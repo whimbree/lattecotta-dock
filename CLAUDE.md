@@ -109,6 +109,27 @@ doesn't happen. (Since fixed properly upstream in latte-dock-ng's
 `docs/PORTING_PLAN.md` for the actual Plasma 6 config-access pattern
 that fix uncovered, which is worth carrying into this port directly.)
 
+## Reference fork sync status
+
+Both reference forks are active projects, not frozen snapshots -
+latte-dock-ng in particular is moving fast. Track the last commit
+actually reviewed for each, so a future "check for updates" is a diff
+from here, not a re-read of the whole history:
+
+- **latte-dock-ng** (`~/Projects/latte-dock-ng`, remote `origin` ->
+  `ruizhi-lab/latte-dock-ng`): reviewed through `59e04b8b7` (2026-07-04).
+  Check for new work:
+  `cd ~/Projects/latte-dock-ng && git fetch origin && git log --oneline 59e04b8b7..origin/main`
+  If that shows anything, read full bodies (not just subjects) via
+  `git log --format="%n=== %h %s ===%n%b" 59e04b8b7..origin/main`
+  before deciding what's worth folding in, then update this hash.
+- **latte-dock-qt6** (`~/Projects/latte-dock-qt6`, remote `origin` ->
+  `CaptSilver/latte-dock-qt6`): reviewed through `9003f33a` (also the
+  end of the port-work range named in the original comparison request).
+  Less active than latte-dock-ng so far; same check pattern applies if
+  it picks back up:
+  `cd ~/Projects/latte-dock-qt6 && git fetch origin && git log --oneline 9003f33a..origin/main`
+
 ## Current status
 
 Phase 1 (build system migration) not yet started. `CMakeLists.txt` at
