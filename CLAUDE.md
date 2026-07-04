@@ -58,9 +58,10 @@ subsystem, not just the phase list here.
 `- [ ]` with a `Commits:` line. When a task lands, tick it and fill in
 the commit hash(es) - that's the traceability mechanism for the whole
 port: any checklist item names its commit(s), any commit can be traced
-back to the task it was for. 113 atomic items across the 12 phases as
-of the initial write-up. Keep this in sync as work happens - don't let
-it drift into "mostly done, some stale checkboxes."
+back to the task it was for. 119 atomic items across the 12 phases as
+of the last sync with upstream latte-dock-ng's ongoing work. Keep this
+in sync as work happens - don't let it drift into "mostly done, some
+stale checkboxes."
 
 ## Working agreements
 
@@ -70,9 +71,10 @@ it drift into "mostly done, some stale checkboxes."
   messages, or code comments - write plainly, like a programmer.
 - Prefer new commits over amending, except when explicitly asked (e.g.
   cleaning up history before opening a PR).
-- This CLAUDE.md is intentionally not committed yet - it's a live
-  scratchpad for project intent, update it as direction changes rather
-  than treating it as fixed.
+- This file and `docs/PORTING_PLAN.md` are committed, but both are live
+  documents - update them as direction changes or new information comes
+  in (e.g. from watching the reference forks' ongoing work) rather than
+  treating either as fixed once written.
 
 ### Stub tracking
 
@@ -95,13 +97,17 @@ ways so it can't quietly get forgotten once a phase "builds fine":
 
 Never stub something silently under a `fix:`/`feat:` message. Case in
 point, inherited from upstream rather than introduced by either fork:
-the original latte-dock's Tasks config page renders but never actually
+the original latte-dock's Tasks config page rendered but never actually
 applied its settings - a genuinely half-finished upstream feature that
 was never marked as a stub anywhere. It went unnoticed across every
-fork until latte-dock-ng's `9faccabda fix: hide unfinished Tasks
-configuration tab` found it and hid it rather than shipping something
-that silently does nothing (the right call). Mark it as a stub in the
-first place and this kind of multi-year silent gap doesn't happen.
+fork for a long time until latte-dock-ng's `9faccabda fix: hide
+unfinished Tasks configuration tab` found it and hid it rather than
+shipping something that silently did nothing (the right call at the
+time). Mark it as a stub in the first place and this kind of silent gap
+doesn't happen. (Since fixed properly upstream in latte-dock-ng's
+`eabf7c89a`/`94f87ba66`/`ed0afd054` - see Phase 5/6 in
+`docs/PORTING_PLAN.md` for the actual Plasma 6 config-access pattern
+that fix uncovered, which is worth carrying into this port directly.)
 
 ## Current status
 

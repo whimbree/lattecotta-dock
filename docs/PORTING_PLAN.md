@@ -387,6 +387,38 @@ platform decision to relitigate.
       entire handler (both Configure and Remove broke this way in one
       fork)
       Commits:
+- [ ] Build plasmoid configuration access correctly from the start:
+      `AppletQuickItem` has **no static `configuration` property on
+      Plasma 6** (latte-dock-ng discovered this after merging our PR,
+      via its own `ed0afd054`/`94f87ba66`/`eabf7c89a`). Build a
+      `KDeclarative::ConfigPropertyMap` from the applet's
+      `contents/config/main.xml` via `KConfigLoader`, attach it as a
+      **dynamic** property on the `AppletQuickItem`, and read it back
+      via `property()` directly rather than
+      `indexOfProperty() >= 0` (a static-property check that's
+      meaningless for a dynamic property). When C++ needs the *same*
+      config object QML bindings (`plasmoid.configuration.*`) observe -
+      not a second, independently-caching one - resolve it through
+      `QQmlContext::contextProperty("plasmoid")` from the actual QML
+      context, not by constructing a fresh loader. Two independent
+      loaders over the same config file cache separately: a write
+      through one is invisible to the other, which is exactly how
+      latte-dock-ng's Tasks config tab silently did nothing for a long
+      time despite looking wired up
+      Commits:
+- [ ] Defer any `QQmlContext`/`QQmlEngine` access performed from applet-
+      configuration code (e.g. an `appletConfiguration()`-style
+      accessor) until the config page actually opens, not during early
+      containment initialization - latte-dock-ng's `2b0963186` found
+      that early access here had unrelated side effects (regressions in
+      wheel-scroll task minimize and middle-click close, in a completely
+      different subsystem). If a config-population path needs the
+      `AppletQuickItem` before the QML engine has created it (e.g. in
+      `onAppletAdded()`), defer via a short retry timer
+      (latte-dock-ng used ~1-2s `QTimer::singleShot`, retried until the
+      graphic object is available) rather than assuming it exists
+      synchronously
+      Commits:
 - [ ] Read dock location changes through `containment.plasmoid`
       (`locationChanged` and `location` moved to the backing applet -
       the containment graphic object no longer emits it itself)
@@ -479,6 +511,28 @@ into C++. There is no drop-in replacement to import.
       (headless daemon processes with no real window surface) when
       cycling
       Commits:
+- [ ] Audit every enum-driven click/action handler (left-click, middle-
+      click, modifier-click, scroll actions, etc.) for completeness
+      against the full enum, not just the common cases - latte-dock-ng
+      shipped a Tasks config UI offering all 9 `TaskAction` values while
+      `TaskMouseArea.qml` actually only handled a subset per click type
+      (3 of 9 for left-click, 5 of 9 for middle-click and modifier-
+      click); picking an unhandled action from the UI silently fell
+      through to a default instead of erroring. Write a completeness
+      test per enum/handler pair rather than trusting the handler was
+      updated in lockstep with the enum
+      Commits:
+- [ ] Route wheel events to badges/sub-regions *inside* the tasks
+      plasmoid explicitly, not just per-applet: `DragDrop.DropArea`
+      blocks wheel event delivery in Qt6, so even though the
+      containment-level wheel bridge (Phase 8) already passes wheel
+      events through to external applets, anything living *inside*
+      Latte's own tasks plasmoid (e.g. an audio-stream badge on a task
+      icon) still needs its own explicit hit-test-and-route step (e.g.
+      `mapFromItem` from containment -> plasmoid -> badge) since the
+      tasks plasmoid itself isn't in the external-applet passthrough
+      path
+      Commits:
 
 ### Phase 7: Widget management, drag-and-drop, edit mode
 
@@ -543,6 +597,22 @@ before implementing, not just before merging.
       (escalating cooldown/dead-zone/hysteresis tuning) and it's still
       jittery per direct testing - don't start from that approach
       Commits:
+- [ ] Related smoothness finding (parabolic hover-zoom, not drag-
+      reorder, but the same class of problem and a real pattern worth
+      copying): keep an item's parabolic-zoom `MouseArea` **always
+      visible** and compute scale synchronously in its own
+      `onPositionChanged`, rather than hiding the `MouseArea` once an
+      item becomes the "current" parabolic item and routing updates
+      through a C++ signal with `Qt::QueuedConnection`. Latte-dock-ng
+      found this exact difference between widget icons (originally
+      routed through the C++ queued path, visibly stuttery) and task
+      icons (always-synchronous, smooth) in its `0deca9e18` - the
+      queued/hidden-MouseArea approach compounds with any lock/
+      debounce timer (its `MIN_SWITCH_INTERVAL_MS`/nullifier timers) to
+      produce visible stutter. Apply "always-visible MouseArea, local
+      synchronous calculation" as the default pattern for any hover-
+      driven visual effect, not just where it was found
+      Commits:
 - [ ] Investigate and fix whatever causes **icons to get stuck behind
       other elements** after repeated drag-reordering (new bug found
       via live testing in latte-dock-ng, not yet root-caused in either
@@ -589,6 +659,16 @@ before implementing, not just before merging.
       max retries are exhausted but `expectedAppletCount > 0` - without
       this the dock never starts its "restored" timer and sits
       positioned off-screen (-9999,-9999) forever with no visible error
+      Commits:
+- [ ] Guard any code that reads a window/activity/audio tracker object
+      during early startup with an explicit "is this tracker actually
+      ready yet" property, rather than assuming it's non-null - both
+      forks hit null-dereference-during-startup bugs of this shape
+      (latte-dock-ng's `3a1aeaf53`: `EnvironmentActions` accessed
+      `selectedWindowsTracker`/`lastActiveWindow` before the window
+      tracker had initialized). A general instance of "don't assume an
+      async-initialized dependency is ready just because your own
+      component finished constructing"
       Commits:
 - [ ] Fix multi-screen cloned-view applet-order sync: add an explicit
       "if this initialization completion made `structuralSyncReady()`
@@ -675,7 +755,15 @@ confirmed transferable today when the same include-path fix was
 applied to get latte-dock-qt6 building on Nix during live debugging.
 
 - [ ] Write `default.nix` (Qt6/KF6 dependency list, matching Phase 1-3
-      framework choices)
+      framework choices). Use `lib.cleanSource ./.` for `src`, not bare
+      `./.` - a plain `./.` copies the *entire* working tree into the
+      Nix store, including a stale `build/` directory (a `CMakeCache.txt`
+      with host paths causes a CMake source-path mismatch inside the
+      Nix build) and anything like a `.codegraph/` daemon socket file
+      (Nix literally cannot copy a socket, hard build failure).
+      `lib.cleanSource` filters via the repo's own `.gitignore`
+      patterns, which already exclude both - latte-dock-ng hit this
+      exact failure post-merge and fixed it in `40daf331e`
       Commits:
 - [ ] Write `flake.nix` exposing `packages.default`, `overlays.default`,
       `nixosModules.default`
