@@ -4,17 +4,20 @@
 */
 
 import QtQuick 2.7
-import QtGraphicalEffects 1.0
+import QtQuick.Effects
+
+import org.kde.latte.components 1.0 as LatteComponents
 
 import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
 
 Item {
-    ColorOverlay {
+    MultiEffect {
         id: colorizer
         anchors.fill: parent
-        color: colorizerManager.applyColor
         source: wrapper
+        colorizationColor: colorizerManager.applyColor
+        colorization: colorizerManager.applyColor.a
     }
 
     ///Shadow in applets
@@ -23,22 +26,20 @@ Item {
         anchors.fill: colorizer
 
         active: appletItem.environment.isGraphicsSystemAccelerated
-                && plasmoid.configuration.appletShadowsEnabled
+                && Plasmoid.configuration.appletShadowsEnabled
                 && (appletColorizer.opacity>0)
 
-        sourceComponent: DropShadow{
+        sourceComponent: LatteComponents.ShadowedItem{
             anchors.fill: parent
-            color: appletItem.myView.itemShadow.shadowColor
-            fast: true
-            samples: 2 * radius
+            shadowColor: appletItem.myView.itemShadow.shadowColor
             source: colorizer
-            radius: shadowSize
-            verticalOffset: forcedShadow ? 0 : 2
+            shadowSizePx: shadowSize
+            shadowVerticalOffset: forcedShadow ? 0 : 2
 
             readonly property int shadowSize : appletItem.myView.itemShadow.size
 
             readonly property bool forcedShadow: root.forceTransparentPanel
-                                                 && plasmoid.configuration.appletShadowsEnabled
+                                                 && Plasmoid.configuration.appletShadowsEnabled
                                                  && !appletItem.communicator.indexerIsSupported ? true : false
         }
     }

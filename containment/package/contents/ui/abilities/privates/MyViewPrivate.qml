@@ -5,6 +5,7 @@
 
 import QtQuick 2.7
 import org.kde.plasma.plasmoid 2.0
+import org.kde.kirigami 2.20 as Kirigami
 
 import org.kde.latte.core 0.2 as LatteCore
 
@@ -16,18 +17,18 @@ AbilityHost.MyView {
     id: _myView
     property Item layouts: null
 
-    readonly property int itemShadowOpacity: (plasmoid.configuration.shadowOpacity/100) * 255
-    readonly property int itemShadowMaxSize: itemShadow.isEnabled ? (0.5*metrics.maxIconSize) * (plasmoid.configuration.shadowSize/100) : 0
+    readonly property int itemShadowOpacity: (Plasmoid.configuration.shadowOpacity/100) * 255
+    readonly property int itemShadowMaxSize: itemShadow.isEnabled ? (0.5*metrics.maxIconSize) * (Plasmoid.configuration.shadowSize/100) : 0
 
-    readonly property real backgroundStoredOpacity: background.themeExtendedBackground && plasmoid.configuration.panelTransparency === -1 ?
-                                                      background.themeExtendedBackground.maxOpacity : plasmoid.configuration.panelTransparency / 100
+    readonly property real backgroundStoredOpacity: background.themeExtendedBackground && Plasmoid.configuration.panelTransparency === -1 ?
+                                                      background.themeExtendedBackground.maxOpacity : Plasmoid.configuration.panelTransparency / 100
 
     readonly property string itemShadowCurrentColor: {
-        if (plasmoid.configuration.shadowColorType === LatteContainment.Types.ThemeColorShadow) {
-            var strC = String(theme.textColor);
+        if (Plasmoid.configuration.shadowColorType === LatteContainment.Types.ThemeColorShadow) {
+            var strC = String(Kirigami.Theme.textColor);
             return strC.indexOf("#") === 0 ? strC.substr(1) : strC;
-        } else if (plasmoid.configuration.shadowColorType === LatteContainment.Types.UserColorShadow) {
-            return plasmoid.configuration.shadowColor;
+        } else if (Plasmoid.configuration.shadowColorType === LatteContainment.Types.UserColorShadow) {
+            return Plasmoid.configuration.shadowColor;
         }
 
         return "080808"; // default
@@ -52,6 +53,7 @@ AbilityHost.MyView {
         target: _myView
         property: "isHidingBlockedFromApplet"
         when: isBindingUpdateEnabled
+        restoreMode: Binding.RestoreNone
         value: {
             var grid;
 

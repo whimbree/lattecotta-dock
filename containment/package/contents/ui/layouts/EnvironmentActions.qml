@@ -49,13 +49,13 @@ Loader {
         property int lastPressX: -1
         property int lastPressY: -1
 
-        onClicked: {
+        onClicked: (mouse) => {
             if (root.closeActiveWindowEnabled && mouse.button === Qt.MidButton) {
                 selectedWindowsTracker.lastActiveWindow.requestClose();
             }
         }
 
-        onPressed: {
+        onPressed: (mouse) => {
             if (!root.dragActiveWindowEnabled) {
                 return;
             }
@@ -72,7 +72,7 @@ Loader {
             lastPressY = -1;
         }
 
-        onPositionChanged: {
+        onPositionChanged: (mouse) => {
             if (!root.dragActiveWindowEnabled || !(mainArea.pressedButtons & Qt.LeftButton)) {
                 return;
             }
@@ -98,7 +98,7 @@ Loader {
             selectedWindowsTracker.lastActiveWindow.requestToggleMaximized();
         }
 
-        onWheel: {
+        onWheel: (wheel) => {
             if (wheelIsBlocked) {
                 return;
             }
@@ -214,7 +214,7 @@ Loader {
                 isPressed: mainArea.pressed
                 panelOpacity: root.background.currentOpacity
                 shadowColor: root.myView.itemShadow.shadowSolidColor
-                palette: colorizerManager.applyTheme
+                colorPalette: colorizerManager.applyTheme
 
                 iconBackgroundColor: "brown"
                 iconGlowColor: "pink"
@@ -223,8 +223,8 @@ Loader {
             Connections {
                 target: mainArea
                 enabled: root.indicators.info.needsMouseEventCoordinates
-                onPressed: indicatorBackLayer.level.mousePressed(mouse.x, mouse.y, mouse.button);
-                onReleased: indicatorBackLayer.level.mouseReleased(mouse.x, mouse.y, mouse.button);
+                function onPressed(mouse) { indicatorBackLayer.level.mousePressed(mouse.x, mouse.y, mouse.button); }
+                function onReleased(mouse) { indicatorBackLayer.level.mouseReleased(mouse.x, mouse.y, mouse.button); }
             }
         }
     }

@@ -4,10 +4,12 @@
 */
 
 import QtQuick 2.7
+import QtQuick.Controls 2.15 as QQC2
 import QtQuick.Layouts 1.1
 
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.plasma.components 3.0 as PlasmaComponents
+import org.kde.kirigami 2.20 as Kirigami
 
 Item{
     id: button
@@ -23,7 +25,7 @@ Item{
     property string tooltip: ""
 
     readonly property bool containsMouse: tooltipBtn.hovered
-    readonly property int implicitHeight: visibleButton.height
+    implicitHeight: visibleButton.height
 
     readonly property color appliedTextColor: checked ? checkedTextColor : textColor
     readonly property color appliedBackgroundColor: checked ? checkedBackgroundColor : backgroundColor
@@ -70,12 +72,12 @@ Item{
             border.width: 1
             border.color: appliedBorderColor
 
-            readonly property int margin: units.smallSpacing
+            readonly property int margin: Kirigami.Units.smallSpacing
 
             RowLayout{
                 id: buttonRow
                 anchors.centerIn: parent
-                spacing: units.smallSpacing
+                spacing: Kirigami.Units.smallSpacing
                 layoutDirection: iconPositionReversed ? Qt.RightToLeft : Qt.LeftToRight
 
                 Loader {
@@ -101,7 +103,9 @@ Item{
         id: tooltipBtn
         anchors.fill: visibleButtonRoot
         opacity: 0
-        tooltip: button.tooltip
+
+        QQC2.ToolTip.text: button.tooltip
+        QQC2.ToolTip.visible: hovered && button.tooltip.length > 0
 
         onPressedChanged: button.pressedChanged(pressed)
     }

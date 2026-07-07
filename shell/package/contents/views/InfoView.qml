@@ -8,20 +8,22 @@ import QtQuick 2.0
 import QtQuick.Layouts 1.1
 import QtQuick.Window 2.1
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.ksvg 1.0 as KSvg
+import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.extras 2.0 as PlasmaExtras
 
 import org.kde.latte.core 0.2 as LatteCore
+import org.kde.kirigami 2.20 as Kirigami
 
-PlasmaCore.FrameSvgItem {
+KSvg.FrameSvgItem {
     id: dialog
 
     imagePath: "widgets/panel-background"
     prefix:""
-    enabledBorders: infoWindow ? infoWindow.enabledBorders : PlasmaCore.FrameSvg.AllBorders
+    enabledBorders: infoWindow ? infoWindow.enabledBorders : KSvg.FrameSvg.AllBorders
 
     width: Screen.width + 1
-    height: Math.min(Screen.height - units.gridUnit * 8, logo.height + messageLbl.height + 2 *units.gridUnit)
+    height: Math.min(Screen.height - Kirigami.Units.gridUnit * 8, logo.height + messageLbl.height + 2 *Kirigami.Units.gridUnit)
 
     property string message
 
@@ -39,7 +41,7 @@ PlasmaCore.FrameSvgItem {
                 id: logo
                 anchors.centerIn: parent
 
-                width: units.iconSizes.huge
+                width: Kirigami.Units.iconSizes.huge
                 height: width
 
                 source: "latte-dock"

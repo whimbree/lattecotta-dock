@@ -7,6 +7,7 @@ import QtQuick 2.7
 
 import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
+import org.kde.ksvg 1.0 as KSvg
 
 Item{
     id: main
@@ -53,7 +54,7 @@ Item{
         return i;
     }
 
-    readonly property bool allBorders: (latteView && latteView.effects && (latteView.effects.enabledBorders === PlasmaCore.FrameSvg.AllBorders))
+    readonly property bool allBorders: (latteView && latteView.effects && (latteView.effects.enabledBorders === KSvg.FrameSvg.AllBorders))
 
     readonly property bool bothVerticals: (leftBorder && rightBorder)
     readonly property bool bothHorizontals: (bottomBorder && topBorder)
@@ -67,7 +68,7 @@ Item{
         property: "topBorder"
         when: latteView
         value: {
-            return (latteView && latteView.effects && ((latteView.effects.enabledBorders & PlasmaCore.FrameSvg.TopBorder)) > 0) || allBorders;
+            return (latteView && latteView.effects && ((latteView.effects.enabledBorders & KSvg.FrameSvg.TopBorder)) > 0) || allBorders;
         }
     }
 
@@ -76,7 +77,7 @@ Item{
         property: "leftBorder"
         when: latteView
         value: {
-            return (latteView && latteView.effects && ((latteView.effects.enabledBorders & PlasmaCore.FrameSvg.LeftBorder)) > 0) || allBorders;
+            return (latteView && latteView.effects && ((latteView.effects.enabledBorders & KSvg.FrameSvg.LeftBorder)) > 0) || allBorders;
         }
     }
 
@@ -85,7 +86,7 @@ Item{
         property: "bottomBorder"
         when: latteView
         value: {
-            return (latteView && latteView.effects && ((latteView.effects.enabledBorders & PlasmaCore.FrameSvg.BottomBorder)) > 0) || allBorders;
+            return (latteView && latteView.effects && ((latteView.effects.enabledBorders & KSvg.FrameSvg.BottomBorder)) > 0) || allBorders;
         }
     }
 
@@ -94,7 +95,7 @@ Item{
         property: "rightBorder"
         when: latteView
         value: {
-            return (latteView && latteView.effects && ((latteView.effects.enabledBorders & PlasmaCore.FrameSvg.RightBorder)) > 0) || allBorders;
+            return (latteView && latteView.effects && ((latteView.effects.enabledBorders & KSvg.FrameSvg.RightBorder)) > 0) || allBorders;
         }
     }
 
@@ -114,7 +115,7 @@ Item{
         opacity: backgroundOpacity
 
         width: {
-            if (plasmoid.formFactor === PlasmaCore.Types.Horizontal) {
+            if (Plasmoid.formFactor === PlasmaCore.Types.Horizontal) {
                 if (drawWithoutRoundness) {
                     return parent.width + 2*borderWidth;
                 } else if (noOfBorders === 2 || (noOfBorders === 3 && bothHorizontals)) {
@@ -122,7 +123,7 @@ Item{
                 } else if (noOfBorders === 3 && bothVerticals) {
                     return parent.width;
                 }
-            } else if (plasmoid.formFactor === PlasmaCore.Types.Vertical) {
+            } else if (Plasmoid.formFactor === PlasmaCore.Types.Vertical) {
                 if (drawWithoutRoundness) {
                     return parent.width + 2 * borderWidth;
                 } else if ((noOfBorders === 2 && !bothVerticals) || (noOfBorders === 3 && bothHorizontals)) {
@@ -135,13 +136,13 @@ Item{
 
 
         height: {
-            if (plasmoid.formFactor === PlasmaCore.Types.Horizontal) {
+            if (Plasmoid.formFactor === PlasmaCore.Types.Horizontal) {
                 if (drawWithoutRoundness) {
                     return parent.height + 2 * borderWidth;
                 } else if ((noOfBorders === 2 && !bothHorizontals) || (noOfBorders === 3 && bothVerticals)) {
                     return parent.height + Math.max(roundness,2 * borderWidth);
                 }
-            } else if (plasmoid.formFactor === PlasmaCore.Types.Vertical) {
+            } else if (Plasmoid.formFactor === PlasmaCore.Types.Vertical) {
                 if (drawWithoutRoundness) {
                     return parent.height + 2*borderWidth;
                 } else if (noOfBorders === 2 || (noOfBorders === 3 && bothVerticals)) {
@@ -170,7 +171,7 @@ Item{
         states: [
             State {
                 name: "horizontal"
-                when: (plasmoid.formFactor === PlasmaCore.Types.Horizontal)
+                when: (Plasmoid.formFactor === PlasmaCore.Types.Horizontal)
 
                 PropertyChanges{
                     target: painter
@@ -193,13 +194,13 @@ Item{
                         }
 
                         //bottom edge and top edge
-                        return plasmoid.location === PlasmaCore.Types.TopEdge ? -centerStep : centerStep;
+                        return Plasmoid.location === PlasmaCore.Types.TopEdge ? -centerStep : centerStep;
                     }
                 }
             },
             State {
                 name: "vertical"
-                when: (plasmoid.formFactor === PlasmaCore.Types.Vertical)
+                when: (Plasmoid.formFactor === PlasmaCore.Types.Vertical)
 
                 PropertyChanges{
                     target: painter
@@ -222,7 +223,7 @@ Item{
                         }
 
                         //left edge and right edge
-                        return plasmoid.location === PlasmaCore.Types.LeftEdge ? -centerStep : centerStep;
+                        return Plasmoid.location === PlasmaCore.Types.LeftEdge ? -centerStep : centerStep;
                     }
                 }
             }

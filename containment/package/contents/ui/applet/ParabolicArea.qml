@@ -53,12 +53,12 @@ Item {
         }
     }
 
-    onParabolicEntered: {
+    onParabolicEntered: (mouseX, mouseY) => {
         lastMousePoint.x = mouseX;
         lastMousePoint.y = mouseY;
 
         if (isThinTooltipEnabled && !(isSeparator || isSpacer || isMarginsAreaSeparator)) {
-            appletItem.thinTooltip.show(appletItem.tooltipVisualParent, applet.title);
+            appletItem.thinTooltip.show(appletItem.tooltipVisualParent, applet.plasmoid.title);
         }
 
         if (restoreAnimation.running) {
@@ -84,7 +84,7 @@ Item {
         }
     }
 
-    onParabolicMove: {
+    onParabolicMove: (mouseX, mouseY) => {
         lastMousePoint.x = mouseX;
         lastMousePoint.y = mouseY;
 
@@ -158,7 +158,7 @@ Item {
     function updateScale(nIndex, nScale){
         if(appletItem && (appletItem.index === nIndex) /*&& !appletItem.containsMouse*/){ /*disable it in order to increase parabolic effect responsiveness*/
             if ( (parabolicEffectIsSupported && !appletItem.originalAppletBehavior && !appletItem.communicator.indexerIsSupported)
-                    && (applet && applet.status !== PlasmaCore.Types.HiddenStatus)){
+                    && (applet && applet.plasmoid.status !== PlasmaCore.Types.HiddenStatus)){
                     wrapper.zoomScale = Math.max(1, nScale);
             }
         }

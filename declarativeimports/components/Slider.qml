@@ -5,8 +5,9 @@
 
 import QtQuick 2.7
 import QtQuick.Templates 2.0 as T
-import org.kde.plasma.core 2.0 as PlasmaCore
+import org.kde.ksvg 1.0 as KSvg
 import "private" as Private
+import org.kde.kirigami 2.20 as Kirigami
 
 T.Slider {
     id: control
@@ -18,24 +19,24 @@ T.Slider {
         Math.max(handle ? handle.implicitHeight : 0,
                  handle ? handle.implicitHeight : 0) + topPadding + bottomPadding)
 
-    //padding: 3*units.smallSpacing //5//units.gridUnit
-    topPadding: 3*units.smallSpacing
-    bottomPadding: 3*units.smallSpacing
-    leftPadding: units.smallSpacing
-    rightPadding: units.smallSpacing
+    //padding: 3*Kirigami.Units.smallSpacing //5//Kirigami.Units.gridUnit
+    topPadding: 3*Kirigami.Units.smallSpacing
+    bottomPadding: 3*Kirigami.Units.smallSpacing
+    leftPadding: Kirigami.Units.smallSpacing
+    rightPadding: Kirigami.Units.smallSpacing
 
     snapMode: T.Slider.SnapOnRelease
 
     readonly property bool minimumInternalValueIsSet: (minimumInternalValue!==from && minimumInternalValue !== -10000)
     property int minimumInternalValue: -10000
 
-    PlasmaCore.Svg {
+    KSvg.Svg {
         id: grooveSvg
         imagePath: "widgets/slider"
-        colorGroup: PlasmaCore.ColorScope.colorGroup
+        colorSet: KSvg.Svg.View
     }
 
-    PlasmaCore.FrameSvgItem {
+    KSvg.FrameSvgItem {
         id: minimumValueGroove
         imagePath: "widgets/slider"
         prefix: "groove-highlight"
@@ -81,7 +82,7 @@ T.Slider {
             shadowElement: parent.horizontal ? "horizontal-slider-shadow" : "vertical-slider-shadow"
             state: control.activeFocus ? "focus" : (control.hovered ? "hover" : "shadow")
         }
-        PlasmaCore.SvgItem {
+        KSvg.SvgItem {
             id: firstHandle
             anchors.fill: parent
             svg: grooveSvg
@@ -89,18 +90,18 @@ T.Slider {
         }
     }
 
-    background: PlasmaCore.FrameSvgItem {
+    background: KSvg.FrameSvgItem {
         imagePath: "widgets/slider"
         prefix: "groove"
         readonly property bool horizontal: control.orientation === Qt.Horizontal
-        implicitWidth: horizontal ? units.gridUnit * 8 : margins.left + margins.right
-        implicitHeight: horizontal ? margins.top + margins.bottom : units.gridUnit * 8
+        implicitWidth: horizontal ? Kirigami.Units.gridUnit * 8 : margins.left + margins.right
+        implicitHeight: horizontal ? margins.top + margins.bottom : Kirigami.Units.gridUnit * 8
         width: horizontal ? control.availableWidth : implicitWidth
         height: horizontal ? implicitHeight : control.availableHeight
         anchors.centerIn: parent
         scale: horizontal && control.mirrored ? -1 : 1
 
-        PlasmaCore.FrameSvgItem {
+        KSvg.FrameSvgItem {
             id: grooveHighlight
             imagePath: "widgets/slider"
             prefix: "groove-highlight"

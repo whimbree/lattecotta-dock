@@ -9,9 +9,10 @@ import QtQuick.Window 2.2
 import QtQuick.Templates 2.2 as T
 import QtQuick.Controls 2.2 as Controls
 import QtQuick.Layouts 1.3
-import QtGraphicalEffects 1.0
+import QtQuick.Effects
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.ksvg 1.0 as KSvg
+import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.kirigami 2.2 as Kirigami
 import "private" as Private
 
@@ -20,13 +21,13 @@ T.ComboBox {
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
                             contentItem.implicitWidth + leftPadding + rightPadding) + indicator.implicitWidth + rightPadding
-    implicitHeight: units.gridUnit * 1.6
+    implicitHeight: Kirigami.Units.gridUnit * 1.6
     baselineOffset: contentItem.y + contentItem.baselineOffset
 
     hoverEnabled: true
     topPadding: surfaceNormal.margins.top
     leftPadding: surfaceNormal.margins.left
-    rightPadding: surfaceNormal.margins.right + units.gridUnit * 2
+    rightPadding: surfaceNormal.margins.right + Kirigami.Units.gridUnit * 2
     bottomPadding: surfaceNormal.margins.bottom
 
     wheelEnabled: false
@@ -55,7 +56,7 @@ T.ComboBox {
         width: control.popup.width
         enabled: !isSeparator && (control.enabledRole.length>0 ? (isArray ? modelData[control.enabledRole] : model[control.enabledRole]) : true)
         text: control.textRole.length>0 ? (isArray ? modelData[control.textRole] : model[control.textRole]) : modelData
-        icon: control.iconRole.length>0 ? (isArray ? modelData[control.iconRole] : model[control.iconRole]) : ''
+        iconSource: control.iconRole.length>0 ? (isArray ? modelData[control.iconRole] : model[control.iconRole]) : ''
         iconToolTip: control.iconToolTipRole.length>0 ? (isArray ? modelData[control.iconToolTipRole] : model[control.iconToolTipRole]) : ''
         iconOnlyWhenHovered: control.iconOnlyWhenHoveredRole.length>0 ? (isArray ? modelData[control.iconOnlyWhenHoveredRole] : model[control.iconOnlyWhenHoveredRole]) : ''
         isSeparator: control.isSeparatorRole.length>0 ? (isArray ? modelData[control.isSeparatorRole] : model[control.isSeparatorRole]) : false
@@ -72,8 +73,9 @@ T.ComboBox {
             id: tooltipBtn
             anchors.fill: parent
             opacity: 0
-            tooltip: parent.toolTip
-            visible: tooltip !== ''
+            Controls.ToolTip.text: parent.toolTip
+            Controls.ToolTip.visible: hovered && parent.toolTip !== ''
+            visible: parent.toolTip !== ''
 
             onPressedChanged: {
                 if (!pressed) {
@@ -86,17 +88,17 @@ T.ComboBox {
         }
     }
 
-    indicator: PlasmaCore.SvgItem {
-        implicitWidth: units.iconSizes.small
+    indicator: KSvg.SvgItem {
+        implicitWidth: Kirigami.Units.iconSizes.small
         implicitHeight: implicitWidth
         anchors {
             right: parent.right
             rightMargin: control.buttonIsTransparent ? 0 : surfaceNormal.margins.right
             verticalCenter: parent.verticalCenter
         }
-        svg: PlasmaCore.Svg {
+        svg: KSvg.Svg {
             imagePath: "widgets/arrows"
-            colorGroup: PlasmaCore.Theme.ButtonColorGroup
+            colorSet: KSvg.Svg.Button
         }
         elementId: "down-arrow"
     }
@@ -115,7 +117,7 @@ T.ComboBox {
         acceptedButtons: Qt.LeftButton
         preventStealing: true
         property int indexUnderMouse: -1
-        onWheel: {
+        onWheel: (wheel) => {
             if (!control.wheelEnabled) {
                 return;
             }
@@ -133,7 +135,7 @@ T.ComboBox {
             control.down = false;
             control.pressed = false;
         }
-        onPositionChanged: {
+        onPositionChanged: (mouse) => {
             var pos = listView.mapFromItem(this, mouse.x, mouse.y);
             indexUnderMouse = listView.indexAt(pos.x, pos.y);
             listView.currentIndex = indexUnderMouse;
@@ -172,17 +174,18 @@ T.ComboBox {
             anchors.fill: parent
             opacity: 0
             visible: control && control.currentIndex>=0 && control.toolTipRole.length>0
-            tooltip: {
+            Controls.ToolTip.text: {
                 if (!visible) {
                     return "";
                 }
 
-                if (Array.isArray(control.model)) {
-                    return control.model[control.currentIndex][control.toolTipRole];
-                } else {
+                if (typeof control.model.get === "function") {
                     return control.model.get(control.currentIndex)[control.toolTipRole];
+                } else {
+                    return control.model[control.currentIndex][control.toolTipRole];
                 }
             }
+            Controls.ToolTip.visible: hovered
 
             onPressedChanged: {
                 if (pressed) {
@@ -202,21 +205,20 @@ T.ComboBox {
                 rightMargin: control.mirrored ? 1 : 0
             }
 
-            PlasmaCore.IconItem {
+            Kirigami.Icon {
                 id: selectedIcon
                 implicitWidth: textLabel.height
                 implicitHeight: textLabel.height
 
-                colorGroup: PlasmaCore.Theme.ButtonColorGroup
                 source: {
                     if (control
                             && control.currentIndex>=0
                             && control.iconRole.length>0) {
 
-                        if (Array.isArray(control.model)) {
-                            return control.model[control.currentIndex][control.iconRole];
-                        } else {
+                        if (typeof control.model.get === "function") {
                             return control.model.get(control.currentIndex)[control.iconRole];
+                        } else {
+                            return control.model[control.currentIndex][control.iconRole];
                         }
                     }
 
@@ -230,12 +232,15 @@ T.ComboBox {
                 id: textLabel
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                Layout.leftMargin: !selectedIcon.visible && !control.mirrored ? units.smallSpacing : 0
-                Layout.rightMargin: !selectedIcon.visible && control.mirrored ? units.smallSpacing : 0
+                Layout.leftMargin: !selectedIcon.visible && !control.mirrored ? Kirigami.Units.smallSpacing : 0
+                Layout.rightMargin: !selectedIcon.visible && control.mirrored ? Kirigami.Units.smallSpacing : 0
+
+                Kirigami.Theme.colorSet: Kirigami.Theme.Button
+                Kirigami.Theme.inherit: false
 
                 text: control.displayText
                 font: control.font
-                color: control.pressed ? theme.highlightedTextColor : theme.buttonTextColor
+                color: control.pressed ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
                 horizontalAlignment: Text.AlignLeft
                 verticalAlignment: Text.AlignVCenter
                 opacity: control.enabled ? 1 : 0.6
@@ -311,10 +316,10 @@ T.ComboBox {
         y: rect.y + 6
     }*/
 
-    background: PlasmaCore.FrameSvgItem {
+    background: KSvg.FrameSvgItem {
         id: surfaceNormal
         //retrocompatibility with old controls
-        implicitWidth: units.gridUnit * 6
+        implicitWidth: Kirigami.Units.gridUnit * 6
         width: parent.width
         height: parent.height
 
@@ -360,7 +365,7 @@ T.ComboBox {
                 rightMargin: control.rightPadding
             }
             acceptedButtons: Qt.NoButton
-            onWheel: {
+            onWheel: (wheel) => {
                 if (!control.wheelEnabled) {
                     return;
                 }
@@ -429,24 +434,31 @@ T.ComboBox {
 
             signal iconClicked(int index);
 
-            onIconClicked: control.iconClicked(index);
+            onIconClicked: (index) => control.iconClicked(index);
         }
         background: Rectangle {
+            id: popupBackground
             anchors {
                 fill: parent
                 margins: -1
             }
             radius: 2
-            color: theme.viewBackgroundColor
-            border.color: Qt.rgba(theme.textColor.r, theme.textColor.g, theme.textColor.b, 0.3)
-            layer.enabled: true
 
-            layer.effect: DropShadow {
-                transparentBorder: true
-                radius: 4
-                samples: 8
-                horizontalOffset: 2
-                verticalOffset: 2
+            Kirigami.Theme.colorSet: Kirigami.Theme.View
+            Kirigami.Theme.inherit: false
+
+            color: Kirigami.Theme.backgroundColor
+            border.color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.3)
+
+            // RectangularShadow draws the halo itself, so it sits behind the card
+            // as a sibling rather than as a layer effect applied over it.
+            RectangularShadow {
+                anchors.fill: popupBackground
+                z: -1
+                radius: popupBackground.radius
+                blur: 4
+                spread: 0
+                offset: Qt.point(2, 2)
                 color: Qt.rgba(0, 0, 0, 0.3)
             }
         }

@@ -8,6 +8,7 @@ import QtQuick 2.5
 import QtQuick.Layouts 1.3
 import QtQuick.Templates 2.2 as T
 import org.kde.plasma.core 2.0 as PlasmaCore
+import org.kde.kirigami 2.20 as Kirigami
 
 import org.kde.latte.components 1.0 as LatteComponents
 
@@ -23,12 +24,12 @@ T.CheckDelegate {
     bottomPadding: margin
     leftPadding: isSeparator ? 0 : margin
     rightPadding: isSeparator ? 0 : margin
-    spacing: units.smallSpacing
+    spacing: Kirigami.Units.smallSpacing
 
     property bool isSeparator: false
 
     property bool blankSpaceForEmptyIcons: false
-    property string icon
+    property string iconSource
     property string iconToolTip
     property bool iconOnlyWhenHovered
     property string toolTip
@@ -41,7 +42,7 @@ T.CheckDelegate {
     contentItem: RowLayout {
         Layout.leftMargin: control.mirrored && !isSeparator ? (control.indicator ? control.indicator.width : 0) + control.spacing : 0
         Layout.rightMargin: !control.mirrored && !isSeparator ? (control.indicator ? control.indicator.width : 0) + control.spacing : 0
-        spacing: isSeparator ? 0 : units.smallSpacing
+        spacing: isSeparator ? 0 : Kirigami.Units.smallSpacing
         enabled: control.enabled
 
         Rectangle {
@@ -49,21 +50,20 @@ T.CheckDelegate {
             Layout.maximumWidth: parent.height
             Layout.minimumHeight: parent.height
             Layout.maximumHeight: parent.height
-            visible: !isSeparator && icon && (!control.iconOnlyWhenHovered || (control.iconOnlyWhenHovered && control.isHovered))
-            color: control.iconToolTip && iconMouseArea.containsMouse ? theme.highlightColor : "transparent"
+            visible: !isSeparator && control.iconSource && (!control.iconOnlyWhenHovered || (control.iconOnlyWhenHovered && control.isHovered))
+            color: control.iconToolTip && iconMouseArea.containsMouse ? Kirigami.Theme.highlightColor : "transparent"
 
-            PlasmaCore.IconItem {
+            Kirigami.Icon {
                 id: iconElement
                 anchors.fill: parent
-                colorGroup: PlasmaCore.Theme.ButtonColorGroup
-                source: control.icon
+                source: control.iconSource
             }
 
             LatteComponents.ToolTip{
                 parent: iconElement
                 text: iconToolTip
                 visible: iconMouseArea.containsMouse
-                delay: 6 * units.longDuration
+                delay: 6 * Kirigami.Units.longDuration
             }
 
             MouseArea {
@@ -80,15 +80,19 @@ T.CheckDelegate {
             //blank space when no icon is shown
             Layout.minimumHeight: parent.height
             Layout.minimumWidth: parent.height
-            visible: !isSeparator && control.blankSpaceForEmptyIcons && (!icon || (control.iconOnlyWhenHovered && !control.isHovered) )
+            visible: !isSeparator && control.blankSpaceForEmptyIcons && (!control.iconSource || (control.iconOnlyWhenHovered && !control.isHovered) )
             color: "transparent"
         }
 
         Label {
             Layout.fillWidth: true
+
+            Kirigami.Theme.colorSet: Kirigami.Theme.View
+            Kirigami.Theme.inherit: false
+
             text: control.text
             font: control.font
-            color: theme.viewTextColor
+            color: Kirigami.Theme.textColor
             elide: Text.ElideRight
             visible: !isSeparator && control.text
             horizontalAlignment: control.textHorizontalAlignment
@@ -98,7 +102,7 @@ T.CheckDelegate {
         Rectangle {
             width: parent.width
             height: 1
-            color: theme.textColor
+            color: Kirigami.Theme.textColor
             opacity: 0.25
             visible: isSeparator
         }
@@ -118,6 +122,6 @@ T.CheckDelegate {
             return 0;
         }
 
-        color: theme.highlightColor
+        color: Kirigami.Theme.highlightColor
     }
 }

@@ -5,6 +5,7 @@
 
 import QtQuick 2.7
 import org.kde.plasma.core 2.0 as PlasmaCore
+import org.kde.kirigami 2.20 as Kirigami
 
 Rectangle {
     id: _corner
@@ -13,7 +14,7 @@ Rectangle {
     anchors.horizontalCenter: parent.right
     anchors.verticalCenter: parent.top
     rotation: 45
-    color: resizeWindowMouseArea.isActive ? theme.buttonFocusColor : theme.textColor
+    color: resizeWindowMouseArea.isActive ? Kirigami.Theme.focusColor : Kirigami.Theme.textColor
     opacity: resizeWindowMouseArea.isActive ? 1 : 0.2
 
     readonly property alias isActive: resizeWindowMouseArea.isActive
@@ -38,7 +39,7 @@ Rectangle {
         property int curGlobalX: 0
         property int curGlobalY: 0
 
-        onPressed: {
+        onPressed: (mouse) => {
             if (pressed) {
                 var scenePos = mapToGlobal(mouse.x, mouse.y);
 
@@ -58,10 +59,10 @@ Rectangle {
             }
         }
 
-        onPositionChanged: {
+        onPositionChanged: (mouse) => {
             if (pressed && initialized) {
                 var scenePos = mapToGlobal(mouse.x, mouse.y);
-                if (plasmoid.location !== PlasmaCore.Types.LeftEsge) {
+                if (plasmoid.location !== PlasmaCore.Types.LeftEdge) {
                     curGlobalX = viewConfig.x + mouse.x;
                     curGlobalY = viewConfig.y + mouse.y;
                 } else {

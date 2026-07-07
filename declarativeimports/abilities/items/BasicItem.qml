@@ -4,11 +4,10 @@
 */
 
 import QtQuick 2.8
-import QtGraphicalEffects 1.0
 
 import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.plasma.components 3.0 as PlasmaComponents
 
 import org.kde.latte.core 0.2 as LatteCore
 
@@ -47,7 +46,7 @@ Item{
             return 0;
         }
 
-        if (plasmoid.formFactor === PlasmaCore.Types.Vertical) {
+        if (Plasmoid.formFactor === PlasmaCore.Types.Vertical) {
             return _parabolicItem.width;
         } else {
             return hiddenSpacerLeft.width + _parabolicItem.width + hiddenSpacerRight.width;
@@ -70,7 +69,7 @@ Item{
             return 0;
         }
 
-        if (plasmoid.formFactor === PlasmaCore.Types.Vertical) {
+        if (Plasmoid.formFactor === PlasmaCore.Types.Vertical) {
             return hiddenSpacerLeft.height + abilityItem.parabolicItem.height + hiddenSpacerRight.height;
         } else {
             return _parabolicItem.height;
@@ -98,21 +97,21 @@ Item{
     property Item monochromizedItem: null
 
     readonly property bool isHorizontal: !isVertical
-    readonly property bool isVertical: plasmoid.formFactor === PlasmaCore.Types.Vertical
+    readonly property bool isVertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
     readonly property bool parabolicAreaContainsMouse: parabolicEventsAreaLoader.active && parabolicEventsAreaLoader.item.containsMouse
     readonly property int parabolicAreaLastMousePos: {
         if (parabolicEventsAreaLoader.active) {
-            return Math.round(plasmoid.formFactor === PlasmaCore.Types.Horizontal ? parabolicEventsAreaLoader.item.lastMouseX : parabolicEventsAreaLoader.item.lastMouseY);
+            return Math.round(Plasmoid.formFactor === PlasmaCore.Types.Horizontal ? parabolicEventsAreaLoader.item.lastMouseX : parabolicEventsAreaLoader.item.lastMouseY);
         }
 
         return 0;
     }
 
     readonly property int location: {
-        if (plasmoid.location === PlasmaCore.Types.LeftEdge
-                || plasmoid.location === PlasmaCore.Types.RightEdge
-                || plasmoid.location === PlasmaCore.Types.TopEdge) {
-            return plasmoid.location;
+        if (Plasmoid.location === PlasmaCore.Types.LeftEdge
+                || Plasmoid.location === PlasmaCore.Types.RightEdge
+                || Plasmoid.location === PlasmaCore.Types.TopEdge) {
+            return Plasmoid.location;
         }
 
         return PlasmaCore.Types.BottomEdge;
@@ -150,7 +149,7 @@ Item{
 
     Connections {
         target: abilityItem.abilities.shortcuts
-        onSglActivateEntryAtIndex: {
+        function onSglActivateEntryAtIndex(entryIndex) {
             if (!abilityItem.abilities.shortcuts.isEnabled) {
                 return;
             }
@@ -162,12 +161,12 @@ Item{
             }
         }
 
-        onSglNewInstanceForEntryAtIndex: {
+        function onSglNewInstanceForEntryAtIndex(entryIndex) {
             if (!abilityItem.abilities.shortcuts.isEnabled) {
                 return;
             }
 
-            var shortcutIndex = abilityItem.abilities.shortcuts.shortcutIndex(taskItem.itemIndex);
+            var shortcutIndex = abilityItem.abilities.shortcuts.shortcutIndex(abilityItem.itemIndex);
 
             if (shortcutIndex === entryIndex) {
                 abilityItem.shortcutRequestedNewInstance();

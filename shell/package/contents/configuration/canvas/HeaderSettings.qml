@@ -7,7 +7,7 @@ import QtQuick 2.7
 import QtQuick.Layouts 1.1
 
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.plasma.components 3.0 as PlasmaComponents
 
 import org.kde.latte.core 0.2 as LatteCore
 
@@ -20,6 +20,9 @@ Item {
 
     readonly property bool containsMouse: rearrangeBtn.containsMouse || stickOnBottomBtn.containsMouse || stickOnTopBtn.containsMouse
     readonly property int thickness: rearrangeBtn.implicitHeight
+
+    //! Surfaced up so the canvas can keep this toggle's rect interactive while click-through in rearrange mode.
+    property alias rearrangeButton: rearrangeBtn
 
     readonly property int headMargin: spacing * 2
 
@@ -71,7 +74,7 @@ Item {
 
         icon: SettingsControls.StickIcon{}
 
-        onPressedChanged: {
+        onPressedChanged: (pressed) => {
             if (pressed) {
                 plasmoid.configuration.isStickedOnTopEdge = !plasmoid.configuration.isStickedOnTopEdge;
             }
@@ -112,7 +115,7 @@ Item {
 
         icon: SettingsControls.RearrangeIcon{}
 
-        onPressedChanged: {
+        onPressedChanged: (pressed) => {
             if (pressed) {
                 universalSettings.inConfigureAppletsMode = !universalSettings.inConfigureAppletsMode;
             }
@@ -130,7 +133,7 @@ Item {
 
         icon: SettingsControls.StickIcon{}
 
-        onPressedChanged: {
+        onPressedChanged: (pressed) => {
             if (pressed) {
                 plasmoid.configuration.isStickedOnBottomEdge = !plasmoid.configuration.isStickedOnBottomEdge;
             }

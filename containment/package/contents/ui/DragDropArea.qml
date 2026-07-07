@@ -7,11 +7,15 @@ import QtQuick 2.7
 
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.draganddrop 2.0 as DragDrop
+import org.kde.plasma.plasmoid 2.0
 
 import org.kde.latte.core 0.2 as LatteCore
 
 DragDrop.DropArea {
     id: dragArea
+
+    // The containment ContainmentItem root; processMimeData() lives there in Plasma 6.
+    property Item containmentItem
 
     property bool containsDrag: false
 
@@ -85,7 +89,7 @@ DragDrop.DropArea {
         }
     }
 
-    onDragEnter: {
+    onDragEnter: (event) => {
         containsDrag = true;
         clearInfoTimer.stop();
         var isTask = event !== undefined
@@ -115,7 +119,7 @@ DragDrop.DropArea {
         dragInfo.onlyLaunchers = isDroppingOnlyLaunchers(event);
         dragInfo.computationsAreValid = true;
 
-        if (dragInfo.isTask || plasmoid.immutable || !root.myView.isShownFully) {
+        if (dragInfo.isTask || Plasmoid.immutable || !root.myView.isShownFully) {
             event.ignore();
             clearInfo();
             return;
@@ -136,7 +140,7 @@ DragDrop.DropArea {
         dndSpacer.opacity = 1;
     }
 
-    onDragMove: {
+    onDragMove: (event) => {
         containsDrag = true;
         clearInfoTimer.stop();
         if (dragInfo.isTask) {
@@ -166,7 +170,7 @@ DragDrop.DropArea {
         dndSpacer.parent = root;
     }
 
-    onDrop: {
+    onDrop: (event) => {
         containsDrag = false;
         animations.needLength.removeEvent(dragArea);
 
@@ -191,7 +195,7 @@ DragDrop.DropArea {
                 eventy = masquearadedIndexFromPoint.y;
             }
 
-            plasmoid.processMimeData(event.mimeData, eventx, eventy);
+            containmentItem.processMimeData(event.mimeData, eventx, eventy);
             //! inform others what plasmoid was drag n' dropped to be added
             latteView.extendedInterface.appletDropped(event.mimeData, eventx, eventy);
             event.accept(event.proposedAction);

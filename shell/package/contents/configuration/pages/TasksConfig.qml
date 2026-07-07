@@ -4,23 +4,23 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 import QtQuick 2.7
-import QtQuick.Controls 1.4
+import QtQuick.Controls 2.15 as QQC2
 import QtQuick.Layouts 1.3
-import QtGraphicalEffects 1.0
 
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.components 3.0 as PlasmaComponents3
 
 import org.kde.latte.core 0.2 as LatteCore
 import org.kde.latte.components 1.0 as LatteComponents
 
 import org.kde.latte.private.tasks 0.1 as LatteTasks
+import org.kde.kirigami 2.20 as Kirigami
 
 PlasmaComponents.Page {
     id: _tasksPage
     width: content.width + content.Layout.leftMargin * 2
-    height: content.height + units.smallSpacing * 2
+    height: content.height + Kirigami.Units.smallSpacing * 2
 
     property bool disableAllWindowsFunctionality: tasks.configuration.hideAllTasks
 
@@ -35,16 +35,16 @@ PlasmaComponents.Page {
     ColumnLayout {
         id: content
 
-        width: (dialog.appliedWidth - units.smallSpacing * 2) - Layout.leftMargin * 2
+        width: (dialog.appliedWidth - Kirigami.Units.smallSpacing * 2) - Layout.leftMargin * 2
         spacing: dialog.subGroupSpacing
         anchors.horizontalCenter: parent.horizontalCenter
-        Layout.leftMargin: units.smallSpacing * 2
-        Layout.rightMargin: units.smallSpacing * 2
+        Layout.leftMargin: Kirigami.Units.smallSpacing * 2
+        Layout.rightMargin: Kirigami.Units.smallSpacing * 2
 
         //! BEGIN: Badges
         ColumnLayout {
-            spacing: units.smallSpacing
-            Layout.topMargin: units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
+            Layout.topMargin: Kirigami.Units.smallSpacing
             visible: dialog.advancedLevel
 
             LatteComponents.Header {
@@ -52,8 +52,8 @@ PlasmaComponents.Page {
             }
 
             LatteComponents.CheckBoxesColumn {
-                Layout.leftMargin: units.smallSpacing * 2
-                Layout.rightMargin: units.smallSpacing * 2
+                Layout.leftMargin: Kirigami.Units.smallSpacing * 2
+                Layout.rightMargin: Kirigami.Units.smallSpacing * 2
 
                 LatteComponents.CheckBox {
                     Layout.maximumWidth: dialog.optionsWidth
@@ -117,16 +117,16 @@ PlasmaComponents.Page {
 
         //! BEGIN: Tasks Interaction
         ColumnLayout {
-            Layout.topMargin: dialog.basicLevel ? units.smallSpacing : 0
-            spacing: units.smallSpacing
+            Layout.topMargin: dialog.basicLevel ? Kirigami.Units.smallSpacing : 0
+            spacing: Kirigami.Units.smallSpacing
 
             LatteComponents.Header {
                 text: i18n("Interaction")
             }
 
             LatteComponents.CheckBoxesColumn {
-                Layout.leftMargin: units.smallSpacing * 2
-                Layout.rightMargin: units.smallSpacing * 2
+                Layout.leftMargin: Kirigami.Units.smallSpacing * 2
+                Layout.rightMargin: Kirigami.Units.smallSpacing * 2
 
                 LatteComponents.CheckBox {
                     Layout.maximumWidth: dialog.optionsWidth
@@ -185,7 +185,7 @@ PlasmaComponents.Page {
 
         //! BEGIN: Tasks Filters
         ColumnLayout {
-            spacing: units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
 
 
             LatteComponents.Header {
@@ -193,8 +193,8 @@ PlasmaComponents.Page {
             }
 
             LatteComponents.CheckBoxesColumn {
-                Layout.leftMargin: units.smallSpacing * 2
-                Layout.rightMargin: units.smallSpacing * 2
+                Layout.leftMargin: Kirigami.Units.smallSpacing * 2
+                Layout.rightMargin: Kirigami.Units.smallSpacing * 2
 
                 LatteComponents.CheckBox {
                     Layout.maximumWidth: dialog.optionsWidth
@@ -272,7 +272,7 @@ PlasmaComponents.Page {
 
         //! BEGIN: Animations
         ColumnLayout {
-            spacing: units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
             enabled: plasmoid.configuration.animationsEnabled
             visible: dialog.advancedLevel
 
@@ -281,8 +281,8 @@ PlasmaComponents.Page {
             }
 
             LatteComponents.CheckBoxesColumn {
-                Layout.leftMargin: units.smallSpacing * 2
-                Layout.rightMargin: units.smallSpacing * 2
+                Layout.leftMargin: Kirigami.Units.smallSpacing * 2
+                Layout.rightMargin: Kirigami.Units.smallSpacing * 2
 
                 LatteComponents.CheckBox {
                     Layout.maximumWidth: dialog.optionsWidth
@@ -344,7 +344,7 @@ PlasmaComponents.Page {
 
         //! BEGIN: Launchers Group
         ColumnLayout {
-            spacing: units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
 
 
             LatteComponents.Header {
@@ -352,8 +352,8 @@ PlasmaComponents.Page {
             }
 
             ColumnLayout {
-                Layout.leftMargin: units.smallSpacing * 2
-                Layout.rightMargin: units.smallSpacing * 2
+                Layout.leftMargin: Kirigami.Units.smallSpacing * 2
+                Layout.rightMargin: Kirigami.Units.smallSpacing * 2
                 spacing: 0
 
                 RowLayout {
@@ -366,18 +366,14 @@ PlasmaComponents.Page {
                     readonly property int buttonsCount: layoutGroupButton.visible ? 3 : 2
                     readonly property int buttonSize: (dialog.optionsWidth - (spacing * buttonsCount-1)) / buttonsCount
 
-                    ExclusiveGroup {
-                        id: launchersGroup
-                    }
-
                     PlasmaComponents.Button {
                         Layout.minimumWidth: parent.buttonSize
                         Layout.maximumWidth: Layout.minimumWidth
                         text: i18nc("unique launchers group","Unique Group")
                         checked: parent.group === group
                         checkable: false
-                        exclusiveGroup: launchersGroup
-                        tooltip: i18n("Use a unique set of launchers for this view which is independent from any other view")
+                        QQC2.ToolTip.text: i18n("Use a unique set of launchers for this view which is independent from any other view")
+                        QQC2.ToolTip.visible: hovered
 
                         readonly property int group: LatteCore.Types.UniqueLaunchers
 
@@ -395,8 +391,8 @@ PlasmaComponents.Page {
                         text: i18nc("layout launchers group","Layout Group")
                         checked: parent.group === group
                         checkable: false
-                        exclusiveGroup: launchersGroup
-                        tooltip: i18n("Use the current layout set of launchers for this latteView. This group provides launchers <b>synchronization</b> between different views in the <b>same layout</b>")
+                        QQC2.ToolTip.text: i18n("Use the current layout set of launchers for this latteView. This group provides launchers <b>synchronization</b> between different views in the <b>same layout</b>")
+                        QQC2.ToolTip.visible: hovered
                         //! it is shown only when the user has activated that option manually from the text layout file
                         visible: tasks.configuration.launchersGroup === group
 
@@ -415,8 +411,8 @@ PlasmaComponents.Page {
                         text: i18nc("global launchers group","Global Group")
                         checked: parent.group === group
                         checkable: false
-                        exclusiveGroup: launchersGroup
-                        tooltip: i18n("Use the global set of launchers for this latteView. This group provides launchers <b>synchronization</b> between different views and between <b>different layouts</b>")
+                        QQC2.ToolTip.text: i18n("Use the global set of launchers for this latteView. This group provides launchers <b>synchronization</b> between different views and between <b>different layouts</b>")
+                        QQC2.ToolTip.visible: hovered
 
                         readonly property int group: LatteCore.Types.GlobalLaunchers
 
@@ -433,15 +429,15 @@ PlasmaComponents.Page {
 
         //! BEGIN: Scrolling
         ColumnLayout {
-            spacing: units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
             visible: dialog.advancedLevel
 
             LatteComponents.HeaderSwitch {
                 id: scrollingHeader
-                Layout.minimumWidth: dialog.optionsWidth + 2 *units.smallSpacing
+                Layout.minimumWidth: dialog.optionsWidth + 2 *Kirigami.Units.smallSpacing
                 Layout.maximumWidth: Layout.minimumWidth
                 Layout.minimumHeight: implicitHeight
-                Layout.bottomMargin: units.smallSpacing
+                Layout.bottomMargin: Kirigami.Units.smallSpacing
                 enabled: LatteCore.WindowSystem.compositingActive
 
                 checked: tasks.configuration.scrollTasksEnabled
@@ -454,8 +450,8 @@ PlasmaComponents.Page {
             }
 
             ColumnLayout {
-                Layout.leftMargin: units.smallSpacing * 2
-                Layout.rightMargin: units.smallSpacing * 2
+                Layout.leftMargin: Kirigami.Units.smallSpacing * 2
+                Layout.rightMargin: Kirigami.Units.smallSpacing * 2
                 spacing: 0
                 enabled: scrollingHeader.checked
 
@@ -464,7 +460,7 @@ PlasmaComponents.Page {
                     Layout.minimumWidth: dialog.optionsWidth
                     Layout.maximumWidth: Layout.minimumWidth
 
-                    Layout.topMargin: units.smallSpacing
+                    Layout.topMargin: Kirigami.Units.smallSpacing
 
                     PlasmaComponents.Label {
                         Layout.fillWidth: true
@@ -515,7 +511,7 @@ PlasmaComponents.Page {
 
         //! BEGIN: Actions
         ColumnLayout {
-            spacing: units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
             visible: dialog.advancedLevel
 
             LatteComponents.Header {
@@ -523,8 +519,8 @@ PlasmaComponents.Page {
             }
 
             ColumnLayout {
-                Layout.leftMargin: units.smallSpacing * 2
-                Layout.rightMargin: units.smallSpacing * 2
+                Layout.leftMargin: Kirigami.Units.smallSpacing * 2
+                Layout.rightMargin: Kirigami.Units.smallSpacing * 2
                 spacing: 0
 
                 GridLayout {
@@ -532,7 +528,7 @@ PlasmaComponents.Page {
                     Layout.minimumWidth: dialog.optionsWidth
                     Layout.maximumWidth: Layout.minimumWidth
 
-                    Layout.topMargin: units.smallSpacing
+                    Layout.topMargin: Kirigami.Units.smallSpacing
                     enabled: !disableAllWindowsFunctionality
 
                     PlasmaComponents.Label {
@@ -661,7 +657,7 @@ PlasmaComponents.Page {
                     }
 
                     RowLayout {
-                        spacing: units.smallSpacing
+                        spacing: Kirigami.Units.smallSpacing
                         enabled: !disableAllWindowsFunctionality
 
                         Layout.minimumWidth: middleClickText.width
@@ -682,7 +678,7 @@ PlasmaComponents.Page {
                     }
 
                     RowLayout {
-                        spacing: units.smallSpacing
+                        spacing: Kirigami.Units.smallSpacing
                         enabled: !disableAllWindowsFunctionality
 
                         readonly property int maxSize: 0.4 * dialog.optionsWidth
@@ -716,8 +712,8 @@ PlasmaComponents.Page {
                 RowLayout {
                     Layout.minimumWidth: dialog.optionsWidth
                     Layout.maximumWidth: Layout.minimumWidth
-                    Layout.topMargin: units.smallSpacing
-                    spacing: units.smallSpacing
+                    Layout.topMargin: Kirigami.Units.smallSpacing
+                    spacing: Kirigami.Units.smallSpacing
                     enabled: !disableAllWindowsFunctionality
 
                 }
@@ -727,7 +723,7 @@ PlasmaComponents.Page {
 
         //! BEGIN: Recycling
        /* ColumnLayout {
-            spacing: units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
             visible: dialog.advancedLevel
 
             LatteComponents.Header {
@@ -737,9 +733,9 @@ PlasmaComponents.Page {
             PlasmaComponents.Button {
                 Layout.minimumWidth: dialog.optionsWidth
                 Layout.maximumWidth: Layout.minimumWidth
-                Layout.leftMargin: units.smallSpacing * 2
-                Layout.rightMargin: units.smallSpacing * 2
-                Layout.topMargin: units.smallSpacing
+                Layout.leftMargin: Kirigami.Units.smallSpacing * 2
+                Layout.rightMargin: Kirigami.Units.smallSpacing * 2
+                Layout.topMargin: Kirigami.Units.smallSpacing
 
                 text: i18n("Remove Latte Tasks Applet")
                 enabled: latteView.latteTasksArePresent

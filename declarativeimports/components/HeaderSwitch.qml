@@ -4,32 +4,27 @@
 */
 
 import QtQuick 2.7
-import QtGraphicalEffects 1.0
-import QtQuick.Controls 1.4
+import QtQuick.Controls 2.15 as QQC2
 import QtQuick.Layouts 1.3
 
-import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
-
-import org.kde.plasma.plasmoid 2.0
+import org.kde.plasma.components 3.0 as PlasmaComponents
 
 import "." as LatteExtraControls
-
-import "private" as Private
+import org.kde.kirigami 2.20 as Kirigami
 
 Item {
     id: item
 
     Layout.rightMargin: {
         if (level === 1) {
-            return Qt.application.layoutDirection === Qt.RightToLeft ? 0 : 2 * units.smallSpacing
+            return Qt.application.layoutDirection === Qt.RightToLeft ? 0 : 2 * Kirigami.Units.smallSpacing
         }
 
         return 0;
     }
     Layout.leftMargin: {
         if (level === 1) {
-            return Qt.application.layoutDirection === Qt.RightToLeft ? 2 * units.smallSpacing : 0
+            return Qt.application.layoutDirection === Qt.RightToLeft ? 2 * Kirigami.Units.smallSpacing : 0
         }
 
         return 0;
@@ -39,9 +34,9 @@ Item {
     property bool checked: false
     property bool isFirstSubCategory: false
 
-    readonly property int implicitWidth: row.width
+    implicitWidth: row.width
 
-    readonly property int implicitHeight: {
+    implicitHeight: {
         if (level === 1) {
             return Math.max(headerText.implicitHeight, itemSwitch.implicitHeight);
         } else if (level === 2) {
@@ -94,7 +89,8 @@ Item {
         PlasmaComponents.Button {
             //tooltip ghost
             anchors.fill: textElement
-            tooltip: item.tooltip
+            QQC2.ToolTip.text: item.tooltip
+            QQC2.ToolTip.visible: hovered && item.tooltip.length > 0
             opacity: 0
             onPressedChanged: {
                 if (pressed) {
@@ -104,19 +100,18 @@ Item {
         }
     }
 
-    Switch {
+    LatteExtraControls.Switch {
         id: itemSwitch
         anchors.verticalCenter: row.verticalCenter
         anchors.right: row.right
         checked: item.checked
         enabled: item.enabled
 
-        style: Private.SwitchStyle {}
-
         PlasmaComponents.Button {
             //tooltip ghost
             anchors.fill: parent
-            tooltip: item.tooltip
+            QQC2.ToolTip.text: item.tooltip
+            QQC2.ToolTip.visible: hovered && item.tooltip.length > 0
             opacity: 0
             onPressedChanged: {
                 if (pressed) {

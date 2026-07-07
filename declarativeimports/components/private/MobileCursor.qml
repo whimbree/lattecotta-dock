@@ -11,7 +11,7 @@ import org.kde.kirigami 2.5 as Kirigami
 Item {
     id: root
     width: 1 //<-important that this is actually a single device pixel
-    height: units.gridUnit
+    height: Kirigami.Units.gridUnit
 
     property Item target
 
@@ -20,31 +20,31 @@ Item {
     visible: Kirigami.Settings.tabletMode && ((target.activeFocus && !selectionStartHandle) || target.selectedText.length > 0)
 
     Rectangle {
-        width: Math.round(units.devicePixelRatio * 3)
+        width: Math.round(Kirigami.Units.devicePixelRatio * 3)
         anchors {
             horizontalCenter: parent.horizontalCenter
             top: parent.top
             bottom: parent.bottom
         }
-        color: Qt.tint(theme.highlightColor, Qt.rgba(1,1,1,0.4))
+        color: Qt.tint(Kirigami.Theme.highlightColor, Qt.rgba(1,1,1,0.4))
         radius: width
         Rectangle {
-            width: Math.round(units.gridUnit/1.5)
+            width: Math.round(Kirigami.Units.gridUnit/1.5)
             height: width
             anchors {
                 horizontalCenter: parent.horizontalCenter
                 verticalCenter: parent.bottom
             }
             radius: width
-            color: Qt.tint(theme.highlightColor, Qt.rgba(1,1,1,0.4))
+            color: Qt.tint(Kirigami.Theme.highlightColor, Qt.rgba(1,1,1,0.4))
         }
         MouseArea {
             anchors {
                 fill: parent
-                margins: -units.gridUnit
+                margins: -Kirigami.Units.gridUnit
             }
             preventStealing: true
-            onPositionChanged: {
+            onPositionChanged: (mouse) => {
                 var pos = mapToItem(target, mouse.x, mouse.y);
                 pos = target.positionAt(pos.x, pos.y);
 

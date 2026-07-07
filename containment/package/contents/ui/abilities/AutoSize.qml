@@ -16,11 +16,12 @@ Item {
     // when there are only plasma style task managers OR any applets that fill width or height
     // the automatic icon size algorithm should better be disabled
     readonly property bool isActive: root.behaveAsDockWithMask
-                                     && plasmoid.configuration.autoSizeEnabled
+                                     && Plasmoid.configuration.autoSizeEnabled
                                      && !root.containsOnlyPlasmaTasks
                                      && layouter.fillApplets<=0
-                                     && !(root.inConfigureAppletsMode && plasmoid.configuration.alignment === LatteCore.Types.Justify) /*block shrinking for justify splitters*/
+                                     && !(root.inConfigureAppletsMode && Plasmoid.configuration.alignment === LatteCore.Types.Justify) /*block shrinking for justify splitters*/
                                      && latteView
+                                     && latteView.visibility
                                      && latteView.visibility.mode !== LatteCore.Types.SidebarOnDemand
                                      && latteView.visibility.mode !== LatteCore.Types.SidebarAutoHide
 
@@ -171,7 +172,7 @@ Item {
             //console.log("------Entered check-----");
             //console.log("max length: "+ maxLength);
 
-            layoutLength = (plasmoid.configuration.alignment === LatteCore.Types.Justify) ?
+            layoutLength = (Plasmoid.configuration.alignment === LatteCore.Types.Justify) ?
                         layouts.startLayout.length+layouts.mainLayout.length+layouts.endLayout.length : layouts.mainLayout.length
 
 

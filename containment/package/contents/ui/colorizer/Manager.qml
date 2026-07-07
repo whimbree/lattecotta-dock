@@ -7,6 +7,7 @@ import QtQuick 2.7
 
 import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
+import org.kde.kirigami 2.20 as Kirigami
 
 import org.kde.latte.core 0.2 as LatteCore
 import org.kde.latte.private.app 0.1 as LatteApp
@@ -22,13 +23,20 @@ Loader{
 
     readonly property bool backgroundIsBusy: item ? item.isBusy : false
 
-    readonly property real originalThemeTextColorBrightness: ColorizerTools.colorBrightness(theme.textColor)
-    readonly property color originalLightTextColor: originalThemeTextColorBrightness > 127.5 ? theme.textColor : theme.backgroundColor
+    //! The Plasma 5 global "theme" context property is gone in Plasma 6. The default Plasma
+    //! color scheme it exposed is available through themeExtended.defaultTheme (a SchemeColors
+    //! object that, unlike Kirigami.Theme, carries the schemeFile/inactive* members this
+    //! colorizer compares against and switches between).
+    readonly property QtObject plasmaTheme: themeExtended ? themeExtended.defaultTheme : null
+
+    readonly property real originalThemeTextColorBrightness: ColorizerTools.colorBrightness(plasmaTheme ? plasmaTheme.textColor : Kirigami.Theme.textColor)
+    readonly property color originalLightTextColor: {
+        var base = plasmaTheme ? plasmaTheme : Kirigami.Theme;
+        return originalThemeTextColorBrightness > 127.5 ? base.textColor : base.backgroundColor;
+    }
 
     readonly property real themeTextColorBrightness: ColorizerTools.colorBrightness(textColor)
     readonly property real backgroundColorBrightness: ColorizerTools.colorBrightness(backgroundColor)
-
-    readonly property color focusGlowColor: Qt.hsva(buttonFocusColor.h, buttonFocusColor.s, 1.0, 1.0)
 
     readonly property color outlineColorBase: backgroundColor
     readonly property real outlineColorBaseBrightness: ColorizerTools.colorBrightness(outlineColorBase)
@@ -47,7 +55,7 @@ Loader{
     readonly property bool editModeTextColorIsBright: ColorizerTools.colorBrightness(editModeTextColor) > 127.5
     readonly property color editModeTextColor: latteView && latteView.layout ? latteView.layout.textColor : "white"
 
-    readonly property bool mustBeShown: (applyTheme && applyTheme !== theme)
+    readonly property bool mustBeShown: (applyTheme && applyTheme !== plasmaTheme)
                                         || (root.inConfigureAppletsMode && (root.themeColors === LatteContainment.Types.SmartThemeColors))
 
     readonly property real currentBackgroundBrightness: item ? item.currentBrightness : -1000
@@ -59,7 +67,7 @@ Loader{
 
     property QtObject applyTheme: {
         if (!root.environment.isGraphicsSystemAccelerated) {
-            return theme;
+            return plasmaTheme;
         }
 
         if (latteView && latteView.windowsTracker && !(root.plasmaBackgroundForPopups && root.hasExpandedApplet)) {
@@ -87,7 +95,7 @@ Loader{
                         && root.windowColors === LatteContainment.Types.NoneWindowColors
                         && root.forceSolidPanel) ) {
                 /* plasma style*/
-                return theme;
+                return plasmaTheme;
             }
 
             if (root.themeColors === LatteContainment.Types.DarkThemeColors) {
@@ -118,18 +126,18 @@ Loader{
                         return themeExtended.darkTheme;
                     } else {
                         //! default plasma theme should be better for panel transparency > 70
-                        return theme;
+                        return plasmaTheme;
                     }
                 }
             }
         }
 
-        return theme;
+        return plasmaTheme;
     }
 
     property color applyColor: textColor
 
-    readonly property color backgroundColor:applyTheme.backgroundColor
+    readonly property color backgroundColor: applyTheme ? applyTheme.backgroundColor : Kirigami.Theme.backgroundColor
     readonly property color textColor: {
         if (latteView && latteView.layout
                 && root.inConfigureAppletsMode
@@ -139,26 +147,26 @@ Loader{
             return latteView.layout.textColor;
         }
 
-        return applyTheme.textColor;
+        return applyTheme ? applyTheme.textColor : Kirigami.Theme.textColor;
     }
 
-    readonly property color inactiveBackgroundColor: applyTheme === theme ? theme.backgroundColor : applyTheme.inactiveBackgroundColor
-    readonly property color inactiveTextColor: applyTheme === theme ? theme.textColor : applyTheme.inactiveTextColor
+    readonly property color inactiveBackgroundColor: applyTheme === plasmaTheme ? (plasmaTheme ? plasmaTheme.backgroundColor : Kirigami.Theme.backgroundColor) : applyTheme.inactiveBackgroundColor
+    readonly property color inactiveTextColor: applyTheme === plasmaTheme ? (plasmaTheme ? plasmaTheme.textColor : Kirigami.Theme.textColor) : applyTheme.inactiveTextColor
 
-    readonly property color highlightColor: applyTheme.highlightColor
-    readonly property color highlightedTextColor: applyTheme.highlightedTextColor
-    readonly property color positiveTextColor: applyTheme.positiveTextColor
-    readonly property color neutralTextColor: applyTheme.neutralTextColor
-    readonly property color negativeTextColor: applyTheme.negativeTextColor
+    readonly property color highlightColor: applyTheme ? applyTheme.highlightColor : Kirigami.Theme.highlightColor
+    readonly property color highlightedTextColor: applyTheme ? applyTheme.highlightedTextColor : Kirigami.Theme.highlightedTextColor
+    readonly property color positiveTextColor: applyTheme ? applyTheme.positiveTextColor : Kirigami.Theme.positiveTextColor
+    readonly property color neutralTextColor: applyTheme ? applyTheme.neutralTextColor : Kirigami.Theme.neutralTextColor
+    readonly property color negativeTextColor: applyTheme ? applyTheme.negativeTextColor : Kirigami.Theme.negativeTextColor
 
-    readonly property color buttonTextColor: applyTheme.buttonTextColor
-    readonly property color buttonBackgroundColor: applyTheme.buttonBackgroundColor
-    readonly property color buttonHoverColor: applyTheme.buttonHoverColor
-    readonly property color buttonFocusColor: applyTheme.buttonFocusColor
+    readonly property color buttonTextColor: applyTheme ? applyTheme.buttonTextColor : Kirigami.Theme.textColor
+    readonly property color buttonBackgroundColor: applyTheme ? applyTheme.buttonBackgroundColor : Kirigami.Theme.backgroundColor
+    readonly property color buttonHoverColor: applyTheme ? applyTheme.buttonHoverColor : Kirigami.Theme.hoverColor
+    readonly property color buttonFocusColor: applyTheme ? applyTheme.buttonFocusColor : Kirigami.Theme.focusColor
 
     readonly property string scheme: {
         if (root.inConfigureAppletsMode && (root.themeColors === LatteContainment.Types.SmartThemeColors)) {
-            if (!LatteCore.WindowSystem.compositingActive && applyTheme !== theme) {
+            if (!LatteCore.WindowSystem.compositingActive && applyTheme !== plasmaTheme) {
                 return applyTheme.schemeFile;
             }
 
@@ -179,7 +187,7 @@ Loader{
             }
         }
 
-        if (applyTheme===theme || !mustBeShown) {
+        if (applyTheme===plasmaTheme || !mustBeShown) {
             if (themeExtended) {
                 return themeExtended.defaultTheme.schemeFile;
             } else {
@@ -192,7 +200,7 @@ Loader{
 
     sourceComponent: LatteApp.BackgroundTracker {
         activity: root.myView.isReady ? root.myView.lastUsedActivity : ""
-        location: plasmoid.location
+        location: Plasmoid.location
         screenName: latteView && latteView.positioner ? latteView.positioner.currentScreenName : ""
     }
 }

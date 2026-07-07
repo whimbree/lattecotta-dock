@@ -6,11 +6,11 @@
 
 import QtQuick 2.1
 import QtQuick.Layouts 1.1
-import QtGraphicalEffects 1.0
 
 import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.plasma.components 3.0 as PlasmaComponents
+import org.kde.plasma.extras 2.0 as PlasmaExtras
 
 import org.kde.latte.core 0.2 as LatteCore
 import org.kde.latte.components 1.0 as LatteComponents
@@ -113,7 +113,7 @@ Item{
             return Infinity;
         }
 
-        root.isHorizontal ? appletMaximumWidth : appletMaximumHeight;
+        return root.isHorizontal ? appletMaximumWidth : appletMaximumHeight;
     }
 
     readonly property real appletMinimumThickness: root.isHorizontal ? appletMinimumHeight : appletMinimumWidth
@@ -276,6 +276,9 @@ Item{
     Binding {
         target: wrapper
         property: "layoutThickness"
+        //! Qt6 defaults Binding.restoreMode to RestoreBindingOrValue, which resets the property to
+        //! its declared default (0) once "when" turns false during zoom; keep the captured value instead.
+        restoreMode: Binding.RestoreNone
         when: latteView && (wrapper.zoomScale === 1 || communicator.parabolicEffectIsSupported)
         value: {
             if (appletItem.isInternalViewSplitter){
@@ -294,6 +297,8 @@ Item{
     Binding {
         target: wrapper
         property: "layoutLength"
+        //! Qt6: keep the captured rest-length when "when" turns false during zoom (see layoutThickness)
+        restoreMode: Binding.RestoreNone
         when: latteView && !appletItem.isAutoFillApplet && (wrapper.zoomScale === 1)
         value: {
             if (applet && ( appletMaximumLength < appletItem.metrics.iconSize
@@ -377,13 +382,13 @@ Item{
         Connections {
             target: root.latteView ? root.latteView.extendedInterface : null
             onAppletRequestedVisualIndicator: {
-                if (plasmoidId === appletItem.applet.id) {
+                if (plasmoidId === appletItem.applet.plasmoid.id) {
                     visualIndicator.showVisualIndicatorRequested = true;
                 }
             }
         }
 
-        sourceComponent: PlasmaComponents.Highlight {
+        sourceComponent: PlasmaExtras.Highlight {
             id: visualIndicatorRectangle
             opacity: 0
 
@@ -432,14 +437,12 @@ Item{
                 && !appletColorizer.mustBeShown
                 && (appletItem.myView.itemShadow.isEnabled && !appletItem.communicator.indexerIsSupported)
 
-        sourceComponent: DropShadow{
+        sourceComponent: LatteComponents.ShadowedItem{
             anchors.fill: parent
-            color: appletItem.myView.itemShadow.shadowColor
-            fast: true
-            samples: 2 * radius
+            shadowColor: appletItem.myView.itemShadow.shadowColor
             source: _wrapperContainer
-            radius: appletItem.myView.itemShadow.size
-            verticalOffset: root.forceTransparentPanel || root.forcePanelForBusyBackground ? 0 : 2
+            shadowSizePx: appletItem.myView.itemShadow.size
+            shadowVerticalOffset: root.forceTransparentPanel || root.forcePanelForBusyBackground ? 0 : 2
         }
     }
 
@@ -480,6 +483,9 @@ Item{
         Binding {
             target: _wrapperContainer
             property: "_thickness"
+            //! Qt6: hold the last size while relocation hiding deactivates this binding; otherwise
+            //! RestoreBindingOrValue resets it to the declared 0 and the container collapses.
+            restoreMode: Binding.RestoreNone
             when: !visibilityManager.inRelocationHiding
             value: {
                 if (appletItem.isInternalViewSplitter) {
@@ -495,6 +501,8 @@ Item{
         Binding {
             target: _wrapperContainer
             property: "_length"
+            //! Qt6: keep the last length during relocation hiding (see _thickness above).
+            restoreMode: Binding.RestoreNone
             when: !visibilityManager.inRelocationHiding
             value: {
                 if (appletItem.isAutoFillApplet && (appletItem.maxAutoFillLength>-1)){
@@ -588,7 +596,7 @@ Item{
         states:[
             State{
                 name: "bottom"
-                when: plasmoid.location === PlasmaCore.Types.BottomEdge
+                when: Plasmoid.location === PlasmaCore.Types.BottomEdge
 
                 AnchorChanges{
                     target: _wrapperContainer;
@@ -603,7 +611,7 @@ Item{
             },
             State{
                 name: "top"
-                when: plasmoid.location === PlasmaCore.Types.TopEdge
+                when: Plasmoid.location === PlasmaCore.Types.TopEdge
 
                 AnchorChanges{
                     target:_wrapperContainer;
@@ -618,7 +626,7 @@ Item{
             },
             State{
                 name: "left"
-                when: plasmoid.location === PlasmaCore.Types.LeftEdge
+                when: Plasmoid.location === PlasmaCore.Types.LeftEdge
 
                 AnchorChanges{
                     target: _wrapperContainer;
@@ -633,7 +641,7 @@ Item{
             },
             State{
                 name: "right"
-                when: plasmoid.location === PlasmaCore.Types.RightEdge
+                when: Plasmoid.location === PlasmaCore.Types.RightEdge
 
                 AnchorChanges{
                     target: _wrapperContainer;
@@ -665,10 +673,10 @@ Item{
     //! InternalViewSplitter
     Loader{
         anchors.fill: parent //_wrapperContainer
-        anchors.topMargin: plasmoid.location === PlasmaCore.Types.TopEdge ? wrapper.appletScreenMargin : 0
-        anchors.leftMargin: plasmoid.location === PlasmaCore.Types.LeftEdge ? wrapper.appletScreenMargin : 0
-        anchors.bottomMargin: plasmoid.location === PlasmaCore.Types.BottomEdge ? wrapper.appletScreenMargin : 0
-        anchors.rightMargin: plasmoid.location === PlasmaCore.Types.RightEdge ? wrapper.appletScreenMargin : 0
+        anchors.topMargin: Plasmoid.location === PlasmaCore.Types.TopEdge ? wrapper.appletScreenMargin : 0
+        anchors.leftMargin: Plasmoid.location === PlasmaCore.Types.LeftEdge ? wrapper.appletScreenMargin : 0
+        anchors.bottomMargin: Plasmoid.location === PlasmaCore.Types.BottomEdge ? wrapper.appletScreenMargin : 0
+        anchors.rightMargin: Plasmoid.location === PlasmaCore.Types.RightEdge ? wrapper.appletScreenMargin : 0
 
         active: appletItem.isInternalViewSplitter && root.inConfigureAppletsMode
 
@@ -680,10 +688,10 @@ Item{
             spritePosition: {
                 if (root.isHorizontal) {
                     return appletItem.parent === appletItem.layouts.startLayout ?
-                                PlasmaCore.Types.RightPositioned : PlasmaCore.Types.LeftPositioned;
+                                LatteCore.Types.RightPositioned : LatteCore.Types.LeftPositioned;
                 } else {
                     return appletItem.parent === appletItem.layouts.startLayout ?
-                                PlasmaCore.Types.BottomPositioned : PlasmaCore.Types.TopPositioned;
+                                LatteCore.Types.BottomPositioned : LatteCore.Types.TopPositioned;
                 }
             }
         }

@@ -7,10 +7,9 @@
 import QtQuick 2.8
 import QtQuick.Layouts 1.1
 import QtQuick.Window 2.2
-import QtGraphicalEffects 1.0
 
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.kquickcontrolsaddons 2.0
 import org.kde.plasma.plasmoid 2.0
 
@@ -29,7 +28,7 @@ import "layouts" as Layouts
 import "./background" as Background
 import "./debugger" as Debugger
 
-Item {
+ContainmentItem {
     id: root
     objectName: "containmentViewLayout"
 
@@ -50,7 +49,7 @@ Item {
     readonly property int version: LatteCore.Environment.makeVersion(0,9,75)
     readonly property bool kirigamiLibraryIsFound: LatteCore.Environment.frameworksVersion >= LatteCore.Environment.makeVersion(5,69,0)
 
-    property bool backgroundOnlyOnMaximized: plasmoid.configuration.backgroundOnlyOnMaximized
+    property bool backgroundOnlyOnMaximized: Plasmoid.configuration.backgroundOnlyOnMaximized
     readonly property bool behaveAsPlasmaPanel: viewType === LatteCore.Types.PanelView
     readonly property bool behaveAsDockWithMask: !behaveAsPlasmaPanel
 
@@ -80,9 +79,9 @@ Item {
             return LatteCore.Types.DockView;
         }
 
-        var staticLayout = (plasmoid.configuration.minLength === plasmoid.configuration.maxLength);
+        var staticLayout = (Plasmoid.configuration.minLength === Plasmoid.configuration.maxLength);
 
-        if ((plasmoid.configuration.alignment === LatteCore.Types.Justify || staticLayout)
+        if ((Plasmoid.configuration.alignment === LatteCore.Types.Justify || staticLayout)
                 && background.isGreaterThanItemThickness
                 && (parabolic.factor.maxZoom === 1.0)) {
             return LatteCore.Types.PanelView;
@@ -91,7 +90,7 @@ Item {
         return LatteCore.Types.DockView;
     }
 
-    property bool blurEnabled: plasmoid.configuration.blurEnabled && (!forceTransparentPanel || forcePanelForBusyBackground)
+    property bool blurEnabled: Plasmoid.configuration.blurEnabled && (!forceTransparentPanel || forcePanelForBusyBackground)
 
     readonly property bool inDraggingOverAppletOrOutOfContainment: latteView && latteView.containsDrag && !backDropArea.containsDrag
 
@@ -107,16 +106,16 @@ Item {
     property bool containsOnlyPlasmaTasks: latteView ? latteView.extendedInterface.hasPlasmaTasks && !latteView.extendedInterface.hasLatteTasks : false
     property bool dockContainsMouse: latteView && latteView.visibility ? latteView.visibility.containsMouse : false
 
-    property bool disablePanelShadowMaximized: plasmoid.configuration.disablePanelShadowForMaximized && LatteCore.WindowSystem.compositingActive
+    property bool disablePanelShadowMaximized: Plasmoid.configuration.disablePanelShadowForMaximized && LatteCore.WindowSystem.compositingActive
     property bool drawShadowsExternal: panelShadowsActive && behaveAsPlasmaPanel
 
-    property bool editMode: plasmoid.userConfiguring
+    property bool editMode: Plasmoid.userConfiguring
     property bool windowIsTouching: latteView && latteView.windowsTracker
                                     && (latteView.windowsTracker.currentScreen.activeWindowTouching
                                         || latteView.windowsTracker.currentScreen.activeWindowTouchingEdge
                                         || hasExpandedApplet)
 
-    property bool floatingInternalGapIsForced: plasmoid.configuration.floatingInternalGapIsForced
+    property bool floatingInternalGapIsForced: Plasmoid.configuration.floatingInternalGapIsForced
 
     property bool hasFloatingGapInputEventsDisabled: root.screenEdgeMarginEnabled
                                                      && !latteView.byPassWM
@@ -128,7 +127,7 @@ Item {
                                     && LatteCore.WindowSystem.compositingActive
                                     && !inConfigureAppletsMode
                                     && userShowPanelBackground
-                                    && ( (plasmoid.configuration.solidBackgroundForMaximized
+                                    && ( (Plasmoid.configuration.solidBackgroundForMaximized
                                           && !(hasExpandedApplet && !plasmaBackgroundForPopups)
                                           && (latteView.windowsTracker.currentScreen.existsWindowTouching
                                               || latteView.windowsTracker.currentScreen.existsWindowTouchingEdge))
@@ -151,24 +150,24 @@ Item {
 
     property bool normalBusyForTouchingBusyVerticalView: (latteView && latteView.windowsTracker /*is touching a vertical view that is in busy state and the user prefers isBusy transparency*/
                                                           && latteView.windowsTracker.currentScreen.isTouchingBusyVerticalView
-                                                          && plasmoid.configuration.backgroundOnlyOnMaximized)
+                                                          && Plasmoid.configuration.backgroundOnlyOnMaximized)
 
     property bool appletIsDragged: root.dragOverlay && root.dragOverlay.pressed
     property bool hideThickScreenGap: false /*set through binding*/
     property bool hideLengthScreenGaps: false /*set through binding*/
 
     property bool mirrorScreenGap: screenEdgeMarginEnabled
-                                   && plasmoid.configuration.floatingGapIsMirrored
+                                   && Plasmoid.configuration.floatingGapIsMirrored
                                    && latteView.visibility.mode === LatteCore.Types.AlwaysVisible
 
 
 
-    property int themeColors: plasmoid.configuration.themeColors
-    property int windowColors: plasmoid.configuration.windowColors
+    property int themeColors: Plasmoid.configuration.themeColors
+    property int windowColors: Plasmoid.configuration.windowColors
 
     property bool colorizerEnabled: themeColors !== LatteContainment.Types.PlasmaThemeColors || windowColors !== LatteContainment.Types.NoneWindowColors
 
-    property bool plasmaBackgroundForPopups: plasmoid.configuration.plasmaBackgroundForPopups
+    property bool plasmaBackgroundForPopups: Plasmoid.configuration.plasmaBackgroundForPopups
 
     readonly property bool hasExpandedApplet: latteView && latteView.extendedInterface.hasExpandedApplet;
     readonly property bool hasUserSpecifiedBackground: (latteView && latteView.layout && latteView.layout.background.startsWith("/")) ?
@@ -176,26 +175,26 @@ Item {
 
     readonly property bool inConfigureAppletsMode: root.editMode && universalSettings && universalSettings.inConfigureAppletsMode
 
-    property bool closeActiveWindowEnabled: plasmoid.configuration.closeActiveWindowEnabled
-    property bool dragActiveWindowEnabled: plasmoid.configuration.dragActiveWindowEnabled
-    property bool immutable: plasmoid.immutable
-    property bool inFullJustify: (plasmoid.configuration.alignment === LatteCore.Types.Justify) && (maxLengthPerCentage===100)
+    property bool closeActiveWindowEnabled: Plasmoid.configuration.closeActiveWindowEnabled
+    property bool dragActiveWindowEnabled: Plasmoid.configuration.dragActiveWindowEnabled
+    property bool immutable: Plasmoid.immutable
+    property bool inFullJustify: (Plasmoid.configuration.alignment === LatteCore.Types.Justify) && (maxLengthPerCentage===100)
     property bool inStartup: true
 
-    property bool isHorizontal: plasmoid.formFactor === PlasmaCore.Types.Horizontal
+    property bool isHorizontal: Plasmoid.formFactor === PlasmaCore.Types.Horizontal
     property bool isVertical: !isHorizontal
 
-    property bool mouseWheelActions: plasmoid.configuration.mouseWheelActions
+    property bool mouseWheelActions: Plasmoid.configuration.mouseWheelActions
     property bool onlyAddingStarup: true //is used for the initialization phase in startup where there aren't removals, this variable provides a way to grow icon size
 
     //FIXME: possibly this is going to be the default behavior, this user choice
     //has been dropped from the Dock Configuration Window
-    //property bool smallAutomaticIconJumps: plasmoid.configuration.smallAutomaticIconJumps
+    //property bool smallAutomaticIconJumps: Plasmoid.configuration.smallAutomaticIconJumps
     property bool smallAutomaticIconJumps: true
 
-    property bool userShowPanelBackground: LatteCore.WindowSystem.compositingActive ? plasmoid.configuration.useThemePanel : true
+    property bool userShowPanelBackground: LatteCore.WindowSystem.compositingActive ? Plasmoid.configuration.useThemePanel : true
     property bool useThemePanel: noApplets === 0 || !LatteCore.WindowSystem.compositingActive ?
-                                     true : (plasmoid.configuration.useThemePanel || plasmoid.configuration.solidBackgroundForMaximized)
+                                     true : (Plasmoid.configuration.useThemePanel || Plasmoid.configuration.solidBackgroundForMaximized)
 
     property bool plasma515: LatteCore.Environment.plasmaDesktopVersion >= LatteCore.Environment.makeVersion(5,15,0)
     property bool plasma518: LatteCore.Environment.plasmaDesktopVersion >= LatteCore.Environment.makeVersion(5,18,0)
@@ -203,9 +202,9 @@ Item {
     readonly property int minAppletLengthInConfigure: 16
     readonly property int maxJustifySplitterSize: 64
 
-    property bool maximizeWhenMaximized: plasmoid.configuration.maximizeWhenMaximized;
-    property real minLengthPerCentage: plasmoid.configuration.minLength
-    property real maxLengthPerCentage: hideLengthScreenGaps ? 100 : plasmoid.configuration.maxLength
+    property bool maximizeWhenMaximized: Plasmoid.configuration.maximizeWhenMaximized;
+    property real minLengthPerCentage: Plasmoid.configuration.minLength
+    property real maxLengthPerCentage: hideLengthScreenGaps ? 100 : Plasmoid.configuration.maxLength
 
     property int minLength: {
         if (myView.alignment === LatteCore.Types.Justify) {
@@ -229,14 +228,14 @@ Item {
         }
     }
 
-    property int scrollAction: plasmoid.configuration.scrollAction
+    property int scrollAction: Plasmoid.configuration.scrollAction
 
-    property bool panelOutline: plasmoid.configuration.panelOutline
+    property bool panelOutline: Plasmoid.configuration.panelOutline
     property int panelEdgeSpacing: Math.max(background.lengthMargins, 1.5*myView.itemShadow.size)
 
     property bool backgroundShadowsInRegularStateEnabled: LatteCore.WindowSystem.compositingActive
                                                           && userShowPanelBackground
-                                                          && plasmoid.configuration.panelShadows
+                                                          && Plasmoid.configuration.panelShadows
 
     property bool panelShadowsActive: {
         if (!userShowPanelBackground) {
@@ -244,10 +243,10 @@ Item {
         }
 
         if (inConfigureAppletsMode) {
-            return plasmoid.configuration.panelShadows;
+            return Plasmoid.configuration.panelShadows;
         }
 
-        var forcedNoShadows = (plasmoid.configuration.panelShadows && disablePanelShadowMaximized
+        var forcedNoShadows = (Plasmoid.configuration.panelShadows && disablePanelShadowMaximized
                                && latteView && latteView.windowsTracker && latteView.windowsTracker.currentScreen.activeWindowMaximized);
 
         if (forcedNoShadows) {
@@ -257,12 +256,12 @@ Item {
         var transparencyCheck = (blurEnabled || (!blurEnabled && background.currentOpacity>20));
 
         //! Draw shadows for isBusy state only when current background opacity is greater than 10%
-        if (plasmoid.configuration.panelShadows && root.forcePanelForBusyBackground && transparencyCheck) {
+        if (Plasmoid.configuration.panelShadows && root.forcePanelForBusyBackground && transparencyCheck) {
             return true;
         }
 
-        if (( (plasmoid.configuration.panelShadows && !root.backgroundOnlyOnMaximized)
-             || (plasmoid.configuration.panelShadows && root.backgroundOnlyOnMaximized && !root.forceTransparentPanel))
+        if (( (Plasmoid.configuration.panelShadows && !root.backgroundOnlyOnMaximized)
+             || (Plasmoid.configuration.panelShadows && root.backgroundOnlyOnMaximized && !root.forceTransparentPanel))
                 && !forcedNoShadows) {
             return true;
         }
@@ -280,9 +279,9 @@ Item {
         }
 
         if (root.isHorizontal) {
-            return width * (plasmoid.configuration.offset/100);
+            return width * (Plasmoid.configuration.offset/100);
         } else {
-            height * (plasmoid.configuration.offset/100)
+            height * (Plasmoid.configuration.offset/100)
         }
     }
 
@@ -296,7 +295,7 @@ Item {
         }
     }
 
-    property bool screenEdgeMarginEnabled: plasmoid.configuration.screenEdgeMargin >= 0
+    property bool screenEdgeMarginEnabled: Plasmoid.configuration.screenEdgeMargin >= 0
 
     property int widthMargins: root.isVertical ? metrics.totals.thicknessEdges : metrics.totals.lengthEdges
     property int heightMargins: root.isHorizontal ? metrics.totals.thicknessEdges : metrics.totals.lengthEdges
@@ -332,7 +331,7 @@ Item {
 
     readonly property QtObject selectedWindowsTracker: {
         if (latteView && latteView.windowsTracker) {
-            switch(plasmoid.configuration.activeWindowFilter) {
+            switch(Plasmoid.configuration.activeWindowFilter) {
             case LatteContainment.Types.ActiveInCurrentScreen:
                 return latteView.windowsTracker.currentScreen;
             case LatteContainment.Types.ActiveFromAllScreens:
@@ -391,11 +390,12 @@ Item {
     Binding {
         target: root
         property: "hideThickScreenGap"
-        when: !(plasmoid.configuration.floatingGapHidingWaitsMouse && dockContainsMouse)
+        when: !(Plasmoid.configuration.floatingGapHidingWaitsMouse && dockContainsMouse)
         value: screenEdgeMarginEnabled
-               && plasmoid.configuration.hideFloatingGapForMaximized
+               && Plasmoid.configuration.hideFloatingGapForMaximized
                && latteView && latteView.windowsTracker
                && latteView.windowsTracker.currentScreen.existsWindowMaximized
+        restoreMode: Binding.RestoreNone
     }
 
     //! Binding is needed in order for hideLengthScreenGaps to be activated or not only after
@@ -406,12 +406,13 @@ Item {
         when: latteView && latteView.positioner && latteView.visibility
               && ((root.behaveAsPlasmaPanel && latteView.positioner.slideOffset === 0)
                   || root.behaveAsDockWithMask)
-              && !(plasmoid.configuration.floatingGapHidingWaitsMouse && dockContainsMouse)
+              && !(Plasmoid.configuration.floatingGapHidingWaitsMouse && dockContainsMouse)
         value: (hideThickScreenGap
                 && (latteView.visibility.mode === LatteCore.Types.AlwaysVisible
                     || latteView.visibility.mode === LatteCore.Types.WindowsGoBelow)
-                && (plasmoid.configuration.alignment === LatteCore.Types.Justify)
-                && plasmoid.configuration.maxLength>85)
+                && (Plasmoid.configuration.alignment === LatteCore.Types.Justify)
+                && Plasmoid.configuration.maxLength>85)
+        restoreMode: Binding.RestoreNone
     }
 
     //////////////END OF BINDINGS
@@ -421,6 +422,14 @@ Item {
     onEditModeChanged: {
         if (!editMode) {
             layouter.updateSizeForAppletsInFill();
+
+            //! Leaving edit mode clears the rearrange (configure-applets) sub-mode. In that sub-mode the
+            //! canvas is click-through, so its on-canvas toggle can't turn it back off; resetting here
+            //! guarantees you can always get out (Escape / leave edit mode) and never re-enter stuck in
+            //! rearrange.
+            if (universalSettings && universalSettings.inConfigureAppletsMode) {
+                universalSettings.inConfigureAppletsMode = false;
+            }
         }
 
         //! This is used in case the dndspacer has been left behind
@@ -450,7 +459,7 @@ Item {
                 return;
             }
 
-            var previousalignment = plasmoid.configuration.alignment;
+            var previousalignment = Plasmoid.configuration.alignment;
 
             if (latteView.alignment===LatteCore.Types.Justify && previousalignment!==LatteCore.Types.Justify) { // main -> justify
                 layouter.appletsInParentChange = true;
@@ -466,7 +475,7 @@ Item {
             }
 
             root.updateIndexes();
-            plasmoid.configuration.alignment = latteView.alignment;
+            Plasmoid.configuration.alignment = latteView.alignment;
             fastLayoutManager.save();
         }
     }
@@ -517,15 +526,15 @@ Item {
 
     onIsVerticalChanged: {
         if (isVertical) {
-            if (plasmoid.configuration.alignment === LatteCore.Types.Left)
-                plasmoid.configuration.alignment = LatteCore.Types.Top;
-            else if (plasmoid.configuration.alignment === LatteCore.Types.Right)
-                plasmoid.configuration.alignment = LatteCore.Types.Bottom;
+            if (Plasmoid.configuration.alignment === LatteCore.Types.Left)
+                Plasmoid.configuration.alignment = LatteCore.Types.Top;
+            else if (Plasmoid.configuration.alignment === LatteCore.Types.Right)
+                Plasmoid.configuration.alignment = LatteCore.Types.Bottom;
         } else {
-            if (plasmoid.configuration.alignment === LatteCore.Types.Top)
-                plasmoid.configuration.alignment = LatteCore.Types.Left;
-            else if (plasmoid.configuration.alignment === LatteCore.Types.Bottom)
-                plasmoid.configuration.alignment = LatteCore.Types.Right;
+            if (Plasmoid.configuration.alignment === LatteCore.Types.Top)
+                Plasmoid.configuration.alignment = LatteCore.Types.Left;
+            else if (Plasmoid.configuration.alignment === LatteCore.Types.Bottom)
+                Plasmoid.configuration.alignment = LatteCore.Types.Right;
         }
     }
 
@@ -533,8 +542,8 @@ Item {
         upgrader_v010_alignment();
 
         fastLayoutManager.restore();
-        plasmoid.action("configure").visible = !plasmoid.immutable;
-        plasmoid.action("configure").enabled = !plasmoid.immutable;
+        Plasmoid.internalAction("configure").visible = !Plasmoid.immutable;
+        Plasmoid.internalAction("configure").enabled = !Plasmoid.immutable;
     }
 
     Component.onDestruction: {
@@ -558,6 +567,11 @@ Item {
     }
 
     Containment.onAppletAdded: {
+        // Plasma 6 signal: appletAdded(Plasma::Applet *applet, const QRectF &geometryHint).
+        // The drop position arrives as a QRectF; pull x/y from it.
+        var x = geometryHint.x;
+        var y = geometryHint.y;
+
         if (fastLayoutManager.isMasqueradedIndex(x, y)) {
             var index = fastLayoutManager.masquearadedIndex(x, y);
             fastLayoutManager.addAppletItem(applet, index);
@@ -569,16 +583,16 @@ Item {
     Containment.onAppletRemoved: fastLayoutManager.removeAppletItem(applet);
 
     Plasmoid.onUserConfiguringChanged: {
-        if (plasmoid.userConfiguring) {
-            for (var i = 0; i < plasmoid.applets.length; ++i) {
-                plasmoid.applets[i].expanded = false;
+        if (Plasmoid.userConfiguring) {
+            for (var i = 0; i < Plasmoid.applets.length; ++i) {
+                Plasmoid.applets[i].expanded = false;
             }
         }
     }
 
     Plasmoid.onImmutableChanged: {
-        plasmoid.action("configure").visible = !plasmoid.immutable;
-        plasmoid.action("configure").enabled = !plasmoid.immutable;
+        Plasmoid.internalAction("configure").visible = !Plasmoid.immutable;
+        Plasmoid.internalAction("configure").enabled = !Plasmoid.immutable;
     }
     //////////////END OF CONNECTIONS
 
@@ -589,7 +603,7 @@ Item {
 
         // don't show applet if it chooses to be hidden but still make it  accessible in the panelcontroller
         appletContainer.visible = Qt.binding(function() {
-            return (appletContainer.applet && appletContainer.applet.status !== PlasmaCore.Types.HiddenStatus || (!plasmoid.immutable && root.inConfigureAppletsMode)) && !appletContainer.isHidden;
+            return (appletContainer.applet && appletContainer.applet.plasmoid.status !== PlasmaCore.Types.HiddenStatus || (!Plasmoid.immutable && root.inConfigureAppletsMode)) && !appletContainer.isHidden;
         });
         return appletContainer;
     }
@@ -615,21 +629,21 @@ Item {
         for (var i = 0; i < layoutsContainer.startLayout.children.length; ++i) {
             var child = layoutsContainer.startLayout.children[i];
 
-            if (child && child.applet && child.applet.id === appletId && child.containsPos(pos))
+            if (child && child.applet && child.applet.plasmoid.id === appletId && child.containsPos(pos))
                 return true;
         }
 
         for (var i = 0; i < layoutsContainer.mainLayout.children.length; ++i) {
             var child = layoutsContainer.mainLayout.children[i];
 
-            if (child && child.applet && child.applet.id === appletId && child.containsPos(pos))
+            if (child && child.applet && child.applet.plasmoid.id === appletId && child.containsPos(pos))
                 return true;
         }
 
         for (var i = 0; i < layoutsContainer.endLayout.children.length; ++i) {
             var child = layoutsContainer.endLayout.children[i];
 
-            if (child && child.applet && child.applet.id === appletId && child.containsPos(pos))
+            if (child && child.applet && child.applet.plasmoid.id === appletId && child.containsPos(pos))
                 return true;
         }
 
@@ -710,9 +724,9 @@ Item {
 
     function upgrader_v010_alignment() {
         //! IMPORTANT, special case because it needs to be loaded on Component constructor
-        if (!plasmoid.configuration.alignmentUpgraded) {
-            plasmoid.configuration.alignment = plasmoid.configuration.panelPosition;
-            plasmoid.configuration.alignmentUpgraded = true;
+        if (!Plasmoid.configuration.alignmentUpgraded) {
+            Plasmoid.configuration.alignment = Plasmoid.configuration.panelPosition;
+            Plasmoid.configuration.alignmentUpgraded = true;
         }
     }
     //END functions
@@ -744,13 +758,9 @@ Item {
 
     ///////////////END components
 
-    PlasmaCore.ColorScope{
-        id: colorScopePalette
-    }
-
     LatteContainment.LayoutManager{
         id:fastLayoutManager
-        plasmoidObj: plasmoid
+        plasmoidObj: Plasmoid
         rootItem: root
         dndSpacerItem: dndSpacer
         mainLayout: layoutsContainer.mainLayout
@@ -786,6 +796,7 @@ Item {
 
     BindingsExternal {
         id: bindingsExternal
+        containmentItem: root
     }
 
     VisibilityManager{
@@ -796,6 +807,7 @@ Item {
     DragDropArea {
         id: backDropArea
         anchors.fill: parent
+        containmentItem: root
 
         Item{
             anchors.fill: layoutsContainer
@@ -876,7 +888,7 @@ Item {
             states:[
                 State{
                     name: "bottom"
-                    when: plasmoid.location === PlasmaCore.Types.BottomEdge
+                    when: Plasmoid.location === PlasmaCore.Types.BottomEdge
 
                     AnchorChanges{
                         target: dndSpacerAddItemContainer;
@@ -891,7 +903,7 @@ Item {
                 },
                 State{
                     name: "top"
-                    when: plasmoid.location === PlasmaCore.Types.TopEdge
+                    when: Plasmoid.location === PlasmaCore.Types.TopEdge
 
                     AnchorChanges{
                         target: dndSpacerAddItemContainer;
@@ -906,7 +918,7 @@ Item {
                 },
                 State{
                     name: "left"
-                    when: plasmoid.location === PlasmaCore.Types.LeftEdge
+                    when: Plasmoid.location === PlasmaCore.Types.LeftEdge
 
                     AnchorChanges{
                         target: dndSpacerAddItemContainer;
@@ -921,7 +933,7 @@ Item {
                 },
                 State{
                     name: "right"
-                    when: plasmoid.location === PlasmaCore.Types.RightEdge
+                    when: Plasmoid.location === PlasmaCore.Types.RightEdge
 
                     AnchorChanges{
                         target: dndSpacerAddItemContainer;
@@ -939,7 +951,7 @@ Item {
     }
 
     Behavior on maxLengthPerCentage {
-        enabled: root.behaveAsDockWithMask && plasmoid.configuration.floatingGapHidingWaitsMouse && dockContainsMouse
+        enabled: root.behaveAsDockWithMask && Plasmoid.configuration.floatingGapHidingWaitsMouse && dockContainsMouse
         NumberAnimation {
             duration: animations.duration.short
             easing.type: Easing.InQuad
@@ -1038,10 +1050,15 @@ Item {
 
     LatteApp.Interfaces {
         id: _interfaces
-        plasmoidInterface: plasmoid
+        plasmoidInterface: root
 
         Component.onCompleted: {
-            view.interfacesGraphicObj = _interfaces;
+            //! view can be null here: on Plasma 6 the C++ View wrapper is constructed after this
+            //! containment graphic object, so _latte_view_object is not injected yet. The View ctor
+            //! re-reads it and onViewChanged below does the wiring once view becomes available.
+            if (view) {
+                view.interfacesGraphicObj = _interfaces;
+            }
         }
 
         onViewChanged: {

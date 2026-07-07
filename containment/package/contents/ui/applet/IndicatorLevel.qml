@@ -6,15 +6,16 @@
 import QtQuick 2.7
 
 import org.kde.plasma.core 2.0 as PlasmaCore
+import org.kde.plasma.plasmoid 2.0
 
 import org.kde.latte.abilities.items 0.1 as AbilityItem
 
 AbilityItem.IndicatorLevel {
     id: indicatorLevel
-    anchors.bottom: (plasmoid.location === PlasmaCore.Types.BottomEdge) ? parent.bottom : undefined
-    anchors.top: (plasmoid.location === PlasmaCore.Types.TopEdge) ? parent.top : undefined
-    anchors.left: (plasmoid.location === PlasmaCore.Types.LeftEdge) ? parent.left : undefined
-    anchors.right: (plasmoid.location === PlasmaCore.Types.RightEdge) ? parent.right : undefined
+    anchors.bottom: (Plasmoid.location === PlasmaCore.Types.BottomEdge) ? parent.bottom : undefined
+    anchors.top: (Plasmoid.location === PlasmaCore.Types.TopEdge) ? parent.top : undefined
+    anchors.left: (Plasmoid.location === PlasmaCore.Types.LeftEdge) ? parent.left : undefined
+    anchors.right: (Plasmoid.location === PlasmaCore.Types.RightEdge) ? parent.right : undefined
 
     anchors.horizontalCenter: root.isHorizontal ? parent.horizontalCenter : undefined
     anchors.verticalCenter: root.isVertical ? parent.verticalCenter : undefined
@@ -63,12 +64,12 @@ AbilityItem.IndicatorLevel {
     Connections {
         target: appletItem
         enabled: indicatorLevel.level.indicator.host.isEnabled && indicatorLevel.level.indicator.host.info.needsMouseEventCoordinates
-        onMousePressed: {
+        function onMousePressed(x, y, button) {
             var fixedPos = indicatorLevel.mapFromItem(appletItem, x, y);
             indicatorLevel.level.mousePressed(Math.round(fixedPos.x), Math.round(fixedPos.y), button);
         }
 
-        onMouseReleased: {
+        function onMouseReleased(x, y, button) {
             var fixedPos = indicatorLevel.mapFromItem(appletItem, x, y);
             indicatorLevel.level.mouseReleased(Math.round(fixedPos.x), Math.round(fixedPos.y), button);
         }

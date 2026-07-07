@@ -4,9 +4,9 @@
 */
 
 import QtQuick 2.2
-import QtGraphicalEffects 1.0
 
 import org.kde.plasma.plasmoid 2.0
+import org.kde.kirigami 2.20 as Kirigami
 
 Rectangle {
     property double proportion: 0
@@ -35,17 +35,17 @@ Rectangle {
     property double partSize: height / 2
     property double pi2: Math.PI * 2
 
-    width: Math.max(minimumWidth, valueText.width + 4*units.smallSpacing)
+    width: Math.max(minimumWidth, valueText.width + 4*Kirigami.Units.smallSpacing)
 
-    color: theme.backgroundColor
+    color: Kirigami.Theme.backgroundColor
     radius: (radiusPerCentage / 100) * (height / 2)
     border.width: 0 //Math.max(1,width/64)
 
     property int borderWidth: 1
     property real borderOpacity: 1
-    property color borderColor: theme.textColor
-    property color textColor: theme.textColor
-    property color highlightedColor: theme.buttonFocusColor
+    property color borderColor: Kirigami.Theme.textColor
+    property color textColor: Kirigami.Theme.textColor
+    property color highlightedColor: Kirigami.Theme.focusColor
 
     readonly property bool singleCharacter: (showNumber && numberValue<=9 && numberValue>=0)|| (showText && textValue.length===1)
 
@@ -119,7 +119,7 @@ Rectangle {
         id: valueText
         anchors.centerIn: canvas
 
-        width: Math.min(maximumWidth - 4*units.smallSpacing, implicitWidth)
+        width: Math.min(maximumWidth - 4*Kirigami.Units.smallSpacing, implicitWidth)
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
 

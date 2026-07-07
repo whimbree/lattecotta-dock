@@ -5,12 +5,13 @@
 */
 
 import QtQuick 2.0
-import QtGraphicalEffects 1.0
+import QtQuick.Effects
 
 import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
 
 import org.kde.latte.core 0.2 as LatteCore
+import org.kde.latte.components 1.0 as LatteComponents
 
 Item{
     id: parabolicItem
@@ -105,7 +106,7 @@ Item{
         //fix bug #478, when changing form factor sometimes the tasks are not positioned
         //correctly, in such case we make a fast reinitialization for the sizes
         Connections {
-            target: plasmoid
+            target: Plasmoid
             onFormFactorChanged:{
                 parabolicItem.zoom = 1.01;
                 parabolicItem.zoomLength = 1.01;
@@ -124,18 +125,15 @@ Item{
                     && !abilityItem.isSeparator
                     && abilityItem.abilities.environment.isGraphicsSystemAccelerated
 
-            sourceComponent: DropShadow{
+            sourceComponent: LatteComponents.ShadowedItem{
                 anchors.fill: parent
                 transformOrigin: abilityItem.iconTransformOrigin
                 opacity: abilityItem.iconOpacity
                 rotation: abilityItem.iconRotation
                 scale: abilityItem.iconScale
-                color: abilityItem.abilities.myView.itemShadow.shadowColor
-                fast: true
-                samples: 2 * radius
+                shadowColor: abilityItem.abilities.myView.itemShadow.shadowColor
                 source: _contentItemContainer
-                radius: abilityItem.abilities.myView.itemShadow.size
-                verticalOffset: 2
+                shadowSizePx: abilityItem.abilities.myView.itemShadow.size
             }
         }
 
@@ -212,10 +210,11 @@ Item{
             anchors.fill: _contentItemContainer
             active: abilityItem.isMonochromaticForcedContentItem && abilityItem.monochromizedItem
 
-            sourceComponent: ColorOverlay {
+            sourceComponent: MultiEffect {
                 anchors.fill: parent
-                color: latteBridge ? latteBridge.palette.textColor : "transparent"
                 source: abilityItem.monochromizedItem
+                colorizationColor: latteBridge ? latteBridge.colorPalette.textColor : "transparent"
+                colorization: latteBridge ? latteBridge.colorPalette.textColor.a : 0
             }
         }
         //! Latte Side Painting-style if the user chose it

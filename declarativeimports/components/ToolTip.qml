@@ -4,9 +4,10 @@
 */
 
 import QtQuick 2.6
-import QtQuick.Controls 1.4
+import QtQuick.Controls 2.15 as QQC2
 import QtQuick.Templates 2.2 as T
-import org.kde.plasma.core 2.0 as PlasmaCore
+import org.kde.ksvg 1.0 as KSvg
+import org.kde.kirigami 2.20 as Kirigami
 
 T.ToolTip {
     id: control
@@ -17,7 +18,7 @@ T.ToolTip {
     implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
     implicitHeight: contentItem.implicitHeight + topPadding + bottomPadding
 
-    margins: units.gridUnit
+    margins: Kirigami.Units.gridUnit
     leftPadding: background.margins.left
     topPadding: background.margins.top
     rightPadding: background.margins.right
@@ -25,14 +26,14 @@ T.ToolTip {
 
     closePolicy: T.Popup.CloseOnEscape | T.Popup.CloseOnPressOutsideParent | T.Popup.CloseOnReleaseOutsideParent
 
-    contentItem: Label {
+    contentItem: QQC2.Label {
         text: control.text
         font: control.font
-        color: PlasmaCore.ColorScope.textColor
+        color: Kirigami.Theme.textColor
     }
 
-    background: PlasmaCore.FrameSvgItem {
+    background: KSvg.FrameSvgItem {
         imagePath: "widgets/background"
-        enabledBorders: PlasmaCore.FrameSvg.AllBorders
+        enabledBorders: KSvg.FrameSvg.AllBorders
     }
 }

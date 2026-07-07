@@ -23,7 +23,7 @@ Item{
     //! That approach can create a conflict with Latte Tasks that after showing the view they reshow windows
     //! that were already shown before hiding.
     //! visible: !(latteView && latteView.visibility.isHidden)
-    opacity: !(latteView && latteView.visibility.isHidden) ? 1 : 0
+    opacity: !(latteView && latteView.visibility && latteView.visibility.isHidden) ? 1 : 0
 
     readonly property bool isHidden: root.inStartup || (latteView && latteView.visibility && latteView.visibility.isHidden)
 
@@ -40,6 +40,7 @@ Item{
         target: layoutsContainer
         property: "x"
         when: !visibilityManager.inRelocationAnimation
+        restoreMode: Binding.RestoreNone
         value: {
             if (root.behaveAsPlasmaPanel) {
                 return 0;
@@ -56,7 +57,7 @@ Item{
                     if (LatteCore.WindowSystem.compositingActive) {
                         return visibilityManager.slidingOutToPos;
                     } else {
-                        if ((plasmoid.location===PlasmaCore.Types.LeftEdge)||(plasmoid.location===PlasmaCore.Types.TopEdge)) {
+                        if ((Plasmoid.location===PlasmaCore.Types.LeftEdge)||(Plasmoid.location===PlasmaCore.Types.TopEdge)) {
                             return visibilityManager.slidingOutToPos + 1;
                         } else {
                             return visibilityManager.slidingOutToPos - 1;
@@ -73,6 +74,7 @@ Item{
         target: layoutsContainer
         property: "y"
         when: !visibilityManager.inRelocationAnimation
+        restoreMode: Binding.RestoreNone
         value: {
             if (root.behaveAsPlasmaPanel) {
                 return 0;
@@ -89,7 +91,7 @@ Item{
                     if (LatteCore.WindowSystem.compositingActive) {
                         return visibilityManager.slidingOutToPos;
                     } else {
-                        if ((plasmoid.location===PlasmaCore.Types.LeftEdge)||(plasmoid.location===PlasmaCore.Types.TopEdge)) {
+                        if ((Plasmoid.location===PlasmaCore.Types.LeftEdge)||(Plasmoid.location===PlasmaCore.Types.TopEdge)) {
                             return visibilityManager.slidingOutToPos + 1;
                         } else {
                             return visibilityManager.slidingOutToPos - 1;
@@ -107,7 +109,7 @@ Item{
     z:10
 
     property bool animationSent: false
-    property bool shouldCheckHalfs: (plasmoid.configuration.alignment === LatteCore.Types.Justify) && (_mainLayout.children>1)
+    property bool shouldCheckHalfs: (Plasmoid.configuration.alignment === LatteCore.Types.Justify) && (_mainLayout.children>1)
 
     property int contentsWidth: root.isHorizontal ? _startLayout.width + _mainLayout.width + _endLayout.width :
                                                     Math.max(_startLayout.width, _mainLayout.width ,_endLayout.width)
@@ -269,7 +271,7 @@ Item{
         beginIndex: 0
         offset: lengthTailPadding
         alignment: {
-            switch(plasmoid.location) {
+            switch(Plasmoid.location) {
             case PlasmaCore.Types.BottomEdge: return LatteCore.Types.BottomEdgeLeftAlign;
             case PlasmaCore.Types.TopEdge: return LatteCore.Types.TopEdgeLeftAlign;
             case PlasmaCore.Types.LeftEdge: return LatteCore.Types.LeftEdgeTopAlign;
@@ -311,19 +313,19 @@ Item{
         property int inJustifyCenterOffset: 0
 
         alignment: {
-            if (plasmoid.location === PlasmaCore.Types.LeftEdge) {
+            if (Plasmoid.location === PlasmaCore.Types.LeftEdge) {
                 if (centered) return LatteCore.Types.LeftEdgeCenterAlign;
                 if (root.myView.alignment === LatteCore.Types.Top) return LatteCore.Types.LeftEdgeTopAlign;
                 if (root.myView.alignment === LatteCore.Types.Bottom) return LatteCore.Types.LeftEdgeBottomAlign;
             }
 
-            if (plasmoid.location === PlasmaCore.Types.RightEdge) {
+            if (Plasmoid.location === PlasmaCore.Types.RightEdge) {
                 if (centered) return LatteCore.Types.RightEdgeCenterAlign;
                 if (root.myView.alignment === LatteCore.Types.Top) return LatteCore.Types.RightEdgeTopAlign;
                 if (root.myView.alignment === LatteCore.Types.Bottom) return LatteCore.Types.RightEdgeBottomAlign;
             }
 
-            if (plasmoid.location === PlasmaCore.Types.BottomEdge) {
+            if (Plasmoid.location === PlasmaCore.Types.BottomEdge) {
                 if (centered) return LatteCore.Types.BottomEdgeCenterAlign;
 
                 if ((root.myView.alignment === LatteCore.Types.Left && !reversed)
@@ -337,7 +339,7 @@ Item{
                 }
             }
 
-            if (plasmoid.location === PlasmaCore.Types.TopEdge) {
+            if (Plasmoid.location === PlasmaCore.Types.TopEdge) {
                 if (centered) return LatteCore.Types.TopEdgeCenterAlign;
 
                 if ((root.myView.alignment === LatteCore.Types.Left && !reversed)
@@ -376,6 +378,7 @@ Item{
             target: _mainLayout
             property:"inJustifyCenterOffset"
             when: !layouter.appletsInParentChange && layouter.inNormalFillCalculationsState
+            restoreMode: Binding.RestoreNone
             value: {
                 if (root.myView.alignment !== LatteCore.Types.Justify) {
                     return 0;
@@ -405,7 +408,7 @@ Item{
         beginIndex: 200
         offset: lengthHeadPadding
         alignment: {
-            switch(plasmoid.location) {
+            switch(Plasmoid.location) {
             case PlasmaCore.Types.BottomEdge: return LatteCore.Types.BottomEdgeRightAlign;
             case PlasmaCore.Types.TopEdge: return LatteCore.Types.TopEdgeRightAlign;
             case PlasmaCore.Types.LeftEdge: return LatteCore.Types.LeftEdgeBottomAlign;

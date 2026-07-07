@@ -3,14 +3,15 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-import QtQuick.Controls 1.4
 import QtQuick 2.2
 import QtQuick.Layouts 1.3
+import QtQuick.Controls 2.15 as QQC2
 
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.components 3.0 as PlasmaComponents3
 
 import org.kde.latte.components 1.0 as LatteComponents
+import org.kde.kirigami 2.20 as Kirigami
 
 Rectangle {
     id: root
@@ -19,7 +20,6 @@ Rectangle {
     implicitWidth: buttonMetrics.implicitWidth
     implicitHeight: buttonMetrics.implicitHeight
 
-    property ExclusiveGroup exclusiveGroup: null
     property bool checked: false
     property bool checkable: false
 
@@ -52,16 +52,6 @@ Rectangle {
 
     signal iconClicked(int index);
 
-    onExclusiveGroupChanged: {
-        if (exclusiveGroup) {
-            exclusiveGroup.bindCheckable(root);
-        }
-    }
-
-    ExclusiveGroup {
-        id: hiddenExclusiveGroup
-    }
-
     PlasmaComponents.Button {
         id: mainButton
         anchors.left: Qt.application.layoutDirection === Qt.RightToLeft ? undefined : parent.left
@@ -71,17 +61,15 @@ Rectangle {
         checked: root.checked || (buttonIsTriggeringMenu && mainComboBox.popup.visible)
         opacity: buttonIsTransparent && !isButtonIndicatingMenuPopup ? 0 : 1
 
-        /*workaround in order to replicate the proper Buttons Exclusive Group Behavior*/
-        checkable: root.checkable && !parent.exclusiveGroup
-        /*workaround in order to replicate the proper Buttons Exclusive Group Behavior*/
-        exclusiveGroup: parent.exclusiveGroup ? hiddenExclusiveGroup : null
+        checkable: root.checkable
 
         width: parent.width
         height: mainComboBox.height
 
         text: root.checkable ?  " " : buttonText
-        iconSource: buttonIconSource
-        tooltip: buttonToolTip
+        icon.name: buttonIconSource
+        QQC2.ToolTip.text: buttonToolTip
+        QQC2.ToolTip.visible: hovered && buttonToolTip !== ""
 
         onClicked: {
             if (buttonIsTriggeringMenu) {
@@ -109,7 +97,7 @@ Rectangle {
         anchors.right: mainButton.right
         anchors.top: parent.top
 
-        width:  units.iconSizes.medium - 2 * units.smallSpacing
+        width:  Kirigami.Units.iconSizes.medium - 2 * Kirigami.Units.smallSpacing
         height: parent.height
 
         enabled: comboBoxEnabled
@@ -136,15 +124,19 @@ Rectangle {
 
         minimumPopUpWidth: Math.max(comboBoxMinimumPopUpWidth, root.width)
 
-        onIconClicked: root.iconClicked(index);
+        onIconClicked: (index) => root.iconClicked(index);
     }
 
-    Label{
+    PlasmaComponents.Label{
         width: labelMetrics.exceeds ? parent.width-mainComboBox.width :  parent.width
         height: parent.height
         text: buttonText
         font: mainButton.font
-        color: buttonIsTransparent ? theme.textColor : theme.buttonTextColor
+
+        Kirigami.Theme.colorSet: buttonIsTransparent ? Kirigami.Theme.Window : Kirigami.Theme.Button
+        Kirigami.Theme.inherit: false
+
+        color: Kirigami.Theme.textColor
         visible: root.checkable || (mainButton.opacity === 0)
 
         elide: Text.ElideRight
@@ -152,7 +144,7 @@ Rectangle {
         verticalAlignment: Text.AlignVCenter
     }
 
-    Label{
+    PlasmaComponents.Label{
         id: labelMetrics
         text: root.buttonText
         opacity: 0

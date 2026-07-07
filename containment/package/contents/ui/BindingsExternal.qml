@@ -7,11 +7,14 @@ import QtQuick 2.1
 
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.plasmoid 2.0
+import org.kde.kirigami 2.20 as Kirigami
 
 import org.kde.latte.core 0.2 as LatteCore
 import org.kde.latte.private.containment 0.1 as LatteContainment
 
 Item {
+    property Item containmentItem
+
     property bool updateIsEnabled: autosize.inCalculatedIconSize
                                    && !visibilityManager.inSlidingIn
                                    && !visibilityManager.inSlidingOut
@@ -22,6 +25,8 @@ Item {
         target: latteView
         property:"maxThickness"
         //! prevents updating window geometry during closing window in wayland and such fixes a crash
+        //! Qt6: RestoreNone keeps the last thickness while the guard is false instead of resetting it.
+        restoreMode: Binding.RestoreNone
         when: latteView && !visibilityManager.inRelocationHiding && !visibilityManager.inClientSideScreenEdgeSliding //&& !inStartup
         value: root.behaveAsPlasmaPanel ? visibilityManager.thicknessAsPanel : metrics.maxThicknessForView
     }
@@ -29,6 +34,7 @@ Item {
     Binding{
         target: latteView
         property:"normalThickness"
+        restoreMode: Binding.RestoreNone
         when: latteView && updateIsEnabled
         value: root.behaveAsPlasmaPanel ? visibilityManager.thicknessAsPanel : metrics.mask.screenEdge + metrics.mask.thickness.maxNormalForItemsWithoutScreenEdge
     }
@@ -36,6 +42,7 @@ Item {
     Binding{
         target: latteView
         property:"maxNormalThickness"
+        restoreMode: Binding.RestoreNone
         when: latteView && updateIsEnabled
         value: metrics.mask.thickness.maxNormal
     }
@@ -43,6 +50,7 @@ Item {
     Binding {
         target: latteView
         property: "headThicknessGap"
+        restoreMode: Binding.RestoreNone
         when: latteView && updateIsEnabled && !visibilityManager.inClientSideScreenEdgeSliding
         value: {
             if (root.behaveAsPlasmaPanel || root.viewType === LatteCore.Types.PanelView || (latteView && latteView.byPassWM)) {
@@ -70,8 +78,8 @@ Item {
     Binding{
         target: latteView
         property: "fontPixelSize"
-        when: theme
-        value: theme.defaultFont.pixelSize
+        when: Kirigami.Theme
+        value: Kirigami.Theme.defaultFont.pixelSize
     }
 
     Binding{
@@ -85,14 +93,14 @@ Item {
         target: latteView
         property: "offset"
         when: latteView
-        value: plasmoid.configuration.offset/100
+        value: Plasmoid.configuration.offset/100
     }
 
     Binding{
         target: latteView
         property: "screenEdgeMargin"
         when: latteView
-        value: Math.max(0, plasmoid.configuration.screenEdgeMargin)
+        value: Math.max(0, Plasmoid.configuration.screenEdgeMargin)
     }
 
     Binding{
@@ -119,8 +127,8 @@ Item {
             }
 
             var isTouchingTopScreenEdge = (latteView.y === latteView.screenGeometry.y);
-            var isStickedOnTopBorder = (plasmoid.configuration.alignment === LatteCore.Types.Justify && plasmoid.configuration.maxLength===100)
-                    || (plasmoid.configuration.alignment === LatteCore.Types.Top && plasmoid.configuration.offset===0);
+            var isStickedOnTopBorder = (Plasmoid.configuration.alignment === LatteCore.Types.Justify && Plasmoid.configuration.maxLength===100)
+                    || (Plasmoid.configuration.alignment === LatteCore.Types.Top && Plasmoid.configuration.offset===0);
 
             return root.isVertical && !latteView.visibility.isHidden && !isTouchingTopScreenEdge && isStickedOnTopBorder && background.isShown;
         }
@@ -139,8 +147,8 @@ Item {
             var screenBottom = latteView.screenGeometry.y + latteView.screenGeometry.height;
             var isTouchingBottomScreenEdge = (latteBottom === screenBottom);
 
-            var isStickedOnBottomBorder = (plasmoid.configuration.alignment === LatteCore.Types.Justify && plasmoid.configuration.maxLength===100)
-                    || (plasmoid.configuration.alignment === LatteCore.Types.Bottom && plasmoid.configuration.offset===0);
+            var isStickedOnBottomBorder = (Plasmoid.configuration.alignment === LatteCore.Types.Justify && Plasmoid.configuration.maxLength===100)
+                    || (Plasmoid.configuration.alignment === LatteCore.Types.Bottom && Plasmoid.configuration.offset===0);
 
             return root.isVertical && !latteView.visibility.isHidden && !isTouchingBottomScreenEdge && isStickedOnBottomBorder && background.isShown;
         }
@@ -165,10 +173,10 @@ Item {
         target: latteView && latteView.effects ? latteView.effects : null
         property: "backgroundAllCorners"
         when: latteView && latteView.effects
-        value: plasmoid.configuration.backgroundAllCorners
+        value: Plasmoid.configuration.backgroundAllCorners
                && (!root.screenEdgeMarginEnabled /*no-floating*/
                    || (root.screenEdgeMarginEnabled /*floating with justify alignment and 100% maxlength*/
-                       && plasmoid.configuration.maxLength===100
+                       && Plasmoid.configuration.maxLength===100
                        && myView.alignment===LatteCore.Types.Justify
                        && !root.hideLengthScreenGaps))
     }
@@ -191,7 +199,7 @@ Item {
         target: latteView && latteView.effects ? latteView.effects : null
         property: "backgroundOpacity"
         when: latteView && latteView.effects
-        value: plasmoid.configuration.panelTransparency===-1 /*Default option*/ ? -1 : background.currentOpacity
+        value: Plasmoid.configuration.panelTransparency===-1 /*Default option*/ ? -1 : background.currentOpacity
     }
 
     Binding{
@@ -234,11 +242,12 @@ Item {
     Binding{
         target: latteView && latteView.effects ? latteView.effects : null
         property:"appletsLayoutGeometry"
+        restoreMode: Binding.RestoreNone
         when: latteView && latteView.effects && visibilityManager.inNormalState
         value: {
             if (root.behaveAsPlasmaPanel
                     || !LatteCore.WindowSystem.compositingActive
-                    || (!parabolic.isEnabled && root.userShowPanelBackground && plasmoid.configuration.panelSize===100)) {
+                    || (!parabolic.isEnabled && root.userShowPanelBackground && Plasmoid.configuration.panelSize===100)) {
                 var paddingtail = background.tailRoundness + background.tailRoundnessMargin;
                 var paddinghead = background.headRoundness + background.headRoundnessMargin;
 
@@ -264,14 +273,14 @@ Item {
         target: latteView && latteView.positioner ? latteView.positioner : null
         property: "isStickedOnTopEdge"
         when: latteView && latteView.positioner
-        value: plasmoid.configuration.isStickedOnTopEdge
+        value: Plasmoid.configuration.isStickedOnTopEdge
     }
 
     Binding{
         target: latteView && latteView.positioner ? latteView.positioner : null
         property: "isStickedOnBottomEdge"
         when: latteView && latteView.positioner
-        value: plasmoid.configuration.isStickedOnBottomEdge
+        value: Plasmoid.configuration.isStickedOnBottomEdge
     }
 
     //! View::VisibilityManager
@@ -287,7 +296,7 @@ Item {
         property: "strutsThickness"
         when: latteView && latteView.visibility
         value: {
-            var isCapableToHideScreenGap = root.screenEdgeMarginEnabled && plasmoid.configuration.hideFloatingGapForMaximized
+            var isCapableToHideScreenGap = root.screenEdgeMarginEnabled && Plasmoid.configuration.hideFloatingGapForMaximized
             var mirrorGapFactor = root.mirrorScreenGap ? 2 : 1;
 
             //! Hide Thickness Screen Gap scenario provides two different struts thicknesses.
@@ -337,11 +346,11 @@ Item {
                || indexer.clientsTrackingWindowsCount  > 0                   /*Applets Need Windows Tracking */
                || root.dragActiveWindowEnabled                               /*Dragging Active Window(Empty Areas)*/
                || ((root.backgroundOnlyOnMaximized                           /*Dynamic Background */
-                    || plasmoid.configuration.solidBackgroundForMaximized
+                    || Plasmoid.configuration.solidBackgroundForMaximized
                     || root.disablePanelShadowMaximized
                     || root.windowColors !== LatteContainment.Types.NoneWindowColors))
                || (root.screenEdgeMarginsEnabled                             /*Dynamic Screen Edge Margin*/
-                   && plasmoid.configuration.hideFloatingGapForMaximized)
+                   && Plasmoid.configuration.hideFloatingGapForMaximized)
     }
 
     //! View::ExtendedInterface bindings
@@ -349,7 +358,7 @@ Item {
         target: latteView && latteView.extendedInterface ? latteView.extendedInterface : null
         property: "plasmoid"
         when: latteView && latteView.extendedInterface
-        value: plasmoid
+        value: containmentItem
     }
 
     Binding{

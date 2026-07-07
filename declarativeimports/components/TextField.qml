@@ -2,14 +2,20 @@
     SPDX-FileCopyrightText: 2019 Michail Vourlakos <mvourlakos@gmail.com>
     SPDX-License-Identifier: GPL-2.0-or-later
 */
-import QtQuick 2.0
+import QtQuick
 import QtQuick.Layouts 1.3
-import QtQuick.Controls 1.4
 
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.plasma.components 3.0 as PlasmaComponents
+import org.kde.kirigami 2.20 as Kirigami
 
 PlasmaComponents.TextField {
     id: textField
+
+    TextMetrics {
+        id: defaultFontMetrics
+        text: "M"
+        font: Kirigami.Theme.defaultFont
+    }
 
     validator: IntValidator {
         bottom: minValue
@@ -26,12 +32,13 @@ PlasmaComponents.TextField {
     placeholderText: i18n("none")
     horizontalAlignment: Text.AlignLeft
 
-    readonly property int implicitWidth: internalContent.width + theme.mSize(theme.defaultFont).width * 3.5
+    implicitWidth: internalContent.width + defaultFontMetrics.advanceWidth * 3.5
 
     readonly property int value: text === "" ? minValue : parseInt(text)
     property int step: 100
     property int minValue: 0
     property int maxValue: 3000
+    property color textColor: Kirigami.Theme.textColor
 
     function increment() {
         var val = text === "" ? minValue : parseInt(text)
@@ -67,8 +74,8 @@ PlasmaComponents.TextField {
             Layout.fillHeight: true
             Layout.preferredWidth: height
             Layout.maximumWidth: height
-            Layout.leftMargin: Qt.application.layoutDirection === Qt.RightToLeft ? 0 : 0.7 * theme.mSize(theme.defaultFont).width
-            Layout.rightMargin: Qt.application.layoutDirection === Qt.RightToLeft ? 0.7 * theme.mSize(theme.defaultFont).width : 0
+            Layout.leftMargin: Qt.application.layoutDirection === Qt.RightToLeft ? 0 : 0.7 * defaultFontMetrics.advanceWidth
+            Layout.rightMargin: Qt.application.layoutDirection === Qt.RightToLeft ? 0.7 * defaultFontMetrics.advanceWidth : 0
 
             text: "-"
             onClicked: decrement()
@@ -109,7 +116,7 @@ PlasmaComponents.TextField {
         anchors.fill: parent
         acceptedButtons: Qt.MiddleButton
 
-        onWheel: {
+        onWheel: (wheel) => {
             var angle = wheel.angleDelta.y / 8
 
             if (angle > 0) {

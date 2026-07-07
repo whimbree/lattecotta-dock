@@ -4,9 +4,9 @@
 */
 
 import QtQuick 2.7
-import QtGraphicalEffects 1.0
 
 import org.kde.plasma.plasmoid 2.0
+import org.kde.kirigami 2.20 as Kirigami
 import org.kde.latte.components 1.0 as LatteComponents
 
 Loader{
@@ -18,10 +18,10 @@ Loader{
     property int fixedIndex:-1
 
     readonly property int maxFixedIndex: abilityItem.abilities.shortcuts.badges.length
-    readonly property real textColorBrightness: colorBrightness(theme.textColor)
+    readonly property real textColorBrightness: colorBrightness(Kirigami.Theme.textColor)
     readonly property string badgeString: (shorcutBadge.fixedIndex>=1 && shorcutBadge.fixedIndex<=maxFixedIndex) ?
                                               abilityItem.abilities.shortcuts.badges[shorcutBadge.fixedIndex-1] : ""
-    readonly property color lightTextColor: textColorBrightness > 127.5 ? theme.textColor : theme.backgroundColor
+    readonly property color lightTextColor: textColorBrightness > 127.5 ? Kirigami.Theme.textColor : Kirigami.Theme.backgroundColor
 
     onActiveChanged: updateShorcutIndex();
 
@@ -54,13 +54,11 @@ Loader{
             active: abilityItem.abilities.myView.itemShadow.isEnabled
                     && abilityItem.abilities.environment.isGraphicsSystemAccelerated
 
-            sourceComponent: DropShadow{
-                color: abilityItem.abilities.myView.itemShadow.shadowColor
-                fast: true
-                samples: 2 * radius
+            sourceComponent: LatteComponents.ShadowedItem{
+                anchors.fill: parent
+                shadowColor: abilityItem.abilities.myView.itemShadow.shadowColor
                 source: taskNumber
-                radius: abilityItem.abilities.myView.itemShadow.size/2
-                verticalOffset: 2
+                shadowSizePx: abilityItem.abilities.myView.itemShadow.size/2
             }
         }
 

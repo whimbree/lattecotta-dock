@@ -7,12 +7,12 @@
 import QtQuick 2.1
 import QtQuick.Layouts 1.1
 import QtQuick.Window 2.2
-import QtGraphicalEffects 1.0
 
 import org.kde.plasma.plasmoid 2.0
 
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.ksvg 1.0 as KSvg
+import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.kquickcontrolsaddons 2.0
 
 import org.kde.latte.core 0.2 as LatteCore
@@ -34,11 +34,11 @@ BackgroundProperties{
 
     isShown: (solidBackground.opacity > 0) || (overlayedBackground.backgroundOpacity > 0)
 
-    hasAllBorders: solidBackground.enabledBorders === PlasmaCore.FrameSvg.AllBorders
-    hasLeftBorder: hasAllBorders || ((solidBackground.enabledBorders & PlasmaCore.FrameSvg.LeftBorder) > 0)
-    hasRightBorder: hasAllBorders || ((solidBackground.enabledBorders & PlasmaCore.FrameSvg.RightBorder) > 0)
-    hasTopBorder: hasAllBorders || ((solidBackground.enabledBorders & PlasmaCore.FrameSvg.TopBorder) > 0)
-    hasBottomBorder: hasAllBorders || ((solidBackground.enabledBorders & PlasmaCore.FrameSvg.BottomBorder) > 0)
+    hasAllBorders: solidBackground.enabledBorders === KSvg.FrameSvg.AllBorders
+    hasLeftBorder: hasAllBorders || ((solidBackground.enabledBorders & KSvg.FrameSvg.LeftBorder) > 0)
+    hasRightBorder: hasAllBorders || ((solidBackground.enabledBorders & KSvg.FrameSvg.RightBorder) > 0)
+    hasTopBorder: hasAllBorders || ((solidBackground.enabledBorders & KSvg.FrameSvg.TopBorder) > 0)
+    hasBottomBorder: hasAllBorders || ((solidBackground.enabledBorders & KSvg.FrameSvg.BottomBorder) > 0)
 
     shadows.left: hasLeftBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? customShadow : shadowsSvgItem.margins.left) : 0
     shadows.right: hasRightBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? customShadow : shadowsSvgItem.margins.right) : 0
@@ -177,7 +177,7 @@ BackgroundProperties{
             maximumItem = maximumItem - totals.minThickness;
         }
 
-        var percentage = LatteCore.WindowSystem.compositingActive ? plasmoid.configuration.panelSize/100 : 1;
+        var percentage = LatteCore.WindowSystem.compositingActive ? Plasmoid.configuration.panelSize/100 : 1;
         return Math.max(totals.minThickness, totals.minThickness + (percentage*maximumItem));
     }
 
@@ -189,7 +189,7 @@ BackgroundProperties{
             maximumItem = maximumItem - totals.minThickness;
         }
 
-        var percentage = LatteCore.WindowSystem.compositingActive ? plasmoid.configuration.panelSize/100 : 1;
+        var percentage = LatteCore.WindowSystem.compositingActive ? Plasmoid.configuration.panelSize/100 : 1;
         return Math.max(totals.minThickness, totals.minThickness + (percentage*maximumItem));
     }
 
@@ -246,7 +246,7 @@ BackgroundProperties{
     property int animationTime: 6*animations.speedFactor.current*animations.duration.small
 
     //! Opacity related
-    readonly property bool isDefaultOpacityEnabled: plasmoid.configuration.panelTransparency===-1
+    readonly property bool isDefaultOpacityEnabled: Plasmoid.configuration.panelTransparency===-1
 
     //! Metrics related
     readonly property bool isGreaterThanItemThickness: root.useThemePanel && (totals.visualThickness >= (metrics.iconSize + metrics.margin.tailThickness))
@@ -261,25 +261,25 @@ BackgroundProperties{
     //!shouldn't change the fact that customShadowedRectangle is still used
     readonly property bool customShadowIsEnabled: (customDefShadowIsEnabled || customUserShadowIsEnabled) && panelShadowsActive
     readonly property bool customDefShadowIsEnabled: customShadowIsSupported && !customUserShadowIsEnabled && customRadiusIsEnabled
-    readonly property bool customUserShadowIsEnabled: customShadowIsSupported && plasmoid.configuration.backgroundShadowSize >= 0
+    readonly property bool customUserShadowIsEnabled: customShadowIsSupported && Plasmoid.configuration.backgroundShadowSize >= 0
 
-    readonly property bool customRadiusIsEnabled: kirigamiLibraryIsFound && plasmoid.configuration.backgroundRadius >= 0
+    readonly property bool customRadiusIsEnabled: kirigamiLibraryIsFound && Plasmoid.configuration.backgroundRadius >= 0
 
     readonly property int customRadius: {
         if (customDefShadowIsEnabled && !customRadiusIsEnabled && themeExtendedBackground) {
             return themeExtendedBackground.roundness;
         }
 
-        return plasmoid.formFactor === PlasmaCore.Types.Horizontal ?
-                    (plasmoid.configuration.backgroundRadius/100) * solidBackground.height :
-                    (plasmoid.configuration.backgroundRadius/100) * solidBackground.width
+        return Plasmoid.formFactor === PlasmaCore.Types.Horizontal ?
+                    (Plasmoid.configuration.backgroundRadius/100) * solidBackground.height :
+                    (Plasmoid.configuration.backgroundRadius/100) * solidBackground.width
     }
     readonly property int customShadow: {
         if (customDefShadowIsEnabled && themeExtendedBackground) {
             return themeExtendedBackground.shadowSize;
         }
 
-        return plasmoid.configuration.backgroundShadowSize;
+        return Plasmoid.configuration.backgroundShadowSize;
     }
 
     readonly property color customShadowColor: themeExtendedBackground ? themeExtendedBackground.shadowColor : "black"
@@ -305,7 +305,10 @@ BackgroundProperties{
         property: "themeExtendedBackground"
         when: themeExtended
         value: {
-            switch(plasmoid.location) {
+            if (!themeExtended) {
+                return null;
+            }
+            switch(Plasmoid.location) {
             case PlasmaCore.Types.BottomEdge: return themeExtended.backgroundBottomEdge;
             case PlasmaCore.Types.LeftEdge: return themeExtended.backgroundLeftEdge;
             case PlasmaCore.Types.TopEdge: return themeExtended.backgroundTopEdge;
@@ -322,11 +325,11 @@ BackgroundProperties{
     //! Layer 1: Shadows that are drawn around the background but always inside the View window (these are internal drawn shadows).
     //!          When the container has chosen external shadows (these are shadows that are drawn out of the View window from the compositor)
     //!          in such case the internal drawn shadows are NOT drawn at all.
-    PlasmaCore.FrameSvgItem{
+    KSvg.FrameSvgItem{
         id: shadowsSvgItem
         width: root.isVertical ?  background.thickness + totals.shadowsThickness : totals.visualLength
         height: root.isVertical ? totals.visualLength : background.thickness + totals.shadowsThickness
-        enabledBorders: latteView && latteView.effects ? latteView.effects.enabledBorders : PlasmaCore.FrameSvg.NoBorder
+        enabledBorders: latteView && latteView.effects ? latteView.effects.enabledBorders : KSvg.FrameSvg.NoBorder
         imagePath: "widgets/panel-background"
         prefix: "shadow"
         opacity: hideShadow || !root.useThemePanel || (root.forceTransparentPanel && !root.forcePanelForBusyBackground) ? 0 : 1
@@ -382,7 +385,7 @@ BackgroundProperties{
     //!          the original background when to special settings and options exist from the user. It is also
     //!          doing one very important job which is to calculate the Effects Rectangle which is used from
     //!          the compositor to provide blurriness and from Mask calculations to provide the View Local Geometry
-    PlasmaCore.FrameSvgItem{
+    KSvg.FrameSvgItem{
         id: solidBackground
         anchors.leftMargin: shadows.left
         anchors.rightMargin: shadows.right
@@ -432,8 +435,8 @@ BackgroundProperties{
             target: themeExtended
             onThemeChanged: {
                 solidBackground.adjustPrefix();
-                plasmoid.configuration.panelShadows = !plasmoid.configuration.panelShadows;
-                plasmoid.configuration.panelShadows = !plasmoid.configuration.panelShadows;
+                Plasmoid.configuration.panelShadows = !Plasmoid.configuration.panelShadows;
+                Plasmoid.configuration.panelShadows = !Plasmoid.configuration.panelShadows;
                 updateEffectsArea();
             }
         }
@@ -445,7 +448,7 @@ BackgroundProperties{
 
 
         Connections{
-            target: plasmoid
+            target: Plasmoid
             onLocationChanged: solidBackground.adjustPrefix();
         }
 
@@ -504,7 +507,7 @@ BackgroundProperties{
                 adjustPrefix();
         }
 
-        enabledBorders: latteView && latteView.effects ? latteView.effects.enabledBorders : PlasmaCore.FrameSvg.NoBorder
+        enabledBorders: latteView && latteView.effects ? latteView.effects.enabledBorders : KSvg.FrameSvg.NoBorder
 
         Behavior on opacity{
             enabled: LatteCore.WindowSystem.compositingActive && !solidBackground.paintInstantly
@@ -517,11 +520,11 @@ BackgroundProperties{
         }
 
         function adjustPrefix() {
-            if (!plasmoid) {
+            if (!Plasmoid) {
                 return "";
             }
             var pre;
-            switch (plasmoid.location) {
+            switch (Plasmoid.location) {
             case PlasmaCore.Types.LeftEdge:
                 pre = "west";
                 break;
@@ -550,7 +553,7 @@ BackgroundProperties{
 
         readonly property bool busyBackground: root.forcePanelForBusyBackground
                                                && (solidBackground.opacity === 0 || !solidBackground.paintInstantly)
-        readonly property bool coloredView: colorizerManager.mustBeShown && colorizerManager.applyTheme !== theme
+        readonly property bool coloredView: colorizerManager.mustBeShown && colorizerManager.applyTheme !== themeExtended.defaultTheme
 
         backgroundOpacity: {
             if (busyBackground && !forceSolidness) {
@@ -640,7 +643,7 @@ BackgroundProperties{
         ///Left
         State {
             name: "leftCenter"
-            when: (plasmoid.location === PlasmaCore.Types.LeftEdge)&&(myView.alignment === LatteCore.Types.Center)
+            when: (Plasmoid.location === PlasmaCore.Types.LeftEdge)&&(myView.alignment === LatteCore.Types.Center)
 
             AnchorChanges {
                 target: barLine
@@ -658,7 +661,7 @@ BackgroundProperties{
         },
         State {
             name: "leftJustify"
-            when: (plasmoid.location === PlasmaCore.Types.LeftEdge)&&(myView.alignment === LatteCore.Types.Justify)
+            when: (Plasmoid.location === PlasmaCore.Types.LeftEdge)&&(myView.alignment === LatteCore.Types.Justify)
 
             AnchorChanges {
                 target: barLine
@@ -677,7 +680,7 @@ BackgroundProperties{
         ///Left
         State {
             name: "leftTop"
-            when: (plasmoid.location === PlasmaCore.Types.LeftEdge)&&(myView.alignment === LatteCore.Types.Top)
+            when: (Plasmoid.location === PlasmaCore.Types.LeftEdge)&&(myView.alignment === LatteCore.Types.Top)
 
             AnchorChanges {
                 target: barLine
@@ -696,7 +699,7 @@ BackgroundProperties{
         ///Left
         State {
             name: "leftBottom"
-            when: (plasmoid.location === PlasmaCore.Types.LeftEdge)&&(myView.alignment === LatteCore.Types.Bottom)
+            when: (Plasmoid.location === PlasmaCore.Types.LeftEdge)&&(myView.alignment === LatteCore.Types.Bottom)
 
             AnchorChanges {
                 target: barLine
@@ -715,7 +718,7 @@ BackgroundProperties{
         ///Right
         State {
             name: "rightCenter"
-            when: (plasmoid.location === PlasmaCore.Types.RightEdge)&&(myView.alignment === LatteCore.Types.Center)
+            when: (Plasmoid.location === PlasmaCore.Types.RightEdge)&&(myView.alignment === LatteCore.Types.Center)
 
             AnchorChanges {
                 target: barLine
@@ -733,7 +736,7 @@ BackgroundProperties{
         },
         State {
             name: "rightJustify"
-            when: (plasmoid.location === PlasmaCore.Types.RightEdge)&&(myView.alignment === LatteCore.Types.Justify)
+            when: (Plasmoid.location === PlasmaCore.Types.RightEdge)&&(myView.alignment === LatteCore.Types.Justify)
 
             AnchorChanges {
                 target: barLine
@@ -751,7 +754,7 @@ BackgroundProperties{
         },
         State {
             name: "rightTop"
-            when: (plasmoid.location === PlasmaCore.Types.RightEdge)&&(myView.alignment === LatteCore.Types.Top)
+            when: (Plasmoid.location === PlasmaCore.Types.RightEdge)&&(myView.alignment === LatteCore.Types.Top)
 
             AnchorChanges {
                 target: barLine
@@ -769,7 +772,7 @@ BackgroundProperties{
         },
         State {
             name: "rightBottom"
-            when: (plasmoid.location === PlasmaCore.Types.RightEdge)&&(myView.alignment === LatteCore.Types.Bottom)
+            when: (Plasmoid.location === PlasmaCore.Types.RightEdge)&&(myView.alignment === LatteCore.Types.Bottom)
 
             AnchorChanges {
                 target: barLine
@@ -788,7 +791,7 @@ BackgroundProperties{
         ///Bottom
         State {
             name: "bottomCenter"
-            when: (plasmoid.location === PlasmaCore.Types.BottomEdge)&&(myView.alignment === LatteCore.Types.Center)
+            when: (Plasmoid.location === PlasmaCore.Types.BottomEdge)&&(myView.alignment === LatteCore.Types.Center)
 
             AnchorChanges {
                 target: barLine
@@ -806,7 +809,7 @@ BackgroundProperties{
         },
         State {
             name: "bottomJustify"
-            when: (plasmoid.location === PlasmaCore.Types.BottomEdge)&&(myView.alignment === LatteCore.Types.Justify)
+            when: (Plasmoid.location === PlasmaCore.Types.BottomEdge)&&(myView.alignment === LatteCore.Types.Justify)
 
             AnchorChanges {
                 target: barLine
@@ -824,7 +827,7 @@ BackgroundProperties{
         },
         State {
             name: "bottomLeft"
-            when: (plasmoid.location === PlasmaCore.Types.BottomEdge)
+            when: (Plasmoid.location === PlasmaCore.Types.BottomEdge)
                   &&(((myView.alignment === LatteCore.Types.Left)&&(Qt.application.layoutDirection !== Qt.RightToLeft))
                      || ((myView.alignment === LatteCore.Types.Right)&&(Qt.application.layoutDirection === Qt.RightToLeft)))
 
@@ -845,7 +848,7 @@ BackgroundProperties{
         },
         State {
             name: "bottomRight"
-            when: (plasmoid.location === PlasmaCore.Types.BottomEdge)
+            when: (Plasmoid.location === PlasmaCore.Types.BottomEdge)
                   &&(((myView.alignment === LatteCore.Types.Right)&&(Qt.application.layoutDirection !== Qt.RightToLeft))
                      ||((myView.alignment === LatteCore.Types.Left)&&(Qt.application.layoutDirection === Qt.RightToLeft)))
 
@@ -866,7 +869,7 @@ BackgroundProperties{
         ///Top
         State {
             name: "topCenter"
-            when: (plasmoid.location === PlasmaCore.Types.TopEdge)&&(myView.alignment === LatteCore.Types.Center)
+            when: (Plasmoid.location === PlasmaCore.Types.TopEdge)&&(myView.alignment === LatteCore.Types.Center)
 
             AnchorChanges {
                 target: barLine
@@ -884,7 +887,7 @@ BackgroundProperties{
         },
         State {
             name: "topJustify"
-            when: (plasmoid.location === PlasmaCore.Types.TopEdge)&&(myView.alignment === LatteCore.Types.Justify)
+            when: (Plasmoid.location === PlasmaCore.Types.TopEdge)&&(myView.alignment === LatteCore.Types.Justify)
 
             AnchorChanges {
                 target: barLine
@@ -902,7 +905,7 @@ BackgroundProperties{
         },
         State {
             name: "topLeft"
-            when: (plasmoid.location === PlasmaCore.Types.TopEdge)
+            when: (Plasmoid.location === PlasmaCore.Types.TopEdge)
                   &&(((myView.alignment === LatteCore.Types.Left)&&(Qt.application.layoutDirection !== Qt.RightToLeft))
                      || ((myView.alignment === LatteCore.Types.Right)&&(Qt.application.layoutDirection === Qt.RightToLeft)))
 
@@ -922,7 +925,7 @@ BackgroundProperties{
         },
         State {
             name: "topRight"
-            when: (plasmoid.location === PlasmaCore.Types.TopEdge)
+            when: (Plasmoid.location === PlasmaCore.Types.TopEdge)
                   &&(((myView.alignment === LatteCore.Types.Right)&&(Qt.application.layoutDirection !== Qt.RightToLeft))
                      ||((myView.alignment === LatteCore.Types.Left)&&(Qt.application.layoutDirection === Qt.RightToLeft)))
 

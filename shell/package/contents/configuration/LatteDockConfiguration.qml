@@ -5,17 +5,15 @@
 */
 
 import QtQuick 2.7
-import QtQuick.Controls 1.4
-import QtQuick.Controls 2.12 as QtQuickControls212
+import QtQuick.Controls 2.15 as QQC2
 import QtQuick.Layouts 1.3
-import QtGraphicalEffects 1.0
 import QtQuick.Window 2.2
 
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.ksvg 1.0 as KSvg
+import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.components 3.0 as PlasmaComponents3
 import org.kde.plasma.extras 2.0 as PlasmaExtras
-import QtQuick.Controls.Styles.Plasma 2.0 as Styles
 
 import org.kde.kquickcontrolsaddons 2.0 as KQuickControlAddons
 
@@ -24,6 +22,7 @@ import org.kde.latte.components 1.0 as LatteComponents
 
 import "pages" as Pages
 import "../controls" as LatteExtraControls
+import org.kde.kirigami 2.20 as Kirigami
 
 Loader {
     active: plasmoid && plasmoid.configuration && latteView
@@ -45,8 +44,8 @@ Loader {
         //!    we use 100px. or 50px. in order to give space for other views to be shown and to also
         //!    have some space around the settings window
         property int maxHeight: plasmoid.formFactor === PlasmaCore.Types.Horizontal ?
-                                    viewConfig.availableScreenGeometry.height - canvasHeadThickness - units.largeSpacing :
-                                    viewConfig.availableScreenGeometry.height - 2 * units.largeSpacing
+                                    viewConfig.availableScreenGeometry.height - canvasHeadThickness - Kirigami.Units.largeSpacing :
+                                    viewConfig.availableScreenGeometry.height - 2 * Kirigami.Units.largeSpacing
 
         property int maxWidth: 0.6 * latteView.screenGeometry.width
 
@@ -57,14 +56,20 @@ Loader {
         }
 
         //! propose size based on font size
-        property int proposedWidth: 0.82 * proposedHeight + units.smallSpacing * 2
-        property int proposedHeight: 36 * theme.mSize(theme.defaultFont).height
+        property int proposedWidth: 0.82 * proposedHeight + Kirigami.Units.smallSpacing * 2
+        property int proposedHeight: 36 * defaultFontMetrics.height
+
+        TextMetrics {
+            id: defaultFontMetrics
+            text: "M"
+            font: Kirigami.Theme.defaultFont
+        }
 
         //! chosen size to be applied, if the user has set or not a different scale for the settings window
         property int chosenWidth: userScaleWidth !== 1 ? userScaleWidth * proposedWidth : proposedWidth
         property int chosenHeight: userScaleHeight !== 1 ? userScaleHeight * heightLevel * proposedHeight : heightLevel * proposedHeight
 
-        readonly property int optionsWidth: appliedWidth - units.smallSpacing * 10
+        readonly property int optionsWidth: appliedWidth - Kirigami.Units.smallSpacing * 10
 
         //! user set scales based on its preference, e.g. 96% of the proposed size
         property real userScaleWidth: 1
@@ -88,10 +93,10 @@ Loader {
         readonly property bool viewIsPanel: latteView.type === LatteCore.Types.PanelView
 
         property bool panelIsVertical: plasmoid.formFactor === PlasmaCore.Types.Vertical
-        property int subGroupSpacing: units.largeSpacing + units.smallSpacing * 1.5
+        property int subGroupSpacing: Kirigami.Units.largeSpacing + Kirigami.Units.smallSpacing * 1.5
 
-        property color bC: theme.backgroundColor
-        property color tC: theme.textColor
+        property color bC: Kirigami.Theme.backgroundColor
+        property color tC: Kirigami.Theme.textColor
         property color transparentBackgroundColor: Qt.rgba(bC.r, bC.g, bC.b, 0.7)
         property color borderColor: Qt.rgba(tC.r, tC.g, tC.b, 0.12)
 
@@ -100,8 +105,8 @@ Loader {
         onAdvancedLevelChanged: {
             //! switch to appearancePage when effectsPage becomes hidden because
             //! advancedLevel was disabled by the user
-            if (!advancedLevel && tabBar.currentTab === effectsTabBtn) {
-                tabBar.currentTab = appearanceTabBtn;
+            if (!advancedLevel && tabBar.currentItem === effectsTabBtn) {
+                tabBar.currentIndex = 1;
             }
         }
 
@@ -119,7 +124,7 @@ Loader {
             userScaleHeight = universalSettings.screenHeightScale(latteView.positioner.currentScreenName);
         }
 
-        PlasmaCore.FrameSvgItem{
+        KSvg.FrameSvgItem{
             id: backgroundFrameSvgItem
             anchors.fill: parent
             imagePath: "dialogs/background"
@@ -149,15 +154,15 @@ Loader {
             Layout.minimumHeight: calculatedHeight
             Layout.preferredWidth: width
             Layout.preferredHeight: calculatedHeight
-            width: (dialog.appliedWidth - units.smallSpacing * 2)
+            width: (dialog.appliedWidth - Kirigami.Units.smallSpacing * 2)
 
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
-            spacing: units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
 
             property int calculatedHeight: header.height + headerSpacer.height+ tabBar.height + pagesBackground.height + actionButtons.height + spacing * 3
 
-            Keys.onPressed: {
+            Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
                     viewConfig.hideConfigWindow();
                 }
@@ -175,21 +180,21 @@ Loader {
                     id: trademark
                     Layout.alignment: Qt.AlignLeft | Qt.AlignTop
                     Layout.fillWidth: false
-                    Layout.topMargin: units.smallSpacing
+                    Layout.topMargin: Kirigami.Units.smallSpacing
                     Layout.preferredWidth: width
                     Layout.preferredHeight: height
 
-                    width: latteTrademark.width + units.smallSpacing
+                    width: latteTrademark.width + Kirigami.Units.smallSpacing
                     height: trademarkHeight
 
                     readonly property int trademarkHeight: 48
 
-                    PlasmaCore.SvgItem{
+                    KSvg.SvgItem{
                         id: latteTrademark
                         width: Qt.application.layoutDirection !== Qt.RightToLeft ? Math.ceil(1.70 * height) : height
                         height: trademark.height
 
-                        svg: PlasmaCore.Svg{
+                        svg: KSvg.Svg{
                             imagePath: Qt.application.layoutDirection !== Qt.RightToLeft ? universalSettings.trademarkPath() : universalSettings.trademarkIconPath()
                         }
                     }
@@ -197,16 +202,16 @@ Loader {
 
                 Item{
                     id: headerSpacer
-                    Layout.minimumHeight: advancedSettings.height + 2*units.smallSpacing
+                    Layout.minimumHeight: advancedSettings.height + 2*Kirigami.Units.smallSpacing
                 }
 
                 ColumnLayout {
                     PlasmaComponents3.ToolButton {
                         id: pinButton
                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                        Layout.bottomMargin: units.smallSpacing * 1.5
-                        Layout.topMargin: units.smallSpacing * 3
-                        Layout.rightMargin: units.smallSpacing * 2
+                        Layout.bottomMargin: Kirigami.Units.smallSpacing * 1.5
+                        Layout.topMargin: Kirigami.Units.smallSpacing * 3
+                        Layout.rightMargin: Kirigami.Units.smallSpacing * 2
                         icon.name: "window-pin"
                         checkable: true
 
@@ -226,7 +231,7 @@ Loader {
                     RowLayout {
                         id: advancedSettings
                         Layout.fillWidth: true
-                        Layout.rightMargin: units.smallSpacing * 2
+                        Layout.rightMargin: Kirigami.Units.smallSpacing * 2
                         Layout.alignment: Qt.AlignRight | Qt.AlignTop
 
                         PlasmaComponents.Label {
@@ -244,15 +249,15 @@ Loader {
                             //! it must remain or be changed
                             text: i18nc("advanced settings", "Advanced")
 
-                            readonly property real textColorBrightness: colorBrightness(theme.textColor)
+                            readonly property real textColorBrightness: colorBrightness(Kirigami.Theme.textColor)
                             readonly property real basicOpacity: textColorBrightness > 127 ? 0.7 : 0.3
 
                             color: {
                                 if (dialog.basicLevel) {
-                                    return textColorBrightness > 127 ? Qt.darker(theme.textColor, 1.4) : Qt.lighter(theme.textColor, 2.8);
+                                    return textColorBrightness > 127 ? Qt.darker(Kirigami.Theme.textColor, 1.4) : Qt.lighter(Kirigami.Theme.textColor, 2.8);
                                 }
 
-                                return theme.textColor;
+                                return Kirigami.Theme.textColor;
                             }
 
                             function colorBrightness(color) {
@@ -292,7 +297,7 @@ Loader {
             PlasmaComponents.TabBar {
                 id: tabBar
                 Layout.fillWidth: true
-                Layout.maximumWidth: (dialog.appliedWidth - units.smallSpacing * 2)
+                Layout.maximumWidth: (dialog.appliedWidth - Kirigami.Units.smallSpacing * 2)
 
                 readonly property int visibleStaticPages: dialog.advancedLevel ? 3 : 2
 
@@ -300,7 +305,7 @@ Loader {
                     id: behaviorTabBtn
                     text: i18n("Behavior")
                     onCheckedChanged: {
-                        if (checked && pagesStackView.currentItem !== behaviorPage) {
+                        if (checked && pagesStackView && pagesStackView.currentItem !== behaviorPage) {
                             pagesStackView.forwardSliding = true;
                             pagesStackView.replace(pagesStackView.currentItem, behaviorPage);
                         }
@@ -310,7 +315,7 @@ Loader {
                         target: viewConfig
                         onIsReadyChanged: {
                             if (viewConfig.isReady) {
-                                tabBar.currentTab = behaviorTabBtn;
+                                tabBar.currentIndex = 0;
                             }
                         }
                     }
@@ -320,8 +325,8 @@ Loader {
                     id: appearanceTabBtn
                     text: i18n("Appearance")
                     onCheckedChanged: {
-                        if (checked && pagesStackView.currentItem !== appearancePage) {
-                            pagesStackView.forwardSliding = (pagesStackView.currentItem.pageIndex > 1);
+                        if (checked && pagesStackView && pagesStackView.currentItem !== appearancePage) {
+                            pagesStackView.forwardSliding = (pagesStackView.currentItem && pagesStackView.currentItem.pageIndex > 1);
                             pagesStackView.replace(pagesStackView.currentItem, appearancePage);
                         }
                     }
@@ -332,8 +337,8 @@ Loader {
                     visible: dialog.advancedLevel
 
                     onCheckedChanged: {
-                        if (checked && pagesStackView.currentItem !== effectsPage) {
-                            pagesStackView.forwardSliding = (pagesStackView.currentItem.pageIndex > 2);
+                        if (checked && pagesStackView && pagesStackView.currentItem !== effectsPage) {
+                            pagesStackView.forwardSliding = (pagesStackView.currentItem && pagesStackView.currentItem.pageIndex > 2);
                             pagesStackView.replace(pagesStackView.currentItem, effectsPage);
                         }
                     }
@@ -346,8 +351,8 @@ Loader {
                     PlasmaComponents.TabButton {
                         text: index >= 1 ? i18nc("tasks header and index","Tasks <%1>", index+1) : i18n("Tasks")
                         onCheckedChanged: {
-                            if (checked && pagesStackView.currentItem !== tasksRepeater.itemAt(index)) {
-                                pagesStackView.forwardSliding = (pagesStackView.currentItem.pageIndex > (tabBar.visibleStaticPages + index));
+                            if (checked && pagesStackView && pagesStackView.currentItem !== tasksRepeater.itemAt(index)) {
+                                pagesStackView.forwardSliding = (pagesStackView.currentItem && pagesStackView.currentItem.pageIndex > (tabBar.visibleStaticPages + index));
                                 pagesStackView.replace(pagesStackView.currentItem, tasksRepeater.itemAt(index));
                             }
                         }
@@ -359,44 +364,42 @@ Loader {
                 id: pagesBackground
                 Layout.fillWidth: true
                 Layout.fillHeight: false
-                Layout.minimumWidth: dialog.appliedWidth - units.smallSpacing * 4
+                Layout.minimumWidth: dialog.appliedWidth - Kirigami.Units.smallSpacing * 4
                 Layout.minimumHeight: height
                 Layout.maximumHeight: height
 
-                width: dialog.appliedWidth - units.smallSpacing * 3
-                height: availableFreeHeight + units.smallSpacing * 4
+                width: dialog.appliedWidth - Kirigami.Units.smallSpacing * 3
+                height: availableFreeHeight + Kirigami.Units.smallSpacing * 4
 
                 //fix the height binding loop when showing the configuration window
-                property int availableFreeHeight: dialog.appliedHeight - header.height - headerSpacer.height - tabBar.height - actionButtons.height - 2 * units.smallSpacing
+                property int availableFreeHeight: dialog.appliedHeight - header.height - headerSpacer.height - tabBar.height - actionButtons.height - 2 * Kirigami.Units.smallSpacing
 
                 // Header
                 Rectangle {
                     anchors.top: parent.top
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.topMargin: -units.smallSpacing + 2
-                    anchors.leftMargin: -2*units.smallSpacing
-                    anchors.rightMargin: -2*units.smallSpacing
+                    anchors.topMargin: -Kirigami.Units.smallSpacing + 2
+                    anchors.leftMargin: -2*Kirigami.Units.smallSpacing
+                    anchors.rightMargin: -2*Kirigami.Units.smallSpacing
 
-                    height: parent.height // dialog.height - (header.height + tabBar.height + units.smallSpacing * 1.5) + 2
-                    color: theme.backgroundColor
+                    height: parent.height // dialog.height - (header.height + tabBar.height + Kirigami.Units.smallSpacing * 1.5) + 2
+                    color: Kirigami.Theme.backgroundColor
                     border.width: 1
                     border.color: dialog.borderColor
                 }
 
-                PlasmaExtras.ScrollArea {
+                QQC2.ScrollView {
                     id: scrollArea
 
                     anchors.fill: parent
-                    verticalScrollBarPolicy: Qt.ScrollBarAsNeeded
-                    horizontalScrollBarPolicy: Qt.ScrollBarAlwaysOff
+                    QQC2.ScrollBar.vertical.policy: QQC2.ScrollBar.AsNeeded
+                    QQC2.ScrollBar.horizontal.policy: QQC2.ScrollBar.AlwaysOff
 
-                    flickableItem.flickableDirection: Flickable.VerticalFlick
-
-                    QtQuickControls212.StackView {
+                    QQC2.StackView {
                         id: pagesStackView
-                        width: currentItem.width
-                        height: currentItem.height
+                        width: currentItem ? currentItem.width : 0
+                        height: currentItem ? currentItem.height : 0
 
                         property bool forwardSliding: true
 
@@ -485,7 +488,7 @@ Loader {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
 
-                spacing: units.largeSpacing
+                spacing: Kirigami.Units.largeSpacing
 
                 LatteComponents.ComboBoxButton {
                     id: actionsComboBtn
@@ -523,7 +526,7 @@ Loader {
 
                         Component.onCompleted:actionsComboBtn.updateModel();
 
-                        onActivated: {
+                        function onActivated(index) {
                             var item = actionsModel.get(index);
 
                             if (item && item.actionId === "add:") {
@@ -614,9 +617,10 @@ Loader {
                     Layout.fillWidth: true
                     enabled: dialog.advancedLevel
                     text: i18n("Remove")
-                    iconSource: "delete"
+                    icon.name: "delete"
                     opacity: enabled ? 1 : 0
-                    tooltip: i18n("Remove current dock")
+                    QQC2.ToolTip.text: i18n("Remove current dock")
+                    QQC2.ToolTip.visible: hovered
 
                     onClicked: latteView.removeView()
                 }
@@ -626,8 +630,9 @@ Loader {
                     Layout.fillWidth: true
 
                     text: i18n("Close")
-                    iconSource: "dialog-close"
-                    tooltip: i18n("Close settings window")
+                    icon.name: "dialog-close"
+                    QQC2.ToolTip.text: i18n("Close settings window")
+                    QQC2.ToolTip.visible: hovered
 
                     onClicked: viewConfig.hideConfigWindow();
                 }
@@ -642,7 +647,7 @@ Loader {
                 left: parent.left
                 right: parent.right
             }
-            height: actionButtons.height + units.smallSpacing * 2.5
+            height: actionButtons.height + Kirigami.Units.smallSpacing * 2.5
             // So that it doesn't appear over the content view, which results in
             // the footer controls being inaccessible
             z: -9999

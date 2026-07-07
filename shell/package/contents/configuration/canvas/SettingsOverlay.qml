@@ -4,13 +4,13 @@
 */
 
 import QtQuick 2.7
-import QtGraphicalEffects 1.0
 import QtQuick.Layouts 1.1
 
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.plasma.components 3.0 as PlasmaComponents
 
 import org.kde.latte.core 0.2 as LatteCore
+import org.kde.latte.components 1.0 as LatteComponents
 
 import "controls" as SettingsControls
 import "maxlength" as MaximumLength
@@ -23,6 +23,10 @@ Item{
                                           || tooltipMouseArea.containsMouse || editBackMouseArea.containsMouse*/
     readonly property int thickness: ruler.thickness + headerSettings.thickness + spacing * 6
     readonly property int spacing: 4
+
+    //! The rearrange/exit toggle button, surfaced up to CanvasConfiguration so CanvasConfigView can keep
+    //! exactly its rect interactive while the rest of the canvas is click-through in configure-applets mode.
+    property alias rearrangeToggle: headerSettings.rearrangeButton
 
     property int textShadow: {
         if (textColorIsDark)  {
@@ -50,11 +54,10 @@ Item{
     readonly property color textColor: bestContrastedTextColor
 
     layer.enabled: graphicsSystem.isAccelerated
-    layer.effect: DropShadow{
-        radius: settingsRoot.textShadow
-        fast: true
-        samples: 2 * radius
-        color: root.appShadowColorSolid
+    layer.effect: LatteComponents.ShadowedItem{
+        shadowSizePx: settingsRoot.textShadow
+        shadowColor: root.appShadowColorSolid
+        shadowVerticalOffset: 0
     }
 
     HeaderSettings{

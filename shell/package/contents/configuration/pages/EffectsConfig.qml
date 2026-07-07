@@ -4,14 +4,12 @@
 */
 
 import QtQuick 2.7
-import QtQuick.Controls 1.4
 import QtQuick.Layouts 1.3
-import QtGraphicalEffects 1.0
-import QtQuick.Dialogs 1.2
-import QtQuick.Controls 2.12 as QtQuickControls212
+import QtQuick.Dialogs
+import QtQuick.Controls 2.15 as QQC2
 
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.components 3.0 as PlasmaComponents3
 import org.kde.plasma.extras 2.0 as PlasmaExtras
 
@@ -20,31 +18,38 @@ import org.kde.latte.components 1.0 as LatteComponents
 import org.kde.latte.private.containment 0.1 as LatteContainment
 
 import "../../controls" as LatteExtraControls
+import org.kde.kirigami 2.20 as Kirigami
 
 PlasmaComponents.Page {
     id: page
     width: content.width + content.Layout.leftMargin * 2
-    height: content.height + units.smallSpacing
+    height: content.height + Kirigami.Units.smallSpacing
+
+    TextMetrics {
+        id: defaultFontMetrics
+        text: "M"
+        font: Kirigami.Theme.defaultFont
+    }
 
     ColumnLayout {
         id: content
         anchors.horizontalCenter: parent.horizontalCenter
-        Layout.leftMargin: units.smallSpacing * 2
-        width: (dialog.appliedWidth - units.smallSpacing * 2) - Layout.leftMargin * 2
+        Layout.leftMargin: Kirigami.Units.smallSpacing * 2
+        width: (dialog.appliedWidth - Kirigami.Units.smallSpacing * 2) - Layout.leftMargin * 2
         spacing: dialog.subGroupSpacing
 
         //! BEGIN: Shadows
         ColumnLayout {
             Layout.fillWidth: true
-            Layout.topMargin: units.smallSpacing
+            Layout.topMargin: Kirigami.Units.smallSpacing
 
-            spacing: units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
 
             LatteComponents.HeaderSwitch {
                 id: showAppletShadow
                 Layout.fillWidth: true
                 Layout.minimumHeight: implicitHeight
-                Layout.topMargin: units.smallSpacing
+                Layout.topMargin: Kirigami.Units.smallSpacing
 
                 checked: plasmoid.configuration.appletShadowsEnabled
                 text: i18n("Shadows")
@@ -54,8 +59,8 @@ PlasmaComponents.Page {
             }
 
             ColumnLayout {
-                Layout.leftMargin: units.smallSpacing * 2
-                Layout.rightMargin: units.smallSpacing * 2
+                Layout.leftMargin: Kirigami.Units.smallSpacing * 2
+                Layout.rightMargin: Kirigami.Units.smallSpacing * 2
                 spacing: 0
 
                 RowLayout{
@@ -100,8 +105,8 @@ PlasmaComponents.Page {
                         enabled: showAppletShadow.checked
                         text: i18nc("number in percentage, e.g. 85 %","%1 %", shadowSizeSlider.value)
                         horizontalAlignment: Text.AlignRight
-                        Layout.minimumWidth: theme.mSize(theme.defaultFont).width * 4
-                        Layout.maximumWidth: theme.mSize(theme.defaultFont).width * 4
+                        Layout.minimumWidth: defaultFontMetrics.advanceWidth * 4
+                        Layout.maximumWidth: defaultFontMetrics.advanceWidth * 4
                     }
                 }
 
@@ -148,27 +153,23 @@ PlasmaComponents.Page {
                         enabled: showAppletShadow.checked
                         text: i18nc("number in percentage, e.g. 85 %","%1 %", shadowOpacitySlider.value)
                         horizontalAlignment: Text.AlignRight
-                        Layout.minimumWidth: theme.mSize(theme.defaultFont).width * 4
-                        Layout.maximumWidth: theme.mSize(theme.defaultFont).width * 4
+                        Layout.minimumWidth: defaultFontMetrics.advanceWidth * 4
+                        Layout.maximumWidth: defaultFontMetrics.advanceWidth * 4
                     }
                 }
 
                 RowLayout {
                     id: shadowColorRow
                     Layout.fillWidth: true
-                    Layout.topMargin: units.smallSpacing
+                    Layout.topMargin: Kirigami.Units.smallSpacing
                     spacing: 2
                     enabled: showAppletShadow.checked
 
                     readonly property string defaultShadow: "080808"
                     readonly property string themeShadow: {
-                        var strC = String(theme.textColor);
+                        var strC = String(Kirigami.Theme.textColor);
 
                         return strC.indexOf("#") === 0 ? strC.substr(1) : strC;
-                    }
-
-                    ExclusiveGroup {
-                        id: shadowColorGroup
                     }
 
                     PlasmaComponents.Button {
@@ -178,8 +179,8 @@ PlasmaComponents.Page {
                         text: i18nc("default shadow", "Default Color")
                         checked: plasmoid.configuration.shadowColorType === type
                         checkable: false
-                        exclusiveGroup: shadowColorGroup
-                        tooltip: i18n("Default shadow for applets")
+                        QQC2.ToolTip.text: i18n("Default shadow for applets")
+                        QQC2.ToolTip.visible: hovered
 
                         readonly property int type: LatteContainment.Types.DefaultColorShadow
 
@@ -197,8 +198,8 @@ PlasmaComponents.Page {
                         text: i18nc("theme shadow", "Theme Color")
                         checked: plasmoid.configuration.shadowColorType === type
                         checkable: false
-                        exclusiveGroup: shadowColorGroup
-                        tooltip: i18n("Shadow from theme color palette")
+                        QQC2.ToolTip.text: i18n("Shadow from theme color palette")
+                        QQC2.ToolTip.visible: hovered
 
                         readonly property int type: LatteContainment.Types.ThemeColorShadow
 
@@ -219,8 +220,8 @@ PlasmaComponents.Page {
 
                         checkable: false
                         checked: plasmoid.configuration.shadowColorType === type
-                        tooltip: i18n("Use set shadow color")
-                        exclusiveGroup: shadowColorGroup
+                        QQC2.ToolTip.text: i18n("Use set shadow color")
+                        QQC2.ToolTip.visible: hovered
 
                         readonly property int type: LatteContainment.Types.UserColorShadow
 
@@ -232,7 +233,7 @@ PlasmaComponents.Page {
 
                         Rectangle{
                             anchors.fill: parent
-                            anchors.margins: 1.5*units.smallSpacing
+                            anchors.margins: 1.5*Kirigami.Units.smallSpacing
 
                             color: "#" + plasmoid.configuration.shadowColor;
 
@@ -242,14 +243,14 @@ PlasmaComponents.Page {
                                 anchors.fill: parent
                                 color: "transparent"
                                 border.width: 1
-                                border.color: theme.textColor
+                                border.color: Kirigami.Theme.textColor
                                 opacity: parent.opacity - 0.4
                             }
 
                             MouseArea{
                                 anchors.fill: parent
                                 onClicked: {
-                                    shadowColorGroup.current = userShadowBtn;
+                                    plasmoid.configuration.shadowColorType = userShadowBtn.type;
                                     viewConfig.setSticker(true);
                                     colorDialogLoader.showDialog = true;
                                 }
@@ -263,11 +264,9 @@ PlasmaComponents.Page {
 
                             sourceComponent: ColorDialog {
                                 title: i18n("Please choose shadow color")
-                                showAlphaChannel: false
 
                                 onAccepted: {
-                                    //console.log("You chose: " + String(color));
-                                    var strC = String(color);
+                                    var strC = String(selectedColor);
                                     if (strC.indexOf("#") === 0) {
                                         plasmoid.configuration.shadowColor = strC.substr(1);
                                     }
@@ -280,8 +279,8 @@ PlasmaComponents.Page {
                                     viewConfig.setSticker(false);
                                 }
                                 Component.onCompleted: {
-                                    color = String("#" + plasmoid.configuration.shadowColor);
-                                    visible = true;
+                                    selectedColor = String("#" + plasmoid.configuration.shadowColor);
+                                    open();
                                 }
                             }
                         }
@@ -294,14 +293,14 @@ PlasmaComponents.Page {
         //! BEGIN: Animations
         ColumnLayout {
             Layout.fillWidth: true
-            Layout.topMargin: units.smallSpacing
-            spacing: units.smallSpacing
+            Layout.topMargin: Kirigami.Units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
 
             LatteComponents.HeaderSwitch {
                 id: animationsHeader
                 Layout.fillWidth: true
                 Layout.minimumHeight: implicitHeight
-                Layout.topMargin: units.smallSpacing
+                Layout.topMargin: Kirigami.Units.smallSpacing
 
                 checked: plasmoid.configuration.animationsEnabled
                 text: i18n("Animations")
@@ -313,8 +312,8 @@ PlasmaComponents.Page {
             }
 
             ColumnLayout {
-                Layout.leftMargin: units.smallSpacing * 2
-                Layout.rightMargin: units.smallSpacing * 2
+                Layout.leftMargin: Kirigami.Units.smallSpacing * 2
+                Layout.rightMargin: Kirigami.Units.smallSpacing * 2
                 spacing: 0
                 enabled: plasmoid.configuration.animationsEnabled
 
@@ -328,16 +327,11 @@ PlasmaComponents.Page {
 
                         property int duration: plasmoid.configuration.durationTime
 
-                        ExclusiveGroup {
-                            id: animationsGroup
-                        }
-
                         PlasmaComponents.Button {
                             Layout.fillWidth: true
                             text: i18n("x1")
                             checked: parent.duration === duration
                             checkable: false
-                            exclusiveGroup: animationsGroup
 
                             readonly property int duration: 3
 
@@ -352,7 +346,6 @@ PlasmaComponents.Page {
                             text: i18n("x2")
                             checked: parent.duration === duration
                             checkable: false
-                            exclusiveGroup: animationsGroup
 
                             readonly property int duration: 2
 
@@ -367,7 +360,6 @@ PlasmaComponents.Page {
                             text: i18n("x3")
                             checked: parent.duration === duration
                             checkable: false
-                            exclusiveGroup: animationsGroup
 
                             readonly property int duration: 1
 
@@ -385,7 +377,7 @@ PlasmaComponents.Page {
 
         //! BEGIN: Active Indicator General Settings
         ColumnLayout{
-            spacing: units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
 
             LatteComponents.HeaderSwitch {
                 id: indicatorsSwitch
@@ -402,9 +394,9 @@ PlasmaComponents.Page {
             }
 
             ColumnLayout {
-                Layout.leftMargin: units.smallSpacing * 2
-                Layout.rightMargin: units.smallSpacing * 2
-                spacing: units.smallSpacing
+                Layout.leftMargin: Kirigami.Units.smallSpacing * 2
+                Layout.rightMargin: Kirigami.Units.smallSpacing * 2
+                spacing: Kirigami.Units.smallSpacing
                 enabled: indicatorsSwitch.checked
 
                 /*   LatteComponents.SubHeader {
@@ -472,11 +464,11 @@ PlasmaComponents.Page {
 
                         function selectTab(type) {
                             if (type === latteBtn.type) {
-                                tabBar.currentTab = latteBtn;
+                                tabBar.currentIndex = 0;
                             } else if (type === plasmaBtn.type) {
-                                tabBar.currentTab = plasmaBtn;
+                                tabBar.currentIndex = 1;
                             } else if (type === customIndicator.type) {
-                                tabBar.currentTab = customBtn;
+                                tabBar.currentIndex = 2;
                             }
                         }
 
@@ -498,13 +490,13 @@ PlasmaComponents.Page {
                         anchors.leftMargin: 2
                         width: tabBar.width - 2*2
                         height: 2
-                        color: theme.textColor
+                        color: Kirigami.Theme.textColor
                         opacity: 0.25
                     }
                 }
 
                 //! BEGIN: Indicator specific sub-options
-                QtQuickControls212.StackView {
+                QQC2.StackView {
                     id: indicatorsStackView
                     Layout.fillWidth: true
                     Layout.maximumHeight: Layout.minimumHeight

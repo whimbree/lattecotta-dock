@@ -6,21 +6,22 @@
 
 import QtQuick 2.7
 import QtQuick.Layouts 1.0
-import QtGraphicalEffects 1.0
 
 import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.kirigami 2.20 as Kirigami
+import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.kquickcontrolsaddons 2.0
 
 import org.kde.latte.core 0.2 as LatteCore
+import org.kde.latte.components 1.0 as LatteComponents
 
 MouseArea {
     id: configurationArea
     z: 1000
 
-    width: plasmoid.formFactor === PlasmaCore.Types.Horizontal ? root.width : thickness
-    height: plasmoid.formFactor === PlasmaCore.Types.Vertical ? root.height : thickness
+    width: Plasmoid.formFactor === PlasmaCore.Types.Horizontal ? root.width : thickness
+    height: Plasmoid.formFactor === PlasmaCore.Types.Vertical ? root.height : thickness
 
     visible: root.inConfigureAppletsMode
     hoverEnabled: root.inConfigureAppletsMode
@@ -54,10 +55,11 @@ MouseArea {
     property int appletY
 
     readonly property int thickness: metrics.mask.thickness.maxNormal - metrics.extraThicknessForNormal
-    readonly property int spacerHandleSize: units.smallSpacing
+    readonly property int spacerHandleSize: Kirigami.Units.smallSpacing
 
     onHeightChanged: tooltip.visible = false;
     onWidthChanged: tooltip.visible = false;
+
 
 
     function hoveredItem(x, y) {
@@ -95,10 +97,10 @@ MouseArea {
     }
 
 
-    onPositionChanged: {
+    onPositionChanged: (mouse) => {
         if (pressed) {
             if(currentApplet){
-                if (plasmoid.formFactor === PlasmaCore.Types.Vertical) {
+                if (Plasmoid.formFactor === PlasmaCore.Types.Vertical) {
                     currentApplet.y += (mouse.y - lastY);
                 } else {
                     currentApplet.x += (mouse.x - lastX);
@@ -111,7 +113,7 @@ MouseArea {
             var mousesink = {x: mouse.x, y: mouse.y};
 
             //! ignore thickness moving at all cases
-            if (plasmoid.formFactor === PlasmaCore.Types.Horizontal) {
+            if (Plasmoid.formFactor === PlasmaCore.Types.Horizontal) {
                 mousesink.y = configurationArea.height / 2;
             } else {
                 mousesink.x = configurationArea.width / 2;
@@ -122,8 +124,8 @@ MouseArea {
             if (item && item !== placeHolder) {
                 var posInItem = mapToItem(item, mousesink.x, mousesink.y);
 
-                if ((plasmoid.formFactor === PlasmaCore.Types.Vertical && posInItem.y < item.height/2) ||
-                        (plasmoid.formFactor !== PlasmaCore.Types.Vertical && posInItem.x < item.width/2)) {
+                if ((Plasmoid.formFactor === PlasmaCore.Types.Vertical && posInItem.y < item.height/2) ||
+                        (Plasmoid.formFactor !== PlasmaCore.Types.Vertical && posInItem.x < item.width/2)) {
                     fastLayoutManager.insertBefore(item, placeHolder);
                 } else {
                     fastLayoutManager.insertAfter(item, placeHolder);
@@ -169,7 +171,7 @@ MouseArea {
         colorizingButton.checked = !currentApplet.userBlocksColorizing;
     }
 
-    onPressed: {
+    onPressed: (mouse) => {
         if (!root.dragOverlay.currentApplet) {
             return;
         }
@@ -199,10 +201,10 @@ MouseArea {
         }
 
         if(currentApplet && currentApplet.applet){
-            if (plasmoid.formFactor === PlasmaCore.Types.Vertical) {
-                currentApplet.applet.configuration.length = handle.height;
+            if (Plasmoid.formFactor === PlasmaCore.Types.Vertical) {
+                currentApplet.applet.plasmoid.configuration.length = handle.height;
             } else {
-                currentApplet.applet.configuration.length = handle.width;
+                currentApplet.applet.plasmoid.configuration.length = handle.width;
             }
         }
 
@@ -221,7 +223,7 @@ MouseArea {
         layouter.updateSizeForAppletsInFill();
     }
 
-    onWheel: {
+    onWheel: (wheel) => {
         if (!currentApplet || !currentApplet.latteStyleApplet) {
             return;
         }
@@ -298,25 +300,21 @@ MouseArea {
 
             Rectangle{
                 anchors.fill: parent
-                color: theme.backgroundColor
+                color: Kirigami.Theme.backgroundColor
                 radius: 3
                 opacity: 0.35
             }
 
-            PlasmaCore.IconItem {
+            Kirigami.Icon {
                 source: "transform-move"
                 width: Math.min(144, root.metrics.iconSize)
                 height: width
                 anchors.centerIn: parent
                 opacity: 0.9
                 layer.enabled: root.environment.isGraphicsSystemAccelerated
-                layer.effect: DropShadow {
-                    radius: root.myView.itemShadow.size
-                    fast: true
-                    samples: 2 * radius
-                    color: root.myView.itemShadow.shadowColor
-
-                    verticalOffset: 2
+                layer.effect: LatteComponents.ShadowedItem {
+                    shadowSizePx: root.myView.itemShadow.size
+                    shadowColor: root.myView.itemShadow.shadowColor
                 }
             }
 
@@ -324,7 +322,7 @@ MouseArea {
             states:[
                 State{
                     name: "bottom"
-                    when: plasmoid.location === PlasmaCore.Types.BottomEdge
+                    when: Plasmoid.location === PlasmaCore.Types.BottomEdge
 
                     AnchorChanges{
                         target: handleVisualItem;
@@ -339,7 +337,7 @@ MouseArea {
                 },
                 State{
                     name: "top"
-                    when: plasmoid.location === PlasmaCore.Types.TopEdge
+                    when: Plasmoid.location === PlasmaCore.Types.TopEdge
 
                     AnchorChanges{
                         target: handleVisualItem;
@@ -354,7 +352,7 @@ MouseArea {
                 },
                 State{
                     name: "left"
-                    when: plasmoid.location === PlasmaCore.Types.LeftEdge
+                    when: Plasmoid.location === PlasmaCore.Types.LeftEdge
 
                     AnchorChanges{
                         target: handleVisualItem;
@@ -369,7 +367,7 @@ MouseArea {
                 },
                 State{
                     name: "right"
-                    when: plasmoid.location === PlasmaCore.Types.RightEdge
+                    when: Plasmoid.location === PlasmaCore.Types.RightEdge
 
                     AnchorChanges{
                         target: handleVisualItem;
@@ -399,17 +397,18 @@ MouseArea {
 
         type: PlasmaCore.Dialog.Dock
         flags: Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.BypassWindowManagerHint | Qt.ToolTip
-        location: plasmoid.location
+        location: Plasmoid.location
+
 
         onVisualParentChanged: {
             if (visualParent && currentApplet
                     && (currentApplet.applet || currentApplet.isSeparator || currentApplet.isInternalViewSplitter)) {
 
                 configureButton.visible = !currentApplet.isInternalViewSplitter
-                        && (currentApplet.applet.pluginName !== "org.kde.latte.plasmoid")
-                        && currentApplet.applet.action("configure")
-                        && currentApplet.applet.action("configure").enabled;
-                closeButton.visible = !currentApplet.isInternalViewSplitter && currentApplet.applet.action("remove") && currentApplet.applet.action("remove").enabled;
+                        && (currentApplet.applet.plasmoid.pluginName !== "org.kde.latte.plasmoid")
+                        && currentApplet.applet.plasmoid.internalAction("configure")
+                        && currentApplet.applet.plasmoid.internalAction("configure").enabled;
+                closeButton.visible = !currentApplet.isInternalViewSplitter && currentApplet.applet.plasmoid.internalAction("remove") && currentApplet.applet.plasmoid.internalAction("remove").enabled;
                 lockButton.visible = !currentApplet.isInternalViewSplitter
                         && !currentApplet.communicator.indexerIsSupported
                         && !currentApplet.communicator.appletBlocksParabolicEffect
@@ -417,7 +416,7 @@ MouseArea {
 
                 colorizingButton.visible = root.colorizerEnabled && !currentApplet.appletBlocksColorizing && !currentApplet.isInternalViewSplitter;
 
-                label.text = currentApplet.isInternalViewSplitter ? i18n("Justify Splitter") : currentApplet.applet.title;
+                label.text = currentApplet.isInternalViewSplitter ? i18n("Justify Splitter") : currentApplet.applet.plasmoid.title;
             }
         }
 
@@ -433,66 +432,68 @@ MouseArea {
             onEntered: hideTimer.stop();
             onExited: hideTimer.restart();
 
+            //! These handle buttons deliberately carry NO QQC2.ToolTip. On Wayland an attached
+            //! ToolTip pops a separate surface at the cursor the instant a button is hovered; the
+            //! compositor then sends a leave to the button AND this wrapping MouseArea, the ToolTip
+            //! hides, the cursor re-enters, and it loops ~20Hz — the edit-handle flicker that also
+            //! ate clicks (hideTimer riding a false window). Don't re-add per-button tooltips here;
+            //! if hints are needed, drive the in-Dialog label instead of a popup.
             Row {
                 id: handleRow
                 anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 2*units.smallSpacing
+                spacing: 2*Kirigami.Units.smallSpacing
 
                 Row{
-                    spacing: units.smallSpacing
+                    spacing: Kirigami.Units.smallSpacing
                     PlasmaComponents.ToolButton {
                         id: configureButton
                         anchors.verticalCenter: parent.verticalCenter
-                        iconSource: "configure"
-                        tooltip: i18n("Configure applet")
+                        icon.name: "configure"
                         onClicked: {
                             tooltip.visible = false;
-                            currentApplet.applet.action("configure").trigger();
+                            currentApplet.applet.plasmoid.internalAction("configure").trigger();
                         }
                     }
 
                     PlasmaComponents.Label {
                         id: label
                         anchors.verticalCenter: parent.verticalCenter
-                        anchors.rightMargin: units.smallSpacing
+                        anchors.rightMargin: Kirigami.Units.smallSpacing
                         textFormat: Text.PlainText
                         maximumLineCount: 1
                     }
 
                     Row{
-                        spacing: units.smallSpacing/2
+                        spacing: Kirigami.Units.smallSpacing/2
 
                         PlasmaComponents.ToolButton{
                             id: colorizingButton
                             checkable: true
-                            iconSource: "color-picker"
-                            tooltip: i18n("Enable painting  for this applet")
+                            icon.name: "color-picker"
 
                             onClicked: {
-                                fastLayoutManager.setOption(currentApplet.applet.id, "userBlocksColorizing", !checked);
+                                fastLayoutManager.setOption(currentApplet.applet.plasmoid.id, "userBlocksColorizing", !checked);
                             }
                         }
 
                         PlasmaComponents.ToolButton{
                             id: lockButton
                             checkable: true
-                            iconSource: checked ? "lock" : "unlock"
-                            tooltip: i18n("Disable parabolic effect for this applet")
+                            icon.name: checked ? "lock" : "unlock"
 
                             onClicked: {
-                                fastLayoutManager.setOption(currentApplet.applet.id, "lockZoom", checked);
+                                fastLayoutManager.setOption(currentApplet.applet.plasmoid.id, "lockZoom", checked);
                             }
                         }
 
                         PlasmaComponents.ToolButton {
                             id: closeButton
                             anchors.verticalCenter: parent.verticalCenter
-                            iconSource: "delete"
-                            tooltip: i18n("Remove applet")
+                            icon.name: "delete"
                             onClicked: {
                                 tooltip.visible = false;
                                 if(currentApplet && currentApplet.applet)
-                                    currentApplet.applet.action("remove").trigger();
+                                    currentApplet.applet.plasmoid.internalAction("remove").trigger();
                             }
                         }
                     }
@@ -504,7 +505,7 @@ MouseArea {
     states: [
         State {
             name: "bottom"
-            when: (plasmoid.location === PlasmaCore.Types.BottomEdge)
+            when: (Plasmoid.location === PlasmaCore.Types.BottomEdge)
 
             AnchorChanges {
                 target: configurationArea
@@ -514,7 +515,7 @@ MouseArea {
         },
         State {
             name: "top"
-            when: (plasmoid.location === PlasmaCore.Types.TopEdge)
+            when: (Plasmoid.location === PlasmaCore.Types.TopEdge)
 
             AnchorChanges {
                 target: configurationArea
@@ -524,7 +525,7 @@ MouseArea {
         },
         State {
             name: "left"
-            when: (plasmoid.location === PlasmaCore.Types.LeftEdge)
+            when: (Plasmoid.location === PlasmaCore.Types.LeftEdge)
 
             AnchorChanges {
                 target: configurationArea
@@ -534,7 +535,7 @@ MouseArea {
         },
         State {
             name: "right"
-            when: (plasmoid.location === PlasmaCore.Types.RightEdge)
+            when: (Plasmoid.location === PlasmaCore.Types.RightEdge)
 
             AnchorChanges {
                 target: configurationArea

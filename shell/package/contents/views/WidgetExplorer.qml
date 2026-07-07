@@ -8,9 +8,9 @@
 import QtQuick 2.7
 import QtQuick.Controls 2.5 as QQC2
 
-import org.kde.plasma.components 2.0 as PC2 // for DialogStatus, ModelCOntextMenu, and Highlight
 import org.kde.plasma.components 3.0 as PC3
 import org.kde.plasma.core 2.0 as PlasmaCore
+import org.kde.ksvg 1.0 as KSvg
 import org.kde.plasma.extras 2.0 as PlasmaExtras
 import org.kde.kquickcontrolsaddons 2.0
 import org.kde.kwindowsystem 1.0
@@ -21,9 +21,11 @@ import QtQuick.Layouts 1.1
 
 import org.kde.plasma.private.shell 2.0 as PlasmaShell
 
+import org.kde.latte.core 0.2 as LatteCore
+
 PC3.Page {
     id: main
-    width: Math.max(heading.paintedWidth, PlasmaCore.Units.iconSizes.enormous * 3 + PlasmaCore.Units.smallSpacing * 4 + PlasmaCore.Units.gridUnit * 2)
+    width: Math.max(heading.paintedWidth, Kirigami.Units.iconSizes.enormous * 3 + Kirigami.Units.smallSpacing * 4 + Kirigami.Units.gridUnit * 2)
   //  height: 800//Screen.height
     opacity: draggingWidget ? 0.3 : 1
     visible: viewConfig.visible
@@ -36,8 +38,8 @@ PC3.Page {
     //therefore get deleted whilst we are still in a drag exec()
     //this is a clue to the owning dialog that hideOnWindowDeactivate should be deleted
     //See https://bugs.kde.org/show_bug.cgi?id=332733
-    property bool preventWindowHide: draggingWidget || categoriesDialog.status !== PC2.DialogStatus.Closed
-                                  || getWidgetsDialog.status !== PC2.DialogStatus.Closed
+    property bool preventWindowHide: draggingWidget || categoriesDialog.status !== PlasmaExtras.Menu.Closed
+                                  || getWidgetsDialog.status !== PlasmaExtras.Menu.Closed
 
     property bool outputOnly: draggingWidget
 
@@ -59,7 +61,7 @@ PC3.Page {
 
     onVisibleChanged: {
         if (!visible) {
-            kwindowsystem.showingDesktop = false;
+            KWindowSystem.showingDesktop = false;
         }
     }
 
@@ -86,10 +88,6 @@ PC3.Page {
         }
     }
 
-    KWindowSystem {
-        id: kwindowsystem
-    }
-
     QQC2.Action {
         shortcut: "Escape"
         onTriggered: {
@@ -110,7 +108,7 @@ PC3.Page {
         onTriggered: addCurrentApplet()
     }
 
-    PlasmaCore.FrameSvgItem{
+    KSvg.FrameSvgItem{
         id: backgroundFrameSvgItem
         anchors.top: parent.top
         anchors.topMargin: -headerMargin
@@ -136,7 +134,7 @@ PC3.Page {
         }
     }
 
-    PC2.ModelContextMenu {
+    PlasmaExtras.ModelContextMenu {
         id: categoriesDialog
         visualParent: categoryButton
         // model set on first invocation
@@ -150,10 +148,10 @@ PC3.Page {
         }
     }
 
-    PC2.ModelContextMenu {
+    PlasmaExtras.ModelContextMenu {
         id: getWidgetsDialog
         visualParent: getWidgetsButton
-        placement: PlasmaCore.Types.TopPosedLeftAlignedPopup
+        placement: LatteCore.Types.TopPosedLeftAlignedPopup
         // model set on first invocation
         onClicked: model.trigger()
     }
@@ -178,7 +176,7 @@ PC3.Page {
         }
         mainItem: Tooltip { id: tooltipWidget }
         Behavior on y {
-            NumberAnimation { duration: PlasmaCore.Units.longDuration }
+            NumberAnimation { duration: Kirigami.Units.longDuration }
         }
     }
     Timer {
@@ -284,7 +282,7 @@ PC3.Page {
         opacity: setModelTimer.running ? 0 : 1
         Behavior on opacity {
             OpacityAnimator {
-                duration: PlasmaCore.Units.longDuration
+                duration: Kirigami.Units.longDuration
                 easing.type: Easing.InOutQuad
             }
         }
@@ -297,10 +295,10 @@ PC3.Page {
             activeFocusOnTab: true
             keyNavigationWraps: true
             cellWidth: Math.floor(width / 3)
-            cellHeight: cellWidth + PlasmaCore.Units.gridUnit * 4 + PlasmaCore.Units.smallSpacing * 2
+            cellHeight: cellWidth + Kirigami.Units.gridUnit * 4 + Kirigami.Units.smallSpacing * 2
 
             delegate: AppletDelegate {}
-            highlight: PC2.Highlight {}
+            highlight: PlasmaExtras.Highlight {}
             highlightMoveDuration: 0
             //highlightResizeDuration: 0
 
@@ -309,7 +307,7 @@ PC3.Page {
                 NumberAnimation {
                     properties: "x"
                     from: -list.width
-                    duration: PlasmaCore.Units.shortDuration
+                    duration: Kirigami.Units.shortDuration
                 }
             }
 
@@ -318,7 +316,7 @@ PC3.Page {
                 NumberAnimation {
                     properties: "x"
                     to: list.width
-                    duration: PlasmaCore.Units.shortDuration
+                    duration: Kirigami.Units.shortDuration
                 }
             }
 
@@ -331,7 +329,7 @@ PC3.Page {
             displaced: Transition {
                 NumberAnimation {
                     properties: "x,y"
-                    duration: PlasmaCore.Units.shortDuration
+                    duration: Kirigami.Units.shortDuration
                 }
             }
         }
@@ -339,7 +337,7 @@ PC3.Page {
 
     PlasmaExtras.PlaceholderMessage {
         anchors.centerIn: parent
-        width: parent.width - (PlasmaCore.Units.largeSpacing * 4)
+        width: parent.width - (Kirigami.Units.largeSpacing * 4)
         text: searchInput.text.length > 0 ? i18n("No widgets matched the search terms") : i18n("No widgets available")
         visible: list.count == 0
     }

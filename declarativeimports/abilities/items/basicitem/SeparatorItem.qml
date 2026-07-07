@@ -4,12 +4,12 @@
 */
 
 import QtQuick 2.8
-import QtGraphicalEffects 1.0
 
 import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
 
 import org.kde.latte.core 0.2 as LatteCore
+import org.kde.latte.components 1.0 as LatteComponents
 
 Loader {
     anchors.bottom: (abilityItem.location === PlasmaCore.Types.BottomEdge) ? parent.bottom : undefined
@@ -51,14 +51,11 @@ Loader {
                 NumberAnimation { duration: abilityItem.abilities.animations.speedFactor.current * abilityItem.abilities.animations.duration.large }
             }
 
-            sourceComponent: DropShadow{
+            sourceComponent: LatteComponents.ShadowedItem{
                 anchors.fill: parent
-                color: abilityItem.abilities.myView.itemShadow.shadowColor
-                fast: true
-                samples: 2 * radius
+                shadowColor: abilityItem.abilities.myView.itemShadow.shadowColor
                 source: separatorItem
-                radius: abilityItem.abilities.myView.itemShadow.size
-                verticalOffset: 2
+                shadowSizePx: abilityItem.abilities.myView.itemShadow.size
             }
         }
 
@@ -74,7 +71,7 @@ Loader {
                 anchors.centerIn: parent
                 width: abilityItem.isVertical ? abilityItem.abilities.metrics.iconSize - 4  : 1
                 height: abilityItem.isHorizontal ? abilityItem.abilities.metrics.iconSize - 4 : 1
-                color: abilityItem.abilities.myView.palette.textColor
+                color: abilityItem.abilities.myView.colorPalette.textColor
             }
         }
     }

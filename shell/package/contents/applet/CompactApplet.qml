@@ -3,13 +3,15 @@
 
     SPDX-License-Identifier: GPL-2.0-or-later
 */
-import QtQuick 2.0
+import QtQuick
 import QtQuick.Layouts 1.1
 import QtQuick.Window 2.0
-import QtGraphicalEffects 1.0
+import QtQuick.Effects
 
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.ksvg 1.0 as KSvg
+import org.kde.kirigami 2.20 as Kirigami
+import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.kquickcontrolsaddons 2.0
 
 import org.kde.latte.core 0.2 as LatteCore
@@ -19,12 +21,12 @@ PlasmaCore.ToolTipArea {
     objectName: "org.kde.desktop-CompactApplet"
     anchors.fill: parent
 
-    mainText: plasmoid.toolTipMainText
-    subText: plasmoid.toolTipSubText
-    location: plasmoid.location
-    active: !plasmoid.expanded
-    textFormat: plasmoid.toolTipTextFormat
-    mainItem: plasmoid.toolTipItem ? plasmoid.toolTipItem : null
+    mainText: hostedApplet ? hostedApplet.toolTipMainText : ""
+    subText: hostedApplet ? hostedApplet.toolTipSubText : ""
+    location: hostedPlasmoid ? hostedPlasmoid.location : PlasmaCore.Types.Floating
+    active: hostedApplet ? !hostedApplet.expanded : true
+    textFormat: hostedApplet ? hostedApplet.toolTipTextFormat : Text.AutoText
+    mainItem: hostedApplet && hostedApplet.toolTipItem ? hostedApplet.toolTipItem : null
 
     property Item fullRepresentation: null
     property Item compactRepresentation: null
@@ -36,6 +38,13 @@ PlasmaCore.ToolTipArea {
     property Item appletItem: compactRepresentationVisualParent
                               && compactRepresentationVisualParent.parent
                               && compactRepresentationVisualParent.parent.parent ? compactRepresentationVisualParent.parent.parent.parent : null
+
+    //! The hosted applet's graphic object (PlasmoidItem / AppletQuickItem). Carries the
+    //! representation-side members (expanded, toolTip*, hideOnWindowDeactivate). Its
+    //! .plasmoid is the Plasma::Applet, which carries location/status/containmentDisplayHints
+    //! and the configure action. Null until the visual tree settles, so every access guards.
+    readonly property Item hostedApplet: appletItem ? appletItem.applet : null
+    readonly property QtObject hostedPlasmoid: hostedApplet ? hostedApplet.plasmoid : null
 
     onCompactRepresentationChanged: {
         if (compactRepresentation) {
@@ -77,7 +86,7 @@ PlasmaCore.ToolTipArea {
             })
         } else {
             popupWindow.mainItem.width = Qt.binding(function() {
-                return PlasmaCore.Theme.mSize(PlasmaCore.Theme.defaultFont).width * 35
+                return _mSize.advanceWidth * 35
             })
         }
 
@@ -95,7 +104,7 @@ PlasmaCore.ToolTipArea {
             })
         } else {
             popupWindow.mainItem.height = Qt.binding(function() {
-                return PlasmaCore.Theme.mSize(PlasmaCore.Theme.defaultFont).height * 25
+                return _mSize.height * 25
             })
         }
 
@@ -103,14 +112,14 @@ PlasmaCore.ToolTipArea {
         fullRepresentation.anchors.fill = fullRepresentation.parent;
     }
 
-   /* PlasmaCore.FrameSvgItem {
+   /* KSvg.FrameSvgItem {
         id: expandedItem
         anchors.fill: parent
         imagePath: "widgets/tabbar"
         visible: fromCurrentTheme && opacity > 0
         prefix: {
             var prefix;
-            switch (plasmoid.location) {
+            switch (hostedPlasmoid ? hostedPlasmoid.location : PlasmaCore.Types.Floating) {
                 case PlasmaCore.Types.LeftEdge:
                     prefix = "west-active-tab";
                     break;
@@ -128,30 +137,44 @@ PlasmaCore.ToolTipArea {
                 }
                 return prefix;
             }
-        opacity: plasmoid.expanded ? 1 : 0
+        opacity: hostedApplet && hostedApplet.expanded ? 1 : 0
         Behavior on opacity {
             NumberAnimation {
-                duration: PlasmaCore.Units.shortDuration
+                duration: Kirigami.Units.shortDuration
                 easing.type: Easing.InOutQuad
             }
         }
     }*/
+
+    TextMetrics {
+        id: _mSize
+        text: "M"
+        font: Kirigami.Theme.defaultFont
+    }
 
     //! This timer is needed in order for the applet popup to not reshow instantly and faulty after the user
     //! clicks compact representation to hide it
     Timer {
         id: expandedSync
         interval: 500
-        onTriggered: plasmoid.expanded = popupWindow.visible;
+        onTriggered: {
+            if (hostedApplet) {
+                hostedApplet.expanded = popupWindow.visible;
+            }
+        }
     }
 
     Connections {
-        target: plasmoid.action("configure")
-        function onTriggered() { plasmoid.expanded = false }
+        target: hostedPlasmoid ? hostedPlasmoid.internalAction("configure") : null
+        function onTriggered() {
+            if (hostedApplet) {
+                hostedApplet.expanded = false;
+            }
+        }
     }
 
     Connections {
-        target: plasmoid
+        target: hostedPlasmoid
         function onContextualActionsAboutToShow() { root.hideToolTip() }
     }
 
@@ -159,12 +182,12 @@ PlasmaCore.ToolTipArea {
         id: popupWindow
         objectName: "popupWindow"
         flags: Qt.WindowStaysOnTopHint
-        visible: plasmoid.expanded && fullRepresentation
+        visible: (hostedApplet && hostedApplet.expanded) && fullRepresentation
         visualParent: compactRepresentationVisualParent ? compactRepresentationVisualParent : (compactRepresentation ? compactRepresentation : null)
-       // location: PlasmaCore.Types.Floating //plasmoid.location
-        edge: plasmoid.location /*this way dialog borders are not updated and it is used only for adjusting dialog position*/
-        hideOnWindowDeactivate: plasmoid.hideOnWindowDeactivate
-        backgroundHints: (plasmoid.containmentDisplayHints & PlasmaCore.Types.DesktopFullyCovered) ? PlasmaCore.Dialog.SolidBackground : PlasmaCore.Dialog.StandardBackground
+       // location: PlasmaCore.Types.Floating //hostedPlasmoid.location
+        edge: hostedPlasmoid ? hostedPlasmoid.location : PlasmaCore.Types.Floating /*this way dialog borders are not updated and it is used only for adjusting dialog position*/
+        hideOnWindowDeactivate: hostedApplet ? hostedApplet.hideOnWindowDeactivate : false
+        backgroundHints: (hostedPlasmoid && (hostedPlasmoid.containmentDisplayHints & PlasmaCore.Types.ContainmentPrefersOpaqueBackground)) ? PlasmaCore.Dialog.SolidBackground : PlasmaCore.Dialog.StandardBackground
 
         property var oldStatus: PlasmaCore.Types.UnknownStatus
 
@@ -175,7 +198,9 @@ PlasmaCore.ToolTipArea {
             focus: true
 
             Keys.onEscapePressed: {
-                plasmoid.expanded = false;
+                if (hostedApplet) {
+                    hostedApplet.expanded = false;
+                }
             }
 
             LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
@@ -200,10 +225,14 @@ PlasmaCore.ToolTipArea {
         onVisibleChanged: {
             if (!visible) {
                 expandedSync.restart();
-                plasmoid.status = oldStatus;
+                if (hostedPlasmoid) {
+                    hostedPlasmoid.status = oldStatus;
+                }
             } else {
-                oldStatus = plasmoid.status;
-                plasmoid.status = PlasmaCore.Types.RequiresAttentionStatus;
+                if (hostedPlasmoid) {
+                    oldStatus = hostedPlasmoid.status;
+                    hostedPlasmoid.status = PlasmaCore.Types.RequiresAttentionStatus;
+                }
                 // This call currently fails and complains at runtime:
                 // QWindow::setWindowState: QWindow::setWindowState does not accept Qt::WindowActive
                 popupWindow.requestActivate();
@@ -251,7 +280,7 @@ PlasmaCore.ToolTipArea {
     }
 
     ////Clicked Effect ////
-    BrightnessContrast {
+    MultiEffect {
         id: _clickedEffect
         anchors.centerIn: parent
         anchors.horizontalCenterOffset: compactRepresentation ? compactRepresentation.anchors.horizontalCenterOffset : 0
