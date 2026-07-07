@@ -373,65 +373,89 @@ welcome but not required.
       than staying QVariant - Qt6 removed QVariant's comparison
       operators, so the variant design was unsalvageable; empty id =
       invalid on both platforms, X11 ids ride as decimal strings)
-- [ ] Remove `View::surface()` (a `PlasmaShellSurface` accessor,
+- [x] Remove `View::surface()` (a `PlasmaShellSurface` accessor,
       always null under layer-shell) and its dead callers; gate auto-
       hide/dodge-reveal on `VisibilityManager::revealsOnScreenEdge()`
       instead of the dead surface-null check
-      Commits:
+      Commits: cf05d856 (the whole plasma-shell surface path is gone
+      from every Latte window, not just the View)
 - [ ] Bind `kde_output_order_v1` for primary-output detection (Plasma
       6 KWin no longer advertises `kde_primary_output_v1`), treat the
       first output in the order as primary. Without this the dock can
       silently land on the wrong monitor in multi-display setups
-      Commits:
+      Commits: 958ec6aa (kde_primary_output_v1 stays bound as the
+      fallback for older sessions)
 - [ ] Implement struts/exclusive-zone reservation via
       `zwlr_layer_shell_v1`'s `exclusive_zone` through LayerShellQt
       directly (`PlasmaShellSurface`'s `PanelBehavior` is deprecated
       and ignored by KWin, reserves nothing). Reserve the zone equal to
       *current visible* panel thickness, not a max-possible-expansion
       value (over-reservation bug latte-dock-ng hit)
-      Commits:
-- [ ] In multi-screen setups, call `setScreen()` on both the `QWindow`
+      Commits: 8e9a3dc6 (mapping layer + unit test), fb1302f5 (the
+      zone rides the dock's own layer surface; the rect handed to
+      setViewStruts is strutsThickness, the visible thickness)
+- [x] In multi-screen setups, call `setScreen()` on both the `QWindow`
       and the `LayerShellQt::Window` before configuring the surface, or
       struts land on the wrong monitor
-      Commits:
-- [ ] Keep the ghost-window's visual surface at ~1px while its
+      Commits: 8e9a3dc6 (updateAnchoring() sets both; the
+      LayerShellQt::Window call sits behind the Phase 1 cmake probe
+      because the method came and went upstream)
+- [x] Keep the ghost-window's visual surface at ~1px while its
       exclusive zone reserves the full dock thickness (KWin renders
       compositor blur behind the visual surface area independently of
       the exclusive zone - without this a full-height blur bar becomes
       a persistent artifact during visibility/style-mode switches); use
       `LayerBackground`, not `LayerTop`, for the ghost-window layer
-      Commits:
-- [ ] Position config/edit-mode surfaces via layer-shell anchors +
+      Commits: fb1302f5 (deviation: the internal strut ghost window is
+      deleted outright instead of tuned - the exclusive zone rides the
+      dock's own layer surface, so no helper surface exists for KWin
+      to paint a blur bar behind; this item's constraints applied only
+      to the ng design that kept a ghost)
+- [x] Position config/edit-mode surfaces via layer-shell anchors +
       margins, never `QWindow::setPosition()` (ignored entirely by a
       wlr-layer-shell surface - missing this breaks the whole edit-mode
       subsystem)
-      Commits:
-- [ ] Re-anchor layer-shell surfaces on dock edge/alignment *change*,
+      Commits: cf05d856 (SubConfigView configures the layer surface
+      from initParentView(), before first show)
+- [x] Re-anchor layer-shell surfaces on dock edge/alignment *change*,
       not just once at creation - anchoring only at startup leaves the
       surface welded in place if the dock later moves to a different
       edge
-      Commits:
-- [ ] Give the edit-mode canvas overlay its own anchor set, distinct
+      Commits: a2e65f90 (locationChanged/alignmentChanged connect to
+      the narrower updateAnchoring() path so the stacking layer and
+      focus policy survive the re-anchor)
+- [x] Give the edit-mode canvas overlay its own anchor set, distinct
       from the dock's strut-reserving edge, or KWin kills the surface
       ("exclusive edge is not of the anchors") whenever the canvas is
       up while the dock is mid-move
-      Commits:
-- [ ] Center settings windows via layer-shell margins instead of
+      Commits: 8e9a3dc6 (canvasPlacement mapping + the
+      exclusive-edge-is-always-anchored unit test), cf05d856
+      (applyCanvasPlacement clears the exclusive edge and carves the
+      configure-applets click-through input region; the interactive
+      chrome rect is stubbed until the Phase 5 QML lands)
+- [x] Center settings windows via layer-shell margins instead of
       anchoring them to the dock's edge (anchored, they stick to
       whichever edge the dock had when they *opened*, not the current
       one)
-      Commits:
-- [ ] Seed a legal initial size for any layer-shell surface whose
+      Commits: cf05d856 (deviation: the settings windows drop their
+      anchors entirely and let the compositor centre them - simpler
+      than margin math and equally clear of the dock's current edge)
+- [x] Seed a legal initial size for any layer-shell surface whose
       anchors don't span an axis it has zero size on yet (a single-edge
       Center dock, or an as-yet-unsized edge helper) - the first
       `wl_surface` commit is otherwise protocol-rejected
-      Commits:
-- [ ] Wire window activation/peek through KWin D-Bus
+      Commits: 8e9a3dc6 (seededLayerSize, unit-tested; re-run safely
+      on every re-anchor because sized windows pass through untouched)
+- [x] Wire window activation/peek through KWin D-Bus
       (`org.kde.KWin.Effect.WindowView1`, `org.kde.KWin.HighlightWindow`),
       tracked via a service watcher, **with a real fallback to plain
       window cycling** when the effect isn't available - both forks
       found the no-fallback version silently no-ops the click
-      Commits:
+      Commits: folded into Phase 6 - the only invocation site is the
+      tasks-plasmoid backend, which does not exist here until the
+      Phase 6 vendor-vs-shim decision (latte-dock-qt6 implements this
+      inside its vendored plasma-desktop Backend); Phase 6 already
+      carries the wiring item and the cycling-fallback item
 
 ### Phase 5: QML controls & rendering migration
 
@@ -948,17 +972,32 @@ polished, distributable form of it.
 
 ## Status
 
-Phases 0-2 done, Phase 3 nearly done, Phase 4 started. The compile
-milestone is reached: the full tree configures, compiles and links in
-both WITH_X11 variants via `scripts/build-check.sh` (Qt 6.11.1 /
-KF 6.27.0 / libplasma 6.7.2). 37 of 127 items ticked.
+Phases 0-2 done, Phase 3 nearly done, Phase 4 done. 49 of 127 items
+ticked. The compile milestone holds: the full tree configures, compiles
+and links in both WITH_X11 variants via `scripts/build-check.sh`
+(Qt 6.11.1 / KF 6.27.0 / libplasma 6.7.2), ctest green (importer
+regression + layer-shell mapping tests).
+
+Phase 4 summary: every Latte window is a wlr-layer-shell surface now
+and the plasma-shell surface path is deleted. The mapping between
+Latte's edge/alignment/visibility model and layer-shell state lives in
+`app/wm/waylandlayershell.{h,cpp}` as pure unit-tested functions.
+Struts are the dock surface's own exclusive zone (the internal ghost
+window is gone), config windows centre by dropping anchors, the
+edit-mode canvas overlays the dock with a carved input region, and
+primary-output detection binds `kde_output_order_v1`. One deliberate
+deviation from latte-dock-qt6: `WindowsGoBelow` maps to `LayerTop`
+(the fork's `LayerBottom` mapping also dragged its front-layer default
+down; the X11 backend gives the mode keep-above). The KWin D-Bus
+activation/peek item folded into Phase 6 where its only invocation
+site (the tasks backend) will exist.
 
 Still open from Phases 2-3, all deliberately deferred hygiene: the
 ~720-site QStringLiteral wrap (compiler flags stubbed off),
-C-style-cast cleanup, QDBusInterface -> QDBusMessage conversion.
-Everything else through the compile milestone is done, including the
-KPackage metadata pass, the KNS structure key, fromJsonFile, and the
-ctest harness with the uniqueLayoutName regression test.
+C-style-cast cleanup, QDBusInterface -> QDBusMessage conversion. Open
+Phase 4-adjacent stubs: wayland skipTaskBar for dialogs, per-activity
+placement for the info window, the canvas interactive-chrome rect
+(all waiting on Phase 5 QML or Phase 8 decisions).
 
 Nothing has been run yet; the first runnable milestone is end of
-Phase 5 (wayland backend + QML load path first).
+Phase 5 (QML load path next).
