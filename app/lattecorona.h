@@ -24,8 +24,8 @@
 // KDE
 #include <KAboutApplicationDialog>
 
-namespace KDeclarative {
-class QmlObjectSharedEngine;
+namespace PlasmaQuick {
+class SharedQmlEngine;
 }
 
 namespace Plasma {
@@ -175,6 +175,11 @@ public Q_SLOTS:
 
     void unload();
 
+    //! Plasma 6's availableScreenRect/RegionChanged signals carry the affected
+    //! screen id; a views-count change can affect any screen, so broadcast for
+    //! every known one
+    void notifyAvailableScreenGeometriesChanged();
+
 Q_SIGNALS:
     void configurationShown(PlasmaQuick::ConfigView *configView);
     void viewLocationChanged();
@@ -186,6 +191,9 @@ Q_SIGNALS:
 private Q_SLOTS:
     void alternativesVisibilityChanged(bool visible);
     void load();
+
+    void onAvailableScreenRectChangedFrom(Latte::View *origin);
+    void onAvailableScreenRegionChangedFrom(Latte::View *origin);
 
     void onAboutToQuit();
 
@@ -226,7 +234,7 @@ private:
     QString m_startupAddViewTemplateName;
     QString m_importFullConfigurationFile;
 
-    QList<KDeclarative::QmlObjectSharedEngine *> m_alternativesObjects;
+    QList<PlasmaQuick::SharedQmlEngine *> m_alternativesObjects;
 
     QTimer m_viewsScreenSyncTimer;
 

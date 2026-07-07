@@ -521,17 +521,13 @@ void Synchronizer::pauseLayout(QString layoutName)
         QStringList appliedactivities = layout->appliedActivities();
 
         if (layout && !appliedactivities.isEmpty()) {
-            int i = 0;
-
-            for (const auto &activityid : appliedactivities) {
-                //! Stopping the activities must be done asynchronous because otherwise
-                //! the activity manager cant close multiple activities
-                QTimer::singleShot(i * 1000, [this, activityid]() {
-                    m_activitiesController->stopActivity(activityid);
-                });
-
-                i = i + 1;
-            }
+            //! STUB: Phase 8 - Plasma 6 removed activity stopping entirely
+            //! (KActivities::Controller::stopActivity is gone and
+            //! kactivitymanagerd no longer exposes StopActivity over D-Bus,
+            //! verified against a live Plasma 6 session). The old behavior
+            //! paused the activities of an unloading layout in
+            //! multiple-layouts mode; decide during Phase 8 whether any
+            //! replacement is possible or the behavior is retired for good.
         }
     }
 }
@@ -867,10 +863,9 @@ bool Synchronizer::switchToLayoutInMultipleModeBasedOnActivities(const QString &
     }
 
     if (!switchToActivity.isEmpty()) {
-        if (!runningActivities().contains(switchToActivity)) {
-            m_activitiesController->startActivity(switchToActivity);
-        }
-
+        //! Plasma 6 removed Controller::startActivity; setCurrentActivity
+        //! makes the target activity current (and therefore running) on its
+        //! own
         m_activitiesController->setCurrentActivity(switchToActivity);
     }
 

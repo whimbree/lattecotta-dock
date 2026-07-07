@@ -53,7 +53,6 @@
 #include <QScreen>
 #include <QDBusConnection>
 #include <QDebug>
-#include <QDesktopWidget>
 #include <QFile>
 #include <QFontDatabase>
 #include <QQmlContext>
@@ -74,7 +73,7 @@
 #include <KPackage/PackageLoader>
 #include <KAboutData>
 #include <PlasmaActivities/Consumer>
-#include <KDeclarative/QmlObjectSharedEngine>
+#include <PlasmaQuick/SharedQmlEngine>
 #include <KWindowSystem>
 #include <KWayland/Client/connection_thread.h>
 #include <KWayland/Client/registry.h>
@@ -226,8 +225,8 @@ void Corona::load()
         m_templatesManager->init();
         m_layoutsManager->init();
 
-        connect(this, &Corona::availableScreenRectChangedFrom, this, &Plasma::Corona::availableScreenRectChanged, Qt::UniqueConnection);
-        connect(this, &Corona::availableScreenRegionChangedFrom, this, &Plasma::Corona::availableScreenRegionChanged, Qt::UniqueConnection);
+        connect(this, &Corona::availableScreenRectChangedFrom, this, &Corona::onAvailableScreenRectChangedFrom, Qt::UniqueConnection);
+        connect(this, &Corona::availableScreenRegionChangedFrom, this, &Corona::onAvailableScreenRegionChangedFrom, Qt::UniqueConnection);
         connect(m_screenPool, &ScreenPool::primaryScreenChanged, this, &Corona::onScreenCountChanged, Qt::UniqueConnection);
 
         QString loadLayoutName = "";
@@ -863,7 +862,7 @@ void Corona::onScreenAdded(QScreen *screen)
 
     connect(screen, &QScreen::geometryChanged, this, &Corona::onScreenGeometryChanged);
 
-    Q_EMIT availableScreenRectChanged();
+    Q_EMIT availableScreenRectChanged(m_screenPool->id(screen->name()));
     Q_EMIT screenAdded(m_screenPool->id(screen->name()));
 
     onScreenCountChanged();
@@ -894,8 +893,34 @@ void Corona::onScreenGeometryChanged(const QRect &geometry)
 
     if (id >= 0) {
         Q_EMIT screenGeometryChanged(id);
-        Q_EMIT availableScreenRegionChanged();
-        Q_EMIT availableScreenRectChanged();
+        Q_EMIT availableScreenRegionChanged(id);
+        Q_EMIT availableScreenRectChanged(id);
+    }
+}
+
+void Corona::notifyAvailableScreenGeometriesChanged()
+{
+    for (QScreen *screen : qGuiApp->screens()) {
+        const int id = m_screenPool->id(screen->name());
+
+        if (id >= 0) {
+            Q_EMIT availableScreenRectChanged(id);
+            Q_EMIT availableScreenRegionChanged(id);
+        }
+    }
+}
+
+void Corona::onAvailableScreenRectChangedFrom(Latte::View *origin)
+{
+    if (origin && origin->containment()) {
+        Q_EMIT availableScreenRectChanged(origin->containment()->screen());
+    }
+}
+
+void Corona::onAvailableScreenRegionChangedFrom(Latte::View *origin)
+{
+    if (origin && origin->containment()) {
+        Q_EMIT availableScreenRegionChanged(origin->containment()->screen());
     }
 }
 
@@ -990,13 +1015,13 @@ void Corona::showAlternativesForApplet(Plasma::Applet *applet)
 
     Latte::View *latteView =  m_layoutsManager->synchronizer()->viewForContainment(applet->containment());
 
-    KDeclarative::QmlObjectSharedEngine *qmlObj{nullptr};
+    PlasmaQuick::SharedQmlEngine *qmlObj{nullptr};
 
     if (latteView) {
         latteView->setAlternativesIsShown(true);
-        qmlObj = new KDeclarative::QmlObjectSharedEngine(latteView);
+        qmlObj = new PlasmaQuick::SharedQmlEngine(latteView);
     } else {
-        qmlObj = new KDeclarative::QmlObjectSharedEngine(this);
+        qmlObj = new PlasmaQuick::SharedQmlEngine(this);
     }
 
     qmlObj->setInitializationDelayed(true);
@@ -1021,10 +1046,10 @@ void Corona::showAlternativesForApplet(Plasma::Applet *applet)
             return;
         }
 
-        QMutableListIterator<KDeclarative::QmlObjectSharedEngine *> it(m_alternativesObjects);
+        QMutableListIterator<PlasmaQuick::SharedQmlEngine *> it(m_alternativesObjects);
 
         while (it.hasNext()) {
-            KDeclarative::QmlObjectSharedEngine *obj = it.next();
+            PlasmaQuick::SharedQmlEngine *obj = it.next();
 
             if (obj == qmlObj) {
                 it.remove();
@@ -1042,10 +1067,10 @@ void Corona::alternativesVisibilityChanged(bool visible)
 
     QObject *root = sender();
 
-    QMutableListIterator<KDeclarative::QmlObjectSharedEngine *> it(m_alternativesObjects);
+    QMutableListIterator<PlasmaQuick::SharedQmlEngine *> it(m_alternativesObjects);
 
     while (it.hasNext()) {
-        KDeclarative::QmlObjectSharedEngine *obj = it.next();
+        PlasmaQuick::SharedQmlEngine *obj = it.next();
 
         if (obj->rootObject() == root) {
             it.remove();
