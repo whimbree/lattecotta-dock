@@ -22,7 +22,7 @@
 #include <KLocalizedString>
 #include <KPluginMetaData>
 #include <KConfigPropertyMap>
-#include <KDeclarative/QmlObjectSharedEngine>
+#include <PlasmaQuick/SharedQmlEngine>
 
 
 namespace Latte {

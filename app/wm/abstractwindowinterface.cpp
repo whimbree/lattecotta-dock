@@ -8,6 +8,9 @@
 #include "abstractwindowinterface.h"
 
 // local
+#include "../data/activitiesinfo.h"
+
+// local
 #include "tracker/schemes.h"
 #include "tracker/windowstracker.h"
 #include "../lattecorona.h"
@@ -364,7 +367,7 @@ void AbstractWindowInterface::windowRemovedSlot(WindowId wid)
 //! Activities switching
 void AbstractWindowInterface::switchToNextActivity()
 {
-    QStringList runningActivities = m_activities->activities(KActivities::Info::State::Running);
+    QStringList runningActivities = Latte::ActivitiesInfo::runningActivities();
     if (runningActivities.count() <= 1) {
         return;
     }
@@ -382,7 +385,7 @@ void AbstractWindowInterface::switchToNextActivity()
 
 void AbstractWindowInterface::switchToPreviousActivity()
 {
-    QStringList runningActivities = m_activities->activities(KActivities::Info::State::Running);
+    QStringList runningActivities = Latte::ActivitiesInfo::runningActivities();
     if (runningActivities.count() <= 1) {
         return;
     }

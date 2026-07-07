@@ -17,7 +17,9 @@
 #include "../../wm/abstractwindowinterface.h"
 
 // KDE
-#include <KLocalizedContext>
+#include <QQmlEngine>
+
+// KDE
 #include <KLocalizedContext>
 #include <KWayland/Client/plasmashell.h>
 #include <KWayland/Client/surface.h>
