@@ -127,30 +127,37 @@ in Phases 10-11 where they originally sat.
 
 ### Phase 1: Build system migration
 
-- [ ] Migrate top-level `find_package(Qt5 ...)` to
+- [x] Migrate top-level `find_package(Qt5 ...)` to
       `find_package(Qt6 ...)`, bump `QT_MIN_VERSION` to 6.6.0; bump
       the `find_package(ECM ...)` floor to match the chosen KF6
       minimum
-      Commits:
-- [ ] Migrate `find_package(KF5 ...)` umbrella to individual
+      Commits: b41667ec
+- [x] Migrate `find_package(KF5 ...)` umbrella to individual
       `find_package(KF6Xxx ...)` calls (KF6 dropped the single-umbrella
       component list on some distros); decide `KF6_MIN_VERSION`
       deliberately - latte-dock-ng uses 6.0.0 (broader compatibility
       target), latte-dock-qt6 uses 6.5.0 (narrower)
-      Commits:
-- [ ] Add `find_package` for de-umbrella'd-from-Plasma frameworks:
+      Commits: b41667ec (deviation: kept the `find_package(KF6 ...)`
+      umbrella - current KDE style, works on nixpkgs. Chose
+      KF6_MIN_VERSION 6.5.0 / PLASMA_MIN_VERSION 6.5.0, the oldest a
+      reference fork demonstrably built against. Discovery: the KF6
+      Declarative/QuickAddons libraries no longer exist as of KF 6.27,
+      link targets moved to KF6::ConfigQml now - see Phase 3)
+- [x] Add `find_package` for de-umbrella'd-from-Plasma frameworks:
       `libplasma`, `PlasmaQuick`, `PlasmaActivities`,
       `PlasmaActivitiesStats`, `KSvg`, `KWayland`, `LayerShellQt`,
       `KSysGuard`
-      Commits:
-- [ ] Add `find_package(KF6KirigamiPlatform)` - transitively required
+      Commits: b41667ec (PlasmaActivitiesStats deliberately skipped -
+      nothing in the tree uses KActivities::Stats; KSvg via the KF6
+      umbrella's Svg component)
+- [x] Add `find_package(KF6KirigamiPlatform)` - transitively required
       by `Plasma::Plasma`'s link interface, configure fails without it
       even though nothing calls it directly
-      Commits:
-- [ ] Add `find_package(KF6Service)` and `find_package(LibNotificationManager)`
+      Commits: b41667ec
+- [x] Add `find_package(KF6Service)` and `find_package(LibNotificationManager)`
       - needed by the tasks plugin for job/launcher data
-      Commits:
-- [ ] Keep X11 as an optional, best-effort build path instead of
+      Commits: b41667ec
+- [x] Keep X11 as an optional, best-effort build path instead of
       dropping it (scope decision, see Phase 4 intro): remove
       `find_package(Qt5 X11Extras)` (the module is gone in Qt6 -
       native handles come from `QNativeInterface::QX11Application`),
@@ -161,19 +168,21 @@ in Phases 10-11 where they originally sat.
       Wayland-only, so there is no reference port for this path -
       expect it to be the mechanical Qt5->Qt6 work upstream would
       have done, with no fork to crib from
-      Commits:
-- [ ] `qt5_add_dbus_adaptor` -> `qt_add_dbus_adaptor`
-      Commits:
-- [ ] Add a CMake `try_compile` feature-detection guard for
+      Commits: b41667ec (`WITH_X11` option -> `HAVE_X11`; both ON and
+      OFF variants configure from a fresh tree)
+- [x] `qt5_add_dbus_adaptor` -> `qt_add_dbus_adaptor`
+      Commits: b41667ec
+- [x] Add a CMake `try_compile` feature-detection guard for
       `LayerShellQt::Window::setScreen(QScreen*)` (added in
       LayerShellQt 6.6, later removed upstream - a real build
       regression latte-dock-ng hit after depending on it
       unconditionally); fall back to plain `QWindow::setScreen()` when
       absent
-      Commits:
-- [ ] Milestone: `cmake` configures cleanly against Qt6/KF6, even if
+      Commits: b41667ec (detected available on the current pin)
+- [x] Milestone: `cmake` configures cleanly against Qt6/KF6, even if
       nothing compiles yet
-      Commits:
+      Commits: b41667ec (Qt 6.11.1 / KF 6.27.0 / libplasma 6.7.2,
+      WITH_X11 ON and OFF)
 
 ### Phase 2: Mechanical Qt5->Qt6 source conversions
 
@@ -912,5 +921,8 @@ polished, distributable form of it.
 
 ## Status
 
-Phase 0 done (toolchain devShell, build check, testing standard).
-Phase 1 (build system migration) is next.
+Phases 0-1 done: toolchain devShell, build check, testing standard,
+and the CMake migration (configures cleanly against Qt 6.11.1 /
+KF 6.27.0 / libplasma 6.7.2, both X11 variants). Phase 2 (mechanical
+source conversion) is next; the build check now fails at compile, as
+expected, and Phase 2's job is to make it pass.
