@@ -34,9 +34,10 @@
 //! KDE
 #include <KWindowSystem>
 #include <KLocalizedString>
-#include <KActivities/Controller>
+#include <PlasmaActivities/Controller>
 #include <KIO/OpenFileManagerWindowJob>
-#include <KNewStuff3/KNS3/DownloadDialog>
+#include <KNSCore/Entry>
+#include <KNSWidgets/Dialog>
 
 
 namespace Latte {
@@ -466,21 +467,25 @@ void TabLayouts::downloadLayout()
         return;
     }
 
-    KNS3::DownloadDialog dialog(QStringLiteral("latte-layouts.knsrc"), m_parentDialog);
+    KNSWidgets::Dialog dialog(QStringLiteral("latte-layouts.knsrc"), m_parentDialog);
     dialog.resize(m_parentDialog->downloadWindowSize());
     dialog.exec();
 
-    if (!dialog.changedEntries().isEmpty() && !dialog.installedEntries().isEmpty()) {
-        for (const auto &entry : dialog.installedEntries()) {
-            for (const auto &entryFile : entry.installedFiles()) {
-                Latte::Layouts::Importer::LatteFileVersion version = Latte::Layouts::Importer::fileVersion(entryFile);
+    //! KNS3::DownloadDialog's installedEntries() is gone; KNSWidgets::Dialog
+    //! exposes changedEntries() and each entry carries its own status
+    for (const KNSCore::Entry &entry : dialog.changedEntries()) {
+        if (entry.status() != KNSCore::Entry::Installed) {
+            continue;
+        }
 
-                if (version == Latte::Layouts::Importer::LayoutVersion2) {
-                    Latte::Data::Layout downloaded = m_layoutsController->addLayoutForFile(entryFile);
-                    showInlineMessage(i18nc("settings:layout downloaded successfully","Layout <b>%1</b> downloaded successfully...", downloaded.name),
-                                      KMessageWidget::Positive);
-                    break;
-                }
+        for (const auto &entryFile : entry.installedFiles()) {
+            Latte::Layouts::Importer::LatteFileVersion version = Latte::Layouts::Importer::fileVersion(entryFile);
+
+            if (version == Latte::Layouts::Importer::LayoutVersion2) {
+                Latte::Data::Layout downloaded = m_layoutsController->addLayoutForFile(entryFile);
+                showInlineMessage(i18nc("settings:layout downloaded successfully","Layout <b>%1</b> downloaded successfully...", downloaded.name),
+                                  KMessageWidget::Positive);
+                break;
             }
         }
     }
