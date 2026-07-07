@@ -11,12 +11,22 @@
 #include <QWindow>
 #include <QIcon>
 #include <QRect>
-#include <QVariant>
+#include <QByteArray>
 
 namespace Latte {
 namespace WindowSystem {
 
-using WindowId = QVariant;
+//! Qt6 removed QVariant's comparison operators, which the old
+//! WindowId = QVariant design relied on for map keys and validity checks.
+//! Ids are byte strings now: wayland carries PlasmaWindow::uuid() directly,
+//! X11 carries the numeric WId as a decimal string, and an empty id is
+//! invalid on both platforms.
+using WindowId = QByteArray;
+
+inline WindowId windowIdFromWId(quint64 wid)
+{
+    return wid ? QByteArray::number(qulonglong(wid)) : QByteArray();
+}
 
 class WindowInfoWrap
 {
@@ -133,8 +143,8 @@ public:
     bool isOnActivity(const QString &activity) const;
 
 private:
-    WindowId m_wid{0};
-    WindowId m_parentId{0};
+    WindowId m_wid;
+    WindowId m_parentId;
 
     QRect m_geometry;
 

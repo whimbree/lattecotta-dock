@@ -55,7 +55,7 @@ InfoView::InfoView(Latte::Corona *corona, QString message, QScreen *screen, QWin
     setFlags(wFlags());
 
     if (KWindowSystem::isPlatformX11()) {
-        m_trackedWindowId = winId();
+        m_trackedWindowId = WindowSystem::windowIdFromWId(winId());
         m_corona->wm()->registerIgnoredWindow(m_trackedWindowId);
     } else {
         connect(m_corona->wm(), &WindowSystem::AbstractWindowInterface::latteWindowAdded, this, &InfoView::updateWaylandId);

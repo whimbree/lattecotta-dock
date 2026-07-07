@@ -106,7 +106,7 @@ SubWindow::SubWindow(Latte::View *view, QString debugType) :
 
         connectionsHack << connect(this, &SubWindow::forcedShown, this, [&]() {
             m_corona->wm()->unregisterIgnoredWindow(m_trackedWindowId);
-            m_trackedWindowId = winId();
+            m_trackedWindowId = WindowSystem::windowIdFromWId(winId());
             m_corona->wm()->registerIgnoredWindow(m_trackedWindowId);
         });
     }
@@ -114,7 +114,7 @@ SubWindow::SubWindow(Latte::View *view, QString debugType) :
     setupWaylandIntegration();
 
     if (KWindowSystem::isPlatformX11()) {
-        m_trackedWindowId = winId();
+        m_trackedWindowId = WindowSystem::windowIdFromWId(winId());
         m_corona->wm()->registerIgnoredWindow(m_trackedWindowId);
     } else {
         connect(m_corona->wm(), &WindowSystem::AbstractWindowInterface::latteWindowAdded, this, &SubWindow::updateWaylandId);
@@ -129,7 +129,7 @@ SubWindow::~SubWindow()
 {
     m_inDelete = true;
 
-    m_corona->wm()->unregisterIgnoredWindow(KWindowSystem::isPlatformX11() ? winId() : m_trackedWindowId);
+    m_corona->wm()->unregisterIgnoredWindow(KWindowSystem::isPlatformX11() ? WindowSystem::windowIdFromWId(winId()) : m_trackedWindowId);
 
     m_latteView = nullptr;
 

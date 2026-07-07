@@ -26,6 +26,7 @@
 #include "../layouts/storage.h"
 #include "../plasma/extended/theme.h"
 #include "../screenpool.h"
+#include "../data/activitiesinfo.h"
 #include "../settings/universalsettings.h"
 #include "../settings/exporttemplatedialog/exporttemplatedialog.h"
 #include "../shortcuts/globalshortcuts.h"
@@ -49,6 +50,10 @@
 #include <KWayland/Client/plasmashell.h>
 #include <KWayland/Client/surface.h>
 #include <KWindowSystem>
+#include <config-latte.h>
+#if HAVE_X11
+#include <KX11Extras>
+#endif
 
 // Plasma
 #include <Plasma/Containment>
@@ -84,7 +89,6 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
     setIcon(qGuiApp->windowIcon());
     setResizeMode(QuickViewSharedEngine::SizeRootObjectToView);
     setColor(QColor(Qt::transparent));
-    setClearBeforeRendering(true);
 
     const auto flags = Qt::FramelessWindowHint
             | Qt::NoDropShadowWindowHint
@@ -104,7 +108,9 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
         //! Best guess is that this is needed because OnAllDesktops is set through visibilitymanager
         //! after containment has been assigned. That delay might lead wm ignoring the flag
         //! until it is reapplied.
-        KWindowSystem::setOnAllDesktops(winId(), true);
+#if HAVE_X11
+        KX11Extras::setOnAllDesktops(winId(), true);
+#endif
     }
 
     if (targetScreen) {
@@ -282,13 +288,13 @@ void View::init(Plasma::Containment *plasma_containment)
     connect(this, &QQuickWindow::heightChanged, this, &View::geometryChanged);
 
     connect(this, &QQuickWindow::xChanged, this, &View::xChanged);
-    connect(this, &QQuickWindow::xChanged, this, &View::updateAbsoluteGeometry);
+    connect(this, &QQuickWindow::xChanged, this, [&]() { updateAbsoluteGeometry(); });
     connect(this, &QQuickWindow::yChanged, this, &View::yChanged);
-    connect(this, &QQuickWindow::yChanged, this, &View::updateAbsoluteGeometry);
+    connect(this, &QQuickWindow::yChanged, this, [&]() { updateAbsoluteGeometry(); });
     connect(this, &QQuickWindow::widthChanged, this, &View::widthChanged);
-    connect(this, &QQuickWindow::widthChanged, this, &View::updateAbsoluteGeometry);
+    connect(this, &QQuickWindow::widthChanged, this, [&]() { updateAbsoluteGeometry(); });
     connect(this, &QQuickWindow::heightChanged, this, &View::heightChanged);
-    connect(this, &QQuickWindow::heightChanged, this, &View::updateAbsoluteGeometry);
+    connect(this, &QQuickWindow::heightChanged, this, [&]() { updateAbsoluteGeometry(); });
 
     connect(this, &View::fontPixelSizeChanged, this, &View::editThicknessChanged);
     connect(this, &View::maxNormalThicknessChanged, this, &View::editThicknessChanged);
@@ -728,9 +734,11 @@ void View::statusChanged(Plasma::Types::ItemStatus status)
         m_visibility->removeBlockHidingEvent(BLOCKHIDINGNEEDSATTENTIONTYPE);
         setFlags(flags() & ~Qt::WindowDoesNotAcceptFocus);
         m_visibility->initViewFlags();
+#if HAVE_X11
         if (KWindowSystem::isPlatformX11()) {
-            KWindowSystem::forceActiveWindow(winId());
+            KX11Extras::forceActiveWindow(winId());
         }
+#endif
         if (m_shellSurface) {
             m_shellSurface->setPanelTakesFocus(true);
         }
@@ -1170,7 +1178,7 @@ QStringList View::activities() const
 {
     QStringList running;
 
-    QStringList runningAll = m_corona->activitiesConsumer()->runningActivities();
+    QStringList runningAll = Latte::ActivitiesInfo::runningActivities();
 
     for(int i=0; i<m_activities.count(); ++i) {
         if (runningAll.contains(m_activities[i])) {
@@ -1207,7 +1215,7 @@ void View::applyActivitiesToWindows()
             Latte::WindowSystem::WindowId appletconfigviewid;
 
             if (KWindowSystem::isPlatformX11()) {
-                appletconfigviewid = m_appletConfigView->winId();
+                appletconfigviewid = WindowSystem::windowIdFromWId(m_appletConfigView->winId());
             } else {
                 appletconfigviewid = m_corona->wm()->winIdFor("latte-dock", m_appletConfigView->title());
             }
@@ -1296,7 +1304,7 @@ void View::setLayout(Layout::GenericLayout *layout)
         });
 
         if (latteCorona->layoutsManager()->memoryUsage() == MemoryUsage::MultipleLayouts) {
-            connectionsLayout << connect(latteCorona->activitiesConsumer(), &KActivities::Consumer::runningActivitiesChanged, this, [&]() {
+            connectionsLayout << connect(latteCorona->activitiesConsumer(), &KActivities::Consumer::activitiesChanged, this, [&]() {
                 if (m_layout && m_visibility) {
                     setActivities(m_layout->appliedActivities());
                     qDebug() << "DOCK VIEW FROM LAYOUT (runningActivitiesChanged) ::: " << m_layout->name()
@@ -1369,7 +1377,7 @@ bool View::mimeContainsPlasmoid(QMimeData *mimeData, QString name)
 
     if (mimeData->hasFormat(QStringLiteral("text/x-plasmoidservicename"))) {
         QString data = mimeData->data(QStringLiteral("text/x-plasmoidservicename"));
-        const QStringList appletNames = data.split('\n', QString::SkipEmptyParts);
+        const QStringList appletNames = data.split('\n', Qt::SkipEmptyParts);
 
         for (const QString &appletName : appletNames) {
             if (appletName == name)
@@ -1648,7 +1656,7 @@ QAction *View::action(const QString &name)
         return nullptr;
     }
 
-    return this->containment()->actions()->action(name);
+    return this->containment()->internalAction(name);
 }
 
 QVariantList View::containmentActions() const

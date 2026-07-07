@@ -9,6 +9,7 @@
 
 // local
 #include <coretypes.h>
+#include <config-latte.h>
 #include "alternativeshelper.h"
 #include "apptypes.h"
 #include "lattedockadaptor.h"
@@ -42,7 +43,9 @@
 #include "wm/abstractwindowinterface.h"
 #include "wm/schemecolors.h"
 #include "wm/waylandinterface.h"
+#if HAVE_X11
 #include "wm/xwindowinterface.h"
+#endif
 #include "wm/tracker/lastactivewindow.h"
 #include "wm/tracker/schemes.h"
 #include "wm/tracker/windowstracker.h"
@@ -107,7 +110,14 @@ Corona::Corona(bool defaultLayoutOnStartup, QString layoutNameOnStartUp, QString
     if (KWindowSystem::isPlatformWayland()) {
         m_wm = new WindowSystem::WaylandInterface(this);
     } else {
+#if HAVE_X11
         m_wm = new WindowSystem::XWindowInterface(this);
+#else
+        //! best-effort X11 support was disabled at build time; the wayland
+        //! interface degrades to no-ops without a wayland registry
+        qWarning() << "Latte was built without X11 support (WITH_X11=OFF) but is not running under wayland; window tracking will not work";
+        m_wm = new WindowSystem::WaylandInterface(this);
+#endif
     }
 
     setupWaylandIntegration();
@@ -963,7 +973,7 @@ void Corona::aboutApplication()
     aboutDialog = new KAboutApplicationDialog(KAboutData::applicationData());
     connect(aboutDialog.data(), &QDialog::finished, aboutDialog.data(), &QObject::deleteLater);
     m_wm->skipTaskBar(*aboutDialog);
-    m_wm->setKeepAbove(aboutDialog->winId(), true);
+    m_wm->setKeepAbove(WindowSystem::windowIdFromWId(aboutDialog->winId()), true);
 
     aboutDialog->show();
 }
@@ -1119,11 +1129,10 @@ void Corona::windowColorScheme(QString windowIdAndScheme)
             //! [Wayland Case] - give the time to be informed correctly for the active window id
             //! otherwise the active window id may not be the same with the one triggered
             //! the color scheme dbus signal
-            QString windowIdStr = m_wm->activeWindow().toString();
-            m_wm->schemesTracker()->setColorSchemeForWindow(windowIdStr.toUInt(), schemeStr);
+            m_wm->schemesTracker()->setColorSchemeForWindow(m_wm->activeWindow(), schemeStr);
         });
     } else {
-        m_wm->schemesTracker()->setColorSchemeForWindow(windowIdStr.toUInt(), schemeStr);
+        m_wm->schemesTracker()->setColorSchemeForWindow(WindowSystem::windowIdFromWId(windowIdStr.toULongLong()), schemeStr);
     }
 }
 

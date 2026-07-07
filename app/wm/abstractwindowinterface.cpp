@@ -50,7 +50,7 @@ AbstractWindowInterface::AbstractWindowInterface(QObject *parent)
 
     connect(&m_windowWaitingTimer, &QTimer::timeout, this, [&]() {
         WindowId wid = m_windowChangedWaiting;
-        m_windowChangedWaiting = QVariant();
+        m_windowChangedWaiting = WindowId();
         Q_EMIT windowChanged(wid);
     });
 

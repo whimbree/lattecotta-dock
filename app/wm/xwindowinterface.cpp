@@ -16,13 +16,13 @@
 // Qt
 #include <QDebug>
 #include <QTimer>
-#include <QtX11Extras/QX11Info>
+#include <QGuiApplication>
 
 // KDE
 #include <KDesktopFile>
-#include <KWindowSystem>
 #include <KWindowInfo>
-#include <KIconThemes/KIconLoader>
+#include <KX11Extras>
+#include <KIconLoader>
 
 // X11
 #include <NETWM>
@@ -32,28 +32,50 @@
 namespace Latte {
 namespace WindowSystem {
 
+namespace {
+//! Qt6 removed QX11Info; native X11 handles come from the platform interface
+xcb_connection_t *x11Connection()
+{
+    const auto *x11App = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
+    return x11App ? x11App->connection() : nullptr;
+}
+
+xcb_window_t x11AppRootWindow()
+{
+    xcb_connection_t *c = x11Connection();
+
+    if (!c) {
+        return XCB_WINDOW_NONE;
+    }
+
+    return xcb_setup_roots_iterator(xcb_get_setup(c)).data->root;
+}
+}
+
 XWindowInterface::XWindowInterface(QObject *parent)
     : AbstractWindowInterface(parent)
 {
-    m_currentDesktop = QString(KWindowSystem::self()->currentDesktop());
+    m_currentDesktop = QString::number(KX11Extras::currentDesktop());
 
-    connect(KWindowSystem::self(), &KWindowSystem::activeWindowChanged, this, &AbstractWindowInterface::activeWindowChanged);
-    connect(KWindowSystem::self(), &KWindowSystem::windowRemoved, this, &AbstractWindowInterface::windowRemoved);
+    connect(KX11Extras::self(), &KX11Extras::activeWindowChanged, this, [&](WId wid) {
+        Q_EMIT activeWindowChanged(windowIdFromWId(wid));
+    });
+    connect(KX11Extras::self(), &KX11Extras::windowRemoved, this, [&](WId wid) {
+        Q_EMIT windowRemoved(windowIdFromWId(wid));
+    });
 
-    connect(KWindowSystem::self(), &KWindowSystem::windowAdded, this, &XWindowInterface::windowAddedProxy);
+    connect(KX11Extras::self(), &KX11Extras::windowAdded, this, &XWindowInterface::windowAddedProxy);
 
-    connect(KWindowSystem::self(), &KWindowSystem::currentDesktopChanged, this, [&](int desktop) {
-        m_currentDesktop = QString(desktop);
+    connect(KX11Extras::self(), &KX11Extras::currentDesktopChanged, this, [&](int desktop) {
+        m_currentDesktop = QString::number(desktop);
         Q_EMIT currentDesktopChanged();
     });
 
-    connect(KWindowSystem::self()
-            , static_cast<void (KWindowSystem::*)(WId, NET::Properties, NET::Properties2)>
-            (&KWindowSystem::windowChanged)
+    connect(KX11Extras::self(), &KX11Extras::windowChanged
             , this, &XWindowInterface::windowChangedProxy);
 
 
-    for(auto wid : KWindowSystem::self()->windows()) {
+    for(auto wid : KX11Extras::self()->windows()) {
         windowAddedProxy(wid);
     }
 }
@@ -64,7 +86,7 @@ XWindowInterface::~XWindowInterface()
 
 void XWindowInterface::setViewExtraFlags(QObject *view,bool isPanelWindow, Latte::Types::Visibility mode)
 {
-    WId winId = -1;
+    WId winId = 0;
 
     QQuickView *quickView = qobject_cast<QQuickView *>(view);
 
@@ -80,30 +102,30 @@ void XWindowInterface::setViewExtraFlags(QObject *view,bool isPanelWindow, Latte
         }
     }
 
-    NETWinInfo winfo(QX11Info::connection()
+    NETWinInfo winfo(x11Connection()
                      , static_cast<xcb_window_t>(winId)
                      , static_cast<xcb_window_t>(winId)
-                     , 0, 0);
+                     , NET::Properties(), NET::Properties2());
 
     winfo.setAllowedActions(NET::ActionChangeDesktop);
 
     if (isPanelWindow) {
-        KWindowSystem::setType(winId, NET::Dock);
+        KX11Extras::setType(winId, NET::Dock);
     } else {
-        KWindowSystem::setType(winId, NET::Normal);
+        KX11Extras::setType(winId, NET::Normal);
     }
 
-    KWindowSystem::setState(winId, NET::SkipTaskbar | NET::SkipPager | NET::SkipSwitcher);
-    KWindowSystem::setOnAllDesktops(winId, true);
+    KX11Extras::setState(winId, NET::SkipTaskbar | NET::SkipPager | NET::SkipSwitcher);
+    KX11Extras::setOnAllDesktops(winId, true);
 
     //! Layer to be applied
     if (mode == Latte::Types::WindowsCanCover || mode == Latte::Types::WindowsAlwaysCover) {
-        setKeepBelow(winId, true);
+        setKeepBelow(windowIdFromWId(winId), true);
     } else if (mode == Latte::Types::NormalWindow) {
-        setKeepBelow(winId, false);
-        setKeepAbove(winId, false);
+        setKeepBelow(windowIdFromWId(winId), false);
+        setKeepAbove(windowIdFromWId(winId), false);
     } else {
-        setKeepAbove(winId, true);
+        setKeepAbove(windowIdFromWId(winId), true);
     }
 }
 
@@ -155,7 +177,7 @@ void XWindowInterface::setViewStruts(QWindow &view, const QRect &rect
         return;
     }
 
-    KWindowSystem::setExtendedStrut(view.winId(),
+    KX11Extras::setExtendedStrut(view.winId(),
                                     strut.left_width,   strut.left_start,   strut.left_end,
                                     strut.right_width,  strut.right_start,  strut.right_end,
                                     strut.top_width,    strut.top_start,    strut.top_end,
@@ -165,13 +187,13 @@ void XWindowInterface::setViewStruts(QWindow &view, const QRect &rect
 
 void XWindowInterface::switchToNextVirtualDesktop()
 {
-    int desktops = KWindowSystem::numberOfDesktops();
+    int desktops = KX11Extras::numberOfDesktops();
 
     if (desktops <= 1) {
         return;
     }
 
-    int curPos = KWindowSystem::currentDesktop();
+    int curPos = KX11Extras::currentDesktop();
     int nextPos = curPos + 1;
 
     if (curPos == desktops) {
@@ -182,17 +204,17 @@ void XWindowInterface::switchToNextVirtualDesktop()
         }
     }
 
-    KWindowSystem::setCurrentDesktop(nextPos);
+    KX11Extras::setCurrentDesktop(nextPos);
 }
 
 void XWindowInterface::switchToPreviousVirtualDesktop()
 {
-    int desktops = KWindowSystem::numberOfDesktops();
+    int desktops = KX11Extras::numberOfDesktops();
     if (desktops <= 1) {
         return;
     }
 
-    int curPos = KWindowSystem::currentDesktop();
+    int curPos = KX11Extras::currentDesktop();
     int nextPos = curPos - 1;
 
     if (curPos == 1) {
@@ -203,27 +225,27 @@ void XWindowInterface::switchToPreviousVirtualDesktop()
         }
     }
 
-    KWindowSystem::setCurrentDesktop(nextPos);
+    KX11Extras::setCurrentDesktop(nextPos);
 }
 
 void XWindowInterface::setWindowOnActivities(const WindowId &wid, const QStringList &activities)
 {
-    KWindowSystem::setOnActivities(wid.toUInt(), activities);
+    KX11Extras::setOnActivities(wid.toUInt(), activities);
 }
 
 void XWindowInterface::removeViewStruts(QWindow &view)
 {
-    KWindowSystem::setStrut(view.winId(), 0, 0, 0, 0);
+    KX11Extras::setStrut(view.winId(), 0, 0, 0, 0);
 }
 
 WindowId XWindowInterface::activeWindow()
 {
-    return KWindowSystem::self()->activeWindow();
+    return windowIdFromWId(KX11Extras::activeWindow());
 }
 
 void XWindowInterface::skipTaskBar(const QDialog &dialog)
 {
-    KWindowSystem::setState(dialog.winId(), NET::SkipTaskbar);
+    KX11Extras::setState(dialog.winId(), NET::SkipTaskbar);
 }
 
 void XWindowInterface::slideWindow(QWindow &view, AbstractWindowInterface::Slide location)
@@ -267,7 +289,7 @@ void XWindowInterface::setActiveEdge(QWindow *view, bool active)
         return;
     }
 
-    xcb_connection_t *c = QX11Info::connection();
+    xcb_connection_t *c = x11Connection();
 
     const QByteArray effectName = QByteArrayLiteral("_KDE_NET_WM_SCREEN_EDGE_SHOW");
     xcb_intern_atom_cookie_t atomCookie = xcb_intern_atom_unchecked(c, false, effectName.length(), effectName.constData());
@@ -320,7 +342,7 @@ void XWindowInterface::setActiveEdge(QWindow *view, bool active)
 
 QRect XWindowInterface::visibleGeometry(const WindowId &wid, const QRect &frameGeometry) const
 {
-    NETWinInfo ni(QX11Info::connection(), wid.toUInt(), QX11Info::appRootWindow(), 0, NET::WM2GTKFrameExtents);
+    NETWinInfo ni(x11Connection(), wid.toUInt(), x11AppRootWindow(), NET::Properties(), NET::WM2GTKFrameExtents);
     NETStrut struts = ni.gtkFrameExtents();
     QMargins margins(struts.left, struts.top, struts.right, struts.bottom);
     QRect visibleGeometry = frameGeometry;
@@ -340,11 +362,11 @@ void XWindowInterface::setFrameExtents(QWindow *view, const QMargins &margins)
         return;
     }
 
-    NETWinInfo ni(QX11Info::connection(), view->winId(), QX11Info::appRootWindow(), 0, NET::WM2GTKFrameExtents);
+    NETWinInfo ni(x11Connection(), view->winId(), x11AppRootWindow(), NET::Properties(), NET::WM2GTKFrameExtents);
 
     if (margins.isNull()) {
         //! delete property
-        xcb_connection_t *c = QX11Info::connection();
+        xcb_connection_t *c = x11Connection();
         const QByteArray atomName = QByteArrayLiteral("_GTK_FRAME_EXTENTS");
         xcb_intern_atom_cookie_t atomCookie = xcb_intern_atom_unchecked(c, false, atomName.length(), atomName.constData());
         QScopedPointer<xcb_intern_atom_reply_t, QScopedPointerPodDeleter> atom(xcb_intern_atom_reply(c, atomCookie, nullptr));
@@ -366,7 +388,7 @@ void XWindowInterface::setFrameExtents(QWindow *view, const QMargins &margins)
         ni.setGtkFrameExtents(struts);
     }
 
-  /*NETWinInfo ni2(QX11Info::connection(), view->winId(), QX11Info::appRootWindow(), 0, NET::WM2GTKFrameExtents);
+  /*NETWinInfo ni2(x11Connection(), view->winId(), x11AppRootWindow(), 0, NET::WM2GTKFrameExtents);
     NETStrut applied = ni2.gtkFrameExtents();
     QMargins amargins(applied.left, applied.top, applied.right, applied.bottom);
     qDebug() << "     window gtk frame extents applied :: " << amargins;*/
@@ -376,7 +398,7 @@ void XWindowInterface::setFrameExtents(QWindow *view, const QMargins &margins)
 void XWindowInterface::checkShapeExtension()
 {
     if (!m_shapeExtensionChecked) {
-        xcb_connection_t *c = QX11Info::connection();
+        xcb_connection_t *c = x11Connection();
         xcb_prefetch_extension_data(c, &xcb_shape_id);
         const xcb_query_extension_reply_t *extension = xcb_get_extension_data(c, &xcb_shape_id);
         if (extension->present) {
@@ -397,7 +419,7 @@ void XWindowInterface::setInputMask(QWindow *window, const QRect &rect)
         return;
     }
 
-    xcb_connection_t *c = QX11Info::connection();
+    xcb_connection_t *c = x11Connection();
 
     if (!m_shapeExtensionChecked) {
         checkShapeExtension();
@@ -426,12 +448,12 @@ void XWindowInterface::setInputMask(QWindow *window, const QRect &rect)
 
 WindowInfoWrap XWindowInterface::requestInfoActive()
 {
-    return requestInfo(KWindowSystem::activeWindow());
+    return requestInfo(windowIdFromWId(KX11Extras::activeWindow()));
 }
 
 WindowInfoWrap XWindowInterface::requestInfo(WindowId wid)
 {
-    const KWindowInfo winfo{wid.value<WId>(), NET::WMFrameExtents
+    const KWindowInfo winfo{static_cast<xcb_window_t>(wid.toUInt()), NET::WMFrameExtents
                 | NET::WMWindowType
                 | NET::WMGeometry
                 | NET::WMDesktop
@@ -455,8 +477,9 @@ WindowInfoWrap XWindowInterface::requestInfo(WindowId wid)
     } else if (isValidWindow(wid)) {
         winfoWrap.setIsValid(true);
         winfoWrap.setWid(wid);
-        winfoWrap.setParentId(winfo.transientFor());
-        winfoWrap.setIsActive(KWindowSystem::activeWindow() == wid.value<WId>());
+        const WId transientId = winfo.transientFor();
+        winfoWrap.setParentId(transientId ? QByteArray::number((qulonglong)transientId) : QByteArray());
+        winfoWrap.setIsActive(KX11Extras::activeWindow() == static_cast<xcb_window_t>(wid.toUInt()));
         winfoWrap.setIsMinimized(winfo.hasState(NET::Hidden));
         winfoWrap.setIsMaxVert(winfo.hasState(NET::MaxVert));
         winfoWrap.setIsMaxHoriz(winfo.hasState(NET::MaxHoriz));
@@ -483,7 +506,7 @@ WindowInfoWrap XWindowInterface::requestInfo(WindowId wid)
         //! END:Window Abilities
 
         winfoWrap.setDisplay(winfo.visibleName());
-        winfoWrap.setDesktops({QString(winfo.desktop())});
+        winfoWrap.setDesktops({QString::number(winfo.desktop())});
         winfoWrap.setActivities(winfo.activities());
     }
 
@@ -501,7 +524,7 @@ AppData XWindowInterface::appDataFor(WindowId wid)
 
 QUrl XWindowInterface::windowUrl(WindowId wid)
 {
-    const KWindowInfo info(wid.value<WId>(), 0, NET::WM2WindowClass | NET::WM2DesktopFileName);
+    const KWindowInfo info(static_cast<xcb_window_t>(wid.toUInt()), NET::Properties(), NET::WM2WindowClass | NET::WM2DesktopFileName);
 
     QString desktopFile = QString::fromUtf8(info.desktopFileName());
 
@@ -530,7 +553,7 @@ QUrl XWindowInterface::windowUrl(WindowId wid)
     }
 
     return windowUrlFromMetadata(info.windowClassClass(),
-                                 NETWinInfo(QX11Info::connection(), wid.value<WId>(), QX11Info::appRootWindow(), NET::WMPid, NET::Properties2()).pid(),
+                                 NETWinInfo(x11Connection(), static_cast<xcb_window_t>(wid.toUInt()), x11AppRootWindow(), NET::WMPid, NET::Properties2()).pid(),
                                  rulesConfig, info.windowClassName());
 }
 
@@ -554,17 +577,17 @@ bool XWindowInterface::windowCanBeMaximized(WindowId wid)
 
 void XWindowInterface::requestActivate(WindowId wid)
 {
-    KWindowSystem::activateWindow(wid.toInt());
+    KX11Extras::activateWindow(wid.toInt());
 }
 
 QIcon XWindowInterface::iconFor(WindowId wid)
 {
     QIcon icon;
 
-    icon.addPixmap(KWindowSystem::icon(wid.value<WId>(), KIconLoader::SizeSmall, KIconLoader::SizeSmall, false));
-    icon.addPixmap(KWindowSystem::icon(wid.value<WId>(), KIconLoader::SizeSmallMedium, KIconLoader::SizeSmallMedium, false));
-    icon.addPixmap(KWindowSystem::icon(wid.value<WId>(), KIconLoader::SizeMedium, KIconLoader::SizeMedium, false));
-    icon.addPixmap(KWindowSystem::icon(wid.value<WId>(), KIconLoader::SizeLarge, KIconLoader::SizeLarge, false));
+    icon.addPixmap(KX11Extras::icon(static_cast<xcb_window_t>(wid.toUInt()), KIconLoader::SizeSmall, KIconLoader::SizeSmall, false));
+    icon.addPixmap(KX11Extras::icon(static_cast<xcb_window_t>(wid.toUInt()), KIconLoader::SizeSmallMedium, KIconLoader::SizeSmallMedium, false));
+    icon.addPixmap(KX11Extras::icon(static_cast<xcb_window_t>(wid.toUInt()), KIconLoader::SizeMedium, KIconLoader::SizeMedium, false));
+    icon.addPixmap(KX11Extras::icon(static_cast<xcb_window_t>(wid.toUInt()), KIconLoader::SizeLarge, KIconLoader::SizeLarge, false));
 
     return icon;
 }
@@ -587,7 +610,7 @@ void XWindowInterface::requestClose(WindowId wid)
         return;
     }
 
-    NETRootInfo ri(QX11Info::connection(), NET::CloseWindow);
+    NETRootInfo ri(x11Connection(), NET::CloseWindow);
     ri.closeWindowRequest(wInfo.wid().toUInt());
 }
 
@@ -613,7 +636,7 @@ void XWindowInterface::requestMoveWindow(WindowId wid, QPoint from)
     int validX = qBound(minX, from.x(), maxX);
     int validY = qBound(minY, from.y(), maxY);
 
-    NETRootInfo ri(QX11Info::connection(), NET::WMMoveResize);
+    NETRootInfo ri(x11Connection(), NET::WMMoveResize);
     ri.moveResizeRequest(wInfo.wid().toUInt(), validX, validY, NET::Move);
 }
 
@@ -625,15 +648,15 @@ void XWindowInterface::requestToggleIsOnAllDesktops(WindowId wid)
         return;
     }
 
-    if (KWindowSystem::numberOfDesktops() <= 1) {
+    if (KX11Extras::numberOfDesktops() <= 1) {
         return;
     }
 
     if (wInfo.isOnAllDesktops()) {
-        KWindowSystem::setOnDesktop(wid.toUInt(), KWindowSystem::currentDesktop());
-        KWindowSystem::forceActiveWindow(wid.toUInt());
+        KX11Extras::setOnDesktop(wid.toUInt(), KX11Extras::currentDesktop());
+        KX11Extras::forceActiveWindow(wid.toUInt());
     } else {
-        KWindowSystem::setOnAllDesktops(wid.toUInt(), true);
+        KX11Extras::setOnAllDesktops(wid.toUInt(), true);
     }
 }
 
@@ -645,7 +668,7 @@ void XWindowInterface::requestToggleKeepAbove(WindowId wid)
         return;
     }
 
-    NETWinInfo ni(QX11Info::connection(), wid.toUInt(), QX11Info::appRootWindow(), NET::WMState, NET::Properties2());
+    NETWinInfo ni(x11Connection(), wid.toUInt(), x11AppRootWindow(), NET::WMState, NET::Properties2());
 
     if (wInfo.isKeepAbove()) {
         ni.setState(NET::States(), NET::KeepAbove);
@@ -661,10 +684,10 @@ void XWindowInterface::setKeepAbove(WindowId wid, bool active)
     }
 
     if (active) {
-        KWindowSystem::setState(wid.toUInt(), NET::KeepAbove);
-        KWindowSystem::clearState(wid.toUInt(), NET::KeepBelow);
+        KX11Extras::setState(wid.toUInt(), NET::KeepAbove);
+        KX11Extras::clearState(wid.toUInt(), NET::KeepBelow);
     } else {
-        KWindowSystem::clearState(wid.toUInt(), NET::KeepAbove);
+        KX11Extras::clearState(wid.toUInt(), NET::KeepAbove);
     }
 }
 
@@ -675,10 +698,10 @@ void XWindowInterface::setKeepBelow(WindowId wid, bool active)
     }
 
     if (active) {
-        KWindowSystem::setState(wid.toUInt(), NET::KeepBelow);
-        KWindowSystem::clearState(wid.toUInt(), NET::KeepAbove);
+        KX11Extras::setState(wid.toUInt(), NET::KeepBelow);
+        KX11Extras::clearState(wid.toUInt(), NET::KeepAbove);
     } else {
-        KWindowSystem::clearState(wid.toUInt(), NET::KeepBelow);
+        KX11Extras::clearState(wid.toUInt(), NET::KeepBelow);
     }
 }
 
@@ -694,13 +717,13 @@ void XWindowInterface::requestToggleMinimized(WindowId wid)
     if (wInfo.isMinimized()) {
         bool onCurrent = wInfo.isOnDesktop(m_currentDesktop);
 
-        KWindowSystem::unminimizeWindow(wid.toUInt());
+        KX11Extras::unminimizeWindow(wid.toUInt());
 
         if (onCurrent) {
-            KWindowSystem::forceActiveWindow(wid.toUInt());
+            KX11Extras::forceActiveWindow(wid.toUInt());
         }
     } else {
-        KWindowSystem::minimizeWindow(wid.toUInt());
+        KX11Extras::minimizeWindow(wid.toUInt());
     }
 }
 
@@ -715,10 +738,10 @@ void XWindowInterface::requestToggleMaximized(WindowId wid)
     bool restore = wInfo.isMaxHoriz() && wInfo.isMaxVert();
 
     if (wInfo.isMinimized()) {
-        KWindowSystem::unminimizeWindow(wid.toUInt());
+        KX11Extras::unminimizeWindow(wid.toUInt());
     }
 
-    NETWinInfo ni(QX11Info::connection(), wid.toInt(), QX11Info::appRootWindow(), NET::WMState, NET::Properties2());
+    NETWinInfo ni(x11Connection(), wid.toInt(), x11AppRootWindow(), NET::WMState, NET::Properties2());
 
     if (restore) {
         ni.setState(NET::States(), NET::Max);
@@ -782,17 +805,21 @@ bool XWindowInterface::isAcceptableWindow(WindowId wid)
 
 void XWindowInterface::windowAddedProxy(WId wid)
 {
-    if (!isAcceptableWindow(wid)) {
+    const WindowId winid = windowIdFromWId(wid);
+
+    if (!isAcceptableWindow(winid)) {
         return;
     }
 
-    Q_EMIT windowAdded(wid);
-    considerWindowChanged(wid);
+    Q_EMIT windowAdded(winid);
+    considerWindowChanged(winid);
 }
 
 void XWindowInterface::windowChangedProxy(WId wid, NET::Properties prop1, NET::Properties2 prop2)
 {
-    if (!isValidWindow(wid)) {
+    const WindowId winid = windowIdFromWId(wid);
+
+    if (!isValidWindow(winid)) {
         return;
     }
 
@@ -815,7 +842,7 @@ void XWindowInterface::windowChangedProxy(WId wid, NET::Properties prop1, NET::P
         return;
     }
 
-    considerWindowChanged(wid);
+    considerWindowChanged(winid);
 }
 
 }

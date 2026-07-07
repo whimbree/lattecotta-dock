@@ -194,11 +194,11 @@ private:
     void setGeometry(QRect geometry);
     void setIcon(QIcon icon);
 
-    void setCurrentWinId(QVariant winId);
+    void setCurrentWinId(WindowId winId);
 
     void cleanHistory();
-    void appendInHistory(const QVariant &wid);
-    void removeFromHistory(const QVariant &wid);
+    void appendInHistory(const WindowId &wid);
+    void removeFromHistory(const WindowId &wid);
 
     void updateColorScheme();
 
@@ -234,7 +234,7 @@ private:
     QRect m_geometry;
     QIcon m_icon;
 
-    QVariant m_currentWinId;
+    WindowId m_currentWinId;
 
     QList<WindowId> m_history;
 

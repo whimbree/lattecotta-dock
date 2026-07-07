@@ -57,12 +57,12 @@ Positioner::Positioner(Latte::View *parent)
 
     if (m_corona) {
         if (KWindowSystem::isPlatformX11()) {
-            m_trackedWindowId = m_view->winId();
+            m_trackedWindowId = WindowSystem::windowIdFromWId(m_view->winId());
             m_corona->wm()->registerIgnoredWindow(m_trackedWindowId);
 
             connect(m_view, &Latte::View::forcedShown, this, [&]() {
                 m_corona->wm()->unregisterIgnoredWindow(m_trackedWindowId);
-                m_trackedWindowId = m_view->winId();
+                m_trackedWindowId = WindowSystem::windowIdFromWId(m_view->winId());
                 m_corona->wm()->registerIgnoredWindow(m_trackedWindowId);
             });
         } else {

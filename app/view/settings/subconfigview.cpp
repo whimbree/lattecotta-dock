@@ -37,7 +37,7 @@ SubConfigView::SubConfigView(Latte::View *view, const QString &title, const bool
     setupWaylandIntegration();
 
     if (KWindowSystem::isPlatformX11()) {
-        m_corona->wm()->registerIgnoredWindow(winId());
+        m_corona->wm()->registerIgnoredWindow(WindowSystem::windowIdFromWId(winId()));
     } else {
         connect(this, &QWindow::windowTitleChanged, this, &SubConfigView::updateWaylandId);
         connect(m_corona->wm(), &WindowSystem::AbstractWindowInterface::latteWindowAdded, this, &SubConfigView::updateWaylandId);
@@ -89,7 +89,7 @@ SubConfigView::~SubConfigView()
 
     m_corona->dialogShadows()->removeWindow(this);
 
-    m_corona->wm()->unregisterIgnoredWindow(KWindowSystem::isPlatformX11() ? winId() : m_waylandWindowId);
+    m_corona->wm()->unregisterIgnoredWindow(KWindowSystem::isPlatformX11() ? WindowSystem::windowIdFromWId(winId()) : m_waylandWindowId);
 
     for (const auto &var : connections) {
         QObject::disconnect(var);
@@ -140,7 +140,7 @@ Latte::WindowSystem::WindowId SubConfigView::trackedWindowId()
         updateWaylandId();
     }
 
-    return !KWindowSystem::isPlatformWayland() ? winId() :  m_waylandWindowId;
+    return !KWindowSystem::isPlatformWayland() ? WindowSystem::windowIdFromWId(winId()) : m_waylandWindowId;
 }
 
 Latte::Corona *SubConfigView::corona() const

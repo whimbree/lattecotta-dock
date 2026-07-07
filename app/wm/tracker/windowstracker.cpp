@@ -100,7 +100,7 @@ void Windows::init()
         //! for some reason this is needed in order to update properly activeness values
         //! when the active window changes the previous active windows should be also updated
         for (const auto view : m_views.keys()) {
-            WindowId lastWinId = m_views[view]->lastActiveWindow()->currentWinId();
+            WindowId lastWinId = m_views[view]->lastActiveWindow()->currentWinId().toByteArray();
             if ((lastWinId) != wid && m_windows.contains(lastWinId)) {
                 m_windows[lastWinId] = m_wm->requestInfo(lastWinId);
             }
@@ -809,7 +809,7 @@ void Windows::cleanupFaultyWindows()
         auto winfo = m_windows[key];
 
         //! garbage windows removing
-        if (winfo.wid()<=0 || winfo.geometry() == QRect(0, 0, 0, 0)) {
+        if (winfo.wid().isEmpty() || winfo.geometry() == QRect(0, 0, 0, 0)) {
             //qDebug() << "Faulty Geometry ::: " << winfo.wid();
             m_windows.remove(key);
         }
@@ -925,7 +925,7 @@ void Windows::updateHints(Latte::View *view)
             break;
         }
 
-        if (!existsFaultyWindow && (winfo.wid()<=0 || winfo.geometry() == QRect(0, 0, 0, 0))) {
+        if (!existsFaultyWindow && (winfo.wid().isEmpty() || winfo.geometry() == QRect(0, 0, 0, 0))) {
             existsFaultyWindow = true;
         }
 
@@ -1095,7 +1095,7 @@ void Windows::updateHints(Latte::Layout::GenericLayout *layout) {
             break;
         }
 
-        if (!existsFaultyWindow && (winfo.wid()<=0 || winfo.geometry() == QRect(0, 0, 0, 0))) {
+        if (!existsFaultyWindow && (winfo.wid().isEmpty() || winfo.geometry() == QRect(0, 0, 0, 0))) {
             existsFaultyWindow = true;
         }
 
