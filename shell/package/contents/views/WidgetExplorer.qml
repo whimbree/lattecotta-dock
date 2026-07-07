@@ -21,10 +21,21 @@ import QtQuick.Layouts 1.1
 
 import org.kde.plasma.private.shell 2.0 as PlasmaShell
 
-import org.kde.latte.core 0.2 as LatteCore
-
 PC3.Page {
     id: main
+    // FrameSvg "dialogs/background" follows the Plasma theme. If the plasma
+    // theme is dark, use Complementary for light text on dark background.
+    // If light, use the default (Window) for dark text on light background.
+    Kirigami.Theme.colorSet: (themeExtended && themeExtended.isDarkTheme)
+        ? Kirigami.Theme.Complementary
+        : Kirigami.Theme.Window
+    Kirigami.Theme.inherit: false
+
+    // Timer constants
+    readonly property int runningCountRefreshInterval: 100
+    readonly property int setModelDelay: 20
+    readonly property int pendingUninstallDelay: 200
+
     width: Math.max(heading.paintedWidth, Kirigami.Units.iconSizes.enormous * 3 + Kirigami.Units.smallSpacing * 4 + Kirigami.Units.gridUnit * 2)
   //  height: 800//Screen.height
     opacity: draggingWidget ? 0.3 : 1
@@ -38,7 +49,9 @@ PC3.Page {
     //therefore get deleted whilst we are still in a drag exec()
     //this is a clue to the owning dialog that hideOnWindowDeactivate should be deleted
     //See https://bugs.kde.org/show_bug.cgi?id=332733
-    property bool preventWindowHide: draggingWidget || categoriesDialog.status !== PlasmaExtras.Menu.Closed
+    property bool getNewWidgetsDialogActive: false
+    property bool preventWindowHide: draggingWidget || getNewWidgetsDialogActive
+                                  || categoriesDialog.status !== PlasmaExtras.Menu.Closed
                                   || getWidgetsDialog.status !== PlasmaExtras.Menu.Closed
 
     property bool outputOnly: draggingWidget
@@ -48,8 +61,15 @@ PC3.Page {
     property bool draggingWidget: false
 
     property QtObject widgetExplorer: widgetExplorerLoader.active ? widgetExplorerLoader.item : null
+    property int runningCountRevision: 0
 
     signal closed();
+
+    function forceClose() {
+        getNewWidgetsWindowHideRestoreTimer.stop()
+        getNewWidgetsDialogActive = false
+        viewConfig.hideConfigWindow()
+    }
 
     onClosed: {
         if (main.preventWindowHide) {
@@ -68,11 +88,16 @@ PC3.Page {
     onWidgetExplorerChanged: {
         if (widgetExplorer) {
             setModelTimer.start();
+            scheduleRunningCountRefresh();
+            // Also bind immediately in case the timer already fired with a null model
+            if (widgetExplorer.widgetsModel) {
+                list.model = widgetExplorer.widgetsModel;
+            }
         }
     }
 
     Component.onDestruction: {
-        if (pendingUninstallTimer.running) {
+        if (pendingUninstallTimer.running && widgetExplorer && widgetExplorer.widgetsModel) {
             // we're not being destroyed so at least reset the filters
             widgetExplorer.widgetsModel.filterQuery = ""
             widgetExplorer.widgetsModel.filterType = ""
@@ -82,9 +107,121 @@ PC3.Page {
 
     function addCurrentApplet() {
         var pluginName = list.currentItem ? list.currentItem.pluginName : ""
-        if (pluginName) {
+        if (pluginName && widgetExplorer && typeof widgetExplorer.addApplet === "function") {
             widgetExplorer.addApplet(pluginName);
-            latteView.extendedInterface.appletCreated(pluginName);
+            scheduleRunningCountRefresh();
+        }
+    }
+
+    function pluginNameForApplet(applet) {
+        if (!applet) {
+            return "";
+        }
+
+        var directName = (applet.pluginName !== undefined && applet.pluginName !== null) ? String(applet.pluginName) : "";
+        if (directName !== "") {
+            return directName;
+        }
+
+        if (applet.metaData !== undefined && applet.metaData && applet.metaData.pluginId !== undefined) {
+            var metadataName = (applet.metaData.pluginId !== null) ? String(applet.metaData.pluginId) : "";
+            if (metadataName !== "") {
+                return metadataName;
+            }
+        }
+
+        if (applet.applet !== undefined && applet.applet && applet.applet !== applet) {
+            var backendName = pluginNameForApplet(applet.applet);
+            if (backendName !== "") {
+                return backendName;
+            }
+        }
+
+        if (applet.plasmoid !== undefined && applet.plasmoid && applet.plasmoid !== applet) {
+            var plasmoidName = pluginNameForApplet(aplet.plasmoid);
+            if (plasmoidName !== "") {
+                return plasmoidName;
+            }
+        }
+
+        return "";
+    }
+
+    function runningInstancesFor(pluginName) {
+        // Plasma's WidgetExplorer model can briefly over-count right after
+        // addApplet(). Use the live containment state for Latte's badge.
+        runningCountRevision;
+
+        if (!pluginName || !containmentFromView || !containmentFromView.applets) {
+            return 0;
+        }
+
+        var count = 0;
+        for (var i = 0; i < containmentFromView.applets.length; ++i) {
+            if (pluginNameForApplet(containmentFromView.applets[i]) === pluginName) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    function shouldOpenExternalGetNewWidgetsDialog(actionModel) {
+        var label = "";
+
+        if (actionModel) {
+            label = String(actionModel.display || actionModel.text || actionModel.name || "");
+        }
+
+        return label.indexOf("Get New") !== -1
+            || label.indexOf("Add New") !== -1
+            || label.indexOf("Download New") !== -1
+            || label.indexOf("添加新") !== -1
+            || label.indexOf("获取新") !== -1
+            || label.indexOf("下载新") !== -1;
+    }
+
+    function holdWidgetExplorerForExternalDialog() {
+        main.getNewWidgetsDialogActive = true
+        getNewWidgetsWindowHideRestoreTimer.restart()
+    }
+
+    function scheduleRunningCountRefresh() {
+        runningCountRevision++;
+        runningCountRefreshTimer.remainingRuns = 20;
+        runningCountRefreshTimer.restart();
+    }
+
+    Timer {
+        id: runningCountRefreshTimer
+        interval: main.runningCountRefreshInterval
+        repeat: true
+
+        property int remainingRuns: 0
+
+        onTriggered: {
+            main.runningCountRevision++;
+            remainingRuns--;
+            if (remainingRuns <= 0) {
+                stop();
+            }
+        }
+    }
+
+    Connections {
+        target: containmentFromView
+        ignoreUnknownSignals: true
+
+        function onAppletsChanged() {
+            main.scheduleRunningCountRefresh();
+        }
+
+        function onAppletAdded() {
+            main.scheduleRunningCountRefresh();
+        }
+
+        function onAppletRemoved() {
+            main.scheduleRunningCountRefresh();
         }
     }
 
@@ -108,6 +245,13 @@ PC3.Page {
         onTriggered: addCurrentApplet()
     }
 
+    Timer {
+        id: getNewWidgetsWindowHideRestoreTimer
+        interval: 30000
+        repeat: false
+        onTriggered: main.getNewWidgetsDialogActive = false
+    }
+
     KSvg.FrameSvgItem{
         id: backgroundFrameSvgItem
         anchors.top: parent.top
@@ -117,7 +261,11 @@ PC3.Page {
         imagePath: "dialogs/background"
         enabledBorders: viewConfig.enabledBorders
 
-        readonly property int headerMargin: header.height + 50 /*magical number in order to fill the top gap*/
+        // The FrameSvg "dialogs/background" has an intrinsic top margin that the
+        // header sits inside. This offset compensates so the background extends
+        // above the header to align with the view's top edge.
+        readonly property int frameSvgTopOverhang: 50
+        readonly property int headerMargin: header.height + frameSvgTopOverhang
 
         onEnabledBordersChanged: viewConfig.updateEffects()
         Component.onCompleted: viewConfig.updateEffects()
@@ -135,6 +283,23 @@ PC3.Page {
     }
 
     PlasmaExtras.ModelContextMenu {
+        id: getWidgetsDialog
+        visualParent: getWidgetsButton
+        // model set on first invocation
+
+        onClicked: function(model) {
+            if (main.shouldOpenExternalGetNewWidgetsDialog(model)) {
+                main.holdWidgetExplorerForExternalDialog()
+                viewConfig.openGetNewWidgetsDialog()
+                return
+            }
+
+            main.holdWidgetExplorerForExternalDialog()
+            model.trigger()
+        }
+    }
+
+    PlasmaExtras.ModelContextMenu {
         id: categoriesDialog
         visualParent: categoryButton
         // model set on first invocation
@@ -142,26 +307,21 @@ PC3.Page {
         onClicked: {
             list.contentX = 0
             list.contentY = 0
-            categoryButton.text = (model.filterData ? model.display : i18nd("plasma_shell_org.kde.plasma.desktop", "All Widgets"))
-            widgetExplorer.widgetsModel.filterQuery = model.filterData
-            widgetExplorer.widgetsModel.filterType = model.filterType
+            categoryButton.text = (model.filterData ? model.display : i18ndc("plasma_shell_org.kde.plasma.desktop", "@action:button like listbox, switches category to all widgets", "All Widgets"))
+            if (widgetExplorer && widgetExplorer.widgetsModel) {
+                widgetExplorer.widgetsModel.filterQuery = model.filterData
+                widgetExplorer.widgetsModel.filterType = model.filterType
+            }
         }
     }
 
-    PlasmaExtras.ModelContextMenu {
-        id: getWidgetsDialog
-        visualParent: getWidgetsButton
-        placement: LatteCore.Types.TopPosedLeftAlignedPopup
-        // model set on first invocation
-        onClicked: model.trigger()
-    }
     /*
     PlasmaCore.Dialog {
         id: tooltipDialog
         property Item appletDelegate
         location: PlasmaCore.Types.RightEdge //actually we want this to be the opposite location of the explorer itself
         type: PlasmaCore.Dialog.Tooltip
-        flags:Qt.Window|Qt.WindowStaysOnTopHint|Qt.X11BypassWindowManagerHint
+        flags:Qt.Window|Qt.WindowStaysOnTopHint
         onAppletDelegateChanged: {
             if (!appletDelegate) {
                 toolTipHideTimer.restart()
@@ -205,55 +365,85 @@ PC3.Page {
                 PlasmaExtras.Heading {
                     id: heading
                     level: 1
-                    text: i18nd("plasma_shell_org.kde.plasma.desktop", "Widgets")
+                    text: i18ndc("plasma_shell_org.kde.plasma.desktop", "@title:group for widget grid", "Widgets")
                     elide: Text.ElideRight
+                    Kirigami.Theme.colorSet: (themeExtended && themeExtended.isDarkTheme)
+                        ? Kirigami.Theme.Complementary
+                        : Kirigami.Theme.View
+                    Kirigami.Theme.inherit: false
 
                     Layout.fillWidth: true
                 }
                 PC3.ToolButton {
                     id: getWidgetsButton
                     icon.name: "get-hot-new-stuff"
-                    text: i18nd("plasma_shell_org.kde.plasma.desktop", "Get New Widgets…")
+                    Kirigami.Theme.colorSet: (themeExtended && themeExtended.isDarkTheme)
+                        ? Kirigami.Theme.Complementary
+                        : Kirigami.Theme.Button
+                    Kirigami.Theme.inherit: false
+                    text: i18ndc("plasma_shell_org.kde.plasma.desktop", "@action:button The word 'new' refers to widgets", "Get New…")
+                    Accessible.name: i18ndc("plasma_shell_org.kde.plasma.desktop", "@action:button", "Get New Widgets…")
                     onClicked: {
+                        if (!widgetExplorer) return
                         getWidgetsDialog.model = widgetExplorer.widgetsMenuActions
-                        getWidgetsDialog.openRelative()
+                        getWidgetsDialog.open(0, getWidgetsButton.height)
                     }
                 }
                 PC3.ToolButton {
                     id: closeButton
                     icon.name: "window-close"
-                    onClicked: main.closed()
+                    Kirigami.Theme.colorSet: (themeExtended && themeExtended.isDarkTheme)
+                        ? Kirigami.Theme.Complementary
+                        : Kirigami.Theme.Button
+                    Kirigami.Theme.inherit: false
+                    onClicked: main.forceClose()
                 }
             }
 
             RowLayout {
                 PC3.TextField {
                     id: searchInput
+                    Kirigami.Theme.colorSet: (themeExtended && themeExtended.isDarkTheme)
+                        ? Kirigami.Theme.Complementary
+                        : Kirigami.Theme.View
+                    Kirigami.Theme.inherit: false
                     Layout.fillWidth: true
                     clearButtonShown: true
-                    placeholderText: i18nd("plasma_shell_org.kde.plasma.desktop", "Search…")
+                    placeholderText: i18ndc("plasma_shell_org.kde.plasma.desktop", "@label:textbox accessible", "Search through widgets")
 
                     inputMethodHints: Qt.ImhNoPredictiveText
 
                     onTextChanged: {
                         list.positionViewAtBeginning()
                         list.currentIndex = -1
-                        widgetExplorer.widgetsModel.searchTerm = text
+                        if (widgetExplorer && widgetExplorer.widgetsModel) {
+                            widgetExplorer.widgetsModel.searchTerm = text
+                        }
                     }
 
-                    Component.onCompleted: if (Kirigami.InputMethod && !Kirigami.InputMethod.willShowOnActive) { forceActiveFocus() }
+                    Component.onCompleted: {
+                        try {
+                            if (!Kirigami.InputMethod || !Kirigami.InputMethod.willShowOnActive) { forceActiveFocus(); }
+                        } catch(e) { forceActiveFocus(); }
+                    }
                 }
                 PC3.ToolButton {
                     id: categoryButton
-                    text: i18nd("plasma_shell_org.kde.plasma.desktop", "All Widgets")
+                    Kirigami.Theme.colorSet: (themeExtended && themeExtended.isDarkTheme)
+                        ? Kirigami.Theme.Complementary
+                        : Kirigami.Theme.Button
+                    Kirigami.Theme.inherit: false
+                    text: i18ndc("plasma_shell_org.kde.plasma.desktop", "@action:button like listbox, switches category to all widgets", "All Widgets")
                     icon.name: "view-filter"
                     onClicked: {
-                        categoriesDialog.model = widgetExplorer.filterModel
-                        categoriesDialog.open(0, categoryButton.height)
+                        if (widgetExplorer && widgetExplorer.filterModel) {
+                            categoriesDialog.model = widgetExplorer.filterModel
+                            categoriesDialog.open(0, categoryButton.height)
+                        }
                     }
 
                     PC3.ToolTip {
-                        text: i18nd("plasma_shell_org.kde.plasma.desktop", "Categories")
+                        text: i18ndc("plasma_shell_org.kde.plasma.desktop", "@action:button tooltip only", "Categories")
                     }
                 }
             }
@@ -262,10 +452,10 @@ PC3.Page {
 
     Timer {
         id: setModelTimer
-        interval: 20
+        interval: main.setModelDelay
         running: true
         onTriggered: {
-            if (widgetExplorer) {
+            if (widgetExplorer && widgetExplorer.widgetsModel) {
                 list.model = widgetExplorer.widgetsModel
             }
         }
@@ -274,9 +464,6 @@ PC3.Page {
     PC3.ScrollView {
         anchors.fill: parent
         //anchors.rightMargin: - main.sidePanel.margins.right
-
-        // HACK: workaround for https://bugreports.qt.io/browse/QTBUG-83890
-        PC3.ScrollBar.horizontal.policy: PC3.ScrollBar.AlwaysOff
 
         // hide the flickering by fading in nicely
         opacity: setModelTimer.running ? 0 : 1
@@ -338,7 +525,9 @@ PC3.Page {
     PlasmaExtras.PlaceholderMessage {
         anchors.centerIn: parent
         width: parent.width - (Kirigami.Units.largeSpacing * 4)
-        text: searchInput.text.length > 0 ? i18n("No widgets matched the search terms") : i18n("No widgets available")
+        text: searchInput.text.length > 0
+            ? i18ndc("plasma_shell_org.kde.plasma.desktop", "@info placeholdermessage", "No widgets matched the search terms")
+            : i18ndc("plasma_shell_org.kde.plasma.desktop", "@info placeholdermessage", "No widgets available")
         visible: list.count == 0
     }
 
@@ -355,8 +544,13 @@ PC3.Page {
         // keeps track of the applets the user wants to uninstall
         property var applets: []
 
-        interval: 200
+        interval: main.pendingUninstallDelay
         onTriggered: {
+            if (!widgetExplorer || typeof widgetExplorer.uninstall !== "function") {
+                applets = []
+                return
+            }
+
             for (var i = 0, length = applets.length; i < length; ++i) {
                 widgetExplorer.uninstall(applets[i])
             }
