@@ -625,7 +625,7 @@ void Effects::updateEffects()
 }
 
 //!BEGIN draw panel shadows outside the dock window
-Plasma::FrameSvg::EnabledBorders Effects::enabledBorders() const
+KSvg::FrameSvg::EnabledBorders Effects::enabledBorders() const
 {
     return m_enabledBorders;
 }
@@ -676,24 +676,24 @@ void Effects::updateEnabledBorders()
         return;
     }
 
-    Plasma::FrameSvg::EnabledBorders borders = Plasma::FrameSvg::AllBorders;
+    KSvg::FrameSvg::EnabledBorders borders = KSvg::FrameSvg::AllBorders;
 
     if (!m_view->screenEdgeMarginEnabled() && !m_backgroundAllCorners) {
         switch (m_view->location()) {
         case Plasma::Types::TopEdge:
-            borders &= ~Plasma::FrameSvg::TopBorder;
+            borders &= ~KSvg::FrameSvg::TopBorder;
             break;
 
         case Plasma::Types::LeftEdge:
-            borders &= ~Plasma::FrameSvg::LeftBorder;
+            borders &= ~KSvg::FrameSvg::LeftBorder;
             break;
 
         case Plasma::Types::RightEdge:
-            borders &= ~Plasma::FrameSvg::RightBorder;
+            borders &= ~KSvg::FrameSvg::RightBorder;
             break;
 
         case Plasma::Types::BottomEdge:
-            borders &= ~Plasma::FrameSvg::BottomBorder;
+            borders &= ~KSvg::FrameSvg::BottomBorder;
             break;
 
         default:
@@ -705,43 +705,43 @@ void Effects::updateEnabledBorders()
         if ((m_view->location() == Plasma::Types::LeftEdge || m_view->location() == Plasma::Types::RightEdge)) {
             if (m_view->maxLength() == 1 && m_view->alignment() == Latte::Types::Justify) {
                 if (!m_forceTopBorder) {
-                    borders &= ~Plasma::FrameSvg::TopBorder;
+                    borders &= ~KSvg::FrameSvg::TopBorder;
                 }
 
                 if (!m_forceBottomBorder) {
-                    borders &= ~Plasma::FrameSvg::BottomBorder;
+                    borders &= ~KSvg::FrameSvg::BottomBorder;
                 }
             }
 
             if (m_view->alignment() == Latte::Types::Top && !m_forceTopBorder && m_view->offset() == 0) {
-                borders &= ~Plasma::FrameSvg::TopBorder;
+                borders &= ~KSvg::FrameSvg::TopBorder;
             }
 
             if (m_view->alignment() == Latte::Types::Bottom && !m_forceBottomBorder && m_view->offset() == 0) {
-                borders &= ~Plasma::FrameSvg::BottomBorder;
+                borders &= ~KSvg::FrameSvg::BottomBorder;
             }
         }
 
         if (m_view->location() == Plasma::Types::TopEdge || m_view->location() == Plasma::Types::BottomEdge) {
             if (m_view->maxLength() == 1 && m_view->alignment() == Latte::Types::Justify) {
-                borders &= ~Plasma::FrameSvg::LeftBorder;
-                borders &= ~Plasma::FrameSvg::RightBorder;
+                borders &= ~KSvg::FrameSvg::LeftBorder;
+                borders &= ~KSvg::FrameSvg::RightBorder;
             }
 
             if (m_view->alignment() == Latte::Types::Left && m_view->offset() == 0) {
-                borders &= ~Plasma::FrameSvg::LeftBorder;
+                borders &= ~KSvg::FrameSvg::LeftBorder;
             }
 
             if (m_view->alignment() == Latte::Types::Right  && m_view->offset() == 0) {
-                borders &= ~Plasma::FrameSvg::RightBorder;
+                borders &= ~KSvg::FrameSvg::RightBorder;
             }
         }
     }
 
-    m_hasTopLeftCorner =  (borders == Plasma::FrameSvg::AllBorders) || ((borders & Plasma::FrameSvg::TopBorder) && (borders & Plasma::FrameSvg::LeftBorder));
-    m_hasTopRightCorner =  (borders == Plasma::FrameSvg::AllBorders) || ((borders & Plasma::FrameSvg::TopBorder) && (borders & Plasma::FrameSvg::RightBorder));
-    m_hasBottomLeftCorner =  (borders == Plasma::FrameSvg::AllBorders) || ((borders & Plasma::FrameSvg::BottomBorder) && (borders & Plasma::FrameSvg::LeftBorder));
-    m_hasBottomRightCorner =  (borders == Plasma::FrameSvg::AllBorders) || ((borders & Plasma::FrameSvg::BottomBorder) && (borders & Plasma::FrameSvg::RightBorder));
+    m_hasTopLeftCorner =  (borders == KSvg::FrameSvg::AllBorders) || ((borders & KSvg::FrameSvg::TopBorder) && (borders & KSvg::FrameSvg::LeftBorder));
+    m_hasTopRightCorner =  (borders == KSvg::FrameSvg::AllBorders) || ((borders & KSvg::FrameSvg::TopBorder) && (borders & KSvg::FrameSvg::RightBorder));
+    m_hasBottomLeftCorner =  (borders == KSvg::FrameSvg::AllBorders) || ((borders & KSvg::FrameSvg::BottomBorder) && (borders & KSvg::FrameSvg::LeftBorder));
+    m_hasBottomRightCorner =  (borders == KSvg::FrameSvg::AllBorders) || ((borders & KSvg::FrameSvg::BottomBorder) && (borders & KSvg::FrameSvg::RightBorder));
 
     if (m_enabledBorders != borders) {
         m_enabledBorders = borders;

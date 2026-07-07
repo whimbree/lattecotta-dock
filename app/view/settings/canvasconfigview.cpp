@@ -21,7 +21,7 @@
 #include <KWayland/Client/plasmashell.h>
 
 // Plasma
-#include <Plasma/Package>
+#include <KPackage/Package>
 
 namespace Latte {
 namespace ViewPart {
@@ -191,23 +191,23 @@ void CanvasConfigView::updateEnabledBorders()
         return;
     }
 
-    Plasma::FrameSvg::EnabledBorders borders = Plasma::FrameSvg::TopBorder;
+    KSvg::FrameSvg::EnabledBorders borders = KSvg::FrameSvg::TopBorder;
 
     switch (m_latteView->location()) {
     case Plasma::Types::TopEdge:
-        borders = Plasma::FrameSvg::BottomBorder;
+        borders = KSvg::FrameSvg::BottomBorder;
         break;
 
     case Plasma::Types::LeftEdge:
-        borders = Plasma::FrameSvg::RightBorder;
+        borders = KSvg::FrameSvg::RightBorder;
         break;
 
     case Plasma::Types::RightEdge:
-        borders = Plasma::FrameSvg::LeftBorder;
+        borders = KSvg::FrameSvg::LeftBorder;
         break;
 
     case Plasma::Types::BottomEdge:
-        borders = Plasma::FrameSvg::TopBorder;
+        borders = KSvg::FrameSvg::TopBorder;
         break;
 
     default:

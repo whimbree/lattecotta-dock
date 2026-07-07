@@ -16,8 +16,8 @@
 #include <QTimer>
 
 // Plasma
-#include <plasma/package.h>
-#include <Plasma/FrameSvg>
+#include <KPackage/Package>
+#include <KSvg/FrameSvg>
 
 
 namespace Plasma {

@@ -65,6 +65,8 @@ target_link_libraries(latte-dock
     Qt6::Qml
     Plasma::Activities
     KF6::Archive
+    KF6::Package
+    KF6::Svg
     KF6::CoreAddons
     KF6::Crash
     KF6::DBusAddons

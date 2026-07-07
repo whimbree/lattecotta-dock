@@ -21,7 +21,7 @@
 #include <KWayland/Client/plasmashell.h>
 
 // Plasma
-#include <Plasma/Package>
+#include <KPackage/Package>
 
 namespace Latte {
 namespace ViewPart {
@@ -184,7 +184,7 @@ void WidgetExplorerView::updateEffects()
     }
 
     if (!m_background) {
-        m_background = new Plasma::FrameSvg(this);
+        m_background = new KSvg::FrameSvg(this);
     }
 
     if (m_background->imagePath() != "dialogs/background") {
@@ -249,19 +249,19 @@ void WidgetExplorerView::updateEnabledBorders()
         return;
     }
 
-    Plasma::FrameSvg::EnabledBorders borders = Plasma::FrameSvg::AllBorders;
+    KSvg::FrameSvg::EnabledBorders borders = KSvg::FrameSvg::AllBorders;
 
     if (!m_geometryWhenVisible.isEmpty()) {
         if (m_geometryWhenVisible.x() == m_latteView->screenGeometry().x()) {
-            borders &= ~Plasma::FrameSvg::LeftBorder;
+            borders &= ~KSvg::FrameSvg::LeftBorder;
         }
 
         if (m_geometryWhenVisible.y() == m_latteView->screenGeometry().y()) {
-            borders &= ~Plasma::FrameSvg::TopBorder;
+            borders &= ~KSvg::FrameSvg::TopBorder;
         }
 
         if (m_geometryWhenVisible.height() == m_latteView->screenGeometry().height()) {
-            borders &= ~Plasma::FrameSvg::BottomBorder;
+            borders &= ~KSvg::FrameSvg::BottomBorder;
         }
     }
 

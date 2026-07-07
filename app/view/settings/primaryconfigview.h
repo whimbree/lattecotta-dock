@@ -20,8 +20,8 @@
 #include <QWindow>
 
 // Plasma
-#include <plasma/package.h>
-#include <Plasma/FrameSvg>
+#include <KPackage/Package>
+#include <KSvg/FrameSvg>
 
 namespace Plasma {
 class Applet;
@@ -164,7 +164,7 @@ private:
     Config::IndicatorUiManager *m_indicatorUiManager{nullptr};
 
     //only for the mask on disabled compositing, not to actually paint
-    Plasma::FrameSvg *m_background{nullptr};
+    KSvg::FrameSvg *m_background{nullptr};
 };
 
 }

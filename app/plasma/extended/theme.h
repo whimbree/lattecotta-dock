@@ -19,7 +19,7 @@
 #include <KSharedConfig>
 
 // Plasma
-#include <Plasma/FrameSvg>
+#include <KSvg/FrameSvg>
 #include <Plasma/Theme>
 
 namespace Latte {

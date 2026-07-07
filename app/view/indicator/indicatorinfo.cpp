@@ -9,7 +9,7 @@
 #include <QDebug>
 
 // Plasma
-#include <Plasma/Svg>
+#include <KSvg/Svg>
 
 namespace Latte {
 namespace ViewPart {

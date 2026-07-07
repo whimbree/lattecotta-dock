@@ -16,8 +16,8 @@
 #include <QTimer>
 
 // Plasma
-#include <plasma/package.h>
-#include <Plasma/FrameSvg>
+#include <KPackage/Package>
+#include <KSvg/FrameSvg>
 
 
 namespace Plasma {
@@ -82,7 +82,7 @@ private:
     QRect m_geometryWhenVisible;
 
     //only for the mask on disabled compositing, not to actually paint
-    Plasma::FrameSvg *m_background{nullptr};
+    KSvg::FrameSvg *m_background{nullptr};
 };
 
 }

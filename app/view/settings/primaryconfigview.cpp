@@ -36,7 +36,7 @@
 #include <KWindowSystem>
 
 // Plasma
-#include <Plasma/Package>
+#include <KPackage/Package>
 
 #define CANVASWINDOWINTERVAL 50
 #define PRIMARYWINDOWINTERVAL 250
@@ -602,23 +602,23 @@ void PrimaryConfigView::updateEnabledBorders()
         return;
     }
 
-    Plasma::FrameSvg::EnabledBorders borders = Plasma::FrameSvg::AllBorders;
+    KSvg::FrameSvg::EnabledBorders borders = KSvg::FrameSvg::AllBorders;
 
     switch (m_latteView->location()) {
     case Plasma::Types::TopEdge:
-        borders &= m_inReverse ? ~Plasma::FrameSvg::BottomBorder : ~Plasma::FrameSvg::TopBorder;
+        borders &= m_inReverse ? ~KSvg::FrameSvg::BottomBorder : ~KSvg::FrameSvg::TopBorder;
         break;
 
     case Plasma::Types::LeftEdge:
-        borders &= ~Plasma::FrameSvg::LeftBorder;
+        borders &= ~KSvg::FrameSvg::LeftBorder;
         break;
 
     case Plasma::Types::RightEdge:
-        borders &= ~Plasma::FrameSvg::RightBorder;
+        borders &= ~KSvg::FrameSvg::RightBorder;
         break;
 
     case Plasma::Types::BottomEdge:
-        borders &= m_inReverse ? ~Plasma::FrameSvg::TopBorder : ~Plasma::FrameSvg::BottomBorder;
+        borders &= m_inReverse ? ~KSvg::FrameSvg::TopBorder : ~KSvg::FrameSvg::BottomBorder;
         break;
 
     default:
@@ -644,7 +644,7 @@ void PrimaryConfigView::updateEffects()
     }
 
     if (!m_background) {
-        m_background = new Plasma::FrameSvg(this);
+        m_background = new KSvg::FrameSvg(this);
     }
 
     if (m_background->imagePath() != "dialogs/background") {
