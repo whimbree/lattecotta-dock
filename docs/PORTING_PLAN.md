@@ -661,10 +661,12 @@ welcome but not required.
       buffers are attached; analogclock loads, the tasks plasmoid
       correctly waits for Phase 6; found and fixed a startup segfault
       in winIdFor() and three latteView-null QML errors)
-      Follow-up under live verification: the surface maps and the
-      scene paints (confirmed on-screen via --graphics debug frames),
-      but the panel background and applet visuals do not draw yet -
-      tracked as the first Phase 6-cadence live item
+      Resolved in follow-up live debugging: 7ca33972 (deferred startup
+      slide-in), fb98037c (the missed itemForApplet conversion in
+      View::init that kept latteView null in QML, and the Qt6 wayland
+      QWindow::setMask damage-clipping behavior that froze the surface
+      transparent). The dock visibly renders on the live session with
+      working struts - screenshot-verified
 
 ### Phase 6: Task manager subsystem
 
