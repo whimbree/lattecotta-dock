@@ -11,6 +11,7 @@
 #include "manager.h"
 #include "../apptypes.h"
 #include "../screenpool.h"
+#include "../data/activitiesinfo.h"
 #include "../data/layoutdata.h"
 #include "../lattecorona.h"
 #include "../layout/centrallayout.h"
@@ -28,8 +29,8 @@
 #include <Plasma/Containment>
 
 // KDE
-#include <KActivities/Consumer>
-#include <KActivities/Controller>
+#include <PlasmaActivities/Consumer>
+#include <PlasmaActivities/Controller>
 #include <KWindowSystem>
 
 #define LAYOUTSINITINTERVAL 350
@@ -67,7 +68,9 @@ Synchronizer::Synchronizer(QObject *parent)
         }
     });
 
-    connect(m_manager->corona()->activitiesConsumer(), &KActivities::Consumer::runningActivitiesChanged,
+    //! KActivities 6 removed runningActivitiesChanged; activitiesChanged also
+    //! fires on activity start/stop, and the handler re-derives running state
+    connect(m_manager->corona()->activitiesConsumer(), &KActivities::Consumer::activitiesChanged,
             this, [&]() {
         if (m_manager->memoryUsage() == MemoryUsage::MultipleLayouts) {
             syncMultipleLayoutsToActivities();
@@ -157,7 +160,7 @@ QStringList Synchronizer::freeActivities()
 
 QStringList Synchronizer::runningActivities()
 {   
-    return m_manager->corona()->activitiesConsumer()->runningActivities();
+    return Latte::ActivitiesInfo::runningActivities();
 }
 
 QStringList Synchronizer::freeRunningActivities()
@@ -864,7 +867,7 @@ bool Synchronizer::switchToLayoutInMultipleModeBasedOnActivities(const QString &
     }
 
     if (!switchToActivity.isEmpty()) {
-        if (!m_manager->corona()->activitiesConsumer()->runningActivities().contains(switchToActivity)) {
+        if (!runningActivities().contains(switchToActivity)) {
             m_activitiesController->startActivity(switchToActivity);
         }
 

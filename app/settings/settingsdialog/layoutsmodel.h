@@ -17,6 +17,9 @@
 #include <QAbstractTableModel>
 #include <QModelIndex>
 
+// KDE
+#include <PlasmaActivities/Info>
+
 
 namespace Latte {
 namespace Settings {

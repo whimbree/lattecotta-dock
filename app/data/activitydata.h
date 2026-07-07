@@ -16,15 +16,24 @@
 #include <QIcon>
 #include <QString>
 
-//! KActivities
-#include <KActivities/Info>
-
 namespace Latte {
 namespace Data {
 
 class Activity : public Generic
 {
 public:
+    //! KActivities 6 removed Info::State. These mirror the old values (and
+    //! the org.kde.ActivityManager wire protocol) so state semantics stay
+    //! stable; ActivitiesInfo::stateFromManager() validates raw integers into
+    //! this enum.
+    enum State {
+        Invalid = 0,
+        Running = 2,
+        Starting = 3,
+        Stopped = 4,
+        Stopping = 5
+    };
+
     Activity();
     Activity(Activity &&o);
     Activity(const Activity &o);
@@ -32,7 +41,7 @@ public:
     //! Layout data
     bool isCurrent{false};
     QString icon;
-    KActivities::Info::State state;
+    State state{Invalid};
 
     bool isValid() const;
     bool isRunning() const;

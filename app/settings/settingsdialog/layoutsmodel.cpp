@@ -6,6 +6,7 @@
 #include "layoutsmodel.h"
 
 // local
+#include "../../data/activitiesinfo.h"
 #include "../../data/layoutdata.h"
 #include "../../layouts/manager.h"
 #include "../../layouts/synchronizer.h"
@@ -21,8 +22,8 @@
 #include <KLocalizedString>
 
 // KActivities
-#include <KActivities/Consumer>
-#include <KActivities/Info>
+#include <PlasmaActivities/Consumer>
+#include <PlasmaActivities/Info>
 
 namespace Latte {
 namespace Settings {
@@ -900,36 +901,39 @@ void Layouts::initActivities()
     allActivities.id = Latte::Data::Layout::ALLACTIVITIESID;
     allActivities.name = QString("[ " + i18n("All Activities") + " ]");
     allActivities.icon = "activities";
-    allActivities.state = KActivities::Info::Stopped;
+    allActivities.state = Latte::Data::Activity::Stopped;
     m_activitiesTable << allActivities;
 
     Latte::Data::Activity freeActivities;
     freeActivities.id = Latte::Data::Layout::FREEACTIVITIESID;
     freeActivities.name = QString("[ " + i18n("Free Activities") + " ]");
     freeActivities.icon = "activities";
-    freeActivities.state = KActivities::Info::Stopped;
+    freeActivities.state = Latte::Data::Activity::Stopped;
     m_activitiesTable << freeActivities;
 
     Latte::Data::Activity currentActivity;
     currentActivity.id = Latte::Data::Layout::CURRENTACTIVITYID;
     currentActivity.name = QString("[ " + i18n("Current Activity") + " ]");
     currentActivity.icon = "dialog-yes";
-    currentActivity.state = KActivities::Info::Stopped;
+    currentActivity.state = Latte::Data::Activity::Stopped;
     m_activitiesTable << currentActivity;
 
     QStringList activities = m_corona->layoutsManager()->synchronizer()->activities();;
 
-    for(const auto &id: activities) {
-        KActivities::Info info(id);
+    const QHash<QString, Latte::Data::Activity::State> activityStates = ActivitiesInfo::states();
 
-        if (info.state() != KActivities::Info::Invalid) {
+    for(const auto &id: activities) {
+        if (activityStates.value(id, Latte::Data::Activity::Invalid) != Latte::Data::Activity::Invalid) {
             onActivityAdded(id);
         }
     }
 
     connect(m_corona->activitiesConsumer(), &KActivities::Consumer::activityAdded, this, &Layouts::onActivityAdded);
     connect(m_corona->activitiesConsumer(), &KActivities::Consumer::activityRemoved, this, &Layouts::onActivityRemoved);
-    connect(m_corona->activitiesConsumer(), &KActivities::Consumer::runningActivitiesChanged, this, &Layouts::onRunningActivitiesChanged);
+    //! KActivities 6 removed runningActivitiesChanged; activitiesChanged fires
+    //! on activity start/stop too, and the handler re-queries real states from
+    //! the activity manager instead of trusting the payload
+    connect(m_corona->activitiesConsumer(), &KActivities::Consumer::activitiesChanged, this, &Layouts::onRunningActivitiesChanged);
 
     Q_EMIT activitiesStatesChanged();
 }
@@ -954,7 +958,7 @@ void Layouts::onActivityAdded(const QString &id)
     activity.id = m_activitiesInfo[id]->id();
     activity.name = m_activitiesInfo[id]->name();
     activity.icon = m_activitiesInfo[id]->icon();
-    activity.state = m_activitiesInfo[id]->state();
+    activity.state = ActivitiesInfo::states().value(id, Latte::Data::Activity::Invalid);
     activity.isCurrent = m_activitiesInfo[id]->isCurrent();
 
     if (!m_activitiesTable.containsId(id)) {
@@ -995,7 +999,7 @@ void Layouts::onActivityChanged(const QString &id)
     if (m_activitiesTable.containsId(id) && m_activitiesInfo.contains(id)) {
         m_activitiesTable[id].name = m_activitiesInfo[id]->name();
         m_activitiesTable[id].icon = m_activitiesInfo[id]->icon();
-        m_activitiesTable[id].state = m_activitiesInfo[id]->state();
+        m_activitiesTable[id].state = ActivitiesInfo::states().value(id, Latte::Data::Activity::Invalid);
         m_activitiesTable[id].isCurrent = m_activitiesInfo[id]->isCurrent();
 
         Q_EMIT activitiesStatesChanged();
@@ -1004,12 +1008,24 @@ void Layouts::onActivityChanged(const QString &id)
 
 void Layouts::onRunningActivitiesChanged(const QStringList &runningIds)
 {
+    Q_UNUSED(runningIds)
+
+    //! KActivities 6's activitiesChanged payload is the id list, not running
+    //! state; refresh every tracked activity from the activity manager so the
+    //! running ones are the ones that render bold
+    const QHash<QString, Latte::Data::Activity::State> activityStates = ActivitiesInfo::states();
+
     for (int i = 0; i < m_activitiesTable.rowCount(); ++i) {
-        if (runningIds.contains(m_activitiesTable[i].id)) {
-            m_activitiesTable[i].state = KActivities::Info::Running;
-        } else {
-            m_activitiesTable[i].state = KActivities::Info::Stopped;
+        const QString &id = m_activitiesTable[i].id;
+
+        if (id == Latte::Data::Layout::ALLACTIVITIESID
+                || id == Latte::Data::Layout::FREEACTIVITIESID
+                || id == Latte::Data::Layout::CURRENTACTIVITYID) {
+            //! sentinel rows are UI placeholders, not real activities
+            continue;
         }
+
+        m_activitiesTable[i].state = activityStates.value(id, Latte::Data::Activity::Invalid);
     }
 
     Q_EMIT activitiesStatesChanged();
