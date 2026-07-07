@@ -661,8 +661,14 @@ into C++. There is no drop-in replacement to import.
       module for this anymore
       Commits:
 - [ ] Wire `activateWindowView`, `windowsHovered`,
-      `cancelHighlightWindows` to the KWin D-Bus interfaces from Phase
-      4, with the fallback behavior always present
+      `cancelHighlightWindows` to the KWin D-Bus effect interfaces
+      (this item absorbed the deferred Phase 4 item; the full spec
+      lives here now): `org.kde.KWin.Effect.WindowView1` for grouped-
+      task window view, `org.kde.KWin.HighlightWindow` for hover peek,
+      availability tracked via a `QDBusServiceWatcher` (register and
+      unregister both), **with a real fallback to plain window cycling
+      when the effect isn't available** - both forks found the
+      no-fallback version silently no-ops the click
       Commits:
 - [ ] Decide and implement grouped-task window preview thumbnails:
       either suppress them on Wayland entirely, or use
