@@ -105,7 +105,10 @@ in Phases 10-11 where they originally sat.
       Commits:
 - [ ] One-command build check (script or make target) runnable
       per-commit once Phase 2's compile milestone lands - cheap
-      insurance across a 100+-item port
+      insurance across a 100+-item port. Once Phase 4 introduces the
+      `HAVE_X11` option it must build both ON and OFF, since the
+      author only runs Wayland and an untested `#ifdef` path rots in
+      weeks otherwise
       Commits:
 - [ ] Write the "honest coverage" testing standard doc now (no test
       that doesn't assert something real/observable), modeled on
@@ -144,8 +147,17 @@ in Phases 10-11 where they originally sat.
 - [ ] Add `find_package(KF6Service)` and `find_package(LibNotificationManager)`
       - needed by the tasks plugin for job/launcher data
       Commits:
-- [ ] Drop the X11/XCB/X11Extras/`HAVE_X11` build path entirely (both
-      reference forks are Wayland-only, confirmed correct choice)
+- [ ] Keep X11 as an optional, best-effort build path instead of
+      dropping it (scope decision, see Phase 4 intro): remove
+      `find_package(Qt5 X11Extras)` (the module is gone in Qt6 -
+      native handles come from `QNativeInterface::QX11Application`),
+      add `find_package(KF6WindowSystem)`'s X11 side
+      (`KX11Extras`/`KWindowInfo`/NETWM moved there from
+      KWindowSystem core), keep `HAVE_X11` a real `option()`
+      defaulting ON but never REQUIRED. Both reference forks went
+      Wayland-only, so there is no reference port for this path -
+      expect it to be the mechanical Qt5->Qt6 work upstream would
+      have done, with no fork to crib from
       Commits:
 - [ ] `qt5_add_dbus_adaptor` -> `qt_add_dbus_adaptor`
       Commits:
@@ -239,14 +251,15 @@ belongs in a later phase instead.
       `view/settings/widgetexplorerview.cpp`) - pass the window
       object itself
       Commits:
-- [ ] Audit the remaining WId-based `KWindowSystem` calls KF6 moved
-      to KX11Extras or removed. Most die with the Phase 4 X11 strip,
-      but two sit on paths that survive:
-      `KWindowSystem::setOnActivities(winId(), ...)` in
-      `infoview.cpp` (needs a Wayland-side replacement or an explicit
-      decision to drop it) and `compositingActive()` in
-      `visibilitymanager.cpp` (always true under Wayland - fold the
-      conditional away, don't port it)
+- [ ] Audit the WId-based `KWindowSystem` calls KF6 moved to
+      `KX11Extras`: on the X11 path they become
+      `KX11Extras::setOnActivities`/`compositingActive`/etc. behind
+      `HAVE_X11`; the Wayland path needs its own answer per call site
+      - `setOnActivities(winId(), ...)` in `infoview.cpp` needs a
+      Wayland-side replacement or an explicit decision to skip it
+      there, and `compositingActive()` in `visibilitymanager.cpp` is
+      always true under Wayland (fold the conditional away on that
+      branch, don't fake-port it)
       Commits:
 - [ ] KPackage metadata pass: add
       `"X-Plasma-API-Minimum-Version": "6.0"` to every package
@@ -288,25 +301,38 @@ belongs in a later phase instead.
       lowercase real header, then `include_next`)
       Commits:
 
-### Phase 4: Wayland backend
+### Phase 4: Window-system backends (Wayland primary, X11 best-effort)
 
-Both reference forks confirm Wayland-only is the right scope, not a
-platform decision to relitigate.
+Scope decision (revised from the original Wayland-only plan, on
+explicit user request): Wayland is the primary target and the only
+one verified live - the author does not run X11. X11 stays as a
+best-effort port: it must keep compiling under `HAVE_X11=ON`, gets
+the mechanical Qt6/KF6 migration done properly (there is real
+upstream-mergeable value here - upstream never dropped X11, both
+community forks did), but X11-specific breakage is tracked as a known
+issue, never a milestone blocker, and no phase waits on X11 behavior
+being right. Opportunistic smoke tests (Xephyr/nested session) are
+welcome but not required.
 
-- [ ] Delete `XWindowInterface`, collapse to a single
-      `WaylandInterface`
+- [ ] Keep the `AbstractWindowInterface` split; port
+      `XWindowInterface` to Qt6/KF6 mechanically: `QX11Info` ->
+      `qGuiApp->nativeInterface<QNativeInterface::QX11Application>()`,
+      `KWindowSystem`/`KWindowInfo`/`NETWinInfo`/NETWM includes ->
+      `KX11Extras` equivalents, all behind `HAVE_X11`
       Commits:
-- [ ] Strip `QX11Info`/`QtX11Extras`/xcb code: the xcb RandR native
-      event filter in `PrimaryOutputWatcher` (including its
-      `QAbstractNativeEventFilter` base), X11 branches in `ScreenPool`
-      and `GlobalShortcuts`, `QX11Info` in `tasktools`, dead `<NETWM>`
-      includes
+- [ ] Port (not strip) the remaining X11-conditional code:
+      the xcb RandR native event filter in `PrimaryOutputWatcher`
+      (Qt6 changed `QAbstractNativeEventFilter::nativeEventFilter`'s
+      result parameter from `long*` to `qintptr*`), X11 branches in
+      `ScreenPool` and `GlobalShortcuts`, `QX11Info` in `tasktools`.
+      Delete only what is genuinely dead on both paths
       Commits:
-- [ ] Move window tracking off the removed `PlasmaWindow::internalId()`
-      to `uuid()`-based ids carried as strings (`WindowId`); update
-      every id-validity check that assumed an integer (window tracker,
-      sub-windows, config views, positioner, main/child window
-      detection)
+- [ ] Move Wayland window tracking off the removed
+      `PlasmaWindow::internalId()` to `uuid()`-based ids carried in
+      the existing variant `WindowId`; update every id-validity check
+      that assumed an integer so it handles both the X11 `WId` case
+      and the Wayland string-uuid case (window tracker, sub-windows,
+      config views, positioner, main/child window detection)
       Commits:
 - [ ] Remove `View::surface()` (a `PlasmaShellSurface` accessor,
       always null under layer-shell) and its dead callers; gate auto-
@@ -859,11 +885,12 @@ polished, distributable form of it.
       2022 (only po/docbook syncs since), so find out whether the
       invent.kde.org repo still accepts MRs and whether anyone
       reviews there. Two upstream-facing decisions in this plan are
-      big enough to sink an unannounced mega-MR regardless: dropping
-      X11 entirely (upstream supported it) and the Phase 6 task
-      manager vendoring. Raise the direction with KDE (an issue or
-      draft MR describing this plan) before the work is done, not
-      after. If upstream turns out to be dead for review purposes,
+      big enough to sink an unannounced mega-MR regardless: X11
+      demoted to a best-effort, author-untested path (softer than the
+      forks' outright removal, but still a support-level change
+      upstream would need to own) and the Phase 6 task manager
+      vendoring. Raise the direction with KDE (an issue or draft MR
+      describing this plan) before the work is done, not after. If upstream turns out to be dead for review purposes,
       the fallback is publishing this fork as a maintained
       continuation - every item below still pays off as code quality
       work either way
