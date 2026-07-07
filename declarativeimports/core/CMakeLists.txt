@@ -16,14 +16,12 @@ target_link_libraries(lattecoreplugin
     Qt6::Quick
     Qt6::Qml
     KF6::CoreAddons
+    KF6::Svg
+    KF6::WindowSystem
     Plasma::Plasma
     Plasma::PlasmaQuick
     KF6::IconThemes
 )
-
-if(HAVE_X11)
-    target_link_libraries(lattecoreplugin KF6::WindowSystem)
-endif()
 
 install(TARGETS lattecoreplugin DESTINATION ${KDE_INSTALL_QMLDIR}/org/kde/latte/core)
 

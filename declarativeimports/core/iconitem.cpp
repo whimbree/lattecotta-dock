@@ -21,13 +21,12 @@
 #include <QQuickWindow>
 #include <QPixmap>
 #include <QSGSimpleTextureNode>
-#include <QuickAddons/ManagedTextureNode>
 #include <QLatin1String>
 
 // KDE
 #include <KIconTheme>
-#include <KIconThemes/KIconLoader>
-#include <KIconThemes/KIconEffect>
+#include <KIconLoader>
+#include <KIconEffect>
 
 namespace Latte {
 
@@ -39,7 +38,7 @@ IconItem::IconItem(QQuickItem *parent)
       m_sizeChanged(false),
       m_usesPlasmaTheme(false),
       m_lastValidSourceName(QString()),
-      m_colorGroup(Plasma::Theme::NormalColorGroup)
+      m_colorGroup(KSvg::Svg::Window)
 {
     setFlag(ItemHasContents, true);
     connect(KIconLoader::global(), SIGNAL(iconLoaderSettingsChanged()),
@@ -93,12 +92,12 @@ void IconItem::setSource(const QVariant &source)
             m_svgIcon.reset();
         } else {
             if (!m_svgIcon) {
-                m_svgIcon = std::make_unique<Plasma::Svg>(this);
-                m_svgIcon->setColorGroup(m_colorGroup);
-                m_svgIcon->setStatus(Plasma::Svg::Normal);
+                m_svgIcon = std::make_unique<KSvg::Svg>(this);
+                m_svgIcon->setColorSet(m_colorGroup);
+                m_svgIcon->setStatus(KSvg::Svg::Normal);
                 m_svgIcon->setUsingRenderingCache(false);
                 m_svgIcon->setDevicePixelRatio((window() ? window()->devicePixelRatio() : qApp->devicePixelRatio()));
-                connect(m_svgIcon.get(), &Plasma::Svg::repaintNeeded, this, &IconItem::schedulePixmapUpdate);
+                connect(m_svgIcon.get(), &KSvg::Svg::repaintNeeded, this, &IconItem::schedulePixmapUpdate);
             }
 
             if (m_usesPlasmaTheme) {
@@ -213,7 +212,7 @@ void IconItem::setLastValidSourceName(QString name)
     Q_EMIT lastValidSourceNameChanged();
 }
 
-void IconItem::setColorGroup(Plasma::Theme::ColorGroup group)
+void IconItem::setColorGroup(KSvg::Svg::ColorSet group)
 {
     if (m_colorGroup == group) {
         return;
@@ -222,13 +221,13 @@ void IconItem::setColorGroup(Plasma::Theme::ColorGroup group)
     m_colorGroup = group;
 
     if (m_svgIcon) {
-        m_svgIcon->setColorGroup(group);
+        m_svgIcon->setColorSet(group);
     }
 
     Q_EMIT colorGroupChanged();
 }
 
-Plasma::Theme::ColorGroup IconItem::colorGroup() const
+KSvg::Svg::ColorSet IconItem::colorGroup() const
 {
     return m_colorGroup;
 }
@@ -352,14 +351,15 @@ QSGNode *IconItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *update
         return nullptr;
     }
 
-    ManagedTextureNode *textureNode = dynamic_cast<ManagedTextureNode *>(oldNode);
+    QSGSimpleTextureNode *textureNode = dynamic_cast<QSGSimpleTextureNode *>(oldNode);
 
     if (!textureNode || m_textureChanged) {
         if (oldNode)
             delete oldNode;
 
-        textureNode = new ManagedTextureNode;
-        textureNode->setTexture(QSharedPointer<QSGTexture>(window()->createTextureFromImage(m_iconPixmap.toImage(), QQuickWindow::TextureCanUseAtlas)));
+        textureNode = new QSGSimpleTextureNode;
+        textureNode->setOwnsTexture(true);
+        textureNode->setTexture(window()->createTextureFromImage(m_iconPixmap.toImage(), QQuickWindow::TextureCanUseAtlas));
         textureNode->setFiltering(smooth() ? QSGTexture::Linear : QSGTexture::Nearest);
 
         m_sizeChanged = true;
@@ -557,7 +557,7 @@ void IconItem::itemChange(ItemChange change, const ItemChangeData &value)
     QQuickItem::itemChange(change, value);
 }
 
-void IconItem::geometryChanged(const QRectF &newGeometry, const QRectF &oldGeometry)
+void IconItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
 {
     if (newGeometry.size() != oldGeometry.size()) {
         m_sizeChanged = true;
@@ -576,7 +576,7 @@ void IconItem::geometryChanged(const QRectF &newGeometry, const QRectF &oldGeome
         }
     }
 
-    QQuickItem::geometryChanged(newGeometry, oldGeometry);
+    QQuickItem::geometryChange(newGeometry, oldGeometry);
 }
 
 void IconItem::componentComplete()

@@ -9,8 +9,8 @@
 #include <QDebug>
 #include <QProcess>
 
-// Plasma
-#include <plasma/version.h>
+// KDE
+#include <KCoreAddons>
 
 #define LONGDURATION 240
 #define SHORTDURATION 40
@@ -41,7 +41,10 @@ uint Environment::longDuration() const
 
 uint Environment::frameworksVersion() const
 {
-    return Plasma::version();
+    // plasma/version.h is gone in Plasma 6; every QML consumer gates on
+    // KF5-era versions, so the runtime KDE Frameworks version keeps those
+    // comparisons meaningful (and unconditionally true on KF6).
+    return KCoreAddons::version();
 }
 
 uint Environment::plasmaDesktopVersion()
