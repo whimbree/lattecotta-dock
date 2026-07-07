@@ -26,12 +26,9 @@ check() {
     cmake --build "$dir"
 }
 
-# Single configuration until Phase 4 turns HAVE_X11 into a real option();
-# from then on this must build both variants, since the author only runs
-# Wayland and an unbuilt #ifdef path rots silently:
-#
-#   check build          -DHAVE_X11=ON
-#   check build-no-x11   -DHAVE_X11=OFF
-check build
+# Both WITH_X11 variants, always: the author only runs Wayland and an
+# unbuilt #ifdef path rots silently.
+check build -DWITH_X11=ON
+check build-no-x11 -DWITH_X11=OFF
 
 echo "build-check: OK"
