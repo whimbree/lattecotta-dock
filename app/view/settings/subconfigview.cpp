@@ -18,7 +18,7 @@
 
 // KDE
 #include <KLocalizedContext>
-#include <KDeclarative/KDeclarative>
+#include <KLocalizedContext>
 #include <KWayland/Client/plasmashell.h>
 #include <KWayland/Client/surface.h>
 #include <KWindowSystem>
@@ -114,11 +114,11 @@ void SubConfigView::init()
         rootContext()->setContextProperty(QStringLiteral("themeExtended"), m_corona->themeExtended());
     }
 
-    KDeclarative::KDeclarative kdeclarative;
-    kdeclarative.setDeclarativeEngine(engine());
-    kdeclarative.setTranslationDomain(QStringLiteral("latte-dock"));
-    kdeclarative.setupContext();
-    kdeclarative.setupEngine(engine());
+    //! KDeclarative's engine setup is gone in KF6; the i18n() context is the
+    //! piece Latte needs from it
+    auto *localizedContext = new KLocalizedContext(engine());
+    localizedContext->setTranslationDomain(QStringLiteral("latte-dock"));
+    engine()->rootContext()->setContextObject(localizedContext);
 
 }
 

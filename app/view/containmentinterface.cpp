@@ -27,7 +27,7 @@
 #include <KDesktopFile>
 #include <KLocalizedString>
 #include <KPluginMetaData>
-#include <KDeclarative/ConfigPropertyMap>
+#include <KConfigPropertyMap>
 
 namespace Latte {
 namespace ViewPart {
@@ -540,7 +540,7 @@ void ContainmentInterface::setPlasmoid(QObject *plasmoid)
     m_plasmoid = plasmoid;
 
     if (m_plasmoid) {
-        m_configuration = qobject_cast<KDeclarative::ConfigPropertyMap *>(m_plasmoid->property("configuration").value<QObject *>());
+        m_configuration = qobject_cast<KConfigPropertyMap *>(m_plasmoid->property("configuration").value<QObject *>());
 
         if (m_configuration) {
             connect(m_configuration, &QQmlPropertyMap::valueChanged, this, &ContainmentInterface::containmentConfigPropertyChanged);
@@ -908,7 +908,7 @@ void ContainmentInterface::updateAppletDelayedConfiguration()
     }
 }
 
-void ContainmentInterface::initAppletConfigurationSignals(const int &id, KDeclarative::ConfigPropertyMap *configuration)
+void ContainmentInterface::initAppletConfigurationSignals(const int &id, KConfigPropertyMap *configuration)
 {
     if (!configuration) {
         return;
@@ -921,7 +921,7 @@ void ContainmentInterface::initAppletConfigurationSignals(const int &id, KDeclar
     });
 }
 
-KDeclarative::ConfigPropertyMap *ContainmentInterface::appletConfiguration(const Plasma::Applet *applet)
+KConfigPropertyMap *ContainmentInterface::appletConfiguration(const Plasma::Applet *applet)
 {
     if (!m_view->containment() || !applet) {
         return nullptr;
@@ -930,13 +930,13 @@ KDeclarative::ConfigPropertyMap *ContainmentInterface::appletConfiguration(const
     PlasmaQuick::AppletQuickItem *ai = applet->property("_plasma_graphicObject").value<PlasmaQuick::AppletQuickItem *>();
     bool isSubContainment = Layouts::Storage::self()->isSubContainment(m_view->corona(), applet); //we use corona() to make sure that returns true even when it is first created from user
     int currentAppletId = applet->id();
-    KDeclarative::ConfigPropertyMap *configuration{nullptr};
+    KConfigPropertyMap *configuration{nullptr};
 
     //! set configuration object properly for applets and subcontainments
     if (!isSubContainment) {
         int metaconfigindex = ai->metaObject()->indexOfProperty("configuration");
         if (metaconfigindex >=0 ){
-            configuration = qobject_cast<KDeclarative::ConfigPropertyMap *>((ai->property("configuration")).value<QObject *>());
+            configuration = qobject_cast<KConfigPropertyMap *>((ai->property("configuration")).value<QObject *>());
         }
     } else {
         Plasma::Containment *subcontainment = Layouts::Storage::self()->subContainmentOf(m_view->corona(), applet);
@@ -946,7 +946,7 @@ KDeclarative::ConfigPropertyMap *ContainmentInterface::appletConfiguration(const
             if (subcai) {
                 int metaconfigindex = subcai->metaObject()->indexOfProperty("configuration");
                 if (metaconfigindex >=0 ){
-                    configuration = qobject_cast<KDeclarative::ConfigPropertyMap *>((subcai->property("configuration")).value<QObject *>());
+                    configuration = qobject_cast<KConfigPropertyMap *>((subcai->property("configuration")).value<QObject *>());
                 }
             }
         }

@@ -9,6 +9,9 @@
 #include "../view.h"
 #include "../positioner.h"
 
+// local tools
+#include "../../tools/commontools.h"
+
 // Qt
 #include <QDebug>
 #include <QSurfaceFormat>
@@ -77,7 +80,7 @@ void ScreenEdgeGhostWindow::updateGeometry()
 
     QRect newGeometry = m_latteView->absoluteGeometry();
 
-    if (KWindowSystem::compositingActive()) {
+    if (Latte::compositingActive()) {
         m_thickness = 6;
     } else {
         m_thickness = 2;

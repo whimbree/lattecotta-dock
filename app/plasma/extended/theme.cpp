@@ -5,6 +5,8 @@
 
 #include "theme.h"
 
+#include <config-latte.h>
+
 // local
 #include "lattecorona.h"
 #include "panelbackground.h"
@@ -25,6 +27,9 @@
 
 // X11
 #include <KWindowSystem>
+#if HAVE_X11
+#include <KX11Extras>
+#endif
 
 #define DEFAULTCOLORSCHEME "default.colors"
 #define REVERSEDCOLORSCHEME "reversed.colors"
@@ -46,10 +51,12 @@ Theme::Theme(KSharedConfig::Ptr config, QObject *parent) :
 
     //! compositing tracking
     if (KWindowSystem::isPlatformWayland()) {
-        //! TODO: Wayland compositing active
+        //! the wayland compositor is the display server, compositing is unconditional
         m_compositing = true;
-    } else {
-        connect(KWindowSystem::self(), &KWindowSystem::compositingChanged
+    }
+#if HAVE_X11
+    else {
+        connect(KX11Extras::self(), &KX11Extras::compositingChanged
                 , this, [&](bool enabled) {
             if (m_compositing == enabled)
                 return;
@@ -58,8 +65,9 @@ Theme::Theme(KSharedConfig::Ptr config, QObject *parent) :
             Q_EMIT compositingChanged();
         });
 
-        m_compositing = KWindowSystem::compositingActive();
+        m_compositing = KX11Extras::compositingActive();
     }
+#endif
     //!
 
     loadConfig();
@@ -309,7 +317,7 @@ void Theme::updateReversedSchemeValues()
         //! update scheme name
         QString originalSchemeName = WindowSystem::SchemeColors::schemeName(m_originalSchemePath);
         KConfigGroup generalGroup(reversedPtr, "General");
-        generalGroup.writeEntry("Name", originalSchemeName + "_reversed");
+        generalGroup.writeEntry("Name", QString(originalSchemeName + "_reversed"));
         generalGroup.sync();
     }
 }
@@ -331,7 +339,7 @@ void Theme::updateHasShadow()
     svg->resize();
 
     QString cornerId = "shadow-topleft";
-    QImage corner = svg->image(svg->elementSize(cornerId), cornerId);
+    QImage corner = svg->image(svg->elementSize(cornerId).toSize(), cornerId);
 
     int fullTransparentPixels = 0;
 
@@ -504,15 +512,15 @@ void Theme::updateMarginsAreaValues()
     bool hasThickSeparatorMargins = svg->hasElement("thick-center");
 
     if (hasThickSeparatorMargins) {
-        int topMargin = svg->hasElement("hint-top-margin") ? svg->elementSize("hint-top-margin").height() : 0;
-        int leftMargin = svg->hasElement("hint-left-margin") ? svg->elementSize("hint-left-margin").width() : 0;
-        int bottomMargin = svg->hasElement("hint-bottom-margin") ? svg->elementSize("hint-bottom-margin").height() : 0;
-        int rightMargin = svg->hasElement("hint-right-margin") ? svg->elementSize("hint-right-margin").width() : 0;
+        int topMargin = svg->hasElement("hint-top-margin") ? svg->elementSize("hint-top-margin").toSize().height() : 0;
+        int leftMargin = svg->hasElement("hint-left-margin") ? svg->elementSize("hint-left-margin").toSize().width() : 0;
+        int bottomMargin = svg->hasElement("hint-bottom-margin") ? svg->elementSize("hint-bottom-margin").toSize().height() : 0;
+        int rightMargin = svg->hasElement("hint-right-margin") ? svg->elementSize("hint-right-margin").toSize().width() : 0;
 
-        int thickTopMargin = svg->hasElement("thick-hint-top-margin") ? svg->elementSize("thick-hint-top-margin").height() : 0;
-        int thickLeftMargin = svg->hasElement("thick-hint-left-margin") ? svg->elementSize("thick-hint-left-margin").width() : 0;
-        int thickBottomMargin = svg->hasElement("thick-hint-bottom-margin") ? svg->elementSize("thick-hint-bottom-margin").height() : 0;
-        int thickRightMargin = svg->hasElement("thick-hint-right-margin") ? svg->elementSize("thick-hint-right-margin").width() : 0;
+        int thickTopMargin = svg->hasElement("thick-hint-top-margin") ? svg->elementSize("thick-hint-top-margin").toSize().height() : 0;
+        int thickLeftMargin = svg->hasElement("thick-hint-left-margin") ? svg->elementSize("thick-hint-left-margin").toSize().width() : 0;
+        int thickBottomMargin = svg->hasElement("thick-hint-bottom-margin") ? svg->elementSize("thick-hint-bottom-margin").toSize().height() : 0;
+        int thickRightMargin = svg->hasElement("thick-hint-right-margin") ? svg->elementSize("thick-hint-right-margin").toSize().width() : 0;
 
         m_marginsAreaTop = qMax(0, thickTopMargin - topMargin);
         m_marginsAreaLeft = qMax(0, thickLeftMargin - leftMargin);

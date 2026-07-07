@@ -23,6 +23,9 @@
 #include <KPackage/Package>
 #include <KSvg/FrameSvg>
 
+// Plasma
+#include <Plasma/Plasma>
+
 namespace Plasma {
 class Applet;
 class Containment;

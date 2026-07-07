@@ -21,6 +21,9 @@
 #include "../../settings/universalsettings.h"
 #include "../../wm/abstractwindowinterface.h"
 
+// local tools
+#include "../../tools/commontools.h"
+
 // Qt
 #include <QQuickItem>
 #include <QQmlContext>
@@ -29,7 +32,7 @@
 
 // KDE
 #include <KLocalizedContext>
-#include <KDeclarative/KDeclarative>
+#include <KLocalizedContext>
 #include <KWayland/Client/plasmashell.h>
 #include <KWayland/Client/surface.h>
 #include <KWindowEffects>
@@ -664,10 +667,10 @@ void PrimaryConfigView::updateEffects()
         setMask(QRegion());
     }
 
-    if (KWindowSystem::compositingActive()) {
-        KWindowEffects::enableBlurBehind(winId(), true, fixedMask);
+    if (Latte::compositingActive()) {
+        KWindowEffects::enableBlurBehind(this, true, fixedMask);
     } else {
-        KWindowEffects::enableBlurBehind(winId(), false);
+        KWindowEffects::enableBlurBehind(this, false);
     }
 }
 

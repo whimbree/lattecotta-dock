@@ -454,12 +454,12 @@ void WaylandInterface::slideWindow(QWindow &view, AbstractWindowInterface::Slide
         break;
     }
 
-    KWindowEffects::slideWindow(view.winId(), slideLocation, -1);
+    KWindowEffects::slideWindow(&view, slideLocation, -1);
 }
 
 void WaylandInterface::enableBlurBehind(QWindow &view)
 {
-    KWindowEffects::enableBlurBehind(view.winId());
+    KWindowEffects::enableBlurBehind(&view);
 }
 
 void WaylandInterface::setActiveEdge(QWindow *view, bool active)

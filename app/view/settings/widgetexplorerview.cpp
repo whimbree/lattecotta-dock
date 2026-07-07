@@ -11,6 +11,9 @@
 #include "../../lattecorona.h"
 #include "../../wm/abstractwindowinterface.h"
 
+// local tools
+#include "../../tools/commontools.h"
+
 // Qt
 #include <QQuickItem>
 #include <QScreen>
@@ -204,10 +207,10 @@ void WidgetExplorerView::updateEffects()
         setMask(QRegion());
     }
 
-    if (KWindowSystem::compositingActive()) {
-        KWindowEffects::enableBlurBehind(winId(), true, fixedMask);
+    if (Latte::compositingActive()) {
+        KWindowEffects::enableBlurBehind(this, true, fixedMask);
     } else {
-        KWindowEffects::enableBlurBehind(winId(), false);
+        KWindowEffects::enableBlurBehind(this, false);
     }
 }
 

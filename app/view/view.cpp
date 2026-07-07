@@ -389,7 +389,7 @@ void View::init(Plasma::Containment *plasma_containment)
         }
     }
 
-    setSource(corona()->kPackage().filePath("lattedockui"));
+    setSource(QUrl::fromLocalFile(corona()->kPackage().filePath("lattedockui")));
 
     //! immediateSyncGeometry helps avoiding binding loops from containment qml side
     m_positioner->immediateSyncGeometry();

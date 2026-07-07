@@ -21,10 +21,11 @@
 #include <KConfigLoader>
 #include <KPluginMetaData>
 
-namespace KDeclarative
+class KConfigPropertyMap;
+
+namespace PlasmaQuick
 {
-class ConfigPropertyMap;
-class QmlObjectSharedEngine;
+class SharedQmlEngine;
 }
 
 namespace Latte {
@@ -157,7 +158,7 @@ private:
     QPointer<IndicatorPart::Info> m_info;
     QPointer<IndicatorPart::Resources> m_resources;
 
-    QPointer<KDeclarative::ConfigPropertyMap> m_configuration;
+    QPointer<KConfigPropertyMap> m_configuration;
 };
 
 }

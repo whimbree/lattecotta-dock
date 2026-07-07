@@ -19,6 +19,9 @@
 #include "../layouts/manager.h"
 #include "../wm/abstractwindowinterface.h"
 
+// local tools
+#include "../tools/commontools.h"
+
 // Qt
 #include <QDebug>
 
@@ -922,7 +925,7 @@ void VisibilityManager::startTimerHide(const int &msec)
     if (msec == 0) {
         int secs = m_timerHideInterval;
 
-        if (!KWindowSystem::compositingActive()) {
+        if (!Latte::compositingActive()) {
             //! this is needed in order to give view time to show and
             //! for floating case to give time to user to reach the view with its mouse
             secs = qMax(m_timerHideInterval, m_latteView->screenEdgeMargin() > 0 ? 700 : 200);

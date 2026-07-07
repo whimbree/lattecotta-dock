@@ -24,6 +24,10 @@ float colorLumina(float r, float g, float b);
 QString rectToString(const QRect &rect);
 QRect stringToRect(const QString &str);
 
+//! KF6 moved the X11 compositing query to KX11Extras; a wayland compositor is
+//! the display server, so compositing is unconditionally active there
+bool compositingActive();
+
 //! returns the standard path found that contains the subPath
 //! local paths have higher priority by default
 QString standardPath(QString subPath, bool localFirst = true);

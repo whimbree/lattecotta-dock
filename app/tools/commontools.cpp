@@ -13,6 +13,14 @@
 #include <QStringList>
 #include <QtMath>
 
+// KDE
+#include <KWindowSystem>
+
+#include <config-latte.h>
+#if HAVE_X11
+#include <KX11Extras>
+#endif
+
 namespace Latte {
 
 float colorBrightness(QColor color)
@@ -120,5 +128,15 @@ QString configPath()
     return configPaths[0];
 }
 
+
+bool compositingActive()
+{
+#if HAVE_X11
+    if (KWindowSystem::isPlatformX11()) {
+        return KX11Extras::compositingActive();
+    }
+#endif
+    return true;
+}
 
 }

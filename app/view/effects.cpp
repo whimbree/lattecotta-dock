@@ -13,12 +13,18 @@
 #include "../lattecorona.h"
 #include "../wm/abstractwindowinterface.h"
 
+// local tools
+#include "../tools/commontools.h"
+
 // Qt
 #include <QRegion>
 
 // KDE
 #include <KWindowEffects>
 #include <KWindowSystem>
+#if HAVE_X11
+#include <KX11Extras>
+#endif
 
 
 namespace Latte {
@@ -55,16 +61,18 @@ void Effects::init()
     connect(m_view, &QQuickWindow::widthChanged, this, &Effects::updateMask);
     connect(m_view, &QQuickWindow::heightChanged, this, &Effects::updateMask);
     connect(m_view, &Latte::View::behaveAsPlasmaPanelChanged, this, &Effects::updateMask);
-    connect(KWindowSystem::self(), &KWindowSystem::compositingChanged, this, [&]() {
-        if (!KWindowSystem::compositingActive() && !m_view->behaveAsPlasmaPanel()) {
+#if HAVE_X11
+    connect(KX11Extras::self(), &KX11Extras::compositingChanged, this, [&]() {
+        if (!Latte::compositingActive() && !m_view->behaveAsPlasmaPanel()) {
             setMask(m_rect);
         }
 
         updateMask();
     });
+#endif
 
     connect(this, &Effects::rectChanged, this, [&]() {
-        if (!KWindowSystem::compositingActive() && !m_view->behaveAsPlasmaPanel()) {
+        if (!Latte::compositingActive() && !m_view->behaveAsPlasmaPanel()) {
             setMask(m_rect);
         }
     });
@@ -470,7 +478,7 @@ void Effects::updateBackgroundCorners()
 
 void Effects::updateMask()
 {
-    if (KWindowSystem::compositingActive()) {
+    if (Latte::compositingActive()) {
         if (KWindowSystem::isPlatformX11()) {
             if (m_view->behaveAsPlasmaPanel()) {
                 // set as NULL in order for plasma framrworks to identify NULL Mask properly
@@ -597,8 +605,8 @@ void Effects::updateEffects()
 
                 if (!fixedMask.isEmpty()) {
                     clearEffects = false;
-                    KWindowEffects::enableBlurBehind(m_view->winId(), true, fixedMask);
-                    KWindowEffects::enableBackgroundContrast(m_view->winId(),
+                    KWindowEffects::enableBlurBehind(m_view, true, fixedMask);
+                    KWindowEffects::enableBackgroundContrast(m_view,
                                                              m_theme.backgroundContrastEnabled(),
                                                              m_backEffectContrast,
                                                              m_backEffectIntesity,
@@ -609,8 +617,8 @@ void Effects::updateEffects()
         } else {
             //!  BEHAVEASPLASMAPANEL case
             clearEffects = false;
-            KWindowEffects::enableBlurBehind(m_view->winId(), true);
-            KWindowEffects::enableBackgroundContrast(m_view->winId(),
+            KWindowEffects::enableBlurBehind(m_view, true);
+            KWindowEffects::enableBackgroundContrast(m_view,
                                                      m_theme.backgroundContrastEnabled(),
                                                      m_backEffectContrast,
                                                      m_backEffectIntesity,
@@ -619,8 +627,8 @@ void Effects::updateEffects()
     }
 
     if (clearEffects) {
-        KWindowEffects::enableBlurBehind(m_view->winId(), false);
-        KWindowEffects::enableBackgroundContrast(m_view->winId(), false);
+        KWindowEffects::enableBlurBehind(m_view, false);
+        KWindowEffects::enableBackgroundContrast(m_view, false);
     }
 }
 
