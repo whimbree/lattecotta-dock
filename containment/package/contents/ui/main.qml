@@ -492,6 +492,13 @@ ContainmentItem {
                 latteView.visibility.onMustBeHide.connect(visibilityManager.slotMustBeHide);
                 latteView.visibility.onMustBeShown.connect(visibilityManager.slotMustBeShown);
             }
+
+            //! the startup slide-in was deferred because latteView was
+            //! still null when inStartup flipped; run it now
+            if (pendingStartupFinished) {
+                pendingStartupFinished = false;
+                finishStartup();
+            }
         }
     }
 
@@ -1079,13 +1086,29 @@ ContainmentItem {
     ///////////////BEGIN TIMER elements
 
     //! It is used in order to slide-in the latteView on startup
+    property bool pendingStartupFinished: false
+
+    function finishStartup() {
+        latteView.positioner.startupFinished();
+        latteView.positioner.slideInDuringStartup();
+        visibilityManager.slotMustBeShown();
+    }
+
     onInStartupChanged: {
+        if (inStartup) {
+            return;
+        }
+
         //! latteView can still be null here on Plasma 6: the C++ View
-        //! wrapper is injected after the containment graphic object exists
-        if (!inStartup && latteView) {
-            latteView.positioner.startupFinished();
-            latteView.positioner.slideInDuringStartup();
-            visibilityManager.slotMustBeShown();
+        //! wrapper is injected after the containment graphic object exists.
+        //! The slide-in must be deferred, not skipped - skipping leaves the
+        //! dock content permanently slid out of its own window (mapped but
+        //! painting nothing). The deferred run happens in the
+        //! onLatteViewChanged handler further up.
+        if (latteView) {
+            finishStartup();
+        } else {
+            pendingStartupFinished = true;
         }
     }
 
