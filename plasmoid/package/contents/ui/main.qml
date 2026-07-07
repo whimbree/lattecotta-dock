@@ -7,14 +7,16 @@
 import QtQuick 2.8
 import QtQuick.Layouts 1.1
 
-import QtGraphicalEffects 1.0
+import QtQuick.Effects
 
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.ksvg 1.0 as KSvg
+import org.kde.plasma.plasma5support 2.0 as P5Support
+import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.plasmoid 2.0
+import org.kde.kirigami 2.20 as Kirigami
 
 import org.kde.taskmanager 0.1 as TaskManager
-import org.kde.plasma.private.taskmanager 0.1 as TaskManagerApplet
 
 import org.kde.activities 0.1 as Activities
 
@@ -31,7 +33,7 @@ import "../code/tools.js" as TaskTools
 import "../code/activitiesTools.js" as ActivitiesTools
 import "../code/ColorizerTools.js" as ColorizerTools
 
-Item {
+PlasmoidItem {
     id:root
     Layout.fillWidth: scrollingEnabled && !root.vertical
     Layout.fillHeight: scrollingEnabled && root.vertical
@@ -55,17 +57,17 @@ Item {
     property bool plasmaAtLeast526: LatteCore.Environment.plasmaDesktopVersion >= LatteCore.Environment.makeVersion(5,25,75)
 
     property bool disableRestoreZoom: false //blocks restore animation in rightClick
-    property bool disableAllWindowsFunctionality: plasmoid.configuration.hideAllTasks
+    property bool disableAllWindowsFunctionality: Plasmoid.configuration.hideAllTasks
     property bool inActivityChange: false
     property bool inDraggingPhase: false
     property bool initializationStep: false //true
     property bool isHovered: false
-    property bool showBarLine: plasmoid.configuration.showBarLine
-    property bool useThemePanel: plasmoid.configuration.useThemePanel
+    property bool showBarLine: Plasmoid.configuration.showBarLine
+    property bool useThemePanel: Plasmoid.configuration.useThemePanel
     property bool taskInAnimation: noTasksInAnimation > 0 ? true : false
-    property bool transparentPanel: plasmoid.configuration.transparentPanel
-    property bool vertical: plasmoid.formFactor === PlasmaCore.Types.Vertical ? true : false
-    property bool isHorizontal: plasmoid.formFactor === PlasmaCore.Types.Horizontal ? true : false
+    property bool transparentPanel: Plasmoid.configuration.transparentPanel
+    property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical ? true : false
+    property bool isHorizontal: Plasmoid.formFactor === PlasmaCore.Types.Horizontal ? true : false
 
     property bool hasTaskDemandingAttention: false
 
@@ -74,13 +76,13 @@ Item {
 
     property int newDroppedPosition: -1
     property int noTasksInAnimation: 0
-    property int themePanelSize: plasmoid.configuration.panelSize
+    property int themePanelSize: Plasmoid.configuration.panelSize
 
     property int location : {
-        if (plasmoid.location === PlasmaCore.Types.LeftEdge
-                || plasmoid.location === PlasmaCore.Types.RightEdge
-                || plasmoid.location === PlasmaCore.Types.TopEdge) {
-            return plasmoid.location;
+        if (Plasmoid.location === PlasmaCore.Types.LeftEdge
+                || Plasmoid.location === PlasmaCore.Types.RightEdge
+                || Plasmoid.location === PlasmaCore.Types.TopEdge) {
+            return Plasmoid.location;
         }
 
         return PlasmaCore.Types.BottomEdge;
@@ -97,8 +99,8 @@ Item {
 
     property real textColorBrightness: ColorizerTools.colorBrightness(themeTextColor)
 
-    property color themeTextColor: theme.textColor
-    property color themeBackgroundColor: theme.backgroundColor
+    property color themeTextColor: Kirigami.Theme.textColor
+    property color themeBackgroundColor: Kirigami.Theme.backgroundColor
 
     property color lightTextColor: textColorBrightness > 127.5 ? themeTextColor : themeBackgroundColor
 
@@ -119,43 +121,43 @@ Item {
     readonly property alias containsDrag: mouseHandler.containsDrag
 
     //! Animations
-    readonly property bool launcherBouncingEnabled: appletAbilities.animations.active && plasmoid.configuration.animationLauncherBouncing
-    readonly property bool newWindowSlidingEnabled: appletAbilities.animations.active && plasmoid.configuration.animationNewWindowSliding
-    readonly property bool windowInAttentionEnabled: appletAbilities.animations.active && plasmoid.configuration.animationWindowInAttention
-    readonly property bool windowAddedInGroupEnabled: appletAbilities.animations.active && plasmoid.configuration.animationWindowAddedInGroup
-    readonly property bool windowRemovedFromGroupEnabled: appletAbilities.animations.active && plasmoid.configuration.animationWindowRemovedFromGroup
+    readonly property bool launcherBouncingEnabled: appletAbilities.animations.active && Plasmoid.configuration.animationLauncherBouncing
+    readonly property bool newWindowSlidingEnabled: appletAbilities.animations.active && Plasmoid.configuration.animationNewWindowSliding
+    readonly property bool windowInAttentionEnabled: appletAbilities.animations.active && Plasmoid.configuration.animationWindowInAttention
+    readonly property bool windowAddedInGroupEnabled: appletAbilities.animations.active && Plasmoid.configuration.animationWindowAddedInGroup
+    readonly property bool windowRemovedFromGroupEnabled: appletAbilities.animations.active && Plasmoid.configuration.animationWindowRemovedFromGroup
 
     readonly property bool hasHighThicknessAnimation: launcherBouncingEnabled || windowInAttentionEnabled || windowAddedInGroupEnabled
 
     //BEGIN properties
-    property bool groupTasksByDefault: plasmoid.configuration.groupTasksByDefault
+    property bool groupTasksByDefault: Plasmoid.configuration.groupTasksByDefault
     property bool highlightWindows: hoverAction === LatteTasks.Types.HighlightWindows || hoverAction === LatteTasks.Types.PreviewAndHighlightWindows
 
-    property bool scrollingEnabled: plasmoid.configuration.scrollTasksEnabled
-    property bool autoScrollTasksEnabled: scrollingEnabled && plasmoid.configuration.autoScrollTasksEnabled
+    property bool scrollingEnabled: Plasmoid.configuration.scrollTasksEnabled
+    property bool autoScrollTasksEnabled: scrollingEnabled && Plasmoid.configuration.autoScrollTasksEnabled
     property bool manualScrollTasksEnabled: scrollingEnabled &&  manualScrollTasksType !== LatteTasks.Types.ManualScrollDisabled
-    property int manualScrollTasksType: plasmoid.configuration.manualScrollTasksType
+    property int manualScrollTasksType: Plasmoid.configuration.manualScrollTasksType
 
-    property bool showInfoBadge: plasmoid.configuration.showInfoBadge
-    property bool showProgressBadge: plasmoid.configuration.showProgressBadge
-    property bool showAudioBadge: plasmoid.configuration.showAudioBadge
-    property bool infoBadgeProminentColorEnabled: plasmoid.configuration.infoBadgeProminentColorEnabled
-    property bool audioBadgeActionsEnabled: plasmoid.configuration.audioBadgeActionsEnabled
-    property bool showOnlyCurrentScreen: plasmoid.configuration.showOnlyCurrentScreen
-    property bool showOnlyCurrentDesktop: plasmoid.configuration.showOnlyCurrentDesktop
-    property bool showOnlyCurrentActivity: plasmoid.configuration.showOnlyCurrentActivity
+    property bool showInfoBadge: Plasmoid.configuration.showInfoBadge
+    property bool showProgressBadge: Plasmoid.configuration.showProgressBadge
+    property bool showAudioBadge: Plasmoid.configuration.showAudioBadge
+    property bool infoBadgeProminentColorEnabled: Plasmoid.configuration.infoBadgeProminentColorEnabled
+    property bool audioBadgeActionsEnabled: Plasmoid.configuration.audioBadgeActionsEnabled
+    property bool showOnlyCurrentScreen: Plasmoid.configuration.showOnlyCurrentScreen
+    property bool showOnlyCurrentDesktop: Plasmoid.configuration.showOnlyCurrentDesktop
+    property bool showOnlyCurrentActivity: Plasmoid.configuration.showOnlyCurrentActivity
     property bool showPreviews:  hoverAction === LatteTasks.Types.PreviewWindows || hoverAction === LatteTasks.Types.PreviewAndHighlightWindows
-    property bool showWindowActions: plasmoid.configuration.showWindowActions && !disableAllWindowsFunctionality
-    property bool showWindowsOnlyFromLaunchers: plasmoid.configuration.showWindowsOnlyFromLaunchers && !disableAllWindowsFunctionality
+    property bool showWindowActions: Plasmoid.configuration.showWindowActions && !disableAllWindowsFunctionality
+    property bool showWindowsOnlyFromLaunchers: Plasmoid.configuration.showWindowsOnlyFromLaunchers && !disableAllWindowsFunctionality
 
     property alias windowPreviewIsShown: windowsPreviewDlg.visible
 
-    property int leftClickAction: plasmoid.configuration.leftClickAction
-    property int middleClickAction: plasmoid.configuration.middleClickAction
-    property int hoverAction: plasmoid.configuration.hoverAction
-    property int modifier: plasmoid.configuration.modifier
-    property int modifierClickAction: plasmoid.configuration.modifierClickAction
-    property int modifierClick: plasmoid.configuration.modifierClick
+    property int leftClickAction: Plasmoid.configuration.leftClickAction
+    property int middleClickAction: Plasmoid.configuration.middleClickAction
+    property int hoverAction: Plasmoid.configuration.hoverAction
+    property int modifier: Plasmoid.configuration.modifier
+    property int modifierClickAction: Plasmoid.configuration.modifierClickAction
+    property int modifierClick: Plasmoid.configuration.modifierClick
     property int modifierQt:{
         if (modifier === LatteTasks.Types.Shift)
             return Qt.ShiftModifier;
@@ -167,12 +169,12 @@ Item {
             return Qt.MetaModifier;
         else return -1;
     }
-    property int taskScrollAction: plasmoid.configuration.taskScrollAction
+    property int taskScrollAction: Plasmoid.configuration.taskScrollAction
 
     onTaskScrollActionChanged: {
         if (taskScrollAction > LatteTasks.Types.ScrollToggleMinimized) {
             //! migrating scroll action to LatteTasks.Types.ScrollAction
-            plasmoid.configuration.taskScrollAction = plasmoid.configuration.taskScrollAction-LatteTasks.Types.ScrollToggleMinimized;
+            Plasmoid.configuration.taskScrollAction = Plasmoid.configuration.taskScrollAction-LatteTasks.Types.ScrollToggleMinimized;
         }
     }
 
@@ -188,21 +190,21 @@ Item {
 
     //END Latte Dock Panel properties
 
-    readonly property bool inEditMode: latteInEditMode || plasmoid.userConfiguring
+    readonly property bool inEditMode: latteInEditMode || Plasmoid.userConfiguring
 
     //BEGIN Latte Dock Communicator
     property QtObject latteBridge: null
 
     readonly property bool inPlasma: latteBridge === null
     readonly property bool inPlasmaDesktop: inPlasma && !inPlasmaPanel
-    readonly property bool inPlasmaPanel: inPlasma && (plasmoid.location === PlasmaCore.Types.LeftEdge
-                                                       || plasmoid.location === PlasmaCore.Types.RightEdge
-                                                       || plasmoid.location === PlasmaCore.Types.BottomEdge
-                                                       || plasmoid.location === PlasmaCore.Types.TopEdge)
+    readonly property bool inPlasmaPanel: inPlasma && (Plasmoid.location === PlasmaCore.Types.LeftEdge
+                                                       || Plasmoid.location === PlasmaCore.Types.RightEdge
+                                                       || Plasmoid.location === PlasmaCore.Types.BottomEdge
+                                                       || Plasmoid.location === PlasmaCore.Types.TopEdge)
     readonly property bool latteInEditMode: latteBridge && latteBridge.inEditMode
     //END  Latte Dock Communicator
 
-    Plasmoid.preferredRepresentation: Plasmoid.fullRepresentation
+    preferredRepresentation: fullRepresentation
     Plasmoid.backgroundHints: inPlasmaDesktop ? PlasmaCore.Types.StandardBackground : PlasmaCore.Types.NoBackground
 
     signal draggingFinished();
@@ -224,18 +226,18 @@ Item {
     }
 
     Connections {
-        target: plasmoid
+        target: Plasmoid
         onLocationChanged: {
             iconGeometryTimer.start();
         }
     }
 
     Connections {
-        target: plasmoid.configuration
+        target: Plasmoid.configuration
 
-        // onLaunchersChanged: tasksModel.launcherList = plasmoid.configuration.launchers
-        onGroupingAppIdBlacklistChanged: tasksModel.groupingAppIdBlacklist = plasmoid.configuration.groupingAppIdBlacklist;
-        onGroupingLauncherUrlBlacklistChanged: tasksModel.groupingLauncherUrlBlacklist = plasmoid.configuration.groupingLauncherUrlBlacklist;
+        // onLaunchersChanged: tasksModel.launcherList = Plasmoid.configuration.launchers
+        onGroupingAppIdBlacklistChanged: tasksModel.groupingAppIdBlacklist = Plasmoid.configuration.groupingAppIdBlacklist;
+        onGroupingLauncherUrlBlacklistChanged: tasksModel.groupingLauncherUrlBlacklist = Plasmoid.configuration.groupingLauncherUrlBlacklist;
     }
 
 
@@ -249,14 +251,14 @@ Item {
 
         onIsReadyChanged: {
             if (appletAbilities.myView.isReady) {
-                plasmoid.action("configure").visible = false;
-                plasmoid.configuration.isInLatteDock = true;
+                Plasmoid.internalAction("configure").visible = false;
+                Plasmoid.configuration.isInLatteDock = true;
             }
         }
     }
 
     Binding {
-        target: plasmoid
+        target: Plasmoid
         property: "status"
         value: {
             var hastaskinattention = root.hasTaskDemandingAttention && tasksModel.anyTaskDemandsAttentionInValidTime;
@@ -268,6 +270,7 @@ Item {
         target: root
         property: "hasTaskDemandingAttention"
         when: appletAbilities.indexer.isReady
+        restoreMode: Binding.RestoreNone
         value: {
             for (var i=0; i<appletAbilities.indexer.layout.children.length; ++i){
                 var item = appletAbilities.indexer.layout.children[i];
@@ -281,9 +284,6 @@ Item {
     }
 
     /////
-    PlasmaCore.ColorScope{
-        id: colorScopePalette
-    }
 
     ///UPDATE
     function updateListViewParent() {
@@ -343,8 +343,8 @@ Item {
 
     LatteCore.Dialog{
         id: windowsPreviewDlg
-        type: plasmoid.configuration.previewWindowAsPopup ? PlasmaCore.Dialog.PopupMenu : PlasmaCore.Dialog.Tooltip
-        flags: plasmoid.configuration.previewWindowAsPopup ? Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.Popup :
+        type: Plasmoid.configuration.previewWindowAsPopup ? PlasmaCore.Dialog.PopupMenu : PlasmaCore.Dialog.Tooltip
+        flags: Plasmoid.configuration.previewWindowAsPopup ? Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.Popup :
                                                              Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.ToolTip
         location: root.location
         edge: root.location
@@ -496,7 +496,7 @@ Item {
         virtualDesktop: virtualDesktopInfo.currentDesktop
         screenGeometry: appletAbilities.myView.screenGeometry
         // comment in order to support LTS Plasma 5.8
-        // screen: plasmoid.screen
+        // screen: Plasmoid.screen
         activity: appletAbilities.myView.isReady ? appletAbilities.myView.lastUsedActivity : activityInfo.currentActivity
 
         filterByVirtualDesktop: root.showOnlyCurrentDesktop
@@ -517,11 +517,11 @@ Item {
         }
 
         onGroupingAppIdBlacklistChanged: {
-            plasmoid.configuration.groupingAppIdBlacklist = groupingAppIdBlacklist;
+            Plasmoid.configuration.groupingAppIdBlacklist = groupingAppIdBlacklist;
         }
 
         onGroupingLauncherUrlBlacklistChanged: {
-            plasmoid.configuration.groupingLauncherUrlBlacklist = groupingLauncherUrlBlacklist;
+            Plasmoid.configuration.groupingLauncherUrlBlacklist = groupingLauncherUrlBlacklist;
         }
 
         onAnyTaskDemandsAttentionChanged: {
@@ -537,15 +537,15 @@ Item {
         Component.onCompleted: {
             ActivitiesTools.launchersOnActivities = root.launchersOnActivities
             ActivitiesTools.currentActivity = String(activityInfo.currentActivity);
-            ActivitiesTools.plasmoid = plasmoid;
+            ActivitiesTools.plasmoid = Plasmoid;
 
             //var loadedLaunchers = ActivitiesTools.restoreLaunchers();
             ActivitiesTools.importLaunchersToNewArchitecture();
 
             appletAbilities.launchers.importLauncherListInModel();
 
-            groupingAppIdBlacklist = plasmoid.configuration.groupingAppIdBlacklist;
-            groupingLauncherUrlBlacklist = plasmoid.configuration.groupingLauncherUrlBlacklist;
+            groupingAppIdBlacklist = Plasmoid.configuration.groupingAppIdBlacklist;
+            groupingLauncherUrlBlacklist = Plasmoid.configuration.groupingLauncherUrlBlacklist;
 
             ///Plasma 5.9 enforce grouping at all cases
             if (LatteCore.Environment.plasmaDesktopVersion >= LatteCore.Environment.makeVersion(5,9,0)) {
@@ -554,44 +554,13 @@ Item {
         }
     }
 
-    //! TaskManagerBackend required a groupDialog setting otherwise it crashes. This patch
-    //! sets one just in order not to crash TaskManagerBackend
-    PlasmaCore.Dialog {
-        //ghost group Dialog to not crash TaskManagerBackend
-        id: groupDialogGhost
-        visible: false
-
-        type: PlasmaCore.Dialog.PopupMenu
-        flags: Qt.WindowStaysOnTopHint
-        hideOnWindowDeactivate: true
-        location: root.location
-    }
-
-
-    TaskManagerApplet.Backend {
+    LatteTasks.Backend {
         id: backend
         taskManagerItem: root
         highlightWindows: root.highlightWindows
 
-        onAddLauncher: {
+        onAddLauncher: (url) => {
             tasksModel.requestAddLauncher(url);
-        }
-
-        Component.onCompleted: {
-            //! In Plasma 5.9 TaskManagerBackend required a groupDialog setting
-            //! otherwise it crashes.
-            //! frameworks 5.29.0 provide id 335104
-            //! work only after Plasma 5.9 and frameworks 5.29
-            //! + added a check for groupDialog also when it is present
-            //!   in plasma 5.8 (that was introduced after 5.8.5)
-            if (LatteCore.Environment.frameworksVersion >= 335104 || (groupDialog !== undefined)) {
-                groupDialog = groupDialogGhost;
-            }
-
-            //! In Plasma 5.22 toolTipItem was dropped
-            if (!root.plasmaGreaterThan522) {
-                toolTipItem = toolTipDelegate;
-            }
         }
     }
 
@@ -619,7 +588,7 @@ Item {
         Component.onCompleted: previousActivity = currentActivity;
     }
 
-    PlasmaCore.DataSource {
+    P5Support.DataSource {
         id: mpris2Source
         engine: "mpris2"
         connectedSources: sources
@@ -711,15 +680,15 @@ Item {
         layout: icList.contentItem
         tasksModel: tasksModel
 
-        animations.local.speedFactor.current: plasmoid.configuration.durationTime
+        animations.local.speedFactor.current: Plasmoid.configuration.durationTime
         animations.local.requirements.zoomFactor: hasHighThicknessAnimation && LatteCore.WindowSystem.compositingActive ? 1.65 : 1.0
 
         indexer.updateIsBlocked: root.inDraggingPhase || root.inActivityChange || tasksExtendedManager.launchersInPausedStateCount>0
 
-        indicators.local.isEnabled: !plasmoid.configuration.isInLatteDock
+        indicators.local.isEnabled: !Plasmoid.configuration.isInLatteDock
 
-        launchers.group: plasmoid.configuration.launchersGroup
-        launchers.isStealingDroppedLaunchers: plasmoid.configuration.isPreferredForDroppedLaunchers
+        launchers.group: Plasmoid.configuration.launchersGroup
+        launchers.isStealingDroppedLaunchers: Plasmoid.configuration.isPreferredForDroppedLaunchers
         launchers.syncer.isBlocked: inDraggingPhase
 
         metrics.local.iconSize: inPlasmaDesktop ? maxIconSizeInPlasma : (inPlasmaPanel ? Math.max(16, panelThickness - metrics.margin.tailThickness - metrics.margin.headThickness) : maxIconSizeInPlasma)
@@ -730,15 +699,15 @@ Item {
         metrics.local.padding.length: 0.04 * metrics.iconSize
 
         myView.local.isHidingBlocked: root.contextMenu || root.windowPreviewIsShown
-        myView.local.itemShadow.isEnabled: plasmoid.configuration.showShadows
+        myView.local.itemShadow.isEnabled: Plasmoid.configuration.showShadows
         myView.local.itemShadow.size: Math.ceil(0.12*appletAbilities.metrics.iconSize)
 
         parabolic.local.isEnabled: (!root.inPlasma || root.inPlasmaDesktop) && parabolic.local.factor.zoom > 1.0
-        parabolic.local.factor.zoom: parabolic.isEnabled ? ( 1 + (plasmoid.configuration.zoomLevel / 20) ) : 1.0
+        parabolic.local.factor.zoom: parabolic.isEnabled ? ( 1 + (Plasmoid.configuration.zoomLevel / 20) ) : 1.0
         parabolic.local.factor.maxZoom: parabolic.isEnabled ? Math.max(parabolic.local.factor.zoom, 1.6) : 1.0
         parabolic.local.restoreZoomIsBlocked: root.contextMenu || windowsPreviewDlg.containsMouse
 
-        shortcuts.isStealingGlobalPositionShortcuts: plasmoid.configuration.isPreferredForPositionShortcuts
+        shortcuts.isStealingGlobalPositionShortcuts: Plasmoid.configuration.isPreferredForPositionShortcuts
 
         requires.activeIndicatorEnabled: false
         requires.lengthMarginsEnabled: false
@@ -781,7 +750,7 @@ Item {
         x: (root.location === PlasmaCore.Types.LeftEdge) ? neededSpace : parent.width - neededSpace
         y: (root.location === PlasmaCore.Types.TopEdge) ? neededSpace : parent.height - neededSpace
 
-        visible: plasmoid.configuration.zoomHelper
+        visible: Plasmoid.configuration.zoomHelper
 
         property int neededSpace: appletAbilities.parabolic.factor.zoom*appletAbilities.metrics.totals.length
     }
@@ -812,7 +781,7 @@ Item {
             source: "../images/panel-west.png"
             border { left:8; right:8; top:8; bottom:8 }
 
-            opacity: (plasmoid.configuration.showBarLine && !plasmoid.configuration.useThemePanel && inPlasma) ? 1 : 0
+            opacity: (Plasmoid.configuration.showBarLine && !Plasmoid.configuration.useThemePanel && inPlasma) ? 1 : 0
 
             visible: (opacity == 0) ? false : true
 
@@ -840,7 +809,7 @@ Item {
 
 
         /// the current theme's panel
-        PlasmaCore.FrameSvgItem{
+        KSvg.FrameSvgItem{
             id: shadowsSvgItem
 
             anchors.bottom: (root.location === PlasmaCore.Types.BottomEdge) ? belower.bottom : undefined
@@ -857,23 +826,23 @@ Item {
             imagePath: "translucent/widgets/panel-background"
             prefix:"shadow"
 
-            opacity: (plasmoid.configuration.showBarLine && plasmoid.configuration.useThemePanel && inPlasma) ? 1 : 0
+            opacity: (Plasmoid.configuration.showBarLine && Plasmoid.configuration.useThemePanel && inPlasma) ? 1 : 0
             visible: (opacity == 0) ? false : true
 
             property int panelSize: ((root.location === PlasmaCore.Types.BottomEdge) ||
                                      (root.location === PlasmaCore.Types.TopEdge)) ?
-                                        plasmoid.configuration.panelSize + belower.height:
-                                        plasmoid.configuration.panelSize + belower.width
+                                        Plasmoid.configuration.panelSize + belower.height:
+                                        Plasmoid.configuration.panelSize + belower.width
 
             Behavior on opacity{
                 NumberAnimation { duration: appletAbilities.animations.speedFactor.current * appletAbilities.animations.duration.large }
             }
 
 
-            PlasmaCore.FrameSvgItem{
+            KSvg.FrameSvgItem{
                 anchors.margins: belower.width-1
                 anchors.fill:parent
-                imagePath: plasmoid.configuration.transparentPanel ? "translucent/widgets/panel-background" :
+                imagePath: Plasmoid.configuration.transparentPanel ? "translucent/widgets/panel-background" :
                                                                      "widgets/panel-background"
             }
         }
@@ -906,7 +875,7 @@ Item {
                 });
             }
 
-            onUrlsDropped: {
+            onUrlsDropped: (urls) => {
                 //! inform synced docks for new dropped launchers
                 if (onlyLaunchersInDroppedList(urls)) {
                     appletAbilities.launchers.addDroppedLaunchers(urls);
@@ -946,16 +915,30 @@ Item {
             //onCurrentPosChanged: console.log("CP :: "+ currentPos + " icW:"+icList.width + " rw: "+root.width + " w:" +width);
 
             layer.enabled: contentsExceed && root.scrollingEnabled
-            layer.effect: OpacityMask {
-                maskSource: TasksLayout.ScrollOpacityMask{
-                    width: scrollableList.width
-                    height: scrollableList.height
-                }
+            layer.effect: MultiEffect {
+                maskEnabled: true
+                maskSource: scrollMask
+                maskThresholdMin: 0.0
+                maskSpreadAtMin: 1.0
+                autoPaddingEnabled: false
+            }
+
+            //! MultiEffect needs the mask as a live layered source it can sample;
+            //! kept invisible and out of layout, only its texture feeds the mask.
+            TasksLayout.ScrollOpacityMask {
+                id: scrollMask
+                width: scrollableList.width
+                height: scrollableList.height
+                visible: false
+                layer.enabled: true
             }
 
             Binding {
                 target: scrollableList
                 property: "thickness"
+                //! Qt6: hold the last size while relocation hiding deactivates this binding; otherwise
+                //! RestoreBindingOrValue resets it to the declared 0 and the scroll list collapses.
+                restoreMode: Binding.RestoreNone
                 when: !appletAbilities.myView.inRelocationHiding
                 value: {
                     if (appletAbilities.myView.isReady) {
@@ -969,6 +952,8 @@ Item {
             Binding {
                 target: scrollableList
                 property: "length"
+                //! Qt6: keep the last length during relocation hiding (see thickness above).
+                restoreMode: Binding.RestoreNone
                 when: !appletAbilities.myView.inRelocationHiding
                 value: root.vertical ? Math.min(root.height, root.tasksLength) : Math.min(root.width, root.tasksLength)
             }
@@ -1239,7 +1224,7 @@ Item {
     }
 
     function getLauncherList() {
-        return plasmoid.configuration.launchers59;
+        return Plasmoid.configuration.launchers59;
     }
 
     function previewContainsMouse() {

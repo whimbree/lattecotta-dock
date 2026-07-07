@@ -9,15 +9,17 @@
 
 import QtQuick 2.6
 import QtQuick.Layouts 1.1
-import QtGraphicalEffects 1.0
+import QtQuick.Effects
 import QtQml.Models 2.2
 
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.kirigami 2.20 as Kirigami
+import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.extras 2.0 as PlasmaExtras
 import org.kde.kquickcontrolsaddons 2.0 as KQuickControlsAddons
 
 import org.kde.latte.core 0.2 as LatteCore
+import org.kde.latte.components 1.0 as LatteComponents
 
 import org.kde.draganddrop 2.0
 
@@ -36,7 +38,7 @@ Column {
     property int virtualDesktop: (typeof model !== 'undefined') && (typeof model.VirtualDesktop !== 'undefined') ? VirtualDesktop : 0
     property var activities : (typeof model !== 'undefined') && (typeof model.Activities !== 'undefined') ? Activities : []
 
-    spacing: units.smallSpacing
+    spacing: Kirigami.Units.smallSpacing
 
     readonly property bool descriptionIsVisible: winDescription.text !== ""
 
@@ -89,12 +91,11 @@ Column {
         anchors.horizontalCenter: parent.horizontalCenter
 
         // launcher icon
-        PlasmaCore.IconItem {
-            Layout.preferredWidth: units.iconSizes.medium
-            Layout.preferredHeight: units.iconSizes.medium
+        Kirigami.Icon {
+            Layout.preferredWidth: Kirigami.Units.iconSizes.medium
+            Layout.preferredHeight: Kirigami.Units.iconSizes.medium
             source: icon
             animated: false
-            usesPlasmaTheme: false
             visible: !isWin
         }
         // all textlabels
@@ -143,7 +144,7 @@ Column {
             id: closeButton
             Layout.alignment: Qt.AlignRight | Qt.AlignTop
             visible: isWin && !hideCloseButtons
-            iconSource: "window-close"
+            icon.name: "window-close"
             onClicked: {
                 if (!isGroup) {
                     //! force windowsPreviewDlg hiding when the last instance is closed
@@ -179,8 +180,11 @@ Column {
             // TODO: this causes XCB error message when being visible the first time
             readonly property var winId: isWin && windows[flatIndex] !== undefined ? windows[flatIndex] : 0
 
-            // There's no PlasmaComponents3 version
-            PlasmaComponents.Highlight {
+            //! Shadow size in px; drives both the preview-loader inset (so the
+            //! halo isn't clipped) and the MultiEffect shadowBlur below.
+            readonly property int shadowPx: Math.round(8.0 * Kirigami.Units.devicePixelRatio)
+
+            PlasmaExtras.Highlight {
                 anchors.fill: hoverHandler
                 visible: hoverHandler.containsMouse
                 pressed: hoverHandler.containsPress
@@ -189,7 +193,7 @@ Column {
             Loader{
                 id:previewThumbLoader
                 anchors.fill: parent
-                anchors.margins: Math.max(2, previewShadow.radius)
+                anchors.margins: Math.max(2, thumbnailSourceItem.shadowPx)
                 active: LatteCore.WindowSystem.isPlatformX11 || (root.plasma520 && LatteCore.WindowSystem.isPlatformWayland)
                 visible: !albumArtImage.visible && !thumbnailSourceItem.isMinimized
                 source:  {
@@ -206,16 +210,15 @@ Column {
                     return "PlasmaCoreThumbnail.qml";
                 }
 
-                DropShadow {
-                    id: previewShadow
-                    anchors.fill:  previewThumbLoader.item
+                LatteComponents.ShadowedItem {
+                    anchors.fill: previewThumbLoader.item
                     visible: previewThumbLoader.item.visible
-                    horizontalOffset: 0
-                    verticalOffset: Math.round(3 * PlasmaCore.Units.devicePixelRatio)
-                    radius: Math.round(8.0 * PlasmaCore.Units.devicePixelRatio)
-                    samples: Math.round(radius * 1.5)
-                    color: "Black"
                     source: previewThumbLoader.item
+                    shadowColor: "Black"
+                    //! Same shadowPx that insets the loader margin above, so the halo
+                    //! width tracks the layout inset.
+                    shadowSizePx: thumbnailSourceItem.shadowPx
+                    shadowVerticalOffset: Math.round(3 * Kirigami.Units.devicePixelRatio)
                 }
             }
 
@@ -233,14 +236,19 @@ Column {
                 source: albumArt
                 anchors.fill: parent
                 fillMode: Image.PreserveAspectCrop
+                //! source is sampled by the sibling blur below; never drawn directly.
+                visible: false
+            }
+
+            MultiEffect {
+                source: albumArtBackground
+                anchors.fill: albumArtBackground
                 visible: albumArtImage.available
-                layer.enabled: true
                 opacity: 0.25
-                layer.effect: FastBlur {
-                    source: albumArtBackground
-                    anchors.fill: parent
-                    radius: 30
-                }
+                blurEnabled: true
+                blur: 1.0
+                blurMax: 32
+                autoPaddingEnabled: false
             }
 
             Image {
@@ -258,13 +266,12 @@ Column {
             }
 
             // when minimized, we don't have a preview, so show the icon
-            PlasmaCore.IconItem {
+            Kirigami.Icon {
                 width: parent.width
                 height: thumbnail.height - playbackLoader.realHeight
                 anchors.horizontalCenter: parent.horizontalCenter
                 source: icon
                 animated: false
-                usesPlasmaTheme: false
                 visible: (thumbnailSourceItem.isMinimized && !albumArtImage.visible) //X11 case
                          || (!previewThumbLoader.active && !albumArtImage.visible) //Wayland case
             }
@@ -302,7 +309,7 @@ Column {
                 Item {
                     id: playerControlsFrostedGlass
                     anchors.fill: parent
-                    visible: false // OpacityMask would render it
+                    visible: false // MultiEffect renders it as a source; not drawn directly
 
                     Rectangle {
                         width: parent.width
@@ -314,16 +321,19 @@ Column {
                         anchors.bottom: parent.bottom
                         width: parent.width
                         height: playerControlsRow.height
-                        color: theme.backgroundColor
+                        color: Kirigami.Theme.backgroundColor
                         opacity: 0.8
                     }
                 }
 
-                OpacityMask {
+                MultiEffect {
                     id: playerControlsOpacityMask
                     anchors.fill: parent
                     source: playerControlsFrostedGlass
+                    maskEnabled: true
                     maskSource: thumbnailSourceItem
+                    maskThresholdMin: 0.0
+                    maskSpreadAtMin: 1.0
                 }
 
                 // prevent accidental click-through when a control is disabled
@@ -364,7 +374,7 @@ Column {
                             elide: Text.ElideRight
                             text: artist || ""
                             visible: text != ""
-                            font.pointSize: theme.smallestFont.pointSize
+                            font.pointSize: Kirigami.Theme.smallFont.pointSize
                         }
                     }
 
@@ -372,7 +382,7 @@ Column {
                        //! It creates issues with Valgrind and needs to be completely removed in that case
                        id: canGoBackButton
                        enabled: canGoBack
-                       iconSource: LayoutMirroring.enabled ? "media-skip-forward" : "media-skip-backward"
+                       icon.name: LayoutMirroring.enabled ? "media-skip-forward" : "media-skip-backward"
                        onClicked: mpris2Source.goPrevious(mprisSourceName)
                    }
 
@@ -380,7 +390,7 @@ Column {
                        //! It creates issues with Valgrind and needs to be completely removed in that case
                        id: playingButton
                        enabled: playing ? canPause : canPlay
-                       iconSource: playing ? "media-playback-pause" : "media-playback-start"
+                       icon.name: playing ? "media-playback-pause" : "media-playback-start"
                        onClicked: {
                            if (!playing) {
                                mpris2Source.play(mprisSourceName);
@@ -394,7 +404,7 @@ Column {
                        //! It creates issues with Valgrind and needs to be completely removed in that case
                        id: canGoNextButton
                        enabled: canGoNext
-                       iconSource: LayoutMirroring.enabled ? "media-skip-backward" : "media-skip-forward"
+                       icon.name: LayoutMirroring.enabled ? "media-skip-backward" : "media-skip-forward"
                        onClicked: mpris2Source.goNext(mprisSourceName)
                    }
 
@@ -408,7 +418,7 @@ Column {
             width: header.width
             height: 3
             opacity: isTaskActive() ? 1 : 0
-            color: theme.buttonFocusColor
+            color: Kirigami.Theme.focusColor
         }
     }
 

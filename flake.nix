@@ -23,6 +23,43 @@
             kdePackages.extra-cmake-modules
           ];
 
+          # The QML module search path for the headless QML checks and the
+          # staged live runs (scripts/lib-qml-env.sh). mkShell does not run
+          # the Qt env hooks, so nothing else exports these paths - and the
+          # desktop session leaks its own (differently pinned) Plasma paths
+          # into the environment, which must never win. Derived from the
+          # dependency list below at eval time; entries without a qml dir
+          # are filtered out by the consumer.
+          LATTE_QML_MODULE_PATH = pkgs.lib.makeSearchPath "lib/qt-6/qml"
+            (with pkgs.kdePackages; [
+              qtdeclarative
+              qtwayland
+              libplasma
+              plasma-activities
+              plasma-workspace
+              plasma-pa
+              plasma5support
+              kpipewire
+              libksysguard
+              kirigami
+              ksvg
+              kdeclarative
+              kwindowsystem
+              knotifications
+              kcmutils
+              knewstuff
+              kitemmodels
+              kconfig
+              kcoreaddons
+              ki18n
+              kiconthemes
+              qqc2-desktop-style
+              kio
+              solid
+              sonnet
+              ktextwidgets
+            ]);
+
           buildInputs = (with pkgs.kdePackages; [
             # Qt
             qtbase
@@ -34,6 +71,9 @@
             plasma-activities
             plasma-activities-stats
             plasma-workspace # LibTaskManager, LibNotificationManager
+            plasma-pa # org.kde.plasma.private.volume for the tasks audio badge
+            kpipewire # org.kde.pipewire for wayland window thumbnails
+            plasma5support # org.kde.plasma.plasma5support for the tasks plasmoid
             libksysguard
             kwayland
             plasma-wayland-protocols

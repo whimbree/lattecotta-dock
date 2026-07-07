@@ -24,8 +24,8 @@ MouseArea {
 
     Connections {
         target: taskMouseArea
-        onPressed: taskItem.mousePressed(mouse.x, mouse.y, mouse.button)
-        onReleased: taskItem.mouseReleased(mouse.x, mouse.y, mouse.button)
+        function onPressed(mouse) { taskItem.mousePressed(mouse.x, mouse.y, mouse.button); }
+        function onReleased(mouse) { taskItem.mouseReleased(mouse.x, mouse.y, mouse.button); }
     }
 
     onEntered: {
@@ -72,7 +72,7 @@ MouseArea {
     }
 
     // IMPORTANT: This must be improved ! even for small milliseconds  it reduces performance
-    onPositionChanged: {
+    onPositionChanged: (mouse) => {
         if (taskItem.abilities.myView.isReady && !taskItem.abilities.myView.isShownFully) {
             return;
         }
@@ -105,7 +105,7 @@ MouseArea {
         }
     }
 
-    onPressed: {
+    onPressed: (mouse) => {
         //console.log("Pressed Task Delegate..");
         if (LatteCore.WindowSystem.compositingActive && !LatteCore.WindowSystem.isPlatformWayland) {
             if(root.leftClickAction !== LatteTasks.Types.PreviewWindows) {
@@ -139,7 +139,7 @@ MouseArea {
         }
     }
 
-    onReleased: {
+    onReleased: (mouse) => {
         //console.log("Released Task Delegate...");
         _resistanerTimer.stop();
 
@@ -228,7 +228,7 @@ MouseArea {
         pressed = false;
     }
 
-    onWheel: {
+    onWheel: (wheel) => {
         var wheelActionsEnabled = (root.taskScrollAction !== LatteTasks.Types.ScrollNone || root.manualScrollTasksEnabled);
 
         if (isSeparator
@@ -252,8 +252,8 @@ MouseArea {
         var positiveDirection = (mainAngle > 12);
         var negativeDirection = (mainAngle < -12);
 
-        var parallelScrolling = (verticalDirection && plasmoid.formFactor === PlasmaCore.Types.Vertical)
-                || (!verticalDirection && plasmoid.formFactor === PlasmaCore.Types.Horizontal);
+        var parallelScrolling = (verticalDirection && Plasmoid.formFactor === PlasmaCore.Types.Vertical)
+                || (!verticalDirection && Plasmoid.formFactor === PlasmaCore.Types.Horizontal);
 
         if (positiveDirection) {
             slotPublishGeometries();
@@ -326,7 +326,7 @@ MouseArea {
     //show window previews
     Timer {
         id: _hoveredTimer
-        interval: Math.max(150,plasmoid.configuration.previewsDelay)
+        interval: Math.max(150,Plasmoid.configuration.previewsDelay)
         repeat: false
 
         onTriggered: {

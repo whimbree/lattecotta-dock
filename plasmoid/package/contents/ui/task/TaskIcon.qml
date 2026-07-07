@@ -4,12 +4,13 @@
 */
 
 import QtQuick 2.7
-import QtGraphicalEffects 1.0
+import QtQuick.Effects
+import org.kde.graphicaleffects as KGraphicalEffects
 
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.plasmoid 2.0
-import org.kde.plasma.private.taskmanager 0.1 as TaskManagerApplet
+import org.kde.latte.private.tasks 0.1 as LatteTasks
 
 import org.kde.kirigami 2.0 as Kirigami
 
@@ -23,8 +24,8 @@ Item {
     anchors.fill: parent
     property bool toBeDestroyed: false
 
-    readonly property color backgroundColor: iconColorsLoader.active ? iconColorsLoader.item.backgroundColor : theme.backgroundColor
-    readonly property color glowColor: iconColorsLoader.active ? iconColorsLoader.item.glowColor : theme.textColor
+    readonly property color backgroundColor: iconColorsLoader.active ? iconColorsLoader.item.backgroundColor : Kirigami.Theme.backgroundColor
+    readonly property color glowColor: iconColorsLoader.active ? iconColorsLoader.item.glowColor : Kirigami.Theme.textColor
 
     readonly property bool smartLauncherEnabled: (taskItem.isStartup === false) //! it needs to be enabled independent of user-set option because it is used from indicators
     readonly property bool progressVisible: smartLauncherItem && smartLauncherItem.progressVisible
@@ -42,10 +43,10 @@ Item {
         radius: 3
         anchors.margins: 5
 
-        property color tempColor: theme.highlightColor
+        property color tempColor: Kirigami.Theme.highlightColor
         color: tempColor
         border.width: 1
-        border.color: theme.highlightColor
+        border.color: Kirigami.Theme.highlightColor
 
         onTempColorChanged: tempColor.a = 0.35;
     }
@@ -53,7 +54,7 @@ Item {
     Loader {
         id: smartLauncherLoader
         active: taskIconContainer.smartLauncherEnabled
-        sourceComponent: TaskManagerApplet.SmartLauncherItem {
+        sourceComponent: LatteTasks.SmartLauncherItem {
             //! It creates issues with Valgrind and needs to be completely removed in that case
             launcherUrl: taskItem.launcherUrlWithIcon
         }
@@ -152,11 +153,10 @@ Item {
         }
 
         sourceComponent: Item{
-            ShaderEffect {
+            KGraphicalEffects.BadgeEffect {
                 id: iconOverlay
-                enabled: false
                 anchors.fill: parent
-                property var source: ShaderEffectSource {
+                source: ShaderEffectSource {
                     sourceItem: Kirigami.Icon{
                         width: taskIconItem.width
                         height: taskIconItem.height
@@ -167,17 +167,18 @@ Item {
 
                         Loader{
                             anchors.fill: parent
-                            active: plasmoid.configuration.forceMonochromaticIcons
+                            active: Plasmoid.configuration.forceMonochromaticIcons
 
-                            sourceComponent: ColorOverlay {
+                            sourceComponent: MultiEffect {
                                 anchors.fill: parent
-                                color: latteBridge ? latteBridge.palette.textColor : "transparent"
                                 source: taskIconItem
+                                colorizationColor: latteBridge ? latteBridge.colorPalette.textColor : "transparent"
+                                colorization: latteBridge ? latteBridge.colorPalette.textColor.a : 0
                             }
                         }
                     }
                 }
-                property var mask: ShaderEffectSource {
+                mask: ShaderEffectSource {
                     sourceItem: Item{
                         LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft && !root.vertical
                         LayoutMirroring.childrenInherit: true
@@ -276,17 +277,6 @@ Item {
                     live: true
                 } //end of mask
 
-                supportsAtlasTextures: true
-
-                fragmentShader: "
-        varying highp vec2 qt_TexCoord0;
-        uniform highp float qt_Opacity;
-        uniform lowp sampler2D source;
-        uniform lowp sampler2D mask;
-        void main() {
-            gl_FragColor = texture2D(source, qt_TexCoord0.st) * (1.0 - (texture2D(mask, qt_TexCoord0.st).a)) * qt_Opacity;
-        }
-    "
             } //end of sourceComponent
         }
     }
@@ -337,47 +327,28 @@ Item {
         anchors.fill: parent
         active: badgeVisualsLoader.active
                 && taskItem.abilities.environment.isGraphicsSystemAccelerated
-        sourceComponent: Colorize{
+        sourceComponent: MultiEffect{
             source: badgeVisualsLoader.item
-
-            //! HACK TO AVOID PIXELIZATION
-            //! WORKAROUND: When Effects are enabled e.g. BrightnessContrast, Colorize etc.
-            //! the icon appears pixelated. It is even most notable when parabolic.factor.zoom === 1
-            //! I don't know enabling cached=true helps, but it does.
-            //! In Question?
-            //cached: true
-
             opacity: stateColorizer.opacity
-            hue: stateColorizer.hue
-            saturation: stateColorizer.saturation
-            lightness: stateColorizer.lightness
+            saturation: -1
         }
     }
     //! END: Badges Visuals
 
     //! Effects
-    Colorize{
+    MultiEffect{
         id: stateColorizer
         anchors.fill: parent
         source: badgesLoader.active ? badgesLoader : taskIconItem
 
         opacity:0
 
-        hue:0
-        saturation:0
-        lightness:0
+        saturation: -1
     }
 
-    BrightnessContrast{
+    MultiEffect{
         id:hoveredImage
         anchors.fill: parent
-
-        //! HACK TO AVOID PIXELIZATION
-        //! WORKAROUND: When Effects are enabled e.g. BrightnessContrast, Colorize etc.
-        //! the icon appears pixelated. It is even most notable when parabolic.factor.zoom === 1
-        //! I don't know enabling cached=true helps, but it does.
-        //! In Question?
-        //cached: true
 
         source: badgesLoader.active ? badgesLoader : taskIconItem
 
@@ -390,16 +361,9 @@ Item {
         }
     }
 
-    BrightnessContrast {
+    MultiEffect {
         id: brightnessTaskEffect
         anchors.fill: parent
-
-        //! HACK TO AVOID PIXELIZATION
-        //! WORKAROUND: When Effects are enabled e.g. BrightnessContrast, Colorize etc.
-        //! the icon appears pixelated. It is even most notable when parabolic.factor.zoom === 1
-        //! I don't know enabling cached=true helps, but it does.
-        //! In Question?
-        //cached: true
 
         source: badgesLoader.active ? badgesLoader : taskIconItem
 

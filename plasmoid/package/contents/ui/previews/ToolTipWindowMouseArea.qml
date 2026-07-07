@@ -6,7 +6,7 @@
 
 import QtQuick 2.0
 
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.plasma.components 3.0 as PlasmaComponents
 
 import org.kde.latte.core 0.2 as LatteCore
 
@@ -20,7 +20,7 @@ MouseArea {
     enabled: LatteCore.WindowSystem.isPlatformWayland ||
              (!LatteCore.WindowSystem.isPlatformWayland && winId != 0)
 
-    onClicked: {
+    onClicked: (mouse) => {
         //!used mainly to not close the previews window when the user closes many windows simultaneously
         var keepVisibility = false;
 

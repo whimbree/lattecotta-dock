@@ -71,6 +71,7 @@ find_package(KSysGuard ${PLASMA_MIN_VERSION} REQUIRED)
 find_package(LibNotificationManager ${PLASMA_MIN_VERSION} REQUIRED)
 
 find_package(LibTaskManager ${PLASMA_MIN_VERSION} REQUIRED)
+find_package(PlasmaActivitiesStats ${PLASMA_MIN_VERSION} REQUIRED)
 add_definitions(-DPLASMA_WORKSPACE_VERSION="${LibTaskManager_VERSION}")
 
 # Best-effort X11 backend: Wayland is the primary target and the only one the

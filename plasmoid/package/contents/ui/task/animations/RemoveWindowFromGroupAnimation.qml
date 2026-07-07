@@ -5,7 +5,7 @@
 */
 
 import QtQuick 2.0
-import QtGraphicalEffects 1.0
+import QtQuick.Effects
 
 import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
@@ -13,6 +13,7 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.kirigami 2.0 as Kirigami
 
 import org.kde.latte.core 0.2 as LatteCore
+import org.kde.latte.components 1.0 as LatteComponents
 
 /////Removing a Window from a group////
 Item{
@@ -63,14 +64,11 @@ Item{
                 active: taskItem.abilities.myView.itemShadow.isEnabled
                         && taskItem.abilities.environment.isGraphicsSystemAccelerated
 
-                sourceComponent: DropShadow{
+                sourceComponent: LatteComponents.ShadowedItem{
                     anchors.fill: parent
-                    color: "#ff080808"
-                    fast: true
-                    samples: 2 * radius
+                    shadowColor: "#ff080808"
                     source: tempRemoveIcon
-                    radius: taskItem.abilities.myView.itemShadow.size
-                    verticalOffset: 2
+                    shadowSizePx: taskItem.abilities.myView.itemShadow.size
                 }
             }
 
@@ -96,13 +94,11 @@ Item{
 
 
 
-            Colorize{
+            MultiEffect{
                 source: tempRemoveIcon
                 anchors.fill: tempRemoveIcon
 
-                hue: 0
-                saturation: 0
-                lightness: 0
+                saturation: -1
             }
 
             ParallelAnimation{

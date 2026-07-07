@@ -9,19 +9,20 @@
 
 import QtQuick 2.6
 import QtQuick.Layouts 1.1
-import QtGraphicalEffects 1.0
+import QtQuick.Controls 2.15 as QQC2
 import QtQml.Models 2.2
 
 import org.kde.draganddrop 2.0
 
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
-import org.kde.plasma.extras 2.0 as PlasmaExtras
+import org.kde.plasma.plasmoid 2.0
+import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.kquickcontrolsaddons 2.0 as KQuickControlsAddons
 
 import org.kde.taskmanager 0.1 as TaskManager
+import org.kde.kirigami 2.20 as Kirigami
 
-PlasmaExtras.ScrollArea {
+QQC2.ScrollView {
     id: mainToolTip
     property Item parentTask: null
     property var rootIndex: []
@@ -46,7 +47,7 @@ PlasmaExtras.ScrollArea {
     property bool isOnAllVirtualDesktopsParent
     property var activitiesParent
     //
-    readonly property bool isVerticalPanel: plasmoid.formFactor === PlasmaCore.Types.Vertical
+    readonly property bool isVerticalPanel: Plasmoid.formFactor === PlasmaCore.Types.Vertical
 
     Layout.minimumWidth: contentItem.width
     Layout.maximumWidth: Layout.minimumWidth
@@ -57,16 +58,16 @@ PlasmaExtras.ScrollArea {
     LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
     LayoutMirroring.childrenInherit: true
 
-    property int textWidth: theme.mSize(theme.defaultFont).width * 20
+    property int textWidth: defaultFontMetrics.advanceWidth * 20
 
-    verticalScrollBarPolicy: Qt.ScrollBarAlwaysOff
-    horizontalScrollBarPolicy: Qt.ScrollBarAlwaysOff
-
-    Component.onCompleted: {
-        flickableItem.interactive = Qt.binding(function() {
-            return isVerticalPanel ? contentItem.height > viewport.height : contentItem.width > viewport.width
-        });
+    TextMetrics {
+        id: defaultFontMetrics
+        text: "M"
+        font: Kirigami.Theme.defaultFont
     }
+
+    QQC2.ScrollBar.vertical.policy: QQC2.ScrollBar.AlwaysOff
+    QQC2.ScrollBar.horizontal.policy: QQC2.ScrollBar.AlwaysOff
 
     Item{
         width: contentItem.width
@@ -85,7 +86,7 @@ PlasmaExtras.ScrollArea {
                 windowsPreviewDlg.hide(9.9);
             }
 
-            onDragMove: {
+            onDragMove: (event) => {
                 var current = mainToolTip.instanceAtPos(event.x, event.y);
 
                 if (current && currentWindow !== current && current.submodelIndex) {
@@ -102,7 +103,7 @@ PlasmaExtras.ScrollArea {
                 rows: !isVerticalPanel
                 columns: isVerticalPanel
                 flow: isVerticalPanel ? Grid.TopToBottom : Grid.LeftToRight
-                spacing: units.largeSpacing
+                spacing: Kirigami.Units.largeSpacing
 
                 readonly property bool hasVisibleDescription: {
                     for (var i=0; i<children.length; ++i) {

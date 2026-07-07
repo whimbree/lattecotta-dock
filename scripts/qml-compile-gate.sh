@@ -12,7 +12,9 @@
 #   * files importing org.kde.latte.private.app - that module is registered
 #     inside the latte-dock binary (lattecorona.cpp), it never exists for a
 #     standalone engine; these all load during dock startup anyway
-#   * the tasks plasmoid - still unported Plasma 5 QML until Phase 6
+#   * superseded *.5.2[0-5].qml version-ladder variants - on Plasma 6 only
+#     the newest variant is ever loaded (see ToolTipInstance.qml's selector);
+#     the older rungs target removed Plasma 5 APIs and are dead here
 #
 # Runs inside the flake devShell (ctest invokes it there via build-check.sh).
 set -euo pipefail
@@ -26,21 +28,19 @@ qml_env_stage
 mapfile -t all < <(find \
     "$stage/share/plasma/shells/org.kde.latte.shell" \
     "$stage/share/plasma/plasmoids/org.kde.latte.containment" \
+    "$stage/share/plasma/plasmoids/org.kde.latte.plasmoid" \
     "$stage/share/latte/indicators" \
     -name '*.qml' 2>/dev/null | sort)
 
 if [[ "${#all[@]}" -eq 0 ]]; then echo "no staged QML found under $stage"; exit 2; fi
 
-files=(); skipped_app=0; skipped_ws=0
+files=(); skipped_app=0; skipped_ladder=0
 for f in "${all[@]}"; do
     if grep -q 'org.kde.latte.private.app' "$f"; then skipped_app=$((skipped_app+1)); continue; fi
-    #! org.kde.plasma.private.shell only exists in plasma-workspace, whose
-    #! nixpkgs build currently rides a foreign Qt pin (see import filtering
-    #! above); these files can only load in the live session
-    if grep -q 'org.kde.plasma.private.shell' "$f"; then skipped_ws=$((skipped_ws+1)); continue; fi
+    if [[ "$f" =~ \.5\.2[0-5]\.qml$ ]]; then skipped_ladder=$((skipped_ladder+1)); continue; fi
     files+=("$f")
 done
-echo "skipped $skipped_app app-module-dependent + $skipped_ws plasma-workspace-module files (they load with the running dock)"
+echo "skipped $skipped_app app-module-dependent + $skipped_ladder dead-version-ladder files"
 
 gen="$stage/_compile_gate.qml"
 {

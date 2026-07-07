@@ -5,12 +5,12 @@
 */
 
 import QtQuick 2.0
-import QtQuick.Controls 1.0
 import QtQuick.Layouts 1.0
-import QtGraphicalEffects 1.0
 
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import org.kde.plasma.components 3.0 as PlasmaComponents
+import org.kde.kirigami 2.20 as Kirigami
+import org.kde.latte.components 1.0 as LatteComponents
 
 Item {
     id: mainItem
@@ -40,9 +40,7 @@ Item {
 
         //Layout.fillWidth: true
 
-        GroupBox {
-            title: ""
-            flat: true
+        ColumnLayout {
             Layout.fillWidth: true
 
             ColumnLayout {
@@ -51,11 +49,11 @@ Item {
 
                 RowLayout{
 
-                    Label {
+                    PlasmaComponents.Label {
                         text: i18n("Maximum icon size: ")
                     }
 
-                    ComboBox {
+                    PlasmaComponents.ComboBox {
                         // 16, 22, 32, 48, 64,128, 256
                         id: iconSizeCmb
                         enabled: !mainItem.isInLatteDock
@@ -134,25 +132,25 @@ Item {
                 }
 
 
-                CheckBox {
+                PlasmaComponents.CheckBox {
                     id: showShadows
                     text: i18n("Enable shadows for icons")
                     enabled: true
                 }
 
-                CheckBox {
+                PlasmaComponents.CheckBox {
                     id: showGlow
                     text: i18n("Show glow around windows points")
                     enabled: true
                 }
 
-                CheckBox {
+                PlasmaComponents.CheckBox {
                     id: threeColorsWindows
                     text: i18n("Different color for minimized windows")
                     enabled: true
                 }
 
-                CheckBox {
+                PlasmaComponents.CheckBox {
                     id: dotsOnActive
                     text: i18n("Indicator for active window group")
                     enabled: true
@@ -166,7 +164,7 @@ Item {
             columns: 3
 
 
-            Label {
+            PlasmaComponents.Label {
                 id: durationTimeLabel
 
                 Layout.alignment: Qt.AlignHCenter
@@ -175,16 +173,15 @@ Item {
                 text: i18n("Animations: ")
             }
 
-            Slider {
+            PlasmaComponents.Slider {
                 id: durationTime
                 enabled: true
                 Layout.fillWidth: true
-                minimumValue: 0
-                maximumValue: 3
+                from: 0
+                to: 3
                 stepSize: 1
-                tickmarksEnabled: true
             }
-            Label {
+            PlasmaComponents.Label {
                 enabled: durationTime.value > 0
                 Layout.alignment: Qt.AlignHCenter
                 horizontalAlignment: Text.AlignHCenter
@@ -195,13 +192,13 @@ Item {
                 text: (durationTime.value > 0 ? ("x" + durationTime.value) + " " + textUsed : textUsed )
             }
 
-            Label{Layout.columnSpan: 3}
+            PlasmaComponents.Label{Layout.columnSpan: 3}
 
             Item{
                 enabled: !mainItem.isInLatteDock
                 Layout.columnSpan: 3
                 Layout.fillWidth: true
-                Label {
+                PlasmaComponents.Label {
                     text: i18n("Zoom")
                     anchors.centerIn: parent
                     font.bold: true
@@ -211,7 +208,7 @@ Item {
 
             //////
 
-            Label {
+            PlasmaComponents.Label {
                 enabled: !mainItem.isInLatteDock
                 Layout.alignment: Qt.AlignHCenter
                 horizontalAlignment: Text.AlignHCenter
@@ -219,17 +216,16 @@ Item {
                 text: i18n("Level: ")
             }
 
-            Slider {
+            PlasmaComponents.Slider {
                 id: zoomLevel
                 enabled: !mainItem.isInLatteDock
                 Layout.fillWidth: true
-                minimumValue: 0
-                maximumValue: 20
+                from: 0
+                to: 20
                 stepSize: 1
-                tickmarksEnabled: true
             }
 
-            Label {
+            PlasmaComponents.Label {
                 id:zoomLevelText
                 enabled: !mainItem.isInLatteDock
                 Layout.minimumWidth: metricsLabel2.width
@@ -242,7 +238,7 @@ Item {
                 property real fixedZoom: (1 + (zoomLevel.value / 20))
                 text:  "x"+ fixedZoom.toFixed(2)
 
-                Label{
+                PlasmaComponents.Label{
                     id:metricsLabel2
                     visible: false
                     text: "x1.50"
@@ -251,13 +247,13 @@ Item {
             /////
             //spacer to set a minimumWidth for sliders
             //Layout.minimumWidth didn't work
-            Label{}
-            //  Label{Layout.maximumWidth: 275}
-            Label{}
+            PlasmaComponents.Label{}
+            //  PlasmaComponents.Label{Layout.maximumWidth: 275}
+            PlasmaComponents.Label{}
 
             ////////
 
-            CheckBox {
+            PlasmaComponents.CheckBox {
                 id: zoomHelper
                 enabled: !mainItem.isInLatteDock
                 text: i18n("Show a red line on the limit needed for animations")
@@ -267,23 +263,20 @@ Item {
         }
     }
 
-    DropShadow {
+    LatteComponents.ShadowedItem {
         id:shadowText
         anchors.fill: inLatteDockLabel
-        fast: true
         enabled: isInLatteDock
-        radius: 3
-        samples: 5
-        color: "#cc080808"
+        shadowSizePx: 3
+        shadowColor: "#cc080808"
         source: inLatteDockLabel
 
-        verticalOffset: 2
-        horizontalOffset: -1
+        shadowHorizontalOffset: -1
         visible: isInLatteDock
     }
 
 
-    Label {
+    PlasmaComponents.Label {
         id:inLatteDockLabel
         anchors.horizontalCenter: mainItem.horizontalCenter
         anchors.bottom: mainColumn.bottom
@@ -297,7 +290,7 @@ Item {
         horizontalAlignment: Text.AlignHCenter
         //  font.bold: true
         font.italic: true
-        font.pointSize: 1.2 * theme.defaultFont.pointSize
+        font.pointSize: 1.2 * Kirigami.Theme.defaultFont.pointSize
 
         wrapMode: Text.WordWrap
     }

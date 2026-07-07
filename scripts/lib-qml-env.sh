@@ -19,23 +19,29 @@ qml_env_setup() {
     # NIXPKGS_QML_SEARCH_PATHS the pinned Qt modules themselves. Entries from
     # a foreign Qt closure (the plasma-workspace build dependency currently
     # rides a different Qt pin) cannot dlopen here and are filtered out.
-    local qtver p
-    qtver="$(qtpaths --query QT_VERSION)"
+    # LATTE_QML_MODULE_PATH is exported by the flake devShell and lists the
+    # qml dirs of the pinned dependency set - the only trustworthy source.
+    # The session's NIXPKGS_QT6_QML_IMPORT_PATH leaks the desktop's own
+    # (differently pinned) module paths and is deliberately ignored.
+    local p
     imports=()
-    IFS=':' read -ra _qmldirs <<< "${NIXPKGS_QT6_QML_IMPORT_PATH:-}:${NIXPKGS_QML_SEARCH_PATHS:-}"
+    IFS=':' read -ra _qmldirs <<< "${LATTE_QML_MODULE_PATH:?scripts/lib-qml-env.sh needs the flake devShell (LATTE_QML_MODULE_PATH)}"
     for p in "${_qmldirs[@]}"; do
-        [[ -d "$p" ]] || continue
-        if [[ "$p" =~ -qt[a-z0-9]+-([0-9]+\.[0-9]+\.[0-9]+)(/|$) ]] && [[ "${BASH_REMATCH[1]}" != "$qtver" ]]; then
-            continue
-        fi
-        imports+=(-import "$p")
+        [[ -d "$p" ]] && imports+=(-import "$p")
     done
 
-    # pin org.kde.plasma.* to the exact libplasma the binary links, in case a
-    # second copy exists in the closure
-    local linked_plasma
-    linked_plasma="$(ldd "$build/bin/latte-dock" | perl -ne 'print $1 if m{=> (\S+)/lib/libPlasma\.so}')"
-    [[ -n "$linked_plasma" && -d "$linked_plasma/lib/qt-6/qml" ]] && imports+=(-import "$linked_plasma/lib/qt-6/qml")
+    # Pin QML modules to the exact packages our binaries link (libplasma,
+    # plasma-workspace via the tasks plugin, ...) in case a second copy of a
+    # provider exists in the environment - the user session leaks its own
+    # Plasma's paths in, and a module resolved from a foreign build fails to
+    # dlopen. Later -import wins, so these outrank everything above.
+    local so linked
+    for so in "$build/bin/latte-dock" "$build/bin/liblattetasksplugin.so"; do
+        [[ -e "$so" ]] || continue
+        for linked in $(ldd "$so" | perl -ne 'print "$1\n" if m{=> (/nix/store/[^/]+)/}' | sort -u); do
+            [[ -d "$linked/lib/qt-6/qml" ]] && imports+=(-import "$linked/lib/qt-6/qml")
+        done
+    done
 
     # the staged Latte modules win over everything
     imports+=(-import "$stage/lib/qml")
