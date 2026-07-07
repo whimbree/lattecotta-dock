@@ -42,9 +42,10 @@ rest, write new commits.
 `docs/PORTING_PLAN.md` has the real detail - it's the product of
 reading every commit body (not just subjects) across both reference
 forks' full port-work ranges (406 commits in latte-dock-ng, 194 in
-latte-dock-qt6), cross-referenced against live testing of both. 12
-phases: build system -> mechanical Qt6 conversion -> KF6 migration ->
-Wayland backend -> QML controls/rendering -> task manager -> widget
+latte-dock-qt6), cross-referenced against live testing of both. 13
+phases (0-12): build environment/testing ground rules -> build system
+-> mechanical Qt6 conversion -> KF6 migration -> Wayland backend ->
+QML controls/rendering -> task manager -> widget
 management/drag-drop/edit-mode -> layout/shutdown/multi-screen ->
 theming polish -> stabilization -> Nix packaging -> upstream prep.
 
@@ -58,8 +59,8 @@ subsystem, not just the phase list here.
 `- [ ]` with a `Commits:` line. When a task lands, tick it and fill in
 the commit hash(es) - that's the traceability mechanism for the whole
 port: any checklist item names its commit(s), any commit can be traced
-back to the task it was for. 119 atomic items across the 12 phases as
-of the last sync with upstream latte-dock-ng's ongoing work. Keep this
+back to the task it was for. 127 atomic items across the 13 phases as
+of the last plan revision. Keep this
 in sync as work happens - don't let it drift into "mostly done, some
 stale checkboxes."
 
@@ -132,5 +133,6 @@ from here, not a re-read of the whole history:
 
 ## Current status
 
-Phase 1 (build system migration) not yet started. `CMakeLists.txt` at
-HEAD is still Qt5 5.15.0 / KF5 5.88.0, X11 required unconditionally.
+Phase 0 (build environment + testing ground rules) not yet started.
+`CMakeLists.txt` at HEAD is still Qt5 5.15.0 / KF5 5.88.0, X11
+required unconditionally.

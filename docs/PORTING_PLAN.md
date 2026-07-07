@@ -82,10 +82,49 @@ reflects real dependency constraints (QML controls can't be ported
 before the build produces a binary), not because we're following
 their commits.
 
+Verification cadence: from the first runnable milestone (end of Phase
+5) onward, a phase isn't done until its subsystem has been driven in a
+live Plasma 6 Wayland session. Phase 10 is the full final sweep, not
+the first time anything gets tested by hand - both forks' histories
+show what deferring all live testing to the end produces.
+
+### Phase 0: Build environment and testing ground rules
+
+Phase 1's milestone ("cmake configures cleanly against Qt6/KF6") is
+untestable without a Qt6/KF6 toolchain to configure against, and a
+testing standard adopted during stabilization can't shape any test
+written before it. Both belong before the first porting commit, not
+in Phases 10-11 where they originally sat.
+
+- [ ] Minimal reproducible Qt6/KF6 toolchain: a Nix devShell (or the
+      Docker image, matching the verification pattern already built
+      for latte-dock-ng) with the full Phase 1 dependency list
+      available to `find_package`. Just enough to build - the
+      polished packaging (flake outputs, overlay, NixOS module) stays
+      in Phase 11
+      Commits:
+- [ ] One-command build check (script or make target) runnable
+      per-commit once Phase 2's compile milestone lands - cheap
+      insurance across a 100+-item port
+      Commits:
+- [ ] Write the "honest coverage" testing standard doc now (no test
+      that doesn't assert something real/observable), modeled on
+      latte-dock-qt6's documented standard (`5fcaa9f1`/`c903921d` in
+      its history), which explicitly bans gaming the metric
+      Commits:
+- [ ] Decide the test-infrastructure shape while it can still grow
+      with the code: coverage-ratchet baseline (fails on regression),
+      headless QML interaction-test harness skeleton. The
+      e2e/screenshot harness needs a runnable dock and stays in
+      Phase 10
+      Commits:
+
 ### Phase 1: Build system migration
 
 - [ ] Migrate top-level `find_package(Qt5 ...)` to
-      `find_package(Qt6 ...)`, bump `QT_MIN_VERSION` to 6.6.0
+      `find_package(Qt6 ...)`, bump `QT_MIN_VERSION` to 6.6.0; bump
+      the `find_package(ECM ...)` floor to match the chosen KF6
+      minimum
       Commits:
 - [ ] Migrate `find_package(KF5 ...)` umbrella to individual
       `find_package(KF6Xxx ...)` calls (KF6 dropped the single-umbrella
@@ -146,7 +185,11 @@ belongs in a later phase instead.
       Commits:
 - [ ] Wrap bare string literals in `QStringLiteral`/`QLatin1String`
       (`QT_NO_CAST_FROM_ASCII`/`_BYTEARRAY` - latte-dock-ng wrapped
-      ~720 sites doing this)
+      ~720 sites doing this). Sequencing freedom: if this churn is
+      blocking the compile milestone, `remove_definitions()` the two
+      flags temporarily with a stub-tracked follow-up and land the
+      wrap as its own pass - it has no interaction with anything else
+      in this phase
       Commits:
 - [ ] C-style casts -> `static_cast<>()`
       Commits:
@@ -188,6 +231,33 @@ belongs in a later phase instead.
       `QuickViewSharedEngine` -> `PlasmaQuick`
       Commits:
 - [ ] `KMimeTypeTrader`/`KServiceTypeTrader` -> `KApplicationTrader`
+      Commits:
+- [ ] `KWindowEffects` signature change: WId -> `QWindow*` on KF6.
+      Every `enableBlurBehind`/`enableBackgroundContrast` call passes
+      `m_view->winId()` today (`view/effects.cpp`,
+      `view/settings/primaryconfigview.cpp`,
+      `view/settings/widgetexplorerview.cpp`) - pass the window
+      object itself
+      Commits:
+- [ ] Audit the remaining WId-based `KWindowSystem` calls KF6 moved
+      to KX11Extras or removed. Most die with the Phase 4 X11 strip,
+      but two sit on paths that survive:
+      `KWindowSystem::setOnActivities(winId(), ...)` in
+      `infoview.cpp` (needs a Wayland-side replacement or an explicit
+      decision to drop it) and `compositingActive()` in
+      `visibilitymanager.cpp` (always true under Wayland - fold the
+      conditional away, don't port it)
+      Commits:
+- [ ] KPackage metadata pass: add
+      `"X-Plasma-API-Minimum-Version": "6.0"` to every package
+      `metadata.json` (shell, containment, plasmoid, all three
+      indicators) - Plasma 6 treats a QML package without it as a
+      Plasma 5 leftover and refuses to load it, so nothing renders no
+      matter how correct the code is (latte-dock-ng's port added
+      exactly this key). Clean out the KF5-era `ServiceTypes` arrays
+      while there; `X-Plasma-MainScript` is ignored on Plasma 6 (main
+      file location is fixed by convention, and `ui/main.qml` already
+      matches it)
       Commits:
 - [ ] `KNS3` -> `KNSWidgets`
       Commits:
@@ -466,6 +536,13 @@ platform decision to relitigate.
       not an incremental patch; load its context menus from
       `org.kde.plasma.extras`
       Commits:
+- [ ] Milestone: **first runnable dock** - starts under a live
+      Plasma 6 Wayland session and renders a panel with at least one
+      non-tasks applet (tasks needs Phase 6). From this point the
+      per-phase verification cadence from the top of this section
+      applies: drive each phase's subsystem in a running session
+      before ticking its last box
+      Commits:
 
 ### Phase 6: Task manager subsystem
 
@@ -736,16 +813,11 @@ before implementing, not just before merging.
       real, reproducible, user-facing bugs went unnoticed for a long
       time under exactly that kind of confidence
       Commits:
-- [ ] Adopt a written "honest coverage" testing standard up front (no
-      test that doesn't assert something real/observable) - modeled on
-      latte-dock-qt6's documented standard (`5fcaa9f1`/`c903921d` in its
-      history), which explicitly bans gaming the metric
-      Commits:
-- [ ] Evaluate adopting (in some form, not necessarily identical)
-      latte-dock-qt6's test infrastructure: a coverage ratchet that
-      fails on regression below a baseline, a headless QML interaction-
-      test harness, an e2e harness driving real widget add/remove
-      through KWin D-Bus with actual screenshot capture
+- [ ] Stand up the e2e harness deferred from Phase 0's
+      test-infrastructure decision (real widget add/remove driven
+      through KWin D-Bus with actual screenshot capture, modeled on
+      latte-dock-qt6's) and verify the coverage ratchet baseline is
+      still honest against the Phase 0 standard
       Commits:
 
 ### Phase 11: Nix packaging + Docker build verification
@@ -753,6 +825,8 @@ before implementing, not just before merging.
 Directly reusable knowledge from this session, not new research -
 confirmed transferable today when the same include-path fix was
 applied to get latte-dock-qt6 building on Nix during live debugging.
+The bare build toolchain moved to Phase 0; this phase is the
+polished, distributable form of it.
 
 - [ ] Write `default.nix` (Qt6/KF6 dependency list, matching Phase 1-3
       framework choices). Use `lib.cleanSource ./.` for `src`, not bare
@@ -779,6 +853,21 @@ applied to get latte-dock-qt6 building on Nix during live debugging.
 
 ### Phase 12: Upstream contribution prep
 
+- [ ] Reality-check the upstream target **early, not here** (this box
+      exists so the check isn't forgotten, but do it around Phase
+      2-3): upstream latte-dock has had no real development since
+      2022 (only po/docbook syncs since), so find out whether the
+      invent.kde.org repo still accepts MRs and whether anyone
+      reviews there. Two upstream-facing decisions in this plan are
+      big enough to sink an unannounced mega-MR regardless: dropping
+      X11 entirely (upstream supported it) and the Phase 6 task
+      manager vendoring. Raise the direction with KDE (an issue or
+      draft MR describing this plan) before the work is done, not
+      after. If upstream turns out to be dead for review purposes,
+      the fallback is publishing this fork as a maintained
+      continuation - every item below still pays off as code quality
+      work either way
+      Commits:
 - [ ] Pass over the whole diff for KDE coding style compliance
       Commits:
 - [ ] Verify REUSE/SPDX license header compliance across
@@ -793,4 +882,5 @@ applied to get latte-dock-qt6 building on Nix during live debugging.
 
 ## Status
 
-Not started. Phase 1 is next.
+Not started. Phase 0 (build environment + testing ground rules) is
+next.
