@@ -31,6 +31,7 @@
 #include "../settings/exporttemplatedialog/exporttemplatedialog.h"
 #include "../shortcuts/globalshortcuts.h"
 #include "../shortcuts/shortcutstracker.h"
+#include "../wm/waylandlayershell.h"
 
 // Qt
 #include <QAction>
@@ -302,6 +303,12 @@ void View::init(Plasma::Containment *plasma_containment)
     connect(this, &View::activitiesChanged, this, &View::applyActivitiesToWindows);
     connect(m_positioner, &ViewPart::Positioner::winIdChanged, this, &View::applyActivitiesToWindows);
 
+    //! a layer surface is placed by its anchors, not setPosition(), so the
+    //! dock must be re-anchored when its edge or alignment changes at
+    //! runtime - anchoring only at creation welds it to the startup edge
+    connect(this, &View::locationChanged, this, &View::reanchorLayerShell);
+    connect(this, &View::alignmentChanged, this, &View::reanchorLayerShell);
+
     connect(this, &View::alignmentChanged, this, [&](){
         // inform neighbour vertical docks/panels to adjust their positioning
         if (m_inDelete || formFactor() == Plasma::Types::Vertical) {
@@ -486,6 +493,33 @@ void View::setupWaylandIntegration()
 KWayland::Client::PlasmaShellSurface *View::surface()
 {
     return m_shellSurface;
+}
+
+void View::setupWaylandLayerShell()
+{
+    if (m_layerShellConfigured || !KWindowSystem::isPlatformWayland() || !containment()) {
+        return;
+    }
+
+    namespace LS = Latte::WindowSystem::LayerShell;
+    LS::configureView(this, screen(), location(), static_cast<Latte::Types::Alignment>(alignment()));
+    LS::applyLayer(this, m_visibility ? m_visibility->mode() : Latte::Types::None);
+    LS::setFocusPolicy(this, !flags().testFlag(Qt::WindowDoesNotAcceptFocus));
+
+    m_layerShellConfigured = true;
+}
+
+void View::reanchorLayerShell()
+{
+    if (!m_layerShellConfigured) {
+        return;
+    }
+
+    //! only the anchors, exclusive edge, screen and seeded size change here;
+    //! the stacking layer (cover modes use LayerBottom) and keyboard policy
+    //! that configureView() forced must survive an edge change
+    namespace LS = Latte::WindowSystem::LayerShell;
+    LS::updateAnchoring(this, screen(), location(), static_cast<Latte::Types::Alignment>(alignment()));
 }
 
 //! the main function which decides if this dock is at the

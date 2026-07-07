@@ -129,6 +129,10 @@ public:
 
     void init(Plasma::Containment *plasma_containment = nullptr);
 
+    //! must run after init() and before the first show(): LayerShellQt can
+    //! only turn a not-yet-created surface into a layer surface
+    void setupWaylandLayerShell();
+
     Types::ViewType type() const;
     void setType(Types::ViewType type);
 
@@ -381,6 +385,7 @@ private Q_SLOTS:
 private:
     void initSignalingForLocationChangeSliding();
     void setupWaylandIntegration();
+    void reanchorLayerShell();
     void updateAppletContainsMethod();
 
     void setContainsDrag(bool contains);
@@ -400,6 +405,8 @@ private:
 
     bool m_isTouchingBottomViewAndIsBusy{false};
     bool m_isTouchingTopViewAndIsBusy{false};
+
+    bool m_layerShellConfigured{false};
 
     int m_fontPixelSize{ -1};
     int m_maxThickness{256};
