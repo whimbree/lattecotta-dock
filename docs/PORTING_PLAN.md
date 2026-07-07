@@ -204,7 +204,8 @@ belongs in a later phase instead.
       don't assume equivalence
       Commits: 6baf2603 (all five sites are the same copy-suffix
       pattern, converted to the form latte-dock-qt6 regression-tested;
-      the pinning unit test lands with the Phase 2 test harness)
+      the pinning unit test landed with the harness:
+      tests/importerregressiontest.cpp)
 - [x] Drop the removed `QDesktopWidget` include and its usages
       Commits: 16f47bf1 (include only, there were no usages)
 - [x] `emit`/`signals`/`slots` -> `Q_EMIT`/`Q_SIGNALS`/`Q_SLOTS` (KDE
@@ -287,7 +288,7 @@ belongs in a later phase instead.
       branch, don't fake-port it)
       Commits: 478efa54, 0c4525d9 (Latte::compositingActive() helper),
       1ae47bd6; infoview's wayland side is a marked stub
-- [ ] KPackage metadata pass: add
+- [x] KPackage metadata pass: add
       `"X-Plasma-API-Minimum-Version": "6.0"` to every package
       `metadata.json` (shell, containment, plasmoid, all three
       indicators) - Plasma 6 treats a QML package without it as a
@@ -297,24 +298,24 @@ belongs in a later phase instead.
       while there; `X-Plasma-MainScript` is ignored on Plasma 6 (main
       file location is fixed by convention, and `ui/main.qml` already
       matches it)
-      Commits:
+      Commits: 7a1e63ae
 - [x] `KNS3` -> `KNSWidgets`
       Commits: 0835b22c
 - [x] `Plasma::Package` -> `KPackage`
       Commits: 6baf2603, 1ae47bd6, 6b53a5ee (includes, Applet::kPackage
       -> pluginMetaData, addFile/DirectoryDefinition signatures)
-- [ ] Switch every plain-JSON `KPluginMetaData(QString)` load site to
+- [x] Switch every plain-JSON `KPluginMetaData(QString)` load site to
       `KPluginMetaData::fromJsonFile()` - the bare single-string
       constructor **resolves its argument as a loadable plugin library
       on KF6**, not a parsed JSON file the way it did on KF5. Silent
       failure mode: latte-dock-qt6 lost every indicator's running/
       active dot this way with zero error message
-      Commits:
-- [ ] Rename the KNS install-structure key from the KF5-era
+      Commits: 7a1e63ae (both sites were the indicator factory)
+- [x] Rename the KNS install-structure key from the KF5-era
       `KPackageType` to KF6's `KPackageStructure` - without this,
       "Get New Indicators..." can't reach any provider
       (`ConfigFileError`, store unreachable)
-      Commits:
+      Commits: 7a1e63ae
 - [x] `#include <Plasma>` -> `<Plasma/Plasma>`; link `KF6::Svg`,
       `KF6::Package`, `KF6::IconWidgets`
       Commits: ef7e26f9, 1990d64c, 785ab8f7, 1ae47bd6
@@ -952,17 +953,12 @@ milestone is reached: the full tree configures, compiles and links in
 both WITH_X11 variants via `scripts/build-check.sh` (Qt 6.11.1 /
 KF 6.27.0 / libplasma 6.7.2). 37 of 127 items ticked.
 
-Still open before Phase 4 proper:
-
-- Phase 2 leftovers that are deliberately deferred hygiene: the
-  ~720-site QStringLiteral wrap (compiler flags stubbed off),
-  C-style-cast cleanup, QDBusInterface -> QDBusMessage conversion
-- Phase 3 leftovers: KPluginMetaData::fromJsonFile audit, the KNS
-  KPackageStructure key rename, and the KPackage metadata.json pass
-  (X-Plasma-API-Minimum-Version) - the last one is required before
-  anything renders
-- the test harness + uniqueLayoutName regression test promised at
-  this milestone (docs/TESTING.md)
+Still open from Phases 2-3, all deliberately deferred hygiene: the
+~720-site QStringLiteral wrap (compiler flags stubbed off),
+C-style-cast cleanup, QDBusInterface -> QDBusMessage conversion.
+Everything else through the compile milestone is done, including the
+KPackage metadata pass, the KNS structure key, fromJsonFile, and the
+ctest harness with the uniqueLayoutName regression test.
 
 Nothing has been run yet; the first runnable milestone is end of
 Phase 5 (wayland backend + QML load path first).
