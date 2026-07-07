@@ -788,19 +788,19 @@ QVariant Views::data(const QModelIndex &index, int role) const
                 currentScreens.insertBasedOnId(explicitScr);
             }
 
-            screensVariant.setValue<Latte::Data::ScreensTable>(currentScreens);
+            screensVariant.setValue(currentScreens);
             return screensVariant;
         } else if (column == EDGECOLUMN) {
             QVariant edgesVariant;
-            edgesVariant.setValue<Latte::Data::ViewsTable>(edgesChoices(m_viewsTable[row]));
+            edgesVariant.setValue(edgesChoices(m_viewsTable[row]));
             return edgesVariant;
         } else if (column == ALIGNMENTCOLUMN) {
             QVariant alignmentsVariant;
 
             if (isVertical(m_viewsTable[row].edge)) {
-                alignmentsVariant.setValue<Latte::Data::ViewsTable>(verticalAlignmentChoices(m_viewsTable[row]));
+                alignmentsVariant.setValue(verticalAlignmentChoices(m_viewsTable[row]));
             } else {
-                alignmentsVariant.setValue<Latte::Data::ViewsTable>(horizontalAlignmentChoices(m_viewsTable[row]));
+                alignmentsVariant.setValue(horizontalAlignmentChoices(m_viewsTable[row]));
             }
 
             return alignmentsVariant;
@@ -810,11 +810,11 @@ QVariant Views::data(const QModelIndex &index, int role) const
     } else if (role == SCREENROLE) {
         QVariant scrVariant;
         Latte::Data::Screen scrdata = screenData(m_viewsTable[row].id);
-        scrVariant.setValue<Latte::Data::Screen>(scrdata);
+        scrVariant.setValue(scrdata);
         return scrVariant;
     } else if (role == VIEWROLE) {
         QVariant viewVariant;
-        viewVariant.setValue<Latte::Data::View>(m_viewsTable[row]);
+        viewVariant.setValue(m_viewsTable[row]);
         return viewVariant;
     } else if (role == ISMOVEORIGINROLE) {
         return m_viewsTable[row].isMoveOrigin;

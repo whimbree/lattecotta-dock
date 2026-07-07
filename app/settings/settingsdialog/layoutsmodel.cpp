@@ -486,7 +486,7 @@ QVariant Layouts::data(const QModelIndex &index, int role) const
     } else if (role == BACKGROUNDUSERROLE) {
         Latte::Data::LayoutIcon _icon = icon(row);
         QVariant iconVariant;
-        iconVariant.setValue<Latte::Data::LayoutIcon>(_icon);
+        iconVariant.setValue(_icon);
         return iconVariant;
     } else if (role == ERRORSROLE) {
         return m_layoutsTable[row].errors;
@@ -512,7 +512,7 @@ QVariant Layouts::data(const QModelIndex &index, int role) const
         } else if (role == Qt::UserRole) {
             Latte::Data::LayoutIcon _icon = icon(row);
             QVariant iconVariant;
-            iconVariant.setValue<Latte::Data::LayoutIcon>(_icon);
+            iconVariant.setValue(_icon);
             return iconVariant;
         }
         break;
@@ -571,11 +571,11 @@ QVariant Layouts::data(const QModelIndex &index, int role) const
                 } else if (m_layoutsTable[row].activities.contains(Latte::Data::Layout::FREEACTIVITIESID)) {
                     return sortingPriority(HIGHPRIORITY, row);
                 } else {
-                    return sortingPriority(MEDIUMPRIORITY, row) + m_layoutsTable[row].activities.count();
+                    return QString(sortingPriority(MEDIUMPRIORITY, row) + QString::number(m_layoutsTable[row].activities.count()));
                 }
             }
 
-            return sortingPriority(NORMALPRIORITY, row) + m_layoutsTable[row].activities.count();
+            return QString(sortingPriority(NORMALPRIORITY, row) + QString::number(m_layoutsTable[row].activities.count()));
         }
 
         if (role == ORIGINALASSIGNEDACTIVITIESROLE) {

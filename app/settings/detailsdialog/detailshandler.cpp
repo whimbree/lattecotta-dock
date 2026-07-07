@@ -73,7 +73,7 @@ void DetailsHandler::init()
 
     m_ui->patternClearBtn->setFixedHeight(m_ui->backgroundBtn->height()+2);
 
-    connect(m_backButtonsGroup, static_cast<void(QButtonGroup::*)(int, bool)>(&QButtonGroup::buttonToggled),
+    connect(m_backButtonsGroup, &QButtonGroup::idToggled,
             [ = ](int id, bool checked) {
 
         if (checked) {

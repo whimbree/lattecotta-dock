@@ -119,7 +119,7 @@ void PatternWidget::updateUi()
     m_label->setStyleSheet("QLabel {border: 0px; background-image:none; color:" + m_textColor + "}");
 }
 
-void PatternWidget::enterEvent(QEvent *event)
+void PatternWidget::enterEvent(QEnterEvent *event)
 {
     setCursor(Qt::PointingHandCursor);
     QWidget::enterEvent(event);
@@ -141,7 +141,7 @@ void PatternWidget::paintEvent(QPaintEvent *event)
     //! it is needed from Qt, otherwise QWidget is not updated
     //! https://wiki.qt.io/How_to_Change_the_Background_Color_of_QWidget
     QStyleOption opt;
-    opt.init(this);
+    opt.initFrom(this);
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing, true);
 

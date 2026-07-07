@@ -35,6 +35,7 @@
 #include <QTemporaryFile>
 
 // KDE
+#include <KPackage/Package>
 #include <KTar>
 #include <KArchiveEntry>
 #include <KArchiveDirectory>

@@ -22,6 +22,7 @@
 
 // KDE
 #include <PlasmaActivities/Consumer>
+#include <KPackage/Package>
 #include <KDirWatch>
 #include <KWindowSystem>
 
@@ -639,13 +640,13 @@ QQmlListProperty<QScreen> UniversalSettings::screens()
     return QQmlListProperty<QScreen>(this, nullptr, &countScreens, &atScreens);
 }
 
-int UniversalSettings::countScreens(QQmlListProperty<QScreen> *property)
+qsizetype UniversalSettings::countScreens(QQmlListProperty<QScreen> *property)
 {
     Q_UNUSED(property)
     return qGuiApp->screens().count();
 }
 
-QScreen *UniversalSettings::atScreens(QQmlListProperty<QScreen> *property, int index)
+QScreen *UniversalSettings::atScreens(QQmlListProperty<QScreen> *property, qsizetype index)
 {
     Q_UNUSED(property)
     return qGuiApp->screens().at(index);

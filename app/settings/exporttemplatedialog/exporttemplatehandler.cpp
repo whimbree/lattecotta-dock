@@ -229,7 +229,7 @@ void ExportTemplateHandler::onExport()
             QString file = openUrlAction->data().toString();
 
             if (!file.isEmpty()) {
-                KIO::highlightInFileManager({file});
+                KIO::highlightInFileManager({QUrl::fromLocalFile(file)});
             }
         });
 

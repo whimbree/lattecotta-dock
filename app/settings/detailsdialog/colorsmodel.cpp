@@ -9,6 +9,7 @@
 #include "../../layout/abstractlayout.h"
 
 // KDE
+#include <KPackage/Package>
 #include <KLocalizedString>
 
 namespace Latte {
