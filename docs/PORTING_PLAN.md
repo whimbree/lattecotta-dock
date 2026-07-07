@@ -189,13 +189,14 @@ in Phases 10-11 where they originally sat.
 Should not require design decisions - if a change here needs one, it
 belongs in a later phase instead.
 
-- [ ] `QString::SkipEmptyParts` -> `Qt::SkipEmptyParts`
-      Commits:
+- [x] `QString::SkipEmptyParts` -> `Qt::SkipEmptyParts`
+      Commits: e9710e95
 - [x] `foreach` -> range-for (verify no mutate-during-iteration/detach
       semantics changed per site)
       Commits: d7801e30 (all six sites verified read-only)
-- [ ] `QMouseEvent`/`QWheelEvent::pos()` -> `position().toPoint()`
-      Commits:
+- [x] `QMouseEvent`/`QWheelEvent::pos()` -> `position().toPoint()`
+      Commits: e9710e95 (mouse sites; the one wheel site was rebuilt on
+      the Qt6 QWheelEvent constructor in 0c4525d9)
 - [x] `QRegExp` -> `QRegularExpression` - **not always behavior-
       identical**: latte-dock-qt6 needed a dedicated regression test
       after this subtly changed the " - [0-9]+" copy-suffix match in
@@ -231,41 +232,51 @@ belongs in a later phase instead.
       `QDBusInterface` connects to internally, otherwise every D-Bus
       call site prints a deprecation warning
       Commits:
-- [ ] Milestone: compiles (a lot still functionally broken/stubbed -
+- [x] Milestone: compiles (a lot still functionally broken/stubbed -
       mark those stubs per the convention in `CLAUDE.md`)
-      Commits:
+      Commits: e9710e95 (full tree, both WITH_X11 variants, via
+      `scripts/build-check.sh`; open stubs: wayland skipTaskBar,
+      infoview setOnActivities, activity stopping, QStringLiteral
+      compiler flags still relaxed)
 
 ### Phase 3: KF5->KF6 framework API migration
 
-- [ ] `KActivities` includes -> `PlasmaActivities` (C++ namespace stays
+- [x] `KActivities` includes -> `PlasmaActivities` (C++ namespace stays
       `KActivities`)
-      Commits:
-- [ ] Replace removed `KActivities::Info::State`/
+      Commits: 97900be8
+- [x] Replace removed `KActivities::Info::State`/
       `Consumer::runningActivities()` with a helper that reads activity
       state directly via `org.kde.ActivityManager` D-Bus
       (`ListActivitiesWithInformation`), mapped onto a locally-defined
       `Activity::State` enum. Without this every activity reads as
       "running" (stopped layouts load, scroll-cycling includes dead
       activities, settings dialog can't bold the real one)
-      Commits:
-- [ ] `ConfigPropertyMap` -> `KConfigPropertyMap` (header:
+      Commits: 97900be8 (`app/data/activitiesinfo.{h,cpp}`), 6b53a5ee
+      (scroll-cycling consumer). Discovery recorded there: Plasma 6
+      also removed activity start/stop entirely, see Phase 8 stub
+- [x] `ConfigPropertyMap` -> `KConfigPropertyMap` (header:
       `KConfigQml/KConfigPropertyMap`)
-      Commits:
-- [ ] `Plasma::Svg`/`FrameSvg`/`Theme` -> `KSvg::Svg`/`FrameSvg`/`ImageSet`
-      Commits:
-- [ ] `QmlObjectSharedEngine` -> `PlasmaQuick::SharedQmlEngine`;
+      Commits: 1990d64c, 0c4525d9 (canonical `<KConfigPropertyMap>`
+      include; the KF6::ConfigQml link target landed in b41667ec)
+- [x] `Plasma::Svg`/`FrameSvg`/`Theme` -> `KSvg::Svg`/`FrameSvg`/`ImageSet`
+      Commits: ef7e26f9, 785ab8f7 (Svg/FrameSvg fully; Plasma::Theme
+      itself survives in libplasma 6 and stays - only its ColorGroup
+      enum died, replaced by KSvg::Svg::ColorSet)
+- [x] `QmlObjectSharedEngine` -> `PlasmaQuick::SharedQmlEngine`;
       `QuickViewSharedEngine` -> `PlasmaQuick`
-      Commits:
-- [ ] `KMimeTypeTrader`/`KServiceTypeTrader` -> `KApplicationTrader`
-      Commits:
+      Commits: 6baf2603, 16f47bf1, 0c4525d9; e9710e95 handles
+      engine() now returning std::shared_ptr
+- [x] `KMimeTypeTrader`/`KServiceTypeTrader` -> `KApplicationTrader`
+      Commits: 6b53a5ee (all nine trader-language queries in the
+      vendored tasktools became lambda filters)
 - [ ] `KWindowEffects` signature change: WId -> `QWindow*` on KF6.
       Every `enableBlurBehind`/`enableBackgroundContrast` call passes
       `m_view->winId()` today (`view/effects.cpp`,
       `view/settings/primaryconfigview.cpp`,
       `view/settings/widgetexplorerview.cpp`) - pass the window
       object itself
-      Commits:
-- [ ] Audit the WId-based `KWindowSystem` calls KF6 moved to
+      Commits: 0c4525d9
+- [x] Audit the WId-based `KWindowSystem` calls KF6 moved to
       `KX11Extras`: on the X11 path they become
       `KX11Extras::setOnActivities`/`compositingActive`/etc. behind
       `HAVE_X11`; the Wayland path needs its own answer per call site
@@ -274,7 +285,8 @@ belongs in a later phase instead.
       there, and `compositingActive()` in `visibilitymanager.cpp` is
       always true under Wayland (fold the conditional away on that
       branch, don't fake-port it)
-      Commits:
+      Commits: 478efa54, 0c4525d9 (Latte::compositingActive() helper),
+      1ae47bd6; infoview's wayland side is a marked stub
 - [ ] KPackage metadata pass: add
       `"X-Plasma-API-Minimum-Version": "6.0"` to every package
       `metadata.json` (shell, containment, plasmoid, all three
@@ -286,10 +298,11 @@ belongs in a later phase instead.
       file location is fixed by convention, and `ui/main.qml` already
       matches it)
       Commits:
-- [ ] `KNS3` -> `KNSWidgets`
-      Commits:
-- [ ] `Plasma::Package` -> `KPackage`
-      Commits:
+- [x] `KNS3` -> `KNSWidgets`
+      Commits: 0835b22c
+- [x] `Plasma::Package` -> `KPackage`
+      Commits: 6baf2603, 1ae47bd6, 6b53a5ee (includes, Applet::kPackage
+      -> pluginMetaData, addFile/DirectoryDefinition signatures)
 - [ ] Switch every plain-JSON `KPluginMetaData(QString)` load site to
       `KPluginMetaData::fromJsonFile()` - the bare single-string
       constructor **resolves its argument as a loadable plugin library
@@ -302,10 +315,10 @@ belongs in a later phase instead.
       "Get New Indicators..." can't reach any provider
       (`ConfigFileError`, store unreachable)
       Commits:
-- [ ] `#include <Plasma>` -> `<Plasma/Plasma>`; link `KF6::Svg`,
+- [x] `#include <Plasma>` -> `<Plasma/Plasma>`; link `KF6::Svg`,
       `KF6::Package`, `KF6::IconWidgets`
-      Commits:
-- [ ] Add `compat/` shim headers for the nixpkgs-only include-path
+      Commits: ef7e26f9, 1990d64c, 785ab8f7, 1ae47bd6
+- [x] Add `compat/` shim headers for the nixpkgs-only include-path
       issue (already solved once for latte-dock-ng, carry the solution
       in from day one): `KIconThemes/KIconLoader`,
       `KIconThemes/KIconEffect`, `KGuiAddons/KIconUtils`,
@@ -313,7 +326,11 @@ belongs in a later phase instead.
       KArchiveEntry,KArchiveDirectory}`, `KConfigQml/KConfigPropertyMap`
       (`__has_include` fallback chain: unprefixed spelling, then
       lowercase real header, then `include_next`)
-      Commits:
+      Commits: resolved without shims - every framework-prefixed
+      include was canonicalized to the plain CamelCase form
+      (1990d64c, ef7e26f9, 6baf2603 and friends), which is upstream
+      KDE style and needs no include-path tricks; proven by the whole
+      port building on nixpkgs from day one
 
 ### Phase 4: Window-system backends (Wayland primary, X11 best-effort)
 
@@ -328,26 +345,33 @@ issue, never a milestone blocker, and no phase waits on X11 behavior
 being right. Opportunistic smoke tests (Xephyr/nested session) are
 welcome but not required.
 
-- [ ] Keep the `AbstractWindowInterface` split; port
+- [x] Keep the `AbstractWindowInterface` split; port
       `XWindowInterface` to Qt6/KF6 mechanically: `QX11Info` ->
       `qGuiApp->nativeInterface<QNativeInterface::QX11Application>()`,
       `KWindowSystem`/`KWindowInfo`/`NETWinInfo`/NETWM includes ->
       `KX11Extras` equivalents, all behind `HAVE_X11`
-      Commits:
-- [ ] Port (not strip) the remaining X11-conditional code:
+      Commits: e9710e95 (the file is also excluded from WITH_X11=OFF
+      builds and the corona falls back to the wayland interface with
+      a warning)
+- [x] Port (not strip) the remaining X11-conditional code:
       the xcb RandR native event filter in `PrimaryOutputWatcher`
       (Qt6 changed `QAbstractNativeEventFilter::nativeEventFilter`'s
       result parameter from `long*` to `qintptr*`), X11 branches in
       `ScreenPool` and `GlobalShortcuts`, `QX11Info` in `tasktools`.
       Delete only what is genuinely dead on both paths
-      Commits:
-- [ ] Move Wayland window tracking off the removed
+      Commits: 478efa54 (primaryoutputwatcher, screenpool's whole X11
+      block was dead), 0c4525d9 (globalshortcuts), 6b53a5ee (tasktools
+      QX11Info include was unused)
+- [x] Move Wayland window tracking off the removed
       `PlasmaWindow::internalId()` to `uuid()`-based ids carried in
       the existing variant `WindowId`; update every id-validity check
       that assumed an integer so it handles both the X11 `WId` case
       and the Wayland string-uuid case (window tracker, sub-windows,
       config views, positioner, main/child window detection)
-      Commits:
+      Commits: 8e8cdf31, e9710e95 (WindowId became QByteArray rather
+      than staying QVariant - Qt6 removed QVariant's comparison
+      operators, so the variant design was unsalvageable; empty id =
+      invalid on both platforms, X11 ids ride as decimal strings)
 - [ ] Remove `View::surface()` (a `PlasmaShellSurface` accessor,
       always null under layer-shell) and its dead callers; gate auto-
       hide/dodge-reveal on `VisibilityManager::revealsOnScreenEdge()`
@@ -923,30 +947,22 @@ polished, distributable form of it.
 
 ## Status
 
-Phases 0-1 done. Phases 2-3 well underway, interleaved as expected
-(the compile milestone needs the compile-blocking subset of the KF6
-API migration). All five QML/plugin library targets compile and link;
-the latte-dock app target is mid-port. Remaining compile surface, in
-order of size:
+Phases 0-2 done, Phase 3 nearly done, Phase 4 started. The compile
+milestone is reached: the full tree configures, compiles and links in
+both WITH_X11 variants via `scripts/build-check.sh` (Qt 6.11.1 /
+KF 6.27.0 / libplasma 6.7.2). 37 of 127 items ticked.
 
-- the WindowId refactor (Phase 4 item, pulled forward because Qt6
-  removed QVariant comparison operators, breaking every
-  QMap<WindowId,...> and numeric validity check): adopt
-  latte-dock-ng's proven design of WindowId = QByteArray (wayland
-  PlasmaWindow::uuid(), X11 ids as number strings), validity =
-  !isEmpty(), and convert the ~19 internalId() sites in
-  waylandinterface plus every id assignment/check in the trackers,
-  sub-windows, config views, positioner and main/child detection
-- xwindowinterface.cpp QX11Info -> QNativeInterface (best-effort X11
-  path, same pattern as primaryoutputwatcher)
-- view.cpp bundle: SkipEmptyParts, setClearBeforeRendering (gone in
-  Qt6 RHI), KWindowSystem::forceActiveWindow/setOnAllDesktops ->
-  KX11Extras, containment actions, runningActivitiesChanged
-- tracker Q_PROPERTY pointer metatypes need fully-defined types
-  (include real headers instead of forward declarations in tracker
-  headers; Qt 6.11 moc enforces it)
-- assorted signal/slot compatibility static asserts
+Still open before Phase 4 proper:
 
-Everything committed so far keeps the plugin targets green; the
-milestone commit at the end of this stretch is the one that must
-build everything.
+- Phase 2 leftovers that are deliberately deferred hygiene: the
+  ~720-site QStringLiteral wrap (compiler flags stubbed off),
+  C-style-cast cleanup, QDBusInterface -> QDBusMessage conversion
+- Phase 3 leftovers: KPluginMetaData::fromJsonFile audit, the KNS
+  KPackageStructure key rename, and the KPackage metadata.json pass
+  (X-Plasma-API-Minimum-Version) - the last one is required before
+  anything renders
+- the test harness + uniqueLayoutName regression test promised at
+  this milestone (docs/TESTING.md)
+
+Nothing has been run yet; the first runnable milestone is end of
+Phase 5 (wayland backend + QML load path first).
