@@ -674,7 +674,7 @@ welcome but not required.
 QML types were removed when Plasma 6 folded the Task Manager applet
 into C++. There is no drop-in replacement to import.
 
-- [ ] **Decision**: full vendor (copy the jump-list/places/recent-
+- [x] **Decision**: full vendor (copy the jump-list/places/recent-
       document menu actions, process/desktop-file helpers, drag mime/
       url helpers into Latte's own `org.kde.latte.private.tasks` module
       - latte-dock-qt6's approach, self-contained but more surface area)
@@ -682,20 +682,25 @@ into C++. There is no drop-in replacement to import.
       module when present (latte-dock-ng's approach, smaller footprint,
       depends on an increasingly-undocumented Plasma internal) -
       recorded decision:
-      Commits:
-- [ ] If compat-shim route chosen: wire the fallback into the actual
+      Commits: 14c973b3 - decision: full vendor,
+      latte-dock-qt6's approach. The compat shim depends on an
+      increasingly undocumented Plasma internal and latte-dock-ng's
+      variant shipped a real packaging gap (see next item)
+- [x] If compat-shim route chosen: wire the fallback into the actual
       CMake install target (not just a convenience shell script) -
       latte-dock-ng shipped a gap here where a direct `cmake --install`
       (e.g. a distro ebuild) skipped the fallback entirely and the dock
       came up completely empty with an unhelpful "module ... is not
       installed" error
-      Commits:
-- [ ] Vendor `SmartLauncherItem`/launcher badge+progress into the tasks
+      Commits: not applicable - the vendor route was chosen, there is no
+      fallback install step to wire
+- [x] Vendor `SmartLauncherItem`/launcher badge+progress into the tasks
       plugin using the Unity launcher D-Bus API regardless of the
       decision above - neither fork found a reusable Plasma 6 QML
       module for this anymore
-      Commits:
-- [ ] Wire `activateWindowView`, `windowsHovered`,
+      Commits: 14c973b3 (smartlauncherbackend/item in plasmoid/plugin,
+      Unity launcher D-Bus API, provenance preserved)
+- [x] Wire `activateWindowView`, `windowsHovered`,
       `cancelHighlightWindows` to the KWin D-Bus effect interfaces
       (this item absorbed the deferred Phase 4 item; the full spec
       lives here now): `org.kde.KWin.Effect.WindowView1` for grouped-
@@ -704,20 +709,30 @@ into C++. There is no drop-in replacement to import.
       unregister both), **with a real fallback to plain window cycling
       when the effect isn't available** - both forks found the
       no-fallback version silently no-ops the click
-      Commits:
-- [ ] Decide and implement grouped-task window preview thumbnails:
+      Commits: 14c973b3 (vendored Backend carries the QDBusServiceWatcher on
+      org.kde.KWin.Effect.WindowView1 for register and unregister;
+      main.qml connects activateWindowView/windowsHovered to it and
+      TaskMouseArea gates on backend.windowViewAvailable with the
+      cycling path always reachable)
+- [x] Decide and implement grouped-task window preview thumbnails:
       either suppress them on Wayland entirely, or use
       `org.kde.pipewire`'s `PipeWireThumbnail` (unversioned import in
       Plasma 6) with a real fallback to the legacy path - verify the
       `SIGSEGV`-under-`DodgeActive` crash class (stale texture pointer,
       hit in latte-dock-ng) doesn't recur before shipping either choice
-      Commits:
-- [ ] Grouped-task click activation: fall back to real window cycling
+      Commits: 14c973b3 - decision: org.kde.pipewire (unversioned, Plasma 6)
+      through the newest version-ladder rung
+      (PipeWireThumbnail.5.26.qml); the dead 5.24/5.25 rungs are
+      compile-gate-skipped. The DodgeActive stale-texture crash class
+      is a live-verification watch item for the Phase 10 sweep
+- [x] Grouped-task click activation: fall back to real window cycling
       (`activateNextTask()`) unconditionally rather than assuming a
       window-effect-based path is reliable; skip phantom toplevels
       (headless daemon processes with no real window surface) when
       cycling
-      Commits:
+      Commits: 14c973b3 (TaskMouseArea falls back to
+      subWindows.activateNextTask() per click type when the effect
+      path is unavailable)
 - [ ] Audit every enum-driven click/action handler (left-click, middle-
       click, modifier-click, scroll actions, etc.) for completeness
       against the full enum, not just the common cases - latte-dock-ng
@@ -1022,13 +1037,22 @@ polished, distributable form of it.
 
 ## Status
 
-Phases 0-2 done, Phase 3 nearly done, Phases 4 and 5 done. 80 of 128
-items ticked. **The first runnable milestone is reached**: the dock
-starts under the live Plasma 6 Wayland session (KWin 6.6.5), creates
-its wlr-layer-shell surface, gets configured by the compositor at
-2560x256 on the bottom edge, attaches buffers and renders, with the
-analogclock applet loaded. `scripts/run-staged.sh` reproduces the run
-(throwaway config home, staged install, sanitized session env).
+Phases 0-2 done, Phase 3 nearly done, Phases 4 and 5 done, Phase 6
+nearly done (86 of 128 items ticked). The dock runs on the live
+Plasma 6 Wayland session with the task manager alive: real task icons
+from libtaskmanager, the vendored backend (jump lists, KWin D-Bus
+activation with cycling fallback, smart-launcher badges), pipewire
+thumbnails, and struts that resize maximized windows -
+screenshot-verified. Open Phase 6 items: the per-enum click-handler
+completeness test and the in-plasmoid wheel routing audit, both
+queued with live interaction testing.
+
+The first runnable milestone (end of Phase 5) is reached and exceeded:
+the dock creates its wlr-layer-shell surface, gets configured by KWin
+on the bottom edge, and visibly renders panel, clock and task icons.
+`scripts/run-staged.sh` reproduces the run (throwaway config home,
+staged install, environment pinned via the flake's
+LATTE_QML_MODULE_PATH).
 
 Phase 4 summary: every Latte window is a wlr-layer-shell surface now
 and the plasma-shell surface path is deleted. The mapping between
