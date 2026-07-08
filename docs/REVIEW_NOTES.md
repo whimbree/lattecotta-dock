@@ -22,20 +22,28 @@ static dtors. Low priority (only bites when launching a duplicate), but it is
 a real crash. **Human/dev check:** reproduce by launching a second instance,
 then decide whether to fix teardown order or short-circuit the duplicate-exit.
 
-### Enumeration ("missing running apps") root cause: KWin permission gate
+### Enumeration ("missing running apps") root cause: KWin permission gate (dev build only)
 Not a code bug. KWin gates `org_kde_plasma_window_management` (libtaskmanager's
 window source) behind a `.desktop` match: the canonicalized first token of an
-installed desktop file's `Exec=` must equal the client's `/proc/PID/exe`, and
-that service must list the interface in `X-KDE-Wayland-Interfaces`. Our
-`app/org.kde.latte-dock.desktop.cmake` already declares it correctly, so a
-normal install (`Exec=/usr/bin/latte-dock`, process at the same path) works.
-Fails for dev builds run from `build/bin/` (no matching installed desktop
-file) and for Nix-wrapped installs (`Exec` points at the makeWrapper script,
-`/proc/exe` at the `.*-wrapped` binary). Dev workaround: a throwaway
-`.desktop` in `~/.local/share/applications` with `Exec=<repo>/build/bin/
-latte-dock` plus the interface line, then `kbuildsycoca6`. Full write-up and
-proof in the fork-comparison journal, 2026-07-07 entry. **No source change
-needed**; flagged so nobody re-hunts this as a code defect.
+installed desktop file's `Exec=` must equal the client's invocation path
+(argv[0] / cmdline[0], NOT `/proc/PID/exe`), and that service must list the
+interface in `X-KDE-Wayland-Interfaces`. Our
+`app/org.kde.latte-dock.desktop.cmake` already declares it correctly.
+- Normal install works: `Exec=$PREFIX/bin/latte-dock`, and the process is
+  launched from that path so argv[0] matches.
+- Nix-wrapped install works too: `makeBinaryWrapper` keeps
+  `argv[0]=$out/bin/latte-dock` (the wrapper), which equals the `.desktop`
+  `Exec`, even though `/proc/exe` is the `.latte-dock-wrapped` binary.
+  (Verified empirically 2026-07-07; an earlier note here wrongly said nix
+  installs are gated.)
+- Only fails for the DEV BUILD run straight from `build/bin/` (no installed
+  `.desktop` has an `Exec` matching that build-tree path). Dev workaround: a
+  throwaway `.desktop` in `~/.local/share/applications` with
+  `Exec=<repo>/build/bin/latte-dock` plus the interface line, then
+  `kbuildsycoca6`.
+Full write-up and correction in the fork-comparison journal, 2026-07-07
+entries. **No source change needed**; flagged so nobody re-hunts this as a
+code defect.
 
 ### Tasks click-action completeness test uses a transcribed "offered" set
 `tests/qml/tst_taskactions.qml` guards the enum/handler contract for task
