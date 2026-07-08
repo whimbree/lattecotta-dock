@@ -8,6 +8,30 @@ decision the driver shouldn't make alone.
 
 ## Open
 
+### Dock surface stops painting after a display power/hotplug event
+Reproduced 2026-07-08 while driving screenshots via `kscreen-doctor --dpms on`.
+On a `screen count changed` event (monitor sleep/wake, DPMS on/off, output
+hotplug) the view re-runs reconsiderScreen()/syncGeometry() and keeps a correct
+geometry (DP-2, BottomEdge, 2560x1440) and its reserved strut (available rect
+2560x1353), but the layer-shell surface stops rendering - the dock is invisible
+with its space still reserved. A fresh process start on a *stable* display
+paints fine; the vanish is triggered specifically by the display event. Likely
+the view needs to re-commit/re-map its wlr-layer-surface (or re-attach a buffer)
+on screen change, not just recompute geometry. This is the same "reserves strut
+but no pixels" shape as the initial DodgeActive confusion, but here visibility
+is AlwaysVisible, so it is a real repaint/remap bug. **Human repro:** let the
+monitor sleep and wake (or unplug/replug) and watch the dock disappear.
+
+### Widget instantiation via config verified OK (no qt6-style crash)
+2026-07-08: injected `org.kde.plasma.digitalclock` and a second
+`org.kde.latte.plasmoid` (the Latte Tasks widget that crashed latte-dock-qt6 on
+add) straight into a layout's applet list and restarted. Both loaded cleanly -
+log `applets found :: 3 : QList(2, 3, 4)`, no KCrash, dock survived. So the
+containment's widget-load path is sound, including the risky widget. NOT covered
+by this test: the drag-from-explorer / tap-to-add gesture itself (can't drive
+the pointer headlessly) - still needs a human to confirm the DnD handler.
+
+
 ### KSvg static-destructor crash on the single-instance early-exit path
 When a second latte-dock starts while another instance already owns the
 `org.kde.lattedock` D-Bus name, ours does its init then exits, and segfaults
