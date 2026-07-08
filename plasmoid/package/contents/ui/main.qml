@@ -11,7 +11,7 @@ import QtQuick.Effects
 
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.ksvg 1.0 as KSvg
-import org.kde.plasma.plasma5support 2.0 as P5Support
+import org.kde.plasma.private.mpris as Mpris
 import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.plasmoid 2.0
 import org.kde.kirigami 2.20 as Kirigami
@@ -598,80 +598,12 @@ PlasmoidItem {
         Component.onCompleted: previousActivity = currentActivity;
     }
 
-    P5Support.DataSource {
+    //! Plasma 6 MPRIS: the old plasma5support "mpris2" dataengine was removed;
+    //! Mpris2Model exposes playerForLauncherUrl() -> PlayerContainer with the
+    //! player state (playbackStatus, canControl, track, artist, artUrl, ...)
+    //! and invokable controls (Play/Pause/Next/Previous/Stop/Raise/Quit).
+    Mpris.Mpris2Model {
         id: mpris2Source
-        engine: "mpris2"
-        connectedSources: sources
-        function sourceNameForLauncherUrl(launcherUrl, pid) {
-            if (!launcherUrl || launcherUrl === "") {
-                return "";
-            }
-
-            // MPRIS spec explicitly mentions that "DesktopEntry" is with .desktop extension trimmed
-            // Moreover, remove URL parameters, like wmClass (part after the question mark)
-            var desktopFileName = launcherUrl.toString().split('/').pop().split('?')[0].replace(".desktop", "")
-            if (desktopFileName.indexOf("applications:") === 0) {
-                desktopFileName = desktopFileName.substr(13)
-            }
-
-            for (var i = 0, length = connectedSources.length; i < length; ++i) {
-                var source = connectedSources[i];
-                // we intend to connect directly, otherwise the multiplexer steals the connection away
-                if (source === "@multiplex") {
-                    continue;
-                }
-
-                var sourceData = data[source];
-                if (!sourceData) {
-                    continue;
-                }
-
-                if (sourceData.DesktopEntry === desktopFileName || (pid && sourceData.InstancePid === pid)) {
-                    return source;
-                }
-
-                var metadata = sourceData.Metadata;
-                if (metadata) {
-                    var kdePid = metadata["kde:pid"];
-                    if (kdePid && pid === kdePid) {
-                        return source;
-                    }
-                }
-            }
-
-            return ""
-        }
-
-        function startOperation(source, op) {
-            var service = serviceForSource(source)
-            var operation = service.operationDescription(op)
-            return service.startOperationCall(operation)
-        }
-
-        function goPrevious(source) {
-            startOperation(source, "Previous");
-        }
-        function goNext(source) {
-            startOperation(source, "Next");
-        }
-        function play(source) {
-            startOperation(source, "Play");
-        }
-        function pause(source) {
-            startOperation(source, "Pause");
-        }
-        function playPause(source) {
-            startOperation(source, "PlayPause");
-        }
-        function stop(source) {
-            startOperation(source, "Stop");
-        }
-        function raise(source) {
-            startOperation(source, "Raise");
-        }
-        function quit(source) {
-            startOperation(source, "Quit");
-        }
     }
 
     Loader {

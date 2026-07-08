@@ -210,7 +210,10 @@
             <choice name="HighlightWindows"/>
             <choice name="PreviewAndHighlightWindows"/>
       </choices>
-      <default>0</default>
+      <!-- Default to window peek + highlight on hover, matching plasmashell
+           and old Latte: hovering a grouped icon shows the open windows to
+           pick from, and the same tooltip hosts MPRIS media controls. -->
+      <default>9</default>
     </entry>
     <entry name="taskScrollAction" type="Enum">
       <choices>

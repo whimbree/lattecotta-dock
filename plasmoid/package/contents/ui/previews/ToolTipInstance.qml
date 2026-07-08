@@ -25,6 +25,8 @@ import org.kde.draganddrop 2.0
 
 import org.kde.taskmanager 0.1 as TaskManager
 
+import org.kde.plasma.private.mpris as Mpris
+
 Column {
     id: instance
     property var submodelIndex
@@ -42,37 +44,22 @@ Column {
 
     readonly property bool descriptionIsVisible: winDescription.text !== ""
 
-    readonly property string mprisSourceName: mpris2Source.sourceNameForLauncherUrl(toolTipDelegate.launcherUrl, isGroup ? appPid : pidParent)
-    readonly property var playerData: mprisSourceName != "" ? mpris2Source.data[mprisSourceName] : 0
-    readonly property bool hasPlayer: !!mprisSourceName && !!playerData
-    readonly property bool playing: hasPlayer && playerData.PlaybackStatus === "Playing"
-    readonly property bool canControl: hasPlayer && playerData.CanControl
-    readonly property bool canPlay: hasPlayer && playerData.CanPlay
-    readonly property bool canPause: hasPlayer && playerData.CanPause
-    readonly property bool canGoBack: hasPlayer && playerData.CanGoPrevious
-    readonly property bool canGoNext: hasPlayer && playerData.CanGoNext
-    readonly property bool canRaise: hasPlayer && playerData.CanRaise
-    readonly property var currentMetadata: hasPlayer ? playerData.Metadata : ({})
+    //! Plasma 6 Mpris2Model: playerForLauncherUrl returns a PlayerContainer
+    //! (or null) exposing player state directly - no dataengine source names
+    //! or xesam metadata parsing anymore.
+    readonly property Mpris.PlayerContainer playerData: mpris2Source.playerForLauncherUrl(toolTipDelegate.launcherUrl, isGroup ? appPid : pidParent)
+    readonly property bool hasPlayer: !!playerData
+    readonly property bool playing: hasPlayer && playerData.playbackStatus === Mpris.PlaybackStatus.Playing
+    readonly property bool canControl: hasPlayer && playerData.canControl
+    readonly property bool canPlay: hasPlayer && playerData.canPlay
+    readonly property bool canPause: hasPlayer && playerData.canPause
+    readonly property bool canGoBack: hasPlayer && playerData.canGoPrevious
+    readonly property bool canGoNext: hasPlayer && playerData.canGoNext
+    readonly property bool canRaise: hasPlayer && playerData.canRaise
 
-    readonly property string track: {
-        var xesamTitle = currentMetadata["xesam:title"]
-        if (xesamTitle) {
-            return xesamTitle;
-        }
-        // if no track title is given, print out the file name
-        var xesamUrl = currentMetadata["xesam:url"] ? currentMetadata["xesam:url"].toString() : ""
-        if (!xesamUrl) {
-            return "";
-        }
-        var lastSlashPos = xesamUrl.lastIndexOf('/')
-        if (lastSlashPos < 0) {
-            return "";
-        }
-        var lastUrlPart = xesamUrl.substring(lastSlashPos + 1)
-        return decodeURIComponent(lastUrlPart);
-    }
-    readonly property string artist: currentMetadata["xesam:artist"] || ""
-    readonly property string albumArt: currentMetadata["mpris:artUrl"] || ""
+    readonly property string track: hasPlayer ? (playerData.track || "") : ""
+    readonly property string artist: hasPlayer ? (playerData.artist || "") : ""
+    readonly property string albumArt: hasPlayer ? (playerData.artUrl || "") : ""
 
     //
     function isTaskActive() {
@@ -383,7 +370,7 @@ Column {
                        id: canGoBackButton
                        enabled: canGoBack
                        icon.name: LayoutMirroring.enabled ? "media-skip-forward" : "media-skip-backward"
-                       onClicked: mpris2Source.goPrevious(mprisSourceName)
+                       onClicked: instance.playerData.Previous()
                    }
 
                    PlasmaComponents.ToolButton {
@@ -393,9 +380,9 @@ Column {
                        icon.name: playing ? "media-playback-pause" : "media-playback-start"
                        onClicked: {
                            if (!playing) {
-                               mpris2Source.play(mprisSourceName);
+                               instance.playerData.Play();
                            } else {
-                               mpris2Source.pause(mprisSourceName);
+                               instance.playerData.Pause();
                            }
                        }
                    }
@@ -405,7 +392,7 @@ Column {
                        id: canGoNextButton
                        enabled: canGoNext
                        icon.name: LayoutMirroring.enabled ? "media-skip-backward" : "media-skip-forward"
-                       onClicked: mpris2Source.goNext(mprisSourceName)
+                       onClicked: instance.playerData.Next()
                    }
 
                 }
