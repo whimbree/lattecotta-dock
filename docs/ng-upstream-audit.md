@@ -31,7 +31,7 @@ so "HAVE" means the specific fix is present in our file, not just that the file
 exists. Where our port deliberately took latte-dock-qt6's QML instead of ng's,
 that is called out.
 
-**Progress: 91 / 249 audited.**
+**Progress: 103 / 249 audited.**
 
 **Emerging finding (after 13):** ng and our port solved the same original
 independently, so most ng commits describe changes we simply did differently or
@@ -140,3 +140,15 @@ actually right before we take it.
 | 90c9a0ca7 | 2026-06-09 | fix: opacity instead of visible for applet container | CHECK | Edit-mode applet-container visibility via opacity binding. Verify our applet show/hide in edit mode. |
 | db748f0dd | 2026-06-09 | fix: full panel thickness for classic-style struts | CHECK | Strut-thickness cluster; verify our classic strut reserves the full thickness. |
 | c917f7936 | 2026-06-09 | fix: prevent parabolic zoom jitter cursor between icons | ADOPT? | Our `parabolic.cpp` has `m_currentParabolicItem` switching but **no `MIN_SWITCH_INTERVAL`/`lastSwitchTimer` debounce** ng added. The journal flagged zoom/reorder jitter — this is a strong candidate. Verify + adopt the switch-interval guard. |
+| c70988a3f | 2026-06-09 | fix: debounce double-click add in Widget Explorer | ADOPT? | No `addDebounceTimer` in our `shell/` explorer. The journal flagged **double-click crashes** in the explorer — this 400ms debounce prevents double-add/flash. Strong candidate. |
+| 13628d9e5 | 2026-06-10 | fix: suppress cfg_ non-existent property warnings | CHECK | Applet-config `cfg_` key guard. Cheap; verify our applet config logs these. |
+| c2c7bbed6 | 2026-06-11 | fix(systray): native icon colors + wheel handling | CHECK | Systray-in-dock colorizing exclusion (`appletBlocksColorizing`/`isSystray`). Verify a system tray widget renders/scrolls right in our dock. |
+| c57458dd5 | 2026-06-12 | fix(widget-explorer): separator double-click flash-and-remove | CHECK | Separator + double-click debounce; separator feature is a GAP for us anyway. |
+| 240f44593 | 2026-06-12 | fix(drag-drop): drag widgets from Widget Explorer to dock | HAVE~ | Our `view.cpp` already handles the `text/x-plasmoidservicename` drop. Verify the full drag-from-explorer path works (this is the gesture I couldn't test headlessly). |
+| 735525810 | 2026-06-12 | fix(drag-drop): position-aware insertion + wave for drops | ADOPT? | `_latte_pendingInsertionIndex` absent. Our drops likely land at the dock end, not at the cursor. Good UX fix for drag-to-add; evaluate. |
+| e557fcdf3 | 2026-06-12 | fix(widget-explorer): double-click to add separator applets | CHECK | Separator GAP; moot until separators exist. |
+| 0e7d8e065 | 2026-06-12 | fix(widget-explorer): place new applets before systray/tasks | CHECK | Insertion-order fix (don't dump new widgets at the dock end). Pairs with 735525810. |
+| 95b1f7cd8 | 2026-06-12 | fix: suppress benign Qt/KIO diagnostics + KIO teardown | CHECK | We have a `qInstallMessageHandler` in `main.cpp`; can add ng's specific noise filters if our logs are noisy. Low value. |
+| 544479586 | 2026-06-12 | fix(widget): multi-cell slot for text-heavy external applets | ADOPT? | `externalAppletForcedSlots`/`externalAppletNaturalWidth` absent. Text-heavy widgets (clock, etc. — the one I test-added) may be squashed into one icon cell. Verify external widget sizing; good candidate. |
+| be72dd5f4 | 2026-06-12 | fix: suppress KDE framework property override warnings | CHECK | More log-noise filters; pairs with 95b1f7cd8. Cosmetic. |
+| 88ee2b8ab | 2026-06-12 | fix(systray): drag-drop reorder without breaking layout | CHECK | Systray reorder + sort-drag z-order. Verify systray widget behaves in our dock. |
