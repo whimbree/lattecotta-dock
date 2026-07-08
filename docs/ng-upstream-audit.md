@@ -21,6 +21,7 @@ chore, docs, ci and pure refactor are excluded per the agreed scope.
   approach, irrelevant to us, or where ng's fix looks wrong/dubious.
 - **N/A** — test-only / infra / does not apply.
 - **CHECK** — evaluate on merit (and verify ng got it right) before deciding.
+- **GAP** — a whole feature we don't have (bigger than a single fix; e.g. separator widgets).
 
 Earlier rows use "PORT"; read it as "ADOPT". A verdict is a judgement on whether
 the *idea* is worth adopting, not whether we are "missing" it.
@@ -30,7 +31,7 @@ so "HAVE" means the specific fix is present in our file, not just that the file
 exists. Where our port deliberately took latte-dock-qt6's QML instead of ng's,
 that is called out.
 
-**Progress: 31 / 249 audited.**
+**Progress: 67 / 249 audited.**
 
 **Emerging finding (after 13):** ng and our port solved the same original
 independently, so most ng commits describe changes we simply did differently or
@@ -79,3 +80,39 @@ actually right before we take it.
 | d811ae6ac | 2026-05-09 | fix: stabilize indicator config theming | CHECK | Indicator-config cluster (Switch.qml SystemPalette, config.qml). Tied to the indicator-theming ADOPTs above; evaluate together. |
 | 546ec39d0 | 2026-05-09 | fix(tasks): remove invalid MultiEffect anchoring in group-remove anim | CHECK | Our `RemoveWindowFromGroupAnimation.qml:97` has a `MultiEffect`; check it doesn't carry the invalid anchoring ng removed (would log warnings / misrender the shadow). |
 | 523f64bdd | 2026-05-10 | fix(containment): stabilize external widget applets | CHECK | Directly relevant to hosting non-Latte widgets (the clock I test-added). Adds `isExternalPlasmaApplet` detection + z-order. Verify external widgets render and layer correctly in our dock. |
+| b75d4a37c | 2026-05-10 | feat: sort widget applets around tasks (drag) | CHECK | `isSortDragging`/`appletSortDragHandler` absent. Drag-to-reorder widgets among tasks. Our drag is qt6-derived; verify reorder works, else consider. |
+| a877f7cae | 2026-05-11 | feat: refine dock behavior and widget interactions | CHECK | Broad 170-line change across `lattecorona.cpp`/`genericlayout.cpp`/`syncedlaunchers.cpp`. Too coarse to verdict from the diff; revisit if a specific behavior is off. |
+| 603a9871c | 2026-05-11 | fix(dbus): silence deprecated serviceOwnerChanged watcher | ADOPT? | Our `abstractwindowinterface.cpp` builds `QDBusServiceWatcher`s but doesn't `setWatchMode(...)`. ng sets it explicitly to kill a deprecation warning. One-line, safe. |
+| 46eee1df2 | 2026-05-12 | feat: add modern dock style | SKIP | New optional style + dual `lib/qml`+`lib/qt6/qml` install. Style is opt-in; the dual-install trick is minor (CHECK only if our QML gets shadowed by stale user installs). |
+| 21ee748c0 | 2026-05-14 | fix(separators): stabilize task widget boundaries | CHECK | Large (`containmentinterface.cpp` +804, new `separator/` subdir, `isSeparatorPluginId`). Separator-widget support absent in our `app/`. Verify separators work in our dock. |
+| 7c23cd64c | 2026-05-17 | fix: unify tooltip contrast to QQC2.ToolTip w/ palette | CHECK | Config-UI tooltip contrast (`safeTextColor`/`safeBackgroundColor`). Theming cluster; absent. Cosmetic but easy. |
+| 54a652e1c | 2026-05-17 | feat: transparent edit mode w/ applet hover tooltips | CHECK | Edit-mode UX in `containment/…/main.qml` (`hoverTooltip`). We have `containment/` but not this. Evaluate with the edit-mode work. |
+| f5f037893 | 2026-05-17 | fix: transparent paddings/opacity in edit mode | CHECK | Edit-mode visual polish; pairs with 54a652e1c. |
+| 1b424bae9 | 2026-05-17 | fix: revert C++ forceWaylandSurfaceRefresh, fix brace | N/A | An ng *revert* — they tried a forced Wayland surface refresh and backed it out. Notable: same shape as the hotplug surface-recreate we just dropped; corroborates that path is fiddly. |
+| 069cf81cf | 2026-05-22 | fix: widget right-click shows applet actions (alt/remove) | CHECK | Edit-mode: right-clicking a widget should offer Alternatives/Remove. C++ `findApplet` walk. Verify our widget context menu offers these (ties to your reported menu issues). |
+| 172a36de0 | 2026-05-22 | fix: auto-detect parallel build jobs | N/A | ng's `install.sh`; irrelevant to our nix build. |
+| e51685b6c | 2026-05-22 | fix: correct Arch package name plasma-framework→libplasma | N/A | ng's distro INSTALLATION doc. |
+| 5c86637c5 | 2026-05-23 | fix: cross-distro build compatibility | N/A | Mostly INSTALLATION.md + a `find_package(KWayland)`; distro-specific, our nix build is unaffected. |
+| 28bcf991d | 2026-05-23 | fix: cleanup + restore wheel task cycling | CHECK | `activateWheelTask` absent, but we have a `taskScrollAction` config (ScrollTasks default). Verify scroll-over-task cycling works in our dock. |
+| 1df8d5e32 | 2026-05-23 | fix: editBackgroundOpacity only in edit mode | SKIP | Part of ng's edit-mode opacity redesign (below). |
+| 61dcbcfe1 | 2026-05-24 | fix: simplify editBackgroundOpacity binding | SKIP | ng opacity-redesign cluster. |
+| 984319fb1 | 2026-05-24 | fix: replace edit canvas grid with dock panel opacity control | SKIP | ng **design choice**: they dropped the edit-mode grid for a panel-opacity control. Not a bug fix; our port keeps the original edit canvas. Adopt only if we want ng's UX. |
+| 9d798ea04 | 2026-05-24 | fix: blur behavior for panel transparency control | SKIP | Same opacity-redesign cluster. |
+| 015b523e7 | 2026-05-27 | fix: cleanup config options, restore ReverseThemeColors | SKIP | ng-specific config surface cleanup; not applicable to our config set. |
+| 64253c628 | 2026-05-27 | fix: unify panel colors across original and cloned views | HAVE | We have `emitContainmentConfigProperties`/`initializationCompleted` in `clonedview.cpp`/`containmentinterface.cpp` — same cloned-view color unification. |
+| 0b2090c56 | 2026-05-27 | fix: audio badge follows panel contrast (not hardcoded dark) | CHECK | Audio-badge theming cluster; our `AudioStream.qml` lacks the `Kirigami.Theme.colorSet`/`coloredView` contrast. Evaluate with the indicator/audio theming ADOPTs. |
+| 4fef2af1f | 2026-05-27 | fix: Layout Custom Colors loads configured scheme file | CHECK | `centrallayout.cpp` scheme-file load. Verify our "Layout" theme-colors mode actually loads a custom scheme. |
+| 947bb2b66 | 2026-05-27 | fix: resolve three pre-existing QML reference warnings | CHECK | Small QML null/undefined guards. Cheap ADOPT if our QML logs the same warnings. |
+| 6cb0c7e51 | 2026-05-29 | fix: separator line length matches app icon separators | GAP | **Our port has no `separator/` package at all** — the whole separator-widget feature (org.kde.latte.separator) is absent. This + 21ee748c0/d17b93871/770631543 are moot until we decide whether to port separators. Original Latte had them. |
+| d17b93871 | 2026-05-29 | fix: separator plasmoid container sizing | GAP | Separator feature — absent (see above). |
+| 770631543 | 2026-05-29 | fix: separator line gap 2px→4px classic | GAP | Separator feature — absent. |
+| a5552d16b | 2026-05-29 | fix: symmetric thickness margin modern mode | SKIP | ng modern-dock-style tuning; not our style. |
+| b17524722 | 2026-05-29 | fix: bump modern mode min thickness margin | SKIP | Same modern-style tuning. |
+| f6cf174c7 | 2026-05-30 | fix: remove dead Plasma indicator tab, fix Install actions | SKIP | ng-specific indicator KNS/store install action + removing their Plasma indicator metadata. |
+| 6e598bd01 | 2026-05-30 | fix: visibility mode bugs, UI checked state, sidebar | CHECK | We have the visibility infra (`setIsBelowLayer`/`isSidebar` in `visibilitymanager.cpp`) but not ng's `m_originalMode` edit-mode handling. Verify edit-mode & sidebar visibility behave (ties to the DodgeActive/AlwaysVisible work). |
+| d769239fe | 2026-05-30 | ui: persistent checked highlight for config buttons | SKIP | Config-dialog button styling; cosmetic. |
+| dc5fa3b0c | 2026-05-30 | fix: remove unnecessary recreateView + debug log | CHECK | ng removed a `recreateView`; **our port still calls `recreateView`** (view.cpp/primaryconfigview/genericlayout). 3rd signal (with 1b424bae9) that view-recreate on Wayland is trouble — worth auditing whether our recreateView paths are needed/safe. |
+| 315057933 | 2026-05-30 | fix: config persistence via missing sync() + visibility not overwritten | ADOPT? | **Our settings dialogs have no explicit `.sync()`** (settingsdialog/layoutscontroller/detailsdialog). ng added them to fix lost config. Verify our settings persist across restart; cheap ADOPT if not. |
+| 0b8e35460 | 2026-05-31 | feat: GitHub release workflow, CPack RPM/DEB/pacman | N/A | ng CI/packaging; our nix build is separate. |
+| 8631fcf69 | 2026-05-31 | fix: scrollbar for Edit Dock advanced settings | SKIP | Config-dialog UI convenience. |
+| 542b717b9 | 2026-05-31 | feat: lower Plasma min to 6.5.0, Mageia support | HAVE | Our `CMakeLists.txt:18` already sets `PLASMA_MIN_VERSION 6.5.0`; Mageia N/A. |
