@@ -31,7 +31,7 @@ so "HAVE" means the specific fix is present in our file, not just that the file
 exists. Where our port deliberately took latte-dock-qt6's QML instead of ng's,
 that is called out.
 
-**Progress: 139 / 249 audited.**
+**Progress: 151 / 249 audited.**
 
 Tally through 139: 71 CHECK · 23 SKIP · 17 HAVE · 17 ADOPT-candidate (ADOPT+PORT)
 · 7 N/A · 4 GAP. Most commits are ng-did-it-differently (expected). The value is
@@ -216,3 +216,15 @@ the hotplug surface-recreate. Our port still calls `recreateView`; worth auditin
 | a53e0adc3 | 2026-06-18 | fix: keep launcher applet popups resizable | CHECK | Applet-popup resize; same popup cluster. |
 | a4abdcd01 | 2026-06-18 | fix: harden KNS compatibility overrides | SKIP | Extends ng's KNS compat (which we don't have — see d3ca82919 GAP). |
 | 63d575107 | 2026-06-18 | build: document relaxed warning flags | N/A | ng build-flag doc. |
+| c6e123401 | 2026-06-18 | fix: keep dock geometry aligned with edge changes | CHECK | Edge-relocation cluster via `viewgeometryhelpers.h` (absent in our port). Pairs with d26645a48/17b3b9519. |
+| c85324068 | 2026-06-18 | feat: expose launcher pinning API | SKIP | ng-specific D-Bus `hasLauncher`/pinning API for external launcher sync; not in our design. |
+| 17b3b9519 | 2026-06-18 | fix: stabilize dock edge relocation | CHECK | Same `viewgeometryhelpers` edge-relocation cluster. Verify our dock re-places cleanly on edge/alignment change. |
+| 8a86e2215 | 2026-06-18 | feat: add dock items alignment option | CHECK | We have dock `alignment` (containment config:8). ng adds a *separate* items-alignment (Left/Center/Justify within the dock). Verify whether we expose that. |
+| 9c12a79aa | 2026-06-18 | fix: harden cross-distro install packaging | N/A | CPACK distro deps + KNS; our nix build is separate. |
+| f469d0737 | 2026-06-18 | fix: translate items alignment controls | N/A | po translations. |
+| 9cbab5920 | 2026-06-18 | build: share CMake target resolution helpers | N/A | ng CMake refactor. |
+| 1585c3b21 | 2026-06-18 | build: share imported target resolution helper | N/A | ng CMake refactor. |
+| a6b6768f5 | 2026-06-18 | build: move CMake target helpers into module | N/A | ng CMake refactor. |
+| 4db3cfdf5 | 2026-06-18 | build: move low-risk CMake config into modules | N/A | ng CMake refactor. |
+| 09faa7d09 | 2026-06-18 | fix: allow isolated KNS compat user QML root | SKIP | KNS compat env (GAP — no KNS in our port). |
+| c42d3355d | 2026-06-18 | fix: reject relative KNS compat user QML root | SKIP | KNS compat hardening (GAP). |
