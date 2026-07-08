@@ -4,7 +4,15 @@
   # extends this with packages.default, overlays.default, nixosModules.default.
   description = "latte-dock Plasma 6/Qt6 port - development environment";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  # Pinned to the exact nixpkgs revision the development machine's NixOS runs
+  # (26.11, Plasma 6.6.5 / Qt 6.11.0), so the dock links the same
+  # libplasma/libtaskmanager/Qt as the live KWin compositor it is tested
+  # against. A newer pin (e.g. nixos-unstable's Plasma 6.7.2) mismatches the
+  # running compositor's plasma-window-management, which hands the tasks model
+  # only a partial window list, and its Plasma theme plugin crashes the binary.
+  # The final packaging (Phase 11) targets whatever the installing system has;
+  # this pin is only the dev/test shell.
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/567a49d1913ce81ac6e9582e3553dd90a955875f";
 
   outputs = { self, nixpkgs }:
     let
