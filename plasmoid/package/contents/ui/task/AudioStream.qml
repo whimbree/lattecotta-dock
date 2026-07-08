@@ -16,6 +16,13 @@ import org.kde.latte.components 1.0 as LatteComponents
 Item {
     id: background
 
+    //! Show plasmashell's centered media-player volume OSD (app icon + level
+    //! bar + %) for this task, matching the native volume popup. Driven from
+    //! the audio-badge scroll handler.
+    function showVolumeOsd() {
+        backend.showAudioStreamOsd(taskItem.volume, taskItem.appName, taskItem.modelLauncherUrl);
+    }
+
     Item {
         id: subRectangle
         width: parent.width/ 2
@@ -106,7 +113,13 @@ Item {
                             taskItem.increaseVolume();
                         } else if (angle < -2) {
                             taskItem.decreaseVolume();
+                        } else {
+                            return;
                         }
+
+                        //! Deferred so the (optimistic) volume change has settled
+                        //! before we read taskItem.volume for the OSD percentage.
+                        Qt.callLater(background.showVolumeOsd);
                     }
 
                     //! A timer is needed in order to handle also touchpads that probably

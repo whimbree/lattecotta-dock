@@ -646,6 +646,36 @@ void Backend::cancelHighlightWindows()
     QDBusConnection::sessionBus().asyncCall(msg);
 }
 
+void Backend::showAudioStreamOsd(int percent, const QString &appName, const QUrl &launcherUrl)
+{
+    //! Resolve the app icon from the launcher's .desktop file so the OSD shows
+    //! the application icon (audio-volume-* as a sane fallback).
+    QString iconName;
+
+    const QUrl desktopEntryUrl = tryDecodeApplicationsUrl(launcherUrl);
+
+    if (desktopEntryUrl.isValid() && desktopEntryUrl.isLocalFile()
+            && KDesktopFile::isDesktopFile(desktopEntryUrl.toLocalFile())) {
+        const KService::Ptr service = KService::serviceByDesktopPath(desktopEntryUrl.toLocalFile());
+
+        if (service) {
+            iconName = service->icon();
+        }
+    }
+
+    if (iconName.isEmpty()) {
+        iconName = QStringLiteral("audio-volume-high");
+    }
+
+    //! plasmashell's centered media-player volume OSD (app icon + bar + %).
+    QDBusMessage msg = QDBusMessage::createMethodCall(QStringLiteral("org.kde.plasmashell"),
+                                                      QStringLiteral("/org/kde/osdService"),
+                                                      QStringLiteral("org.kde.osdService"),
+                                                      QStringLiteral("mediaPlayerVolumeChanged"));
+    msg << percent << appName << iconName;
+    QDBusConnection::sessionBus().asyncCall(msg);
+}
+
 void Backend::activateWindowView(const QVariant &winIds)
 {
     cancelHighlightWindows();

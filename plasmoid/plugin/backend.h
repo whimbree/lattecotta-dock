@@ -82,6 +82,11 @@ public:
     Q_INVOKABLE void windowsHovered(const QVariant &winIds, bool hovered);
     Q_INVOKABLE void cancelHighlightWindows();
 
+    //! Show plasmashell's centered media-player volume OSD (app icon + level
+    //! bar + percentage) for a task whose audio stream volume just changed by
+    //! scroll. The icon is resolved from the task's launcher URL.
+    Q_INVOKABLE void showAudioStreamOsd(int percent, const QString &appName, const QUrl &launcherUrl);
+
 Q_SIGNALS:
     void addLauncher(const QUrl &url) const;
 
