@@ -44,6 +44,9 @@ SecondaryConfigView::SecondaryConfigView(Latte::View *view, PrimaryConfigView *p
     connect(this, &QQuickView::statusChanged, [&](QQuickView::Status status) {
         if (status == QQuickView::Ready) {
             updateEffects();
+            //! QML root is sized now, so a syncGeometry that bailed on zero
+            //! size can complete
+            syncGeometry();
         }
     });
 
@@ -92,6 +95,13 @@ void SecondaryConfigView::syncGeometry()
     }
 
     const QSize size(rootObject()->width(), rootObject()->height());
+
+    //! do not place the layer surface before the QML has a real size:
+    //! a zero-sized wlr-layer surface commit is a fatal protocol error
+    if (size.isEmpty()) {
+        return;
+    }
+
     const auto location = m_latteView->containment()->location();
     const auto scrGeometry = m_latteView->screenGeometry();
     const auto availGeometry = m_parent->availableScreenGeometry();
@@ -150,6 +160,12 @@ void SecondaryConfigView::syncGeometry()
 
     m_geometryWhenVisible = geometry;
 
+    //! size the window before touching the layer-shell anchors: an
+    //! unanchored surface committing at zero size is a fatal protocol error
+    setMaximumSize(size);
+    setMinimumSize(size);
+    resize(size);
+
     if (KWindowSystem::isPlatformWayland()) {
         //! layer-shell ignores setPosition(); like the primary config view,
         //! drop the anchors so the compositor centres it instead of welding
@@ -158,10 +174,6 @@ void SecondaryConfigView::syncGeometry()
     } else {
         setPosition(position);
     }
-
-    setMaximumSize(size);
-    setMinimumSize(size);
-    resize(size);
 
     //! after placement request to activate the main config window in order to avoid
     //! rare cases of closing settings window from secondaryConfigView->focusOutEvent

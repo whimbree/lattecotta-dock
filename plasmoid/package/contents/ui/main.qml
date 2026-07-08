@@ -497,7 +497,17 @@ PlasmoidItem {
         screenGeometry: appletAbilities.myView.screenGeometry
         // comment in order to support LTS Plasma 5.8
         // screen: Plasmoid.screen
-        activity: appletAbilities.myView.isReady ? appletAbilities.myView.lastUsedActivity : activityInfo.currentActivity
+        //! filterByActivity is on by default (showOnlyCurrentActivity), so a
+        //! wrong activity here hides every window not in it. The layout's
+        //! lastUsedActivity comes up empty when KActivities' async consumer
+        //! wasn't ready at layout init (common on wayland), which would filter
+        //! out all activity-specific windows and leave only the
+        //! on-all-activities ones. Fall back to the live current activity
+        //! (Plasma's ActivityInfo, always reliable) whenever it is empty.
+        activity: {
+            var layoutActivity = appletAbilities.myView.isReady ? appletAbilities.myView.lastUsedActivity : "";
+            return (layoutActivity && layoutActivity.length > 0) ? layoutActivity : activityInfo.currentActivity;
+        }
 
         filterByVirtualDesktop: root.showOnlyCurrentDesktop
         filterByScreen: root.showOnlyCurrentScreen

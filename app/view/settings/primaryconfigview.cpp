@@ -62,6 +62,9 @@ PrimaryConfigView::PrimaryConfigView(Latte::View *view)
     connect(this, &QQuickView::statusChanged, [&](QQuickView::Status status) {
         if (status == QQuickView::Ready) {
             updateEffects();
+            //! the QML root now has a real size, so a syncGeometry that bailed
+            //! earlier (zero size, no surface placement) can complete
+            syncGeometry();
         }
     });
 
@@ -340,6 +343,14 @@ void PrimaryConfigView::syncGeometry()
     }
 
     const QSize size(rootObject()->width(), rootObject()->height());
+
+    //! Before the QML content has laid out, rootObject reports 0x0. Committing
+    //! a zero-sized wlr-layer surface is a fatal protocol error; do not place
+    //! the window until it has a real size. rootObject's width/height changes
+    //! (connected in init()) and the post-show re-sync re-run this once sized.
+    if (size.isEmpty()) {
+        return;
+    }
     const auto location = m_latteView->containment()->location();
     const auto scrGeometry = m_latteView->screenGeometry();
     const auto availGeometry = m_availableScreenGeometry;
@@ -402,6 +413,13 @@ void PrimaryConfigView::syncGeometry()
 
     m_geometryWhenVisible = geometry;
 
+    //! size the window before touching the layer-shell anchors: an
+    //! unanchored surface that commits at zero size is a fatal protocol
+    //! error (see LayerShell::setUnanchored)
+    setMaximumSize(size);
+    setMinimumSize(size);
+    resize(size);
+
     if (KWindowSystem::isPlatformWayland()) {
         //! layer-shell ignores setPosition(). Anchoring the settings window
         //! to the dock's edge welds it to whichever edge the dock had when
@@ -411,10 +429,6 @@ void PrimaryConfigView::syncGeometry()
     } else {
         setPosition(position);
     }
-
-    setMaximumSize(size);
-    setMinimumSize(size);
-    resize(size);
 
     Q_EMIT m_latteView->configWindowGeometryChanged();
 }

@@ -89,6 +89,24 @@ public:
         AllSecondaryScreensGroup
     };
     Q_ENUM(ScreensGroup)
+
+    // Values mirror PlasmaExtras::PopupPlacement exactly, because these are
+    // assigned to a PlasmaExtras menu's `placement` (a C++ enum property): the
+    // integers must line up or popups land in the wrong spot. The tasks
+    // plasmoid's ContextMenu.qml uses LatteCore.Types.*Popup for this.
+    enum PopupPlacement
+    {
+        FloatingPopup = 0,
+        TopPosedLeftAlignedPopup = 1,
+        TopPosedRightAlignedPopup = 2,
+        LeftPosedTopAlignedPopup = 3,
+        LeftPosedBottomAlignedPopup = 4,
+        BottomPosedLeftAlignedPopup = 5,
+        BottomPosedRightAlignedPopup = 6,
+        RightPosedTopAlignedPopup = 7,
+        RightPosedBottomAlignedPopup = 8
+    };
+    Q_ENUM(PopupPlacement)
 };
 
 }//end of namespace
