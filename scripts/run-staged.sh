@@ -42,7 +42,15 @@ export QT_QPA_PLATFORM=wayland
 # process segfaults in QCoreApplication::init. The nix-built Qt finds its
 # own plugins through baked-in paths, so drop the session's list and skip
 # the platform theme integration entirely.
-unset QT_PLUGIN_PATH
+#
+# But Latte's OWN C++ plugins are staged, not system-installed - most
+# importantly plasma/containmentactions/org.kde.latte.contextmenu, which
+# builds the dock's right-click menu. With no system Latte install (the ng
+# package removed) and QT_PLUGIN_PATH empty, findPluginById() cannot locate
+# it and right-click falls through to the stock task menu. Point the path at
+# the staged plugin tree ONLY - it holds just Latte's plugins (containment
+# actions, indicator loader), no platform/theme plugin, so no segfault risk.
+export QT_PLUGIN_PATH="$stage/lib/plugins"
 export QT_QPA_PLATFORMTHEME=
 
 echo "config home: $confighome"
