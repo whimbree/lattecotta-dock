@@ -24,6 +24,9 @@
 #include <KLocalizedContext>
 #include <KWindowSystem>
 
+// Plasma
+#include <PlasmaQuick/AppletQuickItem>
+
 namespace Latte {
 namespace ViewPart {
 
@@ -83,8 +86,42 @@ SubConfigView::SubConfigView(Latte::View *view, const QString &title, const bool
 
     connections << connect(&m_showTimer, &QTimer::timeout, this, [this]() {
         syncSlideEffect();
-        show();
+        showWhenSized();
     });
+
+    //! When the window is shown deferred (wayland, waiting for a real size),
+    //! retry as soon as the content sizes it. With SizeViewToRootObject the
+    //! view resizes to the QML root's implicit size during polish, after the
+    //! 0 ms show timer has already fired.
+    connections << connect(this, &QQuickView::widthChanged, this, [this]() {
+        if (m_showDeferredUntilSized) {
+            showWhenSized();
+        }
+    });
+    connections << connect(this, &QQuickView::heightChanged, this, [this]() {
+        if (m_showDeferredUntilSized) {
+            showWhenSized();
+        }
+    });
+}
+
+bool SubConfigView::showWhenSized()
+{
+    if (isVisible()) {
+        m_showDeferredUntilSized = false;
+        return true;
+    }
+
+    //! Only the wlr-layer-shell backend rejects a zero-size surface; on X11 the
+    //! window can always be shown and will size itself afterwards.
+    if (KWindowSystem::isPlatformWayland() && size().isEmpty()) {
+        m_showDeferredUntilSized = true;
+        return false;
+    }
+
+    m_showDeferredUntilSized = false;
+    show();
+    return true;
 }
 
 SubConfigView::~SubConfigView()
@@ -176,8 +213,13 @@ void SubConfigView::initParentView(Latte::View *view)
 
     viewconnections << connect(m_latteView->positioner(), &ViewPart::Positioner::canvasGeometryChanged, this, &SubConfigView::syncGeometry);
 
-    //! Assign app interfaces in be accessible through containment graphic item
-    QQuickItem *containmentGraphicItem = qobject_cast<QQuickItem *>(m_latteView->containment()->property("_plasma_graphicObject").value<QObject *>());
+    //! Assign app interfaces to be accessible through the containment graphic
+    //! item. On Plasma 6 the _plasma_graphicObject property is gone; the item is
+    //! resolved through AppletQuickItem. Without this the "plasmoid" context
+    //! property is null, so the config QML's root Loader (active: plasmoid &&
+    //! plasmoid.configuration && latteView) never loads and the edit panel has
+    //! no content or size.
+    QQuickItem *containmentGraphicItem = PlasmaQuick::AppletQuickItem::itemForApplet(m_latteView->containment());
     rootContext()->setContextProperty(QStringLiteral("plasmoid"), containmentGraphicItem);
     rootContext()->setContextProperty(QStringLiteral("latteView"), m_latteView);
 
@@ -249,12 +291,18 @@ void SubConfigView::setupWaylandIntegration()
         return;
     }
 
-    //! start anchored to the parent dock's edge, centered along it; the
-    //! subclasses re-place the surface from their syncGeometry() (the
-    //! settings windows drop the anchors entirely, the canvas overlays the
-    //! dock's geometry). Config windows take keyboard focus, unlike the dock.
+    //! Associate a layer surface but leave it unanchored and unsized. These are
+    //! floating, content-sized config windows, not edge docks: seeding a size
+    //! here (as configureView() does for the dock) lets the window be shown
+    //! before its QML has laid out, and a wlr-layer surface committed at zero
+    //! width without spanning both horizontal screen edges is a fatal protocol
+    //! error. showWhenSized() holds the first commit until syncGeometry() has a
+    //! real size, and each subclass places the surface from there (the settings
+    //! windows stay unanchored/centered, the canvas overlays the dock geometry).
+    //! Config windows take keyboard focus, unlike the dock.
     namespace LS = Latte::WindowSystem::LayerShell;
-    LS::configureView(this, m_latteView->screen(), m_latteView->location(), Latte::Types::Center);
+    LS::setUnanchored(this);
+    LS::applyLayer(this, Latte::Types::AlwaysVisible); //! keep config windows on the top layer
     LS::setFocusPolicy(this, true);
 
     updateWaylandId();

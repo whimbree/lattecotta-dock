@@ -342,7 +342,14 @@ void PrimaryConfigView::syncGeometry()
         return;
     }
 
-    const QSize size(rootObject()->width(), rootObject()->height());
+    //! The config QML root is a Loader (active: plasmoid && ... && latteView);
+    //! the sized dialog is its loaded item. Read the item's size, because the
+    //! Loader itself does not take on the explicitly-sized item's width/height.
+    QQuickItem *content = rootObject();
+    if (QQuickItem *loaded = rootObject()->property("item").value<QQuickItem *>()) {
+        content = loaded;
+    }
+    const QSize size(content->width(), content->height());
 
     //! Before the QML content has laid out, rootObject reports 0x0. Committing
     //! a zero-sized wlr-layer surface is a fatal protocol error; do not place

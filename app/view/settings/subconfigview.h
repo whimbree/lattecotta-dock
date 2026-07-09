@@ -85,11 +85,20 @@ private Q_SLOTS:
 
 private:
     void setupWaylandIntegration();
+    //! On wayland the window must not be shown (which commits the wlr-layer
+    //! surface) until it has a real size: a zero-width layer surface that is
+    //! not anchored to both horizontal screen edges is a fatal protocol error,
+    //! and these config windows are content-sized (0x0 until their QML lays
+    //! out). Returns true and shows when sized; false while still waiting.
+    bool showWhenSized();
 
 private:
     QString m_validTitle;
 
     QTimer m_showTimer;
+
+    //! a show was requested but deferred until the window has a real size
+    bool m_showDeferredUntilSized{false};
 
     Latte::WindowSystem::WindowId m_waylandWindowId;
 };
