@@ -31,7 +31,12 @@ Item{
     property bool isStartup: IsStartup ? true : false
     property bool isWindow: IsWindow ? true : false
 
-    property int lastActiveWinInGroup: -1
+    //! Holds a window id from WinIdList, or -1 for "none". On Plasma 6 Wayland
+    //! those ids are QString UUIDs, not ints, so this must be var: an int
+    //! property threw "Cannot assign QString to int" on every activation change
+    //! and never tracked the active window, breaking group cycling. The -1
+    //! sentinel and the identity comparisons below still work with strings.
+    property var lastActiveWinInGroup: -1
 
     //states that exist in windows in a Group of windows
     property bool hasMinimized: false;
