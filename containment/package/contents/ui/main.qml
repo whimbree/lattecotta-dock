@@ -830,9 +830,17 @@ ContainmentItem {
         //! behind the applets in the dock window itself.
         Image {
             id: editBlueprint
-            anchors.fill: parent
+            //! Sized to editThickness at the screen edge, like Qt5's edit visual: the
+            //! window is taller than the edit area (parabolic zoom headroom), so filling
+            //! it would draw the grid far above the dock.
+            width: root.isHorizontal ? parent.width : thickness
+            height: root.isHorizontal ? thickness : parent.height
+            x: Plasmoid.location === PlasmaCore.Types.RightEdge ? parent.width - width : 0
+            y: Plasmoid.location === PlasmaCore.Types.BottomEdge ? parent.height - height : 0
             fillMode: Image.Tile
             source: latteView && latteView.layout ? latteView.layout.background : ""
+
+            readonly property int thickness: latteView ? latteView.editThickness : 0
 
             visible: opacity > 0
             //! Hidden in configure-applets mode: there the canvas window overlays the dock
@@ -860,7 +868,6 @@ ContainmentItem {
                     easing.type: Easing.OutCubic
                 }
             }
-
         }
 
         Layouts.LayoutsContainer {
