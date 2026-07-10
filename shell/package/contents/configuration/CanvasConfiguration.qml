@@ -105,6 +105,11 @@ Loader {
         Image{
             id: imageTiler
             anchors.fill: parent
+            //! The containment draws the blueprint inside the dock window now; a second
+            //! copy here paints over the dock, since this window stacks in front of it.
+            //! The item stays for its geometry (the wheel MouseArea anchors to it) and
+            //! its opacity value (SettingsOverlay picks text contrast from it).
+            visible: false
             opacity: root.maxOpacity
             fillMode: Image.Tile
             source: latteView.layout ? latteView.layout.background : "../images/canvas/blueprint.jpg"
