@@ -282,16 +282,23 @@ Column {
                 //                    onClicked: mpris2Source.raise(mprisSourceName)
                 //                }
 
+                //! Drawn directly, deliberately WITHOUT the Qt5 OpacityMask
+                //! (glass trimmed to the thumbnail's alpha). Its port here was a
+                //! MultiEffect with maskSource: thumbnailSourceItem - a plain
+                //! non-layered Item, which is not a valid texture provider, so
+                //! the mask never actually applied ('ShaderEffect: Texture t1 is
+                //! not assigned a valid texture provider' on every media preview
+                //! render) and the glass already rendered unmasked. Worse, that
+                //! permanently-invalid sampler made popup teardown/content
+                //! switches crash the render thread (SIGSEGV in buildRenderLists
+                //! during QSGRhiLayer::grab; user recipe: right-click a widget
+                //! and dismiss while a media app's preview churns). Layering the
+                //! live pipewire thumbnail to make the mask real would feed the
+                //! same crash class, so the mask stays dropped: identical pixels
+                //! to what this port always showed, without the crash vector.
                 Item {
                     id: playerControlsFrostedGlass
                     anchors.fill: parent
-                    visible: false // MultiEffect renders it as a source; not drawn directly
-
-                    Rectangle {
-                        width: parent.width
-                        height: parent.height - playerControlsRow.height
-                        opacity: 0
-                    }
 
                     Rectangle {
                         anchors.bottom: parent.bottom
@@ -300,16 +307,6 @@ Column {
                         color: Kirigami.Theme.backgroundColor
                         opacity: 0.8
                     }
-                }
-
-                MultiEffect {
-                    id: playerControlsOpacityMask
-                    anchors.fill: parent
-                    source: playerControlsFrostedGlass
-                    maskEnabled: true
-                    maskSource: thumbnailSourceItem
-                    maskThresholdMin: 0.0
-                    maskSpreadAtMin: 1.0
                 }
 
                 // prevent accidental click-through when a control is disabled
