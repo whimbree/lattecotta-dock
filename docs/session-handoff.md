@@ -87,21 +87,96 @@ COMPLETELY STATIONARY pointer:
    QWindow::size() vs x=681 from the new mainItem size) every ~10ms while the
    on-screen popup stayed at the first mapped position.
 
-Proposed fix (waiting for user go):
-- Primary, in Parabolic::onEvent: remember the last windowPos and DROP
-  MouseMove-derived parabolic updates whose window position has not changed.
-  Item movement under a stationary pointer then stops masquerading as mouse
-  movement, the loop cannot sustain, and real pointer-driven behavior is
-  untouched (Qt5/X11-faithful: those synthetic events did not reach this path
-  there). Implementation step 1 is a qDebug print of windowPos in onEvent to
-  confirm constancy during a storm, then the guard.
-- Secondary cleanup, same defect surface as the old "mispositions on fast
-  re-hover" backlog item: Dialog::updateGeometry() computes with the stale
-  QWindow::size() while syncToMainItemSize uses the new mainItem size; make
-  updateGeometry use the mainItem size (or skip while a resize is pending).
-- The PORTING_PLAN Phase 7 "always-visible MouseArea, synchronous parabolic
-  calc" note (latte-dock-ng 0deca9e18) is the structural long-term shape, but
-  the windowPos dedupe is the minimal Qt5-faithful cut and can land first.
+IMPLEMENTED (user go given), iterated live with the user across four rounds,
+currently UNCOMMITTED in the working tree awaiting their final verdict:
+
+1. Parabolic::onEvent drops MouseMove-derived updates whose window position
+   has not changed (kills the stationary feedback loop; user confirmed "it no
+   longer jitters"). Honest caveat: the guard's drop path was never observed
+   firing post-fix; the original storm conditions did not fully reproduce.
+2. Dialog::updateGeometry() positions with the size the dialog is about to
+   have (mainItem + frame margins) instead of the stale QWindow::size().
+3. Dialog anchor-follow is pinned: reposition once per (anchor, size) change
+   instead of on every parabolic wiggle of the anchor item; plus one explicit
+   placement on visualParent change (covers same-sized content switches) and
+   an explicit reposition whenever the mainItem resizes (base class proved
+   unreliable there on wayland: a placement computed for the previous content
+   width survived a resize, popup sat half a width off).
+4. The previews dialog opts out of the applets-layout clamp
+   (respectsAppletsLayoutGeometry: false): the clamp shoved wide previews for
+   tasks near the dock ends sideways off their icon.
+5. Previews anchor to a RESTING midpoint (user's own suggestion): every task
+   carries an invisible anchor whose center is sampled while the row is fully
+   at rest and frozen during zoom AND during the restore animation
+   (3*animationTime + margin; unfreezing right when currentParabolicItem
+   clears sampled mid-restore midpoints, reproduced by the user with quick
+   hover-away-and-back). TaskItem.qml _previewsVisualParent.
+
+6. THE ACTUAL WAYLAND ROOT CAUSE of every "popup stuck at the previous
+   task's spot" symptom, found with WAYLAND_DEBUG=1: QWindow::setPosition()
+   and setGeometry() position parts are NO-OPs for a visible wayland window
+   (client position stays frozen at the show-time value forever), AND the
+   base PlasmaQuick::Dialog re-sends that frozen QWindow::position() to the
+   plasmashell surface on every QEvent::Move and on expose
+   (libplasma dialog.cpp event handler + updateVisibility()), overriding any
+   correct placement right after it is made. Fix: updateGeometry() sends the
+   anchored position through PlasmaShellWaylandIntegration::setPosition()
+   (public PlasmaQuick API, works on visible surfaces; required generating
+   qwayland-plasma-shell.h in declarativeimports/core the way app/ already
+   generates other protocols), remembers it, and Dialog::event() re-asserts
+   it AFTER the base class handles Move/Expose so ours is always the last
+   request the compositor sees; cleared on Hide so show-time placement stays
+   the base class's. Protocol-log verified: every stale re-send is now
+   followed by the anchored position, last word ours.
+
+The PORTING_PLAN Phase 7 "always-visible MouseArea, synchronous parabolic
+calc" note (latte-dock-ng 0deca9e18) remains the structural long-term shape.
+User confirmed no jitter within an icon; the final cross-icon slide test on
+the (now multi-monitor) setup is still awaiting their verdict, then the
+whole set can be committed in reviewable pieces.
+
+## Multi-monitor: edit-mode windows use stale/wrong screen geometry (NEW, Phase 8)
+
+User added a second monitor (portrait 1440x2560 at (0,0), landscape 2560x1440
+at (1440,447)) and entered edit mode on the portrait dock. The settings
+window landed at (2031,7) sized 529x1287: exactly the values computed for
+the OLD single-screen 2560x1440 layout (x = 2560-529, y = 1440-146-1287),
+i.e. floating in dead space above the landscape screen. Edit-mode window
+geometry (PrimaryConfigView::syncGeometry inputs: screenGeometry,
+m_availableScreenGeometry, canvasGeometry) must re-derive from the edited
+view's CURRENT screen after output hotplug, and the layer-surface output
+assignment (QWindow::setScreen at SubConfigView construction) must be
+re-checked against where margins are computed (applyFixedGeometry margins
+are relative to the passed screenGeometry and only correct when the surface
+sits on that same output). This is the first concrete Phase 8 multi-screen
+work item; do it WITH the dual-monitor setup live, per the plan's warning
+that both reference forks fought multi-screen repeatedly.
+
+## Dock exits ~20s after screen lock/unlock cycles (open, now well-scoped)
+
+Twice observed: a screen remove/re-add cycle (lock or dpms), handled cleanly
+by the positioner, then ~22s later 'Latte Corona - unload: containments' with
+NO logged trigger, i.e. a clean app quit. Only three programmatic quit paths
+exist (dbus quitApplication, settings dialog, importFullConfiguration) and
+none tie to screens, so suspect an external SIGTERM or dbus call. Next step:
+log the quit reason (KCrash/KSignalHandler or a SIGTERM handler qWarning) and
+check what else runs at unlock. Before 72deaa8c these exits looked like
+crashes because teardown itself segfaulted (~Theme null schemes).
+
+## Add-panel crash (open, core retained)
+
+User's 'add default panel' crashed: Storage::importLayoutFile iterated
+corona()->importLayout() results and one containment pointer was ALREADY
+FREED (first bytes 0x1) when isLatteContainment() copied its metadata
+(kcoreaddons KPluginMetaData copy ctor SEGV). Something destroys a containment
+synchronously during template import. NOT deterministic: a headless
+reproduction (busctl org.kde.LatteDock addView us 0 "Default Panel") imported
+cleanly. Core: coredumpctl 3933991 (02:06). The crashed attempt left a
+half-imported left-edge panel in the layout (cleaned). Candidate suspects to
+instrument next: GenericLayout::addContainment side effects during
+importLayout, subcontainment (systemtray) handling, and the icontasks
+package-load failure ('Could not find required file mainscript') seen during
+imports.
 
 ## Edit mode layout (user-requested, COMMITTED, live-verified)
 

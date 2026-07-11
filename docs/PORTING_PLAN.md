@@ -983,6 +983,17 @@ wallpaper stacking across the dock and CanvasConfigView surfaces).
       actually true, and nothing re-triggers the sync once both sides
       finish otherwise
       Commits:
+- [ ] Edit-mode windows must re-derive geometry from the edited view's
+      CURRENT screen after output hotplug (found live 2026-07-11 when a
+      second monitor was added: the settings window kept the exact
+      position/size computed for the old single-screen layout, landing
+      in dead space between outputs). Also pair layer-surface output
+      assignment with the screen the margins are computed against
+      (LayerShell::applyFixedGeometry offsets are relative to the
+      passed screenGeometry and only land right when the surface is on
+      that output). See "Multi-monitor" section in
+      docs/session-handoff.md for the measured evidence
+      Commits:
 - [ ] Fix multi-screen palette divergence: pin
       `Kirigami.Theme.inherit: false` with an explicit `colorSet`, and
       set `KDE_COLOR_SCHEME_PATH` explicitly and early (in the `View`
