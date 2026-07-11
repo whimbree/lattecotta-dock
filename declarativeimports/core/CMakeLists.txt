@@ -10,11 +10,20 @@ set(lattecoreplugin_SRCS
     types.h
 )
 
+# dialog.cpp uses PlasmaQuick's PlasmaShellWaylandIntegration, whose public
+# header includes the generated qwayland-plasma-shell.h; generate it here the
+# same way libplasma does internally
+ecm_add_qtwayland_client_protocol(lattecoreplugin_SRCS
+    PROTOCOL ${PLASMA_WAYLAND_PROTOCOLS_DIR}/plasma-shell.xml
+    BASENAME plasma-shell
+)
+
 add_library(lattecoreplugin SHARED ${lattecoreplugin_SRCS})
 
 target_link_libraries(lattecoreplugin
     Qt6::Quick
     Qt6::Qml
+    Qt6::WaylandClient
     KF6::CoreAddons
     KF6::Svg
     KF6::WindowSystem

@@ -9,6 +9,12 @@
 #include <QScreen>
 #include <QWindow>
 
+// KDE
+#include <KWindowSystem>
+
+// Plasma
+#include <plasmaquick/plasmashellwaylandintegration.h>
+
 
 namespace Latte {
 namespace Quick {
@@ -17,6 +23,25 @@ Dialog::Dialog(QQuickItem *parent)
     : PlasmaQuick::Dialog(parent)
 {
     connect(this, &PlasmaQuick::Dialog::visualParentChanged, this, &Dialog::onVisualParentChanged);
+
+    //! reposition when the content resizes. The base class is not reliable
+    //! here on wayland during rapid content switches, and a stale placement
+    //! computed for the previous content width then survives the resize
+    //! (previews window observed sitting half its width off its task).
+    connect(this, &PlasmaQuick::Dialog::mainItemChanged, this, &Dialog::onMainItemChanged);
+    onMainItemChanged();
+}
+
+void Dialog::onMainItemChanged()
+{
+    for (auto &c : m_mainItemConnections) {
+        disconnect(c);
+    }
+
+    if (mainItem()) {
+        m_mainItemConnections[0] = connect(mainItem(), &QQuickItem::widthChanged, this, &Dialog::updateGeometry);
+        m_mainItemConnections[1] = connect(mainItem(), &QQuickItem::heightChanged, this, &Dialog::updateGeometry);
+    }
 }
 
 bool Dialog::containsMouse() const
@@ -49,8 +74,27 @@ void Dialog::setEdge(const Plasma::Types::Location &edge)
     Q_EMIT edgeChanged();
 }
 
+bool Dialog::respectsAppletsLayoutGeometry() const
+{
+    return m_respectsAppletsLayoutGeometry;
+}
+
+void Dialog::setRespectsAppletsLayoutGeometry(bool respects)
+{
+    if (m_respectsAppletsLayoutGeometry == respects) {
+        return;
+    }
+
+    m_respectsAppletsLayoutGeometry = respects;
+    Q_EMIT respectsAppletsLayoutGeometryChanged();
+}
+
 bool Dialog::isRespectingAppletsLayoutGeometry() const
 {
+    if (!m_respectsAppletsLayoutGeometry) {
+        return false;
+    }
+
     //! As it appears plasma applets popups are defining their popups to Normal window.
     //! Dock type is needed from wayland scenario. In wayland after a while popups from Normal become Dock types
     return (type() == Dialog::Normal || type() == Dialog::PopupMenu || type() == Dialog::Tooltip || type() == Dialog::Dock);
@@ -84,12 +128,58 @@ void Dialog::onVisualParentChanged()
     if (hassignal) {
         m_visualParentConnections[0] = connect(visualParent(), SIGNAL(anchoredTooltipPositionChanged()) , this, SLOT(updateGeometry()));
     }
+
+    //! one placement per anchor change. Anchors without the follow signal
+    //! (the previews' resting anchor) would otherwise only be honored on the
+    //! next resize, so switching between two same-sized contents would leave
+    //! the window sitting over the previous anchor.
+    if (isVisible()) {
+        updateGeometry();
+    }
 }
 
 void Dialog::updateGeometry()
 {
-    if (visualParent()) {
-        setPosition(popupPosition(visualParent(), size()));
+    //! while hidden the base class places the window itself on show
+    if (!visualParent() || !isVisible()) {
+        return;
+    }
+
+    //! Position with the size the dialog is about to have, not the stale
+    //! QWindow::size(). When the previews content switches to another task
+    //! the mainItem has already resized while the window has not caught up
+    //! yet; centering on the anchor with the old width fights the base
+    //! class's syncToMainItemSize() placement (which uses the new size) and
+    //! the popup visibly bounces between the two spots on every crossing.
+    QSize nextSize = size();
+
+    if (mainItem()) {
+        QSizeF pending(mainItem()->width(), mainItem()->height());
+
+        if (QObject *frameMargins = margins()) {
+            pending += QSizeF(frameMargins->property("left").toReal() + frameMargins->property("right").toReal(),
+                              frameMargins->property("top").toReal() + frameMargins->property("bottom").toReal());
+        }
+
+        if (!pending.isEmpty()) {
+            nextSize = pending.toSize();
+        }
+    }
+
+    const QPoint target = popupPosition(visualParent(), nextSize);
+
+    adjustGeometry(QRect(target, nextSize));
+
+    //! QWindow-level moves (setPosition()/setGeometry()) are NO-OPs for a
+    //! visible wayland window: the logged window position stayed frozen
+    //! through every call while the previews window switched tasks, so the
+    //! popup kept showing new content at the previous task's spot. The
+    //! plasmashell surface can be positioned at any time; this is the same
+    //! integration the base class uses for its show-time placement.
+    if (KWindowSystem::isPlatformWayland()) {
+        m_pendingWaylandPosition = target;
+        m_hasPendingWaylandPosition = true;
+        PlasmaShellWaylandIntegration::get(this)->setPosition(target);
     }
 }
 
@@ -255,7 +345,30 @@ bool Dialog::event(QEvent *e)
         setContainsMouse(false);
     }
 
-    return PlasmaQuick::Dialog::event(e);
+    const bool result = PlasmaQuick::Dialog::event(e);
+
+    //! The base class re-sends QWindow::position() to the plasmashell
+    //! surface on every Move event and on expose (libplasma dialog.cpp,
+    //! QEvent::Move handler and updateVisibility()). On wayland that value
+    //! is permanently stuck at the show-time position, so each re-send
+    //! teleports the window back and undoes updateGeometry()'s anchored
+    //! placement (watched live in WAYLAND_DEBUG: every one of our
+    //! set_position requests was followed by one carrying the stale spot).
+    //! Re-assert the anchored position AFTER the base has handled the
+    //! event, so ours is always the last request the compositor sees.
+    if (m_hasPendingWaylandPosition
+            && isVisible()
+            && (e->type() == QEvent::Move || e->type() == QEvent::Expose)) {
+        PlasmaShellWaylandIntegration::get(this)->setPosition(m_pendingWaylandPosition);
+    }
+
+    if (e->type() == QEvent::Hide) {
+        //! next show is placed fresh by the base class; a stale anchored
+        //! position must not override it
+        m_hasPendingWaylandPosition = false;
+    }
+
+    return result;
 }
 
 }
