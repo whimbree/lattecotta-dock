@@ -30,6 +30,7 @@
 #include "fake-input-client-protocol.h"
 
 #define BTN_LEFT 0x110
+#define BTN_RIGHT 0x111
 
 static struct org_kde_kwin_fake_input *fake_input = NULL;
 
@@ -59,8 +60,8 @@ static const struct wl_registry_listener registry_listener = {
 
 int main(int argc, char **argv)
 {
-    if (argc != 4 || (strcmp(argv[1], "move") && strcmp(argv[1], "click"))) {
-        fprintf(stderr, "usage: %s move|click <x> <y>\n", argv[0]);
+    if (argc != 4 || (strcmp(argv[1], "move") && strcmp(argv[1], "click") && strcmp(argv[1], "rightclick"))) {
+        fprintf(stderr, "usage: %s move|click|rightclick <x> <y>\n", argv[0]);
         return 2;
     }
     double x = atof(argv[2]);
@@ -87,12 +88,13 @@ int main(int argc, char **argv)
         wl_fixed_from_double(x), wl_fixed_from_double(y));
     wl_display_roundtrip(display);
 
-    if (strcmp(argv[1], "click") == 0) {
+    if (strcmp(argv[1], "click") == 0 || strcmp(argv[1], "rightclick") == 0) {
+        uint32_t btn = (strcmp(argv[1], "rightclick") == 0) ? BTN_RIGHT : BTN_LEFT;
         usleep(100000);
-        org_kde_kwin_fake_input_button(fake_input, BTN_LEFT, 1);
+        org_kde_kwin_fake_input_button(fake_input, btn, 1);
         wl_display_roundtrip(display);
         usleep(50000);
-        org_kde_kwin_fake_input_button(fake_input, BTN_LEFT, 0);
+        org_kde_kwin_fake_input_button(fake_input, btn, 0);
         wl_display_roundtrip(display);
     }
 
