@@ -140,7 +140,7 @@ void WidgetExplorerView::syncGeometry()
         //! screen's top-left so it lands as the left-hand panel the slide-in
         //! effect (Slide::Left) already implies.
         namespace LS = Latte::WindowSystem::LayerShell;
-        LS::applyFixedGeometry(this, geometry, m_latteView->screenGeometry());
+        LS::applyFixedGeometry(this, m_latteView->screen(), geometry, m_latteView->screenGeometry());
     } else {
         setPosition(geometry.topLeft());
     }

@@ -110,7 +110,7 @@ void CanvasConfigView::syncGeometry()
         //! layer-shell ignores setPosition(), and the Center-anchored config
         //! from SubConfigView would drop the canvas centred on the dock's
         //! edge; anchor it so it overlays the dock's canvas geometry exactly
-        Latte::WindowSystem::LayerShell::applyCanvasPlacement(this, m_latteView->location(), geometry, m_latteView->screenGeometry());
+        Latte::WindowSystem::LayerShell::applyCanvasPlacement(this, m_latteView->location(), m_latteView->screen(), geometry, m_latteView->screenGeometry());
     } else {
         setPosition(geometry.topLeft());
     }

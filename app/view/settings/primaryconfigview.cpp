@@ -431,7 +431,7 @@ void PrimaryConfigView::syncGeometry()
         //! centres the window mid-screen, nowhere near the dock; pin it to
         //! the position computed above (right end of the available area,
         //! sitting on the edit canvas) the same way the widget explorer does.
-        Latte::WindowSystem::LayerShell::applyFixedGeometry(this, geometry, scrGeometry);
+        Latte::WindowSystem::LayerShell::applyFixedGeometry(this, m_latteView->screen(), geometry, scrGeometry);
     } else {
         setPosition(position);
     }

@@ -252,9 +252,20 @@ CanvasPlacement canvasPlacement(Plasma::Types::Location location,
 }
 
 void applyCanvasPlacement(QWindow *window, Plasma::Types::Location location,
-                          const QRect &canvasGeometry, const QRect &screenGeometry)
+                          QScreen *screen, const QRect &canvasGeometry, const QRect &screenGeometry)
 {
     if (LSW *ls = LSW::get(window)) {
+        //! same output rule as applyFixedGeometry: the placement margins are
+        //! relative to @p screenGeometry, so the surface must be on that
+        //! output or the whole edit chrome lands on the wrong monitor
+        //! (observed live: blueprint spanning the neighboring screen)
+        if (screen) {
+            window->setScreen(screen);
+#ifdef LATTE_LAYERSHELL_HAS_SET_SCREEN
+            ls->setScreen(screen);
+#endif
+        }
+
         const CanvasPlacement placement = canvasPlacement(location, canvasGeometry, screenGeometry);
 
         //! the canvas is an overlay, not a strut-reserving panel: it must not
@@ -272,9 +283,22 @@ void applyCanvasPlacement(QWindow *window, Plasma::Types::Location location,
     }
 }
 
-void applyFixedGeometry(QWindow *window, const QRect &geometry, const QRect &screenGeometry)
+void applyFixedGeometry(QWindow *window, QScreen *screen, const QRect &geometry, const QRect &screenGeometry)
 {
     if (LSW *ls = LSW::get(window)) {
+        //! the margins below are computed against @p screenGeometry, so the
+        //! surface MUST sit on that output: config windows are reused across
+        //! views and screens, and a stale output assignment lands the window
+        //! on the wrong monitor with the other monitor's offsets (observed
+        //! live: settings window cut off, widget explorer opening on the
+        //! neighboring screen)
+        if (screen) {
+            window->setScreen(screen);
+#ifdef LATTE_LAYERSHELL_HAS_SET_SCREEN
+            ls->setScreen(screen);
+#endif
+        }
+
         //! a pop-up surface reserves nothing; a stale exclusive edge from the
         //! parent-dock anchoring would both hold a strut and, if not among the
         //! anchors below, make the compositor kill the surface
