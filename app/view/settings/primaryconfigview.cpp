@@ -372,14 +372,13 @@ void PrimaryConfigView::syncGeometry()
 
     switch (m_latteView->formFactor()) {
     case Plasma::Types::Horizontal: {
-        if (inAdvancedMode()) {
-            if (qApp->isLeftToRight()) {
-                xPos = availGeometry.x() + availGeometry.width() - size.width();
-            } else {
-                xPos = availGeometry.x();
-            }
+        //! always at the screen's end, clear of the dock's center where the
+        //! rearrange toggle and the widgets being configured live (Qt5 only
+        //! did this in advanced mode; centered it covers what is edited)
+        if (qApp->isLeftToRight()) {
+            xPos = availGeometry.x() + availGeometry.width() - size.width();
         } else {
-            xPos = scrGeometry.center().x() - size.width() / 2;
+            xPos = availGeometry.x();
         }
 
         if (location == Plasma::Types::TopEdge) {
@@ -428,11 +427,11 @@ void PrimaryConfigView::syncGeometry()
     resize(size);
 
     if (KWindowSystem::isPlatformWayland()) {
-        //! layer-shell ignores setPosition(). Anchoring the settings window
-        //! to the dock's edge welds it to whichever edge the dock had when
-        //! it opened; dropping the anchors lets the compositor centre it on
-        //! the screen, clear of the dock wherever the dock sits.
-        Latte::WindowSystem::LayerShell::setUnanchored(this);
+        //! layer-shell ignores setPosition(). Unanchored the compositor
+        //! centres the window mid-screen, nowhere near the dock; pin it to
+        //! the position computed above (right end of the available area,
+        //! sitting on the edit canvas) the same way the widget explorer does.
+        Latte::WindowSystem::LayerShell::applyFixedGeometry(this, geometry, scrGeometry);
     } else {
         setPosition(position);
     }
