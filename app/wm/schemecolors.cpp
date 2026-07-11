@@ -162,6 +162,12 @@ QString SchemeColors::possibleSchemeFile(QString scheme)
 
         bool supportsAutoAccentColor{false}; // introduced on plasma 5.25
 
+        //! no kdeglobals at all (fresh user, throwaway config home): resolve
+        //! to the stock scheme instead of keeping the literal "kdeglobals",
+        //! which would be looked up as color-schemes/kdeglobals.colors below,
+        //! never match, and leave the caller with no scheme file at all
+        tempScheme = "BreezeLight";
+
         if (QFileInfo(settingsFile).exists()) {
             KSharedConfigPtr filePtr = KSharedConfig::openConfig(settingsFile);
             KConfigGroup wmGroup = KConfigGroup(filePtr, "WM");

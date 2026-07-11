@@ -90,8 +90,15 @@ Theme::~Theme()
 {
     saveConfig();
 
-    m_defaultScheme->deleteLater();
-    m_reversedScheme->deleteLater();
+    //! the schemes legitimately do not exist when the theme is destroyed
+    //! before load() ever ran (teardown of a corona that failed mid-init)
+    if (m_defaultScheme) {
+        m_defaultScheme->deleteLater();
+    }
+
+    if (m_reversedScheme) {
+        m_reversedScheme->deleteLater();
+    }
 }
 
 bool Theme::hasShadow() const
@@ -183,8 +190,16 @@ WindowSystem::SchemeColors *Theme::darkTheme() const
 
 void Theme::setOriginalSchemeFile(const QString &file)
 {
-    if (m_originalSchemePath == file) {
+    //! an unchanged path is only "done" when the schemes actually exist; the
+    //! very first call with an unresolved (empty) file matches the initial
+    //! empty path, and returning here would leave them null forever
+    if (m_originalSchemePath == file && m_defaultScheme && m_reversedScheme) {
         return;
+    }
+
+    if (file.isEmpty() || !QFileInfo(file).exists()) {
+        qWarning() << "plasma theme original scheme file could not be resolved (" << file
+                   << "); scheme colors will fall back to built-in defaults";
     }
 
     m_originalSchemePath = file;
