@@ -32,7 +32,11 @@ Item {
         sourceComponent: LatteComponents.ShadowedItem{
             anchors.fill: parent
             shadowColor: appletItem.myView.itemShadow.shadowColor
-            source: colorizer
+            //! sample the wrapper's layer, NOT the colorizer MultiEffect: an
+            //! effect is not a texture provider itself (invalid t1 sampler,
+            //! same defect as the colorizer source), and the shadow only
+            //! needs the alpha shape, which colorization preserves
+            source: wrapper
             shadowSizePx: shadowSize
             shadowVerticalOffset: forcedShadow ? 0 : 2
 

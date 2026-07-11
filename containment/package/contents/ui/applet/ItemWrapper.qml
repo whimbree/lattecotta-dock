@@ -69,6 +69,17 @@ Item{
 
     opacity: appletColorizer.mustBeShown && appletItem.environment.isGraphicsSystemAccelerated ? 0 : 1
 
+    //! The colorizer MultiEffect samples this wrapper as its source. Qt6
+    //! MultiEffect does NOT auto-wrap a plain Item the way Qt5's Colorize did:
+    //! without a layer the sampler is invalid ('ShaderEffect: Texture t1 is
+    //! not assigned a valid texture provider'), the applet renders BLANK while
+    //! colorized (opacity 0 above hides the original and the copy draws
+    //! nothing) and the invalid provider corrupts the scenegraph walk -
+    //! reproducible SIGSEGV in buildRenderLists on active-window changes
+    //! (context menu open and dismiss). Track the colorizer's animated
+    //! opacity so the texture stays valid through the whole fade.
+    layer.enabled: appletColorizer.opacity > 0 && appletItem.environment.isGraphicsSystemAccelerated
+
     property bool disableLengthScale: false
     property bool disableThicknessScale: false
 
@@ -453,6 +464,12 @@ Item{
         id:_wrapperContainer
         width: root.isHorizontal ? _length : _thickness
         height: root.isHorizontal ? _thickness : _length
+
+        //! the applet shadow ShadowedItem samples this container; same Qt6
+        //! contract as the wrapper's colorizer layer above: a MultiEffect
+        //! source must be a real texture provider, so keep a layer while the
+        //! shadow is active (Qt5's DropShadow wrapped sources itself)
+        layer.enabled: appletShadow.active
 
         property int _length:0 // through Binding to avoid binding loops
         property int _thickness:0 // through Binding to avoid binding loops
