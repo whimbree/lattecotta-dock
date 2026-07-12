@@ -1022,19 +1022,25 @@ multi-view, multi-monitor setup.
       modules -> zero errors, and the right-click menu is still Latte's
       (the shadowing regression check)
       Commits: 4c9f3bc7
-- [ ] Duplicated docks: applets come out in a DIFFERENT ORDER than the
+- [x] Duplicated docks: applets come out in a DIFFERENT ORDER than the
       original (user-observed live) - matches the ng-documented
       applet-order sync defect class. Note: live config mirroring
       (e.g. pinned tasks appearing on the copy) is NOT expected for
       duplicates, only for screens-group clones; document that
-      distinction somewhere user-visible. PREREQUISITE LANDED
-      2026-07-12: c3d15966 fixed config-sync establishment, which the
-      order machinery rides on. RETEST NEEDED on a layout with
-      rearranged applets (non-default appletOrder) - default-order
-      layouts cannot exhibit the defect; the throwaway layout's docks
-      are all default-order, so use the user's real layout in the
-      interactive session
-      Commits:
+      distinction somewhere user-visible (moved to the replication
+      design doc). ROOT-CAUSED AND FIXED 2026-07-12 with a synthetic
+      reproduction (non-default appletOrder written into the throwaway
+      layout, duplicateView driven over D-Bus): the defect was far
+      bigger than duplication. save()'s collector read the applet id
+      off the GRAPHIC item, which lost its 'id' property on Plasma 6,
+      so every dock's stored order was wiped to default on EVERY
+      startup - rearrangements never survived a restart, and
+      duplicates inherited nothing for the (working) id remap to
+      remap. After the fix all three docks persist real orders and a
+      duplicate's appletOrder maps to exactly the original's plugin
+      sequence
+      Commits: 9a6f8fb8 (id chain), c3d15966 (config-sync
+      prerequisite)
 - [x] Verify duplicated/cloned docks actually establish applet config
       sync after the initial 'org.kde.sync ... was not established'
       storm (the 1s retry in ContainmentInterface should log 'delayed
@@ -1315,6 +1321,21 @@ polished, distributable form of it.
 - [ ] Add a `nixos` target to Docker-based build verification, matching
       the pattern already built for latte-dock-ng
       (`Dockerfile.nixos` + `verify-nix-nixos.sh`)
+      Commits:
+
+### Continuation features (beyond upstream parity)
+
+Features beyond even Latte git master, appropriate under the
+maintained-continuation framing. None of these start before their
+prerequisites in the phases above are done.
+
+- [ ] Replicate Dock: first-class live-mirrored views with user-chosen
+      placement, riding the existing ClonedView sync machinery. Full
+      design, settled decisions (keying, sync scope, editability,
+      lifecycle/detach) and prerequisite tracking:
+      docs/dock-replication-design.md. Blocked on the Phase 8
+      cloned-view order-sync item and a live screens-group clone
+      verification
       Commits:
 
 ### Phase 12: Upstream contribution prep
