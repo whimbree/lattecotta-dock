@@ -167,10 +167,13 @@ void SecondaryConfigView::syncGeometry()
     resize(size);
 
     if (KWindowSystem::isPlatformWayland()) {
-        //! layer-shell ignores setPosition(); like the primary config view,
-        //! drop the anchors so the compositor centres it instead of welding
-        //! it to the edge the dock had when it opened
-        Latte::WindowSystem::LayerShell::setUnanchored(this);
+        //! layer-shell ignores setPosition(); pin the window to the position
+        //! computed above on the edited view's output, the same way the
+        //! primary config view and the widget explorer do. setUnanchored let
+        //! the compositor center it instead, on whatever output the surface
+        //! happened to be created on (observed live: the Dock/Panel chooser
+        //! floating mid-air on the OTHER monitor).
+        Latte::WindowSystem::LayerShell::applyFixedGeometry(this, m_latteView->screen(), geometry, scrGeometry);
     } else {
         setPosition(position);
     }
