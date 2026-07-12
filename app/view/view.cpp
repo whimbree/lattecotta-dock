@@ -191,6 +191,15 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
         }
 
         connect(this->containment(), SIGNAL(statusChanged(Plasma::Types::ItemStatus)), SLOT(statusChanged(Plasma::Types::ItemStatus)));
+
+        //! the containment's screen id lands asynchronously after a view
+        //! relocation (reactToScreenChange -> corona screenForContainment),
+        //! and the positioner keys its available-area computations on that id
+        //! (immediateSyncGeometry's fixedScreen). If every sync ran before the
+        //! id landed, the edit-mode canvas kept the previous screen's length
+        //! (observed live once: 1264-tall canvas on the 2560-tall portrait
+        //! output). Recompute once the containment catches up.
+        connect(this->containment(), &Plasma::Containment::screenChanged, m_positioner, &ViewPart::Positioner::syncGeometry);
         connect(this->containment(), &Plasma::Containment::showAddWidgetsInterface, this, &View::showWidgetExplorer);
         connect(this->containment(), &Plasma::Containment::userConfiguringChanged, this, [&]() {
             Q_EMIT inEditModeChanged();
