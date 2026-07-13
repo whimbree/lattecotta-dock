@@ -1197,21 +1197,31 @@ multi-view, multi-monitor setup.
       (synthetic fakepointer moves left ~150ms gaps that masked it -
       LESSON: verify input fixes at realistic event rates). 15558f40
       defers the re-show one event loop pass so the unmap commits.
-      USER'S MINIMAL RECIPE for retest (2026-07-13 02:39, against the
-      pre-15558f40 build): hover the system monitor applet, wait for
-      its hover modal (the shared plasma ToolTipDialog, a DIFFERENT
-      window), glide along the dock to firefox - firefox's preview
-      opened ~370px left of its icon. Retest this exact recipe on the
-      deferred build; if it still reproduces, the defect is in the
-      FRESH show's anchor, not the switch path: instrument
-      _previewsVisualParent's mapped rect and the dialog's final
-      geometry at every show. ALSO REMAINING: (a) possible residual
-      offset from the icon center during zoom dwell (live vs resting
-      rect, d98bff98 refinement); (b) the rearrange-mode applet hover
-      modal's inconsistent appearance (ConfigOverlay hover tracking),
-      zoom excluded as trigger.
+      The user re-reproduced AGAINST 15558f40 too (recipe: hover the
+      system monitor TASK, wait for its preview, glide to firefox -
+      firefox thumbnails ~370px left). THIRD ROOT CAUSE (d619ae08,
+      instrumented anchors proved every prepare's anchor CORRECT): the
+      deferred remap's 1ms timer re-shows the pending task directly,
+      bypassing preparePreviewWindow, so interleaved shows (task B's
+      prepare between task A's hide and A's deferred re-show)
+      resurrected one task's CONTENT at another task's ANCHOR, and a
+      stale pending could re-show an old task after a newer one mapped
+      (ping-pong). show() now cancels stale pendings when a newer task
+      reaches the map point and assigns visualParent from the mapped
+      taskItem itself (TaskItem exposes previewsVisualParent), making
+      anchor and content atomic per task under any interleaving.
+      Verified: the user's recipe at realistic event rates (fakepointer
+      glide, 8ms steps) mapped the firefox preview centered on its
+      logged anchor (2352 vs 2351.5), plus two adversarial overshoot
+      zigzags and a clean-build pass, all correct. PREVIEW HALF DONE
+      pending user confirmation with a real mouse. STILL REMAINING:
+      (a) small residual offset from the icon center during zoom dwell
+      (live vs resting rect, d98bff98 refinement; observed ~40px);
+      (b) the rearrange-mode applet hover modal's inconsistent
+      appearance (ConfigOverlay hover tracking), zoom excluded.
       Commits: e6c5ae76 (incomplete, coalescing), 15558f40 (deferred
-      remap)
+      remap, still incomplete), d619ae08 (atomic anchor+content, the
+      actual fix)
 - [x] Vertical (left/right) dock canvas header renders off-surface
       (rearrange chip at y=-552/-596, rearrange unusable on the left
       dock, user-reported twice). MECHANISM DEMONSTRATED: the header's
