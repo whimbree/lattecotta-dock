@@ -101,6 +101,11 @@ LatteComponents.IndicatorItem{
                 if (indicator.isApplet) {
                     return (indicator.isActive || isAnimating) ? 1 : 0
                 }
+
+                //! not yet classified (the indicator level initializes before
+                //! the host sets isTask/isApplet); falling through returned
+                //! undefined, which cannot assign to a double
+                return 0;
             }
 
             basicColor: indicator.isActive || (indicator.isGroup && indicator.hasShown) ? root.isActiveColor : root.notActiveColor
