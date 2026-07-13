@@ -67,10 +67,15 @@ int main(int argc, char **argv)
 {
     int isdrag = (argc > 1) && (strcmp(argv[1], "drag") == 0);
     int isglide = (argc > 1) && (strcmp(argv[1], "glide") == 0);
+    int isscroll = (argc > 1) && (strcmp(argv[1], "scroll") == 0);
 
     if (((isdrag || isglide) && (argc < 6 || (argc % 2) != 0))
-        || (!isdrag && !isglide && (argc != 4 || (strcmp(argv[1], "move") && strcmp(argv[1], "click") && strcmp(argv[1], "rightclick"))))) {
-        fprintf(stderr, "usage: %s move|click|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]\n", argv[0], argv[0]);
+        || (isscroll && argc != 6)
+        || (!isdrag && !isglide && !isscroll
+            && (argc != 4 || (strcmp(argv[1], "move") && strcmp(argv[1], "click") && strcmp(argv[1], "rightclick"))))) {
+        fprintf(stderr, "usage: %s move|click|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>\n"
+                        "  scroll: positive detents scroll up, negative down; one detent = one wheel click\n",
+                argv[0], argv[0], argv[0]);
         return 2;
     }
     double x = atof(argv[2]);
@@ -142,6 +147,26 @@ int main(int argc, char **argv)
             usleep(150000);
             org_kde_kwin_fake_input_button(fake_input, BTN_LEFT, 0);
             wl_display_roundtrip(display);
+        }
+    } else if (isscroll) {
+        //! wheel detents at (x,y). fake_input axis takes wl_pointer.axis
+        //! units: 15 per detent (Qt multiplies by 8 into angleDelta 120).
+        //! Sign: positive wayland axis = scroll DOWN, so a positive detent
+        //! count (scroll up, volume up by convention) sends negative values.
+        //! The per-detent gap approximates a human scroll rate so debounce
+        //! and accumulation behaviors face a realistic stream.
+        int detents = atoi(argv[4]);
+        int gapms = atoi(argv[5]);
+        int dir = (detents >= 0) ? -1 : 1;
+        int n = (detents >= 0) ? detents : -detents;
+
+        usleep(100000);
+
+        for (int i = 0; i < n; ++i) {
+            org_kde_kwin_fake_input_axis(fake_input, 0 /* vertical */,
+                wl_fixed_from_double(15.0 * dir));
+            wl_display_roundtrip(display);
+            usleep((useconds_t)gapms * 1000);
         }
     }
 

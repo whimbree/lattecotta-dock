@@ -19,6 +19,8 @@ QtObject {
     property int maxVolumePercent: 125
     property int maxVolumeValue: Math.round(maxVolumePercent * PulseAudio.NormalVolume / 100.0)
     property int volumeStep: Math.round(5 * PulseAudio.NormalVolume / 100.0)
+    //! Shift-scroll fine step, same 1% the plasma volume applet uses
+    property int volumeStepSmall: Math.round(1 * PulseAudio.NormalVolume / 100.0)
 
     function boundVolume(volume) {
         return Math.max(PulseAudio.MinimalVolume, Math.min(volume, maxVolumeValue));
@@ -102,13 +104,15 @@ QtObject {
                 Muted = false
             }
 
-            function increaseVolume() {
-                var bVolume = pulseAudio.boundVolume(Volume + pulseAudio.volumeStep);
+            function increaseVolume(smallStep) {
+                var step = smallStep ? pulseAudio.volumeStepSmall : pulseAudio.volumeStep;
+                var bVolume = pulseAudio.boundVolume(Volume + step);
                 Volume = bVolume;
             }
 
-            function decreaseVolume() {
-                var bVolume = pulseAudio.boundVolume(Volume - pulseAudio.volumeStep);
+            function decreaseVolume(smallStep) {
+                var step = smallStep ? pulseAudio.volumeStepSmall : pulseAudio.volumeStep;
+                var bVolume = pulseAudio.boundVolume(Volume - step);
                 Volume = bVolume;
             }
         }

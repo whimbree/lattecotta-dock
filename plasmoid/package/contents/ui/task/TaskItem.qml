@@ -795,12 +795,12 @@ AbilityItem.BasicItem {
         }
     }
 
-    function increaseVolume() {
-        taskItem.audioStreams.forEach(function (item) { item.increaseVolume(); });
+    function increaseVolume(smallStep) {
+        taskItem.audioStreams.forEach(function (item) { item.increaseVolume(smallStep); });
     }
 
-    function decreaseVolume() {
-        taskItem.audioStreams.forEach(function (item) { item.decreaseVolume(); });
+    function decreaseVolume(smallStep) {
+        taskItem.audioStreams.forEach(function (item) { item.decreaseVolume(smallStep); });
     }
 
     function updateBadge() {

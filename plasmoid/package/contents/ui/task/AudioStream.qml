@@ -93,45 +93,52 @@ Item {
                     anchors.fill: parent
                     enabled: root.audioBadgeActionsEnabled
 
-                    property bool wheelIsBlocked: false;
+                    property int wheelDelta: 0
 
                     onClicked: {
                         taskItem.toggleMuted();
                     }
 
+                    //! Same wheel semantics as the plasma volume applet
+                    //! (plasma-pa applet/main.qml): accumulate angleDelta and
+                    //! apply one step per full 120 units, immediately, however
+                    //! many fit in the event - no lockout timer. The old
+                    //! handler stepped on ANY event past 16 units but then
+                    //! blocked for 80ms, so held scrolling lagged plasma's,
+                    //! and reversals inside the block window were swallowed
+                    //! (user-reported: different thresholds up vs down,
+                    //! slower response than plasma's own applet).
                     onWheel: (wheel) => {
-                        if (wheelIsBlocked) {
-                            return;
+                        const delta = (wheel.inverted ? -1 : 1) * (wheel.angleDelta.y ? wheel.angleDelta.y : -wheel.angleDelta.x);
+
+                        if ((wheelDelta > 0 && delta < 0) || (wheelDelta < 0 && delta > 0)) {
+                            //! direction change: drop the residue so the first
+                            //! step of the new direction needs the same travel
+                            //! as every other step
+                            wheelDelta = 0;
                         }
 
-                        wheelIsBlocked = true;
-                        scrollDelayer.start();
+                        wheelDelta += delta;
 
-                        var angle = wheel.angleDelta.y / 8;
+                        var steps = 0;
 
-                        if (angle > 2) {
-                            taskItem.increaseVolume();
-                        } else if (angle < -2) {
-                            taskItem.decreaseVolume();
-                        } else {
-                            return;
+                        while (wheelDelta >= 120) {
+                            wheelDelta -= 120;
+                            taskItem.increaseVolume(wheel.modifiers & Qt.ShiftModifier);
+                            steps++;
                         }
 
-                        //! Deferred so the (optimistic) volume change has settled
-                        //! before we read taskItem.volume for the OSD percentage.
-                        Qt.callLater(background.showVolumeOsd);
-                    }
+                        while (wheelDelta <= -120) {
+                            wheelDelta += 120;
+                            taskItem.decreaseVolume(wheel.modifiers & Qt.ShiftModifier);
+                            steps++;
+                        }
 
-                    //! A timer is needed in order to handle also touchpads that probably
-                    //! send too many signals very fast. This way the signals per sec are limited.
-                    //! The user needs to have a steady normal scroll in order to not
-                    //! notice a annoying delay
-                    Timer{
-                        id: scrollDelayer
-
-                        interval: 80
-
-                        onTriggered: audioBadgeMouseArea.wheelIsBlocked = false;
+                        if (steps > 0) {
+                            //! Deferred so the (optimistic) volume change has settled
+                            //! before we read taskItem.volume for the OSD percentage.
+                            Qt.callLater(background.showVolumeOsd);
+                        }
                     }
                 }
             }
