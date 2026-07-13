@@ -1137,14 +1137,19 @@ multi-view, multi-monitor setup.
       Verified: full Latte context menu opens on a task in plain edit
       mode, wheel tooltip only on the blueprint margin.
       Commits: 3d714d63
-- [ ] Applet edit-tooltip modal and task hover previews misposition
-      during fast pointer movement along the dock (user-reported
-      2026-07-12 night). Suspect class: popup/dialog anchoring racing
-      parabolic item motion; d98bff98 anchored task previews to the
+- [ ] Applet edit-tooltip modal (rearrange mode) and task hover
+      previews: misposition during fast pointer movement AND the
+      rearrange-mode applet hover modal appears INCONSISTENTLY
+      (user-reported 2026-07-12 night, second report after zoom was
+      disabled in edit mode so zoom motion is not required for the
+      inconsistency). Suspect class: popup/dialog anchoring and hover
+      tracking in ConfigOverlay; d98bff98 anchored task previews to the
       resting midpoint, check whether the configure-mode applet tooltip
-      anchors the same way and whether visualParent/position updates
-      race rapid re-anchoring. Reproduce headless: fakepointer sweep at
-      speed plus screenshots; dumpwins shows popup geometry (layer=6).
+      anchors and hover-tracks the same way, whether
+      visualParent/position updates race rapid re-anchoring, and
+      whether ConfigOverlay's hover detection drops events. Reproduce
+      headless: fakepointer sweep at speed plus slow per-applet dwells,
+      screenshots; dumpwins shows popup geometry (layer=6).
       Commits:
 - [ ] Vertical (left/right) dock canvas header renders off-surface:
       the rearrange chip maps to y=-552 on the left dock's canvas, so
