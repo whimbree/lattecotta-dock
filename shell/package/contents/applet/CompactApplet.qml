@@ -329,6 +329,19 @@ PlasmaCore.ToolTipArea {
         value: appletItem && compactRepresentation ? appletItem.iconScale : 1.0
     }
 
+    //! provider duty for the clicked flash: Qt6 MultiEffect does not
+    //! auto-wrap plain items (family 73da8400), and this effect sampled the
+    //! unlayered compact representation since the port - a rendering no-op
+    //! and corruption vector. The layer tracks the animation; alwaysRunToEnd
+    //! keeps it alive through the whole flash.
+    Binding {
+        target: compactRepresentation
+        property: "layer.enabled"
+        when: compactRepresentation !== null && clickedAnimation.running
+        value: true
+        restoreMode: Binding.RestoreBindingOrValue
+    }
+
     ////Clicked Effect ////
     MultiEffect {
         id: _clickedEffect

@@ -74,12 +74,27 @@ Item {
         }
     }
 
+    //! any of the three state effects below is showing; while true the LIVE
+    //! source (badgesLoader when active, taskIconItem otherwise) must be a
+    //! real texture provider. Qt6 MultiEffect does not auto-wrap plain items
+    //! (family: 73da8400), and these three sampled unlayered sources since
+    //! the port: every icon repaint re-triggered invalid sampling ('No
+    //! QSGTexture provided' accruing at idle) - a rendering no-op and
+    //! scenegraph corruption vector. Opacity-tracking gates keep the layer
+    //! alive through the whole fade, same contract as the applet colorizer.
+    readonly property bool anyStateEffectShown: stateColorizer.opacity > 0
+                                                || hoveredImage.opacity > 0
+                                                || clickedAnimation.running
+
     Kirigami.Icon {
         id: taskIconItem
         anchors.fill: parent
         //roundToIconSize: false
         source: decoration
         visible: !badgesLoader.active
+
+        layer.enabled: taskIconContainer.anyStateEffectShown && !badgesLoader.active
+                       && taskItem.abilities.environment.isGraphicsSystemAccelerated
 
         readonly property real size: Math.min(width,height)
 
@@ -134,6 +149,10 @@ Item {
         active: (activateProgress > 0) && taskItem.abilities.environment.isGraphicsSystemAccelerated
         asynchronous: true
         opacity: stateColorizer.opacity > 0 ? 0 : 1
+
+        //! provider duty while a state effect samples this loader (see
+        //! anyStateEffectShown above)
+        layer.enabled: taskIconContainer.anyStateEffectShown && badgesLoader.active
 
         property real activateProgress: showInfo || showProgress || showAudio ? 1 : 0
 
@@ -341,6 +360,10 @@ Item {
         anchors.fill: parent
         source: badgesLoader.active ? badgesLoader : taskIconItem
 
+        //! invisible effects still sample their source on every repaint;
+        //! without this gate the invalid sampling accrued at idle
+        visible: opacity > 0
+
         opacity:0
 
         saturation: -1
@@ -351,6 +374,8 @@ Item {
         anchors.fill: parent
 
         source: badgesLoader.active ? badgesLoader : taskIconItem
+
+        visible: opacity > 0
 
         opacity: taskItem.containsMouse && !clickedAnimation.running && !taskItem.abilities.indicators.info.providesHoveredAnimation ? 1 : 0
         brightness: 0.30
