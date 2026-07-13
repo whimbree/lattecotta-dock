@@ -92,6 +92,19 @@ below are now RESOLVED and kept only as archaeology.
   was running). Next in queue: hover-modal inconsistency in rearrange
   mode, residual ~40px preview offset during zoom dwell (live vs
   resting rect, refine d98bff98), then the latency items.
+- Round twelve-b, the ghost regression (6c7001ce): e3376405's static
+  paddingRect used Qt.rect(pad,pad,2p,2p) assuming width/height were
+  totals; Qt's updateSourcePadding() defines them as PER-SIDE extras
+  (left/top/right/bottom), and the shader's centerOffset scales with
+  (x - width), so the asymmetric rect drew a smaller offset ghost of
+  every applet inside itself. User caught it within minutes of the
+  build going live. Fixed to Qt.rect(pad,pad,pad,pad); the test now
+  pins all four sides equal. LESSON: MultiEffect verification needs a
+  VISUAL pass, not just CPU numbers and green tests - and when Qt
+  docs are vague, read the Qt source before shipping (the source also
+  revealed autoPadding pads 256px per side around every applet, an
+  extra reason the static rect is right). Storm numbers unchanged
+  after the correction: 0.1% idle, shadows on.
 - Round twelve, the storm KILLED (e3376405): three probe builds
   bisected it to MultiEffect's autoPaddingEnabled - it recomputes
   padding and re-dirties the effect every frame, so every
