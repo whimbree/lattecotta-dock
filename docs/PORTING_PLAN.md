@@ -1020,7 +1020,7 @@ multi-view, multi-monitor setup.
       panel form factors vs size thresholds, and whether Latte should
       pin preferredRepresentation for zoom-resized applets.
       Commits:
-- [ ] 'No QSGTexture provided from updateSampledImage()' warnings:
+- [x] 'No QSGTexture provided from updateSampledImage()' warnings:
       SOURCES IDENTIFIED 2026-07-13 by config bisection. Startup
       baseline ~45: disabling appletShadowsEnabled on all containments
       drops it to 9, so ~36 are the applet ShadowedItem sites (layered
@@ -1040,7 +1040,26 @@ multi-view, multi-monitor setup.
       _clickedEffect the same treatment (still unlayered; earlier
       2026-07-12 note: it was NOT the source of these warnings, but it
       is the same latent class).
-      Commits:
+      FIXED 2026-07-13 exactly to that shape: one anyStateEffectShown
+      property gates layer.enabled on taskIconItem/badgesLoader (split
+      by badgesLoader.active, mirroring the effects' source ternary),
+      effects get visible: opacity>0 so a faded effect cannot sample,
+      CompactApplet's flash uses a when-gated Binding with
+      RestoreBindingOrValue so the adopted rep is not left permanently
+      layered (df747ebf). Verified live: startup 45 -> 7; all residual
+      warnings are first-frame bursts within 17s of startup (initial
+      map + one dodge re-show repainting applet shadows); ZERO accrual
+      over 95s idle and zero across three hover glide passes. Side
+      effect worth knowing: the task hover-brighten/colorize/click
+      effects actually render now - they were silent no-ops before
+      (invalid sampler drew nothing), so tasks visibly brighten on
+      hover for the first time since the port. That is Qt5-faithful
+      (restoring intended behavior), not a deviation. Badged-icon
+      effect rendering unverified (no badge app running); visual-only
+      risk if wrong. The ~28 applet-shadow first-frame nulls remain as
+      the known lower-risk transient population (layered sources,
+      family 7 note in 73da8400).
+      Commits: 69baabf0
 - [x] SIGSEGV dropping/pinning a launcher onto the tasks applet
       (user-reproduced 2026-07-13 under the gdb wrapper, full trace at
       syncedlaunchers.cpp:87). Root cause: removeClientObject

@@ -74,6 +74,24 @@ below are now RESOLVED and kept only as archaeology.
   startup latency (measure without the gdb wrapper first), containment
   menu corner-placement watch item, left canvas geometry flip-flop
   watch item.
+- Round six, autonomous (d619ae08, d98bff98, 69baabf0 + docs): the
+  user's minimal preview recipe (hover System Monitor, glide to
+  Firefox, preview ~370px left) root-caused past the deferred re-show:
+  the timer path skipped preparePreviewWindow so content and anchor
+  could interleave across tasks. show() now binds visualParent and
+  content atomically at map time and cancels stale pendings; verified
+  with glide at realistic rates AND a fresh-map screenshot with the
+  preview dead-center (2395 vs icon 2394). Effect-source layering then
+  landed (69baabf0): startup warnings 45 -> 7, ZERO accrual over 95s
+  idle and over hover churn; residuals are first-frame bursts (~28
+  applet-shadow, known lower-risk class). USER-VISIBLE: task
+  hover-brighten/click effects render for the first time since the
+  port - they were invalid-sampler no-ops before. If the user asks
+  why icons suddenly brighten on hover, that is restored Qt5 behavior,
+  not new. Badged-icon effect rendering still unverified (no badge app
+  was running). Next in queue: hover-modal inconsistency in rearrange
+  mode, residual ~40px preview offset during zoom dwell (live vs
+  resting rect, refine d98bff98), then the latency items.
 - Round four, decisions and mapping (e70bccf7, e85e18d8, 98b7419e):
   parabolic zoom disabled for ALL of edit mode by owner decision
   (deliberate Qt5 deviation, comment at the site). The missing 'Applet
