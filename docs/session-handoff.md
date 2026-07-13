@@ -92,6 +92,27 @@ below are now RESOLVED and kept only as archaeology.
   was running). Next in queue: hover-modal inconsistency in rearrange
   mode, residual ~40px preview offset during zoom dwell (live vs
   resting rect, refine d98bff98), then the latency items.
+- Round seven, latency (37acf9ca): startup measured honestly (KWin
+  window poller, no wrapper, no -d; the -d run matched within 50ms so
+  -d timings are trustworthy). Restart was ~9.4s: ~4.1s launcher
+  (nix develop 3.0s dominating) + 4.5s binary to first dock window,
+  5.3s to all three. Launcher fixed: restart-staged sources a cached
+  print-dev-env snapshot (build/_devshell.env, auto-refreshed on flake
+  changes), warm path measured 0.57s. Binary phase attributed by a
+  mid-stall gdb interrupt (ptrace_scope=1 on this host - attach is
+  blocked, run gdb as the parent and SIGINT the dock, the repo's
+  gdb-batch-cmds documents this): main thread parked in
+  QQmlTypeLoader waits under PlasmaQuick's synchronous per-applet
+  itemForApplet, three views built sequentially in one synchronizer
+  callback (synchronizer.cpp:694). Filed lever: stagger view creation
+  per event-loop cycle (earlier first dock, total unchanged) - NOT
+  implemented, view creation order is Phase 8 territory. Corrected a
+  wrong suspicion: restaging does NOT invalidate the QML disk cache
+  (cmake --install preserves mtimes; 235/237 entries reused), so
+  edit-mode first-open cost is in-engine type instantiation - warm-up,
+  not qmlcachegen, is the candidate fix. Benign oddity explained:
+  latte-dock windows 4/5 appear ~18.5s post-start in every run (lazy
+  ToolTipDialog/KlipperPopup), not user hover.
 - Round four, decisions and mapping (e70bccf7, e85e18d8, 98b7419e):
   parabolic zoom disabled for ALL of edit mode by owner decision
   (deliberate Qt5 deviation, comment at the site). The missing 'Applet
