@@ -131,6 +131,12 @@ AbilityItem.BasicItem {
     readonly property alias mouseArea: taskMouseArea
     readonly property alias subWindows: subWindows
 
+    //! exposed so windowsPreviewDlg.show() can bind the preview's anchor and
+    //! content ATOMICALLY from the same task at map time; assigning the
+    //! anchor only in preparePreviewWindow let the deferred remap resurrect
+    //! one task's content at another task's anchor when shows interleaved
+    readonly property alias previewsVisualParent: _previewsVisualParent
+
     readonly property alias showWindowAnimation: _showWindowAnimation
 
     //! Indicator Properties

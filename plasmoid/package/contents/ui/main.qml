@@ -430,6 +430,21 @@ PlasmoidItem {
                     return;
                 }
 
+                //! a newer task reached the map point: any older pending
+                //! resurrection is stale now - without this cancel the 1ms
+                //! timer re-showed the OLD task after the new one mapped,
+                //! ping-ponging the window
+                remapPendingTask = null;
+                previewRemapTimer.stop();
+
+                //! anchor and content must come from the SAME task at map
+                //! time: preparePreviewWindow() also sets the anchor, but
+                //! interleaved shows (prepare B landing between A's hide and
+                //! A's deferred re-show) mapped one task's thumbnails at
+                //! another task's icon (user-reproduced: firefox preview
+                //! ~370px away over the dock's other end)
+                visualParent = taskItem.previewsVisualParent;
+
                 activeItem = taskItem;
                 toolTipDelegate.parentTask = taskItem;
 
