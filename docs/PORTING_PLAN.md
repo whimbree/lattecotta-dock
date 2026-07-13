@@ -1057,20 +1057,20 @@ multi-view, multi-monitor setup.
       entry should be available ALWAYS, not only in edit mode - which
       matches Qt5/plasmashell behavior.
       Commits:
-- [ ] Edit Dock opens the chrome for the WRONG VIEW (user-reported
-      twice 2026-07-12 night: right-click bottom dock -> chrome
-      appeared on the left dock; later on the top dock). The primary
-      config view is a reused singleton; viewsettingsfactory
-      primaryConfigView(view) -> setParentView(view) hides the old
-      chrome, waits SLIDEOUTINTERVAL, then initParentView+show for the
-      new view. Observed in the 20:53 trace: after right-clicking the
-      bottom dock the LEFT dock's canvas showed first (stale parent
-      from earlier cycling) and the retarget to the bottom followed
-      seconds later. Suspects: the stale chrome being shown before
-      retargeting completes, lastConfigViewFor state, and the deferred
-      show racing the hide. Reproduce: park the chrome on view A, right
-      click view B -> Edit Dock, watch canvas geometries in dumpwins.
-      Commits:
+- [x] Edit Dock opens the chrome for the WRONG VIEW (user-reported
+      three times 2026-07-12 night: right-click bottom dock -> chrome
+      appeared on the left dock, later the top dock). ROOT CAUSE: the
+      per-view m_primaryConfigView pointer to the shared chrome
+      singleton went stale. showConfigurationInterface short-circuited
+      on a non-null pointer without checking parentView()==this (the
+      invariant settingsWindowIsShown already encodes), and the
+      view-recreation catch-up path seeded stale pointers by stealing
+      the singleton without releasing the previous owner (recreations
+      fire on visibility-mode/byPassWM changes, so the state recurred).
+      Fixed both ends; verified twice with the chrome deliberately
+      parked on the top then the left dock: Edit Dock on the bottom
+      dock opened the bottom chrome both times (dumpwins).
+      Commits: 66114774
 - [ ] Edit mode first-open latency (user-reported: first open slow,
       subsequent opens fast). Suspect: cold QML compilation of the
       chrome packages (settings pages, canvas) on first
