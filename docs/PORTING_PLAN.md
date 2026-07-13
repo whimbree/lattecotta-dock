@@ -1140,7 +1140,69 @@ multi-view, multi-monitor setup.
       type cache is warm. Candidate: async-warm the chrome component
       after startup idle. Measure the actual first-open duration before
       building anything.
-      Commits:
+      MEASURED 2026-07-13 (KWin window-count poller bracketing the
+      Edit Dock click to chrome windows visible): COLD 7.3s, WARM
+      0.5s on the same engine. The 6.8s delta is one-time chrome
+      instantiation: the C++ views construct in ~0.4s, then a 4.8s
+      near-silent stall before the windows map. A gdb interrupt
+      mid-stall caught the main thread in a recursive Kirigami
+      PlatformTheme::updateChildren cascade ending in KSvg
+      ImageSet::filePath -> QStandardPaths::locate -> statx, i.e.
+      theme propagation through the freshly built control tree, not
+      pure QQmlTypeLoader work. IMPORTANT: measured while the idle
+      render-loop storm (next item) was active and competing for the
+      main thread - re-measure after that item lands before designing
+      any warm-up. Pre-creation options and their risks:
+      (a) create the chrome ensemble hidden at startup idle - full
+      saving, but ViewSettingsFactory::primaryConfigView(view) calls
+      setUserConfiguring(true) at creation (the dock would flash edit
+      visuals) and the ensemble's focus/map behavior is the
+      edit-trilogy minefield; needs a supervised session;
+      (b) share the corona's QML engine with the config views so the
+      startup type-graph warm-up carries over - architectural change.
+      Commits: (measurement pass)
+- [ ] TOP PRIORITY: idle render-loop + filesystem-stat storm in the
+      applet-shadow path (discovered 2026-07-13 while measuring the
+      edit-open latency; likely inflates EVERY latency number above).
+      THE NUMBERS: the idle dock burns 18.2% CPU, all of it on the
+      MAIN thread (single-threaded 'basic' QtQuick render loop);
+      with appletShadowsEnabled=false on ALL containments it drops to
+      1.2%. A statx-filtered strace recorded 5.04M statx calls over
+      264s - a FLAT ~19,500/s at idle, 99.8% ENOENT, persisting even
+      while every dock was dodge-hidden. The calls are dominated by
+      two files that exist NOWHERE in this environment
+      (plasma/desktoptheme/default/colors and its translucent
+      variant; Breeze uses colorscheme-following instead), resolved
+      ~67x/second - frame rate - with each resolution scanning the
+      session's enormous XDG_DATA_DIRS (273 entries in the dock
+      process, 187 dirs actually probed; NixOS session env).
+      plasma_theme_default.kcache is continuously rewritten. Idle
+      gdb samples show the main thread inside
+      QSGBatchRenderer::Updater/QSGRenderer::preprocess - the
+      scenegraph re-renders every frame, forever.
+      READING: something in the applet-shadow path (ItemWrapper's
+      ShadowedItem Loader + _wrapperContainer layer, possibly the
+      TaskIcon shadow sites too) requests a new frame every vsync;
+      each frame's preprocess walks KSvg/FrameSvg nodes whose colors
+      lookup misses everything and is not negatively cached, so the
+      per-frame cost explodes under the wide XDG_DATA_DIRS. The
+      frame-request loop is OURS; the stat amplification is
+      environmental (libplasma/KSvg negative-cache gap, worth an
+      upstream report once pinned).
+      NEXT SESSION's attack plan: find the eternal frame requester.
+      (1) narrow by config: shadows on ONE containment only, then on
+      one applet; (2) QSG_RENDER_TIMING=1 names which window renders;
+      (3) suspects to rule in/out: layered _wrapperContainer sampled
+      by a sibling MultiEffect that also fills it (double-draw
+      feedback), a flapping binding in the shadow chain (zoom/margin
+      jitter), MultiEffect autoPadding oscillation;
+      (4) QSG_VISUALIZE=changes was tried and is USELESS here - it
+      tints the whole (dodge-hidden) layer surface and blackens the
+      user's screen; do not repeat.
+      Also caught on the idle main thread: QtWebEngine performing a
+      lazy Vulkan/RhiGpuInfo init ~20s after startup (some applet
+      pulls QtWebEngine in) - one-time jank, separate small item.
+      Commits: (evidence pass; fix not started)
 - [ ] Startup latency (user-reported: 'takes way longer than it
       should'). Measure BOTH dev and production-shaped starts before
       optimizing: dev runs pay for cmake --install restaging, the gdb

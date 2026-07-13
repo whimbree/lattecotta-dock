@@ -92,6 +92,25 @@ below are now RESOLVED and kept only as archaeology.
   was running). Next in queue: hover-modal inconsistency in rearrange
   mode, residual ~40px preview offset during zoom dwell (live vs
   resting rect, refine d98bff98), then the latency items.
+- Round eleven, the storm (docs only, evidence in the plan's TOP
+  PRIORITY item): while measuring edit-open latency (cold 7.3s, warm
+  0.5s), found the idle dock burning 18.2% CPU on the main thread -
+  ~19,500 failing statx/s, flat, even with all docks dodge-hidden -
+  and 1.2% with applet shadows disabled. The scenegraph renders every
+  frame forever (idle gdb samples in QSGBatchRenderer), and each
+  frame re-resolves two nonexistent theme colors files across a
+  273-entry NixOS XDG_DATA_DIRS. The eternal-frame requester is in
+  the applet-shadow path and is THE next thing to hunt - it taxes
+  every latency number measured tonight. Full evidence chain and
+  attack plan in the plan item. Practical field notes for that hunt:
+  ptrace_scope=1 means gdb must be the parent (batch file with
+  multiple continue/bt rounds works, SIGINT from outside); strace as
+  parent slows the dock enough that dodge-reveal stops working, so
+  measure idle-only under strace; QSG_VISUALIZE tints hidden layer
+  surfaces black over the whole screen - useless and user-visible.
+  The edit-open cold cost itself is chrome instantiation + Kirigami
+  theme cascade (stack captured), but re-measure after the storm fix;
+  pre-creation options and risks are filed in the latency item.
 - Round ten (c622da1b): the ~40px zoom-dwell preview offset closed by
   DELETING d98bff98's resting-anchor machinery and restoring Qt5's
   live anchor (tooltipVisualParent). The resting anchor only ever
