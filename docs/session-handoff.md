@@ -92,6 +92,17 @@ below are now RESOLVED and kept only as archaeology.
   was running). Next in queue: hover-modal inconsistency in rearrange
   mode, residual ~40px preview offset during zoom dwell (live vs
   resting rect, refine d98bff98), then the latency items.
+- Round nine (8f821310): 77aac4b4 user-confirmed with a real mouse.
+  The rearrange hover-modal inconsistency then fell to the same class:
+  ConfigOverlay's tooltip was a stock PlasmaCore.Dialog with a
+  visualParent binding hopping between hovered applets while mapped -
+  the window parked at the first hover's spot with only its width
+  following (reproduced live at 2122 while hovering an applet at
+  3290). One-line class swap to LatteCore.Dialog plus edge, comment at
+  the site. When a mapped popup's anchor must move on wayland, it must
+  be a Latte::Quick::Dialog - PlasmaCore.Dialog cannot do it. Grep for
+  other PlasmaCore.Dialog uses with mutable visualParent if a similar
+  'appears in the wrong place / does not appear' report shows up.
 - Round eight, the previews bug's real ending (77aac4b4, dbe5a03b):
   the user re-reproduced against d619ae08 with the same recipe. Full
   instrumentation of QML show() plus every C++ position push caught

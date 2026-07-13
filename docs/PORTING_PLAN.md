@@ -1297,16 +1297,25 @@ multi-view, multi-monitor setup.
       LESSON for the whole series: when a fix depends on which of two
       event handlers runs last, it is a patch, not a fix - remove the
       stored state instead of arming it in more places.
+      USER-CONFIRMED with a real mouse 2026-07-13 morning.
+      The rearrange-mode modal half was the SAME defect (8f821310):
+      ConfigOverlay's tooltip was a stock PlasmaCore.Dialog whose
+      visualParent hops between hovered applets while mapped -
+      reproduced live: sweeping clock -> tasks -> comic strip left the
+      window parked at the first applet (x=2122) with only its width
+      tracking the hover, so far applets looked like the modal never
+      appeared. Switched to Latte::Quick::Dialog (the 77aac4b4
+      recompute-fresh machinery); verified live in both sweep
+      directions (2114 over the clock, 3180 over the comic strip).
       STILL REMAINING:
       (a) small residual offset from the icon center during zoom dwell
-      (live vs resting rect, d98bff98 refinement; observed ~40px);
-      (b) the rearrange-mode applet hover modal's inconsistent
-      appearance (ConfigOverlay hover tracking), zoom excluded.
+      (live vs resting rect, d98bff98 refinement; observed ~40px).
       Commits: e6c5ae76 (incomplete, coalescing), 15558f40 (deferred
       remap, still incomplete), d619ae08 (atomic anchor+content,
       still incomplete), 77aac4b4 (recompute-fresh positioning, the
-      structural fix) + dbe5a03b (layershellmappingtest signature
-      catch-up found by the same session's build)
+      structural fix, user-confirmed) + dbe5a03b (layershellmappingtest
+      signature catch-up found by the same session's build) + 8f821310
+      (rearrange modal, same class)
 - [x] Vertical (left/right) dock canvas header renders off-surface
       (rearrange chip at y=-552/-596, rearrange unusable on the left
       dock, user-reported twice). MECHANISM DEMONSTRATED: the header's
