@@ -54,7 +54,7 @@ public:
 
 public Q_SLOTS:
     Q_INVOKABLE void syncGeometry() override;
-    void updateInputRegion();
+    Q_INVOKABLE void updateInputRegion();
 
 Q_SIGNALS:
     void showSignal();

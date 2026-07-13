@@ -34,9 +34,14 @@ Loader {
             if (!b || !b.visible) {
                 return Qt.rect(-1, -1, 0, 0);
             }
+            //! map the CHIP (the real click target), not the outer button
+            //! item: the outer item has been observed stretched after chrome
+            //! retargeting, and carving the mask from it produced a full-width
+            //! stripe that ate hover and drags across every applet's middle
+            var chip = b.interactiveChip ? b.interactiveChip : b;
             //! reference the reactive geometry so the binding re-evaluates when the toggle moves/resizes
-            var reactive = b.x + b.y + b.width + b.height + root.width + root.height;
-            return b.mapToItem(root, 0, 0, b.width, b.height);
+            var reactive = chip.width + chip.height + b.x + b.y + b.width + b.height + root.width + root.height;
+            return chip.mapToItem(root, 0, 0, chip.width, chip.height);
         }
 
         property int animationSpeed: LatteCore.WindowSystem.compositingActive ? 500 : 0

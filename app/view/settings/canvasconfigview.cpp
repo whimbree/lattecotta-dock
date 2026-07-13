@@ -5,6 +5,8 @@
 
 #include "canvasconfigview.h"
 
+#include <QQmlProperty>
+
 // local
 #include "primaryconfigview.h"
 #include "secondaryconfigview.h"
@@ -69,6 +71,19 @@ void CanvasConfigView::init()
 
     auto source = QUrl::fromLocalFile(m_latteView->containment()->corona()->kPackage().filePath(tempFilePath));
     setSource(source);
+
+    //! The configure-applets input mask is carved to the published
+    //! rearrangeToggleRect. That rect settles asynchronously (layouts run
+    //! after the mode flips, and chrome retargeting passes it through
+    //! transient full-width states), so a single sample at mode-change time
+    //! froze whatever garbage it held: observed live as a full-width 26px
+    //! stripe that ate hover across every applet's middle. Re-carve whenever
+    //! the published rect changes.
+    if (rootObject()) {
+        QQmlProperty toggleRect(rootObject(), QStringLiteral("rearrangeToggleRect"));
+        toggleRect.connectNotifySignal(this, metaObject()->indexOfMethod("updateInputRegion()"));
+    }
+
     syncGeometry();
 
     if (m_parent && KWindowSystem::isPlatformX11()) {

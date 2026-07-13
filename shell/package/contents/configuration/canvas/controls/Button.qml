@@ -18,6 +18,14 @@ Item{
 
     signal pressedChanged(bool pressed);
 
+    //! The actually interactive chip: the (invisible) tooltip button fills
+    //! exactly this item, so IT is the click target. Hit-area consumers (the
+    //! canvas input mask) must map THIS rect, never the outer Item: the outer
+    //! width has been observed stretched to near-full row width after chrome
+    //! retargeting between views (origin not yet identified, filed in the
+    //! plan), while the chip stays content-sized.
+    readonly property Item interactiveChip: visibleButtonRoot
+
     property bool checked: false
 
     property bool iconPositionReversed: false
