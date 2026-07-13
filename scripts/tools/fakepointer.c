@@ -7,7 +7,8 @@
  * usage: fakepointer move <x> <y>
  *        fakepointer click <x> <y>     (left click at absolute position)
  *        fakepointer rightclick <x> <y>
- *        fakepointer drag <x1> <y1> <x2> <y2>  (left press, stepped move, release)
+ *        fakepointer drag <x1> <y1> <x2> <y2> [x3 y3 ...]  (left press, glide
+ *          through every waypoint in one hold, release at the last)
  *
  * build (inside the devshell):
  *   xml=$(pkg-config --variable=pkgdatadir plasma-wayland-protocols)/fake-input.xml
@@ -64,9 +65,9 @@ int main(int argc, char **argv)
 {
     int isdrag = (argc > 1) && (strcmp(argv[1], "drag") == 0);
 
-    if ((isdrag && argc != 6)
+    if ((isdrag && (argc < 6 || (argc % 2) != 0))
         || (!isdrag && (argc != 4 || (strcmp(argv[1], "move") && strcmp(argv[1], "click") && strcmp(argv[1], "rightclick"))))) {
-        fprintf(stderr, "usage: %s move|click|rightclick <x> <y>  |  %s drag <x1> <y1> <x2> <y2>\n", argv[0], argv[0]);
+        fprintf(stderr, "usage: %s move|click|rightclick <x> <y>  |  %s drag <x1> <y1> <x2> <y2> [x3 y3 ...]\n", argv[0], argv[0]);
         return 2;
     }
     double x = atof(argv[2]);
@@ -102,11 +103,10 @@ int main(int argc, char **argv)
         org_kde_kwin_fake_input_button(fake_input, btn, 0);
         wl_display_roundtrip(display);
     } else if (isdrag) {
-        //! press at (x,y), glide to (x2,y2) in small steps so drag handlers
-        //! see a believable motion stream, release. Step pacing mirrors a
-        //! human drag (~0.3s total) because drop targets debounce hover.
-        double x2 = atof(argv[4]);
-        double y2 = atof(argv[5]);
+        //! press at (x,y), glide through every waypoint in small steps so
+        //! drag handlers see a believable motion stream, release at the last.
+        //! Step pacing mirrors a human drag because drop targets debounce
+        //! hover.
         const int steps = 24;
 
         usleep(100000);
@@ -114,13 +114,23 @@ int main(int argc, char **argv)
         wl_display_roundtrip(display);
         usleep(150000);
 
-        for (int i = 1; i <= steps; ++i) {
-            double sx = x + (x2 - x) * i / steps;
-            double sy = y + (y2 - y) * i / steps;
-            org_kde_kwin_fake_input_pointer_motion_absolute(fake_input,
-                wl_fixed_from_double(sx), wl_fixed_from_double(sy));
-            wl_display_roundtrip(display);
-            usleep(12000);
+        double cx = x, cy = y;
+
+        for (int w = 4; w + 1 < argc; w += 2) {
+            double wx = atof(argv[w]);
+            double wy = atof(argv[w + 1]);
+
+            for (int i = 1; i <= steps; ++i) {
+                double sx = cx + (wx - cx) * i / steps;
+                double sy = cy + (wy - cy) * i / steps;
+                org_kde_kwin_fake_input_pointer_motion_absolute(fake_input,
+                    wl_fixed_from_double(sx), wl_fixed_from_double(sy));
+                wl_display_roundtrip(display);
+                usleep(12000);
+            }
+
+            cx = wx;
+            cy = wy;
         }
 
         usleep(150000);

@@ -49,10 +49,17 @@ MouseArea {
         return currentApplet ? currentApplet.parent : null
     }
 
-    property int lastX
-    property int lastY
-    property int appletX
-    property int appletY
+    //! REAL, not int: wayland delivers fractional pointer coordinates, and
+    //! the drag applies per-event deltas (x += mouse.x - lastX). An int here
+    //! truncates the stored position every event, so each move injects the
+    //! previous event's lost fraction into the applet position - hundreds of
+    //! events per drag accumulate into visible cursor-to-widget drift
+    //! (user-observed while shuffling a widget back and forth). Qt5/X11 got
+    //! away with int because pointer coordinates were integral there.
+    property real lastX
+    property real lastY
+    property real appletX
+    property real appletY
 
     readonly property int thickness: metrics.mask.thickness.maxNormal - metrics.extraThicknessForNormal
     readonly property int spacerHandleSize: Kirigami.Units.smallSpacing
