@@ -51,6 +51,22 @@ below are now RESOLVED and kept only as archaeology.
   y=-552). The settings pin (sticker) button is the way to keep chrome
   alive during headless driving; fakepointer clicks never hold real
   focus.
+- Round four, decisions and mapping (e70bccf7, e85e18d8, 98b7419e):
+  parabolic zoom disabled for ALL of edit mode by owner decision
+  (deliberate Qt5 deviation, comment at the site). The missing 'Applet
+  Settings' menu entry got its architecture mapped: Qt5's
+  ViewPart::ContextMenu was removed in the port (d3538eee), the canvas
+  ContextMenuLayer replacement has correct composition but dead
+  applet-under-cursor resolution (direct-children method lookup misses
+  Plasma 6 wrappers; cross-window fallback; use-before-null-check at
+  :229), and dock-window right-clicks reach the containment-only
+  containmentactions plugin. Owner decision: configure entry belongs in
+  the menu ALWAYS (matches Qt5/plasmashell). Also filed: Edit Dock
+  wrong-view targeting (stale singleton chrome shows before retarget,
+  observed in the 20:53 trace and twice by the user), edit-mode
+  first-open latency (cold QML compile suspect), startup latency
+  (measure without the gdb wrapper and -d before optimizing). Left
+  dock rearrange remains dead pending the off-surface header item.
 - Round three, the design-level one (3d714d63): plain edit mode
   blocked ALL widget interaction because the canvas owned its whole
   surface. Qt5/X11 stacked the edited dock above the canvas; wayland
