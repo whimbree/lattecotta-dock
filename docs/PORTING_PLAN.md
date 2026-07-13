@@ -1041,6 +1041,25 @@ multi-view, multi-monitor setup.
       2026-07-12 note: it was NOT the source of these warnings, but it
       is the same latent class).
       Commits:
+- [x] SIGSEGV dropping/pinning a launcher onto the tasks applet
+      (user-reproduced 2026-07-13 under the gdb wrapper, full trace at
+      syncedlaunchers.cpp:87). Root cause: removeClientObject
+      qobject_cast the dying QObject back to QQuickItem inside a
+      destroyed() handler - the cast always returns null there because
+      the QQuickItem part is already destructed, so client
+      unregistration silently never happened and every destroyed tasks
+      applet left a dangling pointer that the next launcher drop
+      dereferenced. Removal now by pointer identity. Verified with
+      temporary counters (clients 3 -> 2 on destruction, dying object
+      printing as plain QObject). LESSON recorded: never qobject_cast
+      to a derived type inside a destroyed() handler; grep for the
+      pattern when touching lifetime code. INCIDENT NOTE: during
+      verification a mis-parsed containment id fed removeView and
+      deleted the throwaway layout's top dock; restored from
+      with-comic.bak (state as of 2026-07-11 evening) and the orphan
+      duplicate removed. Parse D-Bus ids with anchored matches and
+      prefer non-destructive verification vectors.
+      Commits: d6d57e61
 - [x] Default indicator main.qml:92 'Unable to assign [undefined] to
       double', 3 per startup: the GlowPoint opacity block fell through
       undefined for not-yet-classified indicators; explicit opacity 0
