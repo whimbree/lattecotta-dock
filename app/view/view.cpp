@@ -215,6 +215,15 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
                 && m_corona->viewSettingsFactory()->lastContainment() == containment()) {
             //! used mostly from view recreations in order to inform config windows that view has been updated
             m_primaryConfigView = m_corona->viewSettingsFactory()->primaryConfigView();
+
+            //! release the previous owner's per-view pointer BEFORE stealing
+            //! the singleton: this path bypasses the factory's handoff, and a
+            //! pointer left behind made the old view show the chrome parented
+            //! elsewhere on its next Edit Dock (wrong-view settings bug)
+            if (m_primaryConfigView->parentView() && m_primaryConfigView->parentView() != this) {
+                m_primaryConfigView->parentView()->releaseConfigView();
+            }
+
             m_primaryConfigView->setParentView(this, true);
         }
 
@@ -625,7 +634,16 @@ void View::showConfigurationInterface(Plasma::Applet *applet)
 
     Plasma::Containment *c = qobject_cast<Plasma::Containment *>(applet);
 
-    if (m_primaryConfigView && c && c->isContainment() && c == this->containment()) {
+    //! Only short-circuit onto the shared config chrome when it is actually
+    //! parented to THIS view (same invariant settingsWindowIsShown checks).
+    //! m_primaryConfigView is a per-view pointer to a shared singleton and
+    //! can go stale: the view-recreation catch-up below reparents the
+    //! singleton, and a stale pointer here showed the chrome on whatever
+    //! view it was last parented to (observed live: Edit Dock on the bottom
+    //! dock opened the top dock's settings). A foreign parent falls through
+    //! to the factory path, which retargets properly.
+    if (m_primaryConfigView && m_primaryConfigView->parentView() == this
+            && c && c->isContainment() && c == this->containment()) {
         if (m_primaryConfigView->isVisible()) {
             m_primaryConfigView->hideConfigWindow();
         } else {
