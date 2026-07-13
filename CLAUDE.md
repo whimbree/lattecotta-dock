@@ -80,6 +80,9 @@ stale checkboxes."
   preference, not specific to this repo).
 - No em-dashes, no AI-sounding marketing-style phrasing in docs, commit
   messages, or code comments - write plainly, like a programmer.
+- Push to origin (whimbree/latte-dock) after each big chunk of landed,
+  verified work - do not let long sessions accumulate dozens of unpushed
+  commits.
 - Prefer new commits over amending, except when explicitly asked (e.g.
   cleaning up history before opening a PR).
 - This file and `docs/PORTING_PLAN.md` are committed, but both are live
