@@ -1186,17 +1186,23 @@ multi-view, multi-monitor setup.
 - [ ] Applet edit-tooltip modal (rearrange mode) and task hover
       previews: misposition during fast pointer movement AND the
       rearrange-mode applet hover modal appears INCONSISTENTLY
-      (user-reported 2026-07-12 night, second report after zoom was
-      disabled in edit mode so zoom motion is not required for the
-      inconsistency). Suspect class: popup/dialog anchoring and hover
-      tracking in ConfigOverlay; d98bff98 anchored task previews to the
-      resting midpoint, check whether the configure-mode applet tooltip
-      anchors and hover-tracks the same way, whether
-      visualParent/position updates race rapid re-anchoring, and
-      whether ConfigOverlay's hover detection drops events. Reproduce
-      headless: fakepointer sweep at speed plus slow per-applet dwells,
-      screenshots; dumpwins shows popup geometry (layer=6).
-      Commits:
+      (user-reported 2026-07-12 night). PARTIALLY FIXED 2026-07-13
+      (e6c5ae76): the parked-preview half is gone - the preview dialog
+      updated its content per hovered task but a mapped wayland popup
+      silently ignores visualParent changes, so fast sweeps left the
+      window at the sweep origin (user screenshot: Firefox preview over
+      the clock, 380px off). show() now unmaps before adopting a
+      different task, and previews follow the sweep (verified with a
+      five-task fakepointer sweep). REMAINING: (a) ~165px residual
+      offset from the hovered icon's center during the zoom dwell -
+      suspect anchoring to the live parabolic-zoomed rect instead of
+      the resting midpoint (d98bff98 refinement) and dock relayout
+      after show; (b) the rearrange-mode applet hover modal's
+      inconsistent appearance (ConfigOverlay hover tracking), zoom
+      excluded as trigger. Reproduce headless: fakepointer sweep at
+      speed plus slow per-applet dwells, screenshots; dumpwins shows
+      popup geometry (layer=6).
+      Commits: e6c5ae76 (parked-preview half)
 - [x] Vertical (left/right) dock canvas header renders off-surface
       (rearrange chip at y=-552/-596, rearrange unusable on the left
       dock, user-reported twice). MECHANISM DEMONSTRATED: the header's
