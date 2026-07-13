@@ -1118,14 +1118,16 @@ multi-view, multi-monitor setup.
       the interactive chip. Verified: carve reads QRegion(8,99 273x26)
       on the top dock, toggle cycles cleanly with the settings pinned.
       Commits: 8be2b388
-- [ ] Outer SettingsControls.Button item width stretches after chrome
-      retargeting (2544 observed while its width binding still points
-      at the 273-wide chip; binding bypassed, writer not identified;
-      inert since 8be2b388 maps the chip, but the mechanism is
-      ununderstood and may bite elsewhere). Instrumentation recipe:
-      onWidthChanged log in Button.qml plus MASKDBG publish log in
-      CanvasConfiguration.qml, cycle the settings between docks.
-      Commits:
+- [x] Outer SettingsControls.Button item width stretches after chrome
+      retargeting (2544 observed while the chip stayed 273). RESOLVED
+      as part of the cross-view binding-stranding family: 9aeda562
+      reloads the canvas content on every view retarget, so no canvas
+      binding can carry stranded cross-view state (the Button's exact
+      strand path was not individually traced; the header's was, see
+      the vertical-dock item). If stranding ever reappears in
+      NON-reloaded chrome, this is the family fingerprint.
+      Commits: 8be2b388 (made it inert for the mask), 9aeda562
+      (removed the class)
 - [x] Plain edit mode blocked all widget interaction (user-reported
       2026-07-12 night: wheel-opacity tooltip over every widget, no
       right-click, no hover config without entering rearrange). Design
@@ -1151,15 +1153,26 @@ multi-view, multi-monitor setup.
       headless: fakepointer sweep at speed plus slow per-applet dwells,
       screenshots; dumpwins shows popup geometry (layer=6).
       Commits:
-- [ ] Vertical (left/right) dock canvas header renders off-surface:
-      the rearrange chip maps to y=-552 on the left dock's canvas, so
-      rearrange mode is unusable on vertical docks (user-reported
-      'edit menu broken on the left dock'). HeaderSettings' rotated
-      positioning math (x formula for LeftEdge, y: width/2 - height/2)
-      is the suspect; the left canvas geometry also flip-flopped
-      between runs (1440,425 106x1440 vs 1440,513 106x1264), so
-      Positioner::canvasGeometry for vertical docks needs a look too.
-      Commits:
+- [x] Vertical (left/right) dock canvas header renders off-surface
+      (rearrange chip at y=-552/-596, rearrange unusable on the left
+      dock, user-reported twice). MECHANISM DEMONSTRATED: the header's
+      positional bindings branch on per-view context and each ternary
+      branch captures different dependencies, so a binding evaluated
+      mid-retarget through the old view's branch strands on a transient
+      value with nothing left to wake it (header y frozen at -13 while
+      sibling width re-evaluated to 1440). STRUCTURAL FIX: the canvas
+      view reloads its QML content whenever it retargets to another
+      view; fresh instantiation against settled context cannot strand.
+      Verified live: after cycling across all three docks the left
+      header matched its formulas exactly (y=707 on the 1352 canvas),
+      the chip mapped on-surface at canvas-local (77,539), rearrange
+      engaged with the blueprint down the strip, and a vertical drag
+      reordered appletOrder 111..117 -> 112;113;114;111;115;116;117,
+      persisted. NOTE the left canvas geometry flip-flop across runs
+      (106x1440 at y425 vs 106x1352 at y513) is still unexplained;
+      likely sibling docks' strut states at placement time - watch it
+      during Phase 8 multi-screen work on Positioner::canvasGeometry.
+      Commits: 9aeda562
 - [x] iconSize=78 startup hang (bisected 2026-07-10, fixed 2026-07-12):
       the autosize shrink loop's termination was the equality
       nextIconSize !== 16 while stepping by 8, so any icon size not
