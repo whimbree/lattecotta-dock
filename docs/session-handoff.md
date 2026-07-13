@@ -92,6 +92,22 @@ below are now RESOLVED and kept only as archaeology.
   was running). Next in queue: hover-modal inconsistency in rearrange
   mode, residual ~40px preview offset during zoom dwell (live vs
   resting rect, refine d98bff98), then the latency items.
+- Round twelve-c, ghosts finished (c7c46226): the per-side rect fix
+  was not enough - the user re-reproduced on the clock. The sibling
+  shadow pattern (ShadowedItem Loader sampling a still-visible
+  original) draws content twice and trusts MultiEffect to place its
+  padded copy pixel-exactly; it lands a few px off, double-striking
+  text applets while icons just look slightly bold (which is how my
+  full-screen visual pass missed it - RULE: verify text applets at
+  NATIVE resolution, imagemagick via 'nix run nixpkgs#imagemagick'
+  since the host has no crop tool). ItemWrapper and ShortcutBadge
+  shadows are now layer.effect - double-draw impossible by
+  construction. Colorizer's shadow keeps the sibling arrangement
+  (samples wrapper while the colorizer MultiEffect draws) and is a
+  filed suspect: in colorizing mode it likely draws an UNCOLORIZED
+  wrapper copy over the colorized one; its comment assumes
+  ShadowedItem draws only the shadow, which is false - MultiEffect
+  always draws source content plus shadow. Idle CPU still 0.1%.
 - Round twelve-b, the ghost regression (6c7001ce): e3376405's static
   paddingRect used Qt.rect(pad,pad,2p,2p) assuming width/height were
   totals; Qt's updateSourcePadding() defines them as PER-SIDE extras

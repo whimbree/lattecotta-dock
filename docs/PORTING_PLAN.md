@@ -1219,7 +1219,25 @@ multi-view, multi-monitor setup.
       Also caught on the idle main thread: QtWebEngine performing a
       lazy Vulkan/RhiGpuInfo init ~20s after startup (some applet
       pulls QtWebEngine in) - one-time jank, separate small item.
-      Commits: e3376405
+      FOLLOW-UPS from the fix (both user-reported ghost regressions,
+      fixed same day): paddingRect components are PER-SIDE extras,
+      not totals (6c7001ce, Qt updateSourcePadding() semantics), and
+      the sibling shadow pattern (effect sampling a still-visible
+      original) double-draws with a few px offset - ItemWrapper and
+      ShortcutBadge shadows are layer.effect now (c7c46226).
+      Commits: e3376405, 6c7001ce, c7c46226
+- [ ] Colorizer's shadow site (colorizer/Applet.qml) likely draws an
+      UNCOLORIZED copy of the wrapper over the colorized applet while
+      colorizing mode is active: it keeps the sibling ShadowedItem
+      arrangement (it must sample the wrapper, since the colorizer
+      MultiEffect is not a texture provider), and its comment assumes
+      ShadowedItem draws only the shadow's alpha shape - false,
+      MultiEffect always draws source content plus shadow. Verify in
+      colorizing mode ('colors from active window'), then either hide
+      the original while the colorizer+shadow pair draws, or restack
+      so the colorizer draws last. Low exposure (mode off by
+      default), found by reading during c7c46226.
+      Commits:
 - [ ] Startup latency (user-reported: 'takes way longer than it
       should'). Measure BOTH dev and production-shaped starts before
       optimizing: dev runs pay for cmake --install restaging, the gdb
