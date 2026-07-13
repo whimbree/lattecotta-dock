@@ -1129,6 +1129,17 @@ multi-view, multi-monitor setup.
       QML disk cache is invalidated by restaging. Options to evaluate
       in Phase 10: qmlcachegen for installed packages, chrome
       pre-instantiation at startup, measuring with QSG_INFO/QML_PROFILE.
+      CORRECTION from the 2026-07-13 startup measurement: the disk
+      cache is NOT invalidated by restaging (cmake --install preserves
+      source mtimes; ~/.cache/lattedock/qmlcache showed 235/237 entries
+      reused across two restarts), so the first-open cost is in-engine
+      type instantiation, not bytecode compilation. The startup stack
+      capture (see next item) makes chrome warm-up the plausible lever:
+      first-open pays the same blocking QQmlTypeLoader walk the views
+      pay at startup, and second opens are fast because the engine's
+      type cache is warm. Candidate: async-warm the chrome component
+      after startup idle. Measure the actual first-open duration before
+      building anything.
       Commits:
 - [ ] Startup latency (user-reported: 'takes way longer than it
       should'). Measure BOTH dev and production-shaped starts before
@@ -1136,7 +1147,38 @@ multi-view, multi-monitor setup.
       wrapper and -d logging before the first frame; a clean timing
       needs a bare run-staged.sh without wrapper. Then profile the real
       offenders (layout load, QML compilation, screen wait).
-      Commits:
+      MEASURED 2026-07-13, no wrapper, no -d, KWin window poller for
+      ground truth (~150ms granularity); the -d run matched within
+      50ms so -d numbers are trustworthy. User-perceived restart is
+      ~9.4s, split into two distinct problems:
+      (1) LAUNCHER ~4.1s before the binary even execs: kill-wait 0.6s
+      + nix develop 3.0s (measured alone) + restaging ~0.5s. Lever:
+      cache the dev-shell env (nix print-dev-env snapshot, invalidate
+      on flake.lock change) instead of re-evaluating per restart -
+      would cut ~3s of dev-loop latency, zero product risk. Production
+      installs never pay this.
+      (2) BINARY 4.5s exec -> first dock window, 5.3s -> all three
+      docks. Attributed via log density + a mid-stall gdb interrupt
+      (child-run gdb; ptrace_scope=1 blocks attach): ~0.6s libs+init
+      to first log, ~0.9s corona init (theme mask parsing, screens,
+      layout templates), then ~3s creating the three views
+      SEQUENTIALLY in one synchronizer timer callback
+      (synchronizer.cpp:694 -> initContainments -> addView each).
+      The captured stack shows the main thread parked in
+      QWaitCondition::wait inside QQmlTypeLoader::doLoad<CachedLoader>
+      under PlasmaQuick AppletQuickItem::itemForApplet /
+      ContainmentItem::init - upstream PlasmaQuick loads every
+      applet's QML synchronously on the main thread, so the 'stall'
+      windows in the log are the loader thread churning imports.
+      Levers, in value order: (a) create views one per event-loop
+      cycle instead of all in one callback - first dock maps ~2s
+      earlier (perceived win), total unchanged, small and safe;
+      (b) the synchronous per-applet load is upstream PlasmaQuick
+      design - treat as the floor, do not fight it locally.
+      Also explained: latte-dock windows 4 and 5 appearing ~18.5s
+      after startup in BOTH runs are lazily created auxiliary popups
+      (ToolTipDialog, KlipperPopup timing matches), benign.
+      Commits: (measurement pass; levers not yet implemented)
 - [x] Edit-mode chrome lifecycle trilogy (user-reported 2026-07-12
       evening: blueprint flashes at open then vanishes, rearrange mode
       dies moments after enabling with no blue frames and no dragging,

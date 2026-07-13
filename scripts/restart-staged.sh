@@ -32,6 +32,19 @@ if pgrep -x latte-dock >/dev/null; then
     exit 1
 fi
 
+# nix develop re-evaluates the flake on every restart (~3.0s measured
+# 2026-07-13, the largest single chunk of the ~4.1s pre-exec launcher
+# overhead). print-dev-env emits the same environment as a sourceable
+# script, so snapshot it once and refresh only when the flake inputs
+# change. Delete build/_devshell.env to force a refresh by hand.
+envcache="$repo/build/_devshell.env"
+if [[ ! -s "$envcache" || "$repo/flake.lock" -nt "$envcache" || "$repo/flake.nix" -nt "$envcache" ]]; then
+    echo "refreshing dev-shell env snapshot (nix print-dev-env)..."
+    mkdir -p "$repo/build"
+    nix print-dev-env "$repo" > "$envcache.tmp"
+    mv "$envcache.tmp" "$envcache"
+fi
+
 # setsid + closed stdin: no controlling terminal, so the dock can never be
 # stopped or hung up by its launching terminal going away.
-exec setsid nix develop "$repo" -c "$repo/scripts/run-staged.sh" "$@" </dev/null
+exec setsid bash -c 'source "$1"; shift; exec "$@"' _ "$envcache" "$repo/scripts/run-staged.sh" "$@" </dev/null
