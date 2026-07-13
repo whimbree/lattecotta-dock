@@ -73,15 +73,12 @@ private:
 
     int appletsPopUpMargin() const;
 
+    QSize pendingContentSize() const;
+    void syncAnchoredWaylandPosition();
+
 private:
     bool m_containsMouse{false};
     bool m_respectsAppletsLayoutGeometry{true};
-
-    //! last anchored position sent to the plasmashell surface; re-asserted
-    //! after base-class Move/Expose handling, which re-sends the stale
-    //! QWindow::position() (frozen on wayland) and would undo it
-    bool m_hasPendingWaylandPosition{false};
-    QPoint m_pendingWaylandPosition;
 
     Plasma::Types::Location m_edge{Plasma::Types::BottomEdge};
 

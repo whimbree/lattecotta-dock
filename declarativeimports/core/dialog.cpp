@@ -138,19 +138,14 @@ void Dialog::onVisualParentChanged()
     }
 }
 
-void Dialog::updateGeometry()
+QSize Dialog::pendingContentSize() const
 {
-    //! while hidden the base class places the window itself on show
-    if (!visualParent() || !isVisible()) {
-        return;
-    }
-
-    //! Position with the size the dialog is about to have, not the stale
-    //! QWindow::size(). When the previews content switches to another task
-    //! the mainItem has already resized while the window has not caught up
-    //! yet; centering on the anchor with the old width fights the base
-    //! class's syncToMainItemSize() placement (which uses the new size) and
-    //! the popup visibly bounces between the two spots on every crossing.
+    //! the size the dialog is about to have, not the stale QWindow::size().
+    //! When the previews content switches to another task the mainItem has
+    //! already resized while the window has not caught up yet; centering on
+    //! the anchor with the old width fights the base class's
+    //! syncToMainItemSize() placement (which uses the new size) and the
+    //! popup visibly bounces between the two spots on every crossing.
     QSize nextSize = size();
 
     if (mainItem()) {
@@ -166,9 +161,15 @@ void Dialog::updateGeometry()
         }
     }
 
-    const QPoint target = popupPosition(visualParent(), nextSize);
+    return nextSize;
+}
 
-    adjustGeometry(QRect(target, nextSize));
+void Dialog::syncAnchoredWaylandPosition()
+{
+    //! while hidden the base class places the window itself on show
+    if (!KWindowSystem::isPlatformWayland() || !visualParent() || !isVisible()) {
+        return;
+    }
 
     //! QWindow-level moves (setPosition()/setGeometry()) are NO-OPs for a
     //! visible wayland window: the logged window position stayed frozen
@@ -176,9 +177,32 @@ void Dialog::updateGeometry()
     //! popup kept showing new content at the previous task's spot. The
     //! plasmashell surface can be positioned at any time; this is the same
     //! integration the base class uses for its show-time placement.
+    //!
+    //! The target is recomputed FRESH from the current anchor and content
+    //! size on every call, never remembered: a stored position goes stale
+    //! the moment the content resizes, and whether the resize handler or
+    //! the base class's stale re-send ran last decided where the popup
+    //! ended up (user-reproduced: a hover sweep mapped the previews with
+    //! the previous task's width, the base recentered correctly on the
+    //! resize, then its next re-send reverted the fix and the window sat
+    //! parked ~450px off its task). Recomputing makes every event
+    //! self-healing regardless of ordering.
+    PlasmaShellWaylandIntegration::get(this)->setPosition(popupPosition(visualParent(), pendingContentSize()));
+}
+
+void Dialog::updateGeometry()
+{
+    //! while hidden the base class places the window itself on show
+    if (!visualParent() || !isVisible()) {
+        return;
+    }
+
+    const QSize nextSize = pendingContentSize();
+    const QPoint target = popupPosition(visualParent(), nextSize);
+
+    adjustGeometry(QRect(target, nextSize));
+
     if (KWindowSystem::isPlatformWayland()) {
-        m_pendingWaylandPosition = target;
-        m_hasPendingWaylandPosition = true;
         PlasmaShellWaylandIntegration::get(this)->setPosition(target);
     }
 }
@@ -351,21 +375,14 @@ bool Dialog::event(QEvent *e)
     //! surface on every Move event and on expose (libplasma dialog.cpp,
     //! QEvent::Move handler and updateVisibility()). On wayland that value
     //! is permanently stuck at the show-time position, so each re-send
-    //! teleports the window back and undoes updateGeometry()'s anchored
-    //! placement (watched live in WAYLAND_DEBUG: every one of our
-    //! set_position requests was followed by one carrying the stale spot).
-    //! Re-assert the anchored position AFTER the base has handled the
-    //! event, so ours is always the last request the compositor sees.
-    if (m_hasPendingWaylandPosition
-            && isVisible()
-            && (e->type() == QEvent::Move || e->type() == QEvent::Expose)) {
-        PlasmaShellWaylandIntegration::get(this)->setPosition(m_pendingWaylandPosition);
-    }
-
-    if (e->type() == QEvent::Hide) {
-        //! next show is placed fresh by the base class; a stale anchored
-        //! position must not override it
-        m_hasPendingWaylandPosition = false;
+    //! teleports the window back and undoes any anchored placement (watched
+    //! live in WAYLAND_DEBUG: every one of our set_position requests was
+    //! followed by one carrying the stale spot). Re-assert the anchored
+    //! position AFTER the base has handled the event, so ours is always the
+    //! last request the compositor sees - recomputed fresh, see
+    //! syncAnchoredWaylandPosition() for why storing it raced.
+    if (e->type() == QEvent::Move || e->type() == QEvent::Expose || e->type() == QEvent::Show) {
+        syncAnchoredWaylandPosition();
     }
 
     return result;
