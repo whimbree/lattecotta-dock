@@ -51,6 +51,21 @@ export QT_QPA_PLATFORM=wayland
 # the staged plugin tree ONLY - it holds just Latte's plugins (containment
 # actions, indicator loader), no platform/theme plugin, so no segfault risk.
 export QT_PLUGIN_PATH="$stage/lib/plugins"
+
+# ... plus ONE allow-listed leaf: the kwindowsystem runtime plugin dir of
+# the exact package the binary links (per the regression rule: specific
+# leaves, never shared roots). Without it KWindowSystem has no wayland
+# backend in this process, so KWindowShadow fails on every dialog (the
+# "Couldn't create KWindowShadow" spam in every -d log) and
+# KWindowEffects::slideWindow() is a silent no-op - applet popups never
+# got the compositor slide-in. The dir ships only kwindowsystem's own
+# platform plugins, nothing that can shadow modules we stage ourselves.
+kwspath=$(ldd "$build/bin/latte-dock" | perl -ne 'print "$1\n" if m{=> (/nix/store/[^/]+-kwindowsystem-[^/]+)/}' | head -1)
+if [[ -n "$kwspath" && -d "$kwspath/lib/qt-6/plugins" ]]; then
+    export QT_PLUGIN_PATH="$QT_PLUGIN_PATH:$kwspath/lib/qt-6/plugins"
+else
+    echo "WARNING: kwindowsystem plugin dir not found; dialog shadows and popup slide will be missing" >&2
+fi
 export QT_QPA_PLATFORMTHEME=
 
 echo "config home: $confighome"
