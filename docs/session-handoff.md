@@ -1,7 +1,7 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-12 (evening). PHASE 8 IS OPEN - read its section in
+Last updated 2026-07-14. PHASE 8 IS OPEN - read its section in
 docs/PORTING_PLAN.md first; every item is current there, several sections
 below are now RESOLVED and kept only as archaeology.
 
@@ -92,6 +92,24 @@ below are now RESOLVED and kept only as archaeology.
   was running). Next in queue: hover-modal inconsistency in rearrange
   mode, residual ~40px preview offset during zoom dwell (live vs
   resting rect, refine d98bff98), then the latency items.
+- Round nineteen (2026-07-14): the Latte->Plasma indicator switch
+  crash root-caused and fixed (841c2ca4). The gdb harness earned its
+  keep: two runs, identical stacks, and a register dump (rdi=0)
+  proving SvgItem::setSvg received a NULL, not a dangling pointer -
+  KSvg 6 dropped Qt5's if (m_svg) guard in updateDevicePixelRatio()
+  (still unguarded at ksvg master; upstream report candidate, noted
+  in the plan item). The null was plasma FrontLayer's svg:
+  resources.svgs[0] evaluating before the QML->C++->QML
+  setSvgImagePaths round trip lands; fix gates the group-arrow
+  Loader on the svg existing (deterministic: Loader active binding
+  subscribes before any arrow exists, connections fire in
+  establishment order). Verified live: switch, round trips, cold
+  start with plasma persisted, frames render; user's indicator
+  setting restored to Latte afterwards. METHOD note: the crash
+  always killed the process before KConfig synced, so the persisted
+  type stayed latte - which both kept the repro armed across runs
+  and hid the cold-start arm of the same race until tested
+  deliberately.
 - SESSION CLOSE STATE (2026-07-13 night): everything committed and
   pushed through 1a49f118; working tree clean; the dock runs the
   latest build with --user-config (the user's REAL ~/.config, single

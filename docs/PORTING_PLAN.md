@@ -1331,14 +1331,23 @@ multi-view, multi-monitor setup.
       KWin effect slow-motion (Effect-slidingpopups SlideInTime) and
       effect unloading as discriminators.
       Commits: f630d2ad (role + slide machinery, slide-out works)
-- [ ] Latte -> Plasma indicator style switch CRASHES the dock
-      (user-reported 2026-07-13 evening, twice). Reproduce under the
-      gdb crash harness (LATTE_RUN_WRAPPER with gdb-batch-cmds) by
-      switching Effects -> Indicators -> Style to Plasma in the edit
-      chrome; expect a real backtrace. Suspect family: the indicator
-      loader swaps indicator QML packages at runtime - provider/layer
-      churn or a dangling indicator item during the swap.
-      Commits:
+- [x] Latte -> Plasma indicator style switch CRASHES the dock
+      (user-reported 2026-07-13 evening, twice). ROOT-CAUSED with the
+      gdb harness (two identical stacks, rdi=0 at the fault):
+      KSvg::SvgItem::setSvg(nullptr) null-derefs in
+      updateDevicePixelRatio() - KSvg 6 dropped Qt5's if (m_svg)
+      guard (verified plasma-framework v5.115.0 vs ksvg 6.27/master;
+      upstream ksvg report candidate for Phase 12). The null came
+      from org.kde.latte.plasma FrontLayer.qml binding svg:
+      resources.svgs[0], which is empty until the QML->C++->QML
+      setSvgImagePaths round trip lands - always after the new
+      package's items incubate during the switch cascade. Fixed by
+      gating the group-arrow Loader on the svg existing (ordering is
+      deterministic: the Loader's active binding subscribes before
+      any arrow exists, connections activate in establishment order).
+      Verified: switch, round trips, cold start with plasma
+      persisted, frames render.
+      Commits: 841c2ca4
 - [ ] Colorizer's shadow site (colorizer/Applet.qml) likely draws an
       UNCOLORIZED copy of the wrapper over the colorized applet while
       colorizing mode is active: it keeps the sibling ShadowedItem
