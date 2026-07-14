@@ -1272,6 +1272,60 @@ multi-view, multi-monitor setup.
       original) double-draws with a few px offset - ItemWrapper and
       ShortcutBadge shadows are layer.effect now (c7c46226).
       Commits: e3376405, 6c7001ce, c7c46226
+- [ ] Applet popup SLIDE-IN animation still missing (plasma parity;
+      user-driven session 2026-07-13 evening). The slide-OUT works
+      (user-verified) since f630d2ad; the open still animates with a
+      generic quick fade (the scale effect - it persisted with KWin's
+      fade effect unloaded, and it stayed quick while slidingpopups
+      was configured to 1500ms, which is how it was identified as NOT
+      slidingpopups). Target behavior, user-stated: the popup must
+      emerge FROM BEHIND the dock, exactly like plasmashell popups
+      emerge from their panel (that is the slide offset/clip at the
+      panel edge, free once the slide-in engages).
+      EVIDENCE CHAIN so far (do not re-litigate these):
+      (1) kwindowsystem wayland backend was missing entirely
+      (347f413a) - KWindowEffects was a no-op, shadows also fixed;
+      (2) the popup carried the Dock role; type AppletPopup fixed it,
+      set_role(7) wire-confirmed, and popupWindow=false in KWin
+      Window terms is CORRECT for appletpopup role (not a defect -
+      that flag misled a whole probe cycle);
+      (3) slide hints reach the wire with valid location, offset -1
+      (client-computed offsets from pre-map geometry are garbage and
+      make the effect clip the slide to an empty region - keep -1);
+      (4) hints are asserted at SurfaceCreated, visibleChanged (after
+      the base's location-derived UNSET in the same emission) and
+      every position sync;
+      (5) PlasmaShellWaylandIntegration re-applies the role itself on
+      Qt's per-hide surface recreation (read v6.6.5 source; explicit
+      re-apply is a cached no-op) but NOT panelBehavior - we re-apply
+      that at SurfaceCreated.
+      OPEN LEADS, in order: (a) the KWin probe saw the popup produce
+      TWO windowAdded events within milliseconds on some opens (and
+      one on others) - a mid-open re-map would cancel slidingpopups'
+      in-animation and hand the second map to the scale effect;
+      correlate with the xdg_surface destroy/recreate cycles and the
+      client-side single visibleChanged; find what re-maps. (b) dump
+      KWIN's view: run kwin with WAYLAND_DEBUG or add effect-side
+      logging via a nested session to see whether slideOnShowHide()
+      is populated at windowAdded. (c) compare a plasmashell popup's
+      full wire stream against ours (kickoff via
+      plasmashell activateLauncherMenu D-Bus refused to open
+      headlessly; the panel calendar needs a real click).
+      TOOLING from the session: KWin windowAdded classification
+      probe (wininspect2.js pattern), fakepointer scroll, latte
+      global-shortcut invocation for applet activation
+      (kglobalaccel invokeShortcut 'activate entry N', flaky),
+      KWin effect slow-motion (Effect-slidingpopups SlideInTime) and
+      effect unloading as discriminators.
+      Commits: f630d2ad (role + slide machinery, slide-out works)
+- [ ] Latte -> Plasma indicator style switch CRASHES the dock
+      (user-reported 2026-07-13 evening, twice). Reproduce under the
+      gdb crash harness (LATTE_RUN_WRAPPER with gdb-batch-cmds) by
+      switching Effects -> Indicators -> Style to Plasma in the edit
+      chrome; expect a real backtrace. Suspect family: the indicator
+      loader swaps indicator QML packages at runtime - provider/layer
+      churn or a dangling indicator item during the swap.
+      Commits:
 - [ ] Colorizer's shadow site (colorizer/Applet.qml) likely draws an
       UNCOLORIZED copy of the wrapper over the colorized applet while
       colorizing mode is active: it keeps the sibling ShadowedItem

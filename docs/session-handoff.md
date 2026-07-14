@@ -92,6 +92,30 @@ below are now RESOLVED and kept only as archaeology.
   was running). Next in queue: hover-modal inconsistency in rearrange
   mode, residual ~40px preview offset during zoom dwell (live vs
   resting rect, refine d98bff98), then the latency items.
+- Round seventeen, the popup slide saga (347f413a, f630d2ad; slide-in
+  STILL OPEN, full evidence chain + leads in the plan item): user
+  wants plasma-parity popup animations - popup must emerge from
+  behind the dock like plasmashell's from their panel. Banked along
+  the way: the staged env was missing kwindowsystem's wayland plugin
+  ENTIRELY (dialog shadows had silently never worked - allow-listed
+  the exact linked package's plugin dir in run-staged), and applet
+  popups now carry the appletpopup role (slide-OUT works,
+  user-verified). Slide-in remains eaten by the scale effect; the
+  hottest lead is a DOUBLE windowAdded per open seen by the KWin
+  probe. HARD-WON METHODOLOGY NOTES: popupWindow=false is CORRECT
+  for appletpopup-role windows (wasted a probe cycle); client-side
+  slide offsets computed pre-map are garbage that make the effect
+  clip the animation invisible - always send -1; KWin effect
+  slow-motion (SlideInTime=1500) + selective effect unloading are
+  cheap discriminators for 'which effect animated that'; a KWin
+  windowAdded script probe beats theorizing about classification;
+  and READ upstream sources at the pinned tag before hypothesizing
+  about them (three ordering theories died to source reading).
+  Also new: audio-badge volume wheel now matches plasma-pa exactly
+  (299a241b, user-verified) and fakepointer has a scroll subcommand.
+  QUEUED NEXT: the Latte->Plasma indicator switch crash (gdb harness
+  item in the plan), the colorizer double-draw check, comic/WebEngine
+  free-run under threaded.
 - Round sixteen, threaded render loop (28fdca5f): the user set the
   bar - 'behave like plasma where possible' - and reported jittery
   per-task volume scroll plus a chugging calendar popup. Both traced
