@@ -75,6 +75,7 @@ private:
 
     QSize pendingContentSize() const;
     void syncAnchoredWaylandPosition();
+    void updateSlideEffect(const QRect &globalGeometry);
 
 private:
     bool m_containsMouse{false};

@@ -230,6 +230,14 @@ PlasmaCore.ToolTipArea {
         id: popupWindow
         objectName: "popupWindow"
         flags: Qt.WindowStaysOnTopHint
+        //! the plasma surface role plasmashell's own applet popups carry.
+        //! Without it the default Normal type ends up Dock-classified by
+        //! KWin (popupWindow=false, specialWindow=true - read live from a
+        //! KWin windowAdded probe) and the sliding-popups effect never
+        //! animates the window even with valid kde-slide data on the
+        //! surface; plasmashell's popups classify popupWindow=true and
+        //! slide. Same fix keeps every other popup behavior plasma-aligned.
+        type: PlasmaCore.Dialog.AppletPopup
         visible: (hostedApplet && hostedApplet.expanded) && fullRepresentation
         visualParent: compactRepresentation ? compactRepresentation : null
        // location: PlasmaCore.Types.Floating //hostedPlasmoid.location

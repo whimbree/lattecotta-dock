@@ -6,10 +6,13 @@
 #include "dialog.h"
 
 // Qt
+#include <QEvent>
+#include <QGuiApplication>
 #include <QScreen>
 #include <QWindow>
 
 // KDE
+#include <KWindowEffects>
 #include <KWindowSystem>
 
 // Plasma
@@ -30,6 +33,22 @@ Dialog::Dialog(QQuickItem *parent)
     //! (previews window observed sitting half its width off its task).
     connect(this, &PlasmaQuick::Dialog::mainItemChanged, this, &Dialog::onMainItemChanged);
     onMainItemChanged();
+
+    //! the base class's updateVisibility() derives a slide hint from its
+    //! location property and UNSETS the slide (NoEdge) when location is
+    //! Floating - which Latte keeps deliberately, location drives border
+    //! drawing here. That unset runs from this same visibleChanged signal,
+    //! connected in the base constructor, i.e. always BEFORE this slot; by
+    //! re-asserting right after it in the same synchronous emission the
+    //! hint is current before the first frame can commit. Without this the
+    //! popup faded in (compositor fallback) yet slid OUT, because by close
+    //! time our event-driven re-asserts had landed (user-reproduced
+    //! consistently, fixed by exactly this ordering).
+    connect(this, &QWindow::visibleChanged, this, [this](bool shown) {
+        if (shown) {
+            updateSlideEffect(QRect(position(), pendingContentSize()));
+        }
+    });
 }
 
 void Dialog::onMainItemChanged()
@@ -97,7 +116,7 @@ bool Dialog::isRespectingAppletsLayoutGeometry() const
 
     //! As it appears plasma applets popups are defining their popups to Normal window.
     //! Dock type is needed from wayland scenario. In wayland after a while popups from Normal become Dock types
-    return (type() == Dialog::Normal || type() == Dialog::PopupMenu || type() == Dialog::Tooltip || type() == Dialog::Dock);
+    return (type() == Dialog::Normal || type() == Dialog::PopupMenu || type() == Dialog::Tooltip || type() == Dialog::Dock || type() == Dialog::AppletPopup);
 }
 
 QRect Dialog::appletsLayoutGeometryFromContainment() const
@@ -164,6 +183,51 @@ QSize Dialog::pendingContentSize() const
     return nextSize;
 }
 
+void Dialog::updateSlideEffect(const QRect &globalGeometry)
+{
+    //! Applet popups slide in from the dock's screen edge, exactly like
+    //! plasmashell's popups (PopupPlasmaWindow::updateSlideEffect - the
+    //! compositor's sliding-popups effect, requested per window through
+    //! KWindowEffects). Only the Normal-type dialogs slide: that is the
+    //! applet popup class (CompactApplet's popupWindow). Tooltip-flavored
+    //! dialogs (task previews, title tooltips, the rearrange modal) do not
+    //! slide in plasma either - their windows appear in place.
+    if (type() != Dialog::Normal && type() != Dialog::AppletPopup) {
+        return;
+    }
+
+    KWindowEffects::SlideFromLocation slideLocation = KWindowEffects::NoEdge;
+
+    switch (m_edge) {
+    case Plasma::Types::BottomEdge:
+        slideLocation = KWindowEffects::BottomEdge;
+        break;
+    case Plasma::Types::TopEdge:
+        slideLocation = KWindowEffects::TopEdge;
+        break;
+    case Plasma::Types::LeftEdge:
+        slideLocation = KWindowEffects::LeftEdge;
+        break;
+    case Plasma::Types::RightEdge:
+        slideLocation = KWindowEffects::RightEdge;
+        break;
+    default:
+        break;
+    }
+
+    //! offset ALWAYS -1: the compositor computes the slide origin from the
+    //! window's real geometry at animation time (screen edge to window edge,
+    //! the same arithmetic we would do). Computing it client-side broke the
+    //! slide-in invisibly: the pre-map hint (the only one that reaches the
+    //! compositor before the mapping commit) read pre-map garbage geometry,
+    //! and the effect clips the sliding window to the region above the
+    //! offset line - a garbage offset makes that clip EMPTY, so the whole
+    //! slide-in animated invisibly and the popup seemed to pop in, while
+    //! slide-out worked from post-map re-asserts with sane values
+    //! (wire-dumped: offset 2301 on the pre-map hint, -1 on the late ones).
+    KWindowEffects::slideWindow(this, slideLocation, -1);
+}
+
 void Dialog::syncAnchoredWaylandPosition()
 {
     //! while hidden the base class places the window itself on show
@@ -187,7 +251,11 @@ void Dialog::syncAnchoredWaylandPosition()
     //! resize, then its next re-send reverted the fix and the window sat
     //! parked ~450px off its task). Recomputing makes every event
     //! self-healing regardless of ordering.
-    PlasmaShellWaylandIntegration::get(this)->setPosition(popupPosition(visualParent(), pendingContentSize()));
+    const QSize nextSize = pendingContentSize();
+    const QPoint target = popupPosition(visualParent(), nextSize);
+
+    PlasmaShellWaylandIntegration::get(this)->setPosition(target);
+    updateSlideEffect(QRect(target, nextSize));
 }
 
 void Dialog::updateGeometry()
@@ -205,6 +273,8 @@ void Dialog::updateGeometry()
     if (KWindowSystem::isPlatformWayland()) {
         PlasmaShellWaylandIntegration::get(this)->setPosition(target);
     }
+
+    updateSlideEffect(QRect(target, nextSize));
 }
 
 void Dialog::updatePopUpEnabledBorders()
@@ -367,6 +437,33 @@ bool Dialog::event(QEvent *e)
     } else if (e->type() == QEvent::Leave
                || e->type() == QEvent::Hide) {
         setContainsMouse(false);
+    }
+
+    if (e->type() == QEvent::PlatformSurface
+               && static_cast<QPlatformSurfaceEvent *>(e)->surfaceEventType() == QPlatformSurfaceEvent::SurfaceCreated) {
+        //! Qt destroys the wl_surface on every hide, so every per-surface
+        //! state must be re-established on the NEW surface before its first
+        //! commit maps the window. The base class re-applies the plasma
+        //! role only from applyType() during show handling, which loses the
+        //! race against the render thread's mapping commit: KWin then maps
+        //! an appletpopup as a role-less window (probe: popupWindow=false at
+        //! windowAdded), the open animates with the generic window effects
+        //! and the sliding-popups effect never sees it. Re-apply the role
+        //! synchronously at surface creation, before any commit can exist.
+        if (KWindowSystem::isPlatformWayland() && type() == Dialog::AppletPopup) {
+            PlasmaShellWaylandIntegration::get(this)->setRole(QtWayland::org_kde_plasma_surface::role_appletpopup);
+            PlasmaShellWaylandIntegration::get(this)->setPanelBehavior(QtWayland::org_kde_plasma_surface::panel_behavior_always_visible);
+        }
+        //! the slide hint must be CURRENT on the surface before the commit
+        //! that maps the window, or the compositor animates the fade effect
+        //! instead of the slide (user-reproduced consistently: fade-in,
+        //! slide-out - by close time the hint had landed). Under the
+        //! threaded render loop the render thread races the gui thread to
+        //! the mapping commit, so hints sent from the Show event arrive one
+        //! commit late; SurfaceCreated precedes any commit by definition.
+        //! The geometry is not final here - offset -1 lets the compositor
+        //! compute it, which matches our arithmetic anyway.
+        updateSlideEffect(QRect(position(), pendingContentSize()));
     }
 
     const bool result = PlasmaQuick::Dialog::event(e);
