@@ -65,6 +65,7 @@
   sonnet,
   ktextwidgets,
   qqc2-desktop-style,
+  qt5compat, # Qt5Compat.GraphicalEffects ColorOverlay (applet colorizer)
 
   wayland,
 
@@ -136,6 +137,7 @@ stdenv.mkDerivation (finalAttrs: {
     sonnet
     ktextwidgets
     qqc2-desktop-style
+    qt5compat
 
     wayland
   ]

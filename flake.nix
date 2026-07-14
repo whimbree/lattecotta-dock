@@ -77,6 +77,7 @@
             (with pkgs.kdePackages; [
               qtdeclarative
               qtwayland
+              qt5compat # Qt5Compat.GraphicalEffects: ColorOverlay for the applet colorizer (flat color through alpha; MultiEffect.colorization is a luminance-preserving tint, not a substitute)
               libplasma
               plasma-activities
               plasma-workspace
