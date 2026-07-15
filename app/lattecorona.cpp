@@ -34,6 +34,7 @@
 #include "plasma/extended/theme.h"
 #include "settings/universalsettings.h"
 #include "templates/templatesmanager.h"
+#include "tools/commontools.h"
 #include "view/originalview.h"
 #include "view/view.h"
 #include "view/settings/viewsettingsfactory.h"
@@ -1015,37 +1016,31 @@ void Corona::loadDefaultLayout()
 //! Two routes, each pinned by a contract test:
 //! - transientParent, when someone assigned one explicitly (libplasma does
 //!   for visualParent'd popups, the context menu code does for menus).
-//! - the QObject parent chain. An applet-created dialog (a PlasmaCore.Dialog
-//!   declared in applet QML) is a resource child of the item that declared
-//!   it and gets NO transient parent on Qt 6 - the Qt 5 declared-inside-an-
-//!   item transient magic now lives in QQuickWindowQmlImpl only (contracts:
-//!   appletwindowparentingtest.cpp, tst_transientwindowcontracts.qml). The
-//!   declaring item's window() is the host; when that host is itself an
-//!   applet popup (a systray member's dialog, say), its transientParent
-//!   carries on to the view.
+//! - the QObject parent chain (Latte::visualHostWindowOf). An applet-created
+//!   dialog (a PlasmaCore.Dialog declared in applet QML) is a resource child
+//!   of the item that declared it and gets NO transient parent on Qt 6 - the
+//!   Qt 5 declared-inside-an-item transient magic now lives in
+//!   QQuickWindowQmlImpl only (contracts: appletwindowparentingtest.cpp,
+//!   tst_transientwindowcontracts.qml). The declaring item's window() is the
+//!   host; when that host is itself an applet popup (a systray member's
+//!   dialog, say), its transientParent carries on to the view.
 static Latte::View *viewHostingWindow(QWindow *window)
 {
     if (auto *view = qobject_cast<Latte::View *>(window->transientParent())) {
         return view;
     }
 
-    for (QObject *ancestor = window->parent(); ancestor; ancestor = ancestor->parent()) {
-        auto *item = qobject_cast<QQuickItem *>(ancestor);
+    QQuickWindow *host = Latte::visualHostWindowOf(window);
 
-        if (!item || !item->window() || item->window() == window) {
-            continue;
-        }
-
-        QQuickWindow *host = item->window();
-
-        if (auto *view = qobject_cast<Latte::View *>(host)) {
-            return view;
-        }
-
-        return qobject_cast<Latte::View *>(host->transientParent());
+    if (!host) {
+        return nullptr;
     }
 
-    return nullptr;
+    if (auto *view = qobject_cast<Latte::View *>(host)) {
+        return view;
+    }
+
+    return qobject_cast<Latte::View *>(host->transientParent());
 }
 
 bool Corona::eventFilter(QObject *watched, QEvent *event)

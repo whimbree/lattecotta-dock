@@ -9,6 +9,8 @@
 // Qt
 #include <QDir>
 #include <QFileInfo>
+#include <QQuickItem>
+#include <QQuickWindow>
 #include <QStandardPaths>
 #include <QStringList>
 #include <QtMath>
@@ -137,6 +139,23 @@ bool compositingActive()
     }
 #endif
     return true;
+}
+
+QQuickWindow *visualHostWindowOf(const QWindow *window)
+{
+    //! QObject::parent() explicitly: QWindow::parent() is the window-parent
+    //! overload, null for a QML-declared dialog (see the header note)
+    for (QObject *ancestor = window->QObject::parent(); ancestor; ancestor = ancestor->parent()) {
+        auto *item = qobject_cast<QQuickItem *>(ancestor);
+
+        if (!item || !item->window() || item->window() == window) {
+            continue;
+        }
+
+        return item->window();
+    }
+
+    return nullptr;
 }
 
 }
