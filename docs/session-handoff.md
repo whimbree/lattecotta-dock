@@ -49,6 +49,17 @@ below are now RESOLVED and kept only as archaeology.
   frames; the only stalls were the previews dialog's first show, already
   behind the 150ms hoveredTimer, and startup). If hover lag is still
   felt, profile the previews first-show and swap backpressure next.
+- Third layer of the same report (still chugged "moving sufficiently
+  quick"): adopting a task into the previews dialog rebuilds the whole
+  delegate tree on the GUI thread - 100-400ms per switch measured with
+  an event-loop lag probe, 859ms cache-cold, dominated by KSvg disk
+  lookups (gdb mid-stall stack: SvgItem::componentComplete ->
+  QStandardPaths::locate). Fixed in 4b533b8d with a trailing-edge burst
+  debounce keyed on request cadence: sweeps coalesce to one rebuild at
+  rest (measured: 2 adoptions instead of 7 on a 9-crossing 140ms
+  sweep, zero mid-sweep stalls). NEXT LEVER if wanted: bring the
+  per-adoption rebuild cost itself down - KSvg lookup storms during
+  ToolTipInstance creation, or instance reuse across tasks.
 - Follow-up on the same desk report, second layer: after the remap fix
   the residual "trigger and move on" lag was the wayland thumbnail
   streams - every preview is a kwin screencast and negotiation measured
