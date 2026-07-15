@@ -5,6 +5,7 @@
 
 import QtQuick 2.7
 import QtQuick.Effects
+import Qt5Compat.GraphicalEffects as GraphicalEffects
 import org.kde.graphicaleffects as KGraphicalEffects
 
 import org.kde.plasma.core 2.0 as PlasmaCore
@@ -93,7 +94,16 @@ Item {
         source: decoration
         visible: !badgesLoader.active
 
-        layer.enabled: taskIconContainer.anyStateEffectShown && !badgesLoader.active
+        //! forceMonochromaticIcons keeps the layer on PERMANENTLY while the
+        //! monochromize overlay exists: that overlay is visible whenever
+        //! active (unlike the fading state effects below, which leave the
+        //! scenegraph at opacity 0), and the effects' SourceProxy never
+        //! repolishes when a source's layer.enabled flips - a proxy that
+        //! chose the direct path during a hover would keep sampling the
+        //! destroyed layer after the hover ends. A settings-stable gate can
+        //! never strand it (same stability rule as df747ebf).
+        layer.enabled: (taskIconContainer.anyStateEffectShown || Plasmoid.configuration.forceMonochromaticIcons)
+                       && !badgesLoader.active
                        && taskItem.abilities.environment.isGraphicsSystemAccelerated
 
         readonly property real size: Math.min(width,height)
@@ -188,11 +198,15 @@ Item {
                             anchors.fill: parent
                             active: Plasmoid.configuration.forceMonochromaticIcons
 
-                            sourceComponent: MultiEffect {
+                            //! Qt5-faithful forced monochromatic is
+                            //! ColorOverlay, flat through the alpha;
+                            //! MultiEffect.colorization multiplies by the
+                            //! source's gray level instead (1f835402 family)
+                            //! and monochromized badged icons since the port
+                            sourceComponent: GraphicalEffects.ColorOverlay {
                                 anchors.fill: parent
+                                color: latteBridge ? latteBridge.colorPalette.textColor : "transparent"
                                 source: taskIconItem
-                                colorizationColor: latteBridge ? latteBridge.colorPalette.textColor : "transparent"
-                                colorization: latteBridge ? latteBridge.colorPalette.textColor.a : 0
                             }
                         }
                     }

@@ -5,7 +5,7 @@
 */
 
 import QtQuick 2.0
-import QtQuick.Effects
+import Qt5Compat.GraphicalEffects as GraphicalEffects
 
 import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
@@ -211,11 +211,17 @@ Item{
             anchors.fill: _contentItemContainer
             active: abilityItem.isMonochromaticForcedContentItem && abilityItem.monochromizedItem
 
-            sourceComponent: MultiEffect {
+            //! Qt5-faithful forced monochromatic is ColorOverlay: the text
+            //! color painted flat through the icon's alpha.
+            //! MultiEffect.colorization is NOT that effect - its shader
+            //! multiplies the target color by the source's gray level
+            //! (same defect and fix as the applet colorizer, 1f835402), so
+            //! forcing a light text color over dark icon pixels re-output
+            //! dark pixels: the monochromize was a near no-op since the port.
+            sourceComponent: GraphicalEffects.ColorOverlay {
                 anchors.fill: parent
+                color: latteBridge ? latteBridge.colorPalette.textColor : "transparent"
                 source: abilityItem.monochromizedItem
-                colorizationColor: latteBridge ? latteBridge.colorPalette.textColor : "transparent"
-                colorization: latteBridge ? latteBridge.colorPalette.textColor.a : 0
             }
         }
         //! Latte Side Painting-style if the user chose it
