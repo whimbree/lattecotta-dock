@@ -373,7 +373,18 @@ PlasmaCore.ToolTipArea {
         source: compactRepresentation
         width: root.width
         height: root.height
-        visible: appletItem && clickedAnimation.running && !appletItem.indicators.info.providesClickedAnimation
+        //! compactRepresentation must be part of the gate: libplasma NULLS the
+        //! expander's compactRepresentation property during the inline
+        //! representation switch (appletquickitem.cpp:384 in 6.6.5 - an applet
+        //! grown past switchWidth/switchHeight, no click needed), and the
+        //! flash runs to its end (alwaysRunToEnd). A visible effect with a
+        //! nulled source logs 'ShaderEffect: Texture t1 is not assigned a
+        //! valid texture provider (QQuickItem*)' on every material sync for
+        //! the rest of the flash - the brightness animation dirties it every
+        //! frame. visible: false removes the node before the next sync, so
+        //! the effect can never sample the nulled source.
+        visible: appletItem && clickedAnimation.running && compactRepresentation
+                 && !appletItem.indicators.info.providesClickedAnimation
         z:1000
     }
 
