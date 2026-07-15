@@ -214,6 +214,36 @@ below are now RESOLVED and kept only as archaeology.
   needs no extension for drag-and-drop (drag is
   press/waypoints/release), GUI-CI candidate tests banked in the
   Phase 10 e2e item pending the planned microvm.
+- Round twenty-six (2026-07-14, spilling past midnight): applet popup
+  sizing fixed to the Plasma 6 contract (437d9a0c, landed before this
+  round was written up). CompactApplet.qml now mirrors libplasma
+  v6.6.5 appletpopup.cpp LayoutChangedProxy: the full representation's
+  implicit size is the live base, Layout.preferred* only an override,
+  Layout.minimum* enforced. Verified live on the volume applet
+  (260x152 clipped -> 260x491 correct; the width sits at plasma-pa's
+  own 252px minimum). IMPORTANT non-bug: plasmashell renders the same
+  applet wider because of MY persisted custom size there
+  (popupWidth=457 under the systemtray group in its appletsrc), not a
+  different default - do not chase that delta again. The follow-up
+  regression sweep (reopen volume + calendar, native-res screenshots)
+  was attempted headlessly and ABORTED: I was at the desk actively
+  using the machine, so the real mouse and fakepointer fought over
+  hover/focus, and a NEW trap surfaced - spectacle's own task icon
+  joins the dock during capture and shifts applet positions ~50px, so
+  any locate-then-click that spans a spectacle run mis-targets (one
+  click landed on Dictionary instead of the volume applet this way).
+  Sweep evidence stands anyway, from my own hands: calendar and
+  dictionary popups open SIMULTANEOUSLY on this build during the
+  session, both rendered and positioned correctly off the dock. Two
+  new bugs filed in the Phase 10 stabilization list with full
+  investigation state: widget removal leaves a multi-second ghost
+  slot in rearrange mode (C++ removal already immediate per 33830b2c,
+  lag is downstream - repro ONLY on the throwaway layout), and
+  edit-mode background opacity is not WYSIWYG (~half opacity at
+  Opacity=100% in plain edit mode; blueprint vs real-background chain
+  mapped, decisive next step is reading the Qt5 original main.qml
+  from this repo's own history - CLAUDE.md names this exact area as a
+  fork trap).
 - SESSION CLOSE STATE (2026-07-14 night): everything committed and
   pushed; working tree clean; my dock runs the latest build
   under the gdb wrapper with --user-config, config fully restored

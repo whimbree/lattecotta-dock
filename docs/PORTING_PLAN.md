@@ -1995,7 +1995,7 @@ multi-view, multi-monitor setup.
       task-cycling-shortcuts feature (overlaps Latte's own shortcut
       system - decide at Phase 12, not auto-port).
       Commits: (alternativeshelper fix in its own commit)
-- [ ] Applet popups are mis-sized (caught live 2026-07-14: the volume
+- [x] Applet popups are mis-sized (caught live 2026-07-14: the volume
       applet popup renders ~260px wide with wrapping tabs and clipped
       content; plasmashell sizes the same applet correctly).
       ROOT-CAUSE DIRECTION, from reading libplasma v6.6.5
@@ -2003,14 +2003,17 @@ multi-view, multi-monitor setup.
       LayoutChangedProxy takes the full representation's IMPLICIT size
       as the base, Layout.preferred* only as an override, and enforces
       Layout.minimum*. Our shell/package/contents/applet/
-      CompactApplet.qml still runs the Qt5-era chain (preferred ->
+      CompactApplet.qml still ran the Qt5-era chain (preferred ->
       implicit -> live width -> font-metric fallback), so applets
-      written to the new contract (plasma-pa) land in the wrong
-      branch. Fix: instrument the chain once to confirm the firing
-      branch, then replace it with the upstream proxy semantics,
-      clamped to available screen. Verify volume side-by-side vs
-      plasmashell, sweep calendar/network/bluetooth popups.
-      Commits:
+      written to the new contract (plasma-pa) landed in the wrong
+      branch. FIXED on the upstream proxy semantics: implicit size as
+      the live base, Layout.preferred* as override, Layout.minimum*
+      enforced. Verified live on the volume applet (260x152 clipped ->
+      260x491 correct; the 260 width is the applet's own 252px minimum
+      plus margins, and plasmashell's wider rendering of the same
+      applet is a persisted custom size there - popupWidth=457 in its
+      appletsrc - not a different default).
+      Commits: 437d9a0c
 - [ ] Applet context menu is MISSING the "Show Alternatives" entry
       (found while live-verifying the AlternativesHelper fix: the
       clock's menu shows Configure/Copy but no Alternatives, so the
@@ -2019,6 +2022,50 @@ multi-view, multi-monitor setup.
       contextmenu containmentactions plugin and the canvas
       ContextMenuLayer for where Qt5 injected it
       (appletAlternativesRequested wiring exists and is connected).
+      Commits:
+- [ ] Widget removal leaves a ghost slot in rearrange mode (caught
+      live 2026-07-14 with screenshots: deleting the System Tray in
+      rearrange mode left its layout slot visible - empty highlighted
+      slot, "System Tray" title chip, drag handle - for MULTIPLE
+      SECONDS before it vanished). The C++ removal is already
+      immediate (33830b2c: LayoutManager::removeAppletItem finalized
+      by destroyAppletContainer), so the lag is downstream: either
+      the containment layout not collapsing until some later resync,
+      or the edit-mode overlay (ConfigOverlay / rearrange chrome)
+      holding its chip on a destroyed applet. REPRO PROTOCOL: on the
+      throwaway layout only (plain restart-staged.sh, NO
+      --user-config), add a disposable widget, delete it in rearrange
+      mode, measure time-to-visual-removal with timestamped
+      screenshots. Never test deletion on the real layout.
+      Commits:
+- [ ] Edit-mode background opacity is not WYSIWYG (caught live
+      2026-07-14 with screenshots: Background -> Opacity at 100% in
+      the settings chrome, but the dock in PLAIN edit mode renders
+      its background at roughly HALF opacity, so the result after
+      closing edit mode does not match what was tuned). Observed to
+      interact with editBackgroundOpacity (the blueprint layer).
+      INVESTIGATION STATE: the blueprint (containment main.qml ~842,
+      Image editBlueprint) draws BEHIND the dock background at
+      opacity = editBackgroundOpacity in plain edit mode, 1 in
+      rearrange, 0 outside. The real background chain has NO
+      edit-mode modifier found yet: MultiLayered.qml
+      solidBackground.appliedOpacity <- overlayedBackground
+      .midOpacity <- root.myView.backgroundStoredOpacity
+      (MyViewPrivate.qml:23 = panelTransparency/100, or theme
+      maxOpacity when panelTransparency is -1). NEXT: (a) check
+      ancestors of the background for an edit-mode opacity
+      (DragDropArea/layoutsContainer, main.qml:815-880), (b) check
+      forceTransparentPanel / forceSolidPanel (main.qml:126-147) for
+      edit-mode arms, (c) DECISIVE: read the ORIGINAL Qt5 main.qml
+      from this repo's own git history to establish Qt5's edit-mode
+      semantics - whether the real background draws during edit mode
+      at all, at what opacity, and how editBackgroundOpacity
+      composes. CLAUDE.md literally cites edit-mode opacity rewiring
+      as a fork trap: Qt5 is the spec. Candidate mechanisms for
+      "half": an edit-mode opacity multiplier on an ancestor, or the
+      port drawing the translucent background OVER the whitish
+      blueprint so the composite reads half-solid when Qt5 composed
+      them differently.
       Commits:
 
 ### Phase 11: Nix packaging + Docker build verification
