@@ -49,6 +49,19 @@ below are now RESOLVED and kept only as archaeology.
   frames; the only stalls were the previews dialog's first show, already
   behind the 150ms hoveredTimer, and startup). If hover lag is still
   felt, profile the previews first-show and swap backpressure next.
+- Seventh layer (window stuck at the previous task's size, reported as
+  "1 spotify + 3 blank"): probed the adoption pipeline end to end and
+  it was CORRECT - the failure was the previews host's declarative size
+  bindings vs the base dialog's imperative mainItem stamps; a late echo
+  of the old window size after a content SHRINK left the binding
+  dormant forever. Fixed d56a26aa with imperative size enforcement in
+  the host's change handlers (revert any write disagreeing with the
+  active delegate's natural size; equality check ends the recursion in
+  one step). Reproduced the stuck 1096 pre-fix with the exact bounce
+  recipe, then verified 274->1096->274->1096 tracking post-fix. This
+  echo family is the same one CompactApplet's sizing chain comments
+  document - any future mainItem whose size derives from swappable
+  content needs the imperative-enforcement shape, not plain bindings.
 - Sixth layer (content corruption after the cache, reported within
   minutes): DelegateModel SILENTLY resets its root when its model swaps,
   and the previews DelegateModel swaps models by design (isGroup flips
