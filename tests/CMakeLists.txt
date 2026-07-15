@@ -24,6 +24,16 @@ target_include_directories(layershellmappingtest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+ecm_add_test(indicatorfactoryremovaltest.cpp
+    TEST_NAME indicatorfactoryremovaltest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(indicatorfactoryremovaltest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(indicatorfactoryremovaltest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
 # Headless QML checks (Phase 5, docs/TESTING.md): the compile gate stages an
 # install and compiles every package QML file in a real engine; the
 # interaction harness drives real Latte components through qmltestrunner.
