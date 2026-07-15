@@ -49,8 +49,7 @@ PC3.Page {
     //therefore get deleted whilst we are still in a drag exec()
     //this is a clue to the owning dialog that hideOnWindowDeactivate should be deleted
     //See https://bugs.kde.org/show_bug.cgi?id=332733
-    property bool getNewWidgetsDialogActive: false
-    property bool preventWindowHide: draggingWidget || getNewWidgetsDialogActive
+    property bool preventWindowHide: draggingWidget
                                   || categoriesDialog.status !== PlasmaExtras.Menu.Closed
                                   || getWidgetsDialog.status !== PlasmaExtras.Menu.Closed
 
@@ -66,8 +65,6 @@ PC3.Page {
     signal closed();
 
     function forceClose() {
-        getNewWidgetsWindowHideRestoreTimer.stop()
-        getNewWidgetsDialogActive = false
         viewConfig.hideConfigWindow()
     }
 
@@ -166,26 +163,6 @@ PC3.Page {
         return count;
     }
 
-    function shouldOpenExternalGetNewWidgetsDialog(actionModel) {
-        var label = "";
-
-        if (actionModel) {
-            label = String(actionModel.display || actionModel.text || actionModel.name || "");
-        }
-
-        return label.indexOf("Get New") !== -1
-            || label.indexOf("Add New") !== -1
-            || label.indexOf("Download New") !== -1
-            || label.indexOf("添加新") !== -1
-            || label.indexOf("获取新") !== -1
-            || label.indexOf("下载新") !== -1;
-    }
-
-    function holdWidgetExplorerForExternalDialog() {
-        main.getNewWidgetsDialogActive = true
-        getNewWidgetsWindowHideRestoreTimer.restart()
-    }
-
     function scheduleRunningCountRefresh() {
         runningCountRevision++;
         runningCountRefreshTimer.remainingRuns = 20;
@@ -245,13 +222,6 @@ PC3.Page {
         onTriggered: addCurrentApplet()
     }
 
-    Timer {
-        id: getNewWidgetsWindowHideRestoreTimer
-        interval: 30000
-        repeat: false
-        onTriggered: main.getNewWidgetsDialogActive = false
-    }
-
     KSvg.FrameSvgItem{
         id: backgroundFrameSvgItem
         anchors.top: parent.top
@@ -287,14 +257,16 @@ PC3.Page {
         visualParent: getWidgetsButton
         // model set on first invocation
 
+        //! plain upstream trigger: "Download New Plasma Widgets" opens the
+        //! in-process KNSWidgets::Dialog inside shellprivate's
+        //! downloadWidgets() (same pattern as our layouts/indicators KNS
+        //! dialogs) and both entries emit shouldClose() to close the
+        //! explorer. The interception that used to live here came from
+        //! latte-dock-ng and routed to a viewConfig invokable this port
+        //! never had (dead click since 0aa7ffb6); ng only needs it to work
+        //! around its system-Qt Kirigami break, which the pinned stack here
+        //! does not have.
         onClicked: function(model) {
-            if (main.shouldOpenExternalGetNewWidgetsDialog(model)) {
-                main.holdWidgetExplorerForExternalDialog()
-                viewConfig.openGetNewWidgetsDialog()
-                return
-            }
-
-            main.holdWidgetExplorerForExternalDialog()
             model.trigger()
         }
     }
