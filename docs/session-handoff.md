@@ -332,6 +332,36 @@ below are now RESOLVED and kept only as archaeology.
   the --user-config restart, which doubles as the dark-bar
   discriminator; the undo-click verification on widget removal
   remains queued.
+- Round thirty (2026-07-15 ~01:00-02:30, autonomous drive, I am
+  remote-monitoring): the defect-class initiative started. All 314
+  post-fork commits classified into eleven defect classes (recorded
+  in the round-twenty-nine-adjacent conversation and the wave
+  charters); tests/contracts stood up (fadd9012) - the suite that
+  pins libplasma/KSvg/Qt behaviors Latte relies on so pin bumps fail
+  in ctest instead of misbehaving in the dock; seeded with the Qt6
+  QVariantList round-trip contract. THREE WAVE-1 SUBAGENTS running
+  in isolated worktrees at write time: mechanical Qt5->Qt6 breaks
+  (+int-truncation audit), effect/texture-source contract sweep, and
+  loops/degenerate-values sweep - each also writes regression tests
+  for landed fixes and contract tests for its class; none may touch
+  the live dock. Merges and live verification happen serially after
+  they report. MEANWHILE the color complex CLOSED (79ca3360): the
+  dark-bar report, the Dark Colors "dead background", and the black
+  silhouette were ALL the throwaway's missing kdeglobals degrading
+  themeExtended's variant resolution - proven by a live Dark Colors
+  flip on the real config (background darkens, applets flatten
+  LIGHT, tasks stay full color, all Qt5-faithful per the Qt5 source;
+  palette restored after). run-staged.sh now seeds the throwaway
+  config with the session kdeglobals. Colorizer scope item closed as
+  not-a-bug. TRAPS learned: removeView rides the SAME 60s undo
+  window as widget removal - restarting inside the window resurrects
+  the containment (verify the config group is gone before
+  restarting); stuck chrome popups (Type combo, secondary advanced
+  window) linger across sessions and EAT CLICKS aimed at the
+  rearrange toggle - filed as a new chrome-lifecycle item. The undo
+  click on widget removal remains for hand verification (chrome
+  fighting made it unreliable headlessly). Session state: real dock
+  back on --user-config, palette default, tree clean and pushed.
 - SESSION CLOSE STATE (2026-07-14 night): everything committed and
   pushed; working tree clean; my dock runs the latest build
   under the gdb wrapper with --user-config, config fully restored

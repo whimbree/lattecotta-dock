@@ -2189,6 +2189,20 @@ multi-view, multi-monitor setup.
       binding-after-flip surfaces elsewhere, hunt the mechanism
       itself, greppable via 'stranded-binding'.
       Commits: e412889d
+- [ ] Settings-chrome popup windows linger as stuck overlays across
+      sessions (observed repeatedly 2026-07-15: the Type combo's
+      "Dock/Panel" popup survived its parent chrome closing and sat
+      over the rearrange toggle EATING CLICKS - three toggle clicks
+      in a row landed on the stale popup during headless driving;
+      plus 1096x527 and 1096x204 layer-6 windows appearing when the
+      chrome opens with Advanced enabled, parked at wrong geometry,
+      persisting after close - almost certainly the SECONDARY
+      advanced-mode config window, which the Phase 8 multi-monitor
+      work note already flags as not covered). One investigation:
+      enumerate the chrome's child windows/popups, their lifecycle
+      on close/retarget, and their output+geometry handling; the
+      d670c97a screen-pinning never covered them.
+      Commits:
 - [ ] Applet-created dialogs open on the wrong screen (caught live
       2026-07-15 with a screenshot: the comic's full-size viewer -
       its "bigger" zoom button - opened on the portrait DP-3 while
