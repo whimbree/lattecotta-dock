@@ -581,6 +581,22 @@ Item {
     ///END functions
 
     //BEGIN connections
+    //! Plasma 6 undo contract: deleting a widget marks its applet destroyed() and
+    //! keeps the object alive while the "Widget Removed" undo notification is open.
+    //! For containment-type applets (System Tray) Containment::appletRemoved does
+    //! not fire at all until the object is really deleted - libplasma askDestroy()
+    //! guards its immediate emit with !isContainment() - so without this watcher
+    //! their slot sat as a ghost in the layout for the whole undo window (measured
+    //! 60s, the libplasma fallback timer). Park the container the moment the applet
+    //! is marked destroyed so the slot hides instantly; unpark on undo so it
+    //! returns in place.
+    Connections {
+        target: appletItem.applet ? appletItem.applet.plasmoid : null
+        function onDestroyedChanged(destroyed) {
+            fastLayoutManager.setAppletInScheduledDestruction(appletItem.applet.plasmoid.id, destroyed);
+        }
+    }
+
     onAppletChanged: {
         if (!applet) {
             destroy();

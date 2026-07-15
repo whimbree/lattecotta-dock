@@ -149,7 +149,27 @@ void LayoutManager::setAppletInScheduledDestruction(const int &id, const bool &e
         m_appletsInScheduledDestruction.remove(id);
         Q_EMIT appletsInScheduledDestructionChanged();
     } else if (!m_appletsInScheduledDestruction.contains(id) && enabled) {
-        m_appletsInScheduledDestruction[id] = appletItem(id);
+        QQuickItem *container = appletItem(id);
+
+        if (!container) {
+            qWarning() << "org.kde.layoutmanager: applet" << id
+                       << "was marked for scheduled destruction but no container exists for it";
+            return;
+        }
+
+        //! When the applet object really dies at the end of the undo window, the
+        //! container self-destructs from QML (AppletItem.onAppletChanged). Prune the
+        //! parking entry by identity then - no dereference, the item is already dying -
+        //! and persist the layout without the removed applet.
+        connect(container, &QObject::destroyed, this, [this, id]() {
+            if (m_appletsInScheduledDestruction.contains(id)) {
+                m_appletsInScheduledDestruction.remove(id);
+                Q_EMIT appletsInScheduledDestructionChanged();
+                save();
+            }
+        });
+
+        m_appletsInScheduledDestruction[id] = container;
         Q_EMIT appletsInScheduledDestructionChanged();
     }
 }
@@ -1232,6 +1252,14 @@ void LayoutManager::addAppletItem(QObject *applet, int x, int y)
         return;
     }
 
+    //! Undo of a removed widget reaches here twice: destroyedChanged(false) already
+    //! unparked the still-alive container (AppletItem's destruction watcher), then
+    //! libplasma re-emits appletAdded. Never create a second container for an applet
+    //! that still has one.
+    if (plasmaApplet && appletItem(plasmaApplet->id())) {
+        return;
+    }
+
     QVariant appletItemVariant;
     QVariant appletVariant; appletVariant.setValue(appletGraphic);
     m_createAppletItemMethod.invoke(m_rootItem, Q_RETURN_ARG(QVariant, appletItemVariant), Q_ARG(QVariant, appletVariant));
@@ -1280,11 +1308,23 @@ void LayoutManager::removeAppletItem(QObject *applet)
         return;
     }
 
-    //! Plasma 6 emits Containment::appletRemoved with the applet already marked destroyed(), and
-    //! unlike Plasma 5 it never calls back a second time. The previous two-phase code parked the
-    //! container on that first call and returned, waiting for a follow-up that never comes — so a
-    //! removed widget stayed parked in m_appletsInScheduledDestruction and was never deleted.
-    //! Finalize now; destroyAppletContainer() locates the container by matching applet().
+    //! Plasma 6 undo contract (libplasma askDestroy()): deleting a widget marks it
+    //! destroyed() and keeps the object alive while the "Widget Removed" undo
+    //! notification is open (60s fallback timer). For regular applets appletRemoved
+    //! fires immediately at that point; for containment-type applets (System Tray)
+    //! askDestroy() guards its emit with !isContainment(), so their ONLY appletRemoved
+    //! arrives from inside ~Applet when the undo window ends. Either way
+    //! destroyed()==true means "undo still possible": park the container, which hides
+    //! the slot instantly and keeps it restorable. Physical cleanup happens when the
+    //! applet object really dies: the container self-destructs through
+    //! AppletItem.onAppletChanged and the parking entry prunes itself (see
+    //! setAppletInScheduledDestruction). destroyed()==false is a direct
+    //! Plasma::Applet deletion (e.g. synced applets): finalize immediately.
+    if (plasmaApplet->destroyed()) {
+        setAppletInScheduledDestruction(plasmaApplet->id(), true);
+        return;
+    }
+
     destroyAppletContainer(plasmaApplet);
 }
 
