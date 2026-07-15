@@ -2615,7 +2615,7 @@ Features beyond even Latte git master, appropriate under the
 maintained-continuation framing. None of these start before their
 prerequisites in the phases above are done.
 
-- [ ] Resizable applet popups with per-applet persistence and reset
+- [x] Resizable applet popups with per-applet persistence and reset
       (requested 2026-07-14; PREREQUISITE: the popup mis-sizing fix in
       the stabilization list - the feature sits on the corrected
       sizing contract). Design decided, from libplasma v6.6.5
@@ -2646,7 +2646,23 @@ prerequisites in the phases above are done.
       feature as tests/qml/tst_compactapplet.qml (3b37750b); still
       wanted here: GUI-CI candidates for the microvm: drag-resize
       round trip, persistence across restart, reset entry.
-      Commits:
+      LANDED 2026-07-15, all live-verified on the throwaway layout
+      with fakepointer drags (grow by top-edge drag, persisted keys
+      in the layout file, reopen at persisted size, reset shrinks a
+      pinned popup live). Two design notes from the live drive:
+      the cross-module reset wake-up is an in-process dynamic-property
+      bump on the applet, NOT KConfigWatcher - kconfig's DBus change
+      notification cannot address layout files with spaces in their
+      names ('My Layout.layout.latte'), verified with dbus-monitor;
+      and end-of-grab detection is Enter/Hide plus a settle timer,
+      because mouse events queued before the compositor grab engages
+      arrive late and killed the session instantly. The systemtray
+      hosts its OWN libplasma AppletPopup which saves popupWidth on
+      every hide (upstream semantics), so the systray always carries
+      the keys and always shows the reset entry - upstream-inherited,
+      noted in 22aa01d7's body. GUI-CI candidates remain wanted.
+      Commits: d12baff2 (core feature), 22aa01d7 (reset menu entry),
+      c3026dea (custom-size qmltests)
 - [ ] Settle-gated hover chrome (requested 2026-07-15: create the
       expensive hover state only after the cursor has DWELLED on the
       same icon for 50ms; once created it tracks the cursor live

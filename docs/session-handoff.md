@@ -5,6 +5,51 @@ Last updated 2026-07-15. PHASE 8 IS OPEN - read its section in
 docs/PORTING_PLAN.md first; every item is current there, several sections
 below are now RESOLVED and kept only as archaeology.
 
+## 2026-07-15 midday: resizable persistent popups LANDED (d12baff2..c3026dea)
+
+- The full continuation feature from the plan: edge-drag resize on applet
+  popups (vendored libplasma WindowResizeHandler in Latte::Quick, plus a
+  resizeStarted() signal), popupWidth/popupHeight persisted in the applet's
+  config group with plasmashell's exact keys, save only after a real user
+  resize (deliberate deviation, commented), "Reset Popup Size" context-menu
+  entry that re-sizes a pinned popup live, customPopupSize branch in the
+  CompactApplet sizing chain with Layout.minimum still enforced, re-anchor
+  suppression during the grab with a single re-anchor on release. Verified
+  live on the throwaway layout with fakepointer: grow, persist, reopen at
+  size, reset-in-place. qml gates + 41 qml tests + 21 contracts + 14 C++
+  tests all green.
+- Hard-won findings, all encoded in code comments and commit bodies:
+  - KConfigWatcher CANNOT deliver for layout files: kconfig's change
+    notification embeds the file name in a DBus object path and layout
+    names carry spaces ("My Layout.layout.latte"). dbus-monitor showed no
+    ConfigChanged even for notify-flagged writes. The reset wake-up is an
+    in-process dynamic-property bump on the applet instead.
+  - KConfigGroup::parent() never goes invalid: the root group is named
+    "<default>" and stays its own parent. A path-building walk on
+    isValid() alone hung the dock at startup twice (caught with the gdb
+    wrapper's live stacks); the code that needed it was removed with the
+    KConfigWatcher approach.
+  - End-of-resize-grab has no protocol signal. Enter (KWin re-enters the
+    surface when the grab ends) + Hide + a 2s resize-quiet backstop timer.
+    MouseMove/MouseButtonRelease are NOT usable: events queued between
+    startSystemResize() and the grab engaging arrive a beat later and
+    ended the session in the same millisecond it started.
+  - The systemtray plasmoid hosts its OWN libplasma AppletPopup (its QML
+    instantiates PlasmaCore.AppletPopup), which persists popupWidth on
+    every hide with zero interaction - so systray always carries the keys
+    and always shows the reset entry. Upstream-inherited, harmless.
+  - My real layout's digitalclock already carried popupWidth=560/
+    popupHeight=400 (pre-dating this feature, likely plasmashell-era or
+    from the systray-noticed save path); the feature now HONORS them, so
+    the real clock popup opens 560x400 on first run. Reset is one
+    right-click away if that reads wrong at the desk.
+- The throwaway 3-dock layout's bottom view is viewType=1 (Panel) +
+  alignment=10 (Justify) + panelSize=100 - the full-width background it
+  draws is the correct rendering for that config, not a regression
+  (checked against the enums and my real layout's viewType=0 pill, which
+  rendered correctly the same morning). Almost certainly left flipped by
+  an earlier session's Dock/Panel type-combo testing.
+
 ## 2026-07-15: tests-first coverage batch + class-A stranding sweep (worktree, headless)
 
 - Regression and contract coverage landed for the recent lifecycle fixes
