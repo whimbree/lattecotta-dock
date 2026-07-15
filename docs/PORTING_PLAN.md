@@ -2146,27 +2146,34 @@ multi-view, multi-monitor setup.
       Release now detaches to a null parent without touching
       visibility, upstream-symmetric.
       Commits: 1aa5238c
-- [ ] Duplicated dock renders its applets ON TOP OF EACH OTHER
-      (caught live 2026-07-15 with a screenshot: Duplicate Dock,
-      placed at DP-3 bottom; the clock draws over the task icons,
-      applets overlap in a crowded pile instead of a row). EVIDENCE
-      SO FAR: the layout FILE is consistent - all four containments'
-      appletOrder lists exactly match their actual applet ids, so
-      the duplicate machinery remaps ids correctly on disk and this
-      is a RUNTIME layout-assembly failure on the cloned view, not
-      config corruption. LEADING SUSPECT: the Justify-alignment
-      splitter machinery - if splitterPosition/splitterPosition2 or
-      the splitter items fail to restore on the clone, the
-      start/main/end sub-layouts assemble overlapped at the same
-      origin, which matches the screenshot exactly. Same family as
-      the Phase 8 cloned-view order-sync item and the old
-      duplicate-dock backlog entries; c3d15966 fixed config-sync
-      establishment for clones, this is the next layer. REPRO: on
-      the throwaway, Duplicate Dock onto any edge; instrument
-      LayoutManager::restore() on the new containment (what order
-      it reads, whether splitters exist, which sub-layout each item
-      lands in).
-      Commits:
+- [x] Duplicated dock renders its applets ON TOP OF EACH OTHER
+      (caught live 2026-07-15 with screenshots, reproduced by hand
+      twice and headlessly twice). NOT the duplicate machinery and
+      NOT config corruption: the file stays consistent, restore()
+      produces correct order, plain duplicateView assembles a clean
+      dock, a screen-only move stays clean, and every restart heals.
+      The trigger is the LIVE FORM-FACTOR FLIP (the clone is born on
+      a free vertical edge, the user then moves it to a horizontal
+      edge of the other screen). ROOT CAUSE, probe-measured through
+      the whole chain: the tasks plasmoid's mouseHandler width/height
+      bindings are DEAD after the flip - root.vertical updates
+      (formFactorChanged fires, verified with a listener), icList
+      re-lays (592x88), metrics stay correct (mask thickness 88), yet
+      mouseHandler stays frozen at the old orientation's 88x592. The
+      frozen size cascades: tasksWidth/Height -> Layout.preferred* ->
+      ItemWrapper appletPreferredThickness -> a vertical-shaped tasks
+      AppletItem (88px of reserved length) inside a horizontal row ->
+      neighbors pack after the phantom slot while ~592px of task
+      icons render over them. FIXED by reasserting the bindings on
+      every orientation change (the afefa442 stranded-binding
+      remedy); verified live: post-fix flip tracks (592x88), row
+      renders correctly spaced, healthy docks unaffected. WATCH
+      ITEM: the binding destroyer is unidentified (suspected
+      anchors-system size takeover while old and new conditional
+      anchors overlap during the transition) - if another dead-
+      binding-after-flip surfaces elsewhere, hunt the mechanism
+      itself, greppable via 'stranded-binding'.
+      Commits: e412889d
 - [ ] Applet-created dialogs open on the wrong screen (caught live
       2026-07-15 with a screenshot: the comic's full-size viewer -
       its "bigger" zoom button - opened on the portrait DP-3 while

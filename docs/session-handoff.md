@@ -304,6 +304,34 @@ below are now RESOLVED and kept only as archaeology.
   Session state: throwaway layout active with the comic working
   (xkcd checked), my real dock still not restored to --user-config;
   the removal-ghost undo arm still wants one live Undo click.
+- Round twenty-nine (2026-07-15, deep into the night, desk-driven with
+  me duplicating docks live while the probes ran): the duplicated-dock
+  overlap fixed (e412889d). The long road mattered: config was proven
+  clean, restore() proven correct, plain duplicateView proven clean,
+  screen-move proven clean - the trigger is ONLY the live formFactor
+  flip, and the defect is mouseHandler's width/height bindings dying
+  in the tasks plasmoid while every input updates around them
+  (measured: vertical=false, icList=592x88, mask=88, mouseHandler
+  frozen 88x592). Fix is the afefa442-class binding reassert on
+  orientation change; the destroyer itself is an open watch item in
+  the plan entry. METHOD kit built along the way and worth reusing:
+  a repeating containment-side geometry probe (per-layout kids with
+  scene mapping, wrapper geometry, per-applet formFactor and Layout
+  hints) plus a tasks-side value probe, and a fully headless repro
+  recipe - dbus duplicateView, chrome cycling by canvas-window
+  geometry, screen dropdown and edge-button coordinates for the
+  pinned settings window. removeView/duplicateView over dbus went
+  incident-free this time (ids verified against the layout file
+  before every removeView). ALSO seen and filed nothing new: the
+  1096x527 layer-6 chrome window on DP-3 appears when the settings
+  chrome opens while Advanced is on and can linger - matches the
+  Phase 8 'secondary advanced-mode window not covered' note; fold it
+  into that work. Session state at close: throwaway active with the
+  user's own re-made clone at DP-3 bottom (healthy), all my test
+  clones removed, tree clean and pushed; my real dock still awaits
+  the --user-config restart, which doubles as the dark-bar
+  discriminator; the undo-click verification on widget removal
+  remains queued.
 - SESSION CLOSE STATE (2026-07-14 night): everything committed and
   pushed; working tree clean; my dock runs the latest build
   under the gdb wrapper with --user-config, config fully restored
