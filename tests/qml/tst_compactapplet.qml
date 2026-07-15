@@ -75,6 +75,7 @@ Item {
             }
             verify(popupWindow, "CompactApplet must expose its popup dialog as objectName popupWindow");
             expander.fullRepresentation = null;
+            popupWindow.customPopupSize = Qt.size(-1, -1);
         }
 
         function makeRep(props) {
@@ -152,6 +153,54 @@ Item {
             rep.minH = 300;
             compare(popupWindow.mainItem.height, 300,
                     "minimum height must win over a smaller implicit base");
+        }
+
+        //! resizable persistent popups: a user-chosen size (persisted as
+        //! popupWidth/popupHeight, surfaced by the dialog as
+        //! customPopupSize) overrides BOTH the implicit base and the
+        //! Layout.preferred override - it is the window size the user last
+        //! chose, exactly plasmashell's explicit-config-size semantics -
+        //! and clearing it returns the chain to the live hints.
+        function test_customSizeOverridesHintsAndClearsLive() {
+            var rep = makeRep({ implicitWidth: 213, implicitHeight: 108 });
+            expander.fullRepresentation = rep;
+            rep.prefW = 400;
+
+            popupWindow.customPopupSize = Qt.size(500, 350);
+            compare(popupWindow.mainItem.width, 500,
+                    "custom width must beat implicit and preferred");
+            compare(popupWindow.mainItem.height, 350,
+                    "custom height must beat the implicit base");
+
+            //! hint churn while a custom size holds must not move the popup
+            rep.implicitWidth = 320;
+            rep.prefW = 450;
+            compare(popupWindow.mainItem.width, 500,
+                    "hint changes must not disturb a custom size");
+
+            //! reset (the context menu entry deletes the keys): back to the
+            //! live hint chain, not to a latched value
+            popupWindow.customPopupSize = Qt.size(-1, -1);
+            compare(popupWindow.mainItem.width, 450,
+                    "clearing the custom size must return to the live hint chain");
+            compare(popupWindow.mainItem.height, 108);
+        }
+
+        //! resizable persistent popups: Layout.minimum stays enforced over
+        //! a custom size, mirroring plasmashell's updateMinSize() which
+        //! grows even an explicitly configured popup when the minimum does.
+        function test_customSizeRespectsMinimum() {
+            var rep = makeRep({ implicitWidth: 213, implicitHeight: 108 });
+            expander.fullRepresentation = rep;
+
+            rep.minW = 250;
+            rep.minH = 200;
+            popupWindow.customPopupSize = Qt.size(220, 150);
+
+            compare(popupWindow.mainItem.width, 250,
+                    "minimum width must win over a smaller custom size");
+            compare(popupWindow.mainItem.height, 200,
+                    "minimum height must win over a smaller custom size");
         }
 
         //! 1aa5238c: the adopt side of the contract - an adopted rep becomes
