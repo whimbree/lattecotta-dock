@@ -296,6 +296,10 @@ void CanvasConfigView::focusOutEvent(QFocusEvent *ev)
 
 void CanvasConfigView::hideConfigWindow()
 {
+    //! the deferred show must die with the session or it maps the canvas
+    //! afterwards as a stuck overlay (see SubConfigView::cancelDeferredShow)
+    cancelDeferredShow();
+
     if (KWindowSystem::isPlatformWayland()) {
         //!NOTE: Avoid crash in wayland environment with qt5.9
         close();

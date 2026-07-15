@@ -63,6 +63,15 @@ set_tests_properties(layoutmanagerparkingtest PROPERTIES
 target_include_directories(layoutmanagerparkingtest PRIVATE
     ${CMAKE_SOURCE_DIR}/containment
     ${CMAKE_BINARY_DIR}/containment)
+ecm_add_test(visualhostwindowtest.cpp
+    TEST_NAME visualhostwindowtest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(visualhostwindowtest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(visualhostwindowtest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
 
 # Headless QML checks (Phase 5, docs/TESTING.md): the compile gate stages an
 # install and compiles every package QML file in a real engine; the
@@ -128,4 +137,12 @@ ecm_add_test(contracts/representationswitchtest.cpp ${repswitch_QRC}
     LINK_LIBRARIES Qt6::Test Qt6::Gui Qt6::Qml Qt6::Quick Plasma::Plasma Plasma::PlasmaQuick KF6::CoreAddons
 )
 set_tests_properties(representationswitchtest PROPERTIES
+# Contract: how Qt Quick parents windows declared inside items (QObject
+# resource child, NO transient parent on Qt 6). qmltest cannot read
+# QObject::parent() of a window, so it runs as a plain Qt test.
+ecm_add_test(contracts/appletwindowparentingtest.cpp
+    TEST_NAME appletwindowparentingtest
+    LINK_LIBRARIES Qt6::Test Qt6::Quick
+)
+set_tests_properties(appletwindowparentingtest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

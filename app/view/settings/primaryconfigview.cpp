@@ -190,6 +190,11 @@ void PrimaryConfigView::hideConfigWindow()
     //! configure-applets frames, no dragging.
     endConfiguringSession();
 
+    //! a pending deferred show would remap the chrome after the session
+    //! ended (see SubConfigView::cancelDeferredShow); the canvas and
+    //! secondary windows cancel their own inside their hideConfigWindow()
+    cancelDeferredShow();
+
     if (KWindowSystem::isPlatformWayland()) {
         //!NOTE: Avoid crash in wayland environment with qt5.9
         close();

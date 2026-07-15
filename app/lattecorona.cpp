@@ -34,6 +34,7 @@
 #include "plasma/extended/theme.h"
 #include "settings/universalsettings.h"
 #include "templates/templatesmanager.h"
+#include "tools/commontools.h"
 #include "view/originalview.h"
 #include "view/view.h"
 #include "view/settings/viewsettingsfactory.h"
@@ -60,6 +61,9 @@
 #include <QFontDatabase>
 #include <QQmlContext>
 #include <QProcess>
+#include <QQuickItem>
+#include <QQuickWindow>
+#include <QWindow>
 
 // Plasma
 #include <Plasma/Plasma>
@@ -105,6 +109,10 @@ Corona::Corona(bool defaultLayoutOnStartup, QString layoutNameOnStartUp, QString
       m_dialogShadows(new PanelShadows(this, QStringLiteral("dialogs/background")))
 {
     connect(qApp, &QApplication::aboutToQuit, this, &Corona::onAboutToQuit);
+
+    //! watch every window the process shows so applet-created transient
+    //! windows can inherit their view's screen (see eventFilter)
+    qApp->installEventFilter(this);
 
     //! create the window manager
     if (KWindowSystem::isPlatformWayland()) {
@@ -1002,6 +1010,65 @@ void Corona::aboutApplication()
 void Corona::loadDefaultLayout()
 {
   //disabled
+}
+
+//! Resolve the Latte::View hosting a window the process is about to show.
+//! Two routes, each pinned by a contract test:
+//! - transientParent, when someone assigned one explicitly (libplasma does
+//!   for visualParent'd popups, the context menu code does for menus).
+//! - the QObject parent chain (Latte::visualHostWindowOf). An applet-created
+//!   dialog (a PlasmaCore.Dialog declared in applet QML) is a resource child
+//!   of the item that declared it and gets NO transient parent on Qt 6 - the
+//!   Qt 5 declared-inside-an-item transient magic now lives in
+//!   QQuickWindowQmlImpl only (contracts: appletwindowparentingtest.cpp,
+//!   tst_transientwindowcontracts.qml). The declaring item's window() is the
+//!   host; when that host is itself an applet popup (a systray member's
+//!   dialog, say), its transientParent carries on to the view.
+static Latte::View *viewHostingWindow(QWindow *window)
+{
+    if (auto *view = qobject_cast<Latte::View *>(window->transientParent())) {
+        return view;
+    }
+
+    QQuickWindow *host = Latte::visualHostWindowOf(window);
+
+    if (!host) {
+        return nullptr;
+    }
+
+    if (auto *view = qobject_cast<Latte::View *>(host)) {
+        return view;
+    }
+
+    return qobject_cast<Latte::View *>(host->transientParent());
+}
+
+bool Corona::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() == QEvent::Show && watched->isWindowType()) {
+        QWindow *window = static_cast<QWindow *>(watched);
+
+        //! An applet-created dialog resolves to its view (above), but
+        //! nothing forwards the view's SCREEN to it: QWindow::screen()
+        //! stays the primary screen until the compositor maps the surface
+        //! somewhere, and applets place such dialogs from window->screen()
+        //! synchronously right after show(), before any wl_surface.enter
+        //! can correct it - so the placement lands on the primary output
+        //! regardless of where the dock is (caught live: the comic
+        //! applet's full-size viewer centered on the portrait screen while
+        //! its dock ran on the landscape one). Forward the screen here, at
+        //! Show delivery: filters run before the target window handles the
+        //! event and before control returns to the code that positions the
+        //! dialog, so every screen-derived placement that follows computes
+        //! from the right output.
+        if (Latte::View *view = viewHostingWindow(window)) {
+            if (view->screen() && window->screen() != view->screen()) {
+                window->setScreen(view->screen());
+            }
+        }
+    }
+
+    return Plasma::Corona::eventFilter(watched, event);
 }
 
 int Corona::screenForContainment(const Plasma::Containment *containment) const

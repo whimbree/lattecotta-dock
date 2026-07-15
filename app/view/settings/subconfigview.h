@@ -47,6 +47,7 @@ public:
     Latte::View *parentView() const;
     virtual void setParentView(Latte::View *view, const bool &immediate = false);
     virtual void showAfter(int msecs = 0);
+    void cancelDeferredShow();
 
     Latte::WindowSystem::WindowId trackedWindowId();
 

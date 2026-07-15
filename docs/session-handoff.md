@@ -41,6 +41,46 @@ below are now RESOLVED and kept only as archaeology.
   reasserts under a real perpendicular flip (repro recipe in the
   eca51ae0 commit body), and the 71b0d75a undo arm still wants its one
   live Undo-click confirmation (unchanged from that item).
+## 2026-07-15: headless wayland-platform/multi-screen session (worktree)
+
+- Three commits, all headless-only, LIVE VERIFICATION PENDING flags in
+  their plan items: 87749d93 (layershellmappingtest now pins the
+  ec5d2316 exclusive-zone rules and the 793faad2/d670c97a cross-screen
+  remap cycle on real QWindows - two offscreen outputs come from the
+  offscreen platform's JSON configfile, written by a custom main),
+  377aad57 (applet-created dialogs - the comic full-size viewer -
+  inherit their view's screen via a Corona app-wide Show filter; the
+  comic dialog QML was extracted from the pinned plugin binary, the
+  libplasma behavior read from the pinned 6.6.5 tarball), 08511ffd
+  (deliberate chrome hides cancel both deferred-show mechanisms; the
+  stuck-overlay family traces to closed sessions whose showAfter timer
+  or waiting-for-size flag mapped chrome windows afterwards).
+- FINDING that redirected a fix mid-flight: on the pinned Qt 6.11 a
+  QQuickWindow-derived window declared inside an Item gets NO
+  transientParent (the Qt 5 declared-inside-an-item magic lives only in
+  QQuickWindowQmlImpl now); the QObject resource-child parent survives.
+  The first draft of the corona filter keyed on transientParent and the
+  new contract test (tst_transientwindowcontracts) failed it
+  immediately - both halves are now pinned (appletwindowparentingtest
+  is the C++ half). If any future fix wants "the window's view", walk
+  the QObject parent chain, not transientParent.
+- SECOND catch in the same fix, worth its own trap note: on a QWindow*,
+  window->parent() is QWindow::parent() - the window-parent overload,
+  null for QML-declared dialogs - and it converts silently to QObject*,
+  so a QObject-chain walk written with it compiles and matches nothing.
+  Use window->QObject::parent(). The walk now lives in
+  Latte::visualHostWindowOf (tools/commontools) with its own headless
+  test, df63fe9e.
+- Clean negative worth keeping: QQC2 popups on the pinned Qt 6.11 are
+  in-scene items (popupType 0, probed offscreen through a scratch
+  qmltestrunner case) - popup-as-native-window theories about the
+  stuck overlays are dead; what lingered were the chrome windows
+  themselves.
+- Live queue for the next session with a compositor: comic zoom viewer
+  lands on the dock's screen; stuck-overlay recipes (close chrome
+  within the 200ms secondary interval, layout switch with chrome open)
+  leave no mapped chrome window; enumerate what the 1096x527/1096x204
+  layer-6 windows actually were.
 
 ## 2026-07-15: headless silent-Qt6-break sweep (worktree session)
 

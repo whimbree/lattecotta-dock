@@ -252,6 +252,21 @@ void SubConfigView::showAfter(int msecs)
 
 }
 
+void SubConfigView::cancelDeferredShow()
+{
+    //! Both deferred-show mechanisms survive close(): the showAfter() timer
+    //! keeps running and m_showDeferredUntilSized keeps re-arming show()
+    //! from any later width/height change. Left alive across a deliberate
+    //! hide they map the window again AFTER the configuring session ended -
+    //! caught live as chrome windows lingering at wrong geometry across
+    //! sessions and eating clicks aimed at the dock (the secondary
+    //! type-chooser parked over the rearrange toggle). Every deliberate
+    //! hide path must cancel them; transient hides (view retargeting,
+    //! layer-surface remaps) must NOT, their re-show is the point.
+    m_showTimer.stop();
+    m_showDeferredUntilSized = false;
+}
+
 void SubConfigView::syncSlideEffect()
 {
     if (!m_latteView || !m_latteView->containment()) {

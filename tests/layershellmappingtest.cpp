@@ -12,7 +12,12 @@
 #include "wm/waylandlayershell.h"
 
 // Qt
+#include <QGuiApplication>
 #include <QRegion>
+#include <QScreen>
+#include <QSignalSpy>
+#include <QTemporaryFile>
+#include <QWindow>
 #include <QtTest>
 
 using namespace Latte::WindowSystem;
@@ -23,6 +28,7 @@ class LayerShellMappingTest : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void initTestCase();
     void anchorsForBottomEdge();
     void anchorsForLeftEdge();
     void exclusiveEdgeIsAlwaysAnchored();
@@ -33,7 +39,29 @@ private Q_SLOTS:
     void canvasInputRegionPlainEditMode();
     void canvasInputRegionConfigureAppletsClickThrough();
     void canvasInputRegionKeepsChromeInteractive();
+    void dockStrutZoneAppliesAndReleases();
+    void canvasPlacementOptsOutOfExclusiveZones();
+    void fixedPlacementOptsOutOfExclusiveZones();
+    void sameScreenPlacementDoesNotRemap();
+    void hiddenWindowRetargetsWithoutMapping();
+    void visibleCrossScreenFixedPlacementRemaps();
+    void visibleCrossScreenCanvasPlacementRemaps();
 };
+
+void LayerShellMappingTest::initTestCase()
+{
+    //! main() below configures the offscreen platform with two outputs (the
+    //! landscape+portrait pair of the real setup) so the cross-screen
+    //! retarget tests can drive an actual screen change. Pin that setup
+    //! loudly: if the offscreen configfile contract ever changes, every
+    //! screen-dependent test here would otherwise misreport.
+    const auto screens = QGuiApplication::screens();
+    QVERIFY2(screens.size() == 2,
+             qPrintable(QStringLiteral("expected the 2 configured offscreen outputs, got %1")
+                            .arg(screens.size())));
+    QCOMPARE(screens.at(0)->geometry(), QRect(0, 0, 1920, 1080));
+    QCOMPARE(screens.at(1)->geometry(), QRect(1920, 0, 1440, 2560));
+}
 
 void LayerShellMappingTest::anchorsForBottomEdge()
 {
@@ -212,6 +240,212 @@ void LayerShellMappingTest::canvasInputRegionKeepsChromeInteractive()
     QVERIFY(!region.contains(QPoint(960, 30)));
 }
 
-QTEST_MAIN(LayerShellMappingTest)
+void LayerShellMappingTest::dockStrutZoneAppliesAndReleases()
+{
+    //! the dock strut flow (WaylandInterface::setViewStruts /
+    //! removeViewStruts): a dock reserves exactly its visible thickness as
+    //! the exclusive zone and releases it with 0. ec5d2316's rule has two
+    //! halves; this is the "docks use their strut zone" half.
+    QWindow window;
+    LSW *ls = LSW::get(&window);
+    QVERIFY(ls);
+
+    LayerShell::setExclusiveZone(&window, LayerShell::exclusiveZoneFor(QRect(0, 1040, 1920, 40), Plasma::Types::BottomEdge));
+    QCOMPARE(ls->exclusionZone(), 40);
+
+    LayerShell::setExclusiveZone(&window, 0);
+    QCOMPARE(ls->exclusionZone(), 0);
+}
+
+void LayerShellMappingTest::canvasPlacementOptsOutOfExclusiveZones()
+{
+    //! ec5d2316's other half: an overlay surface must carry zone -1 (opt out
+    //! of every other surface's exclusive zone) or the compositor shifts it
+    //! off the screen edge by the dock's own strut (measured live: canvas at
+    //! y=1206 instead of 1294). The canvas windows are reused, so drive a
+    //! stale dock-shaped configuration first: the placement must also clear
+    //! the exclusive edge - a stale edge not among the overlay anchors makes
+    //! the compositor kill the surface.
+    QScreen *screen = QGuiApplication::screens().at(0);
+    const QRect screenGeometry = screen->geometry();
+
+    QWindow window;
+    LSW *ls = LSW::get(&window);
+    QVERIFY(ls);
+
+    LayerShell::configureView(&window, screen, Plasma::Types::BottomEdge, Latte::Types::Center);
+    LayerShell::setExclusiveZone(&window, 88);
+    QCOMPARE(ls->exclusiveEdge(), LSW::AnchorBottom);
+
+    const QRect canvasGeometry(0, screenGeometry.height() - 146, screenGeometry.width(), 146);
+    LayerShell::applyCanvasPlacement(&window, Plasma::Types::BottomEdge, screen, canvasGeometry, screenGeometry);
+
+    QCOMPARE(ls->exclusionZone(), -1);
+    QCOMPARE(ls->exclusiveEdge(), LSW::AnchorNone);
+    QCOMPARE(ls->anchors(), LSW::Anchors(LSW::AnchorBottom | LSW::AnchorLeft | LSW::AnchorRight));
+    QCOMPARE(ls->margins(), QMargins(0, 0, 0, 0));
+    QCOMPARE(window.screen(), screen);
+}
+
+void LayerShellMappingTest::fixedPlacementOptsOutOfExclusiveZones()
+{
+    //! fixed-position surfaces (settings window, widget explorer, secondary
+    //! chooser) compute their position in absolute screen coordinates, so a
+    //! compositor strut-shift would land them somewhere else than requested:
+    //! zone -1, no exclusive edge, and the position rides on top+left
+    //! margins relative to the pinned screen (7ac419d1, d670c97a).
+    QScreen *screen = QGuiApplication::screens().at(0);
+    const QRect screenGeometry = screen->geometry();
+
+    QWindow window;
+    LSW *ls = LSW::get(&window);
+    QVERIFY(ls);
+
+    LayerShell::configureView(&window, screen, Plasma::Types::BottomEdge, Latte::Types::Justify);
+    LayerShell::setExclusiveZone(&window, 88);
+
+    const QRect geometry(screenGeometry.x() + 100, screenGeometry.y() + 50, 600, 400);
+    LayerShell::applyFixedGeometry(&window, screen, geometry, screenGeometry);
+
+    QCOMPARE(ls->exclusionZone(), -1);
+    QCOMPARE(ls->exclusiveEdge(), LSW::AnchorNone);
+    QCOMPARE(ls->anchors(), LSW::Anchors(LSW::AnchorTop | LSW::AnchorLeft));
+    QCOMPARE(ls->margins(), QMargins(100, 50, 0, 0));
+    QCOMPARE(window.screen(), screen);
+}
+
+void LayerShellMappingTest::sameScreenPlacementDoesNotRemap()
+{
+    //! a mapped layer surface only needs the destroy/recreate cycle when it
+    //! actually changes outputs; a same-screen re-placement must not hide
+    //! the window even transiently (793faad2's remap is deliberately gated)
+    QScreen *screen = QGuiApplication::screens().at(0);
+
+    QWindow window;
+    QVERIFY(LSW::get(&window));
+    window.setScreen(screen);
+    window.resize(200, 100);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+
+    QSignalSpy visibleSpy(&window, &QWindow::visibleChanged);
+    LayerShell::applyFixedGeometry(&window, screen, QRect(10, 10, 200, 100), screen->geometry());
+
+    QCOMPARE(visibleSpy.count(), 0);
+    QVERIFY(window.isVisible());
+    QCOMPARE(window.screen(), screen);
+}
+
+void LayerShellMappingTest::hiddenWindowRetargetsWithoutMapping()
+{
+    //! a hidden window has no surface to remap: retargeting must be a plain
+    //! screen assignment and must never show the window as a side effect
+    QScreen *target = QGuiApplication::screens().at(1);
+
+    QWindow window;
+    QVERIFY(LSW::get(&window));
+    window.setScreen(QGuiApplication::screens().at(0));
+
+    QSignalSpy visibleSpy(&window, &QWindow::visibleChanged);
+    LayerShell::applyFixedGeometry(&window, target,
+                                   QRect(target->geometry().x() + 10, target->geometry().y() + 10, 200, 100),
+                                   target->geometry());
+
+    QCOMPARE(visibleSpy.count(), 0);
+    QVERIFY(!window.isVisible());
+    QCOMPARE(window.screen(), target);
+}
+
+void LayerShellMappingTest::visibleCrossScreenFixedPlacementRemaps()
+{
+    //! a mapped wlr-layer surface is bound to the output it was created on
+    //! and the protocol has no request to move it (793faad2, d670c97a):
+    //! carrying a visible window to another screen must destroy the surface
+    //! first (hide), retarget, and map a fresh one (show) - observable as
+    //! exactly one hide followed by one show
+    QScreen *origin = QGuiApplication::screens().at(0);
+    QScreen *target = QGuiApplication::screens().at(1);
+
+    QWindow window;
+    QVERIFY(LSW::get(&window));
+    window.setScreen(origin);
+    window.resize(200, 100);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+
+    QSignalSpy visibleSpy(&window, &QWindow::visibleChanged);
+    LayerShell::applyFixedGeometry(&window, target,
+                                   QRect(target->geometry().x() + 10, target->geometry().y() + 10, 200, 100),
+                                   target->geometry());
+
+    QCOMPARE(visibleSpy.count(), 2);
+    QCOMPARE(visibleSpy.at(0).at(0).toBool(), false);
+    QCOMPARE(visibleSpy.at(1).at(0).toBool(), true);
+    QVERIFY(window.isVisible());
+    QCOMPARE(window.screen(), target);
+}
+
+void LayerShellMappingTest::visibleCrossScreenCanvasPlacementRemaps()
+{
+    //! the canvas overlay is reused across edited views (d670c97a): its
+    //! placement path must carry the same hide/retarget/show cycle, and the
+    //! placement margins must be the ones of the TARGET screen - they are
+    //! interpreted relative to the surface's own output
+    QScreen *origin = QGuiApplication::screens().at(0);
+    QScreen *target = QGuiApplication::screens().at(1);
+    const QRect targetGeometry = target->geometry();
+
+    QWindow window;
+    LSW *ls = LSW::get(&window);
+    QVERIFY(ls);
+    window.setScreen(origin);
+    window.resize(200, 100);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+
+    QSignalSpy visibleSpy(&window, &QWindow::visibleChanged);
+    const QRect canvasGeometry(targetGeometry.x(), targetGeometry.y() + 300, 146, targetGeometry.height() - 300);
+    LayerShell::applyCanvasPlacement(&window, Plasma::Types::LeftEdge, target, canvasGeometry, targetGeometry);
+
+    QCOMPARE(visibleSpy.count(), 2);
+    QCOMPARE(visibleSpy.at(0).at(0).toBool(), false);
+    QCOMPARE(visibleSpy.at(1).at(0).toBool(), true);
+    QVERIFY(window.isVisible());
+    QCOMPARE(window.screen(), target);
+    QCOMPARE(ls->anchors(), LSW::Anchors(LSW::AnchorLeft | LSW::AnchorTop));
+    QCOMPARE(ls->margins(), QMargins(0, 300, 0, 0));
+}
+
+//! The mapping tests need a real multi-output topology; the offscreen
+//! platform only exposes one unless configured through its JSON config
+//! file, so a custom main writes one and selects it before the platform
+//! initializes. The geometries mirror the real landscape+portrait setup the
+//! cross-screen defects were caught on.
+int main(int argc, char *argv[])
+{
+    QTemporaryFile config(QDir::tempPath() + QStringLiteral("/layershellmappingtest-XXXXXX.json"));
+    if (!config.open()) {
+        qCritical() << "cannot create the offscreen screen configuration file";
+        return 1;
+    }
+
+    config.write(R"({
+        "screens": [
+            { "name": "landscape", "x": 0, "y": 0, "width": 1920, "height": 1080 },
+            { "name": "portrait", "x": 1920, "y": 0, "width": 1440, "height": 2560 }
+        ]
+    })");
+    config.flush();
+
+    const QByteArray platform = QByteArray("offscreen:configfile=") + config.fileName().toUtf8();
+    qputenv("QT_QPA_PLATFORM", platform);
+
+    QGuiApplication app(argc, argv);
+    app.setAttribute(Qt::AA_Use96Dpi, true);
+
+    LayerShellMappingTest tc;
+    QTEST_SET_MAIN_SOURCE_PATH
+    return QTest::qExec(&tc, argc, argv);
+}
 
 #include "layershellmappingtest.moc"

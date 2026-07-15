@@ -119,6 +119,10 @@ public:
 
     int screenForContainment(const Plasma::Containment *containment) const override;
 
+    //! forwards a view's screen to applet-created transient windows the
+    //! moment they show (see eventFilter implementation notes)
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
     KWayland::Client::PlasmaShell *waylandCoronaInterface() const;
 
     KActivities::Consumer *activitiesConsumer() const;

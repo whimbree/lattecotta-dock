@@ -228,6 +228,10 @@ void SecondaryConfigView::focusOutEvent(QFocusEvent *ev)
 
 void SecondaryConfigView::hideConfigWindow()
 {
+    //! the deferred show must die with the session or it maps the chooser
+    //! afterwards as a stuck overlay (see SubConfigView::cancelDeferredShow)
+    cancelDeferredShow();
+
     if (KWindowSystem::isPlatformWayland()) {
         //!NOTE: Avoid crash in wayland environment with qt5.9
         close();

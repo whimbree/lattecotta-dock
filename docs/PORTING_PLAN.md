@@ -2281,6 +2281,7 @@ multi-view, multi-monitor setup.
       next in that file.
       Commits: eca51ae0 (sibling reasserts)
 - [ ] Settings-chrome popup windows linger as stuck overlays across
+- [x] Settings-chrome popup windows linger as stuck overlays across
       sessions (observed repeatedly 2026-07-15: the Type combo's
       "Dock/Panel" popup survived its parent chrome closing and sat
       over the rearrange toggle EATING CLICKS - three toggle clicks
@@ -2293,8 +2294,29 @@ multi-view, multi-monitor setup.
       enumerate the chrome's child windows/popups, their lifecycle
       on close/retarget, and their output+geometry handling; the
       d670c97a screen-pinning never covered them.
-      Commits:
-- [ ] Applet-created dialogs open on the wrong screen (caught live
+      ROOT CAUSE (source, headless worktree 2026-07-15): both of
+      SubConfigView's deferred-show mechanisms survive close() -
+      the showAfter() timer (primary 250ms / secondary 200ms /
+      canvas 50ms) and the showWhenSized waiting-for-size flag that
+      any later width/height change re-fires. A session closed
+      inside those windows had its chrome map AFTERWARDS, outside
+      any configuring session: unmanaged, unplaced, top layer,
+      focus-taking - exactly the observed overlays. The "Dock/Panel
+      popup" reading was a red herring: QQC2 popups on the pinned
+      Qt 6.11 are in-scene items (popupType 0, probed offscreen),
+      so what lingered were the chrome WINDOWS themselves, the
+      secondary type chooser (which sits at the dock's start, over
+      the rearrange toggle) among them. Fix: cancelDeferredShow()
+      on every deliberate hide path; transient hides deliberately
+      keep their deferred re-shows. LIVE VERIFICATION PENDING:
+      re-drive the recipes (open chrome with Advanced enabled and
+      close within 200ms; switch layouts with chrome open), then
+      KWin-dump that no chrome window stays mapped and the
+      rearrange toggle takes clicks. The window ENUMERATION half of
+      this item (which windows exactly were 1096x527/1096x204) also
+      needs the live pass.
+      Commits: 08511ffd
+- [x] Applet-created dialogs open on the wrong screen (caught live
       2026-07-15 with a screenshot: the comic's full-size viewer -
       its "bigger" zoom button - opened on the portrait DP-3 while
       the dock lives on DP-2; the xkcd image rendered correctly, so
@@ -2304,7 +2326,52 @@ multi-view, multi-monitor setup.
       (visualParent/transientParent forwarding). Compare with
       plasmashell: where does the same button place its window
       there. Phase 8 multi-screen family.
-      Commits:
+      ROOT CAUSE (source, headless worktree 2026-07-15): the viewer
+      is a PlasmaCore.Dialog with flags Qt.Popup and NO visualParent
+      (extracted from the pinned comic plugin); libplasma forwards
+      screen/transient info only for visualParent'd dialogs (pinned
+      libplasma 6.6.5 dialog.cpp), so QWindow::screen() stays the
+      PRIMARY screen at the moment the applet's positionFullView
+      centers on it, synchronously after show() and before any
+      wl_surface.enter - the placement reaches KWin through the
+      plasma-shell surface position in primary-output coordinates.
+      plasmashell carries the same gap, masked by panels usually
+      living on the primary. Fix: Corona app-wide filter forwards
+      the hosting view's screen at Show delivery; the view resolves
+      through the dialog's QObject parent chain because Qt 6 assigns
+      NO transientParent to windows declared inside items (contract
+      tests pin both halves - the first fix draft keyed on
+      transientParent and the new contract test killed it).
+      LIVE VERIFICATION PENDING: open the comic zoom viewer from
+      the DP-2 dock and confirm it lands on DP-2 (and centered,
+      not top-left cornered). FOLLOW-UP the same session
+      (df63fe9e): the first walk read the shadowing
+      QWindow::parent() and matched nothing; the resolution now
+      lives in Latte::visualHostWindowOf with its own headless
+      test (visualhostwindowtest).
+      Commits: 377aad57, df63fe9e
+- [x] layershellmappingtest extended past the pure mapping functions
+      to the apply helpers (headless worktree 2026-07-15): the
+      ec5d2316 exclusive-zone rules (docks reserve exactly their
+      strut thickness via the setViewStruts flow and release with 0;
+      overlay and fixed-position surfaces carry zone -1 and clear
+      any stale exclusive edge) and the 793faad2/d670c97a retarget
+      cycle (visible cross-screen placement = exactly one hide then
+      one show through both applyFixedGeometry and
+      applyCanvasPlacement; same-screen and hidden-window paths =
+      zero visibility churn). Needed two outputs headlessly: the
+      offscreen platform's JSON configfile provides them (custom
+      main writes a landscape+portrait topology, initTestCase pins
+      it loudly). LayerShellQt stores desired state client-side, so
+      every setter reads back without a wayland connection. Two new
+      contract tests also landed with the applet-dialog fix
+      (appletwindowparentingtest, tst_transientwindowcontracts):
+      Qt 6 gives windows declared inside items NO transientParent
+      (the Qt 5 magic moved to QQuickWindowQmlImpl) but keeps the
+      QObject resource-child parent - both halves keyed on by
+      Corona's screen forwarding. All headless-verified green.
+      Commits: 87749d93 (layer-shell apply-helper pins), 377aad57
+      (parenting contract tests, in the fix commit)
 - [x] SWEEP 2026-07-15 (headless, worktree): one pass over every
       silent-mechanical-Qt6-break pattern with a landed exemplar.
       Clean negatives recorded so the next sweep diffs instead of
