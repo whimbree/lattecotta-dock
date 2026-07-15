@@ -2684,7 +2684,25 @@ prerequisites in the phases above are done.
       bursts) before the gate is built, so it fixes rather than
       masks. Ordered AFTER the resizable-popups feature per the
       2026-07-15 direction.
-      Commits:
+      PROFILING PASS DONE 2026-07-15 (QSG_RENDER_TIMING on the real
+      dock, hover-engage timestamps probed in TaskItem, a slow
+      fakepointer sweep plus discrete hovers): the prime suspect is
+      CLEARED. 1377 frames, baseline avg 4.1ms; across all 15
+      hover-engages (including the first after a fresh restart) the
+      worst frame within 200ms of an engage was 8ms - the brighten
+      layer + effect nodes cost at most ~4ms once, not perceivable.
+      The only real stalls in the run were the previews dialog's
+      FIRST show (21ms and 32ms sync-dominated frames on the popup's
+      own window), which already sits behind the existing >=150ms
+      hoveredTimer, and two startup frames. Per this item's own
+      prerequisite the 50ms dwell gate is NOT built: it would mask
+      nothing and delay chrome for no measured win. If hover lag is
+      still felt at the desk, the next suspects are the previews
+      first-show cost (pre-warm or async-create the dialog) and
+      compositor swap backpressure (14-18ms swap frames observed
+      twice), not chrome creation. Item stays open only as the
+      holder of that follow-up direction.
+      Commits: none (gate not built by measurement)
 - [ ] Background color picker: let a dock's background color be set
       directly from Appearance (requested 2026-07-15 while chasing
       the light-background-under-dark-scheme item: "how else can I

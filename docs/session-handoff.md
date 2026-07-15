@@ -43,6 +43,12 @@ below are now RESOLVED and kept only as archaeology.
     from the systray-noticed save path); the feature now HONORS them, so
     the real clock popup opens 560x400 on first run. Reset is one
     right-click away if that reads wrong at the desk.
+- Settle-gated hover chrome: the profiling prerequisite RAN and cleared
+  the suspect, so the 50ms dwell gate was NOT built (the plan item holds
+  the numbers: engage frames max 8ms on a 4.1ms baseline over 1377
+  frames; the only stalls were the previews dialog's first show, already
+  behind the 150ms hoveredTimer, and startup). If hover lag is still
+  felt, profile the previews first-show and swap backpressure next.
 - Colorfulness auto-exemption fixed same day it shipped (5c06b497): LCD
   subpixel fringes made the digital clock's white text measure 49-84%
   "saturated", so its colorizer switched off ~8s after load and palette
