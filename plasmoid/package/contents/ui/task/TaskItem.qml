@@ -497,11 +497,23 @@ AbilityItem.BasicItem {
     }
 
     function preparePreviewWindow(hideClose){
+        //! resolve this task's cached delegate or create a fresh one; the
+        //! expensive model bindings below only run for FRESH instances -
+        //! a cache hit keeps its live bindings and skips the whole rebuild
+        //! (that rebuild is the measured 100-400ms GUI stall)
+        var freshDelegate = windowsPreviewDlg.materializeDelegateFor(taskItem);
+
         windowsPreviewDlg.visualParent = tooltipVisualParent;
         toolTipDelegate.parentTask = taskItem;
+        //! always refreshed, even on cache hits: tasks reorder, and a
+        //! parked delegate's rootIndex can be stale
         toolTipDelegate.rootIndex = tasksModel.makeModelIndex(itemIndex, -1);
 
         toolTipDelegate.hideCloseButtons = hideClose;
+
+        if (!freshDelegate) {
+            return;
+        }
 
         toolTipDelegate.appName = Qt.binding(function() {
             return model.AppName;

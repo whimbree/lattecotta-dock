@@ -35,6 +35,14 @@ QQC2.ScrollView {
     property var windows: []
     readonly property bool isWin: windows !== undefined
 
+    //! natural content size, published as plain properties so the previews
+    //! host (which shows one of several cached delegates) can mirror the
+    //! ACTIVE delegate's geometry into the dialog. Layout attached values
+    //! cannot be read across items, and ScrollView already owns the
+    //! contentWidth/contentHeight names.
+    readonly property real previewContentWidth: contentItem.width
+    readonly property real previewContentHeight: contentItem.height
+
     property variant icon
     property url launcherUrl
     property bool isLauncher

@@ -47,7 +47,11 @@ Column {
     //! Plasma 6 Mpris2Model: playerForLauncherUrl returns a PlayerContainer
     //! (or null) exposing player state directly - no dataengine source names
     //! or xesam metadata parsing anymore.
-    readonly property Mpris.PlayerContainer playerData: mpris2Source.playerForLauncherUrl(toolTipDelegate.launcherUrl, isGroup ? appPid : pidParent)
+    //! mainToolTip, never the global active-delegate pointer: with cached
+    //! standby delegates two instances coexist, and a standby instance
+    //! reading the ACTIVE delegate's launcherUrl would bind another task's
+    //! player to this task's previews
+    readonly property Mpris.PlayerContainer playerData: mpris2Source.playerForLauncherUrl(mainToolTip.launcherUrl, isGroup ? appPid : pidParent)
     readonly property bool hasPlayer: !!playerData
     readonly property bool playing: hasPlayer && playerData.playbackStatus === Mpris.PlaybackStatus.Playing
     readonly property bool canControl: hasPlayer && playerData.canControl

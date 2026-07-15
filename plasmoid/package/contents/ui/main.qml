@@ -335,9 +335,17 @@ PlasmoidItem {
 
     /////Window previews///////////
 
-    Previews.ToolTipDelegate2 {
-        id: toolTipDelegate
-        visible: false
+    //! the delegate every consumer historically addressed by the id
+    //! toolTipDelegate; with the two-slot cache it is a pointer to the
+    //! ACTIVE cached instance, and all existing unqualified references
+    //! (indicators, MouseHandler, TaskItem) resolve to it unchanged
+    property Item toolTipDelegate: windowsPreviewDlg.activeDelegate
+
+    Component {
+        id: previewDelegateComponent
+        Previews.ToolTipDelegate2 {
+            visible: false
+        }
     }
 
     ////BEGIN interfaces
@@ -349,8 +357,25 @@ PlasmoidItem {
                                                              Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.ToolTip
         location: root.location
         edge: root.location
-        mainItem: toolTipDelegate
         visible: false
+
+        //! the host shows ONE of up to two cached delegates (see
+        //! materializeDelegateFor) and mirrors the active one's natural
+        //! size into the dialog geometry, both as its own size (our
+        //! Dialog's pendingContentSize reads mainItem dimensions) and as
+        //! Layout hints (the base dialog reads the mainItem's attached
+        //! Layout). The base class also writes mainItem size imperatively
+        //! on window resizes; that write does not break these bindings,
+        //! same contract as CompactApplet's sizing chain.
+        mainItem: Item {
+            id: previewsHost
+            width: windowsPreviewDlg.activeDelegate ? windowsPreviewDlg.activeDelegate.previewContentWidth : 0
+            height: windowsPreviewDlg.activeDelegate ? windowsPreviewDlg.activeDelegate.previewContentHeight : 0
+            Layout.minimumWidth: width
+            Layout.maximumWidth: width
+            Layout.minimumHeight: height
+            Layout.maximumHeight: height
+        }
 
         //! center on the hovered task; the applets-layout clamp would shove a
         //! wide preview for a task near the dock's end sideways off its icon
@@ -358,6 +383,68 @@ PlasmoidItem {
 
         property bool signalSent: false
         property Item activeItem: null
+
+        //! Two-slot delegate cache: the ACTIVE task's content plus the
+        //! PREVIOUS task's, kept alive and merely visibility-flipped.
+        //! Building a task's content costs 100-400ms of synchronous GUI
+        //! work (measured; KSvg-dominated, see shouldDeferSwitch), so
+        //! hover-open back-and-forth between two tasks - the exact pattern
+        //! reported laggy at the desk - must not rebuild per flip. A
+        //! cached delegate's model bindings stay live while parked (its
+        //! content keeps tracking window changes), and its pipewire
+        //! streams stay warm while the dialog is visible, so a flip-back
+        //! shows real thumbnails instantly instead of re-negotiating.
+        //! Item-typed properties auto-null when their object is destroyed,
+        //! which is exactly how a dead task's cache entry is detected.
+        property Item activeDelegate: null
+        property Item standbyDelegate: null
+        property Item standbyTask: null
+
+        //! resolves the delegate that will show taskItem's previews:
+        //! the active one (same task), the revived standby (flip-back,
+        //! the cache hit this exists for), or a freshly created instance.
+        //! Returns true when the instance is fresh and still needs its
+        //! model bindings from preparePreviewWindow().
+        function materializeDelegateFor(taskItem) {
+            if (activeDelegate && activeItem === taskItem) {
+                return false;
+            }
+
+            //! a destroyed task's parked delegate is unreachable, drop it
+            if (standbyDelegate && standbyTask === null) {
+                standbyDelegate.destroy();
+                standbyDelegate = null;
+            }
+
+            var incoming = null;
+            var fresh = false;
+
+            if (standbyDelegate && standbyTask === taskItem) {
+                incoming = standbyDelegate;
+                standbyDelegate = null;
+                standbyTask = null;
+            } else {
+                incoming = previewDelegateComponent.createObject(previewsHost);
+                incoming.anchors.fill = previewsHost;
+                fresh = true;
+            }
+
+            //! demote the current active to the standby slot; whatever
+            //! was parked there before is the odd one out
+            if (activeDelegate && activeDelegate !== incoming) {
+                if (standbyDelegate) {
+                    standbyDelegate.destroy();
+                }
+                standbyDelegate = activeDelegate;
+                standbyTask = activeItem;
+                standbyDelegate.visible = false;
+            }
+
+            activeDelegate = incoming;
+            incoming.visible = true;
+
+            return fresh;
+        }
 
         //! burst-debounce state for task switches, see shouldDeferSwitch()
         property Item pendingSwitchTask: null
