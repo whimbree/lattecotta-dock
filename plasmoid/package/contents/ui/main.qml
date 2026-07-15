@@ -767,6 +767,28 @@ PlasmoidItem {
         property int spacing: latteBridge ? 0 : appletAbilities.metrics.iconSize / 2
         property int smallSize: Math.max(0.10 * appletAbilities.metrics.iconSize, 16)
 
+        //! same stranded-binding hazard as mouseHandler below (the e412889d
+        //! shape): conditional anchors and size ternaries on one item, so a
+        //! live edge or orientation flip can leave the size bindings dead
+        //! while the anchors system takes the item over during the transient
+        //! where old and new anchor lines overlap. Reassert the identical
+        //! bindings on every transition; re-establishing a live binding is a
+        //! no-op, a dead one comes back.
+        function reassertSizeBindings() {
+            barLine.width = Qt.binding(function() {
+                return ( icList.orientation === Qt.Horizontal ) ? icList.width + barLine.spacing : barLine.smallSize;
+            });
+            barLine.height = Qt.binding(function() {
+                return ( icList.orientation === Qt.Vertical ) ? icList.height + barLine.spacing : barLine.smallSize;
+            });
+        }
+
+        Connections {
+            target: root
+            function onVerticalChanged() { barLine.reassertSizeBindings(); }
+            function onLocationChanged() { barLine.reassertSizeBindings(); }
+        }
+
         Behavior on opacity{
             NumberAnimation { duration: appletAbilities.animations.speedFactor.current * appletAbilities.animations.duration.large }
         }
@@ -801,6 +823,22 @@ PlasmoidItem {
             anchors.bottom: (root.location === PlasmaCore.Types.TopEdge) ? parent.top : undefined
             anchors.right: (root.location === PlasmaCore.Types.LeftEdge) ? parent.left : undefined
             anchors.left: (root.location === PlasmaCore.Types.RightEdge) ? parent.right : undefined
+
+            //! e412889d shape, see barLine.reassertSizeBindings
+            function reassertSizeBindings() {
+                belower.width = Qt.binding(function() {
+                    return (root.location === PlasmaCore.Types.LeftEdge) ? shadowsSvgItem.margins.left : shadowsSvgItem.margins.right;
+                });
+                belower.height = Qt.binding(function() {
+                    return (root.location === PlasmaCore.Types.BottomEdge)? shadowsSvgItem.margins.bottom : shadowsSvgItem.margins.top;
+                });
+            }
+
+            Connections {
+                target: root
+                function onVerticalChanged() { belower.reassertSizeBindings(); }
+                function onLocationChanged() { belower.reassertSizeBindings(); }
+            }
         }
 
 
@@ -818,6 +856,22 @@ PlasmoidItem {
 
             width: root.vertical ? panelSize + margins.left + margins.right: parent.width
             height: root.vertical ? parent.height : panelSize + margins.top + margins.bottom
+
+            //! e412889d shape, see barLine.reassertSizeBindings
+            function reassertSizeBindings() {
+                shadowsSvgItem.width = Qt.binding(function() {
+                    return root.vertical ? shadowsSvgItem.panelSize + shadowsSvgItem.margins.left + shadowsSvgItem.margins.right : shadowsSvgItem.parent.width;
+                });
+                shadowsSvgItem.height = Qt.binding(function() {
+                    return root.vertical ? shadowsSvgItem.parent.height : shadowsSvgItem.panelSize + shadowsSvgItem.margins.top + shadowsSvgItem.margins.bottom;
+                });
+            }
+
+            Connections {
+                target: root
+                function onVerticalChanged() { shadowsSvgItem.reassertSizeBindings(); }
+                function onLocationChanged() { shadowsSvgItem.reassertSizeBindings(); }
+            }
 
             imagePath: "translucent/widgets/panel-background"
             prefix:"shadow"
@@ -871,17 +925,22 @@ PlasmoidItem {
             //! state where the old and new conditional anchors overlap -
             //! so reassert the same bindings on every orientation change,
             //! the reload-on-retarget remedy this tree already uses for the
-            //! stranded-binding class.
+            //! stranded-binding class. Location changes rebind the very same
+            //! conditional anchors (a bottom to top move flips them with no
+            //! orientation change), so they get the same reassert.
+            function reassertSizeBindings() {
+                mouseHandler.width = Qt.binding(function() {
+                    return root.vertical ? mouseHandler.maxThickness : icList.width;
+                });
+                mouseHandler.height = Qt.binding(function() {
+                    return root.vertical ? icList.height : mouseHandler.maxThickness;
+                });
+            }
+
             Connections {
                 target: root
-                function onVerticalChanged() {
-                    mouseHandler.width = Qt.binding(function() {
-                        return root.vertical ? mouseHandler.maxThickness : icList.width;
-                    });
-                    mouseHandler.height = Qt.binding(function() {
-                        return root.vertical ? icList.height : mouseHandler.maxThickness;
-                    });
-                }
+                function onVerticalChanged() { mouseHandler.reassertSizeBindings(); }
+                function onLocationChanged() { mouseHandler.reassertSizeBindings(); }
             }
 
             property int maxThickness: ((appletAbilities.parabolic.isEnabled && appletAbilities.parabolic.isHovered)
