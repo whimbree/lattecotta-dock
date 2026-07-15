@@ -49,6 +49,20 @@ below are now RESOLVED and kept only as archaeology.
   frames; the only stalls were the previews dialog's first show, already
   behind the 150ms hoveredTimer, and startup). If hover lag is still
   felt, profile the previews first-show and swap backpressure next.
+- Sixth layer (content corruption after the cache, reported within
+  minutes): DelegateModel SILENTLY resets its root when its model swaps,
+  and the previews DelegateModel swaps models by design (isGroup flips
+  between 1 and tasksModel); equal-value rootIndex reassignment emits no
+  change, so the correct root was never re-applied - revived groups
+  showed one window, fresh delegates flashed the previous/unrelated
+  content, and the 'Could not find window id 0' screencast error was a
+  transient instance built before the isGroup binding existed. Fixed
+  235753b8: rootIndex assigned LAST plus a refresh token the
+  DelegateModel binding references. VERIFICATION LESSON, hard-won: test
+  hovers with GLIDES (small pointer steps), never coordinate jumps -
+  jumps land beside parabolic-shifted icons, miss the enter entirely,
+  and produced hours of phantom 'flaky engagement' plus one false
+  content-bug lead today.
 - Fourth and fifth layers: the debounce shipped with a regression
   (deferred switches skipped show(), whose first act cancels the hide
   countdown every task exit arms - scrubbing hid the previews under the
