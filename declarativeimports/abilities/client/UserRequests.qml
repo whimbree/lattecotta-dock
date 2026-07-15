@@ -12,13 +12,37 @@ AbilityDefinition.UserRequests {
     property Item bridge: null
     readonly property bool isActive: bridge !== null
 
+    //! the bridge whose host signal is currently forwarded; a disconnect only
+    //! works against the exact object the connect was made on, so it must be
+    //! remembered instead of recomputed from the (possibly already changed)
+    //! bridge property. The old code connected on every isActive rise without
+    //! ever disconnecting - it even re-CONNECTED from Component.onDestruction -
+    //! so every destroyed applet left the host signal wired to a dead client.
+    property Item connectedBridge: null
+
     function updateSignals() {
-        if (isActive) {
-            bridge.userRequests.sglViewType.connect(_userRequests.sglViewType);
+        if (connectedBridge === bridge) {
+            return;
+        }
+
+        if (connectedBridge) {
+            connectedBridge.userRequests.sglViewType.disconnect(_userRequests.sglViewType);
+        }
+
+        connectedBridge = bridge;
+
+        if (connectedBridge) {
+            connectedBridge.userRequests.sglViewType.connect(_userRequests.sglViewType);
         }
     }
 
-    onIsActiveChanged: updateSignals()
+    onBridgeChanged: updateSignals()
     Component.onCompleted: updateSignals()
-    Component.onDestruction: updateSignals()
+
+    Component.onDestruction: {
+        if (connectedBridge) {
+            connectedBridge.userRequests.sglViewType.disconnect(_userRequests.sglViewType);
+            connectedBridge = null;
+        }
+    }
 }
