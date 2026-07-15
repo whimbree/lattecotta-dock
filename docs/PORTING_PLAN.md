@@ -2092,9 +2092,19 @@ multi-view, multi-monitor setup.
       arm (Colorizer.CustomBackground / overlayedBackground
       midOpacity path) may be silently dead - same defect class as
       the applet colorizer no-op fixed in 1f835402, which only
-      covered the applet foreground arm. Discriminate first: check
-      whether the white band tracks the palette dropdown at all,
-      then read what theme the staged process actually resolves.
+      covered the applet foreground arm. MEASURED 2026-07-15:
+      build/_runconfig (the throwaway XDG_CONFIG_HOME) contains NO
+      kdeglobals and NO plasmarc, so every throwaway run resolves
+      the default LIGHT color scheme - the white bar is structural
+      to the throwaway environment, independent of code. The
+      recollection of a dark bottom bar most plausibly comes from
+      --user-config runs, which read the real dark kdeglobals.
+      DECISIVE TEST: restart --user-config and look at the bar; if
+      the real dock's bar is also white while plasmashell renders
+      dark, THAT is the port defect to chase (a774ee55
+      KDE_COLOR_SCHEME_PATH pinning territory). Regardless: seed
+      build/_runconfig with a kdeglobals copy so throwaway runs
+      match the real session visually.
       Commits:
 - [ ] Comic Strip applet renders as a solid black disc instead of its
       icon (reported 2026-07-15 with a screenshot; "was rendering a
@@ -2113,18 +2123,24 @@ multi-view, multi-monitor setup.
       whether the restored arm applies too broadly. Discriminator:
       flip Palette off Dark Colors - if the disc becomes the icon
       again instantly, it is the colorizer arm, not rendering.
-      CLARIFIED 2026-07-15: the report is TWO symptoms - the icon
-      turning into a black disc (above), AND the hover-zoom
-      representation switch no longer firing: zooming used to grow
-      the comic past its switchWidth/switchHeight so AppletQuickItem
-      swapped in the FULL representation (the web-rendered comic)
-      inline, per the 2026-07-12 "comic EXPANDS from zoom alone"
-      note. Check FIRST whether the hover test happened inside edit
-      mode - parabolic zoom is deliberately disabled there
-      (e70bccf7), which suppresses the swap by design. If it is
-      still gone outside edit mode, prime suspect is 437d9a0c
-      (CompactApplet sizing-contract rewrite touching the
-      representation host's Layout plumbing) - bisect from there.
+      CLARIFIED 2026-07-15 (twice): the report is TWO symptoms - the
+      icon turning into a black disc (above), AND the HOVER-triggered
+      full-representation display no longer firing: hovering the
+      comic used to replace the icon with the web-rendered comic
+      strip, per my recollection in BOTH plain and edit mode, and it
+      now fires in NEITHER. Related prior note: 2026-07-12 "comic
+      EXPANDS from zoom alone" (AppletQuickItem swaps representations
+      crossing switchWidth/switchHeight). SUSPECT RULED OUT by diff
+      read: 437d9a0c did NOT drop the no-hints font-metric fallback
+      (it survives as a live binding with Math.max(base, min)), so
+      "popup empty because the WebEngine rep has no implicit size" is
+      not the mechanism as theorized. NEXT: live hover probe on the
+      throwaway comic - watch dumpwins for a popup window mapping,
+      the log for warnings, and determine what the hover trigger
+      actually is (zoom-threshold swap vs an expansion request), then
+      what Qt5 did. The edit-mode arm of the recollection matters:
+      zoom is disabled in edit mode (e70bccf7), so if it truly worked
+      there, the trigger was never zoom.
       Commits:
 
 ### Phase 11: Nix packaging + Docker build verification
