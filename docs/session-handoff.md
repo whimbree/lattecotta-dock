@@ -196,6 +196,25 @@ below are now RESOLVED and kept only as archaeology.
   RESIDUAL filed in the plan item (Phase 8 family): the <1s stale
   flash exists because corona's rect itself is late - the real lever
   is why reserved-area integration lags ~10s behind first paint.
+- Round twenty-five (2026-07-14 late night): the reference-fork sync
+  pass (d67e635a, df1c14da). Full record lives in the Phase 10 SYNC
+  PASS plan item; the headline: one real fold from ng
+  (alternativeshelper _plasma_graphicObject -> itemForApplet; "Show
+  Alternatives" had been silently dead), qt6 woke up with a 54-commit
+  testability campaign with nothing foldable verbatim, and their one
+  behavior fix repairs a mapping mistake we never made - our
+  layershellmappingtest comment already documents rejecting their
+  layerFor(WindowsGoBelow)=Bottom. LESSON re-earned mid-pass: I
+  drafted the same four-site explicit-mode change their fix makes,
+  then found our own test file documenting why it is unnecessary
+  here and REVERTED before commit - check what this tree already
+  decided before folding a fork's fix for the fork's own bug. Also:
+  add-via-drag ticked (user-verified; ownership single by
+  construction), missing "Show Alternatives" MENU ENTRY filed (the
+  restored handler is unreachable until it exists), fakepointer
+  needs no extension for drag-and-drop (drag is
+  press/waypoints/release), GUI-CI candidate tests banked in the
+  Phase 10 e2e item pending the owner's microvm.
 - SESSION CLOSE STATE (2026-07-14 night): everything committed and
   pushed; working tree clean; the user's dock runs the latest build
   under the gdb wrapper with --user-config, config fully restored
