@@ -2086,15 +2086,38 @@ multi-view, multi-monitor setup.
       enforcement) - the qmltest sketched in the resizable-popups
       continuation item, landed ahead of the feature.
       Commits: 437d9a0c, 3b37750b (sizing chain qmltest)
-- [ ] Applet context menu is MISSING the "Show Alternatives" entry
+- [x] Applet context menu is MISSING the "Show Alternatives" entry
       (found while live-verifying the AlternativesHelper fix: the
       clock's menu shows Configure/Copy but no Alternatives, so the
-      restored helper is unreachable from the UI). Sibling of the
-      fixed "Applet Settings" missing-entry saga - check the
-      contextmenu containmentactions plugin and the canvas
-      ContextMenuLayer for where Qt5 injected it
-      (appletAlternativesRequested wiring exists and is connected).
-      Commits:
+      restored helper is unreachable from the UI). RESOLVED 2026-07-15
+      in two parts. The entry was never missing: Qt5 gates it on
+      isUserConfiguring (contextmenulayerquickitem.cpp:471 matches the
+      Qt5 original line for line), so it only shows while the settings
+      window is open - the filing above was a normal-mode right-click.
+      The REAL defect was one layer down: clicking it did nothing
+      because appletalternativesui had no local definition in
+      Latte::Package and resolved through the org.kde.plasma.desktop
+      fallback to plasma-desktop's Plasma 6 AppletAlternatives.qml,
+      which imports org.kde.plasma.shell (registered only inside
+      plasmashell's process) and fails to load. Latte now ships its
+      own copy (two deviations, header comment in the file) plus the
+      package file definition. Verified live end to end on the
+      throwaway layout: entry in edit mode, dialog opens
+      provides-filtered, picking Digital Clock replaces the Analog
+      Clock and persists. latte-dock-ng carries this same latent break
+      (helper restored, dialog QML unfixed) - fold candidate for them.
+      Commits: 56549d73
+- [x] Widget explorer "Get New..." > "Download New Plasma Widgets" did
+      nothing (my desk report, 2026-07-15): ng's WidgetExplorer.qml,
+      adopted wholesale in 0aa7ffb6, intercepts Get New-labelled
+      entries into viewConfig.openGetNewWidgetsDialog() - an invokable
+      this port never had (silent TypeError on click). ng only needs
+      that detour to launch an external knewstuff-dialog6 around its
+      system-Qt Kirigami break. Restored plain model.trigger() and
+      deleted the detour machinery; the in-process KNSWidgets::Dialog
+      opens fully rendered (verified live), explorer closes via
+      upstream's shouldClose.
+      Commits: ab3caae1
 - [x] Widget removal leaves a ghost slot in rearrange mode (caught
       live 2026-07-14 with screenshots: deleting the System Tray in
       rearrange mode left its layout slot visible for multiple

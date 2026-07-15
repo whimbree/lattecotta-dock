@@ -16,14 +16,14 @@ sessions are budgeted, in order:
    ten line-level invariants from the hover-lag excavation, negative-tested
    against three injected regressions. The most delicate machinery in the
    tree now defends itself.
-2. NEXT SESSION: flush the diagnosed-but-unfixed backlog before the
-   diagnoses rot. VERIFY EACH IS STILL OPEN FIRST - some may have died in
-   the sweeps: iconSize startup hang ("root cause bisected, code fix
-   pending", section below), hover preview jitter ("fix proposed, awaiting
-   go"), the missing "Show Alternatives" applet menu entry (plan item), the
-   crash items with cores retained (add-panel; duplicate-dock+add-widget),
-   dock exit after lock/unlock cycles. These are half-finished strong-model
-   diagnoses; a weaker model will re-diagnose them worse.
+2. DONE 2026-07-15 evening (the backlog-flush session, results below in
+   its own entry): iconSize hang and duplicate-dock crash were already
+   dead (annotated), jitter fixes had all landed as commits, Show
+   Alternatives root-caused one layer deeper and FIXED (56549d73), the
+   dead GHNS widget-download entry (desk report mid-session) FIXED
+   (ab3caae1), quit-reason logging landed for the lock/unlock exit
+   (ee0f1ba3), add-panel crash did not reproduce (7 adds, 3 templates;
+   breadcrumbs silent since 07-11 - watch item).
 3. THEN: the QML extraction PLANNING session. The full prompt is saved at
    docs/prompts/qml-extraction-planning-prompt.md - paste it into a fresh
    strong-model session as-is. Its output plan tags every unit
@@ -1235,7 +1235,53 @@ Crash + infrastructure:
   live verification (see below).
 - fcedce40 docs: Qt5-faithful behavior agreement recorded in CLAUDE.md.
 
-## Hover preview jitter: ROOT CAUSE CONFIRMED LIVE, fix proposed, awaiting go
+## 2026-07-15 evening: backlog flush (this session's record)
+
+- Show Alternatives (56549d73): the entry was never missing - Qt5
+  gates it on isUserConfiguring, so it shows only in edit mode; the
+  real defect was appletalternativesui resolving through the package
+  fallback to plasma-desktop's file, which imports org.kde.plasma.shell
+  and cannot load outside plasmashell. Latte ships its own copy now.
+  Full chain verified live (dialog opens filtered, Digital Clock
+  replaced the Analog Clock in place and persisted). ng has the same
+  latent break.
+- Widget explorer GHNS entry (ab3caae1): ng's adopted QML routed 'Get
+  New'-labelled clicks to an invokable this port never implemented -
+  silent TypeError since 0aa7ffb6. Plain model.trigger() restored, ng's
+  external-dialog detour machinery deleted (its reason - ng's system-Qt
+  Kirigami break - does not exist on the pinned stack). KNS dialog
+  verified rendering live. Known noise: one Kirigami OverlayDrawer
+  TypeError from inside the KNS dialog, harmless.
+- Quit-reason trail (ee0f1ba3) for the lock/unlock exit item: SIGINT
+  now via KSignalHandler with a log line (the old raw std::signal
+  lambda called qGuiApp->exit() in signal context; std::signal(SIGKILL)
+  was uncatchable dead code), quitApplication and onAboutToQuit log
+  themselves. SIGINT trail verified live on an unwrapped run. Synthetic
+  lock/unlock repro NOT attempted (I was at the desk using the machine;
+  locking it was not on). The next natural occurrence names its
+  trigger: signal line = external kill / --replace; quitApplication
+  line = settings/dbus/import; onAboutToQuit alone = the
+  /MainApplication D-Bus quit() arm. NOTE: under the gdb wrapper SIGINT
+  never reaches the process (gdb dumps stacks and exits UNcleanly), so
+  a wrapped clean quit with no quitApplication line = the D-Bus arm.
+- Add-panel crash: no reproduction (7 addView calls across Default
+  Panel/Default Dock/Empty Panel on the throwaway, rapid-fire
+  included); fa02b887's guard and breadcrumb have been armed through
+  four days of heavy driving with zero firings. Core 3933991 is
+  useless now (binary rebuilt many times since; the fresh-core
+  analysis was already extracted into fa02b887's message). Stays a
+  watch item: the next occurrence names the deleter in the log.
+- Verification tooling lesson re-earned twice: context menus open at
+  slightly different offsets per invocation - never click from a
+  previous capture's coordinates; capture the menu you are about to
+  click. One stale-coordinate click reopened the widget explorer
+  instead of Edit Dock.
+- Session end state: all three fixes committed and pushed, tree clean,
+  real dock running --user-config under the gdb wrapper, throwaway
+  layout restored from its pre-repro backup (the two test clocks and
+  the digital-clock swap reverted with it).
+
+## RESOLVED (landed 4411d724, 77aac4b4, c622da1b; saga closed by round ten) - Hover preview jitter: ROOT CAUSE CONFIRMED LIVE, fix proposed, awaiting go
 
 Reproduced with fakepointer + temporary QML logging (instrumentation added,
 driven, read, then removed; tree carries none of it). My symptom
@@ -1335,7 +1381,7 @@ sits on that same output). This is the first concrete Phase 8 multi-screen
 work item; do it WITH the dual-monitor setup live, per the plan's warning
 that both reference forks fought multi-screen repeatedly.
 
-## Duplicate-dock + add-widget crash (NEW, open, no core)
+## RESOLVED (no longer reproduces after c3d15966, driven end to end under gdb) - Duplicate-dock + add-widget crash (NEW, open, no core)
 
 I duplicated the dock, then added a widget to it; latte crashed and
 KCrash itself crashed while handling it (log: 'KCrash: appFilePath points
@@ -1350,7 +1396,7 @@ territory as the Phase 8 'cloned-view applet-order sync' item. To get a
 backtrace next time: reproduce under
 LATTE_RUN_WRAPPER='gdb -batch -ex run -ex bt --args' via restart-staged.sh.
 
-## Dock exits ~20s after screen lock/unlock cycles (open, now well-scoped)
+## Dock exits ~20s after screen lock/unlock cycles (open; quit-reason trail landed ee0f1ba3, next occurrence names its trigger)
 
 Twice observed: a screen remove/re-add cycle (lock or dpms), handled cleanly
 by the positioner, then ~22s later 'Latte Corona - unload: containments' with
@@ -1361,7 +1407,7 @@ log the quit reason (KCrash/KSignalHandler or a SIGTERM handler qWarning) and
 check what else runs at unlock. Before 72deaa8c these exits looked like
 crashes because teardown itself segfaulted (~Theme null schemes).
 
-## Add-panel crash (open, core retained)
+## Add-panel crash (open watch item; 2026-07-15: no repro in 7 tries, core stale, fa02b887 breadcrumbs armed and silent since 07-11)
 
 'Add default panel' crashed: Storage::importLayoutFile iterated
 corona()->importLayout() results and one containment pointer was ALREADY
@@ -1417,7 +1463,7 @@ the synthetic release seemed to get lost once, leaving the Button stuck
 pressed so the next synthetic click was a no-op. If a real-mouse report of
 "first unclick needs two clicks" ever comes in, start there.
 
-## iconSize startup hang (NEW, root cause bisected, code fix pending)
+## RESOLVED (fixed ad9b823f, plan item ticked; --user-config safe again) - iconSize startup hang (NEW, root cause bisected, code fix pending)
 
 The port hangs at startup at 100% CPU (main thread, event loop starved, dbus
 times out) when the layout contains iconSize=78. Bisected live: my layout
