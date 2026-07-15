@@ -250,6 +250,18 @@ Column {
                 animated: false
                 visible: (thumbnailSourceItem.isMinimized && !albumArtImage.visible) //X11 case
                          || (!previewThumbLoader.active && !albumArtImage.visible) //Wayland case
+                         //! Wayland stream warm-up: every preview is a live
+                         //! kwin screencast, and the negotiation measured
+                         //! 270-500ms per window (STREAM-PROBE, 2026-07-15).
+                         //! Until the stream's first frame the thumbnail area
+                         //! rendered BLANK - crossing tasks at hover-trigger
+                         //! speed felt like lag at the desk. The icon fills
+                         //! that hole instantly and yields the moment the
+                         //! stream is ready. Strict === false: the X11
+                         //! thumbnail item has no hasThumbnail property, and
+                         //! undefined must never enable this branch there.
+                         || (previewThumbLoader.active && previewThumbLoader.item !== null
+                             && previewThumbLoader.item.hasThumbnail === false && !albumArtImage.visible)
             }
         }
 
