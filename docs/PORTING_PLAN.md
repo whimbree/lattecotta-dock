@@ -2077,6 +2077,44 @@ multi-view, multi-monitor setup.
       band, plain edit leaves the background undimmed.
       Commits: 38e60eb9
 
+- [ ] Dock background renders LIGHT/white while the palette is set to
+      Dark Colors (reported 2026-07-15 with a screenshot, throwaway
+      bottom dock in plain edit mode, Background Opacity 100%).
+      NOT introduced tonight: the same light pill shows in captures
+      from before the 2026-07-15 fixes (21:55 real dock, 22:18
+      throwaway outside edit mode) - the blueprint stacking fix
+      merely made the background fully visible in edit mode, which
+      makes the color obvious now. TWO SUSPECTS, both pre-existing:
+      (a) the staged dock resolves a LIGHT plasma theme while
+      plasmashell on the same session renders its panel dark - an
+      env/theming resolution gap (Phase 9 KDE_COLOR_SCHEME_PATH /
+      Kirigami colorSet territory); (b) the Dark Colors BACKGROUND
+      arm (Colorizer.CustomBackground / overlayedBackground
+      midOpacity path) may be silently dead - same defect class as
+      the applet colorizer no-op fixed in 1f835402, which only
+      covered the applet foreground arm. Discriminate first: check
+      whether the white band tracks the palette dropdown at all,
+      then read what theme the staged process actually resolves.
+      Commits:
+- [ ] Comic Strip applet renders as a solid black disc instead of its
+      icon (reported 2026-07-15 with a screenshot; "was rendering a
+      couple commits ago"). Commit regression UNLIKELY: a 22:30:09
+      verification capture shows the comic icon rendering normally
+      on the final build with all of tonight's fixes live; it went
+      black between 22:30 and ~22:35, during palette/Appearance
+      changes in the settings chrome, and the run log has no
+      WebEngine renderer crash. HOT LEAD: the applet colorizer
+      restored in 1f835402 uses ColorOverlay, which flattens icon
+      content to a single scheme color - a colorized comic icon
+      becomes exactly a filled silhouette disc. If confirmed, the
+      real question is Qt5's colorizer applicability rules: which
+      applets Qt5 colorized vs left full-color (it had per-applet
+      blocking; userBlocksColorizingApplets machinery exists), and
+      whether the restored arm applies too broadly. Discriminator:
+      flip Palette off Dark Colors - if the disc becomes the icon
+      again instantly, it is the colorizer arm, not rendering.
+      Commits:
+
 ### Phase 11: Nix packaging + Docker build verification
 
 Directly reusable knowledge from this session, not new research -
