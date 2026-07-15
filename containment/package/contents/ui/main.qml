@@ -827,18 +827,14 @@ ContainmentItem {
             source: "ContextMenuLayer.qml"
         }
 
-        Item{
-            anchors.fill: layoutsContainer
-
-            Background.MultiLayered{
-                id: _background
-            }
-        }
-
         //! Edit mode blueprint, drawn inside the containment as in Qt5 Latte. It cannot
         //! live in the canvas config window: that is a separate layer surface and wayland
         //! cannot stack dock > grid > wallpaper across two surfaces, so the grid must be
-        //! behind the applets in the dock window itself.
+        //! inside the dock window itself. It sits BELOW the dock background: Qt5 stacked
+        //! the whole dock window (background included) above the grid window, so the
+        //! background renders at its true opacity during edit mode (WYSIWYG for the
+        //! opacity setting) and the grid shows only through its transparent parts and
+        //! in the edit band around it.
         Image {
             id: editBlueprint
             //! Sized to editThickness at the screen edge, like Qt5's edit visual: the
@@ -875,6 +871,14 @@ ContainmentItem {
                     duration: animations.duration.large
                     easing.type: Easing.OutCubic
                 }
+            }
+        }
+
+        Item{
+            anchors.fill: layoutsContainer
+
+            Background.MultiLayered{
+                id: _background
             }
         }
 
