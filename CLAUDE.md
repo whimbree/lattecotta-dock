@@ -177,18 +177,23 @@ actually reviewed for each, so a future "check for updates" is a diff
 from here, not a re-read of the whole history:
 
 - **latte-dock-ng** (`~/Projects/latte-dock-ng`, remote `origin` ->
-  `ruizhi-lab/latte-dock-ng`): reviewed through `59e04b8b7` (2026-07-04).
+  `ruizhi-lab/latte-dock-ng`): reviewed through `456154efb` (2026-07-14).
   Check for new work:
-  `cd ~/Projects/latte-dock-ng && git fetch origin && git log --oneline 59e04b8b7..origin/main`
+  `cd ~/Projects/latte-dock-ng && git fetch origin && git log --oneline 456154efb..origin/main`
   If that shows anything, read full bodies (not just subjects) via
-  `git log --format="%n=== %h %s ===%n%b" 59e04b8b7..origin/main`
+  `git log --format="%n=== %h %s ===%n%b" 456154efb..origin/main`
   before deciding what's worth folding in, then update this hash.
 - **latte-dock-qt6** (`~/Projects/latte-dock-qt6`, remote `origin` ->
-  `CaptSilver/latte-dock-qt6`): reviewed through `9003f33a` (also the
-  end of the port-work range named in the original comparison request).
-  Less active than latte-dock-ng so far; same check pattern applies if
-  it picks back up:
-  `cd ~/Projects/latte-dock-qt6 && git fetch origin && git log --oneline 9003f33a..origin/main`
+  `CaptSilver/latte-dock-qt6`): reviewed through `81384003` (2026-07-14;
+  before that `9003f33a`, the end of the port-work range named in the
+  original comparison request). It woke back up in July 2026 with a
+  testability campaign (pure-helper extractions, DI seams, coverage
+  gates) - that restructuring is their architecture direction and is
+  NOT foldable into our upstream-shaped tree wholesale; read their
+  fix commits individually, and remember their 81384003 top-layer fix
+  repairs a layerFor(WindowsGoBelow)=Bottom mapping mistake we never
+  made (our layershellmappingtest pins the corrected mapping).
+  `cd ~/Projects/latte-dock-qt6 && git fetch origin && git log --oneline 81384003..origin/main`
 - **plasma-desktop** (KDE upstream, not a fork): the vendored
   task-manager backend in `plasmoid/plugin/` (backend, smartlauncher*)
   derives from `applets/taskmanager/` there, which keeps evolving
@@ -202,6 +207,8 @@ from here, not a re-read of the whole history:
 
 ## Current status
 
-Phase 0 (build environment + testing ground rules) not yet started.
-`CMakeLists.txt` at HEAD is still Qt5 5.15.0 / KF5 5.88.0, X11
-required unconditionally.
+(This section was stale for a long time - keep it honest.) The port is
+a daily driver: the user runs it against their real config. Phases 0-7
+are substantially done, Phase 8 is OPEN (docs/PORTING_PLAN.md has the
+live checklist), and current work is stabilization polish driven by
+live use. docs/session-handoff.md carries the running session state.

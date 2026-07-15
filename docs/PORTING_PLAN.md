@@ -807,7 +807,7 @@ before implementing, not just before merging.
       place and matches the prescription. Final "the widget visibly
       disappears" confirmation is a human click-test, queued in
       docs/REVIEW_NOTES.md)
-- [ ] **Widget add via drag** from the Widget Explorer: decide the
+- [x] **Widget add via drag** from the Widget Explorer: decide the
       C++-vs-QML drop-handling ownership split explicitly and keep it
       exclusive per mime type (e.g. Widget-Explorer-originated drops
       identified by `text/x-plasmoidservicename` go through C++ only;
@@ -815,8 +815,18 @@ before implementing, not just before merging.
       - Qt6/Wayland's `View::event()` can intercept drag events before
       Kirigami's `DropArea` QML ever sees them, and letting both paths
       partially handle overlapping cases caused a double-widget-
-      creation bug in latte-dock-ng
-      Commits:
+      creation bug in latte-dock-ng.
+      RESOLVED WITHOUT NEW CODE, user-verified working 2026-07-14:
+      drag-from-Widget-Explorer adds widgets on the live dock. The
+      ownership split exists by construction in this port - our
+      View::event() only OBSERVES drag events (setContainsDrag for
+      visibility) and sinks them onward; widget creation is owned
+      solely by the Plasma 6 containment drop path, so there is no
+      second C++ creation path to race (the ng bug came from adding
+      one). No double-creation observed; if duplicates ever appear,
+      this is the item to reopen. Headless coverage note: fakepointer
+      drag can drive explorer->dock drops once a GUI CI vm exists.
+      Commits: (no port-side change needed)
 - [ ] Position-aware drop insertion: defer QML item access via a 0ms
       singleShot timer (immediate access breaks the Wayland event
       chain), and carry the intended insertion index as an explicit
@@ -1949,7 +1959,50 @@ multi-view, multi-monitor setup.
       test-infrastructure decision (real widget add/remove driven
       through KWin D-Bus with actual screenshot capture, modeled on
       latte-dock-qt6's) and verify the coverage ratchet baseline is
-      still honest against the Phase 0 standard
+      still honest against the Phase 0 standard. The owner plans to
+      provide a microvm for real-GUI CI; tests written meanwhile
+      should assume that runtime (fakepointer already covers
+      move/click/rightclick/drag/glide/scroll - drag doubles as
+      drag-and-drop since it is press/waypoints/release).
+      GUI-CI-candidate tests banked so far: widget-explorer->dock
+      drag-add, AlternativesHelper applet swap (needs a live applet),
+      the settings-window cold-open geometry loop.
+      Commits:
+- [x] SYNC PASS 2026-07-14 (record; hashes updated in CLAUDE.md):
+      latte-dock-ng through 456154efb (10 commits): FOLDED
+      alternativeshelper _plasma_graphicObject -> AppletQuickItem::
+      itemForApplet (their 613ddcc3b spotted it; ours silently no-op'd
+      "Show Alternatives"). SKIPPED: middleClickAction default flip
+      NewInstance->Close (behavior deviation; Qt5 is the spec),
+      audio-badge double-scaling fix (applies to their redesigned
+      badge, ours keeps Qt5 relative sizing), Qt.MidButton and
+      tasks-config migrations (already carried), startup warning
+      gating (their code path). Their new unit-test suites (positioner
+      math, effects borders, importer parsing) are candidate surfaces
+      for our own tests, not foldable files.
+      latte-dock-qt6 through 81384003 (54 commits): NOTHING foldable
+      verbatim - it is a testability-refactor campaign (pure
+      extractions, ICoronaHost/IViewFactory/IScreenInfo seams,
+      coverage gates) on an architecture diverging from upstream
+      shape. Their one behavior fix (81384003 top-layer) repairs
+      their own layerFor(WindowsGoBelow)=Bottom mapping mistake; our
+      mapping was already corrected and test-pinned. CANDIDATES noted
+      for later: their StorageValidator (orphaned subcontainments,
+      id-collision detection - we have real layout-corruption history,
+      see the .polluted/.pre-repair backups) for Phase 8/11, and the
+      Wayland windowFor id-index (perf) if window lookup ever profiles
+      hot. plasma-desktop backend: current except yesterday's new
+      task-cycling-shortcuts feature (overlaps Latte's own shortcut
+      system - decide at Phase 12, not auto-port).
+      Commits: (alternativeshelper fix in its own commit)
+- [ ] Applet context menu is MISSING the "Show Alternatives" entry
+      (found while live-verifying the AlternativesHelper fix: the
+      clock's menu shows Configure/Copy but no Alternatives, so the
+      restored helper is unreachable from the UI). Sibling of the
+      fixed "Applet Settings" missing-entry saga - check the
+      contextmenu containmentactions plugin and the canvas
+      ContextMenuLayer for where Qt5 injected it
+      (appletAlternativesRequested wiring exists and is connected).
       Commits:
 
 ### Phase 11: Nix packaging + Docker build verification
