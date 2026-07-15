@@ -2113,6 +2113,18 @@ multi-view, multi-monitor setup.
       whether the restored arm applies too broadly. Discriminator:
       flip Palette off Dark Colors - if the disc becomes the icon
       again instantly, it is the colorizer arm, not rendering.
+      CLARIFIED 2026-07-15: the report is TWO symptoms - the icon
+      turning into a black disc (above), AND the hover-zoom
+      representation switch no longer firing: zooming used to grow
+      the comic past its switchWidth/switchHeight so AppletQuickItem
+      swapped in the FULL representation (the web-rendered comic)
+      inline, per the 2026-07-12 "comic EXPANDS from zoom alone"
+      note. Check FIRST whether the hover test happened inside edit
+      mode - parabolic zoom is deliberately disabled there
+      (e70bccf7), which suppresses the swap by design. If it is
+      still gone outside edit mode, prime suspect is 437d9a0c
+      (CompactApplet sizing-contract rewrite touching the
+      representation host's Layout plumbing) - bisect from there.
       Commits:
 
 ### Phase 11: Nix packaging + Docker build verification
