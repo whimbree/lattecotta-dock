@@ -15,6 +15,7 @@ import org.kde.kirigami 2.20 as Kirigami
 
 import org.kde.latte.core 0.2 as LatteCore
 import org.kde.latte.components 1.0 as LatteComponents
+import org.kde.latte.private.containment 0.1 as LatteContainment
 
 import org.kde.latte.abilities.items 0.1 as AbilityItem
 
@@ -96,6 +97,15 @@ Item {
                              && applet.plasmoid.pluginName !== "org.kde.plasma.appmenu")
 
     property bool isExpanded: false
+
+    //! Plasma 6 inline representation switch: AppletQuickItem re-parents the
+    //! full representation item INTO ITSELF when the applet grows past
+    //! switchWidth/switchHeight (popup-expanded reps live in the popup
+    //! dialog's mainItem instead, and resting reps are parentless or in the
+    //! expander). The parent identity is therefore the exact inline signal.
+    readonly property bool isShowingInlineFullRepresentation: applet
+                                                              && applet.fullRepresentationItem
+                                                              && applet.fullRepresentationItem.parent === applet
 
     property bool isScheduledForDestruction: (fastLayoutManager && applet && fastLayoutManager.appletsInScheduledDestruction.indexOf(applet.plasmoid.id)>=0)
     property bool isHidden: (!root.inConfigureAppletsMode && ((applet && applet.plasmoid.status === PlasmaCore.Types.HiddenStatus ) || isInternalViewSplitter)) || isScheduledForDestruction
@@ -832,10 +842,22 @@ Item {
                 anchors.fill: parent
                 opacity: mustBeShown ? 1 : 0
 
+                //! Deliberate Qt5 deviation, forced by a Plasma 6 state that
+                //! Qt5 never had: Plasma 6 AppletQuickItem swaps an applet to
+                //! its FULL representation inline when it grows past
+                //! switchWidth/switchHeight (parabolic zoom does this to the
+                //! comic on every hover). Colorizing flattens the wrapper's
+                //! whole alpha to one color, which turns an inline content
+                //! view into a featureless slab (the comic rendered as a
+                //! white rectangle under Dark Colors, caught live
+                //! 2026-07-15). Qt5's colorizer only ever met compact icons,
+                //! so its spirit - theme small symbolic icons - is kept by
+                //! exempting the inline-full state.
                 readonly property bool mustBeShown: colorizerManager.mustBeShown
                                                     && !appletItem.userBlocksColorizing
                                                     && !appletItem.appletBlocksColorizing
                                                     && !appletItem.isInternalViewSplitter
+                                                    && !appletItem.isShowingInlineFullRepresentation
 
                 Behavior on opacity {
                     NumberAnimation {
