@@ -365,8 +365,20 @@ void PrimaryConfigView::instantUpdateAvailableScreenGeometry()
 }
 
 void PrimaryConfigView::updateAvailableScreenGeometry(View *origin)
-{    
-    if (!m_latteView || !m_latteView->layout() || m_latteView == origin) {
+{
+    //! Deviation from upstream (d30143f7 excluded origin == m_latteView):
+    //! after a restart the corona integrates this view's own reserved screen
+    //! area LATE, so the warmed chrome computed availableScreenGeometry from
+    //! the strut-less full screen and a first open right after a restart
+    //! mapped the settings window taller than the available area - observed
+    //! live overflowing the screen top by the dock's reserved thickness
+    //! (99px), stuck that way because the correcting
+    //! availableScreenRectChangedFrom(self) was dropped here. Self-origin
+    //! updates are exactly the ones that heal this; churn is bounded by the
+    //! debounce timer below and by syncGeometry's no-change early-return.
+    Q_UNUSED(origin);
+
+    if (!m_latteView || !m_latteView->layout()) {
         return;
     }
 
