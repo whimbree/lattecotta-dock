@@ -1995,6 +1995,22 @@ multi-view, multi-monitor setup.
       task-cycling-shortcuts feature (overlaps Latte's own shortcut
       system - decide at Phase 12, not auto-port).
       Commits: (alternativeshelper fix in its own commit)
+- [ ] Applet popups are mis-sized (caught live 2026-07-14: the volume
+      applet popup renders ~260px wide with wrapping tabs and clipped
+      content; plasmashell sizes the same applet correctly).
+      ROOT-CAUSE DIRECTION, from reading libplasma v6.6.5
+      appletpopup.cpp: Plasma 6 inverted the popup sizing contract -
+      LayoutChangedProxy takes the full representation's IMPLICIT size
+      as the base, Layout.preferred* only as an override, and enforces
+      Layout.minimum*. Our shell/package/contents/applet/
+      CompactApplet.qml still runs the Qt5-era chain (preferred ->
+      implicit -> live width -> font-metric fallback), so applets
+      written to the new contract (plasma-pa) land in the wrong
+      branch. Fix: instrument the chain once to confirm the firing
+      branch, then replace it with the upstream proxy semantics,
+      clamped to available screen. Verify volume side-by-side vs
+      plasmashell, sweep calendar/network/bluetooth popups.
+      Commits:
 - [ ] Applet context menu is MISSING the "Show Alternatives" entry
       (found while live-verifying the AlternativesHelper fix: the
       clock's menu shows Configure/Copy but no Alternatives, so the
@@ -2051,6 +2067,37 @@ Features beyond even Latte git master, appropriate under the
 maintained-continuation framing. None of these start before their
 prerequisites in the phases above are done.
 
+- [ ] Resizable applet popups with per-applet persistence and reset
+      (requested 2026-07-14; PREREQUISITE: the popup mis-sizing fix in
+      the stabilization list - the feature sits on the corrected
+      sizing contract). Design decided, from libplasma v6.6.5
+      AppletPopup which implements exactly this for plasmashell:
+      (a) interactive edge-drag resize on the popup dialog via a
+      WindowResizeHandler equivalent (startSystemResize; KWin already
+      cooperates for appletpopup-role windows, which ours are since
+      f630d2ad) - scoped STRICTLY to type === AppletPopup so hover
+      previews never become resizable;
+      (b) persist popupWidth/popupHeight in the applet's own config
+      group, the SAME keys plasmashell uses - lands in the layout
+      file so it travels with profile export, and layouts moved
+      between plasmashell and latte keep their sizes;
+      (c) DELIBERATE deviation from upstream: save only after an
+      actual user resize (upstream saves on every hide), so
+      "has a custom size" stays meaningful and the reset entry can
+      hide itself when there is nothing to reset - comment at the
+      site;
+      (d) "Reset Popup Size" entry in the applet context menu
+      (contextmenu containmentactions plugin, next to Configure),
+      visible only when the keys exist, deletes them and re-sizes
+      live back to hint size;
+      (e) suppress our recompute-fresh re-anchoring while a system
+      resize is in flight, re-anchor once on release (the dialog
+      repositions on size change and would fight the drag);
+      (f) tests: qmltest pinning the sizing resolution
+      (implicit/preferred/minimum permutations), GUI-CI candidates
+      for the microvm: drag-resize round trip, persistence across
+      restart, reset entry.
+      Commits:
 - [ ] Replicate Dock: first-class live-mirrored views with user-chosen
       placement, riding the existing ClonedView sync machinery. Full
       design, settled decisions (keying, sync scope, editability,
