@@ -358,9 +358,6 @@ PlasmoidItem {
 
         property bool signalSent: false
         property Item activeItem: null
-        //! the task adopted by the deferred remap (see show()); a sweep
-        //! overwrites it per hovered task so the remap lands on the last one
-        property Item remapPendingTask: null
 
         Component.onCompleted: mainItem.visible = true;
 
@@ -410,40 +407,19 @@ PlasmoidItem {
                     root.signalPreviewsShown();
                 }
 
-                //! Wayland: a mapped popup cannot re-anchor - assigning a new
-                //! visualParent while visible is silently ignored, so a fast
-                //! hover sweep switched the CONTENT from task to task while
-                //! the window stayed parked where the sweep first opened it
-                //! (observed live: Firefox preview sitting over the clock at
-                //! the dock's far end). Unmap before adopting the new task so
-                //! the re-show remaps at the fresh anchor - and the re-show
-                //! MUST wait an event loop pass: hide+show in the same cycle
-                //! coalesces and the surface never actually unmaps (real
-                //! mouse sweeps cross several tasks per frame; the first fix
-                //! attempt only survived slow synthetic sweeps). The pending
-                //! task always overwrites, so a sweep debounces to the last
-                //! hovered task. Slow hovering never hit any of this because
-                //! the hide timer unmaps between tasks.
-                if (visible && activeItem && activeItem !== taskItem) {
-                    remapPendingTask = taskItem;
-                    visible = false;
-                    previewRemapTimer.restart();
-                    return;
-                }
-
-                //! a newer task reached the map point: any older pending
-                //! resurrection is stale now - without this cancel the 1ms
-                //! timer re-showed the OLD task after the new one mapped,
-                //! ping-ponging the window
-                remapPendingTask = null;
-                previewRemapTimer.stop();
-
-                //! anchor and content must come from the SAME task at map
-                //! time: preparePreviewWindow() also sets the anchor, but
-                //! interleaved shows (prepare B landing between A's hide and
-                //! A's deferred re-show) mapped one task's thumbnails at
-                //! another task's icon (user-reproduced: firefox preview
-                //! ~370px away over the dock's other end)
+                //! A task switch re-anchors the MAPPED window in place. This
+                //! replaced an unmap/remap-deferred-a-tick workaround, which
+                //! predated the dialog's live wayland re-anchoring (77aac4b4:
+                //! a mapped plasmashell surface repositions through
+                //! set_position at any time, and onVisualParentChanged places
+                //! once per anchor change) and was never revisited: every
+                //! crossing tore the surface down and mapped a new one - a
+                //! wire-logged 231ms hole between the nil attach and the new
+                //! surface's configure round, plus a repeated slide-in per
+                //! icon - the sweep stutter reproduced at the desk. Anchor
+                //! and content still come from the SAME task in the same
+                //! call: an interleaved prepare once mapped one task's
+                //! thumbnails at another task's icon.
                 visualParent = taskItem.tooltipVisualParent;
 
                 activeItem = taskItem;
@@ -455,21 +431,6 @@ PlasmoidItem {
                 }
 
                 visible = true;
-            }
-        }
-    }
-
-    //! Re-show the previews window one event loop pass after it was hidden
-    //! for a task switch, so the unmap actually reaches the compositor and
-    //! the re-show maps a fresh surface at the new task's anchor
-    Timer {
-        id: previewRemapTimer
-        interval: 1
-        onTriggered: {
-            if (windowsPreviewDlg.remapPendingTask) {
-                var task = windowsPreviewDlg.remapPendingTask;
-                windowsPreviewDlg.remapPendingTask = null;
-                windowsPreviewDlg.show(task);
             }
         }
     }
