@@ -190,7 +190,7 @@ void IndicatorUiManager::downloadIndicator()
 {
     //! call asynchronously in order to not crash when view settings window
     //! loses focus and it closes
-    QTimer::singleShot(0, [this]() {
+    QTimer::singleShot(0, this, [this]() {
         m_primary->corona()->indicatorFactory()->downloadIndicator();
     });
 }
@@ -198,7 +198,7 @@ void IndicatorUiManager::downloadIndicator()
 void IndicatorUiManager::removeIndicator(QString pluginId)
 {    //! call asynchronously in order to not crash when view settings window
     //! loses focus and it closes
-    QTimer::singleShot(0, [this, pluginId]() {
+    QTimer::singleShot(0, this, [this, pluginId]() {
         m_primary->corona()->indicatorFactory()->removeIndicator(pluginId);
     });
 }

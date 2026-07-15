@@ -2298,6 +2298,45 @@ multi-view, multi-monitor setup.
       VERIFICATION PENDING: deleting a dock still slides it out on its
       own edge.
       Commits: 75780c64, 98986641 (contract test)
+- [x] HEADLESS SWEEP 2026-07-15: loops, degenerate indexes, iteration
+      lifetime, delayed-lambda captures (the ad9b823f/46dc83c5/
+      fa02b887/52c2987b/d6d57e61 families, swept systematically
+      instead of waiting for the next coredump). Nine defects found
+      by reading + proven mechanisms, all fixed at their origin:
+      GenericTable operator[](QString) indexed m_list[-1] for missing
+      ids with three reachable feeder sites in the activities
+      delegate (c117e598); layouts model data() read the row before
+      its rowExists guard - the sibling views model carries the
+      corrected order with the old line still commented out
+      (cbb37c95); layouts model currentData() returned a reference to
+      a temporary (41a6918e); fifteen contextless
+      QTimer::singleShot lambdas capturing raw pointers, incl. the
+      config-view slide-out also needing a QPointer on the target
+      view (d1773423); recreateView's delayed steps fetched via
+      null-inserting QHash::operator[], could addView a destroyed
+      containment, and wedged m_viewsToRecreate on abort (9abb3d25);
+      the layouts sort persistence read a half-destructed QHeaderView
+      inside its destroyed() handler (dedfc441); client UserRequests
+      never disconnected its bridge connect - it re-CONNECTED from
+      Component.onDestruction (708c6fe4); cleanupRecords spliced with
+      a proven-negative index, deleting the last launcher record
+      instead of the orphan - dead code today, caller commented out
+      (8468f765); Factory's parallel id/name lists desynced for
+      duplicate display names, making removal index past the names
+      list, plus unbounded local-id re-appends per dirty event
+      (5406a27b). Tests: indicatorfactoryremovaltest drives Factory
+      removals through real KDirWatch deletions - built-in arm
+      SIGSEGVs with the 46dc83c5 guard reverted, passes with it
+      (0454ed36); tst_autosize.qml pins shrink/grow termination for
+      every icon size 16-128 against the REAL stepping extracted to
+      containment code/autosize.js, hang-verified against the
+      747d4870 loop form (1fdcb2e0). Clean negatives and the guard
+      inventory live in docs/session-handoff.md (2026-07-15 sweep
+      section). fa02b887's import path was assessed and is NOT
+      headless-drivable (Storage::importLayoutFile requires a live
+      corona); its guard stays live-verified only.
+      Commits: c117e598 cbb37c95 41a6918e d1773423 9abb3d25 dedfc441
+      708c6fe4 8468f765 5406a27b 0454ed36 1fdcb2e0
 
 ### Phase 11: Nix packaging + Docker build verification
 

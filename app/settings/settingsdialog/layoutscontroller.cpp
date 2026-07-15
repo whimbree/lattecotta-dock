@@ -68,9 +68,14 @@ Layouts::Layouts(Settings::Handler::TabLayouts *parent)
 
     connect(m_model, &Model::Layouts::nameDuplicated, this, &Layouts::onNameDuplicatedFrom);
 
-    connect(m_headerView, &QObject::destroyed, this, [&]() {
-        m_viewSortColumn = m_headerView->sortIndicatorSection();
-        m_viewSortOrder = m_headerView->sortIndicatorOrder();
+    //! track sort changes as they happen; the old destroyed() handler read
+    //! sortIndicatorSection() off the header while it was already inside
+    //! ~QObject (the QHeaderView part destructed), and it also depended on the
+    //! header dying before this controller for the values to reach saveConfig()
+    connect(m_headerView, &QHeaderView::sortIndicatorChanged, this,
+            [this](int column, Qt::SortOrder order) {
+        m_viewSortColumn = column;
+        m_viewSortOrder = order;
     });
 
     initView();
@@ -1102,7 +1107,7 @@ void Layouts::onNameDuplicatedFrom(const QString &provenId, const QString &trial
     QModelIndex tIndex = m_proxyModel->index(tRow, Model::Layouts::NAMECOLUMN);
 
     //! avoid losing focus
-    QTimer::singleShot(0, [this, tIndex]() {
+    QTimer::singleShot(0, this, [this, tIndex]() {
         m_view->edit(tIndex);
     });
 }

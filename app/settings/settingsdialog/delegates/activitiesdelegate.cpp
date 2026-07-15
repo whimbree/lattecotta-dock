@@ -66,6 +66,14 @@ QWidget *Activities::createEditor(QWidget *parent, const QStyleOptionViewItem &o
     }
 
     for (int i=0; i<allActivities.count(); ++i) {
+        if (!allActivitiesTable.containsId(allActivities[i])) {
+            //! the sorted id list comes from the synchronizer while the table only
+            //! carries activities whose state resolved as valid, so an id can
+            //! legitimately be missing here (e.g. an activity still starting up);
+            //! operator[] on a missing id is not allowed
+            continue;
+        }
+
         Latte::Data::Activity activitydata = allActivitiesTable[allActivities[i]];
 
         if (!activitydata.isValid()) {
@@ -308,6 +316,13 @@ void Activities::paint(QPainter *painter, const QStyleOptionViewItem &option, co
     Latte::Data::ActivitiesTable allActivitiesTable = index.data(Model::Layouts::ALLACTIVITIESDATAROLE).value<Latte::Data::ActivitiesTable>();
 
     for (int i=0; i<assignedIds.count(); ++i) {
+        if (!allActivitiesTable.containsId(assignedIds[i])) {
+            //! assigned ids are read from the layout file and can name activities
+            //! that no longer exist on this machine (deleted, or the layout was
+            //! imported from elsewhere); operator[] on a missing id is not allowed
+            continue;
+        }
+
         assignedActivities << allActivitiesTable[assignedIds[i]];
     }
 
@@ -368,6 +383,14 @@ void Activities::updateButton(QWidget *editor, const Latte::Data::ActivitiesTabl
 
     for (QAction *action : button->menu()->actions()) {
         if (action->isChecked() && action->data().toString() != Data::Layout::CURRENTACTIVITYID) {
+            if (!allActivitiesTable.containsId(action->data().toString())) {
+                //! the menu was built from an earlier copy of the table and an
+                //! activity can be deleted while the editor is open, so a checked
+                //! action can name an id the table no longer carries; operator[]
+                //! on a missing id is not allowed
+                continue;
+            }
+
             assignedActivities << allActivitiesTable[action->data().toString()];
         }
     }

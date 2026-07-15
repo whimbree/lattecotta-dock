@@ -280,9 +280,18 @@ void PrimaryConfigView::setParentView(Latte::View *view, const bool &immediate)
     if (m_latteView && !immediate) {
         hideConfigWindow();
 
-        //!slide-out delay
-        QTimer::singleShot(SLIDEOUTINTERVAL, [this, view]() {
-            initParentView(view);
+        //!slide-out delay; the target view can be destroyed while the slide-out
+        //!plays (dock removal, layout switch), so hold it through a QPointer and
+        //!drop the retarget loudly instead of dereferencing a dangling pointer
+        QPointer<Latte::View> nextview(view);
+
+        QTimer::singleShot(SLIDEOUTINTERVAL, this, [this, nextview]() {
+            if (!nextview) {
+                qWarning() << "PrimaryConfigView: the view to be configured was destroyed during the slide-out delay; the settings window stays hidden";
+                return;
+            }
+
+            initParentView(nextview);
             showConfigWindow();
         });
     } else {

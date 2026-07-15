@@ -136,36 +136,36 @@ void Factory::reload(const QString &indicatorPath)
                         && (metadata.pluginId() != "org.kde.latte.plasma")
                         && (metadata.pluginId() != "org.kde.latte.plasmatabstyle")) {
 
-                    //! find correct alphabetical position
-                    int newPos = -1;
-
+                    //! m_customPluginIds and m_customPluginNames are parallel lists:
+                    //! removeIndicatorRecords() removes the SAME position from both,
+                    //! so they must always be inserted together. The old code guarded
+                    //! the name insertion on name uniqueness separately, so two
+                    //! plugins sharing a display name desynced the lists and the
+                    //! removal indexed past the end of the names list.
                     if (!m_customPluginIds.contains(metadata.pluginId())) {
+                        //! find correct alphabetical position
+                        int newPos = -1;
+
                         for (int i=0; i<m_customPluginNames.count(); ++i) {
                             if (QString::compare(metadata.name(), m_customPluginNames[i], Qt::CaseInsensitive)<=0) {
                                 newPos = i;
                                 break;
                             }
                         }
-                    }
 
-                    if (!m_customPluginIds.contains(metadata.pluginId())) {
                         if (newPos == -1) {
                             m_customPluginIds << metadata.pluginId();
-                        } else {
-                            m_customPluginIds.insert(newPos, metadata.pluginId());
-                        }
-                    }
-
-                    if (!m_customPluginNames.contains(metadata.name())) {
-                        if (newPos == -1) {
                             m_customPluginNames << metadata.name();
                         } else {
+                            m_customPluginIds.insert(newPos, metadata.pluginId());
                             m_customPluginNames.insert(newPos, metadata.name());
                         }
                     }
                 }
 
-                if (indicatorPath.startsWith(QDir::homePath())) {
+                //! reload() reruns on every KDirWatch dirty event for the same
+                //! path, so the record must not be appended twice
+                if (indicatorPath.startsWith(QDir::homePath()) && !m_customLocalPluginIds.contains(metadata.pluginId())) {
                     m_customLocalPluginIds << metadata.pluginId();
                 }
             }
@@ -231,7 +231,7 @@ void Factory::removeIndicatorRecords(const QString &path)
         KDirWatch::self()->removeDir(path);
 
         //! delay informing the removal in case it is just an update
-        QTimer::singleShot(1000, [this, pluginId]() {
+        QTimer::singleShot(1000, this, [this, pluginId]() {
             Q_EMIT indicatorRemoved(pluginId);
         });
     }

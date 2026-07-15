@@ -32,6 +32,81 @@ below are now RESOLVED and kept only as archaeology.
   only triggers when cmake is absent from PATH; a host cmake without
   ninja fails the configure. Run it as `nix develop -c
   ./scripts/build-check.sh` from a bare worktree.
+## 2026-07-15: headless sweep - loops, degenerate indexes, lifetime hazards
+
+Systematic sweep of the ad9b823f/46dc83c5/fa02b887/52c2987b/d6d57e61
+families instead of waiting for the next coredump. Eleven commits; the
+Phase 10 sweep entry in the plan lists them all with mechanisms. Fully
+headless session: nothing was driven live, so several fixes carry
+"noted for the Phase 10 sweep" markers for live confirmation (activities
+delegate with a stale activity assignment, config-view slide-out racing
+dock removal, recreate-during-removal, sort persistence round-trip,
+dock/panel type flip after applet removal).
+
+Clean negatives from the sweep (checked, no defect, so the next sweep
+does not re-derive them):
+
+- QML while-loops all terminate: head/tail scans in AppletItem/BasicItem
+  strictly advance past finite lists, ContextMenu's eliding loop bottoms
+  out at empty text vs a non-negative limit, restoreLaunchers always
+  splices two off per pass, wheel-delta loops step by fixed 120.
+- C++ while(!empty) teardown loops all remove before/while iterating
+  (corona unload relies on libplasma removing containments on destroyed
+  - upstream-shared contract, comment already in place).
+- All first()/takeFirst()/last() sites are isEmpty-guarded.
+- QMutableListIterator removal loops (alternatives objects) only
+  pointer-compare captured pointers, never dereference - the d6d57e61
+  discipline holds there, same for the applet destroyed() handlers in
+  containmentinterface (remove-by-identity only).
+- tasktools/servicesFromCmdLine indexOf chains all guard or use
+  QString mid/lastIndexOf semantics safely.
+
+Guard inventory - silent guards found in the swept paths, each assessed,
+NOT blanket-fixed (per CLAUDE.md a guard is a contract or a bandaid):
+
+- templatesmanager templateName(): the .view.latte else-arm calls
+  remove(ext,...) unguarded; ext=-1 would chop the last 11 chars.
+  Unreachable today - both callers filter *.layout.latte / *.view.latte
+  dir entries. Contract-by-construction; left as is, would need a loud
+  warning if a third caller ever appears.
+- importer nameOfConfigFile()/abstractlayout layoutName(): same shape,
+  remove(-1,n) truncates one char off a non-.latterc name. Feeder is
+  the import file dialog (filters .latterc); cosmetic wrong name at
+  worst. Left as is.
+- corona windowColorScheme(): no '-' in the dbus payload makes both
+  halves the whole string. Tolerant parse of our own dbus signal;
+  harmless, left as is.
+- waylandinterface switchToNext/PreviousVirtualDesktop(): unknown
+  current desktop resolves to position -1 which behaves as
+  before-first (next goes to first, previous wraps/returns). Sane
+  degraded behavior, left as is.
+- tasksmodel add/move/restore guards read 'plasmoid && !contains' so a
+  null plasmoid FALLS THROUGH: addTask would null-deref three lines
+  later. Unreachable (the only caller is behind an 'else if (ai)'),
+  but the guard shape is misleading - candidate cleanup, not a bug
+  today.
+- originalview removeClone(): '!cloned->layout()' arm drops the clone
+  from m_clones without slideOut/removeView - silent leak path if a
+  clone ever loses its layout while registered. Origin not proven
+  headlessly; left, watch item.
+- launchers Validator upwardIsBetter(): goal.indexOf(val) can be -1
+  when current is not a permutation of goal, making splice insert
+  before-last; the function is a direction heuristic so the answer is
+  just suboptimal, no corruption. Left as is.
+- AutoSize updateIconSize() maxLength<=0 early-return: deliberate
+  contract, commented in place since ad9b823f (re-run wired via
+  onMaxLengthChanged).
+- fa02b887's liveness filter in Storage::importLayoutFile: still a
+  band-aid by its own admission (deleter unidentified); NOT
+  headless-drivable (needs a live corona), so the importerregression
+  extension was assessed and skipped rather than faked.
+
+Session tooling notes: the worktree build needed its own cmake
+configure (nix develop -c cmake -B build -S . -G Ninja
+-DCMAKE_BUILD_TYPE=RelWithDebInfo) before any target built; ctest picks
+up the new indicatorfactoryremovaltest without extra wiring. KDirWatch
+deletion delivery works offscreen and the whole factory suite runs in
+~1.3s, so it is safe for the default ctest pass.
 
 ## 2026-07-12 late evening: comic hover crash + edit-mode chrome trilogy
 

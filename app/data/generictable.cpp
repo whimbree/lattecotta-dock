@@ -129,6 +129,19 @@ T &GenericTable<T>::operator[](const QString &id)
         }
     }
 
+    if (pos < 0) {
+        //! callers must check containsId() first: there is no valid reference
+        //! to hand out for a missing id. Indexing m_list[-1] here was silent
+        //! out-of-bounds access on Qt6 (heap corruption on write), so fail
+        //! loudly and return a discarded record instead.
+        qCritical() << "GenericTable: record" << id
+                    << "does not exist; the caller must check containsId() first."
+                    << "Writes will be discarded.";
+        static T fallback;
+        fallback = T();
+        return fallback;
+    }
+
     return m_list[pos];
 }
 
@@ -142,6 +155,15 @@ const T GenericTable<T>::operator[](const QString &id) const
             pos = i;
             break;
         }
+    }
+
+    if (pos < 0) {
+        //! same contract as the non-const overload: missing ids are caller
+        //! errors, but an invalid (default) record is returned instead of
+        //! indexing m_list[-1]
+        qCritical() << "GenericTable: record" << id
+                    << "does not exist; the caller must check containsId() first.";
+        return T();
     }
 
     return m_list[pos];

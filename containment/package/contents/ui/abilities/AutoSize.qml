@@ -10,6 +10,8 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 
 import org.kde.latte.core 0.2 as LatteCore
 
+import "../../code/autosize.js" as AutoSizeLogic
+
 Item {
     id: sizer
 
@@ -198,24 +200,17 @@ Item {
             var newIconSizeFound = false;
             if (layoutLength > toShrinkLimit) { //must shrink
                 // console.log("step3");
-                var nextIconSize = metrics.maxIconSize;
-
-                //! bounds are inequalities on purpose: stepping by automaticStep
-                //! from a size that is not a multiple of it skips exact values,
-                //! and the equality forms (!== 16, !== maxIconSize) spun forever
-                //! (inherited from upstream 747d4870; surfaced on wayland where
-                //! the first call can arrive with iconSize=78)
-                do {
-                    nextIconSize = Math.max(16, nextIconSize - automaticStep);
-                    var factor = nextIconSize / metrics.iconSize;
-                    var nextLength = factor * layoutLength;
-
-                } while ( (nextLength>toShrinkLimit) && (nextIconSize > 16));
+                //! stepping logic lives in code/autosize.js so its termination is
+                //! pinned headlessly (tests/qml/tst_autosize.qml); see the note
+                //! there about the upstream 747d4870 equality exits that spun
+                //! forever for sizes not congruent modulo the step (surfaced on
+                //! wayland where the first call can arrive with iconSize=78)
+                var shrunk = AutoSizeLogic.shrinkStep(metrics.maxIconSize, metrics.iconSize, layoutLength, toShrinkLimit, automaticStep);
 
                 var intLength = Math.round(layoutLength);
-                var intNextLength = Math.round(nextLength);
+                var intNextLength = Math.round(shrunk.nextLength);
 
-                iconSize = nextIconSize;
+                iconSize = shrunk.iconSize;
                 newIconSizeFound = true;
 
                 addPrediction(intLength, intNextLength);
@@ -223,21 +218,11 @@ Item {
             } else if ((layoutLength<toGrowLimit
                         && (metrics.iconSize === iconSize)) ) { //must grow probably
                 // console.log("step4");
-                var nextIconSize2 = iconSize;
-                var foundGoodSize = -1;
-
-                do {
-                    nextIconSize2 = Math.min(metrics.maxIconSize, nextIconSize2 + automaticStep);
-                    var factor2 = nextIconSize2 / iconSize;
-                    var nextLength2 = factor2 * layoutLength;
-
-                    if (nextLength2 < toGrowLimit) {
-                        foundGoodSize = nextIconSize2;
-                    }
-                } while ( (nextLength2<toGrowLimit) && (nextIconSize2 < metrics.maxIconSize ));
+                var grown = AutoSizeLogic.growStep(metrics.maxIconSize, iconSize, layoutLength, toGrowLimit, automaticStep);
+                var foundGoodSize = grown.foundGoodSize;
 
                 var intLength2 = Math.round(layoutLength);
-                var intNextLength2 = Math.round(nextLength2);
+                var intNextLength2 = Math.round(grown.nextLength);
 
                 if (foundGoodSize > 0 && !producesEndlessLoop(intLength2, intNextLength2)) {
                     if (foundGoodSize === metrics.maxIconSize) {

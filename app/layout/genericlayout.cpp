@@ -1207,7 +1207,21 @@ void GenericLayout::recreateView(Plasma::Containment *containment, bool delayed)
 
     //! give the time to config window to close itself first and then recreate the dock
     //! step:1 remove the latteview
-    QTimer::singleShot(delay, [this, containment]() {
+    QTimer::singleShot(delay, this, [this, containment]() {
+        //! the wait for the config window is exactly why this can race: the view
+        //! can be legitimately removed while the delay runs (screen sync, layout
+        //! unload), and QHash::operator[] on the gone key would insert a null
+        //! entry and crash on the dereference below
+        if (!m_latteViews.contains(containment)) {
+            //! only the pointer value is printed: a destroyed containment is one
+            //! of the ways its view disappears from m_latteViews, so containment
+            //! must not be dereferenced on this path
+            qWarning() << "recreate - step 1: the view for containment"
+                       << (void *)containment << "was removed during the recreation delay; aborting the recreation";
+            m_viewsToRecreate.removeAll(containment);
+            return;
+        }
+
         auto view = m_latteViews[containment];
         view->disconnectSensitiveSignals();
 
@@ -1215,11 +1229,23 @@ void GenericLayout::recreateView(Plasma::Containment *containment, bool delayed)
         connect(view, &QObject::destroyed, this, [this, containment]() {
             auto view = m_latteViews.take(containment);
             QTimer::singleShot(250, this, [this, containment]() {
-                if (!m_latteViews.contains(containment)) {
+                //! the containment can be destroyed during this second delay
+                //! (its destruction removes it from m_containments, a pointer
+                //! comparison that never dereferences), and addView on a dangling
+                //! containment would crash; the recreation record is cleared on
+                //! every arm so an aborted recreation cannot block future ones
+                if (!m_containments.contains(containment)) {
+                    qWarning() << "recreate - step 2: containment" << (void *)containment
+                               << "was destroyed during the recreation delay; aborting the recreation";
+                } else if (m_latteViews.contains(containment)) {
+                    qWarning() << "recreate - step 2: containment" << containment->id()
+                               << "already has a view again; skipping the duplicate addView";
+                } else {
                     qDebug() << "recreate - step 2: adding dock for containment:" << containment->id();
                     addView(containment);
-                    m_viewsToRecreate.removeAll(containment);
                 }
+
+                m_viewsToRecreate.removeAll(containment);
             });
         });
 

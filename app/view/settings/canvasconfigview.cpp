@@ -251,7 +251,7 @@ void CanvasConfigView::showEvent(QShowEvent *ev)
     //! its parent view on top afterwards
     m_corona->wm()->setViewExtraFlags(this, true);
 
-    QTimer::singleShot(100, [this]() {
+    QTimer::singleShot(100, this, [this]() {
         //! delay execution in order to take influence after last Canvas on top call
         if (m_parent) {
             m_parent->requestActivate();

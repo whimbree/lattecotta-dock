@@ -200,7 +200,11 @@ function cleanupRecords(activities){
             var index = getIndex(launchersOnActivities[i].id, activities);
             if(index < 0){
                 console.log("Orphaned Activity Settings removed:"+launchersOnActivities[i].id);
-                launchersOnActivities.splice(index,1);
+                //! remove the orphaned record at position i; index is proven
+                //! negative here and splice(index,1) removed the LAST record
+                //! instead of the orphan
+                launchersOnActivities.splice(i,1);
+                --i;
             }
         }
     }

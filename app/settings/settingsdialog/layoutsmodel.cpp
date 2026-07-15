@@ -439,11 +439,12 @@ QVariant Layouts::data(const QModelIndex &index, int role) const
 {
     const int row = index.row();
     int column = index.column();
-    bool isNewLayout = !o_layoutsTable.containsId(m_layoutsTable[row].id);
 
     if (!m_layoutsTable.rowExists(row)) {
         return QVariant{};
     }
+
+    bool isNewLayout = !o_layoutsTable.containsId(m_layoutsTable[row].id);
 
     //! original data
     Latte::Data::Layout original;
@@ -823,7 +824,7 @@ const Latte::Data::Layout &Layouts::at(const int &row)
     return m_layoutsTable[row];
 }
 
-const Latte::Data::Layout &Layouts::currentData(const QString &id)
+const Latte::Data::Layout Layouts::currentData(const QString &id)
 {
     if (m_layoutsTable.containsId(id)){
         return m_layoutsTable[id];

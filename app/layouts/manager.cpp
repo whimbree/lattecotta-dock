@@ -436,9 +436,10 @@ void Manager::showInfoWindow(QString info, int duration, QStringList activities)
         infoView->show();
         infoView->setOnActivities(activities);
 
-        QTimer::singleShot(duration, [this, infoView]() {
-            infoView->deleteLater();
-        });
+        //! the InfoView is its own receiver: if it is destroyed earlier for any
+        //! reason the delayed deleteLater is dropped instead of firing on a
+        //! dangling pointer
+        QTimer::singleShot(duration, infoView, &QObject::deleteLater);
     }
 }
 

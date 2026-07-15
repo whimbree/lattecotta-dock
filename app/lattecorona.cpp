@@ -973,13 +973,13 @@ void Corona::quitApplication()
 
     //! this code must be called asynchronously because it is called
     //! also from qml (Settings window).
-    QTimer::singleShot(300, [this]() {
+    QTimer::singleShot(300, this, [this]() {
         m_layoutsManager->hideLatteSettingsDialog();
         m_layoutsManager->synchronizer()->hideAllViews();
     });
 
     //! give the time for the views to hide themselves
-    QTimer::singleShot(800, [this]() {
+    QTimer::singleShot(800, this, [this]() {
         qGuiApp->quit();
     });
 }
@@ -1146,7 +1146,7 @@ void Corona::windowColorScheme(QString windowIdAndScheme)
     QString schemeStr = windowIdAndScheme.mid(firstSlash + 1);
 
     if (KWindowSystem::isPlatformWayland()) {
-        QTimer::singleShot(200, [this, schemeStr]() {
+        QTimer::singleShot(200, this, [this, schemeStr]() {
             //! [Wayland Case] - give the time to be informed correctly for the active window id
             //! otherwise the active window id may not be the same with the one triggered
             //! the color scheme dbus signal
