@@ -54,19 +54,30 @@ T.ComboBox {
 
     delegate: ItemDelegate {
         width: control.popup.width
-        enabled: !isSeparator && (control.enabledRole.length>0 ? (isArray ? modelData[control.enabledRole] : model[control.enabledRole]) : true)
-        text: control.textRole.length>0 ? (isArray ? modelData[control.textRole] : model[control.textRole]) : modelData
-        iconSource: control.iconRole.length>0 ? (isArray ? modelData[control.iconRole] : model[control.iconRole]) : ''
-        iconToolTip: control.iconToolTipRole.length>0 ? (isArray ? modelData[control.iconToolTipRole] : model[control.iconToolTipRole]) : ''
-        iconOnlyWhenHovered: control.iconOnlyWhenHoveredRole.length>0 ? (isArray ? modelData[control.iconOnlyWhenHoveredRole] : model[control.iconOnlyWhenHoveredRole]) : ''
-        isSeparator: control.isSeparatorRole.length>0 ? (isArray ? modelData[control.isSeparatorRole] : model[control.isSeparatorRole]) : false
-        toolTip: control.toolTipRole.length>0 ? (isArray ? modelData[control.toolTipRole] : model[control.toolTipRole]) : ''
+        //! Where roles live depends on the model kind, and Qt6 broke the
+        //! Qt5-era detection: the Qt5 shape branched on
+        //! Array.isArray(control.model), but Qt6's ComboBox hands the model
+        //! back as a QVariantList even when a JS array was assigned, so the
+        //! check was always false and every lookup fell through to
+        //! model[role] - undefined for array models, which left every popup
+        //! row textless AND collapsed (the label also drives the row
+        //! height). Measured on the pinned Qt 6.11 (tst_comboboxpopup):
+        //! array models expose the row object as modelData and nothing via
+        //! model[role]; ListModels expose roles via model[role] and leave
+        //! modelData undefined. Resolve from whichever exists.
+        readonly property var roleSource: modelData !== undefined && modelData !== null ? modelData : model
+
+        enabled: !isSeparator && (control.enabledRole.length>0 ? roleSource[control.enabledRole] : true)
+        text: control.textRole.length>0 ? roleSource[control.textRole] : modelData
+        iconSource: control.iconRole.length>0 ? roleSource[control.iconRole] : ''
+        iconToolTip: control.iconToolTipRole.length>0 ? roleSource[control.iconToolTipRole] : ''
+        iconOnlyWhenHovered: control.iconOnlyWhenHoveredRole.length>0 ? roleSource[control.iconOnlyWhenHoveredRole] : ''
+        isSeparator: control.isSeparatorRole.length>0 ? roleSource[control.isSeparatorRole] : false
+        toolTip: control.toolTipRole.length>0 ? roleSource[control.toolTipRole] : ''
 
         highlighted: mouseArea.pressed ? listView.currentIndex == index : control.currentIndex == index
         blankSpaceForEmptyIcons: control.blankSpaceForEmptyIcons
         textHorizontalAlignment: popUpTextHorizontalAlignment
-
-        readonly property bool isArray: Array.isArray(control.model)
         property bool separatorVisible: false
 
         PlasmaComponents.Button {
