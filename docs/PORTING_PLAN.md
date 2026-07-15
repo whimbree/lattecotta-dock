@@ -2115,7 +2115,7 @@ multi-view, multi-monitor setup.
       The route to a permanently dark bar on a light plasma theme
       is the Dark Colors palette (works) or the filed color-picker
       continuation feature.
-      Commits: (kdeglobals seeding commit)
+      Commits: 79ca3360
 - [x] Applet colorizer applies too broadly - RESOLVED AS NOT A BUG,
       plus a harness fix. Qt5 source read end to end (Manager.qml
       applyTheme, applet/colorizer/Applet.qml): Qt5 runs the same
@@ -2133,7 +2133,7 @@ multi-view, multi-monitor setup.
       (Qt5-correct), task icons stay full color; palette restored
       to default afterwards. run-staged.sh now seeds the throwaway
       config with the session kdeglobals (copy, never a link).
-      Commits: (kdeglobals seeding commit)
+      Commits: 79ca3360
 - [x] Comic Strip applet "not rendering" (reported 2026-07-15; two
       symptoms, RESOLVED as three separate causes, none the suspected
       commit regression). (1) The black-disc icon: the applet
