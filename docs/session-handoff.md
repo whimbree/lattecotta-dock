@@ -273,6 +273,37 @@ below are now RESOLVED and kept only as archaeology.
   repro; it ends the session WITH its systray back. My real dock was
   NOT restarted back to --user-config yet at write time - do that
   (or I do it by hand) before daily-driving resumes.
+- Round twenty-eight (2026-07-15 late night, desk-driven, I reported
+  and co-drove throughout): the "comic stopped rendering" and "dock
+  bar is white in dark mode" reports both dissolved into precise
+  causes, none the feared commit regression. Comic = THREE findings:
+  the black-disc icon was the 1f835402 colorizer flattening a
+  full-color icon under Dark Colors (my palette flip-back proved it
+  live; colorizer SCOPE defect filed - Qt5 rules need reading); the
+  dead hover was the comic applet's own provider list with xkcd
+  UNCHECKED (I found it in its settings; checking it fixed hover on
+  the spot) - near-certainly reverted by the two with-comic.bak
+  restores during the removal-ghost repro, so BEWARE: re-activating
+  a layout backup silently reverts APPLET config too; and the probe
+  runs surfaced a real latent defect, fixed (1aa5238c): the 9ea29eaa
+  release path hid unwired full representations while libplasma's
+  inline representation switch (applet grown past
+  switchWidth/switchHeight) re-uses the cached item without ever
+  re-showing it - the comic's full rep sat parent=null visible=false
+  after startup churn, measured. Release now detaches to a null
+  parent, visibility untouched, upstream-symmetric. White bar =
+  build/_runconfig has NO kdeglobals/plasmarc, so every throwaway
+  run resolves the default LIGHT scheme; the dark-bar memory is from
+  --user-config runs (decisive test queued: restart --user-config
+  and look; seed the throwaway with kdeglobals regardless). Dark
+  Colors NOT darkening the background strengthens the dead
+  background-arm suspicion in that item. NEW items filed:
+  applet-created dialogs (comic's full-size viewer) open on the
+  wrong screen (screenshot evidence, Phase 8 family), and a
+  background color picker as a continuation feature (Qt5 has none).
+  Session state: throwaway layout active with the comic working
+  (xkcd checked), my real dock still not restored to --user-config;
+  the removal-ghost undo arm still wants one live Undo click.
 - SESSION CLOSE STATE (2026-07-14 night): everything committed and
   pushed; working tree clean; my dock runs the latest build
   under the gdb wrapper with --user-config, config fully restored

@@ -2106,41 +2106,56 @@ multi-view, multi-monitor setup.
       build/_runconfig with a kdeglobals copy so throwaway runs
       match the real session visually.
       Commits:
-- [ ] Comic Strip applet renders as a solid black disc instead of its
-      icon (reported 2026-07-15 with a screenshot; "was rendering a
-      couple commits ago"). Commit regression UNLIKELY: a 22:30:09
-      verification capture shows the comic icon rendering normally
-      on the final build with all of tonight's fixes live; it went
-      black between 22:30 and ~22:35, during palette/Appearance
-      changes in the settings chrome, and the run log has no
-      WebEngine renderer crash. HOT LEAD: the applet colorizer
-      restored in 1f835402 uses ColorOverlay, which flattens icon
-      content to a single scheme color - a colorized comic icon
-      becomes exactly a filled silhouette disc. If confirmed, the
-      real question is Qt5's colorizer applicability rules: which
-      applets Qt5 colorized vs left full-color (it had per-applet
-      blocking; userBlocksColorizingApplets machinery exists), and
-      whether the restored arm applies too broadly. Discriminator:
-      flip Palette off Dark Colors - if the disc becomes the icon
-      again instantly, it is the colorizer arm, not rendering.
-      CLARIFIED 2026-07-15 (twice): the report is TWO symptoms - the
-      icon turning into a black disc (above), AND the HOVER-triggered
-      full-representation display no longer firing: hovering the
-      comic used to replace the icon with the web-rendered comic
-      strip, per my recollection in BOTH plain and edit mode, and it
-      now fires in NEITHER. Related prior note: 2026-07-12 "comic
-      EXPANDS from zoom alone" (AppletQuickItem swaps representations
-      crossing switchWidth/switchHeight). SUSPECT RULED OUT by diff
-      read: 437d9a0c did NOT drop the no-hints font-metric fallback
-      (it survives as a live binding with Math.max(base, min)), so
-      "popup empty because the WebEngine rep has no implicit size" is
-      not the mechanism as theorized. NEXT: live hover probe on the
-      throwaway comic - watch dumpwins for a popup window mapping,
-      the log for warnings, and determine what the hover trigger
-      actually is (zoom-threshold swap vs an expansion request), then
-      what Qt5 did. The edit-mode arm of the recollection matters:
-      zoom is disabled in edit mode (e70bccf7), so if it truly worked
-      there, the trigger was never zoom.
+- [ ] Applet colorizer applies too broadly: under a non-default
+      palette it flattens FULL-COLOR applet icons to single-color
+      silhouettes (confirmed live 2026-07-15: Dark Colors turned the
+      comic's multicolor icon into a black disc; flipping the
+      palette back restored it instantly). The 1f835402 restoration
+      brought back Qt5's ColorOverlay mechanism but apparently not
+      Qt5's applicability rules. READ THE QT5 SOURCE for which
+      applets got colorized vs left full-color (per-applet blocking
+      exists - userBlocksColorizingApplets - and Qt5 likely also had
+      an automatic monochrome/low-color heuristic); restore the
+      scope, not just the mechanism. CLAUDE.md fork-trap rule
+      applies: Qt5 is the spec.
+      Commits:
+- [x] Comic Strip applet "not rendering" (reported 2026-07-15; two
+      symptoms, RESOLVED as three separate causes, none the suspected
+      commit regression). (1) The black-disc icon: the applet
+      colorizer restored in 1f835402 flattens icon content to a
+      single scheme color under a non-default palette - CONFIRMED by
+      my flip test (Palette back to Plasma Theme Colors: the smiley
+      returned instantly). The colorizer-scope defect stays open as
+      its own item below. (2) The hover-to-comic display dead in and
+      out of edit mode: the comic applet's own provider list had
+      xkcd UNCHECKED - no comic selected, nothing to render. Found
+      by me in the comic settings; hover works again the moment it
+      was checked (xkcd renders). Near-certain cause of the
+      "worked yesterday" confusion: the active throwaway layout was
+      twice restored from with-comic.bak during the removal-ghost
+      repro, and the backup predates the provider selection - the
+      "regression" was a config file reverted by the repro
+      infrastructure, a trap worth remembering whenever a layout
+      backup gets re-activated. (3) A REAL latent defect found by
+      the probes along the way and fixed: the 9ea29eaa release path
+      hid unwired full representations, and libplasma's inline
+      representation switch re-uses the cached item without ever
+      re-showing it - any applet whose representations churn could
+      end up with a permanently invisible full rep (the comic's sat
+      at parent=null visible=false after startup churn, measured).
+      Release now detaches to a null parent without touching
+      visibility, upstream-symmetric.
+      Commits: 1aa5238c
+- [ ] Applet-created dialogs open on the wrong screen (caught live
+      2026-07-15 with a screenshot: the comic's full-size viewer -
+      its "bigger" zoom button - opened on the portrait DP-3 while
+      the dock lives on DP-2; the xkcd image rendered correctly, so
+      this is placement only). The dialog is created by the applet's
+      own QML, not by our code, so the fix surface is wherever our
+      Dialog/window plumbing resolves screens for applet transients
+      (visualParent/transientParent forwarding). Compare with
+      plasmashell: where does the same button place its window
+      there. Phase 8 multi-screen family.
       Commits:
 
 ### Phase 11: Nix packaging + Docker build verification
@@ -2219,6 +2234,19 @@ prerequisites in the phases above are done.
       (implicit/preferred/minimum permutations), GUI-CI candidates
       for the microvm: drag-resize round trip, persistence across
       restart, reset entry.
+      Commits:
+- [ ] Background color picker: let a dock's background color be set
+      directly from Appearance (requested 2026-07-15 while chasing
+      the light-background-under-dark-scheme item: "how else can I
+      make the bottom bar dark?"). Qt5 Latte has NO such control -
+      background color comes from the plasma theme / color scheme /
+      colorizer palettes - so per the Qt5-faithful rule this is a
+      continuation feature, not a bug. Design sketch: a color
+      button next to the palette dropdown feeding the existing
+      Colorizer.CustomBackground layer (the plumbing that already
+      draws custom-colored backgrounds), persisted per-containment;
+      prerequisite is the Dark Colors background arm actually
+      working (the item in Phase 10).
       Commits:
 - [ ] Replicate Dock: first-class live-mirrored views with user-chosen
       placement, riding the existing ClonedView sync machinery. Full
