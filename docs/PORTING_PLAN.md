@@ -2557,6 +2557,25 @@ prerequisites in the phases above are done.
       prerequisite is the Dark Colors background arm actually
       working (the item in Phase 10).
       Commits:
+- [ ] Hover-intent gating for expensive hover machinery (designed
+      2026-07-15 with the user; motivated by visible hover lag on
+      slow sweeps, currently rated acceptable). Design agreed:
+      per-icon DWELL, not global cursor stillness - the engage timer
+      starts on icon-enter, cancels on icon-leave, fires after ~50ms
+      on the same icon regardless of micro-motion within it (strict
+      stillness never triggers for slow deliberate movers); once
+      engaged, tracking is live exactly as today. Scope: the
+      EXPENSIVE engage work only - title tooltip dialog windows,
+      window preview windows, hover-brighten effect layer flips
+      (real textures again since 69baabf0, so this cost is newly
+      present) - NEVER the parabolic zoom itself, which is the
+      dock's signature feel and stays instant. ORDER OF WORK:
+      instrument one slow sweep first and rank the engage costs
+      (tooltip map, preview map, layer flip, colorfulness grab),
+      then gate only what measures expensive; the measurement may
+      shrink the fix. 50ms initial value, wants a live feel pass at
+      the desk before freezing.
+      Commits:
 - [ ] Replicate Dock: first-class live-mirrored views with user-chosen
       placement, riding the existing ClonedView sync machinery. Full
       design, settled decisions (keying, sync scope, editability,
