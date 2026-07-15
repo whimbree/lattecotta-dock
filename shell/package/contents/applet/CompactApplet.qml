@@ -118,42 +118,47 @@ PlasmaCore.ToolTipArea {
             return;
         }
 
-        //if the fullRepresentation size was restored to a stored size, or if is dragged from the desktop, restore popup size
-        if (fullRepresentation.Layout && fullRepresentation.Layout.preferredWidth > 0) {
-            popupWindow.mainItem.width = Qt.binding(function() {
-                return fullRepresentation.Layout.preferredWidth
-            })
-        } else if (fullRepresentation.implicitWidth > 0) {
-            popupWindow.mainItem.width = Qt.binding(function() {
-                return fullRepresentation.implicitWidth
-            })
-        } else if (fullRepresentation.width > 0) {
-            popupWindow.mainItem.width = Qt.binding(function() {
-                return fullRepresentation.width
-            })
-        } else {
-            popupWindow.mainItem.width = Qt.binding(function() {
-                return _mSize.advanceWidth * 35
-            })
-        }
+        //! Plasma 6 popup sizing contract, from libplasma v6.6.5
+        //! appletpopup.cpp (LayoutChangedProxy): the representation's
+        //! IMPLICIT size is the live base, Layout.preferred overrides it
+        //! when set, Layout.minimum is enforced. The Qt5-era chain here
+        //! sampled these ONCE at representation-change time and picked a
+        //! branch; Plasma 6 applets grow their implicit size as content
+        //! builds AFTER that moment (probe on org.kde.plasma.volume:
+        //! implicit 0x0 at rep-change, 213x108 by first show), so the
+        //! chain fell through to binding mainItem.width to the rep's LIVE
+        //! width - a feedback loop, since the rep is anchored to fill the
+        //! mainItem - and latched the 58px compact size it still carried.
+        //! The dialog's minimum enforcement then dragged the window to
+        //! 260x152 and the volume popup rendered with wrapping tabs and
+        //! clipped content. Everything below is a live binding, so the
+        //! popup tracks the implicit size as the content settles.
+        popupWindow.mainItem.width = Qt.binding(function() {
+            if (!fullRepresentation) {
+                return _mSize.advanceWidth * 35;
+            }
+            var pref = fullRepresentation.Layout ? fullRepresentation.Layout.preferredWidth : -1;
+            var min = fullRepresentation.Layout ? fullRepresentation.Layout.minimumWidth : 0;
+            var base = pref > 0 ? pref : fullRepresentation.implicitWidth;
+            if (base <= 0) {
+                //! reps that publish no hints at all (Qt5-era fallback)
+                base = _mSize.advanceWidth * 35;
+            }
+            return Math.max(base, min);
+        })
 
-        if (fullRepresentation.Layout && fullRepresentation.Layout.preferredHeight > 0) {
-            popupWindow.mainItem.height = Qt.binding(function() {
-                return fullRepresentation.Layout.preferredHeight
-            })
-        } else if (fullRepresentation.implicitHeight > 0) {
-            popupWindow.mainItem.height = Qt.binding(function() {
-                return fullRepresentation.implicitHeight
-            })
-        } else if (fullRepresentation.height > 0) {
-            popupWindow.mainItem.height = Qt.binding(function() {
-                return fullRepresentation.height
-            })
-        } else {
-            popupWindow.mainItem.height = Qt.binding(function() {
-                return _mSize.height * 25
-            })
-        }
+        popupWindow.mainItem.height = Qt.binding(function() {
+            if (!fullRepresentation) {
+                return _mSize.height * 25;
+            }
+            var pref = fullRepresentation.Layout ? fullRepresentation.Layout.preferredHeight : -1;
+            var min = fullRepresentation.Layout ? fullRepresentation.Layout.minimumHeight : 0;
+            var base = pref > 0 ? pref : fullRepresentation.implicitHeight;
+            if (base <= 0) {
+                base = _mSize.height * 25;
+            }
+            return Math.max(base, min);
+        })
 
         fullRepresentation.anchors.fill = null;
         fullRepresentation.parent = appletParent;
