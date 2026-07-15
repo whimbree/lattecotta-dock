@@ -49,6 +49,13 @@ below are now RESOLVED and kept only as archaeology.
   (checked against the enums and my real layout's viewType=0 pill, which
   rendered correctly the same morning). Almost certainly left flipped by
   an earlier session's Dock/Panel type-combo testing.
+- WATCH: one real-config restart brought the dock up with edit mode /
+  the primary config view already open, uninvoked (log:
+  "#primaryconfigview# initialization started" right at boot,
+  10:52:44). Closed cleanly via its Close button; the immediately
+  preceding real-config restart the same morning did not do this. If it
+  recurs, suspect persisted config-view state from the prior session
+  that ended mid-drive.
 
 ## 2026-07-15: tests-first coverage batch + class-A stranding sweep (worktree, headless)
 
