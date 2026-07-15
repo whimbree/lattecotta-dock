@@ -1373,8 +1373,13 @@ multi-view, multi-monitor setup.
       deterministic: the Loader's active binding subscribes before
       any arrow exists, connections activate in establishment order).
       Verified: switch, round trips, cold start with plasma
-      persisted, frames render.
-      Commits: 841c2ca4
+      persisted, frames render. The guard is pinned headlessly:
+      tst_plasmaindicatorgroupsvg.qml drives the real FrontLayer.qml
+      through empty -> populated -> empty resources.svgs (the crash
+      itself cannot be a contract test, it is a SIGSEGV), and
+      tst_loadergatecontracts.qml pins the Loader-deactivates-before-
+      inner-bindings-see-null ordering the guard's comment claims.
+      Commits: 841c2ca4, 2b800846 (guard + ordering tests)
 - [x] Staged launcher child-env leak (dock-launched apps inherited the
       dock's whole environment: KIO systemd runner copies it verbatim
       into the transient unit's Environment=, no per-job hook - read at
@@ -2023,7 +2028,12 @@ multi-view, multi-monitor setup.
       plus margins, and plasmashell's wider rendering of the same
       applet is a persisted custom size there - popupWidth=457 in its
       appletsrc - not a different default).
-      Commits: 437d9a0c
+      tst_compactapplet.qml pins the resolution chain headlessly
+      against the real shipped file (implicit tracked live including
+      the 0x0-at-swap volume shape, preferred override, minimum
+      enforcement) - the qmltest sketched in the resizable-popups
+      continuation item, landed ahead of the feature.
+      Commits: 437d9a0c, 3b37750b (sizing chain qmltest)
 - [ ] Applet context menu is MISSING the "Show Alternatives" entry
       (found while live-verifying the AlternativesHelper fix: the
       clock's menu shows Configure/Copy but no Alternatives, so the
@@ -2062,8 +2072,17 @@ multi-view, multi-monitor setup.
       (notification Undo click restores the slot in place) is
       implemented per the libplasma contract but still wants one live
       confirmation - the popup auto-hid before a headless click could
-      land.
-      Commits: 71b0d75a
+      land. The state machine is now pinned headlessly end to end:
+      layoutmanagerparkingtest compiles the real plugin sources and
+      drives park/unpark/re-init/prune/direct-finalize plus the loud
+      no-container refusal with real applets (itemForApplet) and the
+      real askDestroy chain; askdestroysignalorderingtest pins the
+      libplasma signal timeline the machine keys on (immediate
+      appletRemoved for plain applets, none until object death for
+      containment-type, destroyedChanged(true) as the one instant
+      signal).
+      Commits: 71b0d75a, f269e457 (state machine test), 5f94159c
+      (askDestroy ordering contract)
 - [x] Edit-mode background opacity is not WYSIWYG (caught live
       2026-07-14 with screenshots: Background -> Opacity at 100% in
       the settings chrome, but the dock in PLAIN edit mode renders
@@ -2143,22 +2162,7 @@ multi-view, multi-monitor setup.
       (Qt5-correct), task icons stay full color; palette restored
       to default afterwards. run-staged.sh now seeds the throwaway
       config with the session kdeglobals (copy, never a link).
-      FOLLOW-UP, two DELIBERATE deviations landed on explicit
-      request the same night (comments at both sites): (1) inline
-      full representations are exempt from colorizing (a78e6004) -
-      a Plasma 6 state Qt5 never had; the flattening turned the
-      hover-expanded comic into a white rectangle; detected by
-      fullRepresentationItem parent identity. (2) multicolored
-      applet content is exempt automatically (38734328) - pixel
-      truth via the new C++ IconColorfulness type (grabToImage +
-      saturation fraction; QML Canvas cannot load the itemgrabber:
-      provider, instrumented proof in the commit body). Verified
-      live under Dark Colors: comic emoji colorful, line-art icons
-      themed, tasks unaffected; the manual per-applet toggle is
-      unchanged. LIVE-WATCH: hover lag reported after (acceptable
-      per the desk, no action wanted yet); if it grows, profile the
-      colorfulness grabs and the colorizer layer flips first.
-      Commits: 79ca3360, a78e6004, 38734328
+      Commits: 79ca3360
 - [x] Comic Strip applet "not rendering" (reported 2026-07-15; two
       symptoms, RESOLVED as three separate causes, none the suspected
       commit regression). (1) The black-disc icon: the applet
@@ -2184,8 +2188,15 @@ multi-view, multi-monitor setup.
       end up with a permanently invisible full rep (the comic's sat
       at parent=null visible=false after startup churn, measured).
       Release now detaches to a null parent without touching
-      visibility, upstream-symmetric.
-      Commits: 1aa5238c
+      visibility, upstream-symmetric. Pinned from both sides now:
+      tst_compactapplet.qml asserts our release detaches with
+      visibility intact (via AppletQuickItem's own bare re-parent
+      step) and our adopt re-shows, and representationswitchtest pins
+      the upstream half - the inline switch re-parents the cached
+      item without ever re-showing it, unwires the expander with
+      nulls, and un-switches by detaching to a null parent.
+      Commits: 1aa5238c, 3b37750b (release qmltest), 9a1195dc
+      (representation-switch contract)
 - [x] Duplicated dock renders its applets ON TOP OF EACH OTHER
       (caught live 2026-07-15 with screenshots, reproduced by hand
       twice and headlessly twice). NOT the duplicate machinery and
@@ -2214,6 +2225,61 @@ multi-view, multi-monitor setup.
       binding-after-flip surfaces elsewhere, hunt the mechanism
       itself, greppable via 'stranded-binding'.
       Commits: e412889d
+- [x] HEADLESS SWEEP 2026-07-15 (second pass): the two class-A
+      stranding shapes, swept systematically across every shipped
+      QML package. Shape 1, conditional anchors (per-edge/
+      orientation ternaries) combined with width/height bindings on
+      the same item (the e412889d shape) - every site inventoried
+      with a verdict:
+      FIXED (same file, same transition triggers as the proven
+      strand): plasmoid main.qml barLine (the background band from
+      the original live report), belower, shadowsSvgItem - each got
+      the reassert remedy, and mouseHandler's existing reassert was
+      extended to location changes (a bottom-to-top move rebinds the
+      same conditional anchors with no verticalChanged). The
+      destroyer is still the open e412889d watch item; the reasserts
+      contain blast radius, they are not the root cause fix.
+      ITEMIZED, NOT FIXED (same static shape, but the e412889d live
+      verification is evidence AGAINST live stranding there: post-fix
+      the flipped dock rendered a correctly spaced row, so these
+      per-task/per-applet items tracked the flip; also one reassert
+      per instance would multiply across every task): BasicItem.qml
+      root (declarativeimports), ParabolicItem.qml inner item (which
+      also carries upstream's bug-478 zoom-jiggle acknowledging this
+      family), SeparatorItem.qml, basicitem/IndicatorLevel.qml,
+      containment applet/IndicatorLevel.qml, plasmoid main.qml red
+      zoomHelper debug rectangle (debug-only visual). If a flip ever
+      strands one of these, apply the same reassert.
+      SAFE BY MECHANISM (the suspected takeover needs an OPPOSING
+      anchor pair - top+bottom or left+right - to form transiently so
+      the anchors system controls the size; sites whose conditional
+      anchors can never form one, or that a stronger remedy covers,
+      cannot strand this way): canvas Ruler.qml + HeaderSettings.qml
+      (center-line ternaries only, and 9aeda562 reloads the whole
+      canvas content on retarget - a fresh instantiation cannot
+      strand), HeaderSwitch.qml (left/horizontalCenter only, level
+      fixed per instance), ComboBoxButton.qml (single side by RTL,
+      process-constant), ShortcutBadge.qml both copies (left/top/
+      centerIn only - centerInParent DOES flip live at iconSize 48,
+      but no opposing pair can form), AnchorChanges-based state
+      machines (FrontLayer clickedCenter/arrow) which use the anchors
+      system's own transition mechanism rather than ternary rebinds.
+      Shape 2, once-sampled geometry (the 8be2b388 shape) - CLEAN
+      NEGATIVE: the only C++ site sampling QML-published geometry is
+      canvasconfigview.cpp:200, already notify-connected by 8be2b388
+      itself; MultiLayered's effects-area and VisibilityManager's
+      mask computations are signal-retriggered recompute networks
+      (x/y/size/margins/hidden all wired); the remaining imperative
+      geometry writes are drag/animation transients that are
+      correctly one-shot. One WATCH NOTE, not a defect: the comment
+      at primaryconfigview.cpp syncGeometry's zero-size bail claims
+      "rootObject's width/height changes (connected in init())" but
+      the only size connects are SubConfigView's deferred-show retry
+      and updateEffects; the resample network covers mode changes,
+      screen changes and the post-show debounce, so no gap was
+      provable headlessly - verify the comment against the code when
+      next in that file.
+      Commits: eca51ae0 (sibling reasserts)
 - [ ] Settings-chrome popup windows linger as stuck overlays across
       sessions (observed repeatedly 2026-07-15: the Type combo's
       "Dock/Panel" popup survived its parent chrome closing and sat
@@ -2509,59 +2575,32 @@ prerequisites in the phases above are done.
       resize is in flight, re-anchor once on release (the dialog
       repositions on size change and would fight the drag);
       (f) tests: qmltest pinning the sizing resolution
-      (implicit/preferred/minimum permutations), GUI-CI candidates
-      for the microvm: drag-resize round trip, persistence across
-      restart, reset entry.
-      IMPLEMENTATION SKETCH (2026-07-15, from the pinned libplasma
-      6.6.5 sources - appletpopup.cpp + windowresizehandler.cpp):
-      (1) VENDOR WindowResizeHandler (191 lines, self-contained
-      QWindow event filter: margin hit-test, resize cursors,
-      startSystemResize(sides) on press; LGPL-2.0-or-later, license
-      compatible - provenance stamp like plasmoid/plugin's). Wire it
-      in Latte::Quick::Dialog for type===AppletPopup only: margins
-      from the dialog frame, activeEdges excluding the dock-facing
-      edge (updatePopUpEnabledBorders already knows it; upstream's
-      equivalent is ~nearbyBorders()). (2) PERSISTENCE mirrors
-      upstream's C++ shape: upstream reads popupWidth/popupHeight
-      from applet->config() when the mainItem attaches
-      (m_sizeExplicitlySetFromConfig then suppresses hint-following)
-      and writes size().shrunkBy(padding()) on hideEvent - margins
-      excluded deliberately, robust against theme changes; keep that
-      detail. Give our Dialog an optional appletInterface property so
-      the C++ side owns the KConfigGroup reads/writes exactly like
-      upstream (QML cannot reach the applet's plain config group -
-      only the KConfigLoader [Configuration] schema). OUR DEVIATION:
-      track m_userResized (set when the handler fires
-      startSystemResize), save on hide ONLY if m_userResized or the
-      keys already exist. (3) The sizing chain in CompactApplet.qml
-      gains one arm: when the config size is set, it wins over the
-      implicit-size base (upstream's updateSize early-returns on
-      m_sizeExplicitlySetFromConfig). (4) Re-anchor suppression:
-      Dialog::updateGeometry holds off from startSystemResize until
-      the interactive resize ends (mouse release / configure
-      quiescence), then one re-anchor. (5) Reset entry in the
-      contextmenu containmentactions plugin, gated on the keys
-      existing; deletion clears the explicit-size flag and re-enters
-      hint-following live.
+      (implicit/preferred/minimum permutations) - LANDED ahead of the
+      feature as tests/qml/tst_compactapplet.qml (3b37750b); still
+      wanted here: GUI-CI candidates for the microvm: drag-resize
+      round trip, persistence across restart, reset entry.
       Commits:
-- [ ] Settle-gated hover chrome (requested 2026-07-15: "wait 50ms of
-      no cursor movement before creating the hover; once created it
-      tracks the cursor like now"). SCOPE DECIDED with the requester:
-      gate the EXPENSIVE hover constructions only - brighten-effect
-      layers (created per hover-engage since 69baabf0), title
-      tooltips, first preview-window creation - and once created,
-      live tracking stays exactly as today (previews already
-      retarget during sweeps). The parabolic zoom is EXEMPT: the
+- [ ] Settle-gated hover chrome (requested 2026-07-15: create the
+      expensive hover state only after the cursor has DWELLED on the
+      same icon for 50ms; once created it tracks the cursor live
+      exactly as today while it stays on that icon). CLARIFIED by
+      the requester: the 50ms is dwell WITHIN the icon, not global
+      cursor stillness - a stillness detector would delay chrome
+      even when the pointer is clearly settled but micro-moving,
+      which reads as lag; per-icon dwell is the classic
+      tooltip-intent pattern. SCOPE DECIDED: gate the EXPENSIVE
+      hover constructions only - brighten-effect layers (created per
+      hover-engage since 69baabf0), title tooltips, first
+      preview-window creation. The parabolic zoom is EXEMPT: the
       zoom wave following the pointer through a sweep is the
-      signature feel, is construction-free, and gating it on
-      stillness reads as lag. 50ms initial settle window, kept as
-      one named constant. PREREQUISITE per the root-cause rules:
-      one profiling pass confirming the reported hover lag IS
-      chrome-creation cost (first-frame effect-layer allocation is
-      the prime suspect from the documented warning bursts) before
-      the gate is built, so it fixes rather than masks. Ordered
-      AFTER the resizable-popups feature per the 2026-07-15
-      direction.
+      signature feel, is construction-free, and gating it reads as
+      lag. 50ms kept as one named constant. PREREQUISITE per the
+      root-cause rules: one profiling pass confirming the reported
+      hover lag IS chrome-creation cost (first-frame effect-layer
+      allocation is the prime suspect from the documented warning
+      bursts) before the gate is built, so it fixes rather than
+      masks. Ordered AFTER the resizable-popups feature per the
+      2026-07-15 direction.
       Commits:
 - [ ] Background color picker: let a dock's background color be set
       directly from Appearance (requested 2026-07-15 while chasing
