@@ -34,6 +34,12 @@ void Package::initPackage(KPackage::Package *package)
     package->addFileDefinition("defaults", QStringLiteral("defaults"));
     package->addFileDefinition("lattedockui", QStringLiteral("views/Panel.qml"));
     package->addFileDefinition("widgetexplorerui", QStringLiteral("views/WidgetExplorer.qml"));
+    //! without a local definition this key resolved through the fallback to
+    //! plasma-desktop's AppletAlternatives.qml, which imports
+    //! org.kde.plasma.shell - a module registered only inside plasmashell's
+    //! process - so Show Alternatives silently failed to open; the package
+    //! ships its own copy (see that file's header for the two deviations)
+    package->addFileDefinition("appletalternativesui", QStringLiteral("explorer/AppletAlternatives.qml"));
     //Configuration
     package->addFileDefinition("lattedockconfigurationui", QStringLiteral("configuration/LatteDockConfiguration.qml"));
     package->addFileDefinition("lattedocksecondaryconfigurationui", QStringLiteral("configuration/LatteDockSecondaryConfiguration.qml"));
