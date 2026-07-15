@@ -805,7 +805,12 @@ void GenericLayout::containmentDestroyed(QObject *cont)
 
         if (view) {
             view->disconnectSensitiveSignals();
-            view->positioner()->slideOutDuringExit(containment->location());
+            //! no containment->location() here: this runs inside the
+            //! containment's destroyed() handler, where the Plasma::Applet
+            //! part is already destructed and location() reads freed memory
+            //! (destroyed()-handler demotion, same family as d6d57e61). The
+            //! positioner slides out on its cached last known edge instead.
+            view->positioner()->slideOutDuringExit();
             view->deleteLater();
 
             Q_EMIT viewEdgeChanged();

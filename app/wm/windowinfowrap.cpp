@@ -399,7 +399,12 @@ bool WindowInfoWrap::isMainWindow() const
 
 bool WindowInfoWrap::isChildWindow() const
 {
-    return (m_parentId.toInt() > 0);
+    //! WindowId is a QByteArray: wayland ids are QUuid strings, X11 ids ride
+    //! as decimal strings and empty means "no parent" on both backends. The
+    //! old numeric test (m_parentId.toInt() > 0) was the Qt5/X11 idiom and is
+    //! always false for a wayland UUID, so child windows never resolved to
+    //! their main window there.
+    return !m_parentId.isEmpty();
 }
 
 

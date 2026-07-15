@@ -201,6 +201,10 @@ private:
     Plasma::Types::Location m_nextScreenEdge{Plasma::Types::Floating};
     Latte::Types::Alignment m_nextAlignment{Latte::Types::NoneAlignment};
 
+    //! last edge the view actually had; the safe source for exit slides on
+    //! teardown paths where the containment can no longer be dereferenced
+    Plasma::Types::Location m_lastLocation{Plasma::Types::Floating};
+
     Latte::WindowSystem::WindowId m_trackedWindowId;
 };
 

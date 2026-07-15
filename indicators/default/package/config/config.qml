@@ -58,9 +58,12 @@ ColumnLayout {
 
             readonly property int indicatorType: 0 /*Line*/
 
+            //! latteIndicator, not bare indicator: Qt6 moved 'indicator' onto
+            //! AbstractButton itself, so the bare name resolves to the
+            //! button's own (null) glyph item here and the write throws
             onPressedChanged: {
                 if (pressed) {
-                    indicator.configuration.activeStyle = indicatorType;
+                    latteIndicator.configuration.activeStyle = indicatorType;
                 }
             }
         }
@@ -78,7 +81,7 @@ ColumnLayout {
 
             onPressedChanged: {
                 if (pressed) {
-                    indicator.configuration.activeStyle = indicatorType;
+                    latteIndicator.configuration.activeStyle = indicatorType;
                 }
             }
         }
@@ -267,9 +270,10 @@ ColumnLayout {
 
             readonly property int option: 1 /*OnActive*/
 
+            //! latteIndicator, not bare indicator: see the Style buttons above
             onPressedChanged: {
                 if (pressed) {
-                    indicator.configuration.glowApplyTo = option;
+                    latteIndicator.configuration.glowApplyTo = option;
                 }
             }
         }
@@ -287,7 +291,7 @@ ColumnLayout {
 
             onPressedChanged: {
                 if (pressed) {
-                    indicator.configuration.glowApplyTo = option;
+                    latteIndicator.configuration.glowApplyTo = option;
                 }
             }
         }

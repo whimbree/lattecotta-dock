@@ -1037,7 +1037,11 @@ void Windows::updateHints(Latte::View *view)
     setExistsWindowActive(view, foundActiveInCurScreen);
     setActiveWindowTouching(view, foundActiveTouchInCurScreen || foundActiveGroupTouchInCurScreen);
     setActiveWindowTouchingEdge(view, foundActiveEdgeTouchInCurScreen);
-    setActiveWindowMaximized(view, (maxWinId.toInt()>0 && (maxWinId == activeTouchWinId || maxWinId == activeTouchEdgeWinId)));
+    //! maxWinId is a WindowId (QByteArray): empty means "no maximized window
+    //! found", wayland ids are QUuid strings. The old numeric validity test
+    //! (maxWinId.toInt()>0) was always false for a wayland UUID, so
+    //! activeWindowMaximized could never be set there.
+    setActiveWindowMaximized(view, (!maxWinId.isEmpty() && (maxWinId == activeTouchWinId || maxWinId == activeTouchEdgeWinId)));
     setExistsWindowMaximized(view, foundMaximizedInCurScreen);
     setExistsWindowTouching(view, (foundTouchInCurScreen || foundActiveTouchInCurScreen || foundActiveGroupTouchInCurScreen));
     setExistsWindowTouchingEdge(view, (foundActiveEdgeTouchInCurScreen || foundTouchEdgeInCurScreen));

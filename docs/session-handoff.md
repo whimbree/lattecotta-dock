@@ -1,9 +1,37 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-14. PHASE 8 IS OPEN - read its section in
+Last updated 2026-07-15. PHASE 8 IS OPEN - read its section in
 docs/PORTING_PLAN.md first; every item is current there, several sections
 below are now RESOLVED and kept only as archaeology.
+
+## 2026-07-15: headless silent-Qt6-break sweep (worktree session)
+
+- Full-tree sweep of the silent mechanical break families, each against
+  its landed exemplar (Array.isArray, removed Qt enums, int pointer
+  caches, string window ids, QQC2 shadowing, destroyed()-handler casts,
+  QVariant list reads). Findings and all clean negatives are itemized at
+  the end of Phase 10 in the plan; three fixes landed (f5ff449b wm
+  numeric id tests, 2d28cda1 indicator style/glow buttons, 75780c64
+  containmentDestroyed freed-memory edge read) plus contract-suite
+  growth (98986641: destroyed()-demotion C++ contract, AbstractButton
+  indicator shadowing, Qt.MidButton removal, int fraction truncation)
+  and a windowinfowrap regression test.
+- Everything verified headlessly only: build-check green on both
+  WITH_X11 variants, all 8 ctest entries pass. THREE LIVE CHECKS
+  PENDING, marked in their plan items: activeWindowMaximized engages
+  with a maximized window touching a dock (also: a focused dialog keeps
+  activeWindowTouching), the four indicator-config style/glow buttons
+  apply on press, and dock deletion still slides out on its own edge.
+- Session tooling note: the bare `qml` tool in the devShell runs
+  offscreen probes silently (no console.log output reaches the
+  terminal); use qmltestrunner through scripts/qml-interaction-tests.sh
+  for headless QML probing instead - contract-style TestCases double as
+  the probe and the pin.
+- Session tooling note: build-check.sh's self-reexec into nix develop
+  only triggers when cmake is absent from PATH; a host cmake without
+  ninja fails the configure. Run it as `nix develop -c
+  ./scripts/build-check.sh` from a bare worktree.
 
 ## 2026-07-12 late evening: comic hover crash + edit-mode chrome trilogy
 

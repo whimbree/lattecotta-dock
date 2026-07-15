@@ -2214,6 +2214,90 @@ multi-view, multi-monitor setup.
       plasmashell: where does the same button place its window
       there. Phase 8 multi-screen family.
       Commits:
+- [x] SWEEP 2026-07-15 (headless, worktree): one pass over every
+      silent-mechanical-Qt6-break pattern with a landed exemplar.
+      Clean negatives recorded so the next sweep diffs instead of
+      re-reading: Array.isArray (a302d742 family) - one live site,
+      already fixed, no others, no instanceof Array anywhere; Qt.*
+      enums in QML (81f0093e family) - all 35 distinct names in use
+      exist in Qt6, Qt.MidButton survives only in comments; int-typed
+      pointer/geometry caches (36160c46 family) - the one per-event
+      accumulator was already fixed (ConfigOverlay), the remaining
+      `property int` caches (TaskItem pressX/Y, EnvironmentActions
+      lastPressX/Y, ParabolicEventsArea lastMouse*/lastParabolicPos,
+      DragCorner initGlobal*/curGlobal*, AppletItem oldX/Y) are
+      threshold-gated or one-shot with bounded sub-1px error and never
+      accumulate, judged against the truncation contract pinned in
+      98986641; C++ event paths use QPointF end to end (parabolic,
+      eventssink) with only drag/drop and wheel positions rounding to
+      QPoint, which is harmless there; QVariant::value<QList<...>>
+      (33830b2c family) - LayoutManager's order/lockedZoomApplets/
+      userBlocksColorizingApplets are real Q_PROPERTY QList<int>, exact
+      metatype everywhere, the one element-wise helper is 33830b2c's
+      own; QQC2 shadowing (33fa17d7 family) - of all injected context
+      properties (indicator, dialog, viewConfig, latteView, plasmoid,
+      universalSettings, layoutsManager, themeExtended,
+      shortcutsEngine, primaryConfigView, containmentFromView,
+      infoWindow, alternativesHelper) only `indicator` collides with a
+      QQC2 control property name, and one missed site family was found
+      (next item); destroyed() handlers (d6d57e61 family) - all
+      remaining C++ handlers remove by identity or touch only captured
+      live objects, except containmentDestroyed (item below). The
+      settings-dialog teardown saves (headerView sort state, column
+      widths read from the dying widget in its own destroyed()
+      handler) are inherited upstream idiom that reads the still-live
+      QObjectPrivate-based d-pointer, non-virtual calls only - noted,
+      not touched.
+      Commits: f5ff449b, 2d28cda1, 75780c64, 98986641 (findings also
+      itemized below)
+- [x] Wayland window ids defeated two numeric validity tests left from
+      the WindowId->QByteArray port (8e8cdf31/e9710e95):
+      WindowInfoWrap::isChildWindow() tested parentId.toInt()>0,
+      always false for a wayland UUID, so a focused dialog never
+      resolved to its main window in windowstracker's PASS 2 and
+      activeWindowTouching missed the active-group case; and
+      setActiveWindowMaximized tested maxWinId.toInt()>0, so
+      activeWindowMaximized was constitutionally false on wayland
+      (dodge-maximized's reaction and the containment's
+      plasma-background-for-maximized binding both sit on it). Both
+      now isEmpty() tests, equivalent on X11 where ids are decimal
+      strings. windowinfowraptest pins parent-id semantics for both id
+      shapes. LIVE VERIFICATION PENDING: a maximized window touching a
+      dock must set activeWindowMaximized; a focused dialog of a
+      touching window must keep activeWindowTouching.
+      Commits: f5ff449b
+- [x] Default indicator config: the four style/glow
+      PlasmaComponents.Buttons wrote bare `indicator.configuration` in
+      onPressedChanged. Qt6 moved `indicator` onto AbstractButton, so
+      inside a Button scope the bare name resolves to the control's
+      own null glyph item: the write throws, the handler aborts, and
+      picking Line/Dots or On Active/All silently did nothing.
+      33fa17d7's latteIndicator alias covered only the CheckBox sites
+      (those threw at load where verification could see them; buttons
+      only throw on press). All four writes now go through
+      latteIndicator; the shadowing is pinned by
+      test_abstractButtonShadowsOuterIndicatorName. LIVE VERIFICATION
+      PENDING: press all four buttons in the indicator config and see
+      the setting apply.
+      Commits: 2d28cda1
+- [x] GenericLayout::containmentDestroyed dereferenced the dying
+      containment for the exit-slide edge: containment->location()
+      inside its own destroyed() handler reads freed AppletPrivate
+      (deleted in ~Applet, destroyed() emitted later from ~QObject).
+      Hit on EVERY completed dock removal - the scheduled-destruction
+      flow parks the view alive in m_waitingLatteViews until final
+      destruction, so the take() succeeds and the deref runs; silent
+      because the freed value usually still parses as the old edge.
+      Positioner now caches the last known edge (seeded at init,
+      follows locationChanged, which libplasma 6.6.5 emits at
+      containment attach and on every change - verified in its
+      source), and slideLocation() resolves its Floating default from
+      the cache, which also removes the same hazard from ~Positioner.
+      destroyedtypedemotiontest pins the demotion contract (cast null,
+      QPointer null, metaobject demoted, identity survives). LIVE
+      VERIFICATION PENDING: deleting a dock still slides it out on its
+      own edge.
+      Commits: 75780c64, 98986641 (contract test)
 
 ### Phase 11: Nix packaging + Docker build verification
 

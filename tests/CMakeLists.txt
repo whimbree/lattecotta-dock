@@ -24,6 +24,16 @@ target_include_directories(layershellmappingtest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+ecm_add_test(windowinfowraptest.cpp
+    TEST_NAME windowinfowraptest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(windowinfowraptest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(windowinfowraptest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
 # Headless QML checks (Phase 5, docs/TESTING.md): the compile gate stages an
 # install and compiles every package QML file in a real engine; the
 # interaction harness drives real Latte components through qmltestrunner.
@@ -48,3 +58,13 @@ add_test(NAME qmlcontracts
 set_tests_properties(qmlcontracts PROPERTIES
     ENVIRONMENT "BUILD=${CMAKE_BINARY_DIR}"
     DEPENDS qmlcompilegate)
+
+# C++ half of the contract suite: the destroyed()-handler type-demotion
+# contract cannot be expressed in qmltest (QML cannot observe C++ destructor
+# phases), so it runs as a plain Qt test per the contract-suite rules.
+ecm_add_test(contracts/destroyedtypedemotiontest.cpp
+    TEST_NAME destroyedtypedemotiontest
+    LINK_LIBRARIES Qt6::Test
+)
+set_tests_properties(destroyedtypedemotiontest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

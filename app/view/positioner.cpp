@@ -102,6 +102,9 @@ Positioner::~Positioner()
 
 void Positioner::init()
 {
+    //! seed the teardown-slide edge; it stays fresh through locationChanged
+    m_lastLocation = m_view->location();
+
     //! connections
     connect(this, &Positioner::screenGeometryChanged, this, &Positioner::syncGeometry);
 
@@ -162,6 +165,10 @@ void Positioner::init()
     });
 
     connect(m_view, &Latte::View::locationChanged, this, [&]() {
+        //! keep the last known edge available for teardown slides: by the
+        //! time the containment emits destroyed() it can no longer be asked
+        //! for its location (see slideLocation)
+        m_lastLocation = m_view->location();
         updateFormFactor();
         syncGeometry();
     });
@@ -301,8 +308,15 @@ WindowSystem::AbstractWindowInterface::Slide Positioner::slideLocation(Plasma::T
 {
     auto slideedge = WindowSystem::AbstractWindowInterface::Slide::None;
 
-    if (location == Plasma::Types::Floating && m_view->containment()) {
-        location = m_view->containment()->location();
+    if (location == Plasma::Types::Floating) {
+        //! resolve from the cached edge, never from the containment: exit
+        //! slides run from teardown paths (GenericLayout::containmentDestroyed,
+        //! ~Positioner) where the containment is already inside ~QObject and
+        //! its Plasma::Applet state is freed - asking it for location() there
+        //! reads freed memory (same destroyed()-handler demotion family as
+        //! d6d57e61). The cache is seeded at init() and follows
+        //! locationChanged, so it is the same value while the view is alive.
+        location = m_lastLocation;
     }
 
     switch (location) {
