@@ -19,4 +19,8 @@ if [[ ! -d "$stage/lib/qml/org/kde/latte" ]]; then
     qml_env_stage
 fi
 
-QT_QPA_PLATFORM=offscreen qmltestrunner "${imports[@]}" -input "$repo/tests/qml"
+# optional argument selects a different test directory (used by the
+# qmlcontracts ctest entry for tests/contracts)
+inputdir="${1:-$repo/tests/qml}"
+
+QT_QPA_PLATFORM=offscreen qmltestrunner "${imports[@]}" -input "$inputdir"

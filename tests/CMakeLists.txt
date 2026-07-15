@@ -38,3 +38,13 @@ add_test(NAME qmlinteraction
 set_tests_properties(qmlinteraction PROPERTIES
     ENVIRONMENT "BUILD=${CMAKE_BINARY_DIR}"
     DEPENDS qmlcompilegate)
+
+# Upstream contract tests (tests/contracts/README.md): pin the libplasma,
+# KSvg and Qt behaviors Latte relies on at the flake-pinned versions, so a
+# pin bump that changes semantics fails HERE instead of misbehaving in the
+# dock far from the cause.
+add_test(NAME qmlcontracts
+    COMMAND ${CMAKE_SOURCE_DIR}/scripts/qml-interaction-tests.sh ${CMAKE_SOURCE_DIR}/tests/contracts)
+set_tests_properties(qmlcontracts PROPERTIES
+    ENVIRONMENT "BUILD=${CMAKE_BINARY_DIR}"
+    DEPENDS qmlcompilegate)
