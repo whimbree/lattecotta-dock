@@ -8,6 +8,7 @@ set(lattecoreplugin_SRCS
     quickwindowsystem.cpp
     tools.cpp
     types.h
+    windowresizehandler.cpp
 )
 
 # dialog.cpp uses PlasmaQuick's PlasmaShellWaylandIntegration, whose public
@@ -25,6 +26,7 @@ target_link_libraries(lattecoreplugin
     Qt6::Qml
     Qt6::WaylandClient
     KF6::CoreAddons
+    KF6::ConfigCore
     KF6::Svg
     KF6::WindowSystem
     Plasma::Plasma

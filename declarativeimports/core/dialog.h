@@ -10,6 +10,8 @@
 #include <QEvent>
 #include <QObject>
 #include <QPointer>
+#include <QSize>
+#include <QTimer>
 
 #include <QMetaObject>
 
@@ -19,8 +21,14 @@
 #include <Plasma/Plasma>
 #include <PlasmaQuick/Dialog>
 
+namespace Plasma {
+class Applet;
+}
+
 namespace Latte {
 namespace Quick {
+
+class WindowResizeHandler;
 
 class Dialog : public PlasmaQuick::Dialog {
     Q_OBJECT
@@ -36,6 +44,21 @@ class Dialog : public PlasmaQuick::Dialog {
     //! from its task icon instead of centering on it
     Q_PROPERTY(bool respectsAppletsLayoutGeometry READ respectsAppletsLayoutGeometry WRITE setRespectsAppletsLayoutGeometry NOTIFY respectsAppletsLayoutGeometryChanged)
 
+    //! resizable persistent popups (continuation feature, from libplasma
+    //! v6.6.5 AppletPopup): the Plasma::Applet whose own config group
+    //! persists popupWidth/popupHeight - the SAME keys plasmashell uses, so
+    //! sizes travel with layout export and survive moves between shells.
+    //! Setting it (on an AppletPopup-typed dialog only) arms interactive
+    //! edge-drag resizing and loads any persisted size.
+    Q_PROPERTY(QObject *applet READ applet WRITE setApplet NOTIFY appletChanged)
+
+    //! the persisted popup CONTENT size (margins excluded, mirroring
+    //! plasmashell's "save size without margins, so we're robust against
+    //! theme changes"). Empty when the applet has no custom size. Writable
+    //! so the sizing-chain tests can drive it; runtime writers are the
+    //! resize session and the config watcher.
+    Q_PROPERTY(QSize customPopupSize READ customPopupSize WRITE setCustomPopupSize NOTIFY customPopupSizeChanged)
+
 public:
     explicit Dialog(QQuickItem *parent = nullptr);
 
@@ -47,17 +70,26 @@ public:
     bool respectsAppletsLayoutGeometry() const;
     void setRespectsAppletsLayoutGeometry(bool respects);
 
+    QObject *applet() const;
+    void setApplet(QObject *applet);
+
+    QSize customPopupSize() const;
+    void setCustomPopupSize(const QSize &size);
+
     QPoint popupPosition(QQuickItem *item, const QSize &size) override;
 
 Q_SIGNALS:
     void containsMouseChanged();
     void edgeChanged();
     void respectsAppletsLayoutGeometryChanged();
+    void appletChanged();
+    void customPopupSizeChanged();
 
 protected:
   //  void adjustGeometry(const QRect &geom) override;
 
     bool event(QEvent *e) override;
+    bool eventFilter(QObject *watched, QEvent *e) override;
 
 private Q_SLOTS:
     void setContainsMouse(bool contains);
@@ -77,6 +109,13 @@ private:
     void syncAnchoredWaylandPosition();
     void updateSlideEffect(const QRect &globalGeometry);
 
+    QMargins frameMargins() const;
+    void updateResizeSupport();
+    void onSystemResizeStarted();
+    void finishSystemResize();
+    void loadPersistedPopupSize();
+    void persistPopupSize();
+
 private:
     bool m_containsMouse{false};
     bool m_respectsAppletsLayoutGeometry{true};
@@ -86,6 +125,14 @@ private:
     std::array<QMetaObject::Connection, 2> m_visualParentConnections;
     std::array<QMetaObject::Connection, 2> m_mainItemConnections;
 
+    //! resizable persistent popups state
+    QPointer<Plasma::Applet> m_applet;
+    WindowResizeHandler *m_resizeHandler{nullptr};
+    QSize m_customPopupSize;
+    QSize m_preResizeCustomSize;
+    QSize m_resizeStartContentSize;
+    bool m_inSystemResize{false};
+    QTimer m_resizeSettleTimer;
 };
 
 }

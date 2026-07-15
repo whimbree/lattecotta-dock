@@ -139,13 +139,25 @@ PlasmaCore.ToolTipArea {
         //! 260x152 and the volume popup rendered with wrapping tabs and
         //! clipped content. Everything below is a live binding, so the
         //! popup tracks the implicit size as the content settles.
+        //!
+        //! customPopupSize is the resizable-persistent-popups override
+        //! (continuation feature): a size the user chose by dragging the
+        //! popup's edges, persisted by the dialog in the applet's config
+        //! group with plasmashell's own keys. Like plasmashell's explicit
+        //! config size it beats implicit AND preferred - it IS the window
+        //! size the user last chose - while Layout.minimum stays enforced.
         popupWindow.mainItem.width = Qt.binding(function() {
             if (!fullRepresentation) {
                 return _mSize.advanceWidth * 35;
             }
-            var pref = fullRepresentation.Layout ? fullRepresentation.Layout.preferredWidth : -1;
             var min = fullRepresentation.Layout ? fullRepresentation.Layout.minimumWidth : 0;
-            var base = pref > 0 ? pref : fullRepresentation.implicitWidth;
+            var base;
+            if (popupWindow.customPopupSize.width > 0) {
+                base = popupWindow.customPopupSize.width;
+            } else {
+                var pref = fullRepresentation.Layout ? fullRepresentation.Layout.preferredWidth : -1;
+                base = pref > 0 ? pref : fullRepresentation.implicitWidth;
+            }
             if (base <= 0) {
                 //! reps that publish no hints at all (Qt5-era fallback)
                 base = _mSize.advanceWidth * 35;
@@ -157,9 +169,14 @@ PlasmaCore.ToolTipArea {
             if (!fullRepresentation) {
                 return _mSize.height * 25;
             }
-            var pref = fullRepresentation.Layout ? fullRepresentation.Layout.preferredHeight : -1;
             var min = fullRepresentation.Layout ? fullRepresentation.Layout.minimumHeight : 0;
-            var base = pref > 0 ? pref : fullRepresentation.implicitHeight;
+            var base;
+            if (popupWindow.customPopupSize.height > 0) {
+                base = popupWindow.customPopupSize.height;
+            } else {
+                var pref = fullRepresentation.Layout ? fullRepresentation.Layout.preferredHeight : -1;
+                base = pref > 0 ? pref : fullRepresentation.implicitHeight;
+            }
             if (base <= 0) {
                 base = _mSize.height * 25;
             }
@@ -252,6 +269,9 @@ PlasmaCore.ToolTipArea {
         //! surface; plasmashell's popups classify popupWindow=true and
         //! slide. Same fix keeps every other popup behavior plasma-aligned.
         type: PlasmaCore.Dialog.AppletPopup
+        //! arms edge-drag resizing and popupWidth/popupHeight persistence
+        //! in the applet's own config group (resizable persistent popups)
+        applet: hostedPlasmoid
         visible: (hostedApplet && hostedApplet.expanded) && fullRepresentation
         visualParent: compactRepresentation ? compactRepresentation : null
        // location: PlasmaCore.Types.Floating //hostedPlasmoid.location

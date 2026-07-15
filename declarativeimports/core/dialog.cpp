@@ -4,18 +4,25 @@
 */
 
 #include "dialog.h"
+#include "windowresizehandler.h"
 
 // Qt
+#include <QDebug>
 #include <QEvent>
 #include <QGuiApplication>
 #include <QScreen>
 #include <QWindow>
 
+#include <algorithm>
+#include <cmath>
+
 // KDE
+#include <KConfigGroup>
 #include <KWindowEffects>
 #include <KWindowSystem>
 
 // Plasma
+#include <Plasma/Applet>
 #include <plasmaquick/plasmashellwaylandintegration.h>
 
 
@@ -26,6 +33,28 @@ Dialog::Dialog(QQuickItem *parent)
     : PlasmaQuick::Dialog(parent)
 {
     connect(this, &PlasmaQuick::Dialog::visualParentChanged, this, &Dialog::onVisualParentChanged);
+
+    //! resizable persistent popups: the resize grab zones depend on the
+    //! dialog type (AppletPopup only) and on which edge faces the dock
+    connect(this, &PlasmaQuick::Dialog::typeChanged, this, &Dialog::updateResizeSupport);
+    connect(this, &Dialog::edgeChanged, this, &Dialog::updateResizeSupport);
+
+    //! backstop end-of-resize detection: during a compositor-driven
+    //! interactive resize the client receives no mouse events (the
+    //! compositor owns the grab), only a stream of Resize events, and no
+    //! protocol tells the client the grab ended. The PRIMARY end signals
+    //! are the pointer coming back to us after release (Enter/MouseMove/
+    //! MouseButtonRelease in event()) and the popup hiding. This timer only
+    //! covers a release that lands outside the window with the popup never
+    //! hovered again - without it the session would stay open and dock
+    //! geometry changes in that window would leave the popup unanchored.
+    //! Kept long on purpose: firing during a mid-drag PAUSE (button still
+    //! held) persists the paused size early and re-anchors once under the
+    //! live grab - recoverable but visible - so the backstop should
+    //! essentially never win against a real release.
+    m_resizeSettleTimer.setSingleShot(true);
+    m_resizeSettleTimer.setInterval(2000);
+    connect(&m_resizeSettleTimer, &QTimer::timeout, this, &Dialog::finishSystemResize);
 
     //! reposition when the content resizes. The base class is not reliable
     //! here on wayland during rapid content switches, and a stale placement
@@ -106,6 +135,218 @@ void Dialog::setRespectsAppletsLayoutGeometry(bool respects)
 
     m_respectsAppletsLayoutGeometry = respects;
     Q_EMIT respectsAppletsLayoutGeometryChanged();
+}
+
+QObject *Dialog::applet() const
+{
+    return m_applet;
+}
+
+void Dialog::setApplet(QObject *applet)
+{
+    Plasma::Applet *plasmaApplet = qobject_cast<Plasma::Applet *>(applet);
+
+    if (applet && !plasmaApplet) {
+        qWarning() << "Latte::Quick::Dialog::setApplet expects a Plasma::Applet, got"
+                   << applet->metaObject()->className() << "- popup size persistence stays disabled";
+    }
+
+    if (m_applet == plasmaApplet) {
+        return;
+    }
+
+    if (m_applet) {
+        m_applet->removeEventFilter(this);
+    }
+
+    m_applet = plasmaApplet;
+
+    if (m_applet) {
+        loadPersistedPopupSize();
+
+        //! the context menu's "Reset Popup Size" runs in the app binary
+        //! while this dialog lives in the QML plugin; the applet object is
+        //! what both sides share, so the reset announces itself by bumping
+        //! a dynamic property on it (QEvent::DynamicPropertyChange below).
+        //! KConfigWatcher was tried first and is structurally unfit here:
+        //! kconfig's change notification is a DBus signal whose object
+        //! path embeds the config file name, layout files routinely carry
+        //! spaces ("My Layout.layout.latte") which are illegal in a DBus
+        //! object path, and no ConfigChanged ever reached the bus for them
+        //! (verified with dbus-monitor against a notify-flagged write).
+        m_applet->installEventFilter(this);
+    } else {
+        setCustomPopupSize(QSize());
+    }
+
+    updateResizeSupport();
+    Q_EMIT appletChanged();
+}
+
+bool Dialog::eventFilter(QObject *watched, QEvent *e)
+{
+    if (watched == m_applet && e->type() == QEvent::DynamicPropertyChange) {
+        auto *pe = static_cast<QDynamicPropertyChangeEvent *>(e);
+
+        //! the "Reset Popup Size" wake-up, see setApplet(). The config keys
+        //! are already deleted by the sender; re-loading finds them gone,
+        //! clears customPopupSize and the QML sizing chain returns a pinned
+        //! popup to its live hint size in place.
+        if (pe->propertyName() == QByteArrayLiteral("_latte_popupSizeReset") && !m_inSystemResize) {
+            loadPersistedPopupSize();
+        }
+    }
+
+    return PlasmaQuick::Dialog::eventFilter(watched, e);
+}
+
+QSize Dialog::customPopupSize() const
+{
+    return m_customPopupSize;
+}
+
+void Dialog::setCustomPopupSize(const QSize &size)
+{
+    if (m_customPopupSize == size) {
+        return;
+    }
+
+    m_customPopupSize = size;
+    Q_EMIT customPopupSizeChanged();
+}
+
+QMargins Dialog::frameMargins() const
+{
+    QMargins frame;
+
+    if (QObject *m = margins()) {
+        frame = QMargins(m->property("left").toInt(), m->property("top").toInt(),
+                         m->property("right").toInt(), m->property("bottom").toInt());
+    }
+
+    return frame;
+}
+
+void Dialog::updateResizeSupport()
+{
+    //! scoped STRICTLY to AppletPopup dialogs with a persistence applet:
+    //! hover previews and tooltips must never become resizable
+    const bool supported = m_applet && type() == Dialog::AppletPopup;
+
+    if (!m_resizeHandler) {
+        if (!supported) {
+            return;
+        }
+        m_resizeHandler = new WindowResizeHandler(this);
+        connect(m_resizeHandler, &WindowResizeHandler::resizeStarted, this, &Dialog::onSystemResizeStarted);
+    }
+
+    //! grab zones are the frame margins, like plasmashell's padding()-sized
+    //! zones; the dock-facing edge is excluded - the popup is anchored
+    //! there (its border is hidden for the attached look) and the
+    //! compositor would keep that edge fixed anyway
+    Qt::Edges edges;
+
+    if (supported) {
+        edges = Qt::LeftEdge | Qt::RightEdge | Qt::TopEdge | Qt::BottomEdge;
+
+        switch (m_edge) {
+        case Plasma::Types::LeftEdge:
+            edges &= ~Qt::Edges(Qt::LeftEdge);
+            break;
+        case Plasma::Types::RightEdge:
+            edges &= ~Qt::Edges(Qt::RightEdge);
+            break;
+        case Plasma::Types::TopEdge:
+            edges &= ~Qt::Edges(Qt::TopEdge);
+            break;
+        default:
+            edges &= ~Qt::Edges(Qt::BottomEdge);
+            break;
+        }
+    }
+
+    m_resizeHandler->setActiveEdges(edges);
+    m_resizeHandler->setMargins(frameMargins());
+}
+
+void Dialog::onSystemResizeStarted()
+{
+    m_inSystemResize = true;
+
+    //! freeze the sizing chain on the current content size for the whole
+    //! drag: without this a representation whose implicit size reflows
+    //! mid-drag (content wrapping as the width changes) re-evaluates the
+    //! QML bindings and resizes the window against the compositor's grab
+    m_preResizeCustomSize = m_customPopupSize;
+    m_resizeStartContentSize = mainItem() ? QSize(mainItem()->width(), mainItem()->height())
+                                          : size().shrunkBy(frameMargins());
+    setCustomPopupSize(m_resizeStartContentSize);
+
+    m_resizeSettleTimer.start();
+}
+
+void Dialog::finishSystemResize()
+{
+    if (!m_inSystemResize) {
+        return;
+    }
+
+    m_inSystemResize = false;
+    m_resizeSettleTimer.stop();
+
+    const QSize content = size().shrunkBy(frameMargins());
+
+    if (!content.isEmpty() && content != m_resizeStartContentSize) {
+        setCustomPopupSize(content);
+        persistPopupSize();
+    } else {
+        //! a grab that never changed the size (press on the border,
+        //! release in place) is not a resize: restore the pre-session
+        //! state so "has a custom size" keeps meaning the user chose one
+        setCustomPopupSize(m_preResizeCustomSize);
+    }
+
+    //! re-anchor exactly once, on release; every reposition path was
+    //! suppressed while the compositor owned the geometry
+    updateGeometry();
+}
+
+void Dialog::loadPersistedPopupSize()
+{
+    const KConfigGroup config = m_applet->config();
+    QSize size(config.readEntry("popupWidth", 0), config.readEntry("popupHeight", 0));
+
+    if (size.width() > 0 && size.height() > 0) {
+        //! a size persisted on a larger monitor must not overflow this
+        //! screen - the same 95% cap plasmashell's AppletPopup enforces
+        //! continuously in updateMaxSize()
+        if (const QScreen *s = screen()) {
+            size.setWidth(std::min(size.width(), int(std::round(s->geometry().width() * 0.95))));
+            size.setHeight(std::min(size.height(), int(std::round(s->geometry().height() * 0.95))));
+        }
+        setCustomPopupSize(size);
+    } else {
+        setCustomPopupSize(QSize());
+    }
+}
+
+void Dialog::persistPopupSize()
+{
+    if (!m_applet) {
+        qWarning() << "Latte::Quick::Dialog: cannot persist popup size, no applet is set";
+        return;
+    }
+
+    //! DELIBERATE deviation from plasmashell's AppletPopup, which saves on
+    //! every hideEvent(): persisting only from an actual finished user
+    //! resize keeps "has a custom size" meaningful, so the context menu's
+    //! "Reset Popup Size" entry can hide itself when there is nothing to
+    //! reset. The keys and group are exactly plasmashell's.
+    KConfigGroup config = m_applet->config();
+    config.writeEntry("popupWidth", m_customPopupSize.width());
+    config.writeEntry("popupHeight", m_customPopupSize.height());
+    config.sync();
 }
 
 bool Dialog::isRespectingAppletsLayoutGeometry() const
@@ -230,6 +471,13 @@ void Dialog::updateSlideEffect(const QRect &globalGeometry)
 
 void Dialog::syncAnchoredWaylandPosition()
 {
+    //! the compositor owns the geometry for the whole interactive resize;
+    //! any position re-assert now fights the drag. finishSystemResize()
+    //! re-anchors once when the grab ends.
+    if (m_inSystemResize) {
+        return;
+    }
+
     //! while hidden the base class places the window itself on show
     if (!KWindowSystem::isPlatformWayland() || !visualParent() || !isVisible()) {
         return;
@@ -260,6 +508,12 @@ void Dialog::syncAnchoredWaylandPosition()
 
 void Dialog::updateGeometry()
 {
+    //! see syncAnchoredWaylandPosition(): no repositioning under an active
+    //! interactive-resize grab
+    if (m_inSystemResize) {
+        return;
+    }
+
     //! while hidden the base class places the window itself on show
     if (!visualParent() || !isVisible()) {
         return;
@@ -302,6 +556,10 @@ void Dialog::updatePopUpEnabledBorders()
     } else {
         setLocation(Plasma::Types::Floating);
     }
+
+    //! enabled borders decide the frame margins, and the margins are the
+    //! resize grab zones - refresh them together
+    updateResizeSupport();
 }
 
 QPoint Dialog::popupPosition(QQuickItem *item, const QSize &size)
@@ -444,6 +702,28 @@ void Dialog::adjustGeometry(const QRect &geom)
 
 bool Dialog::event(QEvent *e)
 {
+    if (m_inSystemResize) {
+        if (e->type() == QEvent::Resize) {
+            //! the compositor is still driving the drag; keep the backstop
+            //! timer at bay while geometry keeps flowing
+            m_resizeSettleTimer.start();
+        } else if (e->type() == QEvent::Enter || e->type() == QEvent::Hide) {
+            //! the compositor sends the surface a pointer LEAVE when its
+            //! resize grab engages and an ENTER when the grab releases with
+            //! the cursor over us again, so Enter is the fast end signal
+            //! for the common release-on-the-window case; a hide ends the
+            //! session unconditionally. MouseMove and MouseButtonRelease
+            //! are deliberately NOT end triggers: input already in flight
+            //! between startSystemResize() and the grab actually engaging
+            //! is still delivered to us a beat later and ended the session
+            //! instantly while the compositor resize carried on (probed
+            //! live: the release landed in the same millisecond as the
+            //! session start, the window then grew 150px with the session
+            //! already dead and nothing was persisted).
+            finishSystemResize();
+        }
+    }
+
     if (e->type() == QEvent::Enter) {
         setContainsMouse(true);
     } else if (e->type() == QEvent::Leave
