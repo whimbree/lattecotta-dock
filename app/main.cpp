@@ -36,6 +36,7 @@
 #include <KLocalizedString>
 #include <KAboutData>
 #include <KDBusService>
+#include <KSignalHandler>
 
 //! COLORS
 #define CNORMAL  "\e[0m"
@@ -457,12 +458,23 @@ int main(int argc, char **argv)
         qInstallMessageHandler(noMessageOutput);
     }
 
-    auto signal_handler = [](int) {
+    //! Every quit path must name itself in the log. The dock exited cleanly
+    //! ~20s after screen lock/unlock cycles twice (2026-07-10..12) with no
+    //! logged trigger, and a raw std::signal handler calling qGuiApp->exit()
+    //! was one of three silent candidates (the others: Corona::quitApplication
+    //! over D-Bus, and QCoreApplication::quit() exposed on the bus at
+    //! /MainApplication by KDBusService). KSignalHandler self-pipes, so the
+    //! log call runs on the event loop, not inside the signal handler.
+    //! SIGINT is also the --replace handshake (see the kill() above).
+    //! SIGTERM stays unhandled on purpose: today it means immediate death
+    //! (restart-staged.sh relies on that); routing it through clean teardown
+    //! is the session-shutdown plan item's call to make, not a side effect.
+    //! std::signal(SIGKILL, ...) was dead code - SIGKILL cannot be caught.
+    KSignalHandler::self()->watchSignal(SIGINT);
+    QObject::connect(KSignalHandler::self(), &KSignalHandler::signalReceived, &app, [](int signal) {
+        qWarning() << "main: quitting on signal" << signal << "(SIGINT: terminal, --replace handshake, or external kill)";
         qGuiApp->exit();
-    };
-
-    std::signal(SIGKILL, signal_handler);
-    std::signal(SIGINT, signal_handler);
+    });
 
     KCrash::setDrKonqiEnabled(true);
     KCrash::setFlags(KCrash::AutoRestart | KCrash::AlwaysDirectly);

@@ -213,6 +213,11 @@ Corona::~Corona()
 
 void Corona::onAboutToQuit()
 {
+    //! the last line of the quit-reason trail: if neither the signal line
+    //! (main.cpp) nor the quitApplication line precedes this one in the log,
+    //! the event loop was quit from outside the process's own quit paths
+    qWarning() << "corona: onAboutToQuit - event loop is exiting";
+
     m_inQuit = true;
 
     //! BEGIN: Give the time to slide-out views when closing
@@ -977,6 +982,13 @@ int Corona::primaryScreenId() const
 
 void Corona::quitApplication()
 {
+    //! part of the quit-reason trail (see main.cpp's signal wiring): callers
+    //! are the settings dialog, the D-Bus quitApplication method and
+    //! importFullConfiguration - an unexplained clean exit with this line
+    //! absent points at QCoreApplication::quit() reached directly (e.g. the
+    //! /MainApplication D-Bus object KDBusService registers)
+    qWarning() << "corona: quitApplication invoked - beginning deliberate shutdown";
+
     m_inQuit = true;
 
     //! this code must be called asynchronously because it is called
