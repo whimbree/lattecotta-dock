@@ -100,9 +100,19 @@ Per-unit specs (section C), in rank order:
     ad9b823f hang-class pinned live); maxLength ruler drag resizes
     and settles without oscillation (frame-pair compare + CPU delta).
 - [x] EX-05 FillLengthDistributor - Justify/fill two-pass space distribution
-  - [ ] executed
+  - [x] executed: LANDED 99a00169 (+a1b8a471 e2e). Merge evidence: the 26
+    shipped-QML equality vectors re-ran byte-identical post-rebase (the
+    qmltest is the permanent tripwire); live at merge the real justify
+    layout re-laid out correctly on restart (pill intact, no collapse or
+    overflow). The add/remove-applet stress recipe stays on the live
+    desk list for the next throwaway-profile session.
 - [x] EX-06 VisibleIndexEngine - visible-index math + separator neighbor walks
-  - [ ] executed
+  - [x] executed: LANDED b0e606b2..e78d8caf (rebased hashes; see the spec
+    Commits line). Merge evidence: generator vectors byte-identical
+    across both cutovers except the two documented at-origin fixes; 34/34
+    ctest green post-merge. The Meta+number badge recipe needs a held
+    modifier no injector here can synthesize; it stays on the live desk
+    list for a real-keyboard pass.
 - [x] EX-07 StorageIdRemapper - layout-file id remapping (capt blueprint)
   - [x] executed: LANDED d6ebc83f (core + capt's 11 ported slots +
     exhaustion flag, storage.cpp cutover, availableId deleted) + the
@@ -171,7 +181,13 @@ Per-unit specs (section C), in rank order:
 - [x] EX-18 LengthOffsetClamp - maxLength/offset mutual clamp (dedup)
   - [ ] executed
 - [x] EX-19 ColorLuminance - shared brightness/luminance helpers (dedup)
-  - [ ] executed
+  - [x] executed: LANDED 0c8df527..c92cd5fc lineage (rebased; see the spec
+    Commits line). Merge evidence: the reference table is pinned bit-exact
+    to the shipped JS (std::pow matched Math.pow), 35/35 ctest green
+    post-merge; live at merge the task indicator dots render unchanged on
+    the real dock and the layouts settings window chrome is correctly
+    themed. The light-vs-dark A/B screenshot pair and the add-widgets
+    overlay eyeball stay on the live desk list.
 - [x] EX-20 BadgeMath - badge parsing, proportion, arc geometry
   - [ ] executed
 - [x] EX-21 ScrollOverflowMath - scrollable list overflow/autoscroll math
