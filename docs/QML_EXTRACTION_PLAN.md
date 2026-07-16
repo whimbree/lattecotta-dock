@@ -168,31 +168,48 @@ Per-unit specs (section C), in rank order:
     outside the pill fell through to the DESKTOP context menu (the mask
     carve), and auto-hide hid/revealed with the window geometry
     unchanged (mask-based, dumpwins-verified) plus the 7px edge strip
-    present. Items 4-7 of the matrix (floating gap, sidebar block-all,
-    zoomed input band, debug-overlay cross-check) remain on the live
-    desk list.
+    present. Sidebar block-all verified later the same evening:
+    with visibility=SidebarOnDemand the dock stayed hidden and a
+    right-click over its former pill area opened the DESKTOP context
+    menu (the AcceptNoInput mask lets everything fall through). Items
+    4, 6 and 7 (floating gap, zoomed input band, debug-overlay
+    cross-check) remain on the live desk list.
 - [x] EX-11 LauncherListOps - launcher order algebra, registries, stored-list parsing
   - [x] executed: LANDED 91bc91d8 lineage (rebased; see the spec Commits
     line). Merge evidence: 44/44 ctest green post-rebase incl. the 16-case
     shipped-QML twin suite kept green across every cutover and the 29
     sanitized slots; a rebase-time qmlplugindump against a stale stage
     dropped ScrollOverflowMath from plugins.qmltypes - caught by the name
-    check and re-dumped against the refreshed stage before merge. The six
-    launcher live recipes stay on the live desk list.
+    check and re-dumped against the refreshed stage before merge. Live
+    on the throwaway (2026-07-16 evening): drag-reorder moved firefox
+    to exactly the released slot, launchers59 persisted the new order
+    immediately and it survived a dock restart. One anomaly filed in
+    the porting plan (window-less pinned launcher not rendering after
+    the drag+restart on the two-tasks-applet polluted layout; slot
+    itself proven intact). The cold-start stderr, separator, activity
+    and GC recipes remain on the live desk list.
 - [x] EX-12 ColorizerDecisionCore - applyTheme/scheme selection tree
   - [x] executed: LANDED 8ff0862d lineage (rebased; see the spec Commits
     line). Merge evidence: 36/36 ctest green post-rebase incl. the 10
     boundary pins through the staged install; the resting real config
     renders identically after the master restart (PlasmaThemeColors +
-    NoneWindowColors, mustBeShown false). The Dark/Light palette-flip
-    recipe and the SmartThemeColors edit-mode check stay on the live
-    desk list for the next throwaway-profile session.
+    NoneWindowColors, mustBeShown false). Live on the throwaway
+    (2026-07-16 evening): Dark Colors flipped the pill dark with light
+    clock text and full-color task icons, and Light Colors flipped it
+    back to a light pill with dark text (both legs of the recorded Qt5
+    rules). The SmartThemeColors edit-mode check remains on the live
+    desk list.
 - [x] EX-13 ViewTypeAndBackgroundPredicates - Panel-vs-Dock chain + background states
   - [x] executed: LANDED c2e1ac99 lineage (rebased; see the spec Commits
     line). Merge evidence: 40/40 ctest green post-rebase incl. the
     60-row decision tables and the staged-wrapper qmltest; a mutation
-    probe proved the tables bite. The Dock/Panel flip, background-state
-    matrix and effects-area recipes stay on the live desk list.
+    probe proved the tables bite. Live on the throwaway
+    (2026-07-16 evening): matrix items (a) and (b) pass - a maximized
+    dolphin turned the background full-length solid, and with
+    backgroundOnlyOnMaximized the background vanished entirely once
+    unmaximized (tracker-to-predicate-to-paint proven both ways). The
+    Dock/Panel flip and effects-area recipes remain on the live desk
+    list.
 - [x] EX-14 DropEventClassifier - drag mime classification + insert index
   - [x] executed: LANDED 7ff96532 lineage (rebased; see the spec Commits
     line). Merge evidence: 45/45 ctest green post-rebase incl. the
@@ -209,16 +226,22 @@ Per-unit specs (section C), in rank order:
     file's own recipe before merge. Live on the throwaway (2026-07-16
     afternoon): the ruler-detent recipe passed riding EX-18's extremes
     run - one fired step per injected detent, 6 points each (the rails
-    landing exactly on 100/30 from 51 arithmetic-checks the step). The
-    audio-badge, desktops and task-cycle wheel recipes remain on the
-    live desk list.
+    landing exactly on 100/30 from 51 arithmetic-checks the step). Audio badge verified
+    live later the same evening: two detents on the spotify stream
+    badge stepped the pactl sink-input 74% to 84% (one 5% plasma-pa
+    step per detent), one down-detent to 79%. The task-cycle wheel is
+    covered by EX-16 group-cycle run (same taskScrollAction path); the
+    desktops-wheel recipe remains on the live desk list.
 - [x] EX-16 GroupWindowCycler - next/previous/minimize target selection
   - [x] executed: LANDED 80525a85 lineage (rebased; see the spec Commits
     line). Merge evidence: the 24-case shipped-QML pinning suite and the
     13-case whole-bar cycle suite are green on both sides of the cutover
     (the wheel-cycle path was DEAD since Qt5, fixed at origin with a
-    failing-first suite); 38/38 ctest green post-rebase. The wheel-over-
-    group and wheelEnabled live recipes stay on the live desk list.
+    failing-first suite); 38/38 ctest green post-rebase. Live on the
+    throwaway (2026-07-16 evening): five wheel detents over a 4-window
+    dolphin group advanced through all four distinct KWin window ids
+    and wrapped around exactly (journal-verified). The wheelEnabled
+    empty-area path and minimize-toggle remain on the live desk list.
 - [x] EX-17 TooltipTextComposer - preview title/subtext string transforms
   - [x] executed: LANDED 6190e01c + 53f7ba21. Live at merge: hovered the
     4-window VS Code group on the real dock; titles carry the app-name
@@ -263,9 +286,12 @@ Per-unit specs (section C), in rank order:
   - [x] executed: LANDED 18d4f046 lineage (rebased; see the spec Commits
     line). Merge evidence: the 28-case shipped-QML qmltest is green on
     both sides of the cutover and rode the merge as the permanent
-    equality layer; 37/37 ctest green post-rebase. The overflow/wheel/
-    drag-autoscroll live recipes (scrollTasksEnabled defaults false, 12+
-    windows) stay on the live desk list for the throwaway session.
+    equality layer; 37/37 ctest green post-rebase. Live on the throwaway
+    (2026-07-16 evening): with scrolling enabled, grouping off and ten
+    dolphins on a 30% dock the row overflowed, wheel detents slid new
+    icons into view both directions, and the row refused to over-scroll
+    at its ends. Drag-autoscroll and focusOn remain on the live desk
+    list.
 - [x] EX-22 ActivitySetAlgebra - activity set filtering (capt blueprint)
   - [x] executed: LANDED 8ccad784.
     Type discipline (retroactive step-2.5 pass): reviewed, no

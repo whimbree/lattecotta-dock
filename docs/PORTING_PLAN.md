@@ -2832,6 +2832,26 @@ prerequisites in the phases above are done.
       prerequisite is the Dark Colors background arm actually
       working (the item in Phase 10).
       Commits:
+- [ ] Scrollable group previews: when a grouped task holds more
+      windows than the hover preview strip can fit on screen, the
+      strip should scroll (wheel and drag) instead of clipping.
+      Requested 2026-07-16 while watching a 10-window dolphin group's
+      previews overflow. Qt5 Latte clipped the same way, so per the
+      Qt5-faithful rule this is a continuation feature, not a bug.
+      Likely shape: the ToolTipInstance row becomes a ListView with
+      the EX-21 ScrollMath core driving overflow/clamp, mirroring the
+      tasks-row scroller.
+      Commits:
+- [ ] Window-less pinned launcher can vanish from the row after a
+      drag-reorder plus restart: reproduced once on the polluted
+      throwaway layout (2026-07-16, launchers59 still listed dolphin
+      first while the row rendered without it; opening a dolphin
+      window materialized the task at the correct stored slot, so the
+      slot survived). The layout carries TWO latte tasks applets, so
+      isolation is needed before any fix (regression discipline:
+      one variable, clean profile). File under Phase 8 launcher
+      persistence follow-ups.
+      Commits: none (finding, not yet isolated)
 - [ ] Replicate Dock: first-class live-mirrored views with user-chosen
       placement, riding the existing ClonedView sync machinery. Full
       design, settled decisions (keying, sync scope, editability,
