@@ -1448,8 +1448,10 @@ Conventions used by all specs:
   live matrix is mandatory before the cutover commit merges.
 - Risk + rollback: medium-high consequence, low likelihood given the
   matrix; single cutover commit.
-- Commits: f0e6e8fa (core + bridge + sanitized tests + qmltest),
-  cutover + docs hashes in docs/agent-logs/EX-10.md.
+- Commits: b33198bc (design/spec record), f0e6e8fa (core + bridge +
+  sanitized tests + qmltest), 7d5d18455 (fix: the upstream
+  metrics.margins typo, below), 5dc9e81d1 (QML cutover +
+  strict-on-touch + baseline shrink).
 - Eliminated invalid states (for the ledger tick at merge): the
   effects-protocol sentinel rects (0,0,-1,-1) and (-1,-1,1,1) are
   unrepresentable in the core - InputMaskDecision is a
@@ -1499,6 +1501,15 @@ Conventions used by all specs:
   - Upstream dead code deleted with the cutover bodies: localX/
     localY (updateMaskArea) and floatingInternalGapAcceptsInput
     (updateInputGeometry), both computed-never-read since f0ad7b23.
+  - DEFECT FOUND AND FIXED AT ORIGIN (7d5d18455): the animated
+    floating-gap branch read metrics.margins.screenEdge, a property
+    that never existed (the ability group is margin, singular) -
+    inherited verbatim from upstream 11f42978, so the branch threw a
+    TypeError and aborted updateInputGeometry whenever it ran,
+    leaving the input mask stale (the dead-input class). Only site
+    tree-wide (swept). The core pins the intended subtraction; the
+    live matrix item covering the animated floating-gap band is the
+    behavioral verification.
 
 ### EX-11 LauncherListOps [delegate-safe]
 
