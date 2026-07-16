@@ -38,46 +38,27 @@ MouseArea{
         }
     }
 
-    //! replica of updating maximum length from configuration tab
+    //! the wheel step delegates to the shared clamp authority (EX-18,
+    //! app/settings/lengthoffsetclamp.h): the configuration tab's Maximum
+    //! slider drives the same core, so the two can no longer drift apart.
+    //! Same-value writes are skipped: QQmlPropertyMap emits valueChanged
+    //! on every insert, and the Qt5 body only wrote the keys its taken
+    //! branches touched.
     function updateMaxLength(step: int) {
-        var updateminimumlength = (plasmoid.configuration.maxLength === plasmoid.configuration.minLength);
+        var clamped = lengthClamp.clampMaxLengthByStep(plasmoid.configuration.maxLength,
+                                                       plasmoid.configuration.minLength,
+                                                       plasmoid.configuration.offset,
+                                                       step,
+                                                       plasmoid.configuration.alignment);
 
-        var tempML = plasmoid.configuration.maxLength + step;
-
-        var value = Math.max(Math.min(tempML,100), 30);
-
-        if (updateminimumlength) {
-            plasmoid.configuration.minLength = Math.max(30, value);
+        if (plasmoid.configuration.minLength !== clamped.minLength) {
+            plasmoid.configuration.minLength = clamped.minLength;
         }
 
-        value = Math.max(plasmoid.configuration.minLength, value);
-        plasmoid.configuration.maxLength = value;
+        plasmoid.configuration.maxLength = clamped.maxLength;
 
-        var newTotal = Math.abs(plasmoid.configuration.offset) + value;
-
-        //centered and justify alignments based on offset and get out of the screen in some cases
-        var centeredCheck = ((plasmoid.configuration.alignment === LatteCore.Types.Center)
-                             || (plasmoid.configuration.alignment === LatteCore.Types.Justify))
-                && ((Math.abs(plasmoid.configuration.offset) + value/2) > 50);
-
-        if (newTotal > 100 || centeredCheck) {
-            if ((plasmoid.configuration.alignment === LatteCore.Types.Center)
-                    || (plasmoid.configuration.alignment === LatteCore.Types.Justify)) {
-
-                var suggestedValue = (plasmoid.configuration.offset<0) ? Math.min(0, -(100-value)): Math.max(0, 100-value);
-
-                if ((Math.abs(suggestedValue) + value/2) > 50) {
-                    if (suggestedValue < 0) {
-                        suggestedValue = - (50 - value/2);
-                    } else {
-                        suggestedValue = 50 - value/2;
-                    }
-                }
-
-                plasmoid.configuration.offset = suggestedValue;
-            } else {
-                plasmoid.configuration.offset = Math.max(0, 100-value);
-            }
+        if (plasmoid.configuration.offset !== clamped.offset) {
+            plasmoid.configuration.offset = clamped.offset;
         }
     }
 }

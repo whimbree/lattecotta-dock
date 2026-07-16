@@ -22,6 +22,9 @@
 namespace Latte {
 class Corona;
 class View;
+namespace Settings {
+class LengthOffsetClampBridge;
+}
 }
 
 
@@ -80,6 +83,11 @@ protected:
     KSvg::FrameSvg::EnabledBorders m_enabledBorders{KSvg::FrameSvg::AllBorders};
 
     Latte::Corona *m_corona{nullptr};
+
+    //! the LengthOffsetClamp core's QML boundary (EX-18), exposed to every
+    //! config engine as the `lengthClamp` context property in init(); Qt
+    //! parent ownership (child of this window)
+    Latte::Settings::LengthOffsetClampBridge *m_lengthClampBridge{nullptr};
 
 private Q_SLOTS:
     void updateWaylandId();

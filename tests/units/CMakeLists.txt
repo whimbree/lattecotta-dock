@@ -152,6 +152,15 @@ target_link_libraries(badgemathtest
 # locale with installed latte catalogs must not translate it away
 set_property(TEST badgemathtest APPEND PROPERTY
     ENVIRONMENT "LANGUAGE=C;LC_ALL=C")
+# EX-18 LengthOffsetClamp: header-only pure clamp math plus its QML-facing
+# bridge compiled IN per the sanitized-core rule (the boundary refusals and
+# the alignment-int mapping run instrumented); coretypes.h is generated
+# into the build tree and only needs Qt Core.
+latte_add_unit_test(lengthoffsetclamptest
+    ${CMAKE_SOURCE_DIR}/app/settings/lengthoffsetclampbridge.cpp)
+target_include_directories(lengthoffsetclamptest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app) # coretypes.h is generated there
 
 # EX-17 TooltipTextComposer: header-only pure core plus its QML-facing
 # wrapper compiled IN per the sanitized-core rule (the wrapper's boundary

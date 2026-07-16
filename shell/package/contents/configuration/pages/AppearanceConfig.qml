@@ -269,43 +269,27 @@ PlasmaComponents.Page {
 
                         readonly property int localMinValue: 1
 
+                        //! delegates to the shared clamp authority (EX-18,
+                        //! app/settings/lengthoffsetclamp.h); the canvas maxLength ruler
+                        //! drives the same core, so the two can no longer drift apart.
+                        //! The Qt5 body ended with a minLengthSlider.updateMinLength()
+                        //! re-trigger that was dead since Qt5: the clamp floors maxLength
+                        //! by minLength, so maxLength < minLength cannot hold afterwards
+                        //! (toValue_maxNeverEndsBelowMin pins the proof).
                         function updateMaxLength() {
                             if (!pressed && viewConfig.isReady) {
-                                plasmoid.configuration.maxLength = Math.max(value, plasmoid.configuration.minLength, localMinValue);
-                                var newTotal = Math.abs(plasmoid.configuration.offset) + value;
+                                var clamped = lengthClamp.clampMaxLengthToValue(value,
+                                                                                plasmoid.configuration.minLength,
+                                                                                plasmoid.configuration.offset,
+                                                                                plasmoid.configuration.alignment);
+                                plasmoid.configuration.maxLength = clamped.maxLength;
 
-                                //centered and justify alignments based on offset and get out of the screen in some cases
-                                var centeredCheck = ((plasmoid.configuration.alignment === LatteCore.Types.Center)
-                                                     || (plasmoid.configuration.alignment === LatteCore.Types.Justify))
-                                        && ((Math.abs(plasmoid.configuration.offset) + value/2) > 50);
-
-                                if (newTotal > 100 || centeredCheck) {
-                                    if ((plasmoid.configuration.alignment === LatteCore.Types.Center)
-                                            || (plasmoid.configuration.alignment === LatteCore.Types.Justify)) {
-
-                                        var suggestedValue = (plasmoid.configuration.offset<0) ? Math.min(0, -(100-value)): Math.max(0, 100-value);
-
-                                        if ((Math.abs(suggestedValue) + value/2) > 50) {
-                                            if (suggestedValue < 0) {
-                                                suggestedValue = - (50 - value/2);
-                                            } else {
-                                                suggestedValue = 50 - value/2;
-                                            }
-                                        }
-
-                                        plasmoid.configuration.offset = suggestedValue;
-                                    } else {
-                                        plasmoid.configuration.offset = Math.max(0, 100-value);
-                                    }
+                                if (plasmoid.configuration.offset !== clamped.offset) {
+                                    plasmoid.configuration.offset = clamped.offset;
                                 }
-
-                                if (plasmoid.configuration.maxLength < plasmoid.configuration.minLength) {
-                                    minLengthSlider.updateMinLength();
-                                }
-                            } else {
-                                if ((value < plasmoid.configuration.minLength) || (value < localMinValue)) {
-                                    value = Math.max(plasmoid.configuration.minLength, localMinValue);
-                                }
+                            } else if ((value < plasmoid.configuration.minLength) || (value < localMinValue)) {
+                                //! view-side snap while dragging; the config math lives in the core
+                                value = Math.max(plasmoid.configuration.minLength, localMinValue);
                             }
                         }
 
@@ -457,18 +441,19 @@ PlasmaComponents.Page {
                         stepSize: 1
                         wheelEnabled: false
 
-                        readonly property int screenLengthMaxFactor: (100 - plasmoid.configuration.maxLength) / 2
-
                         //! these properties are used in order to not update view_offset incorrectly when the primary config view
                         //! is changing between different views
                         property bool userInputIsValid: false
                         readonly property bool sliderIsReady: viewConfig.isReady && (from===fromValue) && (to===toValue)
 
-                        readonly property int fromValue: ((plasmoid.configuration.alignment === LatteCore.Types.Center)
-                                                          || (plasmoid.configuration.alignment === LatteCore.Types.Justify)) ? -offsetSlider.screenLengthMaxFactor :  0
+                        //! the reachable range comes from the shared clamp authority
+                        //! (EX-18); the int property keeps the shipped truncation of
+                        //! fractional bounds, which the core reproduces
+                        readonly property int fromValue: lengthClamp.offsetSliderFrom(plasmoid.configuration.maxLength,
+                                                                                      plasmoid.configuration.alignment)
 
-                        readonly property int toValue: ((plasmoid.configuration.alignment === LatteCore.Types.Center)
-                                                        || (plasmoid.configuration.alignment === LatteCore.Types.Justify)) ? offsetSlider.screenLengthMaxFactor :  2*offsetSlider.screenLengthMaxFactor
+                        readonly property int toValue: lengthClamp.offsetSliderTo(plasmoid.configuration.maxLength,
+                                                                                  plasmoid.configuration.alignment)
 
                         property real offsetValue: plasmoid.configuration.offset
 
@@ -488,25 +473,20 @@ PlasmaComponents.Page {
                             value: offsetSlider.toValue
                         }
 
+                        //! delegates to the shared clamp authority (EX-18): while the
+                        //! handle is being dragged the slider owns the value, otherwise
+                        //! the config is the source and gets bounded into the range
                         function updateOffset() {
                             if (!pressed && sliderIsReady) {
-                                if (userInputIsValid) {
-                                    plasmoid.configuration.offset = value;
-                                } else {
-                                    value = Math.min(Math.max(from, plasmoid.configuration.offset), to);
-                                    plasmoid.configuration.offset = value;
-                                }
+                                var requested = userInputIsValid ? value : plasmoid.configuration.offset;
+                                var clamped = lengthClamp.clampOffset(plasmoid.configuration.maxLength,
+                                                                      requested,
+                                                                      plasmoid.configuration.alignment);
+                                value = clamped.offset;
+                                plasmoid.configuration.offset = clamped.offset;
 
-                                var newTotal = Math.abs(value) + plasmoid.configuration.maxLength;
-
-                                //centered and justify alignments based on offset and get out of the screen in some cases
-                                var centeredCheck = ((plasmoid.configuration.alignment === LatteCore.Types.Center)
-                                                     || (plasmoid.configuration.alignment === LatteCore.Types.Justify))
-                                        && ((Math.abs(value) + plasmoid.configuration.maxLength/2) > 50);
-                                if (newTotal > 100 || centeredCheck) {
-                                    plasmoid.configuration.maxLength = ((plasmoid.configuration.alignment === LatteCore.Types.Center)
-                                                                        || (plasmoid.configuration.alignment === LatteCore.Types.Justify)) ?
-                                                2*(50 - Math.abs(value)) :100 - Math.abs(value);
+                                if (plasmoid.configuration.maxLength !== clamped.maxLength) {
+                                    plasmoid.configuration.maxLength = clamped.maxLength;
                                 }
                             }
                         }

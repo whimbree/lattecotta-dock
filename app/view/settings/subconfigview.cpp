@@ -11,6 +11,7 @@
 #include "../../lattecorona.h"
 #include "../../layouts/manager.h"
 #include "../../plasma/extended/theme.h"
+#include "../../settings/lengthoffsetclampbridge.h"
 #include "../../settings/universalsettings.h"
 #include "../../shortcuts/globalshortcuts.h"
 #include "../../shortcuts/shortcutstracker.h"
@@ -147,6 +148,14 @@ void SubConfigView::init()
 
     rootContext()->setContextProperty(QStringLiteral("viewConfig"), this);
     rootContext()->setContextProperty(QStringLiteral("shortcutsEngine"), m_corona->globalShortcuts()->shortcutsTracker());
+
+    //! EX-18: the maxLength/minLength/offset clamp core's QML boundary;
+    //! the maxLength ruler (canvas view) and the Appearance page (primary
+    //! view) both call it, so it lives here where both engines initialize
+    if (!m_lengthClampBridge) {
+        m_lengthClampBridge = new Settings::LengthOffsetClampBridge(this);
+    }
+    rootContext()->setContextProperty(QStringLiteral("lengthClamp"), m_lengthClampBridge);
 
     if (m_corona) {
         rootContext()->setContextProperty(QStringLiteral("universalSettings"), m_corona->universalSettings());
