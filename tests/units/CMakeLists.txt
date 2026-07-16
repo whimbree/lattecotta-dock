@@ -14,3 +14,11 @@ set_tests_properties(activitysetalgebratest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 target_include_directories(activitysetalgebratest PRIVATE
     ${CMAKE_SOURCE_DIR}/app)
+
+# EX-01 PreviewSwitchEngine: header-only pure core, injected clock.
+ecm_add_test(previewswitchenginetest.cpp
+    TEST_NAME previewswitchenginetest
+    LINK_LIBRARIES Qt6::Test
+)
+set_tests_properties(previewswitchenginetest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
