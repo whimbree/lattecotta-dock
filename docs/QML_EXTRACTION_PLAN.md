@@ -162,7 +162,12 @@ Per-unit specs (section C), in rank order:
 - [x] EX-16 GroupWindowCycler - next/previous/minimize target selection
   - [ ] executed
 - [x] EX-17 TooltipTextComposer - preview title/subtext string transforms
-  - [ ] executed
+  - [x] executed: LANDED 6190e01c + 53f7ba21. Live at merge: hovered the
+    4-window VS Code group on the real dock; titles carry the app-name
+    excision ("bun.lock - liquid", no " - Visual Studio Code" tail), and
+    with a temporary second desktop ("Kiln Test") the moved window's
+    subtext read "On Kiln Test" - the desktop-id fix resolves real names
+    where the Qt5 index math rendered "On " with a dangling comma.
 - [x] EX-18 LengthOffsetClamp - maxLength/offset mutual clamp (dedup)
   - [ ] executed
 - [x] EX-19 ColorLuminance - shared brightness/luminance helpers (dedup)
@@ -1661,12 +1666,12 @@ Conventions used by all specs:
 
 ### EX-17 TooltipTextComposer [delegate-safe]
 
-- Commits: 1ed62d89 (desktop-id defect found while extracting, fixed
+- Commits: 6190e01c (desktop-id defect found while extracting, fixed
   at origin: Plasma 6 hands desktop IDs, the Qt5 desktopNames[id - 1]
   lookup indexed with NaN on wayland and rendered "On " / "On ,";
   failing-first shipped-QML pinning suite tests/qml/tst_tooltiptext.qml
   in the same commit - it stays green across the cutover as the
-  twin-equivalence evidence), 7b56f2fe (core + TooltipTextComposer
+  twin-equivalence evidence), 53f7ba21 (core + TooltipTextComposer
   singleton wrapper + plugins.qmltypes for org.kde.latte.private.tasks
   - qmllint baseline 6614 -> 6553 tree-wide - + both twins cut to thin
   shells + tooltiptexttest with the wrapper compiled in sanitized;
