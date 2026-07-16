@@ -1448,6 +1448,46 @@ Conventions used by all specs:
   live matrix is mandatory before the cutover commit merges.
 - Risk + rollback: medium-high consequence, low likelihood given the
   matrix; single cutover commit.
+- Commits:
+- Execution notes (2026-07-16, agent; docs/agent-logs/EX-10.md has
+  the full design):
+  - Provenance correction: the input-geometry half is NOT port-era.
+    The animated/zoomedForItems branch is upstream Michail's
+    11f42978 (2022-01-30, post-f0ad7b23): Qt5-f0ad7b23 cleared the
+    input mask entirely while parabolic-animated, 11f42978 replaced
+    the clear with the zoomed-thickness band to work around faulty
+    ParabolicMouseArea onEntered() after sglClearZoom. Port-era
+    additions are only the latteView startup null guard (5059840e)
+    and the plasmoid->Plasmoid rename (b474adad). Fidelity source
+    for the input half: upstream final == current body.
+  - Derived interface (enumerate-not-approximate): the sketched
+    isFloatingGapWindowEnabled/normalThickness/maxThickness fields do
+    not appear in the bodies; the actual reads are location,
+    compositingActive, behaveAsPlasmaPanel, isHidden, isSidebar,
+    parabolicAnimating (needBothAxis.count>0),
+    floatingGapInputDisabled (root.hasFloatingGapInputEventsDisabled),
+    mask.thickness.hidden, mask.thickness.zoomedForItems,
+    margins.screenEdge, totals.thickness, mask.screenEdge,
+    localGeometry, root size, view size (input half); location,
+    behaveAsPlasmaPanel, effects.rect, totals.thickness,
+    mask.screenEdge, root size, view size (local-geometry half). The
+    isHidden/updateIsEnabled/inNormalState apply-gates stay in the
+    QML shell (signal-state gating, the AutoSize precedent); the
+    result type is std::variant<AcceptAllInput, AcceptInputWithin,
+    AcceptNoInput> so the effects-protocol sentinel rects
+    (0,0,-1,-1 / -1,-1,1,1) are unrepresentable in the core.
+  - qBound assessment (spec-mandated): the clamps are DOCUMENTED
+    NORMALIZATION, not bandaids - effects rect and window size
+    arrive from different signal cascades, and Effects::setInputMask
+    (app/view/effects.cpp:330) documents that degenerate warmup
+    rects legitimately pass through and clear the window mask.
+    Consequently the "degenerate window sizes rejected loudly"
+    test-plan bullet is amended: zero-size is the documented warmup
+    protocol (pinned by a test), only NEGATIVE dimensions assert in
+    the core and are refused loudly at the wrapper boundary.
+  - Upstream dead code deleted with the cutover bodies: localX/
+    localY (updateMaskArea) and floatingInternalGapAcceptsInput
+    (updateInputGeometry), both computed-never-read since f0ad7b23.
 
 ### EX-11 LauncherListOps [delegate-safe]
 
