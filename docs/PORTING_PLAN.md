@@ -2643,6 +2643,21 @@ multi-view, multi-monitor setup.
       under gdb) rather than headless guessing; the double-draw is
       invisible on video content.
       Commits:
+- [ ] QML extraction initiative: execute docs/QML_EXTRACTION_PLAN.md
+      (25 units EX-01..EX-25, each with a full spec, delegation tag,
+      Qt5 anchor, and wave assignment; the completeness ledger at the
+      top of that file is the live per-unit tracker - tick units
+      THERE, tick this item when the backlog is complete or formally
+      closed). Strong-model-window shortlist, in order: Wave 0
+      (tests/units scaffolding + coverage ratchet + EX-22 proving
+      unit), EX-01 PreviewSwitchEngine, EX-03 ParabolicMathCore,
+      EX-02 ParabolicRouter; anything not landed when the window
+      closes defers with its do-not-delegate marker, never delegates.
+      The remaining 21 delegate-safe units are the post-transition
+      backlog (waves 2-4 in the plan's section E).
+      Commits: bab18b2c, 2fb1bd27, f017854c, e554bf04 (the plan
+      document; execution commits get recorded per unit in the plan's
+      ledger)
 
 ### Phase 11: Nix packaging + Docker build verification
 

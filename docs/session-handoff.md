@@ -24,13 +24,23 @@ sessions are budgeted, in order:
    (ab3caae1), quit-reason logging landed for the lock/unlock exit
    (ee0f1ba3), add-panel crash did not reproduce (7 adds, 3 templates;
    breadcrumbs silent since 07-11 - watch item).
-3. THEN: the QML extraction PLANNING session. The full prompt is saved at
-   docs/prompts/qml-extraction-planning-prompt.md - paste it into a fresh
-   strong-model session as-is. Its output plan tags every unit
-   delegate-safe vs strong-model-only.
-4. REMAINING strong-model time: execute the plan's strong-model-only
-   shortlist (feel-bearing seams). The delegate-safe backlog is what the
-   weaker model inherits.
+3. DONE 2026-07-15 (this session): the QML extraction plan is written,
+   committed and pushed - docs/QML_EXTRACTION_PLAN.md (bab18b2c,
+   2fb1bd27, f017854c, e554bf04 + closing commit), with the Phase 10
+   cross-reference item in docs/PORTING_PLAN.md. All 239 package QML
+   files classified, 25 units specced with delegation tags, completeness
+   ledger CLEAR (every section done). Pin-in-place verdicts recorded for
+   CompactApplet chain, ContextMenu, ConfigOverlay drag, and friends.
+4. REMAINING strong-model time: execute the plan's strong-model-window
+   shortlist, IN THIS ORDER (from the plan's section E): Wave 0
+   (tests/units scaffolding + scripts/coverage-ratchet.sh + EX-22
+   ActivitySetAlgebra as the proving unit), then EX-01
+   PreviewSwitchEngine (note its preview-contract-gate migration rule),
+   then EX-03 ParabolicMathCore, then EX-02 ParabolicRouter. Anything
+   not landed when the window closes DEFERS with its do-not-delegate
+   marker - never delegate a strong-model-only unit. The 21 remaining
+   delegate-safe units (waves 2-4) are the weaker model's backlog; each
+   spec is self-contained, start with Wave 2 (C++-only capt ports).
 
 Also done this session: CLAUDE.md reframed as maintained continuation
 (ce94bb1d) - upstream mergeability is no longer a planning constraint;

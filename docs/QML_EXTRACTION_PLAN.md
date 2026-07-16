@@ -61,11 +61,11 @@ Per-unit specs (section C), in rank order:
 - [x] EX-24 IconSourceClassifier - icon source classification (capt blueprint)
 - [x] EX-25 PanelBackgroundScan - panel background scanline math (capt blueprint)
 
-Section D (coverage + ratchet): [ ] pending.
-Section E (waves): [ ] pending.
-Section F (risks + non-goals): [ ] pending.
-Executive summary: [ ] pending.
-PORTING_PLAN cross-reference item: [ ] pending.
+Section D (coverage + ratchet): [x] done.
+Section E (waves): [x] done.
+Section F (risks + non-goals): [x] done.
+Executive summary: [x] done.
+PORTING_PLAN cross-reference item: [x] done (Phase 10, QML extraction initiative item).
 
 ## Method
 
@@ -1622,4 +1622,198 @@ Conventions used by all specs:
   roundness/shadows unchanged (screenshot pair).
 - Delegation tag: delegate-safe.
 - Risk + rollback: minimal.
+
+## D. Coverage and test infrastructure
+
+Extend the existing harness; re-invent nothing. What exists today
+(inventoried at HEAD): C++ ctest targets flat in tests/ (10
+ecm_add_test entries) plus tests/contracts (the pin-the-frameworks
+suite, fadd9012) and tests/qml (6 qmltest files driving the real
+shipped QML); the gates qmlcompilegate, qmlinteraction, qmleffectrules,
+previewcontractrules, qmlcontracts; scripts/build-check.sh as the local
+CI surrogate; docs/TESTING.md's honest-coverage standard (real
+assertions, no swallowed throws, no construction-only credit, honest
+mocks, deterministic headless) with docs/testing/live-only.md for what
+genuinely cannot be tested headlessly.
+
+How new units plug in:
+
+- Pure cores get `tests/units/<name>test.cpp`, one ctest entry each,
+  wired in tests/CMakeLists.txt exactly like the existing flat tests.
+  Cores are headers (+ .cpp where non-inline); tests include them
+  directly, no QML engine, no corona.
+- QML shell wiring keeps its coverage in tests/qml and the gates. A
+  cutover commit may not reduce qmltest coverage: where a qmltest
+  asserted QML-computed values, it now asserts the shell delegates
+  and applies (the tst_autosize.qml precedent for EX-04).
+- The honest-coverage standard applies verbatim: a unit test that
+  instantiates a core and asserts nothing earns nothing; reference
+  tables generated from the current implementation must name their
+  generation method in a comment (EX-03's and EX-19's tables).
+
+Coverage ratchet (design; adopt in Wave 0):
+
+- `scripts/coverage-ratchet.sh`, run by build-check.sh after ctest.
+  Two honest numbers, no instrumentation dependency:
+  1. Unit-pairing: every header under the four units/ directories and
+     the named capt-placement headers must have a matching
+     tests/units/*test.cpp registered in ctest. Unpaired header =
+     fail. This is the structural guarantee a weaker model cannot
+     quietly skip tests.
+  2. Test-count floor: `ctest -N` entry count >= the recorded
+     baseline in `tests/ratchet-baseline` (a committed integer + the
+     entry list for diffability). Any commit may raise the baseline;
+     only a deliberate commit editing the file may lower it, which
+     makes silent coverage loss un-mergeable.
+- Line/branch coverage is deliberately NOT the ratchet metric: the
+  devShell has no pinned gcovr/llvm-cov wiring today and percentage
+  metrics invite the gaming docs/TESTING.md bans. The script's
+  numbers are CI-portable as-is (pure shell over cmake/ctest
+  output), so a future CI job runs the same script unchanged - the
+  no-rework requirement.
+- The preview contract gate and effect/qml gates stay in force; EX-01
+  is the only unit allowed to EDIT preview-contract-rules.sh, under
+  the migration rule its spec states.
+
+## E. Sequencing into waves
+
+Worktree-per-agent, merge to master serially, prune - the established
+workflow (the Wave 1 defect-class initiative ran exactly this shape).
+Per-wave done = tests green (full ctest) + ratchet advanced +
+live-verified per the specs in the wave + Qt5-fidelity confirmed +
+PORTING_PLAN ticked + pushed.
+
+THE TRANSITION RULE GOVERNS ORDER: strong-model-only units are
+scheduled inside the remaining strong-model window or explicitly
+deferred with their do-not-delegate markers; everything else is the
+post-transition backlog, each unit self-contained.
+
+- Wave 0 (strong-model window, small, serial): scaffolding.
+  tests/units/ directory + first CMake wiring, the four units/
+  directories with a README stating the pure-core rules,
+  scripts/coverage-ratchet.sh + tests/ratchet-baseline,
+  EX-22 ActivitySetAlgebra as the proving unit (smallest spec,
+  exercises the whole pipeline end to end). One session.
+- Wave 1 (strong-model window, serial, feel-bearing): EX-01
+  PreviewSwitchEngine, then EX-03 ParabolicMathCore, then EX-02
+  ParabolicRouter design + implementation. EX-03 precedes EX-02
+  because the router consumes the math core. If the window closes
+  mid-wave: EX-02 defers with its do-not-delegate marker; EX-01
+  half-done rolls back to its last green commit (its two-commit
+  split is designed for exactly this).
+- Wave 2 (post-transition, parallel worktrees, C++-only - no QML
+  risk): EX-07 StorageIdRemapper, EX-08 ScreenGeometryCalculator,
+  EX-09 PositionerGeometry, EX-23 predicates/hints, EX-24
+  IconSourceClassifier, EX-25 PanelBackgroundScan. Two to three
+  agents; these touch disjoint files and merge cleanly. This wave
+  first: it builds the delegate's muscle on specs with capt case
+  lists and zero feel exposure.
+- Wave 3 (post-transition, parallel worktrees, QML math cores):
+  EX-17 TooltipTextComposer (calibration unit, run it first), EX-04
+  AutoSizeEngine, EX-05 FillLengthDistributor, EX-06
+  VisibleIndexEngine, EX-19 ColorLuminance, EX-16 GroupWindowCycler,
+  EX-15 WheelAccumulator. Disjoint by subsystem; EX-06 before any
+  future EX-14 work (shared RowEntry type).
+- Wave 4 (post-transition, serial-ish, live-verification heavy):
+  EX-10 MaskInputGeometry (its live matrix wants the desk), EX-11
+  LauncherListOps (user-sacred data, config round-trips), EX-13
+  ViewTypeAndBackgroundPredicates, EX-12 ColorizerDecisionCore,
+  EX-14 DropEventClassifier, EX-18 LengthOffsetClamp, EX-20
+  BadgeMath, EX-21 ScrollOverflowMath. Sequenced later per feel-risk
+  policy; each unit still delegate-safe from its spec, but merges
+  gate on the live recipes actually run and recorded.
+
+Shared-type note (the "shared enums first" rule): the plan
+deliberately introduces only ONE shared new type family (RowEntry,
+EX-06/EX-14) and otherwise reuses Plasma::Types/Latte::Types via
+coretypes.h as capt did. If execution discovers a second shared type
+wanting to exist, it lands as its own tiny commit before its
+consumers, never inside a unit commit.
+
+## F. Risk register and non-goals
+
+Risks, with mitigations bound to mechanisms already in the tree:
+
+1. Feel regression in preview/parabolic (EX-01/02/03). Mitigation:
+   glide-only live recipes in every feel spec (the jump-vs-glide
+   lesson is codified in latte-live-verification); before/after
+   screenshot pairs at fixed pointer positions; two-commit cutovers
+   so a revert is surgical; Wave 1 lands while the strong model can
+   still judge "feels wrong" against measured baselines.
+2. The preview contract gate and EX-01 fighting each other.
+   Mitigation: the migration rule in EX-01's spec - rule and test
+   move together, no unpinned window; gate edits allowed only in
+   EX-01 commits.
+3. Binding-entangled logic forced into a bad seam. Flagged
+   design-first, extract-second, and NOT in the backlog: ConfigOverlay
+   drag/reorder, ItemWrapper's zoom/length binding chains,
+   BindingsExternal's passthrough clusters, the class-A reassert
+   sites (e412889d/eca51ae0 - their real fix is the filed
+   binding-destroyer watch item), CompactApplet's representation
+   wiring. Any future attempt at these starts with a design note in
+   this file, not code.
+4. Config data loss via family-6 (KConfig default deletion) during
+   EX-11/EX-18. Mitigation: non-default-value round-trip tests
+   mandated in both specs; config round-trip greps in the live
+   recipes.
+5. Weak-model execution drift (specs misread, tests thinned).
+   Mitigation: the ratchet's unit-pairing check (structural, not
+   judgment); specs carry verified line anchors and named test
+   cases so "done" is checkable by diff; Wave 2 ordering gives the
+   delegate capt case lists to port before it must derive any;
+   PORTING_PLAN cross-item keeps per-unit Commits: traceability.
+6. Silent divergence from Qt5 during re-implementation. Mitigation:
+   per-spec f0ad7b23 anchors; the executor diffs port-vs-Qt5 BEFORE
+   extracting (three specs already flag known-drift questions);
+   deviations get named commits and code comments per CLAUDE.md.
+7. Vendored-tree contamination (plasmoid/plugin). Mitigation: new
+   files only under plasmoid/plugin/units/ with Latte provenance
+   headers; the fork-sync diff recipe in CLAUDE.md stays clean
+   because vendored files are not edited by extraction commits.
+
+Non-goals, explicit:
+
+- Presentational QML stays QML: the 100+ PRESENTATIONAL files in
+  section A, all states/anchors/gradients blocks, the ability
+  bridge/host/definition relay layers, DebugWindow.
+- No ocean-boiling: files classified BEHAVIORAL but not in the
+  backlog (EventsSink, HiddenSpacer, Metrics chains, ItemWrapper,
+  TaskIcon effect gating, animation ScriptAction state brackets,
+  settings model builders, WidgetExplorer, chrome sizing) are
+  deliberate leave-in-place verdicts at this plan's date; revisit
+  only with new bug-density evidence.
+- No feature work rides extraction commits. Continuation features
+  stay in their own PORTING_PLAN section.
+- No test-infrastructure rewrite: the harness is extended, not
+  replaced; the ratchet is a new script, not a new framework.
+- X11-specific behavior is preserved-but-untested beyond compile
+  (project policy: X11 must compile, never blocks).
+
+## Executive summary
+
+Twenty-five units: 24 delegate-safe, 1 strong-model-only pair-plus-one
+(EX-01 previews, EX-02 parabolic router with EX-03 math underneath).
+Everything else a weaker model can execute cold from section C.
+
+Top five extractions by leverage: EX-01 PreviewSwitchEngine (15 fix
+commits in three days; converts grep-pinned invariants into behavioral
+tests), EX-02/03 parabolic engine (the dock's signature feel, twin
+drift ended), EX-04 AutoSizeEngine (hang-class feedback loop),
+EX-05 FillLengthDistributor (collapse-class arithmetic), EX-07
+StorageIdRemapper (user-data spine, capt-blueprinted).
+
+Wave order: 0 scaffolding+ratchet -> 1 feel-bearing (strong model) ->
+2 C++-only capt ports -> 3 QML math cores -> 4 live-heavy tail.
+
+Strong-model-window shortlist (must land before the transition, in
+order): Wave 0 (scaffolding, ratchet, EX-22 proving unit), EX-01,
+EX-03, EX-02. If time runs out inside the list, everything after the
+cut defers with do-not-delegate markers; nothing on it is delegated.
+
+Single biggest risk: feel regression in the preview/parabolic
+cutovers - the two units where correctness lives partly in
+milliseconds and pixels. The mitigation is structural: they land
+first, inside the strong-model window, with glide-based live recipes
+and surgical two-commit rollbacks; every other unit is pure math with
+tables.
 
