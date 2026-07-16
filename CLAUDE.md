@@ -152,6 +152,53 @@ stale checkboxes."
   dock), not just "it builds". A green build says nothing about whether the
   menu came back.
 
+### Code clarity
+
+Reading is the dominant cost of this codebase: every future session
+(often a weaker model, or me months from now) arrives with zero
+context and pays a comprehension tax on every line. Misread code is
+where bugs breed, so clarity is a correctness tool, not a style
+preference. Concretely:
+
+- Name things for what they DO, so call sites read like English and
+  the reader never has to open a function to learn its job.
+  `_rowKinds()` is the canonical counterexample from this repo's own
+  history: it built the router's row model from the task items and
+  nothing in the name said so; `_routerRowOfTasks()` reads at the
+  call site. If something is hard to name, that is usually the
+  design saying it does more than one job - split it.
+- Small single-purpose functions: a function does the whole thing its
+  name promises and nothing else. When a block inside a function
+  needs a comment to say WHAT it does, extract it and let the name
+  say it (comments are for WHY; names are for WHAT).
+- New C++ is idiomatic C++20: RAII everywhere; managed memory
+  (std::unique_ptr/std::shared_ptr, or Qt parent ownership when the
+  object lives in the Qt tree - never fight the parent system by
+  wrapping QObjects in shared_ptr) instead of naked
+  new/delete/malloc/free; enum class, std::optional/std::variant for
+  absent and alternative states (the step-2.5 law in
+  docs/TESTING.md); const correctness; value types where copies are
+  cheap.
+- When code stays rough after honest refactoring effort - irreducible
+  domain complexity, protocol mirrors, hot paths - the comment
+  carries what the code cannot: the data patterns, the invariants,
+  the shape of the state machine. The parabolic router's semantics
+  block is the model.
+- Any non-obvious optimization gets explained where it lives: what it
+  buys, what breaks or slows if someone "simplifies" it away.
+  Unexplained optimizations get undone by the next cleanup pass.
+- Assert invariants often and early. A precondition checked at the
+  function's first line fails at the defect; the same violation left
+  to flow fails three subsystems away (the whole lesson of the
+  failures-and-root-cause section). In order of preference:
+  make the invalid state unrepresentable (types - the step-2.5 law),
+  static_assert what is knowable at compile time (the engine's
+  settle-vs-burst ordering is the model), Q_ASSERT runtime
+  preconditions in cores (free in release, active in every test run),
+  and qCritical-and-refuse at API boundaries where bad input can
+  arrive from outside (the router wrapper's malformed-row refusal is
+  the model). An assert is documentation that cannot go stale.
+
 ### Pure-core discipline
 
 New pure cores (the QML extraction initiative) follow the step-2.5

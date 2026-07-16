@@ -114,21 +114,21 @@ AbilityHost.ParabolicEffect {
         var reversed = Qt.application.layoutDirection === Qt.RightToLeft && horizontal;
         var stacks = LatteCore.ParabolicMath.computeScales(itemMousePosition / itemLength, _spreadSteps, factor.zoom, reversed);
 
-        routeFromIndex(itemIndex+1, stacks.right, false);
-        routeFromIndex(itemIndex-1, stacks.left, true);
+        routeScalesFromIndex(itemIndex+1, stacks.right, false);
+        routeScalesFromIndex(itemIndex-1, stacks.left, true);
 
         return {leftScale:stacks.left[0], rightScale:stacks.right[0]};
     }
 
     //! route a scale stack entering at entryIndex (also the bridge re-entry
     //! point: clientRequestUpdate* calls this at appletIndex-/+1)
-    function routeFromIndex(entryIndex, newScales, islower) {
-        var info = _rowInfoFor(entryIndex);
+    function routeScalesFromIndex(entryIndex, newScales, islower) {
+        var info = _rowSnapshotContaining(entryIndex);
 
         if (!info) {
             //! a gap index between layouts: the chain emitted here too -
             //! nothing matches exactly, only clear-tail broadcasts act
-            _emitScales(entryIndex, newScales, islower);
+            _emitScalesAt(entryIndex, newScales, islower);
             return;
         }
 
@@ -144,7 +144,7 @@ AbilityHost.ParabolicEffect {
         for (var i = 0; i < plan.actions.length; ++i) {
             var action = plan.actions[i];
             if (action.kind === "emit") {
-                _emitScales(info.rowBase + action.pos, action.stack, islower);
+                _emitScalesAt(info.rowBase + action.pos, action.stack, islower);
             } else {
                 //! spacers left the signal graph: they only ever react when
                 //! exactly targeted (no broadcast arm, Qt5-inherited)
@@ -156,12 +156,12 @@ AbilityHost.ParabolicEffect {
             //! the walk left the row edge: emit at the boundary index, as
             //! the chain did - live stacks match nobody there, clear-tails
             //! broadcast into the neighbor layouts
-            _emitScales(islower ? info.rowBase - 1 : info.rowBase + info.kinds.length,
+            _emitScalesAt(islower ? info.rowBase - 1 : info.rowBase + info.kinds.length,
                         plan.overflow, islower);
         }
     }
 
-    function _emitScales(delegateIndex, newScales, islower) {
+    function _emitScalesAt(delegateIndex, newScales, islower) {
         if (islower) {
             parabolic.sglUpdateLowerItemScale(delegateIndex, newScales);
         } else {
@@ -173,7 +173,7 @@ AbilityHost.ParabolicEffect {
     //! router, the items themselves for spacer absorb calls. Index holes
     //! (mid-churn) stay DeadStop, which is what the chain did at a missing
     //! index: the live walk dies there
-    function _rowInfoFor(entryIndex) {
+    function _rowSnapshotContaining(entryIndex) {
         var grids = [layouts.startLayout, layouts.mainLayout, layouts.endLayout];
 
         for (var g = 0; g < grids.length; ++g) {
@@ -213,7 +213,7 @@ AbilityHost.ParabolicEffect {
                 }
                 var pos = child.index - lo;
                 items[pos] = child;
-                kinds[pos] = _kindOf(child);
+                kinds[pos] = _routerKindOf(child);
             }
 
             return {rowBase: lo, kinds: kinds, items: items};
@@ -222,7 +222,7 @@ AbilityHost.ParabolicEffect {
         return null;
     }
 
-    function _kindOf(item) {
+    function _routerKindOf(item) {
         if (item.isParabolicEdgeSpacer === true) {
             return LatteCore.ParabolicRouter.EdgeSpacer;
         }

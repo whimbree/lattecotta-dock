@@ -136,16 +136,16 @@ AbilityDefinition.ParabolicEffect {
         var reversed = Qt.application.layoutDirection === Qt.RightToLeft && horizontal;
         var stacks = LatteCore.ParabolicMath.computeScales(itemMousePosition / itemLength, _spreadSteps, factor.zoom, reversed);
 
-        routeFromIndex(itemIndex+1, stacks.right, false);
-        routeFromIndex(itemIndex-1, stacks.left, true);
+        routeScalesFromIndex(itemIndex+1, stacks.right, false);
+        routeScalesFromIndex(itemIndex-1, stacks.left, true);
 
         return {leftScale:stacks.left[0], rightScale:stacks.right[0]};
     }
 
-    function routeFromIndex(entryIndex, newScales, islower) {
+    function routeScalesFromIndex(entryIndex, newScales, islower) {
         //! task rows carry no edge spacers and no nested bridge clients;
         //! spacersAbsorbing is inert here
-        var plan = LatteCore.ParabolicRouter.route(_rowKinds(),
+        var plan = LatteCore.ParabolicRouter.route(_routerRowOfTasks(),
                                                    entryIndex,
                                                    islower ? -1 : 1,
                                                    newScales,
@@ -185,7 +185,7 @@ AbilityDefinition.ParabolicEffect {
     //! positions 0..itemsCount-1 keyed by itemIndex; holes (mid-churn
     //! index inconsistencies) stay DeadStop, matching the chain where a
     //! missing index matched no slot and the live walk died
-    function _rowKinds() {
+    function _routerRowOfTasks() {
         var count = indexer.itemsCount;
         var kinds = new Array(count);
         for (var i = 0; i < count; ++i) {
@@ -209,13 +209,13 @@ AbilityDefinition.ParabolicEffect {
     function hostRequestUpdateLowerItemScale(newScales){
         //! function called from host: the stack enters this row at its
         //! highest index and travels down
-        routeFromIndex(indexer.itemsCount-1, newScales, true);
+        routeScalesFromIndex(indexer.itemsCount-1, newScales, true);
     }
 
     function hostRequestUpdateHigherItemScale(newScales){
         //! function called from host: the stack enters at index 0 and
         //! travels up
-        routeFromIndex(0, newScales, false);
+        routeScalesFromIndex(0, newScales, false);
     }
 
     function setCurrentParabolicItemIndex(index) {

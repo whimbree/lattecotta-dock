@@ -144,6 +144,11 @@ inline void emitClearTail(const QVector<RowItem> &row, int pos, int step, RouteR
 inline RouteResult routeStack(const QVector<RowItem> &row, int entryPos, int step,
                               QVector<double> stack, int spreadSteps)
 {
+    //! step=0 is representable and would loop forever; a negative spread
+    //! window would silently absorb nothing
+    Q_ASSERT(step == 1 || step == -1);
+    Q_ASSERT(spreadSteps >= 0);
+
     RouteResult result;
 
     if (stack.isEmpty()) {

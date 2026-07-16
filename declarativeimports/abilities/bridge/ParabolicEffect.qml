@@ -13,11 +13,11 @@ BridgeItem {
     //! index (the chain re-entered through a raw signal emission; routing
     //! decisions now live in the host's LatteCore.ParabolicRouter shell)
     function clientRequestUpdateLowerItemScale(newScales) {
-        host.routeFromIndex(appletIndex-1, newScales, true);
+        host.routeScalesFromIndex(appletIndex-1, newScales, true);
     }
 
     function clientRequestUpdateHigherItemScale(newScales) {
-        host.routeFromIndex(appletIndex+1, newScales, false);
+        host.routeScalesFromIndex(appletIndex+1, newScales, false);
     }
 
   /*Be Careful, needs to be considered how to not create

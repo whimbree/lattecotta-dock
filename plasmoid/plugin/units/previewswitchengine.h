@@ -87,6 +87,9 @@ public:
     explicit PreviewSwitchEngine(int parkedCapacity = 4)
         : m_parkedCapacity(parkedCapacity)
     {
+        //! a negative capacity is representable and would evict on every
+        //! materialize, silently degrading the cache to nothing
+        Q_ASSERT(parkedCapacity >= 0);
     }
 
     //! mirrors shouldDeferSwitch() (main.qml): requests while the dialog

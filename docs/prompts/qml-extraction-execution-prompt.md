@@ -163,6 +163,43 @@ recorded done in the ledger; if the ledger already records it, skip):
    TESTING.md that full-strict QML is the asymptotic state the
    extraction converges to, not a mandate on inherited files.
 
+STANDING LAW FOR ALL CODE WRITTEN UNDER THIS PROMPT (CLAUDE.md carries
+the same rules under "Code clarity"; this restates them where the
+executing session reads its orders, because they bind every wave):
+
+- Write for the reader who arrives with zero context. Reading is the
+  dominant cost of this codebase and misread code is where bugs
+  breed: clarity is a correctness tool. Every name that must be
+  decoded, every function that must be opened to learn its job, is
+  cognitive budget stolen from the actual problem.
+- Names say what the thing DOES, so call sites read like English.
+  _rowKinds() is this repo's own counterexample (it built the
+  router's row model from the task items; the name said neither).
+  A thing that is hard to name is usually two things - split it.
+- Small single-purpose functions. A block that needs a WHAT comment
+  is a function that wants extracting; comments are for WHY.
+- New C++ is idiomatic C++20: RAII, managed memory (unique_ptr/
+  shared_ptr, or Qt parent ownership inside the Qt object tree -
+  never shared_ptr around QObjects against the parent system), no
+  naked new/delete/malloc/free, enum class, optional/variant per the
+  step-2.5 type law, const correctness.
+- Where code stays rough after real refactoring effort (irreducible
+  domain complexity, protocol mirrors, hot paths), the comment
+  carries the data patterns and invariants the code cannot show.
+  Non-obvious optimizations are explained in place: what they buy,
+  what regresses if "simplified". Unexplained cleverness gets undone
+  by the next cleanup pass and unexplained complexity gets guessed
+  at - both are how understanding rots.
+- Assert invariants often and early: a precondition checked at entry
+  fails at the defect, not three subsystems away. Preference order:
+  unrepresentable via types (the step-2.5 law), static_assert at
+  compile time, Q_ASSERT preconditions inside cores, and
+  qCritical-and-refuse at boundaries where bad input arrives from
+  outside. An assert is documentation that cannot go stale.
+- These rules extend, never replace, the existing working agreements:
+  match surrounding idiom in inherited files, Qt5-faithful behavior,
+  no silent guards, stub discipline.
+
 STEP 3 - CONTINUE INTO THE DELEGATE-SAFE WAVES (only after STEP 2.5
 is recorded done). The waves 2-4 backlog
 was written for a weaker model, which makes it trivially executable by
