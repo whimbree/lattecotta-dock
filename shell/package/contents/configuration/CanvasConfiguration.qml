@@ -4,7 +4,6 @@
 */
 
 import QtQuick 2.8
-import QtQuick.Controls 2.15 as QQC2
 
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.components 3.0 as PlasmaComponents
@@ -173,12 +172,77 @@ Loader {
             }
         }
 
-        PlasmaComponents.Button {
-            anchors.fill: editBackMouseArea
-            opacity: 0
+        //! Qt5 carried the wheel hint as an invisible PC2 Button's native tooltip. On
+        //! wayland an attached QQC2.ToolTip maps its own surface at the cursor: the
+        //! compositor moves pointer focus to it, hover leaves this window, the tooltip
+        //! hides, hover re-enters and it maps again - a self-sustaining flash loop
+        //! measured live at ~400ms per cycle with the pointer parked motionless
+        //! (2026-07-16). Same mechanism as the edit-handle flicker (containment
+        //! ConfigOverlay.qml carries the rule); same fix: the hint renders INSIDE this
+        //! window after Plasma's tooltip dwell, so no popup surface exists to steal
+        //! the pointer.
+        Rectangle {
+            id: wheelHintChip
 
-            QQC2.ToolTip.text: editBackMouseArea.tooltip
-            QQC2.ToolTip.visible: hovered && editBackMouseArea.tooltip.length > 0
+            //! the free band between the max-length ruler and the dock strip; the ruler
+            //! hugs the edge away from the dock, so the chip offsets from that edge by
+            //! the ruler's thickness (Ruler.qml: thickness = defaultFont.pixelSize)
+            readonly property int rulerGap: Kirigami.Theme.defaultFont.pixelSize + 2 * Kirigami.Units.smallSpacing
+
+            anchors.horizontalCenter: root.isHorizontal ? parent.horizontalCenter : undefined
+            anchors.verticalCenter: root.isVertical ? parent.verticalCenter : undefined
+            anchors.top: plasmoid.location === PlasmaCore.Types.BottomEdge ? parent.top : undefined
+            anchors.bottom: plasmoid.location === PlasmaCore.Types.TopEdge ? parent.bottom : undefined
+            anchors.left: plasmoid.location === PlasmaCore.Types.RightEdge ? parent.left : undefined
+            anchors.right: plasmoid.location === PlasmaCore.Types.LeftEdge ? parent.right : undefined
+            anchors.topMargin: rulerGap
+            anchors.bottomMargin: rulerGap
+            anchors.leftMargin: rulerGap
+            anchors.rightMargin: rulerGap
+
+            width: wheelHintLabel.width + 4 * Kirigami.Units.smallSpacing
+            height: wheelHintLabel.height + 2 * Kirigami.Units.smallSpacing
+            radius: Kirigami.Units.smallSpacing
+            color: settingsOverlay.textColorIsDark ? "#ccfafafa" : "#cc232629"
+            visible: opacity > 0
+            opacity: hintDwell.dwellCompleted && editBackMouseArea.containsMouse ? 1 : 0
+
+            Behavior on opacity {
+                NumberAnimation { duration: 0.35 * root.animationSpeed; easing.type: Easing.OutCubic }
+            }
+
+            //! Plasma's tooltip dwell: the hint only appears once the pointer has
+            //! rested a while, so the brief hover bounces the compositor sends around
+            //! input-mask re-carves (the dock strip tracks the parabolic zoom) never
+            //! flash it
+            Timer {
+                id: hintDwell
+                property bool dwellCompleted: false
+                interval: Kirigami.Units.toolTipDelay
+                running: editBackMouseArea.containsMouse && !dwellCompleted
+                onTriggered: dwellCompleted = true
+            }
+
+            Connections {
+                target: editBackMouseArea
+                function onContainsMouseChanged() {
+                    if (!editBackMouseArea.containsMouse) {
+                        hintDwell.dwellCompleted = false;
+                    }
+                }
+            }
+
+            PlasmaComponents.Label {
+                id: wheelHintLabel
+                anchors.centerIn: parent
+                //! vertical docks are a narrow band: cap the width and wrap
+                width: Math.min(implicitWidth, root.width - 8 * Kirigami.Units.smallSpacing)
+                wrapMode: Text.WordWrap
+                horizontalAlignment: Text.AlignHCenter
+                text: editBackMouseArea.tooltip
+                textFormat: Text.PlainText
+                color: settingsOverlay.textColorIsDark ? "#232629" : "#fafafa"
+            }
         }
 
         //! Settings Overlay
