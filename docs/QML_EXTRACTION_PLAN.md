@@ -200,7 +200,12 @@ Per-unit specs (section C), in rank order:
     themed. The light-vs-dark A/B screenshot pair and the add-widgets
     overlay eyeball stay on the live desk list.
 - [x] EX-20 BadgeMath - badge parsing, proportion, arc geometry
-  - [ ] executed
+  - [x] executed: LANDED 326e136e lineage (rebased; see the spec Commits
+    line). Merge evidence: 39/39 ctest green post-rebase incl. the
+    tst_badgetext e2e over the real shipped component; BadgeText hit
+    ZERO qmllint findings strict-on-touch. The D-Bus badge round trip,
+    progress-ring and Meta-badge screenshot recipes stay on the live
+    desk list for the throwaway session.
 - [x] EX-21 ScrollOverflowMath - scrollable list overflow/autoscroll math
   - [x] executed: LANDED 18d4f046 lineage (rebased; see the spec Commits
     line). Merge evidence: the 28-case shipped-QML qmltest is green on
