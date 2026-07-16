@@ -99,6 +99,10 @@ target_link_libraries(extraviewhintstest
     Qt6::Gui
     Plasma::Plasma)
 
+# EX-15 WheelAccumulator: header-only pure wheel-delta math (QPoint is
+# QtCore; nothing else reaches the core).
+latte_add_unit_test(wheelaccumulatortest)
+
 # EX-25 PanelBackgroundScan: header-only pure pixel-scan math; QImage and
 # QColor need Qt Gui, nothing from KSvg/Plasma reaches the core.
 latte_add_unit_test(panelbackgroundscantest)
