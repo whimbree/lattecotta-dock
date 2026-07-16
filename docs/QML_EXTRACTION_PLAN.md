@@ -1916,6 +1916,24 @@ Conventions used by all specs:
 
 ### EX-18 LengthOffsetClamp [delegate-safe]
 
+- Commits: c25247343 (core + bridge + both cutovers + 72-row sanitized
+  suite; agent worktree, docs/agent-logs/EX-18.md is the full record).
+  Seam decision, as this spec asked the executor to record: the config
+  view context won over universalSettings - SubConfigView::init()
+  registers the lengthClamp context property, because that one init
+  reaches BOTH consumers unconditionally (PrimaryConfigView hosts
+  AppearanceConfig.qml, CanvasConfigView hosts RulerMouseArea.qml) and
+  the clamped state is per-view configuration, not universal app state.
+  The bridge is its own small QObject (not invokables on SubConfigView)
+  so it compiles into the sanitized unit test - the EX-17 wrapper
+  precedent. Qt5 arbitration: both f0ad7b23 bodies identical to HEAD,
+  equal behavior wins. Recorded deviations (each pinned by a test): the
+  page slider's correction runs on the effective floored maxLength (the
+  raw-value form broke on-screen + idempotence in a slider-unreachable
+  corner), the dead-since-Qt5 minLength re-trigger is deleted with its
+  proof, non-finite config input is refused loudly at the bridge, and
+  offset-slider bounds truncation is pinned to the probed QML
+  int-binding semantics (trunc toward zero, qtdeclarative 6.11.0).
 - Header: `app/settings/lengthoffsetclamp.h` (consumed by shell
   config QML through an existing settings-side registration point;
   executor picks the registration seam that already reaches these
@@ -2482,6 +2500,17 @@ assessed every file the landed cutovers touched):
   carried curated warnings themselves, so this unit's cutovers leave
   every touched count where it was; the shrink obligation resolves
   to residue-with-reasons, recorded here.
+- The EX-18 cutover's residue, same class: the shell configuration QML
+  runs in the config-view engines where plasmoid, viewConfig, dialog,
+  universalSettings and (since EX-18) lengthClamp are context
+  properties BY ARCHITECTURE - RulerMouseArea.qml (12, down from 17:
+  every remaining warning is a context-property or context-chain read;
+  the thin shell's function signature is typed) and
+  AppearanceConfig.qml (253, down from 261: only the slider cluster
+  was in the unit's scope; the rest of the page keeps its inherited
+  count). Zeroing either means injecting the config engines' context
+  properties through the whole dialog tree - the endgame refactor, not
+  a per-unit retrofit.
 - What the retroactive pass DID fix in the touched files: implicit
   Connections handlers to function syntax, own-property qualification
   through the component id (safe: ids outrank scope properties, same
