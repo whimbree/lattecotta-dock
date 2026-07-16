@@ -1661,6 +1661,23 @@ Conventions used by all specs:
 
 ### EX-17 TooltipTextComposer [delegate-safe]
 
+- Commits: 1ed62d89 (desktop-id defect found while extracting, fixed
+  at origin: Plasma 6 hands desktop IDs, the Qt5 desktopNames[id - 1]
+  lookup indexed with NaN on wayland and rendered "On " / "On ,";
+  failing-first shipped-QML pinning suite tests/qml/tst_tooltiptext.qml
+  in the same commit - it stays green across the cutover as the
+  twin-equivalence evidence), 7b56f2fe (core + TooltipTextComposer
+  singleton wrapper + plugins.qmltypes for org.kde.latte.private.tasks
+  - qmllint baseline 6614 -> 6553 tree-wide - + both twins cut to thin
+  shells + tooltiptexttest with the wrapper compiled in sanitized;
+  eliminated invalid states named in docs/agent-logs/EX-17.md; the
+  wrapper exposes the interface below while the core beneath returns a
+  plan the wrapper i18nc-maps, because the catalog lookup is ambient
+  state the pure-core rules park outside). TaskItem's generateSubText
+  twin turned out DEAD since Qt5 (no caller at f0ad7b23 or HEAD);
+  kept as a thin shell so the twins cannot drift again, with its
+  Qt5-only divergences unified onto the live twin's semantics. Live
+  hover check pending at merge (docs/agent-logs/EX-17.md).
 - Header: `plasmoid/plugin/units/tooltiptext.h`
 - Responsibility: preview tooltip title/subtext derivation - KWin
   `<n>` counter stripping, app-name suffix removal, desktop/activity
