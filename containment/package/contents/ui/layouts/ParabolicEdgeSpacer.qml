@@ -4,7 +4,6 @@
 */
 
 import QtQuick 2.7
-import org.kde.latte.core 0.2 as LatteCore
 
 Item {
     id: edgeSpacer
@@ -17,11 +16,8 @@ Item {
     readonly property bool isAutoFillApplet: false
     readonly property bool isInternalViewSplitter: false
     readonly property bool isPlaceHolder: false
-    readonly property bool isTailSpacer: index < parent.beginIndex
-    readonly property bool isHeadSpacer: index >= parent.beginIndex
 
     readonly property int animationTime: animations.speedFactor.normal * (1.2*animations.duration.small)
-    readonly property int hiddenItemsCount: (parabolic.spread - 1)/2
 
     property int index: -1
     property real length: 0
@@ -52,45 +48,13 @@ Item {
         }
     }
 
-    function updateScale(istail, newScales) {
-        var nextFactor = 0;
-        for (var i=0; i<hiddenItemsCount; ++i) {
-            if (i<newScales.length) {
-                nextFactor += (newScales[i] - 1);
-            }
-        }
-
-        length = nextFactor * metrics.totals.length;
-    }
-
-    function sltUpdateLowerItemScale(delegateIndex, newScales) {
-        if (!isTailSpacer || delegateIndex !== index) {
-            return;
-        }
-
-        if (myView.alignment === LatteCore.Types.Center || myView.alignment === LatteCore.Types.Justify) {
-            updateScale(isTailSpacer, newScales);
-        } else {
-            length = 0;
-        }
-
-        //! clear side neighbours
-        parabolic.sglUpdateLowerItemScale(index - 1, [1]);
-    }
-
-    function sltUpdateHigherItemScale(delegateIndex, newScales) {
-        if (!isHeadSpacer || delegateIndex !== index) {
-            return;
-        }
-
-        if (myView.alignment === LatteCore.Types.Center || myView.alignment === LatteCore.Types.Justify) {
-            updateScale(isHeadSpacer, newScales);
-        } else {
-            length = 0;
-        }
-
-        //! clear side neighbours
-        parabolic.sglUpdateHigherItemScale(index + 1, [1]);
+    //! EX-02 (docs/QML_EXTRACTION_PLAN.md): called directly by the
+    //! parabolic ability's routing - spacers left the signal graph (they
+    //! only ever react when exactly targeted; no broadcast arm,
+    //! Qt5-inherited). The factor already carries the absorption sum and
+    //! the alignment gate (inert alignments arrive as 0).
+    function applyParabolicAbsorb(factor) {
+        length = factor * metrics.totals.length;
     }
 
     function sltClearZoom(){
@@ -99,14 +63,10 @@ Item {
 
     Component.onCompleted: {
         parabolic.sglClearZoom.connect(sltClearZoom);
-        parabolic.sglUpdateLowerItemScale.connect(sltUpdateLowerItemScale);
-        parabolic.sglUpdateHigherItemScale.connect(sltUpdateHigherItemScale);
     }
 
     Component.onDestruction: {
         parabolic.sglClearZoom.disconnect(sltClearZoom);
-        parabolic.sglUpdateLowerItemScale.disconnect(sltUpdateLowerItemScale);
-        parabolic.sglUpdateHigherItemScale.disconnect(sltUpdateHigherItemScale);
     }
 
     Loader{

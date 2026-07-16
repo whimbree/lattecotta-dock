@@ -349,6 +349,10 @@ Item {
     property Item userRequests: null
 
     property bool containsMouse: parabolicAreaLoader.active && parabolicAreaLoader.item.containsMouse
+    //! whether this item has live ParabolicArea slots; the parabolic
+    //! ability's row builder maps items without one to DeadStop (a live
+    //! scale stack dies at them - EX-02 in docs/QML_EXTRACTION_PLAN.md)
+    readonly property bool hasParabolicMessagesHandler: parabolicAreaLoader.active
     property bool pressed: viewSignalsConnector.pressed
 
 

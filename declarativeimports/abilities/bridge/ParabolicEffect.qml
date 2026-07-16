@@ -8,12 +8,16 @@ import QtQuick 2.0
 BridgeItem {
     id: parabolicBridge
 
+    //! EX-02 (docs/QML_EXTRACTION_PLAN.md): the client's leftover stack
+    //! re-enters the host row as another routing call at the neighbor
+    //! index (the chain re-entered through a raw signal emission; routing
+    //! decisions now live in the host's LatteCore.ParabolicRouter shell)
     function clientRequestUpdateLowerItemScale(newScales) {
-        host.sglUpdateLowerItemScale(appletIndex-1, newScales);
+        host.routeFromIndex(appletIndex-1, newScales, true);
     }
 
     function clientRequestUpdateHigherItemScale(newScales) {
-        host.sglUpdateHigherItemScale(appletIndex+1, newScales);
+        host.routeFromIndex(appletIndex+1, newScales, false);
     }
 
   /*Be Careful, needs to be considered how to not create

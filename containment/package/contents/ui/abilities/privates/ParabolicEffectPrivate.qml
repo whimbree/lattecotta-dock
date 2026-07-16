@@ -100,6 +100,150 @@ AbilityHost.ParabolicEffect {
         }
     }
 
+    //! EX-02 (docs/QML_EXTRACTION_PLAN.md): the neighbor scale-stack
+    //! routing computed by LatteCore.ParabolicRouter in one call instead of
+    //! the per-item signal-decider recursion. The signals survive only as
+    //! the application mechanism: every emission is either exactly-targeted
+    //! (apply newScales[0] / hand a stack to a bridge client as-received)
+    //! or the single clear-tail [1] emission whose receiver-side broadcast
+    //! arm clears every item beyond it - including items in OTHER layouts
+    //! across the index gaps, which is why the clear is one emission and
+    //! not per-position applications.
+    function applyParabolicEffect(itemIndex, itemMousePosition, itemLength) {
+        var reversed = Qt.application.layoutDirection === Qt.RightToLeft && horizontal;
+        var stacks = LatteCore.ParabolicMath.computeScales(itemMousePosition / itemLength, _spreadSteps, factor.zoom, reversed);
+
+        routeFromIndex(itemIndex+1, stacks.right, false);
+        routeFromIndex(itemIndex-1, stacks.left, true);
+
+        return {leftScale:stacks.left[0], rightScale:stacks.right[0]};
+    }
+
+    //! route a scale stack entering at entryIndex (also the bridge re-entry
+    //! point: clientRequestUpdate* calls this at appletIndex-/+1)
+    function routeFromIndex(entryIndex, newScales, islower) {
+        var info = _rowInfoFor(entryIndex);
+
+        if (!info) {
+            //! a gap index between layouts: the chain emitted here too -
+            //! nothing matches exactly, only clear-tail broadcasts act
+            _emitScales(entryIndex, newScales, islower);
+            return;
+        }
+
+        var absorbing = root.myView.alignment === LatteCore.Types.Center
+                || root.myView.alignment === LatteCore.Types.Justify;
+        var plan = LatteCore.ParabolicRouter.route(info.kinds,
+                                                   entryIndex - info.rowBase,
+                                                   islower ? -1 : 1,
+                                                   newScales,
+                                                   _spreadSteps,
+                                                   absorbing);
+
+        for (var i = 0; i < plan.actions.length; ++i) {
+            var action = plan.actions[i];
+            if (action.kind === "emit") {
+                _emitScales(info.rowBase + action.pos, action.stack, islower);
+            } else {
+                //! spacers left the signal graph: they only ever react when
+                //! exactly targeted (no broadcast arm, Qt5-inherited)
+                info.items[action.pos].applyParabolicAbsorb(action.factor);
+            }
+        }
+
+        if (plan.overflow.length > 0) {
+            //! the walk left the row edge: emit at the boundary index, as
+            //! the chain did - live stacks match nobody there, clear-tails
+            //! broadcast into the neighbor layouts
+            _emitScales(islower ? info.rowBase - 1 : info.rowBase + info.kinds.length,
+                        plan.overflow, islower);
+        }
+    }
+
+    function _emitScales(delegateIndex, newScales, islower) {
+        if (islower) {
+            parabolic.sglUpdateLowerItemScale(delegateIndex, newScales);
+        } else {
+            parabolic.sglUpdateHigherItemScale(delegateIndex, newScales);
+        }
+    }
+
+    //! the row snapshot of the layout containing entryIndex: kinds for the
+    //! router, the items themselves for spacer absorb calls. Index holes
+    //! (mid-churn) stay DeadStop, which is what the chain did at a missing
+    //! index: the live walk dies there
+    function _rowInfoFor(entryIndex) {
+        var grids = [layouts.startLayout, layouts.mainLayout, layouts.endLayout];
+
+        for (var g = 0; g < grids.length; ++g) {
+            var grid = grids[g];
+            var lo = -1;
+            var hi = -1;
+
+            for (var i = 0; i < grid.children.length; ++i) {
+                var child = grid.children[i];
+                if (!child || child.index === undefined || child.index < 0) {
+                    continue;
+                }
+                if (lo === -1 || child.index < lo) {
+                    lo = child.index;
+                }
+                if (child.index > hi) {
+                    hi = child.index;
+                }
+            }
+
+            if (lo === -1 || entryIndex < lo || entryIndex > hi) {
+                continue;
+            }
+
+            var size = hi - lo + 1;
+            var kinds = new Array(size);
+            var items = new Array(size);
+            for (i = 0; i < size; ++i) {
+                kinds[i] = LatteCore.ParabolicRouter.DeadStop;
+                items[i] = null;
+            }
+
+            for (i = 0; i < grid.children.length; ++i) {
+                child = grid.children[i];
+                if (!child || child.index === undefined || child.index < 0) {
+                    continue;
+                }
+                var pos = child.index - lo;
+                items[pos] = child;
+                kinds[pos] = _kindOf(child);
+            }
+
+            return {rowBase: lo, kinds: kinds, items: items};
+        }
+
+        return null;
+    }
+
+    function _kindOf(item) {
+        if (item.isParabolicEdgeSpacer === true) {
+            return LatteCore.ParabolicRouter.EdgeSpacer;
+        }
+
+        if (!item.hasParabolicMessagesHandler) {
+            //! no ParabolicArea instance means no connected slots: a live
+            //! stack dies at this item (zoom-unsupported applet with thin
+            //! tooltips disabled)
+            return LatteCore.ParabolicRouter.DeadStop;
+        }
+
+        if (item.communicator && item.communicator.parabolicEffectIsSupported) {
+            return LatteCore.ParabolicRouter.BridgeClient;
+        }
+
+        if (item.isSeparator || item.isMarginsAreaSeparator || item.isHidden) {
+            return LatteCore.ParabolicRouter.Transparent;
+        }
+
+        return LatteCore.ParabolicRouter.Normal;
+    }
+
     function startRestoreZoomTimer(){
         if (restoreZoomIsBlocked) {
             return;

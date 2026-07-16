@@ -164,10 +164,15 @@ Item {
         }
     }
 
-    function sltUpdateItemScale(delegateIndex, newScales, islower) {
-        var ishigher = !islower;
-        var clearrequestedfromlastacceptedsignal = (newScales.length===1) && (newScales[0]===1);
-        var sideindex = islower ? appletItem.index-1 : appletItem.index+1;
+    //! EX-02 (docs/QML_EXTRACTION_PLAN.md): application-only arms; the
+    //! routing decisions (consume/forward/absorb/stop) live in
+    //! LatteCore.ParabolicRouter, driven by the parabolic ability. Exact
+    //! match applies newScales[0] (or hands the stack to a bridge client
+    //! as-received); a clear-tail [1] emission additionally clears every
+    //! item beyond its position through the broadcast arm - one emission
+    //! reaches items in other layouts across the index gaps.
+    function sltApplyItemScale(delegateIndex, newScales, islower) {
+        var clearrequested = (newScales.length===1) && (newScales[0]===1);
 
         if (delegateIndex === appletItem.index) {
             if (communicator.parabolicEffectIsSupported) {
@@ -176,60 +181,32 @@ Item {
                 } else {
                     communicator.bridge.parabolic.client.hostRequestUpdateHigherItemScale(newScales);
                 }
-                return;
-            }
-
-            if (newScales.length <= 0) {
-                return
-            }
-
-            var nextscales = newScales.slice();                                                          //first copy scales in order to not touch referenced/same array to other slots
-
-            if (!appletItem.isSeparator && !appletItem.isMarginsAreaSeparator && !appletItem.isHidden) { //accept signal and apply the first scale in the stack
-                updateScale(delegateIndex, nextscales[0]);                                               //apply scale
-                nextscales.splice(0, 1);                                                                 //remove accepted and previously applied scale
-
-                if ((nextscales.length===1) && (nextscales[0]===1)) {                                    //send clearrequestedfromlastacceptedsignal to inform neighbours in that direction to release zoom
-                    if (islower) {
-                        parabolic.sglUpdateLowerItemScale(sideindex, nextscales);
-                    } else {
-                        parabolic.sglUpdateHigherItemScale(sideindex, nextscales);
-                    }
-                    return;
-                }
-            }
-
-            if (!clearrequestedfromlastacceptedsignal) {              //send remaining scales in the stack as long as this is not the clearrequestedfromlastacceptedsignal, in order to not send twice
-                if (islower) {
-                    parabolic.sglUpdateLowerItemScale(appletItem.index-1, nextscales);
-                } else {
-                    parabolic.sglUpdateHigherItemScale(appletItem.index+1, nextscales);
-                }
-            }
-        } else if (islower && clearrequestedfromlastacceptedsignal && (appletItem.index < delegateIndex)) { //accept requestedfromlastacceptedsignal in lower direction if that is the case
-            if (communicator.parabolicEffectIsSupported) {
-                communicator.bridge.parabolic.client.hostRequestUpdateLowerItemScale(newScales);
             } else {
-                updateScale(appletItem.index, 1);
+                updateScale(appletItem.index, newScales[0]);
             }
-        } else if (ishigher && clearrequestedfromlastacceptedsignal && (appletItem.index > delegateIndex)) { //accept requestedfromlastacceptedsignal in higher direction if that is the case
+            return;
+        }
+
+        if (clearrequested
+                && (islower ? appletItem.index < delegateIndex : appletItem.index > delegateIndex)) {
             if (communicator.parabolicEffectIsSupported) {
-                communicator.bridge.parabolic.client.hostRequestUpdateHigherItemScale(newScales);
+                if (islower) {
+                    communicator.bridge.parabolic.client.hostRequestUpdateLowerItemScale(newScales);
+                } else {
+                    communicator.bridge.parabolic.client.hostRequestUpdateHigherItemScale(newScales);
+                }
             } else {
                 updateScale(appletItem.index, 1);
             }
         }
     }
 
-
     function sltUpdateLowerItemScale(delegateIndex, newScales) {
-        var islower = true;
-        sltUpdateItemScale(delegateIndex, newScales, islower);
+        sltApplyItemScale(delegateIndex, newScales, true);
     }
 
     function sltUpdateHigherItemScale(delegateIndex, newScales) {
-        var ishigher = false;
-        sltUpdateItemScale(delegateIndex, newScales, ishigher);
+        sltApplyItemScale(delegateIndex, newScales, false);
     }
 
     Component.onCompleted: {
