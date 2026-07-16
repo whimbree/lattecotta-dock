@@ -5,3 +5,4 @@
 # the same commit that lands it.
 app/layouts/activitysetalgebra.h
 app/layouts/storageidremapper.h
+app/screengeometrycalculator.h

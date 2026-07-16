@@ -40,6 +40,16 @@ target_include_directories(activitysetalgebratest PRIVATE
 # EX-07 StorageIdRemapper: header-only pure id-assignment math.
 latte_add_unit_test(storageidremappertest)
 
+# EX-08 ScreenGeometryCalculator: header-only pure geometry math; needs
+# the Latte/Plasma type enums (header-only usage, links stay minimal).
+latte_add_unit_test(screengeometrycalculatortest)
+target_include_directories(screengeometrycalculatortest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app) # coretypes.h is generated there
+target_link_libraries(screengeometrycalculatortest
+    Qt6::Gui
+    Plasma::Plasma)
+
 # EX-01 PreviewSwitchEngine: header-only pure core, injected clock.
 latte_add_unit_test(previewswitchenginetest)
 

@@ -103,7 +103,15 @@ Per-unit specs (section C), in rank order:
     exactly the new ids, zero remap errors; test clone removed after
     the undo window.
 - [x] EX-08 ScreenGeometryCalculator - available screen rect/region (capt blueprint)
-  - [ ] executed
+  - [x] executed: LANDED (header-only calculator over ViewFootprint
+    snapshots, corona's two WithCriteria bodies cut over to it; capt's
+    11 slots ported - their calculator was diffed line-by-line against
+    our corona bodies first - plus the 1b932ed9 self-origin case and a
+    multi-dock same-edge case). Type discipline: footprint is a plain
+    value snapshot; null visibility/positioner become explicit flags
+    instead of pointer reads. Live recipe run: cold restart on my real
+    config, settings window mapped at 3471,432 529x1293 - fully inside
+    DP-2 (y=432 > screen top 425), the 1b932ed9 regression check.
 - [x] EX-09 PositionerGeometry - view sizing/placement math (capt blueprint)
   - [ ] executed
 - [x] EX-10 MaskInputGeometry - visibility mask + input region rect math
