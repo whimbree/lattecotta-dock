@@ -117,6 +117,17 @@ target_include_directories(windowcyclertest PRIVATE
     ${CMAKE_SOURCE_DIR}/declarativeimports/core)
 target_link_libraries(windowcyclertest
     Qt6::Qml)
+# EX-20 BadgeMath: header-only pure core plus its QML-facing wrapper
+# compiled IN per the sanitized-core rule (the wrapper's boundary refusals
+# and i18nc overflow label run instrumented); KF6::I18n for i18nc.
+latte_add_unit_test(badgemathtest
+    ${CMAKE_SOURCE_DIR}/declarativeimports/core/badgemathtools.cpp)
+target_link_libraries(badgemathtest
+    KF6::I18n)
+# the wrapper's overflow label asserts against the English msgid; a host
+# locale with installed latte catalogs must not translate it away
+set_property(TEST badgemathtest APPEND PROPERTY
+    ENVIRONMENT "LANGUAGE=C;LC_ALL=C")
 
 # EX-17 TooltipTextComposer: header-only pure core plus its QML-facing
 # wrapper compiled IN per the sanitized-core rule (the wrapper's boundary

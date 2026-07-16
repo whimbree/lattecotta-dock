@@ -8,6 +8,7 @@
 #include "lattecoreplugin.h"
 
 // local
+#include "badgemathtools.h"
 #include "dialog.h"
 #include "environment.h"
 #include "iconitem.h"
@@ -37,4 +38,12 @@ void LatteCorePlugin::registerTypes(const char *uri)
     qmlRegisterSingletonType<Latte::VisibleIndexTools>(uri, 0, 2, "VisibleIndex", &Latte::visibleindextools_qobject_singletontype_provider);
     qmlRegisterSingletonType<Latte::QuickWindowSystem>(uri, 0, 2, "WindowSystem", &Latte::windowsystem_qobject_singletontype_provider);
     qmlRegisterSingletonType<Latte::WindowCyclerTools>(uri, 0, 2, "WindowCycler", &Latte::windowcyclertools_qobject_singletontype_provider);
+
+    //! stateless badge math (EX-20): lives in LatteCore because the shared
+    //! components module's BadgeText.qml consumes it too
+    qmlRegisterSingletonType<Latte::BadgeMathTools>(
+        uri, 0, 2, "BadgeMath",
+        [](QQmlEngine *, QJSEngine *) -> QObject * {
+            return new Latte::BadgeMathTools;
+        });
 }

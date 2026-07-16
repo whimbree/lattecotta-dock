@@ -2,6 +2,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-latte-lib.h.cmake ${CMAKE_CURR
 
 set(lattecoreplugin_SRCS
     lattecoreplugin.cpp
+    badgemathtools.cpp
     dialog.cpp
     environment.cpp
     iconitem.cpp
@@ -36,6 +37,7 @@ target_link_libraries(lattecoreplugin
     Plasma::Plasma
     Plasma::PlasmaQuick
     KF6::IconThemes
+    KF6::I18n
 )
 
 install(TARGETS lattecoreplugin DESTINATION ${KDE_INSTALL_QMLDIR}/org/kde/latte/core)
