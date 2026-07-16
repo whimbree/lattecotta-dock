@@ -279,7 +279,11 @@ void PanelBackground::updateRoundnessFromMask(KSvg::Svg *svg)
                 int headLimitR = 0;
                 int tailLimitR = 0;
 
-                for (int r = baseRow+1; r<=corner.height(); ++r) {
+                //! r stays < height(): scanLine() rows are 0..height()-1 and these
+                //! loops read the row before their break checks, so the Qt5
+                //! inclusive bound read one row past the image whenever the
+                //! break never fired (e.g. a corner column opaque to the edge)
+                for (int r = baseRow+1; r<corner.height(); ++r) {
                     QRgb *line = (QRgb *)corner.scanLine(r);
                     QRgb fpoint = line[baseCol];
                     if (qAlpha(fpoint) == 0) {
@@ -292,7 +296,7 @@ void PanelBackground::updateRoundnessFromMask(KSvg::Svg *svg)
 
                 int c = baseLineLength - 1;
 
-                for (int r = baseRow+1; r<=corner.height(); ++r) {
+                for (int r = baseRow+1; r<corner.height(); ++r) {
                     QRgb *line = (QRgb *)corner.scanLine(r);
                     QRgb point = line[c];
 
@@ -444,7 +448,10 @@ void PanelBackground::updateRoundnessFromShadows(KSvg::Svg *svg)
         qDebug() << " BOTTOM RIGHT CORNER SHADOW base line length :: " << baseLineLength << " with max shadow opacity : " << baseShadowMaxOpacity;
 
         if (baseLineLength>0) {
-            for (int r = baseRow+1; r<=corner.height(); ++r) {
+            //! r stays < height() for the same scanLine bound reason as the
+            //! mask corner loops above; a fully transparent corner column
+            //! (common for shadows) kept this loop running to the edge
+            for (int r = baseRow+1; r<corner.height(); ++r) {
                 QRgb *line = (QRgb *)corner.scanLine(r);
                 QRgb fpoint = line[baseCol];
                 if (qAlpha(fpoint) != 0) {
