@@ -51,6 +51,69 @@ Module {
         Signal { name: "paintedSizeChanged" }
     }
     Component {
+        name: "Latte::BadgeMathTools"
+        prototype: "QObject"
+        exports: ["org.kde.latte.core/BadgeMath 0.2"]
+        isCreatable: false
+        isSingleton: true
+        exportMetaObjectRevisions: [0]
+        Method {
+            name: "parseCount"
+            type: "int"
+            Parameter { name: "value"; type: "QString" }
+            Parameter { name: "identifier"; type: "QString" }
+        }
+        Method {
+            name: "badgeCountForLauncher"
+            type: "int"
+            Parameter { name: "records"; type: "QVariantList" }
+            Parameter { name: "launcherUrl"; type: "QString" }
+        }
+        Method {
+            name: "applyBadge"
+            type: "QVariantList"
+            Parameter { name: "records"; type: "QVariantList" }
+            Parameter { name: "identifier"; type: "QString" }
+            Parameter { name: "value"; type: "QString" }
+        }
+        Method {
+            name: "taskMatchesBadge"
+            type: "bool"
+            Parameter { name: "launcherUrl"; type: "QString" }
+            Parameter { name: "identifier"; type: "QString" }
+        }
+        Method {
+            name: "proportionFor"
+            type: "double"
+            Parameter { name: "progressVisible"; type: "bool" }
+            Parameter { name: "progress"; type: "double" }
+            Parameter { name: "countVisible"; type: "bool" }
+            Parameter { name: "badgeIndicator"; type: "int" }
+        }
+        Method { name: "arcStartRadian"; type: "double" }
+        Method {
+            name: "arcSweepRadian"
+            type: "double"
+            Parameter { name: "proportion"; type: "double" }
+        }
+        Method {
+            name: "ringOuterRadius"
+            type: "double"
+            Parameter { name: "height"; type: "double" }
+        }
+        Method {
+            name: "ringInnerRadius"
+            type: "double"
+            Parameter { name: "height"; type: "double" }
+            Parameter { name: "fullCircle"; type: "bool" }
+        }
+        Method {
+            name: "countLabel"
+            type: "QString"
+            Parameter { name: "numberValue"; type: "int" }
+        }
+    }
+    Component {
         name: "Latte::ParabolicMathTools"
         prototype: "QObject"
         exports: ["org.kde.latte.core/ParabolicMath 0.2"]

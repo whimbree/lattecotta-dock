@@ -10,6 +10,7 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.kirigami 2.20 as Kirigami
 
 import org.kde.latte.components 1.0 as LatteComponents
+import org.kde.latte.core 0.2 as LatteCore
 
 Item {
     id: background
@@ -90,16 +91,15 @@ Item {
             style3d: taskItem.abilities.myView.badgesIn3DStyle
             textWithBackgroundColor: false
 
+            // the decision is the BadgeMath core's (EX-20); the null
+            // smartLauncherItem check is value-domain and stays here
             proportion: {
-                if (taskIcon.smartLauncherItem && taskIcon.smartLauncherItem.progressVisible) {
-                    return taskIcon.smartLauncherItem.progress / 100;
-                }
-
-                if (taskItem.badgeIndicator > 0 || (taskIcon.smartLauncherItem && taskIcon.smartLauncherItem.countVisible)) {
-                    return 1;
-                }
-
-                return 0;
+                var launcherItem = taskIcon.smartLauncherItem;
+                return LatteCore.BadgeMath.proportionFor(
+                            launcherItem ? launcherItem.progressVisible : false,
+                            launcherItem ? launcherItem.progress : 0,
+                            launcherItem ? launcherItem.countVisible : false,
+                            taskItem.badgeIndicator);
             }
 
             readonly property color prominentBackColor: "#cc0000" //redish  (deprecated: theme.negativeTextColor)

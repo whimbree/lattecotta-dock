@@ -8,7 +8,11 @@ import QtQuick 2.2
 import org.kde.plasma.plasmoid 2.0
 import org.kde.kirigami 2.20 as Kirigami
 
+import org.kde.latte.core 0.2 as LatteCore
+
 Rectangle {
+    id: badgeRoot
+
     property double proportion: 0
 
     property double previousProportion: 0
@@ -28,17 +32,19 @@ Rectangle {
     property int maximumWidth: 9999
 
     property double circleOpacity: 1
-    property double fontPixelSize: partSize // * 0.55
+    property double fontPixelSize: badgeRoot.partSize // * 0.55
 
-    property double stdThickness: partSize < 0 ? 0 : partSize  //  "/2.1"
-    property double circleThicknessAttr: fullCircle ? 0 : stdThickness * 0.9
-    property double partSize: height / 2
-    property double pi2: Math.PI * 2
+    // ring geometry from the BadgeMath core (EX-20): outer radius is half
+    // the height (a transient negative height during creation clamps to an
+    // empty ring), inner radius hollows the full circle into a 90% ring
+    property double stdThickness: LatteCore.BadgeMath.ringOuterRadius(badgeRoot.height)
+    property double circleThicknessAttr: LatteCore.BadgeMath.ringInnerRadius(badgeRoot.height, badgeRoot.fullCircle)
+    property double partSize: badgeRoot.height / 2
 
-    width: Math.max(minimumWidth, valueText.width + 4*Kirigami.Units.smallSpacing)
+    width: Math.max(badgeRoot.minimumWidth, valueText.width + 4*Kirigami.Units.smallSpacing)
 
     color: Kirigami.Theme.backgroundColor
-    radius: (radiusPerCentage / 100) * (height / 2)
+    radius: (badgeRoot.radiusPerCentage / 100) * (badgeRoot.height / 2)
     border.width: 0 //Math.max(1,width/64)
 
     property int borderWidth: 1
@@ -47,23 +53,24 @@ Rectangle {
     property color textColor: Kirigami.Theme.textColor
     property color highlightedColor: Kirigami.Theme.focusColor
 
-    readonly property bool singleCharacter: (showNumber && numberValue<=9 && numberValue>=0)|| (showText && textValue.length===1)
+    readonly property bool singleCharacter: (badgeRoot.showNumber && badgeRoot.numberValue<=9 && badgeRoot.numberValue>=0)
+                                            || (badgeRoot.showText && badgeRoot.textValue.length===1)
 
     onProportionChanged: {
-        if (proportion<0.03) {
-            previousProportion = 0;
+        if (badgeRoot.proportion<0.03) {
+            badgeRoot.previousProportion = 0;
         }
 
         //console.log(previousProportion + " - "+proportion);
-        var currentStep = (proportion - previousProportion);
-        if ((currentStep >= 0.01) || (proportion>=1 && previousProportion !==1)) {
+        var currentStep = (badgeRoot.proportion - badgeRoot.previousProportion);
+        if ((currentStep >= 0.01) || (badgeRoot.proportion>=1 && badgeRoot.previousProportion !==1)) {
             //   console.log("request repaint...");
-            previousProportion = proportion;
-            repaint();
+            badgeRoot.previousProportion = badgeRoot.proportion;
+            badgeRoot.repaint();
         }
     }
 
-    function repaint() {
+    function repaint() : void {
         canvas.requestPaint()
     }
 
@@ -80,26 +87,30 @@ Rectangle {
 
         width: parent.width - 2 * parent.borderWidth
         height: parent.height - 2 * parent.borderWidth
-        opacity: proportion > 0 ? 1 : 0
+        opacity: badgeRoot.proportion > 0 ? 1 : 0
 
         anchors.centerIn: parent
 
-        property color drawColor: highlightedColor
+        property color drawColor: badgeRoot.highlightedColor
 
-        onDrawColorChanged: requestPaint();
+        onDrawColorChanged: canvas.requestPaint();
 
         onPaint: {
-            var ctx = getContext('2d');
+            var ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = drawColor;
+            ctx.fillStyle = canvas.drawColor;
 
-            var startRadian = - Math.PI / 2;
-
-            var radians = pi2 * proportion;
+            // arc geometry from the BadgeMath core (EX-20): twelve o'clock
+            // start, clockwise sweep; the filler stays here because it is a
+            // Canvas edge-bleed workaround, not geometry
+            var startRadian = LatteCore.BadgeMath.arcStartRadian();
+            var sweepRadian = LatteCore.BadgeMath.arcSweepRadian(badgeRoot.proportion);
 
             ctx.beginPath();
-            ctx.arc(width/2, height/2, stdThickness, startRadian, startRadian + radians + filler, false);
-            ctx.arc(width/2, height/2, circleThicknessAttr, startRadian + radians + filler, startRadian, true);
+            ctx.arc(canvas.width/2, canvas.height/2, badgeRoot.stdThickness,
+                    startRadian, startRadian + sweepRadian + canvas.filler, false);
+            ctx.arc(canvas.width/2, canvas.height/2, badgeRoot.circleThicknessAttr,
+                    startRadian + sweepRadian + canvas.filler, startRadian, true);
 
             ctx.closePath();
             ctx.fill();
@@ -111,39 +122,42 @@ Rectangle {
         anchors.fill: canvas
         color: canvas.drawColor
 
-        visible: proportion === 1 && showNumber
+        visible: badgeRoot.proportion === 1 && badgeRoot.showNumber
         radius: parent.radius
     }
 
     Text {
         id: valueText
+        objectName: "badgeLabelText" // the e2e layer reads the shown label through this
         anchors.centerIn: canvas
 
-        width: Math.min(maximumWidth - 4*Kirigami.Units.smallSpacing, implicitWidth)
+        width: Math.min(badgeRoot.maximumWidth - 4*Kirigami.Units.smallSpacing, valueText.implicitWidth)
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
 
         elide: Text.ElideRight
 
         text: {
-            if (showNumber) {
-                if (numberValue > 9999) {
-                    return i18nc("Over 9999 new messages, overlay, keep short", "9,999+");
-                } else if (numberValue > 0) {
-                    return numberValue.toLocaleString(Qt.locale(), 'f', 0);
+            // count label (locale grouping, the 9,999+ clamp) from the
+            // BadgeMath core; an empty label falls through to text mode
+            // exactly like the Qt5 branch structure did
+            if (badgeRoot.showNumber) {
+                var numberLabel = LatteCore.BadgeMath.countLabel(badgeRoot.numberValue);
+                if (numberLabel !== "") {
+                    return numberLabel;
                 }
             }
 
-            if (showText) {
-                return textValue;
+            if (badgeRoot.showText) {
+                return badgeRoot.textValue;
             }
 
             return "";
         }
         font.pixelSize: 0.62 * parent.height
         font.bold: true
-        color: textWithBackgroundColor ? parent.color : parent.textColor
-        visible: showNumber || showText
+        color: badgeRoot.textWithBackgroundColor ? parent.color : parent.textColor
+        visible: badgeRoot.showNumber || badgeRoot.showText
     }
 
     Rectangle{
@@ -158,22 +172,21 @@ Rectangle {
         radius: parent.radius
         opacity: 0.4
 
-        visible: style3d
+        visible: badgeRoot.style3d
     }
 
     Rectangle{
         anchors.fill: parent
         border.width: parent.borderWidth
         border.color: {
-            if (style3d) {
+            if (badgeRoot.style3d) {
                 return parent.borderColor
             }
 
-            return proportion === 1 ? parent.highlightedColor : parent.color
+            return badgeRoot.proportion === 1 ? parent.highlightedColor : parent.color
         }
         color: "transparent"
         radius: parent.radius
         opacity: parent.borderOpacity
     }
 }
-

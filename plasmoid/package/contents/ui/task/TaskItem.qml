@@ -833,14 +833,8 @@ AbilityItem.BasicItem {
         taskItem.audioStreams.forEach(function (item) { item.decreaseVolume(smallStep); });
     }
 
-    function updateBadge() {
-        var badger = root.getBadger(launcherUrl);
-
-        if (badger) {
-            badgeIndicator = parseInt(badger.value);
-        } else {
-            badgeIndicator = 0;
-        }
+    function updateBadge() : void {
+        taskItem.badgeIndicator = root.badgeValueFor(taskItem.launcherUrl);
     }
 
     Connections {

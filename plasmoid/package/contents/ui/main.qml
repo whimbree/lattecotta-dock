@@ -1476,35 +1476,32 @@ PlasmoidItem {
         appletAbilities.shortcuts.sglNewInstanceForEntryAtIndex(index);
     }
 
-    function getBadger(identifier) {
-        var ident1 = identifier;
-        var n = ident1.lastIndexOf('/');
-
-        var result = n>=0 ? ident1.substring(n + 1) : identifier;
-
-        for(var i=0; i<badgers.length; ++i) {
-            if (result.indexOf(badgers[i].id) >= 0) {
-                return badgers[i];
-            }
-        }
+    function badgeValueFor(launcherUrl: string) : int {
+        // record lookup and value parse live in the BadgeMath core (EX-20)
+        return LatteCore.BadgeMath.badgeCountForLauncher(root.badgers, launcherUrl);
     }
 
     function updateBadge(identifier, value) {
+        // parameters stay UNTYPED by contract: containmentinterface.cpp
+        // resolves this method by its metaobject signature
+        // "updateBadge(QVariant,QVariant)" (the whole D-Bus badge path);
+        // typed parameters would change the signature and break it silently
         var tasks = icList.contentItem.children;
-        var identifierF = identifier.concat(".desktop");
+        var matched = false;
 
         for(var i=0; i<tasks.length; ++i){
             var task = tasks[i];
 
-            if (task && task.launcherUrl && task.launcherUrl.indexOf(identifierF) >= 0) {
-                task.badgeIndicator = value === "" ? 0 : Number(value);
-                var badge = getBadger(identifierF);
-                if (badge) {
-                    badge.value = value;
-                } else {
-                    badgers.push({id: identifierF, value: value});
-                }
+            if (task && task.launcherUrl && LatteCore.BadgeMath.taskMatchesBadge(task.launcherUrl, identifier)) {
+                task.badgeIndicator = LatteCore.BadgeMath.parseCount(value, identifier);
+                matched = true;
             }
+        }
+
+        if (matched) {
+            // Qt5 stored the record inside the task loop: zero matching
+            // live tasks meant no record kept, and that stays true
+            root.badgers = LatteCore.BadgeMath.applyBadge(root.badgers, identifier, value);
         }
     }
 
