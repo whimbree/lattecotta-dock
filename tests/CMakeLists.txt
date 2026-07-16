@@ -204,3 +204,27 @@ ecm_add_test(contracts/quitteardowncontractstest.cpp
 )
 set_tests_properties(quitteardowncontractstest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# Contract: Plasma 6's ContainmentItem::createApplet takes a QRectF geometry
+# hint (Qt5 took a QPoint); a mismatched Q_ARG type makes the alternatives
+# swap silently destroy an applet without replacing it. The qmltypes of the
+# PINNED libplasma is located from the imported Plasma::Plasma library at
+# configure time and must exist - a silent skip would un-pin the contract.
+get_target_property(_plasma_lib_location Plasma::Plasma LOCATION)
+get_filename_component(_plasma_libdir "${_plasma_lib_location}" DIRECTORY)
+set(_plasmoid_qmltypes
+    "${_plasma_libdir}/qt-6/qml/org/kde/plasma/plasmoid/plasmoidplugin.qmltypes")
+if(NOT EXISTS "${_plasmoid_qmltypes}")
+    message(FATAL_ERROR "pinned libplasma plasmoid qmltypes not found at "
+        "${_plasmoid_qmltypes}; alternativescreateapplettest cannot pin the "
+        "createApplet geometry contract")
+endif()
+ecm_add_test(contracts/alternativescreateapplettest.cpp
+    TEST_NAME alternativescreateapplettest
+    LINK_LIBRARIES Qt6::Test
+)
+set_tests_properties(alternativescreateapplettest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_compile_definitions(alternativescreateapplettest PRIVATE
+    PLASMOID_QMLTYPES_PATH="${_plasmoid_qmltypes}"
+    REPO_ROOT="${CMAKE_SOURCE_DIR}")
