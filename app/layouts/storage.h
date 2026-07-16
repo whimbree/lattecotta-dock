@@ -23,6 +23,8 @@
 #include <Plasma/Applet>
 #include <Plasma/Containment>
 
+class StorageIdRemapApplicationTest;
+
 namespace Latte {
 class Corona;
 namespace Layout {
@@ -109,6 +111,11 @@ public:
     //! errors/warning;
     Data::ErrorsList errors(const Layout::GenericLayout *layout);
     Data::WarningsList warnings(const Layout::GenericLayout *layout);
+
+    //! test seam: the id-remap APPLICATION (order lists, clone
+    //! references, exhaustion refusal) lives in the private
+    //! newUniqueIdsFile and has no public headless entry
+    friend class ::StorageIdRemapApplicationTest;
 
 private:
     Storage();

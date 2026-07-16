@@ -89,7 +89,19 @@ Per-unit specs (section C), in rank order:
 - [x] EX-06 VisibleIndexEngine - visible-index math + separator neighbor walks
   - [ ] executed
 - [x] EX-07 StorageIdRemapper - layout-file id remapping (capt blueprint)
-  - [ ] executed
+  - [x] executed: LANDED d6ebc83f (core + capt's 11 ported slots +
+    exhaustion flag, storage.cpp cutover, availableId deleted) + the
+    fixes commit (loud exhaustion refusal at both callers; the stale
+    isClonedFrom defect the spec flagged is FIXED - clone references
+    follow the remap, originless clones orphan loudly to ISCLONEDNULL;
+    application tests drive the private newUniqueIdsFile through a
+    friend seam over real layout files). Type discipline: string-id
+    domain is inherited KConfig group names, no sentinels introduced;
+    exhaustion is an explicit flag, not ""-scanning. Live recipe run:
+    dbus duplicateView on the throwaway - new containment took first
+    free id 13, applets 50-54 collision-free, appletOrder references
+    exactly the new ids, zero remap errors; test clone removed after
+    the undo window.
 - [x] EX-08 ScreenGeometryCalculator - available screen rect/region (capt blueprint)
   - [ ] executed
 - [x] EX-09 PositionerGeometry - view sizing/placement math (capt blueprint)

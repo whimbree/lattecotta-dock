@@ -18,6 +18,16 @@ target_include_directories(importerregressiontest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+ecm_add_test(storageidremapapplicationtest.cpp
+    TEST_NAME storageidremapapplicationtest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(storageidremapapplicationtest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(storageidremapapplicationtest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
 ecm_add_test(layershellmappingtest.cpp
     TEST_NAME layershellmappingtest
     LINK_LIBRARIES lattedock-core Qt6::Test

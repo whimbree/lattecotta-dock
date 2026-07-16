@@ -262,6 +262,11 @@ void Storage::importToCorona(const Layout::GenericLayout *layout)
     //! update ids to unique ones
     QString temp2File = newUniqueIdsFile(temp1FilePath, layout);
 
+    if (temp2File.isEmpty()) {
+        qCritical() << "layout import to corona aborted: id remap failed for" << layout->name();
+        return;
+    }
+
     //! Finally import the configuration
     importLayoutFile(layout, temp2File);
 }
@@ -383,6 +388,15 @@ QString Storage::newUniqueIdsFile(QString originFile, const Layout::GenericLayou
         StorageIdRemapper::remap({allIds, toInvestigateContainmentIds, toInvestigateAppletIds});
     const QHash<QString, QString> &assigned = idRemap.assigned;
 
+    if (idRemap.exhausted) {
+        //! writing "" group names would corrupt the destination layout far
+        //! from the cause; refuse the whole import instead
+        qCritical() << "layout import: id remap EXHAUSTED the id space (cap"
+                    << StorageIdRemapper::maxId << ") for" << originFile
+                    << "- aborting the import";
+        return QString();
+    }
+
     qDebug() << "ALL CORONA IDS ::: " << allIds;
     qDebug() << "FULL ASSIGNMENTS ::: " << assigned;
 
@@ -415,6 +429,25 @@ QString Storage::newUniqueIdsFile(QString originFile, const Layout::GenericLayou
         } else {
             //! will be added in inactive layout
             investigate_conts.group(cId).writeEntry("layoutId", QString());
+        }
+
+        //! keep clone references pointing at their remapped originals; the
+        //! shipped code left isClonedFrom stale, so an imported clone bound
+        //! to whatever unrelated containment owned the old id in the
+        //! destination. A clone whose original is not part of this import
+        //! cannot bind to anything valid - orphan it loudly.
+        const int clonedFrom = investigate_conts.group(cId).readEntry("isClonedFrom", Data::View::ISCLONEDNULL);
+
+        if (clonedFrom != Data::View::ISCLONEDNULL) {
+            const QString mappedOriginal = assigned.value(QString::number(clonedFrom));
+
+            if (!mappedOriginal.isEmpty()) {
+                investigate_conts.group(cId).writeEntry("isClonedFrom", mappedOriginal.toInt());
+            } else {
+                qWarning() << "layout import: clone containment" << cId << "references original"
+                           << clonedFrom << "which is not part of the import; orphaning the clone";
+                investigate_conts.group(cId).writeEntry("isClonedFrom", Data::View::ISCLONEDNULL);
+            }
         }
     }
 
@@ -612,6 +645,11 @@ Data::View Storage::newView(const Layout::GenericLayout *destinationLayout, cons
 
     //! update ids to unique ones
     QString temp2File = newUniqueIdsFile(templateTmpAbsolutePath, destinationLayout);
+
+    if (temp2File.isEmpty()) {
+        qCritical() << "new view from template aborted: id remap failed for" << destinationLayout->name();
+        return Data::View();
+    }
 
     //! update view containment data in case next data are provided
     if (nextViewData.state() != Data::View::IsInvalid) {
