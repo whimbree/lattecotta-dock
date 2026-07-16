@@ -31,35 +31,44 @@ sessions are budgeted, in order:
    files classified, 25 units specced with delegation tags, completeness
    ledger CLEAR (every section done). Pin-in-place verdicts recorded for
    CompactApplet chain, ContextMenu, ConfigOverlay drag, and friends.
-4. IN PROGRESS (2026-07-15 night, the first execution session; re-run
-   the same prompt - docs/prompts/qml-extraction-execution-prompt.md -
-   to continue): capt sync came back EMPTY (origin/main still at
-   81384003, nothing to fold, CLAUDE.md hash unchanged). LANDED and
-   pushed: Wave 0 complete (353fd783 scaffolding, 70d38a3e ratchet
-   negative-tested x3, 8ccad784 EX-22 with live switchToLayout smoke;
-   66a41253 fixed the leaked install_manifest.txt the first full ctest
-   surfaced - appstreamtest is vacuous again and staging now
-   self-heals); EX-01 complete (03cf0289 core+19 tests, 2f23f9bd
-   cutover + gate rules 1-4 migrated and negative-tested x3; full
-   glide matrix run live incl. zero attach(nil) in 176 attaches, all
-   revives on warm cache, 7/7 group thumbnails; the hide/re-hover
-   cache defect fixed at origin - see the plan's EX-01 entry, plus a
-   dying-active-task WATCH item); EX-03 complete (c3c04e49, 39-row
-   12-decimal equivalence table baked from the shipped QML, live
-   glide pass matches pre-cutover geometry). EX-02 HALF DONE at the
-   session cut: design written into the spec (0613c2ae), core +
-   equality tests + the recording harness landed (ee66b07c, no
-   behavior change; tests/generators/parabolicchain re-generates the
-   14 recorded vectors). NEXT SESSION RESUMES AT: the EX-02 cutover
-   commits (containment twin then plasmoid twin, live glide matrix
-   per the spec BEFORE each merges) - strong-model-only, DO NOT
-   DELEGATE; if the strong-model window is closed, EX-02's remainder
-   stays deferred with its marker and the delegate backlog (waves
-   2-4, 21 units, start Wave 2) is the starting point instead.
-   Session notes: the dock was restored to --user-config at session
-   end; the throwaway's konsole spawns were cleaned up; fakepointer
-   glides need ~30ms/step exec overhead budgeted when choosing step
-   sizes (16px/no-sleep lands solidly in-burst, 8px/0.02s does not).
+4. DONE (2026-07-15 night + late night, two execution sessions; the
+   strong-model shortlist is COMPLETE): capt sync EMPTY both sessions
+   (origin/main still at 81384003). First session landed Wave 0
+   (353fd783, 70d38a3e, 8ccad784, 66a41253), EX-01 (03cf0289,
+   2f23f9bd), EX-03 (c3c04e49), EX-02's design+core (0613c2ae,
+   ee66b07c). Second session (this one) finished EX-02: 1c94a7ef
+   (core reshaped to the emission plan + DeadStop, driven by three
+   NEW recorded dead-position cases - loader-inactive lockZoom
+   applets kill live stacks but pass clear broadcasts; the spec's
+   DESIGN REVISION bullet has the full reasoning), 504e95e5
+   (containment cutover: deciders deleted, routing in
+   ParabolicEffectPrivate, spacers on direct absorb calls, bridge
+   re-entry via host.routeFromIndex), faa89fd1 (plasmoid cutover:
+   decider + sltTrack watchers deleted, exports from the route
+   result; definition's applyParabolicEffect body deleted). Live
+   glide matrix ran BEFORE each cutover merged: preview-dialog
+   anchor byte-identical at a fixed parked pointer (2366,1529
+   274x204 across pre/containment/plasmoid runs, 1px on the last
+   with the desk in active use), mid/rest screenshots match, log
+   signatures identical in counts. STEP 2.5 also DONE and pushed
+   (5bd40951): ASan+UBSan on all tests/units targets
+   (latte_add_unit_test, negative-tested, four cores green), C++20
+   raised from 17 (KDECompilerSettings 6.0.0 does NOT set 20 -
+   verified, both WITH_X11 variants build-checked), qmllint ratchet
+   gate (qmllintgate ctest entry, tests/qmllint-baseline 170 files /
+   6923 curated warnings, negative-tested x2, strict-on-touch binds
+   cutovers from HERE on), Method + section D + TESTING.md +
+   CLAUDE.md amendments, STEP-2.5 ledger entry. NEXT SESSION STARTS
+   AT: Wave 2 (delegate-safe C++-only capt ports; plan section E),
+   then Wave 3 with EX-17 as calibration - waves are UNGATED, the
+   same prompt continues from the ledger. Session notes: dock is
+   back on --user-config (verified XDG_CONFIG_HOME + 6 views); the
+   glide matrix script lives at the scratchpad's glide-matrix.sh
+   pattern (fixed waypoints + park + dumpwins preview readout - the
+   preview-anchor position is the precise parabolic-geometry
+   equality instrument); one glide run captured its screenshots
+   before the docks finished mapping under desk load - re-run warm
+   rather than trusting a first pass when Bree is at the machine.
 
 Also done this session: CLAUDE.md reframed as maintained continuation
 (ce94bb1d) - upstream mergeability is no longer a planning constraint;
