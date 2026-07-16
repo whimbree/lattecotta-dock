@@ -10,6 +10,7 @@ set(lattecoreplugin_SRCS
     quickwindowsystem.cpp
     tools.cpp
     types.h
+    visibleindextools.cpp
     windowresizehandler.cpp
 )
 

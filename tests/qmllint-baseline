@@ -68,7 +68,7 @@
 3	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/ParabolicEffect.qml
 4	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/PositionShortcuts.qml
 4	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/privates/AnimationsPrivate.qml
-25	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/privates/IndexerPrivate.qml
+1	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/privates/IndexerPrivate.qml
 69	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/privates/IndicatorsPrivate.qml
 8	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/privates/LaunchersPrivate.qml
 81	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/privates/layouter/AppletsContainer.qml

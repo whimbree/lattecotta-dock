@@ -216,76 +216,47 @@ Item {
     readonly property int appletPreferredLength: _wrapper.appletPreferredLength
     readonly property int appletMaximumLength: _wrapper.appletMaximumLength
 
-    //! separators tracking
+    //! separators tracking: the walk verdicts live in the C++ core
+    //! (org.kde.latte.core VisibleIndex, EX-06); only the live bridge
+    //! delegation stays here - when the resolved neighbor manages
+    //! sub-indexed items its own edge answers, read through the bridge
     readonly property bool tailAppletIsSeparator: {
-        if (isSeparator || index<0) {
+        if (appletItem.isSeparator || appletItem.index<0) {
             return false;
         }
 
-        var tail = index - 1;
+        var neighbor = LatteCore.VisibleIndex.hiddenSkippingNeighbor(appletItem.indexer.rowEntries, appletItem.index, LatteCore.VisibleIndex.Tail);
 
-        while(tail>=0 && indexer.hidden.indexOf(tail)>=0) {
-            //! when a tail applet contains sub-indexing and does not influence
-            //! tracking is considered hidden
-            tail = tail - 1;
-        }
-
-        if (tail >= 0 && indexer.clients.indexOf(tail)>=0) {
-            //! tail applet contains items sub-indexing
-            var tailBridge = indexer.getClientBridge(tail);
+        if (neighbor.index >= 0 && appletItem.indexer.clients.indexOf(neighbor.index)>=0) {
+            var tailBridge = appletItem.indexer.getClientBridge(neighbor.index);
 
             if (tailBridge && tailBridge.client) {
                 return tailBridge.client.lastHeadItemIsSeparator;
             }
         }
 
-        // tail applet is normal
-        return (indexer.separators.indexOf(tail)>=0);
+        return neighbor.isSeparator === true;
     }
 
     readonly property bool headAppletIsSeparator: {
-        if (isSeparator || index<0) {
+        if (appletItem.isSeparator || appletItem.index<0) {
             return false;
         }
 
-        var head = index + 1;
+        var neighbor = LatteCore.VisibleIndex.hiddenSkippingNeighbor(appletItem.indexer.rowEntries, appletItem.index, LatteCore.VisibleIndex.Head);
 
-        while(head>=0 && indexer.hidden.indexOf(head)>=0) {
-            //! when a head applet contains sub-indexing and does not influence
-            //! tracking is considered hidden
-            head = head + 1;
-        }
-
-        if (head >= 0 && indexer.clients.indexOf(head)>=0) {
-            //! head applet contains items sub-indexing
-            var headBridge = indexer.getClientBridge(head);
+        if (neighbor.index >= 0 && appletItem.indexer.clients.indexOf(neighbor.index)>=0) {
+            var headBridge = appletItem.indexer.getClientBridge(neighbor.index);
 
             if (headBridge && headBridge.client) {
                 return headBridge.client.firstTailItemIsSeparator;
             }
         }
 
-        // head applet is normal
-        return (indexer.separators.indexOf(head)>=0);
+        return neighbor.isSeparator === true;
     }
 
-    readonly property bool inMarginsArea: {
-        if (isMarginsAreaSeparator || appletItem.indexer.marginsAreaSeparators.length === 0) {
-            return false;
-        }
-
-        var tailMarginsAreaSeparatorsCount = 0;
-
-        for(var i=0; i<appletItem.indexer.marginsAreaSeparators.length; ++i) {
-            if (appletItem.indexer.marginsAreaSeparators[i] < index) {
-                tailMarginsAreaSeparatorsCount++;
-            }
-        }
-
-        //! even number of margins area separators before this applet means that this applet
-        //! is inside margins area
-        return (tailMarginsAreaSeparatorsCount % 2 === 1);
-    }
+    readonly property bool inMarginsArea: LatteCore.VisibleIndex.isInMarginsArea(appletItem.indexer.rowEntries, appletItem.index)
 
     //! local margins
     readonly property bool parabolicEffectMarginsEnabled: appletItem.parabolic.factor.zoom>1 && !originalAppletBehavior && !communicator.parabolicEffectIsSupported
@@ -486,50 +457,32 @@ Item {
         }
     }
 
+    //! the rank math is core-side (assignedLayoutIndex, the fe63a63e
+    //! semantics: edge spacers/internal splitters are uncounted and an
+    //! uncounted self keeps index -1); this only scans the live children.
+    //! endLayout's beginIndex is deliberately very high so mainLayout and
+    //! endLayout never need to exchange hovering messages.
     function checkIndex(){
         index = -1;
 
-        var startAppletIndex = -1;
-        for(var i=0; i<appletItem.layouter.startLayout.count; ++i){
-            var child = layoutsContainer.startLayout.children[i];
-            if (child.isParabolicEdgeSpacer || child.isInternalViewSplitter) {
-                continue;
+        var grids = [layoutsContainer.startLayout, layoutsContainer.mainLayout, layoutsContainer.endLayout];
+        var counts = [appletItem.layouter.startLayout.count, appletItem.layouter.mainLayout.count, appletItem.layouter.endLayout.count];
+
+        for (var g=0; g<grids.length; ++g) {
+            var counted = [];
+            var selfPosition = -1;
+
+            for(var i=0; i<counts[g]; ++i){
+                var child = grids[g].children[i];
+                counted.push(!(child.isParabolicEdgeSpacer || child.isInternalViewSplitter));
+                if (child === appletItem){
+                    selfPosition = i;
+                }
             }
 
-            startAppletIndex++;
-            if (child === appletItem){
-                index = layoutsContainer.startLayout.beginIndex + startAppletIndex;
-                break;
-            }
-        }
-
-        var mainAppletIndex = -1;
-        for(var i=0; i<appletItem.layouter.mainLayout.count; ++i){
-            var child = layoutsContainer.mainLayout.children[i];
-            if (child.isParabolicEdgeSpacer || child.isInternalViewSplitter) {
-                continue;
-            }
-
-            mainAppletIndex++;
-            if (child === appletItem){
-                index = layoutsContainer.mainLayout.beginIndex + mainAppletIndex;
-                break;
-            }
-        }
-
-        var endAppletIndex = -1;
-        for(var i=0; i<appletItem.layouter.endLayout.count; ++i){
-            var child = layoutsContainer.endLayout.children[i];
-            if (child.isParabolicEdgeSpacer || child.isInternalViewSplitter) {
-                continue;
-            }
-
-            endAppletIndex++;
-            if (child === appletItem){
-                //create a very high index in order to not need to exchange hovering messages
-                //between layoutsContainer.mainLayout and layoutsContainer.endLayout
-                index = layoutsContainer.endLayout.beginIndex + endAppletIndex;
-                break;
+            if (selfPosition >= 0) {
+                index = LatteCore.VisibleIndex.assignedLayoutIndex(counted, selfPosition, grids[g].beginIndex);
+                return;
             }
         }
     }

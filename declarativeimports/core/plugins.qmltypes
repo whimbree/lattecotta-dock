@@ -226,6 +226,96 @@ Module {
         }
     }
     Component {
+        name: "Latte::VisibleIndexTools"
+        prototype: "QObject"
+        exports: ["org.kde.latte.core/VisibleIndex 0.2"]
+        isCreatable: false
+        isSingleton: true
+        exportMetaObjectRevisions: [0]
+        Enum {
+            name: "Direction"
+            values: {
+                "Tail": 0,
+                "Head": 1
+            }
+        }
+        Method {
+            name: "visibleIndexOf"
+            type: "int"
+            Parameter { name: "row"; type: "QVariantList" }
+            Parameter { name: "actualIndex"; type: "int" }
+        }
+        Method {
+            name: "clientVisibleIndexOf"
+            type: "int"
+            Parameter { name: "row"; type: "QVariantList" }
+            Parameter { name: "actualIndex"; type: "int" }
+            Parameter { name: "hostBase"; type: "int" }
+        }
+        Method {
+            name: "belongsAtVisibleIndex"
+            type: "bool"
+            Parameter { name: "row"; type: "QVariantList" }
+            Parameter { name: "entryIndex"; type: "int" }
+            Parameter { name: "visibleIndex"; type: "int" }
+        }
+        Method {
+            name: "firstVisibleIndex"
+            type: "int"
+            Parameter { name: "row"; type: "QVariantList" }
+        }
+        Method {
+            name: "lastVisibleIndex"
+            type: "int"
+            Parameter { name: "row"; type: "QVariantList" }
+        }
+        Method {
+            name: "countVisibleItems"
+            type: "int"
+            Parameter { name: "row"; type: "QVariantList" }
+        }
+        Method {
+            name: "edgeItemIsSeparator"
+            type: "bool"
+            Parameter { name: "row"; type: "QVariantList" }
+            Parameter { name: "direction"; type: "int" }
+        }
+        Method {
+            name: "hiddenSkippingNeighbor"
+            type: "QVariantMap"
+            Parameter { name: "row"; type: "QVariantList" }
+            Parameter { name: "actualIndex"; type: "int" }
+            Parameter { name: "direction"; type: "int" }
+        }
+        Method {
+            name: "neighborIsSeparator"
+            type: "bool"
+            Parameter { name: "row"; type: "QVariantList" }
+            Parameter { name: "actualIndex"; type: "int" }
+            Parameter { name: "direction"; type: "int" }
+        }
+        Method {
+            name: "neighborIsVisibleSeparator"
+            type: "bool"
+            Parameter { name: "row"; type: "QVariantList" }
+            Parameter { name: "actualIndex"; type: "int" }
+            Parameter { name: "direction"; type: "int" }
+        }
+        Method {
+            name: "isInMarginsArea"
+            type: "bool"
+            Parameter { name: "row"; type: "QVariantList" }
+            Parameter { name: "actualIndex"; type: "int" }
+        }
+        Method {
+            name: "assignedLayoutIndex"
+            type: "int"
+            Parameter { name: "countedChildren"; type: "QVariantList" }
+            Parameter { name: "selfPosition"; type: "int" }
+            Parameter { name: "beginIndex"; type: "int" }
+        }
+    }
+    Component {
         name: "PlasmaQuick::Dialog"
         defaultProperty: "mainItem"
         prototype: "QQuickWindow"

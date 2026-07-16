@@ -1166,7 +1166,8 @@ Conventions used by all specs:
   firstVisibleItemIndex/lastVisibleItemIndex/visibleIndex);
   containment/package/contents/ui/applet/AppletItem.qml:221-245
   `tailAppletIsSeparator`, 247-271 `headAppletIsSeparator`
-  (while-loop neighbor walks), 486-532 `checkIndex`;
+  (while-loop neighbor walks), 490-536 `checkIndex` (the tree moved
+  under the plan's 486-532; re-verified pre-cutover);
   declarativeimports/abilities/items/BasicItem.qml neighbor-walk
   twins (178-260 per the inventory).
 - Extract-vs-pin: four sites hand-maintain the same ordering
@@ -2085,17 +2086,23 @@ wholesale, so the durable record is here; the retroactive pass
 assessed every file the landed cutovers touched):
 
 - Context-chain name resolution: ParabolicArea.qml (85),
-  ParabolicEventsArea.qml (79), AppletItem.qml (161), plasmoid
-  main.qml (94), ParabolicEdgeSpacer.qml (7), the last 3+3 in the
-  containment parabolic ability/private (root/metrics reads inside
-  BINDINGS), and the containment LayouterPrivate.qml (10 after the
+  ParabolicEventsArea.qml (79), AppletItem.qml (161 after the EX-06
+  cutover: its own-property fixes landed there, the rest is
+  layoutsContainer/root/indexer context ids), plasmoid main.qml (94),
+  ParabolicEdgeSpacer.qml (7), the last 3+3 in the containment
+  parabolic ability/private (root/metrics reads inside BINDINGS),
+  the containment LayouterPrivate.qml (10 after the
   EX-05 cutover: root/background reads inside its maxLength/
   contentsMaxLength BINDINGS, the layouter debounce-entry calls in its
   counter-change handlers, and root/inNormalFillCalculationsState
   reads in the dispatcher - the last is a base-file read of a
   property DECLARED on the derived Layouter.qml, which a base
   redeclaration would break, so it cannot be qualified or injected
-  without the endgame subtree refactor). These files resolve
+  without the endgame subtree refactor), and
+  IndexerPrivate.qml (1: the root.appletIsDragged read inside the
+  clientsTrackingWindowsCount Binding when-clause - same
+  injection-into-Bindings hazard; the other 24 were own-property
+  qualifications the EX-06 cutover fixed). These files resolve
   enclosing-scope ids (appletItem,
   root, metrics, animations, wrapper, parabolicItem, ...) through the
   QML context chain BY ARCHITECTURE - the ability/item pattern the

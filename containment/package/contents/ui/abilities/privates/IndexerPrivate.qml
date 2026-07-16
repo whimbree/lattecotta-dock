@@ -6,6 +6,8 @@
 import QtQuick 2.7
 import org.kde.plasma.plasmoid 2.0
 
+import org.kde.latte.core 0.2 as LatteCore
+
 import org.kde.latte.abilities.definition 0.1 as AbilityDefinition
 
 AbilityDefinition.Indexer {
@@ -23,12 +25,12 @@ AbilityDefinition.Indexer {
     Binding{
         target: indxr
         property: "separators"
-        when: !updateIsBlocked
+        when: !indxr.updateIsBlocked
         restoreMode: Binding.RestoreNone
         value: {
             var seps = [];
 
-            var sLayout = layouts.startLayout;
+            var sLayout = indxr.layouts.startLayout;
             for (var i=0; i<sLayout.children.length; ++i){
                 var appletItem = sLayout.children[i];
                 if (appletItem && appletItem.isSeparator && appletItem.index>=0) {
@@ -36,7 +38,7 @@ AbilityDefinition.Indexer {
                 }
             }
 
-            var mLayout = layouts.mainLayout;
+            var mLayout = indxr.layouts.mainLayout;
             for (var i=0; i<mLayout.children.length; ++i){
                 var appletItem = mLayout.children[i];
                 if (appletItem && appletItem.isSeparator && appletItem.index>=0) {
@@ -44,7 +46,7 @@ AbilityDefinition.Indexer {
                 }
             }
 
-            var eLayout = layouts.endLayout;
+            var eLayout = indxr.layouts.endLayout;
             for (var i=0; i<eLayout.children.length; ++i){
                 var appletItem = eLayout.children[i];
                 if (appletItem && appletItem.isSeparator && appletItem.index>=0) {
@@ -59,12 +61,12 @@ AbilityDefinition.Indexer {
     Binding {
         target: indxr
         property: "hidden"
-        when: !updateIsBlocked
+        when: !indxr.updateIsBlocked
         restoreMode: Binding.RestoreNone
         value: {
             var hdn = [];
 
-            var sLayout = layouts.startLayout;
+            var sLayout = indxr.layouts.startLayout;
             for (var i=0; i<sLayout.children.length; ++i){
                 var appletItem = sLayout.children[i];
                 if (appletItem && appletItem.isHidden && appletItem.index>=0) {
@@ -72,7 +74,7 @@ AbilityDefinition.Indexer {
                 }
             }
 
-            var mLayout = layouts.mainLayout;
+            var mLayout = indxr.layouts.mainLayout;
             for (var i=0; i<mLayout.children.length; ++i){
                 var appletItem = mLayout.children[i];
                 if (appletItem && appletItem.isHidden && appletItem.index>=0) {
@@ -80,7 +82,7 @@ AbilityDefinition.Indexer {
                 }
             }
 
-            var eLayout = layouts.endLayout;
+            var eLayout = indxr.layouts.endLayout;
             for (var i=0; i<eLayout.children.length; ++i){
                 var appletItem = eLayout.children[i];
                 if (appletItem && appletItem.isHidden && appletItem.index>=0) {
@@ -95,7 +97,7 @@ AbilityDefinition.Indexer {
     Binding{
         target: indxr
         property: "marginsAreaSeparators"
-        when: !updateIsBlocked
+        when: !indxr.updateIsBlocked
         restoreMode: Binding.RestoreNone
         value: {
             var seps = [];
@@ -103,11 +105,11 @@ AbilityDefinition.Indexer {
 
             for (var l=0; l<=2; ++l) {
                 if (l===0) {
-                    grid = layouts.startLayout;
+                    grid = indxr.layouts.startLayout;
                 } else if (l===1) {
-                    grid = layouts.mainLayout;
+                    grid = indxr.layouts.mainLayout;
                 } else if (l===2) {
-                    grid = layouts.endLayout;
+                    grid = indxr.layouts.endLayout;
                 }
 
                 for (var i=0; i<grid.children.length; ++i){
@@ -124,15 +126,66 @@ AbilityDefinition.Indexer {
         }
     }
 
+    //! the RowEntry snapshot feeding org.kde.latte.core VisibleIndex
+    //! (EX-06): all index math and neighbor predicates moved to the C++
+    //! core; this Binding only gathers what the live children say, the
+    //! same collector idiom as separators/hidden above. subItemCount asks
+    //! a client's own indexer for its visible items count through the
+    //! same bridge read the deleted visibleItemsBeforeCount used,
+    //! null-guarded the way the clientsBridges collector always was (the
+    //! deleted function dereferenced it bare and would have broken the
+    //! whole binding on an unresolved client).
+    Binding {
+        target: indxr
+        property: "rowEntries"
+        when: !indxr.updateIsBlocked
+        restoreMode: Binding.RestoreNone
+        value: {
+            var row = [];
+            var grid;
+
+            for (var l=0; l<=2; ++l) {
+                if (l===0) {
+                    grid = indxr.layouts.startLayout;
+                } else if (l===1) {
+                    grid = indxr.layouts.mainLayout;
+                } else {
+                    grid = indxr.layouts.endLayout;
+                }
+
+                for (var i=0; i<grid.children.length; ++i){
+                    var appletItem = grid.children[i];
+                    if (!appletItem || !(appletItem.index>=0)) {
+                        continue;
+                    }
+
+                    var subItems = 1;
+                    if (appletItem.communicator && appletItem.communicator.indexerIsSupported) {
+                        var bridgeIndexer = appletItem.communicator.bridge ? appletItem.communicator.bridge.indexer : null;
+                        subItems = (bridgeIndexer && bridgeIndexer.client) ? bridgeIndexer.client.visibleItemsCount : 1;
+                    }
+
+                    row.push({index: appletItem.index,
+                              isSeparator: appletItem.isSeparator === true,
+                              isHidden: appletItem.isHidden === true,
+                              isMarginsSeparator: appletItem.isMarginsAreaSeparator === true,
+                              subItemCount: subItems});
+                }
+            }
+
+            return row;
+        }
+    }
+
     Binding {
         target: indxr
         property: "clients"
-        when: !updateIsBlocked
+        when: !indxr.updateIsBlocked
         restoreMode: Binding.RestoreNone
         value: {
             var clns = [];
 
-            var sLayout = layouts.startLayout;
+            var sLayout = indxr.layouts.startLayout;
             for (var i=0; i<sLayout.children.length; ++i){
                 var appletItem = sLayout.children[i];
                 if (appletItem
@@ -143,7 +196,7 @@ AbilityDefinition.Indexer {
                 }
             }
 
-            var mLayout = layouts.mainLayout;
+            var mLayout = indxr.layouts.mainLayout;
             for (var i=0; i<mLayout.children.length; ++i){
                 var appletItem = mLayout.children[i];
                 if (appletItem
@@ -154,7 +207,7 @@ AbilityDefinition.Indexer {
                 }
             }
 
-            var eLayout = layouts.endLayout;
+            var eLayout = indxr.layouts.endLayout;
             for (var i=0; i<eLayout.children.length; ++i){
                 var appletItem = eLayout.children[i];
                 if (appletItem
@@ -172,12 +225,12 @@ AbilityDefinition.Indexer {
     Binding {
         target: indxr
         property: "clientsBridges"
-        when: !updateIsBlocked
+        when: !indxr.updateIsBlocked
         restoreMode: Binding.RestoreNone
         value: {
             var bdgs = [];
 
-            var sLayout = layouts.startLayout;
+            var sLayout = indxr.layouts.startLayout;
             for (var i=0; i<sLayout.children.length; ++i){
                 var appletItem = sLayout.children[i];
                 if (appletItem
@@ -190,7 +243,7 @@ AbilityDefinition.Indexer {
                 }
             }
 
-            var mLayout = layouts.mainLayout;
+            var mLayout = indxr.layouts.mainLayout;
             for (var i=0; i<mLayout.children.length; ++i){
                 var appletItem = mLayout.children[i];
                 if (appletItem
@@ -203,7 +256,7 @@ AbilityDefinition.Indexer {
                 }
             }
 
-            var eLayout = layouts.endLayout;
+            var eLayout = indxr.layouts.endLayout;
             for (var i=0; i<eLayout.children.length; ++i){
                 var appletItem = eLayout.children[i];
                 if (appletItem
@@ -223,7 +276,7 @@ AbilityDefinition.Indexer {
     Binding{
         target: indxr
         property: "clientsTrackingWindowsCount"
-        when: !(root.appletIsDragged || updateIsBlocked)
+        when: !(root.appletIsDragged || indxr.updateIsBlocked)
         restoreMode: Binding.RestoreNone
         value: {
             var cnts = 0;
@@ -231,11 +284,11 @@ AbilityDefinition.Indexer {
 
             for (var l=0; l<=2; ++l) {
                 if (l===0) {
-                    grid = layouts.startLayout;
+                    grid = indxr.layouts.startLayout;
                 } else if (l===1) {
-                    grid = layouts.mainLayout;
+                    grid = indxr.layouts.mainLayout;
                 } else if (l===2) {
-                    grid = layouts.endLayout;
+                    grid = indxr.layouts.endLayout;
                 }
 
                 for (var i=0; i<grid.children.length; ++i){
@@ -252,61 +305,20 @@ AbilityDefinition.Indexer {
         }
     }
 
-    function visibleItemsBeforeCount(layout, actualIndex) {
-        var visibleItems = 0;
-
-        for (var i=0; i<layout.children.length; ++i){
-            var appletItem = layout.children[i];
-            if (appletItem && appletItem.index<actualIndex) {
-                if ((separators.indexOf(appletItem.index) >= 0)
-                        || (marginsAreaSeparators.indexOf(appletItem.index)>=0)
-                        || (hidden.indexOf(appletItem.index) >= 0)) {
-                    //! ignore hidden and separators applets
-                    continue;
-                } else if (!appletItem.communicator || !appletItem.communicator.indexerIsSupported) {
-                    //! single item applet
-                    visibleItems = visibleItems + 1;
-                } else if (appletItem.communicator && appletItem.communicator.indexerIsSupported) {
-                    //! multi items applet
-                    visibleItems = visibleItems + appletItem.communicator.bridge.indexer.client.visibleItemsCount;
-                }
-            }
-        }
-
-        return visibleItems;
+    //! visibleIndex(-1) answers -1 now: the C++ core refuses to invent a
+    //! visible index for an entry the row does not have. Qt5 answered
+    //! 1 + countBefore for any unknown index, which let an unindexed
+    //! ParabolicEdgeSpacer (index -1) claim visible index 1 through
+    //! visibleIndexBelongsAtApplet.
+    function visibleIndex(actualIndex: int) : int {
+        return LatteCore.VisibleIndex.visibleIndexOf(indxr.rowEntries, actualIndex);
     }
 
-    function visibleIndex(actualIndex) {
-        if ((separators.indexOf(actualIndex) >= 0) || (hidden.indexOf(actualIndex) >= 0)) {
-            return -1;
-        }
-
-        var visibleItems = visibleItemsBeforeCount(layouts.startLayout, actualIndex) +
-                visibleItemsBeforeCount(layouts.mainLayout, actualIndex) +
-                visibleItemsBeforeCount(layouts.endLayout, actualIndex);
-
-        return visibleItems + 1;
-    }
-
-    function visibleIndexBelongsAtApplet(applet, itemVisibleIndex) {
+    function visibleIndexBelongsAtApplet(applet: Item, itemVisibleIndex: int) : bool {
         if (itemVisibleIndex<0 || !applet) {
             return false;
         }
 
-        var vIndexBase = visibleIndex(applet.index);
-
-        if (vIndexBase === itemVisibleIndex) {
-            return true;
-        } else if (applet.communicator
-                   && applet.communicator.indexerIsSupported
-                   && applet.communicator.bridge
-                   && applet.communicator.bridge.indexer) {
-            if (itemVisibleIndex >= vIndexBase
-                    && itemVisibleIndex< (vIndexBase + applet.communicator.bridge.indexer.client.visibleItemsCount)) {
-                return true;
-            }
-        }
-
-        return false;
+        return LatteCore.VisibleIndex.belongsAtVisibleIndex(indxr.rowEntries, applet.index, itemVisibleIndex);
     }
 }
