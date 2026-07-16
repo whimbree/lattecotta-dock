@@ -1,6 +1,8 @@
 /*
     SPDX-FileCopyrightText: 2016 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2016 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -116,7 +118,9 @@ Loader {
 
         Connections {
             target: latteView.positioner
-            onCurrentScreenNameChanged: dialog.updateScales();
+            function onCurrentScreenNameChanged() {
+                dialog.updateScales();
+            }
         }
 
         function updateScales() {
@@ -249,7 +253,7 @@ Loader {
                             //! it must remain or be changed
                             text: i18nc("advanced settings", "Advanced")
 
-                            readonly property real textColorBrightness: colorBrightness(Kirigami.Theme.textColor)
+                            readonly property real textColorBrightness: LatteCore.Tools.colorBrightness(Kirigami.Theme.textColor)
                             readonly property real basicOpacity: textColorBrightness > 127 ? 0.7 : 0.3
 
                             color: {
@@ -258,16 +262,6 @@ Loader {
                                 }
 
                                 return Kirigami.Theme.textColor;
-                            }
-
-                            function colorBrightness(color) {
-                                return colorBrightnessFromRGB(color.r * 255, color.g * 255, color.b * 255);
-                            }
-
-                            // formula for brightness according to:
-                            // https://www.w3.org/TR/AERT/#color-contrast
-                            function colorBrightnessFromRGB(r, g, b) {
-                                return (r * 299 + g * 587 + b * 114) / 1000
                             }
 
                             MouseArea {
@@ -313,7 +307,7 @@ Loader {
 
                     Connections {
                         target: viewConfig
-                        onIsReadyChanged: {
+                        function onIsReadyChanged() {
                             if (viewConfig.isReady) {
                                 tabBar.currentIndex = 0;
                             }
@@ -549,7 +543,7 @@ Loader {
 
                     Connections{
                         target: viewConfig
-                        onIsReadyChanged: {
+                        function onIsReadyChanged() {
                             if (viewConfig.isReady) {
                                 actionsComboBtn.updateModel();
                             }
@@ -558,12 +552,16 @@ Loader {
 
                     Connections{
                         target: latteView
-                        onTypeChanged: actionsComboBtn.updateDuplicateText();
+                        function onTypeChanged() {
+                            actionsComboBtn.updateDuplicateText();
+                        }
                     }
 
                     Connections {
                         target: layoutsManager
-                        onViewTemplatesChanged: actionsComboBtn.updateModel();
+                        function onViewTemplatesChanged() {
+                            actionsComboBtn.updateModel();
+                        }
                     }
 
                     function updateModel() {

@@ -2146,7 +2146,13 @@ assessed every file the landed cutovers touched):
   here. LatteIndicator.qml reached ZERO (57 -> 0): its indicator
   reads all qualify through root.indicator because IndicatorItem
   declares the property - no injection needed, ids outrank nothing
-  (same object).
+  (same object). shell LatteDockConfiguration.qml (94, down from 99;
+  the five implicit Connections handlers went to function syntax) -
+  the remainder is C++ context properties the config view injects
+  (latteView, viewConfig, plasmoid, universalSettings,
+  layoutsManager), i18n/i18nc context functions, and ids/roles read
+  across delegate Component boundaries; none resolvable by a
+  standalone linter, same family as the indicator context property.
 - What the retroactive pass DID fix in the touched files: implicit
   Connections handlers to function syntax, own-property qualification
   through the component id (safe: ids outrank scope properties, same
