@@ -111,7 +111,7 @@
 23	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/config/ConfigInteraction.qml
 8	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/config/ConfigPanel.qml
 218	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/ContextMenu.qml
-84	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/main.qml
+77	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/main.qml
 2	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/previews/PipeWireThumbnail.qml
 1	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/previews/PlasmaCoreThumbnail.qml
 23	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/previews/ToolTipDelegate2.qml
@@ -128,7 +128,6 @@
 93	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/animations/ShowWindowAnimation.qml
 17	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/AudioStream.qml
 30	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/ProgressOverlay.qml
-38	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/taskslayout/MouseHandler.qml
 49	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/taskslayout/ScrollableList.qml
 21	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/taskslayout/ScrollEdgeShadows.qml
 26	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/taskslayout/ScrollOpacityMask.qml

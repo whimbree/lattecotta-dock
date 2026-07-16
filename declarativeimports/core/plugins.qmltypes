@@ -73,6 +73,121 @@ Module {
         }
     }
     Component {
+        name: "Latte::DropClassifierTools"
+        prototype: "QObject"
+        exports: ["org.kde.latte.core/DropClassifier 0.2"]
+        isCreatable: false
+        isSingleton: true
+        exportMetaObjectRevisions: [0]
+        Enum {
+            name: "ContainmentEnterAction"
+            values: {
+                "EnterReject": 0,
+                "EnterShowAddLaunchersMessage": 1,
+                "EnterInsertSpacer": 2
+            }
+        }
+        Enum {
+            name: "ContainmentMoveAction"
+            values: {
+                "MoveLeaveUnchanged": 0,
+                "MoveShowAddLaunchersMessage": 1,
+                "MoveInsertSpacer": 2
+            }
+        }
+        Enum {
+            name: "ContainmentDropAction"
+            values: {
+                "DropIgnore": 0,
+                "DropAddLaunchersToStealingApplet": 1,
+                "DropProcessMime": 2
+            }
+        }
+        Enum {
+            name: "TasksDropAction"
+            values: {
+                "TasksDropIgnore": 0,
+                "TasksDropAddSeparator": 1,
+                "TasksDropUrls": 2,
+                "TasksDropLeaveUnchanged": 3
+            }
+        }
+        Enum {
+            name: "TasksDragMoveAction"
+            values: {
+                "MoveTaskSuppressRepeatTarget": 0,
+                "MoveTaskReorder": 1,
+                "MoveTaskKeepOrder": 2,
+                "MoveTaskHoverAbove": 3,
+                "MoveTaskClearHover": 4,
+                "MoveTaskNone": 5
+            }
+        }
+        Method {
+            name: "classifyContainmentDrag"
+            type: "QVariantMap"
+            Parameter { name: "mimeData"; type: "QMimeData"; isPointer: true }
+            Parameter { name: "isApplicationUrl"; type: "QJSValue" }
+        }
+        Method {
+            name: "classifyTasksDrag"
+            type: "QVariantMap"
+            Parameter { name: "mimeData"; type: "QMimeData"; isPointer: true }
+            Parameter { name: "isApplicationUrl"; type: "QJSValue" }
+        }
+        Method {
+            name: "containmentDragEnterAction"
+            type: "int"
+            Parameter { name: "isTask"; type: "bool" }
+            Parameter { name: "onlyLaunchers"; type: "bool" }
+            Parameter { name: "immutable"; type: "bool" }
+            Parameter { name: "viewShownFully"; type: "bool" }
+            Parameter { name: "hasStealingApplet"; type: "bool" }
+        }
+        Method {
+            name: "containmentDragMoveAction"
+            type: "int"
+            Parameter { name: "isTask"; type: "bool" }
+            Parameter { name: "onlyLaunchers"; type: "bool" }
+            Parameter { name: "hasStealingApplet"; type: "bool" }
+        }
+        Method {
+            name: "containmentDropAction"
+            type: "int"
+            Parameter { name: "isTask"; type: "bool" }
+            Parameter { name: "onlyLaunchers"; type: "bool" }
+            Parameter { name: "viewShownFully"; type: "bool" }
+            Parameter { name: "hasStealingApplet"; type: "bool" }
+        }
+        Method {
+            name: "tasksDragAccepts"
+            type: "bool"
+            Parameter { name: "movingTask"; type: "bool" }
+            Parameter { name: "droppingOnlyLaunchers"; type: "bool" }
+            Parameter { name: "droppingSeparator"; type: "bool" }
+            Parameter { name: "droppingFiles"; type: "bool" }
+        }
+        Method {
+            name: "tasksDropAction"
+            type: "int"
+            Parameter { name: "movingTask"; type: "bool" }
+            Parameter { name: "droppingOnlyLaunchers"; type: "bool" }
+            Parameter { name: "droppingSeparator"; type: "bool" }
+            Parameter { name: "droppingFiles"; type: "bool" }
+        }
+        Method {
+            name: "separatorDropPosition"
+            type: "int"
+            Parameter { name: "hasHoveredItem"; type: "bool" }
+            Parameter { name: "hoveredItemIndex"; type: "int" }
+        }
+        Method {
+            name: "decideTasksDragMove"
+            type: "QVariantMap"
+            Parameter { name: "snapshot"; type: "QVariantMap" }
+        }
+    }
+    Component {
         name: "Latte::Environment"
         prototype: "QObject"
         exports: ["org.kde.latte.core/Environment 0.2"]
