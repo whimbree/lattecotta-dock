@@ -1759,6 +1759,33 @@ Conventions used by all specs:
 
 ### EX-19 ColorLuminance [delegate-safe]
 
+- Commits: 0c8df527 (core + Tools-singleton cutover + 10 sanitized
+  test slots incl. the JS-generated bit-exact reference table),
+  4a1ce0ac (app commontools copies deleted), 8ee3b3bb (ShortcutBadge
+  typo'd-id defect fix, found by strict-on-touch, probe-verified),
+  bb044112 / 5c8e2dad / d6911f8a / 61fb5651 / 12512c6f (per-consumer
+  QML cutovers: declarativeimports + JS delete, containment + JS
+  delete, plasmoid + JS delete, shell, default indicator), 8aa4c6a8
+  (tst_colortools.qml e2e through the staged singleton). Executed in
+  an agent worktree 2026-07-16; full record in
+  docs/agent-logs/EX-19.md, live checks pending at merge.
+- Spec-vs-tree deviations, recorded at execution: (a) the tree held
+  NINE copies, not five - the spec's list plus ShortcutBadge.qml's
+  inline twin and two float C++ copies (Tools singleton, app
+  commontools); all nine resolved to the JS double semantics, the
+  divergence census is in the agent log. (b) `darker/lighterBy`
+  DROPPED from the interface: no custom darker/lighter math exists
+  anywhere in the tree or at f0ad7b23 - call sites use Qt.darker/
+  Qt.lighter builtins, so there was nothing to dedup and wrapping Qt
+  builtins would be speculative untested API. (c) the spec's
+  `luminance` maps to BOTH inherited functions (AERT colorBrightness,
+  what every consumer uses, and WCAG colorLumina, the app-side
+  contrast pick); inherited names kept - they are public API for
+  third-party indicator packages. isLight landed as specced
+  (strictly-greater, threshold 127.5). (d) capt cross-reference was
+  not "none" any more: capt 81384003 commontoolstest/coretoolstest
+  case shapes folded into the slots (their float-semantics code not
+  adopted).
 - Header: `declarativeimports/core/units/colortools.h`, exposed to
   QML as a LatteCore singleton function set.
 - Responsibility: one luminance/brightness implementation replacing
