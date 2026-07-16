@@ -47,14 +47,49 @@ qml_env_setup() {
     imports+=(-import "$stage/lib/qml")
 }
 
+# Undo qml_env_stage's manifest displacement. Global state instead of
+# locals because the EXIT/INT/TERM traps fire after the function's scope
+# is gone. Idempotent: the trap and the in-line calls can both run.
+_qml_env_restore_manifest() {
+    [[ -n "${_QML_MANIFEST:-}" ]] || return 0
+    if [[ -n "$_QML_HAD_MANIFEST" ]]; then
+        mv -f "$_QML_MANIFEST.pre-stage" "$_QML_MANIFEST"
+    else
+        rm -f "$_QML_MANIFEST"
+    fi
+    _QML_MANIFEST=""
+    trap - EXIT INT TERM
+}
+
 qml_env_stage() {
     echo "staging $build -> $stage ..."
 
     # cmake --install unconditionally rewrites build/install_manifest.txt,
     # which ECM's appstreamtest reads; leaving the staged manifest behind
-    # changes what that test validates. Preserve whatever state it had.
-    local manifest="$build/install_manifest.txt" had_manifest=""
-    [[ -f "$manifest" ]] && { had_manifest=1; cp "$manifest" "$manifest.pre-stage"; }
+    # changes what that test validates. Preserve whatever state it had -
+    # UNLESS what it had is itself a leaked staged manifest: staging runs
+    # older than the preserve logic (45c15433) left their manifests behind,
+    # and preserving one keeps appstreamtest un-vacuumed with staged paths
+    # forever (caught 2026-07-15: full ctest failed on the known Phase 11
+    # hyphen warning because of exactly such a leftover). Staged paths are
+    # never a legitimate manifest state; drop them and a real install
+    # regenerates the manifest.
+    _QML_MANIFEST="$build/install_manifest.txt" _QML_HAD_MANIFEST=""
+    if [[ -f "$_QML_MANIFEST" ]]; then
+        if grep -q -- "$stage" "$_QML_MANIFEST"; then
+            echo "dropping leaked staged install_manifest.txt"
+            rm -f "$_QML_MANIFEST"
+        else
+            _QML_HAD_MANIFEST=1
+            cp "$_QML_MANIFEST" "$_QML_MANIFEST.pre-stage"
+        fi
+    fi
+    # Restore even when the install below is interrupted; without these an
+    # aborted staging leaks the staged manifest (SIGKILL still leaks, which
+    # is what the self-heal branch above is for).
+    trap '_qml_env_restore_manifest' EXIT
+    trap '_qml_env_restore_manifest; exit 130' INT
+    trap '_qml_env_restore_manifest; exit 143' TERM
 
     # Install to a throwaway prefix, then checksum-sync into the real stage
     # so files whose CONTENT did not change keep their existing mtime. The
@@ -68,17 +103,15 @@ qml_env_stage() {
     # whole point.
     rm -rf "$stage.new"
     cmake --install "$build" --prefix "$stage.new" >"$stage.log" 2>&1 || {
-        echo "STAGE FAILED:"; tail -15 "$stage.log"; rm -rf "$stage.new"; return 2;
+        echo "STAGE FAILED:"; tail -15 "$stage.log"; rm -rf "$stage.new"
+        _qml_env_restore_manifest; return 2;
     }
     mkdir -p "$stage"
     rsync -rlp --checksum --delete "$stage.new/" "$stage/" >>"$stage.log" 2>&1 || {
-        echo "STAGE SYNC FAILED:"; tail -15 "$stage.log"; rm -rf "$stage.new"; return 2;
+        echo "STAGE SYNC FAILED:"; tail -15 "$stage.log"; rm -rf "$stage.new"
+        _qml_env_restore_manifest; return 2;
     }
     rm -rf "$stage.new"
 
-    if [[ -n "$had_manifest" ]]; then
-        mv "$manifest.pre-stage" "$manifest"
-    else
-        rm -f "$manifest"
-    fi
+    _qml_env_restore_manifest
 }
