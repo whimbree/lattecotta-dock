@@ -33,4 +33,8 @@ check build-no-x11 -DWITH_X11=OFF
 
 ctest --test-dir "$repo/build" --output-on-failure
 
+# Structural coverage ratchet (docs/QML_EXTRACTION_PLAN.md section D):
+# unit-header/test pairing plus the committed ctest entry-list baseline.
+"$repo/scripts/coverage-ratchet.sh" "$repo/build"
+
 echo "build-check: OK"
