@@ -3,3 +3,4 @@
 # One repo-relative path per line; scripts/coverage-ratchet.sh requires a
 # paired tests/units/<basename>test.cpp for each. Add the header's line in
 # the same commit that lands it.
+app/layouts/activitysetalgebra.h
