@@ -954,14 +954,24 @@ before implementing, not just before merging.
       libplasma bump that defers or compresses the signal fails in
       ctest before it breaks detection.
       Commits: 87417a0c7 (contract pin; no product code change needed)
-- [ ] **Drag-to-reorder jitter**: read latte-dock-qt6's actual reorder-
-      handling source (not just its commit log) to understand why it
-      works cleanly there before implementing, since it's the one
-      subsystem observed directly (via live testing) to work better in
-      one fork than the other. Latte-dock-ng fought this four times
-      (escalating cooldown/dead-zone/hysteresis tuning) and it's still
-      jittery per direct testing - don't start from that approach
-      Commits:
+- [x] **Drag-to-reorder jitter**: RESEARCHED 2026-07-16 (full record:
+      docs/agent-logs/2026-07-16-reorder-research.md). Verdict: NO
+      CHANGE NEEDED. The qt6 fork feels clean because it left
+      upstream Qt5's placeholder design alone, and our port runs the
+      SAME algorithm (line-for-line press/move/release logic;
+      midpoint swap test; the placeholder itself is the hysteresis -
+      after a swap the pointer sits inside it and childAt
+      self-suppresses; swaps are instant, no animation window). Ours
+      is strictly better in the two spots the trees differ:
+      fractional drag coordinates (their int lastX/lastY still has
+      the wayland truncation drift we fixed) and the repositionable
+      LatteCore.Dialog handle tooltip. ng's jitter is their own
+      live-item feedback loop (insertBefore on the DRAGGED item,
+      16ms poll) suppressed by stacked dead zones/hysteresis/
+      cooldowns - never import those knobs; if reorder ever jitters
+      here, the bug is something re-reading geometry it just changed.
+      Commits: (no change; the research and its two follow-up fixes
+      are recorded under the stuck-icons item below)
 - [ ] Related smoothness finding (parabolic hover-zoom, not drag-
       reorder, but the same class of problem and a real pattern worth
       copying): keep an item's parabolic-zoom `MouseArea` **always
@@ -978,12 +988,20 @@ before implementing, not just before merging.
       synchronous calculation" as the default pattern for any hover-
       driven visual effect, not just where it was found
       Commits:
-- [ ] Investigate and fix whatever causes **icons to get stuck behind
-      other elements** after repeated drag-reordering (new bug found
-      via live testing in latte-dock-ng, not yet root-caused in either
-      fork - likely a z-order or reparenting mistake during/after the
-      reorder animation)
-      Commits:
+- [x] Investigate and fix whatever causes **icons to get stuck behind
+      other elements** after repeated drag-reordering. ROOT-CAUSE
+      CANDIDATE FOUND AND FIXED 2026-07-16: the task-reorder path
+      raises the dragged delegate to z=100 and NO tree (upstream, ng,
+      qt6, us pre-fix) ever reset it - repeated reorders left several
+      delegates at z=100 permanently, stacking over lower-z chrome.
+      The applet path always reset (currentApplet.z = 1); the task
+      path now restores z=0 at Drag.onDragFinished. Also removed the
+      inert target.animating guard (property never existed on
+      Latte's ListView; comment at the site records the alternative
+      if a moveDisplaced decision freeze is ever wanted). LIVE CHECK
+      PENDING at the desk: repeated real-mouse reorders, then check
+      nothing stacks over the close-button overlay.
+      Commits: 480ae30e3
 - [ ] If any edit-mode interaction needs to be blocked, put the guard
       inside the specific handler that matters (e.g. an explicit
       `!editMode` check in the click/context-menu handler) rather than
