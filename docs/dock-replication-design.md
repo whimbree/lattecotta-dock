@@ -77,12 +77,15 @@ keying, lifecycle and UX - not new sync plumbing.
 - [x] Applet order persists and duplicates are order-faithful
       (9a6f8fb8, 2026-07-12) - replicas would have inherited the same
       wipe.
-- [ ] Phase 8: cloned-view applet-order sync gap (deferred sync when
-      structuralSyncReady becomes true late) - the known remaining
-      clone-machinery defect.
-- [ ] Live verification of screens-group clones on the dual-monitor
-      desk setup (the "On All Screens" path has not been exercised in
-      the port yet).
+- [x] Phase 8: cloned-view applet-order sync gap (deferred sync when
+      structuralSyncReady becomes true late) - fixed e3fdcae78
+      (apply-or-defer with retry on ids-hash growth, all three synced
+      properties), 2026-07-16.
+- [x] Live verification of screens-group clones on the dual-monitor
+      setup (2026-07-16, headless-driven on the real session):
+      AllScreensGroup spawned the DP-3 clone, order and plugin
+      identity verified per position via the new viewAppletsOrder
+      D-Bus readback (f7561df37).
 - [ ] UX: context menu gains "Replicate Dock" next to "Duplicate
       Dock"; the Add Dock/Panel submenu is already the discoverable
       home for both.

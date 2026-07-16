@@ -1914,14 +1914,25 @@ multi-view, multi-monitor setup.
       async-initialized dependency is ready just because your own
       component finished constructing"
       Commits:
-- [ ] Fix multi-screen cloned-view applet-order sync: add an explicit
-      "if this initialization completion made `structuralSyncReady()`
-      become true, perform the deferred order sync now" path - a
-      clone's containment can finish initializing and receive its
-      first `appletDataCreated` signal before the sync guard is
-      actually true, and nothing re-triggers the sync once both sides
-      finish otherwise
-      Commits:
+- [x] Fix multi-screen cloned-view applet-order sync. RESOLVED
+      2026-07-16: in our tree the guard is implicit (translatability
+      of original ids to cloned ids), and all THREE manually-synced
+      properties (appletOrder, lockedZoomApplets,
+      userBlocksColorizingApplets) dropped a not-yet-translatable sync
+      silently with no replay. Handlers now apply-or-defer with a
+      retry at every ids-hash growth point; order re-reads the
+      original at apply time, payload syncs replay their last payload
+      (std::optional - pending EMPTY list is valid and distinct).
+      Live-verified on the throwaway over the real dual-monitor
+      session: AllScreensGroup on containment 1 spawned the DP-3
+      clone, applet order maps position-by-position (plugin identity
+      checked all five positions) - this also discharges the
+      dock-replication-design prerequisite "live verification of
+      screens-group clones". The deferred path's live replay needs a
+      runtime reorder with a clone mid-init; its org.kde.sync
+      "deferred" log lines name it when it fires naturally.
+      Observability: viewAppletsOrder(containmentId) D-Bus readback.
+      Commits: e3fdcae78 (apply-or-defer), f7561df37 (readback)
 - [x] Edit-mode windows must re-derive geometry from the edited view's
       CURRENT screen after output hotplug (found live 2026-07-11 when a
       second monitor was added: the settings window kept the exact

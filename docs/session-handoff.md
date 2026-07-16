@@ -41,6 +41,14 @@ Driving docs/prompts/stabilization-execution-prompt.md top to bottom.
    port; the autostart story needs my decision (plan item has the
    detail), and no reboot/login has happened since June 25 anyway.
 
+4. DONE - Cloned-view sync gap (priority item 4): e3fdcae78
+   (apply-or-defer + retry for all three manually-synced properties),
+   f7561df37 (viewAppletsOrder D-Bus readback). Live-verified: clone
+   spawned on DP-3 via AllScreensGroup, per-position plugin identity
+   match. Replication-design prerequisites both discharged - the
+   Replicate Dock continuation feature is now unblocked. All gates
+   green (46 ctest, ratchet, build-check both variants).
+
 3. PARTIAL - Lock/unlock visibility (priority item 3): one clean
    throwaway cycle (lock 40s, unlock): dock survived, five views
    mapped before AND after, no ~20s exit, no invisibility. The
