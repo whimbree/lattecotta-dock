@@ -50,16 +50,16 @@ Per-unit specs (section C), in rank order:
 - [x] EX-13 ViewTypeAndBackgroundPredicates - Panel-vs-Dock chain + background states
 - [x] EX-14 DropEventClassifier - drag mime classification + insert index
 - [x] EX-15 WheelAccumulator - wheel delta accumulation/threshold semantics
-- [ ] EX-16 GroupWindowCycler - next/previous/minimize target selection
-- [ ] EX-17 TooltipTextComposer - preview title/subtext string transforms
-- [ ] EX-18 LengthOffsetClamp - maxLength/offset mutual clamp (dedup)
-- [ ] EX-19 ColorLuminance - shared brightness/luminance helpers (dedup)
-- [ ] EX-20 BadgeMath - badge parsing, proportion, arc geometry
-- [ ] EX-21 ScrollOverflowMath - scrollable list overflow/autoscroll math
-- [ ] EX-22 ActivitySetAlgebra - activity set filtering (capt blueprint)
-- [ ] EX-23 WindowTrackingPredicates - window predicate + extra-view-hints pass (capt blueprint)
-- [ ] EX-24 IconSourceClassifier - icon source classification (capt blueprint)
-- [ ] EX-25 PanelBackgroundScan - panel background scanline math (capt blueprint)
+- [x] EX-16 GroupWindowCycler - next/previous/minimize target selection
+- [x] EX-17 TooltipTextComposer - preview title/subtext string transforms
+- [x] EX-18 LengthOffsetClamp - maxLength/offset mutual clamp (dedup)
+- [x] EX-19 ColorLuminance - shared brightness/luminance helpers (dedup)
+- [x] EX-20 BadgeMath - badge parsing, proportion, arc geometry
+- [x] EX-21 ScrollOverflowMath - scrollable list overflow/autoscroll math
+- [x] EX-22 ActivitySetAlgebra - activity set filtering (capt blueprint)
+- [x] EX-23 WindowTrackingPredicates - window predicate + extra-view-hints pass (capt blueprint)
+- [x] EX-24 IconSourceClassifier - icon source classification (capt blueprint)
+- [x] EX-25 PanelBackgroundScan - panel background scanline math (capt blueprint)
 
 Section D (coverage + ratchet): [ ] pending.
 Section E (waves): [ ] pending.
@@ -1279,4 +1279,347 @@ Conventions used by all specs:
   match plasma-pa's applet on the same hardware.
 - Delegation tag: delegate-safe.
 - Risk + rollback: low; per-site cutover commits.
+
+### EX-16 GroupWindowCycler [delegate-safe]
+
+- Header: `plasmoid/plugin/units/windowcycler.h`
+- Responsibility: target selection for next/previous/minimize over a
+  task group's window list (wraparound, last-active fallback), and
+  the containment-side task cycle twin.
+- Source (verified): plasmoid/package/contents/ui/task/
+  SubWindows.qml:165-205 `activateNextTask`, 209-250
+  `activatePreviousTask`, 254-301 `minimizeTask`; containment/
+  package/contents/ui/layouts/loaders/Tasks.qml:57-100
+  `activateNextPrevTask` (group-parent expansion + wraparound).
+- Extract-vs-pin: forward/reverse cycles are hand-mirrored copies
+  (the classic drift shape); the fallback ladder (active ->
+  lastActive -> first non-minimized) is a selection function over a
+  snapshot - pure by construction. Wayland window ids are string
+  UUIDs (8e8cdf31/e9710e95): the core takes opaque QString ids,
+  never ints (the family the windowinfowrap tests pin).
+- Interface: `struct GroupWindow { QString winId; bool isActive;
+  bool isMinimized; }`; `selectNext(windows, lastActiveId)`,
+  `selectPrevious(...)`, `selectMinimizeTarget(...)` -> index or
+  -1-free `std::optional<int>`.
+- capt cross-reference: capt lastactivewindowtest covers the
+  backend's last-active bookkeeping; read its cases for the fallback
+  ladder expectations.
+- Test plan: wraparound both directions; active mid-list/at-ends;
+  no active + lastActive present/absent/stale; all minimized;
+  single window; empty list returns nullopt (caller warns - the
+  tasksmodel null-plasmoid misleading-guard note in the handoff's
+  guard inventory applies to the caller side).
+- Qt5-fidelity: Qt5 ancestors of both files (function-level anchors;
+  executor reads f0ad7b23 bodies of SubWindows.qml and the
+  containment tasks loader).
+- Live verification: wheel-cycle over a konsole group (per the
+  configured wheel action); minimize-toggle click behavior on a
+  group.
+- Delegation tag: delegate-safe.
+- Risk + rollback: low; one cutover commit.
+
+### EX-17 TooltipTextComposer [delegate-safe]
+
+- Header: `plasmoid/plugin/units/tooltiptext.h`
+- Responsibility: preview tooltip title/subtext derivation - KWin
+  `<n>` counter stripping, app-name suffix removal, desktop/activity
+  subtext assembly - as pure string functions.
+- Source (verified): plasmoid/package/contents/ui/previews/
+  ToolTipInstance.qml:419-461 `generateTitle` (regex chain), 463-523
+  `generateSubText`; plasmoid/package/contents/ui/task/
+  TaskItem.qml:579-624 `generateSubText` (near-twin).
+- Extract-vs-pin: two near-twin generateSubText bodies; regex chains
+  are cheap to table-test and annoying to drive through live
+  previews. Lowest-risk extraction in the plan - a good first unit
+  for the post-transition executor to calibrate on.
+- Interface: `QString composeTitle(QString display, QString appName)`;
+  `QString composeSubText(TaskEnv { genericName, virtualDesktops,
+  activityNames, onAllDesktops, onAllActivities, currentActivity })`.
+- capt cross-reference: none.
+- Test plan: KWin counter forms (`title <2>`, nested angle
+  brackets, no counter); app-name suffix present/absent/case
+  variants; subtext matrix (all-desktops x activities x current
+  activity filtering); empty inputs; twin-equivalence (both call
+  sites produce identical output for identical inputs after
+  cutover).
+- Qt5-fidelity: f0ad7b23 plasmoid/package/contents/ui/task/
+  TaskItem.qml:537 `generateSubText` (verified); the ToolTipInstance
+  ancestor at its Qt5 path (executor locates; the previews dir was
+  reshaped in the port).
+- Live verification: hover a task with two windows on different
+  desktops; title/subtext match pre-cutover screenshots.
+- Delegation tag: delegate-safe.
+- Risk + rollback: minimal; one commit.
+
+### EX-18 LengthOffsetClamp [delegate-safe]
+
+- Header: `app/settings/lengthoffsetclamp.h` (consumed by shell
+  config QML through an existing settings-side registration point;
+  executor picks the registration seam that already reaches these
+  pages - universalSettings or the config view context - and
+  records it).
+- Responsibility: the mutual maxLength/minLength/offset clamp that
+  keeps a dock on-screen for Center/Justify vs edge alignments -
+  one implementation, currently two.
+- Source (verified): shell/package/contents/configuration/canvas/
+  maxlength/RulerMouseArea.qml:36-76 `updateMaxLength` (the
+  canonical copy per the inventory); shell/package/contents/
+  configuration/pages/AppearanceConfig.qml:272-310
+  `updateMaxLength`, 460-537 offsetSlider from/to/update cluster
+  (the duplicate).
+- Extract-vs-pin: live duplicated math that must agree (the ruler
+  and the slider edit the same keys); divergence here is a
+  config-corruption class. Dedup-by-extraction is the whole point;
+  pinning two copies separately would cement the duplication.
+- Interface: `struct LengthState { double maxLength, minLength,
+  offset; }` (percent units as the QML uses);
+  `clampMaxLength(state, step, Alignment) -> LengthState`,
+  `clampOffset(state, newOffset, Alignment) -> LengthState`.
+- capt cross-reference: capt configcontrolstest exists
+  settings-side; read for shape only.
+- Test plan: Center/Justify off-screen correction (max+offset
+  overflow pulls offset back); edge alignments (offset bounds
+  differ); min<=max invariant under crossed updates; the 30..100
+  maxLength floor/ceiling; idempotence (clamping a clamped state is
+  identity).
+- Qt5-fidelity: Qt5 ancestors of both files (function-level;
+  executor diffs both Qt5 bodies - if Qt5 also duplicated, equal
+  behavior wins; if they differed, that IS the finding to resolve
+  before dedup).
+- Live verification: drag the ruler and the slider to extremes on
+  the throwaway; config round-trip grep (section 6 of
+  latte-live-verification) shows clamped values, dock stays fully
+  on-screen (dumpwins).
+- Delegation tag: delegate-safe.
+- Risk + rollback: low; one commit.
+
+### EX-19 ColorLuminance [delegate-safe]
+
+- Header: `declarativeimports/core/units/colortools.h`, exposed to
+  QML as a LatteCore singleton function set.
+- Responsibility: one luminance/brightness implementation replacing
+  five copies.
+- Source (verified copies): declarativeimports/components/code/
+  ColorizerTools.js, containment/package/contents/code/
+  ColorizerTools.js, plasmoid/package/contents/code/
+  ColorizerTools.js (34/34/28 lines); indicators/default/package/ui/
+  main.qml:71-79 `colorBrightness`; declarativeimports/abilities/
+  client/indicators/LatteIndicator.qml:63-71 twin (plus the inline
+  brightness math in shell LatteDockConfiguration per the
+  inventory).
+- Extract-vs-pin: five copies of the W3C formula is pure drift
+  surface; indicator packages are user-installable so the QML-facing
+  singleton must stay available to third-party indicator QML too
+  (register in LatteCore, which indicators already import).
+- Interface: `double luminance(QColor)`, `bool isLight(QColor,
+  threshold=127.5)`, `QColor darker/lighterBy(QColor, factor)` -
+  match the JS semantics exactly first; improvements are out of
+  scope.
+- capt cross-reference: none.
+- Test plan: formula table (black/white/mid greys/primaries match
+  the JS output to double precision - generate reference values by
+  executing the current JS once, method noted in the test);
+  threshold boundary; the three JS copies diff-checked for
+  divergence BEFORE dedup (a divergence is a finding, one copy may
+  be fixing something).
+- Qt5-fidelity: the JS files are Qt5-inherited; f0ad7b23 carries the
+  same copies (executor confirms per-copy).
+- Live verification: default indicator dot colors on light vs dark
+  tasks unchanged (screenshot pair).
+- Delegation tag: delegate-safe.
+- Risk + rollback: minimal; per-consumer cutover commits.
+
+### EX-20 BadgeMath [delegate-safe]
+
+- Header: `plasmoid/plugin/units/badgemath.h`
+- Responsibility: badge identifier parsing, badge record update
+  semantics, progress-proportion math, and the arc geometry the
+  badge canvas draws.
+- Source (verified): plasmoid/package/contents/ui/main.qml:
+  1467-1478 `getBadger` (identifier tail parse + lookup), 1480-1497
+  `updateBadge`; plasmoid/package/contents/ui/task/
+  ProgressOverlay.qml:93-103 `proportion`;
+  declarativeimports/components/BadgeText.qml:91-106 `onPaint` arc
+  sweep (+36-50 sizing math per the inventory).
+- Extract-vs-pin: parsing and proportion are pure; the Canvas
+  drawing stays QML (presentational), consuming computed
+  {startRadian, sweepRadian, clampedText}. The >9999 clamp and
+  locale formatting are user-visible semantics worth pinning.
+- Interface: `parseBadgeIdentifier(QString) -> {launcherUrl}`;
+  `applyBadge(records, identifier, value) -> records'`;
+  `double proportion(int value, int max, bool isCount)`;
+  `arcFor(double proportion) -> {startRadian, sweepRadian}`;
+  `QString badgeLabel(int value, QLocale)` (9999+ clamp).
+- capt cross-reference: capt smartlauncheritemtest covers backend
+  badge sources; read for value-range cases.
+- Test plan: identifier forms (with/without tail, malformed - loud);
+  record update (append vs mutate); proportion 0/1/overflow/negative
+  (negative is a producer bug: assert, per no-bandaid); arc
+  quarter/half/full sweeps; label clamp at 9999/10000 and locale
+  grouping.
+- Qt5-fidelity: Qt5 ancestors (function-level anchors in the Qt5
+  plasmoid main.qml and BadgeText).
+- Live verification: a download in a badge-publishing app (or
+  qdbus-published unity counter) renders count and progress ring as
+  before.
+- Delegation tag: delegate-safe.
+- Risk + rollback: minimal.
+
+### EX-21 ScrollOverflowMath [delegate-safe]
+
+- Header: `plasmoid/plugin/units/scrollmath.h`
+- Responsibility: task-row overflow scrolling math: clamped
+  positions, scroll-into-view distance, autoscroll trigger zones.
+- Source (verified): plasmoid/package/contents/ui/taskslayout/
+  ScrollableList.qml:84-107 `increasePos`/`decreasePos`/WithStep,
+  109-134 `focusOn` (off-screen distance), 136-171 `autoScrollFor`
+  (trigger zones + block conditions), plus the
+  onContentsExtraSpaceChanged clamp (173-187 per the inventory).
+- Extract-vs-pin: bounded-scroll clamp math with orientation
+  branches; the df747ebf scroll-fade crash was adjacent (effects),
+  but the math itself is untested and feeds drag-autoscroll (feel
+  when dragging tasks in overflow).
+- Interface: `struct ScrollEnv { int contentLength; int viewport;
+  double currentPos; bool vertical; }`; `clampPos`, `stepPos`,
+  `focusDelta(itemRect)`, `autoScrollDecision(pointerPos,
+  triggerZone, blocked) -> {none|step +-}`.
+- capt cross-reference: none.
+- Test plan: no-overflow identity; clamp at both ends; focusOn for
+  fully/partially off-screen items both directions; trigger-zone
+  boundaries; blocked conditions (dragging edge cases from the
+  body).
+- Qt5-fidelity: Qt5 ScrollableList ancestor (function-level).
+- Live verification: shrink maxLength until tasks overflow; wheel
+  and drag-autoscroll behave as pre-cutover (glide the drag).
+- Delegation tag: delegate-safe.
+- Risk + rollback: low.
+
+### EX-22 ActivitySetAlgebra [delegate-safe]
+
+- Header: `app/layouts/activitysetalgebra.h` (capt's placement).
+- Responsibility: free/free-running/valid activity list filtering
+  out of Synchronizer.
+- Source (verified in OUR tree): app/layouts/synchronizer.cpp:150
+  `freeActivities`, :166 `freeRunningActivities`, :179
+  `validActivities`.
+- Extract-vs-pin: trivial set algebra glued to live managers today;
+  capt's header (verified at 81384003) is three inline functions -
+  the cheapest capt port, useful as the delegate wave's warm-up.
+- Interface: capt's verbatim: `freeActivities(all, assigned)`
+  (removeAll semantics), `freeRunningActivities(running, assigned)`
+  (order-preserving), `validActivities(layoutActivities, all)`.
+- capt cross-reference: capt 941bb7fb; activitysetalgebratest (7
+  slots, verified: removeAll duplicate semantics, order
+  preservation, empty cases).
+- Test plan: port the 7 slots; add our synchronizer's actual call
+  patterns (synchronizer.cpp:789/:795 consumers) as integration
+  assertions.
+- Qt5-fidelity: Qt5 synchronizer ancestor (executor greps
+  f0ad7b23:app/layouts/synchronizer.cpp for the same functions).
+- Live verification: not required (no feel surface); layout
+  switching smoke via dbus switchToLayout suffices.
+- Delegation tag: delegate-safe.
+- Risk + rollback: minimal.
+
+### EX-23 WindowTrackingPredicates + ExtraViewHints [delegate-safe]
+
+- Headers: `app/wm/windowtrackingpredicates.h`,
+  `app/wm/tracker/extraviewhints.h` (capt's placements; one spec,
+  two headers, two commits).
+- Responsibility: (a) the window-state predicates behind
+  activeWindowTouching/dodge decisions; (b) the
+  horizontal-touching-busy-vertical bucket pass.
+- Source (verified in OUR tree): app/wm/tracker/
+  windowstracker.cpp:684 `Windows::intersects` and the adjacent
+  isActive/isActiveInViewScreen/isMaximizedInViewScreen family; the
+  extra-view-hints computation lives in the same file (executor
+  locates the exact loop; capt's 5b58c0a3 diff shows the ancestor
+  shape).
+- Extract-vs-pin: dodge visibility decisions are family-5 timing
+  clients (screen geometry arriving late); predicates with pinned
+  truth tables make "dodge did not engage" bugs attributable to
+  inputs vs logic in one test run. The pending live checks from the
+  silent-break sweep (activeWindowMaximized with a touching
+  maximized window) become named cases.
+- Interface: capt's predicates verbatim (WindowInfoWrap + QRect in,
+  bool out; whitelist-wins hasBlockedTracking composition) and
+  capt's TrackedViewGeometry/bucket pass with the hasEdgeTouch
+  callback seam.
+- capt cross-reference: capt 9fba82c8 (7 test slots incl.
+  whitelist-wins and scaled-screen intersects) and 5b58c0a3 (7
+  slots: same-screen bucketing, wrong-location pairing,
+  disabled/not-tracking skips, callback gating). Also capt c94676b9
+  (iterate hashes without copying keys) - fold that micro-fix in if
+  our loop shape matches.
+- Test plan: port both slot sets; add the dodge-maximized live-check
+  scenario as a table case (maximized window intersecting view
+  screen, not minimized/shaded).
+- Qt5-fidelity: Qt5 windowstracker ancestor (function-level).
+- Live verification: the standing consolidated list item: dodge
+  engages with a maximized touching window; a focused dialog keeps
+  activeWindowTouching.
+- Delegation tag: delegate-safe.
+- Risk + rollback: low; behavior-preserving.
+
+### EX-24 IconSourceClassifier [delegate-safe]
+
+- Header: `declarativeimports/core/units/iconsourceclassifier.h`
+  (capt used declarativeimports/core/ too).
+- Responsibility: the IconItem setSource if/else ladder as a
+  classification enum + the last-valid-source-name filter.
+- Source (verified in OUR tree): declarativeimports/core/
+  iconitem.cpp exists; executor anchors the setSource ladder lines
+  at execution.
+- Extract-vs-pin: IconItem is shared rendering infrastructure (task
+  icons, applet fallbacks); misclassification bugs render as wrong/
+  missing icons with no error. capt's classifier is small and
+  proven.
+- Interface: capt's verbatim (verified at 81384003): `sourceName`
+  (QIcon::name precedence), `classify -> {LocalFile, SvgOrIconName,
+  Icon, Image, Clear}`, `isFilteredSourceName` (empty or
+  application-x-executable), `ResolvedIcon::isValid`.
+- capt cross-reference: capt ad74a34a + ed0afd054 routing;
+  iconsourceclassifiertest (13 slots incl. the QImage-variant
+  empty-name case and the isValid truth table).
+- Test plan: port the 13 slots; verify against OUR iconitem.cpp
+  ladder first - if our port diverged from capt's ancestor, our
+  body + Qt5 arbitrate.
+- Qt5-fidelity: f0ad7b23's iconitem.cpp ancestor (executor greps
+  setSource there).
+- Live verification: task icons, applet icons, and a local-file
+  icon path in a launcher all render post-cutover (screenshot).
+- Delegation tag: delegate-safe.
+- Risk + rollback: minimal.
+
+### EX-25 PanelBackgroundScan [delegate-safe]
+
+- Header: `app/plasma/extended/panelbackgroundscan.h` (capt's
+  placement).
+- Responsibility: the pixel-scanline math of panel background
+  analysis - max opacity, mask roundness, shadow band metrics -
+  lifted from panelbackground.cpp's image plumbing.
+- Source (verified in OUR tree): app/plasma/extended/
+  panelbackground.cpp exists; executor anchors the scanline loops
+  at execution (capt 15a317ff's diff maps the ancestor: 400 lines
+  reduced to 25 in their panelbackground.cpp).
+- Extract-vs-pin: pure pixel math over QImage rows, feeding
+  theme-derived roundness/opacity that background drawing consumes;
+  currently only testable by loading real theme SVGs. capt's test
+  images (constructed QImages) prove the seam.
+- Interface: capt's shape: functions over QImage + geometry returning
+  {maxOpacity, roundness, shadow band size/color}.
+- capt cross-reference: capt 15a317ff; panelbackgroundscantest (17
+  slots: opaque/transparent/half-alpha opacity, stepped/square/
+  mirrored corners, zigzag/monotonic shadow ramps, single-row
+  no-crash cases, band spans, max-alpha color pick, no-opaque
+  invalid).
+- Test plan: port the 17 slots with constructed QImages.
+- Qt5-fidelity: f0ad7b23's panelbackground.cpp ancestor
+  (function-level; roundness semantics must match what our
+  MultiLayered padding math consumes - cross-check with EX-13's
+  paddings tests).
+- Live verification: theme switch on the real config; background
+  roundness/shadows unchanged (screenshot pair).
+- Delegation tag: delegate-safe.
+- Risk + rollback: minimal.
 
