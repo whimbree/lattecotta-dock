@@ -5,6 +5,7 @@ plasma_install_package(package org.kde.latte.plasmoid)
 set(tasks_SRCS
     plugin/types.cpp
     plugin/lattetasksplugin.cpp
+    plugin/launcherlistbridge.cpp
     plugin/previewswitchbridge.cpp
     plugin/scrolloverflowmath.cpp
     plugin/tooltiptextcomposer.cpp

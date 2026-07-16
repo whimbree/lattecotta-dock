@@ -161,6 +161,11 @@ latte_add_unit_test(lengthoffsetclamptest
 target_include_directories(lengthoffsetclamptest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app) # coretypes.h is generated there
+# EX-11 LauncherListOps: header-only pure list algebra plus its QML-facing
+# wrappers compiled IN per the sanitized-core rule (the boundary refusals
+# and QVariant mapping run instrumented).
+latte_add_unit_test(launcherlistopstest
+    ${CMAKE_SOURCE_DIR}/plasmoid/plugin/launcherlistbridge.cpp)
 
 # EX-17 TooltipTextComposer: header-only pure core plus its QML-facing
 # wrapper compiled IN per the sanitized-core rule (the wrapper's boundary

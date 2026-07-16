@@ -7,6 +7,7 @@
 
 // local
 #include "backend.h"
+#include "launcherlistbridge.h"
 #include "previewswitchbridge.h"
 #include "scrolloverflowmath.h"
 #include "smartlauncheritem.h"
@@ -44,5 +45,13 @@ void LatteTasksPlugin::registerTypes(const char *uri)
         [](QQmlEngine *, QJSEngine *) -> QObject * {
             return new Latte::Tasks::ScrollOverflowMath;
         });
+    //! launcher list algebra (EX-11): the stateless ops singleton plus the
+    //! per-applet registries TasksExtendedManager instantiates
+    qmlRegisterSingletonType<Latte::Tasks::LauncherListOps>(
+        uri, 0, 1, "LauncherListOps",
+        [](QQmlEngine *, QJSEngine *) -> QObject * {
+            return new Latte::Tasks::LauncherListOps;
+        });
+    qmlRegisterType<Latte::Tasks::TasksExtendedRegistries>(uri, 0, 1, "TasksExtendedRegistries");
 }
 
