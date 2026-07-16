@@ -7,10 +7,20 @@ Written 2026-07-15; premises verified against the tree at afddf1ae.
 
 Read CLAUDE.md, then docs/session-handoff.md - the MODEL-TRANSITION
 PRIORITY STACK at the top. You are executing its item 4: the
-strong-model-window shortlist of docs/QML_EXTRACTION_PLAN.md, with one
-prerequisite pass first (the capt fork sync below). Tree is clean at
-afddf1ae, HEAD == origin/master. This session BUILDS and RUNS code,
-unlike the planning session.
+strong-model-window shortlist of docs/QML_EXTRACTION_PLAN.md first,
+then AS MUCH OF THE REST OF THE PLAN AS POSSIBLE, with one
+prerequisite pass before anything (the capt fork sync below). Verify
+the tree is clean and HEAD == origin/master before starting. This
+session BUILDS and RUNS code, unlike the planning session.
+
+THIS PROMPT IS RE-RUNNABLE AND THE SESSION IS AUTONOMOUS. Each session
+picks up from the plan's completeness ledger and the handoff stack:
+skip any step already recorded done there. Nobody is watching in real
+time - never block on a question; make the call, record it, keep
+moving. Failures get root-caused and fixed per CLAUDE.md, not deferred
+around; defects the specs flag (bandaids, guards, drift found while
+extracting) get fixed at origin during their unit, each as its own
+commit with its own evidence.
 
 STEP 0 - CAPT FORK SYNC (bounded; do this before touching the plan).
 Follow the latte-fork-sync skill. The reviewed-through hash for
@@ -66,6 +76,33 @@ they are the session's failure modes:
 - EX-02 is design-first on the bridge handoff; write the design into
   the spec before coding it.
 
+STEP 3 - CONTINUE INTO THE DELEGATE-SAFE WAVES. The waves 2-4 backlog
+was written for a weaker model, which makes it trivially executable by
+you - keep going, in the plan's wave order (2: C++-only capt ports,
+3: QML math cores starting with EX-17 as the calibration unit, 4: the
+live-heavy tail), until context or the strong-model window runs out.
+You may fan wave-2/3 units out to parallel agent worktrees per the
+established workflow (worktree branches, serial merges to master,
+prune; the defect-class initiative's shape) - subagents never touch
+the live dock; all live verification happens serially in the main
+session after each merge. Per-unit done-criteria are unchanged: tests
+green, ratchet advanced, live recipe run, Qt5 fidelity confirmed,
+ledger + PORTING_PLAN ticked, pushed.
+
+AUTONOMY RULES FOR LIVE VERIFICATION: every spec's live recipe is
+designed to run headlessly (fakepointer glides, dumpwins, spectacle,
+config round-trips - latte-live-verification has the traps: first
+kglobalaccel invoke races, spectacle's own task icon shifts applets,
+stale chrome popups eat clicks, the removeView undo window). Run them
+yourself. The feel-bearing shortlist units (EX-01/02/03) MUST have
+their glide recipes actually run before their cutovers merge - no
+exceptions. Only a check that genuinely needs a real mouse or a human
+eye (the specs mark none as mandatory-desk, but you may discover one)
+gets recorded as a pending live check in the unit's plan entry and in
+the handoff's consolidated live-verification list instead of blocking
+the unit - the docs/testing/live-only.md pattern, recorded not
+papered over.
+
 VERIFICATION RULES (this is where the session earns its keep):
 - The plan's line references were verified at 5e1c2b12. Re-verify each
   against HEAD before editing near it; if the tree moved, fix the spec
@@ -87,10 +124,14 @@ and keep the Phase 10 extraction-initiative item in PORTING_PLAN
 pointing true. Commit messages follow latte-conventions: mechanism,
 why-at-root, live evidence; no attribution trailers, no em-dashes.
 
-THE TRANSITION RULE: if the session (or the strong-model window) ends
-mid-shortlist, stop cleanly at a unit boundary, push, mark the
-unfinished units DEFERRED with their do-not-delegate markers in the
-plan's ledger, and update the handoff stack so the next session knows
-exactly where the cut fell. Never thin a spec, skip its live recipe,
-or hand a strong-model-only unit to the delegate backlog to finish
-faster.
+SESSION CHAINING AND THE TRANSITION RULE: when context nears its end,
+stop cleanly at a unit boundary, push, tick the ledger truthfully, and
+update the handoff stack with exactly where the cut fell - the next
+session runs THIS SAME PROMPT and continues from the ledger. If the
+strong-model WINDOW (not just the session) closes mid-shortlist, the
+unfinished strong-model-only units get DEFERRED markers
+(do-not-delegate) in the plan's ledger; the delegate-safe remainder is
+simply the next session's starting point either way. Never thin a
+spec, skip its live recipe, or hand a strong-model-only unit to the
+delegate backlog to finish faster - getting far is the goal, but a
+unit half-done to spec beats two done thin.
