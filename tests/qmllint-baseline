@@ -145,7 +145,7 @@
 6	share/plasma/shells/org.kde.latte.shell/contents/configuration/canvas/controls/RearrangeIcon.qml
 1	share/plasma/shells/org.kde.latte.shell/contents/configuration/canvas/controls/StickIcon.qml
 44	share/plasma/shells/org.kde.latte.shell/contents/configuration/canvas/HeaderSettings.qml
-13	share/plasma/shells/org.kde.latte.shell/contents/configuration/canvas/maxlength/RulerMouseArea.qml
+12	share/plasma/shells/org.kde.latte.shell/contents/configuration/canvas/maxlength/RulerMouseArea.qml
 99	share/plasma/shells/org.kde.latte.shell/contents/configuration/canvas/maxlength/Ruler.qml
 14	share/plasma/shells/org.kde.latte.shell/contents/configuration/canvas/SettingsOverlay.qml
 1	share/plasma/shells/org.kde.latte.shell/contents/configuration/config.qml
