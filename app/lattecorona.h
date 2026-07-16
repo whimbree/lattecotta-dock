@@ -187,6 +187,12 @@ public:
     //! exists for that containment id (warned in the log).
     QStringList viewAppletsOrder(const uint &containmentId);
 
+    //! D-Bus state readback (observability-first): every current view's
+    //! placement/visibility/geometry facts as one compact JSON array keyed
+    //! on containment id, documented in docs/dbus-observability-interface.md.
+    //! The serialization lives in dbusreports.h; this stays a delegation.
+    QString viewsData();
+
 public Q_SLOTS:
     void aboutApplication();
     void activateLauncherMenu();

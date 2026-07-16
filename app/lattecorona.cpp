@@ -12,6 +12,7 @@
 #include <config-latte.h>
 #include "alternativeshelper.h"
 #include "apptypes.h"
+#include "dbusreports.h"
 #include "screengeometrycalculator.h"
 #include "lattedockadaptor.h"
 #include "screenpool.h"
@@ -1245,6 +1246,12 @@ QStringList Corona::viewAppletsOrder(const uint &containmentId)
     }
 
     return order;
+}
+
+QString Corona::viewsData()
+{
+    return DbusReports::collectViewsData(m_layoutsManager->synchronizer()->currentViews(),
+                                         m_universalSettings->inConfigureAppletsMode());
 }
 
 QStringList Corona::viewTemplatesData()

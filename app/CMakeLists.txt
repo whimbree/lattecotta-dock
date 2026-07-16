@@ -1,6 +1,7 @@
 set(lattedock-app_SRCS
     alternativeshelper.cpp
     apptypes.cpp
+    dbusreports.cpp
     infoview.cpp
     lattecorona.cpp
     screenpool.cpp

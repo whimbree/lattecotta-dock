@@ -56,6 +56,9 @@
     <method name="viewTemplatesData">
         <arg name="data" type="as" direction="out"/>
     </method>
+    <method name="viewsData">
+        <arg name="data" type="s" direction="out"/>
+    </method>
     <method name="setBackgroundFromBroadcast">
         <arg name="activity" type="s" direction="in"/>
         <arg name="screenName" type="s" direction="in"/>
