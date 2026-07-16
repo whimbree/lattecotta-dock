@@ -2814,6 +2814,66 @@ prerequisites in the phases above are done.
       cloned-view order-sync item and a live screens-group clone
       verification
       Commits:
+- [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
+      while surveying what the repo actually ships: shell,
+      containment, tasks plasmoid and three indicators - NO applets).
+      org.kde.latte.separator was never part of latte-dock upstream
+      either; it is one of psifidotos's companion plasmoids from a
+      separate repo, yet the containment SPECIAL-CASES its plugin id
+      today (AppletItem.qml isSeparator + latteStyleApplet arms, the
+      export-template applets list, and the parabolic router treats
+      isSeparator items as Transparent) - we recognize an applet we
+      do not provide. latte-dock-ng vendored it in-tree at v1.0.14
+      and ported it to Qt6 with their own fixes on top (6cb0c7e51
+      separator line length matched to app-icon separators,
+      21ee748c0 task-widget boundary stabilization) - fold THEIR
+      copy per the fork-sync judgment rules: read their fix commits
+      individually against the original applet source, take what is
+      correct, write our own commits; a new top-level applets/
+      subtree with its own install rules, staged like the other
+      packages so the QML gates and the qmllint baseline cover it.
+      Done means: applet installs and staged-loads, drops into a
+      dock via the widget explorer, isSeparator recognition and
+      parabolic transparency verified live (glide across it), and
+      the sibling spacer applet (org.kde.latte.spacer, same
+      companion family, also id-recognized by AppletItem) gets an
+      explicit fold-or-reject decision recorded here rather than
+      staying implicit.
+      Commits:
+- [ ] Full port of applet-window-appmenu (decided 2026-07-15): ship
+      a Latte-maintained global menu applet so we can support
+      features Plasma's org.kde.plasma.appmenu does not or will not
+      (upstream github.com/psifidotos/applet-window-appmenu, Qt5,
+      dormant - the feature-rich one: per-window menu display modes
+      and window-buttons-family integration that stock appmenu never
+      grew; clone it as reference material next to the other
+      reference checkouts when the spike starts). This is a REAL
+      PORT, not a fold: the Qt5 applet leans on private appmenu
+      plumbing, so the port stands on its own research spike first -
+      (a) read the Qt5 source in full and inventory every private
+      dependency (libdbusmenuqt, the appmenu KDED registrar
+      protocol, KWindowSystem X11 winId paths - the wayland arm
+      matters most here, same primary/best-effort split as Phase 4);
+      (b) read Plasma 6's own org.kde.plasma.appmenu + kded appmenu
+      module at the pin to learn the CURRENT registrar/dbusmenu
+      surface (that pair is the living Qt6 reference for the
+      protocol, the same way libplasma 6.6.5 was for popups);
+      (c) decide vendor-vs-depend for dbusmenu parsing the way
+      docs/taskmanager-integration-research.md decided the tasks
+      backend (record the decision the same way);
+      (d) only then the applet port itself, in-tree under applets/,
+      Qt5-faithful to the ORIGINAL applet's behavior per the
+      standing rule (its config options are the spec), landing in
+      cutover-sized commits with the step-2.5 law applied from birth
+      (strict QML, typed cores for any extracted logic, asserts).
+      PREREQUISITES: the separator item above lands first (it
+      creates the applets/ subtree + packaging shape this reuses,
+      on a trivially small applet); interim, verify stock
+      org.kde.plasma.appmenu hosts correctly in a Latte dock (live
+      check, currently UNVERIFIED - needs the appmenu KDED module
+      running) so users have a working global menu while the port
+      cooks and we have a behavior baseline to compare against.
+      Commits:
 
 ### Phase 12: Upstream contribution prep
 
