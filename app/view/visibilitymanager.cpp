@@ -187,6 +187,11 @@ void VisibilityManager::setStrutsThickness(int thickness)
     Q_EMIT strutsThicknessChanged();
 }
 
+QRect VisibilityManager::publishedStruts() const
+{
+    return m_publishedStruts;
+}
+
 Types::Visibility VisibilityManager::mode() const
 {
     return m_mode;

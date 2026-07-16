@@ -280,6 +280,11 @@ bool Positioner::isOffScreen() const
     return (m_view->absoluteGeometry().x()<-500 || m_view->absoluteGeometry().y()<-500);
 }
 
+bool Positioner::inStartup() const
+{
+    return m_inStartup;
+}
+
 int Positioner::currentScreenId() const
 {
     auto *latteCorona = qobject_cast<Latte::Corona *>(m_view->corona());

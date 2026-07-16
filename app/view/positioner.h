@@ -82,6 +82,12 @@ public:
 
     bool isOffScreen() const;
 
+    //! true from construction until the containment QML reports the end of
+    //! its startup sequence (startupFinished); together with isOffScreen()
+    //! this is the startup-stranding diagnostic pair - a view stuck with
+    //! both set never slid in (the Phase 8 startup-stranding item)
+    bool inStartup() const;
+
     QRect canvasGeometry();
 
     void setScreenToFollow(QScreen *scr, bool updateScreenId = true);

@@ -128,6 +128,10 @@ public:
     int strutsThickness() const;
     void setStrutsThickness(int thickness);
 
+    //! the struts rectangle actually sent to the window manager; empty when
+    //! none are published (mode without struts, hidden, or off-screen)
+    QRect publishedStruts() const;
+
     //! Used mostly to show / hide Sidebars
     void toggleHiddenState();
 
