@@ -162,9 +162,15 @@ Per-unit specs (section C), in rank order:
     line). Merge evidence: 42/42 ctest green post-rebase incl. the
     edge-by-state matrix and the staged-bridge qmltest; the dead
     floating-gap input branch (metrics.margins typo, upstream 2022) is
-    fixed at origin. The seven-item visibility/input live matrix stays
-    on the live desk list for the throwaway session - it is the largest
-    outstanding live surface of the initiative.
+    fixed at origin. Live on the throwaway (2026-07-16 afternoon):
+    input band reaches the dock at 2px from the screen edge (parabolic
+    zoom + group preview fired), a right-click in the dock window but
+    outside the pill fell through to the DESKTOP context menu (the mask
+    carve), and auto-hide hid/revealed with the window geometry
+    unchanged (mask-based, dumpwins-verified) plus the 7px edge strip
+    present. Items 4-7 of the matrix (floating gap, sidebar block-all,
+    zoomed input band, debug-overlay cross-check) remain on the live
+    desk list.
 - [x] EX-11 LauncherListOps - launcher order algebra, registries, stored-list parsing
   - [x] executed: LANDED 91bc91d8 lineage (rebased; see the spec Commits
     line). Merge evidence: 44/44 ctest green post-rebase incl. the 16-case
@@ -236,9 +242,14 @@ Per-unit specs (section C), in rank order:
   - [x] executed: LANDED 326e136e lineage (rebased; see the spec Commits
     line). Merge evidence: 39/39 ctest green post-rebase incl. the
     tst_badgetext e2e over the real shipped component; BadgeText hit
-    ZERO qmllint findings strict-on-touch. The D-Bus badge round trip,
-    progress-ring and Meta-badge screenshot recipes stay on the live
-    desk list for the throwaway session.
+    ZERO qmllint findings strict-on-touch. Live on the throwaway
+    (2026-07-16 afternoon): the D-Bus round trip EXPOSED that the whole
+    updateDockItemBadge path was dead since the port (Qt5-era child walk
+    + Qt6 untyped-function signature change) - fixed at origin in
+    0faf8e45, then count 7 rendered, 10000 rendered the 9,999+ overflow,
+    empty cleared, and '2abc' cleared with the loud BadgeMath refusal in
+    the log. Progress-ring and Meta-badge recipes remain on the live
+    desk list.
 - [x] EX-21 ScrollOverflowMath - scrollable list overflow/autoscroll math
   - [x] executed: LANDED 18d4f046 lineage (rebased; see the spec Commits
     line). Merge evidence: the 28-case shipped-QML qmltest is green on
