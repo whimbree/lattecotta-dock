@@ -83,7 +83,22 @@ Per-unit specs (section C), in rank order:
     sanitizer sees it) asserted away; no other invalid states were
     representable
 - [x] EX-04 AutoSizeEngine - iconSize shrink/grow feedback loop
-  - [ ] executed
+  - [x] executed: LANDED (agent worktree, merged 2026-07-16). 19 unit
+    slots (16 shrink + 12 grow equivalence rows recorded from the
+    shipped autosize.js offscreen, ad9b823f termination property over
+    sizes 16..256, oscillation truth table, boundary-bounce sequence,
+    history ring, static_assert unrepresentability proofs) +
+    tst_autosize.qml reshaped to drive the registered AutoSizeStepper
+    through the staged install. Type discipline: output is
+    std::variant<KeepCurrent, ApplySize, RestoreAutomaticMax>
+    (found=false-with-payload unrepresentable), optional
+    appliedIconSize; -1 survives only at the QML boundary. Deviations
+    recorded in docs/agent-logs/EX-04.md incl. the preserved Qt5
+    grow-history quirk. qmllint baseline SHRANK (AutoSize.qml 37->24).
+    Live checks run at merge: throwaway 3-dock iconSize=78 restart -
+    all docks map, process idles at ~2% after the startup settle (the
+    ad9b823f hang-class pinned live); maxLength ruler drag resizes
+    and settles without oscillation (frame-pair compare + CPU delta).
 - [x] EX-05 FillLengthDistributor - Justify/fill two-pass space distribution
   - [ ] executed
 - [x] EX-06 VisibleIndexEngine - visible-index math + separator neighbor walks
