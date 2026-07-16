@@ -158,7 +158,13 @@ Per-unit specs (section C), in rank order:
     two subsequent full runs; no detail captured - if it recurs,
     capture --output-on-failure and root-cause the order dependence.
 - [x] EX-10 MaskInputGeometry - visibility mask + input region rect math
-  - [ ] executed
+  - [x] executed: LANDED f0e6e8fa lineage (rebased; see the spec Commits
+    line). Merge evidence: 42/42 ctest green post-rebase incl. the
+    edge-by-state matrix and the staged-bridge qmltest; the dead
+    floating-gap input branch (metrics.margins typo, upstream 2022) is
+    fixed at origin. The seven-item visibility/input live matrix stays
+    on the live desk list for the throwaway session - it is the largest
+    outstanding live surface of the initiative.
 - [x] EX-11 LauncherListOps - launcher order algebra, registries, stored-list parsing
   - [ ] executed
 - [x] EX-12 ColorizerDecisionCore - applyTheme/scheme selection tree
