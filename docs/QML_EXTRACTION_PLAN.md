@@ -207,7 +207,12 @@ Per-unit specs (section C), in rank order:
     subtext read "On Kiln Test" - the desktop-id fix resolves real names
     where the Qt5 index math rendered "On " with a dangling comma.
 - [x] EX-18 LengthOffsetClamp - maxLength/offset mutual clamp (dedup)
-  - [ ] executed
+  - [x] executed: LANDED c2524734 lineage (rebased; see the spec Commits
+    line). Merge evidence: 43/43 ctest green post-rebase; the rebase
+    crossed EX-15's wheel cutover in the same RulerMouseArea.qml and the
+    compile gate caught the import my hand-merge dropped - fixed and
+    folded before merge. The ruler/slider extreme recipes stay on the
+    live desk list.
 - [x] EX-19 ColorLuminance - shared brightness/luminance helpers (dedup)
   - [x] executed: LANDED 0c8df527..c92cd5fc lineage (rebased; see the spec
     Commits line). Merge evidence: the reference table is pinned bit-exact
