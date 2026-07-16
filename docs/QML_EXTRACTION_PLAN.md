@@ -35,21 +35,21 @@ Inventory (section A):
 Ranking (section B): [x] done.
 
 Per-unit specs (section C), in rank order:
-- [ ] EX-01 PreviewSwitchEngine - preview adoption/debounce/LRU decision core
-- [ ] EX-02 ParabolicRouter - neighbor scale-stack propagation chains
-- [ ] EX-03 ParabolicMathCore - the zoom curve math
-- [ ] EX-04 AutoSizeEngine - iconSize shrink/grow feedback loop
-- [ ] EX-05 FillLengthDistributor - Justify/fill two-pass space distribution
-- [ ] EX-06 VisibleIndexEngine - visible-index math + separator neighbor walks
-- [ ] EX-07 StorageIdRemapper - layout-file id remapping (capt blueprint)
-- [ ] EX-08 ScreenGeometryCalculator - available screen rect/region (capt blueprint)
-- [ ] EX-09 PositionerGeometry - view sizing/placement math (capt blueprint)
-- [ ] EX-10 MaskInputGeometry - visibility mask + input region rect math
-- [ ] EX-11 LauncherListOps - launcher order algebra, registries, stored-list parsing
-- [ ] EX-12 ColorizerDecisionCore - applyTheme/scheme selection tree
-- [ ] EX-13 ViewTypeAndBackgroundPredicates - Panel-vs-Dock chain + background states
-- [ ] EX-14 DropEventClassifier - drag mime classification + insert index
-- [ ] EX-15 WheelAccumulator - wheel delta accumulation/threshold semantics
+- [x] EX-01 PreviewSwitchEngine - preview adoption/debounce/LRU decision core
+- [x] EX-02 ParabolicRouter - neighbor scale-stack propagation chains
+- [x] EX-03 ParabolicMathCore - the zoom curve math
+- [x] EX-04 AutoSizeEngine - iconSize shrink/grow feedback loop
+- [x] EX-05 FillLengthDistributor - Justify/fill two-pass space distribution
+- [x] EX-06 VisibleIndexEngine - visible-index math + separator neighbor walks
+- [x] EX-07 StorageIdRemapper - layout-file id remapping (capt blueprint)
+- [x] EX-08 ScreenGeometryCalculator - available screen rect/region (capt blueprint)
+- [x] EX-09 PositionerGeometry - view sizing/placement math (capt blueprint)
+- [x] EX-10 MaskInputGeometry - visibility mask + input region rect math
+- [x] EX-11 LauncherListOps - launcher order algebra, registries, stored-list parsing
+- [x] EX-12 ColorizerDecisionCore - applyTheme/scheme selection tree
+- [x] EX-13 ViewTypeAndBackgroundPredicates - Panel-vs-Dock chain + background states
+- [x] EX-14 DropEventClassifier - drag mime classification + insert index
+- [x] EX-15 WheelAccumulator - wheel delta accumulation/threshold semantics
 - [ ] EX-16 GroupWindowCycler - next/previous/minimize target selection
 - [ ] EX-17 TooltipTextComposer - preview title/subtext string transforms
 - [ ] EX-18 LengthOffsetClamp - maxLength/offset mutual clamp (dedup)
@@ -852,4 +852,431 @@ Conventions used by all specs:
 - Delegation tag: delegate-safe.
 - Risk + rollback: low; per-twin cutover commits (containment,
   client) so a regression bisects to one side.
+
+### EX-07 StorageIdRemapper [delegate-safe]
+
+- Header: `app/layouts/storageidremapper.h` (capt's placement).
+- Responsibility: the id-assignment math of layout import/duplicate -
+  which containment/applet ids get remapped to what - lifted out of
+  Storage::newUniqueIdsFile's KConfig surgery.
+- Source (verified in OUR tree): app/layouts/storage.cpp:269
+  `Storage::availableId`, :327 `Storage::newUniqueIdsFile`. This is
+  a C++-to-pure-C++ extraction; no QML changes.
+- Extract-vs-pin: the duplicate/import flow is the spine of
+  newView/duplicateView/template import and its only current test
+  coverage is importerregressiontest (name collision suffixes, not id
+  math). fa02b887's liveness filter in importLayoutFile is a
+  self-admitted band-aid (deleter unidentified, noted in
+  session-handoff's guard inventory); a tested remap core is the
+  prerequisite for root-causing that properly instead of guarding.
+- Interface: capt's shape verbatim as a starting point (verified at
+  capt 81384003, app/layouts/storageidremapper.h): `IdRemapInput {
+  usedIds, containmentIds, appletIds }` -> `IdRemap { QHash old->new;
+  mapped() passthrough for unknown keys }`; constants
+  CONTAINMENTIDBASE=12, APPLETIDBASE=40, MAXID=32000 exhaustion cap.
+  OUR DIVERGENCES from capt, mandatory: (1) our storage.cpp also
+  rewrites stringly id LISTS (appletOrder, lockedZoomApplets,
+  userBlocksColorizingApplets - named in latte-architecture) and the
+  isClonedFrom clone reference (ISCLONEDNULL sentinel) - the remap
+  application helper must cover list-valued keys and the clone
+  field, which capt's input struct does not model; (2) exhaustion
+  returning "" must FAIL LOUDLY at the call site (qCritical + abort
+  the import), not write empty ids - per the no-silent-failure rule.
+- capt cross-reference: capt 73f64383 "Extract storage id-remap
+  assignment into a testable unit" (+ e3fc02e1 routing commit).
+- Test plan: port capt's 11 verified test slots
+  (storageidremappertest.cpp at 81384003): availableId first-gap /
+  exhaustion; remap keeps high free ids, reassigns low ids, reassigns
+  colliding used id, containments-before-applets distinct ranges,
+  applet allocation skips containment assignments, the "PROBLEM
+  APPEARED" 2-cycle fix does not corrupt the non-cycle case, empty id
+  gets fresh id, mapped() passthrough, order-key unknown token. ADD
+  ours: list-valued key rewriting (appletOrder round-trip), clone
+  reference remap, exhaustion is loud.
+- Qt5-fidelity: f0ad7b23 app/layouts/storage.cpp:269/:327 (verified;
+  Qt5 uses literal base 12 at :406). The algorithm is Qt5-inherited;
+  diff our current body against Qt5 first and record drift.
+- Live verification: dbus duplicateView on the throwaway layout
+  (recipe in latte-live-verification section 7 plus the undo-window
+  trap in 3b), then verify the new containment's ids in the layout
+  file are collision-free and appletOrder references the new ids.
+- Delegation tag: delegate-safe (capt blueprint + case list + no
+  QML).
+- Risk + rollback: low; behavior-preserving refactor commit + test
+  commit.
+
+### EX-08 ScreenGeometryCalculator [delegate-safe]
+
+- Header: `app/screengeometrycalculator.h` (capt's placement).
+- Responsibility: availableScreenRect/availableScreenRegion math -
+  the screen area left free of docks - as a pure function over view
+  footprints.
+- Source (verified in OUR tree): app/lattecorona.cpp:594
+  `availableScreenRegionWithCriteria`, :798
+  `availableScreenRectWithCriteria`.
+- Extract-vs-pin: this math fed the settings-window overflow saga
+  (1b932ed9: the +99px cold-start overflow) and the Phase 8
+  reserved-area-lag residual filed there; it runs against live View
+  pointers today so every test needs a corona. capt proved the
+  footprint-snapshot seam works.
+- Interface: capt's shape (verified at capt 81384003,
+  app/screengeometrycalculator.h): `ViewFootprint { location,
+  formFactor, alignment, visibilityMode, hasVisibility, isOffScreen,
+  behaveAsPlasmaPanel, normalThickness, screenEdgeMargin, maxLength,
+  offset, geometry }`; `availableRect(startRect, screenGeometry,
+  footprints, ignoreModes, ignoreEdges, desktopUse)` and
+  `availableRegion(...)`. OUR DIVERGENCE, mandatory: 1b932ed9
+  deliberately accepts SELF-ORIGIN updates (upstream d30143f7
+  excluded the origin view; our fix reverted that exclusion so a
+  view's own reserved thickness corrects its chrome) - the
+  extraction must preserve our semantics, and the divergence gets a
+  test case named for 1b932ed9 plus the code comment carried over.
+- capt cross-reference: capt screengeometrycalculator.{h,cpp} +
+  screengeometrycalculatortest.cpp (11 verified slots).
+- Test plan: port capt's slots: empty footprints returns startRect;
+  bottom/top/left edge non-panel reserve thickness; top+bottom
+  accumulate; panel desktopUse uses screenEdgeMargin; ignored
+  visibility mode skipped; ignored edge skipped;
+  normal-window+None auto-blacklisted; offscreen desktopUse skipped;
+  region subtracts footprint. ADD: the 1b932ed9 self-origin case and
+  a multi-dock same-edge case (our real layout shape).
+- Qt5-fidelity: f0ad7b23 app/lattecorona.cpp:537
+  `availableScreenRegion` (verified) and its rect sibling; note Qt5
+  predates the WithCriteria split - fidelity is behavioral (the
+  reserved area Qt5 computed), executor reads both bodies.
+- Live verification: cold restart with --user-config; settings
+  window opens fully on-screen (the 1b932ed9 regression check);
+  dumpwins confirms geometry.
+- Delegation tag: delegate-safe.
+- Risk + rollback: low-medium (chrome placement consumes this);
+  refactor + tests, one revert.
+
+### EX-09 PositionerGeometry [delegate-safe]
+
+- Header: `app/view/positionergeometry.h` (capt's placement).
+- Responsibility: the pure sizing/placement math of a dock view -
+  window position, window size, maximum normal geometry, canvas
+  rect, slide edge, forced borders - lifted from Positioner's live
+  View reads.
+- Source (verified in OUR tree): app/view/positioner.cpp:307
+  `slideLocation`, :686 `validateTopBottomBorders`, :772
+  `updatePosition`, :903 `resizeWindow`.
+- Extract-vs-pin: three landed fixes in this file (793faad2 remap on
+  relocation, c5bdc239 late screen id, the 1607d022 family) were all
+  about WHEN geometry runs, not the math - and the math is exactly
+  what nobody can currently test without a compositor. Extracting the
+  math separates "compute the rect" (table-testable) from "apply it
+  on Wayland" (layer-shell, stays put).
+- Interface: capt's shape (verified at capt 81384003,
+  app/view/positionergeometry.h, 339 lines): `ViewGeometryInputs`
+  struct (location, formFactor, alignment, behaveAsPlasmaPanel,
+  thicknesses, margins, maxLength, offset, slideOffset...) feeding
+  `dockPosition`, `windowSize`, `maximumNormalGeometry`,
+  `canvasGeometry`, `slideEdge`, `forcedBorders`. OUR DIVERGENCE,
+  mandatory and architectural: on Wayland the dock surface position
+  is owned by layer-shell anchors (app/wm/waylandlayershell.cpp
+  configureView/updateAnchoring - the invariants documented there
+  must not be fought); our Positioner's computed positions feed
+  masks, X11, the canvas overlay, and availability math. The spec's
+  adapter section must map each pure function to its ACTUAL consumer
+  in our tree first (grep the call sites at execution) and drop any
+  capt function whose consumer does not exist here - "not consumed
+  on our architecture" is a recorded verdict, not dead code to carry.
+- capt cross-reference: capt 4a829185 (+ sourceguardtest guards) and
+  positionergeometrytest.cpp - 28 verified slots covering all six
+  function families.
+- Test plan: port the 28 capt slots (dockPosition per edge for
+  panel/non-panel and per alignment incl. the screenEdgeMargin/
+  slideOffset case; windowSize horizontal/vertical panel/non-panel +
+  degenerate clamp; maximumNormalGeometry left/right/bottom +
+  multi-monitor offset; canvasGeometry four edges; slideEdge four
+  edges + Floating->None; forcedBorders four cases). Where our math
+  already diverges from capt's port (they ported from the same Qt5
+  ancestor), the Qt5 body at f0ad7b23 arbitrates.
+- Qt5-fidelity: f0ad7b23 app/view/positioner.cpp:300 slideLocation
+  (verified) and the updatePosition/resizeWindow ancestors (executor
+  reads the Qt5 bodies; our layershellmappingtest already pins the
+  port-era layer mapping decisions and must stay green).
+- Live verification: the layershellmappingtest + a real-config
+  restart with dumpwins geometry comparison before/after; canvas
+  overlay placement in edit mode on both monitors.
+- Delegation tag: delegate-safe.
+- Risk + rollback: medium (touches the most Wayland-sensitive file);
+  strictly behavior-preserving refactor, one commit per function
+  family if the diff grows.
+
+### EX-10 MaskInputGeometry [delegate-safe, heavy live recipe]
+
+- Header: `containment/plugin/units/maskgeometry.h`
+- Responsibility: the dock's visibility mask rect and input-region
+  rect per edge/state (hidden, normal, floating-gap, sidebar) as
+  pure per-edge tables.
+- Source (verified): containment/package/contents/ui/
+  VisibilityManager.qml:250-322 `updateMaskArea`, 324-404
+  `updateInputGeometry`.
+- Extract-vs-pin: mask errors are the invisible-dock / dead-input
+  class - user-catastrophic and pixel-invisible in screenshots
+  until interacted with. The math is per-edge rect selection with
+  qBound normalization, fully table-testable. The qBound clamps get
+  the no-bandaid assessment during extraction: each is either a
+  documented geometry normalization (comment carried over) or a
+  symptom hiding a bad producer (finding to file).
+- Interface: `struct MaskInputs { Plasma::Types::Location location;
+  bool inNormalState; bool isHidden; bool behaveAsPlasmaPanel; bool
+  isFloatingGapWindowEnabled; int screenEdgeMargin; int
+  normalThickness; int maxThickness; QRect viewLocalGeometry; ... }`
+  -> `struct MaskResult { QRect maskRect; QRect inputRect; }` via
+  two functions mirroring the QML pair. The exact field list is
+  derived from the two function bodies at execution (they read a
+  bounded set of metrics/visibility properties; enumerate, do not
+  approximate).
+- capt cross-reference: none (capt's visibilityrevealtest is
+  backend-side).
+- Test plan: per-edge x per-state matrix (4 edges x {normal, hidden,
+  sliding, floating-gap, sidebar}); mask==input equivalences where
+  the QML computes them equal; degenerate window sizes rejected
+  loudly (a zero-size input is family-5 async timing - assert, do
+  not clamp, per the AutoSize contract precedent).
+- Qt5-fidelity: f0ad7b23 containment/package/contents/ui/
+  VisibilityManager.qml:250 `updateMaskArea` (verified, same
+  name/line). The input-geometry half is port-era (Wayland input
+  regions); its spec source is the current body plus the C++
+  consumers in app/view/visibilitymanager.cpp.
+- Live verification (mandatory, extensive): for each visibility mode
+  (dodge-active, dodge-maximized, auto-hide, windows-go-below):
+  drive a window against the dock, verify reveal/hide; probe input
+  edges with fakepointer clicks just inside/outside the mask rect
+  (clicks outside must fall through to the desktop); floating-gap
+  hover reveal; dumpwins geometry cross-check. This is the heaviest
+  live matrix in the delegate-safe set - budget it.
+- Delegation tag: delegate-safe (tables are mechanical), but the
+  live matrix is mandatory before the cutover commit merges.
+- Risk + rollback: medium-high consequence, low likelihood given the
+  matrix; single cutover commit.
+
+### EX-11 LauncherListOps [delegate-safe]
+
+- Header: `plasmoid/plugin/units/launcherlistops.h`
+- Responsibility: launcher list algebra - stored-record parsing,
+  separator name allocation, order reconciliation planning, and the
+  waiting/to-be-added/to-be-removed/to-be-moved registries - as pure
+  list operations.
+- Source (verified): plasmoid/package/contents/ui/abilities/
+  Launchers.qml:282-316 `currentStoredLauncherList` (activity-tagged
+  record parsing), 59-87 separator predicates +
+  `freeAvailableSeparatorName` allocation loop;
+  plasmoid/package/contents/ui/abilities/launchers/Validator.qml:
+  50-71 `upwardIsBetter`, 73-136 the reconciliation loop;
+  plasmoid/package/contents/ui/TasksExtendedManager.qml (404 lines
+  of parallel array registries; verified anchor 264-324
+  `addLauncherToBeMoved`/`moveLauncherToCorrectPos` family).
+- Extract-vs-pin: d6d57e61 (stale synced-launcher clients) lived in
+  this complex; the guard inventory flags Validator's
+  `upwardIsBetter` -1-splice as a heuristic that silently degrades
+  to suboptimal moves. Registries with substring-equality and
+  hand-rolled splices are the exact drift class typed containers
+  end. The reconciliation REDESIGN: replace the move-one-then-
+  restart loop with a computed move plan `plan(current, goal) ->
+  ordered list of (from,to) moves`, which fixes the -1-splice at
+  origin (the planner never needs the direction heuristic).
+- Interface: pure functions over QStringList/QVector value types:
+  `parseStoredRecords(QStringList) -> QVector<LauncherRecord {url,
+  activities}>`, `freeSeparatorName(existing) -> QString`,
+  `movePlan(current, goal) -> QVector<Move>`; a `Registry<T>` value
+  type replacing the four parallel-array registries with one tested
+  container (add/remove/exists/count semantics preserved per
+  registry, including the substring-equality quirk of
+  waiting-launchers - which gets a test documenting WHY substring,
+  or a finding if the why cannot be established from Qt5).
+- capt cross-reference: capt syncedlaunchersclienttest and
+  smartlauncheritemtest exist (backend-side); read for case ideas,
+  not structure.
+- Test plan: parse round-trip (records with/without activity tags,
+  malformed tails as loud errors); separator allocation fills gaps
+  and never collides; movePlan property tests (applying the plan to
+  `current` yields `goal` for permutations, insertions, removals;
+  plan length minimal for adjacent swaps); registry semantics per
+  the current QML behavior (equality mode explicit).
+- Qt5-fidelity: f0ad7b23 plasmoid/package/contents/ui/abilities/
+  launchers/Validator.qml:50 `upwardIsBetter` (verified) and the
+  Qt5 TasksExtendedManager equivalent (executor locates it -
+  the Qt5 file may sit at a different path; find it with
+  `git show f0ad7b23:plasmoid/package/contents/ui/ --name-only`
+  class searches, record the actual ancestor).
+- Live verification: drag-reorder launchers in edit mode
+  (fakepointer drag, confirm via appletOrder/launcher list
+  round-trip in the layout file per latte-live-verification section
+  6); pin/unpin a launcher on two activities and switch activities.
+- Delegation tag: delegate-safe.
+- Risk + rollback: medium (launcher order is user-sacred data;
+  family-6 KConfig default-deletion amplifies mistakes - the tests
+  must include a non-default-order round-trip). Registry cutover and
+  planner cutover land as separate commits.
+
+### EX-12 ColorizerDecisionCore [delegate-safe]
+
+- Header: `containment/plugin/units/colorizerdecision.h`
+- Responsibility: the colorizer's theme/scheme selection decision
+  tree (which scheme file and text-color class apply for a given
+  environment state) as a pure decision function.
+- Source (verified): containment/package/contents/ui/colorizer/
+  Manager.qml:68-136 `applyTheme` decision tree, 167-199 `scheme`
+  selection (edit-mode contrast logic).
+- Extract-vs-pin: every color investigation of the 2026-07-14..15
+  complex (1f835402 ColorOverlay semantics, 5c06b497 fringe
+  measurement, 79ca3360 kdeglobals resolution) had to re-derive this
+  tree by hand to state expected behavior. The tree itself has not
+  been the defect yet - extraction here is prophylactic
+  testability, which is why it ranks below the geometry units. The
+  rendering side (ColorOverlay, layer effects) STAYS in QML - it is
+  pinned by qml-effect-rules.sh and the family-7 contracts and is
+  explicitly out of scope.
+- Interface: `struct ColorizerEnv { bool colorizerEnabled; int
+  themeColorsSetting; int windowColorsSetting; bool busyBackground;
+  double backgroundOpacity; bool editMode; bool touchingWindowScheme
+  ... }` -> `struct ColorizerChoice { SchemeSource source; QString
+  schemeFile; bool brightText; }`. Field list enumerated from the
+  two bodies at execution.
+- capt cross-reference: capt schemesmodeltest is settings-side;
+  none for this tree.
+- Test plan: decision table covering the setting enums x busy x
+  opacity thresholds x edit mode; the LightThemeColors desk scenario
+  (5c06b497's context: colorizer active under light scheme) and the
+  Dark Colors real-config flip (79ca3360's verification) as named
+  cases so future palette work has executable expectations.
+- Qt5-fidelity: f0ad7b23 containment/package/contents/ui/colorizer/
+  Manager.qml:60 `applyTheme`, :159 `scheme` (verified). CLAUDE.md
+  names edit-mode color behavior as a fork trap; the Qt5 body is
+  the spec, not either fork's.
+- Live verification: flip Dark/Light Colors on the real config with
+  colorizing enabled; background and applet text track per the Qt5
+  rules (the 79ca3360 session recorded the expected behavior);
+  restore palette after (the probe-config lesson from 1f835402's
+  session).
+- Delegation tag: delegate-safe.
+- Risk + rollback: low; the actuators stay in QML.
+
+### EX-13 ViewTypeAndBackgroundPredicates [delegate-safe]
+
+- Header: `containment/plugin/units/backgroundstate.h`
+- Responsibility: the Panel-vs-Dock decision chain and the
+  background-state predicate cluster (solid/transparent/shadows) as
+  one pure state resolver.
+- Source (verified): containment/package/contents/ui/main.qml:58-69
+  `viewType`, 71-91 `viewTypeInQuestion`, 240-274
+  `panelShadowsActive`, plus the forceSolidPanel/
+  forceTransparentPanel/forcePanelForBusyBackground cluster
+  (126-149 per the inventory); containment/package/contents/ui/
+  background/MultiLayered.qml:463-498 `invUpdateEffectsArea` (the
+  effects-rect computation), 56-125 paddings math.
+- Extract-vs-pin: the chain is the root decision every geometry
+  consumer branches on (latte-architecture: "trace it before
+  changing geometry code") and it has confused live debugging twice
+  (the throwaway viewType=1 full-width background mistaken for a
+  regression, recorded in session-handoff). The edit-mode background
+  family (38e60eb9, f5a5f44c, d72ee0cd) was adjacent stacking/
+  semantics, fixed in QML - the predicates that DECIDE remain
+  untested. Extract the predicates; the layer stack and its states
+  block stay QML.
+- Interface: `struct BackgroundEnv { int viewTypeSetting; bool
+  byPassWM; ... }` -> resolved `{ ViewType effective; bool
+  solidForced; bool transparencyForced; bool shadowsActive; }`, and
+  a separate `effectsRect(inputs) -> QRect` for the
+  invUpdateEffectsArea math. Enumerate fields from the bodies.
+- capt cross-reference: capt panelbackgroundtest covers the C++
+  scanline side (our EX-25), not these predicates.
+- Test plan: decision table: viewType setting x custom shadow x
+  Justify/static x thickness-vs-panelSize x zoom==1 (the
+  viewTypeInQuestion clauses); the throwaway confusion case
+  (viewType=1 + alignment=10 + panelSize=100 => full-width Panel
+  rendering is CORRECT) as a named case; effectsRect for
+  compositing/no-compositing/hidden.
+- Qt5-fidelity: the Qt5 main.qml ancestor (executor greps
+  `viewType`/`panelShadowsActive` in f0ad7b23's containment
+  main.qml; function-level anchor, lines unverified here).
+- Live verification: flip Dock/Panel type in the chooser on the
+  throwaway; background mode changes match Qt5 screenshots
+  (blueprint order per 38e60eb9 stays).
+- Delegation tag: delegate-safe.
+- Risk + rollback: low-medium (everything reads these); cutover in
+  one commit, revert restores bindings.
+
+### EX-14 DropEventClassifier [delegate-safe]
+
+- Header: `declarativeimports/core/units/dropclassifier.h` (both
+  containment and plasmoid consume it).
+- Responsibility: drag/drop mime classification (task vs separator
+  vs launcher-list vs plasmoid vs file urls) and the drop insert
+  index math, as pure functions over a mime snapshot.
+- Source (verified): containment/package/contents/ui/
+  DragDropArea.qml:92-141 `onDragEnter` classification decisions;
+  plasmoid/package/contents/ui/taskslayout/MouseHandler.qml:70-91
+  `isDroppingSeparator`/`isDroppingOnlyLaunchers`/`isMovingTask`,
+  127-195 `onDragMove` (insert index + ignored-item suppression).
+- Extract-vs-pin: mime-format string matching duplicated across two
+  files with subtly different accept sets; b474adad found the
+  DropArea dead-handler trap here (a `function onDrop` member that
+  silently never connects on Qt6) - the QML shells keep arrow-syntax
+  handlers, the decisions move where they cannot be silently
+  disconnected.
+- Interface: `struct MimeSnapshot { QStringList formats; QByteArray
+  taskData; QList<QUrl> urls; QString sourceId; }` ->
+  `DropKind classify(snapshot)`; `int insertIndexAt(rowEntries,
+  QPointF pos, Qt::Orientation)` sharing RowEntry with EX-06.
+- capt cross-reference: capt alternativescreateapplettest is
+  adjacent flow, not this logic.
+- Test plan: classification truth table per mime-format combination
+  (including the masqueraded-index plasmoid drop from containment
+  main.qml's onAppletAdded, latte-architecture's drop routing);
+  insertIndexAt across separators/hidden; launcher-vs-task
+  suppression (the ignoredItem rule in onDragMove).
+- Qt5-fidelity: Qt5 ancestors of both files at f0ad7b23
+  (function-level; executor reads both onDragEnter/onDragMove
+  bodies).
+- Live verification: fakepointer drag of a task icon to reorder; a
+  file-url drop onto a task (opens with the app) and onto empty
+  dock area (launcher pin offer), per Qt5 behavior.
+- Delegation tag: delegate-safe.
+- Risk + rollback: low-medium (drop paths are user-visible but
+  recipes exist); one cutover commit per consumer.
+
+### EX-15 WheelAccumulator [delegate-safe]
+
+- Header: `declarativeimports/core/units/wheelaccumulator.h`
+- Responsibility: wheel delta accumulation with per-site step,
+  threshold, and direction-reversal semantics - one tested
+  accumulator replacing four hand-rolled copies.
+- Source (verified): plasmoid/package/contents/ui/task/
+  AudioStream.qml:111-142 (120-unit step accumulator, residue reset
+  on direction reversal - the 299a241b semantics, hand-verified
+  against plasma-pa); plasmoid/package/contents/ui/task/
+  TaskMouseArea.qml:239-331 `onWheel` (angle decomposition,
+  parallel-scroll detection); containment/package/contents/ui/
+  layouts/EnvironmentActions.qml:107-173 `onWheel` (scroll-action
+  dispatch thresholds); shell/package/contents/configuration/canvas/
+  maxlength/RulerMouseArea.qml:25-33 `onWheel` (step trigger).
+- Extract-vs-pin: 299a241b's body records exact accumulation
+  semantics matched to plasma-pa; nothing pins them. Four sites,
+  three behaviors (accumulate-and-step, threshold-fire,
+  threshold-with-axis-priority). One parameterized accumulator with
+  per-site tests ends the class.
+- Interface: `class WheelAccumulator { int add(QPoint angleDelta);
+  }` returning fired step count (sign-carrying), constructed with
+  {stepSize, axisPriority, resetOnReversal}; pure, no Qt event
+  types beyond QPoint.
+- capt cross-reference: none.
+- Test plan: per-site parameter table; 299a241b's plasma-pa cases
+  (fractional deltas from high-resolution wheels accumulate to one
+  step at 120; reversal drops residue); TaskMouseArea's
+  parallel-axis selection; ruler's +-6 step semantics
+  (RulerMouseArea.qml:36-76 consumes the fired steps - that clamp
+  math belongs to EX-18, keep the seam clean).
+- Qt5-fidelity: Qt5 sites predate high-resolution wheel handling in
+  places; 299a241b's matched-to-plasma-pa semantics WIN where they
+  differ (deviation already documented in that commit body).
+- Live verification: fakepointer scroll subcommand (added in the
+  round-seventeen session) over a task's audio badge: volume steps
+  match plasma-pa's applet on the same hardware.
+- Delegation tag: delegate-safe.
+- Risk + rollback: low; per-site cutover commits.
 
