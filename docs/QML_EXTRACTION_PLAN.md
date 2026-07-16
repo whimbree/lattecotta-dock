@@ -2351,6 +2351,14 @@ assessed every file the landed cutovers touched):
   org.kde.latte.private.containment gets the plugins.qmltypes
   treatment EX-17 gave private.tasks (a follow-up artifact, not one
   unit's).
+- The EX-15 cutovers' residues, same classes: RulerMouseArea.qml (17,
+  unchanged - every warning is a `plasmoid` read inside
+  updateMaxLength, a config-view CONTEXT PROPERTY qmllint cannot
+  resolve and typed injection cannot express, plus root/tooltip
+  context-chain reads in a cursorShape BINDING and an
+  onVisibleChanged handler, both the binding-risk class; the
+  updateMaxLength body is EX-18's extraction target and zeroes with
+  that unit).
 - What the retroactive pass DID fix in the touched files: implicit
   Connections handlers to function syntax, own-property qualification
   through the component id (safe: ids outrank scope properties, same

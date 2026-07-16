@@ -22,18 +22,24 @@ MouseArea{
         }
     }
 
-    onWheel: (wheel) => {
-        var angle = wheel.angleDelta.y / 8;
+    //! Qt5 fired past angle = angleDelta.y/8 > 12, i.e. angleDelta > 96
+    //! (EX-15: the wheel math lives in LatteCore.WheelStepper)
+    LatteCore.WheelStepper {
+        id: lengthWheelStepper
+        axisPick: LatteCore.WheelStepper.VerticalOnly
+        fireThreshold: 96
+    }
 
-        if (angle > 12) {
-            updateMaxLength(6);
-        } else if (angle < -12) {
-            updateMaxLength(-6);
+    onWheel: (wheel) => {
+        const direction = lengthWheelStepper.add(wheel.angleDelta, false);
+
+        if (direction !== 0) {
+            rulerMouseArea.updateMaxLength(6 * direction);
         }
     }
 
     //! replica of updating maximum length from configuration tab
-    function updateMaxLength(step) {
+    function updateMaxLength(step: int) {
         var updateminimumlength = (plasmoid.configuration.maxLength === plasmoid.configuration.minLength);
 
         var tempML = plasmoid.configuration.maxLength + step;
