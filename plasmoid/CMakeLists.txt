@@ -6,6 +6,7 @@ set(tasks_SRCS
     plugin/types.cpp
     plugin/lattetasksplugin.cpp
     plugin/previewswitchbridge.cpp
+    plugin/tooltiptextcomposer.cpp
     plugin/smartlauncherbackend.cpp
     plugin/smartlauncheritem.cpp
     plugin/backend.cpp
@@ -38,4 +39,10 @@ target_link_libraries(lattetasksplugin
 target_include_directories(lattetasksplugin PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
                       
 install(TARGETS lattetasksplugin DESTINATION ${KDE_INSTALL_QMLDIR}/org/kde/latte/private/tasks)
-install(FILES plugin/qmldir DESTINATION ${KDE_INSTALL_QMLDIR}/org/kde/latte/private/tasks)
+# plugins.qmltypes feeds qmllint/tooling type resolution (the step-2.5
+# qmllint ratchet); regenerate after registering new types in
+# lattetasksplugin.cpp:
+#   qmlplugindump -nonrelocatable org.kde.latte.private.tasks 0.1
+# (offscreen, with QML2_IMPORT_PATH at the staged tree - the gate fails
+# on new unresolved-type warnings if this file goes stale)
+install(FILES plugin/qmldir plugin/plugins.qmltypes DESTINATION ${KDE_INSTALL_QMLDIR}/org/kde/latte/private/tasks)

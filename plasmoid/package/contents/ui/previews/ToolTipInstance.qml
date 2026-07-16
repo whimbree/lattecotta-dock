@@ -20,6 +20,7 @@ import org.kde.kquickcontrolsaddons 2.0 as KQuickControlsAddons
 
 import org.kde.latte.core 0.2 as LatteCore
 import org.kde.latte.components 1.0 as LatteComponents
+import org.kde.latte.private.tasks 0.1 as LatteTasks
 
 import org.kde.draganddrop 2.0
 
@@ -416,121 +417,84 @@ Column {
         }
     }
 
-    function generateTitle() {
+    //! thin shell over the EX-17 core (plasmoid/plugin/units/tooltiptext.h):
+    //! the value-domain undefined checks and the group/window source
+    //! selection stay here, the string transform lives in the composer
+    function generateTitle(): string {
         if (!isWin) {
             return genericName != undefined ? genericName : "";
         }
 
-        var text;
         var modelExists = (typeof model !== 'undefined');
 
         if (isGroup && modelExists) {
             if (model.display === undefined) {
                 return "";
             }
-            text = model.display.toString();
-        } else {
-            text = displayParent;
+            return LatteTasks.TooltipTextComposer.composeTitle(model.display.toString(), appName);
         }
 
-        // KWin appends increasing integers in between pointy brackets to otherwise equal window titles.
-        // In this case save <#number> as counter and delete it at the end of text.
-        var counter = text.match(/<\d+>\W*$/);
-        text = text.replace(/\s*<\d+>\W*$/, "");
-
-        // Remove appName from the end of text.
-        var appNameRegex = new RegExp(appName + "$", "i");
-        text = text.replace(appNameRegex, "");
-        text = text.replace(/\s*(?:-|—)*\s*$/, "");
-
-        // Add counter back at the end.
-        if (counter !== null) {
-            if (text === "") {
-                text = counter;
-            } else {
-                text = text + " " + counter;
-            }
-        }
-
-        // In case the window title had only redundant information (i.e. appName), text is now empty.
-        // Add a hyphen to indicate that and avoid empty space.
-        if (text === "") {
-            text = "—";
-        }
-        return text.toString();
+        //! Qt5 threw on an undefined displayParent (a broken binding and an
+        //! empty title); the composer receives "" and renders its em-dash
+        //! placeholder instead
+        return LatteTasks.TooltipTextComposer.composeTitle(
+                    displayParent !== undefined ? displayParent.toString() : "", appName);
     }
 
-    function generateSubText() {
+    //! thin shell over the EX-17 core: the live id -> name lookups and the
+    //! group/window source selection stay here (virtualDesktopInfo and
+    //! activityInfo are session objects a pure core must not read), the
+    //! composer owns every decision and the i18n strings. Index loops, not
+    //! Array methods, on the role values: the offscreen suite feeds
+    //! array-like role stand-ins (ListModel dynamicRoles nests real
+    //! arrays), shaped exactly like these .length/[i] reads.
+    function generateSubText(): string {
+        //! Qt5 quirk preserved: an undefined activitiesParent blanks the
+        //! whole subtext, desktops included, even for group children
+        //! carrying their own activities
         if (activitiesParent === undefined) {
             return "";
         }
 
-        var subTextEntries = [];
-
-        var virtualDesktops = isGroup ? VirtualDesktops : virtualDesktopParent;
-        var virtualDesktopNameList = [];
-
-        //! Plasma 6 libtaskmanager hands desktop IDs (UUID strings on
-        //! wayland), not the Qt5 1-based desktop numbers, so the inherited
-        //! desktopNames[id - 1] lookup indexed with NaN and every name
-        //! joined as empty ("On " / "On ,"). Resolve through desktopIds the
-        //! way ContextMenu.qml already does; an id missing from desktopIds
-        //! (desktop just removed) resolves to nothing instead of an empty
-        //! name.
         var desktopInfo = virtualDesktopInfo;
+        var virtualDesktops = isGroup ? VirtualDesktops : virtualDesktopParent;
+        var desktopNames = [];
 
         for (var i = 0; i < virtualDesktops.length; ++i) {
+            //! Plasma 6 libtaskmanager hands desktop IDs (UUID strings on
+            //! wayland), not the Qt5 1-based desktop numbers; resolve
+            //! through desktopIds the way ContextMenu.qml does. An id
+            //! missing from desktopIds (desktop just removed) resolves to
+            //! nothing instead of an empty name.
             var desktopIndex = desktopInfo.desktopIds.indexOf(virtualDesktops[i]);
             if (desktopIndex >= 0) {
-                virtualDesktopNameList.push(desktopInfo.desktopNames[desktopIndex]);
+                desktopNames.push(desktopInfo.desktopNames[desktopIndex]);
             }
-        }
-
-        if (!root.showOnlyCurrentDesktop
-            && virtualDesktopInfo.numberOfDesktops > 1
-            && (isGroup ? IsOnAllVirtualDesktops : isOnAllVirtualDesktopsParent) !== true
-            && virtualDesktopNameList.length > 0) {
-            subTextEntries.push(i18nc("Comma-separated list of desktops", "On %1", virtualDesktopNameList.join()));
         }
 
         var act = isGroup ? activities : activitiesParent;
+        var activityIds = null;
+        var activityNames = null;
 
-        if (act === undefined) {
-            return subTextEntries.join("\n");
-        }
-
-        if (act.length === 0 && activityInfo.numberOfRunningActivities > 1) {
-            subTextEntries.push(i18nc("Which virtual desktop a window is currently on",
-                                      "Available on all activities"));
-        } else if (act.length > 0) {
-            var activityNames = [];
-
-            for (var i = 0; i < act.length; i++) {
-                var activity = act[i];
-                var activityName = activityInfo.activityName(act[i]);
-                if (activityName === "") {
-                    continue;
-                }
-                if (root.showOnlyCurrentActivity) {
-                    if (activity !== activityInfo.currentActivity) {
-                        activityNames.push(activityName);
-                    }
-                } else if (activity !== activityInfo.currentActivity) {
-                    activityNames.push(activityName);
-                }
-            }
-
-            if (root.showOnlyCurrentActivity) {
-                if (activityNames.length > 0) {
-                    subTextEntries.push(i18nc("Activities a window is currently on (apart from the current one)",
-                                              "Also available on %1", activityNames.join(", ")));
-                }
-            } else if (activityNames.length > 0) {
-                subTextEntries.push(i18nc("Which activities a window is currently on",
-                                          "Available on %1", activityNames.join(", ")));
+        if (act !== undefined) {
+            activityIds = [];
+            activityNames = [];
+            for (var j = 0; j < act.length; ++j) {
+                activityIds.push(act[j]);
+                activityNames.push(activityInfo.activityName(act[j]));
             }
         }
 
-        return subTextEntries.join("\n");
+        return LatteTasks.TooltipTextComposer.composeSubText({
+            showOnlyCurrentDesktop: root.showOnlyCurrentDesktop,
+            showOnlyCurrentActivity: root.showOnlyCurrentActivity,
+            desktopCount: desktopInfo.numberOfDesktops,
+            runningActivityCount: activityInfo.numberOfRunningActivities,
+            onAllVirtualDesktops: (isGroup ? IsOnAllVirtualDesktops : isOnAllVirtualDesktopsParent) === true,
+            desktopNames: desktopNames,
+            activityIds: activityIds,
+            activityNames: activityNames,
+            currentActivity: activityInfo.currentActivity
+        });
     }
 }

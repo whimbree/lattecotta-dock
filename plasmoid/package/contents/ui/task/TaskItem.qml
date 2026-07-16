@@ -576,51 +576,49 @@ AbilityItem.BasicItem {
     }
 
     ///window previews///
-    function generateSubText(task) {
-        var subTextEntries = new Array();
+    //! dead since Qt5 (no caller at f0ad7b23 either - verified by grep of
+    //! both trees), kept as the thin twin of ToolTipInstance's shell over
+    //! the EX-17 composer so the two bodies can never drift apart again.
+    //! Its Qt5-only divergences unify onto the live twin's semantics: the
+    //! uncontexted i18n("On %1") becomes the composer's contexted entry,
+    //! unnamed activities are skipped, and the desktops resolve from the
+    //! Plasma 6 VirtualDesktops role (the Plasma 5 single-desktop
+    //! model.VirtualDesktop role this body read no longer exists).
+    function generateSubText(): string {
+        var desktopNames = [];
 
-        if (!Plasmoid.configuration.showOnlyCurrentDesktop
-                && virtualDesktopInfo.numberOfDesktops > 1
-                && model.IsOnAllVirtualDesktops !== true
-                && model.VirtualDesktop != -1
-                && model.VirtualDesktop != undefined) {
-            subTextEntries.push(i18n("On %1", virtualDesktopInfo.desktopNames[model.VirtualDesktop - 1]));
-        }
-
-        if (model.Activities == undefined) {
-            return subTextEntries.join("\n");
-        }
-
-        if (model.Activities.length == 0 && activityInfo.numberOfRunningActivities > 1) {
-            subTextEntries.push(i18nc("Which virtual desktop a window is currently on",
-                                      "Available on all activities"));
-        } else if (model.Activities.length > 0) {
-            var activityNames = new Array();
-
-            for (var i = 0; i < model.Activities.length; i++) {
-                var activity = model.Activities[i];
-
-                if (Plasmoid.configuration.showOnlyCurrentActivity) {
-                    if (activity != activityInfo.currentActivity) {
-                        activityNames.push(activityInfo.activityName(model.Activities[i]));
-                    }
-                } else if (activity != activityInfo.currentActivity) {
-                    activityNames.push(activityInfo.activityName(model.Activities[i]));
+        if (model.VirtualDesktops !== undefined) {
+            for (var i = 0; i < model.VirtualDesktops.length; ++i) {
+                var desktopIndex = virtualDesktopInfo.desktopIds.indexOf(model.VirtualDesktops[i]);
+                if (desktopIndex >= 0) {
+                    desktopNames.push(virtualDesktopInfo.desktopNames[desktopIndex]);
                 }
             }
+        }
 
-            if (Plasmoid.configuration.showOnlyCurrentActivity) {
-                if (activityNames.length > 0) {
-                    subTextEntries.push(i18nc("Activities a window is currently on (apart from the current one)",
-                                              "Also available on %1", activityNames.join(", ")));
-                }
-            } else if (activityNames.length > 0) {
-                subTextEntries.push(i18nc("Which activities a window is currently on",
-                                          "Available on %1", activityNames.join(", ")));
+        var activityIds = null;
+        var activityNames = null;
+
+        if (model.Activities != undefined) {
+            activityIds = [];
+            activityNames = [];
+            for (var j = 0; j < model.Activities.length; ++j) {
+                activityIds.push(model.Activities[j]);
+                activityNames.push(activityInfo.activityName(model.Activities[j]));
             }
         }
 
-        return subTextEntries.join("\n");
+        return LatteTasks.TooltipTextComposer.composeSubText({
+            showOnlyCurrentDesktop: Plasmoid.configuration.showOnlyCurrentDesktop,
+            showOnlyCurrentActivity: Plasmoid.configuration.showOnlyCurrentActivity,
+            desktopCount: virtualDesktopInfo.numberOfDesktops,
+            runningActivityCount: activityInfo.numberOfRunningActivities,
+            onAllVirtualDesktops: model.IsOnAllVirtualDesktops === true,
+            desktopNames: desktopNames,
+            activityIds: activityIds,
+            activityNames: activityNames,
+            currentActivity: activityInfo.currentActivity
+        });
     }
     ///window previews////
 

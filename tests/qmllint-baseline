@@ -115,14 +115,14 @@
 7	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/abilities/launchers/Validator.qml
 5	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/AppletAbilities.qml
 15	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/config/ConfigAppearance.qml
-31	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/config/ConfigInteraction.qml
+23	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/config/ConfigInteraction.qml
 8	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/config/ConfigPanel.qml
 218	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/ContextMenu.qml
-94	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/main.qml
+84	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/main.qml
 2	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/previews/PipeWireThumbnail.qml
 1	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/previews/PlasmaCoreThumbnail.qml
 23	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/previews/ToolTipDelegate2.qml
-102	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/previews/ToolTipInstance.qml
+97	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/previews/ToolTipInstance.qml
 7	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/previews/ToolTipWindowMouseArea.qml
 20	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/PulseAudio.qml
 8	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/animations/ClickedAnimation.qml
@@ -143,8 +143,8 @@
 16	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/taskslayout/ScrollPositioner.qml
 47	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/SubWindows.qml
 78	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskIcon.qml
-222	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskItem.qml
-194	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskMouseArea.qml
+211	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskItem.qml
+181	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskMouseArea.qml
 94	share/plasma/shells/org.kde.latte.shell/contents/applet/CompactApplet.qml
 16	share/plasma/shells/org.kde.latte.shell/contents/configuration/canvas/controls/Button.qml
 6	share/plasma/shells/org.kde.latte.shell/contents/configuration/canvas/controls/RearrangeIcon.qml
@@ -159,7 +159,7 @@
 261	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/AppearanceConfig.qml
 264	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/BehaviorConfig.qml
 66	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/EffectsConfig.qml
-252	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/TasksConfig.qml
+238	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/TasksConfig.qml
 31	share/plasma/shells/org.kde.latte.shell/contents/controls/CustomIndicatorButton.qml
 8	share/plasma/shells/org.kde.latte.shell/contents/controls/CustomVisibilityModeButton.qml
 38	share/plasma/shells/org.kde.latte.shell/contents/controls/DragCorner.qml

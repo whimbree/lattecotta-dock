@@ -186,6 +186,9 @@ Item {
             root.displayParent = "a <b> <2>";
             checkTitle("counter after other angle brackets", "a <b> <2>");
 
+            root.displayParent = "x <2> <3>";
+            checkTitle("only the last counter is a counter", "x <2> <3>");
+
             // NBSP before the separator: JS \s is unicode-aware and strips it
             root.displayParent = "doc — Firefox";
             checkTitle("unicode whitespace stripped with the separator", "doc");
@@ -226,6 +229,22 @@ Item {
             root.appName = "";
             root.displayParent = "plain title";
             checkTitle("empty appName strips nothing", "plain title");
+        }
+
+        function test_titleDeliberateDivergencesFromQt5() {
+            resetContext();
+
+            // Qt5's JS threw on new RegExp("Notepad++$") and broke the
+            // whole title binding; the composer skips the appName strip
+            root.appName = "Notepad++";
+            root.displayParent = "doc - Notepad++";
+            checkTitle("invalid appName pattern keeps the full title", "doc - Notepad++");
+
+            // Qt5 threw on undefined.match (broken binding, empty title);
+            // the shell hands the composer "" and gets the placeholder
+            root.appName = "Firefox";
+            root.displayParent = undefined;
+            checkTitle("undefined display shows the placeholder", "—");
         }
 
         function test_titleNonWindowUsesGenericName() {

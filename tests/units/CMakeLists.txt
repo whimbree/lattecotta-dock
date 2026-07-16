@@ -101,3 +101,15 @@ target_link_libraries(panelbackgroundscantest
 latte_add_unit_test(iconsourceclassifiertest)
 target_link_libraries(iconsourceclassifiertest
     Qt6::Gui)
+
+# EX-17 TooltipTextComposer: header-only pure core plus its QML-facing
+# wrapper compiled IN per the sanitized-core rule (the wrapper's boundary
+# refusals and i18nc plan-mapping run instrumented); KF6::I18n for i18nc.
+latte_add_unit_test(tooltiptexttest
+    ${CMAKE_SOURCE_DIR}/plasmoid/plugin/tooltiptextcomposer.cpp)
+target_link_libraries(tooltiptexttest
+    KF6::I18n)
+# the wrapper asserts against English msgids; a host locale with installed
+# latte catalogs must not translate them out from under the test
+set_property(TEST tooltiptexttest APPEND PROPERTY
+    ENVIRONMENT "LANGUAGE=C;LC_ALL=C")

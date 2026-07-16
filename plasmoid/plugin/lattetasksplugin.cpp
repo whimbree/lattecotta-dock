@@ -9,6 +9,7 @@
 #include "backend.h"
 #include "previewswitchbridge.h"
 #include "smartlauncheritem.h"
+#include "tooltiptextcomposer.h"
 #include "types.h"
 
 // Qt
@@ -26,5 +27,13 @@ void LatteTasksPlugin::registerTypes(const char *uri)
     qmlRegisterType<SmartLauncher::Item>(uri, 0, 1, "SmartLauncherItem");
     qmlRegisterType<Backend>(uri, 0, 1, "Backend");
     qmlRegisterType<Latte::Tasks::PreviewSwitchBridge>(uri, 0, 1, "PreviewSwitchBridge");
+
+    //! stateless composer (EX-17): a singleton so the tooltip shells reach
+    //! it module-qualified instead of through the context chain
+    qmlRegisterSingletonType<Latte::Tasks::TooltipTextComposer>(
+        uri, 0, 1, "TooltipTextComposer",
+        [](QQmlEngine *, QJSEngine *) -> QObject * {
+            return new Latte::Tasks::TooltipTextComposer;
+        });
 }
 
