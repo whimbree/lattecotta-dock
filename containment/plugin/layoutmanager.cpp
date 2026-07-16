@@ -400,6 +400,13 @@ void LayoutManager::restore()
     }
 
     //! remove invalid applets from the ids order
+    if (!invalidApplets.isEmpty()) {
+        //! loud on purpose: an id recorded in appletOrder with no live applet
+        //! behind it means an applet failed to load or the config is stale -
+        //! either way something upstream of here lost an applet the user had
+        qWarning() << "org.kde.latte ::: restore: appletOrder names applets that do not exist, dropping ids:" << invalidApplets;
+    }
+
     for (int i=0; i<invalidApplets.count(); ++i) {
         appletIdsOrder.removeAll(invalidApplets[i]);
     }
@@ -461,6 +468,12 @@ void LayoutManager::restore()
 
             QQuickItem *appletGraphic = appletGraphicItem(orderedApplets[i]);
             if (!appletGraphic) {
+                //! loud on purpose: restore() runs after the containment item
+                //! created every existing applet's graphic item (verified live,
+                //! all views log full applet sets), so a missing one here means
+                //! that premise broke and this applet silently vanishes from
+                //! the layout until something re-adds it
+                qWarning() << "org.kde.latte ::: restore: applet has NO graphic item and is skipped, id:" << orderedApplets[i]->property("id").toInt();
                 continue;
             }
 
@@ -496,6 +509,8 @@ void LayoutManager::restore()
 
             QQuickItem *appletGraphic = appletGraphicItem(orderedApplets[i]);
             if (!appletGraphic) {
+                //! same loud skip as the non-justify branch above
+                qWarning() << "org.kde.latte ::: restore: applet has NO graphic item and is skipped, id:" << orderedApplets[i]->property("id").toInt();
                 continue;
             }
 
