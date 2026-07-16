@@ -46,7 +46,9 @@ Item {
     property bool inDraggingPhase: false
 
     readonly property LaunchersPart.Syncer syncer: LaunchersPart.Syncer{}
-    readonly property LaunchersPart.Validator validator: LaunchersPart.Validator{}
+    readonly property LaunchersPart.Validator validator: LaunchersPart.Validator{
+        launchersAbility: _launchers
+    }
 
     readonly property string _NULLACTIVITYID_: "00000000-0000-0000-0000-000000000000"
 

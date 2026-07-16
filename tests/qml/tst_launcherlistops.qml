@@ -20,11 +20,10 @@
 //! and the settle/stop branches are observable contract. The adjacent-swap
 //! single-move case IS pinned - both implementations do it in one move.
 //!
-//! Context plumbing (the tst_tooltiptext pattern): every name the shipped
-//! files resolve is provided - TasksExtendedManager takes its
-//! launchersAbility/tasksModel as injected properties (the EX-11 seam),
-//! the Validator resolves _launchers through the context chain via a
-//! property of this root.
+//! Context plumbing (the tst_tooltiptext pattern): both shipped components
+//! take their collaborators as injected properties (the EX-11 seams) -
+//! launchersAbility/tasksModel for TasksExtendedManager, launchersAbility
+//! for the Validator - assigned from stand-in objects on this root.
 
 import QtQuick 2.7
 import QtTest 1.2
@@ -37,7 +36,7 @@ Item {
     width: 400
     height: 300
 
-    // ---- context for TasksExtendedManager.qml ----
+    // ---- stand-ins injected into TasksExtendedManager.qml ----
 
     property QtObject launchersAbility: QtObject {
         signal launcherInRemoving(string launcherUrl)
@@ -61,7 +60,7 @@ Item {
         tasksModel: root.tasksModel
     }
 
-    // ---- context for launchers/Validator.qml ----
+    // ---- stand-in injected into launchers/Validator.qml ----
 
     //! Simulates the launchers ability surface the validator drives: shown
     //! is the current shown-launcher order, and tasksModel.move mutates it
@@ -99,6 +98,7 @@ Item {
 
     LaunchersParts.Validator {
         id: validator
+        launchersAbility: root._launchers
     }
 
     SignalSpy {

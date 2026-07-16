@@ -1,137 +1,63 @@
 /*
     SPDX-FileCopyrightText: 2020 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
 import QtQuick 2.0
 
-import org.kde.plasma.plasmoid 2.0
+import org.kde.latte.private.tasks 0.1 as LatteTasks
 
-import org.kde.latte.core 0.2 as LatteCore
-
-//! Launchers Validate Timer
+//! Launchers Validate Timer: reconciles the shown launcher order with the
+//! synced goal order the host pushed (Syncer assigns launchers and starts
+//! this timer).
+//!
+//! EX-11: the order algebra lives in the core planner (planMoves in
+//! units/launcherlistops.h); this shell applies ONE move per 400ms tick -
+//! the Qt5 cadence - and replans on the next tick, which strictly shrinks
+//! the plan (the termination guarantee the old upwardIsBetter direction
+//! heuristic lacked, pinned by tests/units/launcherlistopstest.cpp).
 Timer{
     id:launchersOrderValidatorTimer
     interval: 400
 
+    //! the launchers ability: shown-list read, layout lookup, tasks model
+    required property QtObject launchersAbility
+
+    //! the goal order (the host's synced list)
     property var launchers: []
 
-    function launchersAreInSync() {
-        return arraysAreEqual(_launchers.currentShownLauncherList(), launchers);
-    }
-
-    function launcherValidPos(url) {
-        for (var i=0; i<launchers.length; ++i) {
-            if (launchers[i] === url) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    function arraysAreEqual(list1, list2) {
-        if (list1.length !== list2.length) {
-            console.log("  arrays have different size...")
-            return false;
-        }
-
-        for (var i=0; i<list1.length; ++i) {
-            if (list1[i] !== list2[i]) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    //! true if upward is the best way to iterate through current
-    //! in order to make it equal with goal
-    function upwardIsBetter(current, goal)
-    {
-        var tCurrent = current.slice();
-
-        if (!arraysAreEqual(tCurrent, goal)) {
-            for (var i=0; i<tCurrent.length; ++i) {
-                if (tCurrent[i] !== goal[i]) {
-                    var val = tCurrent[i];
-                    tCurrent.splice(i, 1);
-                    tCurrent.splice(goal.indexOf(val), 0, val);
-
-                    if (arraysAreEqual(tCurrent, goal)){
-                        return true;
-                    } else {
-                        return false;
-                    }
-                }
-            }
-        }
-
-        return false;
-    }
-
     onTriggered: {
-        if (launchersAreInSync()) {
+        var current = launchersAbility.currentShownLauncherList();
+        var plan = LatteTasks.LauncherListOps.planMoves(current, launchers);
+
+        if (plan === undefined || plan === null) {
+            //! not a duplicate-free permutation of the goal: the model is
+            //! still settling mid-animation (Qt5's launcherValidPos===-1
+            //! restart branch) - retry once it has caught up
+            restart();
+            return;
+        }
+
+        if (plan.length === 0) {
             stop();
             console.log("launchers synced at:" + launchers);
             launchers.length = 0;
-            _launchers.tasksModel.syncLaunchers();
-        } else {
-            var currentLaunchers = _launchers.currentShownLauncherList();
-
-            if (upwardIsBetter(currentLaunchers, launchers)) {
-                console.log("UPWARD....");
-                for (var i=0; i<currentLaunchers.length; ++i) {
-                    if (currentLaunchers[i] !== launchers[i]) {
-                        var p = launcherValidPos(currentLaunchers[i]);
-                        if (p === -1) {
-                            console.log("No pos found for :"+currentLaunchers[i] + " at: "+launchers);
-                            restart();
-                            return;
-                        }
-                        var launcherLayoutIndex = _launchers.indexOfLayoutLauncher(currentLaunchers[i]);
-
-                        if (launcherLayoutIndex === -1) {
-                            console.log(" launcher was not found in model, syncing stopped...");
-                            stop();
-                            return;
-                        }
-
-                        console.log(" moving:" +launcherLayoutIndex + " _ " + p );
-                        _launchers.tasksModel.move(launcherLayoutIndex, p);
-                        restart();
-                        return;
-                    }
-                }
-            } else {
-                console.log("DOWNWARD....");
-                for (var i=currentLaunchers.length-1; i>=0; --i) {
-                    if (currentLaunchers[i] !== launchers[i]) {
-                        var p = launcherValidPos(currentLaunchers[i]);
-                        if (p === -1) {
-                            console.log("No pos found for :"+currentLaunchers[i] + " at: "+launchers);
-                            restart();
-                            return;
-                        }
-                        var launcherLayoutIndex = _launchers.indexOfLayoutLauncher(currentLaunchers[i]);
-
-                        if (launcherLayoutIndex === -1) {
-                            console.log(" launcher was not found in model, syncing stopped...");
-                            stop();
-                            return;
-                        }
-
-                        console.log(" moving:" +launcherLayoutIndex + " _ " + p );
-                        _launchers.tasksModel.move(launcherLayoutIndex, p);
-                        restart();
-                        return;
-                    }
-                }
-            }
-
-            console.log("why we reached ??? ");
-            console.log("CURRENT ::: " + currentLaunchers);
-            console.log("VALID   ::: " + launchers);
+            launchersAbility.tasksModel.syncLaunchers();
+            return;
         }
+
+        var move = plan[0];
+        var layoutIndex = launchersAbility.indexOfLayoutLauncher(current[move.from]);
+
+        if (layoutIndex === -1) {
+            console.log(" launcher was not found in model, syncing stopped...");
+            stop();
+            return;
+        }
+
+        console.log(" moving:" + layoutIndex + " _ " + move.to);
+        launchersAbility.tasksModel.move(layoutIndex, move.to);
+        restart();
     }
 }

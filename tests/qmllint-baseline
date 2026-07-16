@@ -106,7 +106,6 @@
 164	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/VisibilityManager.qml
 3	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/config/config.qml
 42	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/abilities/launchers/Syncer.qml
-7	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/abilities/launchers/Validator.qml
 5	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/AppletAbilities.qml
 15	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/config/ConfigAppearance.qml
 23	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/config/ConfigInteraction.qml
