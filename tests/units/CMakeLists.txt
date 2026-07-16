@@ -120,3 +120,7 @@ latte_add_unit_test(filldistributortest)
 # Shared RowEntry row-snapshot type family (EX-06 consumes it, EX-14 is
 # planned to): header-only plain value type + lookups.
 latte_add_unit_test(rowentrytest)
+
+# EX-06 VisibleIndexEngine: header-only pure index math and neighbor
+# predicates over RowEntry rows.
+latte_add_unit_test(visibleindextest)
