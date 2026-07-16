@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2019 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -11,11 +12,22 @@ import org.kde.plasma.plasmoid 2.0
 
 import org.kde.latte.core 0.2 as LatteCore
 
+//! Thin drag/drop shell (EX-14, docs/QML_EXTRACTION_PLAN.md): every
+//! classification and routing decision comes from
+//! LatteCore.DropClassifier; this file keeps only scene effects (spacer
+//! parenting/opacity, launcher messages, processMimeData). Handlers stay
+//! arrow-syntax members so they cannot silently disconnect (b474adad).
 DragDrop.DropArea {
     id: dragArea
 
     // The containment ContainmentItem root; processMimeData() lives there in Plasma 6.
     property Item containmentItem
+
+    //! injected from main.qml (ids outrank scope properties there);
+    //! function-context reads only, per the strict-on-touch injection rule
+    property Item dndSpacer
+    property QtObject fastLayoutManager
+    property Item animations
 
     property bool containsDrag: false
 
@@ -31,10 +43,10 @@ DragDrop.DropArea {
     }
 
     Connections{
-        target: root.dragInfo
+        target: dragArea.containmentItem ? dragArea.containmentItem.dragInfo : null
 
-        onEnteredChanged: {
-            if(!root.dragInfo.entered) {
+        function onEnteredChanged() {
+            if(!dragArea.containmentItem.dragInfo.entered) {
                 dragArea.clearInfo();
             }
         }
@@ -43,31 +55,15 @@ DragDrop.DropArea {
     Connections{
         target: latteView
 
-        onContainsDragChanged: {
+        function onContainsDragChanged() {
             if(!latteView.containsDrag) {
                 dragArea.clearInfo();
             }
         }
     }
 
-    function clearInfo() {
+    function clearInfo(): void {
         clearInfoTimer.restart();
-    }
-
-    function isDroppingOnlyLaunchers(event) {
-        if (!latteView) {
-            return
-        }
-
-        if (event.mimeData.hasUrls || (event.mimeData.formats.indexOf("text/x-plasmoidservicename") !== 0)) {
-            var onlyLaunchers = event.mimeData.urls.every(function (item) {
-                return latteView.extendedInterface.isApplication(item);
-            });
-
-            return onlyLaunchers;
-        }
-
-        return false;
     }
 
     //! Give the time when an applet is dropped to be positioned properly
@@ -84,42 +80,32 @@ DragDrop.DropArea {
             dragArea.dragInfo.isLatteTasks = false;
             dragArea.dragInfo.onlyLaunchers = false;
 
-            dndSpacer.parent = root;
-            dndSpacer.opacity = 0;
+            dragArea.dndSpacer.parent = dragArea.containmentItem;
+            dragArea.dndSpacer.opacity = 0;
         }
     }
 
     onDragEnter: (event) => {
         containsDrag = true;
         clearInfoTimer.stop();
-        var isTask = event !== undefined
-                && event.mimeData !== undefined
-                && event.mimeData.formats !== undefined
-                && event.mimeData.formats.indexOf("application/x-orgkdeplasmataskmanager_taskbuttonitem") >= 0;
 
-        var isSeparator = event !== undefined
-                && event.mimeData !== undefined
-                && ( latteView.mimeContainsPlasmoid(event.mimeData, "audoban.applet.separator")
-                    || latteView.mimeContainsPlasmoid(event.mimeData, "org.kde.latte.separator") );
+        const flags = LatteCore.DropClassifier.classifyContainmentDrag(
+                    event.mimeData,
+                    (url) => { return latteView.extendedInterface.isApplication(url); });
 
-        var isLatteTasks = event !== undefined
-                && event.mimeData !== undefined
-                && latteView.mimeContainsPlasmoid(event.mimeData, "org.kde.latte.plasmoid");
-
-        var isPlasmoid = event !== undefined
-                && event.mimeData !== undefined
-                && event.mimeData.formats !== undefined
-                && !event.mimeData.hasUrls
-                && event.mimeData.formats.indexOf("text/x-plasmoidservicename") === 0;
-
-        dragInfo.isTask = isTask;
-        dragInfo.isPlasmoid = isPlasmoid;
-        dragInfo.isSeparator = isSeparator;
-        dragInfo.isLatteTasks = isLatteTasks;
-        dragInfo.onlyLaunchers = isDroppingOnlyLaunchers(event);
+        dragInfo.isTask = flags.isTask;
+        dragInfo.isPlasmoid = flags.isPlasmoid;
+        dragInfo.isSeparator = flags.isSeparator;
+        dragInfo.isLatteTasks = flags.isLatteTasks;
+        dragInfo.onlyLaunchers = flags.onlyLaunchers;
         dragInfo.computationsAreValid = true;
 
-        if (dragInfo.isTask || Plasmoid.immutable || !root.myView.isShownFully) {
+        const action = LatteCore.DropClassifier.containmentDragEnterAction(
+                    flags.isTask, flags.onlyLaunchers, Plasmoid.immutable,
+                    containmentItem.myView.isShownFully,
+                    containmentItem.launchers.hasStealingApplet);
+
+        if (action === LatteCore.DropClassifier.EnterReject) {
             event.ignore();
             clearInfo();
             return;
@@ -129,10 +115,10 @@ DragDrop.DropArea {
         //! may not be triggered #408926
         animations.needLength.addEvent(dragArea);
 
-        if (root.launchers.hasStealingApplet && dragInfo.onlyLaunchers) {
-            root.launchers.showAddLaunchersMessageInStealingApplet();
+        if (action === LatteCore.DropClassifier.EnterShowAddLaunchersMessage) {
+            containmentItem.launchers.showAddLaunchersMessageInStealingApplet();
             dndSpacer.opacity = 0;
-            dndSpacer.parent = root;
+            dndSpacer.parent = containmentItem;
             return;
         }
 
@@ -143,14 +129,19 @@ DragDrop.DropArea {
     onDragMove: (event) => {
         containsDrag = true;
         clearInfoTimer.stop();
-        if (dragInfo.isTask) {
+
+        const action = LatteCore.DropClassifier.containmentDragMoveAction(
+                    dragInfo.isTask, dragInfo.onlyLaunchers,
+                    containmentItem.launchers.hasStealingApplet);
+
+        if (action === LatteCore.DropClassifier.MoveLeaveUnchanged) {
             return;
         }
 
-        if (root.launchers.hasStealingApplet && dragInfo.onlyLaunchers) {
-            root.launchers.showAddLaunchersMessageInStealingApplet();
+        if (action === LatteCore.DropClassifier.MoveShowAddLaunchersMessage) {
+            containmentItem.launchers.showAddLaunchersMessageInStealingApplet();
             dndSpacer.opacity = 0;
-            dndSpacer.parent = root;
+            dndSpacer.parent = containmentItem;
             return;
         }
 
@@ -162,28 +153,34 @@ DragDrop.DropArea {
         containsDrag = false;
         animations.needLength.removeEvent(dragArea);
 
-        if (root.launchers.hasStealingApplet) {
-            root.launchers.hideAddLaunchersMessageInStealingApplet();
+        if (containmentItem.launchers.hasStealingApplet) {
+            containmentItem.launchers.hideAddLaunchersMessageInStealingApplet();
         }
 
         dndSpacer.opacity = 0;
-        dndSpacer.parent = root;
+        dndSpacer.parent = containmentItem;
     }
 
     onDrop: (event) => {
         containsDrag = false;
         animations.needLength.removeEvent(dragArea);
 
-        if (root.launchers.hasStealingApplet) {
-            root.launchers.hideAddLaunchersMessageInStealingApplet();
+        if (containmentItem.launchers.hasStealingApplet) {
+            containmentItem.launchers.hideAddLaunchersMessageInStealingApplet();
         }
 
-        if (dragInfo.isTask || !root.myView.isShownFully) {
+        const action = LatteCore.DropClassifier.containmentDropAction(
+                    dragInfo.isTask, dragInfo.onlyLaunchers,
+                    containmentItem.myView.isShownFully,
+                    containmentItem.launchers.hasStealingApplet);
+
+        if (action === LatteCore.DropClassifier.DropIgnore) {
+            //! the spacer is deliberately left as-is: Qt5 returned early here
             return;
         }
 
-        if (root.launchers.hasStealingApplet && dragInfo.onlyLaunchers) {
-            root.launchers.addDroppedLaunchersInStealingApplet(event.mimeData.urls);
+        if (action === LatteCore.DropClassifier.DropAddLaunchersToStealingApplet) {
+            containmentItem.launchers.addDroppedLaunchersInStealingApplet(event.mimeData.urls);
         } else {
             var dndindex = fastLayoutManager.dndSpacerIndex();
             var eventx = event.x;

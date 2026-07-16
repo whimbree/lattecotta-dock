@@ -2557,6 +2557,24 @@ assessed every file the landed cutovers touched):
   count). Zeroing either means injecting the config engines' context
   properties through the whole dialog tree - the endgame refactor, not
   a per-unit retrofit.
+- The EX-14 containment cutover's residue, same class: containment
+  DragDropArea.qml (6, down from 51) - every remaining warning is a
+  `latteView` read (the rootContext context property the view C++
+  sets): the dragInfo.entered BINDING, one Connections target, and the
+  extendedInterface reads in the drag handlers. There is no document id
+  to qualify through, a same-named injected property cannot be bound
+  from main.qml (the RHS resolves to the shell's own property and
+  self-shadows), and routing it through a new main.qml property would
+  add a warning to that exception file instead. Everything else was
+  injected (dndSpacer/fastLayoutManager/animations via document ids,
+  which outrank the shell's same-named properties at the instantiation
+  site) or qualified through containmentItem. Injection lesson recorded
+  here because it is easy to re-trip: declaring an injected property on
+  a shell SWITCHES resolution of that name inside the consumer's
+  instantiation block from the context chain to the (possibly not yet
+  assigned) property - BINDINGS in those blocks must read the document
+  id instead (the _animations/_appletAbilities qualifications in both
+  main.qml files carry the WHY comment).
 - What the retroactive pass DID fix in the touched files: implicit
   Connections handlers to function syntax, own-property qualification
   through the component id (safe: ids outrank scope properties, same

@@ -96,7 +96,7 @@
 66	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/colorizer/CustomBackground.qml
 6	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/colorizer/KirigamiShadowedRectangle.qml
 196	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/debugger/DebugWindow.qml
-51	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/DragDropArea.qml
+6	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/DragDropArea.qml
 92	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/editmode/ConfigOverlay.qml
 10	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/layouts/AppletsContainer.qml
 67	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/layouts/EnvironmentActions.qml

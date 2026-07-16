@@ -786,6 +786,11 @@ ContainmentItem {
         id: backDropArea
         anchors.fill: parent
         containmentItem: root
+        //! document ids outrank the shell's same-named properties here,
+        //! so these resolve to the ids (the EX-14 injection seam)
+        dndSpacer: dndSpacer
+        fastLayoutManager: fastLayoutManager
+        animations: _animations
 
         //! Applet-aware right-click menus for the dock window itself; first
         //! child so it sits at the BOTTOM of the stacking order: applets that
@@ -839,7 +844,11 @@ ContainmentItem {
 
             Behavior on opacity {
                 NumberAnimation {
-                    duration: animations.duration.large
+                    //! _animations by id, not backDropArea's injected
+                    //! animations property: a BINDING can evaluate before
+                    //! the injected property is assigned (the EX-04
+                    //! startup-order class); the document id always resolves
+                    duration: _animations.duration.large
                     easing.type: Easing.OutCubic
                 }
             }
