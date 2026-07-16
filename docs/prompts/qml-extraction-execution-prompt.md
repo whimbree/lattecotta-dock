@@ -231,8 +231,8 @@ executing session reads its orders, because they bind every wave):
 - Copyright is never erased: adopted files keep their authors' SPDX
   lines verbatim, extractions of upstream algorithms keep the
   original author's line, refactors ADD a line next to the existing
-  ones. Only genuinely new files carry a single new line. When in
-  doubt, over-attribute.
+  ones. Genuinely new files carry Bree's line AND "2026 Latte Dock
+  contributors" for good measure. When in doubt, over-attribute.
 - These rules extend, never replace, the existing working agreements:
   match surrounding idiom in inherited files, Qt5-faithful behavior,
   no silent guards, stub discipline.
