@@ -1818,28 +1818,47 @@ multi-view, multi-monitor setup.
       with loginctl lock-session/unlock-session and the screenshot
       loop, then trace the visibility/startup state machine
       Commits:
-- [ ] Implement session shutdown/logout handling as one deliberate
-      pattern rather than iterating - latte-dock-ng's end state (worth
-      adopting as the *starting* implementation, not rediscovering):
-      `setQuitLockEnabled(false)` (a `KJob` can otherwise silently
-      suppress `QCoreApplication::quit()` during logout); a 5-second
-      poller fallback for shutdown detection, checked only after the
-      confirmation phase (Wayland has no XSMP session management, so
-      `commitDataRequest` may simply never fire); the synchronous D-Bus
-      shutdown-check call's timeout reduced from the default 25s to
-      ~1s (25s can block the main thread through compositor teardown);
-      async-signal-safe `SIGINT`/`SIGTERM` handling via a self-pipe
-      (not relying on `signalfd`, which can silently miss signals on
-      some platforms)
-      Commits:
-- [ ] Unload the Corona's dependents in explicit dependency order
-      (`unload` before `setParent(nullptr)` before delete) rather than
-      ad-hoc deletion, to avoid a double-free when deferred-delete
-      events later reference already-gone objects; detach any shared
-      QML engine from `QApplication` before app teardown so it isn't
-      deleted twice (once by Qt's child-deletion, once by its own
-      shared_ptr)
-      Commits:
+- [x] Implement session shutdown/logout handling as one deliberate
+      pattern rather than iterating. RESOLVED 2026-07-16 against the
+      primary source (plasma-workspace 6.6.5 shell/main.cpp read at the
+      pin), not ng's end state - ng's mechanisms were verified claim by
+      claim and two of four were their own invention: plasmashell has
+      NO ksmserver shutdown poller and NO synchronous D-Bus
+      shutdown-check (a non-XSMP wayland client cannot block ksmserver;
+      session teardown arrives as SIGTERM from systemd after the user
+      confirms), so neither was adopted and the 25s->1s timeout note is
+      moot. What landed: AA_DisableSessionManager (replaces the
+      commitData/saveState RestartNever handlers, which could never
+      fire on wayland), setQuitLockEnabled(false) (KJob's
+      QEventLoopLocker could quit the dock when the last job finished),
+      and SIGTERM routed through the clean quit path via KSignalHandler
+      (self-piped) with its own quit-trail line - unhandled SIGTERM was
+      immediate death mid-write, the config-corruption class
+      (iconSize=78 was written by exactly such a kill). Verified live:
+      SIGTERM -> full trail -> all five throwaway views unloaded ->
+      clean exit ~1.5s, no core. LIVE CHECK PENDING (needs my hands,
+      kills the session): one real logout/login cycle observing the
+      journal for the SIGTERM line and a clean exit.
+      Commits: e02d1bcde (quit pattern), 9d183984e (lifecycleState
+      D-Bus readback: startup/running/quit-requested/unloaded,
+      observability-first)
+- [x] Unload the Corona's dependents in explicit dependency order.
+      RESOLVED 2026-07-16: the destructor's deleteLater() pile was a
+      silent no-op - Qt flushes DeferredDelete exactly once after the
+      loop returns (execCleanup), and ~Corona runs after that, so real
+      destruction fell to ~QObject's child pass in CONSTRUCTION order
+      (screen/theme services before the layouts manager that still
+      consumed them: the crash-on-logout class). ~Corona now deletes
+      explicitly, consumers before services, wm last; onAboutToQuit
+      keeps the live-app work (Qt 6.11 emits aboutToQuit inside
+      exit(), so the app is fully live there - pinned in
+      tests/contracts/quitteardowncontractstest.cpp along with the
+      two deferred-delete facts). The shared-QML-engine double-free
+      sub-item is NOT APPLICABLE at our pin: libplasma 6.6.5's
+      SharedQmlEngine holds a parentless std::make_shared QQmlEngine
+      (weak_ptr singleton, no qApp parent, nothing double-deletes) -
+      that fix was for ng's stack, verified against the pinned source.
+      Commits: 525f556c6 (+ adcc68357 ratchet baseline)
 - [ ] Fix the startup retry-exhaustion deadlock in
       `LayoutManager::restore()`: gate `shouldRetry` explicitly on
       retry count rather than letting it stay permanently true when
@@ -2062,6 +2081,10 @@ showed how much of the dock can only be driven by a pointer today.
       high-rate traces) categorized qCDebug logging or the debug
       window are acceptable alternates, but state that a test asserts
       on should be pull-queryable, not log-scraped.
+      SEED LANDED 2026-07-16: lifecycleState() readback
+      (startup/running/quit-requested/unloaded) shipped with the
+      session-shutdown work (9d183984e); the full reviewed interface
+      design remains this item's job.
       Commits:
 - [ ] Convert nondeterministic e2e tests to deterministic ones: every
       screenshot-compare or sleep-and-hope check that is really about

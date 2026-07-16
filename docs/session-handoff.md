@@ -1,9 +1,32 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-15 (end of day). PHASE 8 IS OPEN - read its section in
-docs/PORTING_PLAN.md first; every item is current there, several sections
-below are now RESOLVED and kept only as archaeology.
+Last updated 2026-07-16 (stabilization-execution session, in progress).
+PHASE 8 IS OPEN - read its section in docs/PORTING_PLAN.md first; every item
+is current there, several sections below are now RESOLVED and kept only as
+archaeology.
+
+## 2026-07-16: stabilization execution session (running record)
+
+Driving docs/prompts/stabilization-execution-prompt.md top to bottom.
+
+1. DONE - Session shutdown teardown (priority item 1): 525f556c6
+   (~Corona explicit dependency-order deletes; the deleteLater pile was
+   a silent no-op - Qt contract pinned in quitteardowncontractstest),
+   e02d1bcde (plasmashell's quit pattern: AA_DisableSessionManager,
+   setQuitLockEnabled(false), SIGTERM through the clean quit path; ng's
+   ksmserver poller and D-Bus shutdown-check deliberately NOT adopted -
+   plasmashell has neither, reasons in the commit body and plan item),
+   9d183984e (lifecycleState D-Bus readback, the observability half),
+   adcc68357 (ratchet baseline). All gates green (46 ctest, ratchet,
+   qmllint 155/6026 matched, both WITH_X11 variants). Live-verified on
+   the throwaway: SIGTERM -> full quit trail -> 5 views unloaded ->
+   clean exit ~1.5s, no core; teardown log shows the destructor
+   completing ("Latte Corona - deleted..."). FLAGGED FOR MY HANDS: one
+   real logout/login cycle (kills any driving session by definition) -
+   check journal for the SIGTERM line + clean exit afterwards.
+   Note for future probes: lifecycleState is the pull-query for "is
+   the dock up" - poll it instead of sleeping after restart-staged.
 
 ## MODEL-TRANSITION PRIORITY STACK (2026-07-15 evening, read this first)
 
