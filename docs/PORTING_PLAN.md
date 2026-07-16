@@ -2925,6 +2925,35 @@ prerequisites in the phases above are done.
       running) so users have a working global menu while the port
       cooks and we have a behavior baseline to compare against.
       Commits:
+- [ ] KilnLatte package rename (DELIBERATELY DEFERRED, decided
+      2026-07-16 with the rebrand): eventually rename packages,
+      binaries, installed files, icon names, QML import URIs and
+      D-Bus names from latte / org.kde.latte to kilnlatte
+      equivalents, so multiple latte-dock forks can be installed
+      side by side without file conflicts - that side-by-side
+      story is the whole point, not vanity naming. The 2026-07-16
+      rebrand (repo URL, README, app icon artwork, CLAUDE.md)
+      intentionally did NOT touch any of these: this is a
+      big-blast-radius rename and doing it casually would break
+      running installs, so it gets its own planned pass. Blast
+      radius to design for before starting: config migration for
+      existing installs (~/.config/latte, lattedockrc, the
+      *.layout.latte files and the kwinrc window rules that name
+      the binary); the third-party indicator API (indicators
+      declare X-Latte-* metadata and import org.kde.latte.*, so
+      published indicators break without a compat shim or a
+      declared API break); every QML import URI we ship
+      (org.kde.latte.core/components/private.*) plus the
+      QML2_IMPORT_PATH staging scripts and the Nix
+      module/overlay attribute names that mirror them; and the
+      org.kde.lattedock D-Bus service name plus its .desktop
+      autostart entry (anything that busctl-calls or
+      DBusActivates the dock breaks, including our own scripts).
+      Done means: new names installed, a migration path for my
+      real config verified live, the staging/verification
+      scripts updated in the same series, and a recorded
+      decision per surface on shim-vs-clean-break.
+      Commits:
 
 ### Phase 12: Upstream contribution prep
 
