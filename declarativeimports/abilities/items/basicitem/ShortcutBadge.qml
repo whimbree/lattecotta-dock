@@ -1,5 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2019 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -10,7 +12,15 @@ import org.kde.kirigami 2.20 as Kirigami
 import org.kde.latte.components 1.0 as LatteComponents
 
 Loader{
-    id: shorcutBadge
+    //! the id was misspelled "shorcutBadge" (missing t) since Qt5, and the two
+    //! references
+    //! that spelled it CORRECTLY (the Connections handler and BadgeText's
+    //! borderColor) therefore threw ReferenceError at runtime: badge indexes
+    //! never updated on reorder and the border color stayed at BadgeText's
+    //! default instead of the theme-contrasted pick (both reproduced with an
+    //! offscreen probe, docs/agent-logs/EX-19.md). Fixing the id at the
+    //! source repairs both; the qmllint gate pins the file from here on.
+    id: shortcutBadge
     active: abilityItem.abilities.shortcuts.showPositionShortcutBadges && !abilityItem.isSeparator && !abilityItem.isHidden && abilityItem.abilities.shortcuts.isEnabled
     asynchronous: true
     visible: badgeString !== ""
@@ -19,19 +29,21 @@ Loader{
 
     readonly property int maxFixedIndex: abilityItem.abilities.shortcuts.badges.length
     readonly property real textColorBrightness: colorBrightness(Kirigami.Theme.textColor)
-    readonly property string badgeString: (shorcutBadge.fixedIndex>=1 && shorcutBadge.fixedIndex<=maxFixedIndex) ?
-                                              abilityItem.abilities.shortcuts.badges[shorcutBadge.fixedIndex-1] : ""
+    readonly property string badgeString: (shortcutBadge.fixedIndex>=1 && shortcutBadge.fixedIndex<=maxFixedIndex) ?
+                                              abilityItem.abilities.shortcuts.badges[shortcutBadge.fixedIndex-1] : ""
     readonly property color lightTextColor: textColorBrightness > 127.5 ? Kirigami.Theme.textColor : Kirigami.Theme.backgroundColor
 
-    onActiveChanged: updateShorcutIndex();
+    onActiveChanged: updateShortcutIndex();
 
     Connections {
         target: abilityItem
-        onItemIndexChanged: shortcutBadge.updateShorcutIndex();
+        function onItemIndexChanged() {
+            shortcutBadge.updateShortcutIndex();
+        }
     }
 
-    function updateShorcutIndex() {
-        if (shorcutBadge.active && abilityItem.abilities.shortcuts.showPositionShortcutBadges) {
+    function updateShortcutIndex() {
+        if (shortcutBadge.active && abilityItem.abilities.shortcuts.showPositionShortcutBadges) {
             fixedIndex = abilityItem.abilities.shortcuts.shortcutIndex(abilityItem.itemIndex);
         } else {
             fixedIndex = -1;
@@ -75,7 +87,7 @@ Loader{
             height: Math.max(24, 0.4 * (abilityItem.parabolicItem.zoom * abilityItem.abilities.metrics.iconSize))
 
             style3d: abilityItem.abilities.myView.badgesIn3DStyle
-            textValue: shorcutBadge.badgeString
+            textValue: shortcutBadge.badgeString
             borderColor: shortcutBadge.lightTextColor
 
             showNumber: false
