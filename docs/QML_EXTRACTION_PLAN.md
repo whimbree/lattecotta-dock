@@ -1622,7 +1622,8 @@ Conventions used by all specs:
   compares a unit-interval opacity, dead in Qt5 f0ad7b23 too -
   named test pins the degeneracy, behavior change deferred to a
   deliberate decision.
-- Commits: (filled at landing)
+- Commits: c2e1ac99 (core + wrapper + decision tables, tests-first),
+  7aae3073 (QML cutover + shell qmltest + qmllint baseline shrink).
 
 ### EX-14 DropEventClassifier [delegate-safe]
 
