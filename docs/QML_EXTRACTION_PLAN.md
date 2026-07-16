@@ -1898,6 +1898,12 @@ Conventions used by all specs:
 
 ### EX-20 BadgeMath [delegate-safe]
 
+- Commits: 8dc0c430 (design), 326e136e (core + wrapper + badgemathtest,
+  28 slots sanitized, ratchet 31 -> 32), a1f891752 (cutover: four QML
+  bodies to shells, plugins.qmltypes BadgeMath entry, tst_badgetext
+  e2e, qmllint baseline shrink BadgeText 22 -> 0 / ProgressOverlay
+  34 -> 30). Landed 2026-07-16 in an agent worktree; live recipes
+  pending at merge (docs/agent-logs/EX-20.md has the exact commands).
 - Header: `plasmoid/plugin/units/badgemath.h`
 - Responsibility: badge identifier parsing, badge record update
   semantics, progress-proportion math, and the arc geometry the
