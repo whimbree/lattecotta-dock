@@ -2201,6 +2201,19 @@ showed how much of the dock can only be driven by a pointer today.
       pinned by an offscreen qmltest where feasible. Focus order and
       visible focus indicators are part of the requirement, not
       separate.
+      BASELINE INVENTORY DONE 2026-07-16
+      (docs/agent-logs/2026-07-16-a11y-surface-inventory.md): full
+      per-surface map with file:line for every input path, the
+      existing kglobalaccel family verified (Meta+`/A/1-9/0ZXCVBNM,.
+      + Ctrl variants + press-and-hold badges), and the P0 gate
+      identified - the dock window only takes focus on
+      AcceptingInputStatus (view.cpp:802-841), so a keyboard-nav
+      focus mode gates everything else. Group previews are
+      keyboard-unreachable BY CONSTRUCTION (WindowDoesNotAcceptFocus
+      in both modes); edit-mode chrome buttons are hand-rolled
+      ghost-button chips; QWidget settings dialogs are already dense
+      with QAction shortcuts. Work order per the inventory's gap
+      list.
       Commits:
 - [ ] Observability first - everything instrumentable, D-Bus as the
       primary surface: any subsystem's runtime state must be cheaply
@@ -2254,6 +2267,17 @@ showed how much of the dock can only be driven by a pointer today.
       acceptance test. This also multiplies the keyboard-navigation and
       D-Bus items: AT-SPI exposes an introspectable tree that
       deterministic e2e tests can assert against.
+      BASELINE 2026-07-16 (same inventory as the keyboard item,
+      docs/agent-logs/2026-07-16-a11y-surface-inventory.md): exactly
+      five Accessible.* usages exist in the whole tree
+      (components/Label, WidgetExplorer heading, AppletAlternatives),
+      zero C++ QAccessible - the dock window's AT-SPI subtree is
+      effectively empty. KEY MECHANISM, verified from the pinned
+      qtbase 6.11 source (dbusconnection.cpp:99-103): the
+      accessibility bridge enables per-process via the org.a11y bus
+      flags or QT_LINUX_ACCESSIBILITY_ALWAYS_ON - no plasmashell
+      dependency, and the env var is the switch for Orca-less AT-SPI
+      e2e asserts.
       Commits:
 
 - [ ] WindowId newtype hardening (filed 2026-07-16 from the EX-23
