@@ -16,7 +16,6 @@
 3	lib/qml/org/kde/latte/abilities/client/Containment.qml
 3	lib/qml/org/kde/latte/abilities/client/Debug.qml
 3	lib/qml/org/kde/latte/abilities/client/Environment.qml
-57	lib/qml/org/kde/latte/abilities/client/indicators/LatteIndicator.qml
 3	lib/qml/org/kde/latte/abilities/client/Indicators.qml
 8	lib/qml/org/kde/latte/abilities/client/Metrics.qml
 4	lib/qml/org/kde/latte/abilities/client/MyView.qml
@@ -32,10 +31,9 @@
 1	lib/qml/org/kde/latte/abilities/items/BasicItem.qml
 2	lib/qml/org/kde/latte/abilities/items/basicitem/RestoreAnimation.qml
 36	lib/qml/org/kde/latte/abilities/items/basicitem/SeparatorItem.qml
-24	lib/qml/org/kde/latte/abilities/items/basicitem/ShortcutBadge.qml
+22	lib/qml/org/kde/latte/abilities/items/basicitem/ShortcutBadge.qml
 10	lib/qml/org/kde/latte/abilities/items/basicitem/TitleTooltipParent.qml
-3	lib/qml/org/kde/latte/components/AddingArea.qml
-1	lib/qml/org/kde/latte/components/AddItem.qml
+1	lib/qml/org/kde/latte/components/AddingArea.qml
 22	lib/qml/org/kde/latte/components/BadgeText.qml
 28	lib/qml/org/kde/latte/components/ComboBoxButton.qml
 38	lib/qml/org/kde/latte/components/ComboBox.qml
