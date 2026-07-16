@@ -131,6 +131,37 @@ recorded done in the ledger; if the ledger already records it, skip):
    one pointer line, and the ledger gets a STEP-2.5 entry so every
    later session knows this landed. Commit and push at this boundary
    before starting any wave unit.
+6. QML typing, ratcheted not big-banged. "Strongly typed QML
+   project-wide, no exceptions" is rejected as stated, for recorded
+   structural reasons: winId properties are var BY DESIGN (8e8cdf31 -
+   wayland string ids vs X11 decimal-string ids; an int annotation IS
+   the bug), task-model roles in delegates are dynamically typed by
+   construction, the indicator API hands third-party packages an
+   untyped `indicator` context property (public API; strict mode
+   cannot resolve context properties and changing the API breaks
+   user-installed indicators - this is also the family-2 surface),
+   and the AppletAlternatives mirror stays minimal-diff against
+   plasma-desktop. Enforce the enforceable version instead:
+   (a) stand up a qmllint gate using the PINNED Qt's qmllint (verify
+   it exists in the devshell; never the host's) with a curated rule
+   set - unqualified access, untyped function signatures and
+   parameters, unresolved types, deprecated syntax - run over the
+   package QML the way qml-compile-gate enumerates it;
+   (b) baseline the current per-file warning counts into a committed
+   file; the gate FAILS on any increase, and the baseline only ever
+   shrinks - same ratchet law as tests/ratchet-baseline;
+   (c) STRICT-ON-TOUCH: every QML file a cutover commit touches
+   leaves at ZERO warnings - typed function signatures on the thin
+   shells, qualified access, required properties where a shell takes
+   injected objects, no new var except the documented winId class -
+   so the extraction's thinned shells are born strict and the
+   baseline shrinks wave by wave instead of by a rewrite campaign;
+   (d) files that can never reach zero for a structural reason get
+   the reason recorded next to their baseline entry - the exception
+   is named, never silent (the live-only.md pattern). Fold this in
+   as done-criterion (d) of the point-3 plan amendment, and note in
+   TESTING.md that full-strict QML is the asymptotic state the
+   extraction converges to, not a mandate on inherited files.
 
 STEP 3 - CONTINUE INTO THE DELEGATE-SAFE WAVES (only after STEP 2.5
 is recorded done). The waves 2-4 backlog
