@@ -169,6 +169,19 @@ target_include_directories(coretoolstest PRIVATE
     ${CMAKE_SOURCE_DIR}/declarativeimports/core
     ${CMAKE_BINARY_DIR}/declarativeimports/core)
 
+# The settings-dialog delegate toolkit (Settings::Generic free helpers):
+# state predicates, color-group priority, icon/indicator slot geometry incl.
+# the RTL flip, and the painters driven into a QImage offscreen.
+ecm_add_test(generictoolstest.cpp
+    TEST_NAME generictoolstest
+    LINK_LIBRARIES lattedock-core Qt6::Test Qt6::Widgets
+)
+set_tests_properties(generictoolstest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(generictoolstest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
 # The app/data value-type layer: tables, sentinels, state machines and the
 # serialization round trips the settings dialogs and storage ride on.
 ecm_add_test(datatypestest.cpp
