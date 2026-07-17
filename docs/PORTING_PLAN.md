@@ -2248,8 +2248,14 @@ showed how much of the dock can only be driven by a pointer today.
       JSON keyed on containment id, coarse actions, the debug gate,
       the rejected-with-reasons list, and the 4-step landing order -
       viewsData + setViewEditMode first). Implementation proceeds
-      per that document.
-      Commits: 9d183984e, f7561df37 (seeds)
+      per that document. STEP 1 LANDED 2026-07-16: viewsData()
+      (serializer in app/dbusreports.h/.cpp, pure layer pinned by
+      dbusreportstest) and setViewEditMode(u,b) (enter via
+      View::showSettingsWindow, exit via
+      PrimaryConfigView::hideConfigWindow - the Edit Dock and
+      close-button paths). Steps 2-4 remain.
+      Commits: 9d183984e, f7561df37 (seeds); 455ec42ac, 138364d7f,
+      bc7582cd3, 0b5e2d9f7 (step 1)
 - [ ] Convert nondeterministic e2e tests to deterministic ones: every
       screenshot-compare or sleep-and-hope check that is really about
       STATE moves to a deterministic D-Bus-driven or offscreen-qmltest

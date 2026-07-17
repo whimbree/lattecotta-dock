@@ -147,6 +147,12 @@ the in-process KConfigPropertyMap caches).
 
 1. viewsData (unblocks most e2e conversions and the stranding
    diagnosis) + setViewEditMode.
+   LANDED 2026-07-16 (455ec42ac, 138364d7f, bc7582cd3, 0b5e2d9f7):
+   serializer in app/dbusreports.h/.cpp, pure layer pinned by
+   tests/units/dbusreportstest.cpp; enter wires through
+   View::showSettingsWindow (the Edit Dock ensemble, enter-only),
+   exit through PrimaryConfigView::hideConfigWindow (the chrome's
+   close button).
 2. viewAppletsData + activateTaskAt (order/task asserts).
 3. trackerData + setViewVisibilityMode (visibility-mode e2e).
 4. viewTasksData + colorizerData + layoutsData.
