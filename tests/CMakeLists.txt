@@ -213,6 +213,24 @@ set_tests_properties(layoutmanagerparkingtest PROPERTIES
 target_include_directories(layoutmanagerparkingtest PRIVATE
     ${CMAKE_SOURCE_DIR}/containment
     ${CMAKE_BINARY_DIR}/containment)
+# The containment LayoutManager's plain bookkeeping (option lists, anchor
+# properties, masqueraded drag-and-drop indexes) - compiles the plugin
+# sources like the parking test; the parking suite carries the scheduled-
+# destruction state machine, this one carries everything that needs no
+# Plasma stack.
+ecm_add_test(layoutmanagertest.cpp
+    ${CMAKE_BINARY_DIR}/containment/plugin/lattetypes.h # AUTOMOC source for Latte::Types::staticMetaObject, like the plugin's own list
+    ${CMAKE_SOURCE_DIR}/containment/plugin/layoutmanager.cpp
+    ${CMAKE_SOURCE_DIR}/containment/plugin/types.cpp
+    TEST_NAME layoutmanagertest
+    LINK_LIBRARIES Qt6::Test Qt6::Gui Qt6::Qml Qt6::Quick KF6::ConfigCore KF6::ConfigQml KF6::CoreAddons Plasma::Plasma Plasma::PlasmaQuick
+)
+set_tests_properties(layoutmanagertest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(layoutmanagertest PRIVATE
+    ${CMAKE_SOURCE_DIR}/containment
+    ${CMAKE_BINARY_DIR}/containment)
+
 ecm_add_test(visualhostwindowtest.cpp
     TEST_NAME visualhostwindowtest
     LINK_LIBRARIES lattedock-core Qt6::Test
