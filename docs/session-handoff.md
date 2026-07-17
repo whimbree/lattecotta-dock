@@ -99,9 +99,9 @@ docs/agent-logs/2026-07-17-color-group-audit.md). Two defects fixed:
 the configure-mode popup collapse loop was dead since the port
 (Plasma 6 Containment::applets returns Applets, `expanded` lives on
 the graphic item; rerouted through deactivateApplets, premises pinned
-by appletsexpandedpropertytest) - aac3c9fa5; the coloredView bare
+by appletsexpandedpropertytest) - b84c1f8ff; the coloredView bare
 themeExtended deref (the one unguarded consumer) now compares against
-colorizerManager.plasmaTheme - ac8318f86. The Header-group item is
+colorizerManager.plasmaTheme - c2a0d718c. The Header-group item is
 CLOSED as a recorded decision: Latte paints its own panel from
 plasma-theme SVGs / the colorizer palette, so panel chrome pairs with
 that source (Qt5's own behavior), never [Colors:Header]. Owed desk

@@ -211,12 +211,12 @@ dialog text readable.
    `Plasmoid.applets[i].expanded = false` threw a TypeError and closed
    nothing. Fixed at the hop's origin through
    extendedInterface.deactivateApplets() + contract pin. Commit
-   aac3c9fa5.
+   b84c1f8ff.
 2. MultiLayered.qml:509: bare `themeExtended.defaultTheme` deref in
    coloredView, the single unguarded themeExtended consumer; latent
    (short-circuit timing), now compares against
    colorizerManager.plasmaTheme (identical object when wired, defined
-   when not). Commit ac8318f86.
+   when not). Commit c2a0d718c.
 
 ## Item 2 - Header color group for panel-contrast chrome
 
@@ -274,7 +274,7 @@ QML and checked each against the pinned 6.7.3 headers:
   ContainmentInterface::deactivateApplets() (the C++ itemForApplet
   walk already used by the autohide collapse), with
   appletsexpandedpropertytest pinning both premises at the libplasma
-  pin. Commit aac3c9fa5.
+  pin. Commit b84c1f8ff.
 
 ## Gates
 
@@ -285,7 +285,7 @@ QML and checked each against the pinned 6.7.3 headers:
 
 ## Owed live/desk checks
 
-1. Configure-mode collapse (aac3c9fa5): open an applet popup, enter
+1. Configure-mode collapse (b84c1f8ff): open an applet popup, enter
    edit/configure mode, popup must collapse, no TypeError in the log.
 2. The three SUSPECT mixed-theme sites (recipe above).
 3. Kirigami platform theme pin: confirm org.kde.desktop is the ACTIVE

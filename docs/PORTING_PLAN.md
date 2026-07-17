@@ -2292,7 +2292,7 @@ multi-view, multi-monitor setup.
       themeExtended deref - the one unguarded consumer, latent via
       short-circuit timing, now compared against the null-safe
       colorizerManager.plasmaTheme).
-      Commits: aac3c9fa5, ac8318f86
+      Commits: b84c1f8ff, c2a0d718c
 - [x] For panel-contrast elements specifically, read the `Header` color
       group (`[Colors:Header]` in kdeglobals) rather than whichever
       `Theme` object is nearest at hand (which usually resolves the
@@ -2333,7 +2333,7 @@ multi-view, multi-monitor setup.
       Rerouted through extendedInterface.deactivateApplets(), premises
       pinned by tests/contracts/appletsexpandedpropertytest.cpp.
       Owed at the desk: popup collapses on entering configure mode.
-      Commits: aac3c9fa5
+      Commits: b84c1f8ff
 
 ### Phase 10: Stabilization / verification
 
