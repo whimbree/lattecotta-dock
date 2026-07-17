@@ -59,8 +59,13 @@ changed) has not finished its job.
   regenerate with the qmlplugindump recipe in the file's own header
   against the freshly staged tree, and verify every expected singleton
   name appears before committing.
-- Push after each landed, verified chunk. Prefer new commits over
-  amending. Conventional commits with root-cause bodies.
+- Feature branches + PRs from 2026-07-17 (my direction, session
+  three): work lands on a feature branch, gates green on the branch
+  head, PR to master, rebase/ff-merge (never squash). Push the branch
+  after each landed, verified chunk. Prefer new commits over
+  amending. Conventional commits with root-cause bodies. Worktree
+  subagent branches feed the orchestrator's feature branch; the
+  orchestrator's branch is what goes to PR.
 
 ## Priority order (status revised 2026-07-16 end of session one)
 

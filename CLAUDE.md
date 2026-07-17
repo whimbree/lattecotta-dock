@@ -100,9 +100,16 @@ stale checkboxes."
   get reworded at the pre-PR history cleanup, not amended now.
 - No em-dashes, no AI-sounding marketing-style phrasing in docs, commit
   messages, or code comments - write plainly, like a programmer.
-- Push to origin (whimbree/lattecotta-dock) after each big chunk of landed,
-  verified work - do not let long sessions accumulate dozens of unpushed
-  commits.
+- Feature branches + PRs (my direction, 2026-07-17): new work lands on a
+  feature branch pushed to origin (whimbree/lattecotta-dock) and merges
+  to master via PR. The bisectable small-commit discipline lives INSIDE
+  the branch - never squash-merge, it destroys the bisection tool;
+  rebase/ff-merge keeps history linear. gate-all.sh green on the branch
+  head before the PR opens and again at merge if master moved (the
+  pre-push hook enforces the stamp on every code push, any branch).
+  Push the branch after each landed, verified chunk - do not let long
+  sessions accumulate dozens of unpushed commits. Plan checkboxes get
+  their final hashes at merge time if a rebase rewrote them.
 - Gate verdicts are EXIT CODES, never scraped log text. Run
   scripts/gate-all.sh after the final commit and before any push of code;
   it stamps the validated HEAD and the committed pre-push hook

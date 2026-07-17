@@ -29,6 +29,31 @@ section in docs/PORTING_PLAN.md carries the recorded decision + the
 7-item removal checklist; the stabilization prompt has the execution
 order (source sites first, build system second, audit + docs last).
 
+WORKFLOW CHANGE (from Bree, mid-session): feature branches + PRs from
+now on, rebase/ff-merge only (never squash - the small-commit
+bisection tool survives), gates green on the branch head before the
+PR. Recorded in CLAUDE.md working agreements and the prompt. The
+in-flight X11 work moved onto the x11-removal branch; master was
+reset to origin. Also from Bree during X11 review: the non-wayland
+refusal is default-deny (not an isPlatformX11 check - a hypothetical
+third platform must refuse too), with offscreen as the one named
+harness exception; the Xwayland prose came out of the refusal
+message.
+
+X11 REMOVAL EXECUTED (branch x11-removal, 7 commits + docs; Phase 4
+checklist all ticked except the byPassWM decision item): backend
+removal 1a0a7f9aa, non-wayland refusal 582672d04, ifdef strips
+fca2fd290, runtime isPlatformX11 branches 85c29a825 (~40 sites,
+per-site audit in the body), Effects visual-mask machinery collapse
+5776693a3 (updateMask/forceMaskRedraw/maskCombinedRegion + the
+caller-less subtracted/united region cluster; the mask PROPERTY
+stays - QML reads it and ISHIDDENMASK stamps through it), build
+system d70c754ae (WITH_X11 gone, build-check single-tree: every gate
+run ~2x faster). qmllint baseline SHRANK (VisibilityManager.qml
+164->159). NEW DECISION ITEM for me: byPassWM is X11-only machinery
+but a Qt5-faithful persisted setting with config UI - retiring it is
+a product call, filed in Phase 4.
+
 ITEM 0 COMPLETE (all hashes in the Phase 11 plan item): re-pin
 c147fbbdb, askDestroy contract repin 24dc3ee39 (libplasma 6.7 widened
 the containment-type guard to containment()!=q - parking machinery
