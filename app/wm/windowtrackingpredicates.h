@@ -10,8 +10,7 @@
 //! (app/wm/windowtrackingpredicates.h at 9fba82c8,
 //! github.com/CaptSilver/latte-dock-qt6) after diffing against our
 //! windowstracker.cpp and abstractwindowinterface.cpp bodies - identical,
-//! with the X11
-//! devicePixelRatio screen scaling staying in the adapters (the
+//! with the X11 devicePixelRatio screen scaling staying in the adapters (the
 //! predicates receive the already-scaled screen geometry).
 
 #pragma once
