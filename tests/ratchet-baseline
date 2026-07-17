@@ -2,7 +2,7 @@
 # First non-comment line: entry count. Rest: the entry list, one per
 # line (kept sorted for diffability). Regenerate the list with:
 #   ctest --test-dir build -N | sed -n 's/^ *Test *#[0-9]*: //p' | sort
-63
+64
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -52,6 +52,7 @@ sceneprobe_imagecompare
 screengeometrycalculatortest
 screenpooltest
 scrollmathtest
+settingsmodelstest
 smartlauncheritemtest
 storageidremapapplicationtest
 storageidremappertest

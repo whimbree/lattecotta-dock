@@ -180,6 +180,19 @@ target_include_directories(visualhostwindowtest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+# The two settings table models (export-template applets, screens dialog):
+# population, check-state toggling, defaults and the checkedScreens()
+# active-screen exclusion that gates the Screens dialog removal.
+ecm_add_test(settingsmodelstest.cpp
+    TEST_NAME settingsmodelstest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(settingsmodelstest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(settingsmodelstest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
 # Vendored-backend pins (docs/captsilver-testability-adoption.md P3): both
 # compile the plasmoid plugin sources directly (they live in the tasks QML
 # plugin, not lattedock-core) and serve the plasma-desktop sync pass as
