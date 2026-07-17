@@ -1,0 +1,92 @@
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# Fedora build+gate environment for the multi-distro CI matrix
+# (docs/multi-distro-ci-plan.md, Phase A). Fedora is a pinned-tag stable
+# leg: the base image tag freezes the Qt/KF6/Plasma/Mesa set, so it can
+# carry a bless-frozen bit-exact golden tier (Phase C), unlike the rolling
+# Arch leg. This layer installs ONLY the build/runtime/gate dependencies;
+# the port itself is built by ci/build-and-gate.sh against a bind-mounted
+# or copied source tree, so this image is a cacheable deps-only layer.
+#
+# Base tag pinned to fedora:43. Floor check (CMakeLists.txt requires Qt
+# >= 6.6.0, KF6 >= 6.5.0, libplasma >= 6.5.0), observed in-container on
+# 2026-07-17 with dnf repoquery on this tag's updates repo:
+#   libplasma            6.7.2   (>= 6.5.0 floor: PASS)
+#   plasma-workspace     6.7.2   (LibTaskManager/NotificationManager/KWayland)
+#   plasma-activities    6.7.2
+#   layer-shell-qt       6.7.2
+#   kf6-kcoreaddons      6.28.0  (>= 6.5.0 floor: PASS)
+#   qt6-qtbase           6.10.3  (>= 6.6.0 floor: PASS)
+# fedora:42 ships Plasma 6.3.x (below the 6.5 libplasma floor), so 43 is
+# the earliest Fedora stable that meets it - do NOT drop the tag to 42.
+FROM registry.fedoraproject.org/fedora:43
+
+# install_weak_deps=False keeps the image lean; dnf clean all drops the
+# metadata/package cache so the deps layer stays cacheable and small.
+#
+# libasan/libubsan: the sanitized unit-test targets (latte_add_unit_test,
+# the step-2.5 law) link with -fsanitize=address,undefined, and Fedora's
+# gcc-c++ does NOT pull in the sanitizer runtimes - they ship as separate
+# libasan/libubsan packages (nixpkgs and Arch bundle them with gcc), so
+# without these the ASan/UBSan test executables fail to link
+# ("cannot find libasan.so.8.0.0").
+#
+# Fedora name deltas from the Arch leg's set (resolved by repoquery on
+# fedora:43, 2026-07-17): kf6-plasma-devel -> libplasma-devel;
+# qqc2-desktop-style -> kf6-qqc2-desktop-style; kpipewire ships as
+# kpipewire-devel (no kf6- prefix); plasma5support as plasma5support-devel
+# (no kf6- prefix); the kwin_wayland binary is in the `kwin` package;
+# lavapipe is mesa-vulkan-drivers; the KF6 devel packages carry the
+# kf6- prefix (unlike Arch's bare names). Fedora also SPLITS the Qt
+# private headers into qt6-qtbase-private-devel (nixpkgs and Arch bundle
+# them into qt6-base); the sceneprobe target needs Qt6::GuiPrivate for
+# rhi/qrhi.h, so that split package is a hard build dep here.
+RUN dnf install -y --setopt=install_weak_deps=False \
+        cmake extra-cmake-modules ninja-build make gcc-c++ gettext git \
+        pkgconf-pkg-config jq \
+        libasan libubsan \
+        qt6-qtbase-devel qt6-qtbase-private-devel \
+        qt6-qtdeclarative-devel qt6-qtwayland-devel \
+        qt6-qt5compat-devel qt6-qtshadertools-devel qt6-qttools-devel \
+        libplasma-devel plasma-activities-devel plasma-activities-stats-devel \
+        plasma-workspace-devel kwayland-devel \
+        kf6-kconfig-devel kf6-kcoreaddons-devel kf6-kguiaddons-devel \
+        kf6-kdbusaddons-devel kf6-kdeclarative-devel kf6-kitemmodels-devel \
+        kf6-kxmlgui-devel kf6-kiconthemes-devel kf6-kio-devel kf6-ki18n-devel \
+        kf6-knotifications-devel kf6-knewstuff-devel kf6-karchive-devel \
+        kf6-kglobalaccel-devel kf6-kcrash-devel kf6-kwindowsystem-devel \
+        kf6-kpackage-devel kf6-ksvg-devel \
+        kf6-kcmutils-devel kf6-kirigami-devel kf6-solid-devel kf6-sonnet-devel \
+        kf6-ktextwidgets-devel kf6-kidletime-devel kf6-kdoctools-devel \
+        kf6-qqc2-desktop-style plasma-pa kpipewire-devel plasma5support-devel \
+        libksysguard-devel \
+        plasma-wayland-protocols-devel wayland-devel wayland-protocols-devel \
+        layer-shell-qt-devel \
+        kwin vulkan-loader vulkan-headers mesa-vulkan-drivers \
+        vulkan-validation-layers \
+        google-noto-sans-fonts dbus dbus-daemon libcap rsync perl \
+    && dnf clean all
+
+# kwin_wayland ships with cap_sys_nice=ep (the EFFECTIVE bit set). Podman's
+# default capability set excludes CAP_SYS_NICE, so execve of a file whose
+# effective caps aren't in the container bounding set fails EPERM
+# ("Operation not permitted") - the nested compositor never comes up. The
+# cap only lets kwin raise its scheduler priority, which is meaningless for
+# a throwaway headless CI compositor. Strip it so kwin execs under the
+# default locked-down cap set and CI needs no --cap-add. (Same fix as the
+# Arch leg; Fedora's kwin package sets the identical cap.)
+RUN setcap -r /usr/bin/kwin_wayland 2>/dev/null || true
+
+# The nested-kwin harness and sceneprobe gate read these to find the
+# distro's lavapipe ICD, Vulkan validation layers, and framework QML tree
+# instead of the nix devShell's. Fedora is a lib64 multilib distro, so the
+# framework QML modules live under /usr/lib64/qt6/qml (not lib/qt6/qml as
+# on Arch), and mesa's lavapipe ICD manifest is arch-suffixed
+# (lvp_icd.x86_64.json). All three paths confirmed by ls in-container.
+ENV LATTE_VULKAN_LAVAPIPE_ICD=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+    LATTE_VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d \
+    LATTE_QML_MODULE_PATH=/usr/lib64/qt6/qml
+
+WORKDIR /src
