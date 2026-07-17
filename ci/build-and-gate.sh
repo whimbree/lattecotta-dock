@@ -191,7 +191,7 @@ case "$STAGE" in
         #   020/040/parabolic-hover-preview: a konsole window's app_id resolves
         #     to the bare "konsole" in-container, not the "org.kde.konsole.
         #     desktop" the recipes match - the desktop-app-database resolution
-        #     the dev's plasma-integrated env provides is absent (konsole
+        #     my plasma-integrated env provides is absent (konsole
         #     windows DO map and the dock DOES track them, so this is app_id
         #     resolution, not konsole availability - proven in the ledger).
         #   050-drag-reorder-launchers: the default-template seed carries
