@@ -11,15 +11,47 @@ session drives as an ORCHESTRATOR: it owns the shared scaffold + serial
 merges and FARMS chunks to capable Opus worktree subagents (one distro leg
 / packaging format / the B2 productionization per agent, batched at the
 4-subagent cap), merging each returned branch serially through gate-all ->
-independent lean Opus review -> ff-merge. First shared piece to land:
-productionize the B2 gate (wire fakepointer+seed+run-e2e into
-ci/build-and-gate.sh, add imagemagick, characterize the full e2e suite) -
-that becomes the reusable gate every new distro leg runs. Then Wave A
+independent lean Opus review -> ff-merge. First shared piece (the B2 gate
+productionization) is DONE on branch multi-distro-ci-b2-gate: the reusable
+gate stage runs full green in-container (build -> ctest -> fakepointer ->
+sceneprobe -> seed -> e2e agnostic subset). Next: Wave A
 (fedora / opensuse Tumbleweed / debian sid) in parallel, Wave B (neon /
 gentoo / void), then Phases C-G. Arch is the proven template; the four
 portability fixes already landed mean new legs should mostly just build.
 The execution prompt (multi-distro-ci-execution-prompt.md) still holds the
 standing mission/context; the orchestrator prompt changes only HOW.
+
+## 2026-07-17 multi-distro CI Phase B2: GATE STAGE PRODUCTIONIZED (branch multi-distro-ci-b2-gate)
+
+ci/build-and-gate.sh's gate stage is un-stubbed and runs the full headless
+gate in-container end-to-end GREEN (exit 0): build -> ctest (80/80, minus
+qmllintgate + schemesmodeltest which cannot pass off the nix pin) ->
+fakepointer -> sceneprobe (13/13) -> seed default layout -> e2e
+environment-agnostic subset (6/6). Distro-agnostic: all per-distro paths
+come from the Containerfile ENV (LATTE_QML_MODULE_PATH, LATTE_FAKEINPUT_
+PROTOCOL) not the driver. Image gained imagemagick/konsole/python and
+/usr/lib/qt6/bin on PATH (the `qml` runtime). Both PR-review nits folded
+in ($HOME guard in run-staged.sh:85; qml-interaction reuse-guard uses
+KDE_INSTALL_QMLDIR).
+
+Two real traps root-caused: (1) the gate died EXIT 143 during seeding -
+nested_kwin_cleanup ends with `wait $NESTED_KWIN_PID` (the kwin's 143) and
+the seed subshell inherited the driver's set -e; the library is
+errexit-unsafe by design, so the seed subshell runs `set +e`. (2)
+LATTE_QML_MODULE_PATH in the image dropped the A2 ctest failures 8 -> 2.
+
+FULL e2e characterization (docs/agent-logs/2026-07-17-b2-gate-
+productionization.md): 6 PASS (the gate's hard set), 5 FAIL, all filed in
+the plan B2 with root causes - the konsole cluster (020/040/parabolic) is
+one app-db-resolution gap (konsole window app_id resolves to bare
+"konsole" not "org.kde.konsole.desktop" in a bare container; the dock DOES
+track the window, so it is resolution not availability), 050 needs a
+launcher fixture (default template seeds empty-app_id launchers), and
+duplicate-view is a libplasma removal-flush divergence (removeView never
+reaches the layout file past the 120s undo window - confirmed not a load
+flake). These are the remaining B2 work; the gate is green on the agnostic
+core now. HANDOFF: branch pushed, gate-all green, awaiting orchestrator
+review + ff-merge.
 
 ## 2026-07-17 multi-distro CI Phase B2: e2e VEHICLE RUNS IN-CONTAINER (branch multi-distro-ci-phase-b2)
 

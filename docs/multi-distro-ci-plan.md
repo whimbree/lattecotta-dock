@@ -287,46 +287,69 @@ pass on every distro regardless of tier.
       cap_sys_nice=ep trap applies and the image strips it (libcap-progs
       provides setcap). Commits: 79a8008f0, 3eaa21261, a14c6efef
 - [~] B2 Run the behavioral e2e recipes in-container; make them a hard
-      pass on each distro. ARCH PROVEN BY HAND (000-smoke PASSES in the
-      Arch container: dock reaches lifecycleState running in ~2s,
-      kactivitymanagerd D-Bus-activates on the private bus, 1 view settles,
-      clean SIGTERM, relaunch settles). Blocker fixed: run-staged.sh
-      crashed on unset USER under set -u in a bare container (09b6e69bc).
-      The exact working recipe, to productionize into build-and-gate.sh's
-      gate stage: (a) compile fakepointer - Arch has no plasma-wayland-
-      protocols.pc, so resolve fake-input.xml at /usr/share/plasma-wayland-
-      protocols/fake-input.xml (pkg-config pkgdatadir fails), then
-      wayland-scanner + cc against wayland-client; (b) LATTE_QML_MODULE_PATH
-      = the distro framework qml tree (/usr/lib/qt6/qml on Arch - belongs in
-      each Containerfile's ENV like the ICD path); (c) seed E2E_CONFIG_BASE
-      by running run-staged.sh once in a nested kwin (the dock self-inits a
-      default My Layout.layout.latte); (d) then run-e2e.sh. STILL TO DO:
-      wire (a)-(d) into build-and-gate.sh's gate stage (currently STUB),
-      add imagemagick to the image for the screenshot recipes, and run the
-      FULL suite to characterize which recipes pass/skip/flake in-container
-      (only 000-smoke run so far). ALSO (PR #10 review nit): run-staged.sh
-      uses $HOME unguarded (lines 33/44-45/85) - same set -u landmine as
-      the USER fix; podman exports HOME so the container path is fine today,
-      but give it the same ${HOME:-...} treatment when the driver wiring
-      lands. RESOLVED env-staging from A2/B3:
-      LATTE_QML_MODULE_PATH is the distro framework qml tree
-      (/usr/lib/qt6/qml on Arch) and the staged Latte modules now resolve
-      via KDE_INSTALL_QMLDIR (18aac31b0), so the QML gates and the
-      QML-loading tests (shortcutshost etc.) should pass once the harness
-      exports LATTE_QML_MODULE_PATH in-container. STILL OWED for e2e: the
-      nested vehicle (scripts/run-e2e.sh) needs python3 + imagemagick in
-      the image, a seed layout config, and kactivitymanagerd D-Bus
-      activation working in the container (the dock waits on the activities
-      consumer reaching Running). Also STILL OPEN: schemesmodeltest is
-      non-hermetic - it reads the ambient XDG_DATA_DIRS and picks up the
-      distro's real Breeze schemes instead of its fixtures (the nix
-      devShell's allow-listed XDG_DATA_DIRS hides this), so it needs a
-      fixture-only XDG_DATA_DIRS to be portable. ALSO (PR #9 review nit):
-      scripts/qml-interaction-tests.sh:18 still hardcodes
-      "$stage/lib/qml/org/kde/latte" in its staging-reuse guard, so on a
-      lib/qt6/qml distro the guard always misses and forces a redundant
-      (idempotent) re-stage - give it the same KDE_INSTALL_QMLDIR
-      awareness the import path got in 18aac31b0. Commits:
+      pass on each distro. GATE STAGE PRODUCTIONIZED (branch
+      multi-distro-ci-b2-gate): ci/build-and-gate.sh's gate stage is
+      un-stubbed and runs the full headless gate in-container end-to-end
+      GREEN (exit 0) - build -> ctest (80/80, minus two NixOS-tier entries)
+      -> fakepointer -> sceneprobe (13/13) -> seed default layout -> e2e
+      agnostic subset (6/6). The wiring is distro-agnostic: fakepointer
+      resolves fake-input.xml via pkg-config then the container's
+      LATTE_FAKEINPUT_PROTOCOL ENV (Arch ships no .pc); LATTE_QML_MODULE_PATH
+      is asserted as a container contract (the reused QML harnesses re-exec
+      into `nix develop` when it is unset, fatal in-container); seeding runs
+      run-staged.sh once in a throwaway nested kwin to self-init the default
+      My Layout, then run-e2e.sh copies its throwaway from that base. Image
+      additions (Containerfile.arch): imagemagick, konsole, python (declared,
+      was transitive), LATTE_QML_MODULE_PATH=/usr/lib/qt6/qml,
+      LATTE_FAKEINPUT_PROTOCOL, and /usr/lib/qt6/bin on PATH (for the
+      unversioned `qml` runtime the keyboard-nav recipe uses). Both PR-review
+      nits folded in: run-staged.sh:85 $HOME guarded under set -u; the
+      qml-interaction staging-reuse guard now uses KDE_INSTALL_QMLDIR
+      ($qmldir leaked from qml_env_setup) instead of hardcoded lib/qml.
+      Once LATTE_QML_MODULE_PATH is exported the A2 ctest failures dropped
+      from 8 to 2: qmllintgate (the ratchet structurally refuses any qmllint
+      outside /nix/store - a NixOS-tier merge gate, excluded from the matrix
+      ctest) and schemesmodeltest (still non-hermetic, below). Trap found and
+      fixed: the gate died EXIT 143 during seeding because
+      nested_kwin_cleanup ends with `wait $NESTED_KWIN_PID` (the kwin's
+      SIGTERM status, 143) and the seed subshell inherited the driver's
+      set -e - the library is errexit-unsafe by design (run-e2e.sh uses
+      `set -uo pipefail`), so the seed subshell now runs `set +e`. Full
+      characterization in docs/agent-logs/2026-07-17-b2-gate-productionization.md.
+      FULL e2e suite = 6 PASS (000-smoke, 010-wheel-desktops,
+      030-wheel-ruler-maxlength, 060-geometry-agreement, keyboard-navigation-
+      mode, settings-window-onscreen - these are the gate's hard set), 5
+      environment-dependent FAIL, each root-caused and filed here as the
+      remaining B2 work (NOT silently dropped - enumerated in the driver's
+      run-e2e call too):
+        - 020-wheel-task-cycle / 040-preview-tooltip-text /
+          parabolic-hover-preview: ONE root cause - a konsole window's app_id
+          resolves to the bare "konsole" in-container, not the
+          "org.kde.konsole.desktop" the recipes match. VERIFIED via a live
+          vehicle probe that konsole windows DO map and the dock DOES track
+          them as tasks, so this is desktop-app-database resolution (the
+          dev's plasma-integrated nix env provides it; a bare container does
+          not, even after kbuildsycoca6 into a shared cache), not konsole
+          availability. TO DO: investigate the app_id resolution divergence
+          (KService menu-id / StartupWMClass / konsole version) and/or make
+          the recipes accept the container's app_id form.
+        - 050-drag-reorder-launchers: the default-template seed carries a
+          tasks applet with two launchers whose app_ids are EMPTY (same
+          resolution gap) and the recipe needs >=3 real pinned launchers. TO
+          DO: a purpose-built e2e fixture config with resolvable launchers,
+          not the bare default template seed.
+        - duplicate-view-idremap: separate root cause (not app-db, not a load
+          flake - confirmed solo) - removeView's containment removal never
+          reaches the layout file even after the full 120s undo window. TO
+          DO: root-cause the libplasma removal-flush divergence on Arch.
+      konsole+imagemagick stay in the image so the four app-integration
+      recipes drop straight in once the above land. STILL OPEN (unchanged):
+      schemesmodeltest is non-hermetic - the KF6 color-scheme lookup pulls
+      the distro's /usr/share/color-schemes over the test's temp fixtures
+      even though the test pins XDG_DATA_DIRS, so real Breeze schemes shift
+      the asserted rows (the nix devShell's allow-listed XDG_DATA_DIRS hides
+      it); excluded from the matrix ctest, needs a hermetic scheme-path
+      injection. Commits:
 - [x] B3 Run sceneprobe in-container in invariant+tolerance mode; confirm
       scenes render (not blank, right regions). ARCH DONE: all 13 scenes
       render and PASS in the Arch container - and bit-exact against the
