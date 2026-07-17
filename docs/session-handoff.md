@@ -10,6 +10,21 @@ archaeology.
 
 Driving docs/prompts/stabilization-execution-prompt.md top to bottom.
 
+SESSION CLOSE: all three worktree branches merged serially with full
+gates and pushed; final master state: 54 ctest entries, ratchet OK,
+qmllint baseline matched, build-check both variants OK, sceneprobe
+gate 9/9 PASS on merged master, real dock running --user-config,
+worktrees pruned. The sceneprobe harness is LIVE: pure-CPU lavapipe
+rendering under nested kwin_wayland, goldens blessed bit-exact
+({0,0} tier, no tolerances needed - text-free scenes + pinned Mesa
+beat upstream's variance), gate self-test armed. build-check.sh's
+re-exec now demands the pinned /nix/store toolchain (the system
+cmake 4.1 trap two agents hit independently). Remaining from the
+CaptSilver adoption: P3 behavioral tests, P4 e2e pixel assertions,
+follow-up scenes (parabolic_zoom with a pinned font, colorizer
+stack, monochromatic icons, indicator glow), and cross-machine
+golden verification once a second machine exists.
+
 MERGES COMPLETE (late session): P2 contract transplants merged (52
 ctest entries; includes a REAL live-bug fix - the alternatives swap
 invoked createApplet with a QPoint that cannot resolve against Plasma
