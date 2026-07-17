@@ -212,7 +212,11 @@ pass on every distro regardless of tier.
       wire (a)-(d) into build-and-gate.sh's gate stage (currently STUB),
       add imagemagick to the image for the screenshot recipes, and run the
       FULL suite to characterize which recipes pass/skip/flake in-container
-      (only 000-smoke run so far). RESOLVED env-staging from A2/B3:
+      (only 000-smoke run so far). ALSO (PR #10 review nit): run-staged.sh
+      uses $HOME unguarded (lines 33/44-45/85) - same set -u landmine as
+      the USER fix; podman exports HOME so the container path is fine today,
+      but give it the same ${HOME:-...} treatment when the driver wiring
+      lands. RESOLVED env-staging from A2/B3:
       LATTE_QML_MODULE_PATH is the distro framework qml tree
       (/usr/lib/qt6/qml on Arch) and the staged Latte modules now resolve
       via KDE_INSTALL_QMLDIR (18aac31b0), so the QML gates and the
