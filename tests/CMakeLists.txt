@@ -571,20 +571,38 @@ ecm_add_test(contracts/quitteardowncontractstest.cpp
 set_tests_properties(quitteardowncontractstest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
-# Contract: Plasma 6's ContainmentItem::createApplet takes a QRectF geometry
-# hint (Qt5 took a QPoint); a mismatched Q_ARG type makes the alternatives
-# swap silently destroy an applet without replacing it. The qmltypes of the
-# PINNED libplasma is located from the imported Plasma::Plasma library at
-# configure time and must exist - a silent skip would un-pin the contract.
+# Locate a qmltypes file inside the PINNED libplasma's own qml tree (next to
+# its .so - true on both a split-tree distro like NixOS, where each package
+# carries its own qml, and a merged /usr/lib). The Qt6 QML subdir NAME varies
+# per distro: nixpkgs spells it "qt-6/qml", Arch/Fedora/Debian spell it
+# "qt6/qml". Search the known spellings rather than hardcoding one, so the
+# contracts below pin on every matrix distro instead of only the nix pin.
+# A silent skip would un-pin the contract, so a miss is FATAL, not optional.
 get_target_property(_plasma_lib_location Plasma::Plasma LOCATION)
 get_filename_component(_plasma_libdir "${_plasma_lib_location}" DIRECTORY)
-set(_plasmoid_qmltypes
-    "${_plasma_libdir}/qt-6/qml/org/kde/plasma/plasmoid/plasmoidplugin.qmltypes")
-if(NOT EXISTS "${_plasmoid_qmltypes}")
-    message(FATAL_ERROR "pinned libplasma plasmoid qmltypes not found at "
-        "${_plasmoid_qmltypes}; alternativescreateapplettest cannot pin the "
-        "createApplet geometry contract")
-endif()
+function(latte_find_plasma_qmltypes outvar module_reldir filename contract)
+    find_file("${outvar}"
+        NAMES "${filename}"
+        PATHS "${_plasma_libdir}"
+        PATH_SUFFIXES
+            "qt-6/qml/${module_reldir}"
+            "qt6/qml/${module_reldir}"
+            "qml/${module_reldir}"
+        NO_DEFAULT_PATH)
+    if(NOT ${outvar})
+        message(FATAL_ERROR "pinned libplasma qmltypes '${filename}' not found "
+            "under ${_plasma_libdir} (qt-6/qml, qt6/qml or qml)/${module_reldir}; "
+            "${contract}")
+    endif()
+    set("${outvar}" "${${outvar}}" PARENT_SCOPE)
+endfunction()
+
+# Contract: Plasma 6's ContainmentItem::createApplet takes a QRectF geometry
+# hint (Qt5 took a QPoint); a mismatched Q_ARG type makes the alternatives
+# swap silently destroy an applet without replacing it.
+latte_find_plasma_qmltypes(_plasmoid_qmltypes
+    "org/kde/plasma/plasmoid" plasmoidplugin.qmltypes
+    "alternativescreateapplettest cannot pin the createApplet geometry contract")
 ecm_add_test(contracts/alternativescreateapplettest.cpp
     TEST_NAME alternativescreateapplettest
     LINK_LIBRARIES Qt6::Test
@@ -599,13 +617,9 @@ target_compile_definitions(alternativescreateapplettest PRIVATE
 # straight into PlasmaExtras.Menu's placement enum; the values are pinned
 # member-for-member against the PINNED libplasma's plasmaextracomponents
 # qmltypes, located like the plasmoid qmltypes above and equally must exist.
-set(_plasmaextras_qmltypes
-    "${_plasma_libdir}/qt-6/qml/org/kde/plasma/extras/plasmaextracomponentsplugin.qmltypes")
-if(NOT EXISTS "${_plasmaextras_qmltypes}")
-    message(FATAL_ERROR "pinned libplasma plasmaextras qmltypes not found at "
-        "${_plasmaextras_qmltypes}; popupplacementcontracttest cannot pin the "
-        "context menu placement contract")
-endif()
+latte_find_plasma_qmltypes(_plasmaextras_qmltypes
+    "org/kde/plasma/extras" plasmaextracomponentsplugin.qmltypes
+    "popupplacementcontracttest cannot pin the context menu placement contract")
 ecm_add_test(contracts/popupplacementcontracttest.cpp
     ${CMAKE_BINARY_DIR}/app/coretypes.h # AUTOMOC source for Latte::Types::staticMetaObject
     TEST_NAME popupplacementcontracttest
