@@ -25,6 +25,55 @@ tail on the throwaway profile. scripts/run-e2e.sh found UNTRACKED
 from session one - fold into the e2e-conversion work (quartet item c)
 when the D-Bus steps merge.
 
+MID-SESSION DIRECTION (from me, while agents ran): (1) sceneprobe
+must WORK with a GPU but never REQUIRE one - dgpu device dispatch
+becomes a documented optional extra, lavapipe stays the only CI tier
+(adoption plan updated, agent instructed); (2) CaptSilver's testing
+quality is the floor, not the ceiling - every adopted test gets
+raised to this tree's bar (standing rule added to the adoption plan,
+all four agents instructed).
+
+LIVE TAIL, first pass (throwaway, run 1): EX-20 D-Bus badge arms all
+PASS (count 7 / 9,999+ cap / clear / loud refusal in log 3x / progress
+ring 50% right-half clockwise / full disc / count 42 via busctl emit -
+gdbus is absent, `busctl --user emit` with sa{sv} works). EX-11 item 1
+PASS (zero QML errors from the cutover files, zero launcher-record
+warnings, cold start). INTERRUPTED: I was at the desk mid-run and
+hand-added bottom docks to the displaced session at 20:58 (containment
+14, removed, then 16 - the log's Storage::newView trail; every caller
+is a user action, no auto-creation defect). Pointer-heavy recipes
+would fight the desk, so --user-config was restored immediately;
+the remaining matrix (EX-10, EX-11 2-6, EX-12, EX-14, EX-15, EX-17,
+EX-19, EX-20 items 4-5) waits for an idle desk. THROWAWAY STATE: view
+14 stripped (pre-strip backup at
+build/_runconfig/latte/My Layout.layout.latte.pre-session2.bak), view
+16 (bottom/primary/alwaysVisible) added by hand at the desk, and
+containment 1 carries visibility=8 (SidebarOnDemand) from earlier
+type-combo testing - craft the layout deliberately before the EX-10
+matrix instead of trusting it.
+
+DEFECT UNDER INVESTIGATION (root-cause in progress): ~180x
+"Tools.colorBrightness: invalid color from QML" Criticals per
+throwaway run, bursting at every view creation; ZERO on the real
+config. Ruled out: scheme files missing groups (throwaway kdeglobals
+and the generated default.colors/reversed.colors all carry complete
+WM + Colors:Window groups); Storage::newView auto-creation. Config
+difference spotted: throwaway containment 1 has themeColors=0
+(numeric) vs real DarkThemeColors (name) - not yet proven relevant.
+REPRO IS HEADLESS NOW: the staged dock runs inside
+tests/sceneprobe/run_in_kwin.sh with its own dbus
+(`nix develop -c tests/sceneprobe/run_in_kwin.sh dbus-run-session --
+env LATTE_CONFIG_HOME=<copy> timeout 45 scripts/run-staged.sh -d`) -
+80 criticals reproduced isolated from the live session. Two traps
+banked: the dock inherits the caller's session bus and exits
+instantly on the KDBusService unique name (wrap in dbus-run-session);
+without -d the message handler swallows everything. TEMPORARY
+instrumentation lives in declarativeimports/core/tools.cpp +
+CMakeLists (V4 stack trace on invalid color, Qt6::QmlPrivate) built
+in build-probe/ (BUILD=build-probe, never build/ - the running dock's
+binary stays untouched); REMOVE both before committing anything
+there. This nested-dock recipe is ALSO the P4 e2e vehicle proof.
+
 ## 2026-07-16: stabilization execution session ONE (record)
 
 Drove docs/prompts/stabilization-execution-prompt.md top to bottom.

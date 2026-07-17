@@ -155,10 +155,27 @@ context name on the TestCase root) is directly reusable in qmltests.
 
 Not adopting: the DI-seam test family (CoronaEngine/IScreenInfo/
 IViewFactory - their diverged architecture; revisit per-case only if
-we choose the same extraction for our own reasons), the dgpu golden
-tier (violates the VM-only constraint; harmless as an undocumented
-local extra), their glob-link CMake machinery (ours is better), and
-mirror-logic tests.
+we choose the same extraction for our own reasons), their glob-link
+CMake machinery (ours is better), and mirror-logic tests.
+
+Direction change 2026-07-16 (my call, mid-session-two): the dgpu tier
+was first listed here as not-adopted ("undocumented local extra").
+Revised: the harness must WORK with a GPU but never REQUIRE one - it
+runs in CI/CD (plain VM, lavapipe), on my desktop (real GPU), and in
+a microvm. So the dgpu device dispatch is a DOCUMENTED optional
+extra: lavapipe stays the default and the only tier CI gates on;
+dgpu is opt-in (--device dgpu), its golden set independent and
+unblessed until someone blesses it deliberately; a dgpu run without
+goldens still runs the shader/validation/blank-frame gates and says
+loudly that no goldens exist for the device. The VM-only constraint
+still binds everything CI depends on.
+
+Standing quality rule (my direction, 2026-07-16): the fork's tests
+are the floor, not the ceiling. Every adopted test gets raised to
+this tree's bar - edge cases the fork skipped, loud-refusal cases,
+data-driven tables over single happy paths, negative-tested premises,
+and the step-2.5 machinery (sanitizers, forced asserts, types) doing
+real work. Weak test shapes get redesigned, not copied.
 
 ## Test inventory verdict in one line
 
