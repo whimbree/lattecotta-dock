@@ -1,4 +1,4 @@
-71
+72
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -71,3 +71,4 @@ windowcyclertest
 windowidtest
 windowinfowraptest
 windowtrackingpredicatestest
+wmtoolstest

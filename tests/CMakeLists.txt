@@ -189,6 +189,20 @@ target_include_directories(visibilityrevealtest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+# The wm free helpers: tasktools URL->AppData parsing (launcher/task
+# identity) and the SchemeColors .colors parser (dynamic window-scheme
+# coloring); carries its own main() so XDG_DATA_HOME is a temp dir for the
+# scheme-name resolution fixtures.
+ecm_add_test(wmtoolstest.cpp
+    TEST_NAME wmtoolstest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(wmtoolstest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(wmtoolstest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
 ecm_add_test(windowinfowraptest.cpp
     TEST_NAME windowinfowraptest
     LINK_LIBRARIES lattedock-core Qt6::Test
