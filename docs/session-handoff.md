@@ -3,12 +3,14 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-17 (multi-distro CI Phase A - Arch leg proven).
 
-## 2026-07-17 multi-distro CI Phase A: ARCH LEG PROVEN (branch multi-distro-ci-phase-a)
+## 2026-07-17 multi-distro CI Phase A: ARCH LEG PROVEN + MERGED (PR #8)
 
 Started executing docs/prompts/multi-distro-ci-execution-prompt.md. Phase
-A checkpoint on ONE distro (Arch) before scaling, per the prompt. Branch
-multi-distro-ci-phase-a off master bdd4f3e82, two commits (NOT pushed,
-NOT gated yet - gate-all owed before push):
+A checkpoint on ONE distro (Arch) before scaling, per the prompt. Landed
+via PR #8 (MERGED, ff, master now at cdb76af1e; lean Opus review returned
+MERGE with two nits, both fixed on-branch: ead2518f3 re-resolve qmltypes
+cache each configure, cdb76af1e author voice on the PR #26 refs). Branch
+multi-distro-ci-phase-a off master bdd4f3e82:
 - 00400f16c fix(tests): the two qmltypes contract lookups hardcoded
   nixpkgs' "qt-6/qml" subdir spelling, so configure aborted FATAL on
   Arch (which uses "qt6/qml"). Now a helper searches both spellings from
