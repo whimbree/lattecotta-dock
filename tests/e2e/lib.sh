@@ -200,11 +200,12 @@ for v in views:
 
 # e2e_view_window_x <containment-id>: the TRUE screen x of a horizontal
 # view's window, from the compositor's window dump. viewsData's
-# absolute/local pair implies the window origin, but the vehicle's bottom
-# dock surface drifts left of it by 20-74px run to run (screenshot-proven:
-# the icons really render shifted; filed as a positioner finding in
-# docs/agent-logs/2026-07-17-e2e-promotion.md), so pointer math corrected
-# by this value hits the icons the compositor actually shows.
+# absolute/local pair implies the window origin; since the Phase 8 masked-dock
+# surface drift was fixed (app/wm/waylandlayershell.cpp anchorsFor) the two
+# agree, and 060-geometry-agreement.sh guards that they stay in agreement.
+# This helper stays as the ground-truth window position for pointer math: it
+# reads what the compositor actually shows rather than trusting the reported
+# origin, so a future divergence cannot silently misaim a recipe.
 e2e_view_window_x() {
     local id="$1" edge screenw screenh
     read -r edge screenw screenh <<< "$(e2e_view_field "$id" '"%s %d %d" % (v["edge"], v["screenGeometry"][2], v["screenGeometry"][3])')"

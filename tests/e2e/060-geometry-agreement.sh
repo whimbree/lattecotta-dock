@@ -5,16 +5,14 @@
 # D-Bus assertions are blind to by construction (viewsData stays
 # self-consistent even when the compositor draws the surface elsewhere).
 #
-# This recipe carries "# e2e-expect: fail" because it currently reproduces the
-# filed Phase 8 bottom-dock surface drift (the surface renders 20-74px left of
-# its reported geometry and re-anchors on clock-minute ticks). The driver
-# treats that expected failure as XFAIL and does not count it against the
-# suite. When Phase 8 is fixed the assertion PASSES, the driver reports XPASS
-# and goes red on purpose - that is the signal to delete the two marker lines
-# below, at which point this becomes a permanent standing guard against any
-# future divergence.
+# Standing guard since the Phase 8 bottom-dock surface drift was fixed: a
+# masked dock's window spans the full screen length, so its layer surface now
+# anchors both length edges instead of leaning on the compositor to centre it
+# inside the region other docks' exclusive zones leave free (root cause and
+# fix: app/wm/waylandlayershell.cpp anchorsFor, ledger in
+# docs/agent-logs/2026-07-17-phase8-surface-drift.md). Any future state/render
+# divergence reds the suite here.
 # e2e-mode: nested-only
-# e2e-expect: fail
 set -u
 
 repo="${E2E_REPO:?run through scripts/run-e2e.sh}"
