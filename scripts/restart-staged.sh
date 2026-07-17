@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-# Restart the staged dock reliably (porting plan live-verification cadence).
+# THE DESK LIFECYCLE ENTRY POINT: safely kill any existing instance, then
+# launch the staged dock detached from this terminal. Environment
+# construction itself lives in run-staged.sh (the foreground env core this
+# script delegates to) - kept as a separate file so harnesses can use the
+# env core against nested compositors without this script's kill sequence
+# ever reaching a live dock. Daily-driver shorthand: start-dock.sh.
 #
 # Instances whose launching terminal died can end up SIGSTOPped (state T).
 # A stopped process never runs its SIGTERM handler, so a plain pkill leaves

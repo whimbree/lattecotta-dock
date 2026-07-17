@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
-# Run the staged latte-dock against the live Wayland session (porting plan
-# Phase 5 first-runnable milestone, later phases' live verification cadence).
+# THE ENVIRONMENT CORE, not the user entry point: stages QML, constructs
+# the pinned environment (import paths, data dirs, plugin allow-list) and
+# execs the dock IN THE FOREGROUND of the current session. It manages no
+# other instance - deliberately, so harnesses can run it against a nested
+# compositor or under a wrapper (gdb, timeout) without any risk of
+# touching a dock running elsewhere. The file boundary is the safety
+# boundary: the kill-and-detach lifecycle lives ONLY in restart-staged.sh
+# (the desk entry point), and start-dock.sh is the daily-driver front
+# door (restart-staged.sh --user-config).
 #
 # Uses a throwaway XDG_CONFIG_HOME by default so the user's real Latte and
 # Plasma configuration is never touched; pass --user-config to use the real
-# one deliberately. Data dirs put the staged tree first so the staged shell
+# one deliberately (LATTE_CONFIG_HOME overrides the throwaway path;
+# BUILD overrides the build tree - both used by the nested harness).
+# Data dirs put the staged tree first so the staged shell
 # package, containment and indicators win, with the system dirs behind them
 # for icons, themes and plasma assets.
 set -euo pipefail
