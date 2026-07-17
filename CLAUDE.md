@@ -165,11 +165,13 @@ Every PR gets an INDEPENDENT review before merge: a fresh subagent with
 cold context reviews the full diff read-only against this file's
 standards - commit bodies checked against their own claims, deleted
 "dead" arms verified actually dead, removed API grepped tree-wide for
-surviving callers. Keep the review LEAN (to conserve tokens): a Sonnet
-subagent, a concise prompt scoped to the diff's real risks, NO
-independent rebuild or ctest run and NO repeat-count verification - the
-branch's own gate stamp already proves the gates (one gate-all is the
-verdict), so the review is diff-reading only. Verdict is MERGE / MERGE
+surviving callers. Keep the review LEAN IN SCOPE but use a lean OPUS
+subagent (my direction, 2026-07-17 - Opus for review quality; the
+leanness is the SCOPE, not the model): a concise prompt scoped to the
+diff's real risks, NO independent rebuild or ctest run and NO
+repeat-count verification - the branch's own gate stamp already proves
+the gates (one gate-all is the verdict), so the review is diff-reading
+only. Verdict is MERGE / MERGE
 AFTER FIXES / DO NOT MERGE with concrete findings; blockers get
 root-caused and fixed on the branch before merge, non-blocking nits get
 filed as plan items. The author-session merges only on a MERGE verdict -
