@@ -483,6 +483,29 @@ target_compile_definitions(alternativescreateapplettest PRIVATE
     PLASMOID_QMLTYPES_PATH="${_plasmoid_qmltypes}"
     REPO_ROOT="${CMAKE_SOURCE_DIR}")
 
+# Contract: the task context menu assigns Latte::Types::PopupPlacement ints
+# straight into PlasmaExtras.Menu's placement enum; the values are pinned
+# member-for-member against the PINNED libplasma's plasmaextracomponents
+# qmltypes, located like the plasmoid qmltypes above and equally must exist.
+set(_plasmaextras_qmltypes
+    "${_plasma_libdir}/qt-6/qml/org/kde/plasma/extras/plasmaextracomponentsplugin.qmltypes")
+if(NOT EXISTS "${_plasmaextras_qmltypes}")
+    message(FATAL_ERROR "pinned libplasma plasmaextras qmltypes not found at "
+        "${_plasmaextras_qmltypes}; popupplacementcontracttest cannot pin the "
+        "context menu placement contract")
+endif()
+ecm_add_test(contracts/popupplacementcontracttest.cpp
+    ${CMAKE_BINARY_DIR}/app/coretypes.h # AUTOMOC source for Latte::Types::staticMetaObject
+    TEST_NAME popupplacementcontracttest
+    LINK_LIBRARIES Qt6::Test
+)
+set_tests_properties(popupplacementcontracttest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(popupplacementcontracttest PRIVATE
+    ${CMAKE_BINARY_DIR}/app)
+target_compile_definitions(popupplacementcontracttest PRIVATE
+    PLASMAEXTRAS_QMLTYPES_PATH="${_plasmaextras_qmltypes}")
+
 # Contract: KF6 KPluginMetaData's single-string ctor resolves a plugin
 # LIBRARY, not a metadata file - indicator metadata must load through
 # fromJsonFile() or no indicator ever registers and no task dot renders.

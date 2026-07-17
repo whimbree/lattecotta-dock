@@ -1,4 +1,4 @@
-72
+73
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -36,6 +36,7 @@ maskgeometrytest
 panelbackgroundscantest
 parabolicmathtest
 parabolicroutertest
+popupplacementcontracttest
 positionergeometrytest
 previewcontractrules
 previewswitchenginetest
