@@ -148,7 +148,7 @@ Adopt latte-dock-qt6's three-piece shape, adapted rather than copied:
   re-fires it, so the dialog never maps. This is a synthetic-injection
   artifact, not a dock defect - a real, continuously-moving mouse re-nudges
   and previews are reliable live. The recipe mirrors that: it repeats the
-  glide gesture (up to 8 tries, breaking as soon as the dialog maps) while
+  glide gesture (up to 12 tries, breaking as soon as the dialog maps) while
   keeping the assertion honest - a genuine layer=6 dialog must map. Proven
   12/12 back-to-back after the fix; ~60% single-shot before it.
 
