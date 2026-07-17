@@ -17,7 +17,13 @@
 #include "view/windowstracker/windowstracker.h"
 
 // Qt
+#include <QAbstractItemModel>
+#include <QMetaMethod>
 #include <QQuickItem>
+#include <QUrl>
+
+// KDE
+#include <KPluginMetaData>
 
 // Plasma
 #include <Plasma/Applet>
@@ -154,6 +160,161 @@ QString collectTrackerData(const Latte::View *view)
     record.lastActiveWindowAppName = record.lastActiveWindowPresent ? lastWindow->appName() : QString();
 
     return serializeTrackerData(record);
+}
+
+namespace {
+
+//! the task-model roles viewTasksData() reads, resolved BY NAME from
+//! roleNames() at collect time so no libtaskmanager header is compiled in;
+//! the names are the AbstractTasksModel enum keys
+struct TaskModelRoles {
+    int appId{-1};
+    int launcherUrl{-1};
+    int isLauncher{-1};
+    int isGroupParent{-1};
+    int childCount{-1};
+    int isActive{-1};
+    int isMinimized{-1};
+    int isDemandingAttention{-1};
+    int geometry{-1};
+};
+
+std::optional<TaskModelRoles> resolveTaskModelRoles(const QAbstractItemModel *model)
+{
+    const QHash<int, QByteArray> names = model->roleNames();
+
+    auto roleOf = [&names](const QByteArray &name) {
+        return names.key(name, -1);
+    };
+
+    TaskModelRoles roles;
+    roles.appId = roleOf(QByteArrayLiteral("AppId"));
+    //! LauncherUrlWithoutIcon, not LauncherUrl: the latter encodes a
+    //! fallback icon payload into the url, which is not identity
+    roles.launcherUrl = roleOf(QByteArrayLiteral("LauncherUrlWithoutIcon"));
+    roles.isLauncher = roleOf(QByteArrayLiteral("IsLauncher"));
+    roles.isGroupParent = roleOf(QByteArrayLiteral("IsGroupParent"));
+    roles.childCount = roleOf(QByteArrayLiteral("ChildCount"));
+    roles.isActive = roleOf(QByteArrayLiteral("IsActive"));
+    roles.isMinimized = roleOf(QByteArrayLiteral("IsMinimized"));
+    roles.isDemandingAttention = roleOf(QByteArrayLiteral("IsDemandingAttention"));
+    roles.geometry = roleOf(QByteArrayLiteral("Geometry"));
+
+    for (const int role : {roles.appId, roles.launcherUrl, roles.isLauncher, roles.isGroupParent,
+                           roles.childCount, roles.isActive, roles.isMinimized,
+                           roles.isDemandingAttention, roles.geometry}) {
+        if (role == -1) {
+            //! role-name drift is a code defect (libtaskmanager renamed a
+            //! role), so the whole applet is refused loudly rather than
+            //! reported with plausible-but-wrong defaults
+            qWarning() << "dbusreports: the tasks model no longer exposes every role viewTasksData reads;"
+                       << "available roles:" << names.values();
+            return std::nullopt;
+        }
+    }
+
+    return roles;
+}
+
+//! the same BadgeMath answer the badge canvas draws, through the plasmoid
+//! root's typed badgeValueFor(QString) - resolved by metaobject signature
+//! exactly like the updateBadge D-Bus badge path
+int collectBadgeValue(QQuickItem *plasmoidRoot, const QString &launcherUrl)
+{
+    const QMetaObject *meta = plasmoidRoot->metaObject();
+    const int methodIndex = meta->indexOfMethod("badgeValueFor(QString)");
+
+    if (methodIndex == -1) {
+        qWarning() << "dbusreports: the tasks plasmoid root exposes no badgeValueFor(QString); task badges cannot be reported";
+        return 0;
+    }
+
+    int value{0};
+
+    if (!meta->method(methodIndex).invoke(plasmoidRoot, Q_RETURN_ARG(int, value), Q_ARG(QString, launcherUrl))) {
+        qWarning() << "dbusreports: badgeValueFor invocation failed; task badge reported as 0";
+        return 0;
+    }
+
+    return value;
+}
+
+void appendTaskRecordsOfPlasmoid(QList<Latte::DbusReports::TaskRecord> &records, int appletId, QQuickItem *plasmoidRoot)
+{
+    auto model = plasmoidRoot->property("tasksModel").value<QAbstractItemModel *>();
+
+    if (!model) {
+        //! drift detector: the root publishes tasksModel by contract
+        //! (plasmoid main.qml documents the D-Bus consumer at the alias)
+        qWarning() << "dbusreports: the tasks plasmoid root exposes no tasksModel; viewTasksData cannot read applet" << appletId;
+        return;
+    }
+
+    const auto roles = resolveTaskModelRoles(model);
+
+    if (!roles) {
+        return;
+    }
+
+    const int rows = model->rowCount();
+    records.reserve(records.count() + rows);
+
+    for (int row = 0; row < rows; ++row) {
+        const QModelIndex index = model->index(row, 0);
+
+        Latte::DbusReports::TaskRecord record;
+        record.appletId = appletId;
+        record.index = row;
+        record.appId = model->data(index, roles->appId).toString();
+        record.launcherUrl = model->data(index, roles->launcherUrl).toUrl().toString();
+        record.isLauncher = model->data(index, roles->isLauncher).toBool();
+        record.isGrouped = model->data(index, roles->isGroupParent).toBool();
+        record.childCount = model->data(index, roles->childCount).toInt();
+        record.isActive = model->data(index, roles->isActive).toBool();
+        record.isMinimized = model->data(index, roles->isMinimized).toBool();
+        record.demandsAttention = model->data(index, roles->isDemandingAttention).toBool();
+        record.badge = collectBadgeValue(plasmoidRoot, record.launcherUrl);
+        //! the rect the delegate published via requestPublishDelegateGeometry
+        //! (global coordinates - the WM-facing minimize-animation rect)
+        record.geometry = model->data(index, roles->geometry).toRect();
+
+        records << record;
+    }
+}
+
+}
+
+QString collectTasksData(const Latte::View *view)
+{
+    Q_ASSERT(view);
+    Q_ASSERT(view->containment());
+
+    QList<TaskRecord> records;
+
+    const auto applets = view->containment()->applets();
+
+    for (auto *applet : applets) {
+        if (applet->pluginMetaData().pluginId() != QLatin1String("org.kde.latte.plasmoid")) {
+            continue;
+        }
+
+        auto plasmoidRoot = PlasmaQuick::AppletQuickItem::itemForApplet(applet);
+
+        if (!plasmoidRoot) {
+            //! startup-transient: the applet exists before its quick item;
+            //! said loudly so a poll that lands too early reads as "not
+            //! ready yet" in the journal, not as a silently missing applet
+            qWarning() << "dbusreports: tasks plasmoid" << applet->id() << "has no quick item yet; its tasks are not reported";
+            continue;
+        }
+
+        appendTaskRecordsOfPlasmoid(records, static_cast<int>(applet->id()), plasmoidRoot);
+    }
+
+    //! a view without a latte tasks plasmoid legitimately reports "[]" -
+    //! that IS the state (viewAppletsData's plugin list tells the two
+    //! empty answers apart), so no warning here
+    return serializeTaskRecords(records);
 }
 
 QString collectViewsData(const QList<Latte::View *> &views, bool inConfigureAppletsMode)

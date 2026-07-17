@@ -207,6 +207,14 @@ public:
     //! view exists for that containment id (warned in the log).
     QString trackerData(const uint &containmentId);
 
+    //! D-Bus state readback (observability-first): one view's latte-tasks
+    //! items (identity by appId/launcherUrl, never window titles) as a
+    //! compact JSON array, documented in
+    //! docs/dbus-observability-interface.md. "[]" means no view exists for
+    //! that containment id (warned) or the view hosts no tasks plasmoid
+    //! (legitimate state, not warned).
+    QString viewTasksData(const uint &containmentId);
+
 public Q_SLOTS:
     void aboutApplication();
     void activateLauncherMenu();

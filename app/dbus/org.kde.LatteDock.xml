@@ -75,6 +75,10 @@
         <arg name="data" type="s" direction="out"/>
         <arg name="containmentId" type="u" direction="in"/>
     </method>
+    <method name="viewTasksData">
+        <arg name="data" type="s" direction="out"/>
+        <arg name="containmentId" type="u" direction="in"/>
+    </method>
     <method name="setViewVisibilityMode">
         <arg name="containmentId" type="u" direction="in"/>
         <arg name="mode" type="s" direction="in"/>

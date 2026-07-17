@@ -1357,6 +1357,18 @@ void Corona::setViewVisibilityMode(const uint &containmentId, const QString &mod
     view->visibility()->setMode(*visibilityMode);
 }
 
+QString Corona::viewTasksData(const uint &containmentId)
+{
+    auto view = m_layoutsManager->synchronizer()->viewForContainment(containmentId);
+
+    if (!view) {
+        qWarning() << "corona: viewTasksData queried for containment" << containmentId << "which has no view";
+        return QStringLiteral("[]");
+    }
+
+    return DbusReports::collectTasksData(view);
+}
+
 QString Corona::viewsData()
 {
     return DbusReports::collectViewsData(m_layoutsManager->synchronizer()->currentViews(),

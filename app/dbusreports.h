@@ -55,6 +55,25 @@ struct TrackerRecord {
     QString lastActiveWindowAppName;
 };
 
+//! One task item of a view's tasks plasmoid as viewTasksData() reports it
+//! (docs/dbus-observability-interface.md, step 4). Identity is
+//! appId/launcherUrl only - window titles are other applications'
+//! content and stay out by design (the interface doc records the rule).
+struct TaskRecord {
+    int appletId{-1};
+    int index{-1};
+    QString appId;
+    QString launcherUrl;
+    bool isLauncher{false};
+    bool isGrouped{false};
+    int childCount{0};
+    bool isActive{false};
+    bool isMinimized{false};
+    bool demandsAttention{false};
+    int badge{0};
+    QRect geometry;
+};
+
 //! One applet of a view as viewAppletsData() reports it
 //! (docs/dbus-observability-interface.md, step 2)
 struct AppletRecord {
@@ -246,6 +265,36 @@ inline QString serializeAppletRecords(const QList<AppletRecord> &records)
     return QString::fromUtf8(QJsonDocument(array).toJson(QJsonDocument::Compact));
 }
 
+inline QJsonObject serializeTaskRecord(const TaskRecord &record)
+{
+    QJsonObject json;
+    json[QStringLiteral("appletId")] = record.appletId;
+    json[QStringLiteral("index")] = record.index;
+    json[QStringLiteral("appId")] = record.appId;
+    json[QStringLiteral("launcherUrl")] = record.launcherUrl;
+    json[QStringLiteral("isLauncher")] = record.isLauncher;
+    json[QStringLiteral("isGrouped")] = record.isGrouped;
+    json[QStringLiteral("childCount")] = record.childCount;
+    json[QStringLiteral("isActive")] = record.isActive;
+    json[QStringLiteral("isMinimized")] = record.isMinimized;
+    json[QStringLiteral("demandsAttention")] = record.demandsAttention;
+    json[QStringLiteral("badge")] = record.badge;
+    json[QStringLiteral("geometry")] = serializeRect(record.geometry);
+
+    return json;
+}
+
+inline QString serializeTaskRecords(const QList<TaskRecord> &records)
+{
+    QJsonArray array;
+
+    for (const auto &record : records) {
+        array.append(serializeTaskRecord(record));
+    }
+
+    return QString::fromUtf8(QJsonDocument(array).toJson(QJsonDocument::Compact));
+}
+
 inline QJsonObject serializeViewRecord(const ViewRecord &record)
 {
     QJsonObject json;
@@ -310,6 +359,10 @@ QString collectAppletsData(const Latte::View *view);
 //! serialize one live view's windows-tracker facts for the trackerData()
 //! D-Bus read
 QString collectTrackerData(const Latte::View *view);
+
+//! serialize one live view's latte-tasks items for the viewTasksData()
+//! D-Bus read
+QString collectTasksData(const Latte::View *view);
 
 }
 }
