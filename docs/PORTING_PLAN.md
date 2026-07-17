@@ -2208,7 +2208,25 @@ showed how much of the dock can only be driven by a pointer today.
       + Ctrl variants + press-and-hold badges), and the P0 gate
       identified - the dock window only takes focus on
       AcceptingInputStatus (view.cpp:802-841), so a keyboard-nav
-      focus mode gates everything else. Group previews are
+      focus mode gates everything else.
+      INVENTORY CORRECTION 2026-07-16 (session two, found via the new
+      activateTaskAt D-Bus smoke): the shortcuts host was NEVER being
+      found on Plasma 6 - identifyShortcutsHost kept the Plasma 5
+      child-scan walk while the containment root itself now carries
+      the containmentViewLayout objectName (the Panel.qml viewLayout
+      class of tree change), so activateEntryAtIndex,
+      newInstanceForEntryAtIndex, setShowAppletShortcutBadges and
+      appletIdForIndex were all silently dead and Meta+number was
+      being serviced by fallbacks. Fixed at origin with loud no-host
+      warnings; verified in the nested vehicle (entry activation
+      toggles the active task, the exact Meta+N semantics).
+      RE-VERIFY at the desk: Meta+number entry mapping and the
+      press-and-hold shortcut badges, both through the now-live host.
+      OWED TEST (explicit, not silent): an offscreen pin that builds
+      the containment graph (the layoutmanagerparkingtest corona
+      recipe) and asserts identifyShortcutsHost finds the host and
+      all four method signatures resolve - the walk shape and the QML
+      signature contract both broke silently once already. Group previews are
       keyboard-unreachable BY CONSTRUCTION (WindowDoesNotAcceptFocus
       in both modes); edit-mode chrome buttons are hand-rolled
       ghost-button chips; QWidget settings dialogs are already dense
@@ -2254,9 +2272,17 @@ showed how much of the dock can only be driven by a pointer today.
       View::showSettingsWindow, exit via
       PrimaryConfigView::hideConfigWindow - the Edit Dock and
       close-button paths). Steps 2-4 remain.
+      STEPS 2-4 LANDED 2026-07-16 (session two): all seven remaining
+      surfaces (viewAppletsData, activateTaskAt, trackerData,
+      setViewVisibilityMode, viewTasksData, colorizerData,
+      layoutsData) with data-driven serializer tests, deliberate
+      schema additions recorded in the design doc, busctl smokes run
+      in the nested-kwin vehicle at merge. The design doc's sequencing
+      section carries the per-step record.
       Commits: 9d183984e, f7561df37 (seeds); fdfdf5b00, 07e91e456,
       dd3046c03, 77a9586cc (step 1; the worktree merge rebased the
-      hashes the agent log records)
+      hashes the agent log records); 2390e7220..bb3d8c53f (steps 2-4,
+      11 commits, post-rebase)
 - [ ] Convert nondeterministic e2e tests to deterministic ones: every
       screenshot-compare or sleep-and-hope check that is really about
       STATE moves to a deterministic D-Bus-driven or offscreen-qmltest

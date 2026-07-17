@@ -79,6 +79,23 @@ KDBusService unique name without the dbus-run-session wrap; without
 -d it used to print nothing at all). BUILD=<dir> redirects
 run-staged to an alternate build tree for instrumented binaries.
 
+SECOND DEFECT ROOT-CAUSED (found by the activateTaskAt busctl smoke
+the D-Bus merge owed): identifyShortcutsHost still walked the Plasma
+5 tree (find a CHILD named containmentViewLayout, then look inside)
+but on Plasma 6 itemForApplet returns the containment root which IS
+containmentViewLayout - so the shortcuts host never resolved on any
+latte view and activate-entry/new-instance/shortcut-badges/applet-id
+were ALL silently dead (the invalid-method early-return is the exact
+silent shape CLAUDE.md bans; it now warns loudly). Meta+number only
+looked alive through fallbacks. Fix mirrors Panel.qml's viewLayout
+discovery (root first, child scan kept). Verified in the nested
+vehicle: activateTaskAt entry 5 on the active konsole toggled it -
+real Meta+N semantics; live invokes stopped refusing (desk was in
+active use, so live model asserts were confounded and abandoned).
+An offscreen pin test is OWED, filed in the keyboard-nav plan item.
+METHOD note: the temporary child-objectName probe went into
+build-probe only; her running dock never executed instrumented code.
+
 NESTED-MATRIX VEHICLE PROVEN (major unlock, prototype in the session
 scratchpad as nested-matrix-proto.sh - promote it into scripts/ when
 the EX-10 matrix lands): inside a nested kwin_wayland --virtual

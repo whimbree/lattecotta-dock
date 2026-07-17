@@ -155,5 +155,24 @@ the in-process KConfigPropertyMap caches).
    exit through PrimaryConfigView::hideConfigWindow (the chrome's
    close button).
 2. viewAppletsData + activateTaskAt (order/task asserts).
+   LANDED 2026-07-16 session two.
 3. trackerData + setViewVisibilityMode (visibility-mode e2e).
+   LANDED 2026-07-16 session two.
 4. viewTasksData + colorizerData + layoutsData.
+   LANDED 2026-07-16 session two.
+   Steps 2-4 commits (post-rebase master hashes): 2390e7220..bb3d8c53f
+   (11 commits; per-surface list and the owed-then-run busctl smokes in
+   docs/agent-logs/2026-07-16-dbus-steps-2-4.md).
+
+## Schema additions recorded at implementation (deliberate, 2026-07-16)
+
+- trackerData also carries activeWindowTouchingEdge,
+  existsWindowTouchingEdge and existsWindowActive - the tracker's
+  companion facts; asserting on touching without touching-edge kept
+  producing half-blind e2e checks.
+- viewTasksData records carry appletId, so a multi-tasks-applet view
+  keys records unambiguously.
+- trackerData names the last-active-window identity field
+  lastActiveWindowAppName: LastActiveWindow exposes appName, not a
+  stable appId, and appName is application identity, not window
+  content - still NO titles anywhere.
