@@ -57,6 +57,19 @@ target_include_directories(screenpooltest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+# SyncedLaunchers' client registry driven over the real object: the
+# destroyed-client removal (the d6d57e61 dangling-pointer crash class),
+# identity removal precision, and the layout/group filtering query.
+ecm_add_test(syncedlaunchersclienttest.cpp
+    TEST_NAME syncedlaunchersclienttest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(syncedlaunchersclienttest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(syncedlaunchersclienttest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
 # The pure half of the activity-manager helper: wire-state validation and
 # the running filter that layout assignment and activity cycling ride on.
 ecm_add_test(activitiesinfotest.cpp
