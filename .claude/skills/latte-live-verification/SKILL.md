@@ -277,9 +277,12 @@ The EX-10 visibility matrix ran this way end to end. Shape and traps
 (dock needs its own dbus-run-session or KDBusService kills it;
 kwin and probes must share ONE bus or KWin scripting silently no-ops;
 `-d` or near-silence): latte-debugging's "Isolated reproduction"
-section and the session-handoff nested recipes. Reach for the real
-desk only when the thing under test IS the real session: feel,
-focus interplay with a human, real-mouse semantics, DPMS.
+section and the session-handoff nested recipes. Live verification on
+the real session stays fully sanctioned whenever a recipe needs it
+(feel, focus interplay with a human, real-mouse semantics, DPMS, or
+anything the nested vehicle cannot carry) - the vehicle exists to
+free the desk, not to forbid it. When both can serve, prefer the
+vehicle; when the desk is in active use, prefer it harder.
 
 ## 8. Confound control: DPMS and autolock
 
@@ -335,6 +338,6 @@ tail -50 "$SCRATCH/latte.log"              # no new warnings or backtrace
 
 If any step disagrees with expectation, stop and root-cause it; see the
 failure rules in CLAUDE.md and latte-debugging. For commit shape when the
-fix lands, see latte-conventions; for where the touched code lives, see
+fix lands, see CLAUDE.md (Commit shape and definition of done); for where the touched code lives, see
 latte-architecture; for whether a reference fork already fixed it, see
 latte-fork-sync.

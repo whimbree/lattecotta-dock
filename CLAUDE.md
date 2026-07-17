@@ -123,6 +123,42 @@ stale checkboxes."
   in (e.g. from watching the reference forks' ongoing work) rather than
   treating either as fixed once written.
 
+### Commit shape and definition of done
+
+(Absorbed from the deleted latte-conventions skill, 2026-07-16 - this
+file is the single source; skills stay procedural, never duplicate
+agreements.)
+
+Types: feat, fix, docs, test, build, ci, chore, stub. Scope names the
+subsystem: `fix(wm):`, `build(flake):`. The subject states the
+user-visible outcome, not the internals (good: "fix(components): stop
+writing ComboBox.pressed so popups open again on Qt6"; bad: "fix:
+update ComboBox.qml"). The body carries three things: the mechanism
+traced to its origin, why the fix sits at the root (or why a guard is
+the deliberate contract), and the verification evidence - what was
+driven and what was observed; "it builds" is not evidence. One root
+cause per commit: when a symptom turns out to be two stacked causes,
+land two commits (1607d022 + c5bdc239 is the model). Credit a
+reference-fork parallel in the body when one exists.
+
+Landing mechanics: tick the plan with POST-REBASE hashes at merge
+time, never hashes copied from an agent ledger (worktree merges
+rewrite them; 2bba6cb8b cleaned up exactly that). New findings get
+filed as plan items with evidence even when fixed the same day - a
+bug found, fixed and never written down is invisible to the next
+session. Update docs/session-handoff.md as work lands, not at the end.
+
+Definition of done, every change: root cause at origin (or the
+guard's contract commented); driven with recorded evidence (nested
+vehicle or live session); temporary instrumentation removed; plan
+ticked and findings filed; commit body per above; QML gate if QML was
+touched; stubs marked both ways; new asserted-on state gets its D-Bus
+readback recorded in the XML + design doc + usage reference
+(docs/dbus-interface-reference.md); scripts/gate-all.sh green AFTER
+the final commit before any code push (exit code is the verdict, the
+pre-push hook enforces the stamp); README updated when the landing is
+major.
+
 ### Failures and root cause
 
 - Never silently swallow a failure. A quiet early-return, an empty

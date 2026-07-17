@@ -9,8 +9,7 @@ Where things live and how data moves between them. Use this to find the
 right file before touching anything; the sibling skills cover how to work
 once you are there (latte-build-env to build, latte-live-verification to
 prove changes, latte-debugging for root cause, latte-plasma6-defect-families
-for recurring bug classes, latte-conventions for commit/doc rules,
-latte-fork-sync for reference-fork review).
+for recurring bug classes, latte-fork-sync for reference-fork review).
 
 ## Top-level map
 

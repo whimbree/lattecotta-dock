@@ -71,9 +71,7 @@ changes worth porting.
 
 The forks are reference material, never a merge source. Never merge or
 cherry-pick from them. Read their diffs, take what is actually correct,
-discard the rest, and write NEW commits in this repo (see the
-latte-conventions skill: new commits over amending, and Qt5 Latte is
-the behavior spec).
+discard the rest, and write NEW commits in this repo (per CLAUDE.md: new commits over amending, and Qt5 Latte is the behavior spec).
 
 Before accepting any fork commit that changes behavior (defaults,
 semantics, what a control adjusts), read the Qt5 Latte source first.

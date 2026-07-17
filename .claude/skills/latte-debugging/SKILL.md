@@ -8,7 +8,7 @@ description: Use when the latte-dock port crashes, hangs, spins CPU, or misbehav
 This skill is the crash/hang/misbehavior playbook. Related skills:
 latte-live-verification (driving the dock: restart, fakepointer, screenshots),
 latte-plasma6-defect-families (recognizing recurring bug classes),
-latte-build-env (building and staging), latte-conventions (commit rules).
+latte-build-env (building and staging).
 
 ## The discipline (non-negotiable, from CLAUDE.md)
 
@@ -30,6 +30,29 @@ latte-build-env (building and staging), latte-conventions (commit rules).
 - "It stopped crashing" is not "it is fixed" if the fix is downstream of
   the real defect. Confirm the fix against the running dock (logs, pixels,
   driven interaction), never just a green build.
+
+## Read the state before instrumenting
+
+The dock now answers most "what is it doing right now" questions over
+D-Bus with zero code changes - check the pull surface BEFORE writing
+instrumentation (docs/dbus-interface-reference.md has every method
+and recipe):
+
+- Is it up / how far into startup: `lifecycleState`, then `viewsData`
+  per-view `inStartup`/`isOffScreen` (the startup-stranding bits).
+- Invisible or dead-input dock: `viewsData` `isHidden`, `maskRect`,
+  `inputRegionRects`, `publishedStruts` - the mask questions that used
+  to need screenshots.
+- Dodge/visibility logic: `trackerData` (activeWindowTouching and
+  friends) against what you believe the windows are doing.
+- Colorizer decisions: `colorizerData`; applet/task model state:
+  `viewAppletsData` / `viewTasksData`.
+
+Instrumentation is for the step AFTER these reads localize the
+question to code the surface cannot see. And per observability-first
+(CLAUDE.md): if your instrumentation printed state a future test will
+want to assert on, that state probably deserves a readback on the
+surface instead of a one-off log line.
 
 ## Crash capture
 

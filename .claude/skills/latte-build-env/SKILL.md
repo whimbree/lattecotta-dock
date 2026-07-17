@@ -227,4 +227,3 @@ not just a green build.
 - latte-live-verification: launching and verifying against the live session.
 - latte-plasma6-defect-families: module-shadowing fingerprints and other
   recurring defect patterns.
-- latte-conventions: commit style, stub tracking, Qt5-faithful behavior rules.
