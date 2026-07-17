@@ -90,6 +90,29 @@ PHASE 8 IS OPEN - read its section in docs/PORTING_PLAN.md first; every item
 is current there, several sections below are now RESOLVED and kept only as
 archaeology.
 
+## 2026-07-17: Phase 9 color-group audit (worktree color-group-audit)
+
+Ran in a parallel worktree; merges may re-resolve the hashes below.
+All three Phase 9 audit checklist items executed and ticked (verdicts
+inline in the plan, full 160-line inventory in
+docs/agent-logs/2026-07-17-color-group-audit.md). Two defects fixed:
+the configure-mode popup collapse loop was dead since the port
+(Plasma 6 Containment::applets returns Applets, `expanded` lives on
+the graphic item; rerouted through deactivateApplets, premises pinned
+by appletsexpandedpropertytest) - aac3c9fa5; the coloredView bare
+themeExtended deref (the one unguarded consumer) now compares against
+colorizerManager.plasmaTheme - ac8318f86. The Header-group item is
+CLOSED as a recorded decision: Latte paints its own panel from
+plasma-theme SVGs / the colorizer palette, so panel chrome pairs with
+that source (Qt5's own behavior), never [Colors:Header]. Owed desk
+checks (also in the ledger): popup collapse on entering configure
+mode; three SUSPECT mixed-theme sites (fallback LatteIndicator dots,
+TaskIcon icon-color fallbacks, AppletAlternatives text over the
+plasma dialog SVG); confirm org.kde.desktop is the active Kirigami
+platform plugin; open Show Alternatives once (attached-property
+resolution on a foreign applet item). Gates: 67/67 ctest, qmllint
+baseline matched.
+
 ## 2026-07-17 ~01:00: INCIDENT - system rebuilt under the pinned env; sceneprobe gate down
 
 READ THIS BEFORE RUNNING ANY GATE. The machine was nixos-rebuilt at

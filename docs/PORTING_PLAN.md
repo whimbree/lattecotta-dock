@@ -2262,25 +2262,78 @@ multi-view, multi-monitor setup.
 
 ### Phase 9: Theming, colorization, multi-monitor visual polish
 
-- [ ] Audit every Plasma/Kirigami color-group property read against
+- [x] Audit every Plasma/Kirigami color-group property read against
       what object is genuinely guaranteed to be present at that call
       site, not what's true in the common case - reading a property
       that doesn't exist on whatever theme object is actually in scope
       evaluates to `undefined` in QML silently (no warning, no crash,
       just a wrong color - both forks hit this as literally invisible
       UI, e.g. black indicator dots on a dark panel)
-      Commits:
-- [ ] For panel-contrast elements specifically, read the `Header` color
+      DONE 2026-07-17: all 160 theme-read lines across 44 shipped QML
+      files classified, per-site inventory in
+      docs/agent-logs/2026-07-17-color-group-audit.md. Every property
+      name read off Kirigami.Theme exists on the attached type, so the
+      reads-undefined class cannot arise there; every CUSTOM palette
+      object was verified against its C++ type (SchemeColors carries
+      all 14 consumed members incl. button*/inactive*; colorizer
+      Manager publishes every name the bridge consumers read;
+      LatteCore.IconItem has backgroundColor/glowColor; layout has
+      textColor and scheme). No live bare `theme.` reads remain (the
+      two ComboBox.qml grep hits are commented-out code). Verdicts: 36
+      font-only CORRECT, 34 CORRECT by explicit colorSet+inherit:false,
+      77 CORRECT-substituted (Qt5 `theme.*` uniformly replaced by
+      Kirigami.Theme with contrast pairing preserved; source-scheme
+      deviation recorded, no behavior changed), 3 site groups
+      SUSPECT-needs-live-check on mixed themes (fallback
+      LatteIndicator dots, TaskIcon icon-color fallbacks,
+      AppletAlternatives text over the plasma dialog SVG - desk recipe
+      in the ledger), 2 DEFECTs fixed (the configure-mode popup
+      collapse loop, item 3 below, and the coloredView bare
+      themeExtended deref - the one unguarded consumer, latent via
+      short-circuit timing, now compared against the null-safe
+      colorizerManager.plasmaTheme).
+      Commits: aac3c9fa5, ac8318f86
+- [x] For panel-contrast elements specifically, read the `Header` color
       group (`[Colors:Header]` in kdeglobals) rather than whichever
       `Theme` object is nearest at hand (which usually resolves the
       *window* scheme) - needed for mixed-theme setups (dark panel +
       light window scheme or vice versa)
-      Commits:
-- [ ] Audit for other properties assumed present on the containment
+      CLOSED AS A RECORDED DECISION 2026-07-17 (no behavior change):
+      Header is the wrong target for this port. Plasma 6 panels read
+      Header because plasmashell PAINTS panel surfaces with Header
+      colors; Latte paints its panel from plasma-theme SVGs or the
+      colorizer palette, so panel chrome must pair with THAT source -
+      which is themeExtended.defaultTheme / the colorizer palette,
+      exactly Qt5's `theme` behavior. Reading [Colors:Header] would
+      pair chrome with a scheme the panel background does not follow.
+      Qualifying panel-contrast sites are inventoried in the ledger;
+      the shipped default indicator already routes through
+      indicator.colorPalette (colorizer/plasma palette) and is
+      correct. If the ledger's SUSPECT sites fail a live mixed-theme
+      check, the fix route is the palette bridge, not Header.
+      Commits: (decision recorded here and in the 2026-07-17 ledger)
+- [x] Audit for other properties assumed present on the containment
       graphic object that Plasma 6 actually removed rather than
       deprecated (e.g. `backgroundHints`, which silently takes the
       undefined branch of any comparison rather than erroring)
-      Commits:
+      DONE 2026-07-17: every `Plasmoid.*`/`plasmoid.*` property read in
+      shipped QML (17 + 11 distinct names) checked against the pinned
+      libplasma 6.7.3 headers - all exist on Applet/Containment at the
+      pin, including backgroundHints (so both known writes are valid);
+      Dialog.backgroundHints/hideOnWindowDeactivate exist on
+      PlasmaCore.Dialog; CompactApplet's PlasmoidItem-vs-Applet split
+      verified; Panel.qml's removed-backgroundHints replacement was
+      already commented in place. ONE real hit:
+      `Plasmoid.applets[i].expanded = false` in containment main.qml -
+      Containment::applets returns Plasma::Applet objects on Plasma 6
+      (graphic-item list is a KF6 TODO in libplasma) and `expanded`
+      lives on the graphic item, so the write threw a TypeError that
+      aborted the handler and entering configure mode never collapsed
+      open popups (latte-dock-qt6 ships the identical dead loop).
+      Rerouted through extendedInterface.deactivateApplets(), premises
+      pinned by tests/contracts/appletsexpandedpropertytest.cpp.
+      Owed at the desk: popup collapses on entering configure mode.
+      Commits: aac3c9fa5
 
 ### Phase 10: Stabilization / verification
 
