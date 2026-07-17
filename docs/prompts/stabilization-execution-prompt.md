@@ -1,11 +1,23 @@
 # Stabilization execution prompt (post-extraction continuation)
 
-Re-runnable. Written 2026-07-16, after the QML extraction initiative
-completed. Give this file to a fresh session to drive the remaining
-work in priority order. It assumes CLAUDE.md has been read (the
-working agreements, root-cause law, regression discipline, copyright
-rules, code-clarity laws and Q_ASSERT truths there are binding and are
-not repeated here).
+Re-runnable - KEEP INVOKING THIS PROMPT until every item in the
+priority list below reads DONE. Written 2026-07-16 after the QML
+extraction initiative completed; REVISED the same day after the first
+execution session (items renumbered to reflect what landed - read
+docs/session-handoff.md's 2026-07-16 entry for that session's full
+record). It assumes CLAUDE.md has been read (the working agreements,
+root-cause law, regression discipline, copyright rules, code-clarity
+laws and Q_ASSERT truths there are binding and are not repeated here).
+
+Documentation contract for every session driving this prompt: keep
+docs/session-handoff.md current as work lands (not at the end); tick
+plan items with commit hashes the moment they merge; every subagent
+writes its ledger file in docs/agent-logs/ (one per dispatch,
+YYYY-MM-DD-<slug>.md); anything discovered to need my physical hands
+goes into docs/manual-flake-removal-testing.md with a recipe and the
+plan item it verifies, NOT silently skipped. A session that ends
+without updating this file's status list below (when an item's status
+changed) has not finished its job.
 
 ## Standing context
 
@@ -50,91 +62,75 @@ not repeated here).
 - Push after each landed, verified chunk. Prefer new commits over
   amending. Conventional commits with root-cause bodies.
 
-## Priority order
+## Priority order (status revised 2026-07-16 end of session one)
 
-Work top to bottom. Each item names its home in docs/PORTING_PLAN.md;
-read the full checklist item there before starting - this list is the
-map, not the territory.
+Work top to bottom over the OPEN items. Each names its home in
+docs/PORTING_PLAN.md; read the full checklist item there before
+starting - this list is the map, not the territory. DONE items stay
+listed so a re-run knows not to redo them.
 
 (Icon note: Varlesh's original icon set and logo are the PERMANENT
 choice, through and beyond the Lattecotta package rename - see that
 plan item for the recorded decision. Never land replacement icons.)
 
-1. **Session shutdown/logout teardown** (Phase 8): one deliberate
-   sequence; unload the Corona's dependents in explicit dependency
-   order. This is the crash-on-logout class. Instrument a real
-   logout/login cycle on the throwaway session before and after.
-
-2. **Startup latency + retry-exhaustion deadlock** (Phase 8): measure
-   first (the plan item records the live observation), fix the
-   deadlock, then attack latency with evidence.
-
-3. **Dock visibility across screen lock/unlock** (Phase 8): reproduce
-   with loginctl lock-session/unlock-session on the throwaway.
-
-4. **Cloned-view applet-order sync** (Phase 8): the deferred-sync gap
-   (a clone's containment can finish initializing before
-   structuralSyncReady() is true and nothing re-triggers). Fix is
-   described in the item. Also the prerequisite for the Replicate Dock
-   continuation feature (docs/dock-replication-design.md).
-
-5. **Edit-mode polish cluster** (Phase 7): entry/exit detection
-   research FIRST (read the phase notes - a reference fork needed 8+
-   attempts), then drag-reorder jitter, double-click widget add,
-   position-aware drop insertion, icons-stuck-behind-close-overlay.
-
-6. **Layer-shell struts/exclusive-zone + kde_output_order_v1** (Phase
-   4): align with what Plasma itself uses; regression-test multi-
-   screen placement with dumpwins after every change.
-
-7. **Settings-window control audit** (Phase 8): every control on every
-   page against Qt5 semantics; the Tasks-config lesson (a page that
-   renders but silently does nothing) is the failure mode to hunt.
-
-8. **The accessibility/automation quartet** (Phase 10 requirements
-   subsection - read it in full; these are requirements, not polish):
-   a. Keyboard navigation for EVERYTHING (audit surface-by-surface,
-      written shortcut map, focus order + visible indicators).
-   b. Observability first - D-Bus exposure for everything (one
-      reviewed interface design; any subsystem's state cheaply
-      inspectable, anything a test drives gets a surface, state
-      readbacks replace pixel-peeping; safety rules in the plan item
-      and CLAUDE.md's Observability-first section are binding: reads
-      expose state never execution, mutations stay coarse or
-      debug-gated). This principle also applies to every OTHER item
-      in this list: whatever you fix, ship its observability surface
-      in the same unit of work.
-   c. Convert nondeterministic e2e tests to deterministic ones (live
-      cursor ONLY where pointer delivery is itself under test - those
-      keep fakepointer).
-   d. Full AT-SPI support (Accessible roles/names on every interactive
-      item, focus events, Orca pass as acceptance). Do b before c;
-      a and d together (they share the focus/role work).
-
-9. **CaptSilver testability adoption** (Phase 10; REPLACES the
-   microvm/hosted-CI item, my direction 2026-07-16): study
-   latte-dock-qt6's testability improvements - every test they have
-   that we don't (63 test files vs our 39), and especially their
-   committed visual regression harness ("sceneprobe"): golden PNGs of
-   the parabolic zoom, multieffect, shadows etc., rendered and diffed
-   per GPU backend with a proper per-channel tolerance comparator.
-   HARD CONSTRAINT (my clarification): our CI must run with just KVM
-   or some VMM - NO real-dGPU dependency. Their harness's dGPU golden
-   arm is not an adoption target; what we want is the
-   lavapipe/software-raster path (deterministic software rendering is
-   what makes VM-only CI viable). Adopt as much as fits: the analysis
-   lands as a docs/ file first (what to adopt, transplant cost,
-   conflicts with our upstream-shaped tree), then the adoption work
-   is executed as normal plan items. The microvm compositor harness
-   idea is superseded by this - lavapipe-rendered golden scenes cover
-   the headless-GUI-CI need for rendering; pointer-delivery e2e keeps
-   fakepointer on the live session for now.
-
-10. **The tail**: extraction ledger live-verification leftovers (each
-    executed note names its recipes; two need the author's hands:
-    Meta+number badges, real file drags), known-bug-list sweep,
-    WindowId newtype hardening, stuck-overlay and uninvoked-config
-    findings, Phase 9 color-group audit, Phases 2/3 mechanical tail.
+1. DONE - Session shutdown/logout teardown (525f556c6, e02d1bcde,
+   9d183984e). One real logout/login check remains in
+   docs/manual-flake-removal-testing.md.
+2. DONE - Startup retry deadlock closed not-applicable with evidence
+   (9df0732f9); latency record stands; autostart decision is mine
+   (manual list).
+3. PARTIAL - Lock/unlock: short cycle verified clean; the DPMS/
+   output-off arm is in the manual list; the ~20s mystery exit and
+   the STARTUP-STRANDING defect (new Phase 8 item, instrumented
+   538abc8ec) stay armed - when either fires naturally, root-cause
+   from the logged trail. The stranding item is the top OPEN
+   code-side thread here.
+4. DONE - Cloned-view sync (e3fdcae78, f7561df37).
+5. DONE - Phase 7 cluster (87417a0c7 detection contract, reorder
+   verdict no-change-needed, 480ae30e3 stuck-icons fix, c97c6bb38).
+   Real-mouse checks in the manual list; the boundary-insertion UX
+   deviation is my call, parked in its plan item.
+6. DONE - Phase 4 layer-shell (538abc8ec struts trigger fix; both
+   items ticked).
+7. DONE (automatable half) - Settings audit: named sub-checks clean,
+   isScreenUiReady shim (b8a489c84); the desk walk is in the manual
+   list.
+8. **OPEN - the accessibility/automation quartet** (Phase 10
+   requirements subsection; requirements, not polish). Standing:
+   b's interface is DESIGNED (docs/dbus-observability-interface.md)
+   and step 1 is LIVE (viewsData + setViewEditMode, merged and
+   live-verified); a+d have their baseline inventory recorded in the
+   plan items (docs/agent-logs/2026-07-16-a11y-surface-inventory.md,
+   P0 gate = the dock window's keyboard-focus mode). Remaining, in
+   order: interface steps 2-4 per the design doc (viewAppletsData +
+   activateTaskAt; trackerData + setViewVisibilityMode; viewTasksData
+   + colorizerData + layoutsData - each step lands with a busctl
+   smoke and converts e2e checks as it goes, which IS item c); then
+   the keyboard focus mode for the dock window; then Accessible.*
+   rollout per the inventory's gap list with qmltest pins; the Orca
+   pass is acceptance and needs my hands at the end.
+9. **OPEN - CaptSilver adoption, remaining waves** (the analysis and
+   P1+P2 are DONE and merged: sceneprobe runs headless on lavapipe
+   with bit-exact goldens, six contract pins landed including the
+   alternatives createApplet live-bug fix). Remaining per
+   docs/captsilver-testability-adoption.md: P3 behavioral tests over
+   lattedock-core (screenpool and visibility-reveal first - they
+   serve Phase 8), P4 e2e pixel assertions (latte-imgdiff + KWin
+   ScreenShot2, composes with the new D-Bus surface), follow-up
+   scenes (parabolic_zoom with a PINNED font, colorizer stack,
+   monochromatic icons, indicator glow), and cross-machine golden
+   verification when a second machine exists.
+10. **OPEN - the tail**: Phase 9 color-group audit (surveyed: ~12
+    files read Kirigami.Theme colors; audit each site's theme-object
+    scope), WindowId newtype hardening (its own pass, wm/-wide blast
+    radius), known-bug-list sweep (mostly desk work, see manual
+    list), extraction-ledger live-verification recipes not yet run,
+    Phases 2/3 mechanical tail. Also two small hardening finds from
+    the agent runs: build-check's toolchain guard landed (151a8c829
+    lineage) but the unguarded LATTE_LAYERSHELL_HAS_SET_SCREEN
+    try_compile still re-probes every configure and can silently
+    flip the define after one broken-env run - guard it or make it
+    fail loudly.
 
 ## Session protocol
 
