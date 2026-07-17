@@ -13,9 +13,10 @@ and asserted at entry.
 > forked with the full original history intact and maintained by
 > [whimbree](https://github.com/whimbree) as a living continuation.
 > Upstream development stopped in the Plasma 5 era; this fork carries the
-> codebase to Plasma 6.6 / Qt 6.11 / KDE Frameworks 6 and is developed
-> against a real daily-driver Wayland session. X11 is best-effort: it must
-> compile, but it is not run-tested and never blocks Wayland work.
+> codebase to Plasma 6.7 / Qt 6.11 / KDE Frameworks 6 and is developed
+> against a real daily-driver Wayland session. The port is Wayland-only,
+> matching Plasma 6.8+'s Wayland-exclusive direction; X11 applications are
+> unaffected (they reach the dock as Xwayland windows).
 
 Latte is a dock based on plasma frameworks that provides an elegant and
 intuitive experience for your tasks and plasmoids. It animates its contents
@@ -167,7 +168,7 @@ Installation
 
 - **Plasma >= 6.5**, **Qt >= 6.6**, **KDE Frameworks >= 6.5**
 - LayerShellQt, PlasmaWaylandProtocols
-- A Wayland session (X11 compiles but is untested)
+- A Wayland session (the dock refuses to start on anything else)
 - Tools: cmake >= 3.16, ninja or make, extra-cmake-modules, a C++20
   compiler
 
@@ -231,8 +232,8 @@ scripts/restart-staged.sh -d   # staged run: throwaway config home,
                                # touches your real Plasma or Latte config
 ```
 
-`scripts/` carries the verification tooling: `build-check.sh` (both X11
-variants + full ctest + the ratchets), the QML gates, a KWin
+`scripts/` carries the verification tooling: `build-check.sh` (full
+build + full ctest + the ratchets), the QML gates, a KWin
 window-geometry dumper, and a Wayland pointer injector for driving the
 live dock headlessly.
 

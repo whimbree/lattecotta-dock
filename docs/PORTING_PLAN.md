@@ -428,11 +428,17 @@ blocking.
 
 #### X11 removal checklist (added 2026-07-17)
 
-- [ ] Remove `XWindowInterface` (app/wm/xwindowinterface.*) and the
+- [x] Remove `XWindowInterface` (app/wm/xwindowinterface.*) and the
       corona's HAVE_X11 interface selection in lattecorona.cpp; the
       Wayland interface becomes the only backend, unconditionally
-      Commits:
-- [ ] Strip the remaining HAVE_X11 conditional sites, deleting the
+      Commits: 1a0a7f9aa
+- [x] Refuse to start on any non-wayland platform at the main()
+      boundary (added during execution, my direction): default-deny
+      with the offscreen QPA as the one named harness exception;
+      driven four ways (xcb refuses with the platform named, minimal
+      refuses, offscreen passes, wayland is the live dock)
+      Commits: 582672d04
+- [x] Strip the remaining HAVE_X11 conditional sites, deleting the
       X11 arm and unconditionalizing the Wayland arm - audit each
       site so no Wayland behavior secretly rides an #else:
       app/infoview.cpp, app/primaryoutputwatcher.cpp (the xcb RandR
@@ -440,34 +446,52 @@ blocking.
       app/plasma/extended/theme.cpp, app/tools/commontools.cpp,
       app/settings/settingsdialog/settingsdialog.cpp,
       declarativeimports/core/quickwindowsystem.cpp
-      Commits:
-- [ ] Remove WITH_X11 from the build system: top-level CMakeLists
+      Commits: fca2fd290 (ifdef arms), 85c29a825 (the ~40
+      permanently-false isPlatformX11 runtime branches, per-site
+      audit in the body), 5776693a3 (Effects visual-mask machinery
+      collapse - updateMask/forceMaskRedraw/maskCombinedRegion and
+      the caller-less subtracted/united region cluster)
+- [x] Remove WITH_X11 from the build system: top-level CMakeLists
       option + X11/XCB find_package calls, app/config-latte.h.cmake
       and declarativeimports/core/config-latte-lib.h.cmake defines,
       app/CMakeLists.txt + app/wm/CMakeLists.txt conditionals
-      Commits:
-- [ ] Drop the X11 dependency set from flake.nix buildInputs (libx11,
+      Commits: d70c754ae (wm/CMakeLists block in 1a0a7f9aa)
+- [x] Drop the X11 dependency set from flake.nix buildInputs (libx11,
       libsm, libice, libxcb, libxcb-util, libxrandr) and package.nix;
       kwindowsystem STAYS (KX11Extras was the only X11-path consumer,
       the framework itself is platform-neutral) - update its comment
-      Commits:
-- [ ] Collapse the both-variants gate discipline: build-check.sh
+      Commits: d70c754ae
+- [x] Collapse the both-variants gate discipline: build-check.sh
       builds one tree (drop build-no-x11), gate-all.sh comment,
       CLAUDE.md references ("both WITH_X11 variants" in the C++
       standard-raise process and build notes), docs/TESTING.md if it
       names the variant pair
-      Commits:
-- [ ] Post-removal audit for textual X11 survivors: KX11Extras,
+      Commits: d70c754ae
+- [x] Post-removal audit for textual X11 survivors: KX11Extras,
       QNativeInterface::QX11Application, isPlatformX11-style
       branches, xcb includes, stray WId comments. WindowId's
       QByteArray design STAYS AS IS (uuid strings on Wayland; the
       decimal-string X11 arm simply never occurs anymore - the type
-      does not narrow, per the newtype hardening pass)
+      does not narrow, per the newtype hardening pass; fromX11WId
+      stays with its windowinfowraptest pin as the design record).
+      Result: only main.cpp's refusal-path comments mention xcb, by
+      design; byPassWM found and deliberately NOT removed (next item)
+      Commits: (audit finding record, this docs commit)
+- [ ] DECISION OWED (mine): the byPassWM layout setting. Found by the
+      audit: Qt::BypassWindowManagerHint is X11-only machinery, but
+      byPassWM is a Qt5-faithful, user-persisted layout setting with
+      a config-UI surface (BehaviorConfig.qml) and ~36 code
+      references. Retiring it means a config migration and a settings
+      page change, which is a product decision, not an audit sweep -
+      per the Qt5-faithful rule it stays until I decide. The
+      visibilitymanager's bypasswm-on-X11 frame-extents fold already
+      landed (85c29a825); what remains is the property chain, the
+      setting and the UI
       Commits:
-- [ ] README + docs register update (timeless: "Wayland-only,
+- [x] README + docs register update (timeless: "Wayland-only,
       matching Plasma 6.8+'s Wayland-exclusive direction"), CLAUDE.md
       Plan section phase list wording
-      Commits:
+      Commits: (this docs commit; CLAUDE.md wording landed 03eba5618)
 
 - [x] Keep the `AbstractWindowInterface` split; port
       `XWindowInterface` to Qt6/KF6 mechanically: `QX11Info` ->
