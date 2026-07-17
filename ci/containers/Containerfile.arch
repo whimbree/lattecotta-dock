@@ -1,0 +1,40 @@
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# Arch Linux build+gate environment for the multi-distro CI matrix
+# (docs/multi-distro-ci-plan.md, Phase A). Arch is the rolling KDE-nerd
+# leg: goldens rot, so it gates at the invariant+tolerance tier, not
+# bit-exact. This layer installs ONLY the build/runtime/gate dependencies;
+# the port itself is built by ci/build-and-gate.sh against a bind-mounted
+# or copied source tree, so this image is a cacheable deps-only layer.
+#
+# Rolling base: pinned in Phase A3 to an archive snapshot for reproducible
+# CI once the leg is proven; latest is fine for the local prototype loop.
+FROM docker.io/library/archlinux:latest
+
+# Keep the image lean and the mirror fresh; --noconfirm for non-interactive.
+RUN pacman -Syu --noconfirm --needed \
+        base-devel cmake ninja git pkgconf jq \
+        extra-cmake-modules \
+        qt6-base qt6-declarative qt6-wayland qt6-5compat qt6-shadertools qt6-tools \
+        karchive kcmutils kconfig kcoreaddons kcrash kdbusaddons kdeclarative \
+        kglobalaccel kguiaddons ki18n kiconthemes kio kirigami knewstuff \
+        knotifications kpackage ksvg kwindowsystem kxmlgui kitemmodels solid \
+        sonnet ktextwidgets kidletime kdoctools qqc2-desktop-style \
+        libplasma plasma-activities plasma-activities-stats plasma-workspace \
+        plasma-pa kpipewire plasma5support libksysguard kwayland \
+        plasma-wayland-protocols layer-shell-qt \
+        kwin wayland wayland-protocols \
+        vulkan-headers vulkan-icd-loader vulkan-swrast vulkan-validation-layers \
+        noto-fonts dbus \
+    && pacman -Scc --noconfirm
+
+# The nested-kwin harness and sceneprobe gate read these to find the
+# distro's lavapipe ICD and Vulkan validation layers instead of the nix
+# devShell's. Arch ships lavapipe (vulkan-swrast) and the validation
+# layers under the standard vulkan manifest dirs.
+ENV LATTE_VULKAN_LAVAPIPE_ICD=/usr/share/vulkan/icd.d/lvp_icd.json \
+    LATTE_VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d
+
+WORKDIR /src
