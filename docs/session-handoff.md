@@ -29,8 +29,8 @@ non-hermetic (reads ambient XDG_DATA_DIRS=/usr/share, finds real Breeze
 schemes not its fixtures). Both classes are Phase B in-container
 env-staging (filed in the plan's B2 item).
 
-USEFUL PRIOR ART (Bree flagged latte-dock-ng PR #26 mid-session): the ng
-fork's docker/ pipeline has per-distro Dockerfiles for
+USEFUL PRIOR ART (my own latte-dock-ng PR #26, flagged mid-session): the
+ng fork's docker/ pipeline has per-distro Dockerfiles for
 arch/fedora/opensuse/ubuntu/debian/gentoo/mageia/nixos - a ready dep-NAME
 matrix to adapt for the remaining Phase A legs (ours is a superset; ng
 omits libksysguard/kpipewire/etc. and all render-gate deps). Also

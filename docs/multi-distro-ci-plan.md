@@ -164,7 +164,7 @@ pass on every distro regardless of tier.
       differ per distro). ARCH DONE (ci/containers/Containerfile.arch,
       deps-only cacheable layer + ci/build-and-gate.sh distro-agnostic
       driver). Per-distro NAME reference: the latte-dock-ng docker/
-      pipeline (Bree's PR #26) covers arch/fedora/opensuse/ubuntu/debian/
+      pipeline (my PR #26) covers arch/fedora/opensuse/ubuntu/debian/
       gentoo - adapt those, but our set is a SUPERSET (libksysguard,
       kpipewire, plasma-pa, plasma5support, kcmutils, sonnet,
       ktextwidgets, qqc2-desktop-style, qt5compat, kidletime) PLUS the
