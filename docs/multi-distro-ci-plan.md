@@ -194,8 +194,25 @@ pass on every distro regardless of tier.
       and podman's default cap set excludes CAP_SYS_NICE, so execve failed
       EPERM until the image strips the cap (setcap -r); the cap is
       irrelevant to a throwaway CI compositor. Commits: 79a8008f0
-- [ ] B2 Run the behavioral e2e recipes in-container; make them a hard
-      pass on each distro. NOT STARTED. RESOLVED env-staging from A2/B3:
+- [~] B2 Run the behavioral e2e recipes in-container; make them a hard
+      pass on each distro. ARCH PROVEN BY HAND (000-smoke PASSES in the
+      Arch container: dock reaches lifecycleState running in ~2s,
+      kactivitymanagerd D-Bus-activates on the private bus, 1 view settles,
+      clean SIGTERM, relaunch settles). Blocker fixed: run-staged.sh
+      crashed on unset USER under set -u in a bare container (09b6e69bc).
+      The exact working recipe, to productionize into build-and-gate.sh's
+      gate stage: (a) compile fakepointer - Arch has no plasma-wayland-
+      protocols.pc, so resolve fake-input.xml at /usr/share/plasma-wayland-
+      protocols/fake-input.xml (pkg-config pkgdatadir fails), then
+      wayland-scanner + cc against wayland-client; (b) LATTE_QML_MODULE_PATH
+      = the distro framework qml tree (/usr/lib/qt6/qml on Arch - belongs in
+      each Containerfile's ENV like the ICD path); (c) seed E2E_CONFIG_BASE
+      by running run-staged.sh once in a nested kwin (the dock self-inits a
+      default My Layout.layout.latte); (d) then run-e2e.sh. STILL TO DO:
+      wire (a)-(d) into build-and-gate.sh's gate stage (currently STUB),
+      add imagemagick to the image for the screenshot recipes, and run the
+      FULL suite to characterize which recipes pass/skip/flake in-container
+      (only 000-smoke run so far). RESOLVED env-staging from A2/B3:
       LATTE_QML_MODULE_PATH is the distro framework qml tree
       (/usr/lib/qt6/qml on Arch) and the staged Latte modules now resolve
       via KDE_INSTALL_QMLDIR (18aac31b0), so the QML gates and the

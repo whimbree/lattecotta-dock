@@ -3,6 +3,32 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-17 (multi-distro CI Phase A - Arch leg proven).
 
+## 2026-07-17 multi-distro CI Phase B2: e2e VEHICLE RUNS IN-CONTAINER (branch multi-distro-ci-phase-b2)
+
+000-smoke PASSES in the Arch container - the full nested e2e vehicle
+works headless in podman: dock reaches lifecycleState running in ~2s,
+kactivitymanagerd D-Bus-activates on the private bus (org.kde.
+ActivityManager + org.kde.runners.activities), 1 view settles, clean
+SIGTERM, relaunch settles. THE blocker was a real defect: run-staged.sh
+referenced $USER (for an /etc/profiles/per-user/$USER XDG_DATA_DIRS
+entry) under set -u, and a bare container doesn't export USER, so it
+aborted "USER: unbound variable" before launching the dock. Fixed
+09b6e69bc with ${USER:-$(id -un)}; the nix path entries are absent and
+harmlessly skipped off NixOS. gate-all green @ 09b6e69bc (USER is set on
+nix, so the resolved value is unchanged there).
+
+Proven-by-hand recipe (scratchpad e2e-smoke-check.sh), to wire into
+build-and-gate.sh's gate stage next: compile fakepointer (Arch has no
+plasma-wayland-protocols.pc - resolve fake-input.xml at
+/usr/share/plasma-wayland-protocols/), export LATTE_QML_MODULE_PATH=
+/usr/lib/qt6/qml (belongs in each Containerfile ENV), seed E2E_CONFIG_BASE
+via one run-staged self-init run in a nested kwin (dock writes a default
+My Layout.layout.latte), then run-e2e.sh. STILL TO DO for a repeatable
+gate: wire that into build-and-gate.sh (un-stub the gate stage), add
+imagemagick to the image (screenshot recipes), run the FULL e2e suite to
+characterize (only 000-smoke run so far). Landing PR #10 = the $USER fix +
+this B2 proof; the driver wiring is the next chunk.
+
 ## 2026-07-17 multi-distro CI Phase B: ARCH RENDER HARNESS IN-CONTAINER (branch multi-distro-ci-phase-b)
 
 Depth-first on Arch through Phase B (prove the riskiest unknown - nested
