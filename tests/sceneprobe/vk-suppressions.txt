@@ -3,5 +3,11 @@
 # false positives that fire on a scene with no Latte code, with a one-line reason.
 # Qt RHI requests VK_KHR_create_renderpass2 without its dependency extensions on lavapipe:
 VUID-vkCreateDevice-ppEnabledExtensionNames-01387
+# Qt RHI re-passes the instance validation layer at vkCreateDevice (qtbase 6.11.1
+# qrhivulkan.cpp:861, devInfo.enabledLayerCount = devLayers.size()). Device layers
+# are legacy-allowed and ignored by every loader since Vulkan 1.0; the 26.11.20260715
+# validation layers turned the pattern into a hard VUID. Fires on selftest-good
+# (no Latte code), caught at the 2026-07-17 re-pin:
+VUID-VkDeviceCreateInfo-enabledLayerCount-12384
 # validation-layer vs lavapipe version skew on Qt's own scenegraph SPIR-V:
 VUID-VkShaderModuleCreateInfo-pCode-08740
