@@ -47,8 +47,8 @@ the unit's ledger entry at landing. Their tests run under ASan+UBSan
 (`latte_add_unit_test` in tests/units/CMakeLists.txt; a `.cpp` core is
 compiled into the sanitized test binary, never linked from an
 unsanitized object library). A sanitizer trip is a real bug to fix at
-origin, never suppress. QML-side, `scripts/qmllint-gate.sh` ratchets
-five curated warning categories against `tests/qmllint-baseline`
+origin, never suppress. QML-side, `tests/coverage/qmllint-gate.sh` ratchets
+five curated warning categories against `tests/coverage/qmllint-baseline`
 (exact match; the baseline only shrinks), and every QML file a cutover
 commit touches leaves at zero curated warnings. Full-strict QML is the
 asymptotic state the extraction converges to, not a mandate on

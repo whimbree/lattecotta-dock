@@ -138,6 +138,34 @@ plasma-desktop sync pass), datatypestest, settingsmodelstest. Skip
 their mirror-logic tests (storageroundtriptest, templatesnametest) -
 TESTING.md already rejects reimplementation-testing.
 
+P3b - the remaining transplant candidates (filed 2026-07-17 from a
+mechanical include-level pass over every fork test we lack by name;
+the 33-name gap splits into 10 their-architecture skips, a few
+already-covered-differently, and these, all over headers our tree
+shares - each still gets the P3 method: verify the premise against
+OUR code first, raise past the fork's cases, negative-test):
+shortcutstest (shortcutstracker+modifiertracker; high value now that
+the shortcuts host is alive again), storagetest (layouts/storage.h
+breadth beyond our id-remap pair), universalsettingstest,
+layoutmanagertest + appletremovaltest (containment LayoutManager
+restore/save/removal beyond our parking suite), importerlogictest
+(breadth beyond importerregressiontest), layoutsmodeltest +
+viewsmodeltest + schemesmodeltest (settings models beyond our
+applets+screens pair), viewmodelstest (app/view/tasksmodel +
+indicatorinfo), wmtoolstest (wm/tasktools + schemecolors),
+commontoolstest/coretoolstest/generictoolstest (helper suites,
+partial overlap with our units - premise check decides),
+coretypesenumtest (enum value pins; synergizes with the D-Bus name
+maps), panelbackgroundtest + configcontrolstest (verify against our
+panelbackgroundscantest/backgroundstatetest and the qml
+config-control tests before adopting). Their-architecture skips, so
+the next pass does not re-derive them: addviewdecision,
+startuplayoutplanner, validviewsmapbuilder, viewcontainertransition,
+viewpriority, viewsyncplan, activitystatescache, settingsnameutils
+(their extractions), windowindex (perf-only candidate, already
+banked), storagevalidator (build OURS deliberately - already banked
+for Phase 8/11 with our layout-corruption history as the driver).
+
 P4 - e2e pixel assertions: their latte-imgdiff CLI (comes free with
 P1) + KWin ScreenShot2 before/after diffs under a nested kwin, driven
 over D-Bus with a seeded HOME. Composes directly with our

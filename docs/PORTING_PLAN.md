@@ -2444,6 +2444,11 @@ showed how much of the dock can only be driven by a pointer today.
             (207a4ac55).
             Commits: 20124015c..2b6a94243 (22, post-rebase; the
             fixes above plus test/docs commits listed in the ledger)
+      - [ ] P3b: the remaining transplant candidates (filed
+            2026-07-17; the itemized list with skip verdicts lives in
+            the adoption plan doc - ~14 suites over shared headers,
+            shortcutstest and storagetest first).
+            Commits:
       - [ ] P4: e2e pixel assertions (latte-imgdiff + KWin ScreenShot2
             before/after under nested kwin, D-Bus-driven, seeded HOME);
             fakepointer keeps covering live pointer-delivery tests.

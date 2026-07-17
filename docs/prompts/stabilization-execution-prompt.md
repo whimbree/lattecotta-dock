@@ -32,7 +32,7 @@ changed) has not finished its job.
   latte_add_unit_test, QT_FORCE_ASSERTS, type discipline, qmllint
   ratchet strict-on-touch, coverage-ratchet pairing).
 - Gates before any merge: full ctest green, tests/coverage/coverage-ratchet.sh,
-  scripts/qmllint-gate.sh (baseline only shrinks), both WITH_X11
+  tests/coverage/qmllint-gate.sh (baseline only shrinks), both WITH_X11
   variants build. Use `nix develop -c` for all build/test commands.
 - Live verification on the author's real Wayland session is authorized.
   Tools: scripts/restart-staged.sh (-d for the throwaway profile,
@@ -54,8 +54,7 @@ changed) has not finished its job.
   Merge lessons already paid for: tests/units/CMakeLists.txt and
   plugin-registration files are both-append unions;
   tests/coverage/ratchet-baseline count = union size with a sorted
-  entry list; tests/qmllint-
-  baseline is taken from ours then REGENERATED with --write-baseline
+  entry list; tests/coverage/qmllint-baseline is taken from ours then REGENERATED with --write-baseline
   after a full build; plugins.qmltypes is NEVER hand-merged - always
   regenerate with the qmlplugindump recipe in the file's own header
   against the freshly staged tree, and verify every expected singleton
@@ -118,13 +117,14 @@ plan item for the recorded decision. Never land replacement icons.)
    pins landed including the alternatives createApplet live-bug fix;
    the four follow-up scenes landed session two with probeExpect and
    injection proof). Remaining per
-   docs/captsilver-testability-adoption.md: P3 behavioral tests over
-   lattedock-core (screenpool and visibility-reveal first - they
-   serve Phase 8; agent ran session two), P4 e2e pixel assertions
-   (latte-imgdiff + KWin ScreenShot2, composes with the new D-Bus
-   surface; the nested-kwin staged-dock recipe in the handoff is the
-   vehicle proof), and cross-machine golden verification when a
-   second machine exists.
+   docs/captsilver-testability-adoption.md: P3 landed session two
+   (11 suites, nine origin fixes); P3b - the remaining ~14 transplant
+   candidates over shared headers (itemized with skip verdicts in the
+   adoption plan; shortcutstest and storagetest first), P4 e2e pixel
+   assertions (latte-imgdiff + KWin ScreenShot2, composes with the
+   new D-Bus surface; the nested-kwin staged-dock recipe in the
+   handoff is the vehicle proof), and cross-machine golden
+   verification when a second machine exists.
 10. **PARTIAL - the tail**: DONE session two: WindowId newtype
     hardening (own pass, six commits, windowidtest; wm desk pass in
     the manual list) and the LATTE_LAYERSHELL_HAS_SET_SCREEN guard

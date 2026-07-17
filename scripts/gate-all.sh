@@ -22,7 +22,7 @@ if ! command -v cmake >/dev/null 2>&1 || [[ "$(command -v cmake)" != /nix/store/
 fi
 
 "$repo/scripts/build-check.sh"        # both WITH_X11 variants + full ctest + coverage ratchet
-"$repo/scripts/qmllint-gate.sh"       # baseline only shrinks
+"$repo/tests/coverage/qmllint-gate.sh"       # baseline only shrinks
 "$repo/scripts/sceneprobe-gate.sh"    # real-pixel scene gate incl. self-test
 
 sha="$(git -C "$repo" rev-parse HEAD)"

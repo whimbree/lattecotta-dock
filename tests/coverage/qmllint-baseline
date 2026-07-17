@@ -1,6 +1,6 @@
-# Per-file curated qmllint warning counts (scripts/qmllint-gate.sh).
+# Per-file curated qmllint warning counts (tests/coverage/qmllint-gate.sh).
 # Ratchet law: this file only ever shrinks. Regenerate with
-#   scripts/qmllint-gate.sh --write-baseline
+#   tests/coverage/qmllint-gate.sh --write-baseline
 # and commit the shrink together with the change that earned it.
 # Files that cannot reach zero for a structural reason are NAMED
 # with their reason in docs/QML_EXTRACTION_PLAN.md (section D,

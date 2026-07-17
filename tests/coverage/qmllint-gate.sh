@@ -10,10 +10,10 @@
 #   deprecated                  deprecated syntax
 #   signal-handler-parameters   injected signal-handler parameters
 #
-# Per-file counts must match tests/qmllint-baseline EXACTLY - the same
+# Per-file counts must match tests/coverage/qmllint-baseline EXACTLY - the same
 # ratchet law as tests/coverage/ratchet-baseline: an increase is un-mergeable, an
 # improvement lands with the baseline shrink in the same commit
-# (regenerate with: scripts/qmllint-gate.sh --write-baseline). Files that
+# (regenerate with: tests/coverage/qmllint-gate.sh --write-baseline). Files that
 # can never reach zero for a structural reason carry the reason as a
 # comment next to their baseline entry - named, never silent.
 #
@@ -24,8 +24,8 @@
 # Runs inside the flake devShell (ctest invokes it there via build-check.sh).
 set -euo pipefail
 
-repo="$(cd "$(dirname "$0")/.." && pwd)"
-baseline="$repo/tests/qmllint-baseline"
+repo="$(cd "$(dirname "$0")/../.." && pwd)"
+baseline="$repo/tests/coverage/qmllint-baseline"
 
 source "$repo/scripts/lib-qml-env.sh"
 qml_env_setup "$repo"
@@ -91,9 +91,9 @@ jq -r --arg stage "$stage/" '
 
 if [[ "${1:-}" == "--write-baseline" ]]; then
     {
-        echo "# Per-file curated qmllint warning counts (scripts/qmllint-gate.sh)."
+        echo "# Per-file curated qmllint warning counts (tests/coverage/qmllint-gate.sh)."
         echo "# Ratchet law: this file only ever shrinks. Regenerate with"
-        echo "#   scripts/qmllint-gate.sh --write-baseline"
+        echo "#   tests/coverage/qmllint-gate.sh --write-baseline"
         echo "# and commit the shrink together with the change that earned it."
         echo "# Files that cannot reach zero for a structural reason are NAMED"
         echo "# with their reason in docs/QML_EXTRACTION_PLAN.md (section D,"
@@ -106,7 +106,7 @@ if [[ "${1:-}" == "--write-baseline" ]]; then
 fi
 
 if [[ ! -f "$baseline" ]]; then
-    echo "qmllint-gate: FAIL no baseline at tests/qmllint-baseline (generate with --write-baseline)"
+    echo "qmllint-gate: FAIL no baseline at tests/coverage/qmllint-baseline (generate with --write-baseline)"
     exit 1
 fi
 
@@ -114,7 +114,7 @@ expected="$stage/_qmllint_gate.expected"
 grep -v '^#' "$baseline" | grep -v '^$' | sort -k2 > "$expected"
 
 if ! diff -u "$expected" "$current" > "$stage/_qmllint_gate.diff"; then
-    echo "qmllint-gate: FAIL per-file curated warning counts diverge from tests/qmllint-baseline:"
+    echo "qmllint-gate: FAIL per-file curated warning counts diverge from tests/coverage/qmllint-baseline:"
     cat "$stage/_qmllint_gate.diff"
     echo "qmllint-gate: an increase is a regression to fix; an improvement lands"
     echo "qmllint-gate: with the baseline shrink in the same commit (--write-baseline)."
