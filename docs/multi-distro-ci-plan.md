@@ -91,20 +91,36 @@ distro.
   ninja, gcc, jq, fonts, the imgdiff deps), builds the port with cmake
   against the DISTRO Qt/KF6 (not nix), and runs the headless gates.
 - **Distro matrix** (the Plasma 6.5 / Qt 6.6 / KF6 6.5 floors in
-  CMakeLists.txt are a hard selection constraint):
-  - **Arch** (rolling) - always-current Plasma 6; rolling means goldens
-    rot, so it runs the TOLERANCE/INVARIANT tier, not bit-exact.
-  - **Fedora** (latest stable that ships Plasma >= 6.5, e.g. Fedora 42) -
-    pinned base tag, can carry a blessed bit-exact tier per frozen tag.
-  - **Ubuntu-family Plasma 6** - stock Ubuntu LTS 24.04 ships Plasma 5.27
-    (BELOW floor, unusable); options are Ubuntu 25.04+ (Plasma 6.3) or
-    KDE neon (Ubuntu-based, always-current Plasma - arguably the best
-    Ubuntu-family target for a Plasma dock). DECISION 3.
-  - Optional 4th: openSUSE Tumbleweed (rolling, current Plasma).
-- **CI**: GitHub Actions matrix, one leg per distro, `container:` on
-  official base images. Hosted runners are x86_64 - fine, lavapipe is
-  CPU. Build the dep layer once and cache via GHCR to keep legs fast.
-  Upload actual/expected/diff PNG triples as artifacts on failure.
+  CMakeLists.txt are a hard selection constraint). Two axes that are
+  easy to conflate: the FIVE PACKAGE FORMATS (deb/rpm/PKGBUILD/ebuild/
+  xbps, Phase F) already blanket the whole ecosystem, so "add every
+  distro a KDE nerd runs" mostly adds CI TEST LEGS (build+render
+  environments), not new formats. The KDE-enthusiast set, resolved
+  (Bree, 2026-07-17 - "any distro a Latte nerd would run to"):
+  - **NixOS** - the dev/gate home, BIT-EXACT tier (already live).
+  - **Arch** (rolling) - the canonical KDE-nerd rolling distro; goldens
+    rot, so TOLERANCE/INVARIANT tier. Covers Manjaro/EndeavourOS/Garuda
+    (Arch-based, same makepkg/PKGBUILD) - add them as legs only if a
+    downstream-specific bug appears.
+  - **openSUSE Tumbleweed** (rolling, current Plasma; DECISION 4 = IN) -
+    TOLERANCE tier. RPM but NOT Fedora: different macros, package names,
+    and OBS as the idiomatic build host, so the .spec must build on both
+    Fedora AND Tumbleweed (portability sub-check in F2).
+  - **Fedora** (latest stable shipping Plasma >= 6.5, e.g. 42) - pinned
+    tag, can carry a bless-frozen bit-exact tier.
+  - **KDE neon** (Ubuntu-based, always-current Plasma, made BY KDE - the
+    reference KDE-enthusiast environment; resolves DECISION 3 toward
+    neon) - TOLERANCE tier; deb format. Covers Kubuntu/Pop!_OS/Mint-KDE
+    (deb-based) - stock Ubuntu LTS 24.04 stays EXCLUDED (Plasma 5.27,
+    below floor).
+  - **Debian testing/sid** - deb, current-ish Plasma, the root of the
+    largest derivative tree; a reasonable additional leg.
+  - **Gentoo** and **Void** - source/minimalist nerd distros; already
+    Phase F4/F5 formats and natural CI legs.
+- **CI**: matrix, one leg per distro, `container:` on official base
+  images, runner-agnostic (DECISION 6). Runners are x86_64 - fine,
+  lavapipe is CPU. Build the dep layer once and cache it to keep legs
+  fast. Upload actual/expected/diff PNG triples as artifacts on failure.
 
 ## The golden-per-distro strategy (the crux)
 
@@ -231,7 +247,9 @@ format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
       container, install, gate. Commits:
 - [ ] F2 packaging/rpm/latte-dock.spec (%cmake macros, Qt6/KF6/Plasma
       BuildRequires, %license); build .rpm in the Fedora container,
-      install, gate. Commits:
+      install, gate. Portability sub-check: the same .spec must also build
+      on openSUSE Tumbleweed (different macros/package names/OBS) - fix
+      the divergences so one spec serves both. Commits:
 - [ ] F3 packaging/arch/PKGBUILD (+ .SRCINFO); makepkg in the Arch
       container, install, gate. Commits:
 - [ ] F4 packaging/gentoo/ ebuild (cmake + kde eclasses, USE flags) in an
@@ -256,9 +274,12 @@ format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
 - DECISION 2 - CI cadence: build+e2e on every PR vs nightly + pre-release
   only. Recommendation: build+e2e on PR if leg time is acceptable, full
   sceneprobe matrix nightly + on release tags.
-- DECISION 3 - Ubuntu-family target: Ubuntu 25.04+ vs KDE neon vs
-  Kubuntu. Recommendation: KDE neon (always-current Plasma, Ubuntu base).
-- DECISION 4 - 4th distro (openSUSE Tumbleweed) in or out for v0.12.0.
+- DECISION 3 - RESOLVED (2026-07-17): KDE neon is the Ubuntu-family/deb
+  leg (always-current Plasma, the KDE reference env); covers Kubuntu/Pop/
+  Mint-KDE. Stock Ubuntu LTS 24.04 excluded (below floor).
+- DECISION 4 - RESOLVED (2026-07-17): openSUSE Tumbleweed IN. Widened the
+  CI test-leg set to the full KDE-enthusiast list (Arch, Tumbleweed,
+  Fedora, neon, Debian sid, Gentoo, Void); package formats stay five.
 - DECISION 5 - release gate scope: ALL matrix distros green vs NixOS +
   >=1 mainstream distro green.
 - DECISION 6 - runner: self-hosted Forgejo runners vs GitHub Actions
