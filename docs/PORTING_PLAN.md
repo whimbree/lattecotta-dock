@@ -2524,6 +2524,31 @@ showed how much of the dock can only be driven by a pointer today.
       flags or QT_LINUX_ACCESSIBILITY_ALWAYS_ON - no plasmashell
       dependency, and the env var is the switch for Orca-less AT-SPI
       e2e asserts.
+      ACCESSIBLE ROLLOUT LANDED 2026-07-17 (branch accessible-rollout,
+      6 feat commits; ledger
+      docs/agent-logs/2026-07-17-accessible-rollout.md): role/name/
+      description/press-action on task items (badge values through a
+      new TooltipTextComposer accessible-description composer - core
+      plan + i18n in the wrapper, the EX-17 split), the audio badge as
+      the same checkable Mute the context menu offers, applet
+      containers (activation factored once as toggleExpanded()),
+      HeaderSwitch/ComboBoxButton, edit-mode chrome (canvas chips +
+      ConfigOverlay handles reusing their TextMetrics hint strings),
+      and widget-explorer cards (press action = the tap's addWidget()).
+      Accessible.focused tracks the keyboard focus mode on tasks,
+      applets and explorer cards. Pinned offscreen:
+      tst_taskaccessible / tst_accessiblecontrols /
+      tst_addwidgetsaccessible + sanitized composer vectors in
+      tooltiptexttest. Mechanism notes that will bite again (QQC2
+      native AT press emits clicked() only; required-properties mode
+      kills bare role reads; the qmllint ratchet counts i18n() and
+      inline-component outside-id reads) are in the ledger. STILL OPEN
+      before ticking: the Orca desk pass
+      (docs/manual-flake-removal-testing.md "Orca screen-reader
+      pass"), the previews dialog (deferred with the P1 focus rework),
+      per-instance labels on the config pages' template controls (the
+      P3 page pass), and C++-side focus-event verification against a
+      live AT client.
       Commits:
 
 - [x] WindowId newtype hardening (filed 2026-07-16 from the EX-23

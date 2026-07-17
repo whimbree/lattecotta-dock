@@ -173,3 +173,59 @@ into the focused window. All of these against the staged dock:
       left/right semantics. Decide whether that is correct or arrows
       should follow reading direction, and record the decision in the
       plan.
+
+## Orca screen-reader pass (2026-07-17, needs my ears)
+
+The Accessible.* rollout (branch accessible-rollout; ledger
+docs/agent-logs/2026-07-17-accessible-rollout.md) pinned every
+role/name/description/press-action offscreen, but announcement is a
+runtime pipeline (Qt bridge -> AT-SPI bus -> Orca heuristics) that
+only real ears can accept. Setup: start Orca (`orca` in a terminal or
+the a11y KCM); Qt's bridge enables itself per-process the moment
+org.a11y reports a screen reader - no dock restart needed if Orca was
+up first, otherwise restart the staged dock. For Orca-less debugging,
+`QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1` on the dock plus `accerciser` (or
+busctl on the a11y bus) shows the raw tree.
+
+- [ ] **Task announcement.** Meta+Alt+D, arrow along the row. Each
+      task must announce: title (windows) or app name (launchers),
+      "button", and the state description - a pinned launcher says
+      "launcher", a group says "N windows", a task playing sound says
+      "playing audio" (or "audio muted"), a download in flight says
+      "NN% complete", an unread-count badge says "N notifications".
+      The announcement must follow the arrows in step with the visual
+      indicator highlight (Accessible.focused mirrors the same index).
+- [ ] **Task activation by AT.** Orca's default action (or Enter) on a
+      focused task must do exactly what a left click does - both paths
+      run activateTask().
+- [ ] **Applet announcement.** Arrow onto a plain applet: its plasmoid
+      title plus "button"; the default action toggles its popup (the
+      Meta+number body). The tasks area itself must NOT announce as
+      one blob - its container is pruned so individual tasks speak.
+- [ ] **Audio badge.** On a task with sound, flat review (or object
+      navigation) must find a "Mute" check box whose checked state
+      follows the real mute; toggling it from Orca must mute/unmute
+      (same toggleMuted() as the click and the context menu item).
+- [ ] **Settings custom controls.** Open dock settings: every
+      HeaderSwitch header ("Background", "Indicators", ...) must read
+      as a named check box with its tooltip as help text, and toggling
+      from Orca must flip it. ComboBoxButton chips (e.g. the layouts
+      actions chip) must announce their visible label, both the button
+      and the dropdown half.
+- [ ] **Edit-mode chrome.** In the canvas: "Rearrange and configure
+      your widgets" and the two stick chips announce with their text
+      and toggle state, and Orca-press toggles them (the replayed
+      pressedChanged cycle). Hover an applet in configure mode: the
+      handle buttons announce "Configure applet", "Enable painting for
+      this applet", "Disable parabolic effect for this applet",
+      "Remove applet".
+- [ ] **Add widgets.** Open the widget explorer: each card announces
+      name + description + "button"; the grid's current-item highlight
+      and the announced focus move together; Orca's default action
+      adds the widget exactly like a tap (recorded pin, verify live).
+- [ ] **Known gaps to NOT report as regressions:** the group previews
+      dialog is still focus-refusing and unannounced (deferred to the
+      P1 previews keyboard rework); sliders and combos inside config
+      pages carry roles but not per-instance labels yet (P3 page
+      pass); Return in the widget explorer grid is the keyboard
+      item's Keys wiring, not this rollout's.

@@ -5,6 +5,28 @@ Last updated 2026-07-17 (stabilization-execution session three, in progress).
 
 ## 2026-07-17: stabilization execution session THREE (running record)
 
+ACCESSIBLE ROLLOUT LANDED (branch accessible-rollout, 6 feat commits +
+docs, worktree hashes 8e709d26a..HEAD - retick at merge): the
+accessibility quartet's third item. Accessible role/name/description +
+press-action-forwarding-to-the-click-handler on: task items (badge
+values via a new TooltipTextComposer accessible-description composer,
+core+wrapper per the EX-17 split), the audio badge (checkable Mute,
+context-menu msgid), applet containers (toggleExpanded() factored
+once for Meta+number / neutral-area / AT press), HeaderSwitch +
+ComboBoxButton ghosts, edit-mode canvas chips + ConfigOverlay handle
+buttons (names reuse the TextMetrics hint strings), widget-explorer
+cards (press = the tap's addWidget(); delegate moved to
+required-properties mode). Accessible.focused mirrors the keyboard
+focus mode. Pins: tst_taskaccessible, tst_accessiblecontrols,
+tst_addwidgetsaccessible + sanitized composer vectors. Two qmllint
+baseline shrinks landed (AppletItem 158->155, AppletDelegate 39->33).
+Deferred with reasons (ledger
+docs/agent-logs/2026-07-17-accessible-rollout.md): previews dialog
+(P1 focus rework), config-page per-control labels (P3), ScrollArea /
+Keys.onReturn (keyboard item). Desk pass owed: the Orca script in
+docs/manual-flake-removal-testing.md. Plan item stays UNTICKED until
+the Orca pass. NOT pushed.
+
 KEYBOARD FOCUS MODE LANDED (branch keyboard-focus-mode, 7 commits,
 worktree hashes 634ae2083..920e84ff9 - retick at merge): the
 accessibility quartet's P0 gate plus the owed shortcuts-host pin.

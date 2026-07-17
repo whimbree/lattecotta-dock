@@ -105,13 +105,19 @@ phases, one commit-traceable checklist item per task. The coarse picture:
       CMake install works everywhere the dependencies exist)
 - [ ] Accessibility: keyboard navigation for every interactive surface,
       Accessible roles/names on every interactive item, and a
-      screen-reader pass with Orca as the acceptance test. The gating
-      piece exists: a keyboard focus mode (Meta+Alt+D or D-Bus) makes
-      the otherwise focus-refusing dock window take keyboard input -
+      screen-reader pass with Orca as the acceptance test. Two pieces
+      exist: a keyboard focus mode (Meta+Alt+D or D-Bus) makes the
+      otherwise focus-refusing dock window take keyboard input -
       arrow-key traversal over the same entry space the Meta+number
       shortcuts address, Enter activates, the item indicators double as
       the focus highlight, and Escape or any focus loss returns the
-      window to focus-refusing
+      window to focus-refusing - and the core surfaces carry Accessible
+      semantics: tasks announce title, window count and badge values,
+      applets their plasmoid title, the settings' custom controls and
+      edit-mode chrome their visible labels, and every press action
+      runs the same handler the click does. The Orca acceptance pass
+      and the remaining surfaces (group previews, per-control labels
+      on the config pages) are the open half
 - [ ] Companion applets as sibling repos consumed by flake input: the
       Latte separator applet, then a full Qt 6 port of
       [applet-window-appmenu](https://github.com/psifidotos/applet-window-appmenu)
