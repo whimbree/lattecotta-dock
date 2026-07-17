@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2021 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -260,7 +261,11 @@ QVariant Applets::data(const QModelIndex &index, int role) const
     const int row = index.row();
     int column = index.column();
 
-    if (row >= rowCount()) {
+    //! an invalid QModelIndex has row() == -1, which the old >= rowCount()
+    //! check let through; the table indexer then converted it to uint and
+    //! read far out of bounds. Qt's data() contract requires an invalid
+    //! QVariant for indexes the model does not own, negative rows included.
+    if (row < 0 || row >= rowCount()) {
         return QVariant{};
     }
 
