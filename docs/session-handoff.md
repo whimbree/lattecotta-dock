@@ -3,6 +3,38 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-17 (multi-distro CI Phase A - Arch leg proven).
 
+## 2026-07-17 multi-distro CI Phase B: ARCH RENDER HARNESS IN-CONTAINER (branch multi-distro-ci-phase-b)
+
+Depth-first on Arch through Phase B (prove the riskiest unknown - nested
+kwin + lavapipe in a container - before writing more distro legs). Branch
+multi-distro-ci-phase-b off master bfb0fe5f2:
+- B1 DONE: nested kwin_wayland comes up headless in podman. Blocker fixed:
+  Arch's kwin_wayland has cap_sys_nice=ep and podman's default cap set
+  lacks CAP_SYS_NICE, so execve failed EPERM; the image strips the cap
+  (setcap -r, needs libcap). Also added rsync+perl for QML staging.
+  Commit 79a8008f0.
+- B3 DONE: all 13 sceneprobe scenes render + PASS in the Arch container,
+  bit-exact against the nix lavapipe goldens (Arch llvmpipe 22.1.8 @
+  256-bit matches nix Mesa). Enabler = a real portability fix (18aac31b0):
+  the QML harness hardcoded nix's KDE_INSTALL_QMLDIR spelling (lib/qml);
+  Arch uses lib/qt6/qml, so staged org.kde.latte.* modules were unfindable
+  and 3 scenes failed "module not installed". Fix: top CMakeLists emits
+  KDE_INSTALL_QMLDIR to build/latte-qmldir.txt, lib-qml-env.sh reads it.
+  (Same defect class as the qmltypes qt-6/qml fix in PR #8.)
+- Two set -e / ordering traps hit and fixed along the way (in the commit
+  body): a `[[ -d ]] &&` as the function's last statement aborts the gate
+  under set -e; qml_env_setup runs BEFORE qml_env_stage so the staged dir
+  cannot be probed at setup time (hence the emitted-file approach).
+
+B2 (e2e vehicle in-container) NOT STARTED - it's the next chunk: needs
+python3 + imagemagick in the image, a seed layout config, and
+kactivitymanagerd D-Bus activation in the container. schemesmodeltest
+non-hermeticity (XDG_DATA_DIRS) also still open. Deferred to keep this PR
+the clean "render harness runs in-container" unit.
+
+NEXT: gate-all on the branch (CMakeLists + lib-qml-env are code) -> PR +
+lean Opus review -> ff-merge. Then B2, or widen Phase A to more distros.
+
 ## 2026-07-17 multi-distro CI Phase A: ARCH LEG PROVEN + MERGED (PR #8)
 
 Started executing docs/prompts/multi-distro-ci-execution-prompt.md. Phase

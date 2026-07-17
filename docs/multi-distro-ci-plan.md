@@ -186,24 +186,39 @@ pass on every distro regardless of tier.
       latest for the prototype; archive-snapshot pin TBD). Commits:
 
 ### Phase B - headless gates in-container
-- [ ] B1 Get nested kwin_wayland + lavapipe running in each container
+- [~] B1 Get nested kwin_wayland + lavapipe running in each container
       (per-distro kwin env quirks, validation-layer suppressions may
       differ by Mesa version; the harness already parameterizes ICD and
-      no-permission-checks). Commits:
+      no-permission-checks). ARCH DONE: nested kwin_wayland comes up
+      headless in podman. QUIRK: Arch's kwin_wayland carries cap_sys_nice=ep
+      and podman's default cap set excludes CAP_SYS_NICE, so execve failed
+      EPERM until the image strips the cap (setcap -r); the cap is
+      irrelevant to a throwaway CI compositor. Commits: 79a8008f0
 - [ ] B2 Run the behavioral e2e recipes in-container; make them a hard
-      pass on each distro. KNOWN env-staging work surfaced in A2 (Arch
-      ctest): (1) build-and-gate.sh must stage the QML module tree and
-      export LATTE_QML_MODULE_PATH the way the nix devShell does, or the
-      QML gates (qmllint/qmlcompile/qmlcontracts/qmlinteraction) and the
-      QML-loading tests (shortcutshost, layoutmanagerparking,
-      representationswitch) hard-fail with "LATTE_QML_MODULE_PATH is not
-      set"; (2) schemesmodeltest is non-hermetic - it reads the ambient
-      XDG_DATA_DIRS and picks up the distro's real Breeze schemes instead
-      of its fixtures (the nix devShell's allow-listed XDG_DATA_DIRS hides
-      this), so it needs a fixture-only XDG_DATA_DIRS to be portable.
-      Commits:
-- [ ] B3 Run sceneprobe in-container in invariant+tolerance mode; confirm
-      scenes render (not blank, right regions). Commits:
+      pass on each distro. NOT STARTED. RESOLVED env-staging from A2/B3:
+      LATTE_QML_MODULE_PATH is the distro framework qml tree
+      (/usr/lib/qt6/qml on Arch) and the staged Latte modules now resolve
+      via KDE_INSTALL_QMLDIR (18aac31b0), so the QML gates and the
+      QML-loading tests (shortcutshost etc.) should pass once the harness
+      exports LATTE_QML_MODULE_PATH in-container. STILL OWED for e2e: the
+      nested vehicle (scripts/run-e2e.sh) needs python3 + imagemagick in
+      the image, a seed layout config, and kactivitymanagerd D-Bus
+      activation working in the container (the dock waits on the activities
+      consumer reaching Running). Also STILL OPEN: schemesmodeltest is
+      non-hermetic - it reads the ambient XDG_DATA_DIRS and picks up the
+      distro's real Breeze schemes instead of its fixtures (the nix
+      devShell's allow-listed XDG_DATA_DIRS hides this), so it needs a
+      fixture-only XDG_DATA_DIRS to be portable. Commits:
+- [x] B3 Run sceneprobe in-container in invariant+tolerance mode; confirm
+      scenes render (not blank, right regions). ARCH DONE: all 13 scenes
+      render and PASS in the Arch container - and bit-exact against the
+      nix-blessed lavapipe goldens (Arch llvmpipe 22.1.8 at 256-bit
+      matches nix Mesa for these text-free scenes), so no tolerance tier
+      was even needed on Arch at this Mesa version. The QMLDIR fix
+      (18aac31b0) was the enabler; before it, 3 scenes failed "module
+      org.kde.latte.components not installed". Phase C still adds the
+      per-distro tier axis for rolling drift, but the render path is
+      proven. Commits: 18aac31b0, 79a8008f0
 
 ### Phase C - per-distro golden tiers
 - [ ] C1 Extend the sceneprobe device/tier axis to per-distro naming
