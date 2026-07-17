@@ -83,6 +83,18 @@ target_include_directories(syncedlaunchersclienttest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+# The app/data value-type layer: tables, sentinels, state machines and the
+# serialization round trips the settings dialogs and storage ride on.
+ecm_add_test(datatypestest.cpp
+    TEST_NAME datatypestest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(datatypestest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(datatypestest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
 # The pure half of the activity-manager helper: wire-state validation and
 # the running filter that layout assignment and activity cycling ride on.
 ecm_add_test(activitiesinfotest.cpp
