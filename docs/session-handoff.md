@@ -58,12 +58,29 @@ rebuild and reboot before the next session):
    its start, not to a hash from these notes.
 2. The reboot itself clears the ~790 orphaned portal processes and
    every other leak from tonight - no manual sweep needed anymore.
-3. Decide the autostart question before or at session start (open
-   since session one): ~/.config/autostart/org.kde.latte-dock.desktop
-   launches the PACKAGED latte-dock-ng binary, so post-reboot login
-   brings up NG, not this port. Keep it as interim shell or remove
-   the file; the session restarts our dock after the re-pin rebuild
-   either way (prompt item 0f).
+3. AUTOSTART RESOLVED (superseded; corrected 2026-07-17 after reading
+   /persist/etc/nixos): Bree removed latte-dock-ng from the system
+   (package-ID collision, her config comment has the story) and wired
+   lattecotta in properly - the system flake takes
+   github:whimbree/lattecotta-dock as an input and enables our
+   nixosModules.default (programs.latte-dock.enable). The stale
+   user-level autostart file that still pointed at the REMOVED ng
+   store path was retired (renamed to .removed-ng.bak in
+   ~/.config/autostart). Two facts that follow: (a) our module
+   installs NO autostart entry, so post-reboot login brings up NO
+   dock until one is started by hand (packaged `latte-dock` is on
+   PATH, or scripts/start-dock.sh for the dev build after item 0) - a
+   `programs.latte-dock.autostart` module option is a natural small
+   feature for the re-pin session; (b) the module builds the package
+   with the HOST's pkgs, so the PACKAGED dock is automatically in
+   lockstep with the system at every rebuild - only the dev flake pin
+   needs item 0. Also: system.autoUpgrade updates only the nixpkgs
+   input, so the system's lattecotta SOURCE stays at whatever master
+   the 23:33 lock captured; `nix flake update latte-dock` in
+   /persist/etc/nixos at her next rebuild picks up tonight's fixes.
+   And the machine-readable pin source for item 0's guard:
+   /persist/etc/nixos/flake.lock (or /run/current-system's
+   version-string short rev).
 4. Expect the staged dock NOT to be trustworthy until item 0
    completes (old pinned build, new system substrate - the exact
    incident class); do not fight it manually, let the session land
