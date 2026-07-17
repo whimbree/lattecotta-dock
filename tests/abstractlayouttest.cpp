@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
@@ -13,7 +14,7 @@
 //    degenerate shapes too.
 //
 // Transplanted from latte-dock-qt6 (tests/abstractlayouttest.cpp at
-// origin/main) and extended: their layoutName table stops at four rows; ours
+// 81384003, github.com/CaptSilver/latte-dock-qt6) and extended: their layoutName table stops at four rows; ours
 // adds the empty/degenerate paths and the double-extension shapes, and pins
 // the setter signal guard the round-trip case silently relies on. Their
 // 443ac361 fixed the not-found-index chop in layoutName(); the same defect

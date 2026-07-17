@@ -1,10 +1,11 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// Ported from latte-dock-qt6 at 81384003 (EX-24 in
+// Ported from latte-dock-qt6 at 81384003, github.com/CaptSilver/latte-dock-qt6 (EX-24 in
 // docs/QML_EXTRACTION_PLAN.md, capt ad74a34a): our iconitem.cpp ladder was
 // diffed against capt's ancestor and the Qt5 ancestor (f0ad7b23) before
 // adoption - all three agree, so their case analysis transfers. capt's

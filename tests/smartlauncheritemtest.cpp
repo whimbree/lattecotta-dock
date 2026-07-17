@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
@@ -10,7 +11,7 @@
 // badge state or the launcherUrl contract fails here, not in a live dock.
 //
 // Transplanted from latte-dock-qt6 (tests/smartlauncheritemtest.cpp at
-// origin/main) and extended with the launcherUrlChanged signal discipline.
+// 81384003, github.com/CaptSilver/latte-dock-qt6) and extended with the launcherUrlChanged signal discipline.
 // The badge mutation path (count/progress/urgent) only moves on Unity
 // LauncherAPI DBus traffic through the shared backend, so it stays
 // live-verified; everything below is the honest headless surface.

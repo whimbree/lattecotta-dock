@@ -1,10 +1,11 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// Ported from latte-dock-qt6 at 81384003 (EX-23 in
+// Ported from latte-dock-qt6 at 81384003, github.com/CaptSilver/latte-dock-qt6 (EX-23 in
 // docs/QML_EXTRACTION_PLAN.md); our predicate/bucket bodies were diffed
 // against theirs before adoption, so the case analysis transfers.
 

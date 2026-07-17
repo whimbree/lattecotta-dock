@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
@@ -16,7 +17,7 @@
 // live 2026-07-13).
 //
 // The transplant source (latte-dock-qt6 tests/syncedlaunchersclienttest.cpp
-// at origin/main) mirrors the handler's removal pattern over a plain QList
+// at 81384003, github.com/CaptSilver/latte-dock-qt6) mirrors the handler's removal pattern over a plain QList
 // because their SyncedLaunchers cannot link headlessly. Ours can (plain
 // QObject parent, lives in lattedock-core), so this test is redesigned to
 // drive the REAL object - the mirror would keep passing if the production

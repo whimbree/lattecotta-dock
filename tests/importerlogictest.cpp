@@ -1,4 +1,5 @@
 /*
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
@@ -14,7 +15,7 @@
 // statics read comes from XDG env vars pointed at throwaway temp dirs.
 //
 // Transplanted from latte-dock-qt6 (tests/importerlogictest.cpp at
-// origin/main) and adjusted: their uniqueLayoutName cases are NOT carried
+// 81384003, github.com/CaptSilver/latte-dock-qt6) and adjusted: their uniqueLayoutName cases are NOT carried
 // over (importerregressiontest already pins that helper deeper - six cases
 // against their three), the data homes are split (XDG_DATA_HOME vs
 // XDG_DATA_DIRS point at different dirs, so systemShellDataPath()'s

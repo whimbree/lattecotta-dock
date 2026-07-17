@@ -1,4 +1,5 @@
 /*
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
@@ -14,7 +15,7 @@
 // pinned to emit exactly once per real change.
 //
 // Transplanted from latte-dock-qt6 (tests/layoutmanagertest.cpp at
-// origin/main) minus their scheduled-destruction cases: this tree's
+// 81384003, github.com/CaptSilver/latte-dock-qt6) minus their scheduled-destruction cases: this tree's
 // setAppletInScheduledDestruction contract deliberately DIVERGES (a park
 // with no container is refused loudly instead of tracked blind - the
 // 71b0d75a two-phase parking design), and layoutmanagerparkingtest pins

@@ -1,4 +1,5 @@
 /*
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
@@ -10,7 +11,7 @@
 // through Data::Screen::init -> stringToRect), and the XDG path resolvers.
 //
 // Transplanted from latte-dock-qt6 (tests/commontoolstest.cpp at
-// origin/main) and reshaped for this tree: their colorBrightness/colorLumina
+// 81384003, github.com/CaptSilver/latte-dock-qt6) and reshaped for this tree: their colorBrightness/colorLumina
 // cases do not apply - that math moved to the ColorTools pure core (EX-19,
 // one authority instead of nine copies) and tests/units/colortoolstest.cpp
 // already pins it sanitized. What this suite adds over theirs: the

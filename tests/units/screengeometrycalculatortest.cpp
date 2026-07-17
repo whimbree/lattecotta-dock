@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
@@ -8,7 +9,7 @@
 // available-screen geometry math over view-footprint snapshots.
 //
 // Case provenance (per docs/TESTING.md): the eleven core slots are ported
-// from latte-dock-qt6's screengeometrycalculatortest.cpp at 81384003 -
+// from latte-dock-qt6's screengeometrycalculatortest.cpp at 81384003, github.com/CaptSilver/latte-dock-qt6 -
 // their calculator was diffed line-by-line against our corona bodies
 // before adoption, so their fixture arithmetic transfers. Two additions
 // are ours: the 1b932ed9 self-origin case (a view's own footprint

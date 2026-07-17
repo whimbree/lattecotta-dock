@@ -1,4 +1,5 @@
 /*
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
@@ -15,7 +16,7 @@
 //     there is no way to inject KModifierKeyInfo key events, so only the
 //     idle-state predicates are reachable (same limit the fork hit).
 //
-// Transplanted from latte-dock-qt6 (tests/shortcutstest.cpp at origin/main)
+// Transplanted from latte-dock-qt6 (tests/shortcutstest.cpp at 81384003, github.com/CaptSilver/latte-dock-qt6)
 // and raised: the badge parser is a data-driven table that also pins the
 // branches the fork skipped (non-Meta two-token uppercase, bare single
 // token, bare lowercase letter uppercased, entry 19 boundary), the applet

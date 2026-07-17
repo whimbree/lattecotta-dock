@@ -1,11 +1,12 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
 // Real-object behavioral test for LastActiveWindow, transplanted from
-// latte-dock-qt6 (tests/lastactivewindowtest.cpp at origin/main) and linked
+// latte-dock-qt6 (tests/lastactivewindowtest.cpp at 81384003, github.com/CaptSilver/latte-dock-qt6) and linked
 // through the lattedock-core object library. A minimal concrete
 // AbstractWindowInterface implements the pure virtuals so the real
 // Windows -> TrackedGeneralInfo -> LastActiveWindow graph runs headlessly.

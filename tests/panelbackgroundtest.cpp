@@ -1,4 +1,5 @@
 /*
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
@@ -21,7 +22,7 @@
 // background drawing (the comment block in the file carries the story).
 //
 // Transplanted from latte-dock-qt6 (tests/panelbackgroundtest.cpp at
-// origin/main; both trees fixed it the same way): two cases document the
+// 81384003, github.com/CaptSilver/latte-dock-qt6; both trees fixed it the same way): two cases document the
 // legacy check's fallthrough semantics in a live QML engine, one scans the
 // shipped wrapper so the broken check cannot come back.
 

@@ -1,4 +1,5 @@
 /*
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
@@ -13,7 +14,7 @@
 // QImage under offscreen QPA so the real drawing paths execute.
 //
 // Transplanted from latte-dock-qt6 (tests/generictoolstest.cpp at
-// origin/main) and raised with the RTL flip case for the icon-slot geometry
+// 81384003, github.com/CaptSilver/latte-dock-qt6) and raised with the RTL flip case for the icon-slot geometry
 // (QGuiApplication::setLayoutDirection is honored by the helpers, and no
 // fork case ever drove it). The default-thick-margin equivalence case pins
 // the four-site sentinel fix landed right before this test (fork parallel

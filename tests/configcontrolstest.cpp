@@ -1,4 +1,5 @@
 /*
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
@@ -21,7 +22,7 @@
 //     a ListModel is detected by probing get(), which the ComboBox rides.
 //
 // Transplanted from latte-dock-qt6 (tests/configcontrolstest.cpp at
-// origin/main), with the final-property semantics driven through plain
+// 81384003, github.com/CaptSilver/latte-dock-qt6), with the final-property semantics driven through plain
 // QtQuick.Controls (the rules are Qt's, not Plasma's, and the base types
 // resolve without the Plasma import path) and the source scans pointed at
 // this tree's declarativeimports/components files.

@@ -1,10 +1,11 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// Ported from latte-dock-qt6's panelbackgroundscantest at 81384003
+// Ported from latte-dock-qt6's panelbackgroundscantest at 81384003, github.com/CaptSilver/latte-dock-qt6
 // (15a317ff; EX-25 in docs/QML_EXTRACTION_PLAN.md): their 17 slots
 // re-derived against our extracted bodies - every expected value below
 // carries its hand-walk in a comment instead of capt's instrument-first

@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
@@ -13,7 +14,7 @@
 //   * Settings::Controller::Layouts::modeIsChanged  missing '>' (pointer
 //     arithmetic plus unqualified self-call, infinite recursion)
 //
-// Shape follows the fork's sourceguardtest (latte-dock-qt6 at origin/main):
+// Shape follows the fork's sourceguardtest (latte-dock-qt6 at 81384003, github.com/CaptSilver/latte-dock-qt6):
 // read the real source, brace-match the function body, strip whitespace and
 // assert the fixed token form both positively and negatively, so the typo
 // cannot silently return. Only these two cases are adopted - the rest of

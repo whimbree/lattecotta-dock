@@ -100,25 +100,42 @@ stale checkboxes."
   get reworded at the pre-PR history cleanup, not amended now.
 - No em-dashes, no AI-sounding marketing-style phrasing in docs, commit
   messages, or code comments - write plainly, like a programmer.
-- Feature branches + PRs (my direction, 2026-07-17): new work lands on a
-  feature branch pushed to origin (whimbree/lattecotta-dock) and merges
-  to master via PR. The bisectable small-commit discipline lives INSIDE
-  the branch - never squash-merge, it destroys the bisection tool;
-  rebase/ff-merge keeps history linear. gate-all.sh green on the branch
+- EVERY major feature lands as its own GitHub PR (my direction,
+  2026-07-17, reinforced after several features were reviewed but
+  ff-merged locally without opening a PR - that shortcut is banned).
+  A major feature is any code landing beyond a docs tick or a
+  one-line fix: a new subsystem, a harness, a defect fix with its
+  test, a transplant wave, a phase's worth of work. The flow is:
+  branch off master -> push to origin (whimbree/lattecotta-dock) ->
+  open a real PR (`gh pr create`, installed via `nix run nixpkgs#gh
+  --`) -> independent review (below) -> merge via the PR. Do not
+  local-ff-and-push a feature straight to master; the PR is the
+  reviewable unit and the record.
+- Merge mechanics: the bisectable small-commit discipline lives INSIDE
+  the branch - never squash-merge, it destroys the bisection tool.
+  Prefer a local `git merge --ff-only` of the reviewed branch then a
+  master push (sha-preserving, the PR auto-closes as merged) over
+  GitHub's rebase-merge, which REWRITES every commit sha and forces a
+  re-resolution of every plan/handoff hash the branch just filed (the
+  2bba6cb8b lesson, re-paid on PR #1). gate-all.sh green on the branch
   head before the PR opens and again at merge if master moved (the
   pre-push hook enforces the stamp on every code push, any branch).
-  Push the branch after each landed, verified chunk - do not let long
-  sessions accumulate dozens of unpushed commits. Plan checkboxes get
-  their final hashes at merge time if a rebase rewrote them.
+  Push the branch after each landed, verified chunk. Plan checkboxes
+  get their final hashes at merge time if a rebase rewrote them.
 - Every PR gets an INDEPENDENT review before merge (my direction,
   2026-07-17): a fresh subagent with cold context reviews the full
   diff read-only against this file's standards - commit bodies checked
   against their own claims, deleted "dead" arms verified actually dead,
-  removed API grepped tree-wide for surviving callers, gates re-run in
-  its own build dir. Verdict is MERGE / MERGE AFTER FIXES / DO NOT
-  MERGE with concrete findings; blockers get root-caused and fixed on
-  the branch before merge. The author-session merges only on a MERGE
-  verdict - authoring and approving inside one context is not review.
+  removed API grepped tree-wide for surviving callers. Keep the review
+  LEAN (my direction, 2026-07-17, to conserve tokens): a Sonnet
+  subagent, a concise prompt scoped to the diff's real risks, NO
+  independent rebuild or ctest run - the branch's own gate stamp
+  already proves the gates, so the review is diff-reading only.
+  Verdict is MERGE / MERGE AFTER FIXES / DO NOT MERGE with concrete
+  findings; blockers get root-caused and fixed on the branch before
+  merge, non-blocking nits get filed as plan items. The author-session
+  merges only on a MERGE verdict - authoring and approving inside one
+  context is not review.
 - Gate verdicts are EXIT CODES, never scraped log text. Run
   scripts/gate-all.sh after the final commit and before any push of code;
   it stamps the validated HEAD and the committed pre-push hook
@@ -238,6 +255,26 @@ the existing ones, never in place of them. Genuinely new files -
 glue, wrappers, tests authored from scratch - carry my line AND
 "2026 Latte Dock contributors" for good measure. When in doubt,
 over-attribute: an extra line costs nothing, an erased one is wrong.
+
+CITE TRANSPLANTED CODE PROPERLY (my direction, 2026-07-17). Anything
+carried over from another fork - most often CaptSilver's Qt6 port,
+github.com/CaptSilver/latte-dock-qt6, author David Goree - is cited
+two ways, both required:
+1. A header comment naming the source file at an EXACT fork commit,
+   never a moving ref: "Transplanted from latte-dock-qt6
+   (tests/foo.cpp at 81384003, github.com/CaptSilver/latte-dock-qt6)".
+   A bare "origin/main" drifts and is not a citation - pin the sha
+   (the reviewed-through commit in the reference-fork sync section is
+   the right one unless you transplanted from a newer state).
+2. An SPDX-FileCopyrightText line for the original author at the top
+   of the file (David Goree for capt's ports), ABOVE my line - the
+   original author comes first, the adaptation second. This applies
+   whenever code is DERIVED (transplanted, adapted, extended from his
+   file); a file that only took an IDEA and was written fresh gets
+   the citation comment but not the copyright line (claiming his
+   copyright over code he did not write is as wrong as erasing it).
+Same rule for any other fork or upstream source: name the exact
+commit, carry the author's SPDX line when the code is derived.
 
 ### Code clarity
 

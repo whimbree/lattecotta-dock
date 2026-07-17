@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
@@ -11,7 +12,7 @@
 // the mappings plus the known-id / not-found branches against real production
 // code, linked through the lattedock-core object library.
 //
-// Transplanted from latte-dock-qt6 (tests/screenpooltest.cpp at origin/main);
+// Transplanted from latte-dock-qt6 (tests/screenpooltest.cpp at 81384003, github.com/CaptSilver/latte-dock-qt6);
 // their per-source compile list is replaced by our object library link. The
 // removeScreens case pins the absent-then-present obsolete list their
 // e997ac93 fixed - the same defect was live here (an early return instead of

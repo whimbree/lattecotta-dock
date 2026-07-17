@@ -1,4 +1,5 @@
 /*
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
@@ -16,7 +17,7 @@
 //     stalls the indicator UI or spins re-layouts.
 //
 // Transplanted from latte-dock-qt6 (tests/viewmodelstest.cpp at
-// origin/main). Bare AppletQuickItem instances stand in for real plasmoids
+// 81384003, github.com/CaptSilver/latte-dock-qt6). Bare AppletQuickItem instances stand in for real plasmoids
 // (public default ctor at the 6.7.3 pin; the applet() hook connect inside
 // addTask degrades to a connect warning, which is exactly what production
 // tolerates for a not-yet-attached applet).

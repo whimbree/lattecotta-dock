@@ -1,12 +1,13 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
 // Behavioral coverage for the app/data value-type layer, linked through
 // lattedock-core. Transplanted from latte-dock-qt6 (tests/datatypestest.cpp
-// at origin/main) with two deliberate divergences from their tree:
+// at 81384003, github.com/CaptSilver/latte-dock-qt6) with two deliberate divergences from their tree:
 //
 // - The missing-id table lookup pins OUR contract (c117e598e): a missing id
 //   is a caller error answered loudly (qCritical) with an invalid record

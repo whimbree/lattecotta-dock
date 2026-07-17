@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
@@ -7,7 +8,7 @@
 // Pins VisibilityManager::revealsOnScreenEdge, the predicate that decides
 // which visibility modes arm the wayland edge-ghost detector
 // (WaylandInterface::setActiveEdge). Transplanted from latte-dock-qt6
-// (tests/visibilityrevealtest.cpp at origin/main) and extended over the
+// (tests/visibilityrevealtest.cpp at 81384003, github.com/CaptSilver/latte-dock-qt6) and extended over the
 // full Types::Visibility domain: our enum also carries WindowsAlwaysCover,
 // SidebarOnDemand, SidebarAutoHide and NormalWindow, and none of those may
 // arm the edge detector either - updateKWinEdgesSupport() never creates an

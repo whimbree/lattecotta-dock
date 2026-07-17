@@ -1,4 +1,5 @@
 /*
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
@@ -15,7 +16,7 @@
 // deliberately not touched - with a null corona they would crash.
 //
 // Transplanted from latte-dock-qt6 (tests/universalsettingstest.cpp at
-// origin/main; their ctor grew a DI corona parameter, ours keeps upstream's
+// 81384003, github.com/CaptSilver/latte-dock-qt6; their ctor grew a DI corona parameter, ours keeps upstream's
 // parent-cast shape) and raised: pins THIS tree's deliberate divergence that
 // inConfigureAppletsMode is transient and never persisted (loadConfig
 // deletes stale entries older builds wrote - the fork's tree still persists

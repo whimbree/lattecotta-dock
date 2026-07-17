@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
 
     SPDX-License-Identifier: GPL-2.0-or-later
@@ -8,7 +9,7 @@
 // sizing/placement math of a dock view.
 //
 // Case provenance (per docs/TESTING.md): all 28 slots are ported from
-// latte-dock-qt6's positionergeometrytest.cpp at 81384003 (their
+// latte-dock-qt6's positionergeometrytest.cpp at 81384003, github.com/CaptSilver/latte-dock-qt6 (their
 // 4a829185 extraction); every pure function was diffed against our
 // positioner.cpp bodies before adoption and matched exactly, so their
 // fixture arithmetic - derived from the original positioner.cpp

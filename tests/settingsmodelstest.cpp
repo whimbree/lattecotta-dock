@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
@@ -16,7 +17,7 @@
 // load-bearing, not cosmetic.
 //
 // Transplanted from latte-dock-qt6 (tests/settingsmodelstest.cpp at
-// origin/main), linked through lattedock-core instead of their per-source
+// 81384003, github.com/CaptSilver/latte-dock-qt6), linked through lattedock-core instead of their per-source
 // list, and extended with the screens-model bad-index/role rejection case
 // (the fork only covered the applets model's).
 

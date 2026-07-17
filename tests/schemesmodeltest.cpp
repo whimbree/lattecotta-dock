@@ -1,4 +1,5 @@
 /*
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
@@ -12,7 +13,7 @@
 // synthesizes row 0 as the "System Colors" (kdeglobals) entry.
 //
 // Transplanted from latte-dock-qt6 (tests/schemesmodeltest.cpp at
-// origin/main). The XDG isolation matters doubly here: XDG_DATA_HOME/DIRS
+// 81384003, github.com/CaptSilver/latte-dock-qt6). The XDG isolation matters doubly here: XDG_DATA_HOME/DIRS
 // point at temp dirs so the host's real schemes cannot perturb rows, and
 // XDG_CONFIG_HOME is empty so the synthetic row-0 lookup finds no real
 // kdeglobals (in THIS tree possibleSchemeFile then walks the BreezeLight

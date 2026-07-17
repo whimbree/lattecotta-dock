@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
@@ -12,7 +13,7 @@
 // classification, drag mime payloads or the property contracts.
 //
 // Transplanted from latte-dock-qt6 (tests/tasksbackendtest.cpp at
-// origin/main) and extended: the desktop-file table also proves a
+// 81384003, github.com/CaptSilver/latte-dock-qt6) and extended: the desktop-file table also proves a
 // Type=Link .desktop and a remote url are rejected (isApplication must mean
 // application, not just desktop-file), the no-Categories row pins the empty
 // list, and the mime-data case pins ALL THREE keys the drag payload

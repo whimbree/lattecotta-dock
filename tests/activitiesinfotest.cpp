@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
@@ -14,7 +15,7 @@
 // activity manager and stays live-verified, not tested here.
 //
 // Transplanted from latte-dock-qt6 (tests/activitiesinfotest.cpp at
-// origin/main) and extended: their exclusion case skips Starting (the state
+// 81384003, github.com/CaptSilver/latte-dock-qt6) and extended: their exclusion case skips Starting (the state
 // most likely to be mistaken for running), their table has no negative or
 // first-out-of-range boundary rows, and the empty-input row is new.
 

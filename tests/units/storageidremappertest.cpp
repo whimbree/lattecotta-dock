@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
@@ -8,7 +9,7 @@
 // math of layout import/duplicate.
 //
 // Case provenance (per docs/TESTING.md): the eleven core slots are ported
-// from latte-dock-qt6's storageidremappertest.cpp at 81384003 (their
+// from latte-dock-qt6's storageidremappertest.cpp at 81384003, github.com/CaptSilver/latte-dock-qt6 (their
 // 73f64383 extraction of the same Qt5-inherited algorithm; our body was
 // diffed against Qt5 f0ad7b23 and is identical, so their case analysis
 // transfers). The exhaustion-flag slot is ours: the step-2.5
