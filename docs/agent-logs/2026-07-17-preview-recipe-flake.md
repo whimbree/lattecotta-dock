@@ -87,7 +87,7 @@ daily; they are reliable. The flake is an injection artifact.
 ## Fix
 
 `tests/e2e/parabolic-hover-preview.sh`: repeat the glide-onto-konsole
-gesture (up to 8 attempts), leaving the dock between attempts so the zoom
+gesture (up to 12 attempts), leaving the dock between attempts so the zoom
 resets to rest, and breaking as soon as a layer=6 dialog is observed. Each
 attempt is a genuine hover gesture; the final assertion still requires a
 real mapped dialog, so the retry makes the DRIVE reliable without weakening

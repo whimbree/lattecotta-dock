@@ -77,8 +77,12 @@ else
 fi
 
 preview_re='\|latte-dock\|\|[0-9.,-]+ [0-9]+x[0-9]+\|[^|]+\|layer=6'
+#! ~60% of single glides land the onEntered (the animation race in the
+#! header); the failure probability is 0.4^attempts, so 12 attempts is
+#! ~1.7e-5 - a decisive margin without dozens of gestures
+max_attempts=12
 mapped=0
-for _ in $(seq 1 12); do
+for _ in $(seq 1 "$max_attempts"); do
     #! reset between attempts: leave the dock and let the zoom fully restore
     #! to rest before the next glide - a glide started while the previous
     #! attempt's restore animation is still running crosses the boundary
@@ -103,4 +107,4 @@ if (( mapped == 1 )); then
     echo "parabolic glide engaged; preview dialog mapped (layer=6)"
     exit 0
 fi
-e2e_fail "no preview dialog mapped after gliding onto the konsole task (8 attempts)"
+e2e_fail "no preview dialog mapped after gliding onto the konsole task ($max_attempts attempts)"
