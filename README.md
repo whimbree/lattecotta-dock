@@ -265,10 +265,18 @@ Credits
 - **Michail Vourlakos** and the KDE community: the original Latte Dock,
   a decade of upstream work this port stands on.
 - [Varlesh](https://github.com/varlesh): logos and icons.
-- The reference ports by [ruizhi-lab](https://github.com/ruizhi-lab/latte-dock-ng)
-  and [CaptSilver](https://github.com/CaptSilver/latte-dock-qt6), whose
-  independently-found fixes are periodically reviewed and credited in
-  commit messages where their work informed ours.
+- The reference port by [ruizhi-lab](https://github.com/ruizhi-lab/latte-dock-ng),
+  whose independently-found fixes are periodically reviewed and credited
+  in commit messages where their work informed ours.
+- **David Goree** ([CaptSilver/latte-dock-qt6](https://github.com/CaptSilver/latte-dock-qt6)),
+  whose Qt6 testability work runs through this port well beyond a handful
+  of fixes: the sceneprobe visual-regression harness was adopted from his
+  repository, the testing standard in `docs/TESTING.md` was modeled on his
+  testing commits, seven of the QML-extraction units took his extraction
+  seams as their starting point, and several test suites were transplanted
+  with his cases as the foundation of that coverage. Files derived from his
+  work carry his SPDX-FileCopyrightText line, with the specific commit and
+  source file cited in each.
 
 License
 =======
