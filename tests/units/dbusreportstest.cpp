@@ -23,58 +23,129 @@ class DbusReportsTest : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void viewTypeNames_data();
     void viewTypeNames();
+    void edgeNames_data();
     void edgeNames();
+    void alignmentNames_data();
     void alignmentNames();
+    void visibilityModeNames_data();
     void visibilityModeNames();
     void rectSerialization();
     void recordSerialization();
+    void viewRecordKeySet();
     void emptyInputMaskSerializesAsEmptyRegion();
     void recordsSerializeAsCompactJsonArray();
+
+    void appletRecordSerialization();
+    void appletRecordKeySet();
+    void appletRecordsSerializeAsCompactJsonArray();
 };
+
+//! the exact sorted key list of a serialized record: the schema pin that
+//! makes accidental drift from docs/dbus-observability-interface.md fail a
+//! test instead of a D-Bus consumer
+static QStringList sortedKeys(const QJsonObject &json)
+{
+    QStringList keys = json.keys();
+    keys.sort();
+    return keys;
+}
+
+//! Every enum-name mapping is pinned with one data row per enum value, so
+//! the full space of each Q_UNREACHABLE switch in dbusreports.h stays
+//! covered and a failure names the exact value that drifted.
+
+void DbusReportsTest::viewTypeNames_data()
+{
+    //! Latte enum columns ride as int: the Q_ENUM metaobject for
+    //! Latte::Types is moc-compiled into the app binary, not into any
+    //! library this test links, and a typed column odr-uses
+    //! Types::staticMetaObject through QCOMPARE's failure printer
+    QTest::addColumn<int>("type");
+    QTest::addColumn<QString>("name");
+
+    QTest::newRow("dock") << static_cast<int>(Types::DockView) << QStringLiteral("dock");
+    QTest::newRow("panel") << static_cast<int>(Types::PanelView) << QStringLiteral("panel");
+}
 
 void DbusReportsTest::viewTypeNames()
 {
-    QCOMPARE(viewTypeName(Types::DockView), QStringLiteral("dock"));
-    QCOMPARE(viewTypeName(Types::PanelView), QStringLiteral("panel"));
+    QFETCH(int, type);
+    QFETCH(QString, name);
+
+    QCOMPARE(viewTypeName(static_cast<Types::ViewType>(type)), name);
+}
+
+void DbusReportsTest::edgeNames_data()
+{
+    QTest::addColumn<Plasma::Types::Location>("edge");
+    QTest::addColumn<QString>("name");
+
+    QTest::newRow("bottom") << Plasma::Types::BottomEdge << QStringLiteral("bottom");
+    QTest::newRow("top") << Plasma::Types::TopEdge << QStringLiteral("top");
+    QTest::newRow("left") << Plasma::Types::LeftEdge << QStringLiteral("left");
+    QTest::newRow("right") << Plasma::Types::RightEdge << QStringLiteral("right");
+    QTest::newRow("floating") << Plasma::Types::Floating << QStringLiteral("floating");
+    QTest::newRow("desktop") << Plasma::Types::Desktop << QStringLiteral("desktop");
+    QTest::newRow("fullscreen") << Plasma::Types::FullScreen << QStringLiteral("fullscreen");
 }
 
 void DbusReportsTest::edgeNames()
 {
-    QCOMPARE(edgeName(Plasma::Types::BottomEdge), QStringLiteral("bottom"));
-    QCOMPARE(edgeName(Plasma::Types::TopEdge), QStringLiteral("top"));
-    QCOMPARE(edgeName(Plasma::Types::LeftEdge), QStringLiteral("left"));
-    QCOMPARE(edgeName(Plasma::Types::RightEdge), QStringLiteral("right"));
-    QCOMPARE(edgeName(Plasma::Types::Floating), QStringLiteral("floating"));
-    QCOMPARE(edgeName(Plasma::Types::Desktop), QStringLiteral("desktop"));
-    QCOMPARE(edgeName(Plasma::Types::FullScreen), QStringLiteral("fullscreen"));
+    QFETCH(Plasma::Types::Location, edge);
+    QFETCH(QString, name);
+
+    QCOMPARE(edgeName(edge), name);
+}
+
+void DbusReportsTest::alignmentNames_data()
+{
+    QTest::addColumn<int>("alignment"); //! int: see viewTypeNames_data
+    QTest::addColumn<QString>("name");
+
+    QTest::newRow("none") << static_cast<int>(Types::NoneAlignment) << QStringLiteral("none");
+    QTest::newRow("center") << static_cast<int>(Types::Center) << QStringLiteral("center");
+    QTest::newRow("left") << static_cast<int>(Types::Left) << QStringLiteral("left");
+    QTest::newRow("right") << static_cast<int>(Types::Right) << QStringLiteral("right");
+    QTest::newRow("top") << static_cast<int>(Types::Top) << QStringLiteral("top");
+    QTest::newRow("bottom") << static_cast<int>(Types::Bottom) << QStringLiteral("bottom");
+    QTest::newRow("justify") << static_cast<int>(Types::Justify) << QStringLiteral("justify");
 }
 
 void DbusReportsTest::alignmentNames()
 {
-    QCOMPARE(alignmentName(Types::NoneAlignment), QStringLiteral("none"));
-    QCOMPARE(alignmentName(Types::Center), QStringLiteral("center"));
-    QCOMPARE(alignmentName(Types::Left), QStringLiteral("left"));
-    QCOMPARE(alignmentName(Types::Right), QStringLiteral("right"));
-    QCOMPARE(alignmentName(Types::Top), QStringLiteral("top"));
-    QCOMPARE(alignmentName(Types::Bottom), QStringLiteral("bottom"));
-    QCOMPARE(alignmentName(Types::Justify), QStringLiteral("justify"));
+    QFETCH(int, alignment);
+    QFETCH(QString, name);
+
+    QCOMPARE(alignmentName(static_cast<Types::Alignment>(alignment)), name);
+}
+
+void DbusReportsTest::visibilityModeNames_data()
+{
+    QTest::addColumn<int>("mode"); //! int: see viewTypeNames_data
+    QTest::addColumn<QString>("name");
+
+    QTest::newRow("none") << static_cast<int>(Types::None) << QStringLiteral("none");
+    QTest::newRow("alwaysVisible") << static_cast<int>(Types::AlwaysVisible) << QStringLiteral("alwaysVisible");
+    QTest::newRow("autoHide") << static_cast<int>(Types::AutoHide) << QStringLiteral("autoHide");
+    QTest::newRow("dodgeActive") << static_cast<int>(Types::DodgeActive) << QStringLiteral("dodgeActive");
+    QTest::newRow("dodgeMaximized") << static_cast<int>(Types::DodgeMaximized) << QStringLiteral("dodgeMaximized");
+    QTest::newRow("dodgeAllWindows") << static_cast<int>(Types::DodgeAllWindows) << QStringLiteral("dodgeAllWindows");
+    QTest::newRow("windowsGoBelow") << static_cast<int>(Types::WindowsGoBelow) << QStringLiteral("windowsGoBelow");
+    QTest::newRow("windowsCanCover") << static_cast<int>(Types::WindowsCanCover) << QStringLiteral("windowsCanCover");
+    QTest::newRow("windowsAlwaysCover") << static_cast<int>(Types::WindowsAlwaysCover) << QStringLiteral("windowsAlwaysCover");
+    QTest::newRow("sidebarOnDemand") << static_cast<int>(Types::SidebarOnDemand) << QStringLiteral("sidebarOnDemand");
+    QTest::newRow("sidebarAutoHide") << static_cast<int>(Types::SidebarAutoHide) << QStringLiteral("sidebarAutoHide");
+    QTest::newRow("normalWindow") << static_cast<int>(Types::NormalWindow) << QStringLiteral("normalWindow");
 }
 
 void DbusReportsTest::visibilityModeNames()
 {
-    QCOMPARE(visibilityModeName(Types::None), QStringLiteral("none"));
-    QCOMPARE(visibilityModeName(Types::AlwaysVisible), QStringLiteral("alwaysVisible"));
-    QCOMPARE(visibilityModeName(Types::AutoHide), QStringLiteral("autoHide"));
-    QCOMPARE(visibilityModeName(Types::DodgeActive), QStringLiteral("dodgeActive"));
-    QCOMPARE(visibilityModeName(Types::DodgeMaximized), QStringLiteral("dodgeMaximized"));
-    QCOMPARE(visibilityModeName(Types::DodgeAllWindows), QStringLiteral("dodgeAllWindows"));
-    QCOMPARE(visibilityModeName(Types::WindowsGoBelow), QStringLiteral("windowsGoBelow"));
-    QCOMPARE(visibilityModeName(Types::WindowsCanCover), QStringLiteral("windowsCanCover"));
-    QCOMPARE(visibilityModeName(Types::WindowsAlwaysCover), QStringLiteral("windowsAlwaysCover"));
-    QCOMPARE(visibilityModeName(Types::SidebarOnDemand), QStringLiteral("sidebarOnDemand"));
-    QCOMPARE(visibilityModeName(Types::SidebarAutoHide), QStringLiteral("sidebarAutoHide"));
-    QCOMPARE(visibilityModeName(Types::NormalWindow), QStringLiteral("normalWindow"));
+    QFETCH(int, mode);
+    QFETCH(QString, name);
+
+    QCOMPARE(visibilityModeName(static_cast<Types::Visibility>(mode)), name);
 }
 
 void DbusReportsTest::rectSerialization()
@@ -145,6 +216,24 @@ void DbusReportsTest::recordSerialization()
     QCOMPARE(json.value(QStringLiteral("inConfigureAppletsMode")).toBool(), true);
 }
 
+void DbusReportsTest::viewRecordKeySet()
+{
+    const QStringList expected{
+        QStringLiteral("absoluteGeometry"), QStringLiteral("alignment"),
+        QStringLiteral("containmentId"), QStringLiteral("edge"),
+        QStringLiteral("editMode"), QStringLiteral("inConfigureAppletsMode"),
+        QStringLiteral("inStartup"), QStringLiteral("inputRegionRects"),
+        QStringLiteral("isCloned"), QStringLiteral("isClonedFrom"),
+        QStringLiteral("isHidden"), QStringLiteral("isOffScreen"),
+        QStringLiteral("layout"), QStringLiteral("localGeometry"),
+        QStringLiteral("maskRect"), QStringLiteral("onPrimary"),
+        QStringLiteral("publishedStruts"), QStringLiteral("screen"),
+        QStringLiteral("screenGeometry"), QStringLiteral("strutsThickness"),
+        QStringLiteral("type"), QStringLiteral("visibilityMode")};
+
+    QCOMPARE(sortedKeys(serializeViewRecord(ViewRecord{})), expected);
+}
+
 //! an invalid/empty input mask means "no input restriction published"
 //! (Effects::setInputMask clears the window mask for those) and must read
 //! as an empty array, not a degenerate rect
@@ -182,6 +271,66 @@ void DbusReportsTest::recordsSerializeAsCompactJsonArray()
     QCOMPARE(document.array().at(1).toObject().value(QStringLiteral("containmentId")).toInt(), 2);
 
     QCOMPARE(serializeViewRecords({}), QStringLiteral("[]"));
+}
+
+//! one fully populated applet record, pinning every field name and value
+//! type of viewAppletsData() against docs/dbus-observability-interface.md
+void DbusReportsTest::appletRecordSerialization()
+{
+    AppletRecord record;
+    record.id = 12;
+    record.plugin = QStringLiteral("org.kde.latte.plasmoid");
+    record.index = 3;
+    record.geometry = QRect(4, 5, 6, 7);
+    record.isExpanded = true;
+    record.inScheduledDestruction = true;
+    record.lockedZoom = true;
+    record.colorizingBlocked = true;
+
+    const QJsonObject json = serializeAppletRecord(record);
+
+    QCOMPARE(json.value(QStringLiteral("id")).toInt(), 12);
+    QCOMPARE(json.value(QStringLiteral("plugin")).toString(), QStringLiteral("org.kde.latte.plasmoid"));
+    QCOMPARE(json.value(QStringLiteral("index")).toInt(), 3);
+    QCOMPARE(json.value(QStringLiteral("geometry")).toArray(), serializeRect(QRect(4, 5, 6, 7)));
+    QCOMPARE(json.value(QStringLiteral("isExpanded")).toBool(), true);
+    QCOMPARE(json.value(QStringLiteral("inScheduledDestruction")).toBool(), true);
+    QCOMPARE(json.value(QStringLiteral("lockedZoom")).toBool(), true);
+    QCOMPARE(json.value(QStringLiteral("colorizingBlocked")).toBool(), true);
+}
+
+void DbusReportsTest::appletRecordKeySet()
+{
+    const QStringList expected{
+        QStringLiteral("colorizingBlocked"), QStringLiteral("geometry"),
+        QStringLiteral("id"), QStringLiteral("inScheduledDestruction"),
+        QStringLiteral("index"), QStringLiteral("isExpanded"),
+        QStringLiteral("lockedZoom"), QStringLiteral("plugin")};
+
+    QCOMPARE(sortedKeys(serializeAppletRecord(AppletRecord{})), expected);
+}
+
+void DbusReportsTest::appletRecordsSerializeAsCompactJsonArray()
+{
+    AppletRecord first;
+    first.id = 1;
+    AppletRecord second;
+    second.id = 2;
+
+    const QString data = serializeAppletRecords({first, second});
+
+    //! compact serialization: no newlines, per the interface doc
+    QVERIFY(!data.contains(QLatin1Char('\n')));
+
+    QJsonParseError error{};
+    const QJsonDocument document = QJsonDocument::fromJson(data.toUtf8(), &error);
+    QCOMPARE(error.error, QJsonParseError::NoError);
+    QVERIFY(document.isArray());
+    QCOMPARE(document.array().count(), 2);
+    QCOMPARE(document.array().at(0).toObject().value(QStringLiteral("id")).toInt(), 1);
+    QCOMPARE(document.array().at(1).toObject().value(QStringLiteral("id")).toInt(), 2);
+
+    QCOMPARE(serializeAppletRecords({}), QStringLiteral("[]"));
 }
 
 QTEST_GUILESS_MAIN(DbusReportsTest)
