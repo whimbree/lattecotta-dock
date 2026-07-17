@@ -110,6 +110,15 @@ stale checkboxes."
   Push the branch after each landed, verified chunk - do not let long
   sessions accumulate dozens of unpushed commits. Plan checkboxes get
   their final hashes at merge time if a rebase rewrote them.
+- Every PR gets an INDEPENDENT review before merge (my direction,
+  2026-07-17): a fresh subagent with cold context reviews the full
+  diff read-only against this file's standards - commit bodies checked
+  against their own claims, deleted "dead" arms verified actually dead,
+  removed API grepped tree-wide for surviving callers, gates re-run in
+  its own build dir. Verdict is MERGE / MERGE AFTER FIXES / DO NOT
+  MERGE with concrete findings; blockers get root-caused and fixed on
+  the branch before merge. The author-session merges only on a MERGE
+  verdict - authoring and approving inside one context is not review.
 - Gate verdicts are EXIT CODES, never scraped log text. Run
   scripts/gate-all.sh after the final commit and before any push of code;
   it stamps the validated HEAD and the committed pre-push hook
