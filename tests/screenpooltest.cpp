@@ -47,11 +47,16 @@ private Q_SLOTS:
     void lattePool_removeScreensSkipsAbsentIdAndRemovesPresent();
     void lattePool_firstAvailableIdFillsGap();
     void lattePool_firstAvailableIdAdvancesPastContiguousRun();
+    void lattePool_insertRefusesGarbageColonConnector();
+    void lattePool_insertIsIdempotentForKnownConnector();
+    void lattePool_loadIgnoresNonPositiveAndGarbageKeys();
+    void lattePool_removalPersistsToDisk();
 
     // Plasma-extended ScreenPool (app/plasma/extended/screenpool.cpp)
     void plasmaPool_loadsSeededConnectors();
     void plasmaPool_unknownConnectorIsNotFound();
     void plasmaPool_unknownIdIsEmpty();
+    void plasmaPool_primaryScreenResolvesToIdZero();
 
 private:
     QTemporaryDir m_configDir;
@@ -216,6 +221,105 @@ void ScreenPoolTest::lattePool_firstAvailableIdAdvancesPastContiguousRun()
     QCOMPARE(pool.id(QStringLiteral("NEW-2")), 13);
 }
 
+void ScreenPoolTest::lattePool_insertRefusesGarbageColonConnector()
+{
+    auto config = KSharedConfig::openConfig(m_configDir.filePath(QStringLiteral("lattepool_colon.rc")),
+                                            KConfig::SimpleConfig);
+    KConfigGroup group(config, QStringLiteral("ScreenConnectors"));
+    group.writeEntry(QStringLiteral("10"), QStringLiteral("DP-1:::0,0 1920x1080"));
+    group.sync();
+
+    Latte::ScreenPool pool(config);
+    pool.load();
+
+    // Plasma/Qt sometimes report a garbage connector like "0:0" instead of the
+    // real output name when layouts change; insertScreenMapping refuses any
+    // ":"-prefixed name so the screens database never accumulates garbage ids
+    // (the guard's comment in screenpool.cpp carries the history).
+    pool.insertScreenMapping(QStringLiteral(":0"));
+
+    QCOMPARE(pool.id(QStringLiteral(":0")), int(Latte::ScreenPool::NOSCREENID));
+}
+
+void ScreenPoolTest::lattePool_insertIsIdempotentForKnownConnector()
+{
+    auto config = KSharedConfig::openConfig(m_configDir.filePath(QStringLiteral("lattepool_idem.rc")),
+                                            KConfig::SimpleConfig);
+    KConfigGroup group(config, QStringLiteral("ScreenConnectors"));
+    group.writeEntry(QStringLiteral("10"), QStringLiteral("DP-1:::0,0 1920x1080"));
+    group.writeEntry(QStringLiteral("11"), QStringLiteral("HDMI-1:::1920,0 1280x1024"));
+    group.sync();
+
+    Latte::ScreenPool pool(config);
+    pool.load();
+    // ids 10 and 11 are ours; the QGuiApp virtual screen fills 12.
+    QVERIFY(pool.hasScreenId(12));
+
+    // Re-inserting a known connector must keep its id (a remap would orphan
+    // every view configured against the old id) and must not burn a fresh id:
+    // the next genuinely new connector still gets 13.
+    pool.insertScreenMapping(QStringLiteral("DP-1"));
+    QCOMPARE(pool.id(QStringLiteral("DP-1")), 10);
+
+    pool.insertScreenMapping(QStringLiteral("NEW-3"));
+    QCOMPARE(pool.id(QStringLiteral("NEW-3")), 13);
+}
+
+void ScreenPoolTest::lattePool_loadIgnoresNonPositiveAndGarbageKeys()
+{
+    auto config = KSharedConfig::openConfig(m_configDir.filePath(QStringLiteral("lattepool_keys.rc")),
+                                            KConfig::SimpleConfig);
+    KConfigGroup group(config, QStringLiteral("ScreenConnectors"));
+    // Ids below FIRSTSCREENID are reserved for special cases (0 = primary),
+    // and a non-numeric key parses to 0; load() must skip all of them instead
+    // of materializing mappings for reserved or garbage ids.
+    group.writeEntry(QStringLiteral("0"), QStringLiteral("ZeroScr:::0,0 800x600"));
+    group.writeEntry(QStringLiteral("-3"), QStringLiteral("NegScr:::0,0 800x600"));
+    group.writeEntry(QStringLiteral("abc"), QStringLiteral("AbcScr:::0,0 800x600"));
+    group.writeEntry(QStringLiteral("10"), QStringLiteral("DP-1:::0,0 1920x1080"));
+    group.sync();
+
+    Latte::ScreenPool pool(config);
+    pool.load();
+
+    QCOMPARE(pool.id(QStringLiteral("DP-1")), 10);
+    QCOMPARE(pool.id(QStringLiteral("ZeroScr")), int(Latte::ScreenPool::NOSCREENID));
+    QCOMPARE(pool.id(QStringLiteral("NegScr")), int(Latte::ScreenPool::NOSCREENID));
+    QCOMPARE(pool.id(QStringLiteral("AbcScr")), int(Latte::ScreenPool::NOSCREENID));
+    QVERIFY(pool.connector(0).isEmpty());
+    QVERIFY(pool.connector(-3).isEmpty());
+}
+
+void ScreenPoolTest::lattePool_removalPersistsToDisk()
+{
+    const QString path = m_configDir.filePath(QStringLiteral("lattepool_persist.rc"));
+    {
+        auto config = KSharedConfig::openConfig(path, KConfig::SimpleConfig);
+        KConfigGroup group(config, QStringLiteral("ScreenConnectors"));
+        group.writeEntry(QStringLiteral("10"), QStringLiteral("DP-1:::0,0 1920x1080"));
+        group.writeEntry(QStringLiteral("11"), QStringLiteral("HDMI-1:::1920,0 1280x1024"));
+        group.sync();
+
+        Latte::ScreenPool pool(config);
+        pool.load();
+
+        Latte::Data::ScreensTable obsolete;
+        obsolete << Latte::Data::Screen(QStringLiteral("11"), QStringLiteral("HDMI-1:::1920,0 1280x1024"));
+        pool.removeScreens(obsolete);
+        // pool dtor syncs the group; the 10s save debounce timer never fires
+        // inside a test, so the dtor sync is the only flush - exactly the path
+        // a dock shutdown takes.
+    }
+
+    // Read the file back from DISK (plain KConfig, not the process-shared
+    // instance): the deletion must have reached storage, or the obsolete
+    // screen resurrects on the next dock start.
+    KConfig disk(path, KConfig::SimpleConfig);
+    const KConfigGroup group = disk.group(QStringLiteral("ScreenConnectors"));
+    QVERIFY(group.hasKey(QStringLiteral("10")));
+    QVERIFY(!group.hasKey(QStringLiteral("11")));
+}
+
 // --- Latte::PlasmaExtended::ScreenPool --------------------------------------
 //
 // This pool hardcodes KSharedConfig::openConfig("plasmashellrc"), which resolves
@@ -262,6 +366,21 @@ void ScreenPoolTest::plasmaPool_unknownIdIsEmpty()
 
     // an unmapped, non-zero id has no connector
     QVERIFY(pool.connector(4242).isEmpty());
+}
+
+void ScreenPoolTest::plasmaPool_primaryScreenResolvesToIdZero()
+{
+    seedPlasmaShellRc();
+
+    Latte::PlasmaExtended::ScreenPool pool;
+
+    // Plasma reserves id 0 for the primary screen: a connector that is not in
+    // the [ScreenConnectors] map but IS the current primary resolves to 0, and
+    // connector(0) answers with the primary's name. Latte's multi-screen
+    // assignment logic relies on this exact fallback pair.
+    const QString primaryName = qGuiApp->primaryScreen()->name();
+    QCOMPARE(pool.id(primaryName), 0);
+    QCOMPARE(pool.connector(0), primaryName);
 }
 
 int main(int argc, char *argv[])
