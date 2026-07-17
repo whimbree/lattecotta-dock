@@ -298,7 +298,15 @@ int Positioner::currentScreenId() const
 
 Latte::WindowSystem::WindowId Positioner::trackedWindowId()
 {
-    if (KWindowSystem::isPlatformWayland() && m_trackedWindowId.toInt() <= 0) {
+    //! wayland ids are compositor uuids and a uuid never parses as a
+    //! number, so the Qt5-era 'toInt() <= 0' (id not yet assigned) test
+    //! had become constant-true here: under wayland every call lazily
+    //! re-resolves the id. Kept unconditional deliberately - the wm only
+    //! emits latteWindowAdded for isAcceptableWindow() windows, which
+    //! latte's own skip-taskbar windows are not, so this lazy re-resolve
+    //! is the reliable path after a surface remap. Tightening it to an
+    //! isEmpty() check needs a live-session pass first.
+    if (KWindowSystem::isPlatformWayland()) {
         updateWaylandId();
     }
 
