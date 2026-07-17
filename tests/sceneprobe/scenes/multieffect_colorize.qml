@@ -2,11 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Bree Spektor
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// MultiEffect colorization - the textColor tint used by TaskIcon badges and
-// ParabolicItem's monochromizer. (The containment colorizer applet path is
-// Qt5Compat ColorOverlay, NOT this shader - a flat-color-through-alpha scene
-// for it is still owed, see the adoption plan's P1 scene list.) Shapes instead
-// of the upstream scene's Text (unpinned font = latent cross-machine flake).
+// MultiEffect colorization - pins the colorization shader variant itself.
+// No production monochromize site uses it anymore: 1932db32 moved TaskIcon's
+// badge overlay and ParabolicItem's side-painting to Qt5Compat ColorOverlay
+// (flat color through alpha - this shader's gray-level tint was the silent
+// no-op), and those sites have their own scenes (forced_monochromatic.qml,
+// applet_colorizer.qml). Shapes instead of the upstream scene's Text
+// (unpinned font = latent cross-machine flake).
 import QtQuick
 import QtQuick.Effects
 
