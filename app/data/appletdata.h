@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2020 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 
 */
@@ -26,7 +27,10 @@ public:
     Applet(const Applet &o);
 
     //! Layout data
-    bool isSelected;
+    //! initialized here because the default ctor does not set it while the
+    //! copy/move ctors and operator== read it - reading an indeterminate
+    //! bool is undefined behavior, not merely a wrong value
+    bool isSelected{false};
     QString description;
     QString icon;
     QString storageId;
