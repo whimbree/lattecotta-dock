@@ -83,6 +83,20 @@ target_include_directories(syncedlaunchersclienttest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+# The kglobalshortcutsrc badge parser and the modifier tracker's idle-state
+# predicates; carries its own main() so XDG_CONFIG_HOME and the neutered
+# DBus address land BEFORE QGuiApplication (the tracker's constructor calls
+# KGlobalAccel, which must never reach the desktop's live kglobalacceld).
+ecm_add_test(shortcutstest.cpp
+    TEST_NAME shortcutstest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(shortcutstest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(shortcutstest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
 # The app/data value-type layer: tables, sentinels, state machines and the
 # serialization round trips the settings dialogs and storage ride on.
 ecm_add_test(datatypestest.cpp
