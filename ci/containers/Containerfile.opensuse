@@ -1,0 +1,91 @@
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# openSUSE Tumbleweed build+gate environment for the multi-distro CI matrix
+# (docs/multi-distro-ci-plan.md, Phase A/B). Tumbleweed is a rolling
+# KDE-nerd leg (current Plasma): goldens rot, so it gates at the
+# invariant+tolerance tier, not bit-exact (though at the Mesa version below
+# the text-free scenes happen to match the nix-blessed lavapipe goldens
+# bit-for-bit, same as Arch - recorded, not relied on). This layer installs
+# ONLY the build/runtime/gate dependencies; the port itself is built by
+# ci/build-and-gate.sh against a bind-mounted or copied source tree, so this
+# image is a cacheable deps-only layer.
+#
+# Rolling base: Tumbleweed is a rolling release, so this tracks :latest for
+# the local prototype loop; a Phase A3 snapshot pin (an OBS/download.o.o
+# archived repo) is TBD for reproducible CI. Floor is Plasma>=6.5 / Qt>=6.6
+# / KF6>=6.5; the versions OBSERVED at image-build time (verified in-
+# container 2026-07-17) sail well past it:
+#   Qt 6.11.1  /  KF6 6.28.0  /  Plasma + kwin 6.7.3
+FROM opensuse/tumbleweed:latest
+
+# --no-recommends keeps the image lean (Tumbleweed pulls large recommends
+# by default); --gpg-auto-import-keys trusts the base repos non-
+# interactively. zypper clean --all drops the metadata+package cache so the
+# deps layer stays small.
+#
+# Package-name notes vs the Arch leg (all Tumbleweed-idiomatic):
+#   - extra-cmake-modules is kf6-extra-cmake-modules here.
+#   - Qt6 qtbase/qtdeclarative/qtwayland are qt6-*-devel; the Qt5Compat
+#     shim (Qt.labs / Qt5Compat.GraphicalEffects) is qt6-qt5compat-devel
+#     (Arch: qt6-5compat). Private Qt headers (the sceneprobe target links
+#     Qt6::GuiPrivate for qrhi.h) are split into qt6-base-private-devel here;
+#     Arch bundles them in qt6-base.
+#   - The KF6 frameworks are kf6-<name>-devel across the board.
+#   - libplasma is libplasma6-devel; the Plasma5Support compat lib is
+#     plasma5support6-devel; KSysGuard is libksysguard6-devel; kpipewire is
+#     kpipewire6-devel.
+#   - KWayland is kwayland6-devel (the KF6 KWayland client).
+#   - qqc2-desktop-style is the runtime QML style kf6-qqc2-desktop-style
+#     (a runtime import for Kirigami, not a build-time find_package).
+#   - kwin_wayland (the nested CI compositor) ships in kwin6.
+#   - lavapipe (CPU Vulkan) is libvulkan_lvp; the loader is libvulkan1;
+#     Khronos validation layers are vulkan-validationlayers. Note the ICD
+#     manifest is arch-suffixed here (lvp_icd.x86_64.json), unlike Arch's
+#     lvp_icd.json - the ENV block below points at the resolved path.
+RUN zypper --non-interactive --gpg-auto-import-keys refresh \
+    && zypper --non-interactive install --no-recommends \
+        cmake ninja git jq gettext-tools pkgconf pkgconf-pkg-config gcc-c++ make \
+        kf6-extra-cmake-modules \
+        qt6-base-devel qt6-base-private-devel qt6-declarative-devel qt6-wayland-devel \
+        qt6-qt5compat-devel qt6-shadertools-devel qt6-tools-devel qt6-svg-devel \
+        kf6-kconfig-devel kf6-kcoreaddons-devel kf6-kguiaddons-devel kf6-kdbusaddons-devel \
+        kf6-kdeclarative-devel kf6-kitemmodels-devel kf6-kxmlgui-devel kf6-kiconthemes-devel \
+        kf6-kio-devel kf6-ki18n-devel kf6-knotifications-devel kf6-knewstuff-devel \
+        kf6-karchive-devel kf6-kglobalaccel-devel kf6-kcrash-devel kf6-kwindowsystem-devel \
+        kf6-kpackage-devel kf6-ksvg-devel kf6-kcmutils-devel kf6-kirigami-devel kf6-solid-devel \
+        kf6-sonnet-devel kf6-ktextwidgets-devel kf6-kidletime-devel kf6-kdoctools-devel \
+        kf6-qqc2-desktop-style \
+        libplasma6-devel plasma6-activities-devel plasma6-activities-stats-devel \
+        plasma6-workspace-devel kwayland6-devel plasma5support6-devel kpipewire6-devel \
+        libksysguard6-devel \
+        plasma-wayland-protocols wayland-devel wayland-protocols-devel layer-shell-qt6-devel \
+        kwin6 vulkan-headers vulkan-devel libvulkan1 vulkan-validationlayers libvulkan_lvp \
+        google-noto-sans-fonts dbus-1 libcap-progs rsync perl python313-base ImageMagick \
+    && zypper clean --all
+
+# kwin_wayland ships with cap_sys_nice=ep (the EFFECTIVE bit set). Podman's
+# default capability set excludes CAP_SYS_NICE, so execve of a file whose
+# effective caps aren't in the container bounding set fails EPERM
+# ("Operation not permitted") - the nested compositor never comes up. The
+# cap only lets kwin raise its scheduler priority, which is meaningless for
+# a throwaway headless CI compositor. Strip it (libcap-progs provides setcap)
+# so kwin execs under the default locked-down cap set and CI needs no
+# --cap-add. Same trap as the Arch leg (79a8008f0).
+RUN setcap -r /usr/bin/kwin_wayland 2>/dev/null || true
+
+# The nested-kwin harness (scripts/lib-nested-kwin.sh via the sceneprobe and
+# e2e drivers) and lib-qml-env.sh read these to find the DISTRO's lavapipe
+# ICD, Vulkan validation layers and framework QML tree instead of the nix
+# devShell's:
+#   - Tumbleweed's lavapipe ICD manifest is arch-suffixed
+#     (lvp_icd.x86_64.json), where Arch ships lvp_icd.json.
+#   - The framework QML modules live under lib64 (Tumbleweed is a lib64
+#     multilib distro), where Arch/nix use lib. lib-qml-env.sh needs
+#     LATTE_QML_MODULE_PATH so scenes importing org.kde.* resolve.
+ENV LATTE_VULKAN_LAVAPIPE_ICD=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+    LATTE_VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d \
+    LATTE_QML_MODULE_PATH=/usr/lib64/qt6/qml
+
+WORKDIR /src
