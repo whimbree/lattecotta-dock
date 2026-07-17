@@ -72,8 +72,8 @@ subsystem, not just the phase list here.
 `- [ ]` with a `Commits:` line. When a task lands, tick it and fill in
 the commit hash(es) - that's the traceability mechanism for the whole
 port: any checklist item names its commit(s), any commit can be traced
-back to the task it was for. 127 atomic items across the 13 phases as
-of the last plan revision. Keep this
+back to the task it was for. 233 atomic items across the 13 phases as
+of 2026-07-17 (183 ticked). Keep this
 in sync as work happens - don't let it drift into "mostly done, some
 stale checkboxes."
 

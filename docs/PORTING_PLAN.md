@@ -3760,10 +3760,10 @@ prerequisites in the phases above are done.
       running) so users have a working global menu while the port
       cooks and we have a behavior baseline to compare against.
       Commits:
-- [ ] KilnLatte package rename (DELIBERATELY DEFERRED, decided
+- [ ] Lattecotta package rename (DELIBERATELY DEFERRED, decided
       2026-07-16 with the rebrand): eventually rename packages,
       binaries, installed files, icon names, QML import URIs and
-      D-Bus names from latte / org.kde.latte to kilnlatte
+      D-Bus names from latte / org.kde.latte to Lattecotta
       equivalents, so multiple latte-dock forks can be installed
       side by side without file conflicts - that side-by-side
       story is the whole point, not vanity naming. The 2026-07-16
@@ -3838,18 +3838,22 @@ prerequisites in the phases above are done.
 
 ## Status
 
-Phases 0-2 done, Phase 3 nearly done, Phases 4, 5 and 6 done (88 of
-128 items ticked). The dock runs on the live
-Plasma 6 Wayland session with the task manager alive: real task icons
-from libtaskmanager, the vendored backend (jump lists, KWin D-Bus
-activation with cycling fallback, smart-launcher badges), pipewire
-thumbnails, and struts that resize maximized windows -
-screenshot-verified. The two behavior-audit items closed: the
-click-action dispatch is now data-driven through code/TaskActions.js
-with a completeness test, and the wheel-routing audit found the
-existing z-ordering already correct (cross-boundary wheel delivery
-deferred to the Phase 8 bridge). Next: Phase 7 - widget management,
-drag-and-drop, edit mode.
+For the LIVE current status and the ranked high-priority list, read
+"## Where we are (2026-07-17)" at the top of this file; the per-item
+detail is in the phase sections. This section keeps the phase-by-phase
+architectural summaries.
+
+Position as of 2026-07-17: 183 of 233 checklist items ticked. Phases
+0-7 are substantially done, Phase 4 is WAYLAND-ONLY (X11 backend
+removed), Phase 11 (Nix packaging) shipped early, and the Phase 10 QML
+extraction initiative is COMPLETE. Session three landed the
+accessibility quartet's code half (keyboard focus mode, Accessible.*
+rollout, the maintained e2e nested-vehicle suite), the Phase 9
+color-group audit, the CaptSilver P3b transplants, and the Phase 8
+bottom-dock surface-drift fix. Phase 8 is the open phase
+(shutdown/latency/lock-unlock/stranding). Phase 12 (upstream prep)
+stays parked under the maintained-continuation framing. The dock runs
+on the live Plasma 6 Wayland session against my real config.
 
 The first runnable milestone (end of Phase 5) is reached and exceeded:
 the dock creates its wlr-layer-shell surface, gets configured by KWin
@@ -3868,9 +3872,12 @@ edit-mode canvas overlays the dock with a carved input region, and
 primary-output detection binds `kde_output_order_v1`. One deliberate
 deviation from latte-dock-qt6: `WindowsGoBelow` maps to `LayerTop`
 (the fork's `LayerBottom` mapping also dragged its front-layer default
-down; the X11 backend gives the mode keep-above). The KWin D-Bus
-activation/peek item folded into Phase 6 where its only invocation
-site (the tasks backend) will exist.
+down; layershellmappingtest pins the corrected mapping). Since
+2026-07-17 this is the ONLY window-system backend - the X11 backend
+was removed and masked horizontal docks now anchor both length edges
+so the compositor cannot re-centre them (the Phase 8 surface-drift
+fix). The KWin D-Bus activation/peek item folded into Phase 6 where
+its only invocation site (the tasks backend) exists.
 
 Phase 5 summary: the whole QML load path (shell package, containment
 package, Latte QML modules, the three indicator packages) is on
@@ -3891,7 +3898,9 @@ info window, the canvas interactive-chrome rect (the QML side now
 exists in the fork's shape but wiring waits for edit-mode live testing
 in Phase 7), activity stopping (Phase 8 decision).
 
-From here on the per-phase verification cadence applies: each phase's
+The per-phase verification cadence still applies: each phase's
 subsystem gets driven in the live session before its last box is
-ticked. Next: Phase 6, the task manager subsystem (vendor-vs-shim
-decision first).
+ticked, and from 2026-07-17 each feature lands as its own PR with an
+independent review. The open work is the Phase 8 code threads plus
+the desk-hands and continuation items in "Where we are" and the
+manual list.
