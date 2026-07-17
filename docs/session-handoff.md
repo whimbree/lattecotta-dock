@@ -79,6 +79,20 @@ KDBusService unique name without the dbus-run-session wrap; without
 -d it used to print nothing at all). BUILD=<dir> redirects
 run-staged to an alternate build tree for instrumented binaries.
 
+NESTED-MATRIX VEHICLE PROVEN (major unlock, prototype in the session
+scratchpad as nested-matrix-proto.sh - promote it into scripts/ when
+the EX-10 matrix lands): inside a nested kwin_wayland --virtual
+(1600x1000) with a private XDG_RUNTIME_DIR and dbus-run-session, all
+four pieces work at once - the staged dock reaches lifecycleState
+running, viewsData reports settled views, fakepointer injects into
+the nested compositor WITHOUT the desktop-file allowlist
+(KWIN_WAYLAND_NO_PERMISSION_CHECKS=1), and a real konsole client runs
+inside for dodge-against-window tests. The EX-10 visibility/input
+matrix therefore no longer needs the real desk at all; with
+setViewVisibilityMode (D-Bus step 3, merging) the mode flips need no
+config surgery either. This is also the P4 e2e architecture running
+for real.
+
 OLD RECORD of the investigation start (kept for the method): ~180x
 "Tools.colorBrightness: invalid color from QML" Criticals per
 throwaway run, bursting at every view creation; ZERO on the real

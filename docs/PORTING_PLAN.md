@@ -2375,12 +2375,32 @@ showed how much of the dock can only be driven by a pointer today.
             Commits: 5925b167f, 7fc338cd5, 9ee6f7ad5, 22e6bb63d,
             885c1318e, 53839863b, 9f1672434, b21825ed4 (the worktree
             merge rebased the hashes the agent log records)
-      - [ ] P3: behavioral tests over lattedock-core (screenpool,
+      - [x] P3: behavioral tests over lattedock-core (screenpool,
             visibility-reveal, abstractlayout, activitiesinfo,
             syncedlaunchers client demotion, lastactivewindow, the
             vendored plasmoid backend pins, data types, settings
             models).
-            Commits:
+            LANDED 2026-07-16 (session two; per-candidate verdicts,
+            negative-test outcomes and the raised-quality record in
+            docs/agent-logs/2026-07-16-p3-behavioral-tests.md): all
+            ten candidates executed (syncedlaunchers REDESIGNED over
+            the real broadcast surface, the rest adopted and
+            extended past the fork's cases per the standing quality
+            rule), mirror-logic pair skipped, ctest 54 -> 65. The
+            premise checks found NINE live upstream-inherited
+            defects, each fixed at origin in its own commit:
+            screenpool removeScreens stopping at the first absent id
+            (501c5b789), layoutName chopping the last char of
+            non-layout names (1db82ff50), uninitialized
+            Applet.isSelected (9b8964915), three View debug-string
+            composition bugs incl. char*+int pointer arithmetic
+            (c1e35a72f), negative-row SEGV in the settings table
+            models (5828fe9ae), isSidebar() always false from == in
+            place of = (29b5cea73), and layouts-controller
+            modeIsChanged infinite recursion from a missing arrow
+            (207a4ac55).
+            Commits: 20124015c..2b6a94243 (22, post-rebase; the
+            fixes above plus test/docs commits listed in the ledger)
       - [ ] P4: e2e pixel assertions (latte-imgdiff + KWin ScreenShot2
             before/after under nested kwin, D-Bus-driven, seeded HOME);
             fakepointer keeps covering live pointer-delivery tests.
