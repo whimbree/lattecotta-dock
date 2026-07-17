@@ -1163,38 +1163,45 @@ wallpaper stacking across the dock and CanvasConfigView surfaces).
 PHASE OPENED 2026-07-11 (go given), starting from live crashes on a
 multi-view, multi-monitor setup.
 
-- [ ] Bottom-dock layer surface drifts left of its reported geometry
+- [x] Bottom-dock layer surface drifts left of its reported geometry
       (filed 2026-07-17 from the e2e promotion unit, evidence in
-      docs/agent-logs/2026-07-17-e2e-promotion.md finding 6). In the
-      nested vehicle the bottom dock's window sits at x=-20/-44/-74
-      while viewsData's absolute/local pair implies x=0, and the icons
-      REALLY render shifted (same-rect screenshot crops differ by
-      exactly the drift) - so absoluteGeometry, struts and input
-      regions are self-consistent with each other but not with what
-      the compositor shows. The drift re-anchors when the clock text
-      re-measures (minute tick) and the on-demand sidebar's same-sized
-      window drifts independently. Root-cause in the positioner/
-      layer-shell sizing (margins vs surface size for centered
-      maxLength<100 docks is the suspect area); FIRST check whether
-      the desk session drifts too - a 20px off-center dock on a 2560
-      screen is easy to miss by eye, and if it does, this is a
-      user-facing placement bug, not a vehicle artifact. The e2e
-      recipes compensate (pixel calibration in 050, e2e_view_window_x
-      elsewhere); remove the compensation notes when this is fixed.
-      This drift is ALSO the run-e2e suite-flakiness root: the
-      pointer-precision recipes and the focus-grant-timed keyboard-nav
-      recipe pass solo but can flake in a long sequential run as the
-      surface re-anchors mid-suite (see docs/TESTING.md's e2e note). A
-      per-recipe dock reseed was tried and worsened it (a fresh surface
-      is less settled), so the fix has to be this root cause, not the
-      harness. REPRODUCTION IS NOW A FIRST-CLASS TEST:
-      tests/e2e/060-geometry-agreement.sh asserts reported==rendered
-      geometry via e2e_assert_geometry_agrees and currently XFAILs at
-      -44px (marked # e2e-expect: fail, so it does not red the suite).
-      When this item lands the recipe XPASSes and the driver goes red
-      on purpose - that is the signal to delete the recipe's two marker
-      lines and promote it to a permanent standing guard.
-      Commits:
+      docs/agent-logs/2026-07-17-e2e-promotion.md finding 6; root-caused,
+      fixed and verified 2026-07-17, ledger in
+      docs/agent-logs/2026-07-17-phase8-surface-drift.md). ROOT CAUSE: a
+      masked dock (behaveAsDockWithMask) keeps a window that spans the
+      whole screen along its length axis and realises Left/Center/Right
+      INTERNALLY through its mask; the layer-shell backend anchored a
+      Center dock to a SINGLE edge and leaned on the compositor to centre
+      it, but wlr-layer-shell centres a single-edge-anchored surface
+      inside the region OTHER docks' exclusive zones leave free, not the
+      whole output. A bottom dock beside a left dock (48px zone) and a
+      right dock (88px zone) landed (48-88)/2 = -20px off the screen
+      centre its own full-screen geometry math assumed (the -20/-44/-74
+      spread and the re-anchoring on any re-commit were the side docks'
+      zones committing asynchronously during startup). Vertical docks did
+      not drift: their window is sized to the AVAILABLE region, so the
+      compositor's centring is an identity. FIX: anchorsFor() takes a
+      windowSpansScreenLength flag; a horizontal masked dock anchors BOTH
+      length edges for every alignment, so the compositor pins it corner
+      to corner across the full screen and never re-centres it
+      (View::windowSpansScreenLength() = !behaveAsPlasmaPanel() &&
+      horizontal; vertical docks and sized panels stay single-edge; the
+      layershellmappingtest pins both branches). ISOLATION PROOF: a
+      single bottom dock with NO side docks sat at x=0 drift 0; restoring
+      the side docks brought the drift back. DESK-VS-VEHICLE: real, not a
+      vehicle artifact, but config-dependent - the drift is purely
+      (leftZone-rightZone)/2, so Bree's current no-side-dock desk layout
+      shows 0 (verified live: both desk docks render exactly at their
+      reported origin) while her side-dock "My Layout" drifts, the
+      "easy to miss by eye" case the item predicted. GUARD:
+      tests/e2e/060-geometry-agreement.sh now PASSES and its
+      # e2e-expect: fail marker is removed - a permanent standing guard.
+      The e2e recipes' pixel calibration (050) and e2e_view_window_x
+      stay as best-effort correction but no longer compensate for a live
+      bug. Also the run-e2e suite-flakiness root: with the surface no
+      longer re-anchoring mid-suite the pointer/keyboard-nav recipes run
+      stable back-to-back.
+      Commits: (to fill post-rebase)
 
 - [x] Render-thread crash whenever an overflowing dock relayouts (enter
       edit mode, add a widget, right-click an applet in edit mode - all

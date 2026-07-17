@@ -113,26 +113,28 @@ Adopt latte-dock-qt6's three-piece shape, adapted rather than copied:
   a `# e2e-expect: fail` marker: the driver reports its failure as XFAIL
   (not counted against the suite) and its unexpected pass as XPASS (a
   hard failure - the guarded bug is fixed, so the marker comes off and
-  the recipe becomes a real guard). `060` is XFAIL today against the
-  Phase 8 drift below and will XPASS the moment it is fixed. Known
-  xfail limitation (standard for the mechanism): an xfail recipe treats
-  ANY failure as the expected one, so if `060` ever failed for an
-  unrelated reason (its `e2e_wait_settled` timing out on infra
-  breakage, say) that would still read XFAIL and mask a new bug - keep
-  the marker on the narrowest possible recipe and drop it promptly once
-  a guarded bug is fixed.
-  Every recipe passes SOLO; the pointer-precision recipes
-  (`050-drag-reorder`, `parabolic-hover-preview`) and the
-  focus-grant-timed `keyboard-navigation-mode` can flake in a long
-  back-to-back run because the bottom-dock surface-geometry drift filed
-  in Phase 8 (surface renders offset from its reported geometry and
-  re-anchors on clock-minute ticks) shifts icons out from under
-  fakepointer and slows the layer-shell OnDemand focus grant. Until
-  that root cause lands, run a suspected-flaky recipe on its own to
-  separate a real regression from the drift; a per-recipe dock reseed
-  was tried and made the pointer recipes WORSE (a freshly restarted
-  surface is even less settled), so the suite keeps the shared-dock
-  shape.
+  the recipe becomes a real guard). `060` was XFAIL against the Phase 8
+  surface drift; that drift is fixed (see below), so `060` now PASSES
+  and carries no marker - it is a permanent standing guard. The xfail
+  mechanism has a standard limitation worth remembering for the next
+  guarded bug: an xfail recipe treats ANY failure as the expected one,
+  so a marked recipe that failed for an unrelated reason (its
+  `e2e_wait_settled` timing out on infra breakage, say) would still read
+  XFAIL and mask a new bug - keep any future marker on the narrowest
+  possible recipe and drop it the moment the guarded bug is fixed.
+  Every recipe passes SOLO and now back-to-back: the pointer-precision
+  recipes (`050-drag-reorder`, `parabolic-hover-preview`) and the
+  focus-grant-timed `keyboard-navigation-mode` used to flake in a long
+  sequential run because the bottom-dock surface-geometry drift shifted
+  icons out from under fakepointer and slowed the OnDemand focus grant
+  as the surface re-anchored mid-suite. That drift is root-caused and
+  fixed (a masked dock's surface now anchors both length edges instead
+  of relying on compositor centring - app/wm/waylandlayershell.cpp
+  anchorsFor, ledger docs/agent-logs/2026-07-17-phase8-surface-drift.md),
+  so the surface no longer re-anchors and the suite is stable. A
+  per-recipe dock reseed was tried during the investigation and made the
+  pointer recipes WORSE (a freshly restarted surface is even less
+  settled), so the suite keeps the shared-dock shape.
 
 Enum/handler completeness tests (Phase 6: every UI-offered enum value
 must have a handled branch, verified per enum/handler pair) are part of
