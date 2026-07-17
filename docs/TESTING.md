@@ -114,7 +114,13 @@ Adopt latte-dock-qt6's three-piece shape, adapted rather than copied:
   (not counted against the suite) and its unexpected pass as XPASS (a
   hard failure - the guarded bug is fixed, so the marker comes off and
   the recipe becomes a real guard). `060` is XFAIL today against the
-  Phase 8 drift below and will XPASS the moment it is fixed.
+  Phase 8 drift below and will XPASS the moment it is fixed. Known
+  xfail limitation (standard for the mechanism): an xfail recipe treats
+  ANY failure as the expected one, so if `060` ever failed for an
+  unrelated reason (its `e2e_wait_settled` timing out on infra
+  breakage, say) that would still read XFAIL and mask a new bug - keep
+  the marker on the narrowest possible recipe and drop it promptly once
+  a guarded bug is fixed.
   Every recipe passes SOLO; the pointer-precision recipes
   (`050-drag-reorder`, `parabolic-hover-preview`) and the
   focus-grant-timed `keyboard-navigation-mode` can flake in a long
