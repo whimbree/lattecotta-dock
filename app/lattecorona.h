@@ -200,6 +200,13 @@ public:
     //! that containment id (warned in the log).
     QString viewAppletsData(const uint &containmentId);
 
+    //! D-Bus state readback (observability-first): one view's
+    //! windows-tracker facts (touching/maximized/active windows and the
+    //! last active window's identity) as one compact JSON object,
+    //! documented in docs/dbus-observability-interface.md. "{}" means no
+    //! view exists for that containment id (warned in the log).
+    QString trackerData(const uint &containmentId);
+
 public Q_SLOTS:
     void aboutApplication();
     void activateLauncherMenu();
@@ -222,6 +229,11 @@ public Q_SLOTS:
     //! a view's entry at the given 1-based visual index through the exact
     //! Meta+<index> global-shortcut path
     void activateTaskAt(const uint &containmentId, const int &index);
+
+    //! D-Bus coarse action (docs/dbus-observability-interface.md): set a
+    //! view's visibility mode by its viewsData() name, exactly what the
+    //! settings Behavior combo does; unknown names are refused loudly
+    void setViewVisibilityMode(const uint &containmentId, const QString &mode);
 
     void setBackgroundFromBroadcast(QString activity, QString screenName, QString filename);
     void setBroadcastedBackgroundsEnabled(QString activity, QString screenName, bool enabled);

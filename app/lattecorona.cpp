@@ -39,6 +39,7 @@
 #include "tools/commontools.h"
 #include "view/originalview.h"
 #include "view/view.h"
+#include "view/visibilitymanager.h"
 #include "view/settings/primaryconfigview.h"
 #include "view/settings/viewsettingsfactory.h"
 #include "view/windowstracker/windowstracker.h"
@@ -1316,6 +1317,44 @@ QString Corona::viewAppletsData(const uint &containmentId)
     }
 
     return DbusReports::collectAppletsData(view);
+}
+
+QString Corona::trackerData(const uint &containmentId)
+{
+    auto view = m_layoutsManager->synchronizer()->viewForContainment(containmentId);
+
+    if (!view) {
+        qWarning() << "corona: trackerData queried for containment" << containmentId << "which has no view";
+        return QStringLiteral("{}");
+    }
+
+    return DbusReports::collectTrackerData(view);
+}
+
+void Corona::setViewVisibilityMode(const uint &containmentId, const QString &mode)
+{
+    auto view = m_layoutsManager->synchronizer()->viewForContainment(containmentId);
+
+    if (!view) {
+        qWarning() << "corona: setViewVisibilityMode requested for containment" << containmentId << "which has no view";
+        return;
+    }
+
+    //! D-Bus strings are outside input, so an unknown name (and "none",
+    //! which names the unset state rather than a settable mode) is refused
+    //! loudly here at the boundary instead of tripping setMode's assert
+    const auto visibilityMode = DbusReports::settableVisibilityModeFromName(mode);
+
+    if (!visibilityMode) {
+        qWarning() << "corona: setViewVisibilityMode received unknown visibility mode" << mode
+                   << "for containment" << containmentId << "- expected one of the visibilityMode names viewsData() reports";
+        return;
+    }
+
+    //! exactly what the settings Behavior combo does
+    //! (latteView.visibility.mode = <mode>); persistence and the
+    //! mode-switch machinery stay in their one home, VisibilityManager
+    view->visibility()->setMode(*visibilityMode);
 }
 
 QString Corona::viewsData()

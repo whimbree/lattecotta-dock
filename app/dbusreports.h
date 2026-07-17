@@ -18,6 +18,10 @@
 #include <QRect>
 #include <QString>
 
+// C++
+#include <array>
+#include <optional>
+
 // Plasma
 #include <Plasma/Plasma>
 
@@ -34,6 +38,22 @@ namespace DbusReports {
 //! viewsData() reports and the inline name/serialize functions below are
 //! pure (unit-tested without a corona in tests/units/dbusreportstest.cpp);
 //! only the collect* functions in dbusreports.cpp read live View objects.
+
+//! One view's windows-tracker facts as trackerData() reports them
+//! (docs/dbus-observability-interface.md, step 3)
+struct TrackerRecord {
+    uint containmentId{0};
+    bool enabled{false};
+    bool activeWindowTouching{false};
+    bool activeWindowTouchingEdge{false};
+    bool activeWindowMaximized{false};
+    bool existsWindowActive{false};
+    bool existsWindowTouching{false};
+    bool existsWindowTouchingEdge{false};
+    bool existsWindowMaximized{false};
+    bool lastActiveWindowPresent{false};
+    QString lastActiveWindowAppName;
+};
 
 //! One applet of a view as viewAppletsData() reports it
 //! (docs/dbus-observability-interface.md, step 2)
@@ -138,9 +158,66 @@ inline QString visibilityModeName(Types::Visibility mode)
     Q_UNREACHABLE();
 }
 
+//! the inverse of visibilityModeName, implemented by searching that
+//! function's own output so the two directions can never drift apart;
+//! nullopt for a name no mode serializes to
+inline std::optional<Types::Visibility> visibilityModeFromName(const QString &name)
+{
+    constexpr std::array modes{Types::None, Types::AlwaysVisible, Types::AutoHide,
+                               Types::DodgeActive, Types::DodgeMaximized, Types::DodgeAllWindows,
+                               Types::WindowsGoBelow, Types::WindowsCanCover, Types::WindowsAlwaysCover,
+                               Types::SidebarOnDemand, Types::SidebarAutoHide, Types::NormalWindow};
+
+    for (const auto mode : modes) {
+        if (visibilityModeName(mode) == name) {
+            return mode;
+        }
+    }
+
+    return std::nullopt;
+}
+
+//! the parse the setViewVisibilityMode D-Bus boundary uses: "none" is the
+//! serializer's name for the unset state, not a mode a user can set
+//! (VisibilityManager::setMode asserts against Types::None), so it is
+//! refused here alongside unknown names
+inline std::optional<Types::Visibility> settableVisibilityModeFromName(const QString &name)
+{
+    const auto mode = visibilityModeFromName(name);
+
+    if (mode && *mode == Types::None) {
+        return std::nullopt;
+    }
+
+    return mode;
+}
+
 inline QJsonArray serializeRect(const QRect &rect)
 {
     return QJsonArray{rect.x(), rect.y(), rect.width(), rect.height()};
+}
+
+inline QJsonObject serializeTrackerRecord(const TrackerRecord &record)
+{
+    QJsonObject json;
+    json[QStringLiteral("containmentId")] = static_cast<qint64>(record.containmentId);
+    json[QStringLiteral("enabled")] = record.enabled;
+    json[QStringLiteral("activeWindowTouching")] = record.activeWindowTouching;
+    json[QStringLiteral("activeWindowTouchingEdge")] = record.activeWindowTouchingEdge;
+    json[QStringLiteral("activeWindowMaximized")] = record.activeWindowMaximized;
+    json[QStringLiteral("existsWindowActive")] = record.existsWindowActive;
+    json[QStringLiteral("existsWindowTouching")] = record.existsWindowTouching;
+    json[QStringLiteral("existsWindowTouchingEdge")] = record.existsWindowTouchingEdge;
+    json[QStringLiteral("existsWindowMaximized")] = record.existsWindowMaximized;
+    json[QStringLiteral("lastActiveWindowPresent")] = record.lastActiveWindowPresent;
+    json[QStringLiteral("lastActiveWindowAppName")] = record.lastActiveWindowAppName;
+
+    return json;
+}
+
+inline QString serializeTrackerData(const TrackerRecord &record)
+{
+    return QString::fromUtf8(QJsonDocument(serializeTrackerRecord(record)).toJson(QJsonDocument::Compact));
 }
 
 inline QJsonObject serializeAppletRecord(const AppletRecord &record)
@@ -229,6 +306,10 @@ QString collectViewsData(const QList<Latte::View *> &views, bool inConfigureAppl
 
 //! serialize one live view's applets for the viewAppletsData() D-Bus read
 QString collectAppletsData(const Latte::View *view);
+
+//! serialize one live view's windows-tracker facts for the trackerData()
+//! D-Bus read
+QString collectTrackerData(const Latte::View *view);
 
 }
 }

@@ -13,6 +13,8 @@
 #include "view/positioner.h"
 #include "view/view.h"
 #include "view/visibilitymanager.h"
+#include "view/windowstracker/currentscreentracker.h"
+#include "view/windowstracker/windowstracker.h"
 
 // Qt
 #include <QQuickItem>
@@ -116,6 +118,42 @@ QString collectAppletsData(const Latte::View *view)
     }
 
     return serializeAppletRecords(records);
+}
+
+QString collectTrackerData(const Latte::View *view)
+{
+    //! the tracker ensemble is constructed with the view (View::init), so
+    //! non-null members are invariants, not runtime input
+    Q_ASSERT(view);
+    Q_ASSERT(view->containment());
+    Q_ASSERT(view->windowsTracker() && view->windowsTracker()->currentScreen());
+
+    auto tracker = view->windowsTracker();
+    auto currentScreen = tracker->currentScreen();
+
+    TrackerRecord record;
+    record.containmentId = view->containment()->id();
+    record.enabled = tracker->enabled();
+    record.activeWindowTouching = currentScreen->activeWindowTouching();
+    record.activeWindowTouchingEdge = currentScreen->activeWindowTouchingEdge();
+    record.activeWindowMaximized = currentScreen->activeWindowMaximized();
+    record.existsWindowActive = currentScreen->existsWindowActive();
+    record.existsWindowTouching = currentScreen->existsWindowTouching();
+    record.existsWindowTouchingEdge = currentScreen->existsWindowTouchingEdge();
+    record.existsWindowMaximized = currentScreen->existsWindowMaximized();
+
+    //! a legitimately absent optional: the wm tracker hands out no
+    //! LastActiveWindow while the view is untracked (tracking disabled or
+    //! not yet registered), and the window it does hand out is invalid
+    //! until a first activation lands - both read as "not present"
+    auto lastWindow = currentScreen->lastActiveWindow();
+    record.lastActiveWindowPresent = lastWindow && lastWindow->isValid();
+    //! appName is application identity, deliberately not the window title
+    //! (titles are other applications' content - the interface doc records
+    //! the rule); an absent window reports an empty name
+    record.lastActiveWindowAppName = record.lastActiveWindowPresent ? lastWindow->appName() : QString();
+
+    return serializeTrackerData(record);
 }
 
 QString collectViewsData(const QList<Latte::View *> &views, bool inConfigureAppletsMode)
