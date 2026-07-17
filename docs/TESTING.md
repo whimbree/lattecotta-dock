@@ -99,3 +99,19 @@ Adopt latte-dock-qt6's three-piece shape, adapted rather than copied:
 Enum/handler completeness tests (Phase 6: every UI-offered enum value
 must have a handled branch, verified per enum/handler pair) are part of
 the headless harness's job, not a separate mechanism.
+
+## Gate discipline for agentic sessions (added 2026-07-16)
+
+One runner, one verdict: `scripts/gate-all.sh` runs every merge gate
+(build-check with both WITH_X11 variants + full ctest + coverage
+ratchet, qmllint gate, sceneprobe gate) and its EXIT CODE is the only
+verdict - success additionally prints `GATES: ALL OK @ <sha>` as the
+last line and stamps that sha into `build/_gates-passed`. The
+committed pre-push hook (`scripts/git-hooks/pre-push`, enabled with
+`git config core.hooksPath scripts/git-hooks`) refuses to push a ref
+whose code differs from the stamped sha; docs-only drift (docs/,
+*.md) past a stamped ancestor is exempt so documentation ticks stay
+cheap. Never scrape logs for gate success and never combine reading a
+verdict with acting on it in one shell invocation: a failure branch
+that exits 0 plus a tail read in the same breath as `git push` shipped
+a broken master for 20 minutes on 2026-07-16.

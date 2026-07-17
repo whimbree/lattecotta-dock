@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Refuse to push code that scripts/gate-all.sh has not stamped.
+#
+# The stamp (build/_gates-passed) holds the HEAD sha gate-all validated.
+# A pushed ref must either match the stamp exactly, or differ from the
+# stamped sha by docs-only changes (docs/ and *.md) - so documentation
+# ticks stay cheap while any code change demands a fresh gate run.
+#
+# Installed via `git config core.hooksPath scripts/git-hooks` (recorded
+# in CLAUDE.md; TESTING.md carries the why). Bypassing with --no-verify
+# is a deliberate act you get to explain in the commit history.
+set -u
+
+repo="$(git rev-parse --show-toplevel)"
+stampfile="$repo/build/_gates-passed"
+zero="0000000000000000000000000000000000000000"
+
+stamped="$(cat "$stampfile" 2>/dev/null || true)"
+
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+    # branch deletions push the zero sha; nothing to validate
+    [ "$local_sha" = "$zero" ] && continue
+
+    # exact match: gates ran on precisely this commit
+    [ -n "$stamped" ] && [ "$stamped" = "$local_sha" ] && continue
+
+    # docs-only drift past a stamped ancestor is allowed
+    if [ -n "$stamped" ] && git merge-base --is-ancestor "$stamped" "$local_sha" 2>/dev/null; then
+        if [ -z "$(git diff --name-only "$stamped..$local_sha" -- . ':(exclude)docs' ':(exclude)*.md' 2>/dev/null)" ]; then
+            continue
+        fi
+    fi
+
+    echo "pre-push: REFUSED for $local_sha" >&2
+    echo "pre-push: gates stamped '$(printf '%s' "${stamped:-<no stamp>}" | cut -c1-12)' but this push carries code changes past it." >&2
+    echo "pre-push: run scripts/gate-all.sh after your final commit, then push." >&2
+    exit 1
+done
+
+exit 0

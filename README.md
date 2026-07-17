@@ -64,6 +64,21 @@ desktop-name lookup broken since Qt5, a wheel path dead since Qt5, and
 a D-Bus badge path dead since the port began. Each fix landed with the
 failing evidence in its commit body.
 
+The same date's second wave landed the automation backbone: a complete
+D-Bus observability interface (every view's geometry, visibility,
+applets, tasks, tracker and colorizer state pull-queryable as JSON,
+plus coarse actions - enter/exit edit mode, activate a task, switch a
+view's visibility mode), a headless visual-regression harness that
+renders real pixels on CPU (lavapipe) with bit-exact goldens and works
+with a GPU without ever requiring one, eleven behavioral test suites
+adopted and extended from the CaptSilver fork, and a typed WindowId
+replacing stringly window ids across the window-system layer. The
+test-first sweep kept paying: nine more inherited defects fixed at
+origin, plus two found live the same day - production logging that
+swallowed every Critical, and the Meta+number shortcuts host that had
+been silently dead since the port (its activation, new-instance and
+badge machinery only appeared to work through fallbacks).
+
 Roadmap
 =======
 
@@ -81,22 +96,31 @@ phases, one commit-traceable checklist item per task. The coarse picture:
       feel-critical QML logic into tested, sanitized C++ cores - all 25
       units executed; a tail of live verification recipes is tracked in
       the plan's executed notes
+- [x] D-Bus observability and driving surface: any view's runtime state
+      is pull-queryable as JSON and the coarse user actions are callable,
+      so tests and tooling inspect state instead of peeping pixels
+- [x] Headless visual-regression testing: real-pixel scene rendering on
+      pure CPU under a nested compositor, bit-exact committed goldens,
+      shader/validation/blank-frame gates, GPU-optional by design
+      (runs in CI, a plain VM, or against a desktop GPU)
 - [ ] Layout/config persistence, session shutdown, multi-screen edge cases
       (the open phase; live-driven fixes land here continuously)
 - [ ] Theming and colorization polish audit
 - [ ] CI/CD: the local gates (build-check, QML compile gate, qmllint
-      ratchet, coverage ratchet) are pure shell over cmake/ctest and
-      CI-portable by design; the hosted pipeline itself is not stood up yet
-- [ ] Automated end-to-end GUI testing: headless interaction tests exist
-      today (offscreen qmltest driving the real shipped QML); the planned
-      microvm-based GUI CI with compositor-level pointer driving is not
-      built yet
+      ratchet, coverage ratchet, scene-render gate) are pure shell over
+      cmake/ctest and CI-portable by design; the hosted pipeline itself
+      is not stood up yet
+- [ ] Automated end-to-end GUI testing: the nested-compositor vehicle is
+      proven (the staged dock, pointer injection and a real client window
+      all run isolated from the live session, asserted over D-Bus) - the
+      visibility-mode matrix already runs on it; promoting it into a
+      maintained e2e suite is the open half
 - [ ] Distro packaging beyond NixOS (no PPA/COPR/AUR yet; the classic
       CMake install works everywhere the dependencies exist)
-- [ ] Accessibility and automation: keyboard navigation for every
-      interactive surface, full AT-SPI support (screen-reader pass with
-      Orca as the acceptance test), and a D-Bus surface rich enough to
-      drive and inspect anything a test needs deterministically
+- [ ] Accessibility: keyboard navigation for every interactive surface
+      (the dock-window focus mode is the gate), Accessible roles/names
+      on every interactive item, and a screen-reader pass with Orca as
+      the acceptance test
 - [ ] Companion applets as sibling repos consumed by flake input: the
       Latte separator applet, then a full Qt 6 port of
       [applet-window-appmenu](https://github.com/psifidotos/applet-window-appmenu)
@@ -106,30 +130,33 @@ phases, one commit-traceable checklist item per task. The coarse picture:
 The high-priority slice of what remains, from the plan's own ordering
 (each item carries its full context in its phase section there):
 
-1. Session shutdown/logout as one deliberate teardown sequence (the
-   crash-on-logout class)
-2. Startup latency and the startup retry-exhaustion deadlock
-3. Dock visibility across screen lock/unlock
-4. Multi-screen cloned-view applet-order sync (also the prerequisite
-   for dock replication)
-5. Edit-mode polish: entry/exit detection contract, drag-reorder
-   jitter, double-click widget add, drop insertion position
-6. Layer-shell struts/exclusive-zone reservation and
-   kde_output_order_v1 primary-output detection
-7. Settings-window control audit against Qt5 semantics
-8. The hosted CI pipeline and the microvm GUI e2e harness
+1. The accessibility quartet's open half: the dock-window keyboard
+   focus mode, Accessible.* rollout across the interactive items, and
+   the Orca acceptance pass
+2. Promoting the nested-compositor e2e vehicle into a maintained suite
+   (pixel assertions over KWin screenshots compose with the D-Bus
+   surface), then the hosted CI pipeline on top of the existing gates
+3. Theming polish: the color-group audit (which theme object each of
+   the ~12 Kirigami color read sites should follow)
+4. The remaining live-verification recipes from the extraction ledger
+   (most now runnable in the nested vehicle) and the desk checklist
+5. The armed Phase 8 watch items: the intermittent startup-stranding
+   defect and the lock/unlock DPMS arm, both instrumented and waiting
+   to fire naturally
 
 How it is built
 ===============
 
 Every fix names its root cause and the evidence in its commit body, and
-the tree defends itself: 45 ctest entries including 27 pure-core unit
+the tree defends itself: 66 ctest entries including 29 pure-core unit
 test suites that run under ASan+UBSan with forced asserts, a QML compile
 gate that loads every shipped QML file in a real engine, contract tests
 that pin the exact libplasma/KSvg/Qt behaviors the dock relies on (so a
 dependency bump fails in ctest instead of misbehaving on screen), a
-qmllint ratchet with a committed baseline that only shrinks, and a
-coverage ratchet that makes untested cores un-mergeable. Feel-critical changes (the parabolic engine,
+scene-render gate that compares real rasterized pixels against
+committed goldens on pure CPU, a qmllint ratchet with a committed
+baseline that only shrinks, and a coverage ratchet that makes untested
+cores un-mergeable. Feel-critical changes (the parabolic engine,
 the preview pipeline) additionally get live verification on a running
 Wayland session with injected pointer glides and screenshot comparison
 before they merge. [docs/TESTING.md](docs/TESTING.md) carries the

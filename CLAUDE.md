@@ -102,6 +102,20 @@ stale checkboxes."
 - Push to origin (whimbree/lattecotta-dock) after each big chunk of landed,
   verified work - do not let long sessions accumulate dozens of unpushed
   commits.
+- Gate verdicts are EXIT CODES, never scraped log text. Run
+  scripts/gate-all.sh after the final commit and before any push of code;
+  it stamps the validated HEAD and the committed pre-push hook
+  (scripts/git-hooks/pre-push, enabled via
+  `git config core.hooksPath scripts/git-hooks`) refuses unstamped code
+  pushes (docs-only drift is exempt). Never wrap gate runs in
+  `... || { ... }` compounds that mask the exit code, and never put the
+  verdict read and the push in the same tool invocation - a broken master
+  shipped for 20 minutes on 2026-07-16 from exactly that pair of mistakes.
+- The README is public-facing state and updates IN THE SAME SESSION any
+  major change lands (a new surface, harness, phase completion, or defect
+  class retired) - a landed major change without its README line is an
+  unfinished landing, same discipline as the plan checkbox (my rule,
+  2026-07-16).
 - Prefer new commits over amending, except when explicitly asked (e.g.
   cleaning up history before opening a PR).
 - This file and `docs/PORTING_PLAN.md` are committed, but both are live
