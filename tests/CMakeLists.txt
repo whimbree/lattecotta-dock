@@ -182,6 +182,20 @@ target_include_directories(generictoolstest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+# The Qt6 Controls-2 rules the config windows ride (final base members, the
+# ToolTip attached property, TabBar currentIndex, ListModel get() probing)
+# plus source scans of the components controls that depend on them.
+ecm_add_test(configcontrolstest.cpp
+    TEST_NAME configcontrolstest
+    LINK_LIBRARIES Qt6::Test Qt6::Qml
+)
+set_tests_properties(configcontrolstest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_compile_definitions(configcontrolstest PRIVATE
+    CHECKBOX_QML_PATH="${CMAKE_SOURCE_DIR}/declarativeimports/components/CheckBox.qml"
+    TEXTFIELD_QML_PATH="${CMAKE_SOURCE_DIR}/declarativeimports/components/TextField.qml"
+    ITEMDELEGATE_QML_PATH="${CMAKE_SOURCE_DIR}/declarativeimports/components/ItemDelegate.qml")
+
 # The shell view wrapper's no-band contract: the legacy backgroundHints
 # ternary demonstrably falls through on Plasma 6 (live engine), and the
 # shipped Panel.qml keeps its imagePath empty (source scan).
