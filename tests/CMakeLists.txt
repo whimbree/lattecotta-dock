@@ -168,6 +168,36 @@ target_include_directories(visualhostwindowtest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+# Vendored-backend pins (docs/captsilver-testability-adoption.md P3): both
+# compile the plasmoid plugin sources directly (they live in the tasks QML
+# plugin, not lattedock-core) and serve the plasma-desktop sync pass as
+# behavioral tripwires for synced hunks.
+ecm_add_test(smartlauncheritemtest.cpp
+    ${CMAKE_SOURCE_DIR}/plasmoid/plugin/smartlauncheritem.cpp
+    ${CMAKE_SOURCE_DIR}/plasmoid/plugin/smartlauncherbackend.cpp
+    TEST_NAME smartlauncheritemtest
+    LINK_LIBRARIES Qt6::Test Qt6::Core Qt6::DBus KF6::Service KF6::ConfigCore PW::LibNotificationManager
+)
+set_tests_properties(smartlauncheritemtest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(smartlauncheritemtest PRIVATE
+    ${CMAKE_SOURCE_DIR}/plasmoid/plugin)
+
+set(tasksbackendtest_SRCS tasksbackendtest.cpp ${CMAKE_SOURCE_DIR}/plasmoid/plugin/backend.cpp)
+kconfig_add_kcfg_files(tasksbackendtest_SRCS ${CMAKE_SOURCE_DIR}/plasmoid/plugin/kactivitymanagerd_plugins_settings.kcfgc)
+ecm_add_test(${tasksbackendtest_SRCS}
+    TEST_NAME tasksbackendtest
+    LINK_LIBRARIES Qt6::Test Qt6::Gui Qt6::Widgets Qt6::Qml Qt6::Quick Qt6::DBus
+        Plasma::Activities Plasma::ActivitiesStats KSysGuard::ProcessCore
+        KF6::Service KF6::ConfigCore KF6::ConfigGui KF6::I18n
+        KF6::KIOCore KF6::KIOGui KF6::KIOFileWidgets KF6::Notifications KF6::WindowSystem
+)
+set_tests_properties(tasksbackendtest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(tasksbackendtest PRIVATE
+    ${CMAKE_SOURCE_DIR}/plasmoid/plugin
+    ${CMAKE_CURRENT_BINARY_DIR})
+
 # Headless QML checks (Phase 5, docs/TESTING.md): the compile gate stages an
 # install and compiles every package QML file in a real engine; the
 # interaction harness drives real Latte components through qmltestrunner.
