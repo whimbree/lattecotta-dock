@@ -16,7 +16,7 @@
 # Usage: tests/coverage/coverage-ratchet.sh [build-dir]   (default: ./build)
 set -euo pipefail
 
-repo="$(cd "$(dirname "$0")/.." && pwd)"
+repo="$(cd "$(dirname "$0")/../.." && pwd)"
 build="${1:-$repo/build}"
 
 fail=0
