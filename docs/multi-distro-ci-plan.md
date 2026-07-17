@@ -208,7 +208,12 @@ pass on every distro regardless of tier.
       non-hermetic - it reads the ambient XDG_DATA_DIRS and picks up the
       distro's real Breeze schemes instead of its fixtures (the nix
       devShell's allow-listed XDG_DATA_DIRS hides this), so it needs a
-      fixture-only XDG_DATA_DIRS to be portable. Commits:
+      fixture-only XDG_DATA_DIRS to be portable. ALSO (PR #9 review nit):
+      scripts/qml-interaction-tests.sh:18 still hardcodes
+      "$stage/lib/qml/org/kde/latte" in its staging-reuse guard, so on a
+      lib/qt6/qml distro the guard always misses and forces a redundant
+      (idempotent) re-stage - give it the same KDE_INSTALL_QMLDIR
+      awareness the import path got in 18aac31b0. Commits:
 - [x] B3 Run sceneprobe in-container in invariant+tolerance mode; confirm
       scenes render (not blank, right regions). ARCH DONE: all 13 scenes
       render and PASS in the Arch container - and bit-exact against the
