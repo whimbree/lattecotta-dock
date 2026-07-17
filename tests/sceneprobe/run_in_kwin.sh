@@ -74,7 +74,14 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-XDG_RUNTIME_DIR="$RT" KWIN_WAYLAND_NO_PERMISSION_CHECKS=1 \
+# DISPLAY/XAUTHORITY are STRIPPED for the whole nested session: nothing in
+# it needs the real X server, and leaving them inherited let every
+# dbus-activated service (xdg-desktop-portal, ksecretd - one set PER RUN)
+# open connections to the session Xwayland that never closed. A night of
+# runs saturated the X client limit (254/256, "Maximum number of clients
+# reached") and took down both the desk session's headroom and this gate.
+env -u DISPLAY -u XAUTHORITY \
+  XDG_RUNTIME_DIR="$RT" KWIN_WAYLAND_NO_PERMISSION_CHECKS=1 \
   dbus-run-session -- kwin_wayland --virtual --width 256 --height 256 \
   --no-lockscreen --socket "$SOCK" >"$KWINLOG" 2>&1 &
 KWINPID=$!
