@@ -53,7 +53,12 @@ instead of mysterious.
 
 PRE-SESSION CHECKLIST handed to Bree (2026-07-17, she plans to
 rebuild and reboot before the next session):
-1. Rebuild + reboot as planned. Any nixpkgs revision is fine - the
+1. Rebuild + reboot as planned - and `nix flake update latte-dock` in
+   /persist/etc/nixos FIRST, now REQUIRED: megakill sets
+   programs.latte-dock.autostart = true (committed in her repo), an
+   option that only exists from 5525c45c8 - rebuilding on the stale
+   input fails evaluation with an unknown-option error. Any nixpkgs
+   revision is fine - the
    session re-pins to whatever /run/current-system actually runs at
    its start, not to a hash from these notes.
 2. The reboot itself clears the ~790 orphaned portal processes and
