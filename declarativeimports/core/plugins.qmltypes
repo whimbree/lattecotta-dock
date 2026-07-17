@@ -293,7 +293,6 @@ Module {
         exportMetaObjectRevisions: [0]
         Property { name: "compositingActive"; type: "bool"; isReadonly: true }
         Property { name: "isPlatformWayland"; type: "bool"; isReadonly: true }
-        Property { name: "isPlatformX11"; type: "bool"; isReadonly: true }
         Signal { name: "compositingChanged" }
     }
     Component {

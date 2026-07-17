@@ -98,8 +98,8 @@ kill sequence must never live in the script harnesses invoke.
 
 ## Gate discipline
 
-`scripts/gate-all.sh` is the single canonical gate runner (build-check
-both WITH_X11 variants + full ctest + coverage ratchet, qmllint gate,
+`scripts/gate-all.sh` is the single canonical gate runner (build-check:
+full build + full ctest + coverage ratchet, qmllint gate,
 sceneprobe gate). Its EXIT CODE is the only verdict; success prints
 `GATES: ALL OK @ <sha>` last and stamps build/_gates-passed. The
 committed pre-push hook (scripts/git-hooks/pre-push, enabled via

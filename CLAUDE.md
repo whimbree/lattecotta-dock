@@ -298,8 +298,8 @@ preference. Concretely:
   readable. C++23 is allowed WITH A RECORDED REASON: raising the
   standard is a build-system change with blast radius, so it follows
   the same process the C++17->20 bump did (the reasoned comment at
-  the top-level CMakeLists, full build-check on both WITH_X11
-  variants before anything rides on it).
+  the top-level CMakeLists, full build-check green before anything
+  rides on it).
 - Optimization levels, verified in this tree: the packaged build
   (package.nix) is nixpkgs-default Release, i.e. -O3 -DNDEBUG - the
   maximum reasonable level (-Ofast is not reasonable: it breaks IEEE
