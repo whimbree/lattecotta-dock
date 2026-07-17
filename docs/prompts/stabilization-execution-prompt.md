@@ -116,20 +116,15 @@ plan item for the recorded decision. Never land replacement icons.)
 7. DONE (automatable half) - Settings audit: named sub-checks clean,
    isScreenUiReady shim (b8a489c84); the desk walk is in the manual
    list.
-7a. **OPEN - X11 removal and cleanup** (added 2026-07-17 at my
-   direction; Phase 4's X11 removal checklist has the itemized
-   steps and the recorded rationale - KDE ships Plasma 6.8
-   Wayland-exclusive in October 2026, the 6.7 X11 session is
-   supported only into early 2027, and this backend was never
-   live-tested). Land it EARLY in the session order: dropping the
-   WITH_X11=OFF second build halves every subsequent build-check
-   run. Order inside the item: strip HAVE_X11 source sites first
-   (small bisectable commits, each builds), then the build-system
-   removal (CMake option + config headers + flake/package deps +
-   build-check single-variant collapse) as one build(...) commit,
-   then the textual-survivors audit and the docs/README register
-   pass. The gates line above changes with it: "both WITH_X11
-   variants build" becomes a single-tree build-check.
+7a. **PR OPEN - X11 removal and cleanup** (added and EXECUTED
+   2026-07-17, session three): all seven Phase 4 checklist items
+   landed on the x11-removal branch, gates green on the branch head
+   (stamped 715b5a71f), nested vehicle + real-dock verification on
+   that build, PR #1 open for my review
+   (github.com/whimbree/lattecotta-dock/pull/1). build-check is
+   single-tree once merged - every gate run ~2x faster. Remaining
+   inside the item after merge: my byPassWM decision (Phase 4 item)
+   and re-checking the plan's hashes if a rebase rewrites them.
 8. **OPEN (b DONE) - the accessibility/automation quartet** (Phase 10
    requirements subsection; requirements, not polish). Standing after
    session two: item b's D-Bus interface is COMPLETE (all four steps

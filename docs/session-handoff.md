@@ -40,6 +40,13 @@ third platform must refuse too), with offscreen as the one named
 harness exception; the Xwayland prose came out of the refusal
 message.
 
+PR #1 OPEN: github.com/whimbree/lattecotta-dock/pull/1 (x11-removal
+-> master, gates stamped at 715b5a71f, real dock currently RUNNING
+the branch build). Merge is Bree's review call under the new
+workflow; work that overlaps its files (view.cpp - the keyboard
+focus mode especially) waits for the merge, non-overlapping items
+continue on fresh branches off master.
+
 X11 REMOVAL EXECUTED (branch x11-removal, 7 commits + docs; Phase 4
 checklist all ticked except the byPassWM decision item): backend
 removal 1a0a7f9aa, non-wayland refusal 582672d04, ifdef strips
