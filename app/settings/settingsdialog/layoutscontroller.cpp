@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2020 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -176,7 +177,7 @@ bool Layouts::layoutsAreChanged() const
 
 bool Layouts::modeIsChanged() const
 {
-    return m_model-modeIsChanged();
+    return m_model->modeIsChanged();
 }
 
 void Layouts::setOriginalInMultipleMode(const bool &inmultiple)
