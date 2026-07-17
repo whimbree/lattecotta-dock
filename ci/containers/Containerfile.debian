@@ -1,0 +1,101 @@
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# Debian build+gate environment for the multi-distro CI matrix
+# (docs/multi-distro-ci-plan.md, Phase A). Debian testing is the root of
+# the largest deb-derivative tree; it gates at the invariant+tolerance tier
+# like the other non-NixOS legs (goldens rot as testing rolls). This layer
+# installs ONLY the build/runtime/gate dependencies; the port itself is
+# built by ci/build-and-gate.sh against a bind-mounted or copied source
+# tree, so this image is a cacheable deps-only layer.
+#
+# Floor check (observed 2026-07-17 in debian:testing, apt candidates):
+#   Qt      6.10.2  (floor Qt6      >= 6.6 - PASS)
+#   KF6     6.26.0  (floor KF6      >= 6.5 - PASS)
+#   Plasma  6.6.5   (floor Plasma   >= 6.5 - PASS)
+#   kwin_wayland 6.6.5
+# Debian testing (not sid) already clears every floor, so it is the pinned
+# leg. A3 pins the digest below once the leg is proven; testing tracks the
+# next stable and rolls slowly, so the base is stable enough for a tag pin.
+FROM docker.io/library/debian:testing
+
+# Debian installs are non-interactive in CI: no tzdata/debconf prompts.
+ENV DEBIAN_FRONTEND=noninteractive
+
+# One update+install+clean layer. --no-install-recommends keeps the image
+# lean (recommends drag in docs, examples, X11 clients we never run); the
+# apt lists are removed so the deps layer caches small.
+#
+# Package-name notes where Debian diverges from Arch/the ng dep set:
+#   - KF6 dev packages are libkf6<component>-dev (Config, CoreAddons, ...).
+#   - KF6 Kirigami dev is libkirigami-dev (NOT libkf6kirigami-dev; the KF6
+#     build is the unversioned name, kirigami2-dev is the old Qt5 one).
+#   - qt5compat is qt6-5compat-dev; shadertools qt6-shadertools-dev.
+#   - qqc2-desktop-style ships as qml6-module-org-kde-desktop.
+#   - plasma5support -> libplasma5support-dev; kpipewire -> libkpipewire-dev.
+#   - libksysguard (KSysGuard find_package) -> libksysguard-dev.
+#   - PlasmaQuick/LibTaskManager/LibNotificationManager come from
+#     plasma-workspace-dev; layer-shell-qt -> liblayershellqtinterface-dev.
+#   - lavapipe (software Vulkan) ships in mesa-vulkan-drivers.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        cmake extra-cmake-modules ninja-build git pkgconf jq file gettext \
+        build-essential \
+        qt6-base-dev qt6-base-dev-tools qt6-declarative-dev qt6-wayland-dev \
+        qt6-5compat-dev qt6-shadertools-dev qt6-tools-dev qt6-tools-dev-tools \
+        libqt6svg6-dev \
+        libkf6config-dev libkf6coreaddons-dev libkf6guiaddons-dev \
+        libkf6dbusaddons-dev libkf6declarative-dev libkf6itemmodels-dev \
+        libkf6xmlgui-dev libkf6iconthemes-dev libkf6kio-dev libkf6i18n-dev \
+        libkf6notifications-dev libkf6newstuff-dev libkf6archive-dev \
+        libkf6globalaccel-dev libkf6crash-dev libkf6windowsystem-dev \
+        libkf6package-dev libkf6svg-dev libkf6service-dev \
+        libkf6kcmutils-dev libkirigami-dev libkf6solid-dev libkf6sonnet-dev \
+        libkf6textwidgets-dev libkf6idletime-dev libkf6doctools-dev \
+        qml6-module-org-kde-desktop plasma-pa libkpipewire-dev \
+        libplasma5support-dev libplasma-dev libplasmaactivities-dev \
+        libplasmaactivitiesstats-dev plasma-workspace-dev kwayland-dev \
+        libksysguard-dev plasma-wayland-protocols libwayland-dev \
+        wayland-protocols liblayershellqtinterface-dev \
+        kwin-wayland \
+        libvulkan-dev libvulkan1 vulkan-validationlayers mesa-vulkan-drivers \
+        fonts-noto-core dbus libcap2-bin rsync perl python3 imagemagick \
+    && rm -rf /var/lib/apt/lists/*
+
+# Strip any file capabilities from kwin_wayland. On Arch this was load-
+# bearing: its kwin ships cap_sys_nice=ep, and podman's default cap set
+# excludes CAP_SYS_NICE, so execve of a file whose effective caps aren't in
+# the container bounding set fails EPERM and the nested compositor never
+# comes up. Debian's kwin_wayland ships WITHOUT the cap (getcap is empty
+# here), so this is a no-op on the current package - kept for parity with
+# the Arch leg and as robustness in case a future Debian build adds the cap.
+# The cap only lets kwin raise its scheduler priority, meaningless for a
+# throwaway headless CI compositor, so stripping it is always safe.
+RUN setcap -r /usr/bin/kwin_wayland 2>/dev/null || true
+
+# The nested-kwin harness and sceneprobe gate read these to find the
+# distro's lavapipe ICD and Vulkan validation layers instead of the nix
+# devShell's, and the QML gates read LATTE_QML_MODULE_PATH to locate the
+# distro's KF6/Qt framework qml tree. Debian uses the multiarch libdir
+# (/usr/lib/x86_64-linux-gnu), so the qml tree path differs from
+# Arch/Fedora. Debian's lavapipe ICD manifest is the UNSUFFIXED lvp_icd.json
+# (verified in-image), not the arch-suffixed lvp_icd.x86_64.json some
+# distros ship - confirmed with ls before pinning.
+ENV LATTE_VULKAN_LAVAPIPE_ICD=/usr/share/vulkan/icd.d/lvp_icd.json \
+    LATTE_VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d \
+    LATTE_QML_MODULE_PATH=/usr/lib/x86_64-linux-gnu/qt6/qml
+
+# Debian installs the Qt6 host development tools (qmltestrunner, qmllint,
+# qmlcachegen, ...) under /usr/lib/qt6/bin, which is NOT on the default PATH
+# (Arch/Fedora put them in /usr/bin). The QML ctest gates call qmltestrunner
+# and qmllint by bare name, so without this the qmlcompile/qmlinteraction/
+# qmlcontracts gates fail "command not found". Adding a host-tool bin dir to
+# PATH does not shadow the build's Qt tools - cmake resolves moc/rcc/uic from
+# the Qt6 package's absolute IMPORTED_LOCATION, never PATH - so the blast
+# radius is limited to making the gate tools findable. (The qmllint RATCHET
+# gate stays a NixOS-tier merge gate: its baseline is calibrated to the
+# pinned qmllint version and it deliberately refuses a foreign qmllint, so it
+# is excluded from the distro gate stage rather than run against Debian's.)
+ENV PATH=/usr/lib/qt6/bin:${PATH}
+
+WORKDIR /src
