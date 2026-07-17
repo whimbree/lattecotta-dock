@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Latte Dock contributors
+// SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, derived)
 // SPDX-FileCopyrightText: 2026 Bree Spektor
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
