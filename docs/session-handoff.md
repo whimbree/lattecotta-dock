@@ -24,10 +24,17 @@ healthy. The desk currently has no side docks so it was already drift 0
 (the fix's benefit shows with side docks); no regression. One live-read
 gotcha banked: the SubWindow edge-helper strip renders 1px wide in its
 normal ISHIDDENMASK state, so a startup dumpwins can catch it at full
-width mid-transition - not a defect. parabolic-hover-preview fails
-deterministically in the vehicle but was proven pre-existing/unrelated
-(fails on the pre-change binary too) - filed for a separate look, does
-not block. Real dock runs the merged e089d3d6d build.
+width mid-transition - not a defect. parabolic-hover-preview was flaky in
+the vehicle (~60% single-shot); root-caused 2026-07-17 as a synthetic-
+injection artifact, NOT a dock bug - the preview trigger (task MouseArea
+onEntered) is suppressed while the zoom animation runs (hoverEnabled gates
+off, Qt5-faithful), so a single fakepointer glide races the animation and
+fires the trigger only ~60% of the time, while a real continuously-moving
+mouse always re-enters and previews are reliable live. Fixed by re-gliding
+onto the icon until the dialog maps (assertion still requires a real
+layer=6 dialog); 12/12 back-to-back. Ledger
+docs/agent-logs/2026-07-17-preview-recipe-flake.md, TESTING.md updated.
+Real dock runs the merged e089d3d6d build.
 
 ## 2026-07-17 SESSION THREE CLOSE (master at ed62ce333, all pushed)
 
