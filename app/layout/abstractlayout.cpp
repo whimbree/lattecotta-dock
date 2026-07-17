@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2019 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -354,12 +355,17 @@ QList<Plasma::Types::Location> combinedFreeEdges(const QList<Plasma::Types::Loca
 
 QString AbstractLayout::layoutName(const QString &fileName)
 {
-    int lastSlash = fileName.lastIndexOf("/");
-    QString tempLayoutFile = fileName;
-    QString layoutName = tempLayoutFile.remove(0, lastSlash + 1);
+    int lastSlash = fileName.lastIndexOf(QLatin1String("/"));
+    QString layoutName = fileName.mid(lastSlash + 1);
 
-    int ext = layoutName.lastIndexOf(".layout.latte");
-    layoutName = layoutName.remove(ext, 13);
+    //! strip the extension only when present: QString::remove counts a
+    //! negative position from the END of the string, so feeding it the
+    //! not-found -1 from lastIndexOf silently chopped the last character
+    //! of any name that is not a .layout.latte.
+    const QString extension(QStringLiteral(".layout.latte"));
+    if (layoutName.endsWith(extension)) {
+        layoutName.chop(extension.size());
+    }
 
     return layoutName;
 }
