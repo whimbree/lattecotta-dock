@@ -1181,6 +1181,13 @@ multi-view, multi-monitor setup.
       user-facing placement bug, not a vehicle artifact. The e2e
       recipes compensate (pixel calibration in 050, e2e_view_window_x
       elsewhere); remove the compensation notes when this is fixed.
+      This drift is ALSO the run-e2e suite-flakiness root: the
+      pointer-precision recipes and the focus-grant-timed keyboard-nav
+      recipe pass solo but can flake in a long sequential run as the
+      surface re-anchors mid-suite (see docs/TESTING.md's e2e note). A
+      per-recipe dock reseed was tried and worsened it (a fresh surface
+      is less settled), so the fix has to be this root cause, not the
+      harness.
       Commits:
 
 - [x] Render-thread crash whenever an overflowing dock relayouts (enter

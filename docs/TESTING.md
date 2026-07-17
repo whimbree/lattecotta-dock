@@ -104,7 +104,18 @@ Adopt latte-dock-qt6's three-piece shape, adapted rather than copied:
   (`scripts/lib-nested-kwin.sh`); recipe helpers live in
   `tests/e2e/lib.sh`. Assertions are D-Bus state first (lifecycleState,
   viewsData and friends); pixels only where pixels are the thing under
-  test.
+  test. Every recipe passes SOLO; the pointer-precision recipes
+  (`050-drag-reorder`, `parabolic-hover-preview`) and the
+  focus-grant-timed `keyboard-navigation-mode` can flake in a long
+  back-to-back run because the bottom-dock surface-geometry drift filed
+  in Phase 8 (surface renders offset from its reported geometry and
+  re-anchors on clock-minute ticks) shifts icons out from under
+  fakepointer and slows the layer-shell OnDemand focus grant. Until
+  that root cause lands, run a suspected-flaky recipe on its own to
+  separate a real regression from the drift; a per-recipe dock reseed
+  was tried and made the pointer recipes WORSE (a freshly restarted
+  surface is even less settled), so the suite keeps the shared-dock
+  shape.
 
 Enum/handler completeness tests (Phase 6: every UI-offered enum value
 must have a handled branch, verified per enum/handler pair) are part of
