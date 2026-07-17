@@ -7,7 +7,10 @@
 #include "dbusreports.h"
 
 // local
+#include "layout/centrallayout.h"
 #include "layout/genericlayout.h"
+#include "layouts/manager.h"
+#include "layouts/synchronizer.h"
 #include "view/containmentinterface.h"
 #include "view/effects.h"
 #include "view/positioner.h"
@@ -395,6 +398,30 @@ QString collectColorizerData(const Latte::View *view)
     }
 
     return serializeColorizerData(record);
+}
+
+QString collectLayoutsData(Latte::Layouts::Manager *manager)
+{
+    //! the manager and its synchronizer live for the corona's whole life
+    Q_ASSERT(manager);
+    Q_ASSERT(manager->synchronizer());
+
+    const QList<CentralLayout *> layouts = manager->synchronizer()->centralLayouts();
+
+    QList<LayoutRecord> records;
+    records.reserve(layouts.count());
+
+    for (const auto layout : layouts) {
+        LayoutRecord record;
+        record.name = layout->name();
+        record.isActive = layout->isActive();
+        record.activities = layout->appliedActivities();
+        record.viewsCount = layout->viewsCount();
+
+        records << record;
+    }
+
+    return serializeLayoutsData(manager->memoryUsage(), records);
 }
 
 QString collectViewsData(const QList<Latte::View *> &views, bool inConfigureAppletsMode)

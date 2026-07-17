@@ -291,6 +291,11 @@ CentralLayout *Synchronizer::centralLayout(QString layoutname) const
     return nullptr;
 }
 
+QList<CentralLayout *> Synchronizer::centralLayouts() const
+{
+    return m_centralLayouts;
+}
+
 QList<CentralLayout *> Synchronizer::currentLayouts() const
 {
     QList<CentralLayout *> layouts;

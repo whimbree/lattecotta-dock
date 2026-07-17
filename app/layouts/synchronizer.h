@@ -93,6 +93,10 @@ public:
     Latte::View *viewForContainment(Plasma::Containment *containment);
     Latte::View *viewForContainment(uint id);
 
+    //! every loaded central layout, not just the ones in force on the
+    //! current activity (that filtered set is currentLayouts()); the
+    //! layoutsData D-Bus report reads this
+    QList<CentralLayout *> centralLayouts() const;
     QList<CentralLayout *> currentLayouts() const;
     QList<Latte::View *> currentViews() const;
     QList<Latte::View *> currentViewsWithPlasmaShortcuts() const;

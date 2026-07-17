@@ -9,6 +9,7 @@
 
 // local
 #include <coretypes.h>
+#include "apptypes.h"
 //! the containment plugin's enum home, included relatively: the theme and
 //! window color modes colorizerData() names live there (a header-only
 //! Q_GADGET, no moc linkage), and naming the REAL enums keeps -Wswitch
@@ -32,6 +33,9 @@
 
 namespace Latte {
 class View;
+namespace Layouts {
+class Manager;
+}
 }
 
 namespace Latte {
@@ -58,6 +62,15 @@ struct TrackerRecord {
     bool existsWindowMaximized{false};
     bool lastActiveWindowPresent{false};
     QString lastActiveWindowAppName;
+};
+
+//! One loaded layout as layoutsData() reports it
+//! (docs/dbus-observability-interface.md, step 4)
+struct LayoutRecord {
+    QString name;
+    bool isActive{false};
+    QStringList activities;
+    int viewsCount{0};
 };
 
 //! One view's colorizer decision facts as colorizerData() reports them
@@ -199,6 +212,20 @@ inline QString visibilityModeName(Types::Visibility mode)
     case Types::SidebarOnDemand: return QStringLiteral("sidebarOnDemand");
     case Types::SidebarAutoHide: return QStringLiteral("sidebarAutoHide");
     case Types::NormalWindow: return QStringLiteral("normalWindow");
+    }
+
+    Q_UNREACHABLE();
+}
+
+inline QString memoryUsageName(MemoryUsage::LayoutsMemory memory)
+{
+    switch (memory) {
+    //! Current is the query sentinel some APIs take ("whatever is in
+    //! force"); Layouts::Manager::memoryUsage() never returns it, but the
+    //! mapping stays exhaustive so -Wswitch keeps meaning something
+    case MemoryUsage::Current: return QStringLiteral("current");
+    case MemoryUsage::SingleLayout: return QStringLiteral("single");
+    case MemoryUsage::MultipleLayouts: return QStringLiteral("multiple");
     }
 
     Q_UNREACHABLE();
@@ -351,6 +378,32 @@ inline QString serializeAppletRecords(const QList<AppletRecord> &records)
     return QString::fromUtf8(QJsonDocument(array).toJson(QJsonDocument::Compact));
 }
 
+inline QJsonObject serializeLayoutRecord(const LayoutRecord &record)
+{
+    QJsonObject json;
+    json[QStringLiteral("name")] = record.name;
+    json[QStringLiteral("isActive")] = record.isActive;
+    json[QStringLiteral("activities")] = QJsonArray::fromStringList(record.activities);
+    json[QStringLiteral("viewsCount")] = record.viewsCount;
+
+    return json;
+}
+
+inline QString serializeLayoutsData(MemoryUsage::LayoutsMemory memory, const QList<LayoutRecord> &records)
+{
+    QJsonArray layouts;
+
+    for (const auto &record : records) {
+        layouts.append(serializeLayoutRecord(record));
+    }
+
+    QJsonObject json;
+    json[QStringLiteral("memoryUsage")] = memoryUsageName(memory);
+    json[QStringLiteral("layouts")] = layouts;
+
+    return QString::fromUtf8(QJsonDocument(json).toJson(QJsonDocument::Compact));
+}
+
 inline QJsonObject serializeColorizerRecord(const ColorizerRecord &record)
 {
     QJsonObject json;
@@ -475,6 +528,9 @@ QString collectTasksData(const Latte::View *view);
 //! serialize one live view's colorizer facts for the colorizerData()
 //! D-Bus read
 QString collectColorizerData(const Latte::View *view);
+
+//! serialize the loaded layouts for the layoutsData() D-Bus read
+QString collectLayoutsData(Latte::Layouts::Manager *manager);
 
 }
 }

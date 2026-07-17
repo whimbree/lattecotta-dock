@@ -223,6 +223,12 @@ public:
     //! log).
     QString colorizerData(const uint &containmentId);
 
+    //! D-Bus state readback (observability-first): every loaded layout
+    //! (name, active state, applied activities, view count) plus the
+    //! layouts memory mode as one compact JSON object, documented in
+    //! docs/dbus-observability-interface.md. Complements switchToLayout.
+    QString layoutsData();
+
 public Q_SLOTS:
     void aboutApplication();
     void activateLauncherMenu();

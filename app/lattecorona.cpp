@@ -1381,6 +1381,11 @@ QString Corona::colorizerData(const uint &containmentId)
     return DbusReports::collectColorizerData(view);
 }
 
+QString Corona::layoutsData()
+{
+    return DbusReports::collectLayoutsData(m_layoutsManager);
+}
+
 QString Corona::viewsData()
 {
     return DbusReports::collectViewsData(m_layoutsManager->synchronizer()->currentViews(),
