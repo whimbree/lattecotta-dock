@@ -146,7 +146,7 @@ How it is built
 ===============
 
 Every fix names its root cause and the evidence in its commit body, and
-the tree defends itself: 66 ctest entries including 29 pure-core unit
+the tree defends itself: 82 ctest entries including 29 pure-core unit
 test suites that run under ASan+UBSan with forced asserts, a QML compile
 gate that loads every shipped QML file in a real engine, contract tests
 that pin the exact libplasma/KSvg/Qt behaviors the dock relies on (so a

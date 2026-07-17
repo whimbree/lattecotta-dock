@@ -125,48 +125,48 @@ plan item for the recorded decision. Never land replacement icons.)
    isPlatformWayland-SHAPED branches outside the removal's stated
    scope. build-check is single-tree now (~2x faster gate runs).
    Still mine: the byPassWM decision (Phase 4 item).
-8. **OPEN (b DONE) - the accessibility/automation quartet** (Phase 10
-   requirements subsection; requirements, not polish). Standing after
-   session two: item b's D-Bus interface is COMPLETE (all four steps
-   live, smokes run in the nested vehicle; the activateTaskAt smoke
-   found and fixed the dead-since-the-port shortcuts host,
-   a3d2afc7c - Meta+N badges need a desk re-verify, manual list).
-   Remaining, in order: the keyboard focus mode for the dock window
-   (the P0 gate: view.cpp AcceptingInputStatus + layer-shell
-   OnDemand, a global shortcut to enter, Indexer-driven traversal,
-   Escape leaves - design it together with a D-Bus debug-gate
-   trigger); then Accessible.* rollout per the inventory's gap list
-   with qmltest pins; item c (deterministic e2e conversion) folds
-   scripts/run-e2e.sh plus the nested-vehicle scripts into a
-   maintained tests/e2e suite together with item 9's P4; the Orca
-   pass is acceptance and needs my hands at the end.
-9. **OPEN - CaptSilver adoption, remaining waves** (the analysis,
-   P1+P2 AND the follow-up scenes are DONE and merged: sceneprobe
-   runs headless on lavapipe with bit-exact goldens plus an opt-in
-   dgpu mode - works with a GPU, never requires one; six contract
-   pins landed including the alternatives createApplet live-bug fix;
-   the four follow-up scenes landed session two with probeExpect and
-   injection proof). Remaining per
-   docs/captsilver-testability-adoption.md: P3 landed session two
-   (11 suites, nine origin fixes); P3b - the remaining ~14 transplant
-   candidates over shared headers (itemized with skip verdicts in the
-   adoption plan; shortcutstest and storagetest first), P4 e2e pixel
-   assertions (latte-imgdiff + KWin ScreenShot2, composes with the
-   new D-Bus surface; the nested-kwin staged-dock recipe in the
-   handoff is the vehicle proof), and cross-machine golden
-   verification when a second machine exists.
-10. **PARTIAL - the tail**: DONE session two: WindowId newtype
-    hardening (own pass, six commits, windowidtest; wm desk pass in
-    the manual list) and the LATTE_LAYERSHELL_HAS_SET_SCREEN guard
-    (cached on LayerShellQt_DIR, env defects FATAL). Extraction-
-    ledger live tail: EX-20 badge arms + EX-11 cold-start PASS; the
-    heavy pointer matrix moved into the nested-kwin vehicle (proven;
-    EX-10 runs there). STILL OPEN: Phase 9 color-group audit (~12
-    files read Kirigami.Theme colors; audit each site's theme-object
-    scope), known-bug-list sweep (mostly desk work, see manual
-    list), remaining extraction-ledger recipes (EX-11 2-6, EX-12
-    real-config palette flip, EX-14 drags, EX-15 wheels, EX-17
-    hover, EX-19 visual checks), Phases 2/3 mechanical tail.
+8. **ORCA-ONLY - the accessibility/automation quartet** (Phase 10
+   requirements subsection). The code half is DONE, all merged session
+   three via the PR flow: item b's D-Bus interface (session two,
+   a3d2afc7c shortcuts-host fix; Meta+N badge desk re-verify still on
+   the manual list); the dock-window KEYBOARD FOCUS MODE, the P0 gate
+   (view.cpp AcceptingInputStatus + layer-shell OnDemand keyboard
+   interactivity, Meta+Alt+D global shortcut, Indexer-driven traversal,
+   Escape/focus-loss exit, D-Bus setViewKeyboardNavigation trigger +
+   keyboardNavigation readback, shortcutshosttest pin); the
+   ACCESSIBLE.* rollout across task items, applet containers, the
+   custom controls and edit-mode chrome, with qmltest pins; and item c
+   (deterministic e2e conversion) folded scripts/run-e2e.sh + the
+   nested-vehicle scripts into a maintained tests/e2e suite with the
+   EX recipes and a state-vs-render geometry guard. REMAINING: only the
+   ORCA screen-reader acceptance pass (needs my ears - the desk script
+   is in docs/manual-flake-removal-testing.md) plus the two filed
+   keyboard-focus follow-ups (denied-activation flag staleness,
+   cross-view exclusivity) in the Phase 10 keyboard item.
+9. **CROSS-MACHINE-ONLY - CaptSilver adoption** (P1+P2, follow-up
+   scenes and P3 were done session two; P3b and P4 landed session
+   three via the PR flow). P3b: 14 test suites transplanted (raised to
+   this tree's bar) with four upstream-inherited origin fixes
+   (updateView maxLength, nameOfConfigFile Qt6 chop, stringToRect
+   out-of-range, delegate icon -1 sentinel); properly attributed since
+   (exact fork commit 81384003 + David Goree SPDX). P4: e2e pixel
+   assertions live (latte-imgdiff + KWin ScreenShot2, the
+   preview-tooltip golden) in the maintained nested-vehicle suite.
+   REMAINING: only cross-machine golden verification, which needs a
+   second machine to exist.
+10. **DESK-ONLY tail**: DONE session two: WindowId newtype hardening
+    and the LATTE_LAYERSHELL_HAS_SET_SCREEN guard. DONE session three
+    via the PR flow: the Phase 9 COLOR-GROUP AUDIT (all ~160 theme
+    reads across 44 files classified, three items ticked, two fixes -
+    the configure-mode popup-collapse TypeError and the unguarded
+    defaultTheme deref); the extraction-ledger EX recipes (EX-14
+    drags, EX-15 wheels, EX-17 hover) run in the nested vehicle as e2e
+    recipes; and the PHASE 8 SURFACE-DRIFT fix (masked docks anchored
+    both length edges, 060-geometry-agreement.sh promoted to a
+    permanent guard). STILL OPEN: known-bug-list sweep and EX-12/EX-19
+    (mostly desk work, see the manual list), Phases 2/3 mechanical
+    tail, and the remaining Phase 8 code threads (shutdown/latency/
+    lock-unlock/stranding) which are armed and fire naturally.
 
 ## Session protocol
 

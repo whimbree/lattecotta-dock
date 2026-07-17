@@ -43,14 +43,21 @@ that in the commit line (e.g. `Commits: a1b2c3d (stub - see
 STUB comment in tasksbackend.cpp)`) so it's clear from this doc alone,
 without cross-referencing git log, that follow-up work is owed.
 
-## Where we are (2026-07-16)
+## Where we are (2026-07-17)
 
 The port is a daily driver on my real config. Phases 0-7 are
 substantially done, Phase 11 (Nix packaging) shipped early, and the
 Phase 10 QML extraction initiative is COMPLETE (all 25 units, see the
-ledger in docs/QML_EXTRACTION_PLAN.md). Phase 8 is the OPEN phase.
-Phase 12 (upstream prep) stays parked under the maintained-continuation
-framing.
+ledger in docs/QML_EXTRACTION_PLAN.md). Phase 4 is now WAYLAND-ONLY
+(X11 backend removed 2026-07-17). Session three (2026-07-17) also
+landed, via the feature-branch PR flow: the accessibility quartet's
+code half (dock-window keyboard focus mode, Accessible.* rollout, the
+maintained e2e nested-vehicle suite with a state-vs-render geometry
+guard), the Phase 9 color-group audit, the CaptSilver P3b transplants,
+and the Phase 8 bottom-dock surface-drift fix. Phase 8 remains the
+open PHASE (shutdown/latency/lock-unlock/stranding threads are armed
+and fire naturally). Phase 12 (upstream prep) stays parked under the
+maintained-continuation framing.
 
 High-priority remaining work below Phase 11, in rough order of
 user-facing pain (each is a checklist item in its phase section with
@@ -80,26 +87,25 @@ the full context; this list is the map, not the territory):
    Plasma itself uses).
 8. Phase 8: full settings-window control audit against Qt5 semantics
    (the Tasks-config lesson says half-wired controls hide silently).
-9. Phase 10: the e2e GUI harness (microvm CI with compositor-level
-   pointer driving) - the local gates are CI-portable by design, the
-   hosted pipeline is not stood up.
-8a. Phase 4: X11 removal (decided 2026-07-17, checklist in the Phase 4
-    section): KDE ships Wayland-only from Plasma 6.8 (October 2026)
-    and supports the 6.7 X11 session only into early 2027, so the
-    never-live-tested X11 backend is dead weight; removing it also
-    halves every build-check run.
-9a. Phase 10: the accessibility/automation quartet (added 2026-07-16,
-    see the Phase 10 requirements subsection): keyboard navigation
-    for everything, D-Bus exposure for e2e testability, converting
-    nondeterministic e2e checks to deterministic ones (live cursor
-    only where pointer delivery IS the thing under test), and full
-    AT-SPI support with an Orca acceptance pass.
-10. Phase 10: the extraction ledger's live-verification tail (each
-    executed note names its still-owed recipes), the known-bug-list
-    sweep, WindowId newtype hardening, and the two stuck-overlay /
-    uninvoked-config-view findings.
-11. Phase 9: the color-group audit (Header color set reads) - small
-    but visible on exotic themes.
+9. DONE 2026-07-17: the e2e GUI harness is a maintained nested-vehicle
+   suite (tests/e2e, desk-independent kwin_wayland --virtual, D-Bus
+   assertions + KWin ScreenShot2 pixel goldens + a state-vs-render
+   geometry guard). The local gates stay CI-portable by design; the
+   hosted microvm pipeline is the only remaining piece.
+8a. DONE 2026-07-17 (PR #1): Phase 4 X11 removal - the port is
+    Wayland-only, main() refuses non-wayland platforms, build-check is
+    single-tree. One decision still mine: retire vs keep byPassWM.
+9a. Phase 10 accessibility/automation quartet: CODE HALF DONE 2026-07-17
+    (D-Bus exposure, the dock-window keyboard focus mode, Accessible.*
+    rollout, deterministic e2e conversion). REMAINING: the Orca
+    screen-reader acceptance pass (my ears) and the two filed
+    keyboard-focus follow-ups.
+10. Phase 10 extraction/tail: the EX live-verification recipes
+    (EX-14/15/17) run in the vehicle now; WindowId hardening done
+    session two. REMAINING: the known-bug-list sweep and EX-12/EX-19
+    (desk work), the two stuck-overlay / uninvoked-config-view findings.
+11. DONE 2026-07-17: Phase 9 color-group audit (all ~160 theme reads
+    classified across 44 files, three items ticked, two fixes landed).
 12. Phases 2/3: the mechanical tail (QStringLiteral wrapping, C-cast
     conversion, QDBusInterface modernization, one KWindowEffects
     signature) - low priority, no user-facing behavior.

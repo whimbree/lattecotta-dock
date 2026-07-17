@@ -478,14 +478,23 @@ from here, not a re-read of the whole history:
 
 (This section was stale for a long time - keep it honest.) The port is
 a daily driver: I run it against my real config. Phases 0-7 are
-substantially done, Phase 8 is OPEN (docs/PORTING_PLAN.md has the live
-checklist). The QML extraction initiative is COMPLETE (2026-07-16):
-all 25 units executed and merged - the two-box ledger in
-docs/QML_EXTRACTION_PLAN.md is the record, 45 ctest entries with 27
-sanitized unit-header pairs, qmllint baseline at 155 finding files and
-only shrinking. What remains from it is the live-verification tail:
-each executed note names the recipes still owed a real-session pass
-(the EX-10 visibility/input matrix is the largest). The step-2.5 law
+substantially done; Phase 4 is now WAYLAND-ONLY (X11 backend removed
+2026-07-17, main() refuses non-wayland platforms); Phase 8 still has
+open items (shutdown/latency/lock-unlock/stranding) though its
+bottom-dock surface-drift is fixed. Session three (2026-07-17) landed
+via the PR flow: the dev re-pin to the running system, the X11
+removal, the accessibility quartet's code half (dock-window keyboard
+focus mode as the P0 gate, Accessible.* rollout across the interactive
+items, the e2e nested-vehicle suite with EX-14/15/17 recipes and a
+state-vs-render geometry guard), the Phase 9 color-group audit, the
+CaptSilver P3b transplant wave, and the Phase 8 surface-drift fix -
+only the Orca screen-reader acceptance pass and the desk-hands checks
+remain from the quartet. The QML extraction initiative is COMPLETE
+(2026-07-16): all 25 units executed and merged - the ledger in
+docs/QML_EXTRACTION_PLAN.md is the record. The tree now carries 82
+ctest entries with 29 sanitized unit-header pairs (the coverage
+ratchet enforces the count) and a qmllint baseline that only shrinks.
+The step-2.5 law
 stays in force for all future cores (C++20, sanitized unit tests with
 forced asserts, qmllint ratchet, type discipline, the code-clarity
 rules above). Two companion-applet continuation items are planned as
