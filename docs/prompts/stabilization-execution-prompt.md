@@ -167,6 +167,105 @@ plan item for the recorded decision. Never land replacement icons.)
     (mostly desk work, see the manual list), Phases 2/3 mechanical
     tail, and the remaining Phase 8 code threads (shutdown/latency/
     lock-unlock/stranding) which are armed and fire naturally.
+11. **OPEN - comprehensive CaptSilver attribution audit and fix** (my
+    direction, 2026-07-17). David Goree
+    (github.com/CaptSilver/latte-dock-qt6, author email
+    davidgoree2003@gmail.com) is owed SPDX-FileCopyrightText credit on
+    every file that derives from his work. The CLAUDE.md citation
+    policy (the "CITE TRANSPLANTED CODE PROPERLY" section) defines the
+    rules. A first sweep landed 2026-07-17 (the captsilver-attribution
+    PR) but missed files AND left many citation comments too terse -
+    and it used the blanket origin/main commit 81384003 where a
+    per-file specific commit is the honest reference. This task
+    completes both. FOUR passes, then a verification pass; land each
+    pass as its own commit (names at the end).
+
+    PASS 1 - KNOWN MISSING SPDX LINES (confirmed by external review):
+    these files self-document derivation from his work in their header
+    comments but lack his SPDX-FileCopyrightText line. Add it ABOVE
+    Bree's line per the policy:
+    - app/view/positionergeometry.h - says "Adopted from capt's
+      extraction (latte-dock-qt6 4a829185 at 81384003)"
+    - app/screengeometrycalculator.h - structurally derived from his
+      header (same filename, same ifndef guard, same includes, same
+      ViewFootprint concept)
+    - app/layouts/storageidremapper.h - says "capt's interface shape
+      (latte-dock-qt6 73f64383) as the starting point", uses his struct
+      names (IdRemapInput, IdRemap), field names, and function signature
+    - tests/units/activitysetalgebratest.cpp - says "Case list ported
+      from capt's activitysetalgebratest (latte-dock-qt6 941bb7fb,
+      7 slots)"
+
+    PASS 2 - CITATION COMMENT QUALITY: every file that references his
+    work, whether or not it has his SPDX line, must have a citation a
+    STRANGER can follow back to source with no context. Comments like
+    "capt's interface shape" / "capt blueprint" / "capt's 339-line
+    header adopted" are shorthand that assumes the reader knows who
+    "capt" is - that is not a citation. Scan every .cpp/.h/.qml for
+    comments containing "capt" (case-insensitive), "blueprint",
+    "transplant", "adopted from", or "ported from" that reference his
+    work, and ensure each includes ALL of: (a) full name "David Goree's
+    latte-dock-qt6", not "capt"; (b) full URL
+    github.com/CaptSilver/latte-dock-qt6; (c) the specific commit hash;
+    (d) the specific source file path in that repo; (e) what was taken
+    ("struct interface adopted", "test cases ported", "seam decision
+    used", "header adopted verbatim"). GOOD example:
+      // Interface shape (IdRemapInput, IdRemap structs and remap()
+      // signature) adopted from David Goree's latte-dock-qt6
+      // (app/layouts/storageidremapper.h at 73f64383,
+      // github.com/CaptSilver/latte-dock-qt6). The function bodies are
+      // re-derived from our upstream-inherited storage.cpp.
+    Do NOT over-attribute: if a file only took an IDEA and the code is
+    fresh, say so ("Extraction boundary informed by David Goree's
+    latte-dock-qt6 (app/foo.h, github.com/CaptSilver/latte-dock-qt6);
+    implementation is independent"). Also fix docs: scan
+    docs/QML_EXTRACTION_PLAN.md for bare "capt" - expand to at least
+    "David Goree's latte-dock-qt6 (github.com/CaptSilver/latte-dock-qt6)"
+    on first mention per unit section, with the commit hash and source
+    file where applicable; later mentions in the same section may use
+    "Goree's" or "latte-dock-qt6".
+
+    PASS 3 - FULL TREE SCAN FOR UNDISCOVERED GAPS: search every
+    .cpp/.h/.qml for derivation markers without a David Goree SPDX
+    line - "capt" (case-insensitive), "latte-dock-qt6", "transplant",
+    "adopted from", "ported from", "blueprint" referencing capt, and
+    any header citing a CaptSilver commit hash (73f64383, 81384003,
+    4a829185, 941bb7fb, 15a317ff, c94676b9, b48903ec, 5fcaa9f1,
+    c903921d, 9003f33a, or any other attributed to latte-dock-qt6).
+    For each: if it already has his SPDX line, skip the SPDX step but
+    still fix the citation per Pass 2; else apply the CLAUDE.md
+    distinction - DERIVED (his expression adapted) gets the SPDX line +
+    good citation, IDEA-only (his concept, our expression) gets the
+    good citation only, no SPDX line.
+
+    PASS 4 - README AND PUBLIC-FACING DOCS: the Credits entry for
+    CaptSilver undersells his contribution ("independently-found fixes
+    ... credited in commit messages"). Rewrite it to acknowledge
+    specifically: the sceneprobe visual-regression harness was adopted
+    from his repo; the testing standard (docs/TESTING.md) was modeled
+    on his testing commits; seven QML-extraction units are tagged "capt
+    blueprint" and used his seam decisions as the starting point;
+    multiple test files were transplanted with his test cases forming
+    the foundation of our coverage; his repo is
+    github.com/CaptSilver/latte-dock-qt6, author David Goree. Factual
+    and concise - a short paragraph, not a wall. Do NOT remove or change
+    the Michail Vourlakos, Varlesh, or ruizhi-lab credits.
+
+    VERIFICATION PASS: run
+      grep -rn "capt\|CaptSilver\|latte-dock-qt6\|transplant\|blueprint"
+        --include="*.cpp" --include="*.h" --include="*.qml" | grep -v
+        "SPDX" | head -80
+    and for each result confirm (a) the file has a David Goree SPDX line
+    if derived, and (b) the citation is stranger-readable per Pass 2
+    (full name, URL, commit hash, source file, what was taken). List any
+    remaining gaps with justification for why they are acceptable.
+
+    COMMITS (separate): (1) "fix(attribution): add missing David Goree
+    SPDX lines on derived files"; (2) "fix(attribution): expand terse
+    'capt' citations to full stranger-readable references"; (3)
+    "docs(readme): credit CaptSilver's architectural contributions
+    properly". Lands as its own feature-branch PR with an independent
+    lean review, per the workflow.
 
 ## Session protocol
 
