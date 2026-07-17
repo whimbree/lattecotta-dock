@@ -82,11 +82,41 @@ nested_kwin_cleanup() {
     # wrapper pid alone orphans the kwin child often enough that a day of
     # runs left 315 virtual compositors alive (the setsid above gives the
     # session its own pgid so the negative-pid kill has a precise target)
-    [ -n "${NESTED_KWIN_PID:-}" ] && { kill -- "-$NESTED_KWIN_PID" 2>/dev/null || kill "$NESTED_KWIN_PID" 2>/dev/null; wait "$NESTED_KWIN_PID" 2>/dev/null; }
+    if [ -n "${NESTED_KWIN_PID:-}" ]; then
+        kill -- "-$NESTED_KWIN_PID" 2>/dev/null || kill "$NESTED_KWIN_PID" 2>/dev/null
+        wait "$NESTED_KWIN_PID" 2>/dev/null
+        # ... and wait for the WHOLE group to be gone before removing its
+        # runtime dir: waiting on the session leader alone races the members'
+        # exit paths - kwin and kded flush their config on SIGTERM and
+        # recreated XDG dirs inside $NESTED_RT after the rm below had run
+        # (leftover /tmp/nested-kwin-xdg.* dirs holding a fresh
+        # kwinoutputconfig.json, caught on the e2e driver's first day)
+        local _i
+        for _i in $(seq 1 50); do
+            pgrep -g "$NESTED_KWIN_PID" >/dev/null 2>&1 || break
+            sleep 0.1
+        done
+        if pgrep -g "$NESTED_KWIN_PID" >/dev/null 2>&1; then
+            kill -KILL -- "-$NESTED_KWIN_PID" 2>/dev/null
+            sleep 0.2
+        fi
+    fi
     # the xdg-desktop-portal the nested bus activates FUSE-mounts $RT/doc;
     # unmount before removing or the rm leaves the mountpoint behind
     [ -n "${NESTED_RT:-}" ] && {
         fusermount3 -u "$NESTED_RT/doc" 2>/dev/null || fusermount -u "$NESTED_RT/doc" 2>/dev/null || true
         rm -rf "$NESTED_RT" 2>/dev/null || true
+        # contract check: nothing may outlive the session and recreate state
+        # in here (seen once even after the group wait: a leftover dir with a
+        # fresh kwinoutputconfig.json). If the dir reappears, NAME the writer
+        # loudly - a silent survivor holds a live config path and pollutes
+        # the next run's isolation - then remove again.
+        sleep 0.3
+        if [ -d "$NESTED_RT" ]; then
+            echo "nested-kwin cleanup: $NESTED_RT was recreated after removal; survivors referencing it:" >&2
+            pgrep -af "$NESTED_RT" >&2 || echo "  (none found by cmdline; an env-only reference)" >&2
+            find "$NESTED_RT" -type f >&2 2>/dev/null || true
+            rm -rf "$NESTED_RT" 2>/dev/null || true
+        fi
     }
 }
