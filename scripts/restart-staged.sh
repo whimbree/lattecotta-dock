@@ -16,23 +16,53 @@ set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 
-if pgrep -x latte-dock >/dev/null; then
-    pkill -TERM -x latte-dock || true
-    pkill -CONT -x latte-dock || true
+# The dock's comm depends on the build shape: the dev/staged binary runs as
+# latte-dock, but the nixpkgs-packaged one (programs.latte-dock module,
+# autostarted at login) is a wrapQtAppsHook shell wrapper that execs
+# .latte-dock-wrapped - truncated by the kernel's 15-char comm limit to
+# ".latte-dock-wra". A sweep that only matches latte-dock leaves the
+# packaged instance alive holding the KDBusService unique name, and the
+# staged dock then exits silently at startup (caught live 2026-07-17, the
+# first login with the module autostart enabled). The wrapper pattern's
+# leading dot is deliberately unescaped: at 15 characters it stays under
+# procps' pattern-length warning, and regex-any vs literal dot cannot
+# collide with any real comm here.
+comm_pats=('latte-dock' '.latte-dock-wra')
+
+dock_pgrep() {
+    local found=1 pat
+    for pat in "${comm_pats[@]}"; do
+        pgrep "$@" -x "$pat" && found=0
+    done
+    return "$found"
+}
+
+dock_alive() { dock_pgrep >/dev/null; }
+
+dock_pkill() {
+    local pat
+    for pat in "${comm_pats[@]}"; do
+        pkill "$@" -x "$pat" || true
+    done
+}
+
+if dock_alive; then
+    dock_pkill -TERM
+    dock_pkill -CONT
     for _ in $(seq 1 50); do
-        pgrep -x latte-dock >/dev/null || break
+        dock_alive || break
         sleep 0.2
     done
 fi
 
-if pgrep -x latte-dock >/dev/null; then
+if dock_alive; then
     echo "latte-dock survived SIGTERM, sending SIGKILL:" >&2
-    pgrep -ax latte-dock >&2
-    pkill -KILL -x latte-dock
+    dock_pgrep -a >&2
+    dock_pkill -KILL
     sleep 1
 fi
 
-if pgrep -x latte-dock >/dev/null; then
+if dock_alive; then
     echo "latte-dock still alive after SIGKILL, refusing to stack another instance" >&2
     exit 1
 fi
