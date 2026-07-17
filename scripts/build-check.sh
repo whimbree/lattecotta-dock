@@ -5,15 +5,22 @@
 #   ./scripts/build-check.sh          # incremental
 #   ./scripts/build-check.sh --fresh  # wipe build dirs first
 #
-# Re-execs itself inside the flake devShell when the toolchain isn't already
-# in PATH, so it works from a bare shell too.
+# Re-execs itself inside the flake devShell unless the PINNED toolchain is
+# already in PATH, so it works from a bare shell too. "cmake exists" is not
+# that test: this host's system profile ships its own cmake (4.1, no ninja),
+# and a mere presence check once let that one reconfigure both build dirs
+# with the wrong toolchain - the fresh variant then died on "CMake was
+# unable to find Ninja". Same pinned-closure check qmllint-gate uses: the
+# devshell's cmake resolves under /nix/store/*, the system profile's under
+# /run/current-system.
 set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 
-if ! command -v cmake >/dev/null 2>&1; then
-    exec nix develop "$repo" -c "$0" "$@"
-fi
+case "$(command -v cmake || true)" in
+    /nix/store/*) ;;
+    *) exec nix develop "$repo" -c "$0" "$@";;
+esac
 
 fresh=0
 [[ "${1:-}" == "--fresh" ]] && fresh=1
