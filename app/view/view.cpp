@@ -332,9 +332,17 @@ void View::init(Plasma::Containment *plasma_containment)
 
     //! a layer surface is placed by its anchors, not setPosition(), so the
     //! dock must be re-anchored when its edge or alignment changes at
-    //! runtime - anchoring only at creation welds it to the startup edge
+    //! runtime - anchoring only at creation welds it to the startup edge.
+    //! behaveAsPlasmaPanel is also load-bearing here: windowSpansScreenLength()
+    //! keys off it, so a Panel->Dock flip (the type toggle) turns a
+    //! single-edge-anchored sized panel into a full-width masked dock that
+    //! must switch to both-length-edge anchoring or the compositor re-centres
+    //! it into the drift this exists to prevent. The type toggle can leave
+    //! alignment unchanged (a Center panel becoming a Center dock), so
+    //! alignmentChanged is not enough - watch the panel flag directly.
     connect(this, &View::locationChanged, this, &View::reanchorLayerShell);
     connect(this, &View::alignmentChanged, this, &View::reanchorLayerShell);
+    connect(this, &View::behaveAsPlasmaPanelChanged, this, &View::reanchorLayerShell);
 
     connect(this, &View::alignmentChanged, this, [&](){
         // inform neighbour vertical docks/panels to adjust their positioning
