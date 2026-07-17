@@ -1095,6 +1095,15 @@ ContainmentItem {
         layouts: layoutsContainer
     }
 
+    //! keyboard focus mode traversal; only receives key events while the
+    //! C++ View temporarily accepts keyboard focus
+    KeyboardNavigationHandler {
+        id: _keyboardNavigation
+        view: root.latteView
+        shortcuts: _shortcuts
+        indexer: _indexer
+    }
+
     Ability.ThinTooltip {
         id: _thinTooltip
         debug: _debug

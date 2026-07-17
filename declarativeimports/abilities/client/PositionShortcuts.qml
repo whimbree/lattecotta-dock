@@ -14,6 +14,7 @@ AbilityDefinition.PositionShortcuts {
 
     badges: ref.shortcuts.badges
     showPositionShortcutBadges: ref.shortcuts.showPositionShortcutBadges
+    keyboardFocusedEntryIndex: ref.shortcuts.keyboardFocusedEntryIndex
 
     property bool isStealingGlobalPositionShortcuts: false
 

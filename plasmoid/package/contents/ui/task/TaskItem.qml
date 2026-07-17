@@ -146,7 +146,9 @@ AbilityItem.BasicItem {
                                                                      && (windowsPreviewDlg.activeItem === taskItem)) )
 
     indicator.isGroup: !root.disableAllWindowsFunctionality && taskItem.isGroupParent
-    indicator.isHovered: taskItem.containsMouse || (windowsPreviewDlg.containsMouse && (toolTipDelegate.parentTask === taskItem))
+    //! isKeyboardFocused: keyboard focus mode reuses the hover chrome as
+    //! its visible focus indicator (BasicItem.isKeyboardFocused)
+    indicator.isHovered: taskItem.containsMouse || taskItem.isKeyboardFocused || (windowsPreviewDlg.containsMouse && (toolTipDelegate.parentTask === taskItem))
     indicator.isMinimized: !root.disableAllWindowsFunctionality && taskItem.isMinimized
     indicator.isPressed: taskItem.pressed
     indicator.inAttention: !root.disableAllWindowsFunctionality && taskItem.inAttention

@@ -120,6 +120,15 @@ Item{
     readonly property bool isFirstItemInContainer: abilityItem.abilities.containment.isFirstAppletInContainment && (abilityItem.itemIndex === abilityItem.abilities.indexer.firstVisibleItemIndex)
     readonly property bool isLastItemInContainer: abilityItem.abilities.containment.isLastAppletInContainment && (abilityItem.itemIndex === abilityItem.abilities.indexer.lastVisibleItemIndex)
 
+    //! keyboard focus mode: whether this item's shortcut index is the one
+    //! the keyboard-navigation handler focuses; the same shortcutIndex
+    //! match onSglActivateEntryAtIndex uses, so highlight and Enter always
+    //! agree on the target. Consumers feed it into their indicator's
+    //! hover state - the existing hover chrome IS the focus indicator.
+    readonly property bool isKeyboardFocused: abilityItem.abilities.shortcuts.keyboardFocusedEntryIndex >= 0
+                                              && abilityItem.abilities.shortcuts.isEnabled
+                                              && abilityItem.abilities.shortcuts.shortcutIndex(abilityItem.itemIndex) === abilityItem.abilities.shortcuts.keyboardFocusedEntryIndex
+
     readonly property int itemIndex: index
     readonly property int animationTime: (abilityItem.abilities.animations.active ? abilityItem.abilities.animations.speedFactor.current : 2) * (1.2 * abilityItem.abilities.animations.duration.small)
     property int iconAnimatedOffsetX: 0

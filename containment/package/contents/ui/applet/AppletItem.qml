@@ -319,6 +319,16 @@ Item {
     property Item userRequests: null
 
     property bool containsMouse: parabolicAreaLoader.active && parabolicAreaLoader.item.containsMouse
+
+    //! keyboard focus mode: the same visible-index match
+    //! onSglActivateEntryAtIndex activates on, so highlight and Enter
+    //! always agree; applets that manage their own position shortcuts
+    //! (tasks) are excluded here exactly as they are there - their
+    //! sub-items highlight themselves (BasicItem.isKeyboardFocused)
+    readonly property bool isKeyboardFocused: appletItem.shortcuts && appletItem.shortcuts.keyboardFocusedEntryIndex >= 0
+                                              && appletItem.shortcuts.unifiedGlobalShortcuts
+                                              && !_communicator.positionShortcutsAreSupported
+                                              && appletItem.indexer && appletItem.indexer.visibleIndex(appletItem.index) === appletItem.shortcuts.keyboardFocusedEntryIndex
     //! whether this item has live ParabolicArea slots; the parabolic
     //! ability's row builder maps items without one to DeadStop (a live
     //! scale stack dies at them - EX-02 in docs/QML_EXTRACTION_PLAN.md)
@@ -742,7 +752,9 @@ Item {
                 isApplet: true
 
                 isActive: appletItem.isActive
-                isHovered: appletItem.containsMouse
+                //! keyboard focus mode reuses the hover chrome as its
+                //! visible focus indicator
+                isHovered: appletItem.containsMouse || appletItem.isKeyboardFocused
                 isPressed: appletItem.isPressed
                 isSquare: appletItem.isSquare
 
