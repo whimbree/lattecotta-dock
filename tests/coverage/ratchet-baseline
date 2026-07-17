@@ -1,4 +1,4 @@
-81
+82
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -59,6 +59,7 @@ screengeometrycalculatortest
 screenpooltest
 scrollmathtest
 settingsmodelstest
+shortcutshosttest
 shortcutstest
 smartlauncheritemtest
 sourceguardtest
