@@ -8,7 +8,9 @@ users run - Arch, Fedora, an Ubuntu-family Plasma 6 image - in a fully
 automated container CI matrix with per-distro golden validation. Green
 across the matrix is the release gate for **v0.12.0**, the first tagged
 continuation release (upstream Latte stopped at v0.10.8; this tree is at
-an interim VERSION 0.10.77 in CMakeLists.txt).
+an interim VERSION 0.10.77 in CMakeLists.txt). A linked NATIVE PACKAGING
+workstream (Phases F-G) rides on the same per-distro build environments
+to produce installable .deb/.rpm/PKGBUILD/ebuild/xbps artifacts.
 
 This is a CHECKLIST, not prose to read once - same discipline as
 docs/PORTING_PLAN.md. Every task is a `- [ ]` with a Commits: line;
@@ -168,19 +170,82 @@ pass on every distro regardless of tier.
 - [ ] C2 Bless the pinned-tag tiers for the stable distros; set
       tolerances for the rolling tier. Commits:
 
-### Phase D - GitHub Actions matrix
-- [ ] D1 Net-new .github/workflows (none exist today; only the inherited
-      .kde-ci.yml). Matrix over distros, `container:` per leg, GHCR layer
-      cache, PNG-triple artifacts on failure. Commits:
+### Phase D - CI matrix workflow (runner-agnostic)
+Runner is UNDECIDED (DECISION 6): self-hosted Forgejo runners or GitHub
+Actions. Forgejo Actions is largely GH-Actions-syntax-compatible, so keep
+the workflow portable (avoid GH-only actions; parameterize the registry/
+cache). A self-hosted Forgejo runner also opens an ARM runner later - the
+natural home for the parked aarch64 golden tier.
+- [ ] D1 Net-new CI workflow (none exist today; only the inherited
+      .kde-ci.yml). Matrix over distros, `container:` per leg, a layer
+      cache (registry TBD by runner choice), PNG-triple artifacts on
+      failure. Commits:
 - [ ] D2 Triggers: build + e2e on PR-to-master if fast enough; full
       sceneprobe matrix nightly + on release tags (DECISION 2). Commits:
-- [ ] D3 Branch protection / required checks wired to the matrix.
+- [ ] D3 Required checks / branch protection wired to the matrix.
       Commits:
 
 ### Phase E - v0.12.0 release
 - [ ] E1 Bump CMakeLists VERSION 0.10.77 -> 0.12.0; changelog; release
       process doc. Commits:
 - [ ] E2 Matrix green on the release commit; tag v0.12.0. Commits:
+
+## Native packaging workstream (distinct from, built on, the CI matrix)
+
+The CI matrix above is a GATE ("does it build+render on distro X"); native
+packaging produces installable ARTIFACTS (.deb/.rpm/PKGBUILD/ebuild/xbps).
+They share the per-distro build ENVIRONMENTS - once Phase A can build in a
+distro's container, producing that distro's package is one recipe away. So
+packaging is an EXTENSION of the matrix, sequenced AFTER Phase A/B (a
+packaging task needs a proven build env for its distro first).
+
+Two tiers - the honest cut is recipes vs upstreaming, not
+mainstream vs obscure:
+
+- **Tier 1 - in-repo recipes + CI-validated packages (automatable, do all
+  five formats now).** The marginal cost of the "obscure" formats is small
+  once the container build works, so there is no reason to split them into
+  a later wave. Each format's recipe lives in-repo under packaging/<fmt>/;
+  CI builds it in that distro's container, installs the built package, and
+  runs the gates against the INSTALLED package (not just the build tree).
+  The SPDX attribution audit (David Goree, Michail, the KDE authors) feeds
+  directly into debian/copyright (DEP-5) and the rpm %license block.
+- **Tier 2 - upstreaming into official channels (the real second wave;
+  social/process, not code, so an agent cannot "do it now").** Low-friction
+  channels we control first (AUR, Void void-packages PR, a Gentoo overlay/
+  GURU, a personal Copr/OBS repo); the heavy gatekept archives (Debian
+  proper, Fedora dist-git, openSUSE OBS Factory) are a genuine later wave
+  with review queues and maintainer duties.
+
+Execution model (Bree's idea, 2026-07-17): orchestrator + one worktree
+subagent per package FORMAT, the repo's established
+orchestrator-merges-serially pattern. The orchestrator owns the SHARED
+parts (CI skeleton, version/changelog, common copyright metadata, base
+images) so they are not duplicated five times; each subagent owns one
+format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
+(highest reach); wave B = gentoo, void.
+
+### Phase F - Tier 1 packaging recipes (after A/B; swarm)
+- [ ] F1 packaging/debian/ (control, rules via dh cmake, changelog,
+      DEP-5 copyright from the SPDX audit); build .deb in the Ubuntu-family
+      container, install, gate. Commits:
+- [ ] F2 packaging/rpm/latte-dock.spec (%cmake macros, Qt6/KF6/Plasma
+      BuildRequires, %license); build .rpm in the Fedora container,
+      install, gate. Commits:
+- [ ] F3 packaging/arch/PKGBUILD (+ .SRCINFO); makepkg in the Arch
+      container, install, gate. Commits:
+- [ ] F4 packaging/gentoo/ ebuild (cmake + kde eclasses, USE flags) in an
+      overlay layout; build in a Gentoo container, gate. Commits:
+- [ ] F5 packaging/void/ template (xbps-src) in a void-packages layout;
+      build in a Void container, install, gate. Commits:
+- [ ] F6 CI: extend the matrix to build + install + gate each package
+      format as an artifact (registry/runner per DECISION 6). Commits:
+
+### Phase G - Tier 2 upstreaming (later wave; needs Bree's hands)
+- [ ] G1 Low-friction channels we control: AUR push, Void PR, Gentoo
+      overlay, personal Copr/OBS. Commits:
+- [ ] G2 Gatekept archives (Debian/Fedora/openSUSE Factory) - process,
+      sponsorship, review; tracked, not agent-automatable. Commits:
 
 ## Open decisions (need Bree)
 
@@ -196,4 +261,12 @@ pass on every distro regardless of tier.
 - DECISION 4 - 4th distro (openSUSE Tumbleweed) in or out for v0.12.0.
 - DECISION 5 - release gate scope: ALL matrix distros green vs NixOS +
   >=1 mainstream distro green.
-- DECISION 6 - runner: GitHub hosted (x86, free-ish) vs self-hosted.
+- DECISION 6 - runner: self-hosted Forgejo runners vs GitHub Actions
+  (undecided; keep the workflow runner-portable either way). A self-hosted
+  ARM Forgejo runner would later host the parked aarch64 golden tier.
+- DECISION 7 - packaging phasing: all five Tier-1 recipes now (the
+  recommendation - the obscure formats are cheap once the build env
+  exists) vs mainstream three now + gentoo/void in a later wave.
+- DECISION 8 - packaging swarm batching: wave A (deb, rpm, arch) + wave B
+  (gentoo, void) under the 4-subagent cap, orchestrator owns the shared
+  CI/version/copyright scaffold. Confirm the cut.
