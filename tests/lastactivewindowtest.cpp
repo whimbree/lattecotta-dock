@@ -124,7 +124,7 @@ private:
     static WindowInfoWrap makeShownWindow(int id)
     {
         WindowInfoWrap w;
-        w.setWid(QByteArray::number(id)); // WindowId is QByteArray in this port (windowinfowrap.h)
+        w.setWid(WindowId::fromWaylandUuid(QByteArray::number(id))); // explicit per the WindowId newtype (windowid.h)
         w.setIsValid(true);
         w.setIsActive(true);
         w.setIsOnAllDesktops(true);
@@ -211,7 +211,7 @@ void LastActiveWindowTest::invalidWindowIsRejected()
     // An invalid window for the same id is not tracked, gets removed from
     // history, and the (now-empty) history selection drops validity.
     WindowInfoWrap bad;
-    bad.setWid(QByteArray::number(3));
+    bad.setWid(WindowId::fromWaylandUuid(QByteArray::number(3)));
     bad.setIsValid(false);
     law->setInformation(bad);
 
@@ -271,17 +271,17 @@ void LastActiveWindowTest::removingOlderHistoryEntryKeepsCurrent()
 
     // A background window closing must not steal or reset the current one;
     // it only leaves the history.
-    m_wm->retire(QByteArray::number(1));
+    m_wm->retire(WindowId::fromWaylandUuid(QByteArray::number(1)));
 
     QVERIFY(law->isValid());
     QCOMPARE(law->currentWinId().toInt(), 3);
 
     // The pruned entry really is gone: once the current window closes, the
     // re-selection lands on 2 and never resurrects 1.
-    m_wm->retire(QByteArray::number(3));
+    m_wm->retire(WindowId::fromWaylandUuid(QByteArray::number(3)));
     QCOMPARE(law->currentWinId().toInt(), 2);
 
-    m_wm->retire(QByteArray::number(2));
+    m_wm->retire(WindowId::fromWaylandUuid(QByteArray::number(2)));
     QVERIFY(!law->isValid());
 }
 
@@ -315,7 +315,7 @@ void LastActiveWindowTest::historyPrunesToBounds()
         int cur = law->currentWinId().toInt();
         reached.append(cur);
 
-        m_wm->retire(QByteArray::number(cur));
+        m_wm->retire(WindowId::fromWaylandUuid(QByteArray::number(cur)));
         ++guard;
 
         if (law->isValid() && law->currentWinId().toInt() == cur) {
