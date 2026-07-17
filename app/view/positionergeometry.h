@@ -10,16 +10,18 @@
 
 //! The pure sizing/placement math of a dock view (EX-09 in
 //! docs/QML_EXTRACTION_PLAN.md), lifted from Positioner's live View reads.
-//! Adopted from capt's extraction (latte-dock-qt6 4a829185 at 81384003)
-//! after diffing every function against our positioner.cpp bodies - they
-//! matched exactly, so their 28 test fixtures transfer.
+//! The header structure and 28 test fixtures are adopted from David
+//! Goree's latte-dock-qt6 (app/view/positionergeometry.h at 4a829185,
+//! github.com/CaptSilver/latte-dock-qt6); every function was diffed
+//! against our positioner.cpp bodies and matched exactly, so the fixtures
+//! transfer unchanged.
 //!
 //! Architecture note (the spec's mandatory divergence check): on Wayland
 //! the dock SURFACE position is owned by layer-shell anchors
 //! (app/wm/waylandlayershell.cpp configureView/updateAnchoring); the
 //! positions computed here feed masks, X11, m_validGeometry, the canvas
 //! overlay and availability math. Every function below has a live
-//! consumer in our Positioner - nothing of capt's shape was dropped.
+//! consumer in our Positioner - nothing of Goree's shape was dropped.
 
 // local
 #include <coretypes.h>

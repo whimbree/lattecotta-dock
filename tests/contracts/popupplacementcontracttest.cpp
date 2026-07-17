@@ -21,7 +21,8 @@
 //! bump that inserts, removes or reorders members fails HERE instead of
 //! posing menus wrong in the live dock.
 //!
-//! Idea from latte-dock-qt6's coretypesenumtest (81384003, github.com/CaptSilver/latte-dock-qt6), which pins
+//! Idea from David Goree's latte-dock-qt6 (tests/coretypesenumtest.cpp at
+//! 81384003, github.com/CaptSilver/latte-dock-qt6), which pins
 //! three of the nine values as hardcoded ints; this parses the pinned
 //! library's own declaration instead and pins all of them. Their
 //! EdgePosition cases are not carried: that enum is their tree's addition

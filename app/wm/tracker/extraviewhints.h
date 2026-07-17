@@ -6,8 +6,10 @@
 */
 
 //! The horizontal-touching-busy-vertical bucket pass (EX-23 in
-//! docs/QML_EXTRACTION_PLAN.md), adopted from capt (latte-dock-qt6
-//! 5b58c0a3 at 81384003): an O(views) restructure of our O(n^2)
+//! docs/QML_EXTRACTION_PLAN.md), adopted from David Goree's latte-dock-qt6
+//! (app/wm/tracker/extraviewhints.h at 5b58c0a3,
+//! github.com/CaptSilver/latte-dock-qt6): an O(views) restructure of our
+//! O(n^2)
 //! updateExtraViewHints loop with equivalent semantics (their slots pin
 //! same-screen bucketing, wrong-location pairing, disabled/not-tracking
 //! skips and callback gating). The edge-touch check stays a callback

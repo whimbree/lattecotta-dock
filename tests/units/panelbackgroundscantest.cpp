@@ -5,11 +5,12 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// Ported from latte-dock-qt6's panelbackgroundscantest at 81384003, github.com/CaptSilver/latte-dock-qt6
-// (15a317ff; EX-25 in docs/QML_EXTRACTION_PLAN.md): their 17 slots
+// Ported from David Goree's latte-dock-qt6 tests/panelbackgroundscantest.cpp
+// at 81384003, github.com/CaptSilver/latte-dock-qt6 (15a317ff; EX-25 in
+// docs/QML_EXTRACTION_PLAN.md): their 17 slots
 // re-derived against our extracted bodies - every expected value below
-// carries its hand-walk in a comment instead of capt's instrument-first
-// pins. One deliberate fixture divergence: capt wrote straight-alpha
+// carries its hand-walk in a comment instead of Goree's instrument-first
+// pins. One deliberate fixture divergence: Goree wrote straight-alpha
 // pixel values into premultiplied images (invalid premultiplied data),
 // so their color-pick slot asserted an RGB the live scan never sees.
 // Our fixtures premultiply (setPixelPremultiplied), matching what KSvg
@@ -298,7 +299,7 @@ void PanelBackgroundScanTest::shadowRoundness_emptyShadow_returnsZero()
 void PanelBackgroundScanTest::shadowRoundness_zigZagCollapsesToZero()
 {
     // The 3.1 zig-zag reset (Air theme case), TopLeft branch where
-    // baseLineLength stays fixed per row. capt's fixture reset from an
+    // baseLineLength stays fixed per row. Goree's fixture reset from an
     // already-zero count, so deleting the reset branch would not fail it;
     // this one accumulates two roundness lines FIRST, then wanders.
     // Hand-walk, 8x8 (rows are processed 6 down to 0):

@@ -5,7 +5,9 @@
 */
 
 //! Vendored from plasma-desktop applets/taskmanager (Eike Hein's backend),
-//! adopted 2026-07-07 (commit 14c973b3) following latte-dock-qt6's shape:
+//! adopted 2026-07-07 (our commit 14c973b3) following the vendoring
+//! decision in David Goree's latte-dock-qt6
+//! (github.com/CaptSilver/latte-dock-qt6):
 //! Plasma 6 folded the Task Manager applet into C++ and ships no public
 //! replacement for these helpers (docs/taskmanager-integration-research.md).
 //! Latte extensions on top of upstream: the KWin WindowView/HighlightWindow

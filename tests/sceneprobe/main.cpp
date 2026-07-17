@@ -6,8 +6,9 @@
 // latte-sceneprobe: render a QML scene offscreen on Vulkan for N frames.
 // Runs under a nested kwin_wayland session (wayland QPA) so QVulkanInstance works.
 //
-// Adopted from latte-dock-qt6 tests/sceneprobe (docs/
-// captsilver-testability-adoption.md, P1). Local changes:
+// Adopted from David Goree's latte-dock-qt6 (tests/sceneprobe/main.cpp at
+// 52c11b36, github.com/CaptSilver/latte-dock-qt6; see
+// docs/captsilver-testability-adoption.md, P1). Local changes:
 //  - LATTE_QML_IMPORT_PATH is a colon-separated list (our staging hands the
 //    probe the same resolved import list the QML gates use), not one dir.
 //  - The validation layer's presence is verified before instance creation:

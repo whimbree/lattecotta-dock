@@ -18,8 +18,11 @@ namespace Layouts {
 
 //! Pure set algebra over activity-id lists, lifted out of Synchronizer so
 //! the free/free-running/valid filtering is unit-testable without the live
-//! Corona graph (EX-22 in docs/QML_EXTRACTION_PLAN.md, following the same
-//! extraction in latte-dock-qt6 941bb7fb). Synchronizer keeps gathering the
+//! Corona graph (EX-22 in docs/QML_EXTRACTION_PLAN.md). The namespace
+//! structure and function signatures are adopted from David Goree's
+//! latte-dock-qt6 (app/layouts/activitysetalgebra.h at 941bb7fb,
+//! github.com/CaptSilver/latte-dock-qt6); the bodies are re-derived from
+//! our Qt5-inherited synchronizer.cpp. Synchronizer keeps gathering the
 //! inputs from its live managers and delegates the filtering here; result
 //! ORDER is contract in all three functions - switchToLayout takes [0] of
 //! the free lists and validActivities feeds ordered activity assignment.

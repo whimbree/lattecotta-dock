@@ -10,8 +10,10 @@
 //! analysis (EX-25 in docs/QML_EXTRACTION_PLAN.md): max opacity of the
 //! center element, corner roundness from mask or shadow corners, and
 //! the shadow band's size and color. The bodies are Michail's Qt5
-//! algorithms, extracted along capt's seam (latte-dock-qt6 15a317ff at
-//! 81384003) after diffing their unit against our panelbackground.cpp.
+//! algorithms, extracted along the seam from David Goree's latte-dock-qt6
+//! (app/plasma/extended/panelbackgroundscan.h at 15a317ff,
+//! github.com/CaptSilver/latte-dock-qt6) after diffing their unit against
+//! our panelbackground.cpp.
 //! Deliberate divergences from the Qt5 bodies, all pinned by
 //! tests/units/panelbackgroundscantest.cpp:
 //! - the corner loops keep the exclusive row bound of 39c6517d (Qt5

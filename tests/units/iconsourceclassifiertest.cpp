@@ -5,13 +5,15 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// Ported from latte-dock-qt6 at 81384003, github.com/CaptSilver/latte-dock-qt6 (EX-24 in
-// docs/QML_EXTRACTION_PLAN.md, capt ad74a34a): our iconitem.cpp ladder was
-// diffed against capt's ancestor and the Qt5 ancestor (f0ad7b23) before
-// adoption - all three agree, so their case analysis transfers. capt's
+// Ported from David Goree's latte-dock-qt6 tests/iconsourceclassifiertest.cpp
+// at 81384003, github.com/CaptSilver/latte-dock-qt6 (EX-24 in
+// docs/QML_EXTRACTION_PLAN.md, his ad74a34a extraction): our iconitem.cpp
+// ladder was diffed against his ancestor and the Qt5 ancestor (f0ad7b23)
+// before
+// adoption - all three agree, so their case analysis transfers. Goree's
 // instrument-first qDebug probes of Qt6 QVariant::canConvert behavior are
 // upgraded to assertions here: the premises they printed are pinned, not
-// just logged. Slots added beyond capt's set: the nameless-QIcon Icon
+// just logged. Slots added beyond Goree's set: the nameless-QIcon Icon
 // branch (absent from their slots despite the commit claiming full branch
 // coverage), the named-QIcon precedence path sourceName exists for, and
 // the edge/degenerate sweep - null QIcon/QImage, pathless file://, bare
@@ -64,7 +66,7 @@ void IconSourceClassifierTest::sourceName_plainString_returnsString()
 
 void IconSourceClassifierTest::sourceName_imageVariant_returnsEmpty()
 {
-    // premise (capt pinned this instrument-first on Qt 6.11): a QImage
+    // premise (Goree pinned this instrument-first on Qt 6.11): a QImage
     // variant stringifies empty and does not convert to QIcon, so no name
     // can be derived from it
     const QVariant v(QImage(4, 4, QImage::Format_ARGB32));
@@ -162,7 +164,7 @@ void IconSourceClassifierTest::classify_numericVariant_isSvgOrIconName()
 void IconSourceClassifierTest::classify_namelessIcon_isIcon()
 {
     // a pixmap-built QIcon has no theme name, so it routes to the Icon
-    // branch; this is the branch capt's slot set left uncovered
+    // branch; this is the branch Goree's slot set left uncovered
     QPixmap pix(4, 4);
     pix.fill(Qt::red);
     const QIcon nameless(pix);
@@ -184,7 +186,7 @@ void IconSourceClassifierTest::classify_nullIcon_isIcon()
 
 void IconSourceClassifierTest::classify_qimage_isImage()
 {
-    // premise (capt pinned this instrument-first on Qt 6.11): a QImage
+    // premise (Goree pinned this instrument-first on Qt 6.11): a QImage
     // variant reaches the Image branch only because it fails the QIcon
     // conversion first - if Qt ever grows a QImage->QIcon variant
     // conversion, classification changes and this must be re-decided
@@ -209,7 +211,7 @@ void IconSourceClassifierTest::classify_nullImage_isImage()
 
 void IconSourceClassifierTest::classify_emptyVariant_isClear()
 {
-    // premise (capt pinned this instrument-first on Qt 6.11): a default
+    // premise (Goree pinned this instrument-first on Qt 6.11): a default
     // QVariant converts to neither QIcon nor QImage
     const QVariant empty;
     QVERIFY(!empty.canConvert<QIcon>());
@@ -279,7 +281,7 @@ void IconSourceClassifierTest::isValid_truthTable()
 // QGuiApplication (offscreen via the ctest environment), which the themed
 // icon engine and QPixmap construction require - under QCoreApplication
 // QIcon::fromTheme() has no engine (name() comes back empty) and QPixmap
-// aborts with "QGuiApplication required". capt stayed guiless and that is
+// aborts with "QGuiApplication required". Goree stayed guiless and that is
 // exactly why their slot set could not cover these two branches.
 QTEST_MAIN(IconSourceClassifierTest)
 

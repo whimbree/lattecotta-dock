@@ -21,9 +21,11 @@ namespace Layouts {
 //! The id-assignment math of layout import/duplicate (EX-07 in
 //! docs/QML_EXTRACTION_PLAN.md), lifted out of Storage::newUniqueIdsFile's
 //! KConfig surgery so it is unit-testable without files or a corona.
-//! Ported from the Qt5-inherited body (f0ad7b23 storage.cpp, verified
-//! identical to ours before extraction) with capt's interface shape
-//! (latte-dock-qt6 73f64383) as the starting point.
+//! The function bodies are ported from the Qt5-inherited storage.cpp
+//! (f0ad7b23, verified identical to ours before extraction); the interface
+//! shape (IdRemapInput, IdRemap structs and the remap() signature) is
+//! adopted from David Goree's latte-dock-qt6 (app/layouts/storageidremapper.h
+//! at 73f64383, github.com/CaptSilver/latte-dock-qt6).
 //!
 //! Id domain facts the reader needs: ids are KConfig GROUP NAMES, so they
 //! are strings of decimal integers; containments allocate from 12 up,
@@ -54,7 +56,8 @@ struct IdRemap {
     QHash<QString, QString> assigned;
     //! true when the id space ran out and at least one assignment is
     //! empty; the caller must fail loudly instead of writing "" group
-    //! names (the step-2.5 loud-exhaustion divergence from capt/Qt5)
+    //! names (the step-2.5 loud-exhaustion divergence from Goree's
+    //! latte-dock-qt6 and Qt5)
     bool exhausted = false;
 
     //! passthrough for unknown keys (an id the remap never saw maps to

@@ -23,9 +23,11 @@
 namespace Latte {
 
 //! IconItem's source-routing decisions as pure functions (EX-24 in
-//! docs/QML_EXTRACTION_PLAN.md), adopted from capt (latte-dock-qt6
-//! ad74a34a at 81384003) after diffing their ancestor ladder against our
-//! iconitem.cpp and the Qt5 ancestor (f0ad7b23) - all three agree.
+//! docs/QML_EXTRACTION_PLAN.md), adopted from David Goree's latte-dock-qt6
+//! (declarativeimports/core/iconsourceclassifier.h at ad74a34a,
+//! github.com/CaptSilver/latte-dock-qt6) after diffing their ancestor
+//! ladder against our iconitem.cpp and the Qt5 ancestor (f0ad7b23) - all
+//! three agree.
 //! iconitem.cpp keeps the KSvg/KIconLoader resolution work and asks here
 //! which branch a source variant takes, so a misrouting bug fails a unit
 //! test here instead of rendering as a silently wrong icon.

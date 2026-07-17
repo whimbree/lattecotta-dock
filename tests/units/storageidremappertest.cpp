@@ -9,7 +9,8 @@
 // math of layout import/duplicate.
 //
 // Case provenance (per docs/TESTING.md): the eleven core slots are ported
-// from latte-dock-qt6's storageidremappertest.cpp at 81384003, github.com/CaptSilver/latte-dock-qt6 (their
+// from David Goree's latte-dock-qt6 tests/storageidremappertest.cpp at
+// 81384003, github.com/CaptSilver/latte-dock-qt6 (their
 // 73f64383 extraction of the same Qt5-inherited algorithm; our body was
 // diffed against Qt5 f0ad7b23 and is identical, so their case analysis
 // transfers). The exhaustion-flag slot is ours: the step-2.5
@@ -113,7 +114,7 @@ void StorageIdRemapperTest::remap_appletAllocationSkipsContainmentAssignments()
 void StorageIdRemapperTest::remap_twoCycleCheckDoesNotCorruptNonCycleCase()
 {
     // The "PROBLEM APPEARED" 2-cycle fix fires when
-    // assigned[assigned[X]] == X for X != assigned[X]. capt's exhaustive
+    // assigned[assigned[X]] == X for X != assigned[X]. Goree's exhaustive
     // analysis (81384003) shows natural inputs cannot trigger it with
     // this algorithm - any id forced to remap is either below base
     // (unavailable as a return value) or in usedIds (excluded from

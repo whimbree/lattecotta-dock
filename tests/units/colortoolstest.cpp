@@ -21,10 +21,14 @@
 // channel quantization the header documents is part of the pinned
 // behavior.
 //
-// capt cross-reference: the case shapes black/white/weighted-primaries/
-// mixed-158.677/overloads-agree/monotonic-greys are folded from capt
-// 81384003 tests/commontoolstest.cpp + tests/coretoolstest.cpp (their code
-// tests the float implementation and is not adopted).
+// Cross-reference to David Goree's latte-dock-qt6
+// (github.com/CaptSilver/latte-dock-qt6): the case shapes
+// black/white/weighted-primaries/mixed-158.677/overloads-agree/monotonic-
+// greys are folded from his tests/commontoolstest.cpp +
+// tests/coretoolstest.cpp at 81384003. This is idea-only reuse - his code
+// tests the float implementation and is not adopted, and the expected
+// values here are generated from our own ColorizerTools.js (above), so no
+// David Goree copyright line is carried.
 
 #include <QColor>
 #include <QtTest>
@@ -121,8 +125,8 @@ void ColorToolsTest::luminaBranchBoundary()
 
 void ColorToolsTest::luminaMonotonicOverGreys()
 {
-    // capt 81384003 case shape: luminance rises from black through greys
-    // to white and stays inside [0, 1]
+    // Goree's latte-dock-qt6 case shape (81384003): luminance rises from
+    // black through greys to white and stays inside [0, 1]
     const double dark = ColorTools::colorLumina(QColor(64, 64, 64));
     const double mid = ColorTools::colorLumina(QColor(128, 128, 128));
     const double light = ColorTools::colorLumina(QColor(220, 220, 220));
@@ -135,8 +139,8 @@ void ColorToolsTest::luminaMonotonicOverGreys()
 
 void ColorToolsTest::rgbEntryIsExactIntegerArithmetic()
 {
-    // the QRgb entry computes on integer channels: capt 81384003's
-    // hand-computed values hold exactly
+    // the QRgb entry computes on integer channels: Goree's latte-dock-qt6
+    // (81384003) hand-computed values hold exactly
     COMPARE_EXACT(ColorTools::colorBrightness(qRgb(255, 0, 0)), 76.245);
     COMPARE_EXACT(ColorTools::colorBrightness(qRgb(0, 255, 0)), 149.685);
     COMPARE_EXACT(ColorTools::colorBrightness(qRgb(0, 0, 255)), 29.07);

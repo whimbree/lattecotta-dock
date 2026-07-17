@@ -6,9 +6,11 @@
 */
 
 //! Window-state predicates behind the tracking/dodge decisions (EX-23 in
-//! docs/QML_EXTRACTION_PLAN.md), adopted from capt (latte-dock-qt6
-//! 9fba82c8 at 81384003) after diffing against our windowstracker.cpp and
-//! abstractwindowinterface.cpp bodies - identical, with the X11
+//! docs/QML_EXTRACTION_PLAN.md), adopted from David Goree's latte-dock-qt6
+//! (app/wm/windowtrackingpredicates.h at 9fba82c8,
+//! github.com/CaptSilver/latte-dock-qt6) after diffing against our
+//! windowstracker.cpp and abstractwindowinterface.cpp bodies - identical,
+//! with the X11
 //! devicePixelRatio screen scaling staying in the adapters (the
 //! predicates receive the already-scaled screen geometry).
 

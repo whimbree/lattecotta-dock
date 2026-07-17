@@ -24,9 +24,11 @@ namespace Latte {
 //! The available-screen geometry math (EX-08 in
 //! docs/QML_EXTRACTION_PLAN.md), extracted from Latte::Corona's
 //! availableScreenRect/RegionWithCriteria so it runs over value snapshots
-//! instead of live View pointers (capt's proven seam, latte-dock-qt6
-//! screengeometrycalculator at 81384003; our loop bodies were diffed
-//! against theirs and against Qt5 f0ad7b23 before adoption).
+//! instead of live View pointers. The extraction seam and ViewFootprint
+//! struct are adopted from David Goree's latte-dock-qt6
+//! (app/screengeometrycalculator.h at 6108a3bc,
+//! github.com/CaptSilver/latte-dock-qt6); our loop bodies were diffed
+//! against theirs and against Qt5 f0ad7b23 before adoption.
 //!
 //! DIVERGENCE note carried from 1b932ed9: there is deliberately NO
 //! self-origin exclusion here or in the shell - a view's own footprint

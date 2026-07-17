@@ -6,7 +6,8 @@
 */
 
 // EX-22 ActivitySetAlgebra (docs/QML_EXTRACTION_PLAN.md). Case list ported
-// from capt's activitysetalgebratest (latte-dock-qt6 941bb7fb, 7 slots:
+// from David Goree's latte-dock-qt6 (tests/activitysetalgebratest.cpp at
+// 941bb7fb, github.com/CaptSilver/latte-dock-qt6; 7 slots:
 // removeAll duplicate semantics, order preservation, empty cases), re-derived
 // against our synchronizer bodies, which are byte-identical to the Qt5
 // ancestor (f0ad7b23:app/layouts/synchronizer.cpp:146-186). The two

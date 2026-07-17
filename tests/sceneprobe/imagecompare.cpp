@@ -2,8 +2,10 @@
 // SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Adopted from latte-dock-qt6 tests/sceneprobe (docs/
-// captsilver-testability-adoption.md, P1) - unchanged.
+// Adopted unchanged from David Goree's latte-dock-qt6
+// (tests/sceneprobe/imagecompare.cpp at c3633f1a,
+// github.com/CaptSilver/latte-dock-qt6; see
+// docs/captsilver-testability-adoption.md, P1).
 #include "imagecompare.h"
 
 namespace LatteProbe {

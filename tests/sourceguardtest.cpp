@@ -14,11 +14,12 @@
 //   * Settings::Controller::Layouts::modeIsChanged  missing '>' (pointer
 //     arithmetic plus unqualified self-call, infinite recursion)
 //
-// Shape follows the fork's sourceguardtest (latte-dock-qt6 at 81384003, github.com/CaptSilver/latte-dock-qt6):
+// Shape follows David Goree's latte-dock-qt6 (tests/sourceguardtest.cpp
+// at 81384003, github.com/CaptSilver/latte-dock-qt6):
 // read the real source, brace-match the function body, strip whitespace and
 // assert the fixed token form both positively and negatively, so the typo
 // cannot silently return. Only these two cases are adopted - the rest of
-// the fork's file pins their delegation-helper architecture, which this
+// his file pins their delegation-helper architecture, which this
 // tree deliberately does not share (docs/captsilver-testability-adoption.md,
 // the not-adopting list).
 

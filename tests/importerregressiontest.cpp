@@ -5,7 +5,8 @@
 */
 
 //! Pins Importer::uniqueLayoutName()'s copy-suffix behavior across the
-//! QRegExp -> QRegularExpression conversion. latte-dock-qt6 found this exact
+//! QRegExp -> QRegularExpression conversion. David Goree's latte-dock-qt6
+//! (github.com/CaptSilver/latte-dock-qt6) found this exact
 //! " - [0-9]+" match subtly behavior-sensitive during its port and added a
 //! regression test; this is ours. The layouts directory the real statics read
 //! comes from XDG_CONFIG_HOME, pointed at a throwaway temp dir so the host

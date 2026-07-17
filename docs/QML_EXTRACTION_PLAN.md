@@ -15,9 +15,18 @@ maintained continuation. Upstream mergeability is not a constraint.
 Non-negotiable: small bisectable commits, Qt5 behavioral fidelity per
 extraction (the Qt5 source is in our own history at tag f0ad7b23,
 v0.10.8: `git show f0ad7b23:<path>`), re-implementation with
-understanding. CaptSilver/latte-dock-qt6 (reviewed through 81384003) is
+understanding. David Goree's latte-dock-qt6
+(github.com/CaptSilver/latte-dock-qt6, reviewed through 81384003) is
 a blueprint of WHAT to extract and WHICH invariants to pin, never a
-source to paste.
+source to paste. Throughout this document "capt" is shorthand for that
+repository - David Goree, github.com/CaptSilver/latte-dock-qt6 - and
+each unit section below records the specific commit hash and source
+file for whatever it took from it, so any "capt" reference resolves to
+an exact source. Where a unit adopted his expression (a header, a
+struct interface, a test's case list) the landed file also carries his
+SPDX-FileCopyrightText line per the CLAUDE.md citation policy; where it
+took only an idea and the code is ours, the citation stays but no
+copyright line is claimed on his behalf.
 
 ## Completeness ledger
 
