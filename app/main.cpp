@@ -36,6 +36,7 @@
 #include <KAboutData>
 #include <KDBusService>
 #include <KSignalHandler>
+#include <KWindowSystem>
 
 //! COLORS
 #define CNORMAL  "\e[0m"
@@ -123,6 +124,24 @@ int main(int argc, char **argv)
     detectPlatform(argc, argv);
     QApplication app(argc, argv);
     qunsetenv("QT_WAYLAND_DISABLE_FIXED_POSITIONS");
+
+    //! Wayland is the only platform Latte can drive: every view is a
+    //! layer-shell surface, so anywhere else nothing anchors, struts
+    //! reserve nothing and window tracking no-ops - a dock that "starts"
+    //! there is silent wrong behavior, not compatibility (X11 backend
+    //! removed 2026-07-17, decision record in the porting plan's Phase 4).
+    //! Default-deny rather than enumerating bad platforms, so anything new
+    //! is refused until it is deliberately supported; the offscreen QPA is
+    //! the one exception - it is the test harness's platform and pretends
+    //! to drive no display server. When stderr is not a tty Qt routes the
+    //! refusal to the journal, exactly where a failed login autostart gets
+    //! looked for.
+    if (!KWindowSystem::isPlatformWayland() && app.platformName() != QLatin1String("offscreen")) {
+        qCritical() << "Latte requires a Wayland session (the X11 backend was removed;"
+                       " KDE's own X11 session ends with Plasma 6.7)."
+                    << "Refusing to start on platform" << app.platformName();
+        return 1;
+    }
 
     if (!qpaVariable) {
         // don't leak the env variable to processes we start
@@ -630,7 +649,8 @@ inline void detectPlatform(int argc, char **argv)
 
     if (qstrcmp(sessionType, "wayland") == 0) {
         qputenv("QT_QPA_PLATFORM", "wayland");
-    } else if (qstrcmp(sessionType, "x11") == 0) {
-        qputenv("QT_QPA_PLATFORM", "xcb");
     }
+    //! an x11 session gets no platform hint: Qt resolves xcb on its own and
+    //! the isPlatformX11() boundary check after QApplication refuses with the
+    //! real message - selecting xcb here would read as supporting it
 }
