@@ -11,7 +11,7 @@
 #   signal-handler-parameters   injected signal-handler parameters
 #
 # Per-file counts must match tests/qmllint-baseline EXACTLY - the same
-# ratchet law as tests/ratchet-baseline: an increase is un-mergeable, an
+# ratchet law as tests/coverage/ratchet-baseline: an increase is un-mergeable, an
 # improvement lands with the baseline shrink in the same commit
 # (regenerate with: scripts/qmllint-gate.sh --write-baseline). Files that
 # can never reach zero for a structural reason carry the reason as a

@@ -4,7 +4,7 @@ Tests for the pure cores extracted out of QML and out of live-manager
 C++ by docs/QML_EXTRACTION_PLAN.md. One test file per core, named
 `<unit>test.cpp` after the core's header basename: the core
 `activitysetalgebra.h` pairs with `activitysetalgebratest.cpp` here.
-That pairing is mechanical on purpose - scripts/coverage-ratchet.sh
+That pairing is mechanical on purpose - tests/coverage/coverage-ratchet.sh
 enforces it (every unit header must have its paired test registered in
 ctest), so a unit cannot land untested without failing build-check.
 

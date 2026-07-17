@@ -8,12 +8,12 @@
 #      tests/units/<basename>test.cpp present AND registered in ctest.
 #      A unit cannot land untested without failing here.
 #   2. Entry-list ratchet: the ctest entry list must match
-#      tests/ratchet-baseline exactly. Adding a test means adding its
+#      tests/coverage/ratchet-baseline exactly. Adding a test means adding its
 #      line there in the same commit (routine); REMOVING a test is only
 #      possible by deliberately editing the committed baseline, which
 #      makes silent coverage loss un-mergeable.
 #
-# Usage: scripts/coverage-ratchet.sh [build-dir]   (default: ./build)
+# Usage: tests/coverage/coverage-ratchet.sh [build-dir]   (default: ./build)
 set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
@@ -66,7 +66,7 @@ done
 
 # --- 2. entry-list ratchet -------------------------------------------------
 
-baseline="$repo/tests/ratchet-baseline"
+baseline="$repo/tests/coverage/ratchet-baseline"
 if [[ ! -f "$baseline" ]]; then
     echo "ratchet: FAIL missing $baseline"
     exit 1
@@ -79,15 +79,15 @@ actual_list="$(sort <<<"$ctest_names")"
 actual_count="$(sed '/^$/d' <<<"$actual_list" | wc -l)"
 
 if [[ "$recorded_count" != "$(sed '/^$/d' <<<"$recorded_list" | wc -l)" ]]; then
-    echo "ratchet: FAIL tests/ratchet-baseline count line disagrees with its own entry list"
+    echo "ratchet: FAIL tests/coverage/ratchet-baseline count line disagrees with its own entry list"
     fail=1
 fi
 
 if [[ "$recorded_list" != "$actual_list" ]]; then
-    echo "ratchet: FAIL ctest entry list diverged from tests/ratchet-baseline"
+    echo "ratchet: FAIL ctest entry list diverged from tests/coverage/ratchet-baseline"
     echo "ratchet: recorded $recorded_count entries, ctest reports $actual_count. Diff (-recorded +actual):"
     diff <(printf '%s\n' "$recorded_list") <(printf '%s\n' "$actual_list") | sed 's/^/ratchet:   /' || true
-    echo "ratchet: additions are routine - update tests/ratchet-baseline in the same commit."
+    echo "ratchet: additions are routine - update tests/coverage/ratchet-baseline in the same commit."
     echo "ratchet: removals must be deliberate - the baseline edit is the audit trail."
     fail=1
 fi

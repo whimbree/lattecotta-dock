@@ -31,7 +31,7 @@ changed) has not finished its job.
   new cores follow the same step-2.5 law (sanitized unit tests via
   latte_add_unit_test, QT_FORCE_ASSERTS, type discipline, qmllint
   ratchet strict-on-touch, coverage-ratchet pairing).
-- Gates before any merge: full ctest green, scripts/coverage-ratchet.sh,
+- Gates before any merge: full ctest green, tests/coverage/coverage-ratchet.sh,
   scripts/qmllint-gate.sh (baseline only shrinks), both WITH_X11
   variants build. Use `nix develop -c` for all build/test commands.
 - Live verification on the author's real Wayland session is authorized.
@@ -52,8 +52,9 @@ changed) has not finished its job.
   YYYY-MM-DD-<short-task-slug>.md) - the ledger strategy that keeps
   models and subagents accountable over long horizons.
   Merge lessons already paid for: tests/units/CMakeLists.txt and
-  plugin-registration files are both-append unions; tests/ratchet-
-  baseline count = union size with a sorted entry list; tests/qmllint-
+  plugin-registration files are both-append unions;
+  tests/coverage/ratchet-baseline count = union size with a sorted
+  entry list; tests/qmllint-
   baseline is taken from ours then REGENERATED with --write-baseline
   after a full build; plugins.qmltypes is NEVER hand-merged - always
   regenerate with the qmlplugindump recipe in the file's own header

@@ -42,6 +42,6 @@ ctest --test-dir "$repo/build" --output-on-failure
 
 # Structural coverage ratchet (docs/QML_EXTRACTION_PLAN.md section D):
 # unit-header/test pairing plus the committed ctest entry-list baseline.
-"$repo/scripts/coverage-ratchet.sh" "$repo/build"
+"$repo/tests/coverage/coverage-ratchet.sh" "$repo/build"
 
 echo "build-check: OK"

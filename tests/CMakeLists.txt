@@ -5,7 +5,7 @@ include(ECMAddTests)
 # docs/TESTING.md. QT_QPA_PLATFORM=offscreen keeps them headless.
 
 # Pure-core unit tests (docs/QML_EXTRACTION_PLAN.md): one paired test per
-# extracted core header, enforced by scripts/coverage-ratchet.sh.
+# extracted core header, enforced by tests/coverage/coverage-ratchet.sh.
 add_subdirectory(units)
 
 # sceneprobe render harness (docs/captsilver-testability-adoption.md P1):

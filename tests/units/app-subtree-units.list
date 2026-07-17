@@ -1,6 +1,6 @@
 # Pure-core unit headers that live in the app subtree (capt placements,
 # docs/QML_EXTRACTION_PLAN.md section C) instead of a units/ directory.
-# One repo-relative path per line; scripts/coverage-ratchet.sh requires a
+# One repo-relative path per line; tests/coverage/coverage-ratchet.sh requires a
 # paired tests/units/<basename>test.cpp for each. Add the header's line in
 # the same commit that lands it.
 app/dbusreports.h
