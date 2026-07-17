@@ -33,6 +33,16 @@ Item {
     readonly property real progress: smartLauncherItem && smartLauncherItem.progress ? smartLauncherItem.progress : 0
     readonly property QtObject smartLauncherItem: smartLauncherLoader.active ? smartLauncherLoader.item : null
 
+    //! the owning TaskItem, bound at the TaskItem instantiation site and
+    //! threaded down to the audio badge's screen-reader wiring (new
+    //! references stay qualified for the qmllint ratchet)
+    property Item ownerTask: null
+
+    //! what the info/progress badges currently SHOW, surfaced for the
+    //! screen-reader description TaskItem composes (Phase 10 AT-SPI)
+    readonly property alias infoBadgeShown: badgesLoader.showInfo
+    readonly property alias progressBadgeShown: badgesLoader.showProgress
+
     readonly property Item monochromizedItem: badgesLoader.active ? badgesLoader.item : taskIconItem
 
     Rectangle{
@@ -326,7 +336,15 @@ Item {
         readonly property int infoBadgeWidth: active ? publishedInfoBadgeWidth : 0
         property int publishedInfoBadgeWidth: 0
 
+        //! threads ownerTask into the audio badge from HERE (document
+        //! scope) instead of a binding inside sourceComponent: the qmllint
+        //! ratchet counts any outside-id read within the inline component
+        //! as an unqualified access
+        onLoaded: item.audioOwnerTask = Qt.binding(function() { return taskIconContainer.ownerTask; })
+
         sourceComponent: Item {
+            property alias audioOwnerTask: audioStreamBadge.ownerTask
+
             ProgressOverlay{
                 id: infoBadge
                 anchors.right: parent.right

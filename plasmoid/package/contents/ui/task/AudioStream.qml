@@ -12,9 +12,36 @@ import org.kde.kirigami 2.20 as Kirigami
 
 import org.kde.latte.core 0.2 as LatteCore
 import org.kde.latte.components 1.0 as LatteComponents
+import org.kde.latte.private.tasks 0.1 as LatteTasks
 
 Item {
     id: background
+
+    //! the owning TaskItem, threaded from TaskItem through TaskIcon at the
+    //! instantiation sites: the qmllint ratchet keeps NEW references
+    //! qualified, so the context-chain taskItem reads the older handlers
+    //! in this file carry are not an option for new code
+    property Item ownerTask: null
+
+    //! Screen-reader surface (Phase 10 AT-SPI rollout): the badge is the
+    //! same checkable mute control the context menu offers - identical
+    //! msgid (the composer's muteToggleLabel), identical toggleMuted()
+    //! handler as the click below - so Orca announces and drives both
+    //! mute surfaces the same way.
+    Accessible.ignored: !background.visible
+    Accessible.role: Accessible.CheckBox
+    Accessible.name: LatteTasks.TooltipTextComposer.muteToggleLabel()
+    Accessible.checkable: true
+    Accessible.checked: background.ownerTask ? background.ownerTask.muted === true : false
+    Accessible.onPressAction: background.requestMuteToggle()
+    Accessible.onToggleAction: background.requestMuteToggle()
+
+    //! same gate and same handler as the badge click (audioBadgeMouseArea)
+    function requestMuteToggle() {
+        if (audioBadgeMouseArea.enabled && background.ownerTask) {
+            background.ownerTask.toggleMuted();
+        }
+    }
 
     //! Show plasmashell's centered media-player volume OSD (app icon + level
     //! bar + %) for this task, matching the native volume popup. Driven from

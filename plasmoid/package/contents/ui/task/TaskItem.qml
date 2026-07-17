@@ -48,6 +48,37 @@ AbilityItem.BasicItem {
 
     preserveIndicatorInInitialPosition: inBouncingAnimation || inAttentionBuiltinAnimation || inNewWindowBuiltinAnimation
 
+    //! Screen-reader surface (Phase 10 AT-SPI rollout): the name reuses the
+    //! same model fields the thin tooltip shows, the description is the
+    //! badge composer's (window count and badge values, the same shown
+    //! state TaskIcon draws), and activation forwards to activateTask() -
+    //! the exact left-click and Meta+<number> body - so what Orca announces
+    //! and triggers cannot drift from the pointer path. Accessible.focused
+    //! mirrors the keyboard focus mode's focused entry, so screen readers
+    //! follow the Meta+Alt+D traversal as it moves.
+    Accessible.ignored: isSeparator
+    Accessible.role: Accessible.Button
+    Accessible.name: isWindow && taskItem.m ? taskItem.m.display : appName
+    Accessible.description: {
+        var launcherItem = taskIcon.smartLauncherItem;
+        var launcherCountVisible = launcherItem ? launcherItem.countVisible === true : false;
+        return LatteTasks.TooltipTextComposer.composeAccessibleDescription({
+            isLauncher: taskItem.isLauncher,
+            isGroupParent: taskItem.isGroupParent,
+            windowsCount: taskItem.windowsCount,
+            showsAudioBadge: taskItem.hasAudioStream && taskItem.playingAudio,
+            isMuted: taskItem.muted,
+            showsProgressBadge: taskIcon.progressBadgeShown,
+            progressPercent: Math.round(taskIcon.progress),
+            infoBadgeCount: taskIcon.infoBadgeShown
+                            ? (launcherCountVisible ? launcherItem.count : taskItem.badgeIndicator)
+                            : 0
+        });
+    }
+    Accessible.focusable: true
+    Accessible.focused: taskItem.isKeyboardFocused
+    Accessible.onPressAction: taskItem.activateTask()
+
     parabolicItem.isParabolicEventBlocked: root.dragSource
                                            || !hoverEnabled
                                            || !taskItem.abilities.myView.isShownFully
@@ -240,6 +271,11 @@ AbilityItem.BasicItem {
     //! Content Item
     contentItem: TaskIcon{
         id:taskIcon
+        //! threads down to the audio badge's screen-reader wiring; bound
+        //! HERE because taskItem is this file's own id - the qmllint
+        //! ratchet keeps new references qualified, so new code cannot use
+        //! the context-chain taskItem reads the older bindings carry
+        ownerTask: taskItem
     }
     //////
 
