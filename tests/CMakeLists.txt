@@ -581,6 +581,10 @@ set_tests_properties(quitteardowncontractstest PROPERTIES
 get_target_property(_plasma_lib_location Plasma::Plasma LOCATION)
 get_filename_component(_plasma_libdir "${_plasma_lib_location}" DIRECTORY)
 function(latte_find_plasma_qmltypes outvar module_reldir filename contract)
+    # find_file caches its result, so a stale hit would survive a libplasma
+    # pin bump in a persistent build dir; clear it first to keep the old
+    # set()+if(EXISTS) guarantee that every configure re-resolves the path.
+    unset("${outvar}" CACHE)
     find_file("${outvar}"
         NAMES "${filename}"
         PATHS "${_plasma_libdir}"
