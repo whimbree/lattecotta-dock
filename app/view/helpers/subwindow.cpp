@@ -160,9 +160,12 @@ void SubWindow::setupWaylandIntegration()
     }
 
     //! edge helper strips sit centered on the dock's edge; they must never
-    //! steal keyboard focus from the compositor
+    //! steal keyboard focus from the compositor. windowSpansScreenLength is
+    //! false: these strips are sized to a fraction of the screen length (the
+    //! dock's own length, not the whole edge), so they keep the single-edge
+    //! Center anchoring - the full-length span is only for masked dock windows.
     namespace LS = Latte::WindowSystem::LayerShell;
-    LS::configureView(this, m_latteView->screen(), m_latteView->location(), Latte::Types::Center);
+    LS::configureView(this, m_latteView->screen(), m_latteView->location(), Latte::Types::Center, false);
     LS::setFocusPolicy(this, false);
 }
 

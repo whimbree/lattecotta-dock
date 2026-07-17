@@ -394,6 +394,13 @@ private Q_SLOTS:
 private:
     void initSignalingForLocationChangeSliding();
     void reanchorLayerShell();
+    //! true when this view's window covers the whole screen along its length
+    //! axis (a horizontal masked dock: PositionerGeometry::windowSize gives it
+    //! the full screen width). The layer-shell anchoring anchors both length
+    //! edges in that case so the compositor never re-centres it (see
+    //! LayerShell::anchorsFor). Vertical masked docks are sized to the available
+    //! region, not the screen, so they do not qualify.
+    bool windowSpansScreenLength() const;
     void updateAppletContainsMethod();
 
     //! apply the window's keyboard-focus stance (Qt flags + layer-shell

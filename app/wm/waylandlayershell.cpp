@@ -16,7 +16,8 @@ namespace LayerShell {
 
 using LSW = LayerShellQt::Window;
 
-LSW::Anchors anchorsFor(Plasma::Types::Location location, Latte::Types::Alignment alignment)
+LSW::Anchors anchorsFor(Plasma::Types::Location location, Latte::Types::Alignment alignment,
+                        bool windowSpansScreenLength)
 {
     LSW::Anchors anchors;
     const bool horizontal = (location == Plasma::Types::TopEdge || location == Plasma::Types::BottomEdge);
@@ -42,6 +43,29 @@ LSW::Anchors anchorsFor(Plasma::Types::Location location, Latte::Types::Alignmen
     const LSW::Anchor nearAnchor = horizontal ? LSW::AnchorLeft : LSW::AnchorTop;
     const LSW::Anchor farAnchor = horizontal ? LSW::AnchorRight : LSW::AnchorBottom;
 
+    //! A masked dock (behaveAsDockWithMask) keeps a window that spans the whole
+    //! screen along its length axis and realises Left/Center/Right INSIDE that
+    //! window through its mask - the window itself never moves. Such a surface
+    //! must anchor BOTH length edges so the compositor pins it corner to corner
+    //! across the full screen length. The alternative - a single-edge anchor
+    //! that leans on the compositor to centre a Center dock - drifts the surface
+    //! off its reported geometry: wlr-layer-shell centres a single-edge-anchored
+    //! surface inside the region left FREE by other docks' exclusive zones, not
+    //! the whole output. A bottom dock beside a left dock (48px zone) and a
+    //! right dock (88px zone) then lands (48-88)/2 = -20px off the screen centre
+    //! its own geometry math assumes (PositionerGeometry::dockPosition is
+    //! full-screen for horizontal docks), so icons render 20px off where input
+    //! regions and task centres expect them. Both length edges make the surface
+    //! ignore the perpendicular zones and fill the whole screen length, matching
+    //! the full-width window. Reproduced and isolated in
+    //! docs/agent-logs/2026-07-17-phase8-surface-drift.md; guarded by
+    //! tests/e2e/060-geometry-agreement.sh.
+    if (windowSpansScreenLength) {
+        anchors |= nearAnchor;
+        anchors |= farAnchor;
+        return anchors;
+    }
+
     switch (alignment) {
     case Latte::Types::Justify:
         anchors |= nearAnchor;
@@ -57,7 +81,9 @@ LSW::Anchors anchorsFor(Plasma::Types::Location location, Latte::Types::Alignmen
         break;
     case Latte::Types::Center:
     default:
-        //! single-edge anchor: the compositor centres along the length axis
+        //! a sized panel window (behaveAsPlasmaPanel) is shorter than the screen
+        //! and its alignment moves the whole window; a single-edge anchor lets
+        //! the compositor centre it along the length axis
         break;
     }
 
@@ -139,7 +165,8 @@ QSize seededLayerSize(LSW::Anchors anchors, Plasma::Types::Location location,
 }
 
 void updateAnchoring(QWindow *window, QScreen *screen,
-                     Plasma::Types::Location location, Latte::Types::Alignment alignment)
+                     Plasma::Types::Location location, Latte::Types::Alignment alignment,
+                     bool windowSpansScreenLength)
 {
     LSW *ls = LSW::get(window);
 
@@ -147,7 +174,7 @@ void updateAnchoring(QWindow *window, QScreen *screen,
         return;
     }
 
-    const LSW::Anchors anchors = anchorsFor(location, alignment);
+    const LSW::Anchors anchors = anchorsFor(location, alignment, windowSpansScreenLength);
 
     if (screen) {
         //! seed a legal size before the anchors commit; seededLayerSize
@@ -179,7 +206,8 @@ void updateAnchoring(QWindow *window, QScreen *screen,
 }
 
 void configureView(QWindow *window, QScreen *screen,
-                   Plasma::Types::Location location, Latte::Types::Alignment alignment)
+                   Plasma::Types::Location location, Latte::Types::Alignment alignment,
+                   bool windowSpansScreenLength)
 {
     LSW *ls = LSW::get(window);
 
@@ -188,7 +216,7 @@ void configureView(QWindow *window, QScreen *screen,
     }
 
     ls->setScope(QStringLiteral("dock"));
-    updateAnchoring(window, screen, location, alignment);
+    updateAnchoring(window, screen, location, alignment, windowSpansScreenLength);
     ls->setLayer(LSW::LayerTop);
     ls->setKeyboardInteractivity(LSW::KeyboardInteractivityNone);
 }

@@ -32,6 +32,7 @@ private Q_SLOTS:
     void initTestCase();
     void anchorsForBottomEdge();
     void anchorsForLeftEdge();
+    void anchorsForMaskedDockSpanBothLengthEdges();
     void exclusiveEdgeIsAlwaysAnchored();
     void layerByVisibilityMode();
     void exclusiveZoneByLocation();
@@ -66,26 +67,43 @@ void LayerShellMappingTest::initTestCase()
 
 void LayerShellMappingTest::anchorsForBottomEdge()
 {
-    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::BottomEdge, Latte::Types::Center),
+    //! a sized panel window (windowSpansScreenLength=false): alignment moves it
+    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::BottomEdge, Latte::Types::Center, false),
              LSW::Anchors(LSW::AnchorBottom));
-    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::BottomEdge, Latte::Types::Left),
+    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::BottomEdge, Latte::Types::Left, false),
              LSW::Anchors(LSW::AnchorBottom | LSW::AnchorLeft));
-    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::BottomEdge, Latte::Types::Right),
+    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::BottomEdge, Latte::Types::Right, false),
              LSW::Anchors(LSW::AnchorBottom | LSW::AnchorRight));
-    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::BottomEdge, Latte::Types::Justify),
+    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::BottomEdge, Latte::Types::Justify, false),
              LSW::Anchors(LSW::AnchorBottom | LSW::AnchorLeft | LSW::AnchorRight));
 }
 
 void LayerShellMappingTest::anchorsForLeftEdge()
 {
-    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::LeftEdge, Latte::Types::Center),
+    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::LeftEdge, Latte::Types::Center, false),
              LSW::Anchors(LSW::AnchorLeft));
-    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::LeftEdge, Latte::Types::Top),
+    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::LeftEdge, Latte::Types::Top, false),
              LSW::Anchors(LSW::AnchorLeft | LSW::AnchorTop));
-    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::LeftEdge, Latte::Types::Bottom),
+    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::LeftEdge, Latte::Types::Bottom, false),
              LSW::Anchors(LSW::AnchorLeft | LSW::AnchorBottom));
-    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::LeftEdge, Latte::Types::Justify),
+    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::LeftEdge, Latte::Types::Justify, false),
              LSW::Anchors(LSW::AnchorLeft | LSW::AnchorTop | LSW::AnchorBottom));
+}
+
+void LayerShellMappingTest::anchorsForMaskedDockSpanBothLengthEdges()
+{
+    //! A masked dock's window covers the full screen length and centres its
+    //! contents internally, so its surface anchors BOTH length edges for EVERY
+    //! alignment - the compositor pins it corner to corner rather than centring
+    //! it inside the region other docks' exclusive zones leave free (the -20px
+    //! drift this parameter fixes). Horizontal: length edges are left+right.
+    const LSW::Anchors bottomSpan(LSW::AnchorBottom | LSW::AnchorLeft | LSW::AnchorRight);
+    for (auto alignment : {Latte::Types::Center, Latte::Types::Left,
+                           Latte::Types::Right, Latte::Types::Justify}) {
+        QCOMPARE(LayerShell::anchorsFor(Plasma::Types::BottomEdge, alignment, true), bottomSpan);
+    }
+    QCOMPARE(LayerShell::anchorsFor(Plasma::Types::TopEdge, Latte::Types::Center, true),
+             LSW::Anchors(LSW::AnchorTop | LSW::AnchorLeft | LSW::AnchorRight));
 }
 
 void LayerShellMappingTest::exclusiveEdgeIsAlwaysAnchored()
@@ -103,10 +121,12 @@ void LayerShellMappingTest::exclusiveEdgeIsAlwaysAnchored()
 
     for (const auto location : locations) {
         for (const auto alignment : alignments) {
-            const LSW::Anchors anchors = LayerShell::anchorsFor(location, alignment);
-            QVERIFY2(anchors.testFlag(LayerShell::edgeFor(location)),
-                     qPrintable(QStringLiteral("exclusive edge not anchored for location=%1 alignment=%2")
-                                    .arg(int(location)).arg(int(alignment))));
+            for (const bool spansScreenLength : {false, true}) {
+                const LSW::Anchors anchors = LayerShell::anchorsFor(location, alignment, spansScreenLength);
+                QVERIFY2(anchors.testFlag(LayerShell::edgeFor(location)),
+                         qPrintable(QStringLiteral("exclusive edge not anchored for location=%1 alignment=%2 spans=%3")
+                                        .arg(int(location)).arg(int(alignment)).arg(spansScreenLength)));
+            }
         }
     }
 }
@@ -143,7 +163,7 @@ void LayerShellMappingTest::seededSizeForUnspannedAxes()
     //! a Center bottom dock anchors a single edge; a 0x0 window must be
     //! seeded (length -> screen width, thickness -> 1px) or the first
     //! surface commit is protocol-rejected
-    const auto bottomCenter = LayerShell::anchorsFor(Plasma::Types::BottomEdge, Latte::Types::Center);
+    const auto bottomCenter = LayerShell::anchorsFor(Plasma::Types::BottomEdge, Latte::Types::Center, false);
     QCOMPARE(LayerShell::seededLayerSize(bottomCenter, Plasma::Types::BottomEdge, QSize(0, 0), screen),
              QSize(1920, 1));
 
@@ -154,12 +174,12 @@ void LayerShellMappingTest::seededSizeForUnspannedAxes()
 
     //! a Justify dock spans left+right, so width 0 is legal (the compositor
     //! stretches it) and must not be overwritten
-    const auto bottomJustify = LayerShell::anchorsFor(Plasma::Types::BottomEdge, Latte::Types::Justify);
+    const auto bottomJustify = LayerShell::anchorsFor(Plasma::Types::BottomEdge, Latte::Types::Justify, false);
     QCOMPARE(LayerShell::seededLayerSize(bottomJustify, Plasma::Types::BottomEdge, QSize(0, 48), screen),
              QSize(0, 48));
 
     //! vertical dock: thickness is the width, length axis is vertical
-    const auto leftCenter = LayerShell::anchorsFor(Plasma::Types::LeftEdge, Latte::Types::Center);
+    const auto leftCenter = LayerShell::anchorsFor(Plasma::Types::LeftEdge, Latte::Types::Center, false);
     QCOMPARE(LayerShell::seededLayerSize(leftCenter, Plasma::Types::LeftEdge, QSize(0, 0), screen),
              QSize(1, 1080));
 }
@@ -274,7 +294,7 @@ void LayerShellMappingTest::canvasPlacementOptsOutOfExclusiveZones()
     LSW *ls = LSW::get(&window);
     QVERIFY(ls);
 
-    LayerShell::configureView(&window, screen, Plasma::Types::BottomEdge, Latte::Types::Center);
+    LayerShell::configureView(&window, screen, Plasma::Types::BottomEdge, Latte::Types::Center, false);
     LayerShell::setExclusiveZone(&window, 88);
     QCOMPARE(ls->exclusiveEdge(), LSW::AnchorBottom);
 
@@ -302,7 +322,7 @@ void LayerShellMappingTest::fixedPlacementOptsOutOfExclusiveZones()
     LSW *ls = LSW::get(&window);
     QVERIFY(ls);
 
-    LayerShell::configureView(&window, screen, Plasma::Types::BottomEdge, Latte::Types::Justify);
+    LayerShell::configureView(&window, screen, Plasma::Types::BottomEdge, Latte::Types::Justify, false);
     LayerShell::setExclusiveZone(&window, 88);
 
     const QRect geometry(screenGeometry.x() + 100, screenGeometry.y() + 50, 600, 400);

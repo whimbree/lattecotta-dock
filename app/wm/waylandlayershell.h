@@ -41,9 +41,18 @@ namespace WindowSystem {
 //! surface.
 namespace LayerShell {
 
-//! dock edge + length-axis alignment -> anchor flags
+//! dock edge + length-axis alignment -> anchor flags. @p windowSpansScreenLength
+//! is true for a masked dock (behaveAsDockWithMask), whose window covers the
+//! whole screen along its length axis and realises Left/Center/Right internally
+//! through its mask: such a surface anchors BOTH length edges regardless of
+//! @p alignment, so the compositor pins it corner to corner instead of centring
+//! it inside the region other docks' exclusive zones leave free (the surface
+//! drift fixed in this file's anchorsFor comment). A sized panel window
+//! (behaveAsPlasmaPanel, shorter than the screen) passes false and its alignment
+//! maps to near/far/both/single-edge anchoring.
 LayerShellQt::Window::Anchors anchorsFor(Plasma::Types::Location location,
-                                         Latte::Types::Alignment alignment);
+                                         Latte::Types::Alignment alignment,
+                                         bool windowSpansScreenLength);
 
 //! Latte visibility mode -> stacking layer
 LayerShellQt::Window::Layer layerFor(Latte::Types::Visibility mode);
@@ -65,8 +74,10 @@ QSize seededLayerSize(LayerShellQt::Window::Anchors anchors, Plasma::Types::Loca
 
 //! Turn @p window into a layer surface for @p location / @p alignment on
 //! @p screen. Must be called before the window is first shown.
+//! @p windowSpansScreenLength - see anchorsFor().
 void configureView(QWindow *window, QScreen *screen,
-                   Plasma::Types::Location location, Latte::Types::Alignment alignment);
+                   Plasma::Types::Location location, Latte::Types::Alignment alignment,
+                   bool windowSpansScreenLength);
 
 //! Re-apply only the anchors, exclusive edge, screen and seeded size for a
 //! new @p location / @p alignment. Anchors are what move a layer surface, so
@@ -74,9 +85,10 @@ void configureView(QWindow *window, QScreen *screen,
 //! only once at creation would weld the surface to its original edge.
 //! Deliberately narrower than configureView(): re-running the full
 //! configuration would reset the stacking layer (cover modes use LayerBottom)
-//! and the keyboard policy.
+//! and the keyboard policy. @p windowSpansScreenLength - see anchorsFor().
 void updateAnchoring(QWindow *window, QScreen *screen,
-                     Plasma::Types::Location location, Latte::Types::Alignment alignment);
+                     Plasma::Types::Location location, Latte::Types::Alignment alignment,
+                     bool windowSpansScreenLength);
 
 //! update the stacking layer of an already-configured window from its
 //! visibility mode

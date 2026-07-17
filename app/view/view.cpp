@@ -507,7 +507,8 @@ void View::setupWaylandLayerShell()
     }
 
     namespace LS = Latte::WindowSystem::LayerShell;
-    LS::configureView(this, screen(), location(), static_cast<Latte::Types::Alignment>(alignment()));
+    LS::configureView(this, screen(), location(), static_cast<Latte::Types::Alignment>(alignment()),
+                      windowSpansScreenLength());
     LS::applyLayer(this, m_visibility ? m_visibility->mode() : Latte::Types::None);
     LS::setFocusPolicy(this, !flags().testFlag(Qt::WindowDoesNotAcceptFocus));
 
@@ -524,7 +525,20 @@ void View::reanchorLayerShell()
     //! the stacking layer (cover modes use LayerBottom) and keyboard policy
     //! that configureView() forced must survive an edge change
     namespace LS = Latte::WindowSystem::LayerShell;
-    LS::updateAnchoring(this, screen(), location(), static_cast<Latte::Types::Alignment>(alignment()));
+    LS::updateAnchoring(this, screen(), location(), static_cast<Latte::Types::Alignment>(alignment()),
+                        windowSpansScreenLength());
+}
+
+bool View::windowSpansScreenLength() const
+{
+    //! A horizontal masked dock is sized to the full screen width
+    //! (PositionerGeometry::windowSize) and centres its contents through the
+    //! mask, so its surface spans both length edges. A behaveAsPlasmaPanel
+    //! window is a fraction of the screen and moves with its alignment; a
+    //! vertical masked dock is sized to the AVAILABLE region (reduced by top/
+    //! bottom docks), not the full screen, and the compositor's single-edge
+    //! centring is an identity for it - neither qualifies.
+    return !behaveAsPlasmaPanel() && formFactor() == Plasma::Types::Horizontal;
 }
 
 //! the main function which decides if this dock is at the
