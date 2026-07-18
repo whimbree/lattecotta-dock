@@ -220,7 +220,12 @@ time, never hashes copied from an agent ledger (worktree merges
 rewrite them; 2bba6cb8b cleaned up exactly that). New findings get
 filed as plan items with evidence even when fixed the same day - a
 bug found, fixed and never written down is invisible to the next
-session. Update docs/session-handoff.md as work lands, not at the end.
+session. A real DEFECT (a bug, whether fixed the same day or still
+open) ALSO earns an entry in docs/known-defects.md, the flat
+found-bugs registry - one line to scan for "what is known broken",
+including bugs found by code-reading or an adversarial test-design
+pass that are not fixed yet (SUSPECTED/OPEN are valid recorded
+states). Update docs/session-handoff.md as work lands, not at the end.
 
 Definition of done, every change: root cause at origin (or the
 guard's contract commented); driven with recorded evidence (nested
