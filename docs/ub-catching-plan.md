@@ -58,10 +58,11 @@ sanitizer AFTER it. UB-catching therefore needs TWO prongs.
       vehicle (0 sanitizer output at startup) and ABORTS with a symbolized stack
       on an injected heap OOB (app/main.cpp:159, since removed). Ledger:
       docs/agent-logs/2026-07-18-ub-sanitize-build.md.
-- [ ] A3 Wire the sanitized dock into a driven gate: run the e2e /
+- [x] A3 Wire the sanitized dock into a driven gate: run the e2e /
       sceneprobe nested scenarios against the build-asan dock so UB in
       integration paths fails CI (halt_on_error, first-finding abort).
-      Sequenced after A1/A2. Commits:
+      Sequenced after A1/A2. Commits: (ub-a3-sanitized-gate branch; final
+      hashes at merge)
       NOTE (2026-07-18): the containment-plugin-shadow-in-vehicle risk this
       item flagged is fixed at the harness layer by PR #23 (master 326aba06d,
       scripts/lib-qml-env.sh): NIXPKGS_QT6_QML_IMPORT_PATH / NIXPKGS_QML_SEARCH_PATHS
@@ -69,14 +70,36 @@ sanitizer AFTER it. UB-catching therefore needs TWO prongs.
       any nested run sourcing lib-qml-env.sh) loaded the packaged containment
       plugin, not the build-under-test - A3's sanitized dock would have run the
       packaged binary and caught no UB. The fix strips only the packaged
-      latte-dock leaf. A3 must still confirm the build-asan dock's plugin
-      resolves to build-asan (assert /proc/<dock>/maps in the vehicle, same
-      check that caught this live). Non-blocking nit filed from PR #23 review:
-      lib-qml-env.sh:40 grep -vE returns exit 1 if a var is ALL latte-dock
-      entries (unreachable in the documented env - the vars always carry KDE
-      frameworks); when this file is next touched, wrap the grep `|| true` so
-      the all-filtered case is tolerated (grep-exit-1 there is a legit
-      "everything filtered" signal, not a masked failure).
+      latte-dock leaf. A3 still confirms the build-asan dock's plugin resolves to
+      build-asan (asserts /proc/<dock>/maps in the vehicle, same check that
+      caught this live - see tests/e2e/070-asan-binary-shadow.sh below).
+      Non-blocking nit filed from PR #23 review: lib-qml-env.sh:40 grep -vE
+      returns exit 1 if a var is ALL latte-dock entries (unreachable in the
+      documented env - the vars always carry KDE frameworks); when this file is
+      next touched, wrap the grep `|| true` so the all-filtered case is tolerated
+      (grep-exit-1 there is a legit "everything filtered" signal, not a masked
+      failure).
+      DONE: scripts/asan-e2e-gate.sh builds build-asan, seeds a hermetic
+      default-layout config (shared scripts/lib-e2e-seed.sh, extracted from
+      ci/build-and-gate.sh), and drives the sanitized dock through the no-input
+      e2e core (000-smoke, 060-geometry-agreement, plus the new shadow assertion
+      tests/e2e/070-asan-binary-shadow.sh) with ASan/UBSan abort-on-first;
+      wired as gate-all.sh's final stage (exit code = verdict). The shadow
+      assertion reads /proc/<dock>/maps and asserts the executable AND the
+      containment plugin resolve under build-asan and libasan is mapped
+      (E2E_EXPECT_ASAN=1 from run-asan-dock.sh) - so a shadowed uninstrumented
+      binary (PR #23 class) fails instead of silently catching no UB. Proven:
+      GREEN exit 0 at 3/3 clean; RED exit 2 with a symbolized stack at
+      layoutmanager.cpp on an injected LayoutManager-ctor OOB (view-creation
+      path, removed after). The gate caught two REAL vptr UBs on its first run
+      (see B2). Note: the "sceneprobe against sanitized" leg is deferred - the
+      probe binary lives under BUILD_TESTING (absent in build-asan) and GCC's
+      shared ASan will not let an uninstrumented probe dlopen sanitized plugins,
+      so it needs its own -DLATTE_SANITIZE -DBUILD_TESTING tree; the unit +
+      sceneprobe suites are already sanitized in the normal gate via
+      latte_add_unit_test / the LATTE_SANITIZE directory scope, and the DOCK
+      e2e path is where the motivating integration-path UB actually lives.
+      Ledger: docs/agent-logs/2026-07-18-a3-sanitized-gate.md.
 
 ## Prong B - boundary invariants make lib-boundary UB structurally impossible
 
@@ -115,6 +138,17 @@ asserts, refused/repaired at runtime in the field.
 - [ ] B2 Sweep the obvious index/enum/pointer boundaries the sanitized dock
       surfaces once it runs (A2/A3), converting each into a Q_ASSERT + runtime
       refuse. Ongoing, evidence-driven from Prong A findings. Commits:
+      FIRST FINDINGS (A3's driven gate, 2026-07-18): two UBSan -fsanitize=vptr
+      aborts on the sanitized dock's clean-shutdown path, same root cause - a
+      static_cast downcast in a destroyed(QObject*) slot reads the object's
+      decayed (now-QObject) vptr = UB. app/layout/genericlayout.cpp:790
+      (Containment) and app/layouts/syncedlaunchers.cpp:65 (QQuickItem); both use
+      the pointer only for identity (indexOf / take / removeAll), so fixed with
+      reinterpret_cast (vptr-clean, no vtable access) + a comment at each site.
+      Fixed on the ub-a3-sanitized-gate branch so the gate is green; final hashes
+      at merge. Not a boundary-refuse case (no external bad input) - a cast-idiom
+      correction - but recorded here as Prong A-surfaced UB. Remaining B2 index/
+      enum boundaries: still to sweep as the gate exercises more paths.
 
 ## Farm-out (parallel Opus worktree agents)
 - Agent 1 = Prong A1+A2 (the LATTE_SANITIZE build + nested run + known-UB

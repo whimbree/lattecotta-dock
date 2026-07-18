@@ -164,10 +164,14 @@ cores un-mergeable. Feel-critical changes (the parabolic engine,
 the preview pipeline) additionally get live verification on a running
 Wayland session with injected pointer glides and screenshot comparison
 before they merge. The whole dock and its plugins can also be built
-with ASan+UBSan and live Q_ASSERTs on demand (a `-DLATTE_SANITIZE`
+with ASan+UBSan and live Q_ASSERTs (a `-DLATTE_SANITIZE`
 build, off by default), then driven either in the nested compositor or
 against the real session, so undefined behavior and tripped invariants
-in the running dock abort with a stack instead of misbehaving silently.
+in the running dock abort with a stack instead of misbehaving silently;
+the merge gate drives that sanitized dock through the nested e2e recipes
+and asserts, from the running process's own memory map, that the binary
+under test really is the instrumented one, so integration-path UB fails
+the gate rather than shipping.
 [docs/TESTING.md](docs/TESTING.md) carries the
 standard; [docs/session-handoff.md](docs/session-handoff.md) carries the
 current working state.

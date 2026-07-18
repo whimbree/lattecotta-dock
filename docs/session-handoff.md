@@ -53,6 +53,22 @@ driven from Prong A findings); the on-disk splitterPosition write-back caveat
 (the justify fix repairs at every load, so the panel is always correct, but the
 corrected value doesn't persist to the layout file yet - small follow-up).
 
+## UB-catching initiative (parallel track, docs/ub-catching-plan.md)
+
+Prong A COMPLETE with A3 (branch `ub-a3-sanitized-gate`, PR open, awaiting
+review), building on the #21/#22 A1/A2/B1 landings above. A3 wires the sanitized
+dock into a DRIVEN gate: `scripts/asan-e2e-gate.sh` seeds a hermetic config
+(shared `scripts/lib-e2e-seed.sh`, extracted from ci/build-and-gate.sh) and
+drives the sanitized dock through the no-input e2e core - 000-smoke, 060, and the
+new shadow assertion `tests/e2e/070-asan-binary-shadow.sh` that proves from
+/proc/<dock>/maps that the binary + containment plugin under test are build-asan
+and libasan is mapped - wired as gate-all.sh's final stage. It caught two REAL
+vptr UBs on its first run (destroyed()-slot decayed-vptr downcasts in
+genericlayout.cpp + syncedlaunchers.cpp, fixed via reinterpret_cast). NEXT on
+this track: Prong B2 (sweep the index/enum/pointer boundaries the gate surfaces),
+and optionally add the wheel/edit recipes or a sanitized sceneprobe leg. Ledger:
+docs/agent-logs/2026-07-18-a3-sanitized-gate.md.
+
 ## NEXT SESSION ENTRY POINT (2026-07-17)
 
 Invoke `docs/prompts/multi-distro-ci-orchestrator-prompt.md`. The session
