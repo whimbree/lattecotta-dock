@@ -261,7 +261,7 @@ a success.
       did-not-realize-as-declared fixture REFUSED - not a green pass. Reuses
       run-e2e's XPASS-is-failure discipline.
       Commits: (C-I1 branch, hash at merge)
-- [ ] **P1 Multi-output nested vehicle.** Blocks all dual cells and F5/A4.
+- [x] **P1 Multi-output nested vehicle.** Blocks all dual cells and F5/A4.
       Extend `lib-nested-kwin.sh` to pass `--output-count 2` (verified on the
       pinned kwin_wayland: `--virtual --output-count <count>`), discover the two
       output NAMES via a KWin script (`workspace.screens`), export
@@ -273,6 +273,32 @@ a success.
       MIS-ASSIGNMENT (drive a fixture pinned to output B, force/observe it
       landing on A, prove the check goes red), and that a single-output run
       asked for output B reports "no such output" rather than silently passing.
+      Landed: `nested_kwin_start` gained an optional output-count arg (default
+      1, so every single-output recipe's command line is byte-identical; >1
+      adds `--output-count`), threaded through `run-e2e.sh` as `E2E_OUTPUT_COUNT`
+      and fronted by `scripts/run-multi-output-e2e.sh` (the dual sibling of
+      run-matrix). O7 came out EASIER than feared once the real pin mechanism
+      was found: the per-screen key `explicitScreen` the P0 fixture wrote is a
+      DEAD key (grep app/ - nothing reads it); Latte pins a view to a secondary
+      by `onPrimary=false` + `lastScreen=<numeric ScreenPool id>`, the id
+      resolved through the `[ScreenConnectors]` group in lattedockrc. So
+      `fixture.py` now writes those real keys and seeds the mapping (with a
+      SENTINEL id when no secondary is discovered, so a single-output run's 2out
+      cell is REFUSED by the dock, never mis-placed on primary - the built-in
+      "Rejected because Screen is not available" path in genericlayout).
+      DISCOVER-AND-PIN is pull-queryable, not a KWin script: a new `screensData`
+      D-Bus readback exposes ScreenPool's id<->connector<->primary mapping (the
+      dock's own authority, cross-checked against where the default onPrimary
+      view landed), so the harness discovers the secondary connector + geometry,
+      pins it to a fixed id (10), and VERIFIES the pin resolved - a deliberate
+      improvement over the plan's `workspace.screens` idea, which would only see
+      KWin's outputs, not Latte's id assignment. HC3 acceptance
+      (`tests/e2e/multi-output-selftest.sh`): places a view on the secondary and
+      asserts it landed there by readback; proves the SAME check goes red when
+      the view is checked against the primary and when a primary (1out) view is
+      checked against the secondary; and proves a 2out cell with no available
+      secondary is refused. `dbusreportstest` pins the screensData serializer;
+      `matrix-fixture-check.sh` pins the new fixture keys.
       Commits:
 - [x] **P2 Render-golden bridge (small set).** Blocks the render-golden half of
       the visual-only scenarios (section 7). Wire lavapipe + fixed wallpaper +
@@ -1080,7 +1106,12 @@ merge --rebase`, re-resolve hashes, fetch).
       `tests/e2e/matrix/fixture.py`, `tests/e2e/matrix/matrix-lib.sh`,
       `scripts/run-matrix.sh`, `tests/e2e/matrix-harness-selftest.sh` (HC3).
       Commits: (C-I1 branch, hash at merge)
-- [ ] **C-I2 = P1** multi-output vehicle. Commits:
+- [x] **C-I2 = P1** multi-output vehicle. `scripts/lib-nested-kwin.sh` (output
+      count), `scripts/run-e2e.sh` (`E2E_OUTPUT_COUNT`),
+      `scripts/run-multi-output-e2e.sh`, `tests/e2e/matrix/multi-output-lib.sh`
+      (discover-and-pin), `tests/e2e/multi-output-selftest.sh` (HC3), the
+      `screensData` D-Bus readback (XML + dbusreports + dbusreportstest + docs),
+      `fixture.py` real per-screen pin, `matrix-fixture-check.sh`. Commits:
 - [x] **C-I3 = P3** `addApplet` + applet-id order readback + XML + test. Commits: (branch worktree-agent-a102bc9cfc620c8c0; final hashes at PR merge)
 - [x] **C-I4 = P4** `removeApplet` + drop-marker/spacer readback + XML + test. Commits: (branch worktree-agent-af2749c9456618186; final hashes at PR merge)
 - [ ] **C-I5 = P5** `moveViewToScreen` + XML + test. Commits:
@@ -1240,10 +1271,16 @@ one-per-scenario. Everything else asserts by readback.
 - **O6 Window-task fixtures.** F4/A3 window sub-model needs real reorderable
   client windows. Confirm spawning N deterministic throwaway windows, or scope to
   launcher reorder only (window-task = live-desk).
-- **O7 Multi-output view-assignment mapping.** `ScreenPool` name<->output under
-  `--virtual --output-count 2` is unproven; P1 needs a discover-and-pin step
-  before any dual scenario trusts placement. Biggest schedule risk in the
-  dual/F5/A4 half.
+- **O7 Multi-output view-assignment mapping. RETIRED (C-I2/P1, 2026-07-18).**
+  `ScreenPool` name<->output under `--virtual --output-count 2` is now proven
+  and pinned: the `screensData` D-Bus readback exposes the id<->connector<->
+  primary mapping, the vehicle discovers the secondary from it and pins the
+  view via `onPrimary=false` + `lastScreen=<fixed id>` + a seeded
+  `[ScreenConnectors]` entry (the real keys; the P0 fixture's `explicitScreen`
+  was a dead key that read nothing). The `multi-output-selftest` recipe proves
+  placement AND that the check catches a misplacement / a no-such-output
+  request. F5/A4 can now trust `viewsData.screen`. Came out EASIER than feared
+  once the dead-key finding was made.
 - **O8 Abort input mechanics: Escape vs release (GROUNDED, see section 7's
   ESCAPE-vs-RELEASE finding).** Escape-cancel and release-at-origin /
   release-over-nothing exercise DIFFERENT code, and the code says Escape is NOT
