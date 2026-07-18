@@ -492,18 +492,41 @@ known-defects discipline.
 Ticked with post-rebase hashes at merge time. Grouped by cluster.
 
 ### CL-0 - infrastructure and observability (prereq)
-- [ ] **AU-0a** Config-value readback (viewsData extension or `viewConfigData`)
-      for the containment General-group keys the audit asserts on, read from the
-      in-process map (KConfig default-deletion caveat). XML + adaptor regen +
-      dbusreportstest pin + docs/dbus-* update. Commits:
-- [ ] **AU-0b** Tasks-config readback (viewAppletsData extension or a
-      tasks-config read) for `tasks.plasmoid.configuration.*`. Commits:
-- [ ] **AU-0c** Config-snapshot-diff harness in the nested vehicle: snapshot all
-      keys, drive, snapshot, assert exact key delta. Ships an HC3 acceptance test
-      proving it reports a NO-CHANGE / stray-key as a failure. Commits:
-- [ ] **AU-0d** Settings-window fakepointer drive helpers (click/drag/combo on
-      the mapped config window) + a QML-handler stub harness for wiring tests.
-      HC3 acceptance test. Commits:
+- [x] **AU-0a** Config-value readback via a dedicated `viewConfigData(u) -> s`
+      (General-group config values + the C++ `view` half: visibility timers,
+      byPassWM, indicator type), read from the in-process `KConfigPropertyMap`
+      so the KConfig default-deletion trap cannot corrupt the diff. XML +
+      adaptor + dbusreportstest pin + docs/dbus-* update. Commits: 931b900fe
+- [x] **AU-0b** Tasks-config readback `appletConfigData(u,u) -> s` for
+      `tasks.plasmoid.configuration.*` (and any plain applet). Commits: 931b900fe
+- [x] **AU-0c** Config-snapshot-diff harness (tests/units/configsnapshotdiff.h +
+      tests/e2e/audit/audit-lib.sh): snapshot all keys, drive, snapshot, assert
+      exact key delta. HC3 proven - a wrong-key, a stray coupled write (D15
+      shape) and a no-op (D10 shape) each report FAIL; a default-deleted key is a
+      loud change, never a silent pass. Commits: ad00dba0c
+- [x] **AU-0d** Settings-window fakepointer drive helpers (audit_settings_*) + a
+      QML-handler stub harness (tests/settingswiringharnesstest.cpp) driving a
+      real handler body against a stub QQmlPropertyMap. HC3 rejection caught
+      through a real handler, not crafted JSON. Commits: ad00dba0c
+
+CL-0 review follow-up nits (from the PR #40 independent review, non-blocking):
+- [ ] **AU-0e** `configValueToJson` (app/dbusreports.h + the mirror in
+      settingswiringharnesstest.cpp) falls back to a bare `toString()` for a
+      non-scalar, non-color type. Latent false-PASS: a future General-group key
+      of a type with no JSON scalar and no distinguishing string (QFont,
+      QVariantMap) would collapse the way the QColor branch already guards
+      against. No such key exists today. Harden: warn/refuse on an unserializable
+      non-color type rather than silently stringify. Commits:
+- [ ] **AU-0f** `appletConfigData` reads `target->property("configuration")`
+      directly; a subcontainment applet (system tray) keeps its real config on
+      the subcontainment (the containmentinterface.cpp:1069 pattern), so a
+      subcontainment id silently returns the wrapper's near-empty config. The
+      tasks plasmoid is plain, so CL-5 is unaffected; add a one-line warn if the
+      surface ever generalizes to subcontainments. Commits:
+- [ ] **AU-0g** `appletConfigData` reads any applet id on the containment,
+      including a user-added third-party widget - broader than the docs' "D10
+      tasks plasmoid" framing. Low severity (the caller's own session over their
+      own bus, within the read-surface safety contract). Commits:
 
 ### CL-1 - length cluster (seed defects)
 - [ ] **AU-1a D15** Drive the Maximum ruler; assert via snapshot-diff which keys

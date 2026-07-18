@@ -1,12 +1,61 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-18 (panel bug fixes + UB-catching initiative + a dev-loop
-shadow fix all landed; clangd editor-intelligence setup in flight as its own
-PR; #4 maximize-length and A3 sanitized-gate in flight; D14 startup
-invalid-color qCriticals fixed at the QML call sites, own PR; the e2e
-interaction matrix swarm is executing - C-I7/P6 applet-reorder driver in
-flight, below).
+Last updated 2026-07-18 (trunk renamed master->main; the e2e interaction DRIVER
+layer is fully landed - C-I7/C-I8/C-I9 merged as PRs #37/#38/#39 atop the
+earlier infra chunks; the edit-mode settings audit harness CL-0 merged as PR
+#40, unblocking the audit clusters; CL-1 length cluster and an X11-ism cleanup
+audit are farmed and in flight, below).
+
+## 2026-07-18 WAVE: e2e driver layer complete + settings-audit harness (CL-0)
+
+The e2e interaction plan's DRIVER layer is fully on main. The three interaction
+drivers landed each as its own reviewed PR through `gh pr merge --rebase`
+(server-side rebase, MERGED not closed, shas rewritten at merge):
+- **#37 C-I8/P7** task-reorder driver + G4 window-task readback + the `dragkey`
+  fakepointer verb (DR-6 escape-in-held-drag). D1 (aborted task-reorder does not
+  revert) resolved ACCEPTED, Qt5-faithful live-move.
+- **#38 C-I9/P8** widget-explorer real cross-surface Wayland DnD driver +
+  `showWidgetExplorer` coarse action. Found D18 (explorer-drag enter/leave
+  flicker, OPEN, correctness unaffected).
+- **#39 C-I7/P6** applet-reorder driver + G2 delegate-`z` readback +
+  `setViewConfiguringApplets` action. Confirmed D2 live (ConfigOverlay z=900
+  strand on edit-exit mid-drag; was SUSPECTED, now OPEN).
+
+Merge-queue lesson banked: serial `gh pr merge --rebase` moves main under every
+other in-flight branch, so each following PR re-rebases onto the new tip before
+its asan-at-merge runs (asan must validate the exact head that lands). #38/#39
+auto-merged their overlapping docs both-sides; #40 had real code overlap in
+dbusreports.cpp/lattecorona.cpp (disjoint methods, kept both).
+
+**CL-0 (#40) landed** - the edit-mode settings audit harness:
+`viewConfigData(u)` / `appletConfigData(u,u)` in-process config readbacks (the
+KConfig default-deletion trap avoided by reading the live KConfigPropertyMap),
+the config-snapshot-diff core (tests/units/configsnapshotdiff.h), the shell
+audit library (tests/e2e/audit/audit-lib.sh with the P1/P2/P3/P4 assert
+helpers + settings-window drive helpers), and the QML-handler wiring harness
+(tests/settingswiringharnesstest.cpp). HC3 proven: a wrong-key, a stray coupled
+write (D15 shape) and a no-op (D10 shape) each report FAIL through a real QML
+handler. Three non-blocking review nits filed as AU-0e/0f/0g in the audit plan.
+
+IN FLIGHT (farmed, code-only PRs; orchestrator owns plan ticks + defect filing):
+- **CL-1 length cluster** - the three seed defects. D15 ACCEPTED (keep the
+  coupling, Bree's call); D16 FIX (Max/Min sliders get the offset slider's
+  re-syncing Binding{} pattern so the handle re-tracks config after a drag);
+  D17 FIX (extend the clamp core's Alignment enum to represent Justify
+  distinctly and skip the minLength floor for Justify in both clamp functions +
+  bridge + handlers + new core tests).
+- **X11-ism cleanup audit** - inventory the whole tree for surviving X11-isms
+  now that main() refuses non-Wayland, execute the dead-code removals (seed: the
+  X11-only WindowThumbnail element reachable only through a dead ternary arm;
+  app/wm/windowid.h's dead X11 parse surface), and PROPOSE (sign-off-gated) the
+  windowid.h newtype simplification and the QByteArray-uuid vs QUuid substrate
+  question. Primary deliverable docs/x11-cleanup-audit.md.
+
+NEXT after CL-1: the wave-2 audit clusters {CL-2 appearance, CL-3 behavior,
+CL-4 effects, CL-6 chrome} in parallel, then CL-5 tasks/D10 wire-up. The e2e
+scenario + abort chunks (C-S*/C-A*) are the other open track once C-I5
+(moveViewToScreen) lands.
 
 ## 2026-07-18 D14: startup invalid-color qCriticals fixed at the source (own PR)
 

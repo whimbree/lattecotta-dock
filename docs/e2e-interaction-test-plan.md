@@ -1216,18 +1216,18 @@ merge --rebase`, re-resolve hashes, fetch).
       `viewAppletsData` (app/dbusreports.{h,cpp} + dbusreportstest + docs), the
       `setViewConfiguringApplets` D-Bus action (rearrange driving surface; XML +
       corona + docs). DR-6 rides the `dragkey` fakepointer verb (on main via
-      C-I8). Found+confirmed D2 live (docs/known-defects.md). Commits: (C-I7 branch; final hashes at PR merge)
+      C-I8). Found+confirmed D2 live (docs/known-defects.md). Commits: de0934d66, df4bf85c3, b1655003b
 - [x] **C-I8 = P7** task-reorder driver + window-task readback (commit+abort).
       `tests/e2e/matrix/task-reorder-lib.sh` (driver, launcher+window sub-models
       via appId), fakepointer `dragkey` verb (DR-6 escape-in-held-drag), G4
       confirmed + documented + `dbusreportstest`, `tests/e2e/092-task-reorder.sh`
-      (HC3 + D1 evidence). D1 -> ACCEPTED (Qt5-faithful live-move). Commits:
+      (HC3 + D1 evidence). D1 -> ACCEPTED (Qt5-faithful live-move). Commits: f89020ba2, 47ff39750, 97ef0d204, 3670590fb
 - [x] **C-I9 = P8** widget-explorer DND driver (commit + non-drop abort).
       `tests/e2e/matrix/dnd-lib.sh` (the driver + `matrix_verb_addwidget_*`),
       `tests/e2e/093-widget-explorer-dnd.sh` (HC3), the `showWidgetExplorer(u)`
       coarse action (app/lattecorona.{h,cpp}, app/view/view.{h,cpp}
       openWidgetExplorer, app/dbus/org.kde.LatteDock.xml, both dbus docs). REAL
-      cross-surface Wayland DnD proven, no xfail. Commits:
+      cross-surface Wayland DnD proven, no xfail. Commits: 7e02307fa, ab05d9e7e
 - [x] **C-I10 = P9** fakepointer key injection. Commits: <this PR - `key <keysym>` verb (keyboard_keysym/xkbcommon) + tests/e2e/080-key-escape-cancels-move.sh>
 
 ### Committed scenario chunks
