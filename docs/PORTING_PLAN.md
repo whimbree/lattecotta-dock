@@ -1027,8 +1027,13 @@ before implementing, not just before merging.
       solely by the Plasma 6 containment drop path, so there is no
       second C++ creation path to race (the ng bug came from adding
       one). No double-creation observed; if duplicates ever appear,
-      this is the item to reopen. Headless coverage note: fakepointer
-      drag can drive explorer->dock drops once a GUI CI vm exists.
+      this is the item to reopen. Headless coverage note: this is
+      drivable now with no GUI CI vm - the nested-vehicle e2e suite
+      (scripts/run-e2e.sh, default desk-independent kwin_wayland
+      --virtual) injects fakepointer drag against a real client surface
+      with no live desk, and 050-drag-reorder-launchers.sh already drives
+      fakepointer drag-reorder there. An explorer->dock drop recipe just
+      needs writing against that vehicle; it is not written yet.
       Commits: (no port-side change needed)
 - [x] Position-aware drop insertion. VERIFIED PRESENT BY CONSTRUCTION
       2026-07-16: the intended insertion index is carried explicitly -
