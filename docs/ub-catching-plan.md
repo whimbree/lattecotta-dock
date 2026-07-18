@@ -61,8 +61,9 @@ sanitizer AFTER it. UB-catching therefore needs TWO prongs.
 - [x] A3 Wire the sanitized dock into a driven gate: run the e2e /
       sceneprobe nested scenarios against the build-asan dock so UB in
       integration paths fails CI (halt_on_error, first-finding abort).
-      Sequenced after A1/A2. Commits: (ub-a3-sanitized-gate branch; final
-      hashes at merge)
+      Sequenced after A1/A2. Commits: ddb766df1 (vptr-UB fix the gate caught),
+      f8505a543 (shared lib-e2e-seed.sh), d6fc8cd9e (asan-e2e-gate + shadow
+      assertion), a345e8f03 (docs/tick).
       NOTE (2026-07-18): the containment-plugin-shadow-in-vehicle risk this
       item flagged is fixed at the harness layer by PR #23 (master 326aba06d,
       scripts/lib-qml-env.sh): NIXPKGS_QT6_QML_IMPORT_PATH / NIXPKGS_QML_SEARCH_PATHS

@@ -338,10 +338,14 @@ a success.
       THIS DRIVER'S ACCEPTANCE TEST IS A REJECTION BY CONSTRUCTION - it must
       prove that a release over nothing yields ZERO applets and reports that AS a
       rejected drop (count unchanged), which is exactly the A1 assertion; a
-      driver that cannot see the rejected drop cannot be trusted for A1. If
-      explorer DND is intractable headlessly, F2-DND and A1-DND become documented
-      xfails and the deterministic paths carry the assertion (O5). Depends on P0,
-      maybe P1.
+      driver that cannot see the rejected drop cannot be trusted for A1.
+      EXPECTATION (Bree, 2026-07-18): explorer DND IS doable in THIS nested
+      vehicle (kwin_wayland + fakepointer press-glide-release + a live client
+      surface in the same compositor) - the old Phase 7 "defer to a GUI CI vm"
+      note is stale, it predates this infra. Implement real explorer->containment
+      DND here. A degrade to xfail is a LAST RESORT only if PROVEN infeasible
+      after honest effort, with the blocking root cause recorded - never an
+      assumed skip. Depends on P0, maybe P1.
       Commits:
 - [ ] **P9 fakepointer key injection (`key <keysym>`).** Blocks the
       Escape-CANCEL sub-path of A2/A3/A4/A5 (release/drop-back aborts do not need
@@ -697,9 +701,14 @@ one-per-scenario. Everything else asserts by readback.
   highest-value aborts A2-vertical, A4-split-brain, A5) in `gate-all` as the
   per-commit gate, the full 196 as a periodic / pre-release gate in the
   multi-distro matrix. Confirm split + tier-1 membership.
-- **O5 Headless widget-explorer DND feasibility.** Phase 7 deferred this to "a
-  GUI CI vm." If intractable, F2-DND and A1-DND degrade to xfail and the
-  deterministic paths carry the assertion. Set the P8/C-I9 acceptance bar first.
+- **O5 Widget-explorer DND: EXPECTED DOABLE (Bree directive, 2026-07-18), not an
+  open question.** The Phase 7 "defer to a GUI CI vm" note is STALE - it predates
+  the nested vehicle (kwin_wayland + fakepointer press-glide-release + a live
+  client surface in ONE compositor), which is exactly the infra a Wayland
+  explorer->containment DND needs. P8 implements REAL DND. A degrade to xfail is a
+  last resort only if PROVEN infeasible after honest effort, with the blocking
+  root cause recorded - never an assumed skip. C-I9's acceptance bar (HC3 rejected
+  drop) requires the driver to actually drive DND, so xfail is not a shortcut.
 - **O6 Window-task fixtures.** F4/A3 window sub-model needs real reorderable
   client windows. Confirm spawning N deterministic throwaway windows, or scope to
   launcher reorder only (window-task = live-desk).
