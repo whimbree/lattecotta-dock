@@ -63,6 +63,27 @@ NEXT ACTION: make the hint non-interactive (HoverHandler / pointer-transparent
 / z below the button) so clicks fall through to "Rearrange...". Guard: a
 click-through test that a click at the button rect reaches the button even
 with the tooltip shown.
+ROOT CAUSE + FIX (Job B, branch panel-fix-editmode-tooltip): the three header
+buttons share shell/.../configuration/canvas/controls/Button.qml; the real
+click target (invisible opacity-0 PlasmaComponents.Button) carried an attached
+QQC2.ToolTip. On Wayland that ToolTip is a SEPARATE popup surface at the
+cursor; in the click-through edit-mode overlay it lands over the button and
+takes the press. Same defect family already retired in ConfigOverlay.qml and
+CanvasConfiguration.qml. Fixed by removing the QQC2.ToolTip (and the unused
+QtQuick.Controls import) and rendering the hint IN-WINDOW as a pointer-
+transparent Rectangle+Label (still shown, dwell-gated). Guards: source scan
+scripts/qml-tooltip-rules.sh (ctest qmltooltiprules) bans the attached ToolTip
+on the overlay click targets; behavioral tests/qml/tst_buttonhintclickthrough.qml
+drives the real control (hint is an in-window rectangle carrying no input
+handler; press reaches the button). See
+docs/agent-logs/2026-07-17-panel-fix-editmode-tooltip.md.
+OWED: (1) desk-check the tight top-panel case with real hands - the offscreen
+engine cannot reproduce the Wayland separate-surface grab. (2) SIBLING same
+class not yet fixed: the max-length ruler
+shell/.../configuration/canvas/maxlength/Ruler.qml (~317-323) still uses the
+invisible-button + attached QQC2.ToolTip pattern on its drag handle in the same
+overlay; owed an in-window-hint migration (left out of qmltooltiprules scope
+until done).
 
 ## Issue 4 - real panel test coverage on all four sides (SEPARATE subagent)
 Bree: full depth, as its OWN isolated subagent (keep it out of orchestrator
