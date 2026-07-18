@@ -116,6 +116,13 @@ call addApplet us 1 "org.kde.plasma.marginsseparator"  # add an installed plasmo
                                        # drop). Refused loudly with NO applet if the containment id has
                                        # no view or the plugin id is not installed. Readback:
                                        # viewAppletsData / viewAppletsOrder grow by one
+call removeApplet uu 1 42               # remove applet instance 42 from view 1 - the coarse
+                                       # "Remove this Widget". UNDO WINDOW (same as removeView):
+                                       # the applet lingers with inScheduledDestruction=true until
+                                       # the notification closes or ~60s; a restart inside the
+                                       # window resurrects it. Refused loudly with NO removal if the
+                                       # containment id has no view or the applet id names no applet.
+                                       # Readback: viewAppletsData's inScheduledDestruction flips
 call duplicateView u 1
 call removeView u 1                    # UNDO WINDOW: containment survives until the
                                        # notification closes or ~60s; restarting inside

@@ -1472,6 +1472,32 @@ void Corona::addApplet(const uint &containmentId, const QString &pluginId)
     }
 }
 
+void Corona::removeApplet(const uint &containmentId, const uint &appletId)
+{
+    auto view = m_layoutsManager->synchronizer()->viewForContainment(containmentId);
+
+    if (!view || !view->extendedInterface()) {
+        //! a mutating boundary refuses a bad id the same way the reads do:
+        //! no view for this containment id means the request is outside
+        //! input, refused loudly with NO applet removed (reads-never-construct
+        //! extended to the mutators, docs/dbus-observability-interface.md)
+        qWarning() << "corona: removeApplet requested for containment" << containmentId << "which has no view; no applet removed";
+        return;
+    }
+
+    //! the same coarse "Remove this Widget" the applet context menu triggers:
+    //! Applet::destroy(), which enters the libplasma UNDO WINDOW - the applet
+    //! lingers with inScheduledDestruction=true (queryable in viewAppletsData)
+    //! until the "Widget Removed" notification closes or the ~60s fallback
+    //! timer fires, exactly the removeView undo trap. An applet id that names
+    //! no applet on this view is outside input refused loudly here, not the
+    //! historical silent no-op inside ContainmentInterface::removeApplet.
+    if (!view->extendedInterface()->removeApplet((int)appletId)) {
+        qWarning() << "corona: removeApplet found no applet" << appletId
+                   << "on containment" << containmentId << "; no applet removed";
+    }
+}
+
 void Corona::duplicateView(const uint &containmentId)
 {
     auto view = m_layoutsManager->synchronizer()->viewForContainment((int)containmentId);

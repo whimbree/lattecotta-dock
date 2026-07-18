@@ -905,15 +905,21 @@ void ContainmentInterface::toggleAppletExpanded(const int id)
     }
 }
 
-void ContainmentInterface::removeApplet(const int &id)
+bool ContainmentInterface::removeApplet(const int &id)
 {
     if (!m_appletData.contains(id)) {
-        return;
+        //! no applet on this view carries that instance id. The clone-sync
+        //! caller only ever passes an id it just read from the original next
+        //! door (never missing), so it discards the result; only the coarse
+        //! removeApplet D-Bus boundary reacts to false and turns it into a
+        //! loud refusal instead of the historical silent no-op.
+        return false;
     }
 
     auto applet = m_appletData[id].applet;
     Q_EMIT applet->appletDeleted(applet); //! this signal should be part of Plasma Frameworks AppletPrivate::destroy() function...
     applet->destroy();
+    return true;
 }
 
 

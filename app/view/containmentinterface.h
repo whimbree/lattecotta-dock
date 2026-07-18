@@ -142,7 +142,12 @@ public Q_SLOTS:
     //! bad plugin id loudly instead of the historical silent no-op.
     bool addApplet(const QString &pluginId);
     void addApplet(QObject *metadata, int x, int y);
-    void removeApplet(const int &id);
+    //! trigger the same coarse "Remove this Widget" the applet context menu
+    //! does (Applet::destroy(), which enters the libplasma undo window).
+    //! Returns whether an applet with that instance id existed, so the coarse
+    //! removeApplet D-Bus action can refuse a bad id loudly instead of the
+    //! historical silent no-op.
+    bool removeApplet(const int &id);
     void setAppletsOrder(const QList<int> &order);
     void setAppletsInLockedZoom(const QList<int> &applets);
     void setAppletsDisabledColoring(const QList<int> &applets);

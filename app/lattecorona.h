@@ -246,6 +246,18 @@ public Q_SLOTS:
     //! to this mutator). Readback: viewAppletsData/viewAppletsOrder.
     void addApplet(const uint &containmentId, const QString &pluginId);
 
+    //! D-Bus coarse action (docs/dbus-observability-interface.md): remove an
+    //! applet from a view by its instance id, the same "Remove this Widget"
+    //! the applet context menu triggers (Applet::destroy()). It rides the
+    //! libplasma UNDO WINDOW: the applet lingers with inScheduledDestruction
+    //! true until the notification closes or the ~60s fallback fires (the
+    //! removeView undo trap). A bad containment id (no such view) or an
+    //! applet id that names no applet on the view is refused loudly with NO
+    //! applet removed. Readback: viewAppletsData's inScheduledDestruction
+    //! flips, and the applet leaves viewAppletsData/viewAppletsOrder once the
+    //! undo window ends.
+    void removeApplet(const uint &containmentId, const uint &appletId);
+
     void duplicateView(const uint &containmentId);
     void exportViewTemplate(const uint &containmentId);
     void moveViewToLayout(const uint &containmentId, const QString &layoutName);

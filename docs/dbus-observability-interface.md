@@ -145,6 +145,20 @@ Landed before or during the 2026-07-16 stabilization session:
   plugin id that names no installed plasmoid. Readback:
   viewAppletsData/viewAppletsOrder grow by one, the new applet at the
   absolute end.
+- `removeApplet(u containmentId, u appletId)` (added 2026-07-18 with the
+  e2e interaction suite, C-I4/P4) - the coarse "Remove this Widget" the
+  applet context menu triggers: Applet::destroy() on the applet with
+  that instance id. It rides the libplasma UNDO WINDOW exactly as
+  removeView does: destroy() marks the applet destroyed() and holds the
+  object alive while the "Widget Removed" undo notification is open
+  (~60s libplasma fallback timer), so the applet does NOT vanish from
+  the readback immediately - it lingers with inScheduledDestruction=true
+  and leaves viewAppletsData/viewAppletsOrder only once the window ends
+  (a restart inside the window resurrects it, same trap as removeView).
+  Two refusals, both loud with NO applet removed (reads-never-construct
+  extended to this mutator): a containment id with no view, and an
+  applet id that names no applet on the view. Readback: the applet's
+  inScheduledDestruction field in viewAppletsData flips to true.
 
 Rejected for now, with reasons recorded: setAppletsOrder over D-Bus
 (reorder is a drag interaction; tests that need order changes drive
