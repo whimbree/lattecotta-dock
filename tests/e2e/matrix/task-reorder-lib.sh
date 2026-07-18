@@ -125,11 +125,14 @@ taskdrag_reverse_jitter() {
 # taskdrag_escape_held <view> <src_appId> <dst_appId>: press on src, glide to
 # dst's rest center CROSSING the neighbour, tap Escape WITH THE BUTTON STILL
 # HELD, then release (DR-6, via fakepointer dragkey). This asks what Escape
-# does to the tasks drag. The drag is a Qt-Quick internal Drag.active, not a
-# compositor data-device drag, so Escape is delivered to the dock's focused
-# surface, NOT a compositor drag-cancel; and the tasksModel.move already ran
-# live while crossing. The caller reads taskdrag_order to record Escape's REAL
-# effect (D1) - do not assume it reverts.
+# does to the tasks drag. The drag is a REAL compositor drag: the task
+# delegate sets Drag.mimeData + Drag.active (TaskItem.qml) on a helper whose
+# Drag.dragType is Drag.Automatic (main.qml), which starts a QDrag, i.e. a
+# wl_data_device drag the compositor owns. So Escape DOES cancel the drag at
+# the compositor - but tasksModel.move already ran LIVE while crossing
+# (MouseHandler.qml), and Drag.onDragFinished only resets z / clears
+# dragSource, so the already-committed move is what does NOT revert. The caller
+# reads taskdrag_order to record that (D1) - do not assume the move reverts.
 taskdrag_escape_held() {
     local view="$1" src="$2" dst="$3" sc dc sx sy dx dy ax ay
     sc="$(_taskdrag_center "$view" "$src")" || return 1
