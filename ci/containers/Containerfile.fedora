@@ -89,4 +89,16 @@ ENV LATTE_VULKAN_LAVAPIPE_ICD=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
     LATTE_VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d \
     LATTE_QML_MODULE_PATH=/usr/lib64/qt6/qml
 
+# Golden-compare tier (multi-distro CI Phase C). Fedora renders the lavapipe
+# device and compares the nix-blessed .expected.lavapipe.png goldens, but its
+# Mesa (LLVM 21.1.8) rounds 5 of the 13 scenes one LSB off the nix pin's LLVM
+# 22, a max per-channel Δ of 2 (B3). So it gates at the TOLERANCE tier
+# (perChannelDelta=2, 0.5% budget) instead of bit-exact - no per-distro golden
+# is blessed for it; it is the "invariant + bounded tolerance" tier. The tier
+# is decoupled from the device on purpose: the device still picks the golden
+# file, the tier only loosens the compare. (A future C2 could instead bless a
+# frozen fedora:43 bit-exact golden as .expected.fedora.png - the device-keyed
+# naming already supports it - but that is not wired now.)
+ENV SCENEPROBE_TIER=tolerance
+
 WORKDIR /src

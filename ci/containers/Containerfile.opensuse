@@ -88,4 +88,15 @@ ENV LATTE_VULKAN_LAVAPIPE_ICD=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
     LATTE_VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d \
     LATTE_QML_MODULE_PATH=/usr/lib64/qt6/qml
 
+# Golden-compare tier (multi-distro CI Phase C). Tumbleweed renders the lavapipe
+# device and, at its current Mesa 26.1.4, matches the nix-blessed
+# .expected.lavapipe.png goldens bit-for-bit for these text-free scenes (B3),
+# so it gates at the BITEXACT tier. Set explicitly (it is also the probe's
+# default) so the tier is a visible per-distro property, consistent with the
+# tolerance-tier legs. This is a rolling-Mesa accident, not a guarantee: if a
+# future bump introduces a per-channel delta (as Fedora's/neon's LLVM already
+# does), flip this to tolerance - the tier is the one knob, decoupled from the
+# device.
+ENV SCENEPROBE_TIER=bitexact
+
 WORKDIR /src

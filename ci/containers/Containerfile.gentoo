@@ -186,4 +186,15 @@ ENV LATTE_VULKAN_LAVAPIPE_ICD=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
 # module trees the dock pins. (Same off-PATH trap the Fedora/Debian legs hit.)
 ENV PATH="/usr/lib64/qt6/bin:/usr/libexec/qt6:${PATH}"
 
+# Golden-compare tier (multi-distro CI Phase C). Gentoo renders the lavapipe
+# device and, at the binhost's llvmpipe (LLVM 22.1.8, 256-bit, identical to
+# Arch), matches the nix-blessed .expected.lavapipe.png goldens bit-for-bit for
+# these text-free scenes (B3), so it gates at the BITEXACT tier. Set explicitly
+# (it is also the probe's default) so the tier is a visible per-distro property,
+# consistent with the tolerance-tier legs. This is a rolling-Mesa accident, not
+# a guarantee: if a future Mesa/LLVM bump introduces a per-channel delta (as
+# Fedora's/neon's LLVM already does), flip this to tolerance - the tier is the
+# one knob, decoupled from the device.
+ENV SCENEPROBE_TIER=bitexact
+
 WORKDIR /src

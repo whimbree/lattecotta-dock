@@ -63,6 +63,13 @@ export LATTE_QML_IMPORT_PATH="$importpath"
 unset QT_PLUGIN_PATH
 
 export SCENEPROBE_DEVICE=lavapipe
+# Golden-compare RIGOR, decoupled from the render device (every leg renders
+# the lavapipe device and compares .expected.lavapipe.png; only the rigor
+# differs). Forwarded from the environment so a tolerance-tier distro
+# (Fedora, KDE neon set SCENEPROBE_TIER=tolerance in their Containerfile ENV)
+# gates at a bounded delta, while the default here stays bit-exact for the
+# NixOS merge gate. The probe refuses an unknown tier loudly (bitexact|tolerance).
+export SCENEPROBE_TIER="${SCENEPROBE_TIER:-bitexact}"
 export LATTE_VK_SUPPRESSIONS="$here/vk-suppressions.txt"
 export SCENEPROBE_ARTIFACTS="${SCENEPROBE_ARTIFACTS:-$build/_sceneprobe-artifacts}"
 mkdir -p "$SCENEPROBE_ARTIFACTS"

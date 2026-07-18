@@ -125,4 +125,14 @@ ENV LATTE_VULKAN_LAVAPIPE_ICD=/usr/share/vulkan/icd.d/lvp_icd.json \
 # excluded from the distro gate stage rather than run against neon's.)
 ENV PATH=/usr/lib/qt6/bin:${PATH}
 
+# Golden-compare tier (multi-distro CI Phase C). neon renders the lavapipe
+# device and compares the nix-blessed .expected.lavapipe.png goldens, but its
+# Mesa (LLVM 20) rounds the SAME 5 of 13 scenes one LSB off the nix pin's LLVM
+# 22, a max per-channel Δ of 2 - by the same pixel counts as Fedora's LLVM 21
+# (B3). So it gates at the TOLERANCE tier (perChannelDelta=2, 0.5% budget)
+# instead of bit-exact; no per-distro golden is blessed for it (the "invariant
+# + bounded tolerance" tier). The tier is decoupled from the device on purpose:
+# the device still picks the golden file, the tier only loosens the compare.
+ENV SCENEPROBE_TIER=tolerance
+
 WORKDIR /src
