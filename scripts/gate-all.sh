@@ -51,6 +51,7 @@ fi
 "$repo/scripts/build-check.sh"        # full build + full ctest + coverage ratchet
 "$repo/tests/coverage/qmllint-gate.sh"       # baseline only shrinks
 "$repo/scripts/sceneprobe-gate.sh"    # real-pixel scene gate incl. self-test
+"$repo/scripts/asan-e2e-gate.sh"      # driven sanitized dock: UB in integration paths aborts
 
 sha="$(git -C "$repo" rev-parse HEAD)"
 mkdir -p "$repo/build"

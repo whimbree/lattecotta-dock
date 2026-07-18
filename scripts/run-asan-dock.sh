@@ -45,6 +45,12 @@ export ASAN_OPTIONS="${common}:suppressions=$repo/scripts/asan/asan.supp${ASAN_O
 export UBSAN_OPTIONS="${common}:suppressions=$repo/scripts/asan/ubsan.supp${UBSAN_OPTIONS:+:$UBSAN_OPTIONS}"
 export BUILD="$ASAN_BUILD"
 
+# Tell the shadow-assertion recipe (tests/e2e/070-asan-binary-shadow.sh) that the
+# dock under test MUST be the sanitized build: it then asserts libasan is mapped
+# into the running process, so a shadow that swapped in an uninstrumented binary
+# (which would silently catch no UB) fails the run instead of passing green.
+export E2E_EXPECT_ASAN=1
+
 echo "run-asan-dock: sanitized dock from $ASAN_BUILD in the nested vehicle"
 echo "run-asan-dock: ASAN_OPTIONS=$ASAN_OPTIONS"
 echo "run-asan-dock: UBSAN_OPTIONS=$UBSAN_OPTIONS"
