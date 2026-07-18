@@ -17,14 +17,29 @@ qml_env_setup() {
 
     unset QML2_IMPORT_PATH QML_IMPORT_PATH
 
-    # NIXPKGS_QT6_QML_IMPORT_PATH covers the KDE framework modules;
-    # NIXPKGS_QML_SEARCH_PATHS the pinned Qt modules themselves. Entries from
-    # a foreign Qt closure (the plasma-workspace build dependency currently
-    # rides a different Qt pin) cannot dlopen here and are filtered out.
-    # LATTE_QML_MODULE_PATH is exported by the flake devShell and lists the
-    # qml dirs of the pinned dependency set - the only trustworthy source.
-    # The session's NIXPKGS_QT6_QML_IMPORT_PATH leaks the desktop's own
-    # (differently pinned) module paths and is deliberately ignored.
+    # The nixpkgs Qt6 runtime wrapper reads NIXPKGS_QT6_QML_IMPORT_PATH /
+    # NIXPKGS_QML_SEARCH_PATHS from the ENV to seed the QML engine's import
+    # path, independently of QML2_IMPORT_PATH - so ignoring them while building
+    # `imports` from LATTE_QML_MODULE_PATH below does NOT stop them winning.
+    # A live case (caught 2026-07-18 via /proc/<dock>/maps): the desktop
+    # session leaks NIXPKGS_QT6_QML_IMPORT_PATH carrying the SYSTEM-INSTALLED
+    # packaged latte-dock (the NixOS module's environment.systemPackages copy,
+    # when programs.latte-dock.enable is on), whose
+    # org.kde.latte.private.containment plugin then shadowed the staged one -
+    # so every containment/plugin change (layoutmanager, maskgeometry) ran the
+    # packaged binary, not the worktree build ("landed but never ran").
+    # Strip ONLY the packaged latte-dock leaf, not the whole var: these paths
+    # also carry KDE framework modules the QML gates import (unsetting the var
+    # wholesale drops a module qmlcontracts needs). Deny-list the specific
+    # store leaf, per the regression rule (never nuke a shared root). The
+    # staged latte-dock lives under a $HOME path, not a /nix/store/*-latte-dock-*
+    # one, so it is never matched.
+    local _v _filtered
+    for _v in NIXPKGS_QT6_QML_IMPORT_PATH NIXPKGS_QML_SEARCH_PATHS; do
+        [[ -n "${!_v:-}" ]] || continue
+        _filtered=$(tr ':' '\n' <<<"${!_v}" | grep -vE '/nix/store/[^/]*-latte-dock-' | paste -sd:)
+        export "$_v=$_filtered"
+    done
     local p
     imports=()
     IFS=':' read -ra _qmldirs <<< "${LATTE_QML_MODULE_PATH:?scripts/lib-qml-env.sh needs the flake devShell (LATTE_QML_MODULE_PATH)}"
