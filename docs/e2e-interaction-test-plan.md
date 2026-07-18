@@ -454,6 +454,13 @@ or explicitly deferred if the swarm runs short. justify and abort and
 vertical-edge cells are never in the coverage-only bucket, and a panel never
 carries four alignment sub-modes (only full-span + justify).
 
+These 78 abort cells are the CONFIG-MATRIX abort coverage. The section 7
+adversarial abort target matrix ADDS ~30 novel residue-path scenarios on top
+(each on one representative cell, all novel by class), lifting the abort total to
+~108 and the grand total to ~228, and splitting the two richest abort legs (add,
+applet-reorder) into config-matrix + adversarial-target chunks (section 8's
+C-A1b, C-A2b).
+
 ## 7. Scenario families (readback assertions; goldens justified case-by-case)
 
 For each family: the readback that carries the assertion, and - only where a
@@ -547,6 +554,283 @@ readback cannot express the fact - the specific golden and its justification.
 Each drives then CANCELS, then `matrix_assert_baseline_restored`: byte-identical
 readback + (visual-only cases) crop equals the clean baseline.
 
+#### Adversarial abort target matrix (grounded in the drop code)
+
+The polite aborts A1-A6 already carry (Escape, release-at-origin) exercise the
+drop code's EARLY-OUT paths, which are by construction the least fragile arms in
+the machinery. The dangerous residue lives where the code TRIES to honor a
+malformed-but-plausible drop: it computes a target index, mutates layout state,
+and only then discovers the drop was nonsensical (the `insert(-1)` class). This
+matrix enumerates those targets, each anchored to the exact handler it stresses
+and the residue it would strand. Targets are NOVEL by class (each is a distinct
+residue path); per HC1 each runs on its family's single highest-value
+representative cell (justify on a VERTICAL edge, where `insertAtCoordinates`'
+three-zone distance fallback and the length-axis reorder math are busiest), not
+multiplied across the 128-cell config matrix. A family's config-matrix abort
+cells (section 6) stay as-is; these targets ADD to that family's novel count.
+
+**Shared code map (the handlers every target below stresses):**
+- **CONTAINMENT ADD DND:** `DragDropArea.qml` onDragEnter/Move/Leave/Drop ->
+  `LayoutManager::insertAtCoordinates` (layoutmanager.cpp:1121) ->
+  `insertAtLayoutCoordinates` (821). insertAtCoordinates NEVER refuses: when the
+  point hovers no layout it falls through to a nearest-distance heuristic
+  (1151-1187) that places the spacer by min tail/head distance to
+  start/main/end. There is no "off-target, refuse" arm in the C++; the only
+  refusal is the DropClassifier ladder in QML (`containmentDropAction`,
+  dropclassifier.h:243).
+- **THE SPACER (G3):** `dndSpacerIndex()` (layoutmanager.cpp:1000) reports the
+  spacer's slot, -1 when it is parented to root/containment (clean). It is set
+  live by insertAtCoordinates and cleared by onDragLeave (DragDropArea.qml:152),
+  the 100ms `clearInfoTimer` (70-86), and the edit-exit rescue (main.qml:403).
+  onDrop does NOT reparent the spacer (only `dndSpacer.opacity = 0`, line 201),
+  so a completed drop leaves it parented until the timer. FINDING:
+  dndSpacerIndex line 1002 dereferences `m_dndSpacer` with no null guard; the G3
+  readback surface must guard it or a query issued before any drag has created
+  the spacer crashes the dock.
+- **THE MASQUERADE:** onDrop reads dndSpacerIndex, encodes it to a fake negative
+  point (`indexToMasquearadedPoint`, 601), hands that to `processMimeData`;
+  `onAppletAdded` (main.qml:547) decodes it and calls `addAppletItem(applet,
+  index)` (1211), which guards `index < 0` (early return, applet left unplaced)
+  and appends when `index >= count`. A stale spacer index between drop and
+  applet-added lands the applet at the wrong slot.
+- **APPLET REORDER:** `ConfigOverlay.qml` MouseArea onPressed/PositionChanged/
+  Released. onReleased (201) ALWAYS commits (insertBefore(placeHolder,
+  currentApplet), z=1, save); there is NO abort branch. Press lifts the applet
+  to `root` at z=900 (194-198); only onReleased restores it. The MouseArea has
+  no `acceptedButtons` (LeftButton only) and no `Keys`/Escape handler.
+- **TASK REORDER:** `MouseHandler.qml` DropArea. `MoveTaskReorder` mutates
+  `tasksModel.move` LIVE during onDragMove (184) and sets `dragSource.z = 100`
+  (180); onDrop for an internal move is `LeaveUnchanged`/ignore
+  (dropclassifier.h:263) and reverts NOTHING. The 200ms `ignoreItemTimer` (50)
+  is the only anti-jitter.
+- **CROSS-SCREEN:** `positioner.cpp` relocation is hide -> set
+  m_nextScreen/m_nextScreenName (890) -> screenChanged confirm (835) ->
+  hidingForRelocationFinished apply (877). Those pending-move members are the
+  split-brain state, and the wayland `confirmedgeometry` shortcut (843) skips the
+  geometry-confirm gate.
+- **EDIT OVERLAY MASK:** `inputmaskflush.h` holds the window mask at the union of
+  bands during a LENGTH-axis shrink and collapses on a settle timer in Effects;
+  `needsSettleCollapse` (97) gates the collapse. The edit overlay leaves only the
+  toggle rects live (PR #20).
+
+**T1 WRONG-PLACE-IN-DOCK**
+- **T1a onto an OCCUPIED applet** (insert-at-occupied): drop squarely on another
+  applet's center. Stresses insertAtLayoutCoordinates' midpoint branch (879-884)
+  and its degenerate `width()>1`/`height()>1` guard - a hovered item caught
+  mid-collapse (width<=1) always routes `insertAfter` regardless of side.
+  Residue: applet on the wrong side of the occupant, an off-by-one in
+  `viewAppletsOrder`. Assert: appletOrder + applet-id order (G1) byte-identical
+  to baseline on abort.
+- **T1b on a JUSTIFY SPLITTER or exactly ON a zone boundary** (the
+  insert(-1)/off-by-one territory): drop at the start/main or main/end seam.
+  Stresses insertAtCoordinates' justify branch (1131-1145, start then end then
+  main) and save()'s splitter recompute (666-668) feeding
+  `JustifySplitters::insertSplitters` (justifysplitters.h:94). Residue: a stale
+  splitterPosition/splitterPosition2 persisted; on the next restore
+  `repairPositions` logs "out of range ... repairing to centered"
+  (layoutmanager.cpp:398), a visible migration the abort must NOT provoke.
+  Assert: splitterPosition/splitterPosition2 in config byte-unchanged, NO repair
+  qWarning in the log.
+- **T1c PAST THE LAST SLOT** (overflow/clamp): drop beyond the final applet.
+  Stresses the distance fallback (1169-1187, tail-vs-head) and addAppletItem's
+  `index >= count` append (1235). Residue: applet at a phantom trailing index or
+  a gap. Assert: order + count identical.
+- **T1d a TASK dropped OUT of the Tasks applet onto a containment neighbor:** the
+  task drag carries the taskbutton mime; classifyContainmentDrag sets isTask
+  (dropclassifier.h:148), containmentDropAction returns Ignore (246), and onDrop
+  leaves the spacer as-is (177-180, "Qt5 returned early here"). Residue: the
+  spacer strands in the neighbor's layout until the 100ms timer; a re-enter that
+  stops the timer lingers it. Assert: dndSpacerIndex()==-1 (G3) after settle;
+  appletOrder unchanged.
+- **T1e an applet dropped INTO the SYSTRAY interior:** the systray is its own
+  containment; its DropArea consumes the drop and Latte's onDrop never fires
+  (cross-target, see T3). Residue would be a Latte spacer opened with no matching
+  onDrop to close it. Assert: G3 clean, Latte appletOrder unchanged.
+- **T1f onto the EDIT CHROME** (ruler, Add-Widgets button, settings window): the
+  settings window is a separate KWin surface (a foreign-surface drop, T2b); the
+  in-canvas ruler/toggle carry no DropArea. Assert: the drop is a no-op (order
+  unchanged, no spacer opened).
+- **T1g onto a STALE popup/tooltip window** (the click-eater surface): a
+  QQC2.ToolTip / preview surface stranded over a live rect (the PR #20 class). A
+  drop or click landing on it is eaten. Assert (behavioral, shared with A5): the
+  drop/click reaches the item beneath.
+
+**T2 OFF-THE-DOCK-ENTIRELY**
+- **T2a release on EMPTY DESKTOP / at OFF-SCREEN coords:** pointer released
+  outside every layout. For add DND, onDragLeave (DragDropArea.qml:152) should
+  have fired on exit and cleaned the spacer; the adversarial case is a release
+  WITHOUT a preceding leave (teleport out), which if still inside root lands in
+  the distance fallback. Residue: an orphan spacer (G3 != -1) or a phantom
+  insert. Assert: nothing added/removed, G3 clean, no gap.
+- **T2b release on a FOREIGN WINDOW** (another app, the settings window): the
+  drop crosses to a surface Latte does not own. Assert: appletOrder/count
+  unchanged, spacer clean.
+- **T2c the SPACER-CLEANUP stress (widget-add):** drag from the explorer, hover
+  IN to SHOW the spacer (dndSpacerIndex>=0), then drag back OUT and release
+  off-dock. Stresses whether onDragLeave/clearInfoTimer actually reset the spacer
+  parent. An orphan spacer here is pure residue. Assert: dndSpacerIndex()==-1
+  (G3), appletOrder byte-identical.
+
+**T3 CROSS-TARGET / CROSS-VIEW**
+- **T3a onto a DIFFERENT dock/view then abort:** start on view A, cross to view
+  B's surface, release/Escape. Each view has an independent DragDropArea and its
+  own m_dndSpacer; a spacer opened on B must clean on B. Assert: both views'
+  appletOrder unchanged, both G3 clean.
+- **T3b DUAL-DISPLAY move toward B, waypoint, drop BACK on A** (split-brain
+  "vacated but never claimed"): stresses positioner's pending-move members
+  (m_nextScreen/m_nextScreenName, positioner.cpp:890) and the wayland
+  confirmedgeometry shortcut (843). Residue: struts vacated on A but never
+  republished (A4's core). Assert: viewsData.screen still A, A's publishedStruts
+  intact, no struts / ghost view on B.
+- **T3c a TASK dragged out of Tasks onto the containment/systray and back** (the
+  cross-target of the task sub-model, T1d/T1e for the tasks path).
+
+**T4 TIMING / STATE-TRANSITION COMBOS** (driver DR-4)
+- **T4a abort mid-drag DURING autohide HIDE/REVEAL:** fire a visibility
+  hide/reveal mid-glide. Stresses the thickness-axis mask shrink (inputmaskflush,
+  deliberately NOT held) racing the drag grab. Residue: a dropped drag or a
+  spacer left in a hidden dock. Assert: on reveal, G3 clean, order unchanged.
+- **T4b abort DURING MAXIMIZE-LENGTH or ZOOM-SETTLE:** spawn/maximize a client
+  (maximize-length path) or unhover (zoom-out) mid-drag, then abort. Stresses
+  `windowMaskFor`'s length-axis union hold (inputmaskflush.h:62-92) and
+  `needsSettleCollapse` (97): an abort that interrupts the settle collapse leaves
+  the WINDOW mask over-wide. Residue: inputRegionRects/maskRect wider than the
+  settled band (input captured across the vacated band, the stale frosted band
+  drawn). Assert: after settle, maskRect == the non-drag band (readback) AND the
+  post-settle crop equals the clean baseline (the frosted-band golden, the one
+  visual-only residue, shared with A5).
+- **T4c EXIT EDIT-MODE mid-drag (applet reorder):** trigger `setViewEditMode
+  false` while ConfigOverlay holds currentApplet at z=900 parented to root.
+  onReleased never runs; onEditModeChanged (main.qml:387-405) rescues dndSpacer
+  but NOT the ConfigOverlay placeHolder/currentApplet. Residue: an applet stuck
+  at z=900 parented to root, DROPPED from appletOrder (save() walks only the
+  three layouts, so the applet vanishes from the order). Assert: appletOrder
+  count+order restored (applet back in a layout), z readback (G2) at baseline.
+  HIGH-VALUE A2 target.
+- **T4d DRAG SOURCE REMOVED mid-drag:** removeApplet the dragged applet mid-glide
+  (a second path deletes it). Stresses currentApplet going null under
+  ConfigOverlay and dragSource dying under MouseHandler. Residue: a dangling
+  currentApplet, placeHolder/spacer never cleared. Assert: no crash,
+  placeHolder/spacer clean, order reflects only the removal.
+- **T4e SECOND DRAG before the first settles** (driver DR-5): start drag B before
+  A's save/settle. Stresses re-entrancy of the single m_dndSpacer / single
+  currentApplet. Assert: exactly one coherent order, one spacer, no double
+  insert. (Advanced; desk-check fallback if headlessly infeasible, root cause
+  recorded per HC3.)
+
+**T5 DEGENERATE INPUT**
+- **T5a ZERO-DELTA drag:** press and release without moving. The true no-op
+  baseline: task reorder MUST NOT move (insertIndexAt inert), applet reorder
+  onReleased returns the applet to origin. Assert: order + z + config identical.
+- **T5b DIRECTION-REVERSAL JITTER** (out->back->out->release, driver DR-2):
+  stresses the 200ms ignoreItemTimer (MouseHandler.qml:50) and SuppressRepeatTarget
+  (dropclassifier.h:387). For task reorder, note the LIVE-move truth: a reversal
+  that crosses a neighbor commits tasksModel.move immediately and does NOT revert
+  on the way back unless the reverse re-crosses. Assert: final order matches the
+  NET crossings; launchers key reflects only net moves.
+- **T5c OFF-BY-ONE BOUNDARY COORDINATE:** release one pixel inside/outside a
+  midpoint, or at distance 0. Stresses insertIndexAt's `ceil(distance/step)-1` =
+  -1 at distance 0 (dropclassifier.h:316), which TasksModel::move rejects
+  (inert, preserved not clamped). Assert: NO move to -1, order unchanged.
+- **T5d TELEPORT vs GLIDE (parabolic shift):** a single-step teleport skips the
+  intermediate childAt() sampling a 24-step glide hits. Stresses whether the
+  reorder tracks the same target under both. Assert: same final order; on abort,
+  baseline.
+- **T5e RIGHT/MIDDLE-CLICK mid-drag:** the ConfigOverlay MouseArea accepts
+  LeftButton only (no acceptedButtons); a right/middle press during the left-drag
+  is not consumed here and may reach a context menu. Assert: the reorder still
+  resolves on left-release with no residue, OR a context menu opens without
+  stranding currentApplet at z=900.
+- **T5f MODIFIER HELD (Ctrl/Shift copy-vs-move, driver DR-3):** hold Ctrl/Shift
+  across the drag. Latte's paths do not distinguish a copy action
+  (`event.proposedAction`, DragDropArea.qml:198). Assert: the abort leaves no
+  residue regardless of modifier; a copy-modified add abort still adds ZERO.
+
+**ESCAPE-vs-RELEASE, grounded** (supersedes the assumption in O8): the
+ConfigOverlay applet-reorder MouseArea has NO Keys/Escape handler, so Escape
+never reaches it. The A2 "Escape sub-path" is therefore NOT a given cancel:
+Escape hits the view / KeyboardNavigationHandler and most likely EXITS edit mode
+(T4c), which STRANDS the ConfigOverlay residue rather than cleanly cancelling.
+The task-reorder MouseHandler is a real DragDrop drag the compositor CAN cancel
+with Escape, but the LIVE `tasksModel.move` already applied is not reverted. Each
+abort driver's HC3 acceptance must OBSERVE Escape's REAL effect on its path
+(clean cancel, no-op, or edit-exit-with-residue), never assume "Escape cancels".
+
+**Driver capabilities the abort matrix needs** (flagged for the named infra
+chunk; these ADD to that chunk's definition of done, they do not change its
+config-matrix scope - do not edit the infra tick lines to record them, they land
+with the chunk's own work):
+- **DR-1 drop-at-arbitrary-target release** (explicit x,y; over a named foreign
+  window from dumpwins; a nested systray containment; off-screen coords) -> C-I9
+  extends its release primitive, C-I1 resolves the target rect. Needed by
+  T1a/b/c/d/e, T2a/b, T3a.
+- **DR-2 reverse-jitter glide** (press, out->back->out waypoints, release) ->
+  composes fakepointer's existing multi-waypoint drag/glide; a
+  `matrix_reverse_jitter` wrapper in C-I7 (applets) / C-I8 (tasks). No new
+  fakepointer verb.
+- **DR-3 modifier-hold** (Ctrl/Shift across a drag) -> fakepointer has no
+  modifier axis; extend the C-I10 keyboard axis with keydown/keyup (press-and-hold
+  a modifier keysym). Needed by T5f.
+- **DR-4 mid-drag state-transition hook** (run a D-Bus action or spawn/maximize a
+  window BETWEEN glide waypoints) -> a `matrix_mid_drag_hook` seam in C-I1,
+  driving existing actions (setViewEditMode for T4c, removeApplet for T4d, a
+  maximized client for T4b, a visibility toggle for T4a). Needed by T4a-d.
+- **DR-5 second-concurrent-drag** -> C-I7/C-I8; advanced, desk-check fallback if
+  headlessly infeasible with the root cause recorded (HC3 still requires
+  observing the negative outcome).
+- **DR-6 escape-within-a-held-pointer-drag** (press + `key Escape` + release in
+  ONE tool invocation) -> C-I7/C-I8 build on C-I10; the standalone 080 recipe
+  proved a key cancels a KWin interactive move, NOT a MouseArea/DropArea drag
+  with the button still held. Its acceptance must resolve the ESCAPE-vs-RELEASE
+  finding above.
+
+**Candidate readback** (per HC2, a missing readback is a signal to ADD one):
+- **G6** (candidate, flagged not committed) relocation-pending state (positioner
+  m_nextScreen/m_nextScreenName/m_nextScreenEdge) would make A4's mid-relocation
+  split-brain queryable instead of timing-dependent; decide in review alongside
+  G5.
+- **G3 hardening:** the dndSpacerIndex null-guard finding above is a prerequisite
+  for A1/A2 to query the spacer safely; it lands with G3 in C-I4/P4.
+
+**Residue surface per abort (harness-hardening requirement, C-I1).** The
+`matrix_probe_config` residue detector snapshots ONLY the layout file
+(`$E2E_LAYOUT`), so an abort that strands residue OUTSIDE it false-passes green.
+Each abort scenario must name the surface(s) its residue could land in, and any
+that leaves the layout file MUST extend the snapshot. Three surfaces exist:
+- **LAYOUT FILE** (covered): the containment config group carries `appletOrder`,
+  `splitterPosition`/`splitterPosition2`, `lockedZoomApplets`/
+  `userBlocksColorizingApplets`, and the view's screen assignment. A1/A2/A6
+  residue is here.
+- **VIEW RECORD** (covered by D-Bus readback, not a file): `editMode`,
+  `inputRegionRects`/`maskRect`, `publishedStruts`, z-order (G2), dndSpacerIndex
+  (G3). A2/A3/A5 runtime residue is here.
+- **OFF-LAYOUT CONFIG (NOT covered - the gap):**
+  - **`lattedockrc`** carries universal settings and the ScreenPool
+    `[ScreenConnectors]` name<->connector map (screenpool.cpp:140-145). A4 and A6
+    can strand a PHANTOM screen connector here on a split-brain move / a view
+    removal; A5 can strand a stale `inConfigureAppletsMode`, which universalSettings
+    persists via `saveConfig` on change (universalsettings.cpp:50). These three
+    families MUST also snapshot `lattedockrc` in their baseline/assert.
+  - **Another applet's config group** (a distinct group inside the layout file,
+    NOT the containment's `appletOrder`): the tasks applet's `launchers` key
+    (plasmoid config main.xml:21) for A3, and the stealing-applet launchers key
+    for A1's add-launchers path. If `matrix_probe_config` reads only the
+    containment's `appletOrder` key rather than the whole file, these are missed;
+    A3/A1 MUST snapshot the tasks-applet config group via the
+    `MATRIX_VOLATILE_EXTRA` seam.
+  This is a HARNESS-HARDENING prereq on C-I1: extend `matrix_probe_config` to
+  optionally snapshot `lattedockrc` and accept a `MATRIX_VOLATILE_EXTRA` list of
+  additional config groups/files, so A3/A4/A5/A6 assert on the surface their
+  residue actually lands in rather than on the layout file alone.
+
+**Scenario growth:** each family's target list below is single-representative-cell
+(justify + a vertical edge) per HC1, so the matrix adds roughly 30 novel
+target scenarios (A1 ~7, A2 ~9, A3 ~5, A4 ~4, A5 ~4, A6 ~3) on top of the 78
+config-matrix abort cells, lifting the abort total to ~108 and the grand total
+to ~228. The two richest legs (add, applet-reorder) split into a config-matrix
+chunk plus an adversarial-target chunk (C-A1b, C-A2b), taking the abort chunks
+from six to eight and the total from 28 to 30 (section 8 re-balances the waves).
+
 - [ ] **A1 Widget-add abort.** DRIVE (P8): explorer drag, release over a
       NON-drop zone. READBACK: applet count and `viewAppletsOrder` byte-identical
       to baseline; the drop-marker/spacer readback (P4) reads CLEAN (no stranded
@@ -554,6 +838,29 @@ readback + (visual-only cases) crop equals the clean baseline.
       GOLDEN only if the spacer readback cannot fully express a half-rendered
       placeholder band (justify cells): crop equals baseline. This is the
       readback-gap-becomes-surface case in action.
+      ADVERSARIAL TARGETS (each on the justify + vertical-edge representative,
+      per the matrix above): **T2c** the spacer-cleanup stress (hover in to open
+      the spacer, drag back OUT, release off-dock) - the canonical orphan-spacer
+      case, assert dndSpacerIndex()==-1; **T2a** teleport-out release with no
+      preceding onDragLeave (the distance-fallback at insertAtCoordinates:1151
+      must not phantom-insert); **T2b** release on the settings window / a
+      foreign surface; **T1a** release on an OCCUPIED applet's center (the add
+      never overwrites, count unchanged); **T1d** a TASK dragged out of Tasks
+      onto this containment - containmentDropAction Ignore (dropclassifier.h:246)
+      leaves the spacer as-is (DragDropArea.qml:177), assert G3 clean after the
+      100ms timer, NOT stranded by a re-enter that stops the timer; **T1e** an
+      applet released into the systray interior (cross-target, systray's own
+      DropArea eats it, Latte spacer must still close); **T5f** a Ctrl/Shift-held
+      copy-modified add abort still adds ZERO (no ng double-create even with a
+      copy action). RESIDUE / NO-RESIDUE: appletOrder + applet-id order (G1)
+      byte-identical, count unchanged, `dndSpacerIndex()==-1` (G3, null-guarded
+      per the finding above), no repair qWarning, config byte-unchanged; the
+      justify placeholder-band golden only where G3 cannot express the half-drawn
+      spacer. RESIDUE SURFACE: layout file + G3 runtime for the plain add; the
+      T1d/stealing-applet launcher-drop leg strands into the tasks-applet
+      `launchers` group (addDroppedLaunchersInStealingApplet), so that leg's
+      assert snapshots the tasks-applet config group via `MATRIX_VOLATILE_EXTRA`.
+      DRIVER: DR-1 (arbitrary-target release, C-I9); split into C-A1b.
       Commits:
 - [ ] **A2 Applet-reorder abort.** DRIVE (P6; Escape sub-path P9): start a
       reorder, Escape (drag-CANCEL) or release at origin. READBACK:
@@ -561,11 +868,66 @@ readback + (visual-only cases) crop equals the clean baseline.
       swap), z back to baseline (no applet over chrome). GOLDEN: none (both
       residues are now readback). Run both sub-paths where P9 exists. Vertical
       edges highest-value.
+      ADVERSARIAL TARGETS (ConfigOverlay MouseArea; onReleased always commits and
+      has no abort branch, so the residue is in the paths that BYPASS onReleased):
+      **T4c** EXIT edit-mode mid-drag (the marquee A2 target) - setViewEditMode
+      false while the applet is lifted to root at z=900, onEditModeChanged
+      (main.qml:387) rescues dndSpacer but NOT the ConfigOverlay
+      placeHolder/currentApplet, so the applet DROPS out of appletOrder (save()
+      walks only the three layouts); assert appletOrder count+order restored and
+      z (G2) at baseline; **T4d** the dragged applet REMOVED by another path
+      mid-drag (currentApplet goes null) - assert no crash, placeHolder cleared,
+      order reflects only the removal; **T1a** release on an OCCUPIED applet
+      (insertAtLayoutCoordinates midpoint + the width<=1 degenerate-hovered
+      guard, 879) - assert no off-by-one; **T1b** release exactly on a justify
+      SPLITTER / zone boundary - assert splitterPosition/2 config byte-unchanged,
+      NO "repairing to centered" qWarning (layoutmanager.cpp:398); **T1c** release
+      PAST the last slot (distance fallback + index>=count append); **T5b**
+      reverse-jitter (out->back->out->release); **T5e** right/middle-click
+      mid-drag (MouseArea is LeftButton-only, no acceptedButtons) - assert the
+      left-release still resolves and no applet strands at z=900; **T5f** modifier
+      held; **T5a** zero-delta. ESCAPE FINDING: prove Escape's REAL effect here
+      first - the MouseArea has no Keys handler, so Escape likely exits edit mode
+      (= T4c residue), NOT a clean cancel; the driver's HC3 acceptance must
+      distinguish. RESIDUE / NO-RESIDUE: `viewAppletsOrder` + applet-id order (G1)
+      byte-identical, z (G2) baseline (no applet parented to root / over chrome),
+      splitterPosition/2 byte-unchanged, config byte-unchanged. DRIVERS: DR-4
+      (mid-drag hook, C-I1), DR-6 (escape-in-held-drag, C-I7+C-I10), DR-2
+      (reverse-jitter, C-I7); split into C-A2b.
       Commits:
 - [ ] **A3 Task-reorder abort.** DRIVE (P7; Escape P9): start a task drag,
       Escape / release at origin. READBACK: `viewTasksData` order UNCHANGED, z
       back to baseline, `launchers` key byte-unchanged. Both sub-models. No
       golden.
+      LIVE-MOVE TRUTH (grounds this whole family): MouseHandler mutates
+      `tasksModel.move` DURING onDragMove (MouseHandler.qml:184), not on drop;
+      onDrop for an internal move is LeaveUnchanged/ignore (dropclassifier.h:263)
+      and reverts NOTHING. So "order UNCHANGED" holds ONLY for a drag that never
+      crossed a neighbor's midpoint. A CROSS-then-abort is the adversarial case:
+      the move already committed (and the `launchers` key already rewrote), and
+      neither Escape nor release restores it. The plan must assert the ACTUAL
+      contract, not a wished revert.
+      ADVERSARIAL TARGETS: **T5a** zero-delta / release-before-cross - the ONLY
+      true no-op, assert order + launchers byte-unchanged; **T5b** reverse-jitter
+      within the 200ms ignoreItemTimer window (MouseHandler.qml:50) - assert the
+      final order equals the NET crossings and the launchers key reflects only
+      net moves (a reversal that re-crosses back is a net-zero that MUST land
+      byte-identical); **T5c** off-by-one / distance-0 boundary - insertIndexAt
+      answers -1 (dropclassifier.h:316), TasksModel::move rejects it, assert NO
+      move to -1; **T5d** teleport vs 24-step glide to the same target - same
+      final order; **T4c/T4d** edit-exit or task-closed mid-drag; **T1d/T3c** a
+      task dragged OUT of the Tasks applet onto the containment/systray and back
+      (cross-target); window-task sub-model AND launcher sub-model both. RESIDUE
+      / NO-RESIDUE: `viewTasksData` order (+ window-task order G4) matches the net
+      crossings, z (G2) back to baseline (dragSource.z=100 reset on
+      Drag.onDragFinished, 480ae30e3, must not stick), `launchers` key reflects
+      only net moves. RESIDUE SURFACE: the `launchers` key is the TASKS-APPLET
+      config group (plasmoid main.xml:21), NOT the containment `appletOrder` - the
+      assertion MUST snapshot that group via `MATRIX_VOLATILE_EXTRA`, or a
+      launcher-order strand on a cross-then-abort false-passes. ESCAPE FINDING: a
+      DragDrop drag IS compositor-cancelable by
+      Escape, but the already-applied move stays - the acceptance must observe
+      that, not assume a revert. DRIVER: DR-2 (reverse-jitter, C-I8).
       Commits:
 - [ ] **A4 Cross-screen-move abort (split-brain).** DRIVE (P1,P5): begin a move
       toward B, drop BACK on the origin (or cancel mid-move). READBACK, the
@@ -573,6 +935,29 @@ readback + (visual-only cases) crop equals the clean baseline.
       (still A), A's `publishedStruts` still reserved, and NO ghost view/struts
       on B (exactly one view, on A). Fully queryable - no golden. This is the
       "vacated but never claimed" strand turned into a readback assertion.
+      ADVERSARIAL TARGETS: **T3b** the waypoint-drop-back-on-A (glide toward B,
+      waypoint over B's rect, release back on A) - stresses positioner's
+      pending-move members (m_nextScreen/m_nextScreenName, positioner.cpp:890)
+      and the wayland `confirmedgeometry` shortcut (843) that skips the
+      geometry-confirm gate, so a screenChanged that fires mid-abort can finalize
+      a move the drop-back was meant to cancel; assert m_nextScreen cleared (via G6 if committed,
+      else via viewsData.screen + publishedStruts staying on A); **T4a** abort
+      DURING the relocation HIDE (hidingForRelocationStarted has fired, the view
+      is sliding out) - assert the view slides back IN on A, not stranded hidden
+      (`isHidden`/`isOffScreen` false, `inStartup` not stuck); move to a
+      NON-EXISTENT output must be REFUSED (P5 acceptance, view stays put); a
+      cloned-view move (Phase 8 applet-order sync open) if a clone exists.
+      RESIDUE / NO-RESIDUE: exactly one view, on A; `viewsData.screen`/`onPrimary`
+      unchanged; A's `publishedStruts` intact and NONE on B; `screenGeometry` ==
+      A's rect; `e2e_assert_geometry_agrees` (render lands where reported); no
+      "CLEARED SCREEN"-driven stranding (that log is benign per Phase 8).
+      RESIDUE SURFACE: a split-brain move can strand a PHANTOM entry in the
+      ScreenPool `[ScreenConnectors]` map in `lattedockrc` (screenpool.cpp:140-145),
+      which the layout-file snapshot MISSES - the assertion MUST also snapshot
+      `lattedockrc`. READBACK-GAP: flag G6 (relocation-pending state) so the
+      mid-relocation abort is queryable rather than timing-dependent. DRIVERS:
+      DR-4 (mid-drag hook to abort during the hide, C-I1), P1/P5 vehicle + move
+      action.
       Commits:
 - [ ] **A5 Edit-mode no-op (PR #20 click-eating residue).** DRIVE: enter edit
       mode, exit WITHOUT changes. READBACK: `editMode`/`inConfigureAppletsMode`
@@ -586,6 +971,28 @@ readback + (visual-only cases) crop equals the clean baseline.
       divergence no readback can express (the readback says clean, that IS the
       bug), so the post-exit crop must equal the baseline. The marquee golden of
       the suite. ~1 per (edge x vt) center (~8).
+      ADVERSARIAL TARGETS: **T1g** exit edit mode with a STALE tooltip/preview
+      surface still mapped over a formerly-live rect (the exact PR #20
+      separate-surface click-eater) - drive a click at that point, assert it
+      REACHES the applet beneath (behavioral readback), and the crop equals
+      baseline; **T4b** exit edit mode DURING a length-axis mask shrink
+      (maximize-length release or zoom-out settle) so the settle collapse races
+      the exit - stresses `windowMaskFor`'s union hold (inputmaskflush.h:62) and
+      `needsSettleCollapse` (97), residue is `inputRegionRects`/`maskRect` left
+      wider than the settled band (input captured across the vacated band, the
+      frosted band drawn); assert after settle maskRect == the non-edit band AND
+      the crop equals baseline; **T4c** exit edit mode mid applet-drag (shares the
+      A2 z=900 strand); a right/middle-click on the exiting overlay. RESIDUE /
+      NO-RESIDUE: `editMode`/`inConfigureAppletsMode` false, `inputRegionRects` +
+      `maskRect` == the non-edit baseline (NOT the held union), config
+      byte-unchanged, the click-through behavioral readback reaches the applet,
+      and the post-exit crop equals the clean baseline (the frosted-band /
+      ghost-overlay golden). RESIDUE SURFACE: `inConfigureAppletsMode` is a
+      UNIVERSAL setting that `saveConfig`s to `lattedockrc` on change
+      (universalsettings.cpp:50), so an edit-mode abort that leaves it stale
+      strands residue OUTSIDE the layout file - the assertion MUST also snapshot
+      `lattedockrc`. DRIVER: DR-4 (fire the mask-shrink transition at edit-exit,
+      C-I1); Escape variant needs C-I10.
       Commits:
 - [ ] **A6 Remove-undo abort.** DRIVE: `removeView`, then trigger UNDO within
       the window. READBACK, no golden: on undo the containment FULLY resurrects
@@ -593,13 +1000,37 @@ readback + (visual-only cases) crop equals the clean baseline.
       half-alive strand); counter-case, if it COMMITS, the group is FULLY gone
       (no `[Containments][<cid>]`, no orphan strut). Both branches asserted.
       GOTCHAS: 60s fallback; restart-inside-window resurrection; verify id first.
+      ADVERSARIAL TARGETS (the widget-remove undo, layoutmanager.cpp
+      removeAppletItem:1333 + setAppletInScheduledDestruction:147): **T4d-class**
+      remove an applet, then re-add (undo) it - libplasma re-emits appletAdded and
+      the double-container guard (addAppletItem:1287-1302) must NOT create a
+      second container; assert applet count and appletOrder resurrect exactly once
+      (no duplicate id), and `appletsInScheduledDestruction` (the parking map) is
+      EMPTY after both undo and commit; RESTART inside the undo window
+      (resurrection trap) - assert the removed applet/view does NOT come back
+      after a commit that a restart raced; UNDO AFTER an overflow-relayout
+      (df747ebf class) - assert a clean relayout with no orphan strut; a justify
+      remove-then-undo recomputes splitters without a repair qWarning
+      (splitterPosition/2 byte-stable). RESIDUE / NO-RESIDUE: on undo, `viewsData`
+      / `viewAppletsOrder` + count byte-identical to baseline, parking map empty,
+      no orphan `[Containments][<cid>]` strut; on commit, the group is fully gone,
+      parking map empty, restart does not resurrect. RESIDUE SURFACE: the
+      widget-remove-undo residue is the layout file (covered) plus the runtime
+      parking map (readback); but the removeView branch can leave an ORPHAN
+      ScreenPool `[ScreenConnectors]` entry in `lattedockrc` (screenpool.cpp:140-145)
+      for the removed view's screen - that branch MUST also snapshot `lattedockrc`.
+      No new driver (removeView / removeApplet exist).
       Commits:
 
 ## 8. Chunk decomposition for the swarm
 
-Ten infra chunks, twelve committed scenario chunks, six abort chunks: **28
-chunks total.** Each is one Opus agent's single reviewable PR (branch, gate,
-independent lean-Opus review, `gh pr merge --rebase`, re-resolve hashes, fetch).
+Ten infra chunks, twelve committed scenario chunks, eight abort chunks: **30
+chunks total.** (The abort family grew from six to eight: the adversarial target
+matrix in section 7 split the two richest legs, add and applet-reorder, into a
+config-matrix chunk plus an adversarial-target chunk each - C-A1b, C-A2b - while
+A3/A4/A5/A6 fold their targets into the existing chunk.) Each is one Opus
+agent's single reviewable PR (branch, gate, independent lean-Opus review, `gh pr
+merge --rebase`, re-resolve hashes, fetch).
 
 ### Infra chunks (each ships the HC3 observes-a-rejection acceptance test)
 - [x] **C-I1 = P0** fixture generator + matrix harness + baseline backbone.
@@ -634,21 +1065,26 @@ independent lean-Opus review, `gh pr merge --rebase`, re-resolve hashes, fetch).
 - [ ] **C-S12** F6 widget remove vertical + dual strand (8+4 = 12). Commits:
 
 ### Abort scenario chunks (highest-value; interleave EARLY, never last)
-- [ ] **C-A1** A1 add abort, dock+panel, 4 edge, {c,j}, single (16) + dual (2) = 18. Commits:
-- [ ] **C-A2** A2 applet-reorder abort, dock+panel, 4 edge, {c,j} (16) + dual (2) = 18. Commits:
-- [ ] **C-A3** A3 task-reorder abort, dock+panel, 4 edge, center (8) + dual (2) = 10. Commits:
-- [ ] **C-A4** A4 move abort / split-brain, dock+panel, 4 edge, {c,j}, dual (16). Commits:
-- [ ] **C-A5** A5 edit no-op / PR#20 guard, dock+panel, 4 edge, center (8) + dual (2) = 10. Commits:
-- [ ] **C-A6** A6 remove-undo abort, dock+panel, 2 edge, center (4) + dual (2) = 6. Commits:
+- [ ] **C-A1** A1 add abort (config-matrix leg), dock+panel, 4 edge, {c,j}, single (16) + dual (2) = 18. Commits:
+- [ ] **C-A1b** A1 add abort (adversarial-target leg): T2c orphan-spacer, T2a/T2b off-dock/foreign, T1a occupied, T1d task-onto-containment spacer-strand, T1e systray interior, T5f copy-modifier (~7 on the justify+vertical representative). Needs C-I9 (DR-1) + C-I4 (G3 null-guard). Commits:
+- [ ] **C-A2** A2 applet-reorder abort (config-matrix leg), dock+panel, 4 edge, {c,j} (16) + dual (2) = 18. Commits:
+- [ ] **C-A2b** A2 applet-reorder abort (adversarial-target leg): T4c edit-exit-mid-drag z=900 strand (marquee), T4d source-removed, T1a/T1b/T1c occupied/splitter/overflow, T5b reverse-jitter, T5e right-click, T5f modifier (~9). Needs C-I7 + C-I1 (DR-4) + C-I10 (DR-6). Commits:
+- [ ] **C-A3** A3 task-reorder abort, dock+panel, 4 edge, center (8) + dual (2) = 10; folds the live-move-truth targets T5a/T5b/T5c/T5d + T1d cross-target (~5). Needs C-I8 (DR-2). Commits:
+- [ ] **C-A4** A4 move abort / split-brain, dock+panel, 4 edge, {c,j}, dual (16); folds T3b waypoint-drop-back + T4a abort-during-hide + nonexistent-output refusal (~4). Flags G6 relocation-pending readback. Needs C-I5 + C-I2 + C-I1 (DR-4). Commits:
+- [ ] **C-A5** A5 edit no-op / PR#20 guard, dock+panel, 4 edge, center (8) + dual (2) = 10; folds T1g stale-tooltip-surface + T4b mask-shrink-settle-race (~4). Needs C-I1 (DR-4). Commits:
+- [ ] **C-A6** A6 remove-undo abort, dock+panel, 2 edge, center (4) + dual (2) = 6; folds double-container-guard, restart-inside-window, overflow-relayout undo (~3). removeView/removeApplet exist. Commits:
 
 ### Merge order and parallelism
 **Gate on everything:** C-I1 (harness + baseline) and C-I6 (golden bridge) block
-all eighteen scenario chunks.
+all twenty scenario chunks.
 
 **Per-family gates:** C-I3 -> C-S4,C-S5,C-A1. C-I4 -> C-S11,C-S12,C-A1(spacer),
-C-A2(z). C-I5 -> C-S9,C-S10,C-A4. C-I7 -> C-S6,C-S7,C-A2. C-I8 -> C-S8,C-A3.
-C-I9 -> DND leg of C-S4,C-S5,C-A1. C-I10 -> Escape sub-path of C-A2,C-A3,C-A5.
-C-I2 -> all dual tails + F5/A4.
+C-A1b(G3 null-guard),C-A2(z). C-I5 -> C-S9,C-S10,C-A4. C-I7 -> C-S6,C-S7,C-A2,
+C-A2b. C-I8 -> C-S8,C-A3. C-I9 -> DND leg of C-S4,C-S5,C-A1,C-A1b. C-I10 ->
+Escape sub-path of C-A2,C-A2b,C-A3,C-A5. C-I2 -> all dual tails + F5/A4. The two
+adversarial legs carry the heaviest driver deps: C-A1b needs DR-1 (C-I9) + the
+G3 null-guard (C-I4); C-A2b needs DR-4 (C-I1 mid-drag hook) + DR-6 (C-I7+C-I10),
+so it is the LAST abort chunk to unblock.
 
 **Waves:**
 - Wave 1 (<=4): C-I1, C-I3, C-I4, C-I5, C-I10.
@@ -660,7 +1096,10 @@ C-I2 -> all dual tails + F5/A4.
   (+C-I10 for A5's Escape variant; removeView exists for A6), so they are among
   the FIRST scenario chunks to merge. C-A2 lands with C-S6/C-S7 (C-I7); C-A1
   with C-S4/C-S5 (C-I9/C-I3/C-I4); C-A4 with C-S9/C-S10 (C-I5/C-I2); C-A3 with
-  C-S8 (C-I8).
+  C-S8 (C-I8). The adversarial legs trail their config-matrix twins by the
+  driver deps: C-A1b after C-A1 once C-I9(DR-1)+C-I4(G3) are in; C-A2b after
+  C-A2 once C-I1(DR-4)+C-I10(DR-6) are in - it is the last abort chunk, but still
+  interleaved with the remaining committed chunks, never deferred past them.
 
 **Max concurrency = 4 agents** (the established cap). Nested kwin + lavapipe is
 CPU-heavy and podman/CPU are shared: a gate/e2e timeout under concurrent load is
@@ -749,7 +1188,14 @@ one-per-scenario. Everything else asserts by readback.
   `--virtual --output-count 2` is unproven; P1 needs a discover-and-pin step
   before any dual scenario trusts placement. Biggest schedule risk in the
   dual/F5/A4 half.
-- **O8 Abort input mechanics: Escape vs release.** Escape-cancel (drag CANCEL,
-  needs P9) and release-at-origin / release-over-nothing (a no-op drop) exercise
-  DIFFERENT code. Plan runs both where P9 exists. Confirm both wanted, or pick
-  Escape as canonical (more residue-prone, better regression target).
+- **O8 Abort input mechanics: Escape vs release (GROUNDED, see section 7's
+  ESCAPE-vs-RELEASE finding).** Escape-cancel and release-at-origin /
+  release-over-nothing exercise DIFFERENT code, and the code says Escape is NOT
+  uniformly a cancel: the ConfigOverlay applet-reorder MouseArea has no Keys
+  handler, so Escape there most likely EXITS edit mode (stranding the z=900
+  residue, target T4c), while the task-reorder DragDrop drag IS
+  compositor-cancelable but does not revert the already-applied `tasksModel.move`.
+  So both input paths are wanted AND their acceptance must OBSERVE Escape's real
+  effect per path, never assume cancel. The richer regression target is the
+  malformed-drop matrix (T1-T5), not Escape alone. Confirm: run both, with the
+  driver HC3 acceptance pinning Escape's actual per-path behavior.
