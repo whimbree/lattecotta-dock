@@ -109,11 +109,25 @@ matrix_init() {
 matrix_gen() {
     local cell="$1" out="$2"
     matrix_cell_parse "$cell" || return 2
+    #! P1 (C-I2): a 2out cell pins its view to the SECONDARY output discovered
+    #! by the multi-output vehicle (tests/e2e/matrix/multi-output-lib.sh
+    #! mo_discover_outputs exports E2E_MO_SECONDARY*). Absent that discovery (a
+    #! single-output run, or any recipe that never sourced multi-output-lib),
+    #! no --screen is passed and the fixture falls back to its sentinel id, so
+    #! the dock REFUSES the 2out view rather than silently placing it on the
+    #! primary - the degenerate case fails loud, per the observes-a-rejection
+    #! rule. This is the only 2out-aware line; 1out generation is unchanged.
+    local pin_args=()
+    if [[ "$MATRIX_DISPLAY" == 2out && -n "${E2E_MO_SECONDARY:-}" ]]; then
+        pin_args=(--screen "$E2E_MO_SECONDARY"
+                  --screen-id "${E2E_MO_SECONDARY_ID:?multi-output-lib sets this alongside E2E_MO_SECONDARY}"
+                  --screen-geometry "${E2E_MO_SECONDARY_GEOM:-}")
+    fi
     python3 "$MATRIX_FIXTURE" \
         --seed-dir "$MATRIX_PRISTINE" --out-dir "$out" \
         --view-type "$MATRIX_VT" --edge "$MATRIX_EDGE" \
         --alignment "$MATRIX_ALIGN" --display "$MATRIX_DISPLAY" \
-        --cell "$cell" || return 2
+        --cell "$cell" "${pin_args[@]}" || return 2
 }
 
 # matrix_stage <cell>: generate the cell fixture, restart the vehicle dock onto
