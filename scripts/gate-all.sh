@@ -52,6 +52,9 @@ fi
 "$repo/tests/coverage/qmllint-gate.sh"       # baseline only shrinks
 "$repo/scripts/sceneprobe-gate.sh"    # real-pixel scene gate incl. self-test
 "$repo/scripts/asan-e2e-gate.sh"      # driven sanitized dock: UB in integration paths aborts
+"$repo/scripts/matrix-fixture-check.sh"   # hermetic e2e-matrix fixture generator + refusals
+                                          # (fast tier-1; the nested-vehicle harness
+                                          # acceptance is scripts/run-matrix.sh, periodic)
 
 sha="$(git -C "$repo" rev-parse HEAD)"
 mkdir -p "$repo/build"
