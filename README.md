@@ -137,9 +137,11 @@ The high-priority slice of what remains, from the plan's own ordering
 1. The accessibility quartet's open half: Accessible.* rollout across
    the interactive items and the Orca acceptance pass, building on the
    landed keyboard focus mode
-2. Promoting the nested-compositor e2e vehicle into a maintained suite
-   (pixel assertions over KWin screenshots compose with the D-Bus
-   surface), then the hosted CI pipeline on top of the existing gates
+2. The hosted CI pipeline on top of the existing gates and the
+   now-maintained nested-vehicle e2e suite (the suite already runs
+   desk-independently, asserting over the D-Bus surface with
+   KWin-screenshot pixel goldens where pixels are the thing under test;
+   standing it up in hosted CI is what remains)
 3. Theming polish: the color-group audit (which theme object each of
    the ~12 Kirigami color read sites should follow)
 4. The remaining live-verification recipes from the extraction ledger
