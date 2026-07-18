@@ -21,6 +21,17 @@
  *          default; down/up hold or release, e.g. a modifier. <keysym> is an
  *          XKB keysym NAME like Escape, Up, Return, space, or a numeric
  *          literal like 0xff1b.)
+ *        fakepointer dragkey <keysym> <x1> <y1> <x2> <y2> [x3 y3 ...]  (left
+ *          press at the first point, glide through every waypoint WITH THE
+ *          BUTTON STILL HELD, tap <keysym> at the last waypoint, then release
+ *          - all on ONE connection so the pointer grab spans the keystroke.
+ *          The escape-within-a-held-pointer-drag primitive: a plain `key`
+ *          run after a `drag` cannot reach an in-flight drag because `drag`
+ *          has already released the button by the time the second process
+ *          runs. Used to ask what Escape actually does to a Qt-Quick internal
+ *          drag - e.g. the tasks-applet reorder, whose tasksModel.move is
+ *          already applied live before the key ever arrives, DR-6 in
+ *          docs/e2e-interaction-test-plan.md.)
  *
  * Why keysyms, not scancodes (the keymap question): the fake_input keyboard
  * axis offers two requests. keyboard_key(button,state) carries a Linux evdev
@@ -128,20 +139,32 @@ int main(int argc, char **argv)
     int isglide = (argc > 1) && (strcmp(argv[1], "glide") == 0);
     int isscroll = (argc > 1) && (strcmp(argv[1], "scroll") == 0);
     int iskey = (argc > 1) && (strcmp(argv[1], "key") == 0);
+    int isdragkey = (argc > 1) && (strcmp(argv[1], "dragkey") == 0);
 
     if (iskey) {
         if (argc != 3 && argc != 4) {
             fprintf(stderr, "usage: %s key <keysym> [down|up|press]\n", argv[0]);
             return 2;
         }
+    } else if (isdragkey) {
+        //! dragkey <keysym> <x1> <y1> <x2> <y2> [...]: keysym then >=2 coord
+        //! pairs, so argc is odd and at least 7 (prog dragkey key x1 y1 x2 y2)
+        if (argc < 7 || (argc % 2) == 0) {
+            fprintf(stderr, "usage: %s dragkey <keysym> <x1> <y1> <x2> <y2> [x3 y3 ...]\n"
+                            "  press at (x1,y1), glide through the waypoints with the button held,\n"
+                            "  tap <keysym> at the last waypoint, then release - one held-drag session\n",
+                    argv[0]);
+            return 2;
+        }
     } else if (((isdrag || isglide) && (argc < 6 || (argc % 2) != 0))
         || (isscroll && argc != 6)
         || (!isdrag && !isglide && !isscroll
             && (argc != 4 || (strcmp(argv[1], "move") && strcmp(argv[1], "click") && strcmp(argv[1], "rightclick"))))) {
-        fprintf(stderr, "usage: %s move|click|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>  |  %s key <keysym> [down|up|press]\n"
+        fprintf(stderr, "usage: %s move|click|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>  |  %s key <keysym> [down|up|press]  |  %s dragkey <keysym> <x1> <y1> <x2> <y2> [x3 y3 ...]\n"
                         "  scroll: positive detents scroll up, negative down; one detent = one wheel click\n"
-                        "  key:    <keysym> is an XKB name (Escape, Up, Return, space) or a numeric literal; state defaults to press (down then up)\n",
-                argv[0], argv[0], argv[0], argv[0]);
+                        "  key:    <keysym> is an XKB name (Escape, Up, Return, space) or a numeric literal; state defaults to press (down then up)\n"
+                        "  dragkey: press, glide (button held), tap <keysym> at the last point, release - one held-drag session\n",
+                argv[0], argv[0], argv[0], argv[0], argv[0]);
         return 2;
     }
 
@@ -204,6 +227,72 @@ int main(int argc, char **argv)
             org_kde_kwin_fake_input_keyboard_keysym(fake_input, keysym, WL_KEYBOARD_KEY_STATE_RELEASED);
             wl_display_roundtrip(display);
         }
+
+        wl_display_disconnect(display);
+        return 0;
+    }
+
+    if (isdragkey) {
+        //! keysym goes to the compositor's keymap the same way `key` does, so
+        //! it needs the same v6 floor; a lower version can still carry the
+        //! pointer half but not the keystroke, so refuse rather than press-drag
+        //! silently without the key the caller asked for.
+        if (fake_input_version < 6) {
+            fprintf(stderr, "org_kde_kwin_fake_input version %u < 6, no keyboard_keysym (dragkey needs v6)\n",
+                fake_input_version);
+            wl_display_disconnect(display);
+            return 3;
+        }
+        xkb_keysym_t keysym = resolve_keysym(argv[2]);
+        if (keysym == XKB_KEY_NoSymbol) {
+            fprintf(stderr, "unknown keysym '%s' (try an XKB name like Escape, or a numeric literal like 0xff1b)\n",
+                argv[2]);
+            wl_display_disconnect(display);
+            return 2;
+        }
+
+        const int steps = 24;
+        double x = atof(argv[3]);
+        double y = atof(argv[4]);
+
+        //! press at the first point, then hold the button through every glide
+        //! and the keystroke - the whole point of this verb is that the grab
+        //! outlives the key, which a separate `drag` then `key` cannot do
+        org_kde_kwin_fake_input_pointer_motion_absolute(fake_input,
+            wl_fixed_from_double(x), wl_fixed_from_double(y));
+        wl_display_roundtrip(display);
+        usleep(100000);
+        org_kde_kwin_fake_input_button(fake_input, BTN_LEFT, 1);
+        wl_display_roundtrip(display);
+        usleep(150000);
+
+        double cx = x, cy = y;
+        for (int w = 5; w + 1 < argc; w += 2) {
+            double wx = atof(argv[w]);
+            double wy = atof(argv[w + 1]);
+            for (int i = 1; i <= steps; ++i) {
+                double sx = cx + (wx - cx) * i / steps;
+                double sy = cy + (wy - cy) * i / steps;
+                org_kde_kwin_fake_input_pointer_motion_absolute(fake_input,
+                    wl_fixed_from_double(sx), wl_fixed_from_double(sy));
+                wl_display_roundtrip(display);
+                usleep(12000);
+            }
+            cx = wx;
+            cy = wy;
+        }
+
+        //! tap the key at the target with the button still down
+        usleep(120000);
+        org_kde_kwin_fake_input_keyboard_keysym(fake_input, keysym, WL_KEYBOARD_KEY_STATE_PRESSED);
+        wl_display_roundtrip(display);
+        usleep(20000);
+        org_kde_kwin_fake_input_keyboard_keysym(fake_input, keysym, WL_KEYBOARD_KEY_STATE_RELEASED);
+        wl_display_roundtrip(display);
+        usleep(120000);
+
+        org_kde_kwin_fake_input_button(fake_input, BTN_LEFT, 0);
+        wl_display_roundtrip(display);
 
         wl_display_disconnect(display);
         return 0;
