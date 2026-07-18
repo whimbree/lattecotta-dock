@@ -221,8 +221,25 @@ pass on every distro regardless of tier.
       (Arch/nix bundle them): qt6-qtbase-private-devel (Qt6::GuiPrivate for
       the sceneprobe) and libasan/libubsan (the sanitized unit tests link
       -fsanitize). Full dep-name resolution in
-      docs/agent-logs/2026-07-17-fedora-leg.md. Remaining: neon/gentoo/void
-      layers. Commits: d68ad64c0, 3eaa21261, a14c6efef, 2b2469b5e
+      docs/agent-logs/2026-07-17-fedora-leg.md. KDE NEON DONE
+      (ci/containers/Containerfile.neon, deps-only cacheable layer, deb/
+      multiarch like Debian). Base is the KDE registry image
+      invent-registry.kde.org/neon/docker-images/plasma:user (the stale
+      Docker Hub kdeneon/* tags are Ubuntu 22.04 / Plasma 5.27, below floor).
+      neon builds its own KF6/Plasma packages, so FIVE dev names diverge from
+      BOTH Arch and Debian, resolved by in-image apt dry-run: KSvg is
+      kf6-ksvg-dev (libkf6svg-dev does NOT exist on neon); qqc2-desktop-style
+      is kf6-qqc2-desktop-style (not qml6-module-org-kde-desktop);
+      plasma5support-dev (the kf6- name is a transitional dummy);
+      plasma-activities-dev / plasma-activities-stats-dev; qt6-svg-dev
+      (libqt6svg6-dev is a transitional dummy). Everything else matches
+      Debian. neon-specific: the base defaults to an unprivileged USER neon
+      (uid 1001), so the image sets USER root for apt + the driver (the other
+      legs already run as root). ENV/traps identical to Debian (unsuffixed
+      lvp_icd.json, multiarch qt6/qml tree, Qt6 host tools off-PATH under
+      /usr/lib/qt6/bin). Full resolution:
+      docs/agent-logs/2026-07-17-neon-leg.md. Remaining: gentoo/void
+      layers. Commits: d68ad64c0, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7
 - [~] A2 Clean cmake build of the port in each container locally (podman
       is on the host - prototype here, no CI yet). Record per-distro
       build quirks. ARCH DONE: builds clean (565/565) against Arch's Qt
@@ -272,8 +289,22 @@ pass on every distro regardless of tier.
       the default PATH) -> a B2 PATH note. No SOURCE fix was needed to build;
       the two Fedora blockers were missing build DEPS (qt6-qtbase-private-
       devel, libasan/libubsan), resolved in the Containerfile, not tree
-      defects. Remaining distros TBD.
-      Commits: 00400f16c, d68ad64c0, 3fb8f899d, 3eaa21261, a14c6efef, 2b2469b5e
+      defects. KDE NEON DONE: builds clean (565/565, same benign
+      dropclassifiertest -Wmissing-field-initializers as Debian/Fedora)
+      against neon's Qt 6.11.1 / KF6 6.28.0 / Plasma 6.7.3 on noble; NO
+      source fix needed (master's portability fixes carry the multiarch
+      libdir). ci/build-and-gate.sh test -> 80/80: the driver's test stage
+      now runs ctest -E '^(qmllintgate|schemesmodeltest)$', so the two
+      NixOS-tier entries are excluded by construction and every other test
+      passes (the image PATH carries /usr/lib/qt6/bin for the QML
+      script-gates, and LATTE_QML_MODULE_PATH resolves the framework modules).
+      The raw ctest still shows those two failing for the documented
+      NixOS-tier reasons only (qmllint ratchet refuses a foreign qmllint;
+      schemesmodeltest non-hermetic against the neon base's real Breeze
+      schemes) - the same pair every non-nix leg excludes, no per-leg action.
+      neon is on the Plasma 6.7 branch so the askDestroy contract needs no
+      #if gate (unlike Debian 6.6.5). Remaining distros TBD.
+      Commits: 00400f16c, d68ad64c0, 3fb8f899d, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7
 - [~] A3 Pin the exact base image tags that meet the Plasma 6.5 floor;
       document the floor check per distro. Arch is rolling (archlinux:
       latest for the prototype; archive-snapshot pin TBD). DEBIAN DONE:
@@ -293,8 +324,16 @@ pass on every distro regardless of tier.
       6.28.0 / qt6-qtbase 6.10.3 - all meet Qt>=6.6, KF6>=6.5,
       libplasma>=6.5. fedora:42 ships Plasma 6.3.x (below floor), so 43 is
       the earliest qualifying Fedora stable; did NOT use ng's fedora:44 /
-      USTC-mirror lines. Remaining: neon/gentoo/void tags.
-      Commits: 3eaa21261, a14c6efef, 2b2469b5e
+      USTC-mirror lines. KDE NEON PINNED:
+      invent-registry.kde.org/neon/docker-images/plasma:user (the User
+      Edition, neon's stable release channel). Floor checked in-container
+      2026-07-17 and recorded in the Containerfile header: Qt 6.11.1 / KF6
+      6.28.0 / Plasma+kwin 6.7.3 on Ubuntu 24.04 noble, all past floor. The
+      stale Docker Hub kdeneon/* tags (Ubuntu 22.04 / Plasma 5.27, 2023) are
+      below floor and were rejected. neon User rolls with each Plasma
+      release, so a registry digest pin is the open reproducibility item
+      (same as Arch/Tumbleweed). Remaining: gentoo/void tags.
+      Commits: 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7
 
 ### Phase B - headless gates in-container
 - [~] B1 Get nested kwin_wayland + lavapipe running in each container
@@ -316,8 +355,14 @@ pass on every distro regardless of tier.
       podman and drives all 13 sceneprobe scenes. Same cap_sys_nice=ep quirk
       (Fedora's kwin package) - same setcap -r fix. No Fedora-specific
       validation-layer suppressions needed: the existing vk-suppressions.txt
-      covers Fedora's Mesa (LLVM 21.1.8) warnings.
-      Commits: 79a8008f0, 3eaa21261, a14c6efef, 2b2469b5e
+      covers Fedora's Mesa (LLVM 21.1.8) warnings. KDE NEON DONE: nested
+      kwin_wayland comes up headless in podman and drives all 13 sceneprobe
+      scenes. neon's kwin_wayland ships WITHOUT cap_sys_nice (getcap empty),
+      so the setcap -r is a harmless no-op - kept for parity/robustness. No
+      neon-specific suppressions needed: the only validation message is the
+      known VK_KHR_create_renderpass2/multiview/maintenance2 lavapipe
+      emulation warning, already covered by vk-suppressions.txt.
+      Commits: 79a8008f0, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7
 - [~] B2 Run the behavioral e2e recipes in-container; make them a hard
       pass on each distro. GATE STAGE PRODUCTIONIZED (branch
       multi-distro-ci-b2-gate): ci/build-and-gate.sh's gate stage is
@@ -420,8 +465,21 @@ pass on every distro regardless of tier.
       wired here. This is the first concrete proof of the graduated-rigor
       model's premise: bit-exactness is a per-Mesa/LLVM accident, so Fedora
       needs the tolerance tier. Detail:
-      docs/agent-logs/2026-07-17-fedora-leg.md.
-      Commits: 18aac31b0, 79a8008f0, 3eaa21261, a14c6efef, 2b2469b5e
+      docs/agent-logs/2026-07-17-fedora-leg.md. KDE NEON DONE (invariant+
+      tolerance tier): all 13 scenes RENDER (non-blank, correct
+      regions/colors, self-test valid) through nested kwin on lavapipe in the
+      neon:user container. NOT bit-exact - neon ships Mesa 25.2.8 on LLVM
+      20.1.2, so the SAME 5 scenes as Fedora differ, by the SAME pixel counts
+      and the SAME max Δ=2 (8 bit-exact PASS; applet_colorizer/indicator_glow/
+      multieffect_degenerate/shadoweditem at Δ=1, multieffect_blur 93.3% px
+      but Δ=2 from the blur spreading the LSB rounding). neon's LLVM20 and
+      Fedora's LLVM21 land bit-identically on the same side of the nix pin's
+      rounding. CompareTolerance{2, >=0.95} passes all 13; the tier/bless is
+      Phase C (C1/C2), not this leg, and sceneprobe-gate.sh exiting 1 at the
+      bit-exact tier is correct (neon is not a bit-exact distro). Second
+      concrete proof of the graduated-rigor premise after Fedora. Detail:
+      docs/agent-logs/2026-07-17-neon-leg.md.
+      Commits: 18aac31b0, 79a8008f0, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7
 
 ### Phase C - per-distro golden tiers
 - [ ] C1 Extend the sceneprobe device/tier axis to per-distro naming
