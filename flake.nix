@@ -83,6 +83,13 @@
             jq # scripts/qmllint-gate.sh parses qmllint --json with it
             imagemagick # cropping live-verification and docs screenshots
 
+            # clangd for the editor/IDE code-intelligence flow (docs/clangd-setup.md):
+            # a contributor gets a working language server straight from `nix develop`,
+            # no separate install. clang-tools ships only the tooling binaries
+            # (clangd, clang-format, clang-tidy) - it carries NO cc/gcc/g++/clang++
+            # driver, so it cannot shadow the pinned GCC stdenv the build uses.
+            clang-tools
+
             # sceneprobe render gate (scripts/sceneprobe-gate.sh): a nested
             # throwaway compositor gives the probe a Vulkan-capable wayland
             # QPA. Process-level tool only - its QML/plugin trees are never
