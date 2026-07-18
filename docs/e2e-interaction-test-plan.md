@@ -275,7 +275,7 @@ a success.
       WRONG golden FAILS the compare and a MISSING golden FAILS on the lavapipe
       tier (mirror sceneprobe `selftest-bad`/`selftest-blank`). Depends on P0.
       Commits:
-- [ ] **P3 `addApplet` action + applet-id order readback.** Blocks F2/A1 and
+- [x] **P3 `addApplet` action + applet-id order readback.** Blocks F2/A1 and
       F6/A6 setup. Add COARSE `addApplet us <cid> <pluginId>` (Qt5-faithful
       end-append) in the three required places + `dbusreportstest`. ALSO add the
       readback HC2 demands here: an unambiguous applet-id order (extend
@@ -284,7 +284,15 @@ a success.
       rejection): the action's test proves a bad containment id is REFUSED with
       a qWarning and no applet created (the existing read-surface refusal
       contract, extended to this mutator).
-      Commits:
+      Landed: `addApplet(u,s)` on the corona (loud refusal for a bad
+      containment id AND a plugin that names no installed plasmoid; the latter
+      made observable by making `ContainmentInterface::addApplet` return bool);
+      `viewAppletsOrder` now reports the splitter-free applet-instance-id order
+      via the pure `DbusReports::appletIdOrder` helper (G1); XML, design doc,
+      usage reference, `dbusreportstest` (appletIdOrder), and the
+      `tests/e2e/080-add-applet.sh` acceptance recipe (happy add + G1
+      consistency + the HC3 bad-id rejection, PASS in the nested vehicle).
+      Commits: (branch worktree-agent-a102bc9cfc620c8c0; final hashes at PR merge)
 - [ ] **P4 `removeApplet` action + drop-marker/spacer readback.** Blocks F6/A1/A2.
       Add COARSE `removeApplet uu <cid> <appletId>` (invokes
       `LayoutManager::removeAppletItem`, the `33830b2c` finalize-immediately
@@ -581,7 +589,7 @@ independent lean-Opus review, `gh pr merge --rebase`, re-resolve hashes, fetch).
 ### Infra chunks (each ships the HC3 observes-a-rejection acceptance test)
 - [ ] **C-I1 = P0** fixture generator + matrix harness + baseline backbone. Commits:
 - [ ] **C-I2 = P1** multi-output vehicle. Commits:
-- [ ] **C-I3 = P3** `addApplet` + applet-id order readback + XML + test. Commits:
+- [x] **C-I3 = P3** `addApplet` + applet-id order readback + XML + test. Commits: (branch worktree-agent-a102bc9cfc620c8c0; final hashes at PR merge)
 - [ ] **C-I4 = P4** `removeApplet` + drop-marker/spacer readback + XML + test. Commits:
 - [ ] **C-I5 = P5** `moveViewToScreen` + XML + test. Commits:
 - [ ] **C-I6 = P2** render-golden bridge (small set) + `--bless`. Commits:
@@ -657,8 +665,15 @@ Existing actions used: `setViewEditMode`, `setViewKeyboardNavigation`,
 **Readback-gap list to ADD (HC2 corollary - each closes a would-be golden and
 lands in the three required places + `dbusreportstest`):**
 
-- [ ] G1 applet-id order in `viewAppletsData`/`viewAppletsOrder` (disambiguate
-      same-plugin applets). Retires ambiguity in F2/F3/A1/A2. (In C-I3/P3.) Commits:
+- [x] G1 applet-id order in `viewAppletsData`/`viewAppletsOrder` (disambiguate
+      same-plugin applets). Retires ambiguity in F2/F3/A1/A2. (In C-I3/P3.)
+      `viewAppletsData` already carried the stable per-applet instance `id` in
+      visual order; the gap was `viewAppletsOrder`, which interleaved
+      justify-splitter sentinels (`JUSTIFYSPLITTERID = -10`) and was
+      mislabeled "plugin ids" in the docs. Now both are splitter-free and
+      agree, via the pure `DbusReports::appletIdOrder` helper (pinned by
+      `dbusreportstest`); the e2e recipe asserts the two order readbacks match.
+      Commits: (branch worktree-agent-a102bc9cfc620c8c0; final hashes at PR merge)
 - [ ] G2 `z`/stacking order in `viewAppletsData` (and `viewTasksData`). Retires
       the stuck-over-chrome golden for F3/F4/A2/A3 (`480ae30e3` residue becomes
       queryable). (In C-I7/P6.) Commits:
