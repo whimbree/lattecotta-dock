@@ -177,18 +177,38 @@ readback expresses (section 7 names each).
 
 **Abort scenarios** assert RETURN-TO-BASELINE WITH NO RESIDUE:
 
-- `matrix_baseline_capture <cell>` snapshots the exact D-Bus/compositor fields
-  the verb would touch (and, only for the visual-residue cases, a baseline crop).
+- `matrix_baseline_capture <view> <verb>` snapshots every residue SURFACE the
+  verb could strand into (and, only for the visual-residue cases, a baseline
+  crop). The surface set (`matrix_surface_list`, the single source both capture
+  and assert read so they cannot drift) is: the `viewsData` view record
+  (editMode, inConfigureAppletsMode, struts, mask, inputRegionRects, geometry);
+  `viewAppletsOrder`; the whole LAYOUT config file; lattedockrc
+  `[UniversalSettings]` (persisted universal residue - the global `launchers`
+  list, `inAdvancedModeForEditSettings`); lattedockrc `[ScreenConnectors]` (a
+  phantom connector left by an aborted cross-screen move, the A4 "vacated but
+  never claimed" strand); the verb's own probe; and one named applet config
+  group per `MATRIX_APPLET_CONFIG_GROUPS` entry (the tasks `launchers` key is a
+  launcher/task-reorder abort strand). The whole-layout snapshot is the broad
+  net; the named applet surface localizes and stays strict when a scenario
+  relaxes unrelated churn.
 - Drive the interaction, then ABORT it mid-flight.
-- `matrix_assert_baseline_restored <cell>` re-reads the same fields and asserts
-  BYTE-IDENTICAL to baseline (order unchanged, count unchanged, screen unchanged,
-  struts unchanged, `editMode`/`inConfigureAppletsMode` false, config file
-  byte-unchanged modulo KConfig default-key deletion). Where the residue is
-  VISUAL-ONLY and no readback can express it (a ghost overlay whose state says
-  "clean" - PR #20; a stale drop-marker band), it also re-shoots the crop and
-  asserts equality to the baseline frame. No abort blesses a NEW golden; its
-  expected image IS the clean baseline, so residue shows as a diff against a
-  known-clean frame.
+- `matrix_assert_baseline_restored <view> <verb>` re-reads the same surfaces and
+  asserts BYTE-IDENTICAL to baseline (order unchanged, count unchanged, screen
+  unchanged, struts unchanged, `editMode`/`inConfigureAppletsMode` false, no
+  phantom connector, config byte-unchanged). The KConfig config surfaces are
+  default-aware: a key that returned to its default (KConfig deletes it) reads as
+  a removed line = a diff = a false-FAIL, the SAFE direction (never a
+  false-PASS); a scenario that hits a known-benign default-deletion relaxes it
+  through `MATRIX_VOLATILE_EXTRA`, without redefining the probe. A probe that
+  FAILS on re-read (a D-Bus call error, a missing file) surfaces as an
+  unassertable surface, never swallowed into a silent pass. The residue diff is
+  byte-exact on geometry/struts/mask, so every `_drive` verb honors a SETTLING
+  CONTRACT: it must fully settle (poll its state, then wait for geometry to stop
+  moving) before returning, or it false-FAILs. Where the residue is VISUAL-ONLY
+  and no readback can express it (a ghost overlay whose state says "clean" - PR
+  #20; a stale drop-marker band), it also re-shoots the crop and asserts equality
+  to the baseline frame. No abort blesses a NEW golden; its expected image IS the
+  clean baseline, so residue shows as a diff against a known-clean frame.
 
 Why readback-first works here and where it does not: most residue HAS a readback
 or should get one (a half-applied swap shows in `viewAppletsOrder`; a stale
