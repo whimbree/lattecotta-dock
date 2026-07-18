@@ -1,0 +1,26 @@
+# AddressSanitizer suppressions for the sanitized latte-dock build
+# (docs/ub-catching-plan.md, Prong A). Referenced by both launchers via
+# ASAN_OPTIONS=suppressions=... (scripts/run-asan-dock.sh nested,
+# scripts/start-dock-sanitized.sh live).
+#
+# STARTS EMPTY ON PURPOSE. A suppression hides a finding, so an over-broad
+# entry here re-creates exactly the silent-UB failure this whole initiative
+# exists to end (CLAUDE.md "never silently swallow a failure"). Add an entry
+# ONLY for a report you have traced into uninstrumented system code
+# (Qt/KF6/Plasma/glib) and confirmed is not our bug - never to quiet our own
+# code.
+#
+# ASan's suppression file only covers a FEW categories - interceptor-based
+# reports and ODR violations, NOT heap/stack-buffer-overflow or
+# use-after-free (those are always fatal, which is what we want for our code).
+# Supported forms:
+#   interceptor_via_fun:<mangled_or_demangled_function_name>
+#   interceptor_via_lib:<substring_of_library_path>   e.g. libglib-2.0.so
+#   odr_violation:<global_symbol_name>
+#
+# Leaks are handled by detect_leaks=0 in the launchers (Qt/Plasma leak at exit
+# by design; leak spam would drown the UB signal), so no leak: entries here.
+#
+# Example (commented - uncomment and narrow to the real library if a
+# library-internal interceptor report ever buries the live run):
+# interceptor_via_lib:libfontconfig.so
