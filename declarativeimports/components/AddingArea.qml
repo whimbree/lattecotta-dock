@@ -23,7 +23,11 @@ Rectangle{
     property int iconSize: 64
 
     readonly property color outlineColorBase: Kirigami.Theme.backgroundColor
-    readonly property real outlineColorBaseBrightness: LatteCore.Tools.colorBrightness(outlineColorBase)
+    //! D14: outlineColorBase is Kirigami.Theme.backgroundColor, invalid on this
+    //! binding's first evaluation at creation before the palette resolves; guard
+    //! so the invalid interim is not handed to the C++ boundary (tools.cpp).
+    //! Valid branch unchanged.
+    readonly property real outlineColorBaseBrightness: outlineColorBase.valid ? LatteCore.Tools.colorBrightness(outlineColorBase) : 0
     readonly property color outlineColor: {
         if (outlineColorBaseBrightness > 127.5) {
             return Qt.darker(outlineColorBase, 1.5);

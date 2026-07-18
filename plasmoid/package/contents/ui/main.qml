@@ -97,7 +97,12 @@ PlasmoidItem {
 
     readonly property int minimumLength: inPlasma ? (root.isHorizontal ? tasksWidth : tasksHeight) : -1;
 
-    property real textColorBrightness: LatteCore.Tools.colorBrightness(themeTextColor)
+    //! D14: themeTextColor is Kirigami.Theme.textColor, which is a
+    //! default-constructed invalid QColor on this binding's first evaluation at
+    //! creation, before the attached PlatformTheme resolves its palette; guard
+    //! so the invalid interim is not handed to the C++ boundary (tools.cpp).
+    //! Valid branch unchanged.
+    property real textColorBrightness: themeTextColor.valid ? LatteCore.Tools.colorBrightness(themeTextColor) : 0
 
     property color themeTextColor: Kirigami.Theme.textColor
     property color themeBackgroundColor: Kirigami.Theme.backgroundColor

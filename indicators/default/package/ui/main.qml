@@ -31,7 +31,11 @@ LatteComponents.IndicatorItem{
 
     readonly property int thicknessMargin: screenEdgeMargin + thickLocalMargin + (glowEnabled ? 1 : 0)
 
-    property real textColorBrightness: LatteCore.Tools.colorBrightness(indicator.colorPalette.textColor)
+    //! D14: the indicator colorPalette serves an invalid textColor on this
+    //! binding's first evaluation at creation, before the palette resolves;
+    //! guard so the invalid interim is not handed to the C++ boundary
+    //! (declarativeimports/core/tools.cpp). Valid branch unchanged.
+    property real textColorBrightness: indicator.colorPalette.textColor.valid ? LatteCore.Tools.colorBrightness(indicator.colorPalette.textColor) : 0
 
     //! buttonFocusColor is a Plasma color-group name; a Kirigami.Theme fallback palette
     //! (used when no colorization is active) lacks it and would read undefined -> black.

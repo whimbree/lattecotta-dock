@@ -28,7 +28,12 @@ LatteComponents.IndicatorItem{
 
     readonly property int screenEdgeMargin: Plasmoid.location === PlasmaCore.Types.Floating || reversedEnabled ? 0 : indicator.screenEdgeMargin
 
-    property real textColorBrightness: LatteCore.Tools.colorBrightness(Kirigami.Theme.textColor)
+    //! D14: Kirigami's attached PlatformTheme serves an invalid QColor on this
+    //! binding's first evaluation at creation, before its palette resolves; the
+    //! change notify recomputes it a beat later. Guard so the invalid interim is
+    //! not handed to the C++ boundary (declarativeimports/core/tools.cpp); the
+    //! valid branch is unchanged so the settled brightness is identical.
+    property real textColorBrightness: Kirigami.Theme.textColor.valid ? LatteCore.Tools.colorBrightness(Kirigami.Theme.textColor) : 0
 
     property color isActiveColor: Kirigami.Theme.focusColor
     property color minimizedColor: {

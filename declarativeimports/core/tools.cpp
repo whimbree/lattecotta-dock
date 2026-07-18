@@ -10,16 +10,18 @@
 // local
 #include "units/colortools.h"
 
-// KNOWN BENIGN SOURCE of the refusals below, root-caused 2026-07-16 with a
-// V4 caller trace (session-handoff has the method): during item creation the
-// first evaluation of bindings reading Kirigami.Theme colors (directly, or
-// through the colorizer chain they feed) can run before the attached
-// PlatformTheme has resolved its palette, so the getter hands over a
-// default-constructed invalid QColor. Every traced consumer is a live
-// binding, so the theme's change notify recomputes it with the real color a
-// beat later - the refusal's fallback value is only ever a first-evaluation
-// interim. Expect a burst of these per view creation under --debug; a
-// STEADY stream at idle is NOT this and deserves a fresh hunt.
+// These three loudly refuse an invalid QColor at the QML->C++ boundary rather
+// than silently returning a wrong brightness: an invalid color arriving here
+// is a caller bug worth seeing, not noise to swallow. A startup BURST of such
+// refusals used to be expected and benign (root-caused 2026-07-16 with a V4
+// caller trace, session-handoff has the method): creation-time QML bindings
+// read Kirigami.Theme colors (directly, or through the colorizer/colorPalette
+// chain they feed) before the attached PlatformTheme resolved its palette, so
+// the getter handed over a default-constructed invalid QColor, self-corrected
+// a beat later by the theme's change notify. Those call sites now guard the
+// brightness call on color validity (D14, docs/known-defects.md), so this
+// boundary is SILENT at startup. Any refusal now is a genuine invalid color
+// and deserves a fresh hunt, not a shrug.
 
 namespace Latte{
 

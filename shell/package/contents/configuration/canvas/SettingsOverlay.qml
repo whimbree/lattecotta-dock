@@ -38,7 +38,10 @@ Item{
 
     property string tooltip: ""
 
-    readonly property real textColorBrightness: LatteCore.Tools.colorBrightness(textColor)
+    //! D14: textColor derives from the theme palette, which is transiently
+    //! invalid on first evaluation at creation; guard so the invalid interim is
+    //! not handed to the C++ boundary (tools.cpp). Valid branch unchanged.
+    readonly property real textColorBrightness: textColor.valid ? LatteCore.Tools.colorBrightness(textColor) : 0
     readonly property bool textColorIsDark: textColorBrightness < 127.5
 
     readonly property color bestContrastedTextColor: {

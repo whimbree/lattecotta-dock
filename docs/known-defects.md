@@ -66,24 +66,6 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FIX DIRECTION: classify the shrink axis against the previous logical band
   while still unioning against the applied region for coverage.
 
-### D14 - 46 invalid-color qCriticals at every startup
-- STATUS: OPEN (found live 2026-07-18; previously noticed at
-  session-handoff.md:890 but never root-caused).
-- SYMPTOM: startup logs ~46 `Tools.colorBrightness: invalid color from QML,
-  returning 0 (dark)` (plus colorLumina / isLight siblings) - qCriticals, not
-  warnings.
-- EVIDENCE: the guard at declarativeimports/core/tools.cpp:33 is CORRECT (loud
-  refuse of an invalid QColor at the QML boundary). The root is a QML call site
-  handing it an invalid QColor before the theme/palette resolves at item
-  creation. Likely per-item bindings (the ~46 count tracks item count):
-  declarativeimports/abilities/client/indicators/LatteIndicator.qml:31 and
-  abilities/items/basicitem/ShortcutBadge.qml:32 (Kirigami.Theme.textColor),
-  indicators/default/package/ui/main.qml:34 (indicator.colorPalette.textColor),
-  containment/.../colorizer/Manager.qml:32 (plasmaTheme.textColor).
-- FIX DIRECTION: at the call sites, do not evaluate colorBrightness on an
-  invalid color (guard the binding on color validity, or defer until the theme
-  resolves) - fix the source, do not silence the guard. Keep the guard.
-
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here
@@ -118,6 +100,31 @@ app/wm/waylandinterface.cpp:299 (Phase 4 WId), app/layouts/synchronizer.cpp:507
 (Open/Resolved); this registry is the flat defect index that points into it.
 
 ## Fixed (kept for the record)
+
+### D14 - invalid-color qCriticals at every startup
+- FIXED: this PR. Startup logged a burst of `Tools.colorBrightness: invalid
+  color from QML, returning 0 (dark)` qCriticals (80 in the nested-vehicle real
+  config; ~46 on the config the defect was first noted against - the count
+  tracks item/view count). ROOT: Kirigami's attached PlatformTheme (and the
+  colorizer/colorPalette chain it feeds) serves a default-constructed invalid
+  QColor on the FIRST evaluation of a creation-time binding, before its palette
+  resolves; the theme's change notify recomputes the real color a beat later.
+  The C++ boundary guard at declarativeimports/core/tools.cpp is CORRECT and
+  stays (loud refuse of an invalid QColor); the fix is at the SOURCE - the QML
+  call sites now guard the brightness/isLight call on color validity
+  (`COLOR.valid ? Tools.f(COLOR) : <invalid-fallback>`), so the invalid interim
+  is never handed to the boundary. All 13 LatteCore.Tools brightness/isLight
+  call sites guarded (Manager.qml x5, LatteIndicator, ShortcutBadge,
+  indicators/default main, plasmoid main, AddItem, AddingArea, SettingsOverlay,
+  LatteDockConfiguration). EVIDENCE (nested vehicle, three runs): baseline 80
+  invalid qCriticals, all spec=0; after the guard 0 qCriticals with per-site
+  attribution summing to exactly 80 (no site missed); settled brightness values
+  identical before/after (themeTextColorBrightness 37.445,
+  backgroundColorBrightness 239.815, editModeTextColorIsBright true), so the
+  fix changes only the premature invalid call, not the resolved result. The
+  tools.cpp boundary comment flipped from "expect a burst" to "SILENT at
+  startup; a refusal now is a genuine bug". Found live 2026-07-18; previously
+  noticed at session-handoff.md:890 but never root-caused.
 
 ### D5 - Justify splitter negative-insert UB
 - FIXED: #22 (c9f3f2427). splitterPosition=0 -> QList::insert(-1) = UB in the

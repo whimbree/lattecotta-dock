@@ -29,17 +29,25 @@ Loader{
     //! colorizer compares against and switches between).
     readonly property QtObject plasmaTheme: themeExtended ? themeExtended.defaultTheme : null
 
-    readonly property real originalThemeTextColorBrightness: LatteCore.Tools.colorBrightness(plasmaTheme ? plasmaTheme.textColor : Kirigami.Theme.textColor)
+    //! D14: the theme source (plasmaTheme/colorPalette, or the Kirigami.Theme
+    //! fallback) can serve a default-constructed invalid QColor on a binding's
+    //! FIRST evaluation at item creation, before its palette resolves; the
+    //! change notify then recomputes with the real color a beat later. Guard
+    //! the brightness calls (here and the isLight one below) on color validity
+    //! so the invalid interim is not handed to the C++ boundary, which loudly
+    //! refuses it (declarativeimports/core/tools.cpp). The valid branch is
+    //! unchanged, so the settled result is identical.
+    readonly property real originalThemeTextColorBrightness: (plasmaTheme ? plasmaTheme.textColor : Kirigami.Theme.textColor).valid ? LatteCore.Tools.colorBrightness(plasmaTheme ? plasmaTheme.textColor : Kirigami.Theme.textColor) : 0
     readonly property color originalLightTextColor: {
         var base = plasmaTheme ? plasmaTheme : Kirigami.Theme;
         return originalThemeTextColorBrightness > 127.5 ? base.textColor : base.backgroundColor;
     }
 
-    readonly property real themeTextColorBrightness: LatteCore.Tools.colorBrightness(textColor)
-    readonly property real backgroundColorBrightness: LatteCore.Tools.colorBrightness(backgroundColor)
+    readonly property real themeTextColorBrightness: textColor.valid ? LatteCore.Tools.colorBrightness(textColor) : 0
+    readonly property real backgroundColorBrightness: backgroundColor.valid ? LatteCore.Tools.colorBrightness(backgroundColor) : 0
 
     readonly property color outlineColorBase: backgroundColor
-    readonly property real outlineColorBaseBrightness: LatteCore.Tools.colorBrightness(outlineColorBase)
+    readonly property real outlineColorBaseBrightness: outlineColorBase.valid ? LatteCore.Tools.colorBrightness(outlineColorBase) : 0
     readonly property color outlineColor: {
         if (!root.panelOutline) {
             return backgroundColor;
@@ -52,7 +60,10 @@ Loader{
         }
     }
 
-    readonly property bool editModeTextColorIsBright: LatteCore.Tools.isLight(editModeTextColor)
+    //! same D14 startup transient as the brightness guards above (layout
+    //! textColor can be transiently invalid); the "white" fallback is already
+    //! valid, so only the layout branch needs guarding.
+    readonly property bool editModeTextColorIsBright: editModeTextColor.valid ? LatteCore.Tools.isLight(editModeTextColor) : false
     readonly property color editModeTextColor: latteView && latteView.layout ? latteView.layout.textColor : "white"
 
     readonly property bool mustBeShown: decider.mustBeShown

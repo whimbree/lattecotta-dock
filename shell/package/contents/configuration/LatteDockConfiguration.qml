@@ -253,7 +253,11 @@ Loader {
                             //! it must remain or be changed
                             text: i18nc("advanced settings", "Advanced")
 
-                            readonly property real textColorBrightness: LatteCore.Tools.colorBrightness(Kirigami.Theme.textColor)
+                            //! D14: guard the startup transient where
+                            //! Kirigami.Theme.textColor is invalid before its
+                            //! palette resolves, keeping it off the C++ boundary
+                            //! (tools.cpp). Valid branch unchanged.
+                            readonly property real textColorBrightness: Kirigami.Theme.textColor.valid ? LatteCore.Tools.colorBrightness(Kirigami.Theme.textColor) : 0
                             readonly property real basicOpacity: textColorBrightness > 127 ? 0.7 : 0.3
 
                             color: {

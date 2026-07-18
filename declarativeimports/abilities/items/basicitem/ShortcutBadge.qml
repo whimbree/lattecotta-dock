@@ -29,7 +29,10 @@ Loader{
     property int fixedIndex:-1
 
     readonly property int maxFixedIndex: abilityItem.abilities.shortcuts.badges.length
-    readonly property real textColorBrightness: LatteCore.Tools.colorBrightness(Kirigami.Theme.textColor)
+    //! D14: guard the startup transient where Kirigami's attached PlatformTheme
+    //! serves an invalid QColor before its palette resolves, so it is not handed
+    //! to the C++ boundary (tools.cpp). Valid branch unchanged.
+    readonly property real textColorBrightness: Kirigami.Theme.textColor.valid ? LatteCore.Tools.colorBrightness(Kirigami.Theme.textColor) : 0
     readonly property string badgeString: (shortcutBadge.fixedIndex>=1 && shortcutBadge.fixedIndex<=maxFixedIndex) ?
                                               abilityItem.abilities.shortcuts.badges[shortcutBadge.fixedIndex-1] : ""
     readonly property color lightTextColor: textColorBrightness > 127.5 ? Kirigami.Theme.textColor : Kirigami.Theme.backgroundColor
