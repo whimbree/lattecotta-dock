@@ -245,3 +245,11 @@ target_include_directories(dbusreportstest PRIVATE
 target_link_libraries(dbusreportstest
     Qt6::Gui
     Plasma::Plasma)
+
+# Justify-alignment splitter placement (containment/plugin/units/
+# justifysplitters.h): header-only pure list math. The template
+# boundary-invariant guard for the UB-catching initiative - the sanitized
+# build (QT_FORCE_ASSERTS + ASan) turns the old negative QList::insert into
+# an abort, so this test both pins the repaired placement and stays the
+# tripwire if the repair is ever removed.
+latte_add_unit_test(justifysplitterstest)

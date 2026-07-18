@@ -7,6 +7,7 @@
 
 // local
 #include <plugin/lattetypes.h>
+#include "units/justifysplitters.h"
 
 // Qt
 #include <QtMath>
@@ -292,8 +293,16 @@ void LayoutManager::updateOrder()
     auto nextorder = m_appletOrder;
 
     if (alignment==Latte::Types::Justify) {
-        nextorder.insert(m_splitterPosition-1, JUSTIFYSPLITTERID);
-        nextorder.insert(m_splitterPosition2-1, JUSTIFYSPLITTERID);
+        //! save() sets valid positions right before calling us, so a repair here
+        //! should never trigger; if it does, the compute upstream produced an
+        //! out-of-range value and we want it loud, not a silent negative insert.
+        if (!JustifySplitters::positionsAreValid(m_splitterPosition, m_splitterPosition2, m_appletOrder.count())) {
+            qWarning() << "org.kde.latte ::: updateOrder: justify splitter positions out of range for"
+                       << m_appletOrder.count() << "applets, repairing to centered layout - stored:"
+                       << m_splitterPosition << m_splitterPosition2;
+        }
+
+        nextorder = JustifySplitters::insertSplitters(m_appletOrder, m_splitterPosition, m_splitterPosition2, JUSTIFYSPLITTERID);
     }
 
     setOrder(nextorder);
@@ -379,13 +388,20 @@ void LayoutManager::restore()
     int splitterPosition2 = (*m_configuration)[QStringLiteral("splitterPosition2")].toInt();
 
     if (alignment==Latte::Types::Justify) {
-        if (splitterPosition!=-1 && splitterPosition2!=-1) {
-            appletIdsOrder.insert(splitterPosition-1, -1);
-            appletIdsOrder.insert(splitterPosition2-1, -1);
-        } else {
-            appletIdsOrder.insert(0, -1);
-            appletIdsOrder << -1;
+        //! -1 is the splitter sentinel on the restore walk below (JUSTIFYSPLITTERID
+        //! is the save/order sentinel). insertSplitters validates the stored
+        //! positions and repairs an out-of-range pair - the schema default -1, or a
+        //! 0 carried over from an older alignment scheme, both of which used to feed
+        //! a negative index straight into QList::insert - to the centered layout, so
+        //! no bad index ever reaches insert. save() below then recomputes valid
+        //! positions from the real placement.
+        if (!JustifySplitters::positionsAreValid(splitterPosition, splitterPosition2, appletIdsOrder.count())) {
+            qWarning() << "org.kde.latte ::: restore: stored justify splitter positions out of range for"
+                       << appletIdsOrder.count() << "applets, repairing to centered layout - stored:"
+                       << splitterPosition << splitterPosition2;
         }
+
+        appletIdsOrder = JustifySplitters::insertSplitters(appletIdsOrder, splitterPosition, splitterPosition2, -1);
     }
 
     QList<int> invalidApplets;
@@ -528,6 +544,16 @@ void LayoutManager::restore()
     save(); //will restore also a valid applets ids order
     cleanupOptions();
     initSaveConnections();
+
+    //! Heal a stale/migrated splitter position in the stored config IN PLACE.
+    //! save() above recomputed valid positions from the real placement, but it
+    //! ran before initSaveConnections() so its splitterPositionChanged never
+    //! reached saveOptions - a config carrying e.g. splitterPosition=0 would
+    //! otherwise sit wrong forever, repaired on every load. saveOptions writes
+    //! only the keys that actually differ from the members, so a healthy config
+    //! produces no writes here; a stale one gets the corrected values persisted.
+    saveOptions();
+
     m_hasRestoredAppletsTimer.start();
 }
 
