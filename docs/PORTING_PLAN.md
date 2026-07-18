@@ -1209,6 +1209,36 @@ multi-view, multi-monitor setup.
       stable back-to-back.
       Commits: (to fill post-rebase)
 
+- [x] Maximize-length repaint: "maximize panel length in presence of
+      maximized windows" grows a masked dock to full width while a
+      maximized window is present and shrinks it back on un-maximize; on
+      Qt6 wayland the just-vacated edge pixels rendered as a lighter
+      frosted/semi-transparent band at the former extent (caught live on
+      a real top dock). ROOT CAUSE: Qt6's wayland backend couples
+      QWindow::mask() to each frame's submitted damage - a shrinking mask
+      clips the vacated region's transparent repaint out of submitted
+      damage, so the compositor keeps compositing stale panel pixels
+      there. Qt5/X11 shape masks did not clip damage; platform-forced Qt6
+      deviation, no upstream precedent (the same mask/damage coupling the
+      empty-mask setInputMask comment already documents). FIX: a pure core
+      (app/view/inputmaskflush.h, Latte::ViewPart::InputMaskFlush) owns the
+      setMask-region decision - keep the UNION of applied+band across a
+      shrink so the vacated edges stay inside the mask, collapse back to
+      the band once it settles; Effects routes setInputMask through
+      applyInputMaskToWindow() + a 100ms coalescing timer, keeps
+      m_appliedInputMask, and reports it as viewsData's
+      appliedInputRegionRects. VERIFICATION: inputmaskflushtest (sanitized,
+      forced-assert) passes and is a real tripwire - a naive setMask(band)
+      SIGABRTs on the shrink invariant result.contains(applied); the live
+      union-then-collapse was captured in the nested vehicle with temporary
+      instrumentation over a deliberate ruler-driven band shrink (the
+      vehicle cannot flip existsWindowMaximized, so the identical maxLength
+      path is driven instead) and guarded by
+      tests/e2e/070-maximize-length-mask.sh. The "no frosted band" pixel
+      confirmation on the real feature is a desk-check owed to Bree - steps
+      in docs/agent-logs/2026-07-18-maximize-length-repaint.md.
+      Commits: (to fill post-rebase)
+
 - [x] Render-thread crash whenever an overflowing dock relayouts (enter
       edit mode, add a widget, right-click an applet in edit mode - all
       one backtrace: buildRenderLists SEGV during QSGRhiLayer::grab).
