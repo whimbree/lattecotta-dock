@@ -274,7 +274,7 @@ a success.
       landing on A, prove the check goes red), and that a single-output run
       asked for output B reports "no such output" rather than silently passing.
       Commits:
-- [ ] **P2 Render-golden bridge (small set).** Blocks the render-golden half of
+- [x] **P2 Render-golden bridge (small set).** Blocks the render-golden half of
       the visual-only scenarios (section 7). Wire lavapipe + fixed wallpaper +
       cursor-park. Add `e2e_assert_golden <cell> <verb> <phase>` (crop ->
       `latte-imgdiff` at the tier tolerance -> save actual/expected/diff on
@@ -282,7 +282,25 @@ a success.
       `--bless`. Acceptance (observes a rejection): self-test that a deliberately
       WRONG golden FAILS the compare and a MISSING golden FAILS on the lavapipe
       tier (mirror sceneprobe `selftest-bad`/`selftest-blank`). Depends on P0.
-      Commits:
+      Landed: the bridge is `tests/e2e/matrix/golden-bridge.sh` -
+      `e2e_golden_compare` (tier-aware pixel compare), `e2e_screenshot_crop`
+      (cursor-excluded deterministic shot), `matrix_view_crop_rect`, and
+      `e2e_assert_golden` with `E2E_BLESS=1`. It REUSES the sceneprobe
+      comparator: `latte-imgdiff` gains a `--tier` flag that resolves the
+      delta/budget from `SCENEPROBE_TIER` through the SAME
+      `parseGoldenTier`/`toleranceForTier` the render gate uses (the C++ tier
+      table stays the one source of the numbers, no shell re-derivation). The
+      abort backbone's stubbed frame-compare hook
+      (`matrix_frame_equals_baseline`) now routes through
+      `e2e_golden_compare`, and the baseline frames are captured cursor-free.
+      Interaction goldens gate at Tolerance, sceneprobe stays BitExact (O3,
+      Bree 2026-07-18): the vehicle dock is host-rendered, not lavapipe-forced.
+      Acceptance is `tests/e2e/090-golden-bridge-selftest.sh`: off one settled
+      crop it proves a match passes, a WRONG golden and a real diff beyond
+      Tolerance are REJECTED (HC3), a missing golden hard-fails, an unknown tier
+      is refused, and the SAME +1-shift pair flips verdict across
+      tolerance/bitexact (proving the tier axis is consulted, not hardcoded).
+      Commits: (C-I6 branch; final hashes at PR merge)
 - [x] **P3 `addApplet` action + applet-id order readback.** Blocks F2/A1 and
       F6/A6 setup. Add COARSE `addApplet us <cid> <pluginId>` (Qt5-faithful
       end-append) in the three required places + `dbusreportstest`. ALSO add the
@@ -610,7 +628,11 @@ independent lean-Opus review, `gh pr merge --rebase`, re-resolve hashes, fetch).
 - [x] **C-I3 = P3** `addApplet` + applet-id order readback + XML + test. Commits: (branch worktree-agent-a102bc9cfc620c8c0; final hashes at PR merge)
 - [ ] **C-I4 = P4** `removeApplet` + drop-marker/spacer readback + XML + test. Commits:
 - [ ] **C-I5 = P5** `moveViewToScreen` + XML + test. Commits:
-- [ ] **C-I6 = P2** render-golden bridge (small set) + `--bless`. Commits:
+- [x] **C-I6 = P2** render-golden bridge (small set) + `--bless`.
+      `tests/e2e/matrix/golden-bridge.sh` (`e2e_golden_compare`/
+      `e2e_assert_golden`/`e2e_screenshot_crop`), `latte-imgdiff --tier`,
+      `matrix_frame_equals_baseline` hook live, `tests/e2e/090-golden-bridge-selftest.sh` (HC3).
+      Commits: (C-I6 branch; final hashes at PR merge)
 - [ ] **C-I7 = P6** applet-reorder driver + `z`/stacking readback (commit+abort). Commits:
 - [ ] **C-I8 = P7** task-reorder driver + window-task readback (commit+abort). Commits:
 - [ ] **C-I9 = P8** widget-explorer DND driver (commit + non-drop abort). Commits:
