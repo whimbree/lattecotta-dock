@@ -2,7 +2,26 @@
 
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-18 (panel bug fixes + UB-catching initiative + a dev-loop
-shadow fix all landed; #4 maximize-length and A3 sanitized-gate in flight).
+shadow fix all landed; clangd editor-intelligence setup in flight as its own
+PR; #4 maximize-length and A3 sanitized-gate in flight).
+
+## 2026-07-18 SIDE TRACK: clangd editor code intelligence (own PR)
+
+Made clangd resolve the whole Qt6/KF6 tree with zero false diagnostics from
+`nix develop`, so a contributor opening the repo in VSCode (or any LSP editor)
+gets correct code intelligence out of the box instead of a flood of bogus
+"QHash/QObject file not found" errors. Root cause: no compile DB existed, so
+clangd parsed every file standalone. Three-part fix: `CMAKE_EXPORT_COMPILE_COMMANDS ON`
+(emits build/compile_commands.json, a side artifact only - build graph proven
+identical OFF->ON); repo-root `.clangd` (CompilationDatabase: build); and a
+hash-tolerant `--query-driver=/nix/store/*/bin/*gcc,/nix/store/*/bin/*g++` glob
+so clangd runs the nix g++ wrapper to recover the Qt/KF6 umbrella + libstdc++
+include paths nix injects via NIX_CFLAGS_COMPILE (never recorded in the DB, and
+the reason the DB alone is not enough on nix). devShell now ships clangd
+(clang-tools - no gcc/clang++ driver, so no toolchain shadowing). `.vscode/`
+committed; contributor flow in docs/clangd-setup.md. Headless proof via
+`clangd --check`: layoutmanager.cpp 21->0, effects.cpp 21->0, justifysplitters.h
+5->0 real diagnostics. Filed as a Phase 0 plan item.
 
 ## 2026-07-18 SESSION: panel fixes, UB-catching, dev-loop shadow fix
 

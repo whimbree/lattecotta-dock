@@ -264,6 +264,12 @@ build + full ctest + the ratchets), the QML gates, a KWin
 window-geometry dumper, and a Wayland pointer injector for driving the
 live dock headlessly.
 
+The devShell also ships `clangd`, and configuring the build emits
+`build/compile_commands.json`, so an editor with the clangd extension
+resolves the whole Qt6/KF6 tree with no false diagnostics out of the
+box. Launch the editor from inside `nix develop` and follow
+[`docs/clangd-setup.md`](docs/clangd-setup.md).
+
 Running
 =======
 

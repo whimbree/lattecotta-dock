@@ -1,0 +1,12 @@
+{
+  // Code intelligence for this tree comes from clangd against the CMake
+  // compile_commands.json, NOT from the Microsoft C/C++ extension (which
+  // has its own IntelliSense that fights clangd and does not know the nix
+  // toolchain). See docs/clangd-setup.md.
+  "recommendations": [
+    "llvm-vs-code-extensions.vscode-clangd"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.cpptools"
+  ]
+}

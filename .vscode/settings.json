@@ -1,0 +1,41 @@
+{
+  // clangd code intelligence for the Plasma 6 / Qt6 tree. Full explanation
+  // in docs/clangd-setup.md. Launch VSCode from inside `nix develop` (run
+  // `code .` there) so both clangd and the nix GCC wrapper are on PATH and
+  // NIX_CFLAGS_COMPILE is set - the query-driver below reads the wrapper's
+  // injected Qt/KF6/libstdc++ include paths from that environment.
+
+  // Use the clangd from the devShell (clang-tools) that is on PATH, not a
+  // copy the extension downloads on its own.
+  "clangd.path": "clangd",
+  "clangd.checkUpdates": false,
+
+  "clangd.arguments": [
+    // compile_commands.json lives in build/ (also set by repo-root .clangd,
+    // repeated here so it works even if a contributor's clangd ignores the
+    // config file for any reason).
+    "--compile-commands-dir=build",
+
+    // THE CRUX. The compile database records `-isystem .../include/QtCore`
+    // etc, but the nix GCC wrapper injects the parent Qt/KF6 umbrella
+    // include dirs and libstdc++/compiler-builtin paths through
+    // NIX_CFLAGS_COMPILE at build time, so they never land in the recorded
+    // command. --query-driver lets clangd RUN the recorded g++ wrapper to
+    // extract those paths. The glob tolerates the non-deterministic
+    // /nix/store hash and the gcc version, so it never needs re-pinning
+    // (clangd's glob matches `*` across `/`). Both g++ (C++) and gcc (C)
+    // drivers appear in the database.
+    "--query-driver=/nix/store/*/bin/*gcc,/nix/store/*/bin/*g++",
+
+    "--background-index",
+    "--clang-tidy",
+    "--header-insertion=never",
+    "--pch-storage=memory"
+  ],
+
+  "clangd.onConfigChanged": "restart",
+
+  // If the Microsoft C/C++ extension is also installed, keep its IntelliSense
+  // out of the way so the two engines do not double-diagnose.
+  "C_Cpp.intelliSenseEngine": "disabled"
+}

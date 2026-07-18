@@ -191,6 +191,23 @@ in Phases 10-11 where they originally sat.
       Phase 10
       Commits: c221f6e1 (decision recorded in `docs/TESTING.md`;
       harness/ratchet code lands with the Phase 2 compile milestone)
+- [x] Editor code intelligence: clangd resolves the whole Qt6/KF6 tree
+      with zero false diagnostics straight from `nix develop`. Root
+      cause was no compile DB (clangd parsed files standalone -> every
+      Qt include "file not found", cascading into hundreds of bogus
+      undeclared-identifier errors). Fix has three parts: emit
+      `build/compile_commands.json` unconditionally
+      (`CMAKE_EXPORT_COMPILE_COMMANDS ON`, a side artifact only - build
+      graph proven identical OFF->ON, binaries byte-identical); a
+      repo-root `.clangd` pointing at `build/`; and a `--query-driver`
+      glob so clangd runs the nix g++ wrapper to recover the Qt/KF6
+      umbrella and libstdc++ include paths nix injects via
+      `NIX_CFLAGS_COMPILE` (never recorded in the DB). Verified headless
+      with `clangd --check`: layoutmanager.cpp 21->0, effects.cpp 21->0,
+      justifysplitters.h 5->0 real diagnostics. Contributor flow in
+      `docs/clangd-setup.md`; devShell ships clangd; `.vscode/` config
+      committed.
+      Commits: <filled at merge>
 
 ### Phase 1: Build system migration
 

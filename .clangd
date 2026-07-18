@@ -1,0 +1,22 @@
+# clangd configuration for the latte-dock Plasma 6 / Qt6 tree.
+# See docs/clangd-setup.md for the full contributor flow.
+#
+# CompilationDatabase points clangd at build/, where CMake writes
+# compile_commands.json (CMAKE_EXPORT_COMPILE_COMMANDS is ON in the
+# top-level CMakeLists). The path is relative to this file (repo root),
+# so it stays correct no matter where the tree is checked out and it
+# survives build/ being reconfigured or wiped and regenerated. This
+# alone gives clangd every Qt6/KF6/project -I and -isystem flag the real
+# build uses, which is what fixes the "QHash/QObject file not found"
+# flood.
+#
+# The nix GCC wrapper's own libstdc++ and compiler-builtin include paths
+# are NOT recorded in compile_commands.json (nix injects them through the
+# wrapper, not as explicit flags), so clangd must extract them by running
+# the driver. That is the --query-driver argument, passed on the clangd
+# command line (there is no config-file key for it): .vscode/settings.json
+# sets it for VSCode, and docs/clangd-setup.md gives the glob for other
+# editors and for `clangd --check`. The glob tolerates the /nix/store hash
+# and gcc version so it never needs re-pinning.
+CompileFlags:
+  CompilationDatabase: build
