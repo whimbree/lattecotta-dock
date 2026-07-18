@@ -211,6 +211,9 @@ void DbusReportsTest::recordSerialization()
     record.publishedStruts = QRect(0, 1352, 2560, 88);
     record.maskRect = QRect(9, 10, 11, 12);
     record.inputMask = QRect(13, 14, 15, 16);
+    //! wider than inputMask: the union held across a shrink, the one state
+    //! where the applied window mask and the logical band diverge
+    record.appliedInputMask = QRect(13, 14, 40, 16);
     record.editMode = true;
     record.inConfigureAppletsMode = true;
     record.keyboardNavigation = true;
@@ -241,6 +244,10 @@ void DbusReportsTest::recordSerialization()
     QCOMPARE(inputRegion.count(), 1);
     QCOMPARE(inputRegion.at(0).toArray(), serializeRect(QRect(13, 14, 15, 16)));
 
+    const QJsonArray appliedInputRegion = json.value(QStringLiteral("appliedInputRegionRects")).toArray();
+    QCOMPARE(appliedInputRegion.count(), 1);
+    QCOMPARE(appliedInputRegion.at(0).toArray(), serializeRect(QRect(13, 14, 40, 16)));
+
     QCOMPARE(json.value(QStringLiteral("editMode")).toBool(), true);
     QCOMPARE(json.value(QStringLiteral("inConfigureAppletsMode")).toBool(), true);
     QCOMPARE(json.value(QStringLiteral("keyboardNavigation")).toBool(), true);
@@ -250,6 +257,7 @@ void DbusReportsTest::viewRecordKeySet()
 {
     const QStringList expected{
         QStringLiteral("absoluteGeometry"), QStringLiteral("alignment"),
+        QStringLiteral("appliedInputRegionRects"),
         QStringLiteral("containmentId"), QStringLiteral("edge"),
         QStringLiteral("editMode"), QStringLiteral("inConfigureAppletsMode"),
         QStringLiteral("inStartup"), QStringLiteral("inputRegionRects"),
@@ -272,13 +280,17 @@ void DbusReportsTest::emptyInputMaskSerializesAsEmptyRegion()
 {
     ViewRecord record;
     record.inputMask = QRect(); // default: invalid
+    record.appliedInputMask = QRect(); // the applied mask shares the convention
 
     QJsonObject json = serializeViewRecord(record);
     QVERIFY(json.value(QStringLiteral("inputRegionRects")).toArray().isEmpty());
+    QVERIFY(json.value(QStringLiteral("appliedInputRegionRects")).toArray().isEmpty());
 
     record.inputMask = QRect(0, 0, -1, -1); // the explicit clear request
+    record.appliedInputMask = QRect(0, 0, -1, -1);
     json = serializeViewRecord(record);
     QVERIFY(json.value(QStringLiteral("inputRegionRects")).toArray().isEmpty());
+    QVERIFY(json.value(QStringLiteral("appliedInputRegionRects")).toArray().isEmpty());
 }
 
 void DbusReportsTest::recordsSerializeAsCompactJsonArray()

@@ -148,6 +148,7 @@ struct ViewRecord {
     QRect publishedStruts;
     QRect maskRect;
     QRect inputMask;
+    QRect appliedInputMask;
     bool editMode{false};
     bool inConfigureAppletsMode{false};
     bool keyboardNavigation{false};
@@ -492,6 +493,20 @@ inline QJsonObject serializeViewRecord(const ViewRecord &record)
     }
 
     json[QStringLiteral("inputRegionRects")] = inputRegion;
+
+    //! the region actually handed to QWindow::setMask (Effects::appliedInputMask):
+    //! the union kept wide across a length shrink so Qt6 wayland does not clip the
+    //! vacated region's clearing damage, collapsing back to inputRegionRects once
+    //! the band settles. It differs from inputRegionRects only mid-shrink, which is
+    //! exactly the window the maximize-length settle is asserted across. Same
+    //! empty-means-cleared and array-for-future-multi-rect conventions as above.
+    QJsonArray appliedInputRegion;
+
+    if (record.appliedInputMask.isValid() && !record.appliedInputMask.isEmpty()) {
+        appliedInputRegion.append(serializeRect(record.appliedInputMask));
+    }
+
+    json[QStringLiteral("appliedInputRegionRects")] = appliedInputRegion;
     json[QStringLiteral("editMode")] = record.editMode;
     json[QStringLiteral("inConfigureAppletsMode")] = record.inConfigureAppletsMode;
     json[QStringLiteral("keyboardNavigation")] = record.keyboardNavigation;

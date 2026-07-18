@@ -53,7 +53,10 @@ sidebarOnDemand|sidebarAutoHide|normalWindow), `isHidden`,
 `inStartup`, `isOffScreen`, `absoluteGeometry`, `localGeometry`,
 `screenGeometry` (all `[x,y,w,h]`), `strutsThickness`,
 `publishedStruts`, `maskRect`, `inputRegionRects` (array of rects),
-`editMode`, `inConfigureAppletsMode`, `keyboardNavigation`.
+`appliedInputRegionRects` (array of rects: the region actually handed
+to `QWindow::setMask`, kept wide across a length shrink and collapsing
+back to `inputRegionRects` once the band settles - differs only
+mid-shrink), `editMode`, `inConfigureAppletsMode`, `keyboardNavigation`.
 
 This replaces pixel-peeping for dock state: hidden-or-not, where the
 input region really is, whether startup stranded (`inStartup` stuck

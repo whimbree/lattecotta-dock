@@ -65,6 +65,7 @@ Landed before or during the 2026-07-16 stabilization session:
     "screenGeometry": [x, y, w, h],
     "strutsThickness": 88, "publishedStruts": [x, y, w, h],
     "maskRect": [x, y, w, h], "inputRegionRects": [[...], ...],
+    "appliedInputRegionRects": [[...], ...],
     "editMode": false, "inConfigureAppletsMode": false
   }
   ```

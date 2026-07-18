@@ -76,6 +76,7 @@ ViewRecord collectViewRecord(const Latte::View *view, bool inConfigureAppletsMod
     record.publishedStruts = view->visibility()->publishedStruts();
     record.maskRect = view->effects()->mask();
     record.inputMask = view->effects()->inputMask();
+    record.appliedInputMask = view->effects()->appliedInputMask();
     record.editMode = view->inEditMode();
     record.inConfigureAppletsMode = inConfigureAppletsMode;
     record.keyboardNavigation = view->keyboardNavigationIsActive();
