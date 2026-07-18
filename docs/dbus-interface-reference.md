@@ -99,6 +99,13 @@ call contextMenuData u 1               # as: legacy ;;/** joined list (pre-JSON,
 ```bash
 call layoutsData                       # s: JSON array per loaded layout
 #   name, isActive, memoryUsage, activities, viewsCount
+call screensData                       # s: JSON array per known output
+#   id (Latte screen id), name (connector), geometry [x,y,w,h],
+#   isActive (connector connected now), isPrimary. The screen<->output
+#   topology; viewsData.screen reports the connector a view sits ON,
+#   this reports the whole mapping (which id is which output, which is
+#   primary). Used by the multi-output e2e vehicle to discover the
+#   secondary output and verify a per-screen pin resolved.
 call viewTemplatesData                 # as: name,id pairs flattened
 ```
 

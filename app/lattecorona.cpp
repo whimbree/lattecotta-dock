@@ -1434,6 +1434,11 @@ QString Corona::layoutsData()
     return DbusReports::collectLayoutsData(m_layoutsManager);
 }
 
+QString Corona::screensData()
+{
+    return DbusReports::collectScreensData(m_screenPool);
+}
+
 QString Corona::viewsData()
 {
     return DbusReports::collectViewsData(m_layoutsManager->synchronizer()->currentViews(),

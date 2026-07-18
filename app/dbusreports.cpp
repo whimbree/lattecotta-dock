@@ -11,6 +11,8 @@
 #include "layout/genericlayout.h"
 #include "layouts/manager.h"
 #include "layouts/synchronizer.h"
+#include "screenpool.h"
+#include "data/screendata.h"
 #include "view/containmentinterface.h"
 #include "view/effects.h"
 #include "view/positioner.h"
@@ -436,6 +438,43 @@ QString collectViewsData(const QList<Latte::View *> &views, bool inConfigureAppl
     }
 
     return serializeViewRecords(records);
+}
+
+QString collectScreensData(Latte::ScreenPool *pool)
+{
+    //! the screen pool lives for the corona's whole life (constructed in the
+    //! Corona ctor); a null pool would be a code defect, not runtime input
+    Q_ASSERT(pool);
+
+    //! primaryScreenId() dereferences the primary QScreen; a running corona
+    //! always has one (the same assumption genericlayout's placement path
+    //! makes). screensData is a post-settle readback, never called before the
+    //! first primary output exists.
+    const int primaryId = pool->primaryScreenId();
+
+    Latte::Data::ScreensTable table = pool->screensTable();
+
+    QList<ScreenRecord> records;
+    records.reserve(table.rowCount());
+
+    for (int i = 0; i < table.rowCount(); ++i) {
+        const Latte::Data::Screen screen = table[static_cast<uint>(i)];
+
+        ScreenRecord record;
+        record.id = screen.id.toInt();
+        record.name = screen.name;
+        record.geometry = screen.geometry;
+        //! isActive = the connector is currently connected (a live QScreen
+        //! carries this name); a pool entry can outlive its output (a
+        //! remembered-but-unplugged monitor), so this is a real per-read fact,
+        //! not a stored flag
+        record.isActive = pool->isScreenActive(record.id);
+        record.isPrimary = (record.id == primaryId);
+
+        records << record;
+    }
+
+    return serializeScreensData(records);
 }
 
 }

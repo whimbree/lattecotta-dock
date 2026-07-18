@@ -121,6 +121,14 @@ Landed before or during the 2026-07-16 stabilization session:
   screenshot bisections of rounds twenty-one/twenty-eight.
 - `layoutsData() -> s` (JSON): loaded layouts, memory mode, current
   activity per layout, view counts. Complements switchToLayout.
+- `screensData() -> s` (JSON array): the ScreenPool id<->connector
+  mapping - per output its Latte screen id, connector name, geometry
+  ([x,y,w,h]), isActive (the connector is currently connected) and
+  isPrimary. The pull-queryable screen<->output topology the
+  multi-output e2e vehicle (C-I2/P1, O7) discovers the secondary
+  output from and pins a per-screen view assignment against; before it
+  existed that mapping was only reachable by scraping ScreenPool's
+  qDebug, which the observability-first rule forbids.
 - Existing lifecycleState() gains nothing; it stays the tiny liveness
   probe (poll for "running").
 
@@ -235,3 +243,11 @@ the in-process KConfigPropertyMap caches).
   keyboard focus. The exit paths are asserted through this field
   (a stuck true means a dock stuck focusable - the exact defect the
   mode's design guards against).
+- screensData (2026-07-18, C-I2/P1): the ScreenPool id<->connector
+  mapping as its own read, so the multi-output vehicle DISCOVERS which
+  connector is the secondary (isActive && !isPrimary) rather than
+  hardcoding a name the compositor may reassign, and VERIFIES a pinned
+  view's id resolved to the intended output. viewsData.screen already
+  reported the connector NAME a view sits on; screensData adds the
+  topology (all outputs, their ids, and which is primary) that
+  view-level field cannot express.

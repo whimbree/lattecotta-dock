@@ -33,6 +33,7 @@
 
 namespace Latte {
 class View;
+class ScreenPool;
 namespace Layouts {
 class Manager;
 }
@@ -71,6 +72,21 @@ struct LayoutRecord {
     bool isActive{false};
     QStringList activities;
     int viewsCount{0};
+};
+
+//! One output as ScreenPool knows it, as screensData() reports it
+//! (docs/dbus-observability-interface.md). This is the pull-queryable
+//! screen<->output mapping the multi-output e2e vehicle (C-I2/P1) needs:
+//! which Latte screen id resolves to which connector, its geometry, whether
+//! the connector is currently connected (isActive), and which id is the
+//! primary. Before it existed the mapping was only reachable by scraping
+//! ScreenPool's qDebug, which the observability-first rule forbids.
+struct ScreenRecord {
+    int id{-1};
+    QString name;
+    QRect geometry;
+    bool isActive{false};
+    bool isPrimary{false};
 };
 
 //! One view's colorizer decision facts as colorizerData() reports them
@@ -446,6 +462,29 @@ inline QString serializeLayoutsData(MemoryUsage::LayoutsMemory memory, const QLi
     return QString::fromUtf8(QJsonDocument(json).toJson(QJsonDocument::Compact));
 }
 
+inline QJsonObject serializeScreenRecord(const ScreenRecord &record)
+{
+    QJsonObject json;
+    json[QStringLiteral("id")] = record.id;
+    json[QStringLiteral("name")] = record.name;
+    json[QStringLiteral("geometry")] = serializeRect(record.geometry);
+    json[QStringLiteral("isActive")] = record.isActive;
+    json[QStringLiteral("isPrimary")] = record.isPrimary;
+
+    return json;
+}
+
+inline QString serializeScreensData(const QList<ScreenRecord> &records)
+{
+    QJsonArray array;
+
+    for (const auto &record : records) {
+        array.append(serializeScreenRecord(record));
+    }
+
+    return QString::fromUtf8(QJsonDocument(array).toJson(QJsonDocument::Compact));
+}
+
 inline QJsonObject serializeColorizerRecord(const ColorizerRecord &record)
 {
     QJsonObject json;
@@ -588,6 +627,10 @@ QString collectColorizerData(const Latte::View *view);
 
 //! serialize the loaded layouts for the layoutsData() D-Bus read
 QString collectLayoutsData(Latte::Layouts::Manager *manager);
+
+//! serialize the ScreenPool's id<->connector mapping for the screensData()
+//! D-Bus read (the queryable screen<->output topology)
+QString collectScreensData(Latte::ScreenPool *pool);
 
 }
 }

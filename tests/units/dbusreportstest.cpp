@@ -71,6 +71,10 @@ private Q_SLOTS:
     void layoutRecordSerialization();
     void layoutRecordKeySet();
     void layoutsDataSerialization();
+
+    void screenRecordSerialization();
+    void screenRecordKeySet();
+    void screensDataSerializesAsCompactJsonArray();
 };
 
 //! the exact sorted key list of a serialized record: the schema pin that
@@ -820,6 +824,71 @@ void DbusReportsTest::layoutsDataSerialization()
     const QJsonDocument empty = QJsonDocument::fromJson(serializeLayoutsData(MemoryUsage::SingleLayout, {}).toUtf8());
     QCOMPARE(empty.object().value(QStringLiteral("memoryUsage")).toString(), QStringLiteral("single"));
     QVERIFY(empty.object().value(QStringLiteral("layouts")).toArray().isEmpty());
+}
+
+void DbusReportsTest::screenRecordSerialization()
+{
+    ScreenRecord record;
+    record.id = 11;
+    record.name = QStringLiteral("Virtual-2");
+    record.geometry = QRect(1600, 0, 1600, 1000);
+    record.isActive = true;
+    record.isPrimary = false;
+
+    const QJsonObject json = serializeScreenRecord(record);
+
+    QCOMPARE(json.value(QStringLiteral("id")).toInt(), 11);
+    QCOMPARE(json.value(QStringLiteral("name")).toString(), QStringLiteral("Virtual-2"));
+    QCOMPARE(json.value(QStringLiteral("geometry")).toArray(), serializeRect(record.geometry));
+    QCOMPARE(json.value(QStringLiteral("isActive")).toBool(), true);
+    QCOMPARE(json.value(QStringLiteral("isPrimary")).toBool(), false);
+}
+
+void DbusReportsTest::screenRecordKeySet()
+{
+    const QStringList expected{
+        QStringLiteral("geometry"), QStringLiteral("id"),
+        QStringLiteral("isActive"), QStringLiteral("isPrimary"),
+        QStringLiteral("name")};
+
+    QCOMPARE(sortedKeys(serializeScreenRecord(ScreenRecord{})), expected);
+}
+
+void DbusReportsTest::screensDataSerializesAsCompactJsonArray()
+{
+    ScreenRecord primary;
+    primary.id = 10;
+    primary.name = QStringLiteral("Virtual-1");
+    primary.geometry = QRect(0, 0, 1600, 1000);
+    primary.isActive = true;
+    primary.isPrimary = true;
+
+    ScreenRecord secondary;
+    secondary.id = 11;
+    secondary.name = QStringLiteral("Virtual-2");
+    secondary.geometry = QRect(1600, 0, 1600, 1000);
+    secondary.isActive = true;
+    secondary.isPrimary = false;
+
+    const QString data = serializeScreensData({primary, secondary});
+
+    //! one line: a busctl-piped consumer parses it whole
+    QVERIFY(!data.contains(QLatin1Char('\n')));
+
+    QJsonParseError error{};
+    const QJsonDocument document = QJsonDocument::fromJson(data.toUtf8(), &error);
+    QCOMPARE(error.error, QJsonParseError::NoError);
+    QVERIFY(document.isArray());
+
+    const QJsonArray array = document.array();
+    QCOMPARE(array.count(), 2);
+    QCOMPARE(array.at(0).toObject().value(QStringLiteral("name")).toString(), QStringLiteral("Virtual-1"));
+    QCOMPARE(array.at(0).toObject().value(QStringLiteral("isPrimary")).toBool(), true);
+    QCOMPARE(array.at(1).toObject().value(QStringLiteral("id")).toInt(), 11);
+    QCOMPARE(array.at(1).toObject().value(QStringLiteral("isPrimary")).toBool(), false);
+
+    //! no screens still answers a well-formed empty array
+    QCOMPARE(serializeScreensData({}), QStringLiteral("[]"));
 }
 
 QTEST_GUILESS_MAIN(DbusReportsTest)

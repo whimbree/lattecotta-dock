@@ -237,6 +237,16 @@ public:
     //! docs/dbus-observability-interface.md. Complements switchToLayout.
     QString layoutsData();
 
+    //! D-Bus state readback (observability-first): the ScreenPool's
+    //! id<->connector mapping - every known output's Latte screen id,
+    //! connector name, geometry, connected state and whether it is the
+    //! primary - as one compact JSON array, documented in
+    //! docs/dbus-observability-interface.md. This is the queryable
+    //! screen<->output topology the multi-output e2e vehicle pins a
+    //! per-screen view assignment against; the serialization lives in
+    //! dbusreports.h, this stays a delegation.
+    QString screensData();
+
 public Q_SLOTS:
     void aboutApplication();
     void activateLauncherMenu();
