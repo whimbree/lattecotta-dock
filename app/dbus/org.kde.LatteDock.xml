@@ -32,6 +32,10 @@
         <arg name="containmentId" type="u" direction="in"/>
         <arg name="templateId" type="s" direction="in"/>
     </method>
+    <method name="addApplet">
+        <arg name="containmentId" type="u" direction="in"/>
+        <arg name="pluginId" type="s" direction="in"/>
+    </method>
     <method name="duplicateView">
         <arg name="containmentId" type="u" direction="in"/>
     </method>

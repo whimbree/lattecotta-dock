@@ -136,7 +136,11 @@ public Q_SLOTS:
 
     Q_INVOKABLE bool isApplication(const QUrl &url) const;
 
-    void addApplet(const QString &pluginId);
+    //! add an installed plasmoid by plugin id (end-appended via
+    //! Plasma::Containment::createApplet). Returns whether a plugin was
+    //! found and created, so the coarse addApplet D-Bus action can refuse a
+    //! bad plugin id loudly instead of the historical silent no-op.
+    bool addApplet(const QString &pluginId);
     void addApplet(QObject *metadata, int x, int y);
     void removeApplet(const int &id);
     void setAppletsOrder(const QList<int> &order);

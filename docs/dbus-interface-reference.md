@@ -108,6 +108,11 @@ call activateTaskAt ui 1 3             # what Meta+3 does on view 1: 1-BASED vis
                                        # (minimize), launcher-only entries launch
 call showSettingsWindow i 1
 call addView us 0 "Default Dock"       # 0 = first current layout; template names from viewTemplatesData
+call addApplet us 1 "org.kde.plasma.marginsseparator"  # add an installed plasmoid to view 1,
+                                       # end-appended (the deterministic sibling of a widget-explorer
+                                       # drop). Refused loudly with NO applet if the containment id has
+                                       # no view or the plugin id is not installed. Readback:
+                                       # viewAppletsData / viewAppletsOrder grow by one
 call duplicateView u 1
 call removeView u 1                    # UNDO WINDOW: containment survives until the
                                        # notification closes or ~60s; restarting inside

@@ -133,6 +133,17 @@ Landed before or during the 2026-07-16 stabilization session:
   drives, targeted at one view; the test surface for the mode, since
   kglobalaccel invokes race registration inside the nested vehicle.
   Readback: viewsData()'s keyboardNavigation field.
+- `addApplet(u containmentId, s pluginId)` (added 2026-07-18 with the
+  e2e interaction suite, C-I3/P3) - the deterministic sibling of a
+  widget-explorer drop: validate that pluginId names an INSTALLED
+  plasmoid, then Plasma::Containment::createApplet, end-appended
+  (Qt5-faithful). It is the add-path the F2 scenarios drive instead of
+  the real explorer DND (that stays its own driver, C-I9/P8). Two
+  refusals, both loud with NO applet created (reads-never-construct
+  extended to this mutator): a containment id with no view, and a
+  plugin id that names no installed plasmoid. Readback:
+  viewAppletsData/viewAppletsOrder grow by one, the new applet at the
+  absolute end.
 
 Rejected for now, with reasons recorded: setAppletsOrder over D-Bus
 (reorder is a drag interaction; tests that need order changes drive

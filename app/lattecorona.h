@@ -237,6 +237,15 @@ public Q_SLOTS:
     void setAutostart(const bool &enabled);
 
     void addView(const uint &containmentId, const QString &templateId);
+
+    //! D-Bus coarse action (docs/dbus-observability-interface.md): add an
+    //! installed plasmoid to a view by plugin id, the deterministic sibling
+    //! of a widget-explorer drop. Qt5-faithful end-append. A bad containment
+    //! id (no such view) or a plugin id that names no installed plasmoid is
+    //! refused loudly with NO applet created (reads-never-construct extended
+    //! to this mutator). Readback: viewAppletsData/viewAppletsOrder.
+    void addApplet(const uint &containmentId, const QString &pluginId);
+
     void duplicateView(const uint &containmentId);
     void exportViewTemplate(const uint &containmentId);
     void moveViewToLayout(const uint &containmentId, const QString &layoutName);

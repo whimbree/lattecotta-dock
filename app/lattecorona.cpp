@@ -1447,6 +1447,31 @@ void Corona::addView(const uint &containmentId, const QString &templateId)
     }
 }
 
+void Corona::addApplet(const uint &containmentId, const QString &pluginId)
+{
+    auto view = m_layoutsManager->synchronizer()->viewForContainment(containmentId);
+
+    if (!view || !view->extendedInterface()) {
+        //! a mutating boundary refuses a bad id the same way the reads do:
+        //! no view for this containment id means the request is outside
+        //! input, refused loudly with NO applet created - never a silent
+        //! no-op, never a constructed view (reads-never-construct extended
+        //! to the mutators, docs/dbus-observability-interface.md)
+        qWarning() << "corona: addApplet requested for containment" << containmentId << "which has no view; no applet created";
+        return;
+    }
+
+    //! the same coarse add a widget-explorer drop performs: validate the
+    //! plugin names an INSTALLED plasmoid, then Plasma::Containment::createApplet
+    //! (end-appended, Qt5-faithful). A plugin id matching no installed
+    //! plasmoid is outside input refused loudly here, not the historical
+    //! silent no-op inside ContainmentInterface::addApplet.
+    if (!view->extendedInterface()->addApplet(pluginId)) {
+        qWarning() << "corona: addApplet found no installed plasmoid named" << pluginId
+                   << "for containment" << containmentId << "; no applet created";
+    }
+}
+
 void Corona::duplicateView(const uint &containmentId)
 {
     auto view = m_layoutsManager->synchronizer()->viewForContainment((int)containmentId);

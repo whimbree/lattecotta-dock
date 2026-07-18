@@ -681,10 +681,10 @@ void ContainmentInterface::setLayoutManager(QObject *manager)
     Q_EMIT layoutManagerChanged();
 }
 
-void ContainmentInterface::addApplet(const QString &pluginId)
+bool ContainmentInterface::addApplet(const QString &pluginId)
 {
     if (pluginId.isEmpty()) {
-        return;
+        return false;
     }
 
     QStringList paths = Latte::Layouts::Importer::standardPaths();
@@ -699,9 +699,16 @@ void ContainmentInterface::addApplet(const QString &pluginId)
         }
     }
 
-    if (!pluginpath.isEmpty()) {
-        m_view->containment()->createApplet(pluginId);
+    if (pluginpath.isEmpty()) {
+        //! not installed: the callers decide how loud to be. The clone-sync
+        //! and OriginalView callers pass an id that was just created next
+        //! door (never missing), so only the D-Bus boundary turns a false
+        //! into a refusal.
+        return false;
     }
+
+    m_view->containment()->createApplet(pluginId);
+    return true;
 }
 
 void ContainmentInterface::addApplet(QObject *metadata, int x, int y)
