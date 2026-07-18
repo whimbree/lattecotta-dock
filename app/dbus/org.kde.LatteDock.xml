@@ -69,6 +69,10 @@
         <arg name="order" type="as" direction="out"/>
         <arg name="containmentId" type="u" direction="in"/>
     </method>
+    <method name="viewDropMarkerIndex">
+        <arg name="index" type="i" direction="out"/>
+        <arg name="containmentId" type="u" direction="in"/>
+    </method>
     <method name="viewTemplatesData">
         <arg name="data" type="as" direction="out"/>
     </method>

@@ -407,6 +407,19 @@ inline QList<int> appletIdOrder(const QList<int> &appletsOrder)
     return ids;
 }
 
+//! The G3 drop-marker sentinel (docs/e2e-interaction-test-plan.md): the
+//! viewDropMarkerIndex() D-Bus read reports the drag placeholder spacer's
+//! visual insert index while a drag hovers the view, or -1 when no marker is
+//! live. Index 0 is the LEADING insert position - a real, live marker, not
+//! "absent"; only a negative value means no marker. This predicate pins that
+//! off-by-one boundary so an abort assertion can read "clean" without
+//! mistaking the leading-index case for a stranded marker - the direct
+//! insert(-1) observability the A1/A2 aborts assert on.
+inline bool dropMarkerIsLive(int dropMarkerIndex)
+{
+    return dropMarkerIndex >= 0;
+}
+
 inline QJsonObject serializeLayoutRecord(const LayoutRecord &record)
 {
     QJsonObject json;

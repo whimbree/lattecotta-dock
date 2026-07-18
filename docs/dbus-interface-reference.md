@@ -87,6 +87,10 @@ call colorizerData u 1                 # s: JSON object - the colorizer decision
 call viewAppletsOrder u 1              # as: applet INSTANCE ids in visual order (cheap, stable);
 #   justify-splitter sentinels (-10) excluded, so it agrees with
 #   viewAppletsData's order on justify views (G1)
+call viewDropMarkerIndex u 1           # i: live drop-marker (dndSpacer) visual insert index while
+#   a drag hovers the view, -1 when no marker is live (parked at rest / after a
+#   drop or abort). Index 0 = leading position (a live marker); only negative =
+#   no marker. The G3 insert(-1) observability an add/reorder abort asserts (-1)
 call contextMenuData u 1               # as: legacy ;;/** joined list (pre-JSON, kept)
 ```
 

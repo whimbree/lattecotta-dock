@@ -999,6 +999,17 @@ QQuickItem *LayoutManager::appletItem(const int &id)
 
 int LayoutManager::dndSpacerIndex()
 {
+    //! Historically only the DragDropArea drop handler called this, mid-drag,
+    //! when the spacer and the three layout items are all wired by QML. The G3
+    //! drop-marker readback (Corona::viewDropMarkerIndex) now also calls it,
+    //! and a D-Bus query can arrive before QML has bound the DND machinery. A
+    //! missing spacer (or missing layouts) means no drag is in flight and
+    //! therefore no live marker: report the no-marker sentinel, the deliberate
+    //! contract, rather than dereferencing a null parentItem().
+    if (!m_dndSpacer || !m_startLayout || !m_mainLayout || !m_endLayout) {
+        return -1;
+    }
+
     if (m_dndSpacer->parentItem() != m_startLayout
             && m_dndSpacer->parentItem() != m_mainLayout
             && m_dndSpacer->parentItem() != m_endLayout) {

@@ -1258,6 +1258,28 @@ QStringList Corona::viewAppletsOrder(const uint &containmentId)
     return order;
 }
 
+int Corona::viewDropMarkerIndex(const uint &containmentId)
+{
+    auto view = m_layoutsManager->synchronizer()->viewForContainment(containmentId);
+
+    if (!view || !view->extendedInterface()) {
+        qWarning() << "corona: viewDropMarkerIndex queried for containment" << containmentId << "which has no view";
+        return -1;
+    }
+
+    const int index = view->extendedInterface()->readDropMarkerIndex();
+
+    //! a live marker is transient (only present while a drag hovers the view),
+    //! so a query that catches one is worth a trace to correlate with the drag
+    //! that produced it; the common clean case stays quiet
+    if (DbusReports::dropMarkerIsLive(index)) {
+        qDebug() << "corona: viewDropMarkerIndex - containment" << containmentId
+                 << "has a live drop marker at insert index" << index;
+    }
+
+    return index;
+}
+
 void Corona::setViewEditMode(const uint &containmentId, const bool &editing)
 {
     auto view = m_layoutsManager->synchronizer()->viewForContainment(containmentId);

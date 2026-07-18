@@ -90,6 +90,18 @@ Landed before or during the 2026-07-16 stabilization session:
   layout artifacts that own no applet) are EXCLUDED, the same line
   viewAppletsData draws, so the two order readbacks agree on justify
   views. Cheap, stable, already used.
+- `viewDropMarkerIndex(u containmentId) -> i` (added 2026-07-18 with the
+  e2e interaction suite, C-I4/P4). The live drop-marker readback (the G3
+  gap, docs/e2e-interaction-test-plan.md): the drag placeholder spacer's
+  (dndSpacer) current visual insert index while a drag hovers the view,
+  or -1 when no marker is live (the spacer parked off the layouts at
+  rest and after any drop or abort). Index 0 is the LEADING insert
+  position, a live marker - only a negative value means "no marker" (the
+  DbusReports::dropMarkerIsLive predicate pins that boundary, pinned by
+  dbusreportstest). This is the direct insert(-1) observability: an
+  add/reorder ABORT asserts it reads -1 afterwards, so a cancelled or
+  misdirected drag that stranded an orphan placeholder is queryable, not
+  golden-only. -1 also for a bad containment id (warned in the log).
 - `viewTasksData(u containmentId) -> s` (JSON array, tasks plasmoid
   views only). Per task item: index, appId/launcherUrl, isLauncher,
   isGrouped + childCount, isActive, isMinimized, demandsAttention,

@@ -42,6 +42,7 @@ private Q_SLOTS:
     void appletRecordsSerializeAsCompactJsonArray();
     void appletIdOrderStripsSplitters();
     void appletIdOrderDisambiguatesSamePluginApplets();
+    void dropMarkerIsLiveSeparatesLiveFromClean();
 
     void visibilityModeRoundTrip_data();
     void visibilityModeRoundTrip();
@@ -414,6 +415,28 @@ void DbusReportsTest::appletIdOrderDisambiguatesSamePluginApplets()
     QCOMPARE(order.at(0), 11);
     QCOMPARE(order.at(1), 14);
     QVERIFY(order.at(0) != order.at(1));
+}
+
+//! The G3 drop-marker sentinel contract (docs/e2e-interaction-test-plan.md):
+//! viewDropMarkerIndex reports the drag placeholder's visual insert index, or
+//! -1 when no marker is live. The trap this pins is that index 0 is the
+//! LEADING insert position - a live marker, NOT "absent" - so an add/reorder
+//! abort assertion can read "clean" (< 0) without confusing a leading-index
+//! marker for a stranded one. Both states are proven here: the -1 (and any
+//! negative) clean sentinel and the live indices including the 0 boundary.
+void DbusReportsTest::dropMarkerIsLiveSeparatesLiveFromClean()
+{
+    //! clean: -1 is the no-marker sentinel the layout walk emits at rest and
+    //! after an abort
+    QVERIFY(!dropMarkerIsLive(-1));
+    //! live: index 0 is the leading insert position, a real marker - the
+    //! off-by-one this predicate exists to get right
+    QVERIFY(dropMarkerIsLive(0));
+    //! live at any interior/tail index
+    QVERIFY(dropMarkerIsLive(3));
+    //! defensive: only -1 is emitted, but the contract is "negative = clean",
+    //! so any negative reads as no marker rather than a spurious live one
+    QVERIFY(!dropMarkerIsLive(-5));
 }
 
 //! every visibility mode must survive name -> mode -> name, so the two

@@ -794,6 +794,27 @@ QList<int> ContainmentInterface::appletsOrder() const
     return m_appletOrder;
 }
 
+int ContainmentInterface::readDropMarkerIndex()
+{
+    if (!m_layoutManager) {
+        //! no layout manager wired yet means no DND machinery and so no live
+        //! drop marker: the same no-marker sentinel LayoutManager reports
+        return -1;
+    }
+
+    //! the LayoutManager owns the live drag placeholder (dndSpacer); its
+    //! dndSpacerIndex() walks the layouts to find the spacer's current visual
+    //! insert index, or -1 when the spacer is parked off the layouts (no drag
+    //! in flight). The manager lives in the containment QML plugin, reached
+    //! only through the meta-object, so invoke it by name for the return.
+    int index = -1;
+    QMetaObject::invokeMethod(m_layoutManager,
+                              "dndSpacerIndex",
+                              Qt::DirectConnection,
+                              Q_RETURN_ARG(int, index));
+    return index;
+}
+
 QList<int> ContainmentInterface::appletsInLockedZoom() const
 {
     return m_appletsInLockedZoom;

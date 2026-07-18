@@ -301,7 +301,7 @@ a success.
       `tests/e2e/080-add-applet.sh` acceptance recipe (happy add + G1
       consistency + the HC3 bad-id rejection, PASS in the nested vehicle).
       Commits: (branch worktree-agent-a102bc9cfc620c8c0; final hashes at PR merge)
-- [ ] **P4 `removeApplet` action + drop-marker/spacer readback.** Blocks F6/A1/A2.
+- [x] **P4 `removeApplet` action + drop-marker/spacer readback.** Blocks F6/A1/A2.
       Add COARSE `removeApplet uu <cid> <appletId>` (invokes
       `LayoutManager::removeAppletItem`, the `33830b2c` finalize-immediately
       path), documenting the undo window. ALSO add the readback HC2's corollary
@@ -312,7 +312,32 @@ a success.
       rejection): a bad applet id is REFUSED, no removal; and the drop-marker
       readback reports "marker live" during a drag and "clean" after, proven by
       driving both states.
-      Commits:
+      Landed: `removeApplet(u,u)` on the corona. PATH CORRECTION (from reading
+      the code): a real "Remove this Widget" does NOT take
+      `removeAppletItem`'s finalize-immediately arm - that arm
+      (`destroyAppletContainer`) is the `destroyed()==false` case for direct
+      deletions of synced applets, and `removeAppletItem` is the REACT-to-
+      removal bookkeeping, not the trigger. The Qt5-faithful coarse action is
+      `ContainmentInterface::removeApplet` -> `Applet::destroy()`, the exact
+      context-menu path, which RIDES the libplasma undo window (the applet
+      lingers with `inScheduledDestruction=true`, leaving
+      viewAppletsData/viewAppletsOrder only when the ~60s fallback fires - the
+      removeView trap, now confirmed for applets). Loud refusal for a bad
+      containment id AND a bad/absent applet id (the latter made observable by
+      making `ContainmentInterface::removeApplet` return bool). G3 readback:
+      `viewDropMarkerIndex(u) -> i` reports the live `dndSpacer` visual insert
+      index, -1 when parked (no drag) - `LayoutManager::dndSpacerIndex()` given
+      a null-machinery guard so the readback is safe any time, bridged by
+      `ContainmentInterface::readDropMarkerIndex`, sentinel pinned by the pure
+      `DbusReports::dropMarkerIsLive` (index 0 = live leading marker, only
+      negative = clean). XML, design doc, usage reference, `dbusreportstest`
+      (dropMarkerIsLiveSeparatesLiveFromClean), and two acceptance recipes:
+      `tests/e2e/090-remove-applet.sh` (remove fires + both bad-id rejections)
+      and `tests/e2e/091-drop-marker.sh` (marker clean at rest = post-abort
+      baseline + bad-id refusal). The mid-drag live end-to-end drive rides on
+      C-I9's DND driver (C-A1 asserts this readback); the live VALUE is proven
+      by dbusreportstest.
+      Commits: (branch worktree-agent-af2749c9456618186; final hashes at PR merge)
 - [ ] **P5 `moveViewToScreen` action.** Blocks F5/A4. Add COARSE
       `moveViewToScreen us <cid> <screenName>` (sets the same
       `screensGroup`/`onPrimary`/explicit-screen state the settings combo
@@ -1039,7 +1064,7 @@ merge --rebase`, re-resolve hashes, fetch).
       Commits: (C-I1 branch, hash at merge)
 - [ ] **C-I2 = P1** multi-output vehicle. Commits:
 - [x] **C-I3 = P3** `addApplet` + applet-id order readback + XML + test. Commits: (branch worktree-agent-a102bc9cfc620c8c0; final hashes at PR merge)
-- [ ] **C-I4 = P4** `removeApplet` + drop-marker/spacer readback + XML + test. Commits:
+- [x] **C-I4 = P4** `removeApplet` + drop-marker/spacer readback + XML + test. Commits: (branch worktree-agent-af2749c9456618186; final hashes at PR merge)
 - [ ] **C-I5 = P5** `moveViewToScreen` + XML + test. Commits:
 - [ ] **C-I6 = P2** render-golden bridge (small set) + `--bless`. Commits:
 - [ ] **C-I7 = P6** applet-reorder driver + `z`/stacking readback (commit+abort). Commits:
@@ -1134,9 +1159,18 @@ lands in the three required places + `dbusreportstest`):**
 - [ ] G2 `z`/stacking order in `viewAppletsData` (and `viewTasksData`). Retires
       the stuck-over-chrome golden for F3/F4/A2/A3 (`480ae30e3` residue becomes
       queryable). (In C-I7/P6.) Commits:
-- [ ] G3 live drop-marker / `dndSpacerIndex` state readback. Retires the
+- [x] G3 live drop-marker / `dndSpacerIndex` state readback. Retires the
       half-inserted-placeholder golden for A1/A2 - the direct `insert(-1)`
-      observability. (In C-I4/P4.) Commits:
+      observability. (In C-I4/P4.) Landed as `viewDropMarkerIndex(u) -> i`:
+      the live `dndSpacer` visual insert index, -1 when parked (no drag in
+      flight, i.e. at rest and after any drop/abort). Sourced from
+      `LayoutManager::dndSpacerIndex()` (null-machinery guarded), bridged by
+      `ContainmentInterface::readDropMarkerIndex`, sentinel contract pinned by
+      the pure `DbusReports::dropMarkerIsLive` (0 = live leading marker, only
+      negative = clean) in `dbusreportstest`. XML + design doc + usage
+      reference; `091-drop-marker.sh` proves the clean/post-abort baseline
+      reading end-to-end.
+      Commits: (branch worktree-agent-af2749c9456618186; final hashes at PR merge)
 - [ ] G4 window-task order readback confirmation/addition in `viewTasksData`
       (`index`/`appId` stable after reorder). For F4/A3 window sub-model. (In
       C-I8/P7.) Commits:

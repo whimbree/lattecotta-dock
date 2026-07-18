@@ -187,6 +187,14 @@ public:
     //! exists for that containment id (warned in the log).
     QStringList viewAppletsOrder(const uint &containmentId);
 
+    //! D-Bus state readback (observability-first): the live drop-marker
+    //! (dndSpacer) visual insert index for one view - >=0 while a drag hovers
+    //! the view, -1 when no marker is live. The G3 readback
+    //! (docs/e2e-interaction-test-plan.md): the direct insert(-1)
+    //! observability that lets an add/reorder abort assert no orphan
+    //! placeholder was stranded. -1 also for a bad containment id (warned).
+    int viewDropMarkerIndex(const uint &containmentId);
+
     //! D-Bus state readback (observability-first): every current view's
     //! placement/visibility/geometry facts as one compact JSON array keyed
     //! on containment id, documented in docs/dbus-observability-interface.md.
