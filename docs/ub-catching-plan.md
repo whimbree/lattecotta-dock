@@ -73,7 +73,7 @@ precondition (live in the sanitized/test build) AND a runtime `qCritical`
 out-of-range value must never REACH `insert()` - caught at test time by forced
 asserts, refused/repaired at runtime in the field.
 
-- [ ] B1 JUSTIFY SPLITTER FIX (the first boundary-invariant case, and a live
+- [x] B1 JUSTIFY SPLITTER FIX (the first boundary-invariant case, and a live
       user bug). Root cause: `splitterPosition=0` (stale, migrated;
       `alignmentUpgraded=true`) -> `layoutmanager.cpp:294-296`
       `insert(splitterPosition-1)` = `insert(-1)` = negative index = UB in the
@@ -85,7 +85,18 @@ asserts, refused/repaired at runtime in the field.
       repair. Must HEAL Bree's existing `splitterPosition=0` config in place.
       Guard: a sanitized layout-manager unit test feeding a bad splitterPosition
       that asserts two correctly-placed splitters (would abort under ASan/
-      forced-assert against the old code). Commits:
+      forced-assert against the old code). DONE: single-owner pure core
+      `containment/plugin/units/justifysplitters.h` (validate + centered repair
+      + post-repair Q_ASSERT) is the only path reaching `QList::insert` for a
+      splitter index; both call sites (updateOrder, restore) route through it
+      and warn loudly on a bad pair; restore() heals via a trailing
+      saveOptions(). Guard `tests/units/justifysplitterstest.cpp` PASSES on the
+      fix and ABORTS (SIGABRT) on the reverted raw insert (proven). Nested
+      vehicle reproduced the live UB (`QList(0, -1, 3, 4, 6, 29, 122)` from
+      splitterPosition=0). Full detail + the nested-vehicle
+      packaged-plugin-shadow finding + the desk-check owed:
+      docs/agent-logs/2026-07-18-justify-splitter-ub.md. Commits: (branch
+      panel-fix-justify-splitter-ub head 33a28f196; post-rebase hash at merge)
 - [ ] B2 Sweep the obvious index/enum/pointer boundaries the sanitized dock
       surfaces once it runs (A2/A3), converting each into a Q_ASSERT + runtime
       refuse. Ongoing, evidence-driven from Prong A findings. Commits:
