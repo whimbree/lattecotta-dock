@@ -66,6 +66,39 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FIX DIRECTION: classify the shrink axis against the previous logical band
   while still unioning against the applied region for coverage.
 
+## Recorded elsewhere - indexed here so the flat scan is complete
+
+These predate the registry and are detailed in their source docs; indexed here
+so "what is known broken" is one scan. Full detail migrates on next touch.
+
+### D10 - Tasks config page renders but does not apply its settings
+- STATUS: OPEN (inherited upstream half-finished feature; decide wire-up vs hide).
+- LatteDockConfiguration.qml still exposes the Tasks config tab; latte-dock-ng
+  hid theirs (9faccabda) after judging it non-applying. Detail:
+  docs/ng-upstream-audit.md:322, docs/REVIEW_NOTES.md, and CLAUDE.md's
+  stub-tracking cautionary tale (this is that exact case).
+
+### D11 - Dev-dock env leak into child Qt apps
+- STATUS: OPEN (re-evaluate at Phase 11 packaging).
+- QML2_IMPORT_PATH and the stage-first XDG_DATA_DIRS leak into Qt apps LAUNCHED
+  FROM the dev dock, so a child app can lose its platform plugin. Distinct from
+  the #23 shadow fix (that is about what the dock ITSELF loads; this is about
+  child processes the dev dock spawns). Detail: docs/PORTING_PLAN.md ~1724.
+
+### D12 - Plasma lookup-by-id can silently fail on an id mismatch
+- STATUS: OPEN/CHECK. An applet whose metadata embedded id mismatches makes
+  Plasma's lookup-by-id silently fail. Detail: docs/PORTING_PLAN.md ~2362.
+
+### D13 - Dock blank after display churn
+- STATUS: SUSPECTED/UNCONFIRMED (could NOT reproduce as a monitor-sleep bug).
+  Detail: docs/REVIEW_NOTES.md "## Open".
+
+NOTE: deferred/STUBBED features are NOT defects and are tracked separately by the
+stub discipline (`grep -rn 'STUB:'`): app/infoview.cpp:165 +
+app/wm/waylandinterface.cpp:299 (Phase 4 WId), app/layouts/synchronizer.cpp:507
+(Phase 8 activity-stop). REVIEW_NOTES.md stays the human review-session log
+(Open/Resolved); this registry is the flat defect index that points into it.
+
 ## Fixed (kept for the record)
 
 ### D5 - Justify splitter negative-insert UB

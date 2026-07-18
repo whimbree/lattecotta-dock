@@ -139,6 +139,18 @@ stale checkboxes."
   documents - update them as direction changes or new information comes
   in (e.g. from watching the reference forks' ongoing work) rather than
   treating either as fixed once written.
+- PERIODICALLY REVIEW the governing docs for staleness, do not only react
+  (added 2026-07-18). Decisions and rules improve over time; the docs must
+  track that or they calcify and mislead. At each session's start, and
+  whenever a rule is invoked or a decision is made, check whether the
+  written version still matches reality: a rule that has been superseded,
+  refined, or proven wrong gets reworded or dated IN PLACE, not left
+  standing. Date every change (as these agreements already do with "my
+  direction, DATE" / "tightened DATE" / "added DATE") so the evolution is
+  legible and the next reader can trust the latest wording is current. This
+  applies to the decision docs too (docs/known-defects.md, the plan
+  checklists, docs/session-handoff.md): keep them current as work lands, and
+  retire or migrate entries that have gone stale.
 
 ### PR workflow and independent review
 
