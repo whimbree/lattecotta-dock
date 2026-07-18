@@ -77,7 +77,13 @@ e2e_dock_pid() { cat "${E2E_DOCK_PIDFILE:?}" 2>/dev/null; }
 e2e_dock_start() {
     _e2e_require_nested e2e_dock_start || return 2
     local timeout="${1:-60}"
+    #! QT_FORCE_STDERR_LOGGING so the dock's qCDebug/qWarning land in
+    #! E2E_DOCK_LOG: NixOS Qt otherwise routes to journald whenever stderr is
+    #! not a tty (the same reason the vehicle kwin sets it), leaving the log
+    #! empty - which both blinds the failure-artifact capture and hides the
+    #! action-refusal warnings a rejection recipe asserts on
     setsid env LATTE_CONFIG_HOME="$E2E_CONFIG_HOME" BUILD="$E2E_BUILD" \
+        QT_FORCE_STDERR_LOGGING=1 \
         "$E2E_REPO/scripts/run-staged.sh" -d >>"$E2E_DOCK_LOG" 2>&1 &
     echo $! > "$E2E_DOCK_PIDFILE"
     e2e_wait_running "$timeout" && e2e_wait_settled "$timeout"
