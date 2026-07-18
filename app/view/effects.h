@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2018 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -14,6 +15,7 @@
 #include <QPointer>
 #include <QQuickView>
 #include <QRect>
+#include <QTimer>
 
 // Plasma
 #include <KSvg/FrameSvg>
@@ -96,6 +98,12 @@ public:
     QRect inputMask() const;
     void setInputMask(QRect area);
 
+    //! the region actually handed to QWindow::setMask (the union kept across a
+    //! shrink, collapsing back to inputMask() once the band settles); differs
+    //! from inputMask() only mid-shrink. Read back over D-Bus (viewsData's
+    //! appliedInputRegionRects) so the settle can be asserted without pixels.
+    QRect appliedInputMask() const;
+
     QRect rect() const;
     void setRect(QRect area);
 
@@ -146,6 +154,11 @@ private:
     qreal currentMidValue(const qreal &max, const qreal &factor, const qreal &min) const;
     QRegion customMask(const QRect &rect);
 
+    //! hand m_inputMask to the QWindow, keeping the window mask wide across a
+    //! shrink so the vacated region's clearing damage is not clipped (Qt6
+    //! wayland couples mask() to submitted damage; see inputmaskflush.h)
+    void applyInputMaskToWindow();
+
 private:
     bool m_animationsBlocked{false};
     bool m_backgroundAllCorners{false};
@@ -173,7 +186,15 @@ private:
     QRect m_rect;
     QRect m_mask;
     QRect m_inputMask;
+    //! the region actually handed to QWindow::setMask; kept at the union of
+    //! the bands seen since the last settle so a shrinking band never clips
+    //! the vacated region's clearing damage (inputmaskflush.h)
+    QRect m_appliedInputMask;
     QRect m_appletsLayoutGeometry;
+
+    //! collapses m_appliedInputMask back to the exact band once the band stops
+    //! changing (restarted on every band change, so it only fires when quiet)
+    QTimer m_inputMaskSettleTimer;
 
     QPointer<Latte::View> m_view;
     QPointer<Latte::Corona> m_corona;

@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2018 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -8,6 +9,7 @@
 // local
 #include <config-latte.h>
 #include <coretypes.h>
+#include "inputmaskflush.h"
 #include "panelshadows_p.h"
 #include "view.h"
 #include "../lattecorona.h"
@@ -75,6 +77,22 @@ void Effects::init()
     connect(&m_theme, &Plasma::Theme::themeChanged, this, [&]() {
         updateBackgroundContrastValues();
         updateEffects();
+    });
+
+    //! Once the band stops changing, narrow the window mask from the union it
+    //! was kept at during the shrink (inputmaskflush.h) back to the exact band,
+    //! so steady-state input hit-testing and libplasma popup anchoring read the
+    //! real band. 100ms clears three 30Hz frames of animation/hitch; the timer
+    //! is restarted on every band change so it only fires when the band is quiet.
+    m_inputMaskSettleTimer.setSingleShot(true);
+    m_inputMaskSettleTimer.setInterval(100);
+    connect(&m_inputMaskSettleTimer, &QTimer::timeout, this, [this]() {
+        if (!m_view || !InputMaskFlush::needsSettleCollapse(m_appliedInputMask, m_inputMask)) {
+            return;
+        }
+
+        m_appliedInputMask = m_inputMask;
+        m_view->setMask(m_appliedInputMask);
     });
 }
 
@@ -289,23 +307,54 @@ void Effects::setInputMask(QRect area)
     }
 
     m_inputMask = area;
-
-    //! Under Qt6's wayland backend the window mask no longer carries
-    //! only the input area: Qt also restricts each frame's submitted
-    //! damage to it, so an empty or degenerate region freezes the
-    //! surface at its last content - initially fully transparent, which
-    //! made the whole dock render 30fps into buffers that never showed.
-    //! The mask computation legitimately passes degenerate rects while
-    //! the layouter is still warming up (localGeometry width 0) and
-    //! Qt.rect(0,0,-1,-1) as the explicit clear request; both must clear
-    //! the mask instead of being forwarded.
-    if (area.isValid() && !area.isEmpty()) {
-        m_view->setMask(area);
-    } else {
-        m_view->setMask(QRegion());
-    }
+    applyInputMaskToWindow();
 
     Q_EMIT inputMaskChanged();
+}
+
+QRect Effects::appliedInputMask() const
+{
+    return m_appliedInputMask;
+}
+
+void Effects::applyInputMaskToWindow()
+{
+    if (!m_view) {
+        return;
+    }
+
+    //! Under Qt6's wayland backend the window mask no longer carries only the
+    //! input area: Qt also restricts each frame's submitted damage to it, so an
+    //! empty or degenerate region freezes the surface at its last content -
+    //! initially fully transparent, which made the whole dock render 30fps into
+    //! buffers that never showed. The mask computation legitimately passes
+    //! degenerate rects while the layouter is still warming up (localGeometry
+    //! width 0) and Qt.rect(0,0,-1,-1) as the explicit clear request; both must
+    //! clear the mask instead of being forwarded.
+    const QRect toApply = InputMaskFlush::windowMaskFor(m_appliedInputMask, m_inputMask);
+
+    if (!toApply.isValid() || toApply.isEmpty()) {
+        m_inputMaskSettleTimer.stop();
+        m_appliedInputMask = QRect();
+        m_view->setMask(QRegion());
+        return;
+    }
+
+    //! Keep the window mask at the union across a SHRINK so the just-vacated
+    //! edge pixels' transparent repaint is not clipped out of submitted damage
+    //! (else the compositor freezes stale semi-transparent panel pixels there,
+    //! the lighter band caught live on 2026-07-18 when maximizeWhenMaximized
+    //! released on un-maximize). inputmaskflush.h carries the full rationale.
+    m_appliedInputMask = toApply;
+    m_view->setMask(m_appliedInputMask);
+
+    //! While the band is still shrinking the applied mask stays wider than it;
+    //! (re)arm the collapse so the window narrows back to the band once quiet.
+    if (InputMaskFlush::needsSettleCollapse(m_appliedInputMask, m_inputMask)) {
+        m_inputMaskSettleTimer.start();
+    } else {
+        m_inputMaskSettleTimer.stop();
+    }
 }
 
 QRect Effects::appletsLayoutGeometry() const
