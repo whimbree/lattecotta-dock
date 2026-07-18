@@ -30,11 +30,20 @@ A unit that genuinely cannot meet 1-4 headlessly is **live-only**: it
 gets an entry in a live-only registry (`docs/testing/live-only.md`,
 created with its first entry) stating *why*, and becomes the target of
 live verification (per-phase live testing from the first runnable
-milestone, and the Phase 10 e2e harness). The registry exists so the gap
-is recorded instead of papered over with a dishonest test. Latte's QML
-is full of units that dereference a live containment, `Plasmoid`
-attached objects, or a real compositor - latte-dock-qt6's registry shows
-how large this class is; expect the same here.
+milestone, and the nested-vehicle e2e suite below). The registry exists
+so the gap is recorded instead of papered over with a dishonest test.
+The bar for "genuinely" tightened once the e2e tier existed: needing a
+real compositor or a real pointer gesture (drag, tap, wheel, hover
+glide) is no longer live-only, because the nested-vehicle e2e suite
+(`scripts/run-e2e.sh`, a desk-independent `kwin_wayland --virtual` with
+fakepointer injection) supplies both with no dependence on the
+developer's session. True live-only is now what needs the real desk
+itself: real kglobalaccel registration, real multi-screen, audio bound
+to a task, a logout/login or lock/unlock cycle. Latte's QML still has
+units that dereference a live containment or `Plasmoid` attached objects
+in ways an offscreen engine cannot satisfy - latte-dock-qt6's registry
+shows how large that class is - but the "needs a real compositor" slice
+of it is now e2e-coverable rather than live-only.
 
 ## Pure cores (the extraction initiative's step-2.5 law)
 
