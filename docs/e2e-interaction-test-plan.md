@@ -237,22 +237,30 @@ Each is a chunk in section 8. Every item's definition of done includes the HC3
 acceptance clause: its self-test must demonstrably OBSERVE A REJECTION, not only
 a success.
 
-- [ ] **P0 Parametrized fixture generator + matrix harness + baseline
+- [x] **P0 Parametrized fixture generator + matrix harness + baseline
       backbone.** Blocks every scenario. (a) A generator
       (`tests/e2e/matrix/fixture.py`) that, given `(viewType, edge, alignment,
-      display)`, writes a throwaway `<cell>.layout.latte` + `lattedockrc` with
-      the view type (`behaveAsPlasmaPanel`), edge, alignment, and per-screen
-      assignment (`screensGroup` + screen name / `onPrimary`) set correctly. (b)
-      A harness (`run-matrix.sh` + `matrix-lib.sh`): `matrix_scenario <cell>
-      <verb> <outcome>` stages, starts, drives, asserts, tears down - scenarios
-      are FUNCTIONS parametrized by cell, never copy-paste. (c) The abort
-      backbone: `matrix_baseline_capture` / `matrix_assert_baseline_restored`.
-      Acceptance (observes a rejection): the harness self-test injects a WRONG
-      expected value (e.g. a scenario that claims order X when the dock is at Y)
-      and proves the harness reports FAIL, and injects a fixture the dock must
-      REFUSE (a malformed cell) and proves it reports refusal - not a green pass.
-      Reuse run-e2e's XPASS-is-failure discipline.
-      Commits:
+      display)`, derives a throwaway config from a proven-loadable seed with
+      the view type, edge, alignment, and per-screen assignment
+      (`screensGroup`/`onPrimary`/`explicitScreen`) set correctly. viewType is
+      driven by the QML derivation (zoom-off + justify-or-static + thick
+      background = panel; zoom-on = dock) since `viewsData.type` is the derived
+      value, not a stored flag. (b) A harness (`scripts/run-matrix.sh` +
+      `tests/e2e/matrix/matrix-lib.sh`): `matrix_scenario_commit` /
+      `matrix_scenario_abort <cell> <verb>` stage, start, drive, assert, tear
+      down - scenarios are FUNCTIONS parametrized by cell, never copy-paste;
+      verbs are `matrix_verb_<name>_drive`/`_probe` pairs a scenario chunk
+      defines. (c) The abort backbone: `matrix_baseline_capture` /
+      `matrix_assert_baseline_restored` snapshot and diff the residue surface
+      (view record, applet order, config bytes KConfig-default-aware, the
+      verb's probe, and a baseline frame under `MATRIX_CAPTURE_FRAME=1` whose
+      pixel compare is a P2 hook). Acceptance (observes a rejection): the
+      `matrix-harness-selftest` recipe asserts the harness's OWN verdicts - a
+      WRONG expected-readback reported as FAIL, abort RESIDUE (a leaked edit
+      session) reported as FAIL, a malformed cell REFUSED, and a
+      did-not-realize-as-declared fixture REFUSED - not a green pass. Reuses
+      run-e2e's XPASS-is-failure discipline.
+      Commits: (C-I1 branch, hash at merge)
 - [ ] **P1 Multi-output nested vehicle.** Blocks all dual cells and F5/A4.
       Extend `lib-nested-kwin.sh` to pass `--output-count 2` (verified on the
       pinned kwin_wayland: `--virtual --output-count <count>`), discover the two
@@ -579,7 +587,10 @@ chunks total.** Each is one Opus agent's single reviewable PR (branch, gate,
 independent lean-Opus review, `gh pr merge --rebase`, re-resolve hashes, fetch).
 
 ### Infra chunks (each ships the HC3 observes-a-rejection acceptance test)
-- [ ] **C-I1 = P0** fixture generator + matrix harness + baseline backbone. Commits:
+- [x] **C-I1 = P0** fixture generator + matrix harness + baseline backbone.
+      `tests/e2e/matrix/fixture.py`, `tests/e2e/matrix/matrix-lib.sh`,
+      `scripts/run-matrix.sh`, `tests/e2e/matrix-harness-selftest.sh` (HC3).
+      Commits: (C-I1 branch, hash at merge)
 - [ ] **C-I2 = P1** multi-output vehicle. Commits:
 - [ ] **C-I3 = P3** `addApplet` + applet-id order readback + XML + test. Commits:
 - [ ] **C-I4 = P4** `removeApplet` + drop-marker/spacer readback + XML + test. Commits:
