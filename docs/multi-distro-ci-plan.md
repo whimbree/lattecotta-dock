@@ -238,8 +238,21 @@ pass on every distro regardless of tier.
       legs already run as root). ENV/traps identical to Debian (unsuffixed
       lvp_icd.json, multiarch qt6/qml tree, Qt6 host tools off-PATH under
       /usr/lib/qt6/bin). Full resolution:
-      docs/agent-logs/2026-07-17-neon-leg.md. Remaining: gentoo/void
-      layers. Commits: d68ad64c0, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7
+      docs/agent-logs/2026-07-17-neon-leg.md. GENTOO DONE
+      (ci/containers/Containerfile.gentoo): NOT a package-name distro - a
+      BINHOST distro. Deps come as prebuilt binpkgs from
+      distfiles.gentoo.org/releases/amd64/binpackages/23.0/x86-64 wired via
+      binrepos.conf + FEATURES=getbinpkg, not a per-package name install. The
+      decisive resolution was the BASE IMAGE, not names: the KDE binpkgs carry
+      USE=systemd, so gentoo/stage3:amd64-systemd (not the default openrc
+      stage3) is what lets --binpkg-respect-use accept them instead of
+      source-rebuilding the whole Plasma stack. package.use entries align
+      computed USE to the binhost's recorded USE (diffed from the Packages
+      index); the render gate needs two mandatory SOURCE rebuilds the binhost
+      omits (media-libs/mesa +video_cards_lavapipe, kde-plasma/kwin +lock).
+      Full atom/USE resolution + binhost recipe in
+      docs/agent-logs/2026-07-17-gentoo-leg.md. All 8 legs done.
+      Commits: d68ad64c0, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7, 8838dcf31
 - [~] A2 Clean cmake build of the port in each container locally (podman
       is on the host - prototype here, no CI yet). Record per-distro
       build quirks. ARCH DONE: builds clean (565/565) against Arch's Qt
@@ -324,8 +337,21 @@ pass on every distro regardless of tier.
       the step-2.5 law's -fsanitize test targets need to link. test stage:
       80/82 ctest (schemesmodeltest non-hermetic XDG + qmllintgate ratchet -
       the known classes; better than Arch/Tumbleweed because the image
-      exports LATTE_QML_MODULE_PATH + Qt6 QML host-tool PATH). Remaining: gentoo.
-      Commits: 00400f16c, d68ad64c0, 3fb8f899d, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7, 72dc44dab
+      exports LATTE_QML_MODULE_PATH + Qt6 QML host-tool PATH). GENTOO DONE:
+      builds clean (565/565, identical target count) against the binhost's Qt
+      6.11.1 / KF6 6.27.0 / libplasma 6.6.6; NO port source change needed
+      (master's portability fixes carry the split-usr lib64 layout -
+      build/latte-qmldir.txt came out lib64/qt6/qml). Offscreen ctest = 79/79
+      (100%, the 2 NixOS-tier excluded), BEATING Arch (74/82) and Fedora
+      (78/82): the image ENV (LATTE_QML_MODULE_PATH=/usr/lib64/qt6/qml) lets
+      the QML-loading unit tests resolve, and /usr/lib64/qt6/bin +
+      /usr/libexec/qt6 on the image PATH lets the QML script-gates find
+      qmltestrunner/qmllint (same off-PATH trap as Fedora/Tumbleweed, resolved
+      in the image). No build DEPS were missing - Gentoo bundles the Qt
+      private headers and sanitizer runtimes. libplasma 6.6.6 < 6.7, so the
+      askdestroysignalorderingtest containment assertions stay gated off by the
+      existing PLASMA_VERSION >= 6.7.0 guard (Debian leg), untouched.
+      Commits: 00400f16c, d68ad64c0, 3fb8f899d, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7, 72dc44dab, 8838dcf31
 - [~] A3 Pin the exact base image tags that meet the Plasma 6.5 floor;
       document the floor check per distro. Arch is rolling (archlinux:
       latest for the prototype; archive-snapshot pin TBD). DEBIAN DONE:
@@ -362,8 +388,17 @@ pass on every distro regardless of tier.
       xbps-install -Suy sync, which is the initial RUN step), so a
       reproducible pin would be an image digest, same open item as
       Arch/Tumbleweed. GLIBC image deliberately (musl is a separate axis).
-      Remaining: gentoo tags.
-      Commits: 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7, 72dc44dab
+      GENTOO PINNED: base image gentoo/stage3:amd64-systemd (the systemd
+      stage3, required so the binhost's USE=systemd KDE binpkgs resolve as
+      binaries) + binhost snapshot
+      distfiles.gentoo.org/releases/amd64/binpackages/23.0/x86-64. Floor check
+      (in-container, 2026-07-17): Qt 6.11.1 / KF6 6.27.0 / libplasma 6.6.6 /
+      plasma-workspace 6.6.6 / kwin 6.6.6 / mesa 26.0.8 - all meet Qt>=6.6,
+      KF6>=6.5, libplasma>=6.5. Both the stage3 tag and the binhost path roll
+      (Gentoo is a rolling source distro); a binhost REPO_REVISIONS/snapshot
+      pin is TBD, the same open item as Arch/Tumbleweed. All 8 base tags
+      resolved.
+      Commits: 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7, 72dc44dab, 8838dcf31
 
 ### Phase B - headless gates in-container
 - [~] B1 Get nested kwin_wayland + lavapipe running in each container
@@ -396,8 +431,18 @@ pass on every distro regardless of tier.
       podman and drives the full sceneprobe suite (13/13). SAME cap_sys_nice=ep
       trap as Arch/Tumbleweed (getcap showed cap_sys_nice=ep before strip,
       empty after); the image strips it (libcap-progs provides setcap on Void
-      too).
-      Commits: 79a8008f0, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7, 72dc44dab
+      too). GENTOO DONE: nested kwin_wayland comes up headless and drives all
+      13 scenes, but Gentoo's binhost kwin needed TWO in-image fixes the other
+      legs did not. (1) The binpkg kwin is built USE=-lock (no screenlocker),
+      so it does not know the --no-lockscreen option lib-nested-kwin.sh passes
+      unconditionally and exits "Unknown option no-lockscreen" - fixed by
+      rebuilding kwin from source with USE=lock (kscreenlocker already a
+      binpkg). (2) Gentoo is split-usr and installs kwin_wayland at BOTH
+      /usr/bin and /usr/sbin, each cap_sys_nice=ep; the harness resolves
+      /usr/sbin first, so the setcap -r must strip BOTH paths (the one-path
+      Arch fix is insufficient). The existing vk-suppressions.txt covers
+      Gentoo's Mesa (LLVM 22.1.8) warnings.
+      Commits: 79a8008f0, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7, 72dc44dab, 8838dcf31
 - [~] B2 Run the behavioral e2e recipes in-container; make them a hard
       pass on each distro. GATE STAGE PRODUCTIONIZED (branch
       multi-distro-ci-b2-gate): ci/build-and-gate.sh's gate stage is
@@ -522,8 +567,21 @@ pass on every distro regardless of tier.
       owns the rolling-drift axis). The image ENV (LATTE_QML_MODULE_PATH=/usr/
       lib/qt6/qml, arch-suffixed lvp_icd.x86_64.json) resolves the framework
       qml tree and ICD; note /usr/lib64 is a symlink to lib on Void, so the
-      canonical lib path is used.
-      Commits: 18aac31b0, 79a8008f0, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7, 72dc44dab
+      canonical lib path is used. GENTOO DONE (bit-exact tier, NOT tolerance):
+      all 13 scenes render and PASS bit-exact against the nix-blessed lavapipe
+      goldens (sceneprobe-gate.sh exit 0) in the Gentoo container. Render
+      device llvmpipe (LLVM 22.1.8, 256 bits) - IDENTICAL to Arch, so the
+      output matches nix Mesa bit-for-bit and no tolerance tier is needed at
+      this Mesa version. This deliberately did NOT reproduce ng's LLVM 21 pin
+      (which the prompt predicted would land Gentoo in Fedora's tolerance
+      tier): leaving LLVM unpinned took the binhost's LLVM 22 Mesa, the
+      bit-exact-matching major. Enablers: the Mesa-with-lavapipe source rebuild
+      (video_cards_lavapipe) produced the ICD, and the QMLDIR emit (18aac31b0)
+      resolved the staged org.kde.latte.* modules on lib64/qt6/qml. Recorded,
+      not relied on - Phase C still owns the rolling-drift axis (a future
+      Gentoo Mesa/LLVM bump could shift this to tolerance, as Fedora shows).
+      Detail: docs/agent-logs/2026-07-17-gentoo-leg.md.
+      Commits: 18aac31b0, 79a8008f0, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7, 72dc44dab, 8838dcf31
 
 ### Phase C - per-distro golden tiers
 - [ ] C1 Extend the sceneprobe device/tier axis to per-distro naming
