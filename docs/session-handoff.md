@@ -55,22 +55,50 @@ LANDED (master 326aba06d):
   /proc/maps flipped packaged->staged; #19/#22 fixes now visibly active on Bree's
   real dock (Bree confirmed "dock is looking better").
 
-IN FLIGHT (parallel Opus worktree agents, nested-only, off master 326aba06d):
-- #4 panel-fix-maximize-length-repaint: Qt6 wayland couples QWindow::mask() to
-  submitted buffer damage, so a shrinking masked dock (maximize-panel-length
-  releasing on un-maximize) drops the vacated edge's clearing damage -> stale
-  frosted band at the former extent. Salvaged pure-core WIP inputmaskflush.h
-  (keep the mask at the union of bands until settled, then collapse to the band)
-  in scratchpad/maximize-wip/.
-- A3 (ub-catching): wire the sanitized dock into a DRIVEN e2e/sceneprobe gate
-  (build-asan + halt_on_error + a /proc/maps shadow-assertion so the gate can't
-  run a shadowed binary + an injected-UB proof).
+ALSO LANDED (merged since):
+- #25 A3 (ub-catching): sanitized dock wired into a DRIVEN gate (build-asan +
+  halt_on_error + /proc/maps shadow-assertion + injected-UB proof, now gate-all's
+  final stage). CAUGHT TWO REAL vptr UBs on first run (decayed-vptr static_cast in
+  destroyed() slots, genericlayout.cpp + syncedlaunchers.cpp, fixed via
+  reinterpret_cast, filed under B2). Commits ddb766df1/f8505a543/d6fc8cd9e.
+- #26 clangd: CMAKE_EXPORT_COMPILE_COMMANDS + .clangd + nix --query-driver +
+  devShell clang-tools + .vscode + docs/clangd-setup.md. Contributor gets
+  zero-false-diagnostic VSCode clangd out of the box (proven clangd --check
+  21->0). In-session harness clangd still noisy (it invokes without --query-driver;
+  cosmetic, VSCode has it).
+- #24 maximize-length repaint: inputmaskflush.h union-then-collapse core, SCOPED
+  to LENGTH-axis shrinks only (F2 caught autohide/dodge HIDE over-capture - a
+  hidden dock held its full body as input for 100ms; fixed by keying the hold to
+  the length axis so thickness/hide applies the strip directly). New
+  appliedInputRegionRects D-Bus readback. Commits 2b80a9411/79f8f1379/c05f844c2/
+  98008f70f. DESK-CHECK OWED to Bree: (a) maximize-length un-maximize shows no
+  frosted band at the former extent; (b) autohide/dodge hide + zoom-out settle
+  show no click-swallow / spurious reveal (drive it on the live dock once the
+  swarm quiesces; the fix is on master but Bree's running dock predates it).
+  TWO NITS FILED (re-review, non-blocking): inputmaskflush.h:64 the axis test keys
+  off the held `applied` region not the previous logical band, so a
+  maximize-length settle still pending + an autohide HIDE within 100ms
+  misclassifies the hide as a length shrink (sub-100ms race, exotic combo, still
+  strictly better than pre-fix; hardening = classify against the previous logical
+  band); and inputmaskflushtest.cpp:210 rests on the reveal strip preserving the
+  band length EXACTLY (1px shorter flips lengthShrank true) - worth a comment.
 
-OPEN AFTER THESE: Job C (panel test matrix, all 4 edges - after #4 stabilizes so
-its goldens capture the maximize fix); UB Prong B2 (boundary sweep, evidence-
-driven from Prong A findings); the on-disk splitterPosition write-back caveat
-(the justify fix repairs at every load, so the panel is always correct, but the
-corrected value doesn't persist to the layout file yet - small follow-up).
+E2E INTERACTION SUITE (docs/e2e-interaction-test-plan.md, on master): 196
+scenarios (~106 novel), abort first-class, readback-first (goldens only where no
+readback exists), full-dual-display matrix, tier-1-in-gate-all + full-periodic.
+Both HC gates passed at review (HC1 panel-alignment degeneracy, HC3 rejection
+acceptance per driver). SWARM WAVE 1 in flight: C-I1 (harness backbone, root
+dep), C-I10 (fakepointer key injection), C-I3 (addApplet + applet-id readback);
+C-I4/C-I5 serialized behind C-I3 (shared D-Bus files). 28 chunks, 4 waves, max 4
+agents. Widget-explorer DND (C-I9/P8) is EXPECTED DOABLE in the nested vehicle
+(Bree directive - the old "GUI CI vm" defer note was stale).
+
+OPEN: Job C (panel matrix) is likely SUBSUMED by the e2e suite - reconcile;
+UB Prong B2 (boundary sweep, now seeded by A3's two vptr finds); the on-disk
+splitterPosition write-back caveat (justify repairs at every load, panel always
+correct, corrected value not yet persisted to the layout file - small follow-up);
+a docs testing-infra accuracy pass in flight (PORTING_PLAN/README/TESTING.md,
+correcting stale "infra not there yet" claims).
 
 ## UB-catching initiative (parallel track, docs/ub-catching-plan.md)
 
