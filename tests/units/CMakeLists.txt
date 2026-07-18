@@ -11,7 +11,16 @@ include(ECMAddTests)
 # unsanitized object library, or the code under test runs uninstrumented
 # and the sanitizers are theater). -fno-sanitize-recover turns any UBSan
 # find into a test failure instead of a log line.
-set(LATTE_UNIT_SANITIZE_FLAGS -fsanitize=address,undefined -fno-sanitize-recover=all)
+#
+# The flag set is defined ONCE at the top-level CMakeLists as
+# LATTE_SANITIZE_FLAGS (the single source of truth shared with the
+# -DLATTE_SANITIZE sanitized-dock build); consume it here so the tests and the
+# sanitized dock can never disagree on what "sanitized" means. Refuse loudly if
+# it went missing rather than silently building these tests without sanitizers
+# (a green test with a violated precondition is the exact failure this guards).
+if(NOT LATTE_SANITIZE_FLAGS)
+    message(FATAL_ERROR "LATTE_SANITIZE_FLAGS is unset - it must be defined at the top-level CMakeLists before tests/ is added")
+endif()
 
 function(latte_add_unit_test _name)
     # extra arguments: additional sources compiled into the binary
@@ -21,8 +30,8 @@ function(latte_add_unit_test _name)
     )
     set_tests_properties(${_name} PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
-    target_compile_options(${_name} PRIVATE ${LATTE_UNIT_SANITIZE_FLAGS})
-    target_link_options(${_name} PRIVATE ${LATTE_UNIT_SANITIZE_FLAGS})
+    target_compile_options(${_name} PRIVATE ${LATTE_SANITIZE_FLAGS})
+    target_link_options(${_name} PRIVATE ${LATTE_SANITIZE_FLAGS})
     # RelWithDebInfo defines QT_NO_DEBUG, which strips Q_ASSERT wholesale -
     # without this the cores' invariant asserts would be dead code even
     # here, and the tests would pass with violated preconditions.

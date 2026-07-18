@@ -170,6 +170,40 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wformat -Werror=format-security")
 
 message(STATUS "COMPILER FLAGS : ${CMAKE_CXX_FLAGS}")
 
+# Sanitized-dock build (docs/ub-catching-plan.md, Prong A). LATTE_SANITIZE=ON
+# compiles AND links every target in this tree - the dock and the plugins that
+# dlopen into it (containment, core, tasks, the context-menu containment
+# action) - with ASan+UBSan, and forces Q_ASSERT live via QT_FORCE_ASSERTS, so
+# OUR-code UB and tripped invariants abort with a stack during real driving
+# instead of running silently. The motivating bug was an insert(-1) from a
+# stale splitter position that vanished a justify splitter in the field with
+# no diagnostic (RelWithDebInfo strips Q_ASSERT, ships no sanitizer).
+#
+# This is a build-system change with blast radius, so it follows the C++17->20
+# bump discipline: default OFF, and the normal build is BYTE-UNCHANGED when OFF
+# (the block below is skipped entirely - the only always-run additions are an
+# inert variable and an OFF option). It is meant for a dedicated out-of-tree
+# build (build-asan, scripts/run-asan-dock.sh / start-dock-sanitized.sh), never
+# the packaged build (package.nix stays nixpkgs Release) and never the normal
+# RelWithDebInfo dev tree. -fno-sanitize-recover=all makes the first finding an
+# abort, not a log line.
+#
+# LATTE_SANITIZE_FLAGS is the SINGLE SOURCE OF TRUTH for the sanitizer flag
+# set, shared with the sanitized unit tests (tests/units/CMakeLists.txt reads
+# it), so the dock and the tests can never drift on what "sanitized" means.
+set(LATTE_SANITIZE_FLAGS -fsanitize=address,undefined -fno-sanitize-recover=all)
+option(LATTE_SANITIZE "Build the dock and its plugins with ASan+UBSan and forced Q_ASSERTs (out-of-tree build-asan; never the packaged or normal dev build)" OFF)
+if(LATTE_SANITIZE)
+    message(STATUS "LATTE_SANITIZE: ON - dock + plugins built with '${LATTE_SANITIZE_FLAGS}' and QT_FORCE_ASSERTS")
+    add_compile_options(${LATTE_SANITIZE_FLAGS})
+    add_link_options(${LATTE_SANITIZE_FLAGS})
+    # RelWithDebInfo defines QT_NO_DEBUG/NDEBUG, which strips Q_ASSERT
+    # wholesale; without this our invariant asserts would be dead code exactly
+    # in the sanitized build meant to exercise them (the same reason
+    # latte_add_unit_test sets it on the test binaries).
+    add_compile_definitions(QT_FORCE_ASSERTS)
+endif()
+
 # Share Same Core Types between declarativeimports and app
 set(CORETYPESHEADER "LIBCORETYPES_H")
 configure_file(declarativeimports/coretypes.h.in declarativeimports/core/types.h)
