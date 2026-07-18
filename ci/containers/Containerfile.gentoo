@@ -1,0 +1,189 @@
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# Gentoo build+gate environment for the multi-distro CI matrix
+# (docs/multi-distro-ci-plan.md, Phase A). Gentoo is the source/minimalist
+# nerd leg. Building the KDE stack (Qt6 + KF6 + Plasma + kwin + Mesa) from
+# source in a throwaway container would take many hours, so this image pulls
+# PREBUILT BINARY PACKAGES from Gentoo's upstream binhost
+# (distfiles.gentoo.org, 23.0/x86-64 snapshot) instead of compiling the world
+# - only the port itself (built later by ci/build-and-gate.sh) compiles, plus
+# a small tail of packages the binhost snapshot lags behind the synced tree on
+# (see the ledger docs/agent-logs/2026-07-17-gentoo-leg.md). This layer
+# installs ONLY the build/runtime/gate dependencies; the port is built against
+# a bind-mounted source tree, so the image is a cacheable deps-only layer.
+#
+# Base: gentoo/stage3:amd64-systemd (NOT the default openrc stage3). The
+# binhost binpkgs were built with the systemd profile - plasma-workspace and
+# the rest carry USE="systemd" - so a systemd stage3 is what makes the KDE
+# binpkgs installable without --binpkg-respect-use rejecting them and falling
+# back to a full source rebuild. This was the decisive resolution for the leg.
+#
+# Floor check (CMakeLists.txt requires Qt >= 6.6.0, KF6 >= 6.5.0,
+# libplasma >= 6.5.0, PlasmaWaylandProtocols >= 1.6), observed on the binhost
+# snapshot in-container 2026-07-17:
+#   dev-qt/qtbase            6.11.1   (>= 6.6.0 floor: PASS)
+#   kde-frameworks/kcoreaddons 6.27.0 (>= 6.5.0 floor: PASS)
+#   kde-plasma/libplasma     6.6.6    (>= 6.5.0 floor: PASS)
+#   kde-plasma/plasma-workspace 6.6.6 (LibTaskManager / NotificationManager / KWayland)
+#   kde-plasma/kwin          6.6.6
+#   media-libs/mesa          26.0.8   (lavapipe, llvm_slot_22 -> llvmpipe LLVM
+#                                       22.1.8, the bit-exact-matching major:
+#                                       sceneprobe is 13/13 bit-exact here, same
+#                                       as Arch, NOT a Fedora-style tolerance tier)
+# libplasma 6.6.6 is BELOW 6.7, so the askDestroy containment-type assertions
+# stay gated off here by the same PLASMA_VERSION >= 6.7.0 guard the Debian leg
+# added (already on master); the port build itself needs no source change.
+FROM docker.io/gentoo/stage3:amd64-systemd
+
+# --- binhost + portage configuration ---------------------------------------
+# repos.conf: the main ::gentoo ebuild tree (rsync). binrepos.conf: the
+# upstream binary package host. FEATURES=getbinpkg + the --getbinpkg/--usepkg
+# EMERGE_DEFAULT_OPTS make emerge prefer binpkgs. The sandbox-disabling
+# FEATURES are required because podman's default seccomp/namespace setup makes
+# Portage's own sandboxes fail; a throwaway CI build image is the right place
+# to drop them. binpkg-request-signature keeps the binhost's GPG verification.
+#
+# VIDEO_CARDS: lavapipe is the software-Vulkan driver the headless render gate
+# renders through, and it is a SEPARATE video_cards_lavapipe USE flag on Gentoo
+# that the binhost Mesa binpkg was NOT built with - so Mesa is the one KDE-stack
+# package that MUST rebuild from source here, to add lavapipe. The rest of the
+# set (amdgpu intel nouveau radeon radeonsi) matches the binpkg's build set so
+# the source Mesa still resolves its libdrm/etc deps as binaries; amdgpu is
+# radeonsi's libdrm dependency. LLVM is NOT pinned: the binhost toolchain is
+# llvm_slot_22, so leaving the default gives llvmpipe/lavapipe on LLVM 22 (the
+# same major as Arch's proven bit-exact leg).
+RUN mkdir -p /etc/portage/repos.conf /etc/portage/binrepos.conf /etc/portage/package.use && \
+    rm -f /etc/portage/binrepos.conf/* && \
+    printf '%s\n' \
+      '[gentoo]' \
+      'location = /var/db/repos/gentoo' \
+      'sync-type = rsync' \
+      'sync-uri = rsync://rsync.gentoo.org/gentoo-portage' \
+      'auto-sync = yes' \
+      > /etc/portage/repos.conf/gentoo.conf && \
+    printf '%s\n' \
+      '[binhost]' \
+      'priority = 1' \
+      'sync-uri = https://distfiles.gentoo.org/releases/amd64/binpackages/23.0/x86-64' \
+      'location = /var/cache/binpkgs' \
+      > /etc/portage/binrepos.conf/binhost.conf && \
+    printf '%s\n' \
+      '' \
+      'FEATURES="getbinpkg binpkg-request-signature -usersandbox -network-sandbox -pid-sandbox -ipc-sandbox"' \
+      'USE="wayland qml vulkan opengl dbus X"' \
+      'VIDEO_CARDS="amdgpu intel nouveau radeon radeonsi lavapipe"' \
+      'ACCEPT_LICENSE="*"' \
+      'MAKEOPTS="-j8"' \
+      'GENTOO_MIRRORS="https://distfiles.gentoo.org"' \
+      'EMERGE_DEFAULT_OPTS="--jobs=3 --load-average=16 --getbinpkg --usepkg --binpkg-respect-use=y --newuse --autounmask-write=y --autounmask-continue=y --verbose"' \
+      >> /etc/portage/make.conf && \
+    printf '%s\n' \
+      '# USE alignment so the binhost binpkgs are ACCEPTED (their built-in USE)' \
+      '# instead of rejected by --binpkg-respect-use and rebuilt from source.' \
+      '# Each entry was derived by diffing the computed USE against the binhost' \
+      "# Packages index's recorded USE for that atom (see the ledger)." \
+      'dev-qt/qtbase cups gtk icu libproxy' \
+      'dev-qt/qt5compat icu qml' \
+      'dev-qt/qtdeclarative svg' \
+      'dev-qt/qtmultimedia alsa pipewire pulseaudio' \
+      '# kwin lock: NOT binpkg-matching - the OPPOSITE, it FORCES a kwin source' \
+      '# rebuild. The binhost kwin is built -lock (no screenlocker), so it does' \
+      "# not know the --no-lockscreen option the nested-kwin harness passes" \
+      '# unconditionally, and kwin exits "Unknown option no-lockscreen". lock' \
+      '# adds screenlocker support (kscreenlocker already present) so the flag' \
+      '# is accepted and the headless compositor comes up.' \
+      'kde-plasma/kwin lock' \
+      'kde-plasma/plasma-workspace networkmanager screencast' \
+      'media-libs/freetype harfbuzz' \
+      'media-libs/libcanberra alsa' \
+      'media-plugins/alsa-plugins pulseaudio' \
+      'sys-apps/systemd policykit' \
+      'sys-libs/minizip-ng compat' \
+      'sys-libs/zlib minizip' \
+      'app-text/xmlto text' \
+      'x11-base/xwayland libei' \
+      > /etc/portage/package.use/latte-ci
+
+# Sync the ebuild tree, then pull the whole build+runtime+gate dependency set.
+# The KDE/Qt/Plasma packages resolve to binpkgs; a tail of fast-moving
+# packages the binhost snapshot lags on (cups, networkmanager, pipewire,
+# imagemagick, exiv2, ffmpeg, gtk+3, qtmultimedia, ...) compiles from source.
+# This is our SUPERSET of latte-dock-ng's gentoo leg: it adds libksysguard,
+# kpipewire, plasma-pa, plasma5support (via plasma-workspace), kcmutils,
+# sonnet, ktextwidgets, qqc2-desktop-style, qt5compat, kidletime PLUS the
+# render-gate deps ng omits (kwin, the Vulkan loader + lavapipe + validation
+# layers, a Noto font). --autounmask-continue writes any residual USE/keyword
+# changes and continues; the package.use above pre-seeds the ones that are
+# either/or conflicts autounmask cannot resolve on its own.
+RUN emerge-webrsync --quiet && \
+    emerge \
+      dev-build/cmake dev-build/ninja app-misc/jq \
+      dev-qt/qtbase:6 dev-qt/qtdeclarative:6 dev-qt/qtwayland:6 \
+      dev-qt/qt5compat:6 dev-qt/qtshadertools:6 dev-qt/qttools:6 \
+      kde-frameworks/extra-cmake-modules kde-frameworks/kcoreaddons:6 \
+      kde-frameworks/kconfig:6 kde-frameworks/kirigami:6 kde-frameworks/kio:6 \
+      kde-frameworks/kxmlgui:6 kde-frameworks/kiconthemes:6 kde-frameworks/ki18n:6 \
+      kde-frameworks/knotifications:6 kde-frameworks/knewstuff:6 \
+      kde-frameworks/karchive:6 kde-frameworks/kglobalaccel:6 kde-frameworks/kcrash:6 \
+      kde-frameworks/kwindowsystem:6 kde-frameworks/kpackage:6 kde-frameworks/ksvg:6 \
+      kde-frameworks/kcmutils:6 kde-frameworks/kitemmodels:6 kde-frameworks/kguiaddons:6 \
+      kde-frameworks/kdbusaddons:6 kde-frameworks/kdeclarative:6 kde-frameworks/kidletime:6 \
+      kde-frameworks/ktextwidgets:6 kde-frameworks/sonnet:6 kde-frameworks/solid:6 \
+      kde-frameworks/kdoctools:6 kde-frameworks/qqc2-desktop-style:6 \
+      kde-plasma/libplasma:6 kde-plasma/plasma-activities:6 \
+      kde-plasma/plasma-activities-stats:6 kde-plasma/plasma-workspace:6 \
+      kde-plasma/plasma-pa:6 kde-plasma/kpipewire:6 kde-plasma/libksysguard:6 \
+      kde-plasma/layer-shell-qt:6 kde-plasma/kwin:6 kde-plasma/kwayland:6 \
+      dev-libs/plasma-wayland-protocols dev-libs/wayland \
+      media-libs/mesa media-libs/vulkan-loader dev-util/vulkan-headers \
+      media-libs/vulkan-layers \
+      sys-libs/libcap net-misc/rsync dev-lang/perl dev-lang/python \
+      media-gfx/imagemagick media-fonts/noto && \
+    rm -rf /var/cache/distfiles/* /var/cache/binpkgs/*
+
+# kwin_wayland ships with cap_sys_nice=ep (the EFFECTIVE bit set). Podman's
+# default capability set excludes CAP_SYS_NICE, so execve of a file whose
+# effective caps aren't in the container bounding set fails EPERM - the nested
+# compositor never comes up. The cap only lets kwin raise its scheduler
+# priority, meaningless for a throwaway headless CI compositor. Strip it so
+# kwin execs under the default locked-down cap set and CI needs no --cap-add.
+# (Same fix as Arch/Fedora; Gentoo's kwin binpkg sets the identical cap.)
+# Gentoo is split-usr and ships kwin_wayland at BOTH /usr/bin and /usr/sbin
+# (each carrying cap_sys_nice=ep); the nested-kwin harness resolves /usr/sbin
+# first via PATH, so BOTH must be stripped.
+RUN setcap -r /usr/bin/kwin_wayland 2>/dev/null || true; \
+    setcap -r /usr/sbin/kwin_wayland 2>/dev/null || true
+
+# The nested-kwin harness and sceneprobe gate read these to find the distro's
+# lavapipe ICD, Vulkan validation layers, and framework QML tree instead of
+# the nix devShell's. Gentoo is a split-usr lib64 distro: the framework QML
+# modules live under /usr/lib64/qt6/qml, Mesa's lavapipe ICD manifest is
+# arch-suffixed (lvp_icd.x86_64.json), and the validation layers sit under the
+# standard vulkan explicit_layer.d. All three paths confirmed by ls
+# in-container.
+#
+# LATTE_QML_MODULE_PATH is a CONTAINER CONTRACT: scripts/run-e2e.sh and
+# lib-qml-env.sh re-exec into `nix develop` when it is unset, and there is no
+# nix here, so an unset value would detonate the gate rather than run it.
+# LATTE_FAKEINPUT_PROTOCOL points at the fake-input Wayland protocol XML the
+# e2e fakepointer injector is generated from (plasma-wayland-protocols ships it
+# and also a .pc, so pkg-config wins in build-and-gate.sh; the ENV is the
+# fallback, kept for parity with the Arch leg).
+ENV LATTE_VULKAN_LAVAPIPE_ICD=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+    LATTE_VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d \
+    LATTE_QML_MODULE_PATH=/usr/lib64/qt6/qml \
+    LATTE_FAKEINPUT_PROTOCOL=/usr/share/plasma-wayland-protocols/fake-input.xml
+
+# Gentoo installs the Qt6 host tools (qmltestrunner, qmllint, qmlcachegen,
+# qmlimportscanner, the unversioned `qml` runtime) under /usr/lib64/qt6/bin and
+# /usr/libexec/qt6, neither on the default PATH. The QML script-gate ctests
+# (qmlcompilegate/qmlinteraction/qmlcontracts) and the e2e keyboard-nav recipe
+# look these up by bare name, so put both dirs on PATH. With this and
+# LATTE_QML_MODULE_PATH the offscreen ctest is 79/79 in-container. This exposes
+# only Qt's executables, not QML modules or plugins, so it cannot shadow the
+# module trees the dock pins. (Same off-PATH trap the Fedora/Debian legs hit.)
+ENV PATH="/usr/lib64/qt6/bin:/usr/libexec/qt6:${PATH}"
+
+WORKDIR /src
