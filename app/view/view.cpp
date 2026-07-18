@@ -729,6 +729,15 @@ void View::showWidgetExplorer(const QPointF &point)
     }
 }
 
+void View::openWidgetExplorer()
+{
+    //! the same body the showAddWidgetsInterface signal reaches; exposed
+    //! publicly so the coarse D-Bus action can trigger it without a synthetic
+    //! right-click. QPointF() means "no anchor point", exactly what the
+    //! context menu's requestWidgetExplorer passes.
+    showWidgetExplorer(QPointF());
+}
+
 QRect View::localGeometry() const
 {
     return m_localGeometry;

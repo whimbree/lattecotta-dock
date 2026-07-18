@@ -1525,6 +1525,23 @@ void Corona::removeApplet(const uint &containmentId, const uint &appletId)
     }
 }
 
+void Corona::showWidgetExplorer(const uint &containmentId)
+{
+    auto view = m_layoutsManager->synchronizer()->viewForContainment(containmentId);
+
+    if (!view) {
+        //! a mutating boundary refuses a bad id the same way the reads do: no
+        //! view for this containment id means the request is outside input,
+        //! refused loudly with NO window shown (reads-never-construct extended
+        //! to this action, docs/dbus-observability-interface.md)
+        qWarning() << "corona: showWidgetExplorer requested for containment" << containmentId << "which has no view; no explorer shown";
+        return;
+    }
+
+    //! the same coarse "Add Widgets..." the containment context menu triggers
+    view->openWidgetExplorer();
+}
+
 void Corona::duplicateView(const uint &containmentId)
 {
     auto view = m_layoutsManager->synchronizer()->viewForContainment((int)containmentId);

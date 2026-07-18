@@ -137,6 +137,12 @@ call removeApplet uu 1 42               # remove applet instance 42 from view 1 
                                        # window resurrects it. Refused loudly with NO removal if the
                                        # containment id has no view or the applet id names no applet.
                                        # Readback: viewAppletsData's inScheduledDestruction flips
+call showWidgetExplorer u 1            # open view 1's widget explorer (the "Add Widgets..."
+                                       # context menu action). Exists as the drag SOURCE for the
+                                       # e2e DND driver: the explorer's AppletDelegate offers the
+                                       # text/x-plasmoidservicename mime. Refused loudly with no
+                                       # window if the containment id has no view. No readback of
+                                       # its own; the window appears in the compositor dump
 call duplicateView u 1
 call removeView u 1                    # UNDO WINDOW: containment survives until the
                                        # notification closes or ~60s; restarting inside

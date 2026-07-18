@@ -187,6 +187,21 @@ Landed before or during the 2026-07-16 stabilization session:
   extended to this mutator): a containment id with no view, and an
   applet id that names no applet on the view. Readback: the applet's
   inScheduledDestruction field in viewAppletsData flips to true.
+- `showWidgetExplorer(u containmentId)` (added 2026-07-18 with the e2e
+  interaction suite, C-I9/P8) - the coarse "Add Widgets..." the
+  containment context menu triggers (Menu::requestWidgetExplorer ->
+  Containment::showAddWidgetsInterface -> View::showWidgetExplorer),
+  exposed as a public View::openWidgetExplorer entry so no synthetic
+  right-click is needed. Its only reason to exist is a DRIVING SURFACE:
+  the explorer window carries the AppletDelegate DragArea offering the
+  text/x-plasmoidservicename mime, the real Wayland drag source the e2e
+  DND driver (dnd-lib.sh) presses on and glides onto the dock. A bad
+  containment id (no view) is refused loudly with no window shown
+  (reads-never-construct extended to this action). No readback of its
+  own: the explorer window shows in the compositor dump (e2e_dumpwins,
+  resourceClass latte-dock, its own caption), and a drop's effect is
+  observed through viewAppletsData (count) and viewDropMarkerIndex (the
+  live spacer, G3).
 
 Rejected for now, with reasons recorded: setAppletsOrder over D-Bus
 (reorder is a drag interaction; tests that need order changes drive

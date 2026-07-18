@@ -228,6 +228,13 @@ public:
     bool settingsWindowIsShown();
     void showSettingsWindow();
 
+    //! open this view's widget explorer, the exact "Add Widgets..." context
+    //! menu action (Menu::requestWidgetExplorer -> showAddWidgetsInterface ->
+    //! the showWidgetExplorer slot below). The public coarse entry the D-Bus
+    //! showWidgetExplorer action drives so the e2e DND driver has a real drag
+    //! source surface (the explorer's AppletDelegate DragArea) to press on.
+    void openWidgetExplorer();
+
     QQuickItem *colorizer() const;
     void setColorizer(QQuickItem *colorizer);
 

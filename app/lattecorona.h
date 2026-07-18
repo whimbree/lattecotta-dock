@@ -276,6 +276,19 @@ public Q_SLOTS:
     //! undo window ends.
     void removeApplet(const uint &containmentId, const uint &appletId);
 
+    //! D-Bus coarse action (docs/dbus-observability-interface.md): open a
+    //! view's widget explorer, the exact "Add Widgets..." context menu action.
+    //! It exists as the DRIVING SURFACE for the e2e explorer->containment DND
+    //! driver (C-I9/P8): the explorer window carries the AppletDelegate
+    //! DragArea that offers the text/x-plasmoidservicename mime, the real drag
+    //! source a headless fakepointer press-glide-release drives onto the dock.
+    //! A bad containment id (no such view) is refused loudly with no window
+    //! shown (reads-never-construct extended to this mutator). No readback of
+    //! its own: the explorer window shows up in the compositor dump
+    //! (e2e_dumpwins), and a completed drop is observed through
+    //! viewAppletsData/viewDropMarkerIndex.
+    void showWidgetExplorer(const uint &containmentId);
+
     void duplicateView(const uint &containmentId);
     void exportViewTemplate(const uint &containmentId);
     void moveViewToLayout(const uint &containmentId, const QString &layoutName);
