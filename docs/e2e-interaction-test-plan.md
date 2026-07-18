@@ -347,14 +347,21 @@ a success.
       after honest effort, with the blocking root cause recorded - never an
       assumed skip. Depends on P0, maybe P1.
       Commits:
-- [ ] **P9 fakepointer key injection (`key <keysym>`).** Blocks the
+- [x] **P9 fakepointer key injection (`key <keysym>`).** Blocks the
       Escape-CANCEL sub-path of A2/A3/A4/A5 (release/drop-back aborts do not need
-      it). `org_kde_kwin_fake_input` carries a keyboard axis (`keyboard_key`);
-      add a `key` verb. Acceptance (observes a rejection): self-test proves
-      Escape actually CANCELS an in-flight drag (the drag is observably aborted,
-      order restored), i.e. it observes the cancel, not just that a key was sent.
-      Small, independent; land early.
-      Commits:
+      it). `org_kde_kwin_fake_input` carries a keyboard axis; the `key` verb uses
+      `keyboard_keysym` (interface v6) so the compositor maps the semantic XKB
+      keysym against its OWN keymap (no fragile hardcoded scancode) - resolved
+      from a name via libxkbcommon. Acceptance (observes a rejection):
+      `tests/e2e/080-key-escape-cancels-move.sh` proves Escape actually CANCELS
+      an in-flight drag by observing the cancel EFFECT - it drives KWin's
+      keyboard interactive-move (the simplest in-flight drag a STANDALONE key
+      verb can cancel, since a pointer-button-held drag releases when the tool
+      exits), nudges the window with arrow keys, then shows Return COMMITS the
+      move while Escape ABORTS it and restores the pre-move geometry. The A2/A3
+      pointer-drag Escape sub-paths interleave the key within one drag client and
+      land with P6/P7. Small, independent; landed early.
+      Commits: <this PR - fakepointer key verb + 080 recipe>
 
 ## 6. The configuration matrix (labeled NOVEL vs COVERAGE-ONLY)
 
@@ -588,7 +595,7 @@ independent lean-Opus review, `gh pr merge --rebase`, re-resolve hashes, fetch).
 - [ ] **C-I7 = P6** applet-reorder driver + `z`/stacking readback (commit+abort). Commits:
 - [ ] **C-I8 = P7** task-reorder driver + window-task readback (commit+abort). Commits:
 - [ ] **C-I9 = P8** widget-explorer DND driver (commit + non-drop abort). Commits:
-- [ ] **C-I10 = P9** fakepointer key injection. Commits:
+- [x] **C-I10 = P9** fakepointer key injection. Commits: <this PR - `key <keysym>` verb (keyboard_keysym/xkbcommon) + tests/e2e/080-key-escape-cancels-move.sh>
 
 ### Committed scenario chunks
 - [ ] **C-S1** F1 dock, single, 4 edge x 4 align (16; 8 novel) - a dock is not

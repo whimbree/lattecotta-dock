@@ -124,12 +124,24 @@ fakepointer move <x> <y>
 fakepointer click <x> <y>        # left click at absolute position
 fakepointer rightclick <x> <y>
 fakepointer drag <x1> <y1> <x2> <y2>   # press, 24-step glide, release
+fakepointer key <keysym> [down|up|press]   # inject a key (default press = down+up)
 ```
 
 Coordinates are GLOBAL compositor logical coordinates. drag is how
 configure-applets reordering is verified headlessly; note synthetic
 drags are grab-point sensitive, so confirm the grab landed by checking
 appletOrder actually changed rather than assuming.
+
+`key` names the key by its XKB keysym (`Escape`, `Up`, `Return`, `space`,
+or a numeric literal like `0xff1b`), sent through `keyboard_keysym` so the
+COMPOSITOR maps it against its own keymap - no fragile scancode. It needs
+fake_input interface v6. A standalone `key` cannot inject into a
+pointer-button-held drag (the button releases when the tool process exits),
+so it is used to cancel PERSISTENT modes: the acceptance test
+`tests/e2e/080-key-escape-cancels-move.sh` drives KWin's keyboard
+interactive window-move and shows Escape aborts+restores while Return
+commits. `down`/`up` hold or release a key (a modifier), but for the same
+reason cannot span two invocations across a drag.
 
 When hovering DOCK ITEMS, GLIDE - move in small steps (~8px with short
 sleeps) - never jump straight to an icon's rest coordinates. The
@@ -150,8 +162,11 @@ xml=$(pkg-config --variable=pkgdatadir plasma-wayland-protocols)/fake-input.xml
 wayland-scanner client-header "$xml" fake-input-client-protocol.h
 wayland-scanner private-code  "$xml" fake-input-protocol.c
 cc -O2 -I. -o fakepointer fakepointer.c fake-input-protocol.c \
-   $(pkg-config --cflags --libs wayland-client)
+   $(pkg-config --cflags --libs wayland-client xkbcommon)
 ```
+
+The `xkbcommon` link is for the `key` verb's `xkb_keysym_from_name`; a
+build missing it fails on that symbol.
 
 KWin gates org_kde_kwin_fake_input PER CLIENT. The binary needs a desktop
 file in ~/.local/share/applications whose Exec is the ABSOLUTE path of the

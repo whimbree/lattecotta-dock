@@ -1,8 +1,13 @@
 /*
- * fakepointer - drive the KDE Wayland pointer via org_kde_kwin_fake_input.
- * Same mechanism KDE Connect uses for remote input; same-user, no root.
- * Used by the live-verification loop to hover dock items (task previews,
- * tooltips, parabolic zoom) and click UI without a human at the desk.
+ * SPDX-FileCopyrightText: 2026 Bree Spektor
+ * SPDX-FileCopyrightText: 2026 Latte Dock contributors
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * fakepointer - drive the KDE Wayland pointer AND keyboard via
+ * org_kde_kwin_fake_input. Same mechanism KDE Connect uses for remote input;
+ * same-user, no root. Used by the live-verification loop to hover dock items
+ * (task previews, tooltips, parabolic zoom), click UI, and inject keys
+ * (Escape to cancel an in-flight drag) without a human at the desk.
  *
  * usage: fakepointer move <x> <y>
  *        fakepointer click <x> <y>     (left click at absolute position)
@@ -11,13 +16,43 @@
  *          through every waypoint in one hold, release at the last)
  *        fakepointer glide <x1> <y1> <x2> <y2> [x3 y3 ...]  (same smooth
  *          motion stream, no buttons - replicates a real fast hover sweep)
+ *        fakepointer scroll <x> <y> <detents> <ms-gap>
+ *        fakepointer key <keysym> [down|up|press]   (press = down then up, the
+ *          default; down/up hold or release, e.g. a modifier. <keysym> is an
+ *          XKB keysym NAME like Escape, Up, Return, space, or a numeric
+ *          literal like 0xff1b.)
+ *
+ * Why keysyms, not scancodes (the keymap question): the fake_input keyboard
+ * axis offers two requests. keyboard_key(button,state) carries a Linux evdev
+ * keycode whose resulting keysym depends on the compositor's active keymap and
+ * layout - hardcoding one is fragile (it only stays stable for the
+ * layout-independent keys, and can never reach a keysym that is not on the
+ * active layout at all). keyboard_keysym(keysym,state) (since interface v6)
+ * carries the XKB keysym directly and lets the compositor map it against ITS
+ * OWN keymap: KWin's FakeInputBackend resolves the keysym with
+ * keycodeFromKeysym, sets the shift/modifier level for us, and even
+ * temporarily binds a spare keycode for a keysym absent from the active
+ * layout. So we name the key by its layout-independent XKB keysym - resolved
+ * from a name with libxkbcommon's xkb_keysym_from_name - and never assume the
+ * compositor's keymap ourselves. That is the correct "handle the keymap"
+ * choice: the semantic key is sent, the keycode lookup stays where the keymap
+ * actually lives.
+ *
+ * A fake_input client holds keyboard/button state only while it is CONNECTED;
+ * KWin releases anything still down when the client goes away. So a full
+ * keystroke (down+up) rides one connection, as it does here. A `down`/`up`
+ * pair for holding a modifier across a pointer drag cannot span two separate
+ * invocations for the same reason - which is why the in-flight drag this verb
+ * is built to cancel is KWin's keyboard interactive-move (a PERSISTENT
+ * compositor mode that outlives any one input client), not a
+ * pointer-button-held grab. See tests/e2e/080-key-escape-cancels-move.sh.
  *
  * build (inside the devshell):
  *   xml=$(pkg-config --variable=pkgdatadir plasma-wayland-protocols)/fake-input.xml
  *   wayland-scanner client-header "$xml" fake-input-client-protocol.h
  *   wayland-scanner private-code  "$xml" fake-input-protocol.c
  *   cc -O2 -o fakepointer fakepointer.c fake-input-protocol.c \
- *      $(pkg-config --cflags --libs wayland-client)
+ *      $(pkg-config --cflags --libs wayland-client xkbcommon)
  *
  * KWin filters restricted globals per client: without authorization the
  * registry never lists fake_input. Authorize by installing a desktop file
@@ -32,20 +67,26 @@
 #include <string.h>
 #include <unistd.h>
 #include <wayland-client.h>
+#include <xkbcommon/xkbcommon.h>
 #include "fake-input-client-protocol.h"
 
 #define BTN_LEFT 0x110
 #define BTN_RIGHT 0x111
 
 static struct org_kde_kwin_fake_input *fake_input = NULL;
+//! the interface version actually bound, so each verb can check the version
+//! it needs (absolute motion is since 3, keyboard_keysym since 6) instead of
+//! assuming one blanket floor.
+static uint32_t fake_input_version = 0;
 
 static void registry_global(void *data, struct wl_registry *registry,
                             uint32_t name, const char *interface, uint32_t version)
 {
     (void)data;
     if (strcmp(interface, org_kde_kwin_fake_input_interface.name) == 0) {
-        uint32_t v = version < 5 ? version : 5;
+        uint32_t v = version < 6 ? version : 6;
         fake_input = wl_registry_bind(registry, name, &org_kde_kwin_fake_input_interface, v);
+        fake_input_version = v;
         if (v < 5) {
             fprintf(stderr, "org_kde_kwin_fake_input version %u < 5, no absolute motion\n", v);
             exit(3);
@@ -63,23 +104,46 @@ static const struct wl_registry_listener registry_listener = {
     .global_remove = registry_global_remove,
 };
 
+//! Resolve a key NAME (an XKB keysym name like "Escape", "Return", "space")
+//! to its XKB keysym value, falling back to a numeric literal ("0xff1b",
+//! "65307") so a caller can always name a key this tool has no shorthand for.
+//! Returns XKB_KEY_NoSymbol (0) when neither form resolves.
+static xkb_keysym_t resolve_keysym(const char *name)
+{
+    xkb_keysym_t keysym = xkb_keysym_from_name(name, XKB_KEYSYM_NO_FLAGS);
+    if (keysym != XKB_KEY_NoSymbol) {
+        return keysym;
+    }
+    char *end = NULL;
+    unsigned long numeric = strtoul(name, &end, 0);
+    if (end != name && *end == '\0' && numeric != 0) {
+        return (xkb_keysym_t)numeric;
+    }
+    return XKB_KEY_NoSymbol;
+}
+
 int main(int argc, char **argv)
 {
     int isdrag = (argc > 1) && (strcmp(argv[1], "drag") == 0);
     int isglide = (argc > 1) && (strcmp(argv[1], "glide") == 0);
     int isscroll = (argc > 1) && (strcmp(argv[1], "scroll") == 0);
+    int iskey = (argc > 1) && (strcmp(argv[1], "key") == 0);
 
-    if (((isdrag || isglide) && (argc < 6 || (argc % 2) != 0))
+    if (iskey) {
+        if (argc != 3 && argc != 4) {
+            fprintf(stderr, "usage: %s key <keysym> [down|up|press]\n", argv[0]);
+            return 2;
+        }
+    } else if (((isdrag || isglide) && (argc < 6 || (argc % 2) != 0))
         || (isscroll && argc != 6)
         || (!isdrag && !isglide && !isscroll
             && (argc != 4 || (strcmp(argv[1], "move") && strcmp(argv[1], "click") && strcmp(argv[1], "rightclick"))))) {
-        fprintf(stderr, "usage: %s move|click|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>\n"
-                        "  scroll: positive detents scroll up, negative down; one detent = one wheel click\n",
-                argv[0], argv[0], argv[0]);
+        fprintf(stderr, "usage: %s move|click|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>  |  %s key <keysym> [down|up|press]\n"
+                        "  scroll: positive detents scroll up, negative down; one detent = one wheel click\n"
+                        "  key:    <keysym> is an XKB name (Escape, Up, Return, space) or a numeric literal; state defaults to press (down then up)\n",
+                argv[0], argv[0], argv[0], argv[0]);
         return 2;
     }
-    double x = atof(argv[2]);
-    double y = atof(argv[3]);
 
     struct wl_display *display = wl_display_connect(NULL);
     if (!display) {
@@ -98,6 +162,56 @@ int main(int argc, char **argv)
 
     org_kde_kwin_fake_input_authenticate(fake_input,
         "latte-dock-dev-verify", "drive hover interactions for dock verification");
+
+    if (iskey) {
+        //! keyboard_keysym is a v6 request; a compositor advertising less can
+        //! carry pointer events but not a keysym, so say which is missing.
+        if (fake_input_version < 6) {
+            fprintf(stderr, "org_kde_kwin_fake_input version %u < 6, no keyboard_keysym (key injection needs v6)\n",
+                fake_input_version);
+            wl_display_disconnect(display);
+            return 3;
+        }
+        xkb_keysym_t keysym = resolve_keysym(argv[2]);
+        if (keysym == XKB_KEY_NoSymbol) {
+            fprintf(stderr, "unknown keysym '%s' (try an XKB name like Escape, or a numeric literal like 0xff1b)\n",
+                argv[2]);
+            wl_display_disconnect(display);
+            return 2;
+        }
+        const char *state = (argc == 4) ? argv[3] : "press";
+        int do_press, do_release;
+        if (strcmp(state, "press") == 0) {
+            do_press = 1; do_release = 1;
+        } else if (strcmp(state, "down") == 0) {
+            do_press = 1; do_release = 0;
+        } else if (strcmp(state, "up") == 0) {
+            do_press = 0; do_release = 1;
+        } else {
+            fprintf(stderr, "unknown key state '%s' (want down, up, or press)\n", state);
+            wl_display_disconnect(display);
+            return 2;
+        }
+
+        if (do_press) {
+            org_kde_kwin_fake_input_keyboard_keysym(fake_input, keysym, WL_KEYBOARD_KEY_STATE_PRESSED);
+            wl_display_roundtrip(display);
+        }
+        if (do_press && do_release) {
+            usleep(20000);
+        }
+        if (do_release) {
+            org_kde_kwin_fake_input_keyboard_keysym(fake_input, keysym, WL_KEYBOARD_KEY_STATE_RELEASED);
+            wl_display_roundtrip(display);
+        }
+
+        wl_display_disconnect(display);
+        return 0;
+    }
+
+    double x = atof(argv[2]);
+    double y = atof(argv[3]);
+
     org_kde_kwin_fake_input_pointer_motion_absolute(fake_input,
         wl_fixed_from_double(x), wl_fixed_from_double(y));
     wl_display_roundtrip(display);
