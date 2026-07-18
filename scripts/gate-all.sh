@@ -51,7 +51,24 @@ fi
 "$repo/scripts/build-check.sh"        # full build + full ctest + coverage ratchet
 "$repo/tests/coverage/qmllint-gate.sh"       # baseline only shrinks
 "$repo/scripts/sceneprobe-gate.sh"    # real-pixel scene gate incl. self-test
-"$repo/scripts/asan-e2e-gate.sh"      # driven sanitized dock: UB in integration paths aborts
+
+# The asan-e2e-gate rebuilds a full sanitized build-asan tree (~25-35 min),
+# far longer than a subagent's per-tool time budget (a 10-min cap), so a swarm
+# branch gate that ran it inline could not finish in one call and stalled
+# (decided 2026-07-18: split the gate). LATTE_GATE_FAST=1 skips it on a swarm
+# BRANCH gate; the orchestrator then runs the full gate (asan included) at
+# MERGE time on the rebased branch head, before merging, where a background
+# poll across turns is available. Default (unset) runs the full gate, so
+# master gates, merge gates, and any non-swarm gate stay complete. The skip is
+# announced loudly - a fast stamp is deliberately partial and only valid as a
+# branch push, never as the merge verdict.
+if [[ "${LATTE_GATE_FAST:-0}" == "1" ]]; then
+    echo "gate-all: LATTE_GATE_FAST=1 - asan-e2e-gate SKIPPED (runs at merge time)"
+    printf '%s\n' "fast" > "$repo/build/_gates-fast" 2>/dev/null || true
+else
+    rm -f "$repo/build/_gates-fast" 2>/dev/null || true
+    "$repo/scripts/asan-e2e-gate.sh"  # driven sanitized dock: UB in integration paths aborts
+fi
 "$repo/scripts/matrix-fixture-check.sh"   # hermetic e2e-matrix fixture generator + refusals
                                           # (fast tier-1; the nested-vehicle harness
                                           # acceptance is scripts/run-matrix.sh, periodic)
