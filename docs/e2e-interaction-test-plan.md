@@ -367,9 +367,30 @@ Novelty collapse rules (HC1) - within a verb, these cells are COVERAGE-EQUIVALEN
   horizontal-vs-vertical IS novel (distinct layout math). For the PLACEMENT verb
   (F1 edit chrome) each of the 4 edges is a distinct chrome geometry = novel.
 - `left`/`center`/`right` alignment share one non-justify placement path
-  (coverage); `justify` is a distinct splitter path = NOVEL, never trimmed (it
-  is the `insert(-1)` path). For F1 chrome, `center` is distinct from the rest
-  (settings opens to the side) = novel.
+  (coverage) FOR A DOCK; `justify` is a distinct splitter path = NOVEL, never
+  trimmed (it is the `insert(-1)` path). For F1 chrome on a DOCK, `center` is
+  distinct from the rest (settings opens to the side) = novel.
+- **PANEL-ALIGNMENT DEGENERACY** (grounded in the code, not a blind collapse).
+  A Plasma panel (`behaveAsPlasmaPanel`, i.e. `viewType === PanelView`) is
+  LENGTH-MAXIMIZED unconditionally: `main.qml:210` sets
+  `const maximize = behaveAsPlasmaPanel || ...` and returns the full `width`/
+  `height` for `maxLength` (and `minLength` at `main.qml:203-205` does the same
+  under compositing), so a panel ALWAYS spans the whole edge. The left/center/
+  right alignment control has nothing to position along an already-full-span
+  edge, so for a panel those three are DEGENERATE (no effect), not merely
+  coverage-equivalent. There is also NO panel maxLength<100% positioning case:
+  the config slider exists but `maximize = behaveAsPlasmaPanel` overrides it, so
+  a panel is never sub-full-length (that positioning is a DOCK behavior, and its
+  cells are the dock-alignment cells, not a panel path). Consequently a PANEL
+  carries only `{full-span (the single non-justify layout), justify (the
+  splitter distribution within the full span)}` = TWO alignment modes, never
+  four. `center` in any panel row below denotes the full-span layout. Panels are
+  also degenerate on non-matrix axes the dock owns (no parabolic zoom, no
+  floating length gap), but those are not matrix axes; alignment is the one
+  matrix axis where the panel differs, and it collapses 4 -> 2. (Panel edit
+  chrome still differs from dock chrome and is NOT degenerate - a panel has no
+  parabolic headroom, so its `editThickness`/blueprint path is its own; F1 keeps
+  a panel leg, just with 2 alignment modes.)
 - `2out` per-view interaction (reorder/add/remove on a secondary view) is
   coverage of its `1out` twin EXCEPT for the SCREEN-OP verbs (F5/A4), where dual
   is the substance = novel.
@@ -380,7 +401,8 @@ Meaningful count and novel split per verb x outcome:
 
 | Verb | outcome | cells (meaningful) | NOVEL | coverage-only |
 |---|---|---|---|---|
-| F1 edit mode (single, 4 edge x 4 align x 2 vt) | commit | 32 | 16 (4 edge x 2 vt x {centered, not}) | 16 |
+| F1 edit mode DOCK (single, 4 edge x 4 align) | commit | 16 | 8 (4 edge x {centered, not}) | 8 |
+| F1 edit mode PANEL (single, 4 edge x {full-span, justify}) | commit | 8 | 4 (4 edge, panel spans full; no L/C/R) | 4 |
 | F1 edit mode (dual chrome-on-2nd, 4 edge x 2 vt) | commit | 8 | 2 (dock+panel maps on 2nd) | 6 |
 | A5 edit-mode no-op (4 edge x 2 vt center; +dual 2) | abort | 10 | 10 (PR #20 residue, all novel) | 0 |
 | F2 add (single {c,j} x 4 edge x 2 vt; +dual 2) | commit | 18 | 8 (orient x {nonjust,just} x vt) | 10 |
@@ -396,12 +418,14 @@ Meaningful count and novel split per verb x outcome:
 | F6 removeView / stranding (dual, 2 edge x 2 vt) | commit | 4 | 2 | 2 |
 | A6 remove-undo abort (single 4 + dual 2) | abort | 6 | 6 (undo+commit x 2 vt +dual) | 0 |
 
-**Committed total = 126. Abort total = 78. Grand total = 204 scenarios.**
-**NOVEL ~= 110. Coverage-only ~= 94.** Implementation and golden effort target
-the ~110 novel; the ~94 coverage-only are the same parametrized functions
-re-invoked with cosmetic params (near-free) or explicitly deferred if the swarm
-runs short. justify and abort and vertical-edge cells are never in the
-coverage-only bucket.
+**Committed total = 118. Abort total = 78. Grand total = 196 scenarios.**
+**NOVEL ~= 106. Coverage-only ~= 90.** (The panel-alignment collapse removed 8
+degenerate panel F1 cells - 4 novel, 4 coverage - from the earlier 204/110/94.)
+Implementation and golden effort target the ~106 novel; the ~90 coverage-only
+are the same parametrized functions re-invoked with cosmetic params (near-free)
+or explicitly deferred if the swarm runs short. justify and abort and
+vertical-edge cells are never in the coverage-only bucket, and a panel never
+carries four alignment sub-modes (only full-span + justify).
 
 ## 7. Scenario families (readback assertions; goldens justified case-by-case)
 
@@ -418,13 +442,18 @@ readback cannot express the fact - the specific golden and its justification.
       BLUEPRINT GRID is drawn INSIDE the dock window (Phase 7 step 1) and the
       ruler/toggle are QML items inside the config view - neither is a separate
       KWin window nor a `viewsData` field, so their pixel placement is
-      visual-only. One golden per (edge x viewType) for the centered case (~8),
-      proving the grid renders at `editThickness` at the edge and the toggle
-      sits at the alignment-driven end. READBACK-GAP flagged (O-gap): an
+      visual-only. One golden per (edge x viewType) for the representative alignment
+      (~8: the dock's centered case, where the toggle sits at the
+      alignment-driven end and settings opens to the side; the panel's full-span
+      case, since a panel has no L/C/R positioning per the PANEL-ALIGNMENT
+      DEGENERACY rule), proving the grid renders at `editThickness` at the edge.
+      READBACK-GAP flagged (O-gap): an
       edit-chrome sub-item geometry readback (ruler/toggle rects) would retire
       even these goldens. GOTCHAS: first kglobalaccel invoke races registration
       (retry); dock grows to `editThickness` (Phase 7 step 2 UNFINISHED - assert
-      current mask/strut, mark the gap); panel chrome differs from dock.
+      current mask/strut, mark the gap); panel chrome differs from dock (no
+      parabolic headroom) and a panel carries only {full-span, justify}, never
+      four alignment sub-modes.
       Commits:
 
 ### F2 Add a widget
@@ -558,8 +587,11 @@ independent lean-Opus review, `gh pr merge --rebase`, re-resolve hashes, fetch).
 - [ ] **C-I10 = P9** fakepointer key injection. Commits:
 
 ### Committed scenario chunks
-- [ ] **C-S1** F1 dock, single, 4 edge x 4 align (16; 8 novel). Commits:
-- [ ] **C-S2** F1 panel, single, 4 edge x 4 align (16; 8 novel). Commits:
+- [ ] **C-S1** F1 dock, single, 4 edge x 4 align (16; 8 novel) - a dock is not
+      length-maximized, so all four alignments position distinctly. Commits:
+- [ ] **C-S2** F1 panel, single, 4 edge x {full-span, justify} (8; 4 novel) -
+      panel is length-maximized, so NO L/C/R alignment cells (PANEL-ALIGNMENT
+      DEGENERACY). Commits:
 - [ ] **C-S3** F1 dual chrome-on-2nd, dock+panel, 4 edge, center (8; 2 novel). Commits:
 - [ ] **C-S4** F2 add, horizontal, dock+panel, {c,j}, single (8) + dual (2) = 10. Commits:
 - [ ] **C-S5** F2 add, vertical, dock+panel, {c,j}, single (8). Commits:
@@ -647,9 +679,9 @@ one-per-scenario. Everything else asserts by readback.
 
 ## 10. Open questions / risks
 
-- **O1 Full vs trimmed matrix (HC1).** 204 total, ~110 novel, ~94 coverage-only.
+- **O1 Full vs trimmed matrix (HC1).** 196 total, ~106 novel, ~90 coverage-only.
   Confirm the coverage-only cells are cheap parametrized repeats to include, or
-  should they be DEFERRED (novel-only first, ~110)? justify/abort/vertical are
+  should they be DEFERRED (novel-only first, ~106)? justify/abort/vertical are
   never coverage-only.
 - **O2 New mutating actions + growing readback surface (HC2).** `addApplet`,
   `removeApplet`, `moveViewToScreen`, plus G1-G4 readbacks. Each mirrors a real
@@ -663,7 +695,7 @@ one-per-scenario. Everything else asserts by readback.
 - **O4 Does the suite join `gate-all.sh`?** `run-e2e` is not in `gate-all`
   today. Recommend a fast tier-1 subset (one novel cell per verb incl. the
   highest-value aborts A2-vertical, A4-split-brain, A5) in `gate-all` as the
-  per-commit gate, the full 204 as a periodic / pre-release gate in the
+  per-commit gate, the full 196 as a periodic / pre-release gate in the
   multi-distro matrix. Confirm split + tier-1 membership.
 - **O5 Headless widget-explorer DND feasibility.** Phase 7 deferred this to "a
   GUI CI vm." If intractable, F2-DND and A1-DND degrade to xfail and the
