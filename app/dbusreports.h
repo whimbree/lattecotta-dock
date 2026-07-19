@@ -234,6 +234,16 @@ struct ViewLiveRecord {
     bool indicatorEnabled{false};
     QString indicatorType;
     QString indicatorCustomType;
+    //! universalSettings edit-settings state the CL-6 chrome audit reads for its
+    //! P3 leg: the settings window's advanced-mode toggle (control 7) and the
+    //! drag-corner's per-screen settings-window scales (control 8). These live on
+    //! UniversalSettings (global / per-screen), not on the view or its containment
+    //! config, so a config-map read cannot see them; the Corona (which owns
+    //! UniversalSettings) resolves them and merges them onto this record in
+    //! collectConfigData, the same way viewsData threads inConfigureAppletsMode.
+    bool inAdvancedModeForEditSettings{false};
+    double settingsWindowScaleWidth{1.0};
+    double settingsWindowScaleHeight{1.0};
 };
 
 //! Enum-to-string names for the JSON fields. Exhaustive switches with no
@@ -737,6 +747,9 @@ inline QJsonObject serializeViewLiveRecord(const ViewLiveRecord &record)
     json[QStringLiteral("indicatorEnabled")] = record.indicatorEnabled;
     json[QStringLiteral("indicatorType")] = record.indicatorType;
     json[QStringLiteral("indicatorCustomType")] = record.indicatorCustomType;
+    json[QStringLiteral("inAdvancedModeForEditSettings")] = record.inAdvancedModeForEditSettings;
+    json[QStringLiteral("settingsWindowScaleWidth")] = record.settingsWindowScaleWidth;
+    json[QStringLiteral("settingsWindowScaleHeight")] = record.settingsWindowScaleHeight;
 
     return json;
 }
@@ -796,9 +809,22 @@ QString collectColorizerData(const Latte::View *view);
 //! View/VisibilityManager/Indicator (dbusreports.cpp)
 ViewLiveRecord collectViewLiveRecord(const Latte::View *view);
 
+//! The universalSettings edit-settings state the Corona resolves and merges into
+//! viewConfigData()'s "view" object (the CL-6 chrome audit's P3 leg for the
+//! advanced-mode toggle and the drag-corner scales). Sourced from
+//! UniversalSettings, which the Corona owns; a named bundle rather than three
+//! positional scalars so the two same-typed scales cannot be transposed at the
+//! call site.
+struct EditSettingsState {
+    bool inAdvancedMode{false};
+    double settingsWindowScaleWidth{1.0};
+    double settingsWindowScaleHeight{1.0};
+};
+
 //! serialize one live view's containment config VALUES plus the live
-//! C++-property half for the viewConfigData() D-Bus read
-QString collectConfigData(const Latte::View *view);
+//! C++-property half (with the universalSettings edit-settings state merged in)
+//! for the viewConfigData() D-Bus read
+QString collectConfigData(const Latte::View *view, const EditSettingsState &editSettings);
 
 //! serialize one child applet's config VALUES for the appletConfigData()
 //! D-Bus read; "{}" (warned) when no applet on the view carries appletId

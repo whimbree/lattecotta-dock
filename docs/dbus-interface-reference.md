@@ -102,7 +102,8 @@ call viewConfigData u 1                # s: JSON object - the settings-panel con
 #           visibilityTimerHide, visibilityEnableKWinEdges,
 #           visibilityRaiseOnDesktop, visibilityRaiseOnActivity,
 #           indicatorPresent, indicatorEnabled, indicatorType,
-#           indicatorCustomType} }
+#           indicatorCustomType, inAdvancedModeForEditSettings,
+#           settingsWindowScaleWidth, settingsWindowScaleHeight} }
 #   config = the containment config map, read IN-PROCESS (a key at its
 #   default reads as its default, never "missing" - the KConfig
 #   default-deletion caveat). view = the live C++-property half whose

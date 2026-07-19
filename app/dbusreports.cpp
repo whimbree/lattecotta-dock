@@ -537,7 +537,7 @@ ViewLiveRecord collectViewLiveRecord(const Latte::View *view)
     return record;
 }
 
-QString collectConfigData(const Latte::View *view)
+QString collectConfigData(const Latte::View *view, const EditSettingsState &editSettings)
 {
     Q_ASSERT(view);
     Q_ASSERT(view->containment());
@@ -547,7 +547,15 @@ QString collectConfigData(const Latte::View *view)
     //! in-process (readConfigMap's default-deletion note)
     const QVariantMap config = readConfigMap(view->containment());
 
-    return serializeConfigData(view->containment()->id(), config, collectViewLiveRecord(view));
+    //! the advanced-mode toggle and drag-corner scales have no containment config
+    //! key: they live on UniversalSettings and the Corona resolves them, so merge
+    //! them onto the per-view live record here (CL-6, edit-mode-settings-audit-plan)
+    ViewLiveRecord live = collectViewLiveRecord(view);
+    live.inAdvancedModeForEditSettings = editSettings.inAdvancedMode;
+    live.settingsWindowScaleWidth = editSettings.settingsWindowScaleWidth;
+    live.settingsWindowScaleHeight = editSettings.settingsWindowScaleHeight;
+
+    return serializeConfigData(view->containment()->id(), config, live);
 }
 
 QString collectAppletConfigData(const Latte::View *view, int appletId)

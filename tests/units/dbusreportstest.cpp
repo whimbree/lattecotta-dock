@@ -1073,6 +1073,9 @@ void DbusReportsTest::viewLiveRecordSerialization()
     record.indicatorEnabled = true;
     record.indicatorType = QStringLiteral("org.kde.latte.default");
     record.indicatorCustomType = QStringLiteral("");
+    record.inAdvancedModeForEditSettings = true;
+    record.settingsWindowScaleWidth = 0.96;
+    record.settingsWindowScaleHeight = 0.85;
 
     const QJsonObject json = serializeViewLiveRecord(record);
 
@@ -1087,14 +1090,19 @@ void DbusReportsTest::viewLiveRecordSerialization()
     QCOMPARE(json.value(QStringLiteral("indicatorEnabled")).toBool(), true);
     QCOMPARE(json.value(QStringLiteral("indicatorType")).toString(), QStringLiteral("org.kde.latte.default"));
     QCOMPARE(json.value(QStringLiteral("indicatorCustomType")).toString(), QString());
+    QCOMPARE(json.value(QStringLiteral("inAdvancedModeForEditSettings")).toBool(), true);
+    QCOMPARE(json.value(QStringLiteral("settingsWindowScaleWidth")).toDouble(), 0.96);
+    QCOMPARE(json.value(QStringLiteral("settingsWindowScaleHeight")).toDouble(), 0.85);
 }
 
 void DbusReportsTest::viewLiveRecordKeySet()
 {
     const QStringList expected{
-        QStringLiteral("byPassWM"), QStringLiteral("indicatorCustomType"),
+        QStringLiteral("byPassWM"), QStringLiteral("inAdvancedModeForEditSettings"),
+        QStringLiteral("indicatorCustomType"),
         QStringLiteral("indicatorEnabled"), QStringLiteral("indicatorPresent"),
         QStringLiteral("indicatorType"), QStringLiteral("isPreferredForShortcuts"),
+        QStringLiteral("settingsWindowScaleHeight"), QStringLiteral("settingsWindowScaleWidth"),
         QStringLiteral("visibilityEnableKWinEdges"), QStringLiteral("visibilityRaiseOnActivity"),
         QStringLiteral("visibilityRaiseOnDesktop"), QStringLiteral("visibilityTimerHide"),
         QStringLiteral("visibilityTimerShow")};

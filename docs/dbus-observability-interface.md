@@ -153,7 +153,13 @@ Landed before or during the 2026-07-16 stabilization session:
   C++-property half whose settings controls write a View/Visibility/
   Indicator property instead of a config key (byPassWM,
   isPreferredForShortcuts, visibility timerShow/timerHide/enableKWinEdges/
-  raiseOnDesktop/raiseOnActivity, indicator enabled/type/customType).
+  raiseOnDesktop/raiseOnActivity, indicator enabled/type/customType) plus
+  the universalSettings edit-settings state (inAdvancedModeForEditSettings,
+  settingsWindowScaleWidth/settingsWindowScaleHeight) the CL-6 chrome audit
+  reads for the advanced-mode toggle (control 7) and the drag-corner window
+  scales (control 8) - these live on UniversalSettings (global / per-screen)
+  with no containment config key, so the Corona resolves them and merges
+  them onto the view object.
   READ FROM THE IN-PROCESS KConfigPropertyMap (the same map the settings
   pages write through plasmoid.configuration), NOT the on-disk file: the
   file drops a key whose value returned to its default, but the map keeps

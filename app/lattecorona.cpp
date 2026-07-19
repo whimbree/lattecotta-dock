@@ -38,6 +38,7 @@
 #include "templates/templatesmanager.h"
 #include "tools/commontools.h"
 #include "view/originalview.h"
+#include "view/positioner.h"
 #include "view/view.h"
 #include "view/visibilitymanager.h"
 #include "view/settings/primaryconfigview.h"
@@ -1466,7 +1467,17 @@ QString Corona::viewConfigData(const uint &containmentId)
         return QStringLiteral("{}");
     }
 
-    return DbusReports::collectConfigData(view);
+    //! the settings window's advanced-mode toggle and the drag-corner window
+    //! scales live on UniversalSettings (global / per-screen), not on the
+    //! containment config, so resolve them here where UniversalSettings is owned
+    //! and merge them into the "view" object (CL-6 chrome audit P3 leg)
+    const QString screenName = view->positioner()->currentScreenName();
+    const DbusReports::EditSettingsState editSettings{
+        m_universalSettings->inAdvancedModeForEditSettings(),
+        m_universalSettings->screenWidthScale(screenName),
+        m_universalSettings->screenHeightScale(screenName)};
+
+    return DbusReports::collectConfigData(view, editSettings);
 }
 
 QString Corona::appletConfigData(const uint &containmentId, const uint &appletId)
