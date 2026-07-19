@@ -262,6 +262,24 @@ set_tests_properties(effectshandleraudittest PROPERTIES
 target_include_directories(effectshandleraudittest PRIVATE
     ${CMAKE_SOURCE_DIR}/tests/units) # configsnapshotdiff.h
 
+# The Appearance page's non-length wiring audit (CL-2,
+# docs/edit-mode-settings-audit-plan.md): the same QML-fragment/stub-map pattern
+# as settingswiringharnesstest, over the Items/Margins/Colors/Background
+# controls. containment/plugin for types.h (the ThemeColors enum values the
+# Palette round-trip and its static_asserts pin); the main.xml path for the
+# KConfigXT-schema-vs-enum numeric agreement check (the S-b clearance).
+ecm_add_test(appearancehandleraudittest.cpp
+    TEST_NAME appearancehandleraudittest
+    LINK_LIBRARIES Qt6::Test Qt6::Qml Qt6::Gui
+)
+set_tests_properties(appearancehandleraudittest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(appearancehandleraudittest PRIVATE
+    ${CMAKE_SOURCE_DIR}/tests/units          # configsnapshotdiff.h
+    ${CMAKE_SOURCE_DIR}/containment/plugin)   # types.h (ThemeColors enum)
+target_compile_definitions(appearancehandleraudittest PRIVATE
+    THEMECOLORS_MAINXML_PATH="${CMAKE_SOURCE_DIR}/containment/package/contents/config/main.xml")
+
 # The shell view wrapper's no-band contract: the legacy backgroundHints
 # ternary demonstrably falls through on Plasma 6 (live engine), and the
 # shipped Panel.qml keeps its imagePath empty (source scan).
