@@ -58,8 +58,12 @@ compiled into the sanitized test binary, never linked from an
 unsanitized object library). A sanitizer trip is a real bug to fix at
 origin, never suppress. QML-side, `tests/coverage/qmllint-gate.sh` ratchets
 five curated warning categories against `tests/coverage/qmllint-baseline`
-(exact match; the baseline only shrinks), and every QML file a cutover
-commit touches leaves at zero curated warnings. Full-strict QML is the
+(exact match; the baseline only shrinks - with ONE documented exception: an
+irreducible per-feature warning that cannot be qualified away, e.g. an `i18nc`
+label in a context-property-only file with no qualifiable access, may grow the
+baseline by that minimum when the growth is justified in the commit body; the
+D23 Reverse-row restore is the first such case, 242->243), and every QML file a
+cutover commit touches leaves at zero curated warnings. Full-strict QML is the
 asymptotic state the extraction converges to, not a mandate on
 inherited files; structural exceptions are named in the extraction
 plan's section D (the baseline file is regenerated wholesale). The

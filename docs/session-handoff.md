@@ -9,10 +9,13 @@ stranding FIXED), the X11 survivor sweep (PR #42 - dead-code removals, D19 filed
 proposals D1/D2/D3/D5/S1 awaiting sign-off in docs/x11-cleanup-audit.md), and the
 D20 normal-mode menu guard (PR #44 - the write-path emptying was disproven).
 D20-class menu emptying was also fixed live on the real dock by restoring the
-contextMenuActionsAlwaysShown key. IN FLIGHT: the Light/Layout colorizer contrast
-fix (D21/D22/D23) developing in the NESTED vehicle - approach B, push the resolved
-scheme into applets' color groups (Bree's call), a recorded Qt5 divergence. NEXT:
-wave-2 audit clusters {CL-2, CL-3, CL-4, CL-6} + CL-5 fan out from clean main.
+contextMenuActionsAlwaysShown key. The Light/Layout colorizer contrast fix
+LANDED as PR #46 (D21/D22/D23 FIXED via approach B - push the resolved scheme
+into applets' Kirigami.Theme color groups, retire the FBO overlay; a recorded
+Qt5 divergence; new per-applet colorizerActive/colorizerReason readbacks; proven
+in the nested vehicle by a control/treatment isolation). The tree is fully clean,
+no open PRs. NEXT: wave-2 audit clusters {CL-2, CL-3, CL-4, CL-6} + CL-5 fan out
+from clean main (awaiting Bree's go); the X11 proposals await sign-off.
 Note: a live-dock regression scare this session (an agent restarted the real dock
 with its WIP worktree build, breaking floating-gap/maximize behavior) reaffirmed
 that AGENTS DEVELOP IN THE NESTED VEHICLE, never the real session - see the

@@ -280,7 +280,7 @@ app/wm/waylandinterface.cpp:299 (Phase 4 WId), app/layouts/synchronizer.cpp:507
 ## Fixed (kept for the record)
 
 ### D21 - Light/Layout applet contrast: clock has no text, show-desktop is white
-- FIXED: this PR. In "Light colors" (themeColors=LightThemeColors=4) and "Layout
+- FIXED (#46, be2db3049). In "Light colors" (themeColors=LightThemeColors=4) and "Layout
   colors" (=5) the top panel's applets lost contrast: the digital clock showed NO
   text and the show-desktop applet rendered WHITE (invisible) on the light panel;
   "Dark colors" (=3) was fine. ROOT: Latte's ONLY applet-recolor path was a
@@ -321,7 +321,7 @@ app/wm/waylandinterface.cpp:299 (Phase 4 WId), app/layouts/synchronizer.cpp:507
   tests/e2e/110-colorizer-applet-contrast.sh. Found on the real dock 2026-07-18.
 
 ### D22 - main.xml omits the LayoutThemeColors enum choice (enum range out of sync)
-- FIXED: this PR. containment/package/contents/config/main.xml listed only five
+- FIXED (#46, be2db3049). containment/package/contents/config/main.xml listed only five
   themeColors choices (Plasma/Reverse/Smart/Dark/Light) while types.h and the
   settings UI define six - LayoutThemeColors=5 was missing, so the KConfigXT
   enum-by-name range was out of sync with the real enum: a config that stored the
@@ -339,7 +339,7 @@ app/wm/waylandinterface.cpp:299 (Phase 4 WId), app/layouts/synchronizer.cpp:507
   "layout" (=5).
 
 ### D23 - Colors dropdown collides Reverse and Layout on one index
-- FIXED: this PR. shell/.../pages/AppearanceConfig.qml colorsToIndex() mapped BOTH
+- FIXED (#46, be2db3049). shell/.../pages/AppearanceConfig.qml colorsToIndex() mapped BOTH
   ReverseThemeColors and LayoutThemeColors to index 3, while Reverse was commented
   out of the dropdown model entirely (upstream's 2020 "combine Colors options"
   commit 2b5d19cfa; capt's port carries the same collision). A Reverse config
@@ -351,7 +351,7 @@ app/wm/waylandinterface.cpp:299 (Phase 4 WId), app/layouts/synchronizer.cpp:507
   the D21 investigation.
 
 ### D14 - invalid-color qCriticals at every startup
-- FIXED: this PR. Startup logged a burst of `Tools.colorBrightness: invalid
+- FIXED (#46, be2db3049). Startup logged a burst of `Tools.colorBrightness: invalid
   color from QML, returning 0 (dark)` qCriticals (80 in the nested-vehicle real
   config; ~46 on the config the defect was first noted against - the count
   tracks item/view count). ROOT: Kirigami's attached PlatformTheme (and the
