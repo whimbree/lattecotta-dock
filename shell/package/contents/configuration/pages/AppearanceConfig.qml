@@ -1,6 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2016 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2016 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -820,11 +821,17 @@ PlasmaComponents.Page {
                         },{
                             name: i18nc("layout custom colors", "Layout Custom Colors"),
                             value: LatteContainment.Types.LayoutThemeColors
-                        },
-                        /*,{
+                        },{
+                            //! D23: Reverse is a real themeColors value (types.h,
+                            //! main.xml) but was left out of this model while
+                            //! colorsToIndex still mapped it, colliding with
+                            //! Layout on index 3 - so a Reverse config showed
+                            //! (and, via onCurrentIndexChanged, was rewritten to)
+                            //! Layout. Restore it as its own row so every value
+                            //! the dropdown can hold maps to a distinct index.
                             name: i18nc("reverse plasma theme colors", "Reverse"),
                             value: LatteContainment.Types.ReverseThemeColors
-                        }*/{
+                        },{
                             name: i18nc("smart theme colors", "Smart Colors Based On Desktop Background"),
                             value: LatteContainment.Types.SmartThemeColors
                         }
@@ -834,6 +841,10 @@ PlasmaComponents.Page {
                     textRole: "name"
                     onCurrentIndexChanged: plasmoid.configuration.themeColors = model[currentIndex].value
 
+                    //! D23: distinct index per value, in model-row order
+                    //! (Plasma0/Dark1/Light2/Layout3/Reverse4/Smart5). Reverse and
+                    //! Layout used to both return 3 while Reverse was missing from
+                    //! the model, so a Reverse config showed as Layout.
                     function colorsToIndex(colors) {
                         if (colors === LatteContainment.Types.PlasmaThemeColors) {
                             return 0;
@@ -841,12 +852,12 @@ PlasmaComponents.Page {
                             return 1;
                         } else if (colors === LatteContainment.Types.LightThemeColors) {
                             return 2;
-                        } else if (colors === LatteContainment.Types.ReverseThemeColors) {
-                            return 3;
                         } else if (colors === LatteContainment.Types.LayoutThemeColors) {
                             return 3;
-                        } else if (colors === LatteContainment.Types.SmartThemeColors) {
+                        } else if (colors === LatteContainment.Types.ReverseThemeColors) {
                             return 4;
+                        } else if (colors === LatteContainment.Types.SmartThemeColors) {
+                            return 5;
                         }
                     }
                 }
