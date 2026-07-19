@@ -1,4 +1,4 @@
-91
+92
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -77,6 +77,7 @@ storageidremappertest
 storagetest
 syncedlaunchersclienttest
 tasksbackendtest
+taskshandleraudittest
 tooltiptexttest
 universalsettingstest
 userconfiguringcontracttest

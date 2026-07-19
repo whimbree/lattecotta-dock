@@ -280,6 +280,23 @@ target_include_directories(appearancehandleraudittest PRIVATE
 target_compile_definitions(appearancehandleraudittest PRIVATE
     THEMECOLORS_MAINXML_PATH="${CMAKE_SOURCE_DIR}/containment/package/contents/config/main.xml")
 
+# The Tasks page's real-handler wiring audit (CL-5, the tasks-page settings
+# audit + the D10 disposition, docs/edit-mode-settings-audit-plan.md controls
+# 91-121): the same QML-fragment/stub-map pattern as settingswiringharnesstest,
+# over the badges/interaction/filters/animations/launchers/scrolling/actions
+# controls. plasmoid/plugin for types.h (the TaskAction/TaskScrollAction enum the
+# leftClickAction/hoverAction combo mappings and their static_asserts pin). No
+# extra sources: the handlers are self-contained QML fragments over the stub map.
+ecm_add_test(taskshandleraudittest.cpp
+    TEST_NAME taskshandleraudittest
+    LINK_LIBRARIES Qt6::Test Qt6::Qml Qt6::Gui
+)
+set_tests_properties(taskshandleraudittest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(taskshandleraudittest PRIVATE
+    ${CMAKE_SOURCE_DIR}/tests/units       # configsnapshotdiff.h
+    ${CMAKE_SOURCE_DIR}/plasmoid/plugin)   # types.h (TaskAction enum)
+
 # The shell view wrapper's no-band contract: the legacy backgroundHints
 # ternary demonstrably falls through on Plasma 6 (live engine), and the
 # shipped Panel.qml keeps its imagePath empty (source scan).
