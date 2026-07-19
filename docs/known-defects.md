@@ -279,6 +279,77 @@ app/wm/waylandinterface.cpp:299 (Phase 4 WId), app/layouts/synchronizer.cpp:507
 
 ## Fixed (kept for the record)
 
+### D21 - Light/Layout applet contrast: clock has no text, show-desktop is white
+- FIXED: this PR. In "Light colors" (themeColors=LightThemeColors=4) and "Layout
+  colors" (=5) the top panel's applets lost contrast: the digital clock showed NO
+  text and the show-desktop applet rendered WHITE (invisible) on the light panel;
+  "Dark colors" (=3) was fine. ROOT: Latte's ONLY applet-recolor path was a
+  layer-FBO ColorOverlay (containment/.../applet/colorizer/Applet.qml fed by
+  ItemWrapper.qml's layer.enabled, original hidden at opacity 0). Dark mode worked
+  only because the decision core sets mustBeShown=false there (colorizer a no-op,
+  applets native). In Light/Layout mustBeShown=true and the overlay ran, exposing
+  two gaps: (a) the digital clock's label is Text.NativeRendering, which is NOT
+  captured into a layer.enabled FBO, so the overlay sampled empty and the hidden
+  original left the clock BLANK; (b) show-desktop is exempt from the overlay
+  (isShowingInlineFullRepresentation / low-saturation icon), so it rendered its
+  native Breeze-dark (light) icon = white on the light panel. The decision core
+  (colorizerdecider.cpp + units/colorizerdecision.h) was CORRECT and unchanged -
+  applyColor already resolved to the right colour. FIX (approach B, chosen by Bree
+  2026-07-18, a DELIBERATE and APPROVED divergence from Qt5's flatten-everything
+  overlay model): push the decided scheme into each stock applet's OWN
+  Kirigami.Theme colour group (AppletItem.qml `_wrapper` Kirigami.Theme.inherit +
+  the resolved colorizerManager colours, gated by colorizerPaletteActive), the way
+  stock Plasma panels colour applets, so native content renders with correct
+  contrast WITHOUT the FBO; the ColorOverlay is then retired (held inert at
+  mustBeShown:false). Latte-aware applets keep their existing LatteBridge.colorPalette
+  path (appletBlocksColorizing); colourful icons stay native (colorfulness probe).
+  EVIDENCE (nested vehicle, dark plasma theme, LightThemeColors, isolating the
+  push as the sole variable): CONTROL (overlay retired + push disabled via
+  inherit:true) rendered the clock and show-desktop UNIFORM light - mean 0.994,
+  std 0, min 0.988 - invisible native text on the light panel, faithfully
+  modelling the real-system failure. TREATMENT (overlay retired + push enabled):
+  clock "10:00 PM 7/18/26" and the show-desktop icon rendered DARK - clock std
+  0.126, min 0.125 - visible/correct; the systray's symbolic icons also rendered
+  dark AND kept their semantic accents (muted-volume's red strike), which the old
+  flatten would have destroyed. The nested vehicle's compositor happens to capture
+  NativeRendering into the FBO, so it does not reproduce the raw blank-clock
+  symptom the real Plasma 6.6.5 desktop shows; the control/treatment isolation
+  proves the mechanism instead. Observability: colorizerData now reports the
+  resolved applyColor/textColor/backgroundColor + brightnesses; viewAppletsData
+  reports per-applet colorizerActive + colorizerReason (applied / notEngaged /
+  splitter / selfColored / userBlocked / inlineFull / colorful). Guard:
+  tests/e2e/110-colorizer-applet-contrast.sh. Found on the real dock 2026-07-18.
+
+### D22 - main.xml omits the LayoutThemeColors enum choice (enum range out of sync)
+- FIXED: this PR. containment/package/contents/config/main.xml listed only five
+  themeColors choices (Plasma/Reverse/Smart/Dark/Light) while types.h and the
+  settings UI define six - LayoutThemeColors=5 was missing, so the KConfigXT
+  enum-by-name range was out of sync with the real enum: a config that stored the
+  Layout mode by NAME (`themeColors=LayoutThemeColors`) had no choice to map to,
+  and a Layout config held as the bare int `5` could not be re-serialized to its
+  name. SURFACED 2026-07-18 during the D21 repro: the real top panel's
+  `themeColors=LightThemeColors` was seen rewritten to a bare `themeColors=5`
+  while the dock ran (the trigger was not isolated to a single write, but the
+  enum range being out of sync is the class of bug that lets a name/int mismatch
+  slip through). FIX: add `<choice name="LayoutThemeColors"/>` in enum order
+  (matches types.h and the ng fork's main.xml). VERIFIED (nested vehicle): with
+  the choice present, a `themeColors=LightThemeColors` panel round-trips a save
+  cycle unchanged - after an edit-mode enter/exit the value stayed
+  `LightThemeColors` and colorizerData read it as mode "light" (=4), not
+  "layout" (=5).
+
+### D23 - Colors dropdown collides Reverse and Layout on one index
+- FIXED: this PR. shell/.../pages/AppearanceConfig.qml colorsToIndex() mapped BOTH
+  ReverseThemeColors and LayoutThemeColors to index 3, while Reverse was commented
+  out of the dropdown model entirely (upstream's 2020 "combine Colors options"
+  commit 2b5d19cfa; capt's port carries the same collision). A Reverse config
+  therefore showed as "Layout Custom Colors" and, via onCurrentIndexChanged, was
+  silently rewritten to Layout on open. FIX (ng-faithful): restore Reverse as its
+  own dropdown row and give the six values distinct indices
+  (Plasma0/Dark1/Light2/Layout3/Reverse4/Smart5), so the dropdown can show which
+  mode is active and no value is clobbered. Found 2026-07-18, code-reading during
+  the D21 investigation.
+
 ### D14 - invalid-color qCriticals at every startup
 - FIXED: this PR. Startup logged a burst of `Tools.colorBrightness: invalid
   color from QML, returning 0 (dark)` qCriticals (80 in the nested-vehicle real

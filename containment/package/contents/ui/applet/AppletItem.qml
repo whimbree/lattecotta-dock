@@ -1,6 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2016 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2016 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -89,6 +90,50 @@ Item {
                                      || (fastLayoutManager && applet && (fastLayoutManager.lockedZoomApplets.indexOf(applet.plasmoid.id)>=0))
     readonly property bool userBlocksColorizing: appletBlocksColorizing
                                                  || (fastLayoutManager && applet && (fastLayoutManager.userBlocksColorizingApplets.indexOf(applet.plasmoid.id)>=0))
+
+    //! the containment's colorizer Manager (main.qml id), aliased once as an
+    //! appletItem property so the D21 push below can reach it QUALIFIED
+    //! (appletItem.colorizerHost.*) from the nested wrapper without one
+    //! unqualified-access warning per colour it pushes.
+    readonly property var colorizerHost: colorizerManager
+
+    //! D21 (approach B, docs/known-defects.md): when the colorizer is engaged
+    //! this stock applet's OWN Kirigami.Theme color group is set to the decided
+    //! scheme (the _wrapper push below), so its native content - the digital
+    //! clock's Text.NativeRendering label, symbolic icons - renders with the
+    //! right contrast WITHOUT the layer-FBO ColorOverlay. Same applet scope the
+    //! overlay used to cover: engaged, not self-colored (latte-aware applets keep
+    //! their LatteBridge.colorPalette path), not user-blocked, not a colorful
+    //! icon (those stay native, the flatten never suited them), not an inline
+    //! full-representation content view, not an internal splitter.
+    readonly property bool colorizerPaletteActive: colorizerHost.mustBeShown
+                                                   && !userBlocksColorizing
+                                                   && !isInternalViewSplitter
+                                                   && !isShowingInlineFullRepresentation
+                                                   && !colorfulnessProbe.blocksColorizing
+
+    //! why the palette push is or is not applied to this applet - the
+    //! viewAppletsData colorizer readback (observability-first). "applied" is
+    //! the active state; the rest name the single winning exemption.
+    readonly property string colorizerExemptionReason: {
+        if (colorizerPaletteActive) {
+            return "applied";
+        } else if (!colorizerHost.mustBeShown) {
+            return "notEngaged";
+        } else if (isInternalViewSplitter) {
+            return "splitter";
+        } else if (appletBlocksColorizing) {
+            return "selfColored";
+        } else if (userBlocksColorizing) {
+            return "userBlocked";
+        } else if (isShowingInlineFullRepresentation) {
+            return "inlineFull";
+        } else if (colorfulnessProbe.blocksColorizing) {
+            return "colorful";
+        }
+
+        return "unknown";
+    }
 
     property bool isActive: (isExpanded
                              && !appletItem.communicator.indexerIsSupported
@@ -831,6 +876,27 @@ Item {
             ItemWrapper{
                 id: _wrapper
 
+                //! D21 approach B (docs/known-defects.md): push the colorizer's
+                //! decided scheme into this stock applet's OWN Kirigami.Theme
+                //! color group. Native content (the digital clock's
+                //! Text.NativeRendering label, symbolic icons) then renders with
+                //! the scheme's contrast directly, the way stock Plasma panels
+                //! colour their applets - no layer-FBO ColorOverlay, which never
+                //! captured NativeRendering text (it sampled empty and the
+                //! original was hidden, so the clock went blank) and rendered
+                //! overlay-exempt applets like show-desktop in their native
+                //! Breeze-dark icon (white on a light panel). inherit flips back
+                //! on for applets the colorizer does not apply to, so their own
+                //! Plasma palette is left untouched.
+                Kirigami.Theme.inherit: !appletItem.colorizerPaletteActive
+                Kirigami.Theme.textColor: appletItem.colorizerHost.textColor
+                Kirigami.Theme.backgroundColor: appletItem.colorizerHost.backgroundColor
+                Kirigami.Theme.highlightColor: appletItem.colorizerHost.highlightColor
+                Kirigami.Theme.highlightedTextColor: appletItem.colorizerHost.highlightedTextColor
+                Kirigami.Theme.positiveTextColor: appletItem.colorizerHost.positiveTextColor
+                Kirigami.Theme.neutralTextColor: appletItem.colorizerHost.neutralTextColor
+                Kirigami.Theme.negativeTextColor: appletItem.colorizerHost.negativeTextColor
+
                 TitleTooltipParent{
                     id: titleTooltipParent
                     metrics: appletItem.metrics
@@ -870,23 +936,15 @@ Item {
                 anchors.fill: parent
                 opacity: mustBeShown ? 1 : 0
 
-                //! Deliberate Qt5 deviation, forced by a Plasma 6 state that
-                //! Qt5 never had: Plasma 6 AppletQuickItem swaps an applet to
-                //! its FULL representation inline when it grows past
-                //! switchWidth/switchHeight (parabolic zoom does this to the
-                //! comic on every hover). Colorizing flattens the wrapper's
-                //! whole alpha to one color, which turns an inline content
-                //! view into a featureless slab (the comic rendered as a
-                //! white rectangle under Dark Colors, caught live
-                //! 2026-07-15). Qt5's colorizer only ever met compact icons,
-                //! so its spirit - theme small symbolic icons - is kept by
-                //! exempting the inline-full state.
-                readonly property bool mustBeShown: colorizerManager.mustBeShown
-                                                    && !appletItem.userBlocksColorizing
-                                                    && !appletItem.appletBlocksColorizing
-                                                    && !appletItem.isInternalViewSplitter
-                                                    && !appletItem.isShowingInlineFullRepresentation
-                                                    && !colorfulnessProbe.blocksColorizing
+                //! D21 approach B: the FBO ColorOverlay is RETIRED - the
+                //! _wrapper Kirigami.Theme push above colours native content
+                //! directly, which the overlay could never do for
+                //! Text.NativeRendering (it sampled an empty FBO and blanked the
+                //! clock). Held at mustBeShown:false so the overlay never
+                //! engages and the wrapper is never hidden; kept inert as the
+                //! single rollback point. The scope it used to cover now lives
+                //! in appletItem.colorizerPaletteActive.
+                readonly property bool mustBeShown: false
 
                 Behavior on opacity {
                     NumberAnimation {
