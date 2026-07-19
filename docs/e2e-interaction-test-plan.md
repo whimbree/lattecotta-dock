@@ -1181,6 +1181,103 @@ from six to eight and the total from 28 to 30 (section 8 re-balances the waves).
       No new driver (removeView / removeApplet exist).
       Commits:
 
+## 7.9 Multi-monitor hardware-seam coverage (feasibility-proven roadmap)
+
+The multi-output vehicle (C-I2, the nested multi-output harness) uses
+`kwin_wayland --virtual` outputs: uniform synthetic rectangles - same size, same
+DPI, no hotplug, no orientation, no sleep/wake. That proves the LOGICAL placement
+half (pure state) but leaves the PHYSICAL hardware seams - mixed-DPI, hotplug,
+mixed orientation, refresh-rate, sleep/wake - to reality, and the nastiest real
+multi-monitor bugs live in exactly those seams. A 2026-07-19 feasibility study
+(proved by RUNNING, not reading: three probe scripts drove a nested
+`kwin_wayland 6.7.3 --virtual` vehicle on a private socket + private
+dbus-run-session, never wayland-0) established that FIVE of the seven seams are
+nested-vehicle-testable, and the dock reacts through its real multi-screen logic
+(positioner / screenpool / ScreenGeometries) with placement math verified correct
+in every reacting case.
+
+### The mechanism
+`kscreen-doctor` (libkscreen KWayland backend) fully drives virtual outputs in a
+nested KWin over the wayland `kde-output-management` protocol. Key facts:
+- There is NO `org.kde.KWin` D-Bus output API and NO runtime "add a brand-new
+  output" call. `--output-count N` fixes the pool at startup; runtime hotplug is
+  `kscreen-doctor output.<name>.disable` / `.enable` of a PRE-DECLARED output, and
+  `.enable` fires a `QScreen`-add exactly like a real hotplug (the dock logs
+  "screen count changed"), so disable/enable faithfully exercises the remove/add
+  code paths.
+- The CLI backend gives every output one identical mode (1600x1000@60), so
+  heterogeneous physical MODES / refresh are not settable - but `.scale.<n>` and
+  `.rotation.<dir>` reshape the LOGICAL geometry, which is the only thing the
+  dock's placement math consumes.
+- Every output command MUST run inside the nested vehicle's private env (its own
+  WAYLAND_DISPLAY + dbus bus). A `kscreen-doctor` mutation against the real
+  session (wayland-0 / the user bus) would flip the owner's actual monitors - the
+  helper below must guard this.
+
+### Per-scenario feasibility
+| Seam | Verdict | Mechanism (nested env only) | Readback / proof |
+| --- | --- | --- | --- |
+| Hotplug remove (onPrimary view) | FEASIBLE | `output.<primary>.disable` | `screensData` primary flips to survivor; `viewsData.screen` re-homes, geometry re-centered (proven correct) |
+| Hotplug re-add | FEASIBLE | `output.<name>.enable` | `screensData` isActive True; explicit view returns |
+| Explicit-view STRAND (pinned view, its screen vanishes) | FEASIBLE - reproduces the open Phase-8 seam | `output.<secondary>.disable` | `screensData[sec].isActive=false` WHILE `viewsData.screen` still names the dead output at off-desktop coords; dock log "screens inconsistent" |
+| Mixed-DPI | FEASIBLE | `output.<name>.scale.2` | `screensData` logical geom halves (1600x1000 -> 800x500); view re-centers on scaled geom |
+| Mixed orientation | FEASIBLE | `output.<name>.rotation.left` | `screensData` geom -> portrait; dock re-lays-out along the rotated edge |
+| Third+ screen (N>2) | FEASIBLE | vehicle `--output-count 3` (`E2E_OUTPUT_COUNT=3`) | `screensData` 3 active outputs; per-screen pin works |
+| Refresh-rate mismatch | NOT (and irrelevant) | virtual backend gives one mode per output | n/a - the dock has ZERO refreshRate/vsync code, so no timing race exists to test |
+| Sleep/wake | PARTIAL | output vanish/return via disable+enable (the testable half); `--dpms off/on` is a no-op for the dock | output-ordering half via screensData; the lock-grab + logind suspend/resume ordering stays live-only |
+| EDID / HDR / GPU fractional-scale artifacts | NOT (irreducible) | virtual outputs report EDID/HDR/WCG/ICC "incapable" | real-hardware residue; the dock has no EDID/HDR/color-profile code anyway |
+
+### The enabling investment (one helper)
+A runtime-output-mutation helper (a `multi-output-lib.sh` sibling) that, inside
+the vehicle env: maps a ScreenPool screen id / connector to the kscreen output
+name, runs `kscreen-doctor output.<name>.{scale,rotation,position,disable,enable}
+.<v>`, then POLLS `screensData` / `viewsData` until the dock settles (never a fixed
+sleep). Model it on the existing `mo_discover_outputs`. It self-checks that its
+env targets the nested kwin, never wayland-0. This one helper makes every FEASIBLE
+scenario assertable.
+
+### The strand tripwire (needs NO new readback)
+It is already a cross-check of two existing readbacks: a non-cloned view may not
+report a `screen` that `screensData` marks `isActive:false`. Add it as a lib
+assertion; it converts the open Phase-8 strand into a real guard the day the
+behavior is adjudicated/fixed.
+
+### Recommended tests (build order; all ride the helper)
+1. `030-multi-output-hotplug-remove-onprimary` (M, high value): disable the
+   primary; assert the onPrimary view re-homes to the new primary and re-centers.
+   Passes today - locks in the working path.
+2. `031-multi-output-hotplug-readd` (S): enable it back; assert the view returns.
+3. `032-multi-output-explicit-strand` (M, mark `# e2e-expect: fail`): pin a view
+   to the secondary, disable it, assert the strand tripwire. Reproduces the open
+   Phase-8 seam; flips to a passing guard the day it is fixed. Needs a Qt5-faithful
+   decision on whether an explicit view hides while its output is absent.
+4. `033-multi-output-mixed-dpi` (M): scale the secondary to 2.0; assert logical
+   geom halves and the view re-centers.
+5. `034-multi-output-orientation` (S): rotate the secondary; assert portrait geom
+   + edge re-layout.
+6. `035-three-output-placement` (S): `E2E_OUTPUT_COUNT=3`; pin a view to the third
+   output; assert placement.
+Estimate: a couple of days once the helper lands.
+
+### Optional readback enrichment
+For direct (vs geometry-inferred) assertions, add `scale` (from
+`QScreen::devicePixelRatio`) and `orientation`/`transform` to `ScreenRecord` /
+`screensData` (app/dbusreports.h + app/lattecorona.cpp + the XML/design/usage
+docs, per the observability contract). Not required - scale-2 shows unambiguously
+as 800x500 and portrait as HxW - but it reads directly.
+
+### Harness note (from the study)
+The existing `dock-bottom-center-2out` pin fixture seeds a phantom duplicate
+`[ScreenConnectors]` entry (two Virtual-1 records); on scale/rotate only the live
+one updates. A clean mixed-DPI/strand test should use a normal explicit view or
+drop the phantom so the duplicate does not muddy the readback.
+
+### Irreducible real-hardware residue (genuinely needs monitors)
+Refresh-rate / GPU-present timing (not simulable, nothing in the dock to test),
+EDID-driven behavior + HDR/WCG/ICC + fractional-scale rendering sharpness (real
+GPUs only), and the lock/unlock + suspend/resume ORDERING half of sleep/wake
+(kscreenlocker + logind act on the real session, must never run in a probe).
+
 ## 8. Chunk decomposition for the swarm
 
 Ten infra chunks, twelve committed scenario chunks, eight abort chunks: **30
