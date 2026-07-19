@@ -150,7 +150,7 @@ reproducible once the worktree moves.
 ## Test-infrastructure findings route to the adoption plan
 
 CaptSilver's testability campaign has its own standing plan:
-docs/reference/captsilver-testability-adoption.md (P1-P5 waves, what is adopted
+docs/archive/captsilver-testability-adoption.md (P1-P5 waves, what is adopted
 vs skipped, and the hard VM-only constraint). Fork commits about test
 infrastructure are evaluated against THAT document, not folded ad hoc.
 Two standing rules recorded there: the fork's tests are the quality

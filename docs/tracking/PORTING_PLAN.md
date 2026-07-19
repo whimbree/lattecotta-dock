@@ -882,7 +882,7 @@ blocking.
       middle-click action rather than being swallowed. ng reached the same
       conclusion in 613ddcc3b ("Qt.MidButton ... removed in Qt 6"); ng delegates
       the empty-area close to a C++ handler we don't have, so we keep our QML
-      handler with conditional acceptance. See docs/reference/ng-upstream-audit.md finding A.
+      handler with conditional acceptance. See docs/archive/ng-upstream-audit.md finding A.
 - [x] Replace the `KWindowSystem` creatable-QML-element usage in the
       widget explorer with the KF6 singleton form
       Commits: b474adad
@@ -2740,7 +2740,7 @@ showed how much of the dock can only be driven by a pointer today.
       Commits:
 - [ ] CaptSilver testability adoption (REPLACES the microvm GUI-CI
       plan, my direction 2026-07-16; the full analysis is
-      docs/reference/captsilver-testability-adoption.md and the study record is
+      docs/archive/captsilver-testability-adoption.md and the study record is
       docs/agent-logs/2026-07-16-captsilver-testability-study.md).
       HARD CONSTRAINT: everything must run in CI under a plain
       VM - no real GPU. Sub-items, in adoption order:

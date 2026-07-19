@@ -8,7 +8,7 @@
 //
 // Adopted from David Goree's latte-dock-qt6 (tests/sceneprobe/main.cpp at
 // 52c11b36, github.com/CaptSilver/latte-dock-qt6; see
-// docs/reference/captsilver-testability-adoption.md, P1). Local changes:
+// docs/archive/captsilver-testability-adoption.md, P1). Local changes:
 //  - LATTE_QML_IMPORT_PATH is a colon-separated list (our staging hands the
 //    probe the same resolved import list the QML gates use), not one dir.
 //  - The validation layer's presence is verified before instance creation:

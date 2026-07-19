@@ -187,7 +187,7 @@ interactive subsystems I can't verify, or tick items the plan's own cadence
 says aren't done until driven live.
 
 ### Middle-click was dead (`Qt.MidButton` undefined in Qt6) - FIXED 2026-07-08
-Found during the ng upstream audit (docs/reference/ng-upstream-audit.md finding A) and
+Found during the ng upstream audit (docs/archive/ng-upstream-audit.md finding A) and
 fixed the same day. `Qt.MidButton` was removed from the QML Qt enum in Qt6, so
 it evaluated to `undefined`; every `mouse.button === Qt.MidButton` was always
 false. Consequences before the fix: task middle-click actions (close / new

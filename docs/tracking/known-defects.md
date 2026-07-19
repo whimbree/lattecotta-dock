@@ -244,6 +244,49 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   normal-mode always-shown feed carries the full set, closing the verification
   gap that let the collapse be invisible.
 
+### D25 - Task icons do not refresh on an icon-theme change (stale until restart)
+- STATUS: SUSPECTED (found by code-reading during the ng-upstream commit audit;
+  not yet reproduced under a live driver in this port). Migrated here 2026-07-19
+  from that audit (its Top ADOPT (adopt-this-fix) finding F, also listed as a
+  feature GAP) so archiving the audit does not bury the action item.
+- FOUND: code-reading, ng-upstream audit (archived at
+  docs/archive/ng-upstream-audit.md). ng's own remedy is commit ef2989ec2
+  (refresh task icons when the icon theme changes).
+- SYMPTOM (per the audit): after the desktop icon theme changes, task-manager
+  icons keep rendering the previous theme's pixmaps until the dock is restarted.
+- MECHANISM (code-reading): this port carries no icon-theme-change refresh path -
+  no forceRefreshTaskIconSource() and no QPixmapCache::clear() anywhere in
+  plasmoid/ or app/ (grep is empty). ng's ef2989ec2 adds exactly that refresh on
+  the icon-theme-changed signal.
+- NEXT: reproduce live (switch icon theme, watch a pinned/running task icon),
+  then adopt ng's refresh if it reproduces, or resolve as HAVE if a Plasma 6 icon
+  source already repaints on a theme change.
+
+### D26 - inNormalState binding-loop warning in VisibilityManager
+- STATUS: OPEN (a "Binding loop detected for inNormalState" warning was recorded
+  reproduced in this port's log by the ng-upstream commit audit; the flagged
+  declarative binding is unchanged, so it stands unless the loop condition was
+  removed elsewhere). Migrated here 2026-07-19 from that audit (its Top ADOPT
+  (adopt-this-fix) finding D) so archiving the audit does not bury the action
+  item.
+- FOUND: the ng-upstream audit (archived at docs/archive/ng-upstream-audit.md),
+  which recorded the in-log warning "Binding loop detected for inNormalState".
+  ng's own remedy is commit 73d982f0b (replace the binding with an imperative
+  recompute).
+- SYMPTOM: Qt logs "Binding loop detected for inNormalState" from
+  VisibilityManager, so the property re-evaluates until it settles instead of
+  updating once.
+- MECHANISM (code-verified 2026-07-19): inNormalState is a declarative binding
+  over two model counts at
+  containment/package/contents/ui/VisibilityManager.qml:33
+  (`inNormalState: ((animations.needBothAxis.count === 0) &&
+  (animations.needLength.count === 0))`), and this port still carries no
+  imperative recomputeInNormalState() (grep is empty). ng replaced the binding
+  with an imperative recomputeInNormalState() driven from the count-change
+  signals to break the loop.
+- NEXT: adopt ng's imperative-recompute shape (73d982f0b), or confirm the loop is
+  already absent in this tree and resolve.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here
@@ -258,7 +301,7 @@ so "what is known broken" is one scan. Full detail migrates on next touch.
   appletConfigData, and a launchersGroup Unique->Global change alters the running
   bar. So this port needs neither wire-up nor hide.
 - HISTORY: the inherited upstream half-finished feature that latte-dock-ng hid
-  (9faccabda). Detail: docs/reference/ng-upstream-audit.md:322,
+  (9faccabda). Detail: docs/archive/ng-upstream-audit.md:322,
   docs/tracking/REVIEW_NOTES.md, and CLAUDE.md's stub-tracking cautionary tale.
 
 ### D11 - Dev-dock env leak into child Qt apps

@@ -1,7 +1,7 @@
 Start by reading two documents end to end, in this order, before touching anything:
 CLAUDE.md (the big picture - what this project is, and the binding rigor: root-cause
 law, regression discipline, code-clarity and Q_ASSERT rules, commit shape and the
-definition of done, gate discipline) and docs/prompts/stabilization-execution-prompt.md
+definition of done, gate discipline) and docs/archive/stabilization-execution-prompt.md
 (the session contract - re-runnable priority list, documentation duties, merge
 protocol). Then execute that prompt top to bottom, autonomously, with a long horizon.
 

@@ -1,6 +1,6 @@
 # P3 behavioral-test transplants from latte-dock-qt6 (2026-07-16)
 
-Task: docs/reference/captsilver-testability-adoption.md P3 - behavioral tests
+Task: docs/archive/captsilver-testability-adoption.md P3 - behavioral tests
 over the lattedock-core object library, transplanted from the
 reference fork (read at origin/main via `git show`; the local checkout
 sits at 9003f33a and these tests exist only at origin/main), each

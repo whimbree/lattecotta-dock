@@ -1,6 +1,6 @@
 # 2026-07-16: sceneprobe transplant (P1 of the CaptSilver adoption plan)
 
-Executing P1 of docs/reference/captsilver-testability-adoption.md: transplant the
+Executing P1 of docs/archive/captsilver-testability-adoption.md: transplant the
 sceneprobe visual-regression harness from latte-dock-qt6 (read-only
 reference at ~/Projects/latte-dock-qt6/tests/sceneprobe/) into this tree
 as tests/sceneprobe/, lavapipe-only, wired into our own staging and gate

@@ -8,7 +8,7 @@ include(ECMAddTests)
 # extracted core header, enforced by tests/coverage/coverage-ratchet.sh.
 add_subdirectory(units)
 
-# sceneprobe render harness (docs/reference/captsilver-testability-adoption.md P1):
+# sceneprobe render harness (docs/archive/captsilver-testability-adoption.md P1):
 # builds the probe/imgdiff binaries and registers the comparator unit test;
 # the render gate itself is scripts/sceneprobe-gate.sh (needs nested kwin).
 add_subdirectory(sceneprobe)
@@ -508,7 +508,7 @@ target_include_directories(settingsmodelstest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
-# Vendored-backend pins (docs/reference/captsilver-testability-adoption.md P3): both
+# Vendored-backend pins (docs/archive/captsilver-testability-adoption.md P3): both
 # compile the plasmoid plugin sources directly (they live in the tasks QML
 # plugin, not lattedock-core) and serve the plasma-desktop sync pass as
 # behavioral tripwires for synced hunks.

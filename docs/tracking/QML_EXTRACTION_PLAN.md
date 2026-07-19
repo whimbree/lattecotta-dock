@@ -3,7 +3,7 @@
 Planning artifact for moving behavioral logic out of QML into
 strongly-typed, unit-testable C++. Written 2026-07-15 against HEAD
 5e1c2b12 by the strong-model planning session named in
-docs/prompts/qml-extraction-planning-prompt.md; every commit hash, file
+docs/archive/qml-extraction-planning-prompt.md; every commit hash, file
 path, and line range cited below was verified with git/grep during that
 session. This plan executes across a model transition: specs tagged
 `delegate-safe` are written to be executable cold by a weaker model;

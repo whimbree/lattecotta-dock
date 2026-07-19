@@ -930,7 +930,7 @@ rebuild and reboot before the next session):
 
 ## 2026-07-16: stabilization execution session TWO (running record)
 
-Driving docs/prompts/stabilization-execution-prompt.md over the open
+Driving docs/archive/stabilization-execution-prompt.md over the open
 items (8, 9 remainder, 10). Session start: fixed session one's plan
 drift (2bba6cb8b - P2 checkbox was never ticked, and the plan/design
 doc carried the agents' pre-rebase hashes; master hashes now recorded,
@@ -1084,7 +1084,7 @@ there. This nested-dock recipe is ALSO the P4 e2e vehicle proof.
 
 ## 2026-07-16: stabilization execution session ONE (record)
 
-Drove docs/prompts/stabilization-execution-prompt.md top to bottom.
+Drove docs/archive/stabilization-execution-prompt.md top to bottom.
 
 SESSION CLOSE: all three worktree branches merged serially with full
 gates and pushed; final master state: 54 ctest entries, ratchet OK,
@@ -1125,7 +1125,7 @@ lock/unlock arm, one real logout cycle, and the reorder/stuck-icons
 real-mouse checks are the four things waiting on my hands. Item 8's
 D-Bus interface design is WRITTEN (docs/reference/dbus-observability-interface.md)
 and item 9 became the CaptSilver adoption plan
-(docs/reference/captsilver-testability-adoption.md). FOUR worktree/read agents
+(docs/archive/captsilver-testability-adoption.md). FOUR worktree/read agents
 were dispatched in parallel at session end (logs in docs/agent-logs/,
 2026-07-16-*): a11y surface inventory (read-only baseline for the
 keyboard/AT-SPI quartet items), viewsData+setViewEditMode

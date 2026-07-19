@@ -6,7 +6,7 @@
 // Adopted from David Goree's latte-dock-qt6
 // (tests/sceneprobe/imgdiff_main.cpp at cfb516e7,
 // github.com/CaptSilver/latte-dock-qt6; see
-// docs/reference/captsilver-testability-adoption.md, P1) - Goree's CLI (the positional
+// docs/archive/captsilver-testability-adoption.md, P1) - Goree's CLI (the positional
 // pair + --delta/--budget/--out) is unchanged. Local addition (interaction
 // render-golden bridge, P2 / C-I6): the --tier flag resolves the compare
 // rigor from SCENEPROBE_TIER through the SAME parseGoldenTier/toleranceForTier

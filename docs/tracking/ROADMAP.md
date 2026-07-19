@@ -41,7 +41,7 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
 
 ## Registries and state
 
-- [Known defects](known-defects.md) - the flat found-bugs registry (D1-D24), one
+- [Known defects](known-defects.md) - the flat found-bugs registry (D1-D26), one
   line per bug with its status (OPEN / FIXED / ACCEPTED / SUSPECTED). Scan here
   for what is known broken.
 - [Session handoff](session-handoff.md) - the rolling session state. Read first
@@ -52,7 +52,30 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
 - [`../reference/`](../reference/) - stable how-tos and research: the D-Bus
   interface reference and observability design, the testing standard, the
   dock-replication design, clangd setup, the task-manager integration research,
-  the ng-upstream audit, flake-removal testing, the CaptSilver testability
-  adoption, and the live-only test registry.
-- [`../prompts/`](../prompts/) - the orchestrator prompt and the per-workstream
-  execution and planning prompts.
+  flake-removal testing, and the live-only test registry.
+- [`../prompts/`](../prompts/) - the orchestrator prompt and the multi-distro CI
+  execution and orchestrator prompts.
+- [`../archive/`](../archive/) - finished and superseded docs, kept for the
+  record; see the Archived / completed section below.
+
+## Archived / completed
+
+Finished or superseded docs, moved to [`../archive/`](../archive/) so the record
+is preserved but off the active index. One line each on what it was:
+
+- [ng-upstream audit](../archive/ng-upstream-audit.md) - the complete 249/249
+  merit audit of latte-dock-ng's commits. Every genuinely-open ADOPT (adopt-this-
+  fix) item is now tracked in the porting plan or the known-defects registry.
+- [CaptSilver testability adoption](../archive/captsilver-testability-adoption.md) -
+  the P1-P5 (five-wave) plan for adopting CaptSilver's testability campaign; the
+  adopted waves have landed.
+- [QML extraction execution prompt](../archive/qml-extraction-execution-prompt.md) -
+  the per-unit session contract that drove the now-complete QML extraction
+  initiative.
+- [QML extraction planning prompt](../archive/qml-extraction-planning-prompt.md) -
+  the planning-session contract that produced the QML extraction plan.
+- [Stabilization execution prompt](../archive/stabilization-execution-prompt.md) -
+  the stabilization session contract (re-runnable priority list, merge protocol);
+  its work has all landed.
+- [Stabilization short prompt](../archive/stabilization-short.md) - the short
+  kickoff form of the stabilization session contract.
