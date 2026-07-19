@@ -52,6 +52,22 @@ private Q_SLOTS:
     void harnessCatchesWrongKeyWrite();
     void harnessCatchesStrayCoupledWrite();
 
+    //! CL-6 (AU-6a/AU-6b) - the chrome and on-canvas non-length controls'
+    //! handlers write only their own key. The decisive one is the
+    //! edit-background wheel: both reference forks rewired it to panelTransparency
+    //! (the CLAUDE.md fork-rewire trap); this port keeps editBackgroundOpacity,
+    //! pinned here by seeding panelTransparency and proving it never moves.
+    void editBackgroundWheelWritesOnlyEditBackgroundOpacity();
+    void editBackgroundWheelClampsWithinUnitRangeNeverPanelTransparency();
+    void pinButtonWritesOnlyConfigurationSticker();
+    void stickOnTopWritesOnlyIsStickedOnTopEdge();
+    void stickOnBottomWritesOnlyIsStickedOnBottomEdge();
+    //! the us-toggles (rearrange, advanced) write a UniversalSettings property,
+    //! never a plasmoid.configuration key - proven by driving the real toggle
+    //! against a stub universalSettings and asserting the config map is untouched
+    void rearrangeToggleWritesUniversalSettingsNotConfig();
+    void advancedToggleWritesUniversalSettingsNotConfig();
+
 private:
     //! seed a stub config map with the keys a handler under test may touch.
     //! QML can only assign to properties that already exist on a QQmlPropertyMap
@@ -64,6 +80,12 @@ private:
     //! the QML error string (empty on success) so a malformed fragment fails
     //! loudly instead of silently writing nothing and reading as a no-op.
     static QString runHandler(QQmlPropertyMap &config, const QString &handlerBody);
+
+    //! same, plus a stub `universalSettings` map (mirrors the QML singleton the
+    //! us-toggle chrome controls write). Lets a handler that touches
+    //! universalSettings be driven while the config map is watched for stray
+    //! writes - the P2 "writes universalSettings, not a config key" check.
+    static QString runHandler(QQmlPropertyMap &config, QQmlPropertyMap &universalSettings, const QString &handlerBody);
 
     //! snapshot the stub map's current values as a "config" JSON object, the
     //! same shape viewConfigData()'s "config" object carries (dbusreports.h
@@ -83,6 +105,32 @@ QString SettingsWiringHarnessTest::runHandler(QQmlPropertyMap &config, const QSt
 {
     QQmlEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("configuration"), &config);
+
+    QQmlComponent component(&engine);
+    const QString qml = QStringLiteral(
+        "import QtQml\n"
+        "QtObject { Component.onCompleted: { %1 } }\n").arg(handlerBody);
+    component.setData(qml.toUtf8(), QUrl());
+
+    if (component.isError()) {
+        return component.errorString();
+    }
+
+    QScopedPointer<QObject> root(component.create());
+
+    if (!root) {
+        return component.errorString().isEmpty()
+            ? QStringLiteral("handler fragment produced no object") : component.errorString();
+    }
+
+    return QString();
+}
+
+QString SettingsWiringHarnessTest::runHandler(QQmlPropertyMap &config, QQmlPropertyMap &universalSettings, const QString &handlerBody)
+{
+    QQmlEngine engine;
+    engine.rootContext()->setContextProperty(QStringLiteral("configuration"), &config);
+    engine.rootContext()->setContextProperty(QStringLiteral("universalSettings"), &universalSettings);
 
     QQmlComponent component(&engine);
     const QString qml = QStringLiteral(
@@ -206,6 +254,169 @@ void SettingsWiringHarnessTest::harnessCatchesStrayCoupledWrite()
     QVERIFY2(!onlyExpectedKeysChanged(before, after, {QStringLiteral("maxLength")}),
              "a coupled minLength side effect must be REJECTED by the harness (P2 fails)");
     QCOMPARE(changedConfigKeys(before, after), (QStringList{QStringLiteral("maxLength"), QStringLiteral("minLength")}));
+}
+
+//! CL-6 AU-6a control 2: THE fork-rewire trap. The edit-background wheel
+//! (CanvasConfiguration.qml:144-161) adjusts the edit-mode grid opacity, which
+//! is editBackgroundOpacity - a Double in [0,1]. BOTH reference forks
+//! (latte-dock-qt6 CanvasConfiguration.qml:153-155, latte-dock-ng :98) rewired
+//! this handler to write panelTransparency instead (an Int in [0,100] that is
+//! the dock's real runtime background opacity, a persistent user setting). This
+//! port keeps the Qt5-faithful editBackgroundOpacity; the seed carries
+//! panelTransparency so a rewire would show as a stray changed key and FAIL P2.
+void SettingsWiringHarnessTest::editBackgroundWheelWritesOnlyEditBackgroundOpacity()
+{
+    QQmlPropertyMap config;
+    seed(config, {{QStringLiteral("editBackgroundOpacity"), 0.5},
+                  {QStringLiteral("panelTransparency"), 40},
+                  {QStringLiteral("offset"), 0}});
+
+    const QJsonObject before = snapshot(config);
+    //! the up-detent write, verbatim from the handler (opacityStep = 0.1)
+    QCOMPARE(runHandler(config, QStringLiteral(
+                 "var opacityStep = 0.1;\n"
+                 "var current = configuration.editBackgroundOpacity;\n"
+                 "configuration.editBackgroundOpacity = Math.min(1, current + opacityStep);")),
+             QString());
+    const QJsonObject after = snapshot(config);
+
+    QVERIFY(controlApplies(before, after, QStringLiteral("editBackgroundOpacity")));
+    QVERIFY2(onlyExpectedKeysChanged(before, after, {QStringLiteral("editBackgroundOpacity")}),
+             "the edit-background wheel must write ONLY editBackgroundOpacity - a panelTransparency "
+             "write is the fork-rewire trap and a P2 failure");
+    //! spell the trap out: panelTransparency never moved
+    QVERIFY(!changedConfigKeys(before, after).contains(QStringLiteral("panelTransparency")));
+}
+
+//! CL-6 AU-6a control 2 (clamp half): the handler floors/ceilings the value in
+//! [0,1] with Math.max/Math.min, and STILL only ever touches editBackgroundOpacity.
+void SettingsWiringHarnessTest::editBackgroundWheelClampsWithinUnitRangeNeverPanelTransparency()
+{
+    //! up-detent at the ceiling: 0.95 + 0.1 clamps to exactly 1.0
+    {
+        QQmlPropertyMap config;
+        seed(config, {{QStringLiteral("editBackgroundOpacity"), 0.95},
+                      {QStringLiteral("panelTransparency"), 40}});
+        const QJsonObject before = snapshot(config);
+        QCOMPARE(runHandler(config, QStringLiteral(
+                     "var current = configuration.editBackgroundOpacity;\n"
+                     "configuration.editBackgroundOpacity = Math.min(1, current + 0.1);")),
+                 QString());
+        const QJsonObject after = snapshot(config);
+        QVERIFY(valueReflects(after, QStringLiteral("editBackgroundOpacity"), 1.0));
+        QVERIFY(onlyExpectedKeysChanged(before, after, {QStringLiteral("editBackgroundOpacity")}));
+    }
+
+    //! down-detent at the floor: 0.05 - 0.1 clamps to exactly 0.0
+    {
+        QQmlPropertyMap config;
+        seed(config, {{QStringLiteral("editBackgroundOpacity"), 0.05},
+                      {QStringLiteral("panelTransparency"), 40}});
+        const QJsonObject before = snapshot(config);
+        QCOMPARE(runHandler(config, QStringLiteral(
+                     "var current = configuration.editBackgroundOpacity;\n"
+                     "configuration.editBackgroundOpacity = Math.max(0, current - 0.1);")),
+                 QString());
+        const QJsonObject after = snapshot(config);
+        QVERIFY(valueReflects(after, QStringLiteral("editBackgroundOpacity"), 0.0));
+        QVERIFY(onlyExpectedKeysChanged(before, after, {QStringLiteral("editBackgroundOpacity")}));
+    }
+}
+
+//! CL-6 AU-6b control 6: the Pin button (LatteDockConfiguration.qml:224-227) writes
+//! configurationSticker (its C++ side effect, viewConfig.setSticker, is not a
+//! config write and is covered by the live drive).
+void SettingsWiringHarnessTest::pinButtonWritesOnlyConfigurationSticker()
+{
+    QQmlPropertyMap config;
+    seed(config, {{QStringLiteral("configurationSticker"), false},
+                  {QStringLiteral("panelTransparency"), 40}});
+
+    const QJsonObject before = snapshot(config);
+    QCOMPARE(runHandler(config, QStringLiteral("configuration.configurationSticker = true")), QString());
+    const QJsonObject after = snapshot(config);
+
+    QVERIFY(controlApplies(before, after, QStringLiteral("configurationSticker")));
+    QVERIFY(onlyExpectedKeysChanged(before, after, {QStringLiteral("configurationSticker")}));
+    QVERIFY(valueReflects(after, QStringLiteral("configurationSticker"), true));
+}
+
+//! CL-6 AU-6a control 4: Stick On Top (HeaderSettings.qml:79-83) toggles
+//! isStickedOnTopEdge and touches nothing else (never the sibling bottom key).
+void SettingsWiringHarnessTest::stickOnTopWritesOnlyIsStickedOnTopEdge()
+{
+    QQmlPropertyMap config;
+    seed(config, {{QStringLiteral("isStickedOnTopEdge"), false},
+                  {QStringLiteral("isStickedOnBottomEdge"), false}});
+
+    const QJsonObject before = snapshot(config);
+    QCOMPARE(runHandler(config, QStringLiteral(
+                 "configuration.isStickedOnTopEdge = !configuration.isStickedOnTopEdge")), QString());
+    const QJsonObject after = snapshot(config);
+
+    QVERIFY(controlApplies(before, after, QStringLiteral("isStickedOnTopEdge")));
+    QVERIFY(onlyExpectedKeysChanged(before, after, {QStringLiteral("isStickedOnTopEdge")}));
+    QVERIFY(valueReflects(after, QStringLiteral("isStickedOnTopEdge"), true));
+}
+
+//! CL-6 AU-6a control 5: Stick On Bottom (HeaderSettings.qml:143-147) - the mirror.
+void SettingsWiringHarnessTest::stickOnBottomWritesOnlyIsStickedOnBottomEdge()
+{
+    QQmlPropertyMap config;
+    seed(config, {{QStringLiteral("isStickedOnTopEdge"), false},
+                  {QStringLiteral("isStickedOnBottomEdge"), false}});
+
+    const QJsonObject before = snapshot(config);
+    QCOMPARE(runHandler(config, QStringLiteral(
+                 "configuration.isStickedOnBottomEdge = !configuration.isStickedOnBottomEdge")), QString());
+    const QJsonObject after = snapshot(config);
+
+    QVERIFY(controlApplies(before, after, QStringLiteral("isStickedOnBottomEdge")));
+    QVERIFY(onlyExpectedKeysChanged(before, after, {QStringLiteral("isStickedOnBottomEdge")}));
+    QVERIFY(valueReflects(after, QStringLiteral("isStickedOnBottomEdge"), true));
+}
+
+//! CL-6 AU-6a control 3: the Rearrange toggle (HeaderSettings.qml:125-129) flips
+//! universalSettings.inConfigureAppletsMode. P2 here is "no config key leaks":
+//! the config map is seeded and watched, and must stay untouched while the
+//! us flag flips.
+void SettingsWiringHarnessTest::rearrangeToggleWritesUniversalSettingsNotConfig()
+{
+    QQmlPropertyMap config;
+    seed(config, {{QStringLiteral("editBackgroundOpacity"), 0.5},
+                  {QStringLiteral("panelTransparency"), 40}});
+    QQmlPropertyMap universal;
+    universal.insert(QStringLiteral("inConfigureAppletsMode"), false);
+
+    const QJsonObject before = snapshot(config);
+    QCOMPARE(runHandler(config, universal, QStringLiteral(
+                 "universalSettings.inConfigureAppletsMode = !universalSettings.inConfigureAppletsMode")),
+             QString());
+    const QJsonObject after = snapshot(config);
+
+    QVERIFY2(changedConfigKeys(before, after).isEmpty(),
+             "the rearrange toggle must not write any plasmoid.configuration key");
+    QCOMPARE(universal.value(QStringLiteral("inConfigureAppletsMode")).toBool(), true);
+}
+
+//! CL-6 AU-6b control 7: the Advanced switch (LatteDockConfiguration.qml:285-289)
+//! writes universalSettings.inAdvancedModeForEditSettings, no config key.
+void SettingsWiringHarnessTest::advancedToggleWritesUniversalSettingsNotConfig()
+{
+    QQmlPropertyMap config;
+    seed(config, {{QStringLiteral("editBackgroundOpacity"), 0.5},
+                  {QStringLiteral("panelTransparency"), 40}});
+    QQmlPropertyMap universal;
+    universal.insert(QStringLiteral("inAdvancedModeForEditSettings"), false);
+
+    const QJsonObject before = snapshot(config);
+    QCOMPARE(runHandler(config, universal, QStringLiteral(
+                 "universalSettings.inAdvancedModeForEditSettings = true")), QString());
+    const QJsonObject after = snapshot(config);
+
+    QVERIFY2(changedConfigKeys(before, after).isEmpty(),
+             "the advanced switch must not write any plasmoid.configuration key");
+    QCOMPARE(universal.value(QStringLiteral("inAdvancedModeForEditSettings")).toBool(), true);
 }
 
 QTEST_GUILESS_MAIN(SettingsWiringHarnessTest)
