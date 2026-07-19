@@ -12,7 +12,7 @@
 set -uo pipefail
 
 bin="/usr/bin/latte-dock"
-repo="$(cd "$(dirname "$0")/../../.." && pwd)"
+repo="$(cd "$(dirname "$0")/../.." && pwd)"
 export E2E_REPO="$repo"
 
 source "$repo/scripts/lib-nested-kwin.sh"
