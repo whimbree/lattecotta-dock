@@ -12,14 +12,31 @@ D20-class menu emptying was also fixed live on the real dock by restoring the
 contextMenuActionsAlwaysShown key. The Light/Layout colorizer contrast fix
 LANDED as PR #46 (D21/D22/D23 FIXED via approach B - push the resolved scheme
 into applets' Kirigami.Theme color groups, retire the FBO overlay; a recorded
-Qt5 divergence; new per-applet colorizerActive/colorizerReason readbacks; proven
-in the nested vehicle by a control/treatment isolation). The tree is fully clean,
-no open PRs. NEXT: wave-2 audit clusters {CL-2, CL-3, CL-4, CL-6} + CL-5 fan out
-from clean main (awaiting Bree's go); the X11 proposals await sign-off.
-Note: a live-dock regression scare this session (an agent restarted the real dock
-with its WIP worktree build, breaking floating-gap/maximize behavior) reaffirmed
-that AGENTS DEVELOP IN THE NESTED VEHICLE, never the real session - see the
-live-system consent memory.)
+Qt5 divergence; new per-applet colorizerActive/colorizerReason readbacks) and was
+DELIVERED live to the real dock (verified: the Light top panel resolves dark fg
+#202326 on light bg #fcfcfc, all applets colorizerActive=applied).
+
+IN FLIGHT: wave-2 audit clusters CL-2 (appearance) / CL-3 (behavior) / CL-4
+(effects) / CL-6 (chrome) are farming as code-only PRs; CL-5 (tasks page / D10 -
+DECIDED: WIRE IT UP) follows when a slot frees.
+
+NEXT for a fresh session - drive it with docs/prompts/orchestrator-prompt.md (the
+reusable farm/review/merge workflow + subagent templates):
+1. Land the wave-2 cluster PRs as they return: independent review -> rebase onto
+   main -> asan-at-merge for dock C++ -> `gh pr merge --rebase` -> tick the AU
+   items + file findings (orchestrator owns the plan/defect docs).
+2. Farm CL-5 (tasks/D10 wire-up, the ng eabf7c89a pattern).
+3. X11 hygiene, best-practice sequence: one small PR = D3 (collapse the dead
+   windowColorScheme else-arm) + D2 (mark the D19 keep-above an explicit
+   `// STUB`); THEN a deliberate isolated later pass for D1 (strip the WindowId
+   X11 parse surface -> uuid-only) and S1 (QByteArray-uuid -> QUuid substrate,
+   LAST, its own driven-verified PR); D5 at the next fork-sync.
+4. The e2e scenario/abort track (C-S*/C-A* in docs/e2e-interaction-test-plan.md)
+   and the deferred nits.
+
+Note: AGENTS DEVELOP IN THE NESTED VEHICLE, never the real session (a WIP-build
+restart broke the live dock this session); the ORCHESTRATOR does controlled live
+deliver/verify. See the live-system consent memory.)
 
 ## 2026-07-18 WAVE: e2e driver layer complete + settings-audit harness (CL-0)
 
