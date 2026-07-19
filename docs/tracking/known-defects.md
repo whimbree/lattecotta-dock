@@ -424,7 +424,7 @@ carries its own detail or points into the plan and the reference docs.
   TypeSelection.qml, or accept as inert. Harmless either way (nothing reads them).
 
 ### D28 - Show-desktop applet icon stays white on a light-colored panel
-- FIXED (#<PR>, <sha>). On a "Light colors" or "Layout colors" panel the
+- FIXED (0390582fa). On a "Light colors" or "Layout colors" panel the
   show-desktop applet (org.kde.plasma.showdesktop) rendered with its native
   Breeze-dark icon, which is white, against the light panel background and was
   hard to see. ROOT: the D21 colorizer push is gated by
