@@ -212,6 +212,24 @@ set_tests_properties(settingswiringharnesstest PROPERTIES
 target_include_directories(settingswiringharnesstest PRIVATE
     ${CMAKE_SOURCE_DIR}/tests/units) # configsnapshotdiff.h
 
+# The length cluster's real-handler wiring audit (CL-1,
+# docs/edit-mode-settings-audit-plan.md): the same QML-fragment/stub-map pattern
+# as settingswiringharnesstest, plus the LengthOffsetClampBridge registered as
+# `lengthClamp` (SubConfigView registers it live) so the REAL maxLength ruler /
+# slider handlers can be driven. Pins the D15 min-coupling as accepted, the D16
+# binding re-sync, and the offset/fine-value P2 rows.
+ecm_add_test(lengthhandleraudittest.cpp
+    ${CMAKE_SOURCE_DIR}/app/settings/lengthoffsetclampbridge.cpp
+    TEST_NAME lengthhandleraudittest
+    LINK_LIBRARIES Qt6::Test Qt6::Qml Qt6::Gui
+)
+set_tests_properties(lengthhandleraudittest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(lengthhandleraudittest PRIVATE
+    ${CMAKE_SOURCE_DIR}/tests/units      # configsnapshotdiff.h
+    ${CMAKE_SOURCE_DIR}/app/settings     # lengthoffsetclampbridge.h / lengthoffsetclamp.h
+    ${CMAKE_BINARY_DIR}/app)             # coretypes.h is generated there
+
 # The shell view wrapper's no-band contract: the legacy backgroundHints
 # ternary demonstrably falls through on Plasma 6 (live engine), and the
 # shipped Panel.qml keeps its imagePath empty (source scan).
