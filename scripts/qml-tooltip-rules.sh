@@ -13,7 +13,7 @@
 # separate Wayland surface AT THE CURSOR, lands on top of the very control it
 # describes, and swallows the press - the "Rearrange..." toggle went
 # unclickable whenever edit-mode space was tight (caught live on a top panel,
-# 2026-07-17; docs/panel-issues-plan.md issue 3). The same family also
+# 2026-07-17; docs/tracking/panel-issues-plan.md issue 3). The same family also
 # produced the ~20Hz edit-handle flicker. The fix, already committed in
 # ConfigOverlay.qml (the handle buttons) and now in Button.qml (the header
 # buttons), renders the hint IN-WINDOW as a plain, pointer-transparent
@@ -25,7 +25,7 @@
 # with a click-through mask), so this bans the pattern only in the named
 # edit-mode overlay CLICK-TARGET files, not tree-wide. The max-length Ruler
 # (canvas/maxlength/Ruler.qml) carries the same pattern on its drag handle and
-# is an owed sibling migration tracked in docs/panel-issues-plan.md - it is
+# is an owed sibling migration tracked in docs/tracking/panel-issues-plan.md - it is
 # intentionally not yet listed here, and gets added the day it is migrated.
 #
 # Plain source scan, no staged install: the rule holds for the shipped QML
@@ -61,7 +61,7 @@ for f in "${guarded[@]}"; do
     if [[ -n "$violations" ]]; then
         echo "FAIL: attached ToolTip on an edit-mode overlay click target (Wayland popup" >&2
         echo "surface eats the press - render the hint in-window instead, see the file's" >&2
-        echo "'don't re-add a QQC2.ToolTip here' comment and docs/panel-issues-plan.md #3):" >&2
+        echo "'don't re-add a QQC2.ToolTip here' comment and docs/tracking/panel-issues-plan.md #3):" >&2
         echo "$f:" >&2
         echo "$violations" >&2
         fail=1

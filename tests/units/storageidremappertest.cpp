@@ -5,10 +5,10 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-07 StorageIdRemapper (docs/QML_EXTRACTION_PLAN.md): the id-assignment
+// EX-07 StorageIdRemapper (docs/tracking/QML_EXTRACTION_PLAN.md): the id-assignment
 // math of layout import/duplicate.
 //
-// Case provenance (per docs/TESTING.md): the eleven core slots are ported
+// Case provenance (per docs/reference/TESTING.md): the eleven core slots are ported
 // from David Goree's latte-dock-qt6 tests/storageidremappertest.cpp at
 // 81384003, github.com/CaptSilver/latte-dock-qt6 (their
 // 73f64383 extraction of the same Qt5-inherited algorithm; our body was

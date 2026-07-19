@@ -1,7 +1,7 @@
 # Accessible.* rollout (2026-07-17, branch accessible-rollout)
 
 The accessibility quartet's third item (Phase 10 "Full AT-SPI support"
-in docs/PORTING_PLAN.md): Accessible attached properties across the
+in docs/tracking/PORTING_PLAN.md): Accessible attached properties across the
 dock's interactive QML, per the gap list in
 docs/agent-logs/2026-07-16-a11y-surface-inventory.md. Base already
 carried the keyboard focus mode (the P0 gate); this rollout makes the
@@ -136,7 +136,7 @@ verdict, stamp on the branch head. Not pushed (per task).
 
 ## What acceptance still needs
 
-The Orca desk script (docs/manual-flake-removal-testing.md, "Orca
+The Orca desk script (docs/reference/manual-flake-removal-testing.md, "Orca
 screen-reader pass") - announcement is a runtime pipeline only real
 ears can accept. The plan item stays unticked until that pass and the
 deferred surfaces land.

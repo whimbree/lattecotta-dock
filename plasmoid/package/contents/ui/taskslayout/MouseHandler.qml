@@ -15,7 +15,7 @@ import org.kde.taskmanager 0.1 as TaskManager
 
 import org.kde.latte.core 0.2 as LatteCore
 
-//! Thin drag/drop shell (EX-14, docs/QML_EXTRACTION_PLAN.md): mime
+//! Thin drag/drop shell (EX-14, docs/tracking/QML_EXTRACTION_PLAN.md): mime
 //! classification and the onDragMove suppression/reorder routing come
 //! from LatteCore.DropClassifier; this file keeps the scene effects
 //! (model moves, hover bookkeeping, preview windows) and the trivial

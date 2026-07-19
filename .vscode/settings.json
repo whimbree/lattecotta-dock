@@ -1,6 +1,6 @@
 {
   // clangd code intelligence for the Plasma 6 / Qt6 tree. Full explanation
-  // in docs/clangd-setup.md. Launch VSCode from inside `nix develop` (run
+  // in docs/reference/clangd-setup.md. Launch VSCode from inside `nix develop` (run
   // `code .` there) so both clangd and the nix GCC wrapper are on PATH and
   // NIX_CFLAGS_COMPILE is set - the query-driver below reads the wrapper's
   // injected Qt/KF6/libstdc++ include paths from that environment.

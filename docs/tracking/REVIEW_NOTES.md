@@ -139,7 +139,7 @@ containment wheel bridge, which does not exist yet. Once it lands, verify on a
 live session that (a) scrolling over a task cycles/activates and (b) scrolling
 over an audio badge on a task changes that app's volume. This is a live-only
 check (needs a real audio-playing window on a task); it is recorded in
-`docs/testing/live-only.md`.
+`docs/reference/live-only.md`.
 
 ### Phase 7 needs a hands-on session - most of it can't be verified without you
 Phase 7 (widget management, drag-and-drop, edit mode) is ~90% interactive, and
@@ -187,7 +187,7 @@ interactive subsystems I can't verify, or tick items the plan's own cadence
 says aren't done until driven live.
 
 ### Middle-click was dead (`Qt.MidButton` undefined in Qt6) - FIXED 2026-07-08
-Found during the ng upstream audit (docs/ng-upstream-audit.md finding A) and
+Found during the ng upstream audit (docs/reference/ng-upstream-audit.md finding A) and
 fixed the same day. `Qt.MidButton` was removed from the QML Qt enum in Qt6, so
 it evaluated to `undefined`; every `mouse.button === Qt.MidButton` was always
 false. Consequences before the fix: task middle-click actions (close / new

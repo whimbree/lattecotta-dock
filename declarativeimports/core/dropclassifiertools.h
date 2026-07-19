@@ -19,7 +19,7 @@ class QMimeData;
 namespace Latte {
 
 //! Thin QML shell over the DropClassifier pure core (EX-14 in
-//! docs/QML_EXTRACTION_PLAN.md, units/dropclassifier.h). The drag
+//! docs/tracking/QML_EXTRACTION_PLAN.md, units/dropclassifier.h). The drag
 //! handlers of the containment DragDropArea and the plasmoid
 //! MouseHandler hand their event's QMimeData (a DeclarativeMimeData IS
 //! one) plus trivially-read live state here and apply the returned

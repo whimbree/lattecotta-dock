@@ -19,7 +19,7 @@ namespace Latte {
 namespace Settings {
 
 //! The mutual maxLength/minLength/offset clamp that keeps a dock
-//! on-screen (EX-18 in docs/QML_EXTRACTION_PLAN.md), deduplicated out of
+//! on-screen (EX-18 in docs/tracking/QML_EXTRACTION_PLAN.md), deduplicated out of
 //! two Qt5-inherited QML copies that edited the same three config keys
 //! and had to agree or corrupt them: the maxLength ruler
 //! (shell .../canvas/maxlength/RulerMouseArea.qml) and the Appearance

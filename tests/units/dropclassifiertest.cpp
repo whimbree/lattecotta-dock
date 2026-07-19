@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-//! EX-14 DropEventClassifier (docs/QML_EXTRACTION_PLAN.md). Pins the
+//! EX-14 DropEventClassifier (docs/tracking/QML_EXTRACTION_PLAN.md). Pins the
 //! drag/drop mime classification of BOTH consumers (containment
 //! DragDropArea, plasmoid MouseHandler) over shared vectors - the
 //! drift-regression shape - plus the decision ladders, tools.js

@@ -48,7 +48,7 @@ without cross-referencing git log, that follow-up work is owed.
 The port is a daily driver on my real config. Phases 0-7 are
 substantially done, Phase 11 (Nix packaging) shipped early, and the
 Phase 10 QML extraction initiative is COMPLETE (all 25 units, see the
-ledger in docs/QML_EXTRACTION_PLAN.md). Phase 4 is now WAYLAND-ONLY
+ledger in docs/tracking/QML_EXTRACTION_PLAN.md). Phase 4 is now WAYLAND-ONLY
 (X11 backend removed 2026-07-17). Session three (2026-07-17) also
 landed, via the feature-branch PR flow: the accessibility quartet's
 code half (dock-window keyboard focus mode, Accessible.* rollout, the
@@ -183,13 +183,13 @@ in Phases 10-11 where they originally sat.
       that doesn't assert something real/observable), modeled on
       latte-dock-qt6's documented standard (`5fcaa9f1`/`c903921d` in
       its history), which explicitly bans gaming the metric
-      Commits: c221f6e1 (`docs/TESTING.md`)
+      Commits: c221f6e1 (`docs/reference/TESTING.md`)
 - [x] Decide the test-infrastructure shape while it can still grow
       with the code: coverage-ratchet baseline (fails on regression),
       headless QML interaction-test harness skeleton. The
       e2e/screenshot harness needs a runnable dock and stays in
       Phase 10
-      Commits: c221f6e1 (decision recorded in `docs/TESTING.md`;
+      Commits: c221f6e1 (decision recorded in `docs/reference/TESTING.md`;
       harness/ratchet code lands with the Phase 2 compile milestone)
 - [x] Editor code intelligence: clangd resolves the whole Qt6/KF6 tree
       with zero false diagnostics straight from `nix develop`. Root
@@ -205,7 +205,7 @@ in Phases 10-11 where they originally sat.
       `NIX_CFLAGS_COMPILE` (never recorded in the DB). Verified headless
       with `clangd --check`: layoutmanager.cpp 21->0, effects.cpp 21->0,
       justifysplitters.h 5->0 real diagnostics. Contributor flow in
-      `docs/clangd-setup.md`; devShell ships clangd; `.vscode/` config
+      `docs/reference/clangd-setup.md`; devShell ships clangd; `.vscode/` config
       committed.
       Commits: <filled at merge>
 
@@ -487,7 +487,7 @@ blocking.
 - [x] Collapse the both-variants gate discipline: build-check.sh
       builds one tree (drop build-no-x11), gate-all.sh comment,
       CLAUDE.md references ("both WITH_X11 variants" in the C++
-      standard-raise process and build notes), docs/TESTING.md if it
+      standard-raise process and build notes), docs/reference/TESTING.md if it
       names the variant pair
       Commits: 3f857fbff
 - [x] Post-removal audit for textual X11 survivors: KX11Extras,
@@ -531,7 +531,7 @@ blocking.
       Commits:
 - [x] Survivor sweep (2026-07-18): a second whole-tree grep for the
       X11 vocabulary after the first removal wave, classified in
-      docs/x11-cleanup-audit.md. Executed the DEAD/stale removals:
+      docs/tracking/x11-cleanup-audit.md. Executed the DEAD/stale removals:
       the X11-only PlasmaCoreThumbnail preview element (deleted, the
       ToolTipInstance thumbnail ternary collapsed to PipeWire), the
       dead NETWM + orphaned KWindowSystem includes the layer-shell
@@ -540,7 +540,7 @@ blocking.
       removal reconfirmed complete (no HAVE_X11/WITH_X11 define, no
       find_package(X11|XCB), no X11 nix buildInput survives)
       Commits: 4c84c1bad, 67bd25638, 2f78a7d7e
-- [ ] AWAIT SIGN-OFF (survivor-sweep proposals, docs/x11-cleanup-audit.md):
+- [ ] AWAIT SIGN-OFF (survivor-sweep proposals, docs/tracking/x11-cleanup-audit.md):
       D2 the aboutApplication keep-above X11-id no-op (a Qt WId fed
       through fromX11WId never resolves in windowFor() on wayland, so
       the keep-above silently does nothing - known-defects D19; stub
@@ -882,7 +882,7 @@ blocking.
       middle-click action rather than being swallowed. ng reached the same
       conclusion in 613ddcc3b ("Qt.MidButton ... removed in Qt 6"); ng delegates
       the empty-area close to a C++ handler we don't have, so we keep our QML
-      handler with conditional acceptance. See docs/ng-upstream-audit.md finding A.
+      handler with conditional acceptance. See docs/reference/ng-upstream-audit.md finding A.
 - [x] Replace the `KWindowSystem` creatable-QML-element usage in the
       widget explorer with the KF6 singleton form
       Commits: b474adad
@@ -998,7 +998,7 @@ into C++. There is no drop-in replacement to import.
       modifier chains collapse into one executeStandardAction executor;
       tst_taskactions.qml pins that every config-offered enum resolves
       to a real command. The offered set is transcribed from the config
-      combos - see docs/REVIEW_NOTES.md for the review item)
+      combos - see docs/tracking/REVIEW_NOTES.md for the review item)
 - [x] Route wheel events to badges/sub-regions *inside* the tasks
       plasmoid explicitly, not just per-applet: `DragDrop.DropArea`
       blocks wheel event delivery in Qt6, so even though the
@@ -1015,7 +1015,7 @@ into C++. There is no drop-in replacement to import.
       preventStealing DropArea is stacked below the task list. The
       cross-boundary "does the containment deliver wheel into the
       plasmoid at all" question depends on the Phase 8 wheel bridge and
-      is recorded in docs/testing/live-only.md for live verification)
+      is recorded in docs/reference/live-only.md for live verification)
 
 ### Phase 7: Widget management, drag-and-drop, edit mode
 
@@ -1035,7 +1035,7 @@ before implementing, not just before merging.
       m_appletsInScheduledDestruction; the deterministic C++ fix is in
       place and matches the prescription. Final "the widget visibly
       disappears" confirmation is a human click-test, queued in
-      docs/REVIEW_NOTES.md)
+      docs/tracking/REVIEW_NOTES.md)
 - [x] **Widget add via drag** from the Widget Explorer: decide the
       C++-vs-QML drop-handling ownership split explicitly and keep it
       exclusive per mime type (e.g. Widget-Explorer-originated drops
@@ -1176,7 +1176,7 @@ before implementing, not just before merging.
       Commits:
 
 Qt5-faithful edit mode blueprint (decided live 2026-07-09, see
-docs/session-handoff.md for the measurements and
+docs/tracking/session-handoff.md for the measurements and
 reasoning): the blueprint grid must live inside the dock window, since
 two wlr-layer surfaces cannot be interleaved (no dock > grid >
 wallpaper stacking across the dock and CanvasConfigView surfaces).
@@ -2268,7 +2268,7 @@ multi-view, multi-monitor setup.
       (LayerShell::applyFixedGeometry offsets are relative to the
       passed screenGeometry and only land right when the surface is on
       that output). See "Multi-monitor" section in
-      docs/session-handoff.md for the measured evidence
+      docs/tracking/session-handoff.md for the measured evidence
       Commits: d670c97a (canvas, settings window and widget explorer are
       pinned to the edited view's output; hand-verified on the
       portrait+landscape setup), 7ac419d1 (secondary advanced-mode
@@ -2544,7 +2544,7 @@ showed how much of the dock can only be driven by a pointer today.
       docs/agent-logs/2026-07-17-keyboard-focus-mode.md). Desk pass
       owed (real keyboard: Meta+Alt+D, arrows/Home/End, Enter,
       Escape, badge + highlight visuals) - filed in
-      docs/manual-flake-removal-testing.md.
+      docs/reference/manual-flake-removal-testing.md.
       TWO FOLLOW-UPS from the merge review (neither is the
       stuck-focus defect class): (1) if the compositor silently
       denies requestActivate at mode entry, the mode FLAG stays true
@@ -2608,7 +2608,7 @@ showed how much of the dock can only be driven by a pointer today.
       (startup/running/quit-requested/unloaded) shipped with the
       session-shutdown work (9d183984e) and viewAppletsOrder with the
       clone-sync work (f7561df37). THE REVIEWED INTERFACE DESIGN IS
-      WRITTEN: docs/dbus-observability-interface.md (read surfaces as
+      WRITTEN: docs/reference/dbus-observability-interface.md (read surfaces as
       JSON keyed on containment id, coarse actions, the debug gate,
       the rejected-with-reasons list, and the 4-step landing order -
       viewsData + setViewEditMode first). Implementation proceeds
@@ -2677,7 +2677,7 @@ showed how much of the dock can only be driven by a pointer today.
       kills bare role reads; the qmllint ratchet counts i18n() and
       inline-component outside-id reads) are in the ledger. STILL OPEN
       before ticking: the Orca desk pass
-      (docs/manual-flake-removal-testing.md "Orca screen-reader
+      (docs/reference/manual-flake-removal-testing.md "Orca screen-reader
       pass"), the merge review's one nit (canvas Button.qml wires an
       undocumented Accessible.onToggleAction duplicating onPressAction
       - functionally safe, each fire is an independent correct toggle,
@@ -2740,7 +2740,7 @@ showed how much of the dock can only be driven by a pointer today.
       Commits:
 - [ ] CaptSilver testability adoption (REPLACES the microvm GUI-CI
       plan, my direction 2026-07-16; the full analysis is
-      docs/captsilver-testability-adoption.md and the study record is
+      docs/reference/captsilver-testability-adoption.md and the study record is
       docs/agent-logs/2026-07-16-captsilver-testability-study.md).
       HARD CONSTRAINT: everything must run in CI under a plain
       VM - no real GPU. Sub-items, in adoption order:
@@ -2789,7 +2789,7 @@ showed how much of the dock can only be driven by a pointer today.
             createApplet bug it caught are in
             docs/agent-logs/2026-07-16-p2-contract-transplants.md;
             one live "Show Alternatives" sanity pass remains in
-            docs/manual-flake-removal-testing.md).
+            docs/reference/manual-flake-removal-testing.md).
             Commits: 5925b167f, 7fc338cd5, 9ee6f7ad5, 22e6bb63d,
             885c1318e, 53839863b, 9f1672434, b21825ed4 (the worktree
             merge rebased the hashes the agent log records)
@@ -3450,7 +3450,7 @@ showed how much of the dock can only be driven by a pointer today.
       every icon size 16-128 against the REAL stepping extracted to
       containment code/autosize.js, hang-verified against the
       747d4870 loop form (1fdcb2e0). Clean negatives and the guard
-      inventory live in docs/session-handoff.md (2026-07-15 sweep
+      inventory live in docs/tracking/session-handoff.md (2026-07-15 sweep
       section). fa02b887's import path was assessed and is NOT
       headless-drivable (Storage::importLayoutFile requires a live
       corona); its guard stays live-verified only.
@@ -3529,7 +3529,7 @@ showed how much of the dock can only be driven by a pointer today.
       under gdb) rather than headless guessing; the double-draw is
       invisible on video content.
       Commits:
-- [x] QML extraction initiative: execute docs/QML_EXTRACTION_PLAN.md
+- [x] QML extraction initiative: execute docs/tracking/QML_EXTRACTION_PLAN.md
       (25 units EX-01..EX-25, each with a full spec, delegation tag,
       Qt5 anchor, and wave assignment; the completeness ledger at the
       top of that file is the live per-unit tracker - tick units
@@ -3633,15 +3633,15 @@ Features beyond even Latte git master, appropriate under the
 maintained-continuation framing. None of these start before their
 prerequisites in the phases above are done.
 
-- [ ] MULTI-DISTRO CI MATRIX (v0.12.0 release pre-req, planned
+- [ ] MULTI-DISTRO CI MATRIX (v0.20.0 release pre-req, planned
       2026-07-17) - take the headless nested-kwin/lavapipe sceneprobe +
       tests/e2e harness to Arch/Fedora/Ubuntu-family Plasma 6 containers
       with per-distro golden validation (graduated rigor: bit-exact on
       the NixOS pin, bless-frozen on stable distros, invariant+tolerance
-      on rolling). Green across the matrix gates the v0.12.0 tag (first
+      on rolling). Green across the matrix gates the v0.20.0 tag (first
       tagged continuation release; upstream stopped at v0.10.8, tree is
       at 0.10.77). Full architecture, phased A-E checklist and open
-      decisions in docs/multi-distro-ci-plan.md. Cross-ARCH (aarch64)
+      decisions in docs/tracking/multi-distro-ci-plan.md. Cross-ARCH (aarch64)
       golden verification (item 9) is PARKED there with its findings -
       the width-knob crashes lavapipe, and a local aarch64 guest needs
       binfmt or a real ARM box; the distro matrix is the higher-value
@@ -3771,7 +3771,7 @@ prerequisites in the phases above are done.
       placement, riding the existing ClonedView sync machinery. Full
       design, settled decisions (keying, sync scope, editability,
       lifecycle/detach) and prerequisite tracking:
-      docs/dock-replication-design.md. Blocked on the Phase 8
+      docs/reference/dock-replication-design.md. Blocked on the Phase 8
       cloned-view order-sync item and a live screens-group clone
       verification
       Commits:
@@ -3836,7 +3836,7 @@ prerequisites in the phases above are done.
       surface (that pair is the living Qt6 reference for the
       protocol, the same way libplasma 6.6.5 was for popups);
       (c) decide vendor-vs-depend for dbusmenu parsing the way
-      docs/taskmanager-integration-research.md decided the tasks
+      docs/reference/taskmanager-integration-research.md decided the tasks
       backend (record the decision the same way);
       (d) only then the applet port itself, IN ITS OWN REPO: fork
       github.com/psifidotos/applet-window-appmenu to whimbree with
@@ -3915,7 +3915,7 @@ prerequisites in the phases above are done.
       pitch plasma-workspace on a public libtaskmanager API for the
       task-manager backend helpers (jump-list/places/recent-doc
       actions, smart-launcher badge tracking) - see
-      docs/taskmanager-integration-research.md; the evidence is that
+      docs/reference/taskmanager-integration-research.md; the evidence is that
       three independent ports all vendor the same plasma-desktop
       file, and ng's attempt to shrink that vendor cost four end-user
       features plus silent breakage (itemized in the research doc).

@@ -1,7 +1,7 @@
 # Pure cores for the containment plugin
 
 Behavioral logic extracted out of the containment package QML per
-docs/QML_EXTRACTION_PLAN.md (section C conventions). Everything in
+docs/tracking/QML_EXTRACTION_PLAN.md (section C conventions). Everything in
 this directory is a pure core:
 
 - Plain value structs in, plain values out.

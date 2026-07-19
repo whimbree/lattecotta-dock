@@ -114,7 +114,7 @@ public:
     QList<int> appletsOrder() const;
     //! read the live drop-marker (dndSpacer) visual insert index from the
     //! layout manager: >=0 while a drag hovers the view, -1 when no marker is
-    //! live (the G3 readback, docs/e2e-interaction-test-plan.md - the direct
+    //! live (the G3 readback, docs/tracking/e2e-interaction-test-plan.md - the direct
     //! insert(-1) observability an add/reorder abort asserts stays clean).
     int readDropMarkerIndex();
     QList<int> appletsInLockedZoom() const;

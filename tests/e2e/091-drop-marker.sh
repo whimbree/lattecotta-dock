@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # e2e-mode: nested-only
 #
-# C-I4 / P4, the G3 readback (docs/e2e-interaction-test-plan.md): the live
+# C-I4 / P4, the G3 readback (docs/tracking/e2e-interaction-test-plan.md): the live
 # drop-marker readback viewDropMarkerIndex - the direct insert(-1)
 # observability an add/reorder abort leans on.
 #

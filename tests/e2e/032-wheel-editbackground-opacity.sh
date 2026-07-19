@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # e2e-mode: nested-only
 #
-# AU-6a control 2 (docs/edit-mode-settings-audit-plan.md, cluster CL-6): the LIVE
+# AU-6a control 2 (docs/tracking/edit-mode-settings-audit-plan.md, cluster CL-6): the LIVE
 # driven proof of the edit-background-wheel fork-rewire trap. In edit mode the
 # wheel over the canvas grid adjusts editBackgroundOpacity - the edit-mode grid
 # overlay's opacity, a Double in [0,1]. BOTH reference forks rewired this handler

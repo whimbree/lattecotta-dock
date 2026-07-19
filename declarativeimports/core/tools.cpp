@@ -19,7 +19,7 @@
 // chain they feed) before the attached PlatformTheme resolved its palette, so
 // the getter handed over a default-constructed invalid QColor, self-corrected
 // a beat later by the theme's change notify. Those call sites now guard the
-// brightness call on color validity (D14, docs/known-defects.md), so this
+// brightness call on color validity (D14, docs/tracking/known-defects.md), so this
 // boundary is SILENT at startup. Any refusal now is a genuine invalid color
 // and deserves a fresh hunt, not a shrug.
 

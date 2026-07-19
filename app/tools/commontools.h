@@ -19,7 +19,7 @@ namespace Latte {
 
 // the color brightness/luminance helpers moved to the ColorTools pure core
 // (declarativeimports/core/units/colortools.h, EX-19 in
-// docs/QML_EXTRACTION_PLAN.md) - one authority instead of nine copies
+// docs/tracking/QML_EXTRACTION_PLAN.md) - one authority instead of nine copies
 
 QString rectToString(const QRect &rect);
 QRect stringToRect(const QString &str);

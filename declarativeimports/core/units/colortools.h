@@ -8,7 +8,7 @@
 #ifndef LATTECOLORTOOLSCORE_H
 #define LATTECOLORTOOLSCORE_H
 
-// EX-19 ColorLuminance (docs/QML_EXTRACTION_PLAN.md): the single authority
+// EX-19 ColorLuminance (docs/tracking/QML_EXTRACTION_PLAN.md): the single authority
 // for the W3C color brightness/luminance math that previously lived in nine
 // copies - three ColorizerTools.js files, four inline QML twins (default
 // indicator, LatteIndicator, ShortcutBadge, LatteDockConfiguration) and two

@@ -1,4 +1,4 @@
-# Multi-distro CI matrix plan (v0.12.0 release pre-req)
+# Multi-distro CI matrix plan (v0.20.0 release pre-req)
 
 Planning artifact, written 2026-07-17. The Plasma 6 port has a mature
 HEADLESS gate stack (nested kwin_wayland + lavapipe sceneprobe, the
@@ -6,24 +6,24 @@ tests/e2e nested-vehicle suite) that today runs only on the pinned NixOS
 dev environment. This plan takes that same harness to the distros real
 users run - Arch, Fedora, an Ubuntu-family Plasma 6 image - in a fully
 automated container CI matrix with per-distro golden validation. Green
-across the matrix is the release gate for **v0.12.0**, the first tagged
+across the matrix is the release gate for **v0.20.0**, the first tagged
 continuation release (upstream Latte stopped at v0.10.8; this tree is at
 an interim VERSION 0.10.77 in CMakeLists.txt). A linked NATIVE PACKAGING
 workstream (Phases F-G) rides on the same per-distro build environments
 to produce installable .deb/.rpm/PKGBUILD/ebuild/xbps artifacts.
 
 This is a CHECKLIST, not prose to read once - same discipline as
-docs/PORTING_PLAN.md. Every task is a `- [ ]` with a Commits: line;
+docs/tracking/PORTING_PLAN.md. Every task is a `- [ ]` with a Commits: line;
 tick and fill as work lands.
 
-## Why this is the v0.12.0 gate
+## Why this is the v0.20.0 gate
 
 The NixOS pinned sceneprobe gate proves BIT-EXACT determinism under a
 frozen Qt+Mesa+fontconfig, which is the precise per-commit regression
 tool. It proves nothing about whether the port BUILDS and RENDERS
 correctly against the distro-shipped Qt6/KF6/Plasma/Mesa that actual
 users have. A continuation release that jumps upstream's dormant v0.10.8
-to v0.12.0 needs that portability evidence, automated, before the tag.
+to v0.20.0 needs that portability evidence, automated, before the tag.
 The matrix is additive: the NixOS pinned tier stays the canonical merge
 gate; the distro matrix is the release/periodic gate.
 
@@ -174,7 +174,7 @@ pass on every distro regardless of tier.
 - **Sceneprobe** - bit-exact on NixOS (merge gate); per-distro tier
   (bless-frozen or invariant+tolerance) on the matrix (release gate,
   diff artifacts on failure).
-- v0.12.0 blocks on the agreed matrix being green (DECISION 5: all
+- v0.20.0 blocks on the agreed matrix being green (DECISION 5: all
   distros, or NixOS + at least one mainstream distro).
 
 ## Phased checklist
@@ -640,10 +640,10 @@ natural home for the parked aarch64 golden tier.
 - [ ] D3 Required checks / branch protection wired to the matrix.
       Commits:
 
-### Phase E - v0.12.0 release
-- [ ] E1 Bump CMakeLists VERSION 0.10.77 -> 0.12.0; changelog; release
+### Phase E - v0.20.0 release
+- [ ] E1 Bump CMakeLists VERSION 0.10.77 -> 0.20.0; changelog; release
       process doc. Commits:
-- [ ] E2 Matrix green on the release commit; tag v0.12.0. Commits:
+- [ ] E2 Matrix green on the release commit; tag v0.20.0. Commits:
 
 ## Native packaging workstream (distinct from, built on, the CI matrix)
 

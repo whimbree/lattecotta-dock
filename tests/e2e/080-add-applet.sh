@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # e2e-mode: nested-only
 #
-# C-I3 / P3 acceptance (docs/e2e-interaction-test-plan.md, HC3): the coarse
+# C-I3 / P3 acceptance (docs/tracking/e2e-interaction-test-plan.md, HC3): the coarse
 # addApplet D-Bus action, PROVING BOTH SIDES.
 #
 #   Happy path - append an installed plasmoid and watch the applet-id order

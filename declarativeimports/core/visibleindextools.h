@@ -17,7 +17,7 @@
 namespace Latte {
 
 //! Thin QML shell over the VisibleIndex pure core (EX-06 in
-//! docs/QML_EXTRACTION_PLAN.md, units/visibleindex.h). The indexer
+//! docs/tracking/QML_EXTRACTION_PLAN.md, units/visibleindex.h). The indexer
 //! twins' collector Bindings feed row snapshots - lists of {index,
 //! isSeparator, isHidden, isMarginsSeparator, subItemCount} - and every
 //! verdict comes from the core; the QML keeps only its live reads

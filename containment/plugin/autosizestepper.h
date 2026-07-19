@@ -18,7 +18,7 @@ namespace Latte {
 namespace Containment {
 
 //! Thin QML shell over the AutoSizeEngine pure core (EX-04 in
-//! docs/QML_EXTRACTION_PLAN.md, units/autosizeengine.h). The containment
+//! docs/tracking/QML_EXTRACTION_PLAN.md, units/autosizeengine.h). The containment
 //! ability AutoSize.qml instantiates one stepper per sizer: the stepper
 //! owns the prediction history, the QML keeps its timers, gates and
 //! property reads and asks here for decisions only.

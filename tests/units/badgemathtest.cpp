@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-20 BadgeMath (docs/QML_EXTRACTION_PLAN.md): behavioral tests for the
+// EX-20 BadgeMath (docs/tracking/QML_EXTRACTION_PLAN.md): behavioral tests for the
 // badge identifier/record/proportion/arc/label core and its QML-facing
 // wrapper (compiled into this sanitized binary, so the boundary refusals
 // run instrumented too).

@@ -1,7 +1,7 @@
 # P3b transplant wave - running ledger (2026-07-17)
 
 Worktree: /tmp/latte-wt-p3b, branch p3b-transplants. Method per
-docs/captsilver-testability-adoption.md P3b: premise checked against OUR
+docs/reference/captsilver-testability-adoption.md P3b: premise checked against OUR
 code first, raised past the fork's cases, negative-tested. Reference:
 ~/Projects/latte-dock-qt6 at origin/main (read via git show; local
 checkout sits at 9003f33a).

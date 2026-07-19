@@ -49,7 +49,7 @@ rest, write new commits.
 
 ## Plan
 
-`docs/PORTING_PLAN.md` has the real detail - it's the product of
+`docs/tracking/PORTING_PLAN.md` has the real detail - it's the product of
 reading every commit body (not just subjects) across both reference
 forks' full port-work ranges (406 commits in latte-dock-ng, 194 in
 latte-dock-qt6), cross-referenced against live testing of both. 13
@@ -146,7 +146,7 @@ stale checkboxes."
   does not belong in the README (my correction, 2026-07-17).
 - Prefer new commits over amending, except when explicitly asked (e.g.
   cleaning up history before opening a PR).
-- This file and `docs/PORTING_PLAN.md` are committed, but both are live
+- This file and `docs/tracking/PORTING_PLAN.md` are committed, but both are live
   documents - update them as direction changes or new information comes
   in (e.g. from watching the reference forks' ongoing work) rather than
   treating either as fixed once written.
@@ -159,8 +159,8 @@ stale checkboxes."
   standing. Date every change (as these agreements already do with "my
   direction, DATE" / "tightened DATE" / "added DATE") so the evolution is
   legible and the next reader can trust the latest wording is current. This
-  applies to the decision docs too (docs/known-defects.md, the plan
-  checklists, docs/session-handoff.md): keep them current as work lands, and
+  applies to the decision docs too (docs/tracking/known-defects.md, the plan
+  checklists, docs/tracking/session-handoff.md): keep them current as work lands, and
   retire or migrate entries that have gone stale.
 
 ### PR workflow and independent review
@@ -250,11 +250,11 @@ rewrite them; 2bba6cb8b cleaned up exactly that). New findings get
 filed as plan items with evidence even when fixed the same day - a
 bug found, fixed and never written down is invisible to the next
 session. A real DEFECT (a bug, whether fixed the same day or still
-open) ALSO earns an entry in docs/known-defects.md, the flat
+open) ALSO earns an entry in docs/tracking/known-defects.md, the flat
 found-bugs registry - one line to scan for "what is known broken",
 including bugs found by code-reading or an adversarial test-design
 pass that are not fixed yet (SUSPECTED/OPEN are valid recorded
-states). Update docs/session-handoff.md as work lands, not at the end.
+states). Update docs/tracking/session-handoff.md as work lands, not at the end.
 
 Definition of done, every change: root cause at origin (or the
 guard's contract commented); driven with recorded evidence (nested
@@ -262,7 +262,7 @@ vehicle or live session); temporary instrumentation removed; plan
 ticked and findings filed; commit body per above; QML gate if QML was
 touched; stubs marked both ways; new asserted-on state gets its D-Bus
 readback recorded in the XML + design doc + usage reference
-(docs/dbus-interface-reference.md); scripts/gate-all.sh green AFTER
+(docs/reference/dbus-interface-reference.md); scripts/gate-all.sh green AFTER
 the final commit before any code push (exit code is the verdict, the
 pre-push hook enforces the stamp); README updated when the landing is
 major.
@@ -375,7 +375,7 @@ preference. Concretely:
   wrapping QObjects in shared_ptr) instead of naked
   new/delete/malloc/free; enum class, std::optional/std::variant for
   absent and alternative states (the step-2.5 law in
-  docs/TESTING.md); const correctness; value types where copies are
+  docs/reference/TESTING.md); const correctness; value types where copies are
   cheap.
 - Expressive, concise code that follows ESTABLISHED LANGUAGE
   PATTERNS. "The purpose of abstracting is not to be vague, but to
@@ -447,7 +447,7 @@ preference. Concretely:
 
 Everything should be cheaply instrumentable from outside the process,
 with D-Bus as the primary surface (decided 2026-07-16; the Phase 10
-requirements subsection in docs/PORTING_PLAN.md carries the full
+requirements subsection in docs/tracking/PORTING_PLAN.md carries the full
 contract). The extraction initiative's live-verification tail proved
 the cost of its absence: state had to be read by pixel-peeping
 screenshots and pointer acrobatics. Concretely:
@@ -466,7 +466,7 @@ screenshots and pointer acrobatics. Concretely:
 ### Pure-core discipline
 
 New pure cores (the QML extraction initiative) follow the step-2.5
-law in docs/TESTING.md: project C++ standard, invalid states designed
+law in docs/reference/TESTING.md: project C++ standard, invalid states designed
 out via types, tests green under ASan+UBSan, qmllint ratchet with
 strict-on-touch for cutover-touched QML.
 
@@ -500,7 +500,7 @@ shipping something that silently did nothing (the right call at the
 time). Mark it as a stub in the first place and this kind of silent gap
 doesn't happen. (Since fixed properly upstream in latte-dock-ng's
 `eabf7c89a`/`94f87ba66`/`ed0afd054` - see Phase 5/6 in
-`docs/PORTING_PLAN.md` for the actual Plasma 6 config-access pattern
+`docs/tracking/PORTING_PLAN.md` for the actual Plasma 6 config-access pattern
 that fix uncovered, which is worth carrying into this port directly.)
 
 ## Reference fork sync status
@@ -536,7 +536,7 @@ from here, not a re-read of the whole history:
   `curl -s "https://invent.kde.org/api/v4/projects/plasma%2Fplasma-desktop/repository/files/applets%2Ftaskmanager%2Fbackend.cpp/raw?ref=master" | diff - plasmoid/plugin/backend.cpp`
   (ours carries deliberate extensions - KWin D-Bus watcher,
   showAudioStreamOsd - so expect a stable base diff; look for NEW
-  upstream hunks. See docs/taskmanager-integration-research.md for the
+  upstream hunks. See docs/reference/taskmanager-integration-research.md for the
   vendor-vs-integrate analysis and the decision record.)
 
 ## Current status
@@ -555,7 +555,7 @@ CaptSilver P3b transplant wave, and the Phase 8 surface-drift fix -
 only the Orca screen-reader acceptance pass and the desk-hands checks
 remain from the quartet. The QML extraction initiative is COMPLETE
 (2026-07-16): all 25 units executed and merged - the ledger in
-docs/QML_EXTRACTION_PLAN.md is the record. The tree now carries 82
+docs/tracking/QML_EXTRACTION_PLAN.md is the record. The tree now carries 82
 ctest entries with 29 sanitized unit-header pairs (the coverage
 ratchet enforces the count) and a qmllint baseline that only shrinks.
 The step-2.5 law
@@ -565,5 +565,5 @@ rules above). Two companion-applet continuation items are planned as
 sibling repos consumed by flake input (separator first, then the
 applet-window-appmenu port) - see the continuation-features section of
 the porting plan. The README carries the public-facing roadmap and
-real-dock screenshots (docs/screenshots/). docs/session-handoff.md
+real-dock screenshots (docs/screenshots/). docs/tracking/session-handoff.md
 carries the running session state.

@@ -2,7 +2,7 @@
 
 Source: `docs/prompts/panel-issues.md` (Bree's raw report, 2026-07-17).
 Confirmed with Bree before farm-out. This is a CHECKLIST, same discipline as
-docs/multi-distro-ci-plan.md: every fix lands AT ROOT, WITH its regression
+docs/tracking/multi-distro-ci-plan.md: every fix lands AT ROOT, WITH its regression
 guard and recorded driving evidence (CLAUDE.md definition of done), never a
 downstream bandaid.
 

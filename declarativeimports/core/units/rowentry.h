@@ -15,7 +15,7 @@
 
 namespace Latte {
 
-//! The shared row-snapshot type family (docs/QML_EXTRACTION_PLAN.md,
+//! The shared row-snapshot type family (docs/tracking/QML_EXTRACTION_PLAN.md,
 //! section E "shared enums first" note): one entry per indexed item of a
 //! dock row, gathered by the QML collector Bindings that read live
 //! children. EX-06 VisibleIndexEngine consumes it now; EX-14

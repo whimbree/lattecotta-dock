@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # Arch Linux build+gate environment for the multi-distro CI matrix
-# (docs/multi-distro-ci-plan.md, Phase A). Arch is the rolling KDE-nerd
+# (docs/tracking/multi-distro-ci-plan.md, Phase A). Arch is the rolling KDE-nerd
 # leg: goldens rot, so it gates at the invariant+tolerance tier, not
 # bit-exact. This layer installs ONLY the build/runtime/gate dependencies;
 # the port itself is built by ci/build-and-gate.sh against a bind-mounted

@@ -1,5 +1,5 @@
 # clangd configuration for the latte-dock Plasma 6 / Qt6 tree.
-# See docs/clangd-setup.md for the full contributor flow.
+# See docs/reference/clangd-setup.md for the full contributor flow.
 #
 # CompilationDatabase points clangd at build/, where CMake writes
 # compile_commands.json (CMAKE_EXPORT_COMPILE_COMMANDS is ON in the
@@ -15,7 +15,7 @@
 # wrapper, not as explicit flags), so clangd must extract them by running
 # the driver. That is the --query-driver argument, passed on the clangd
 # command line (there is no config-file key for it): .vscode/settings.json
-# sets it for VSCode, and docs/clangd-setup.md gives the glob for other
+# sets it for VSCode, and docs/reference/clangd-setup.md gives the glob for other
 # editors and for `clangd --check`. The glob tolerates the /nix/store hash
 # and gcc version so it never needs re-pinning.
 CompileFlags:

@@ -16,7 +16,7 @@
 #     shadowed the staged one - so every containment/plugin change "landed but
 #     never ran". lib-qml-env.sh now strips that leaf; this recipe is the
 #     standing guard that it stays stripped, in any nested run.
-#  2. The sanitized gate (docs/ub-catching-plan.md A3): a driven ASan/UBSan gate
+#  2. The sanitized gate (docs/tracking/ub-catching-plan.md A3): a driven ASan/UBSan gate
 #     that ran a shadowed, NON-instrumented binary would catch no UB and pass
 #     green - the worst kind of false confidence. When the caller sets
 #     E2E_EXPECT_ASAN=1 (scripts/run-asan-dock.sh does), this recipe additionally

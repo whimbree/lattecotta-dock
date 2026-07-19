@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # The TASK-REORDER driver for the e2e matrix (C-I8 / P7,
-# docs/e2e-interaction-test-plan.md section 5, families F4 and A3). Sourced by
+# docs/tracking/e2e-interaction-test-plan.md section 5, families F4 and A3). Sourced by
 # task-reorder recipes AFTER tests/e2e/lib.sh. Reusable across the launcher and
 # window-task sub-models: both reorder through the SAME tasks-applet handler
 # (plasmoid/.../taskslayout/MouseHandler.qml), keyed here by appId - the stable
@@ -14,7 +14,7 @@
 # through ConfigOverlay's MouseArea in edit mode; tasks move through the tasks
 # plasmoid's own DropArea, whose tasksModel.move() runs LIVE during onDragMove
 # (MouseHandler.qml:184), not on drop. The abort primitives below exist to
-# expose that live-move truth (defect D1, docs/known-defects.md): a crossed
+# expose that live-move truth (defect D1, docs/tracking/known-defects.md): a crossed
 # reorder commits immediately and neither Escape nor a release-back reverts it;
 # only a drag that never crossed a neighbour is a true no-op.
 #

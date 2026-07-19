@@ -5,7 +5,7 @@
 */
 
 // The Behavior page's real-handler WIRING audit (CL-3 in
-// docs/edit-mode-settings-audit-plan.md). Same pattern as
+// docs/tracking/edit-mode-settings-audit-plan.md). Same pattern as
 // settingswiringharnesstest / lengthhandleraudittest: a control's handler body
 // runs as a QML fragment against a stub QQmlPropertyMap standing in for
 // plasmoid.configuration, then the Tier B diff predicates

@@ -7,7 +7,7 @@
 */
 
 //! Pure pixel-scanline math behind PanelBackground's plasma-theme
-//! analysis (EX-25 in docs/QML_EXTRACTION_PLAN.md): max opacity of the
+//! analysis (EX-25 in docs/tracking/QML_EXTRACTION_PLAN.md): max opacity of the
 //! center element, corner roundness from mask or shadow corners, and
 //! the shadow band's size and color. The bodies are Michail's Qt5
 //! algorithms, extracted along the seam from David Goree's latte-dock-qt6

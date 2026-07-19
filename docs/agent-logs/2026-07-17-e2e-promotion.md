@@ -18,7 +18,7 @@ semantics (030's commit). One REAL finding filed for Phase 8
 root-cause: the window-x drift (finding 6) - the dock genuinely
 renders shifted from its reported geometry in the vehicle; whether
 the desk drifts too is a desk-owed check in
-docs/manual-flake-removal-testing.md, alongside the audio-badge
+docs/reference/manual-flake-removal-testing.md, alongside the audio-badge
 repeatable recipe (no pipewire in the vehicle) and the desk-side
 consecutive-desktops-wheel cross-check.
 

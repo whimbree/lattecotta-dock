@@ -5,7 +5,7 @@
 */
 
 // Behavioral test for the WindowCycler pure core (EX-16 in
-// docs/QML_EXTRACTION_PLAN.md) and its QML-facing WindowCyclerTools
+// docs/tracking/QML_EXTRACTION_PLAN.md) and its QML-facing WindowCyclerTools
 // wrapper (compiled in, per the sanitized-core rule). Expectations are
 // hand-derived from the f0ad7b23 QML bodies the spec names (SubWindows.qml
 // activateNextTask/activatePreviousTask/minimizeTask, the containment

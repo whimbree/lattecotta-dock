@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # e2e-mode: nested-only
 #
-# CL-3 behavior audit, the LIVE half (docs/edit-mode-settings-audit-plan.md).
+# CL-3 behavior audit, the LIVE half (docs/tracking/edit-mode-settings-audit-plan.md).
 # The Behavior page mixes four writer classes; the cfg controls (checkboxes,
 # the two action combos) and the S-a TypeSelection dead-key finding are pinned
 # deterministically in tests/behaviorwiringaudittest.cpp. The pos/vis/view

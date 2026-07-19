@@ -6,7 +6,7 @@ refuse every non-wayland platform, `9b41dd3ae`/`24e54b7d8`/`019c3aed3` stripped
 the conditional arms and the visual-mask machinery, `3f857fbff` removed
 `WITH_X11` from the build system, `ed9416a21` folded the two id-fallback
 leftovers the isPlatformX11 sweep did not reach). See the Phase 4 section of
-`docs/PORTING_PLAN.md` for the rationale and the removal checklist.
+`docs/tracking/PORTING_PLAN.md` for the rationale and the removal checklist.
 
 This audit is the survivor sweep: a whole-tree grep for the X11 vocabulary
 (`X11`, `xcb`, `XCB`, `HAVE_X11`, `WITH_X11`, `isPlatformX11`, `X11Extras`,
@@ -202,7 +202,7 @@ Proposal: do NOT delete the call (that drops the legitimate intent silently).
 Either mark it a `// STUB` like `skipTaskBar`, deferring the real keep-above to
 the PlasmaShellSurface/layer-shell surface-management work, or wire the about
 dialog's keep-above through the wayland surface directly. Recorded as a defect
-in `docs/known-defects.md`.
+in `docs/tracking/known-defects.md`.
 
 Blast radius: `lattecorona.cpp` `aboutApplication`; the wayland surface-request
 path if wired for real. Small.

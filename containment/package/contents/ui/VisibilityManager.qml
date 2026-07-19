@@ -64,7 +64,7 @@ Item{
 
     //! The per-edge rect tables of updateMaskArea/updateInputGeometry live
     //! in the MaskGeometry core (containment/plugin/units/maskgeometry.h,
-    //! EX-10 in docs/QML_EXTRACTION_PLAN.md; pinned by tests/units/
+    //! EX-10 in docs/tracking/QML_EXTRACTION_PLAN.md; pinned by tests/units/
     //! maskgeometrytest.cpp and tests/qml/tst_maskgeometry.qml). The bridge
     //! maps the core's decisions onto the effects protocol's sentinel
     //! rects; this file keeps the signal plumbing, the update gates and

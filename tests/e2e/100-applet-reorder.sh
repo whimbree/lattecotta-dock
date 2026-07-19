@@ -5,7 +5,7 @@
 # e2e-mode: nested-only
 #
 # The applet-REORDER driver's acceptance test (P6 / C-I7,
-# docs/e2e-interaction-test-plan.md). HC3: a driver whose acceptance only shows
+# docs/tracking/e2e-interaction-test-plan.md). HC3: a driver whose acceptance only shows
 # a green happy path is untrustworthy - it cannot be relied on to assert "the
 # abort left no residue" if it would report success regardless. So this proves,
 # on BOTH the horizontal (bottom/top, x-drag) AND the VERTICAL (left/right,

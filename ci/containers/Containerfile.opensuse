@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # openSUSE Tumbleweed build+gate environment for the multi-distro CI matrix
-# (docs/multi-distro-ci-plan.md, Phase A/B). Tumbleweed is a rolling
+# (docs/tracking/multi-distro-ci-plan.md, Phase A/B). Tumbleweed is a rolling
 # KDE-nerd leg (current Plasma): goldens rot, so it gates at the
 # invariant+tolerance tier, not bit-exact (though at the Mesa version below
 # the text-free scenes happen to match the nix-blessed lavapipe goldens

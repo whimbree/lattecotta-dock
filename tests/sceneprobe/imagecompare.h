@@ -5,7 +5,7 @@
 // Adopted from David Goree's latte-dock-qt6
 // (tests/sceneprobe/imagecompare.h at c3633f1a,
 // github.com/CaptSilver/latte-dock-qt6; see
-// docs/captsilver-testability-adoption.md, P1) - the comparator API
+// docs/reference/captsilver-testability-adoption.md, P1) - the comparator API
 // (CompareTolerance/CompareResult and its five functions) is Goree's,
 // unchanged. Local addition (multi-distro CI Phase C): the GoldenTier
 // vocabulary + parseGoldenTier/toleranceForTier, which decouple the

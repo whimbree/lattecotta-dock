@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-01 PreviewSwitchEngine (docs/QML_EXTRACTION_PLAN.md): behavioral tests
+// EX-01 PreviewSwitchEngine (docs/tracking/QML_EXTRACTION_PLAN.md): behavioral tests
 // for the previews decision core, written BEFORE the engine from the spec's
 // tables. Time is injected (plain qint64), no timers, no QML. Each slot
 // names the excavation commit whose trap it pins; the QML mechanics that

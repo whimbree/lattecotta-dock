@@ -20,7 +20,7 @@
 namespace Latte {
 
 //! Thin QML boundary over the WheelAccumulator pure core (EX-15 in
-//! docs/QML_EXTRACTION_PLAN.md, units/wheelaccumulator.h). Each wheel
+//! docs/tracking/QML_EXTRACTION_PLAN.md, units/wheelaccumulator.h). Each wheel
 //! site instantiates its own stepper - the accumulating mode carries a
 //! per-instance residue (every audio badge owns one), so this cannot be
 //! a singleton. The QML shells keep their timers, guards and action

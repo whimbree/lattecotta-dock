@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # e2e-mode: nested-only
 #
-# AU-1c (docs/edit-mode-settings-audit-plan.md, cluster CL-1): the LIVE
+# AU-1c (docs/tracking/edit-mode-settings-audit-plan.md, cluster CL-1): the LIVE
 # cross-view confirmation of the D16 fix - the Maximum settings slider re-tracks
 # the on-canvas ruler after the slider's handle binding has been clobbered.
 #

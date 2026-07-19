@@ -1,7 +1,7 @@
 # Phase 9 color-group audit - 2026-07-17
 
 Working ledger for the three Phase 9 audit checklist items in
-docs/PORTING_PLAN.md: (1) every Plasma/Kirigami color-group property
+docs/tracking/PORTING_PLAN.md: (1) every Plasma/Kirigami color-group property
 read in shipped QML checked against the theme object genuinely in
 scope, (2) the Header-color-group question for panel-contrast chrome,
 (3) reads of properties Plasma 6 removed from the containment graphic

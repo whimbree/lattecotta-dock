@@ -4,11 +4,11 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-03 ParabolicMathCore (docs/QML_EXTRACTION_PLAN.md): equivalence tests
+// EX-03 ParabolicMathCore (docs/tracking/QML_EXTRACTION_PLAN.md): equivalence tests
 // for the zoom curve against the QML implementation being replaced, plus
 // the stack-assembly and swap contracts of applyParabolicEffect.
 //
-// Reference-table generation method (per docs/TESTING.md): the rows in
+// Reference-table generation method (per docs/reference/TESTING.md): the rows in
 // scaleForItem_equivalenceTable were produced by driving the SHIPPED
 // declarativeimports/abilities/definition/ParabolicEffect.qml scaleForItem()
 // through qmltestrunner offscreen at HEAD 2f23f9bd (a scratch TestCase

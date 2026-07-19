@@ -5,10 +5,10 @@
 
     SPDX-License-Identifier: GPL-2.0-or-later
 */
-// EX-09 PositionerGeometry (docs/QML_EXTRACTION_PLAN.md): the pure
+// EX-09 PositionerGeometry (docs/tracking/QML_EXTRACTION_PLAN.md): the pure
 // sizing/placement math of a dock view.
 //
-// Case provenance (per docs/TESTING.md): all 28 slots are ported from
+// Case provenance (per docs/reference/TESTING.md): all 28 slots are ported from
 // latte-dock-qt6's positionergeometrytest.cpp at 81384003, github.com/CaptSilver/latte-dock-qt6 (their
 // 4a829185 extraction); every pure function was diffed against our
 // positioner.cpp bodies before adoption and matched exactly, so their

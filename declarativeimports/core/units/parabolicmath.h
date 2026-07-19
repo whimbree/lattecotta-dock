@@ -18,7 +18,7 @@
 namespace Latte {
 
 //! The parabolic zoom curve as pure functions (EX-03 in
-//! docs/QML_EXTRACTION_PLAN.md), extracted from the abilities definition
+//! docs/tracking/QML_EXTRACTION_PLAN.md), extracted from the abilities definition
 //! ParabolicEffect.qml and algebraically identical to the Qt5 ancestor's
 //! linearEffect (f0ad7b23). The QML definition keeps its signal emissions
 //! and asks here for numbers only; EX-02's router consumes the same

@@ -144,7 +144,7 @@ Read before implementing; do not re-derive.
   diff.png]`), `scripts/sceneprobe-gate.sh` (nested kwin + lavapipe ICD +
   `SCENEPROBE_TIER` + `--bless`; SELF-TESTS good/bad/blank first - the HC3
   precedent).
-- **D-Bus surface**: `docs/dbus-interface-reference.md`, adaptor XML
+- **D-Bus surface**: `docs/reference/dbus-interface-reference.md`, adaptor XML
   `app/dbus/org.kde.LatteDock.xml`, serializers `app/dbusreports.{h,cpp}` pinned
   by `tests/units/dbusreportstest.cpp`. Section 9 inventories which methods each
   verb uses and which are MISSING.
@@ -469,7 +469,7 @@ a success.
       section 9): index/appId were already the window-task order readback; this
       chunk documents the contract and pins it in `dbusreportstest`
       (windowTaskOrderReadbackTracksAppIdAcrossReorder). D1 disposition
-      (docs/known-defects.md): ACCEPTED, Qt5-faithful live-move - both reference
+      (docs/tracking/known-defects.md): ACCEPTED, Qt5-faithful live-move - both reference
       forks carry the identical live tasksModel.move; there is no revert to fix.
       O6: the driver is identity-generic and drives window tasks unchanged, and
       G4 is proven pure, so the LIVE window-task reorder with distinct-appId
@@ -1313,7 +1313,7 @@ merge --rebase`, re-resolve hashes, fetch).
       `viewAppletsData` (app/dbusreports.{h,cpp} + dbusreportstest + docs), the
       `setViewConfiguringApplets` D-Bus action (rearrange driving surface; XML +
       corona + docs). DR-6 rides the `dragkey` fakepointer verb (on main via
-      C-I8). Found+confirmed D2 live (docs/known-defects.md). Commits: de0934d66, df4bf85c3, b1655003b
+      C-I8). Found+confirmed D2 live (docs/tracking/known-defects.md). Commits: de0934d66, df4bf85c3, b1655003b
 - [x] **C-I8 = P7** task-reorder driver + window-task readback (commit+abort).
       `tests/e2e/matrix/task-reorder-lib.sh` (driver, launcher+window sub-models
       via appId), fakepointer `dragkey` verb (DR-6 escape-in-held-drag), G4

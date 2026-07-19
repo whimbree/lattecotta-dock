@@ -5,7 +5,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-22 ActivitySetAlgebra (docs/QML_EXTRACTION_PLAN.md). Case list ported
+// EX-22 ActivitySetAlgebra (docs/tracking/QML_EXTRACTION_PLAN.md). Case list ported
 // from David Goree's latte-dock-qt6 (tests/activitysetalgebratest.cpp at
 // 941bb7fb, github.com/CaptSilver/latte-dock-qt6; 7 slots:
 // removeAll duplicate semantics, order preservation, empty cases), re-derived

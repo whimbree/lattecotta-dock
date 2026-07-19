@@ -9,7 +9,7 @@
 #define POSITIONERGEOMETRY_H
 
 //! The pure sizing/placement math of a dock view (EX-09 in
-//! docs/QML_EXTRACTION_PLAN.md), lifted from Positioner's live View reads.
+//! docs/tracking/QML_EXTRACTION_PLAN.md), lifted from Positioner's live View reads.
 //! The header structure and 28 test fixtures are adopted from David
 //! Goree's latte-dock-qt6 (app/view/positionergeometry.h at 4a829185,
 //! github.com/CaptSilver/latte-dock-qt6); every function was diffed

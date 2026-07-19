@@ -5,7 +5,7 @@
 */
 
 //! Pins the WindowId newtype's whole boundary contract (the WindowId
-//! newtype hardening item in docs/PORTING_PLAN.md):
+//! newtype hardening item in docs/tracking/PORTING_PLAN.md):
 //! - construction stays explicit-only: the compile-time pins below fail
 //!   the build if a QByteArray or char* ever converts in implicitly
 //!   again (the stringly-typed hole the newtype exists to close);

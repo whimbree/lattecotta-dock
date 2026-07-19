@@ -4,17 +4,17 @@ Re-runnable - KEEP INVOKING THIS PROMPT until every item in the
 priority list below reads DONE. Written 2026-07-16 after the QML
 extraction initiative completed; REVISED the same day after the first
 execution session (items renumbered to reflect what landed - read
-docs/session-handoff.md's 2026-07-16 entry for that session's full
+docs/tracking/session-handoff.md's 2026-07-16 entry for that session's full
 record). It assumes CLAUDE.md has been read (the working agreements,
 root-cause law, regression discipline, copyright rules, code-clarity
 laws and Q_ASSERT truths there are binding and are not repeated here).
 
 Documentation contract for every session driving this prompt: keep
-docs/session-handoff.md current as work lands (not at the end); tick
+docs/tracking/session-handoff.md current as work lands (not at the end); tick
 plan items with commit hashes the moment they merge; every subagent
 writes its ledger file in docs/agent-logs/ (one per dispatch,
 YYYY-MM-DD-<slug>.md); anything discovered to need my physical hands
-goes into docs/manual-flake-removal-testing.md with a recipe and the
+goes into docs/reference/manual-flake-removal-testing.md with a recipe and the
 plan item it verifies, NOT silently skipped. A session that ends
 without updating this file's status list below (when an item's status
 changed) has not finished its job.
@@ -23,10 +23,10 @@ changed) has not finished its job.
 
 - Repo: ~/Projects/latte-dock, GitHub whimbree/lattecotta-dock
   (project name Lattecotta Dock; binary/D-Bus names stay latte).
-- docs/PORTING_PLAN.md is the tracker: its "Where we are" section
+- docs/tracking/PORTING_PLAN.md is the tracker: its "Where we are" section
   carries the ranked high-priority list; every task is a checkbox with
   a Commits: line - tick and fill as you land work.
-- docs/QML_EXTRACTION_PLAN.md is COMPLETE; its ledger's executed notes
+- docs/tracking/QML_EXTRACTION_PLAN.md is COMPLETE; its ledger's executed notes
   name the still-owed live-verification recipes. Do not reopen units;
   new cores follow the same step-2.5 law (sanitized unit tests via
   latte_add_unit_test, QT_FORCE_ASSERTS, type discipline, qmllint
@@ -70,7 +70,7 @@ changed) has not finished its job.
 ## Priority order (status revised 2026-07-16 end of session one)
 
 Work top to bottom over the OPEN items. Each names its home in
-docs/PORTING_PLAN.md; read the full checklist item there before
+docs/tracking/PORTING_PLAN.md; read the full checklist item there before
 starting - this list is the map, not the territory. DONE items stay
 listed so a re-run knows not to redo them.
 
@@ -96,7 +96,7 @@ plan item for the recorded decision. Never land replacement icons.)
 
 1. DONE - Session shutdown/logout teardown (525f556c6, e02d1bcde,
    9d183984e). One real logout/login check remains in
-   docs/manual-flake-removal-testing.md.
+   docs/reference/manual-flake-removal-testing.md.
 2. DONE - Startup retry deadlock closed not-applicable with evidence
    (9df0732f9); latency record stands; autostart decision is mine
    (manual list).
@@ -140,7 +140,7 @@ plan item for the recorded decision. Never land replacement icons.)
    nested-vehicle scripts into a maintained tests/e2e suite with the
    EX recipes and a state-vs-render geometry guard. REMAINING: only the
    ORCA screen-reader acceptance pass (needs my ears - the desk script
-   is in docs/manual-flake-removal-testing.md) plus the two filed
+   is in docs/reference/manual-flake-removal-testing.md) plus the two filed
    keyboard-focus follow-ups (denied-activation flag staleness,
    cross-view exclusivity) in the Phase 10 keyboard item.
 9. **CROSS-MACHINE-ONLY - CaptSilver adoption** (P1+P2, follow-up
@@ -234,7 +234,7 @@ plan item for the recorded decision. Never land replacement icons.)
     fresh, say so ("Extraction boundary informed by David Goree's
     latte-dock-qt6 (app/foo.h, github.com/CaptSilver/latte-dock-qt6);
     implementation is independent"). Also fix docs: scan
-    docs/QML_EXTRACTION_PLAN.md for bare "capt" - expand to at least
+    docs/tracking/QML_EXTRACTION_PLAN.md for bare "capt" - expand to at least
     "David Goree's latte-dock-qt6 (github.com/CaptSilver/latte-dock-qt6)"
     on first mention per unit section, with the commit hash and source
     file where applicable; later mentions in the same section may use
@@ -257,7 +257,7 @@ plan item for the recorded decision. Never land replacement icons.)
     CaptSilver undersells his contribution ("independently-found fixes
     ... credited in commit messages"). Rewrite it to acknowledge
     specifically: the sceneprobe visual-regression harness was adopted
-    from his repo; the testing standard (docs/TESTING.md) was modeled
+    from his repo; the testing standard (docs/reference/TESTING.md) was modeled
     on his testing commits; seven QML-extraction units are tagged "capt
     blueprint" and used his seam decisions as the starting point;
     multiple test files were transplanted with his test cases forming
@@ -289,7 +289,7 @@ item and its phase notes, design before code, tests first where a core
 is touched, land in small bisectable commits, run the gates, live-verify
 against the running dock (throwaway first, real config for the final
 check when the change is user-visible), tick the plan checkbox with
-commit hashes, push, and keep docs/session-handoff.md current so an
+commit hashes, push, and keep docs/tracking/session-handoff.md current so an
 interruption loses nothing. When a live check finds a defect, stop and
 root-cause it before continuing the checklist - found defects outrank
 planned work. Flag anything needing the author's physical input and

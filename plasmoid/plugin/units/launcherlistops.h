@@ -21,7 +21,7 @@
 namespace Latte {
 namespace LauncherLists {
 
-//! Launcher list algebra (EX-11 in docs/QML_EXTRACTION_PLAN.md): the
+//! Launcher list algebra (EX-11 in docs/tracking/QML_EXTRACTION_PLAN.md): the
 //! stored-record grammar, separator name allocation, the order
 //! reconciliation planner and the animation registries that lived across
 //! abilities/Launchers.qml, abilities/launchers/Validator.qml and

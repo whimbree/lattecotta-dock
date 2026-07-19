@@ -18,7 +18,7 @@ pwthumb="$repo/plasmoid/package/contents/ui/previews/PipeWireThumbnail.qml"
 fail=0
 bad() { echo "preview-contract-rules VIOLATION: $1"; echo "  -> $2"; fail=1; }
 
-# Rules 1-4 MIGRATED (EX-01, docs/QML_EXTRACTION_PLAN.md): their behavioral
+# Rules 1-4 MIGRATED (EX-01, docs/tracking/QML_EXTRACTION_PLAN.md): their behavioral
 # halves (burst window semantics, Defer carrying the countdown cancel,
 # settle never re-entering the burst check, interval < threshold) live in
 # tests/units/previewswitchenginetest.cpp against the engine with an

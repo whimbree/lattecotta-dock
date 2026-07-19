@@ -23,7 +23,7 @@
 namespace Latte {
 
 //! IconItem's source-routing decisions as pure functions (EX-24 in
-//! docs/QML_EXTRACTION_PLAN.md), adopted from David Goree's latte-dock-qt6
+//! docs/tracking/QML_EXTRACTION_PLAN.md), adopted from David Goree's latte-dock-qt6
 //! (declarativeimports/core/iconsourceclassifier.h at ad74a34a,
 //! github.com/CaptSilver/latte-dock-qt6) after diffing their ancestor
 //! ladder against our iconitem.cpp and the Qt5 ancestor (f0ad7b23) - all

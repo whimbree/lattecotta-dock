@@ -690,7 +690,7 @@ QRegion Corona::availableScreenRegionWithCriteria(int id,
         return available;
     }
 
-    //! EX-08 (docs/QML_EXTRACTION_PLAN.md): the geometry math lives in the
+    //! EX-08 (docs/tracking/QML_EXTRACTION_PLAN.md): the geometry math lives in the
     //! tested ScreenGeometryCalculator over view-footprint snapshots; this
     //! function keeps the live-graph reads. Deliberately NO self-origin
     //! exclusion (1b932ed9) - see the calculator header.
@@ -1328,7 +1328,7 @@ void Corona::activateTaskAt(const uint &containmentId, const int &index)
         return;
     }
 
-    //! the exact Meta+<index> path (docs/dbus-observability-interface.md):
+    //! the exact Meta+<index> path (docs/reference/dbus-observability-interface.md):
     //! plasma-tasks fallback, wait-for-shown deferral while the dock is
     //! hidden, then the shortcuts host's activateEntryAtIndex - the same
     //! code a left-click on the entry drives. Index is therefore the
@@ -1546,7 +1546,7 @@ void Corona::addApplet(const uint &containmentId, const QString &pluginId)
         //! no view for this containment id means the request is outside
         //! input, refused loudly with NO applet created - never a silent
         //! no-op, never a constructed view (reads-never-construct extended
-        //! to the mutators, docs/dbus-observability-interface.md)
+        //! to the mutators, docs/reference/dbus-observability-interface.md)
         qWarning() << "corona: addApplet requested for containment" << containmentId << "which has no view; no applet created";
         return;
     }
@@ -1570,7 +1570,7 @@ void Corona::removeApplet(const uint &containmentId, const uint &appletId)
         //! a mutating boundary refuses a bad id the same way the reads do:
         //! no view for this containment id means the request is outside
         //! input, refused loudly with NO applet removed (reads-never-construct
-        //! extended to the mutators, docs/dbus-observability-interface.md)
+        //! extended to the mutators, docs/reference/dbus-observability-interface.md)
         qWarning() << "corona: removeApplet requested for containment" << containmentId << "which has no view; no applet removed";
         return;
     }
@@ -1596,7 +1596,7 @@ void Corona::showWidgetExplorer(const uint &containmentId)
         //! a mutating boundary refuses a bad id the same way the reads do: no
         //! view for this containment id means the request is outside input,
         //! refused loudly with NO window shown (reads-never-construct extended
-        //! to this action, docs/dbus-observability-interface.md)
+        //! to this action, docs/reference/dbus-observability-interface.md)
         qWarning() << "corona: showWidgetExplorer requested for containment" << containmentId << "which has no view; no explorer shown";
         return;
     }

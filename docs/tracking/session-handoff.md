@@ -6,7 +6,7 @@ layer is fully landed - C-I7/C-I8/C-I9 merged as PRs #37/#38/#39; the edit-mode
 settings audit harness CL-0 merged as PR #40; and a second merge wave cleared:
 CL-1 length cluster (PR #43 - D15 ACCEPTED, D16 slider-desync + D17 Justify
 stranding FIXED), the X11 survivor sweep (PR #42 - dead-code removals, D19 filed,
-proposals D1/D2/D3/D5/S1 awaiting sign-off in docs/x11-cleanup-audit.md), and the
+proposals D1/D2/D3/D5/S1 awaiting sign-off in docs/tracking/x11-cleanup-audit.md), and the
 D20 normal-mode menu guard (PR #44 - the write-path emptying was disproven).
 D20-class menu emptying was also fixed live on the real dock by restoring the
 contextMenuActionsAlwaysShown key. The Light/Layout colorizer contrast fix
@@ -34,13 +34,13 @@ reusable farm/review/merge workflow + subagent templates):
 1. Farm CL-5 (tasks page / D10 - DECIDED: WIRE IT UP; the ng eabf7c89a pattern) -
    the last audit cluster: first prove whether tasks.plasmoid.configuration.*
    writes apply, then wire them if not, then audit each control.
-2. X11 hygiene, best-practice sequence (docs/x11-cleanup-audit.md has the plain-
+2. X11 hygiene, best-practice sequence (docs/tracking/x11-cleanup-audit.md has the plain-
    English plan): one small PR = D3 (collapse the dead windowColorScheme else-arm)
    + D2 (mark the D19 keep-above an explicit `// STUB`); THEN a deliberate isolated
    later pass for D1 (strip the WindowId X11 parse surface -> uuid-only) and S1
    (QByteArray-uuid -> QUuid substrate, LAST, its own driven-verified PR, optional);
    D5 at the next fork-sync.
-3. The e2e scenario/abort track (C-S*/C-A* in docs/e2e-interaction-test-plan.md)
+3. The e2e scenario/abort track (C-S*/C-A* in docs/tracking/e2e-interaction-test-plan.md)
    and the deferred nits.
 
 Note: AGENTS DEVELOP IN THE NESTED VEHICLE, never the real session (a WIP-build
@@ -90,7 +90,7 @@ IN FLIGHT (farmed, code-only PRs; orchestrator owns plan ticks + defect filing):
   X11-only WindowThumbnail element reachable only through a dead ternary arm;
   app/wm/windowid.h's dead X11 parse surface), and PROPOSE (sign-off-gated) the
   windowid.h newtype simplification and the QByteArray-uuid vs QUuid substrate
-  question. Primary deliverable docs/x11-cleanup-audit.md.
+  question. Primary deliverable docs/tracking/x11-cleanup-audit.md.
 
 NEXT after CL-1: the wave-2 audit clusters {CL-2 appearance, CL-3 behavior,
 CL-4 effects, CL-6 chrome} in parallel, then CL-5 tasks/D10 wire-up. The e2e
@@ -100,7 +100,7 @@ scenario + abort chunks (C-S*/C-A*) are the other open track once C-I5
 ## 2026-07-18 X11 survivor sweep (own PR, in flight)
 
 A second whole-tree grep for the X11 vocabulary after the first removal wave,
-classified in docs/x11-cleanup-audit.md. Executed the DEAD/stale removals only:
+classified in docs/tracking/x11-cleanup-audit.md. Executed the DEAD/stale removals only:
 deleted the X11-only PlasmaCoreThumbnail preview element (ToolTipInstance
 thumbnail ternary collapsed to PipeWire), dropped the dead NETWM + orphaned
 KWindowSystem includes from the two SubWindow helpers, relabelled the stale
@@ -138,7 +138,7 @@ console.warn loggers in Manager (removed).
 ## 2026-07-18 SWARM: C-I7/P6 applet-reorder driver + G2 z readback
 
 The applet-reorder infra chunk of the e2e interaction matrix
-(docs/e2e-interaction-test-plan.md). Landed on its own branch/PR:
+(docs/tracking/e2e-interaction-test-plan.md). Landed on its own branch/PR:
 - The reusable driver `tests/e2e/matrix/applet-reorder-driver.sh` - enter/exit
   rearrange, applet-id-order + delegate-z readbacks, and a glide reorder with
   commit/origin/noop/jitter/escape/occupied/overflow modes plus an
@@ -174,7 +174,7 @@ so clangd runs the nix g++ wrapper to recover the Qt/KF6 umbrella + libstdc++
 include paths nix injects via NIX_CFLAGS_COMPILE (never recorded in the DB, and
 the reason the DB alone is not enough on nix). devShell now ships clangd
 (clang-tools - no gcc/clang++ driver, so no toolchain shadowing). `.vscode/`
-committed; contributor flow in docs/clangd-setup.md. Headless proof via
+committed; contributor flow in docs/reference/clangd-setup.md. Headless proof via
 `clangd --check`: layoutmanager.cpp 21->0, effects.cpp 21->0, justifysplitters.h
 5->0 real diagnostics. Filed as a Phase 0 plan item.
 
@@ -217,7 +217,7 @@ ALSO LANDED (merged since):
   destroyed() slots, genericlayout.cpp + syncedlaunchers.cpp, fixed via
   reinterpret_cast, filed under B2). Commits ddb766df1/f8505a543/d6fc8cd9e.
 - #26 clangd: CMAKE_EXPORT_COMPILE_COMMANDS + .clangd + nix --query-driver +
-  devShell clang-tools + .vscode + docs/clangd-setup.md. Contributor gets
+  devShell clang-tools + .vscode + docs/reference/clangd-setup.md. Contributor gets
   zero-false-diagnostic VSCode clangd out of the box (proven clangd --check
   21->0). In-session harness clangd still noisy (it invokes without --query-driver;
   cosmetic, VSCode has it).
@@ -238,7 +238,7 @@ ALSO LANDED (merged since):
   band); and inputmaskflushtest.cpp:210 rests on the reveal strip preserving the
   band length EXACTLY (1px shorter flips lengthShrank true) - worth a comment.
 
-E2E INTERACTION SUITE (docs/e2e-interaction-test-plan.md, on master): 196
+E2E INTERACTION SUITE (docs/tracking/e2e-interaction-test-plan.md, on master): 196
 scenarios (~106 novel), abort first-class, readback-first (goldens only where no
 readback exists), full-dual-display matrix, tier-1-in-gate-all + full-periodic.
 Both HC gates passed at review (HC1 panel-alignment degeneracy, HC3 rejection
@@ -259,7 +259,7 @@ GATE SPLIT (2026-07-18): LATTE_GATE_FAST=1 skips the ~30-min asan-e2e-gate on a
 swarm BRANCH gate (it exceeds a subagent's per-tool budget); the orchestrator runs
 asan-e2e-gate at MERGE time on the rebased head before merging a dock-code PR.
 
-DEFECTS REGISTRY (docs/known-defects.md, 2026-07-18): the flat found-bugs index
+DEFECTS REGISTRY (docs/tracking/known-defects.md, 2026-07-18): the flat found-bugs index
 D1-D14; CLAUDE.md now requires filing there + PERIODIC governing-doc review. VOICE
 (2026-07-18): impersonal, no first-person pronouns in committed content. D14 OPEN:
 46 invalid-color qCriticals at startup (the colorBrightness guard is correct; a QML
@@ -273,7 +273,7 @@ matrix_surface_list, N2 unescaped MATRIX_VOLATILE_EXTRA regex) + the #28 fakepoi
 nits + the #33/#34 first-person commit-body wording, to fold in at the next touch /
 pre-PR cleanup.
 
-## UB-catching initiative (parallel track, docs/ub-catching-plan.md)
+## UB-catching initiative (parallel track, docs/tracking/ub-catching-plan.md)
 
 Prong A COMPLETE with A3 (branch `ub-a3-sanitized-gate`, PR open, awaiting
 review), building on the #21/#22 A1/A2/B1 landings above. A3 wires the sanitized
@@ -322,7 +322,7 @@ LLVM major. NEXT: Phase C (decouple render DEVICE from golden TIER in
 tests/sceneprobe/main.cpp + imagecompare.h; wire bit-exact NixOS / bless-
 frozen stable / invariant+tolerance rolling - this is a REAL code change, so a
 real gate-all, not the --no-verify shortcut), then Phase D (CI workflow -
-collect DECISION 6 runner + 2 cadence), Phase E (v0.12.0 - DECISION 5),
+collect DECISION 6 runner + 2 cadence), Phase E (v0.20.0 - DECISION 5),
 Phase F (packaging swarm deb/rpm/arch/gentoo/void - DECISION 7/8).
 
 MERGE MECHANIC (Bree's direction, learned the hard way this session): land
@@ -534,17 +534,17 @@ ff-merge. Then Phase B (wire in-container nested-kwin + lavapipe, resolve
 the two env-staging classes above) OR widen Phase A to fedora/opensuse/
 neon/debian/gentoo/void using the ng dep matrix.
 
-## 2026-07-17 NEW DIRECTION: multi-distro CI matrix for v0.12.0
+## 2026-07-17 NEW DIRECTION: multi-distro CI matrix for v0.20.0
 
 Planned, not started. The next big initiative (Bree's call): take the
 existing headless harness (nested kwin_wayland + lavapipe sceneprobe,
 tests/e2e nested-vehicle recipes) to Arch/Fedora/Ubuntu-family Plasma 6
 CONTAINERS with per-distro golden validation, as a fully automated
 GitHub Actions matrix. Green across the matrix is the release gate for
-v0.12.0 (first tagged continuation release; upstream stopped at v0.10.8,
+v0.20.0 (first tagged continuation release; upstream stopped at v0.10.8,
 tree is at CMakeLists VERSION 0.10.77; no GitHub Actions exist yet, only
 the inherited .kde-ci.yml). Full architecture + phased A-E checklist +
-six open DECISIONs in docs/multi-distro-ci-plan.md; pointer bullet in
+six open DECISIONs in docs/tracking/multi-distro-ci-plan.md; pointer bullet in
 PORTING_PLAN's Continuation-features section. podman (the project's
 container runtime, not docker) is on the host, so Phase A (containerize +
 build per distro) can prototype locally right now.
@@ -653,13 +653,13 @@ derived.
 
 OWED, needs Bree's hands (none block the code): the Meta+Alt+D
 keyboard-nav desk pass + Orca screen-reader pass
-(docs/manual-flake-removal-testing.md), the byPassWM retire/keep
+(docs/reference/manual-flake-removal-testing.md), the byPassWM retire/keep
 decision (Phase 4 item), the Phase 8 bottom-dock surface-drift
 root-cause (it is the e2e suite's sequence-flakiness source - recipes
 pass solo), the two keyboard-focus follow-ups (denied-activation flag
 staleness, cross-view exclusivity), the nixos-upgrade-timer story,
 and the e2e audio-badge recipe (needs pipewire). Full desk checklist
-in docs/manual-flake-removal-testing.md.
+in docs/reference/manual-flake-removal-testing.md.
 
 ## 2026-07-17: stabilization execution session THREE (running record)
 
@@ -682,7 +682,7 @@ Deferred with reasons (ledger
 docs/agent-logs/2026-07-17-accessible-rollout.md): previews dialog
 (P1 focus rework), config-page per-control labels (P3), ScrollArea /
 Keys.onReturn (keyboard item). Desk pass owed: the Orca script in
-docs/manual-flake-removal-testing.md. Plan item stays UNTICKED until
+docs/reference/manual-flake-removal-testing.md. Plan item stays UNTICKED until
 the Orca pass. NOT pushed.
 
 KEYBOARD FOCUS MODE LANDED (branch keyboard-focus-mode, 7 commits,
@@ -702,7 +702,7 @@ shortcutshosttest pins the discovery walk + all four QML signatures
 against the REAL qrc-aliased ability files (negative-tested; found
 and pinned the stale-.qmlc-masks-qrc-drift trap - plan item filed to
 audit the other qrc harnesses). Desk pass owed: real-keyboard
-traversal section in docs/manual-flake-removal-testing.md. Ledger:
+traversal section in docs/reference/manual-flake-removal-testing.md. Ledger:
 docs/agent-logs/2026-07-17-keyboard-focus-mode.md. Vehicle traps
 re-proven: forgetting dbus-run-session reaches the DESK dock;
 konsole cold-start fakes focus-loss failures (qml window is the
@@ -729,7 +729,7 @@ into the stabilization order as item 7a. Researched timelines first:
 KDE's "Going all-in on a Wayland future" (blogs.kde.org, 2025-11-26) -
 Plasma 6.7 is the final X11-session release, 6.8 (October 2026) is
 Wayland-exclusive, 6.7 X11 supported only into early 2027. Phase 4's
-section in docs/PORTING_PLAN.md carries the recorded decision + the
+section in docs/tracking/PORTING_PLAN.md carries the recorded decision + the
 7-item removal checklist; the stabilization prompt has the execution
 order (source sites first, build system second, audit + docs last).
 
@@ -807,7 +807,7 @@ containments (the historical "6 views" notes described an older
 layout era). Gates were re-run through gate-all after the final
 commit; stamp caught up to HEAD and pushed WITH the pre-push hook
 (no --no-verify needed anymore).
-PHASE 8 IS OPEN - read its section in docs/PORTING_PLAN.md first; every item
+PHASE 8 IS OPEN - read its section in docs/tracking/PORTING_PLAN.md first; every item
 is current there, several sections below are now RESOLVED and kept only as
 archaeology.
 
@@ -1023,7 +1023,7 @@ session: EX-15 wheels / EX-17 hover / EX-14 drags can run in the
 nested vehicle (config flips + choreography, recipes in the ledger
 notes); EX-12 palette flip wants the real config at an idle desk;
 EX-19 visual checks + the desk items in
-docs/manual-flake-removal-testing.md; Phase 9 color-group audit;
+docs/reference/manual-flake-removal-testing.md; Phase 9 color-group audit;
 quartet items: keyboard focus mode (P0), Accessible rollout, e2e
 conversion (item c - fold scripts/run-e2e.sh, still untracked, plus
 the nested-matrix scripts into tests/e2e as P4 lands).
@@ -1122,9 +1122,9 @@ LATE-SESSION STATE: priority items 1-7 done or flagged (details in
 the numbered entries below); the settings desk-walk, the DPMS
 lock/unlock arm, one real logout cycle, and the reorder/stuck-icons
 real-mouse checks are the four things waiting on my hands. Item 8's
-D-Bus interface design is WRITTEN (docs/dbus-observability-interface.md)
+D-Bus interface design is WRITTEN (docs/reference/dbus-observability-interface.md)
 and item 9 became the CaptSilver adoption plan
-(docs/captsilver-testability-adoption.md). FOUR worktree/read agents
+(docs/reference/captsilver-testability-adoption.md). FOUR worktree/read agents
 were dispatched in parallel at session end (logs in docs/agent-logs/,
 2026-07-16-*): a11y surface inventory (read-only baseline for the
 keyboard/AT-SPI quartet items), viewsData+setViewEditMode
@@ -1224,9 +1224,9 @@ sessions are budgeted, in order:
    (ee0f1ba3), add-panel crash did not reproduce (7 adds, 3 templates;
    breadcrumbs silent since 07-11 - watch item).
 3. DONE 2026-07-15 (this session): the QML extraction plan is written,
-   committed and pushed - docs/QML_EXTRACTION_PLAN.md (bab18b2c,
+   committed and pushed - docs/tracking/QML_EXTRACTION_PLAN.md (bab18b2c,
    2fb1bd27, f017854c, e554bf04 + closing commit), with the Phase 10
-   cross-reference item in docs/PORTING_PLAN.md. All 239 package QML
+   cross-reference item in docs/tracking/PORTING_PLAN.md. All 239 package QML
    files classified, 25 units specced with delegation tags, completeness
    ledger CLEAR (every section done). Pin-in-place verdicts recorded for
    CompactApplet chain, ContextMenu, ConfigOverlay drag, and friends.
@@ -2405,7 +2405,7 @@ live session (each fix's commit body says exactly what to look at).
   add-widget crash NO LONGER REPRODUCES (driven end to end under gdb).
 - Vendored backend: provenance stamps in plasmoid/plugin, plasma-desktop
   added as a sync-diff target in CLAUDE.md, Phase 12 outreach reframed for
-  the maintained-continuation reality (docs/taskmanager-integration-research.md
+  the maintained-continuation reality (docs/reference/taskmanager-integration-research.md
   has the vendor-vs-integrate analysis; ng's narrowing is the counter-example
   and will not be repeated).
 

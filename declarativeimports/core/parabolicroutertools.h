@@ -17,7 +17,7 @@
 namespace Latte {
 
 //! Thin QML shell over the ParabolicRouter pure core (EX-02 in
-//! docs/QML_EXTRACTION_PLAN.md, units/parabolicrouter.h). The shells
+//! docs/tracking/QML_EXTRACTION_PLAN.md, units/parabolicrouter.h). The shells
 //! (containment parabolic ability, plasmoid client ability) feed their
 //! row snapshot and apply the returned emission plan through the
 //! surviving sglUpdateLower/HigherItemScale application signals.

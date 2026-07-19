@@ -17,7 +17,7 @@
 namespace Latte {
 
 //! Thin QML shell over the WindowCycler pure core (EX-16 in
-//! docs/QML_EXTRACTION_PLAN.md, units/windowcycler.h). The shells
+//! docs/tracking/QML_EXTRACTION_PLAN.md, units/windowcycler.h). The shells
 //! (plasmoid SubWindows.qml, containment loaders/Tasks.qml, plasmoid
 //! tools.js) feed value snapshots and apply the returned selection through
 //! the live tasksModel request slots. Every "none" result is -1 here -

@@ -1,5 +1,5 @@
 # UndefinedBehaviorSanitizer suppressions for the sanitized latte-dock build
-# (docs/ub-catching-plan.md, Prong A). Referenced by both launchers via
+# (docs/tracking/ub-catching-plan.md, Prong A). Referenced by both launchers via
 # UBSAN_OPTIONS=suppressions=... (scripts/run-asan-dock.sh nested,
 # scripts/start-dock-sanitized.sh live).
 #

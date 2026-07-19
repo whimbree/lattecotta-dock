@@ -5,7 +5,7 @@
 */
 
 // The QML-handler WIRING harness of the edit-mode settings audit
-// (docs/edit-mode-settings-audit-plan.md section 2, the cheaper decisive
+// (docs/tracking/edit-mode-settings-audit-plan.md section 2, the cheaper decisive
 // driver). A settings control's WIRING - which config key its handler writes -
 // is the P2 question, and the fiddliest to answer through the mapped settings
 // window (combos and text fields are pointer-drivable but awkward). This

@@ -6,7 +6,7 @@
 */
 
 // Ported from latte-dock-qt6 at 81384003, github.com/CaptSilver/latte-dock-qt6 (EX-23 in
-// docs/QML_EXTRACTION_PLAN.md); our predicate/bucket bodies were diffed
+// docs/tracking/QML_EXTRACTION_PLAN.md); our predicate/bucket bodies were diffed
 // against theirs before adoption, so the case analysis transfers.
 
 #include "../../app/wm/windowtrackingpredicates.h"

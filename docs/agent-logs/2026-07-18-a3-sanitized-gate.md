@@ -1,6 +1,6 @@
 # A3 - the driven sanitized-dock gate (2026-07-18)
 
-Prong A3 of the UB-catching initiative (docs/ub-catching-plan.md): wire the
+Prong A3 of the UB-catching initiative (docs/tracking/ub-catching-plan.md): wire the
 sanitized dock (build-asan, -DLATTE_SANITIZE=ON, from A1/A2) into a DRIVEN gate
 so OUR-code UB and tripped invariants in the LIVE integration paths abort the run
 with a symbolized stack and a non-zero exit instead of running silently. A1/A2

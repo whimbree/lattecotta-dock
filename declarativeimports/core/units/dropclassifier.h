@@ -26,7 +26,7 @@
 namespace Latte {
 
 //! Drag/drop mime classification and the drop decision ladders (EX-14 in
-//! docs/QML_EXTRACTION_PLAN.md), extracted from the containment's
+//! docs/tracking/QML_EXTRACTION_PLAN.md), extracted from the containment's
 //! DragDropArea.qml, the plasmoid's taskslayout/MouseHandler.qml and
 //! tools.js insertIndexAt. The two consumers matched the same mime
 //! formats with SUBTLY different accept sets (newline-split name lines

@@ -4,10 +4,10 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-05 FillLengthDistributor (docs/QML_EXTRACTION_PLAN.md): pins the
+// EX-05 FillLengthDistributor (docs/tracking/QML_EXTRACTION_PLAN.md): pins the
 // two-pass fill-length distribution against the shipped QML behavior.
 //
-// Generation method (docs/TESTING.md): every scenario's expected values
+// Generation method (docs/reference/TESTING.md): every scenario's expected values
 // were recorded by driving the SHIPPED pre-cutover implementation
 // (containment abilities/privates/LayouterPrivate.qml at 71737d61, itself
 // byte-identical to Qt5 f0ad7b23) offscreen through the equality harness

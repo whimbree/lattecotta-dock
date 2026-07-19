@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: 2026 Bree Spektor
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# End-to-end recipe driver (docs/TESTING.md, the e2e tier). Runs the
+# End-to-end recipe driver (docs/reference/TESTING.md, the e2e tier). Runs the
 # tests/e2e/*.sh recipes against the staged dock and reports pass/fail per
 # recipe. Two modes:
 #

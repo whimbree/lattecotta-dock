@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-18 LengthOffsetClamp (docs/QML_EXTRACTION_PLAN.md): the mutual
+// EX-18 LengthOffsetClamp (docs/tracking/QML_EXTRACTION_PLAN.md): the mutual
 // maxLength/minLength/offset clamp that keeps a dock on-screen, dedup'd
 // out of the two Qt5-inherited QML copies (the canvas maxLength ruler and
 // the Appearance page's slider cluster). Divergence between those copies

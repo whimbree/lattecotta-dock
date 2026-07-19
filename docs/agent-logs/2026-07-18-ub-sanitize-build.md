@@ -1,6 +1,6 @@
 # Prong A - the sanitized dock build (LATTE_SANITIZE) + nested/live launch
 
-Ledger for the UB-catching initiative's Prong A (docs/ub-catching-plan.md,
+Ledger for the UB-catching initiative's Prong A (docs/tracking/ub-catching-plan.md,
 items A1 and A2). Scope: a build-system capability that catches OUR-code
 undefined behavior and tripped Q_ASSERTs during real driving, not just in unit
 tests. A3 (wiring the sanitized dock into a driven gate) is a later chunk and

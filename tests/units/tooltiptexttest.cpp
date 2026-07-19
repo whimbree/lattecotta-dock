@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-17 TooltipTextComposer (docs/QML_EXTRACTION_PLAN.md): behavioral tests
+// EX-17 TooltipTextComposer (docs/tracking/QML_EXTRACTION_PLAN.md): behavioral tests
 // for the tooltip title/subtext core and its QML-facing wrapper (compiled
 // into this sanitized binary, so the boundary refusals and the i18n mapping
 // run instrumented too).

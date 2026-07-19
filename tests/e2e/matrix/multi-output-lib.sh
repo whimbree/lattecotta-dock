@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # The MULTI-OUTPUT discover-and-pin layer for the e2e matrix (C-I2 / P1,
-# docs/e2e-interaction-test-plan.md section 5, open question O7). Sourced by the
+# docs/tracking/e2e-interaction-test-plan.md section 5, open question O7). Sourced by the
 # multi-output self-test recipe inside a TWO-output nested vehicle
 # (E2E_OUTPUT_COUNT=2, via scripts/run-multi-output-e2e.sh). Depends on
 # tests/e2e/lib.sh and tests/e2e/matrix/matrix-lib.sh being sourced first.

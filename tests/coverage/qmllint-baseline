@@ -3,7 +3,7 @@
 #   tests/coverage/qmllint-gate.sh --write-baseline
 # and commit the shrink together with the change that earned it.
 # Files that cannot reach zero for a structural reason are NAMED
-# with their reason in docs/QML_EXTRACTION_PLAN.md (section D,
+# with their reason in docs/tracking/QML_EXTRACTION_PLAN.md (section D,
 # step-2.5 additions) - this file is regenerated wholesale, so
 # the durable record lives there.
 10	lib/qml/org/kde/latte/abilities/bridge/Launchers.qml

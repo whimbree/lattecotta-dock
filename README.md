@@ -60,7 +60,7 @@ The stabilization initiative is complete: the feel-critical QML math
 visibility masks, badges, scrolling, colorization decisions) lives in
 pure C++ cores with sanitized unit tests, the dock's runtime state is
 inspectable and drivable over D-Bus
-([docs/dbus-interface-reference.md](docs/dbus-interface-reference.md)),
+([D-Bus interface reference](docs/reference/dbus-interface-reference.md)),
 and rendering is guarded by a committed-golden scene gate that runs on
 pure CPU. Inherited bugs found along the way are fixed at origin, each
 with its evidence in the commit body.
@@ -68,7 +68,7 @@ with its evidence in the commit body.
 Roadmap
 =======
 
-The real tracker is [docs/PORTING_PLAN.md](docs/PORTING_PLAN.md): 13
+The real tracker is [the porting plan](docs/tracking/PORTING_PLAN.md): 13
 phases, one commit-traceable checklist item per task. The coarse picture:
 
 - [x] Build system, Qt 6 / KF 6 migration, Wayland layer-shell backend
@@ -78,7 +78,7 @@ phases, one commit-traceable checklist item per task. The coarse picture:
 - [x] Nix packaging (flake with package, overlay and NixOS module)
 - [x] Resizable persistent applet popups (continuation feature)
 - [x] Stabilization: the QML logic extraction initiative
-      ([docs/QML_EXTRACTION_PLAN.md](docs/QML_EXTRACTION_PLAN.md)) moved
+      ([the QML extraction plan](docs/tracking/QML_EXTRACTION_PLAN.md)) moved
       feel-critical QML logic into tested, sanitized C++ cores - all 25
       units executed; a tail of live verification recipes is tracked in
       the plan's executed notes
@@ -174,8 +174,8 @@ the merge gate drives that sanitized dock through the nested e2e recipes
 and asserts, from the running process's own memory map, that the binary
 under test really is the instrumented one, so integration-path UB fails
 the gate rather than shipping.
-[docs/TESTING.md](docs/TESTING.md) carries the
-standard; [docs/session-handoff.md](docs/session-handoff.md) carries the
+[The testing doc](docs/reference/TESTING.md) carries the
+standard; [the session handoff](docs/tracking/session-handoff.md) carries the
 current working state.
 
 Relationship to other Plasma 6 ports
@@ -270,7 +270,7 @@ The devShell also ships `clangd`, and configuring the build emits
 `build/compile_commands.json`, so an editor with the clangd extension
 resolves the whole Qt6/KF6 tree with no false diagnostics out of the
 box. Launch the editor from inside `nix develop` and follow
-[`docs/clangd-setup.md`](docs/clangd-setup.md).
+[the clangd setup guide](docs/reference/clangd-setup.md).
 
 Running
 =======
@@ -294,7 +294,7 @@ Credits
 - **David Goree** ([CaptSilver/latte-dock-qt6](https://github.com/CaptSilver/latte-dock-qt6)),
   whose Qt6 testability work runs through this port well beyond a handful
   of fixes: the sceneprobe visual-regression harness was adopted from his
-  repository, the testing standard in `docs/TESTING.md` was modeled on his
+  repository, the testing standard in `docs/reference/TESTING.md` was modeled on his
   testing commits, seven of the QML-extraction units took his extraction
   seams as their starting point, and several test suites were transplanted
   with his cases as the foundation of that coverage. Files derived from his

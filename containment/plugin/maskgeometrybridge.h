@@ -15,7 +15,7 @@ namespace Latte {
 namespace Containment {
 
 //! Thin QML shell over the MaskGeometry pure core (EX-10 in
-//! docs/QML_EXTRACTION_PLAN.md, units/maskgeometry.h). The containment's
+//! docs/tracking/QML_EXTRACTION_PLAN.md, units/maskgeometry.h). The containment's
 //! VisibilityManager.qml keeps its signal plumbing and update gates and
 //! asks here for the rects; this boundary maps the core's decision
 //! alternatives onto the effects protocol's sentinel rects

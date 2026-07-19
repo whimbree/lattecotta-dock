@@ -5,7 +5,7 @@
 */
 
 // The Tasks page's real-handler WIRING audit (CL-5, the tasks-page settings
-// audit, in docs/edit-mode-settings-audit-plan.md, controls 91-121). Same
+// audit, in docs/tracking/edit-mode-settings-audit-plan.md, controls 91-121). Same
 // pattern as settingswiringharnesstest / behaviorwiringaudittest / effects-
 // handleraudittest: each control's handler body runs as a QML fragment against a
 // stub QQmlPropertyMap standing in for the Tasks plasmoid's configuration map,
@@ -15,7 +15,7 @@
 // deterministically.
 //
 // D10 CONTEXT (the Tasks config page renders but did not apply its settings -
-// the inherited half-finished upstream feature; docs/known-defects.md D10). The
+// the inherited half-finished upstream feature; docs/tracking/known-defects.md D10). The
 // disposition is WIRE IT UP (audit plan section 8). This port already IS wired,
 // two ways, and this test PINS both against regression rather than adding new
 // wiring:

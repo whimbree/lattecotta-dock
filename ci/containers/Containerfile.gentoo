@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # Gentoo build+gate environment for the multi-distro CI matrix
-# (docs/multi-distro-ci-plan.md, Phase A). Gentoo is the source/minimalist
+# (docs/tracking/multi-distro-ci-plan.md, Phase A). Gentoo is the source/minimalist
 # nerd leg. Building the KDE stack (Qt6 + KF6 + Plasma + kwin + Mesa) from
 # source in a throwaway container would take many hours, so this image pulls
 # PREBUILT BINARY PACKAGES from Gentoo's upstream binhost

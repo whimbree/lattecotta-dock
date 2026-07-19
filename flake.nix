@@ -1,5 +1,5 @@
 {
-  # Phase 0 of docs/PORTING_PLAN.md: a reproducible Qt6/KF6 toolchain so the
+  # Phase 0 of docs/tracking/PORTING_PLAN.md: a reproducible Qt6/KF6 toolchain so the
   # port has something to configure against from the first commit. Phase 11
   # extends this with packages.default, overlays.default, nixosModules.default.
   description = "latte-dock Plasma 6/Qt6 port - development environment";
@@ -83,7 +83,7 @@
             jq # scripts/qmllint-gate.sh parses qmllint --json with it
             imagemagick # cropping live-verification and docs screenshots
 
-            # clangd for the editor/IDE code-intelligence flow (docs/clangd-setup.md):
+            # clangd for the editor/IDE code-intelligence flow (docs/reference/clangd-setup.md):
             # a contributor gets a working language server straight from `nix develop`,
             # no separate install. clang-tools ships only the tooling binaries
             # (clangd, clang-format, clang-tidy) - it carries NO cc/gcc/g++/clang++

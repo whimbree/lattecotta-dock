@@ -18,7 +18,7 @@
 namespace Latte{
 
 //! Thin QML shell over the ColorTools pure core (EX-19 in
-//! docs/QML_EXTRACTION_PLAN.md, units/colortools.h). This singleton is
+//! docs/tracking/QML_EXTRACTION_PLAN.md, units/colortools.h). This singleton is
 //! public API for third-party indicator packages (they import
 //! org.kde.latte.core), so its surface changes carefully and bad input
 //! from QML is refused loudly instead of asserted away.

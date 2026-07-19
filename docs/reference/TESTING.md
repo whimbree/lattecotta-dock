@@ -1,6 +1,6 @@
 # Testing standard
 
-Adopted at Phase 0 of the port (see `docs/PORTING_PLAN.md`), before any
+Adopted at Phase 0 of the port (see `docs/tracking/PORTING_PLAN.md`), before any
 test exists, so it can shape every test written rather than being
 retrofitted during stabilization. Modeled on latte-dock-qt6's documented
 honest-coverage standard (`5fcaa9f1`/`c903921d` in its history), which
@@ -27,7 +27,7 @@ A test earns credit for a unit of code only if all of these hold:
    no dependence on the developer's live session.
 
 A unit that genuinely cannot meet 1-4 headlessly is **live-only**: it
-gets an entry in a live-only registry (`docs/testing/live-only.md`,
+gets an entry in a live-only registry (`docs/reference/live-only.md`,
 created with its first entry) stating *why*, and becomes the target of
 live verification (per-phase live testing from the first runnable
 milestone, and the nested-vehicle e2e suite below). The registry exists

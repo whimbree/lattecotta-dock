@@ -1,7 +1,7 @@
 # 2026-07-17 Phase 8 bottom-dock surface drift - running ledger
 
 The plan item: "Bottom-dock layer surface drifts left of its reported
-geometry" (docs/PORTING_PLAN.md). Reproduced as a first-class failing test,
+geometry" (docs/tracking/PORTING_PLAN.md). Reproduced as a first-class failing test,
 tests/e2e/060-geometry-agreement.sh (was `# e2e-expect: fail`, XFAIL at
 -44px).
 

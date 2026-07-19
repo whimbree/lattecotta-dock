@@ -24,7 +24,7 @@ using MaskGeometry::InputMaskDecision;
 
 Q_DECLARE_METATYPE(InputMaskDecision)
 
-//! EX-10 MaskInputGeometry (docs/QML_EXTRACTION_PLAN.md): the visibility
+//! EX-10 MaskInputGeometry (docs/tracking/QML_EXTRACTION_PLAN.md): the visibility
 //! mask (local geometry) and input-region rect tables extracted from
 //! VisibilityManager.qml's updateMaskArea/updateInputGeometry pair.
 //!

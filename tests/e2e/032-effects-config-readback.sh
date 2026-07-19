@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # e2e-mode: nested-only
 #
-# CL-4 live P3 leg (docs/edit-mode-settings-audit-plan.md, controls 75-90): the
+# CL-4 live P3 leg (docs/tracking/edit-mode-settings-audit-plan.md, controls 75-90): the
 # Effects page controls REFLECT the dock's live state on open. The wiring (which
 # key/property each control writes) is pinned deterministically in
 # tests/effectshandleraudittest.cpp; this recipe proves the other direction on a

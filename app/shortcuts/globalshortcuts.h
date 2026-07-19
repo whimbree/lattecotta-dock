@@ -50,7 +50,7 @@ public:
     //! the Meta+<index> entry activation for one view (plasma-tasks
     //! fallback, wait-for-shown deferral, then the shortcuts host's
     //! activateEntryAtIndex). Public so the activateTaskAt D-Bus coarse
-    //! action (docs/dbus-observability-interface.md) drives the exact same
+    //! action (docs/reference/dbus-observability-interface.md) drives the exact same
     //! path the global shortcut does.
     bool activateEntryForView(Latte::View *view, int index, Qt::Key modifier);
 

@@ -16,7 +16,7 @@
 namespace Latte {
 
 //! Thin QML shell over the ParabolicMath pure core (EX-03 in
-//! docs/QML_EXTRACTION_PLAN.md, units/parabolicmath.h). Numbers only;
+//! docs/tracking/QML_EXTRACTION_PLAN.md, units/parabolicmath.h). Numbers only;
 //! the abilities definition keeps its signals and layout-direction read.
 class ParabolicMathTools final : public QObject
 {

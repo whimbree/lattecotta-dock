@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # Run the SANITIZED dock (build-asan, -DLATTE_SANITIZE=ON) in the NESTED
-# VEHICLE only, never the real session (docs/ub-catching-plan.md, Prong A2).
+# VEHICLE only, never the real session (docs/tracking/ub-catching-plan.md, Prong A2).
 # It is a thin front door onto scripts/run-e2e.sh: it points the vehicle at
 # the sanitized build tree (BUILD=build-asan) and sets ASan/UBSan to abort on
 # the first finding with a stack, so OUR-code UB in the driven paths fails the

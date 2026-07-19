@@ -18,7 +18,7 @@ namespace Latte {
 namespace Containment {
 
 //! The colorizer's theme/scheme selection decision tree (EX-12 in
-//! docs/QML_EXTRACTION_PLAN.md), extracted from the containment's
+//! docs/tracking/QML_EXTRACTION_PLAN.md), extracted from the containment's
 //! colorizer/Manager.qml applyTheme, mustBeShown, scheme and textColor
 //! bodies. The Qt5 body (f0ad7b23) is the spec: every branch and its
 //! ordering are carried verbatim, including one deliberately preserved

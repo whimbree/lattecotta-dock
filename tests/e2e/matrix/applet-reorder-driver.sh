@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Bree Spektor
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# The applet-REORDER driver (P6 / C-I7, docs/e2e-interaction-test-plan.md
+# The applet-REORDER driver (P6 / C-I7, docs/tracking/e2e-interaction-test-plan.md
 # sections 5, 7 A2, 9 G2). The reusable surface the F3 committed-reorder and
 # the A2 abort chunks (C-S6/C-S7/C-A2/C-A2b) drive through - it does for
 # containment applets in rearrange mode what 050-drag-reorder-launchers does

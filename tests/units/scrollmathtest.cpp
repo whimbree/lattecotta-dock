@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-21 ScrollOverflowMath (docs/QML_EXTRACTION_PLAN.md): the task-row
+// EX-21 ScrollOverflowMath (docs/tracking/QML_EXTRACTION_PLAN.md): the task-row
 // overflow scrolling math extracted from ScrollableList.qml - the overflow
 // predicate with its int-world floor, the asymmetric step clamps, the
 // scroll-into-view distance, the autoscroll trigger zones with their block

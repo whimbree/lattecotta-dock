@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # e2e-mode: nested-only
 #
-# C-I8 / P7 acceptance (docs/e2e-interaction-test-plan.md section 5): the
+# C-I8 / P7 acceptance (docs/tracking/e2e-interaction-test-plan.md section 5): the
 # task-reorder driver (tests/e2e/matrix/task-reorder-lib.sh) and the G4
 # window-task order readback. Proven on the launcher sub-model, which reorders
 # through the IDENTICAL tasks-applet handler as window tasks (MouseHandler.qml

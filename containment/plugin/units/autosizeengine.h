@@ -20,7 +20,7 @@
 namespace Latte {
 
 //! The automatic icon-size search as a pure step function (EX-04 in
-//! docs/QML_EXTRACTION_PLAN.md), extracted from the containment ability
+//! docs/tracking/QML_EXTRACTION_PLAN.md), extracted from the containment ability
 //! AutoSize.qml and code/autosize.js. One call decides one pass: shrink
 //! when the applet row overflows the available length, grow when it fits
 //! with room to spare, otherwise keep the current size. The QML shell

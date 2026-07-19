@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Bree Spektor
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# The e2e interaction MATRIX HARNESS (P0 / C-I1, docs/e2e-interaction-test-plan.md
+# The e2e interaction MATRIX HARNESS (P0 / C-I1, docs/tracking/e2e-interaction-test-plan.md
 # sections 3 and 5). This is the reusable driver every scenario chunk (C-S*,
 # C-A*) calls: a scenario is a FUNCTION composed as
 # (fixture x interaction x expected-readback), never a bespoke copy-paste

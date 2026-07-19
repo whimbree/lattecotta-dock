@@ -215,7 +215,7 @@ bool AbstractWindowInterface::isSidepanel(const QRect &wGeometry) const
     return (thicknessIsAcccepted && lengthIsAccepted && sideRatio<0.4);
 }
 
-//! EX-23 (docs/QML_EXTRACTION_PLAN.md): the whitelist-wins composition
+//! EX-23 (docs/tracking/QML_EXTRACTION_PLAN.md): the whitelist-wins composition
 //! lives in WindowTrackingPredicates with a pinned truth table
 bool AbstractWindowInterface::hasBlockedTracking(const WindowId &wid) const
 {

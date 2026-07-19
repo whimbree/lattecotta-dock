@@ -58,17 +58,21 @@ for recurring bug classes, latte-fork-sync for reference-fork review).
   committed `ratchet-baseline` and `qmllint-baseline`.
 - `app/dbusreports.{h,cpp}` - the D-Bus observability serializers
   (viewsData and friends); Corona methods are one-line delegates.
-  Usage: docs/dbus-interface-reference.md; design:
-  docs/dbus-observability-interface.md.
+  Usage: docs/reference/dbus-interface-reference.md; design:
+  docs/reference/dbus-observability-interface.md.
 - `app/wm/windowid.h` - the WindowId newtype (explicit construction,
   optional-returning X11 parse, byte-wise container semantics).
-- `docs/` - `PORTING_PLAN.md` is the master checklist (every task has a
-  Commits: line, keep it ticked), `session-handoff.md` the rolling
-  handoff, `dbus-interface-reference.md` (the D-Bus how-to),
-  `captsilver-testability-adoption.md` (the test-infrastructure
-  adoption plan), plus research docs
-  (`taskmanager-integration-research.md`,
-  `dock-replication-design.md`, `ng-upstream-audit.md`).
+- `docs/` - split into `tracking/` (live plans and registries) and
+  `reference/` (stable how-tos and research). `tracking/ROADMAP.md` is
+  the index; `tracking/PORTING_PLAN.md` is the master checklist (every
+  task has a Commits: line, keep it ticked), `tracking/session-handoff.md`
+  the rolling handoff, `tracking/known-defects.md` the flat defect
+  registry; `reference/dbus-interface-reference.md` is the D-Bus how-to,
+  `reference/captsilver-testability-adoption.md` the test-infrastructure
+  adoption plan, plus research docs
+  (`reference/taskmanager-integration-research.md`,
+  `reference/dock-replication-design.md`,
+  `reference/ng-upstream-audit.md`).
 
 ## The View family (app/view/)
 
@@ -100,7 +104,7 @@ view on Latte's color scheme. Each View owns manager objects:
   (`app/layouts/storage.cpp` reads/writes it, null sentinel
   `ISCLONEDNULL`); `genericlayout.cpp` resolves clones back to their
   original at load. Design and prerequisites for the replicate feature:
-  `docs/dock-replication-design.md`.
+  `docs/reference/dock-replication-design.md`.
 - `app/view/settings/` - the per-view chrome windows, all deriving from
   `subconfigview.cpp` (shared base: `showAfter()` deferred show, the
   `viewconnections` list tying window lifetime to the view). See the
@@ -253,5 +257,5 @@ verification recipes are in latte-live-verification.
 | Background/theming drawing | `containment/package/contents/ui/background/MultiLayered.qml`, `app/plasma/extended/theme.cpp` |
 | Auto-hide / dodge misbehaving | `app/view/visibilitymanager.cpp` |
 | Layout switching, activities | `app/layouts/synchronizer.cpp`, `app/layouts/manager.cpp` |
-| Inspect/drive the dock from outside | `docs/dbus-interface-reference.md`; serializers in `app/dbusreports.cpp` |
+| Inspect/drive the dock from outside | `docs/reference/dbus-interface-reference.md`; serializers in `app/dbusreports.cpp` |
 | Meta+number, entry activation, shortcut badges | `app/shortcuts/globalshortcuts.cpp` -> `app/view/containmentinterface.cpp` `identifyShortcutsHost()` (defect family 9 lives here) |

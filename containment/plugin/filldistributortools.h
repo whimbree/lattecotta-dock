@@ -17,7 +17,7 @@
 namespace Latte {
 
 //! Thin QML boundary for the FillLengthDistributor core (EX-05 in
-//! docs/QML_EXTRACTION_PLAN.md, units/filldistributor.h). The containment
+//! docs/tracking/QML_EXTRACTION_PLAN.md, units/filldistributor.h). The containment
 //! layouter gathers the per-item records and per-layout aggregates from
 //! its live grids, calls distribute() once per update, and applies the
 //! returned lengths; every pass and quirk lives in the core.

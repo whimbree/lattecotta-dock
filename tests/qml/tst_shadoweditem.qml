@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-//! First occupant of the headless QML interaction harness (docs/TESTING.md).
+//! First occupant of the headless QML interaction harness (docs/reference/TESTING.md).
 //! ShadowedItem is resolved through the real module import, not a file URL:
 //! latte-dock-qt6 shipped an unresolved "LatteComponents.ShadowedItem is not
 //! a type" bug with exactly this component, so type resolution through the

@@ -35,7 +35,7 @@ latte-build-env (building and staging).
 
 The dock now answers most "what is it doing right now" questions over
 D-Bus with zero code changes - check the pull surface BEFORE writing
-instrumentation (docs/dbus-interface-reference.md has every method
+instrumentation (docs/reference/dbus-interface-reference.md has every method
 and recipe):
 
 - Is it up / how far into startup: `lifecycleState`, then `viewsData`
@@ -271,5 +271,5 @@ cause hiding behind the first; one clean run proves nothing.
 - [ ] Reproduction re-run at least twice against the running dock.
 - [ ] Log checked with `grep -a`, benign-noise list not mistaken for
       evidence.
-- [ ] If a checklist item in docs/PORTING_PLAN.md covers this, tick it
+- [ ] If a checklist item in docs/tracking/PORTING_PLAN.md covers this, tick it
       and fill in the commit hash.

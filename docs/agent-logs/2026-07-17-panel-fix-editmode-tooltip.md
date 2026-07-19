@@ -1,6 +1,6 @@
 # Panel fix: edit-mode tooltip eats the click on "Rearrange..." (2026-07-17)
 
-Job B of docs/panel-issues-plan.md (issue 3). Worktree, branch
+Job B of docs/tracking/panel-issues-plan.md (issue 3). Worktree, branch
 `panel-fix-editmode-tooltip`. Hashes here are pre-rebase; the merge
 rewrites them.
 
@@ -106,4 +106,4 @@ correct visual side automatically.
   on its drag handle, in the same canvas overlay. Owed migration to an
   in-window hint; intentionally left out of the qmltooltiprules scope
   until migrated (noted in the rule's header). Filed to
-  docs/panel-issues-plan.md issue 3.
+  docs/tracking/panel-issues-plan.md issue 3.

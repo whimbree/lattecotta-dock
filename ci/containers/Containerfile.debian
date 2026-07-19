@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # Debian build+gate environment for the multi-distro CI matrix
-# (docs/multi-distro-ci-plan.md, Phase A). Debian testing is the root of
+# (docs/tracking/multi-distro-ci-plan.md, Phase A). Debian testing is the root of
 # the largest deb-derivative tree; it gates at the invariant+tolerance tier
 # like the other non-NixOS legs (goldens rot as testing rolls). This layer
 # installs ONLY the build/runtime/gate dependencies; the port itself is

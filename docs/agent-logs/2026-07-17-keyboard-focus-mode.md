@@ -1,7 +1,7 @@
 # Keyboard focus mode + shortcuts-host pin (2026-07-17)
 
 Worktree branch `keyboard-focus-mode`. The accessibility quartet's P0
-gate (docs/PORTING_PLAN.md, keyboard item; gap analysis in
+gate (docs/tracking/PORTING_PLAN.md, keyboard item; gap analysis in
 docs/agent-logs/2026-07-16-a11y-surface-inventory.md) plus the owed
 shortcuts-host pin test. NOTE: hashes below are worktree hashes; the
 plan gets its final ones at merge.
@@ -90,7 +90,7 @@ temporarily focusable and everything else rides existing machinery:
    negative-tested both ways. Filed as a plan item to audit the other
    qrc harnesses (representationswitchtest, layoutmanagerparkingtest).
 
-## Left for the desk pass (filed in docs/manual-flake-removal-testing.md)
+## Left for the desk pass (filed in docs/reference/manual-flake-removal-testing.md)
 
 Real-keyboard traversal (Meta+Alt+D, arrows/Home/End, Enter/Space,
 Escape), the badge + indicator visuals, auto-hide reveal on enter, and

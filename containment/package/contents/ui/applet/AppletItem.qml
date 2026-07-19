@@ -97,7 +97,7 @@ Item {
     //! unqualified-access warning per colour it pushes.
     readonly property var colorizerHost: colorizerManager
 
-    //! D21 (approach B, docs/known-defects.md): when the colorizer is engaged
+    //! D21 (approach B, docs/tracking/known-defects.md): when the colorizer is engaged
     //! this stock applet's OWN Kirigami.Theme color group is set to the decided
     //! scheme (the _wrapper push below), so its native content - the digital
     //! clock's Text.NativeRendering label, symbolic icons - renders with the
@@ -391,7 +391,7 @@ Item {
 
     //! whether this item has live ParabolicArea slots; the parabolic
     //! ability's row builder maps items without one to DeadStop (a live
-    //! scale stack dies at them - EX-02 in docs/QML_EXTRACTION_PLAN.md)
+    //! scale stack dies at them - EX-02 in docs/tracking/QML_EXTRACTION_PLAN.md)
     readonly property bool hasParabolicMessagesHandler: parabolicAreaLoader.active
     property bool pressed: viewSignalsConnector.pressed
 
@@ -876,7 +876,7 @@ Item {
             ItemWrapper{
                 id: _wrapper
 
-                //! D21 approach B (docs/known-defects.md): push the colorizer's
+                //! D21 approach B (docs/tracking/known-defects.md): push the colorizer's
                 //! decided scheme into this stock applet's OWN Kirigami.Theme
                 //! color group. Native content (the digital clock's
                 //! Text.NativeRendering label, symbolic icons) then renders with

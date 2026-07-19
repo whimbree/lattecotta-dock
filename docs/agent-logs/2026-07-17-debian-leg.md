@@ -1,7 +1,7 @@
 # Debian leg - multi-distro CI matrix (Phase A/B)
 
 Bringing up the Debian testing build + sceneprobe render leg, replicating
-the proven Arch leg (docs/multi-distro-ci-plan.md). Branch
+the proven Arch leg (docs/tracking/multi-distro-ci-plan.md). Branch
 `multi-distro-ci-phase-a-debian`. B2 (e2e gate wiring) is a parallel agent's
 job and is deliberately NOT done here.
 

@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-04 AutoSizeEngine (docs/QML_EXTRACTION_PLAN.md): the automatic
+// EX-04 AutoSizeEngine (docs/tracking/QML_EXTRACTION_PLAN.md): the automatic
 // icon-size search as a pure step function. Termination is the headline
 // invariant: the ad9b823f incident was this feedback loop hanging the GUI
 // thread at 100% CPU on startup because the inherited equality exits
@@ -13,7 +13,7 @@
 // regression back to the equality form makes the property loops here spin
 // and fails the run via the harness timeout instead of a live dock hang.
 //
-// Reference-table generation method (per docs/TESTING.md): the rows in
+// Reference-table generation method (per docs/reference/TESTING.md): the rows in
 // shrink_equivalenceTable and grow_equivalenceTable were produced by
 // driving the SHIPPED containment/package/contents/code/autosize.js
 // shrinkStep()/growStep() through qmltestrunner offscreen at HEAD 71737d61

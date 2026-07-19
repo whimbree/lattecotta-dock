@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # e2e-mode: nested-only
 #
-# C-I4 / P4 acceptance (docs/e2e-interaction-test-plan.md, HC3): the coarse
+# C-I4 / P4 acceptance (docs/tracking/e2e-interaction-test-plan.md, HC3): the coarse
 # removeApplet D-Bus action, PROVING BOTH SIDES.
 #
 #   Happy path - remove an existing applet by instance id and watch the coarse

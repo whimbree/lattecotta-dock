@@ -47,14 +47,14 @@ namespace Latte {
 namespace DbusReports {
 
 //! The org.kde.LatteDock JSON read surface
-//! (docs/dbus-observability-interface.md). Two layers, so serialization
+//! (docs/reference/dbus-observability-interface.md). Two layers, so serialization
 //! stays a pure core: ViewRecord is a value snapshot of every field
 //! viewsData() reports and the inline name/serialize functions below are
 //! pure (unit-tested without a corona in tests/units/dbusreportstest.cpp);
 //! only the collect* functions in dbusreports.cpp read live View objects.
 
 //! One view's windows-tracker facts as trackerData() reports them
-//! (docs/dbus-observability-interface.md, step 3)
+//! (docs/reference/dbus-observability-interface.md, step 3)
 struct TrackerRecord {
     uint containmentId{0};
     bool enabled{false};
@@ -70,7 +70,7 @@ struct TrackerRecord {
 };
 
 //! One loaded layout as layoutsData() reports it
-//! (docs/dbus-observability-interface.md, step 4)
+//! (docs/reference/dbus-observability-interface.md, step 4)
 struct LayoutRecord {
     QString name;
     bool isActive{false};
@@ -79,7 +79,7 @@ struct LayoutRecord {
 };
 
 //! One output as ScreenPool knows it, as screensData() reports it
-//! (docs/dbus-observability-interface.md). This is the pull-queryable
+//! (docs/reference/dbus-observability-interface.md). This is the pull-queryable
 //! screen<->output mapping the multi-output e2e vehicle (C-I2/P1) needs:
 //! which Latte screen id resolves to which connector, its geometry, whether
 //! the connector is currently connected (isActive), and which id is the
@@ -94,7 +94,7 @@ struct ScreenRecord {
 };
 
 //! One view's colorizer decision facts as colorizerData() reports them
-//! (docs/dbus-observability-interface.md, step 4). The doc's prose mapped
+//! (docs/reference/dbus-observability-interface.md, step 4). The doc's prose mapped
 //! onto the state that exists: "mode" is the containment's
 //! themeColors/windowColors settings, the decision in force is
 //! mustBeShown/applyingWindowColors off the colorizer Manager item, and
@@ -127,11 +127,11 @@ struct ColorizerRecord {
 };
 
 //! One task item of a view's tasks plasmoid as viewTasksData() reports it
-//! (docs/dbus-observability-interface.md, step 4). Identity is
+//! (docs/reference/dbus-observability-interface.md, step 4). Identity is
 //! appId/launcherUrl only - window titles are other applications'
 //! content and stay out by design (the interface doc records the rule).
 //!
-//! G4 (docs/e2e-interaction-test-plan.md section 9): index + appId ARE the
+//! G4 (docs/tracking/e2e-interaction-test-plan.md section 9): index + appId ARE the
 //! window-task order readback. index is the tasks model ROW (records are
 //! emitted in row order, so the array position and index agree), and it moves
 //! when a reorder calls tasksModel.move; appId is the stable per-window
@@ -157,7 +157,7 @@ struct TaskRecord {
 };
 
 //! One applet of a view as viewAppletsData() reports it
-//! (docs/dbus-observability-interface.md, step 2)
+//! (docs/reference/dbus-observability-interface.md, step 2)
 struct AppletRecord {
     int id{-1};
     QString plugin;
@@ -175,7 +175,7 @@ struct AppletRecord {
     //! userBlocked / inlineFull / colorful.
     bool colorizerActive{false};
     QString colorizerReason;
-    //! the G2 stacking readback (docs/e2e-interaction-test-plan.md): the z of
+    //! the G2 stacking readback (docs/tracking/e2e-interaction-test-plan.md): the z of
     //! the applet's AppletItem delegate. At rest every applet sits at the
     //! layout default (0); the applet-reorder machinery lifts the dragged
     //! delegate to z=900 over the edit chrome and restores it on release, so a
@@ -216,7 +216,7 @@ struct ViewRecord {
 //! settings-panel controls that write a View/VisibilityManager/Indicator
 //! property instead of a containment config key, so the edit-mode audit's
 //! P3 leg (a control reflects the dock's current state) has a readback for
-//! them (docs/dbus-observability-interface.md, docs/edit-mode-settings-audit-plan.md
+//! them (docs/reference/dbus-observability-interface.md, docs/tracking/edit-mode-settings-audit-plan.md
 //! section 3). Config-backed controls read from viewConfigData()'s "config"
 //! object instead; these are the ones whose live value lives only in C++.
 struct ViewLiveRecord {
@@ -484,7 +484,7 @@ inline QString serializeAppletRecords(const QList<AppletRecord> &records)
 //! the id-order readback draws the same line and keeps only real Plasma
 //! applet ids in visual order. Two applets of the SAME plugin still carry
 //! distinct instance ids, so this order disambiguates them where the plugin
-//! string cannot - the G1 readback in docs/e2e-interaction-test-plan.md.
+//! string cannot - the G1 readback in docs/tracking/e2e-interaction-test-plan.md.
 inline QList<int> appletIdOrder(const QList<int> &appletsOrder)
 {
     QList<int> ids;
@@ -502,7 +502,7 @@ inline QList<int> appletIdOrder(const QList<int> &appletsOrder)
     return ids;
 }
 
-//! The G3 drop-marker sentinel (docs/e2e-interaction-test-plan.md): the
+//! The G3 drop-marker sentinel (docs/tracking/e2e-interaction-test-plan.md): the
 //! viewDropMarkerIndex() D-Bus read reports the drag placeholder spacer's
 //! visual insert index while a drag hovers the view, or -1 when no marker is
 //! live. Index 0 is the LEADING insert position - a real, live marker, not
@@ -691,7 +691,7 @@ inline QString serializeViewRecords(const QList<ViewRecord> &records)
 }
 
 //! One config value as a STABLE, comparable JSON scalar for viewConfigData()
-//! and appletConfigData() (docs/dbus-observability-interface.md). Config
+//! and appletConfigData() (docs/reference/dbus-observability-interface.md). Config
 //! values are the user's own dock settings - almost all are int/double/bool/
 //! string/stringlist, which QJsonValue::fromVariant maps straight to a JSON
 //! scalar. The handful of typed values with no JSON scalar (a QColor for
@@ -758,7 +758,7 @@ inline QJsonObject serializeViewLiveRecord(const ViewLiveRecord &record)
 //! object) plus the live C++-property half (the "view" object). Two objects,
 //! not one flat map, so the audit's config-snapshot diff runs over "config"
 //! alone (a config key and a live C++ property never collide) while the P3
-//! leg reads "view". docs/dbus-observability-interface.md.
+//! leg reads "view". docs/reference/dbus-observability-interface.md.
 inline QString serializeConfigData(uint containmentId, const QVariantMap &config, const ViewLiveRecord &live)
 {
     QJsonObject json;
@@ -772,7 +772,7 @@ inline QString serializeConfigData(uint containmentId, const QVariantMap &config
 //! The appletConfigData() payload: one child applet's config VALUES, keyed by
 //! containment id, applet id and plugin. The D10-class surface the tasks-page
 //! audit (CL-5) diffs to prove whether tasks.plasmoid.configuration.* writes
-//! land anywhere. docs/dbus-observability-interface.md.
+//! land anywhere. docs/reference/dbus-observability-interface.md.
 inline QString serializeAppletConfigData(uint containmentId, int appletId, const QString &plugin, const QVariantMap &config)
 {
     QJsonObject json;

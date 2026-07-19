@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Bree Spektor
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# sceneprobe render harness (docs/captsilver-testability-adoption.md, P1):
+# sceneprobe render harness (docs/reference/captsilver-testability-adoption.md, P1):
 # latte-sceneprobe renders one QML scene offscreen on Vulkan (lavapipe under
 # the gate) and applies three failure gates; latte-imgdiff is the standalone
 # comparator CLI (P4 reuses it). Only the comparator unit test registers in

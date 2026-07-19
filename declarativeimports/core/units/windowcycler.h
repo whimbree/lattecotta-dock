@@ -21,7 +21,7 @@ namespace Latte {
 namespace WindowCycler {
 
 //! Cycle-target selection over window/task snapshots (EX-16 in
-//! docs/QML_EXTRACTION_PLAN.md). Replaces the hand-mirrored QML/JS bodies
+//! docs/tracking/QML_EXTRACTION_PLAN.md). Replaces the hand-mirrored QML/JS bodies
 //! that drifted apart per copy (unguarded WinIdList reads, a dead taskList
 //! reference): the group-window family below is SubWindows.qml's three
 //! cycle functions, the flat-task family is the containment loader's and

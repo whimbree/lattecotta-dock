@@ -20,7 +20,7 @@
 namespace Latte {
 
 //! The two-pass distribution of free length among fill applets
-//! (EX-05 in docs/QML_EXTRACTION_PLAN.md), extracted from the containment
+//! (EX-05 in docs/tracking/QML_EXTRACTION_PLAN.md), extracted from the containment
 //! abilities definition LayouterPrivate.qml and algebraically identical to
 //! the Qt5 ancestor (f0ad7b23; the extraction source was byte-identical to
 //! it). The QML layouter keeps gathering inputs from live items and

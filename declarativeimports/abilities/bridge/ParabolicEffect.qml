@@ -8,7 +8,7 @@ import QtQuick 2.0
 BridgeItem {
     id: parabolicBridge
 
-    //! EX-02 (docs/QML_EXTRACTION_PLAN.md): the client's leftover stack
+    //! EX-02 (docs/tracking/QML_EXTRACTION_PLAN.md): the client's leftover stack
     //! re-enters the host row as another routing call at the neighbor
     //! index (the chain re-entered through a raw signal emission; routing
     //! decisions now live in the host's LatteCore.ParabolicRouter shell)

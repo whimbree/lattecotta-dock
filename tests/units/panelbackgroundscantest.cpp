@@ -7,7 +7,7 @@
 
 // Ported from David Goree's latte-dock-qt6 tests/panelbackgroundscantest.cpp
 // at 81384003, github.com/CaptSilver/latte-dock-qt6 (15a317ff; EX-25 in
-// docs/QML_EXTRACTION_PLAN.md): their 17 slots
+// docs/tracking/QML_EXTRACTION_PLAN.md): their 17 slots
 // re-derived against our extracted bodies - every expected value below
 // carries its hand-walk in a comment instead of Goree's instrument-first
 // pins. One deliberate fixture divergence: Goree wrote straight-alpha

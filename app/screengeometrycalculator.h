@@ -22,7 +22,7 @@
 namespace Latte {
 
 //! The available-screen geometry math (EX-08 in
-//! docs/QML_EXTRACTION_PLAN.md), extracted from Latte::Corona's
+//! docs/tracking/QML_EXTRACTION_PLAN.md), extracted from Latte::Corona's
 //! availableScreenRect/RegionWithCriteria so it runs over value snapshots
 //! instead of live View pointers. The extraction seam and ViewFootprint
 //! struct are adopted from David Goree's latte-dock-qt6

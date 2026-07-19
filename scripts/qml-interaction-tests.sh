@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Headless QML interaction harness (porting plan Phase 5, docs/TESTING.md):
+# Headless QML interaction harness (porting plan Phase 5, docs/reference/TESTING.md):
 # drives real Latte QML components offscreen through qmltestrunner. Tests
 # live in tests/qml/tst_*.qml and resolve Latte's modules through the staged
 # install, so module registration and type resolution are part of what every

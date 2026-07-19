@@ -15,7 +15,7 @@ import org.kde.latte.private.tasks 0.1 as LatteTasks
 
 //! The overflow/scroll math lives in the ScrollMath core
 //! (plasmoid/plugin/units/scrollmath.h, EX-21 in
-//! docs/QML_EXTRACTION_PLAN.md), reached through the stateless
+//! docs/tracking/QML_EXTRACTION_PLAN.md), reached through the stateless
 //! LatteTasks.ScrollOverflowMath singleton; this file keeps the fact
 //! assembly (ability reads, mapToItem), the orientation resolution and
 //! the contentX/contentY writes the Behavior animations ride on.

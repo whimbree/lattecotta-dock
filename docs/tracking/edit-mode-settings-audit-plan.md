@@ -11,7 +11,7 @@ about controls that silently do the wrong thing.
 This document is a CATALOG of every edit-mode control, a driven AUDIT METHOD
 that can prove or disprove each control's contract, and a DECOMPOSITION into
 implementation clusters. It is a CHECKLIST, same discipline as
-docs/e2e-interaction-test-plan.md and docs/ub-catching-plan.md: `- [ ]` items
+docs/tracking/e2e-interaction-test-plan.md and docs/tracking/ub-catching-plan.md: `- [ ]` items
 with `Commits:` lines, ticked with post-rebase hashes at merge time. No fixes
 are implemented here. This is the plan the implementation agents execute.
 
@@ -44,7 +44,7 @@ around it. Section 3 lists the readback gaps this audit opens.
 ## 1. The three confirmed seed defects (D15-D17)
 
 All three live in the length cluster (Maximum/Minimum/Offset), the most coupled
-control group. They are filed in docs/known-defects.md as D15-D17 and are the
+control group. They are filed in docs/tracking/known-defects.md as D15-D17 and are the
 first audit items (cluster CL-1). Root-cause findings from reading the code:
 
 ### D15 - the Maximum ruler drags the Minimum (coupled-min side effect)
@@ -216,7 +216,7 @@ plan lands its C-I infra before its scenario chunks.
 
 ## 4. Relationship to the e2e interaction plan (no duplication)
 
-The e2e plan's F1 edit-mode family (docs/e2e-interaction-test-plan.md sections
+The e2e plan's F1 edit-mode family (docs/tracking/e2e-interaction-test-plan.md sections
 F1, C-S1..C-S3) drives edit mode and asserts CHROME GEOMETRY (ruler and toggle
 rects, blueprint placement) across the edge x alignment matrix. This audit is
 the SEMANTIC complement, not a re-run: it asserts each control's CONFIG EFFECT
@@ -398,7 +398,7 @@ wheel actions) elsewhere.
 ## 6. Additional suspected defects surfaced while cataloging
 
 Filed here as SUSPECTED (code-reading only); the audit confirms or clears them.
-Promote to a D-number in docs/known-defects.md when the driven audit reproduces
+Promote to a D-number in docs/tracking/known-defects.md when the driven audit reproduces
 one:
 
 - **S-a TypeSelection dead keys.** controls/TypeSelection.qml writes

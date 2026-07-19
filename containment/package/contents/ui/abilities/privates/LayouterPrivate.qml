@@ -46,7 +46,7 @@ Item {
     //!         FILLWIDTH/FILLHEIGHT COMPUTATIONS
     //! The two-pass arithmetic that sizes fillWidth/fillHeight applets
     //! lives in the containment plugin's FillLengthDistributor core
-    //! (EX-05 in docs/QML_EXTRACTION_PLAN.md); this file keeps only the
+    //! (EX-05 in docs/tracking/QML_EXTRACTION_PLAN.md); this file keeps only the
     //! live-item boundary - gathering the constraint records the passes
     //! consume and applying the lengths they produce.
 

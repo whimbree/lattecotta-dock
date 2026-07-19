@@ -256,7 +256,7 @@ presence.
 
 The interface is now the complete observability surface - full method
 list, signatures, JSON field lists and recipes live in
-docs/dbus-interface-reference.md. The habits that replace older
+docs/reference/dbus-interface-reference.md. The habits that replace older
 sections of this skill:
 
 - Poll `lifecycleState` for "running" instead of sleeping after a

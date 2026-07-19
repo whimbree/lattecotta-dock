@@ -164,7 +164,7 @@ Item {
         }
     }
 
-    //! EX-02 (docs/QML_EXTRACTION_PLAN.md): application-only arms; the
+    //! EX-02 (docs/tracking/QML_EXTRACTION_PLAN.md): application-only arms; the
     //! routing decisions (consume/forward/absorb/stop) live in
     //! LatteCore.ParabolicRouter, driven by the parabolic ability. Exact
     //! match applies newScales[0] (or hands the stack to a bridge client

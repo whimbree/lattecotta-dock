@@ -92,7 +92,7 @@ unless noted; verify before citing them onward):
   leaving dangling QML references (a deleted SmartLauncherItem still
   instantiated, a connect to a removed slot that aborts the handler
   and silently kills the code after it).
-  docs/taskmanager-integration-research.md itemizes the damage. The
+  docs/reference/taskmanager-integration-research.md itemizes the damage. The
   decision on record is that this project will NOT repeat ng-style
   narrowing; treat any ng commit in that direction as rejected by
   default.
@@ -111,7 +111,7 @@ change it ports, and keep the port line-for-line close to upstream
 where our extensions allow, so the next pass's diff stays cheap. The
 diffability against upstream is the whole reason the vendor was kept in
 upstream's idiom (option A in
-docs/taskmanager-integration-research.md); do not restyle it.
+docs/reference/taskmanager-integration-research.md); do not restyle it.
 
 ## Process checklist
 
@@ -125,14 +125,14 @@ docs/taskmanager-integration-research.md); do not restyle it.
 4. Classify every finding, explicitly, one of three ways:
    - Fold in now: write a new commit in this repo (never a
      cherry-pick), crediting the source commit in the body.
-   - File for later: add a checklist item to docs/PORTING_PLAN.md in
+   - File for later: add a checklist item to docs/tracking/PORTING_PLAN.md in
      the right phase, with a pointer to the source commit.
    - Reject: record a one-line note saying what it was and why it was
      rejected, so the next pass does not re-evaluate it from scratch.
 5. Update the last-reviewed hashes in CLAUDE.md to the new tips you
    actually read through.
 6. Record the pass (date, ranges reviewed, classification of each
-   finding) in docs/session-handoff.md.
+   finding) in docs/tracking/session-handoff.md.
 
 ## Warning: worktree state vs recorded hash
 
@@ -143,14 +143,14 @@ last-reviewed hash was `59e04b8b7`. Always compute the review range
 against the RECORDED hash from CLAUDE.md, not against whatever HEAD
 happens to be. And when you read files in a fork checkout to document
 a finding, cite which checkout (commit) you actually read, the way
-docs/taskmanager-integration-research.md cites "read at ng checkout
+docs/reference/taskmanager-integration-research.md cites "read at ng checkout
 c705aa7e7". A file citation without the checkout hash is not
 reproducible once the worktree moves.
 
 ## Test-infrastructure findings route to the adoption plan
 
 CaptSilver's testability campaign has its own standing plan:
-docs/captsilver-testability-adoption.md (P1-P5 waves, what is adopted
+docs/reference/captsilver-testability-adoption.md (P1-P5 waves, what is adopted
 vs skipped, and the hard VM-only constraint). Fork commits about test
 infrastructure are evaluated against THAT document, not folded ad hoc.
 Two standing rules recorded there: the fork's tests are the quality

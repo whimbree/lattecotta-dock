@@ -4,10 +4,10 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-02 ParabolicRouter (docs/QML_EXTRACTION_PLAN.md): equality tests
+// EX-02 ParabolicRouter (docs/tracking/QML_EXTRACTION_PLAN.md): equality tests
 // against the REAL shipped propagation chain.
 //
-// Reference-vector generation method (per docs/TESTING.md): every expected
+// Reference-vector generation method (per docs/reference/TESTING.md): every expected
 // vector below was recorded by driving the SHIPPED containment chain
 // offscreen (14 cases at HEAD 0613c2ae, the dead_* cases at 4fca5a39) -
 // the real abilities definition ParabolicEffect hub, real containment

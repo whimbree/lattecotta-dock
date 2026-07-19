@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-11 LauncherListOps (docs/QML_EXTRACTION_PLAN.md): behavioral tests for
+// EX-11 LauncherListOps (docs/tracking/QML_EXTRACTION_PLAN.md): behavioral tests for
 // the launcher list algebra core and its QML-facing wrappers (compiled into
 // this sanitized binary, so the boundary refusals run instrumented too).
 //

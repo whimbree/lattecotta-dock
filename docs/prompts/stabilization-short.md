@@ -6,7 +6,7 @@ definition of done, gate discipline) and docs/prompts/stabilization-execution-pr
 protocol). Then execute that prompt top to bottom, autonomously, with a long horizon.
 
 Item 0 is mandatory and blocks everything: the machine was rebuilt and rebooted since
-the last session (incident record at the top of docs/session-handoff.md - read that
+the last session (incident record at the top of docs/tracking/session-handoff.md - read that
 entry too before running any gate). Re-pin the dev flake to the nixpkgs revision the
 system ACTUALLY runs now (readlink /run/current-system; the system flake.lock at
 /persist/etc/nixos is the machine-readable source), full rebuild, expect a sceneprobe
@@ -27,13 +27,13 @@ real config, only at an idle desk).
 Standing rules, all binding: worktree subagents for disjoint items (max 4, ledgers in
 docs/agent-logs/, merge serially, post-rebase hashes at tick time); gates are exit
 codes only via scripts/gate-all.sh - never scrape logs, never bypass the pre-push hook;
-use the D-Bus surface (docs/dbus-interface-reference.md) for state instead of pixels or
+use the D-Bus surface (docs/reference/dbus-interface-reference.md) for state instead of pixels or
 sleeps, and document any new surface in all three places; prefer the nested vehicle,
 but real-session verification is fine whenever a recipe needs it - throwaway first,
 restore --user-config after, back off if you see desk activity; tick
-docs/PORTING_PLAN.md, update the prompt's status list and the README on major landings
+docs/tracking/PORTING_PLAN.md, update the prompt's status list and the README on major landings
 (timeless register, no session narration); push after each verified chunk; keep
-docs/session-handoff.md current; route anything needing my hands to
-docs/manual-flake-removal-testing.md with a recipe. When a check finds a defect,
+docs/tracking/session-handoff.md current; route anything needing my hands to
+docs/reference/manual-flake-removal-testing.md with a recipe. When a check finds a defect,
 root-cause it before returning to the checklist. Do not stop until the open list is
 exhausted or every remaining item genuinely needs my hands.

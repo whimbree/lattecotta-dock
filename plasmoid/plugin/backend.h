@@ -9,7 +9,7 @@
 //! decision in David Goree's latte-dock-qt6
 //! (github.com/CaptSilver/latte-dock-qt6):
 //! Plasma 6 folded the Task Manager applet into C++ and ships no public
-//! replacement for these helpers (docs/taskmanager-integration-research.md).
+//! replacement for these helpers (docs/reference/taskmanager-integration-research.md).
 //! Latte extensions on top of upstream: the KWin WindowView/HighlightWindow
 //! QDBusServiceWatcher wiring and showAudioStreamOsd. At reference-fork
 //! sync time, diff upstream's file against this one to port their fixes.

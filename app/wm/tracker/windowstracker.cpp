@@ -683,7 +683,7 @@ WindowInfoWrap Windows::infoFor(const WindowId &wid) const
 
 
 //! Windows Criteria Functions
-//! EX-23 (docs/QML_EXTRACTION_PLAN.md): the window-state predicates live
+//! EX-23 (docs/tracking/QML_EXTRACTION_PLAN.md): the window-state predicates live
 //! in WindowTrackingPredicates; these adapters keep the live reads (view
 //! geometry, tracked screen geometry incl. the X11 scale fix)
 bool Windows::intersects(Latte::View *view, const WindowInfoWrap &winfo)
@@ -826,7 +826,7 @@ void Windows::updateAllHints()
 
 void Windows::updateExtraViewHints()
 {
-    //! EX-23 (docs/QML_EXTRACTION_PLAN.md): the bucket pass lives in
+    //! EX-23 (docs/tracking/QML_EXTRACTION_PLAN.md): the bucket pass lives in
     //! Tracker::ExtraViewHints; this adapter snapshots the tracked views
     //! (viewKey = index into the parallel list) and keeps the edge-touch
     //! check as a live-geometry callback

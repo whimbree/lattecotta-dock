@@ -12,7 +12,7 @@
 //! delegate context and the smart-launcher backend), so the composed
 //! values are pinned here through the singleton and the attached-property
 //! wiring is walked at the desk (the Orca script in
-//! docs/manual-flake-removal-testing.md). Vectors mirror
+//! docs/reference/manual-flake-removal-testing.md). Vectors mirror
 //! tests/units/tooltiptexttest.cpp; strings are English msgids - the
 //! offscreen environment loads no catalogs, deterministically.
 

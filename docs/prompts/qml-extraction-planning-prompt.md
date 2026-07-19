@@ -7,9 +7,9 @@ Paste everything below the rule into a fresh strong-model session. Written
 
 ROLE: You are planning a major architectural refactor for latte-dock (this
 repo, the Plasma 6 / Qt6 port). Do NOT write implementation code. This
-session's only deliverable is `docs/QML_EXTRACTION_PLAN.md`, committed and
+session's only deliverable is `docs/tracking/QML_EXTRACTION_PLAN.md`, committed and
 pushed, plus one cross-reference checklist item added to
-`docs/PORTING_PLAN.md` so the plan stays on the traceability spine.
+`docs/tracking/PORTING_PLAN.md` so the plan stays on the traceability spine.
 
 CONTEXT THAT SHAPES EVERYTHING: this plan will be executed across a model
 transition. A strong model (you) is available for only a few more days;
@@ -60,7 +60,7 @@ INPUTS TO MINE (read before planning)
    latte-live-verification.
 2. QML under containment/, plasmoid/, shell/, indicators/,
    declarativeimports/. Depth budget below.
-3. Bug history, freshest first: docs/session-handoff.md. The 2026-07-15
+3. Bug history, freshest first: docs/tracking/session-handoff.md. The 2026-07-15
    preview saga (c6eeeb20..45c15433) is the densest hot-spot evidence in
    the repo: seven QML-logic defects in one subsystem in one day, each
    with a measured root cause. Then the hardening sweeps (silent-break,
@@ -74,7 +74,7 @@ INPUTS TO MINE (read before planning)
    preview-contract-rules.sh (b4f5621c: the ten pinned previews
    invariants; your plan must not propose changes that fight this gate
    without saying so), build-check.sh, and the honest-coverage standard
-   in docs/TESTING.md. The dialog resize-session work (d12baff2) is a
+   in docs/reference/TESTING.md. The dialog resize-session work (d12baff2) is a
    recent QML<->C++ seam done in our tree; study its shape.
 5. capt (~/Projects/latte-dock-qt6, reviewed through 81384003): the
    extraction campaign. storageidremapper.h, activitysetalgebra.h,
@@ -111,7 +111,7 @@ compressing quality:
   truncation or thinning specs to finish is not. Never pad a spec with
   unverified filler to close the ledger faster.
 
-WHAT TO PRODUCE - docs/QML_EXTRACTION_PLAN.md:
+WHAT TO PRODUCE - docs/tracking/QML_EXTRACTION_PLAN.md:
 
 A. QML LOGIC INVENTORY. Classify per file: geometry math / state machine /
    ordering / model transform / event routing / pure presentation; S/M/L

@@ -5,7 +5,7 @@
 # e2e-mode: nested-only
 #
 # HC3 acceptance test for the edit-mode settings audit harness
-# (docs/edit-mode-settings-audit-plan.md, cluster CL-0). It proves the
+# (docs/tracking/edit-mode-settings-audit-plan.md, cluster CL-0). It proves the
 # config-snapshot-diff harness OBSERVES A REJECTION - it reports FAIL on a wrong
 # outcome, never a green pass - so the ~dozen suspected-broken controls the audit
 # hunts cannot slip through. Two legs:

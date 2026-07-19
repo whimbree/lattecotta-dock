@@ -208,6 +208,6 @@ produced).
 - Decision point recorded, not taken: tightening the three
   trackedWindowId() re-resolves to isEmpty() once latteWindowAdded
   coverage for skip-taskbar subwindows is verified live.
-- docs/PORTING_PLAN.md tick for the WindowId item (left to the
+- docs/tracking/PORTING_PLAN.md tick for the WindowId item (left to the
   orchestrator per the worktree footprint rules), and a Phase 4-ish
   note for the probe guard if wanted.

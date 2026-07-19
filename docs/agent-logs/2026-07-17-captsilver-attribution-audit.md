@@ -78,7 +78,7 @@ Idea-only, no copyright claim, said so explicitly: colortools folds his
 case SHAPES but expected values come from our own ColorizerTools.js;
 popupplacement took the enum-pinning IDEA but parses our own declaration.
 
-docs/QML_EXTRACTION_PLAN.md: the Posture paragraph now names David Goree +
+docs/tracking/QML_EXTRACTION_PLAN.md: the Posture paragraph now names David Goree +
 URL and defines "capt" as document-wide shorthand for that repo, with each
 unit section recording the specific commit and source file - so the ~90
 downstream "capt" mentions resolve to an exact source instead of undefined
@@ -88,7 +88,7 @@ jargon (single-source definition rather than churning 90 lines).
 
 The Credits entry bundled CaptSilver with ruizhi-lab under
 "independently-found fixes". David Goree now has his own line naming the
-concrete contributions: sceneprobe harness adopted, docs/TESTING.md
+concrete contributions: sceneprobe harness adopted, docs/reference/TESTING.md
 modeled on his testing commits, seven QML-extraction units (EX-07/08/09/
 22/23/24/25) built on his seams, several test suites transplanted with his
 cases. Michail, Varlesh and ruizhi-lab credits unchanged.

@@ -18,7 +18,7 @@
 namespace Latte {
 namespace ScrollMath {
 
-//! Task-row overflow scrolling math (EX-21 in docs/QML_EXTRACTION_PLAN.md):
+//! Task-row overflow scrolling math (EX-21 in docs/tracking/QML_EXTRACTION_PLAN.md):
 //! the overflow predicate, the clamped scroll positions, the scroll-into-view
 //! distance and the autoscroll trigger-zone decision that lived as JS bodies
 //! in ScrollableList.qml. Latte-authored, NOT part of the plasma-desktop

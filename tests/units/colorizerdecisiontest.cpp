@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-12 ColorizerDecisionCore (docs/QML_EXTRACTION_PLAN.md). Every case was
+// EX-12 ColorizerDecisionCore (docs/tracking/QML_EXTRACTION_PLAN.md). Every case was
 // derived BY HAND from reading the Qt5 body
 // (f0ad7b23:containment/package/contents/ui/colorizer/Manager.qml:60
 // applyTheme, :159 scheme) - no table was generated from the extracted

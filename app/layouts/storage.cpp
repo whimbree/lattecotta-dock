@@ -381,7 +381,7 @@ QString Storage::newUniqueIdsFile(QString originFile, const Layout::GenericLayou
     }
 
     //! Reassign containment and applet ids to unique ones (EX-07 in
-    //! docs/QML_EXTRACTION_PLAN.md: the assignment math lives in the
+    //! docs/tracking/QML_EXTRACTION_PLAN.md: the assignment math lives in the
     //! tested StorageIdRemapper core; this function keeps the KConfig
     //! application)
     const StorageIdRemapper::IdRemap idRemap =

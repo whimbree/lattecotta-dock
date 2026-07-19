@@ -5,7 +5,7 @@
 */
 
 // The Effects page's real-handler WIRING audit (CL-4 in
-// docs/edit-mode-settings-audit-plan.md, controls 75-90). It is the
+// docs/tracking/edit-mode-settings-audit-plan.md, controls 75-90). It is the
 // settingswiringharnesstest pattern (a control's handler body run as a QML
 // fragment against a stub QQmlPropertyMap, then the Tier B diff predicates in
 // tests/units/configsnapshotdiff.h over the delta), extended with the one thing

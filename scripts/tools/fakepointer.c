@@ -31,7 +31,7 @@
  *          runs. Used to ask what Escape actually does to a Qt-Quick internal
  *          drag - e.g. the tasks-applet reorder, whose tasksModel.move is
  *          already applied live before the key ever arrives, DR-6 in
- *          docs/e2e-interaction-test-plan.md.)
+ *          docs/tracking/e2e-interaction-test-plan.md.)
  *
  * Why keysyms, not scancodes (the keymap question): the fake_input keyboard
  * axis offers two requests. keyboard_key(button,state) carries a Linux evdev

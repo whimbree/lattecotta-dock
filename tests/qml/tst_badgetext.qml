@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-//! EX-20 BadgeMath e2e layer (docs/QML_EXTRACTION_PLAN.md): drives the REAL
+//! EX-20 BadgeMath e2e layer (docs/tracking/QML_EXTRACTION_PLAN.md): drives the REAL
 //! shipped BadgeText.qml through the installed org.kde.latte.components
 //! module and asserts the shell delegates to the LatteCore.BadgeMath
 //! singleton and applies the results - the section-D rule that a cutover

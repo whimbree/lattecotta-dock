@@ -1,6 +1,6 @@
 # org.kde.LatteDock D-Bus reference (usage)
 
-The practical companion to [dbus-observability-interface.md](dbus-observability-interface.md)
+The practical companion to [the observability interface design doc](dbus-observability-interface.md)
 (which carries the design rationale, the safety rules and the
 rejected-with-reasons list). This file is the how-to: every method on
 the bus, its real signature, and a copy-paste invocation. Field lists

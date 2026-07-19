@@ -1,8 +1,8 @@
-# Multi-distro CI + packaging execution prompt (drive to v0.12.0)
+# Multi-distro CI + packaging execution prompt (drive to v0.20.0)
 
 Re-runnable - KEEP INVOKING THIS PROMPT until the agreed CI matrix is
 green on a release commit, the native packages build+install+gate on
-every target, and v0.12.0 is tagged. Written 2026-07-17.
+every target, and v0.20.0 is tagged. Written 2026-07-17.
 
 ## Read first, in order
 
@@ -12,23 +12,23 @@ every target, and v0.12.0 is tagged. Written 2026-07-17.
    definition of done, gate discipline, the PR workflow + independent-
    review contract (reviews are a lean OPUS subagent), copyright/
    attribution rules, author voice, no AI attribution.
-2. `docs/multi-distro-ci-plan.md` - the plan: motivation (this is the
-   v0.12.0 release gate), architecture, the golden-per-distro strategy,
+2. `docs/tracking/multi-distro-ci-plan.md` - the plan: motivation (this is the
+   v0.20.0 release gate), architecture, the golden-per-distro strategy,
    the distro set, the phased A-G checklist, the packaging workstream,
    and the open DECISIONs.
 3. Skim the harness you are containerizing: `scripts/sceneprobe-gate.sh`,
    `scripts/lib-nested-kwin.sh`, `tests/sceneprobe/run_in_kwin.sh`,
    `tests/sceneprobe/imagecompare.h` + `main.cpp` (the three compare
    tiers), `tests/e2e/` (numbered recipes + `lib.sh`).
-   `docs/session-handoff.md` carries the latest state.
+   `docs/tracking/session-handoff.md` carries the latest state.
 
 ## Mission
 
-Execute `docs/multi-distro-ci-plan.md` top to bottom: take the existing
+Execute `docs/tracking/multi-distro-ci-plan.md` top to bottom: take the existing
 HEADLESS harness (nested kwin_wayland + lavapipe sceneprobe + the
 tests/e2e nested-vehicle recipes) to the KDE-enthusiast distro set in
 container CI with per-distro golden validation (Phases A-E), then produce
-native packages for every format (Phases F-G), then tag v0.12.0. Tick the
+native packages for every format (Phases F-G), then tag v0.20.0. Tick the
 plan's `- [ ]` items with commit hashes as work lands.
 
 ## Standing context (do not re-derive)
@@ -61,7 +61,7 @@ plan's `- [ ]` items with commit hashes as work lands.
 - Behavioral tests/e2e recipes assert STATE not pixels, so they are a
   HARD pass on every distro regardless of golden tier.
 - No CI workflows exist yet (only the inherited `.kde-ci.yml`). Version
-  is CMakeLists VERSION 0.10.77; tag target v0.12.0 (upstream stopped at
+  is CMakeLists VERSION 0.10.77; tag target v0.20.0 (upstream stopped at
   v0.10.8).
 - PARKED (do not chase): cross-ARCH aarch64 goldens. Never set
   `LP_NATIVE_VECTOR_WIDTH` - forcing it crashes lavapipe on this x86
@@ -99,7 +99,7 @@ start it immediately.
   frozen tiers; set tolerances for rolling).
 - **D** CI workflow, runner-agnostic (DECISION 6): matrix, `container:`
   per leg, layer cache, PNG-triple artifacts on failure (DECISION 2).
-- **E** bump VERSION -> 0.12.0, changelog, release process; matrix green;
+- **E** bump VERSION -> 0.20.0, changelog, release process; matrix green;
   tag (DECISION 5).
 - **F** Tier-1 packaging recipes (deb/rpm/PKGBUILD/ebuild/xbps),
   CI-built, installed, and gated against the INSTALLED package. The SPDX
@@ -148,7 +148,7 @@ Every subagent keeps a ledger in docs/agent-logs/YYYY-MM-DD-<slug>.md.
 - Conventional commits with root-cause bodies; author voice ("caught
   live", not "user-reported"); NO Co-Authored-By and NO "Generated with
   Claude Code" footer anywhere.
-- Update docs/session-handoff.md as work lands, not at the end. Tick plan
+- Update docs/tracking/session-handoff.md as work lands, not at the end. Tick plan
   checkboxes with post-merge hashes. README updated when a landing is
   major (a new gate surface, the matrix going green, the release).
 
@@ -156,9 +156,9 @@ Every subagent keeps a ledger in docs/agent-logs/YYYY-MM-DD-<slug>.md.
 
 The agreed matrix (DECISION 5) is green on a release commit; the five
 package formats build+install+gate on their targets; CMakeLists VERSION
-bumped 0.10.77 -> 0.12.0 with a changelog and a documented release
-process; v0.12.0 tagged; the plan's A-G checklist ticked with hashes;
-README states the multi-distro matrix, the packages, and the v0.12.0
+bumped 0.10.77 -> 0.20.0 with a changelog and a documented release
+process; v0.20.0 tagged; the plan's A-G checklist ticked with hashes;
+README states the multi-distro matrix, the packages, and the v0.20.0
 release.
 
 ## Session protocol

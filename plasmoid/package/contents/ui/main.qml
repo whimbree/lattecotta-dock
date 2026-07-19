@@ -194,7 +194,7 @@ PlasmoidItem {
     property alias tasksCount: tasksModel.count
 
     //! the plasmoid's task model, published for the viewTasksData D-Bus
-    //! read (docs/dbus-observability-interface.md): dbusreports.cpp reads
+    //! read (docs/reference/dbus-observability-interface.md): dbusreports.cpp reads
     //! this root property and walks the model's roles by name. Ids outrank
     //! properties in QML scope resolution, so every internal tasksModel
     //! reference keeps resolving to the id.

@@ -8,7 +8,7 @@
 #define LATTE_AUDIT_CONFIGSNAPSHOTDIFF_H
 
 // The pure diff core of the edit-mode settings audit's Tier B check
-// (docs/edit-mode-settings-audit-plan.md section 2). It answers the audit's
+// (docs/tracking/edit-mode-settings-audit-plan.md section 2). It answers the audit's
 // three per-control questions over two viewConfigData()/appletConfigData()
 // "config" snapshots taken before and after driving a control:
 //

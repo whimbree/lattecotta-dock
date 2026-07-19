@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # LIVE sanitized-dock launcher for MANUAL PRE-RELEASE testing on the REAL
-# Wayland session against the REAL ~/.config (docs/ub-catching-plan.md, Prong
+# Wayland session against the REAL ~/.config (docs/tracking/ub-catching-plan.md, Prong
 # A2). This runs the build-asan dock (ASan+UBSan, forced Q_ASSERTs) as your
 # actual desktop dock so real, in-hand usage - the best UB surface there is -
 # aborts LOUDLY with a stack the instant it hits our-code UB or a tripped

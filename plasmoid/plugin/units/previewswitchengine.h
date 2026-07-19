@@ -19,7 +19,7 @@ namespace Latte {
 namespace Tasks {
 
 //! The window-previews dialog's decision core (EX-01 in
-//! docs/QML_EXTRACTION_PLAN.md): switch vs defer vs settle-adopt, the
+//! docs/tracking/QML_EXTRACTION_PLAN.md): switch vs defer vs settle-adopt, the
 //! hide-countdown decisions, and the parked-delegate LRU accounting, as one
 //! pure state machine. Latte-authored, NOT part of the plasma-desktop
 //! vendored set in plasmoid/plugin.

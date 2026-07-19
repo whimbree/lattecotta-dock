@@ -1,11 +1,11 @@
-# Pure-core unit tests (docs/QML_EXTRACTION_PLAN.md, section D). Each core
+# Pure-core unit tests (docs/tracking/QML_EXTRACTION_PLAN.md, section D). Each core
 # header under a units/ directory (or an app-subtree capt placement listed in
 # app-subtree-units.list) gets exactly one latte_add_unit_test entry here,
 # named <header-basename>test. tests/coverage/coverage-ratchet.sh fails build-check
 # if a header has no registered pair, so keep the naming mechanical.
 include(ECMAddTests)
 
-# Every pure-core test runs under ASan+UBSan (docs/TESTING.md, the step-2.5
+# Every pure-core test runs under ASan+UBSan (docs/reference/TESTING.md, the step-2.5
 # rule). The cores are compiled INTO the test binary (header-only today;
 # a .cpp core must be added to the test's SOURCES, never linked from an
 # unsanitized object library, or the code under test runs uninstrumented
@@ -116,7 +116,7 @@ target_link_libraries(windowtrackingpredicatestest
     Qt6::Gui)
 
 # WindowId newtype (the WindowId newtype hardening item in
-# docs/PORTING_PLAN.md): header-only id type with the checked X11 parse
+# docs/tracking/PORTING_PLAN.md): header-only id type with the checked X11 parse
 # and the loud boundary refusal, pinned incl. compile-time
 # non-convertibility.
 latte_add_unit_test(windowidtest)
@@ -240,14 +240,14 @@ target_link_libraries(dropclassifiertest
     Qt6::Qml)
 
 # Edit-mode settings audit diff core (tests/units/configsnapshotdiff.h): the
-# pure Tier B check (docs/edit-mode-settings-audit-plan.md section 2) over two
+# pure Tier B check (docs/tracking/edit-mode-settings-audit-plan.md section 2) over two
 # viewConfigData "config" snapshots. The HC3 acceptance property lives here -
 # every rejection direction (stray coupled write, no-op, default-deletion) is
 # pinned so the harness cannot green-light a wrong outcome. QJsonObject-only,
 # Qt6::Test brings QtCore.
 latte_add_unit_test(configsnapshotdifftest)
 
-# viewsData D-Bus serializer (docs/dbus-observability-interface.md): the
+# viewsData D-Bus serializer (docs/reference/dbus-observability-interface.md): the
 # pure ViewRecord -> JSON layer of app/dbusreports.h - enum-name mappings
 # and serialization. The live collectors stay in app/dbusreports.cpp
 # (three-line field reads off View) and are exercised by the running dock;

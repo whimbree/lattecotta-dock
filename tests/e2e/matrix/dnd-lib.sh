@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # Widget-explorer drag-and-drop driver (C-I9 / P8,
-# docs/e2e-interaction-test-plan.md). The reusable API the F2-add and A1-add-abort
+# docs/tracking/e2e-interaction-test-plan.md). The reusable API the F2-add and A1-add-abort
 # scenario chunks (C-S4/C-S5/C-A1/C-A1b) drive, plus the DR-1 arbitrary-target
 # release primitive the adversarial abort matrix (T1/T2) needs.
 #

@@ -29,7 +29,7 @@ Item {
     signal sglUpdateLowerItemScale(int delegateIndex, variant newScales);
     signal sglUpdateHigherItemScale(int delegateIndex, variant newScales);
 
-    //! EX-02/EX-03 (docs/QML_EXTRACTION_PLAN.md): the curve math lives in
+    //! EX-02/EX-03 (docs/tracking/QML_EXTRACTION_PLAN.md): the curve math lives in
     //! LatteCore.ParabolicMath and the routing in LatteCore.ParabolicRouter;
     //! applyParabolicEffect is implemented by the two shells that own a row
     //! (the containment host ability and the plasmoid client ability), not

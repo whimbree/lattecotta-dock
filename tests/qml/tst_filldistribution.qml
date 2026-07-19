@@ -11,7 +11,7 @@
 //! the staged org.kde.latte.private.containment import) over mock grids
 //! and asserts the per-item maxAutoFillLength/minAutoFillLength results.
 //!
-//! Generation method (docs/TESTING.md): the expected values were recorded
+//! Generation method (docs/reference/TESTING.md): the expected values were recorded
 //! by THIS file in record mode (property record: true prints CASE| lines
 //! instead of asserting) against the pre-cutover in-QML implementation at
 //! 71737d61, byte-identical to Qt5 f0ad7b23; the post-cutover run printed

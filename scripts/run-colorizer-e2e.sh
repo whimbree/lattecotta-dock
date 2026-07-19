@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # Front door for the D21 colorizer-contrast e2e guard
-# (tests/e2e/110-colorizer-applet-contrast.sh, docs/known-defects.md). It seeds
+# (tests/e2e/110-colorizer-applet-contrast.sh, docs/tracking/known-defects.md). It seeds
 # a hermetic config from tests/e2e/fixtures/d21 - a Light-colors panel (digital
 # clock + systray + show-desktop) on a bundled dark Plasma color scheme, the
 # condition that engages the colorizer - and hands it to scripts/run-e2e.sh. The

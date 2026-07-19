@@ -22,7 +22,7 @@
 namespace Latte {
 
 //! The Panel-vs-Dock decision chain and the background-state predicate
-//! cluster (EX-13 in docs/QML_EXTRACTION_PLAN.md), extracted from the
+//! cluster (EX-13 in docs/tracking/QML_EXTRACTION_PLAN.md), extracted from the
 //! containment's main.qml and background/MultiLayered.qml. This chain is
 //! the root decision every geometry consumer branches on; the QML shells
 //! keep their property bindings (whose split exists to break binding

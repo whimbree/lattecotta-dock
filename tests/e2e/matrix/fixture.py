@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # Parametrized fixture generator for the e2e interaction matrix (P0 /
-# docs/e2e-interaction-test-plan.md section 5). Given a cell descriptor
+# docs/tracking/e2e-interaction-test-plan.md section 5). Given a cell descriptor
 # (viewType, edge, alignment, display) it produces a hermetic Latte config
 # directory that seeds exactly one view in that configuration.
 #

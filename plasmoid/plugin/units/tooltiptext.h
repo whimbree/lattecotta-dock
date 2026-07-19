@@ -26,7 +26,7 @@ namespace Latte {
 namespace TooltipText {
 
 //! Preview tooltip title/subtext derivation (EX-17 in
-//! docs/QML_EXTRACTION_PLAN.md): the KWin <n> counter strip, the appName
+//! docs/tracking/QML_EXTRACTION_PLAN.md): the KWin <n> counter strip, the appName
 //! suffix strip and the desktop/activity subtext decisions that lived as
 //! near-twin JS bodies in ToolTipInstance.qml and TaskItem.qml.
 //! Latte-authored, NOT part of the plasma-desktop vendored set in

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# qmllint ratchet gate (docs/QML_EXTRACTION_PLAN.md step 2.5, point 6;
-# docs/TESTING.md). Runs the PINNED Qt's qmllint over the same package QML
+# qmllint ratchet gate (docs/tracking/QML_EXTRACTION_PLAN.md step 2.5, point 6;
+# docs/reference/TESTING.md). Runs the PINNED Qt's qmllint over the same package QML
 # qml-compile-gate.sh enumerates, plus the staged org.kde.latte
 # declarativeimports tree, counting the curated warning categories:
 #
@@ -96,7 +96,7 @@ if [[ "${1:-}" == "--write-baseline" ]]; then
         echo "#   tests/coverage/qmllint-gate.sh --write-baseline"
         echo "# and commit the shrink together with the change that earned it."
         echo "# Files that cannot reach zero for a structural reason are NAMED"
-        echo "# with their reason in docs/QML_EXTRACTION_PLAN.md (section D,"
+        echo "# with their reason in docs/tracking/QML_EXTRACTION_PLAN.md (section D,"
         echo "# step-2.5 additions) - this file is regenerated wholesale, so"
         echo "# the durable record lives there."
         cat "$current"

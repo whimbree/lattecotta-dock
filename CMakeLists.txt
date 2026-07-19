@@ -18,7 +18,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # pure side artifact: the Ninja generator writes the JSON but the compile
 # rules are byte-for-byte unchanged, so binaries stay identical (verified
 # OFF->ON with a diff of the built .so/binaries). Repo-root .clangd points
-# clangd at build/ for this file; docs/clangd-setup.md has the contributor
+# clangd at build/ for this file; docs/reference/clangd-setup.md has the contributor
 # flow. Ninja/Makefile generators honour this; ours is Ninja.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -66,7 +66,7 @@ include(WriteBasicConfigVersionFile)
 # QT_NO_CAST_FROM_BYTEARRAY, which the inherited Qt5-era code does not satisfy
 # yet (~720 bare string literals). Removed here so the Phase 2 compile
 # milestone isn't blocked on that churn; the dedicated QStringLiteral pass in
-# Phase 2 of docs/PORTING_PLAN.md deletes these two lines again.
+# Phase 2 of docs/tracking/PORTING_PLAN.md deletes these two lines again.
 remove_definitions(-DQT_NO_CAST_FROM_ASCII)
 remove_definitions(-DQT_NO_CAST_FROM_BYTEARRAY)
 
@@ -109,7 +109,7 @@ find_package(Wayland REQUIRED COMPONENTS Client)
 
 # Detect whether LayerShellQt::Window::setScreen(QScreen*) exists - added in
 # LayerShellQt 6.6, later removed upstream again. Fall back to plain
-# QWindow::setScreen() when absent (see Phase 4 of docs/PORTING_PLAN.md).
+# QWindow::setScreen() when absent (see Phase 4 of docs/tracking/PORTING_PLAN.md).
 #
 # The raw try_compile re-ran on every configure and adopted whatever that
 # run said, so a single configure in a broken environment (system cmake
@@ -182,7 +182,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wformat -Werror=format-security")
 
 message(STATUS "COMPILER FLAGS : ${CMAKE_CXX_FLAGS}")
 
-# Sanitized-dock build (docs/ub-catching-plan.md, Prong A). LATTE_SANITIZE=ON
+# Sanitized-dock build (docs/tracking/ub-catching-plan.md, Prong A). LATTE_SANITIZE=ON
 # compiles AND links every target in this tree - the dock and the plugins that
 # dlopen into it (containment, core, tasks, the context-menu containment
 # action) - with ASan+UBSan, and forces Q_ASSERT live via QT_FORCE_ASSERTS, so

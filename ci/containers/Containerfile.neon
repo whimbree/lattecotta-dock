@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # KDE neon build+gate environment for the multi-distro CI matrix
-# (docs/multi-distro-ci-plan.md, Phase A). neon is the KDE-made Ubuntu-family
+# (docs/tracking/multi-distro-ci-plan.md, Phase A). neon is the KDE-made Ubuntu-family
 # reference environment: always-current Plasma on an Ubuntu LTS base, built by
 # KDE itself, so it is THE deb-family KDE-enthusiast leg and covers
 # Kubuntu/Pop!_OS/Mint-KDE (stock Ubuntu LTS 24.04 stays excluded - it ships

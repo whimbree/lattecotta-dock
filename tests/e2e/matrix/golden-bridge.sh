@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # The RENDER-GOLDEN BRIDGE for the e2e interaction suite (P2 / C-I6,
-# docs/e2e-interaction-test-plan.md sections 4 and 5). Goldens are the LAST
+# docs/tracking/e2e-interaction-test-plan.md sections 4 and 5). Goldens are the LAST
 # resort in this suite (HC2): the overwhelming majority of scenarios assert by
 # D-Bus readback, and a golden is blessed ONLY where a pixel fact has no
 # queryable readback (the F1 blueprint grid, F2/F3 justify zone distribution,

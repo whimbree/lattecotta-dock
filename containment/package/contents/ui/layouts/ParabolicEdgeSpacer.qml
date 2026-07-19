@@ -48,7 +48,7 @@ Item {
         }
     }
 
-    //! EX-02 (docs/QML_EXTRACTION_PLAN.md): called directly by the
+    //! EX-02 (docs/tracking/QML_EXTRACTION_PLAN.md): called directly by the
     //! parabolic ability's routing - spacers left the signal graph (they
     //! only ever react when exactly targeted; no broadcast arm,
     //! Qt5-inherited). The factor already carries the absorption sum and

@@ -4,12 +4,12 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-13 ViewTypeAndBackgroundPredicates (docs/QML_EXTRACTION_PLAN.md): the
+// EX-13 ViewTypeAndBackgroundPredicates (docs/tracking/QML_EXTRACTION_PLAN.md): the
 // Panel-vs-Dock decision chain and the background-state predicate cluster
 // (solid/transparent/busy/blur/shadows), plus the effects-area rect and the
 // per-edge background padding math, as pure functions.
 //
-// Case derivation method (per docs/TESTING.md): every expectation below was
+// Case derivation method (per docs/reference/TESTING.md): every expectation below was
 // hand-derived by reading the QML bodies being replaced (containment
 // main.qml:58-91/93/126-153/240-274, background/MultiLayered.qml:56-125/
 // 463-498 at HEAD) side by side with their Qt5 ancestors at f0ad7b23 -

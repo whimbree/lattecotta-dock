@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # e2e-mode: nested-only
 #
-# D21 guard (docs/known-defects.md): stock-applet contrast in a Light-colors
+# D21 guard (docs/tracking/known-defects.md): stock-applet contrast in a Light-colors
 # panel. On a dark Plasma theme with themeColors=LightThemeColors the colorizer
 # engages (mustBeShown=true) and resolves a LIGHT scheme, so applet foregrounds
 # must be DARK against the light panel. The bug: Latte's only recolor path was a

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Coverage ratchet (docs/QML_EXTRACTION_PLAN.md, section D). Two structural
+# Coverage ratchet (docs/tracking/QML_EXTRACTION_PLAN.md, section D). Two structural
 # checks, no instrumentation dependency, CI-portable as plain shell:
 #
 #   1. Unit pairing: every pure-core header under the units/ directories

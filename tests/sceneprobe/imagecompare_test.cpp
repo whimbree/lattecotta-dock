@@ -5,7 +5,7 @@
 // Adopted from David Goree's latte-dock-qt6
 // (tests/sceneprobe/imagecompare_test.cpp at c3633f1a,
 // github.com/CaptSilver/latte-dock-qt6; see
-// docs/captsilver-testability-adoption.md, P1) - Goree's cases are unchanged.
+// docs/reference/captsilver-testability-adoption.md, P1) - Goree's cases are unchanged.
 // Local addition (multi-distro CI Phase C): the GoldenTier parse + tolerance
 // mapping cases at the bottom, covering the merge-gate-critical default.
 #include <QtTest>

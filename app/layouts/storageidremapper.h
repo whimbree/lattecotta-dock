@@ -19,7 +19,7 @@ namespace Latte {
 namespace Layouts {
 
 //! The id-assignment math of layout import/duplicate (EX-07 in
-//! docs/QML_EXTRACTION_PLAN.md), lifted out of Storage::newUniqueIdsFile's
+//! docs/tracking/QML_EXTRACTION_PLAN.md), lifted out of Storage::newUniqueIdsFile's
 //! KConfig surgery so it is unit-testable without files or a corona.
 //! The function bodies are ported from the Qt5-inherited storage.cpp
 //! (f0ad7b23, verified identical to ours before extraction); the interface

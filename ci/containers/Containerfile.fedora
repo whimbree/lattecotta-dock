@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # Fedora build+gate environment for the multi-distro CI matrix
-# (docs/multi-distro-ci-plan.md, Phase A). Fedora is a pinned-tag stable
+# (docs/tracking/multi-distro-ci-plan.md, Phase A). Fedora is a pinned-tag stable
 # leg: the base image tag freezes the Qt/KF6/Plasma/Mesa set, so it can
 # carry a bless-frozen bit-exact golden tier (Phase C), unlike the rolling
 # Arch leg. This layer installs ONLY the build/runtime/gate dependencies;

@@ -86,7 +86,7 @@ Landed before or during the 2026-07-16 stabilization session:
   z (stacking order). The per-applet `id` is the stable Plasma instance
   id, so two applets of the SAME plugin are distinguishable by id and
   their order is unambiguous (the G1 disambiguation readback,
-  docs/e2e-interaction-test-plan.md - retires the same-plugin ambiguity
+  docs/tracking/e2e-interaction-test-plan.md - retires the same-plugin ambiguity
   in the F2/F3/A1/A2 add/reorder/abort scenarios). The `z` field (added
   2026-07-18 with the applet-reorder driver, C-I7/P6) is the G2 stacking
   readback: the applet's AppletItem delegate z, 0 at the layout default
@@ -94,7 +94,7 @@ Landed before or during the 2026-07-16 stabilization session:
   that strands the dragged applet over the edit chrome (the 480ae30e3
   "icons stuck over chrome" residue class, e.g. an edit-exit mid-drag)
   shows here as a delegate left at z>=900, so the residue is queryable
-  instead of golden-only (D2 in docs/known-defects.md was confirmed live
+  instead of golden-only (D2 in docs/tracking/known-defects.md was confirmed live
   through exactly this field). Supersedes viewAppletsOrder for rich
   asserts.
 - `viewAppletsOrder(u containmentId) -> as`: the cheap companion to
@@ -105,7 +105,7 @@ Landed before or during the 2026-07-16 stabilization session:
   views. Cheap, stable, already used.
 - `viewDropMarkerIndex(u containmentId) -> i` (added 2026-07-18 with the
   e2e interaction suite, C-I4/P4). The live drop-marker readback (the G3
-  gap, docs/e2e-interaction-test-plan.md): the drag placeholder spacer's
+  gap, docs/tracking/e2e-interaction-test-plan.md): the drag placeholder spacer's
   (dndSpacer) current visual insert index while a drag hovers the view,
   or -1 when no marker is live (the spacer parked off the layouts at
   rest and after any drop or abort). Index 0 is the LEADING insert
@@ -145,7 +145,7 @@ Landed before or during the 2026-07-16 stabilization session:
   twenty-one/twenty-eight.
 - `viewConfigData(u containmentId) -> s` (JSON object, added 2026-07-18
   for the edit-mode settings audit's CL-0 prerequisite,
-  docs/edit-mode-settings-audit-plan.md). Two objects: `config`, the
+  docs/tracking/edit-mode-settings-audit-plan.md). Two objects: `config`, the
   containment's settings-panel config VALUES (every key of the General
   group - maxLength/minLength/offset/alignment, iconSize/zoomLevel/
   panelSize/panelTransparency, the margins, the background toggles, the

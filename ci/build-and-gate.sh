@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # Distro-agnostic build+gate driver for the multi-distro CI matrix
-# (docs/multi-distro-ci-plan.md). Runs INSIDE a per-distro container (see
+# (docs/tracking/multi-distro-ci-plan.md). Runs INSIDE a per-distro container (see
 # ci/containers/Containerfile.<distro>) against the source tree bind-mounted
 # read-only at /src, building out-of-source in a writable /build.
 #
@@ -90,7 +90,7 @@ source "$SRC/scripts/lib-e2e-seed.sh"
 #  - schemesmodeltest: non-hermetic - the KF6 color-scheme lookup still pulls
 #    the distro's /usr/share/color-schemes over the test's temp fixtures even
 #    though the test pins XDG_DATA_DIRS, so real Breeze schemes shift the
-#    asserted rows. Known-open, tracked in docs/multi-distro-ci-plan.md B2
+#    asserted rows. Known-open, tracked in docs/tracking/multi-distro-ci-plan.md B2
 #    (needs a hermetic scheme-path injection); passes on the nix devShell whose
 #    allow-listed XDG_DATA_DIRS does not carry the conflicting schemes.
 CTEST_MATRIX_EXCLUDE='^(qmllintgate|schemesmodeltest)$'
@@ -131,7 +131,7 @@ case "$STAGE" in
         # settings-window) - they assert pure dock state and pass on any distro
         # that builds. Five recipes need integration a minimal container does
         # not provide; they are NOT silently dropped, they are enumerated here
-        # and tracked in docs/multi-distro-ci-plan.md B2 with the root cause:
+        # and tracked in docs/tracking/multi-distro-ci-plan.md B2 with the root cause:
         #   020/040/parabolic-hover-preview: a konsole window's app_id resolves
         #     to the bare "konsole" in-container, not the "org.kde.konsole.
         #     desktop" the recipes match - the desktop-app-database resolution

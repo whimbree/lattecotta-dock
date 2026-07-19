@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # e2e-mode: nested-only
 #
-# AU-6b (docs/edit-mode-settings-audit-plan.md, cluster CL-6): the settings-window
+# AU-6b (docs/tracking/edit-mode-settings-audit-plan.md, cluster CL-6): the settings-window
 # chrome audit's live leg. Two things it proves against a real dock:
 #
 #   1. The universalSettings readback CL-6 added to viewConfigData's "view"

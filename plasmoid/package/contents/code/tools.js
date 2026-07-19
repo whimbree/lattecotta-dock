@@ -136,4 +136,4 @@ function activateNextPrevTask(next) {
 }
 
 //! insertIndexAt moved to C++ (LatteCore.DropClassifier, EX-14 in
-//! docs/QML_EXTRACTION_PLAN.md); MouseHandler.qml was its only caller.
+//! docs/tracking/QML_EXTRACTION_PLAN.md); MouseHandler.qml was its only caller.

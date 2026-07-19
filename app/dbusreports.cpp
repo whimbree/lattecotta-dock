@@ -66,7 +66,7 @@ ViewRecord collectViewRecord(const Latte::View *view, bool inConfigureAppletsMod
     record.layout = view->layout() ? view->layout()->name() : QString();
     record.isCloned = view->isCloned();
     //! groupId() is the original's containment id for clones; originals
-    //! report -1 per docs/dbus-observability-interface.md
+    //! report -1 per docs/reference/dbus-observability-interface.md
     record.isClonedFrom = record.isCloned ? view->groupId() : -1;
     record.type = view->type();
     record.screen = view->positioner()->currentScreenName();

@@ -6,7 +6,7 @@
 #
 # CL-5 (the tasks-page settings audit) live leg, settling D10 (the Tasks config
 # page renders but did not apply its settings - the inherited half-finished
-# upstream feature; docs/known-defects.md D10). It proves the Tasks page's writes
+# upstream feature; docs/tracking/known-defects.md D10). It proves the Tasks page's writes
 # reach the RUNNING tasks plasmoid on a real dock, the "applies at all" question
 # the audit plan's AU-5a demands answered first.
 #

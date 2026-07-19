@@ -7,7 +7,7 @@
 
 // Ported from David Goree's latte-dock-qt6 tests/iconsourceclassifiertest.cpp
 // at 81384003, github.com/CaptSilver/latte-dock-qt6 (EX-24 in
-// docs/QML_EXTRACTION_PLAN.md, his ad74a34a extraction): our iconitem.cpp
+// docs/tracking/QML_EXTRACTION_PLAN.md, his ad74a34a extraction): our iconitem.cpp
 // ladder was diffed against his ancestor and the Qt5 ancestor (f0ad7b23)
 // before
 // adoption - all three agree, so their case analysis transfers. Goree's

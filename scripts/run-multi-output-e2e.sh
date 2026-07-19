@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # Front door for the DUAL-OUTPUT e2e leg (C-I2 / P1,
-# docs/e2e-interaction-test-plan.md). It is the single-output run-matrix sibling
+# docs/tracking/e2e-interaction-test-plan.md). It is the single-output run-matrix sibling
 # for scenarios that need two outputs (the multi-output vehicle self-test today;
 # the F5/A4 cross-screen scenarios later): it seeds a clean hermetic config and
 # hands the recipes to scripts/run-e2e.sh with E2E_OUTPUT_COUNT=2 set, so the

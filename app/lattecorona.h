@@ -190,35 +190,35 @@ public:
     //! D-Bus state readback (observability-first): the live drop-marker
     //! (dndSpacer) visual insert index for one view - >=0 while a drag hovers
     //! the view, -1 when no marker is live. The G3 readback
-    //! (docs/e2e-interaction-test-plan.md): the direct insert(-1)
+    //! (docs/tracking/e2e-interaction-test-plan.md): the direct insert(-1)
     //! observability that lets an add/reorder abort assert no orphan
     //! placeholder was stranded. -1 also for a bad containment id (warned).
     int viewDropMarkerIndex(const uint &containmentId);
 
     //! D-Bus state readback (observability-first): every current view's
     //! placement/visibility/geometry facts as one compact JSON array keyed
-    //! on containment id, documented in docs/dbus-observability-interface.md.
+    //! on containment id, documented in docs/reference/dbus-observability-interface.md.
     //! The serialization lives in dbusreports.h; this stays a delegation.
     QString viewsData();
 
     //! D-Bus state readback (observability-first): one view's applets as a
     //! compact JSON array (id, plugin, index, geometry, expanded and
     //! destruction/lockedZoom/coloring flags), documented in
-    //! docs/dbus-observability-interface.md. "[]" means no view exists for
+    //! docs/reference/dbus-observability-interface.md. "[]" means no view exists for
     //! that containment id (warned in the log).
     QString viewAppletsData(const uint &containmentId);
 
     //! D-Bus state readback (observability-first): one view's
     //! windows-tracker facts (touching/maximized/active windows and the
     //! last active window's identity) as one compact JSON object,
-    //! documented in docs/dbus-observability-interface.md. "{}" means no
+    //! documented in docs/reference/dbus-observability-interface.md. "{}" means no
     //! view exists for that containment id (warned in the log).
     QString trackerData(const uint &containmentId);
 
     //! D-Bus state readback (observability-first): one view's latte-tasks
     //! items (identity by appId/launcherUrl, never window titles) as a
     //! compact JSON array, documented in
-    //! docs/dbus-observability-interface.md. "[]" means no view exists for
+    //! docs/reference/dbus-observability-interface.md. "[]" means no view exists for
     //! that containment id (warned) or the view hosts no tasks plasmoid
     //! (legitimate state, not warned).
     QString viewTasksData(const uint &containmentId);
@@ -226,7 +226,7 @@ public:
     //! D-Bus state readback (observability-first): one view's colorizer
     //! facts (configured color modes, the decision in force, the measured
     //! background bucket, the published scheme basename) as one compact
-    //! JSON object, documented in docs/dbus-observability-interface.md.
+    //! JSON object, documented in docs/reference/dbus-observability-interface.md.
     //! "{}" means no view exists for that containment id (warned in the
     //! log).
     QString colorizerData(const uint &containmentId);
@@ -236,7 +236,7 @@ public:
     //! effects) read from the in-process KConfigPropertyMap, plus the live
     //! C++-property half (byPassWM, visibility timers/flags, indicator type)
     //! the edit-mode audit's P3 leg reads, as one compact JSON object
-    //! documented in docs/dbus-observability-interface.md. The in-process
+    //! documented in docs/reference/dbus-observability-interface.md. The in-process
     //! read sidesteps the KConfig default-deletion trap (a key at its default
     //! reads as its default, not "missing"). Coarse read of the user's own
     //! dock config (no execution, no secrets). "{}" means no view exists for
@@ -246,7 +246,7 @@ public:
     //! D-Bus state readback (observability-first): one child applet's config
     //! VALUES (keyed by containment id, applet id, plugin) read from the
     //! applet's in-process KConfigPropertyMap, as one compact JSON object
-    //! documented in docs/dbus-observability-interface.md. This is the
+    //! documented in docs/reference/dbus-observability-interface.md. This is the
     //! D10-class surface the Tasks-page audit diffs to prove whether
     //! tasks.plasmoid.configuration.* writes land anywhere. "{}" means no view
     //! for that containment id, or no applet with that id on the view (both
@@ -256,14 +256,14 @@ public:
     //! D-Bus state readback (observability-first): every loaded layout
     //! (name, active state, applied activities, view count) plus the
     //! layouts memory mode as one compact JSON object, documented in
-    //! docs/dbus-observability-interface.md. Complements switchToLayout.
+    //! docs/reference/dbus-observability-interface.md. Complements switchToLayout.
     QString layoutsData();
 
     //! D-Bus state readback (observability-first): the ScreenPool's
     //! id<->connector mapping - every known output's Latte screen id,
     //! connector name, geometry, connected state and whether it is the
     //! primary - as one compact JSON array, documented in
-    //! docs/dbus-observability-interface.md. This is the queryable
+    //! docs/reference/dbus-observability-interface.md. This is the queryable
     //! screen<->output topology the multi-output e2e vehicle pins a
     //! per-screen view assignment against; the serialization lives in
     //! dbusreports.h, this stays a delegation.
@@ -278,7 +278,7 @@ public Q_SLOTS:
 
     void addView(const uint &containmentId, const QString &templateId);
 
-    //! D-Bus coarse action (docs/dbus-observability-interface.md): add an
+    //! D-Bus coarse action (docs/reference/dbus-observability-interface.md): add an
     //! installed plasmoid to a view by plugin id, the deterministic sibling
     //! of a widget-explorer drop. Qt5-faithful end-append. A bad containment
     //! id (no such view) or a plugin id that names no installed plasmoid is
@@ -286,7 +286,7 @@ public Q_SLOTS:
     //! to this mutator). Readback: viewAppletsData/viewAppletsOrder.
     void addApplet(const uint &containmentId, const QString &pluginId);
 
-    //! D-Bus coarse action (docs/dbus-observability-interface.md): remove an
+    //! D-Bus coarse action (docs/reference/dbus-observability-interface.md): remove an
     //! applet from a view by its instance id, the same "Remove this Widget"
     //! the applet context menu triggers (Applet::destroy()). It rides the
     //! libplasma UNDO WINDOW: the applet lingers with inScheduledDestruction
@@ -298,7 +298,7 @@ public Q_SLOTS:
     //! undo window ends.
     void removeApplet(const uint &containmentId, const uint &appletId);
 
-    //! D-Bus coarse action (docs/dbus-observability-interface.md): open a
+    //! D-Bus coarse action (docs/reference/dbus-observability-interface.md): open a
     //! view's widget explorer, the exact "Add Widgets..." context menu action.
     //! It exists as the DRIVING SURFACE for the e2e explorer->containment DND
     //! driver (C-I9/P8): the explorer window carries the AppletDelegate
@@ -316,28 +316,28 @@ public Q_SLOTS:
     void moveViewToLayout(const uint &containmentId, const QString &layoutName);
     void removeView(const uint &containmentId);
 
-    //! D-Bus coarse action (docs/dbus-observability-interface.md): enter or
+    //! D-Bus coarse action (docs/reference/dbus-observability-interface.md): enter or
     //! leave a view's edit mode through the same paths the context menu's
     //! Edit Dock... entry and the settings chrome's close button use
     void setViewEditMode(const uint &containmentId, const bool &editing);
 
-    //! D-Bus coarse action (docs/dbus-observability-interface.md): activate
+    //! D-Bus coarse action (docs/reference/dbus-observability-interface.md): activate
     //! a view's entry at the given 1-based visual index through the exact
     //! Meta+<index> global-shortcut path
     void activateTaskAt(const uint &containmentId, const int &index);
 
-    //! D-Bus coarse action (docs/dbus-observability-interface.md): set a
+    //! D-Bus coarse action (docs/reference/dbus-observability-interface.md): set a
     //! view's visibility mode by its viewsData() name, exactly what the
     //! settings Behavior combo does; unknown names are refused loudly
     void setViewVisibilityMode(const uint &containmentId, const QString &mode);
 
-    //! D-Bus coarse action (docs/dbus-observability-interface.md): enter or
+    //! D-Bus coarse action (docs/reference/dbus-observability-interface.md): enter or
     //! leave a view's keyboard-navigation mode through the same
     //! View::enter/exitKeyboardNavigation paths the Meta+Alt+D global
     //! shortcut drives; readback is viewsData()'s keyboardNavigation field
     void setViewKeyboardNavigation(const uint &containmentId, const bool &navigating);
 
-    //! D-Bus coarse action (docs/dbus-observability-interface.md): enter or
+    //! D-Bus coarse action (docs/reference/dbus-observability-interface.md): enter or
     //! leave a view's applet-rearrange (configure-applets) sub-mode, the same
     //! global toggle the settings-window header's rearrange button flips
     //! (HeaderSettings.qml). It is the driving surface for the applet-reorder

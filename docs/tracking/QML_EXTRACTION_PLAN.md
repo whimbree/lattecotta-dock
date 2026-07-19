@@ -250,7 +250,7 @@ Per-unit specs (section C), in rank order:
     detent, config-verified per detent). Only the audio-badge check
     stays desk-bound as a repeatable recipe (no pipewire in the
     vehicle; the one-time live pass above stands, and the desk-owed
-    note is in docs/manual-flake-removal-testing.md).
+    note is in docs/reference/manual-flake-removal-testing.md).
 - [x] EX-16 GroupWindowCycler - next/previous/minimize target selection
   - [x] executed: LANDED 80525a85 lineage (rebased; see the spec Commits
     line). Merge evidence: the 24-case shipped-QML pinning suite and the
@@ -392,7 +392,7 @@ PORTING_PLAN cross-reference item: [x] done (Phase 10, QML extraction initiative
 - No bandaids carried over: where the QML logic "works" via a polling
   timer, silent early-return, or value-hiding clamp, the spec flags it
   as a defect to fix during extraction. The known inventory of
-  assessed silent guards is in docs/session-handoff.md (the 2026-07-15
+  assessed silent guards is in docs/tracking/session-handoff.md (the 2026-07-15
   loops/degenerate-indexes sweep); specs reference it rather than
   re-litigating each guard.
 - STEP-2.5 AMENDMENT (2026-07-15, binds every unit not yet landed;
@@ -2453,9 +2453,9 @@ ecm_add_test entries) plus tests/contracts (the pin-the-frameworks
 suite, fadd9012) and tests/qml (6 qmltest files driving the real
 shipped QML); the gates qmlcompilegate, qmlinteraction, qmleffectrules,
 previewcontractrules, qmlcontracts; scripts/build-check.sh as the local
-CI surrogate; docs/TESTING.md's honest-coverage standard (real
+CI surrogate; docs/reference/TESTING.md's honest-coverage standard (real
 assertions, no swallowed throws, no construction-only credit, honest
-mocks, deterministic headless) with docs/testing/live-only.md for what
+mocks, deterministic headless) with docs/reference/live-only.md for what
 genuinely cannot be tested headlessly.
 
 How new units plug in:
@@ -2489,7 +2489,7 @@ Coverage ratchet (design; adopt in Wave 0):
      makes silent coverage loss un-mergeable.
 - Line/branch coverage is deliberately NOT the ratchet metric: the
   devShell has no pinned gcovr/llvm-cov wiring today and percentage
-  metrics invite the gaming docs/TESTING.md bans. The script's
+  metrics invite the gaming docs/reference/TESTING.md bans. The script's
   numbers are CI-portable as-is (pure shell over cmake/ctest
   output), so a future CI job runs the same script unchanged - the
   no-rework requirement.

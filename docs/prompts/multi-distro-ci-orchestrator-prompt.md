@@ -1,8 +1,8 @@
-# Multi-distro CI ORCHESTRATOR prompt (continue to v0.12.0)
+# Multi-distro CI ORCHESTRATOR prompt (continue to v0.20.0)
 
 Re-runnable - KEEP INVOKING until the agreed matrix is green on a release
 commit, the native packages build+install+gate on every target, and
-v0.12.0 is tagged. Written 2026-07-17, after Arch was proven end to end.
+v0.20.0 is tagged. Written 2026-07-17, after Arch was proven end to end.
 
 **You are the ORCHESTRATOR, not the sole worker.** There is a lot of work
 left and most of it is parallelizable. Your job is to DECOMPOSE it into
@@ -20,13 +20,13 @@ hands whenever a chunk is self-contained.
    stamp), the PR workflow + INDEPENDENT-REVIEW contract (reviews are a
    lean OPUS subagent, cold context, diff-only), copyright/attribution,
    author voice, no AI attribution, the subagent cap (batch at 4).
-2. `docs/multi-distro-ci-plan.md` - the checklist, phases A-G, the
+2. `docs/tracking/multi-distro-ci-plan.md` - the checklist, phases A-G, the
    graduated-golden strategy, the DECISIONs, and the "Execution model"
    section (the swarm shape).
 3. `docs/prompts/multi-distro-ci-execution-prompt.md` - the STANDING
    mission/context/reuse/risky-unknowns. Still fully valid; THIS prompt
    changes HOW the work is driven (orchestrated), not WHAT the work is.
-4. `docs/session-handoff.md` - the latest state (the 2026-07-17 Phase A/B/
+4. `docs/tracking/session-handoff.md` - the latest state (the 2026-07-17 Phase A/B/
    B2 entries).
 
 ## Where things stand (do not re-derive)
@@ -79,7 +79,7 @@ hands whenever a chunk is self-contained.
   root-cause blockers on the branch before merge, file non-blocking nits
   as plan items.
 - **Keep the record current** as each chunk lands: tick plan checkboxes
-  with POST-MERGE hashes, update `docs/session-handoff.md`, update the
+  with POST-MERGE hashes, update `docs/tracking/session-handoff.md`, update the
   README when a landing is major (the matrix going green, the release).
 - **Collect an OPEN DECISION** from Bree with `AskUserQuestion` only when
   its phase arrives (none block the Phase A/B wave): DECISION 2 (cadence,
@@ -141,7 +141,7 @@ hands whenever a chunk is self-contained.
   from the golden TIER name in `tests/sceneprobe/main.cpp` so non-nix legs
   run invariant+tolerance instead of bit-exact; more central, one agent or
   do it yourself), Phase D (CI workflow, runner-agnostic - DECISION 6/2),
-  Phase E (VERSION 0.12.0 + changelog + tag - DECISION 5), Phase F
+  Phase E (VERSION 0.20.0 + changelog + tag - DECISION 5), Phase F
   (packaging swarm, one Opus worktree agent per FORMAT: wave = deb, rpm,
   arch; then gentoo, void - orchestrator owns the shared CI/version/
   copyright scaffold).
@@ -161,9 +161,9 @@ hands whenever a chunk is self-contained.
 
 The agreed matrix (DECISION 5) green on a release commit; the five package
 formats build+install+gate on their targets; CMakeLists VERSION 0.10.77 ->
-0.12.0 with a changelog + documented release process; v0.12.0 tagged; the
+0.20.0 with a changelog + documented release process; v0.20.0 tagged; the
 plan's A-G checklist ticked with hashes; README states the multi-distro
-matrix, the packages, and the v0.12.0 release.
+matrix, the packages, and the v0.20.0 release.
 
 ## Session protocol
 

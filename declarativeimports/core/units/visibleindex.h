@@ -22,7 +22,7 @@
 namespace Latte {
 
 //! Visible-index mapping and separator/hidden neighbor predicates over an
-//! item row (EX-06 in docs/QML_EXTRACTION_PLAN.md), extracted from four
+//! item row (EX-06 in docs/tracking/QML_EXTRACTION_PLAN.md), extracted from four
 //! hand-maintained QML twins that had already drifted structurally: the
 //! containment IndexerPrivate.qml/Indexer.qml pair, the client abilities
 //! Indexer.qml, and the AppletItem.qml/BasicItem.qml while-loop neighbor

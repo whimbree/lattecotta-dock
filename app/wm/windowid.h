@@ -19,7 +19,7 @@ namespace Latte {
 namespace WindowSystem {
 
 //! Window-system id newtype (the WindowId newtype hardening item in
-//! docs/PORTING_PLAN.md). Storage stays the QByteArray that 8e8cdf31
+//! docs/tracking/PORTING_PLAN.md). Storage stays the QByteArray that 8e8cdf31
 //! chose: wayland carries PlasmaWindow::uuid() bytes verbatim, X11
 //! carries the numeric WId as a decimal string, and the empty id is the
 //! one no-window value on both platforms. What the newtype adds over the

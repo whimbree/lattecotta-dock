@@ -5,7 +5,7 @@
 */
 
 // The length cluster's real-handler WIRING audit (CL-1 in
-// docs/edit-mode-settings-audit-plan.md). It is the settingswiringharnesstest
+// docs/tracking/edit-mode-settings-audit-plan.md). It is the settingswiringharnesstest
 // pattern (a control's handler body run as a QML fragment against a stub
 // QQmlPropertyMap, then the Tier B diff predicates in
 // tests/units/configsnapshotdiff.h over the delta), extended with the one thing

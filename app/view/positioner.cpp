@@ -717,7 +717,7 @@ void Positioner::updatePosition(QRect availableScreenRect)
                    << m_view->location();
     }
 
-    //! EX-09 (docs/QML_EXTRACTION_PLAN.md): the placement math lives in the
+    //! EX-09 (docs/tracking/QML_EXTRACTION_PLAN.md): the placement math lives in the
     //! tested PositionerGeometry core; this adapter keeps the validGeometry
     //! bookkeeping and the window application
     const QPoint position = PositionerGeometry::dockPosition(geometryInputs(), availableScreenRect);

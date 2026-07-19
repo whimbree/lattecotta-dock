@@ -5,7 +5,7 @@
 */
 
 // The pure layer of the viewsData() D-Bus read
-// (docs/dbus-observability-interface.md): ViewRecord -> JSON serialization
+// (docs/reference/dbus-observability-interface.md): ViewRecord -> JSON serialization
 // and the enum-name mappings. The live collectors in app/dbusreports.cpp
 // are three-line field reads off View and stay exercised by the running
 // dock; everything a consumer parses is pinned here.
@@ -91,7 +91,7 @@ private Q_SLOTS:
 };
 
 //! the exact sorted key list of a serialized record: the schema pin that
-//! makes accidental drift from docs/dbus-observability-interface.md fail a
+//! makes accidental drift from docs/reference/dbus-observability-interface.md fail a
 //! test instead of a D-Bus consumer
 static QStringList sortedKeys(const QJsonObject &json)
 {
@@ -207,7 +207,7 @@ void DbusReportsTest::rectSerialization()
 }
 
 //! one fully populated record, so every field name and value type a D-Bus
-//! consumer parses is pinned against docs/dbus-observability-interface.md
+//! consumer parses is pinned against docs/reference/dbus-observability-interface.md
 void DbusReportsTest::recordSerialization()
 {
     ViewRecord record;
@@ -337,7 +337,7 @@ void DbusReportsTest::recordsSerializeAsCompactJsonArray()
 }
 
 //! one fully populated applet record, pinning every field name and value
-//! type of viewAppletsData() against docs/dbus-observability-interface.md
+//! type of viewAppletsData() against docs/reference/dbus-observability-interface.md
 void DbusReportsTest::appletRecordSerialization()
 {
     AppletRecord record;
@@ -384,7 +384,7 @@ void DbusReportsTest::appletRecordKeySet()
     QCOMPARE(sortedKeys(serializeAppletRecord(AppletRecord{})), expected);
 }
 
-//! The G2 stacking readback contract (docs/e2e-interaction-test-plan.md): the
+//! The G2 stacking readback contract (docs/tracking/e2e-interaction-test-plan.md): the
 //! z field carries the applet delegate's stacking order as a real number, and
 //! its at-rest baseline is 0 (the layout default). An applet-reorder that
 //! stranded the dragged delegate lifted over the edit chrome shows here as a
@@ -427,7 +427,7 @@ void DbusReportsTest::appletRecordsSerializeAsCompactJsonArray()
     QCOMPARE(serializeAppletRecords({}), QStringLiteral("[]"));
 }
 
-//! The G1 applet-id-order readback (docs/e2e-interaction-test-plan.md):
+//! The G1 applet-id-order readback (docs/tracking/e2e-interaction-test-plan.md):
 //! appletIdOrder() drops the justify-splitter sentinels
 //! (LayoutManager::JUSTIFYSPLITTERID = -10) from a raw appletsOrder() and
 //! keeps every real applet id in place, so viewAppletsOrder reports exactly
@@ -465,7 +465,7 @@ void DbusReportsTest::appletIdOrderDisambiguatesSamePluginApplets()
     QVERIFY(order.at(0) != order.at(1));
 }
 
-//! The G3 drop-marker sentinel contract (docs/e2e-interaction-test-plan.md):
+//! The G3 drop-marker sentinel contract (docs/tracking/e2e-interaction-test-plan.md):
 //! viewDropMarkerIndex reports the drag placeholder's visual insert index, or
 //! -1 when no marker is live. The trap this pins is that index 0 is the
 //! LEADING insert position - a live marker, NOT "absent" - so an add/reorder
@@ -539,7 +539,7 @@ void DbusReportsTest::settableVisibilityModeRefusals()
 }
 
 //! one fully populated tracker record, pinning every field name and value
-//! type of trackerData() against docs/dbus-observability-interface.md
+//! type of trackerData() against docs/reference/dbus-observability-interface.md
 void DbusReportsTest::trackerRecordSerialization()
 {
     TrackerRecord record;
@@ -601,7 +601,7 @@ void DbusReportsTest::trackerDataSerializesAsCompactJsonObject()
 }
 
 //! one fully populated task record, pinning every field name and value
-//! type of viewTasksData() against docs/dbus-observability-interface.md -
+//! type of viewTasksData() against docs/reference/dbus-observability-interface.md -
 //! note there is deliberately NO title field anywhere in the schema
 void DbusReportsTest::taskRecordSerialization()
 {
@@ -669,7 +669,7 @@ void DbusReportsTest::taskRecordsSerializeAsCompactJsonArray()
     QCOMPARE(serializeTaskRecords({}), QStringLiteral("[]"));
 }
 
-//! G4 (docs/e2e-interaction-test-plan.md section 9): index + appId ARE the
+//! G4 (docs/tracking/e2e-interaction-test-plan.md section 9): index + appId ARE the
 //! window-task order readback the F4/A3 window-task scenarios assert on. This
 //! pins the contract in the serializer: the array is emitted in row order (so
 //! position i carries index i), and appId is the identity that travels WITH a
@@ -894,7 +894,7 @@ void DbusReportsTest::memoryUsageNames()
 }
 
 //! one fully populated layout record, pinning every field name and value
-//! type of layoutsData() against docs/dbus-observability-interface.md
+//! type of layoutsData() against docs/reference/dbus-observability-interface.md
 void DbusReportsTest::layoutRecordSerialization()
 {
     LayoutRecord record;

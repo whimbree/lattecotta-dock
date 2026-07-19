@@ -18,7 +18,7 @@ namespace Latte {
 namespace Containment {
 
 //! Thin QML shell over the BackgroundState pure core (EX-13 in
-//! docs/QML_EXTRACTION_PLAN.md, units/backgroundstate.h). Stateless: the
+//! docs/tracking/QML_EXTRACTION_PLAN.md, units/backgroundstate.h). Stateless: the
 //! containment main.qml and background/MultiLayered.qml each instantiate
 //! one and keep their per-predicate property bindings (the binding split
 //! breaks loops the core must not re-tie; see the core's resolveViewType

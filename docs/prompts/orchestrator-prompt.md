@@ -19,6 +19,16 @@ divergence, a sign-off-gated proposal).
 This prompt encodes the CHOREOGRAPHY. It does NOT duplicate the binding rules -
 those live in `CLAUDE.md` and are followed, not restated here.
 
+## Startup: confirm the target before farming
+
+If the invoker named a specific task or workstream (or pointed at its plan doc),
+adopt it and proceed. If NO specific target was named, do NOT pick one and do NOT
+start farming: first READ `docs/tracking/ROADMAP.md`, then present the open
+roadmap items with their current state (one line each) and ASK the owner which to
+tackle. Only proceed autonomously once a target is chosen or was named up front.
+The full autonomy below governs EXECUTING the chosen workstream, not choosing
+which workstream runs.
+
 ## Read first, in order
 
 1. `CLAUDE.md` - the binding rigor: root-cause law + regression discipline
@@ -28,28 +38,31 @@ those live in `CLAUDE.md` and are followed, not restated here.
    attribution + transplant citation, author voice (impersonal, no first-person,
    no em-dashes), no AI/Co-Authored-By attribution, code clarity, observability-
    first, the subagent cap.
-2. `docs/session-handoff.md` - the CURRENT state. Read it first every session;
+2. `docs/tracking/ROADMAP.md` - the one-screen index of every plan and its
+   current state; the map. Skim it to know what workstreams exist and where each
+   stands before drilling into any one plan.
+3. `docs/tracking/session-handoff.md` - the CURRENT state. Read it first every session;
    it is the single source of "where things stand". Update it as work lands.
-3. `docs/PORTING_PLAN.md` - the 13-phase checklist and its traceability rule
+4. `docs/tracking/PORTING_PLAN.md` - the 13-phase checklist and its traceability rule
    (every `- [ ]` names its `Commits:`; the orchestrator ticks with post-rebase
    hashes at merge).
-4. `docs/known-defects.md` - the flat defect registry (D-numbers; STATUS values
+5. `docs/tracking/known-defects.md` - the flat defect registry (D-numbers; STATUS values
    OPEN / SUSPECTED / FIXED / ACCEPTED). The orchestrator owns filing.
-5. The work-stream plan for the current focus, e.g.
-   `docs/edit-mode-settings-audit-plan.md`, `docs/e2e-interaction-test-plan.md`,
-   `docs/ub-catching-plan.md`, `docs/x11-cleanup-audit.md`,
-   `docs/QML_EXTRACTION_PLAN.md`, `docs/multi-distro-ci-plan.md`,
-   `docs/panel-issues-plan.md`. Each carries the chunk list, the DECISIONs, and
+6. The work-stream plan for the current focus, e.g.
+   `docs/tracking/edit-mode-settings-audit-plan.md`, `docs/tracking/e2e-interaction-test-plan.md`,
+   `docs/tracking/ub-catching-plan.md`, `docs/tracking/x11-cleanup-audit.md`,
+   `docs/tracking/QML_EXTRACTION_PLAN.md`, `docs/tracking/multi-distro-ci-plan.md`,
+   `docs/tracking/panel-issues-plan.md`. Each carries the chunk list, the DECISIONs, and
    an execution/swarm-shape section.
-6. `docs/TESTING.md` - the step-2.5 pure-core law, the sanitizer contract, the
+7. `docs/reference/TESTING.md` - the step-2.5 pure-core law, the sanitizer contract, the
    qmllint ratchet (baseline only shrinks, with one documented per-feature
    i18nc carve-out), and the gate mechanics.
-7. Skills (invoke as needed): `latte-live-verification` (drive the dock + the
+8. Skills (invoke as needed): `latte-live-verification` (drive the dock + the
    nested vehicle, D-Bus surface, fakepointer), `latte-debugging` (crash/hang,
    isolated reproduction), `latte-architecture` (subsystem map), `latte-build-
    env` (build/stage), `latte-fork-sync` (the reference forks),
    `latte-plasma6-defect-families`.
-8. Memories: `live-system-experiment-consent` (standing OK for the ORCHESTRATOR
+9. Memories: `live-system-experiment-consent` (standing OK for the ORCHESTRATOR
    to deliver/verify on the live dock; agents stay in the nested vehicle),
    `verify-subagent-results-before-dismissing` (read the transcript, not the
    metadata), `harness-scripting-typed-python`, `author-voice-in-commits-and-
@@ -124,10 +137,10 @@ and the serial-merge steps.
 
 ### 5. Finalize (orchestrator-owned, its own docs PR)
 - Tick the plan (PORTING_PLAN / the work-stream plan) with POST-REBASE hashes.
-- File/close defects in `known-defects.md` (a real defect earns an entry even
-  when fixed the same day; record the disposition honestly, incl. DISPROVEN
-  hypotheses and SUSPECTED latents).
-- Update `session-handoff.md` as work lands.
+- File/close defects in `docs/tracking/known-defects.md` (a real defect earns an
+  entry even when fixed the same day; record the disposition honestly, incl.
+  DISPROVEN hypotheses and SUSPECTED latents).
+- Update `docs/tracking/session-handoff.md` as work lands.
 - Update the `README` when the landing is major (a new surface, harness, phase,
   or retired defect class) - timeless voice, no session narration.
 - Branch protection blocks direct-to-main, so docs land through a PR too: a
@@ -234,11 +247,11 @@ DISCIPLINE:
 - GATE: `LATTE_GATE_FAST=1 scripts/gate-all.sh`, read the EXIT CODE (never scrape
   prose, never `... || {}` mask). Exit 0 = green + stamped. Do NOT run the plain
   gate (asan-e2e exceeds your tool cap); the orchestrator runs asan at merge.
-- CODE + TESTS ONLY. Do NOT edit docs/PORTING_PLAN.md, docs/known-defects.md,
-  docs/session-handoff.md, or the work-stream plan - the orchestrator owns those.
+- CODE + TESTS ONLY. Do NOT edit docs/tracking/PORTING_PLAN.md, docs/tracking/known-defects.md,
+  docs/tracking/session-handoff.md, or the work-stream plan - the orchestrator owns those.
   REPORT every finding (new suspected defect, Qt5 divergence, each RED->GREEN) in
   your final message so the orchestrator can file it. [A defect-FIX PR MAY file
-  its own D-number in known-defects.md.]
+  its own D-number in docs/tracking/known-defects.md.]
 - Commit shape: one root cause per commit; body = mechanism + why-at-root +
   verification evidence (what was driven and observed). Credit any reference-fork
   parallel.
@@ -301,7 +314,7 @@ is up reproducing this - but do NOT mutate the session or config):
 4. PORT REGRESSION? Compare the same path vs Qt5 (git history) + the reference
    forks (~/Projects/latte-dock-ng, ~/Projects/latte-dock-qt6); cite the diff.
 5. OBSERVABILITY: is the asserted-on state pull-queryable (busctl ...
-   org.kde.LatteDock; docs/dbus-interface-reference.md)? If not, is a new
+   org.kde.LatteDock; docs/reference/dbus-interface-reference.md)? If not, is a new
    readback warranted for a regression test?
 
 DELIVER a findings report: (a) what exists vs is missing/broken; (b) the ROOT
@@ -315,16 +328,17 @@ Investigate and REPORT ONLY - do not fix, edit, or build.
 | Path | Purpose |
 | --- | --- |
 | `CLAUDE.md` | The binding agreements (this prompt references, never duplicates). |
-| `docs/session-handoff.md` | Rolling state; read first, update as work lands. |
-| `docs/PORTING_PLAN.md` | 13-phase checklist + commit traceability. |
-| `docs/known-defects.md` | Flat defect registry (D-numbers; the orchestrator files). |
-| `docs/TESTING.md` | Step-2.5 law, sanitizers, qmllint ratchet, gate mechanics. |
-| `docs/edit-mode-settings-audit-plan.md` | Settings-audit workstream (CL-clusters). |
-| `docs/e2e-interaction-test-plan.md` | E2e interaction matrix (C-I/C-S/C-A chunks). |
-| `docs/ub-catching-plan.md` | Sanitized build + boundary-invariant prongs. |
-| `docs/x11-cleanup-audit.md` | X11 survivor sweep + sign-off-gated proposals. |
-| `docs/QML_EXTRACTION_PLAN.md` | The completed pure-core extraction ledger. |
-| `docs/dbus-interface-reference.md` | The observability surface (readbacks + recipes). |
+| `docs/tracking/ROADMAP.md` | One-screen index of every plan and its current state. |
+| `docs/tracking/session-handoff.md` | Rolling state; read first, update as work lands. |
+| `docs/tracking/PORTING_PLAN.md` | 13-phase checklist + commit traceability. |
+| `docs/tracking/known-defects.md` | Flat defect registry (D-numbers; the orchestrator files). |
+| `docs/reference/TESTING.md` | Step-2.5 law, sanitizers, qmllint ratchet, gate mechanics. |
+| `docs/tracking/edit-mode-settings-audit-plan.md` | Settings-audit workstream (CL-clusters). |
+| `docs/tracking/e2e-interaction-test-plan.md` | E2e interaction matrix (C-I/C-S/C-A chunks). |
+| `docs/tracking/ub-catching-plan.md` | Sanitized build + boundary-invariant prongs. |
+| `docs/tracking/x11-cleanup-audit.md` | X11 survivor sweep + sign-off-gated proposals. |
+| `docs/tracking/QML_EXTRACTION_PLAN.md` | The completed pure-core extraction ledger. |
+| `docs/reference/dbus-interface-reference.md` | The observability surface (readbacks + recipes). |
 | `scripts/gate-all.sh` | The gate; `LATTE_GATE_FAST=1` skips asan-e2e. |
 | `scripts/asan-e2e-gate.sh` | The merge-time asan-e2e leg for dock C++. |
 | `scripts/git-hooks/pre-push` | Refuses unstamped code pushes; `.md` drift exempt. |

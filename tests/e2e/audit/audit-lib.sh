@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Latte Dock contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# The edit-mode settings audit HARNESS (docs/edit-mode-settings-audit-plan.md,
+# The edit-mode settings audit HARNESS (docs/tracking/edit-mode-settings-audit-plan.md,
 # cluster CL-0). This is the Tier B / Tier C / Tier D driver every per-control
 # cluster (CL-1 length, CL-2 appearance, CL-3 behavior, CL-4 effects, CL-5
 # tasks, CL-6 chrome) calls. It is a SUPERSET of the e2e matrix harness, NOT a

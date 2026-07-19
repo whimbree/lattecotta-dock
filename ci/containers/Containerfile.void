@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # Void Linux build+gate environment for the multi-distro CI matrix
-# (docs/multi-distro-ci-plan.md, Phase A/B). Void is the minimalist
+# (docs/tracking/multi-distro-ci-plan.md, Phase A/B). Void is the minimalist
 # source/rolling nerd leg (xbps package manager): goldens rot as the repo
 # rolls, so it gates at the invariant+tolerance tier, not bit-exact (though
 # at the Mesa version below the text-free scenes happen to match the

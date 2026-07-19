@@ -1,7 +1,7 @@
 # Accessibility and keyboard surface inventory (2026-07-16)
 
 Baseline inventory for the Phase 10 accessibility requirements
-(docs/PORTING_PLAN.md, "Accessibility, keyboard and automation
+(docs/tracking/PORTING_PLAN.md, "Accessibility, keyboard and automation
 requirements"). Read-only research pass: no code changed. Method:
 grepped the shipped packages (containment/package, plasmoid/package,
 shell/package, declarativeimports) plus app/settings and app/shortcuts

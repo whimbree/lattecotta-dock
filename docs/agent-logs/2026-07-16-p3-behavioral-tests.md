@@ -1,6 +1,6 @@
 # P3 behavioral-test transplants from latte-dock-qt6 (2026-07-16)
 
-Task: docs/captsilver-testability-adoption.md P3 - behavioral tests
+Task: docs/reference/captsilver-testability-adoption.md P3 - behavioral tests
 over the lattedock-core object library, transplanted from the
 reference fork (read at origin/main via `git show`; the local checkout
 sits at 9003f33a and these tests exist only at origin/main), each
@@ -15,7 +15,7 @@ visibilityrevealtest first (Phase 8 subjects), then abstractlayouttest,
 activitiesinfotest, syncedlaunchersclienttest, lastactivewindowtest,
 smartlauncheritemtest, tasksbackendtest, datatypestest,
 settingsmodelstest. storageroundtriptest and templatesnametest are
-SKIPPED per the plan (mirror-logic tests; docs/TESTING.md rejects
+SKIPPED per the plan (mirror-logic tests; docs/reference/TESTING.md rejects
 reimplementation-testing).
 
 ## Defects exposed by the premise sweep
@@ -218,7 +218,7 @@ per the plan.
 
 ### SKIPPED: storageroundtriptest, templatesnametest
 
-Mirror-logic tests, per the adoption plan and docs/TESTING.md's
+Mirror-logic tests, per the adoption plan and docs/reference/TESTING.md's
 reimplementation-testing ban. No further evaluation needed.
 
 ## Strengthening pass under the quality bar

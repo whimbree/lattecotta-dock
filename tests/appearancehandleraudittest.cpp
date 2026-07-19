@@ -5,7 +5,7 @@
 */
 
 // The Appearance page's NON-length real-handler WIRING audit (CL-2 in
-// docs/edit-mode-settings-audit-plan.md). It is the settingswiringharnesstest
+// docs/tracking/edit-mode-settings-audit-plan.md). It is the settingswiringharnesstest
 // pattern: a control's handler body run as a QML fragment against a stub
 // QQmlPropertyMap standing in for plasmoid.configuration, then the Tier B diff
 // predicates (tests/units/configsnapshotdiff.h) over the before/after delta.

@@ -15,7 +15,7 @@
 namespace Latte {
 
 //! Thin QML shell over the BadgeMath pure core (EX-20 in
-//! docs/QML_EXTRACTION_PLAN.md, units/badgemath.h), registered as the
+//! docs/tracking/QML_EXTRACTION_PLAN.md, units/badgemath.h), registered as the
 //! LatteCore.BadgeMath singleton. It lives in LatteCore rather than the
 //! tasks-private plugin because BadgeText.qml is a shared
 //! org.kde.latte.components component (the containment's shortcut badges

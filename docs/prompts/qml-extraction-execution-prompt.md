@@ -5,9 +5,9 @@ Written 2026-07-15; premises verified against the tree at afddf1ae.
 
 ---
 
-Read CLAUDE.md, then docs/session-handoff.md - the MODEL-TRANSITION
+Read CLAUDE.md, then docs/tracking/session-handoff.md - the MODEL-TRANSITION
 PRIORITY STACK at the top. You are executing its item 4: the
-strong-model-window shortlist of docs/QML_EXTRACTION_PLAN.md first,
+strong-model-window shortlist of docs/tracking/QML_EXTRACTION_PLAN.md first,
 then AS MUCH OF THE REST OF THE PLAN AS POSSIBLE, with one
 prerequisite pass before anything (the capt fork sync below). Verify
 the tree is clean and HEAD == origin/master before starting. This
@@ -68,7 +68,7 @@ they are the session's failure modes:
   and simultaneous: no invariant may be unpinned in both places, and
   only EX-01 commits may edit scripts/preview-contract-rules.sh.
 - Tests come FIRST, from the spec's tables, then the implementation
-  greens them. The honest-coverage standard (docs/TESTING.md) applies;
+  greens them. The honest-coverage standard (docs/reference/TESTING.md) applies;
   reference tables generated from current implementations must name
   their generation method in a comment.
 - Cutover commits delete the QML logic body they replace (single-copy
@@ -110,7 +110,7 @@ recorded done in the ledger; if the ledger already records it, skip):
    invalid-states rule below is stated in terms of what the standard
    in force provides (optional, enum class, strong typedefs,
    bounds-checked access), not a wishlist.
-3. Amend docs/QML_EXTRACTION_PLAN.md ONCE (Method section + section
+3. Amend docs/tracking/QML_EXTRACTION_PLAN.md ONCE (Method section + section
    D), binding all not-yet-landed units: every unit's done-criteria
    become (a) logic extracted to a pure core in the project's C++
    standard, (b) invalid states made unrepresentable via the type
@@ -125,7 +125,7 @@ recorded done in the ledger; if the ledger already records it, skip):
    of inherited Latte code, no sanitizing the live dock, and live
    verification stays mandatory for feel-bearing logic exactly as
    the specs say.
-5. Record it as standing law: docs/TESTING.md gets the rule ("pure
+5. Record it as standing law: docs/reference/TESTING.md gets the rule ("pure
    cores are written to the project C++ standard with invalid states
    designed out; their tests run under ASan+UBSan"), CLAUDE.md gets
    one pointer line, and the ledger gets a STEP-2.5 entry so every
@@ -242,8 +242,8 @@ executing session reads its orders, because they bind every wave):
   regression test in its fix commit; QML-observable behavior gets an
   offscreen qmltest in tests/qml driving the REAL shipped component
   through the wrapper (our automated e2e layer) - what genuinely
-  needs a compositor is recorded per docs/testing/live-only.md, not
-  faked. Honest-coverage (docs/TESTING.md) is the floor everywhere;
+  needs a compositor is recorded per docs/reference/live-only.md, not
+  faked. Honest-coverage (docs/reference/TESTING.md) is the floor everywhere;
   never assert on KConfig groupList()/QHash iteration order (varies
   per process seed - this class already produced one flake).
 - These rules extend, never replace, the existing working agreements:
@@ -275,7 +275,7 @@ exceptions. Only a check that genuinely needs a real mouse or a human
 eye (the specs mark none as mandatory-desk, but you may discover one)
 gets recorded as a pending live check in the unit's plan entry and in
 the handoff's consolidated live-verification list instead of blocking
-the unit - the docs/testing/live-only.md pattern, recorded not
+the unit - the docs/reference/live-only.md pattern, recorded not
 papered over.
 
 VERIFICATION RULES (this is where the session earns its keep):

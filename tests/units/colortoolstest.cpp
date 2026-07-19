@@ -4,12 +4,12 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-19 ColorLuminance (docs/QML_EXTRACTION_PLAN.md): equivalence tests for
+// EX-19 ColorLuminance (docs/tracking/QML_EXTRACTION_PLAN.md): equivalence tests for
 // the brightness/luminance core against the JS implementation it replaces,
 // plus the Tools QML-boundary contract (delegation and loud refusal of
 // invalid colors).
 //
-// Reference-table generation method (per docs/TESTING.md): the rows in
+// Reference-table generation method (per docs/reference/TESTING.md): the rows in
 // referenceTable_data were produced by driving the SHIPPED
 // declarativeimports/components/code/ColorizerTools.js (byte-identical to
 // the containment copy; the plasmoid copy differs only by a semicolon and

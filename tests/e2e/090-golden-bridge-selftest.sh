@@ -5,7 +5,7 @@
 # e2e-mode: nested-only
 #
 # HC3 acceptance test for the render-golden bridge (P2 / C-I6,
-# docs/e2e-interaction-test-plan.md). A golden compare that only ever passes on
+# docs/tracking/e2e-interaction-test-plan.md). A golden compare that only ever passes on
 # a match cannot catch a visual regression - so, exactly like the sceneprobe
 # gate's good/bad/blank self-test and the matrix harness's own tripwire, this
 # proves the bridge OBSERVES A REJECTION: a deliberately-wrong golden and a

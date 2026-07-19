@@ -25,7 +25,7 @@
 //! The plasmoid handed to LayoutManager is a mock carrying a REAL
 //! KConfigPropertyMap over a throwaway KConfigLoader: the map is where
 //! save() publishes appletOrder, which is how finalization is observable
-//! (docs/TESTING.md: assert observable effects).
+//! (docs/reference/TESTING.md: assert observable effects).
 
 // Qt
 #include <QBuffer>

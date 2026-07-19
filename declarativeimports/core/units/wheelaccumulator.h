@@ -19,7 +19,7 @@
 namespace Latte {
 
 //! Wheel delta accumulation/threshold semantics (EX-15 in
-//! docs/QML_EXTRACTION_PLAN.md): one tested accumulator replacing four
+//! docs/tracking/QML_EXTRACTION_PLAN.md): one tested accumulator replacing four
 //! hand-rolled onWheel bodies - AudioStream.qml (plasma-pa accumulate,
 //! 299a241b), TaskMouseArea.qml (dominant-axis threshold),
 //! EnvironmentActions.qml (signed-extreme threshold) and

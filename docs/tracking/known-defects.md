@@ -190,7 +190,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   so this is not a delete - it is a stub-or-wire decision. Either mark it a
   `// STUB` like skipTaskBar (defer to the PlasmaShellSurface/layer-shell
   surface-management work) or request keep-above through the wayland surface
-  directly. Filed as proposal D2 in docs/x11-cleanup-audit.md; not fixed this
+  directly. Filed as proposal D2 in docs/tracking/x11-cleanup-audit.md; not fixed this
   pass (the survivor sweep executes removals only, surfaces behaviour changes).
 ### D20 - Right-click menu collapses in normal mode when the always-shown key is empty
 - STATUS: the collapse-on-empty is ACCEPTED (Qt5-faithful: a genuinely empty
@@ -253,7 +253,7 @@ so "what is known broken" is one scan. Full detail migrates on next touch.
 - STATUS: OPEN (inherited upstream half-finished feature; decide wire-up vs hide).
 - LatteDockConfiguration.qml still exposes the Tasks config tab; latte-dock-ng
   hid theirs (9faccabda) after judging it non-applying. Detail:
-  docs/ng-upstream-audit.md:322, docs/REVIEW_NOTES.md, and CLAUDE.md's
+  docs/reference/ng-upstream-audit.md:322, docs/tracking/REVIEW_NOTES.md, and CLAUDE.md's
   stub-tracking cautionary tale (this is that exact case).
 
 ### D11 - Dev-dock env leak into child Qt apps
@@ -261,15 +261,15 @@ so "what is known broken" is one scan. Full detail migrates on next touch.
 - QML2_IMPORT_PATH and the stage-first XDG_DATA_DIRS leak into Qt apps LAUNCHED
   FROM the dev dock, so a child app can lose its platform plugin. Distinct from
   the #23 shadow fix (that is about what the dock ITSELF loads; this is about
-  child processes the dev dock spawns). Detail: docs/PORTING_PLAN.md ~1724.
+  child processes the dev dock spawns). Detail: docs/tracking/PORTING_PLAN.md ~1724.
 
 ### D12 - Plasma lookup-by-id can silently fail on an id mismatch
 - STATUS: OPEN/CHECK. An applet whose metadata embedded id mismatches makes
-  Plasma's lookup-by-id silently fail. Detail: docs/PORTING_PLAN.md ~2362.
+  Plasma's lookup-by-id silently fail. Detail: docs/tracking/PORTING_PLAN.md ~2362.
 
 ### D13 - Dock blank after display churn
 - STATUS: SUSPECTED/UNCONFIRMED (could NOT reproduce as a monitor-sleep bug).
-  Detail: docs/REVIEW_NOTES.md "## Open".
+  Detail: docs/tracking/REVIEW_NOTES.md "## Open".
 
 NOTE: deferred/STUBBED features are NOT defects and are tracked separately by the
 stub discipline (`grep -rn 'STUB:'`): app/infoview.cpp:165 +

@@ -57,7 +57,7 @@ ContainmentItem {
 
     //! the Panel-vs-Dock chain and the background-state predicate cluster
     //! below delegate to the BackgroundState core (EX-13 in
-    //! docs/QML_EXTRACTION_PLAN.md); the null guards around latteView and
+    //! docs/tracking/QML_EXTRACTION_PLAN.md); the null guards around latteView and
     //! its trackers stay here because call arguments evaluate eagerly,
     //! unlike the short-circuiting && chains they replace
     property int viewType: _backgroundState.viewType(!!(latteView && latteView.visibility),

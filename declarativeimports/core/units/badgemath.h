@@ -25,7 +25,7 @@ namespace BadgeMath {
 
 //! Badge identifier parsing, record update semantics, progress-proportion
 //! math and the arc/ring geometry the badge canvas draws (EX-20 in
-//! docs/QML_EXTRACTION_PLAN.md). Replaces the JS bodies in the plasmoid
+//! docs/tracking/QML_EXTRACTION_PLAN.md). Replaces the JS bodies in the plasmoid
 //! main.qml (getBadger/updateBadge), ProgressOverlay.qml (proportion) and
 //! BadgeText.qml (onPaint sweep, ring sizing, 9999+ label) - the upstream
 //! copyright lines above trace to those Qt5 ancestors.

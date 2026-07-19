@@ -5,7 +5,7 @@
 # e2e-mode: nested-only
 #
 # HC3 acceptance test for the MULTI-OUTPUT nested vehicle (C-I2 / P1,
-# docs/e2e-interaction-test-plan.md, open question O7). Run through
+# docs/tracking/e2e-interaction-test-plan.md, open question O7). Run through
 # scripts/run-multi-output-e2e.sh, which brings up a TWO-output vehicle
 # (E2E_OUTPUT_COUNT=2).
 #

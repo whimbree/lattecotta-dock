@@ -1,6 +1,6 @@
 # P2 contract transplants from latte-dock-qt6 (2026-07-16)
 
-Task: docs/captsilver-testability-adoption.md P2 - transplant the six
+Task: docs/reference/captsilver-testability-adoption.md P2 - transplant the six
 Plasma 6 silent-failure contract pins from the reference fork
 (read at origin/main via `git show`; the local checkout sits at
 9003f33a and all seven test files exist only at origin/main), each

@@ -5,7 +5,7 @@
 */
 
 //! Regression guard for the edit-mode hint that ate the click on the
-//! "Rearrange..." button (docs/panel-issues-plan.md issue 3). The settings
+//! "Rearrange..." button (docs/tracking/panel-issues-plan.md issue 3). The settings
 //! header controls' hint must render IN-WINDOW as a pointer-transparent chip,
 //! never as an attached QQC2.ToolTip whose separate Wayland surface maps at
 //! the cursor and swallows the press.

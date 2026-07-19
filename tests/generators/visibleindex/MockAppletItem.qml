@@ -6,7 +6,7 @@
 
 //! Honest-mock containment layout child: exactly the properties the
 //! shipped IndexerPrivate.qml collectors/functions and the AppletItem.qml
-//! walk bodies read on a layout child (docs/TESTING.md mock rule).
+//! walk bodies read on a layout child (docs/reference/TESTING.md mock rule).
 import QtQuick 2.7
 
 Item {

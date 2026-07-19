@@ -13,6 +13,6 @@ Item {
     //! children: [{index, isSeparator, isHidden, isMarginsSeparator,
     //! subItemCount}]. All index math and neighbor predicates over it live
     //! in org.kde.latte.core VisibleIndex (EX-06 in
-    //! docs/QML_EXTRACTION_PLAN.md).
+    //! docs/tracking/QML_EXTRACTION_PLAN.md).
     property var rowEntries: []
 }

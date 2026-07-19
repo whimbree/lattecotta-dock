@@ -12,7 +12,7 @@ import org.kde.plasma.plasmoid 2.0
 
 import org.kde.latte.core 0.2 as LatteCore
 
-//! Thin drag/drop shell (EX-14, docs/QML_EXTRACTION_PLAN.md): every
+//! Thin drag/drop shell (EX-14, docs/tracking/QML_EXTRACTION_PLAN.md): every
 //! classification and routing decision comes from
 //! LatteCore.DropClassifier; this file keeps only scene effects (spacer
 //! parenting/opacity, launcher messages, processMimeData). Handlers stay

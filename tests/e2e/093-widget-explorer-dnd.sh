@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # e2e-mode: nested-only
 #
-# C-I9 / P8 acceptance (docs/e2e-interaction-test-plan.md, HC3): the
+# C-I9 / P8 acceptance (docs/tracking/e2e-interaction-test-plan.md, HC3): the
 # widget-explorer -> containment drag-and-drop driver (tests/e2e/matrix/dnd-lib.sh).
 #
 # HC3 says this driver's acceptance IS A REJECTION BY CONSTRUCTION: it must prove

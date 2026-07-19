@@ -5,10 +5,10 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-08 ScreenGeometryCalculator (docs/QML_EXTRACTION_PLAN.md): the
+// EX-08 ScreenGeometryCalculator (docs/tracking/QML_EXTRACTION_PLAN.md): the
 // available-screen geometry math over view-footprint snapshots.
 //
-// Case provenance (per docs/TESTING.md): the eleven core slots are ported
+// Case provenance (per docs/reference/TESTING.md): the eleven core slots are ported
 // from latte-dock-qt6's screengeometrycalculatortest.cpp at 81384003, github.com/CaptSilver/latte-dock-qt6 -
 // their calculator was diffed line-by-line against our corona bodies
 // before adoption, so their fixture arithmetic transfers. Two additions

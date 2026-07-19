@@ -101,7 +101,7 @@ AbilityHost.ParabolicEffect {
         }
     }
 
-    //! EX-02 (docs/QML_EXTRACTION_PLAN.md): the neighbor scale-stack
+    //! EX-02 (docs/tracking/QML_EXTRACTION_PLAN.md): the neighbor scale-stack
     //! routing computed by LatteCore.ParabolicRouter in one call instead of
     //! the per-item signal-decider recursion. The signals survive only as
     //! the application mechanism: every emission is either exactly-targeted

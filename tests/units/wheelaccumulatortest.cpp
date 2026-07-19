@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// EX-15 WheelAccumulator (docs/QML_EXTRACTION_PLAN.md): per-site tests for
+// EX-15 WheelAccumulator (docs/tracking/QML_EXTRACTION_PLAN.md): per-site tests for
 // the wheel delta accumulation/threshold semantics extracted from four
 // hand-rolled QML onWheel bodies. The expected values were derived by
 // reading the shipped QML handlers at HEAD 2f9f1df0 (AudioStream.qml,

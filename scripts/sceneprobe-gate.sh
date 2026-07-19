@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: 2026 Bree Spektor
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# Deterministic render gate (docs/captsilver-testability-adoption.md, P1):
+# Deterministic render gate (docs/reference/captsilver-testability-adoption.md, P1):
 # runs latte-sceneprobe over every scene in tests/sceneprobe/scenes/ through
 # a throwaway nested kwin_wayland (lavapipe + LP_NUM_THREADS=0) and fails if
 # any real scene fails. Three failure gates per scene: shader/scenegraph

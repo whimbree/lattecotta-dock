@@ -5,7 +5,7 @@ login, or a judgment call only I can make. Collected 2026-07-16 at the
 end of the stabilization execution session; each entry names the plan
 item or commit it verifies so results can be recorded there. Tick and
 annotate here as they happen, then fold the verdicts back into
-docs/PORTING_PLAN.md.
+docs/tracking/PORTING_PLAN.md.
 
 Ground rules while testing: the dock should be running the staged
 build with --user-config (scripts/restart-staged.sh --user-config);

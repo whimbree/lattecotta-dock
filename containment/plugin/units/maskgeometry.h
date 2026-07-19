@@ -25,7 +25,7 @@
 namespace Latte {
 
 //! The dock's visibility mask and input-region rect math (EX-10 in
-//! docs/QML_EXTRACTION_PLAN.md), extracted from the containment's
+//! docs/tracking/QML_EXTRACTION_PLAN.md), extracted from the containment's
 //! VisibilityManager.qml updateMaskArea/updateInputGeometry pair. Mask
 //! errors are the invisible-dock / dead-input class: user-catastrophic
 //! and invisible in screenshots until interacted with, which is why the

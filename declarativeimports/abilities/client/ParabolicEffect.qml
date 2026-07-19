@@ -124,7 +124,7 @@ AbilityDefinition.ParabolicEffect {
         }
     }
 
-    //! EX-02 (docs/QML_EXTRACTION_PLAN.md): the routing computed by
+    //! EX-02 (docs/tracking/QML_EXTRACTION_PLAN.md): the routing computed by
     //! LatteCore.ParabolicRouter in one call instead of the per-item
     //! signal-decider recursion. The signals survive as the application
     //! mechanism only (exact apply + the clear-tail broadcast arm in

@@ -2,13 +2,13 @@ include(ECMAddTests)
 
 # Behavioral tests drive the real compiled application code through the
 # lattedock-core object library - no mocks of Latte's own logic, per
-# docs/TESTING.md. QT_QPA_PLATFORM=offscreen keeps them headless.
+# docs/reference/TESTING.md. QT_QPA_PLATFORM=offscreen keeps them headless.
 
-# Pure-core unit tests (docs/QML_EXTRACTION_PLAN.md): one paired test per
+# Pure-core unit tests (docs/tracking/QML_EXTRACTION_PLAN.md): one paired test per
 # extracted core header, enforced by tests/coverage/coverage-ratchet.sh.
 add_subdirectory(units)
 
-# sceneprobe render harness (docs/captsilver-testability-adoption.md P1):
+# sceneprobe render harness (docs/reference/captsilver-testability-adoption.md P1):
 # builds the probe/imgdiff binaries and registers the comparator unit test;
 # the render gate itself is scripts/sceneprobe-gate.sh (needs nested kwin).
 add_subdirectory(sceneprobe)
@@ -197,7 +197,7 @@ target_compile_definitions(configcontrolstest PRIVATE
     ITEMDELEGATE_QML_PATH="${CMAKE_SOURCE_DIR}/declarativeimports/components/ItemDelegate.qml")
 
 # The edit-mode settings audit's QML-handler WIRING harness
-# (docs/edit-mode-settings-audit-plan.md section 2): runs a control's handler
+# (docs/tracking/edit-mode-settings-audit-plan.md section 2): runs a control's handler
 # body against a stub QQmlPropertyMap and runs the Tier B diff predicates
 # (tests/units/configsnapshotdiff.h) over the delta. Its own HC3 acceptance
 # test - it proves the harness catches a wrong-key/no-op/stray-coupled write
@@ -213,7 +213,7 @@ target_include_directories(settingswiringharnesstest PRIVATE
     ${CMAKE_SOURCE_DIR}/tests/units) # configsnapshotdiff.h
 
 # The length cluster's real-handler wiring audit (CL-1,
-# docs/edit-mode-settings-audit-plan.md): the same QML-fragment/stub-map pattern
+# docs/tracking/edit-mode-settings-audit-plan.md): the same QML-fragment/stub-map pattern
 # as settingswiringharnesstest, plus the LengthOffsetClampBridge registered as
 # `lengthClamp` (SubConfigView registers it live) so the REAL maxLength ruler /
 # slider handlers can be driven. Pins the D15 min-coupling as accepted, the D16
@@ -231,7 +231,7 @@ target_include_directories(lengthhandleraudittest PRIVATE
     ${CMAKE_BINARY_DIR}/app)             # coretypes.h is generated there
 
 # The Behavior page's real-handler wiring audit (CL-3,
-# docs/edit-mode-settings-audit-plan.md): the same QML-fragment/stub-map pattern
+# docs/tracking/edit-mode-settings-audit-plan.md): the same QML-fragment/stub-map pattern
 # as settingswiringharnesstest. Pins the Actions/Environment/Items cfg checkboxes
 # and the two action combos to their own key (P2, S-d identity round-trips), the
 # Location/Alignment/Visibility buttons' `checked` reflection (P3), and the S-a
@@ -247,7 +247,7 @@ target_include_directories(behaviorwiringaudittest PRIVATE
     ${CMAKE_SOURCE_DIR}/tests/units) # configsnapshotdiff.h
 
 # The Effects page's real-handler wiring audit (CL-4,
-# docs/edit-mode-settings-audit-plan.md): the same QML-fragment/stub-map pattern
+# docs/tracking/edit-mode-settings-audit-plan.md): the same QML-fragment/stub-map pattern
 # as settingswiringharnesstest, plus a stub latteView.indicator for the ind-class
 # indicator controls (they write a C++ property, not a config key). Pins the
 # shadow/animation right-key deltas, the S-c durationTime sense verdict, and the
@@ -263,7 +263,7 @@ target_include_directories(effectshandleraudittest PRIVATE
     ${CMAKE_SOURCE_DIR}/tests/units) # configsnapshotdiff.h
 
 # The Appearance page's non-length wiring audit (CL-2,
-# docs/edit-mode-settings-audit-plan.md): the same QML-fragment/stub-map pattern
+# docs/tracking/edit-mode-settings-audit-plan.md): the same QML-fragment/stub-map pattern
 # as settingswiringharnesstest, over the Items/Margins/Colors/Background
 # controls. containment/plugin for types.h (the ThemeColors enum values the
 # Palette round-trip and its static_asserts pin); the main.xml path for the
@@ -281,7 +281,7 @@ target_compile_definitions(appearancehandleraudittest PRIVATE
     THEMECOLORS_MAINXML_PATH="${CMAKE_SOURCE_DIR}/containment/package/contents/config/main.xml")
 
 # The Tasks page's real-handler wiring audit (CL-5, the tasks-page settings
-# audit + the D10 disposition, docs/edit-mode-settings-audit-plan.md controls
+# audit + the D10 disposition, docs/tracking/edit-mode-settings-audit-plan.md controls
 # 91-121): the same QML-fragment/stub-map pattern as settingswiringharnesstest,
 # over the badges/interaction/filters/animations/launchers/scrolling/actions
 # controls. plasmoid/plugin for types.h (the TaskAction/TaskScrollAction enum the
@@ -508,7 +508,7 @@ target_include_directories(settingsmodelstest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
-# Vendored-backend pins (docs/captsilver-testability-adoption.md P3): both
+# Vendored-backend pins (docs/reference/captsilver-testability-adoption.md P3): both
 # compile the plasmoid plugin sources directly (they live in the tasks QML
 # plugin, not lattedock-core) and serve the plasma-desktop sync pass as
 # behavioral tripwires for synced hunks.
@@ -538,7 +538,7 @@ target_include_directories(tasksbackendtest PRIVATE
     ${CMAKE_SOURCE_DIR}/plasmoid/plugin
     ${CMAKE_CURRENT_BINARY_DIR})
 
-# Headless QML checks (Phase 5, docs/TESTING.md): the compile gate stages an
+# Headless QML checks (Phase 5, docs/reference/TESTING.md): the compile gate stages an
 # install and compiles every package QML file in a real engine; the
 # interaction harness drives real Latte components through qmltestrunner.
 # Both need the devShell toolchain, which is how ctest runs (build-check.sh).
@@ -553,7 +553,7 @@ set_tests_properties(qmlinteraction PROPERTIES
     ENVIRONMENT "BUILD=${CMAKE_BINARY_DIR}"
     DEPENDS qmlcompilegate)
 
-# qmllint ratchet (docs/QML_EXTRACTION_PLAN.md step 2.5 point 6): per-file
+# qmllint ratchet (docs/tracking/QML_EXTRACTION_PLAN.md step 2.5 point 6): per-file
 # curated warning counts (unqualified, missing-type, unresolved-type,
 # deprecated, signal-handler-parameters) must match tests/coverage/qmllint-baseline
 # exactly; the baseline only ever shrinks. Cutover-touched files leave at
@@ -573,7 +573,7 @@ add_test(NAME qmleffectrules
     COMMAND ${CMAKE_SOURCE_DIR}/scripts/qml-effect-rules.sh)
 
 # Wayland popup-tooltip-surface rule (latte-plasma6-defect-families; issue 3
-# of docs/panel-issues-plan.md): the edit-mode canvas overlay click-target
+# of docs/tracking/panel-issues-plan.md): the edit-mode canvas overlay click-target
 # controls must not carry an attached QQC2/Controls.ToolTip, whose separate
 # Wayland surface maps at the cursor and swallows the press (the
 # "Rearrange..." toggle went unclickable in tight edit-mode space). Pins the

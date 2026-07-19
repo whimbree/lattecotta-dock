@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: 2026 Bree Spektor
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# The DRIVEN sanitized-dock gate (docs/ub-catching-plan.md, Prong A3). Builds
+# The DRIVEN sanitized-dock gate (docs/tracking/ub-catching-plan.md, Prong A3). Builds
 # the build-asan tree (dock + plugins under ASan+UBSan with QT_FORCE_ASSERTS,
 # via -DLATTE_SANITIZE=ON) and drives the nested e2e recipes against it, so
 # OUR-code UB and tripped invariants in the LIVE integration paths ABORT the run

@@ -18,7 +18,7 @@ namespace Latte {
 namespace Containment {
 
 //! Thin QML shell over the ColorizerDecision pure core (EX-12 in
-//! docs/QML_EXTRACTION_PLAN.md, units/colorizerdecision.h). The colorizer
+//! docs/tracking/QML_EXTRACTION_PLAN.md, units/colorizerdecision.h). The colorizer
 //! Manager.qml instantiates one decider, binds the environment facts and
 //! the candidate SchemeColors objects as inputs, and reads the resolved
 //! decisions back. All DECISIONS live in the core; this class only

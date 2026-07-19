@@ -1,6 +1,6 @@
 # viewsData + setViewEditMode implementation log (2026-07-16)
 
-Step 1 of docs/dbus-observability-interface.md: the `viewsData()` JSON
+Step 1 of docs/reference/dbus-observability-interface.md: the `viewsData()` JSON
 read surface and the `setViewEditMode(u, b)` coarse action on
 org.kde.LatteDock.
 

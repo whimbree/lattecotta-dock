@@ -20,7 +20,7 @@
 // assert the fixed token form both positively and negatively, so the typo
 // cannot silently return. Only these two cases are adopted - the rest of
 // his file pins their delegation-helper architecture, which this
-// tree deliberately does not share (docs/captsilver-testability-adoption.md,
+// tree deliberately does not share (docs/reference/captsilver-testability-adoption.md,
 // the not-adopting list).
 
 #include <QFile>

@@ -1,7 +1,7 @@
 # Pure cores for org.kde.latte.core
 
 Behavioral logic extracted out of package QML that both the
-containment and the plasmoid consume, per docs/QML_EXTRACTION_PLAN.md
+containment and the plasmoid consume, per docs/tracking/QML_EXTRACTION_PLAN.md
 (section C conventions). Everything in this directory is a pure core:
 
 - Plain value structs in, plain values out.

@@ -33,7 +33,7 @@ confident wrong "stale binary" diagnosis before.
 
 ABSOLUTE RULE: stop the dock before any rebuild. A running dock executes the
 binary at build/bin, and rebuilding under it makes the process run a deleted
-binary and crash confusingly (docs/session-handoff.md, Known traps).
+binary and crash confusingly (docs/tracking/session-handoff.md, Known traps).
 `scripts/restart-staged.sh` does the stop correctly: it sends SIGTERM, then
 SIGCONT (a SIGSTOPped instance never runs its TERM handler otherwise),
 escalates to SIGKILL, and refuses to start while any instance survives.
@@ -106,7 +106,7 @@ committed pre-push hook (scripts/git-hooks/pre-push, enabled via
 `git config core.hooksPath scripts/git-hooks`) refuses unstamped code
 pushes; docs-only drift is exempt. Never scrape logs for gate success
 and never combine reading a verdict with acting on it in one shell
-invocation (docs/TESTING.md carries the incident this rule comes from).
+invocation (docs/reference/TESTING.md carries the incident this rule comes from).
 
 ## QML import path doctrine
 

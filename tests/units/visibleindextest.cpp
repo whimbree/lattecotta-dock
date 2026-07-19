@@ -7,7 +7,7 @@
 //! Behavioral tests for the EX-06 VisibleIndexEngine core
 //! (declarativeimports/core/units/visibleindex.h).
 //!
-//! GENERATION METHOD (docs/TESTING.md): every vector marked with a CASE
+//! GENERATION METHOD (docs/reference/TESTING.md): every vector marked with a CASE
 //! name was recorded by driving the SHIPPED QML twins offscreen - the
 //! real containment abilities/Indexer.qml + IndexerPrivate.qml and the
 //! real client abilities/client/Indexer.qml wired through a mock bridge,

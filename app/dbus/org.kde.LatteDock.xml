@@ -100,7 +100,7 @@
     <!-- G4: the per-task index + appId in the JSON payload ARE the
          window-task order readback (index is the model row, appId the stable
          per-window identity that travels across a reorder). Signature stays s
-         (JSON string); no new argument. See docs/e2e-interaction-test-plan.md
+         (JSON string); no new argument. See docs/tracking/e2e-interaction-test-plan.md
          section 9 and DbusReports::TaskRecord. -->
     <method name="viewTasksData">
         <arg name="data" type="s" direction="out"/>

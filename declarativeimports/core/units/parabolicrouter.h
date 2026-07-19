@@ -22,7 +22,7 @@
 namespace Latte {
 
 //! The parabolic scale-propagation ROUTING as one pure walk (EX-02 in
-//! docs/QML_EXTRACTION_PLAN.md; the design section there carries the full
+//! docs/tracking/QML_EXTRACTION_PLAN.md; the design section there carries the full
 //! semantics inventory read out of the distributed chain). The chain this
 //! replaces was synchronous per-item signal recursion; the walk computes
 //! the identical outcome in one call. Equality-tested against the real
