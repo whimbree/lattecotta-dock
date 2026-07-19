@@ -23,13 +23,16 @@ inStartup).
       quit-requested -> unloaded trail, and NO coredump
       (`coredumpctl list --since today`). This is the one check that
       kills any driving session by definition.
-- [ ] **Autostart decision** (startup-latency item). Login currently
-      starts the PACKAGED latte-dock-ng fork binary
-      (~/.config/autostart/org.kde.latte-dock.desktop) - not this
-      port. Decide: point the entry at the packaged build from
-      package.nix, or keep dev-session-only startup. After deciding,
-      measure a real login (journal timestamps + poll lifecycleState
-      for "running").
+- [ ] **Autostart decision** (startup-latency item). Login no longer
+      autostarts any latte dock: the old latte-dock-ng fork autostart
+      entry (~/.config/autostart/org.kde.latte-dock.desktop) has been
+      removed (renamed to org.kde.latte-dock.desktop.removed-ng.bak),
+      and the staged dev dock is launched by hand via
+      scripts/start-dock.sh, not by an autostart .desktop. Decide: add
+      an autostart entry pointing at the packaged build from
+      package.nix, or keep manual dev-session-only startup. After
+      deciding, measure a real login (journal timestamps + poll
+      lifecycleState for "running").
 - [ ] **DPMS / long lock cycle** (lock/unlock item). Either
       `kscreen-doctor --dpms off` then on, or lock and walk away past
       the display-sleep timer. Afterwards: docks visible on both
