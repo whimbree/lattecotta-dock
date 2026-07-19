@@ -75,6 +75,10 @@ private Q_SLOTS:
     void plainValueBindingDesyncsAfterClobber();
     void proxyResyncReTracksAfterClobber();
 
+    //! AU-1e: the offset slider (control 54) is the correct re-sync reference
+    void offsetWritePathWritesOnlyOffsetWhenInRange();
+    void offsetWritePathHealsMaxLengthOnlyWhenCorrupt();
+
 private:
     static void seed(QQmlPropertyMap &config,
                      std::initializer_list<std::pair<QString, QVariant>> pairs);
@@ -306,6 +310,67 @@ void LengthHandlerAuditTest::proxyResyncReTracksAfterClobber()
     root->setProperty("pressed", false);
     config.insert(QStringLiteral("maxLength"), 63);
     QCOMPARE(root->property("value").toDouble(), 63.0);
+}
+
+//! the offset slider's config-driven write path (offsetSlider.updateOffset,
+//! the not-pressed re-sync branch): bound the config offset into range, then
+//! shrink maxLength only if the pair still leaves the screen. This is the P3
+//! re-sync branch (requested = plasmoid.configuration.offset), verbatim except
+//! for the stub-map rename, so its key delta is the live delta.
+static const QString kOffsetResyncBody = QStringLiteral(
+    "var requested = configuration.offset;\n"
+    "var clamped = lengthClamp.clampOffset(configuration.maxLength,\n"
+    "                                      requested,\n"
+    "                                      configuration.alignment);\n"
+    "configuration.offset = clamped.offset;\n"
+    "if (configuration.maxLength !== clamped.maxLength) {\n"
+    "    configuration.maxLength = clamped.maxLength;\n"
+    "}\n");
+
+//! AU-1e: the offset slider is the in-tree re-sync REFERENCE the D16 fix
+//! copied to Maximum/Minimum, so it must itself stay P2-correct. On a sane
+//! (in-range) maxLength it writes ONLY offset - never a stray maxLength - which
+//! is exactly the "writes its own key and nothing else" property the whole
+//! audit checks.
+void LengthHandlerAuditTest::offsetWritePathWritesOnlyOffsetWhenInRange()
+{
+    QQmlPropertyMap config;
+    seed(config, {{QStringLiteral("maxLength"), 80}, {QStringLiteral("minLength"), 30},
+                  {QStringLiteral("offset"), 200}, {QStringLiteral("alignment"), 0}}); // Center
+
+    const QJsonObject before = snapshot(config);
+    QCOMPARE(runHandler(config, kOffsetResyncBody), QString());
+    const QJsonObject after = snapshot(config);
+
+    //! the out-of-range request is pulled into the centered bound [-10, 10]
+    QVERIFY(controlApplies(before, after, QStringLiteral("offset")));
+    QVERIFY(onlyExpectedKeysChanged(before, after, {QStringLiteral("offset")}));
+    QVERIFY(valueReflects(after, QStringLiteral("offset"), 10));
+    QVERIFY2(!changedConfigKeys(before, after).contains(QStringLiteral("maxLength")),
+             "an in-range offset re-sync must not resize the dock");
+}
+
+//! AU-1e: the offset slider's ONE legitimate coupled write is healing a
+//! corrupt (out-of-range) maxLength back on-screen (the catalog's "+maxLength
+//! via clampOffset"). That coupling is intended and documented, not a stray
+//! side effect: it fires only when the stored maxLength is already invalid.
+void LengthHandlerAuditTest::offsetWritePathHealsMaxLengthOnlyWhenCorrupt()
+{
+    QQmlPropertyMap config;
+    seed(config, {{QStringLiteral("maxLength"), 150}, {QStringLiteral("minLength"), 30},
+                  {QStringLiteral("offset"), 0}, {QStringLiteral("alignment"), 0}}); // Center, corrupt max
+
+    const QJsonObject before = snapshot(config);
+    QCOMPARE(runHandler(config, kOffsetResyncBody), QString());
+    const QJsonObject after = snapshot(config);
+
+    //! both move: the inverted bounds land offset on `to` and the shrink
+    //! branch pulls maxLength back on-screen (matches the core's
+    //! clampOffset_outOfRangeMaxLengthSelfHeals)
+    QVERIFY(onlyExpectedKeysChanged(before, after,
+                                    {QStringLiteral("maxLength"), QStringLiteral("offset")}));
+    QVERIFY(valueReflects(after, QStringLiteral("maxLength"), 50));
+    QVERIFY(valueReflects(after, QStringLiteral("offset"), -25));
 }
 
 QTEST_GUILESS_MAIN(LengthHandlerAuditTest)
