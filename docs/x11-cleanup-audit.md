@@ -102,6 +102,58 @@ nothing duplicated."
   KWindowSystem include`. The include is live (`isPlatformWayland()`); only the
   misleading `// X11` label is corrected to `// KDE`.
 
+## Recommended plan and sequence (plain English, 2026-07-19)
+
+The port is Wayland-only now (it refuses to start on old X11). Five X11-era
+leftovers remain. Each is written plainly with its tracking codeword in brackets
+so the plan is both readable and traceable. (The `byPassWM` setting [D4] is NOT
+in this list: it is a live user-facing setting tracked as its own open plan item,
+not dead-code cleanup.)
+
+The five leftovers:
+
+1. **Dead color-scheme fallback branch [D3].** One spot picks a window's colors
+   and has an "if not on Wayland, parse the id the old X11 way" branch that can
+   never run. Removing it is safe, and it deletes the last real (non-test) use of
+   the old X11 id-parsing.
+2. **The About dialog's broken "keep on top" [D2].** The Help -> About dialog
+   should float above other windows; it asks using an old X11 window id that
+   Wayland can never match, so the request silently does nothing and the dialog
+   can end up buried. A real (minor) bug. Do not leave it a SILENT nothing: mark
+   it a clear stub now (findable, deferred to the window-surface work), and wire
+   it up properly later.
+3. **Trim the window-identity wrapper [D1].** A small type represents "which
+   window this is" and can build that identity two ways: the Wayland way (live)
+   and the old X11 way (dead). Once #1 and #2 are gone, nothing uses the X11 way,
+   so delete those few methods - but KEEP the wrapper itself. Its value is that
+   it cannot be built wrong (you cannot accidentally hand it the wrong kind of
+   string); that safety is worth keeping with only the Wayland way left.
+4. **(Optional, maybe never) Store the id more strictly [S1].** The wrapper
+   stores the identity as raw bytes; Qt has a dedicated unique-id type
+   (`QUuid`) it could use instead - more self-documenting, harder to misuse. It
+   fixes nothing and is the riskiest of the five: it changes what the UI layer
+   sees across the C++/UI bridge, changes how the id sorts as a lookup key, needs
+   its tests rewritten, and only works if the Wayland id is genuinely a proper
+   UUID (unconfirmed). Lowest value: do it last or skip it, and only after
+   confirming the id's shape.
+5. **Leftover unused X11 include [D5].** A file kept in sync with upstream KDE
+   still includes an old X11 header nothing uses. Trivial to drop, but do it
+   while syncing that file against upstream so it does not create diff noise.
+
+Order of work:
+
+- **Soon, one small PR:** remove the dead color-scheme branch [D3] and mark the
+  About-dialog keep-on-top a stub [D2]. Low risk; turns a silent bug into a
+  tracked one.
+- **Right after, a tiny follow-up:** trim the window-identity wrapper to
+  Wayland-only [D1], now that its callers are gone.
+- **Optional and last, only if it earns it:** the stricter-id-type switch [S1],
+  after confirming the Wayland id is really a UUID.
+- **At the next upstream sync:** drop the leftover include [D5].
+
+The detailed per-item analysis (exact files, blast radius, the two options for
+[D1]) is in the Proposals section below.
+
 ## Proposals (await sign-off)
 
 None of the following are applied in this pass. Each names its blast radius.

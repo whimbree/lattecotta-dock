@@ -111,6 +111,17 @@ stale checkboxes."
   the pre-PR history cleanup, not amended now.
 - No em-dashes, no AI-sounding marketing-style phrasing in docs, commit
   messages, or code comments - write plainly, like a programmer.
+- Codewords carry their meaning (new rule, 2026-07-19). Every short-name that
+  stands in for something - a defect number (D21), a cluster/chunk/task id
+  (CL-2, C-I7, AU-1a), a phase or proposal id - is written WITH a plain-English
+  description of what it is, on first use in any commit message, PR title/body,
+  or doc prose. The codeword is for TRACEABILITY (it links to the registry or
+  plan, so any commit traces back to its task); the plain-English gloss is for
+  READABILITY (a reader with zero context understands the change without opening
+  another doc). Always both, never a bare codeword: not "fix D21" but "fix D21
+  (Light/Layout applet text invisible)"; not "land CL-2" but "land CL-2 (the
+  appearance-page settings audit)". This is the name-things-for-what-they-do rule
+  applied to project history: it must be BOTH easy to read AND easy to trace.
 - Every major feature lands as its own GitHub PR with an independent
   review - the full contract is its own subsection below (### PR
   workflow and independent review).
