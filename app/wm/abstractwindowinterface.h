@@ -170,7 +170,7 @@ protected:
     //! Plasma taskmanager rules ile
     KSharedConfig::Ptr rulesConfig;
 
-    void considerWindowChanged(WindowId wid);
+    void considerWindowChanged(WindowId wid, bool immediate = false);
 
     bool isIgnored(const WindowId &wid) const;
     bool isRegisteredPlasmaIgnoredWindow(const WindowId &wid) const;

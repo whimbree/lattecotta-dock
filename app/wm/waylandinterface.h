@@ -94,6 +94,7 @@ public:
 
 private Q_SLOTS:
     void updateWindow();
+    void updateWindowMaximized();
     void windowUnmapped();
 
 private:

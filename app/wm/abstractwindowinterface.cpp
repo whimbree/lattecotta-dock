@@ -376,9 +376,24 @@ void AbstractWindowInterface::switchToPreviousActivity()
 }
 
 //! Delay window changed triggering
-void AbstractWindowInterface::considerWindowChanged(WindowId wid)
+void AbstractWindowInterface::considerWindowChanged(WindowId wid, bool immediate)
 {
     //! Consider if the windowChanged signal should be sent DIRECTLY or WAIT
+
+    if (immediate) {
+        if (m_windowWaitingTimer.isActive()) {
+            WindowId pending = m_windowChangedWaiting;
+            m_windowWaitingTimer.stop();
+
+            if (!pending.isEmpty() && pending != wid) {
+                Q_EMIT windowChanged(pending);
+            }
+        }
+
+        m_windowChangedWaiting = WindowId();
+        Q_EMIT windowChanged(wid);
+        return;
+    }
 
     if (m_windowChangedWaiting == wid && m_windowWaitingTimer.isActive()) {
         //! window should be sent later

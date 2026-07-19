@@ -760,6 +760,15 @@ void WaylandInterface::updateWindow()
     }
 }
 
+void WaylandInterface::updateWindowMaximized()
+{
+    PlasmaWindow *pW = qobject_cast<PlasmaWindow*>(QObject::sender());
+
+    if (isValidWindow(pW)) {
+        considerWindowChanged(WindowId::fromWaylandUuid(pW->uuid()), true);
+    }
+}
+
 void WaylandInterface::windowUnmapped()
 {
     PlasmaWindow *pW = qobject_cast<PlasmaWindow*>(QObject::sender());
@@ -780,7 +789,7 @@ void WaylandInterface::trackWindow(KWayland::Client::PlasmaWindow *w)
     connect(w, &PlasmaWindow::titleChanged, this, &WaylandInterface::updateWindow);
     connect(w, &PlasmaWindow::fullscreenChanged, this, &WaylandInterface::updateWindow);
     connect(w, &PlasmaWindow::geometryChanged, this, &WaylandInterface::updateWindow);
-    connect(w, &PlasmaWindow::maximizedChanged, this, &WaylandInterface::updateWindow);
+    connect(w, &PlasmaWindow::maximizedChanged, this, &WaylandInterface::updateWindowMaximized);
     connect(w, &PlasmaWindow::minimizedChanged, this, &WaylandInterface::updateWindow);
     connect(w, &PlasmaWindow::shadedChanged, this, &WaylandInterface::updateWindow);
     connect(w, &PlasmaWindow::skipTaskbarChanged, this, &WaylandInterface::updateWindow);
@@ -803,7 +812,7 @@ void WaylandInterface::untrackWindow(KWayland::Client::PlasmaWindow *w)
     disconnect(w, &PlasmaWindow::titleChanged, this, &WaylandInterface::updateWindow);
     disconnect(w, &PlasmaWindow::fullscreenChanged, this, &WaylandInterface::updateWindow);
     disconnect(w, &PlasmaWindow::geometryChanged, this, &WaylandInterface::updateWindow);
-    disconnect(w, &PlasmaWindow::maximizedChanged, this, &WaylandInterface::updateWindow);
+    disconnect(w, &PlasmaWindow::maximizedChanged, this, &WaylandInterface::updateWindowMaximized);
     disconnect(w, &PlasmaWindow::minimizedChanged, this, &WaylandInterface::updateWindow);
     disconnect(w, &PlasmaWindow::shadedChanged, this, &WaylandInterface::updateWindow);
     disconnect(w, &PlasmaWindow::skipTaskbarChanged, this, &WaylandInterface::updateWindow);
