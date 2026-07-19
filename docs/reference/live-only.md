@@ -22,7 +22,6 @@ the real desk or a human judgment.
   the tasks plasmoid is already proven by `tests/e2e/020-wheel-task-cycle.sh`
   (below); the missing piece is a task bound to a live audio stream.
 - **Verify at:** a live session with a real audio-playing client.
-- **Related:** `docs/tracking/REVIEW_NOTES.md` "In-plasmoid wheel routing".
 
 The task-cycle and empty-area wheel behaviors this entry used to cover are no
 longer live-only: `020-wheel-task-cycle.sh` (nested-only) drives a fakepointer
@@ -40,7 +39,6 @@ driven and asserted in the vehicle, so only the real-audio badge remains here.
   classification) and the gestures are driven in the vehicle (below), but "does
   it feel smooth" is a human sign-off, not a headless assertion.
 - **Verify at:** a live session, watching a real reorder and a real hover sweep.
-- **Related:** `docs/tracking/REVIEW_NOTES.md` "Phase 7 needs a hands-on session".
 
 The rest of the Phase 7 subsystem this entry used to claim as live-only is not.
 Wayland pointer input IS scriptable (`scripts/tools/fakepointer.c`:

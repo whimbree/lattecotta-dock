@@ -998,7 +998,8 @@ into C++. There is no drop-in replacement to import.
       modifier chains collapse into one executeStandardAction executor;
       tst_taskactions.qml pins that every config-offered enum resolves
       to a real command. The offered set is transcribed from the config
-      combos - see docs/tracking/REVIEW_NOTES.md for the review item)
+      combos, so if a combo gains an option the transcription must gain
+      it too)
 - [x] Route wheel events to badges/sub-regions *inside* the tasks
       plasmoid explicitly, not just per-applet: `DragDrop.DropArea`
       blocks wheel event delivery in Qt6, so even though the
@@ -1034,8 +1035,9 @@ before implementing, not just before merging.
       immediately via destroyAppletContainer instead of parking in
       m_appletsInScheduledDestruction; the deterministic C++ fix is in
       place and matches the prescription. Final "the widget visibly
-      disappears" confirmation is a human click-test, queued in
-      docs/tracking/REVIEW_NOTES.md)
+      disappears" confirmation is drivable in the nested vehicle: drive
+      the removal and assert the applet set via the viewAppletsData
+      readback)
 - [x] **Widget add via drag** from the Widget Explorer: decide the
       C++-vs-QML drop-handling ownership split explicitly and keep it
       exclusive per mime type (e.g. Widget-Explorer-originated drops
@@ -3625,6 +3627,25 @@ polished, distributable form of it.
 - [ ] Add a `nixos` target to Docker-based build verification, matching
       the pattern already built for latte-dock-ng
       (`Dockerfile.nixos` + `verify-nix-nixos.sh`)
+      Commits:
+- [ ] mpris2 dataengine missing from the packaged build (media badge has
+      no backend). Migrated 2026-07-19 from the deprecated human review
+      notes (packaging follow-up). The packaged (flake `packages.default`)
+      dock logs `Could not find plugin plasma5support/dataengine/
+      plasma_engine_mpris2`, and that dataengine is not present anywhere
+      in the store, so the tasks media/audio badge and the Spotify
+      media-control overlay have NO backend in the packaged build (the
+      dev/staged build is unaffected). Identify which kdePackages input
+      ships the mpris2 dataengine (or its Plasma 6 replacement API) and add
+      it, or wire the plasmoid to the current media API. Enumeration and
+      the dock itself are unaffected. Not blocking.
+      Commits:
+- [ ] cmake icon-cache doubled-path install warning. Migrated 2026-07-19
+      from the deprecated human review notes (packaging follow-up). The
+      build log shows `cmake -E touch: failed to update <out>//nix/store/
+      <out>/share/icons/hicolor` (doubled path). Harmless (it is only the
+      icon cache index), but it points at an install rule using an absolute
+      path under DESTDIR; worth a look when next touching the icon install.
       Commits:
 
 ### Continuation features (beyond upstream parity)

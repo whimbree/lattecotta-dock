@@ -1242,6 +1242,23 @@ report a `screen` that `screensData` marks `isActive:false`. Add it as a lib
 assertion; it converts the open Phase-8 strand into a real guard the day the
 behavior is adjudicated/fixed.
 
+### Known fix pointer: dock blank on genuine hotplug
+Migrated 2026-07-19 from the deprecated human review notes (the display-churn
+lead), kept here because this is the section that exercises it. A plain monitor
+sleep (`kscreen-doctor --dpms off/on`, single or rapid) does NOT blank the dock:
+the QScreen stays intact, so `reconsiderScreen()` early-returns without a
+`setScreenToFollow()` and the surface is never touched. Genuine output hotplug is
+different: unplug/replug an external monitor (or a laptop dock/undock) DESTROYS
+and recreates the QScreen and calls `setScreenToFollow()`, and whether the layer
+surface re-maps cleanly there is the open question. A guarded platform-surface
+recreate (`destroy()` + `show()`, gated to a visible past-startup view) inside
+`setScreenToFollow()` was prototyped and then reverted, because it was
+unverifiable on a single-monitor box that never hits the case. If a hotplug
+scenario above (the disable/enable remove/re-add rows, or the explicit-view
+strand) is ever seen to leave the dock blank, that guarded recreate in
+`setScreenToFollow()` is the exact fix to reintroduce and drive here. Tracked as
+D13 (dock blank after display churn) in the known-defects registry.
+
 ### Recommended tests (build order; all ride the helper)
 1. `030-multi-output-hotplug-remove-onprimary` (M, high value): disable the
    primary; assert the onPrimary view re-homes to the new primary and re-centers.

@@ -528,7 +528,7 @@ int main(int argc, char **argv)
     //! it and this instance must exit. Doing that here, before the Corona and
     //! the theme/KSvg singletons it constructs exist, avoids the segfault we
     //! otherwise hit tearing those statics down on the duplicate-exit path
-    //! (a static KSvg::Svg destructor -> eraseRenderer()). See REVIEW_NOTES.
+    //! (a static KSvg::Svg destructor -> eraseRenderer()). See commit d45c7a38.
     KDBusService service(KDBusService::Unique);
 
     if (!service.isRegistered()) {

@@ -301,8 +301,8 @@ so "what is known broken" is one scan. Full detail migrates on next touch.
   appletConfigData, and a launchersGroup Unique->Global change alters the running
   bar. So this port needs neither wire-up nor hide.
 - HISTORY: the inherited upstream half-finished feature that latte-dock-ng hid
-  (9faccabda). Detail: docs/archive/ng-upstream-audit.md:322,
-  docs/tracking/REVIEW_NOTES.md, and CLAUDE.md's stub-tracking cautionary tale.
+  (9faccabda). Detail: docs/archive/ng-upstream-audit.md:323 and CLAUDE.md's
+  stub-tracking cautionary tale.
 
 ### D11 - Dev-dock env leak into child Qt apps
 - STATUS: OPEN (re-evaluate at Phase 11 packaging).
@@ -317,13 +317,15 @@ so "what is known broken" is one scan. Full detail migrates on next touch.
 
 ### D13 - Dock blank after display churn
 - STATUS: SUSPECTED/UNCONFIRMED (could NOT reproduce as a monitor-sleep bug).
-  Detail: docs/tracking/REVIEW_NOTES.md "## Open".
+  Detail and the known-fix pointer for genuine hotplug (the guarded
+  setScreenToFollow() recreate): docs/tracking/e2e-interaction-test-plan.md
+  section 7.9 "Known fix pointer: dock blank on genuine hotplug".
 
 NOTE: deferred/STUBBED features are NOT defects and are tracked separately by the
 stub discipline (`grep -rn 'STUB:'`): app/infoview.cpp:165 +
 app/wm/waylandinterface.cpp:299 (Phase 4 WId), app/layouts/synchronizer.cpp:507
-(Phase 8 activity-stop). REVIEW_NOTES.md stays the human review-session log
-(Open/Resolved); this registry is the flat defect index that points into it.
+(Phase 8 activity-stop). This registry is the flat defect index; each entry
+carries its own detail or points into the plan and the reference docs.
 
 ## Fixed (kept for the record)
 

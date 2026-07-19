@@ -8,8 +8,7 @@
 # makeBinaryWrapper that keeps argv[0] = $out/bin/latte-dock. KWin gates the
 # org_kde_plasma_window_management protocol on the client's argv[0] matching an
 # installed .desktop Exec, and the installed org.kde.latte-dock.desktop carries
-# Exec=$out/bin/latte-dock. So the wrapped, installed dock enumerates windows;
-# see docs/tracking/REVIEW_NOTES.md for the full gate write-up.
+# Exec=$out/bin/latte-dock. So the wrapped, installed dock enumerates windows.
 {
   lib,
   stdenv,
