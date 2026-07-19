@@ -1,4 +1,4 @@
-92
+93
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -86,6 +86,7 @@ visibilityrevealtest
 visibleindextest
 visualhostwindowtest
 wheelaccumulatortest
+windowchangedebouncetest
 windowcyclertest
 windowidtest
 windowinfowraptest
