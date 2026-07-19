@@ -1,7 +1,40 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-18 (trunk renamed master->main; the e2e interaction DRIVER
+Last updated 2026-07-19.
+
+## 2026-07-19 SESSION: D27 + D28 panel bugs fixed and delivered live
+
+Two live panel-mode bugs reported on the real top panel were root-caused,
+fixed, reviewed, merged, and delivered to the running dock in the same session:
+
+- **D27 (maximize gap debounce lag, PR #61)** - the floating-panel gap on a
+  top panel lingered for 1-2 s after maximizing a window because
+  `AbstractWindowInterface::considerWindowChanged` re-armed its 150 ms debounce
+  on every `geometryChanged` event from KWin's maximize animation. Fix: route
+  `PlasmaWindow::maximizedChanged` through a dedicated
+  `WaylandInterface::updateWindowMaximized` slot that flushes `windowChanged`
+  synchronously, while keeping the debounce for geometry/title/active churn.
+  Regression test: `tests/windowchangedebouncetest.cpp`. Merged via PR #61;
+  asan-e2e gate green on the rebased head.
+
+- **D28 (show-desktop white icon on light panels, PR #60)** - the show-desktop
+  applet rendered a white icon on a light panel because the
+  `IconColorfulness` probe judged the Breeze `user-desktop` icon as colorful
+  and gated the colorizer off. A deeper root-cause pass confirmed the probe
+  and its wrapper target are correct; the icon itself is intrinsically
+  multicolored. The in-tree root-cause-aware fix is a policy override in
+  `AppletItem.qml` that forces `org.kde.plasma.showdesktop` to follow the
+  panel colorizer scheme. E2E guard in
+  `tests/e2e/110-colorizer-applet-contrast.sh`. Merged via PR #60.
+
+Both fixes are on main and were delivered live: the staged dock was rebuilt
+and restarted with the real config, and both the immediate maximize gap
+collapse and the dark show-desktop icon were observed working on the desk.
+
+## 2026-07-18 (previous state)
+
+Trunk renamed master->main; the e2e interaction DRIVER
 layer is fully landed - C-I7/C-I8/C-I9 merged as PRs #37/#38/#39; the edit-mode
 settings audit harness CL-0 merged as PR #40; and a second merge wave cleared:
 CL-1 length cluster (PR #43 - D15 ACCEPTED, D16 slider-desync + D17 Justify
