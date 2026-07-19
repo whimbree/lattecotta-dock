@@ -104,13 +104,15 @@ Item {
     //! right contrast WITHOUT the layer-FBO ColorOverlay. Same applet scope the
     //! overlay used to cover: engaged, not self-colored (latte-aware applets keep
     //! their LatteBridge.colorPalette path), not user-blocked, not a colorful
-    //! icon (those stay native, the flatten never suited them), not an inline
-    //! full-representation content view, not an internal splitter.
+    //! icon (those stay native, the flatten never suited them), not the
+    //! show-desktop applet (D28 forces that stock panel icon to follow the
+    //! panel scheme), not an inline full-representation content view, not an
+    //! internal splitter.
     readonly property bool colorizerPaletteActive: colorizerHost.mustBeShown
                                                    && !userBlocksColorizing
                                                    && !isInternalViewSplitter
                                                    && !isShowingInlineFullRepresentation
-                                                   && !colorfulnessProbe.blocksColorizing
+                                                   && (isShowDesktop || !colorfulnessProbe.blocksColorizing)
 
     //! why the palette push is or is not applied to this applet - the
     //! viewAppletsData colorizer readback (observability-first). "applied" is
@@ -128,7 +130,7 @@ Item {
             return "userBlocked";
         } else if (isShowingInlineFullRepresentation) {
             return "inlineFull";
-        } else if (colorfulnessProbe.blocksColorizing) {
+        } else if (colorfulnessProbe.blocksColorizing && !isShowDesktop) {
             return "colorful";
         }
 
@@ -161,6 +163,11 @@ Item {
                                           || applet.plasmoid.pluginName === "org.kde.latte.separator")
     property bool isSpacer: applet && (applet.plasmoid.pluginName === "org.kde.latte.spacer")
     property bool isSystray: applet && (applet.plasmoid.pluginName === "org.kde.plasma.systemtray" || applet.plasmoid.pluginName === "org.nomad.systemtray" )
+    //! D28: the Plasma show-desktop applet is a stock panel icon and must
+    //! always follow the panel scheme on a light-colored panel. The pixel
+    //! colorfulness probe can treat its Breeze icon as multicolored, which
+    //! would keep the native white icon on a light background.
+    readonly property bool isShowDesktop: applet && applet.plasmoid.pluginName === "org.kde.plasma.showdesktop"
 
     property bool firstChildOfStartLayout: index === appletItem.layouter.startLayout.firstVisibleIndex
     property bool firstChildOfMainLayout: index === appletItem.layouter.mainLayout.firstVisibleIndex

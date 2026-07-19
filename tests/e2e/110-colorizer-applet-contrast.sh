@@ -101,6 +101,10 @@ if missing:
     print("D21 FAIL: fixture applets missing from the view:", missing, file=sys.stderr); sys.exit(1)
 if bad:
     print("D21 FAIL: applets not colorized as 'applied':", bad, file=sys.stderr); sys.exit(1)
+# D28: show-desktop is a stock panel icon and must not be blocked as colorful
+show = seen.get("org.kde.plasma.showdesktop")
+if show and show[1] == "colorful":
+    print("D28 FAIL: show-desktop is incorrectly colorizerReason='colorful'; it must follow the panel scheme", file=sys.stderr); sys.exit(1)
 print("D21 STATE ok: clock, systray, show-desktop all colorizerActive=true reason=applied")
 PY
 

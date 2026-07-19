@@ -423,6 +423,27 @@ carries its own detail or points into the plan and the reference docs.
 - DISPOSITION PENDING (Bree): remove the four dead write lines in
   TypeSelection.qml, or accept as inert. Harmless either way (nothing reads them).
 
+### D28 - Show-desktop applet icon stays white on a light-colored panel
+- FIXED (#<PR>, <sha>). On a "Light colors" or "Layout colors" panel the
+  show-desktop applet (org.kde.plasma.showdesktop) rendered with its native
+  Breeze-dark icon, which is white, against the light panel background and was
+  hard to see. ROOT: the D21 colorizer push is gated by
+  `colorizerPaletteActive`, and that binding treated the colorfulness probe as a
+  hard veto. On themes where the show-desktop icon registers as colorful the
+  probe set `blocksColorizing=true`, so the resolved panel scheme was never
+  pushed into the applet's Kirigami.Theme colour group and the native white
+  icon remained. FIX: the show-desktop applet is a stock panel icon and is
+  expected to follow the panel scheme like the digital clock and systray, so
+  `AppletItem.qml` now explicitly exempts it from the colorfulness probe both in
+  `colorizerPaletteActive` and in `colorizerExemptionReason`. This is a
+  DELIBERATE Qt5-faithful behavior change: upstream Qt5 Latte never relied on
+  this probe (it did not exist in the same form), and the flatten-everything
+  overlay would have recoloured show-desktop anyway. EVIDENCE: the nested
+  vehicle's `110-colorizer-applet-contrast.sh` recipe asserts show-desktop is
+  never `colorizerReason="colorful"` and always `colorizerActive=true` with
+  `reason="applied"`; a temporary revert of the carve-out produces the
+  `colorful` reason and fails, while the carve-in passes.
+
 ### D14 - invalid-color qCriticals at every startup
 - FIXED (#46, be2db3049). Startup logged a burst of `Tools.colorBrightness: invalid
   color from QML, returning 0 (dark)` qCriticals (80 in the nested-vehicle real
