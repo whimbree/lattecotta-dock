@@ -555,33 +555,48 @@ CL-0 review follow-up nits (from the PR #40 independent review, non-blocking):
       only their own key, no coupling even at the boundary. Commits: fe36bf088
 
 ### CL-2 - appearance non-length
-- [ ] **AU-2a** Items (47-49): iconSize/proportionIconSize/zoomLevel apply to geo
-      and hover; P2/P3. Commits:
-- [ ] **AU-2b** Margins (57-59): lengthExtMargin/thickMargin/screenEdgeMargin geo
-      effect; P2/P3. Commits:
-- [ ] **AU-2c** Colors (60-61) incl. S-b Palette index collision; golden effect;
-      P2/P3. Commits:
-- [ ] **AU-2d** Background group (62-74): golden effects; P2/P3 for every toggle
-      and slider. Commits:
+- [x] **AU-2a** Items (47-49): iconSize/proportionIconSize/zoomLevel - P2 (own
+      key) + P3 (transforms pinned: icon-size even-snap, proportionIconSize -1
+      disabled sentinel, zoomLevel inverse factor). Commits: fcf1a88e6
+- [x] **AU-2b** Margins (57-59): lengthExtMargin/thickMargin/screenEdgeMargin -
+      P2/P3. Commits: fcf1a88e6
+- [x] **AU-2c** Colors (60-61): P2/P3. S-b palette-index collision CLEARED - the 6
+      ThemeColors values map to 6 distinct round-tripping combo indices (the D23
+      Reverse/Layout dropdown fix already on main handles it; pinned three ways).
+      Commits: fcf1a88e6
+- [x] **AU-2d** Background group (62-74): P2/P3 for every toggle and slider (all
+      have a config readback, so snapshot-diff, no golden needed). Commits:
+      fcf1a88e6
 
 ### CL-3 - behavior
-- [ ] **AU-3a** Location + Alignment + Screen (14-22): setNextLocation effect via
-      vd.edge/alignment/screen; P3 `checked` reflects live. Commits:
-- [ ] **AU-3b** Visibility + Delay (23-30, 43-46): mode + timers via readback
-      (adds the visibility readbacks); P3 reflects live. Commits:
-- [ ] **AU-3c** Actions + Environment + Items checkboxes (31-42, 44) incl. the
-      view-property controls (byPassWM, isPreferredForShortcuts); S-d combo
-      round-trips. Commits:
-- [ ] **AU-3d** S-a TypeSelection dead-key check (control 13): snapshot-diff shows
-      `solidPanel`/`colorizeTransparentPanels` land nowhere; file/clear the
-      finding. Commits:
+- [x] **AU-3a** Location + Alignment + Screen (14-22): setNextLocation effect via
+      viewsData edge/alignment/screen; P3 `checked` reflects live. Commits:
+      8f0feadf2, 523ab5097
+- [x] **AU-3b** Visibility + Delay (23-30, 43-46): mode + timers via the CL-0 view
+      readback (consumed, not re-added); P3 reflects live. Commits: 8f0feadf2,
+      523ab5097
+- [x] **AU-3c** Actions + Environment + Items checkboxes (31-42, 44) incl. byPassWM
+      / isPreferredForShortcuts (read via the view half). S-d combo round-trips
+      CLEARED - activeWindowFilter / scrollAction are identity-mapped so a re-fire
+      on the stored value is a no-op (no oscillation). Commits: 8f0feadf2
+- [x] **AU-3d** S-a TypeSelection dead-key check (control 13): S-a CONFIRMED - the
+      Dock/Panel presets write `solidPanel` and `colorizeTransparentPanels`, both
+      schema-absent with zero readers tree-wide (inherited upstream cruft; the Qt6
+      reference fork has the identical dead writes, so not a port regression).
+      Filed as D24. Commits: 8f0feadf2
 
 ### CL-4 - effects
-- [ ] **AU-4a** Shadows (75-80): golden effects; P2/P3. Commits:
-- [ ] **AU-4b** Animations (81-84) incl. S-c durationTime inversion check.
-      Commits:
-- [ ] **AU-4c** Indicators (85-90): latteView.indicator readback; P1/P3; the
-      per-plugin sub-options own sub-audit. Commits:
+- [x] **AU-4a** Shadows (75-80): P2/P3; the visual shadow PIXELS (HC2, no readback)
+      are left to a live-bless golden pass. Commits: ccc0a45ff, 0ba0fa024
+- [x] **AU-4b** Animations (81-84): S-c durationTime inversion CLEARED - the
+      x1/x2/x3 buttons store 3/2/1 and the SENSE is correct (faster label yields
+      the shorter animation, not "faster stores larger"; both forks identical);
+      pinned by a sense guard. Commits: ccc0a45ff
+- [x] **AU-4c** Indicators (85-90): the switch/tabs write the C++ latteView.indicator
+      (an empty General-key delta is CORRECT, not a dead control); P1/P3 via the
+      CL-0 indicator readback. GAP: control 90's per-plugin sub-options write
+      `[Indicator][<pluginId>]` keys viewConfigData does not expose - that
+      sub-audit needs a new readback. Commits: ccc0a45ff, 0ba0fa024
 
 ### CL-5 - tasks page (D10)
 - [ ] **AU-5a D10** Prove whether `tasks.plasmoid.configuration.*` writes apply
@@ -592,8 +607,14 @@ CL-0 review follow-up nits (from the PR #40 independent review, non-blocking):
       behavioural drive for the click/hover/wheel actions. Commits:
 
 ### CL-6 - chrome and on-canvas non-length
-- [ ] **AU-6a** On-canvas non-length (2-5): edit-background wheel keeps
-      editBackgroundOpacity (the fork-rewire trap), stick buttons, rearrange
-      toggle. Commits:
-- [ ] **AU-6b** Settings chrome (6-12): pin/advanced/drag-corner/add/duplicate/
-      remove/close; behavioural + universalSettings readback. Commits:
+- [x] **AU-6a** On-canvas non-length (2-5): the edit-background wheel keeps
+      `editBackgroundOpacity` - the fork-rewire trap AVOIDED (both reference forks
+      wrongly rewired it to panelTransparency; this port is Qt5-faithful, pinned
+      so a regression fails three ways); stick buttons + rearrange toggle P2.
+      Commits: b5e33db34, 83acfc766
+- [x] **AU-6b** Settings chrome (6-12): pin/advanced/drag-corner/add/duplicate/
+      remove/close - behavioural, plus a new universalSettings readback
+      (inAdvancedModeForEditSettings + settingsWindowScaleWidth/Height added to
+      viewConfigData's view half). The destructive add/remove/close control-level
+      live drives are a CL-6 follow-up (deferred to duplicate-view-idremap.sh +
+      code-read). Commits: 3224345c1, 83acfc766

@@ -16,22 +16,31 @@ Qt5 divergence; new per-applet colorizerActive/colorizerReason readbacks) and wa
 DELIVERED live to the real dock (verified: the Light top panel resolves dark fg
 #202326 on light bg #fcfcfc, all applets colorizerActive=applied).
 
-IN FLIGHT: wave-2 audit clusters CL-2 (appearance) / CL-3 (behavior) / CL-4
-(effects) / CL-6 (chrome) are farming as code-only PRs; CL-5 (tasks page / D10 -
-DECIDED: WIRE IT UP) follows when a slot frees.
+LANDED: wave-2 audit clusters all merged - CL-2 (appearance, PR #53), CL-3
+(behavior, #51), CL-4 (effects, #52), CL-6 (chrome, #50). All controls P2/P3
+green; the S-b palette-index, S-c duration-sense, and S-d combo-round-trip
+suspicions are CLEARED; the edit-background wheel is confirmed Qt5-faithful (it
+writes editBackgroundOpacity, not the panelTransparency both forks wrongly rewired
+to); S-a is CONFIRMED and filed as D24 (TypeSelection writes two dead keys
+solidPanel/colorizeTransparentPanels - disposition pending Bree: remove or accept,
+harmless either way). CL-6 added an advanced-mode + drag-corner-scale readback to
+viewConfigData. Wave-2 follow-ups (all small): control 56 (maximizeWhenMaximized)
+is unassigned between CL-1 and CL-2; control 90's per-plugin indicator sub-options
+need an [Indicator][<pluginId>] readback for their sub-audit; CL-6's destructive
+add/remove/close control-level live drives are deferred; the D24 disposition.
 
 NEXT for a fresh session - drive it with docs/prompts/orchestrator-prompt.md (the
 reusable farm/review/merge workflow + subagent templates):
-1. Land the wave-2 cluster PRs as they return: independent review -> rebase onto
-   main -> asan-at-merge for dock C++ -> `gh pr merge --rebase` -> tick the AU
-   items + file findings (orchestrator owns the plan/defect docs).
-2. Farm CL-5 (tasks/D10 wire-up, the ng eabf7c89a pattern).
-3. X11 hygiene, best-practice sequence: one small PR = D3 (collapse the dead
-   windowColorScheme else-arm) + D2 (mark the D19 keep-above an explicit
-   `// STUB`); THEN a deliberate isolated later pass for D1 (strip the WindowId
-   X11 parse surface -> uuid-only) and S1 (QByteArray-uuid -> QUuid substrate,
-   LAST, its own driven-verified PR); D5 at the next fork-sync.
-4. The e2e scenario/abort track (C-S*/C-A* in docs/e2e-interaction-test-plan.md)
+1. Farm CL-5 (tasks page / D10 - DECIDED: WIRE IT UP; the ng eabf7c89a pattern) -
+   the last audit cluster: first prove whether tasks.plasmoid.configuration.*
+   writes apply, then wire them if not, then audit each control.
+2. X11 hygiene, best-practice sequence (docs/x11-cleanup-audit.md has the plain-
+   English plan): one small PR = D3 (collapse the dead windowColorScheme else-arm)
+   + D2 (mark the D19 keep-above an explicit `// STUB`); THEN a deliberate isolated
+   later pass for D1 (strip the WindowId X11 parse surface -> uuid-only) and S1
+   (QByteArray-uuid -> QUuid substrate, LAST, its own driven-verified PR, optional);
+   D5 at the next fork-sync.
+3. The e2e scenario/abort track (C-S*/C-A* in docs/e2e-interaction-test-plan.md)
    and the deferred nits.
 
 Note: AGENTS DEVELOP IN THE NESTED VEHICLE, never the real session (a WIP-build

@@ -350,6 +350,21 @@ app/wm/waylandinterface.cpp:299 (Phase 4 WId), app/layouts/synchronizer.cpp:507
   mode is active and no value is clobbered. Found 2026-07-18, code-reading during
   the D21 investigation.
 
+### D24 - TypeSelection Dock/Panel presets write two dead keys
+- STATUS: OPEN (CONFIRMED harmless-but-inert; DISPOSITION pending Bree). Found by
+  the CL-3 behavior-page audit (2026-07-19, AU-3d / the S-a check).
+- The Type-selection presets (shell/.../controls/TypeSelection.qml, four write
+  sites) write `solidPanel` and `colorizeTransparentPanels` when picking Dock or
+  Panel. Neither key exists in the containment schema (config/main.xml) and a
+  tree-wide grep finds ZERO readers (the only solidPanel* symbols are the
+  differently-named BackgroundStateResolver::solidPanelForced, fed by the REAL
+  solidBackgroundForMaximized). So the two writes land nowhere and do nothing.
+- INHERITED, not a port regression: a deprecated `solidPanel` schema key was
+  removed upstream long ago and these writes were never cleaned up; the Qt6
+  reference fork carries the identical dead writes.
+- DISPOSITION PENDING (Bree): remove the four dead write lines in
+  TypeSelection.qml, or accept as inert. Harmless either way (nothing reads them).
+
 ### D14 - invalid-color qCriticals at every startup
 - FIXED (#46, be2db3049). Startup logged a burst of `Tools.colorBrightness: invalid
   color from QML, returning 0 (dark)` qCriticals (80 in the nested-vehicle real
