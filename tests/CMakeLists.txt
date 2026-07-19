@@ -85,6 +85,19 @@ target_include_directories(lastactivewindowtest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+# The windowChanged debounce: normal geometry/title/active churn waits 150 ms,
+# but a discrete maximized-change edge flushes synchronously (avoids the
+# maximize-animation geometry stream re-arming the timer for seconds).
+ecm_add_test(windowchangedebouncetest.cpp
+    TEST_NAME windowchangedebouncetest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(windowchangedebouncetest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(windowchangedebouncetest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
 # SyncedLaunchers' client registry driven over the real object: the
 # destroyed-client removal (the d6d57e61 dangling-pointer crash class),
 # identity removal precision, and the layout/group filtering query.
