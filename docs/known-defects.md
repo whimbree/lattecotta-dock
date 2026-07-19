@@ -185,6 +185,57 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   surface-management work) or request keep-above through the wayland surface
   directly. Filed as proposal D2 in docs/x11-cleanup-audit.md; not fixed this
   pass (the survivor sweep executes removals only, surfaces behaviour changes).
+### D20 - Right-click menu collapses in normal mode when the always-shown key is empty
+- STATUS: the collapse-on-empty is ACCEPTED (Qt5-faithful: a genuinely empty
+  `contextMenuActionsAlwaysShown` must hide every gated action in normal mode);
+  the hypothesised UNASKED-FOR write-path emptying is DISPROVEN (not reproduced
+  under a faithful driver); the real defect, that normal mode was never
+  asserted, is FIXED by `tests/e2e/110-context-menu-normal-mode.sh` (6bcf55d62).
+- FOUND: 2026-07-18, D20 audit item. Reported symptom: in NORMAL (non-edit)
+  mode the dock right-click menu shows only the "Latte" section header and
+  "Edit Dock...", every other action (Add Widgets, the Layouts submenu,
+  Configure Latte, Add Dock/Panel, Duplicate, Export, Remove) hidden. EDIT mode
+  shows them all.
+- MECHANISM (confirmed): `menu.cpp:288` gates each normal-mode action on
+  `m_actionsAlwaysShown.contains(action) || configuring`; `m_actionsAlwaysShown`
+  is `contextMenuData` index 3, the `;;`-joined
+  `UniversalSettings::contextMenuActionsAlwaysShown`. When that config value is
+  empty the normal-mode menu collapses to the section header + Edit; edit mode
+  (`|| configuring`) masks it, which is why the port's edit-mode-only menu
+  verification (PORTING_PLAN menu check) never caught it.
+- EVIDENCE (nested vehicle): a default/rich config drives `contextMenuData`
+  index 3 to the full set
+  `_layouts;;_preferences;;_quit_latte;;_separator1;;_add_latte_widgets;;_add_view`
+  (menu full); seeding `contextMenuActionsAlwaysShown=` and restarting drives
+  index 3 to `''` (menu collapsed). The new guard PASSES on the rich config and
+  FAILS with `always-shown set is [], expected [...]` on the emptied one, so it
+  observes the live failure, not just the pass.
+- WRITE-PATH HYPOTHESIS DISPROVEN: the prime suspect was that the
+  Preferences -> Actions `KActionSelector` fails to round-trip its selected
+  column under KF6, so opening + saving persists an empty set. A faithful
+  headless reproduction of the actual `loadItems()` -> `currentAlwaysData()`
+  round-trip (the exact `app/settings/actionsdialog/actionshandler.cpp` logic
+  against a real KF6 `KActionSelector`) leaves the selected column populated
+  with all six actions in every case: construction-only, inside a shown dialog,
+  and with a shuffled stored order. `currentAlwaysData()` is never empty for a
+  rich seed, and OK stays disabled on a clean open (`hasChangedData()==false`),
+  so a clean open + save cannot empty the key. Both reference forks carry
+  byte-identical `loadItems`/`save` (upstream-unchanged), and the actionshandler
+  history in this tree is upstream. The only in-tree writer of the persisted key
+  is `TabPreferences::save` <- `ActionsHandler::save` <- `currentAlwaysData`; QML
+  and D-Bus never write it. The only reachable empty state is a DELIBERATE user
+  removal of every action, which the Qt5-faithful constraint requires to collapse
+  the menu, so there is no unasked-for write-path emptying to fix, and no
+  load-side or render-side default guard was added.
+- SEPARATE LATENT (SUSPECTED, not D20, not fixed here): `menu.cpp` reads
+  `m_data[index]` for indices 0..6 without checking `m_data.size()`; a failed
+  `contextMenuData` D-Bus call leaves `m_data` empty (cleared at `menu.cpp:221`,
+  never repopulated) and every access is then out-of-bounds, a silent broken
+  menu instead of a loud failure. Not triggered in the D20 scenario (the reply
+  carries seven elements); worth its own item.
+- FIX: `tests/e2e/110-context-menu-normal-mode.sh` asserts every view's
+  normal-mode always-shown feed carries the full set, closing the verification
+  gap that let the collapse be invisible.
 
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
