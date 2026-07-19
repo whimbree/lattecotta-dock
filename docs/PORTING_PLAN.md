@@ -529,6 +529,32 @@ blocking.
       landed (24e54b7d8); what remains is the property chain, the
       setting and the UI
       Commits:
+- [x] Survivor sweep (2026-07-18): a second whole-tree grep for the
+      X11 vocabulary after the first removal wave, classified in
+      docs/x11-cleanup-audit.md. Executed the DEAD/stale removals:
+      the X11-only PlasmaCoreThumbnail preview element (deleted, the
+      ToolTipInstance thumbnail ternary collapsed to PipeWire), the
+      dead NETWM + orphaned KWindowSystem includes the layer-shell
+      cutover left in the two SubWindow helpers, and the stale `// X11`
+      label over theme.cpp's live KWindowSystem include. Build-system
+      removal reconfirmed complete (no HAVE_X11/WITH_X11 define, no
+      find_package(X11|XCB), no X11 nix buildInput survives)
+      Commits: 4c84c1bad, 67bd25638, 2f78a7d7e
+- [ ] AWAIT SIGN-OFF (survivor-sweep proposals, docs/x11-cleanup-audit.md):
+      D2 the aboutApplication keep-above X11-id no-op (a Qt WId fed
+      through fromX11WId never resolves in windowFor() on wayland, so
+      the keep-above silently does nothing - known-defects D19; stub
+      or wire through the surface, do not blind-delete the intent);
+      D3 the windowColorScheme else arm (X11 decimal parse, dead in
+      production, collapse to the wayland branch - retires the last
+      non-test fromX11WId parse caller); D5 the dead netwm.h include
+      in the vendored plasmoid/plugin/backend.h (verify against
+      current upstream plasma-desktop before removing, to keep the
+      vendored diff clean); D1 strip the WindowId X11 parse surface
+      (gated on D2/D3 first); S1 the WindowId QByteArray-vs-QUuid
+      substrate (a separate change, downstream of D1, touches the QML
+      ArrayBuffer boundary). None applied this pass
+      Commits:
 - [x] README + docs register update (timeless: "Wayland-only,
       matching Plasma 6.8+'s Wayland-exclusive direction"), CLAUDE.md
       Plan section phase list wording

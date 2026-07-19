@@ -57,6 +57,21 @@ CL-4 effects, CL-6 chrome} in parallel, then CL-5 tasks/D10 wire-up. The e2e
 scenario + abort chunks (C-S*/C-A*) are the other open track once C-I5
 (moveViewToScreen) lands.
 
+## 2026-07-18 X11 survivor sweep (own PR, in flight)
+
+A second whole-tree grep for the X11 vocabulary after the first removal wave,
+classified in docs/x11-cleanup-audit.md. Executed the DEAD/stale removals only:
+deleted the X11-only PlasmaCoreThumbnail preview element (ToolTipInstance
+thumbnail ternary collapsed to PipeWire), dropped the dead NETWM + orphaned
+KWindowSystem includes from the two SubWindow helpers, relabelled the stale
+`// X11` header over theme.cpp's live KWindowSystem include. Build-system X11
+removal reconfirmed complete. Surfaced (NOT applied) as sign-off proposals:
+D2 the aboutApplication keep-above X11-id no-op (known-defects D19), D3 the
+windowColorScheme else arm, D5 the vendored backend.h netwm.h include, D1 the
+WindowId X11 parse surface, S1 the QByteArray-vs-QUuid substrate. The two
+still-open Phase-4 checklist items (the View activity-stop reshow hack and the
+byPassWM decision) are unchanged - both need live evidence / a product decision.
+
 ## 2026-07-18 D14: startup invalid-color qCriticals fixed at the source (own PR)
 
 The startup burst of `Tools.colorBrightness: invalid color from QML` qCriticals

@@ -163,6 +163,29 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   vs ACCEPTED. Not in C-I9 scope (the driver's job is to drive and observe the
   drop, which it does correctly); a future F2-add investigation owns it.
 
+### D19 - About dialog keep-above is a silent X11-shaped no-op on wayland
+- STATUS: OPEN (found 2026-07-18 by the X11 survivor-sweep code-read; the X11
+  removal wave missed it because it is not textually an isPlatformX11 branch -
+  it is an X11-shaped call the wayland interface silently drops).
+- SYMPTOM: the About dialog is not actually raised keep-above on wayland. It may
+  appear under other always-on-top windows instead of above them.
+- EVIDENCE (code-read, lattecorona.cpp:882 + waylandinterface.cpp setKeepAbove):
+  aboutApplication() calls
+  `m_wm->setKeepAbove(WindowId::fromX11WId(aboutDialog->winId()), true)`
+  unconditionally. `aboutDialog->winId()` is a Qt WId; fromX11WId wraps its
+  decimal string. On wayland WaylandInterface::setKeepAbove does windowFor(wid),
+  which resolves a WindowId against PlasmaWindow::uuid() values - a Qt WId
+  decimal string can never equal a PlasmaWindow uuid, so windowFor() returns
+  null and requestToggleKeepAbove() is never reached. Pairs with the skipTaskBar
+  STUB one line above (waylandinterface.cpp:297), already a no-op with a Phase-4
+  surface-management note.
+- DISPOSITION PENDING: the intent (keep the About dialog above) is legitimate,
+  so this is not a delete - it is a stub-or-wire decision. Either mark it a
+  `// STUB` like skipTaskBar (defer to the PlasmaShellSurface/layer-shell
+  surface-management work) or request keep-above through the wayland surface
+  directly. Filed as proposal D2 in docs/x11-cleanup-audit.md; not fixed this
+  pass (the survivor sweep executes removals only, surfaces behaviour changes).
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here

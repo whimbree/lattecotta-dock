@@ -2828,8 +2828,10 @@ Non-goals, explicit:
   stay in their own PORTING_PLAN section.
 - No test-infrastructure rewrite: the harness is extended, not
   replaced; the ratchet is a new script, not a new framework.
-- X11-specific behavior is preserved-but-untested beyond compile
-  (project policy: X11 must compile, never blocks).
+- No X11-specific behavior to preserve: the X11 backend was removed
+  2026-07-17 (Phase 4), so this plan's cores are wayland-only. (The
+  original ground rule read "X11 must compile, never blocks"; retired
+  with the backend.)
 
 ## Executive summary
 

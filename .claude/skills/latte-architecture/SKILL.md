@@ -133,9 +133,9 @@ pushed off-screen by the dock's own zone); and a mapped wlr-layer
 surface is bound to the output it was created on, so `retargetScreen()`
 must hide/re-show to move chrome across monitors.
 
-`waylandinterface.cpp` / `xwindowinterface.cpp` are the window-tracking
-backends behind `abstractwindowinterface.cpp` (Wayland is primary; X11
-must compile but never blocks).
+`waylandinterface.cpp` is the window-tracking backend behind
+`abstractwindowinterface.cpp` (wayland-only since the X11 backend and
+`xwindowinterface.cpp` were removed 2026-07-17, Phase 4).
 
 ## Layout and storage (app/layout/, app/layouts/)
 
