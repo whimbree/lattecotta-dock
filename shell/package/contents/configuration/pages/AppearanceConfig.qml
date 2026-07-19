@@ -261,13 +261,24 @@ PlasmaComponents.Page {
                         id: maxLengthSlider
                         Layout.fillWidth: true
 
-                        value: plasmoid.configuration.maxLength
                         from: 0
                         to: 100
                         stepSize: 1
                         wheelEnabled: false
 
                         readonly property int localMinValue: 1
+
+                        //! config drives the handle through a proxy property, NOT a
+                        //! declarative `value: plasmoid.configuration.maxLength` binding
+                        //! (D16): a plain value binding is DESTROYED by the first
+                        //! imperative assignment (the drag-snap below, or a handle drag),
+                        //! and nothing re-establishes it - after that first touch the
+                        //! canvas ruler and any external config edit no longer moved the
+                        //! handle, so the ruler and the slider disagreed. The proxy is
+                        //! never assigned imperatively, so its binding survives; a change
+                        //! to it re-syncs the handle. Same pattern the offset slider
+                        //! already uses (offsetValue + updateOffset), generalized here.
+                        property real maxLengthValue: plasmoid.configuration.maxLength
 
                         //! delegates to the shared clamp authority (EX-18,
                         //! app/settings/lengthoffsetclamp.h); the canvas maxLength ruler
@@ -293,16 +304,28 @@ PlasmaComponents.Page {
                             }
                         }
 
+                        //! re-establish the handle from config after any interaction
+                        //! clobbered it (D16); skipped while pressed so a live drag owns
+                        //! the value
+                        function resyncMaxLengthHandle() {
+                            if (!pressed) {
+                                value = maxLengthValue;
+                            }
+                        }
+
                         onPressedChanged: {
                             updateMaxLength();
                         }
 
                         Component.onCompleted: {
-                            valueChanged.connect(updateMaxLength)
+                            valueChanged.connect(updateMaxLength);
+                            maxLengthValueChanged.connect(resyncMaxLengthHandle);
+                            resyncMaxLengthHandle();
                         }
 
                         Component.onDestruction: {
-                            valueChanged.disconnect(updateMaxLength)
+                            valueChanged.disconnect(updateMaxLength);
+                            maxLengthValueChanged.disconnect(resyncMaxLengthHandle);
                         }
                     }
 
@@ -356,11 +379,16 @@ PlasmaComponents.Page {
                         id: minLengthSlider
                         Layout.fillWidth: true
 
-                        value: plasmoid.configuration.minLength
                         from: 0
                         to: 100
                         stepSize: 1
                         wheelEnabled: false
+
+                        //! config drives the handle through a proxy property, not a
+                        //! declarative `value:` binding, so a drag cannot clobber the
+                        //! ruler / external re-sync (D16 - same pattern as maxLengthSlider
+                        //! and the offset slider)
+                        property real minLengthValue: plasmoid.configuration.minLength
 
                         function updateMinLength() {
                             if (!pressed  && viewConfig.isReady) {
@@ -376,16 +404,28 @@ PlasmaComponents.Page {
                             }
                         }
 
+                        //! re-establish the handle from config after any interaction
+                        //! clobbered it (D16); skipped while pressed so a live drag owns
+                        //! the value
+                        function resyncMinLengthHandle() {
+                            if (!pressed) {
+                                value = minLengthValue;
+                            }
+                        }
+
                         onPressedChanged: {
                             updateMinLength();
                         }
 
                         Component.onCompleted: {
-                            valueChanged.connect(updateMinLength)
+                            valueChanged.connect(updateMinLength);
+                            minLengthValueChanged.connect(resyncMinLengthHandle);
+                            resyncMinLengthHandle();
                         }
 
                         Component.onDestruction: {
-                            valueChanged.disconnect(updateMinLength)
+                            valueChanged.disconnect(updateMinLength);
+                            minLengthValueChanged.disconnect(resyncMinLengthHandle);
                         }
                     }
 
