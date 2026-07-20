@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-License-Identifier: GPL-2.0-or-later
+set -euo pipefail
+
+if [[ $# -lt 1 || "$1" != /* ]]; then
+    echo "Usage: packaging/debian/build-package ABSOLUTE_OUTPUT_DIR [dpkg-buildpackage options]" >&2
+    exit 2
+fi
+
+output_dir="$1"
+shift
+if [[ -e "$output_dir" ]]; then
+    echo "build-package: output directory already exists: $output_dir" >&2
+    exit 2
+fi
+
+script_dir="${BASH_SOURCE[0]%/*}"
+repo="$(cd "$script_dir/../.." && pwd -P)"
+version="$(dpkg-parsechangelog -l"$script_dir/changelog" -SVersion)"
+upstream_version="${version#*:}"
+upstream_version="${upstream_version%-*}"
+source_name="latte-dock-$upstream_version"
+source_dir="$output_dir/$source_name"
+source_epoch="$(git -C "$repo" show -s --format=%ct HEAD)"
+orig_archive="$output_dir/latte-dock_${upstream_version}.orig.tar.gz"
+
+mkdir -p "$output_dir"
+git -C "$repo" archive --format=tar --prefix="$source_name/" HEAD \
+    | tar -xf - -C "$output_dir"
+mv "$source_dir/packaging/debian" "$source_dir/debian"
+
+# Normalize the archive metadata so the same Git tree produces the same orig tarball.
+tar --sort=name --mtime="@$source_epoch" --clamp-mtime \
+    --owner=0 --group=0 --numeric-owner -I 'gzip -n' \
+    --exclude="$source_name/debian" -cf "$orig_archive" \
+    -C "$output_dir" "$source_name"
+
+echo "build-package: staged source: $source_dir"
+echo "build-package: upstream archive: $orig_archive"
+(cd "$source_dir" && dpkg-buildpackage -us -uc "$@")
