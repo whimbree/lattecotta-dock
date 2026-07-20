@@ -32,6 +32,51 @@ for latte_package_gate_loader_variable in "${latte_package_gate_loader_variables
 done
 unset latte_package_gate_loader_variable
 
+_latte_package_gate_qt_plugin_info_is_qt6() {
+    local tool="$1" version_output
+    version_output="$("$tool" --version 2>&1)" || return 1
+    [[ "$version_output" =~ (^|[^0-9])6\.[0-9]+(\.[0-9]+)?([^0-9]|$) ]]
+}
+
+latte_package_gate_choose_qt6_plugin_info() {
+    local output_name="$1" candidate
+    shift
+    local -n output_path="$output_name"
+    output_path=""
+    for candidate in "$@"; do
+        if _latte_package_gate_qt_plugin_info_is_qt6 "$candidate"; then
+            output_path="$candidate"
+            return 0
+        fi
+    done
+    return 2
+}
+
+latte_package_gate_find_qt6_plugin_info() {
+    local output_name="$1" name candidate
+    local -a candidates=()
+    local -A seen=()
+
+    # Distro-specific names cannot be shadowed by an unsuffixed Qt 5 tool.
+    for name in qtplugininfo6 qtplugininfo-qt6; do
+        if candidate="$(command -v "$name" 2>/dev/null)"; then
+            [[ -n "${seen[$candidate]+present}" ]] || candidates+=("$candidate")
+            seen["$candidate"]=1
+        fi
+    done
+    for candidate in /usr/lib/qt6/bin/qtplugininfo /usr/lib64/qt6/bin/qtplugininfo; do
+        if [[ -x "$candidate" ]]; then
+            [[ -n "${seen[$candidate]+present}" ]] || candidates+=("$candidate")
+            seen["$candidate"]=1
+        fi
+    done
+    if candidate="$(command -v qtplugininfo 2>/dev/null)"; then
+        [[ -n "${seen[$candidate]+present}" ]] || candidates+=("$candidate")
+    fi
+
+    latte_package_gate_choose_qt6_plugin_info "$output_name" "${candidates[@]}"
+}
+
 latte_package_gate_read_elf_search_paths() {
     local file="$1" output_name="$2" readelf_output parsed_output path
     local -n output_paths="$output_name"

@@ -215,6 +215,33 @@ build_qt_plugin "$fixture_indicator_plugin" latte_packagestructure_indicator_fac
 good="$work/good"
 make_package "$good"
 
+real_qt_plugin_info=""
+latte_package_gate_find_qt6_plugin_info real_qt_plugin_info \
+    || { echo "FAIL: no real Qt 6 qtplugininfo is available for fixtures" >&2; exit 1; }
+qt_selector_bin="$work/qt-selector-bin"
+qt6_selector_log="$work/qt6-selector.log"
+qt5_selector_log="$work/qt5-selector.log"
+mkdir -p "$qt_selector_bin"
+printf '#!/usr/bin/env bash\n: >%q\nexec %q "$@"\n' \
+    "$qt6_selector_log" "$real_qt_plugin_info" >"$qt_selector_bin/qtplugininfo6"
+printf '#!/usr/bin/env bash\n: >%q\nprintf "qplugininfo 5.15.2\\n"\n' \
+    "$qt5_selector_log" >"$qt_selector_bin/qtplugininfo"
+chmod +x "$qt_selector_bin/qtplugininfo6" "$qt_selector_bin/qtplugininfo"
+qt_selector_output="$(run_check "$good" PATH="$qt_selector_bin:$PATH")"
+[[ "$qt_selector_output" == *"installed-package-gate: CHECK OK"* \
+        && -e "$qt6_selector_log" && ! -e "$qt5_selector_log" ]] \
+    || { echo "FAIL: Qt 6-specific qtplugininfo was not preferred over the unsuffixed tool" >&2; echo "$qt_selector_output" >&2; exit 1; }
+echo "PASS: Qt 6-specific qtplugininfo takes precedence over an unsuffixed Qt 5 tool"
+
+fake_qt5_plugin_info="$work/qtplugininfo5"
+printf '#!/usr/bin/env bash\nprintf "qplugininfo 5.15.2\\n"\n' >"$fake_qt5_plugin_info"
+chmod +x "$fake_qt5_plugin_info"
+if latte_package_gate_choose_qt6_plugin_info rejected_qt_plugin_info "$fake_qt5_plugin_info"; then
+    echo "FAIL: Qt 5 qtplugininfo passed Qt 6 version validation" >&2
+    exit 1
+fi
+echo "PASS: Qt 5-only qtplugininfo is rejected by version"
+
 expect_failure "live root without ownership manifest" \
     "--manifest is required with --root /" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
@@ -923,4 +950,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (60 focused controls)"
+echo "installed-package-gate-selftest: PASS (62 focused controls)"

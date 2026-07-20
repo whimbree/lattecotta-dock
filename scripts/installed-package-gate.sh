@@ -57,24 +57,8 @@ require_commands() {
 require_commands validation awk cat dirname find jq mktemp perl readelf readlink realpath rm timeout tr
 
 qt_plugin_info=""
-for qt_plugin_info_name in qtplugininfo qtplugininfo6 qtplugininfo-qt6; do
-    if qt_plugin_info="$(command -v "$qt_plugin_info_name" 2>/dev/null)"; then
-        break
-    fi
-    qt_plugin_info=""
-done
-if [[ -z "$qt_plugin_info" ]]; then
-    for qt_plugin_info_candidate in \
-            /usr/lib/qt6/bin/qtplugininfo /usr/lib64/qt6/bin/qtplugininfo; do
-        if [[ -x "$qt_plugin_info_candidate" ]]; then
-            qt_plugin_info="$qt_plugin_info_candidate"
-            break
-        fi
-    done
-fi
-[[ -n "$qt_plugin_info" ]] \
-    || fail "required validation command 'qtplugininfo' is missing (also checked qtplugininfo6 and qtplugininfo-qt6)"
-unset qt_plugin_info_name qt_plugin_info_candidate
+latte_package_gate_find_qt6_plugin_info qt_plugin_info \
+    || fail "required Qt 6 validation command 'qtplugininfo' is missing or reports a non-Qt-6 version"
 
 path_is_within() {
     local path="$1" base="$2"
