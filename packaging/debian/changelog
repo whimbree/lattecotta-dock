@@ -1,4 +1,4 @@
-latte-dock (0.10.77-1) unstable; urgency=medium
+latte-dock (0.10.77-1) noble; urgency=medium
 
   * Add Phase F1 (the Debian-family native package recipe).
   * Build the production CMake payload with debhelper and Ninja.
