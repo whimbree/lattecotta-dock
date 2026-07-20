@@ -114,6 +114,9 @@ case "$STAGE" in
         # This is a container contract, not something to default here.
         : "${LATTE_QML_MODULE_PATH:?the container image must export LATTE_QML_MODULE_PATH (the distro framework qml tree); see ci/containers/Containerfile.<distro>}"
 
+        echo "==> installed-package nested-runtime acceptance"
+        BUILD="$BUILD" "$SRC/tests/installed-package-gate-runtime-test.sh"
+
         fakepointer="$BUILD/_e2e-tools/fakepointer"
         echo "==> building fakepointer"
         build_fakepointer "$fakepointer"

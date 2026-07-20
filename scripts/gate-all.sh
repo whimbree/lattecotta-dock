@@ -48,7 +48,8 @@ else
     echo "gate-all: lockstep guard skipped: no /run/current-system on this host"
 fi
 
-"$repo/tests/installed-package-gate-selftest.sh" # native-package provenance and fallback refusals
+"$repo/tests/installed-package-gate-selftest.sh" # fast native-package provenance/refusal controls;
+                                                 # ci/build-and-gate.sh runs the package-installed runtime acceptance
 "$repo/scripts/build-check.sh"        # full build + full ctest + coverage ratchet
 "$repo/tests/coverage/qmllint-gate.sh"       # baseline only shrinks
 "$repo/scripts/sceneprobe-gate.sh"    # real-pixel scene gate incl. self-test
