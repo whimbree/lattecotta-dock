@@ -679,7 +679,7 @@ done
 [[ -e "$group_ignored_ready" ]] \
     || { kill -KILL -- "-$group_ignored_pid" 2>/dev/null || true; echo "FAIL: process-group fixture did not start" >&2; exit 1; }
 latte_package_gate_stop_process_group "$group_ignored_pid" "TERM-ignoring process group" 1 0.01 50 0.01
-latte_package_gate_process_group_exists "$group_ignored_pid" \
+latte_package_gate_process_group_has_live_members "$group_ignored_pid" \
     && { echo "FAIL: cleanup left the TERM-ignoring process group alive" >&2; exit 1; }
 echo "PASS: nested-style process-group cleanup escalates within fixed bounds"
 
@@ -709,12 +709,76 @@ kill -0 "$descendant_pid" 2>/dev/null \
     && { echo "FAIL: cleanup left a TERM-ignoring dock descendant alive" >&2; exit 1; }
 echo "PASS: dock-group cleanup escalates after the leader exits but a descendant survives"
 
+zombie_holder_source="$work/zombie-holder.c"
+zombie_holder="$work/zombie-holder"
+printf '%s\n' \
+    '#include <signal.h>' \
+    '#include <stdio.h>' \
+    '#include <stdlib.h>' \
+    '#include <sys/wait.h>' \
+    '#include <unistd.h>' \
+    'static pid_t child;' \
+    'static void finish(int signal_number) {' \
+    '    (void)signal_number;' \
+    '    waitpid(child, NULL, 0);' \
+    '    _exit(0);' \
+    '}' \
+    'int main(int argc, char **argv) {' \
+    '    siginfo_t child_info;' \
+    '    FILE *pid_file;' \
+    '    if (argc != 3) return 2;' \
+    '    child = fork();' \
+    '    if (child < 0) return 3;' \
+    '    if (child == 0) {' \
+    '        if (setpgid(0, 0) != 0) _exit(4);' \
+    '        _exit(0);' \
+    '    }' \
+    '    if (waitid(P_PID, child, &child_info, WEXITED | WNOWAIT) != 0) return 5;' \
+    '    pid_file = fopen(argv[1], "w");' \
+    '    if (!pid_file) return 6;' \
+    '    fprintf(pid_file, "%ld\n", (long)child);' \
+    '    fclose(pid_file);' \
+    '    pid_file = fopen(argv[2], "w");' \
+    '    if (!pid_file) return 7;' \
+    '    fclose(pid_file);' \
+    '    signal(SIGTERM, finish);' \
+    '    for (;;) pause();' \
+    '}' >"$zombie_holder_source"
+cc "$zombie_holder_source" -o "$zombie_holder"
+zombie_pid_file="$work/zombie.pid"
+zombie_ready="$work/zombie.ready"
+"$zombie_holder" "$zombie_pid_file" "$zombie_ready" &
+zombie_holder_pid=$!
+for ((ready_wait = 0; ready_wait < 50; ready_wait++)); do
+    [[ -e "$zombie_ready" ]] && break
+    sleep 0.01
+done
+[[ -e "$zombie_ready" ]] \
+    || { kill -KILL "$zombie_holder_pid" 2>/dev/null || true; echo "FAIL: zombie fixture did not start" >&2; exit 1; }
+zombie_pid="$(<"$zombie_pid_file")"
+if latte_package_gate_process_group_has_live_members "$zombie_pid"; then
+    kill -TERM "$zombie_holder_pid" 2>/dev/null || true
+    wait "$zombie_holder_pid" 2>/dev/null || true
+    echo "FAIL: defunct process-group member was treated as live" >&2
+    exit 1
+else
+    zombie_poll_status=$?
+fi
+[[ "$zombie_poll_status" -eq 1 ]] \
+    || { kill -TERM "$zombie_holder_pid" 2>/dev/null || true; wait "$zombie_holder_pid" 2>/dev/null || true; echo "FAIL: zombie-only group poll returned $zombie_poll_status" >&2; exit 1; }
+latte_package_gate_stop_process_group "$zombie_pid" "zombie-only process group" 1 0 1 0
+[[ -d "/proc/$zombie_pid" ]] \
+    || { kill -TERM "$zombie_holder_pid" 2>/dev/null || true; wait "$zombie_holder_pid" 2>/dev/null || true; echo "FAIL: zombie fixture was reaped before cleanup completed" >&2; exit 1; }
+kill -TERM "$zombie_holder_pid"
+wait "$zombie_holder_pid"
+echo "PASS: zombie-only process groups count as successfully stopped"
+
 bounded_group_wait_log="$work/unbounded-group-wait-called"
 set +e
 bounded_group_output="$(
     (
         source "$repo/scripts/lib-installed-package-gate.sh"
-        pgrep() { return 0; }
+        pgrep() { printf '%s\n' "$$"; return 0; }
         kill() { return 0; }
         sleep() { :; }
         wait() { : >"$bounded_group_wait_log"; }
@@ -728,6 +792,27 @@ set -e
 [[ ! -e "$bounded_group_wait_log" ]] \
     || { echo "FAIL: process-group cleanup called unbounded wait while members still existed" >&2; exit 1; }
 echo "PASS: nested-style post-SIGKILL cleanup never waits on a live group"
+
+for pgrep_error_status in 2 3; do
+    polling_error_wait_log="$work/polling-error-$pgrep_error_status-wait-called"
+    set +e
+    polling_error_output="$(
+        (
+            source "$repo/scripts/lib-installed-package-gate.sh"
+            pgrep() { return "$pgrep_error_status"; }
+            wait() { : >"$polling_error_wait_log"; }
+            latte_package_gate_stop_process_group 424242 "unpollable process group" 1 0 1 0
+        ) 2>&1
+    )"
+    polling_error_rc=$?
+    set -e
+    [[ "$polling_error_rc" -eq 2 \
+            && "$polling_error_output" == *"pgrep failed while polling process group 424242 with status $pgrep_error_status"* ]] \
+        || { echo "FAIL: pgrep status $pgrep_error_status was not propagated" >&2; echo "$polling_error_output" >&2; exit 1; }
+    [[ ! -e "$polling_error_wait_log" ]] \
+        || { echo "FAIL: polling failure entered wait for process group 424242" >&2; exit 1; }
+done
+echo "PASS: pgrep operational failures abort cleanup without entering wait"
 
 clean_term_ready="$work/clean-term.ready"
 bash -c '
@@ -793,4 +878,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (55 focused controls)"
+echo "installed-package-gate-selftest: PASS (57 focused controls)"

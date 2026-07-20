@@ -741,8 +741,15 @@ latte_package_gate_audit_mapped_paths "/proc/$dock_pid/maps" "$artifact_prefix" 
     expected_mapped_artifacts required_mapped_artifacts
 
 kill -TERM -- "-$dock_pid"
-latte_package_gate_wait_until_process_group_exits "$dock_pid" 125 0.2 \
-    || fail "installed dock process group $dock_pid survived SIGTERM for 25 seconds"
+if latte_package_gate_wait_until_process_group_exits "$dock_pid" 125 0.2; then
+    :
+else
+    group_wait_status=$?
+    if [[ "$group_wait_status" -eq 1 ]]; then
+        fail "installed dock process group $dock_pid survived SIGTERM for 25 seconds"
+    fi
+    fail "cannot determine whether installed dock process group $dock_pid exited after SIGTERM"
+fi
 # KSignalHandler turns SIGTERM into qGuiApp->quit(), so a clean installed
 # shutdown returns from the event loop with status zero rather than 143.
 latte_package_gate_require_exit_status "$dock_pid" 0 "installed dock after SIGTERM"
