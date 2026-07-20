@@ -54,7 +54,27 @@ require_commands() {
     done
 }
 
-require_commands validation awk cat dirname find mktemp perl readelf readlink realpath rm tr
+require_commands validation awk cat dirname find jq mktemp perl readelf readlink realpath rm timeout tr
+
+qt_plugin_info=""
+for qt_plugin_info_name in qtplugininfo qtplugininfo6 qtplugininfo-qt6; do
+    if qt_plugin_info="$(command -v "$qt_plugin_info_name" 2>/dev/null)"; then
+        break
+    fi
+    qt_plugin_info=""
+done
+if [[ -z "$qt_plugin_info" ]]; then
+    for qt_plugin_info_candidate in \
+            /usr/lib/qt6/bin/qtplugininfo /usr/lib64/qt6/bin/qtplugininfo; do
+        if [[ -x "$qt_plugin_info_candidate" ]]; then
+            qt_plugin_info="$qt_plugin_info_candidate"
+            break
+        fi
+    done
+fi
+[[ -n "$qt_plugin_info" ]] \
+    || fail "required validation command 'qtplugininfo' is missing (also checked qtplugininfo6 and qtplugininfo-qt6)"
+unset qt_plugin_info_name qt_plugin_info_candidate
 
 path_is_within() {
     local path="$1" base="$2"
@@ -219,13 +239,48 @@ audit_elf_search_paths() {
 }
 
 require_loadable_plugin() {
-    local label="$1" plugin="$2" loader_output
-    loader_output="$(
-        LD_BIND_NOW=1 perl -MDynaLoader -e '
+    local label="$1" plugin="$2" loader_output loader_status
+    if loader_output="$(
+        timeout --kill-after=1s 5s env LD_BIND_NOW=1 perl -MDynaLoader -e '
             my $handle = DynaLoader::dl_load_file($ARGV[0], 0x02);
             die DynaLoader::dl_error() unless $handle;
         ' "$plugin" 2>&1
-    )" || fail "$label cannot be loaded from the installed artifact $plugin: $loader_output"
+    )"; then
+        return 0
+    else
+        loader_status=$?
+    fi
+    case "$loader_status" in
+        124|137) fail "$label loader timed out for installed artifact $plugin" ;;
+        *) fail "$label cannot be loaded from the installed artifact $plugin: $loader_output" ;;
+    esac
+}
+
+require_plugin_metadata() {
+    local label="$1" plugin="$2" expected_iid="$3" expected_class="$4"
+    local metadata_filter="$5" metadata_description="$6"
+    local metadata_output metadata_iid metadata_class metadata_status
+
+    if metadata_output="$(timeout --kill-after=1s 5s "$qt_plugin_info" \
+            --full-json -f compact "$plugin" 2>&1)"; then
+        :
+    else
+        metadata_status=$?
+        case "$metadata_status" in
+            124|137) fail "$label metadata inspection timed out for $plugin" ;;
+            *) fail "$label has no valid Qt plugin metadata at $plugin: $metadata_output" ;;
+        esac
+    fi
+    metadata_iid="$(jq -er '.IID | strings' <<<"$metadata_output")" \
+        || fail "$label metadata has no string IID at $plugin"
+    metadata_class="$(jq -er '.className | strings' <<<"$metadata_output")" \
+        || fail "$label metadata has no string className at $plugin"
+    [[ "$metadata_iid" == "$expected_iid" ]] \
+        || fail "$label has IID '$metadata_iid', expected '$expected_iid'"
+    [[ "$metadata_class" == "$expected_class" ]] \
+        || fail "$label has class '$metadata_class', expected '$expected_class'"
+    jq -e "$metadata_filter" <<<"$metadata_output" >/dev/null \
+        || fail "$label metadata does not declare $metadata_description"
 }
 
 require_one_match() {
@@ -419,8 +474,43 @@ package_plugin_paths=(
     "$action_plugin"
     "$indicator_package_plugin"
 )
+package_plugin_iids=(
+    "org.qt-project.Qt.QQmlExtensionInterface"
+    "org.qt-project.Qt.QQmlExtensionInterface"
+    "org.qt-project.Qt.QQmlExtensionInterface"
+    "org.kde.KPluginFactory"
+    "org.kde.KPluginFactory"
+)
+package_plugin_classes=(
+    "LatteCorePlugin"
+    "LatteContainmentPlugin"
+    "LatteTasksPlugin"
+    "MenuFactory"
+    "latte_packagestructure_indicator_factory"
+)
+package_plugin_metadata_filters=(
+    'true'
+    'true'
+    'true'
+    '.MetaData.KPlugin.Id == "org.kde.latte.contextmenu" and (.MetaData.KPlugin.ServiceTypes | index("Plasma/ContainmentActions") != null)'
+    '.MetaData.KPackageStructure == "Latte/Indicator" and .MetaData["X-KDE-ParentApp"] == "org.kde.latte-dock"'
+)
+package_plugin_metadata_descriptions=(
+    "the Latte core QML extension type"
+    "the Latte containment QML extension type"
+    "the Latte tasks QML extension type"
+    "the org.kde.latte.contextmenu Plasma/ContainmentActions type"
+    "the Latte/Indicator package-structure type for org.kde.latte-dock"
+)
 for ((plugin_index = 0; plugin_index < ${#package_plugin_paths[@]}; plugin_index++)); do
     audit_elf_search_paths "${package_plugin_labels[$plugin_index]}" "${package_plugin_paths[$plugin_index]}"
+    require_plugin_metadata \
+        "${package_plugin_labels[$plugin_index]}" \
+        "${package_plugin_paths[$plugin_index]}" \
+        "${package_plugin_iids[$plugin_index]}" \
+        "${package_plugin_classes[$plugin_index]}" \
+        "${package_plugin_metadata_filters[$plugin_index]}" \
+        "${package_plugin_metadata_descriptions[$plugin_index]}"
     require_loadable_plugin "${package_plugin_labels[$plugin_index]}" "${package_plugin_paths[$plugin_index]}"
 done
 
@@ -640,7 +730,12 @@ required_mapped_artifacts=(
     liblattecoreplugin.so
     liblattecontainmentplugin.so
     liblattetasksplugin.so
+    org.kde.latte.contextmenu.so
 )
+# latte_indicator.so is a KPackage structure used while opening/installing
+# indicator packages, not by normal dock startup. Its applicable runtime
+# contract is the bounded metadata/type/dlopen validation above. Keeping it in
+# expected_mapped_artifacts still rejects a foreign copy if startup ever maps it.
 latte_package_gate_audit_mapped_paths "/proc/$dock_pid/maps" "$artifact_prefix" "$repo" \
     expected_mapped_artifacts required_mapped_artifacts
 

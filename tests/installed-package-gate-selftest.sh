@@ -9,8 +9,8 @@
 set -euo pipefail
 
 for required_command in \
-        awk bash cc chmod cp env find grep ld ln mkdir mktemp mv pgrep readelf \
-        realpath rm setsid sleep sort; do
+        awk bash c++ cc chmod cp env find grep ld ln mkdir mktemp mv patchelf pgrep \
+        pkg-config readelf realpath rm setsid sleep sort; do
     command -v "$required_command" >/dev/null 2>&1 || {
         printf "installed-package-gate-selftest: FAIL: required command '%s' is missing\n" \
             "$required_command" >&2
@@ -47,14 +47,24 @@ make_package() {
         "$data/latte/indicators/default"
     cp "$fixture_binary" "$root/usr/bin/latte-dock"
     : >"$qml/org/kde/latte/core/qmldir"
-    cp "$fixture_plugin" "$qml/org/kde/latte/core/liblattecoreplugin.so"
+    cp "$fixture_core_plugin" "$qml/org/kde/latte/core/liblattecoreplugin.so"
+    cp -L "$fixture_qt_core" "$fixture_libstdcxx" "$fixture_libgcc" \
+        "$qml/org/kde/latte/core/"
     : >"$qml/org/kde/latte/components/deep/Installed.qml"
     : >"$qml/org/kde/latte/private/containment/qmldir"
-    cp "$fixture_plugin" "$qml/org/kde/latte/private/containment/liblattecontainmentplugin.so"
+    cp "$fixture_containment_plugin" "$qml/org/kde/latte/private/containment/liblattecontainmentplugin.so"
+    cp -L "$fixture_qt_core" "$fixture_libstdcxx" "$fixture_libgcc" \
+        "$qml/org/kde/latte/private/containment/"
     : >"$qml/org/kde/latte/private/tasks/qmldir"
-    cp "$fixture_plugin" "$qml/org/kde/latte/private/tasks/liblattetasksplugin.so"
-    cp "$fixture_plugin" "$plugins/kpackage/packagestructure/latte_indicator.so"
-    cp "$fixture_plugin" "$plugins/plasma/containmentactions/org.kde.latte.contextmenu.so"
+    cp "$fixture_tasks_plugin" "$qml/org/kde/latte/private/tasks/liblattetasksplugin.so"
+    cp -L "$fixture_qt_core" "$fixture_libstdcxx" "$fixture_libgcc" \
+        "$qml/org/kde/latte/private/tasks/"
+    cp "$fixture_indicator_plugin" "$plugins/kpackage/packagestructure/latte_indicator.so"
+    cp -L "$fixture_qt_core" "$fixture_libstdcxx" "$fixture_libgcc" \
+        "$plugins/kpackage/packagestructure/"
+    cp "$fixture_action_plugin" "$plugins/plasma/containmentactions/org.kde.latte.contextmenu.so"
+    cp -L "$fixture_qt_core" "$fixture_libstdcxx" "$fixture_libgcc" \
+        "$plugins/plasma/containmentactions/"
     : >"$data/plasma/shells/org.kde.latte.shell/metadata.json"
     : >"$data/plasma/shells/org.kde.latte.shell/Installed.qml"
     : >"$data/plasma/plasmoids/org.kde.latte.containment/metadata.json"
@@ -63,6 +73,32 @@ make_package() {
     : >"$data/plasma/plasmoids/org.kde.latte.plasmoid/Installed.qml"
     : >"$data/applications/org.kde.latte-dock.desktop"
     : >"$data/latte/indicators/default/Installed.qml"
+}
+
+build_qt_plugin() {
+    local output="$1" class_name="$2" iid="$3" metadata_file="${4:-}" constructor="${5:-}"
+    local source_file="$work/$class_name.cpp" moc_file="$work/$class_name.moc"
+    local qt_cflags qt_libs
+    {
+        printf '#include <QObject>\n'
+        [[ -z "$constructor" ]] || printf '%s\n' "$constructor"
+        printf 'class %s : public QObject {\n' "$class_name"
+        printf '    Q_OBJECT\n'
+        if [[ -n "$metadata_file" ]]; then
+            printf '    Q_PLUGIN_METADATA(IID "%s" FILE "%s")\n' "$iid" "$metadata_file"
+        else
+            printf '    Q_PLUGIN_METADATA(IID "%s")\n' "$iid"
+        fi
+        printf '};\n#include "%s"\n' "${moc_file##*/}"
+    } >"$source_file"
+    "$moc" "$source_file" -o "$moc_file"
+    qt_cflags="$(pkg-config --cflags Qt6Core)" \
+        || { echo "FAIL: Qt6Core compiler flags are unavailable" >&2; exit 1; }
+    qt_libs="$(pkg-config --libs Qt6Core)" \
+        || { echo "FAIL: Qt6Core linker flags are unavailable" >&2; exit 1; }
+    # shellcheck disable=SC2086 -- pkg-config emits shell-ready flag words.
+    c++ -std=c++20 -fPIC -shared "$source_file" -o "$output" $qt_cflags $qt_libs
+    patchelf --set-rpath '$ORIGIN' "$output"
 }
 
 write_package_manifest() {
@@ -123,9 +159,25 @@ expect_failure "missing awk parser" "required validation command 'awk' is missin
     env PATH="$missing_awk_path" LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     "$(command -v bash)" "$gate" --root "$work/not-used" --prefix /usr --check-only
 
+qt_libexec="$(pkg-config --variable=libexecdir Qt6Core)" \
+    || { echo "FAIL: Qt6Core host-tool directory is unavailable" >&2; exit 1; }
+moc="$qt_libexec/moc"
+[[ -x "$moc" ]] || { echo "FAIL: Qt6 moc is unavailable at $moc" >&2; exit 1; }
+qt_libdir="$(pkg-config --variable=libdir Qt6Core)" \
+    || { echo "FAIL: Qt6Core library directory is unavailable" >&2; exit 1; }
+fixture_qt_core="$qt_libdir/libQt6Core.so.6"
+fixture_libstdcxx="$(c++ -print-file-name=libstdc++.so.6)" \
+    || { echo "FAIL: libstdc++ fixture dependency cannot be resolved" >&2; exit 1; }
+fixture_libgcc="$(c++ -print-file-name=libgcc_s.so.1)" \
+    || { echo "FAIL: libgcc fixture dependency cannot be resolved" >&2; exit 1; }
+for fixture_dependency in "$fixture_qt_core" "$fixture_libstdcxx" "$fixture_libgcc"; do
+    [[ -f "$fixture_dependency" ]] \
+        || { echo "FAIL: fixture dependency is unavailable: $fixture_dependency" >&2; exit 1; }
+done
+
 elf_source="$work/elf-fixture.c"
 fixture_binary="$work/fixture-binary"
-fixture_plugin="$work/fixture-plugin.so"
+fixture_plugin="$work/fixture-generic-library.so"
 fixture_object="$work/elf-fixture.o"
 printf '%s\n' \
     'int fixture(void) { return 0; }' \
@@ -135,7 +187,31 @@ chmod +x "$fixture_binary"
 cc -fPIC -c "$elf_source" -o "$fixture_object"
 NIX_LDFLAGS= NIX_LDFLAGS_BEFORE= ld --build-id -shared "$fixture_object" -o "$fixture_plugin"
 readelf -h "$fixture_plugin" >/dev/null 2>&1 \
-    || { echo "FAIL: positive package plugin ELF fixture is invalid" >&2; exit 1; }
+    || { echo "FAIL: generic shared-library fixture is invalid" >&2; exit 1; }
+
+action_metadata="$work/action-metadata.json"
+indicator_metadata="$work/indicator-metadata.json"
+printf '%s\n' \
+    '{"KPlugin":{"Id":"org.kde.latte.contextmenu","ServiceTypes":["Plasma/ContainmentActions"]}}' \
+    >"$action_metadata"
+printf '%s\n' \
+    '{"KPackageStructure":"Latte/Indicator","X-KDE-ParentApp":"org.kde.latte-dock"}' \
+    >"$indicator_metadata"
+fixture_core_plugin="$work/liblattecoreplugin.so"
+fixture_containment_plugin="$work/liblattecontainmentplugin.so"
+fixture_tasks_plugin="$work/liblattetasksplugin.so"
+fixture_action_plugin="$work/org.kde.latte.contextmenu.so"
+fixture_indicator_plugin="$work/latte_indicator.so"
+build_qt_plugin "$fixture_core_plugin" LatteCorePlugin \
+    org.qt-project.Qt.QQmlExtensionInterface
+build_qt_plugin "$fixture_containment_plugin" LatteContainmentPlugin \
+    org.qt-project.Qt.QQmlExtensionInterface
+build_qt_plugin "$fixture_tasks_plugin" LatteTasksPlugin \
+    org.qt-project.Qt.QQmlExtensionInterface
+build_qt_plugin "$fixture_action_plugin" MenuFactory org.kde.KPluginFactory \
+    "$action_metadata"
+build_qt_plugin "$fixture_indicator_plugin" latte_packagestructure_indicator_factory \
+    org.kde.KPluginFactory "$indicator_metadata"
 
 good="$work/good"
 make_package "$good"
@@ -329,20 +405,39 @@ for invalid_plugin_spec in "${invalid_plugin_specs[@]}"; do
         bash "$gate" --root "$invalid_plugin_root" --prefix /usr --check-only
 done
 
+generic_action="$work/generic-action-plugin"
+cp -a "$good" "$generic_action"
+cp "$fixture_plugin" \
+    "$generic_action/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so"
+expect_failure "generic shared library in a plugin slot" "has no valid Qt plugin metadata" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$generic_action" --prefix /usr --check-only
+
 unloadable_action="$work/unloadable-action-plugin"
 cp -a "$good" "$unloadable_action"
-unloadable_source="$work/unloadable-plugin.c"
-unloadable_object="$work/unloadable-plugin.o"
-printf 'extern void missing_latte_gate_symbol(void);\nvoid fixture(void) { missing_latte_gate_symbol(); }\n' >"$unloadable_source"
-cc -fPIC -c "$unloadable_source" -o "$unloadable_object"
-NIX_LDFLAGS= NIX_LDFLAGS_BEFORE= ld -shared "$unloadable_object" -o \
-    "$unloadable_action/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so"
-[[ "$(readelf -Ws "$unloadable_action/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so")" \
+unloadable_action_path="$unloadable_action/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so"
+build_qt_plugin "$unloadable_action_path" MenuFactory org.kde.KPluginFactory \
+    "$action_metadata" \
+    'extern "C" void missing_latte_gate_symbol(); __attribute__((constructor)) static void require_missing_symbol() { missing_latte_gate_symbol(); }'
+[[ "$(readelf -Ws "$unloadable_action_path")" \
         == *missing_latte_gate_symbol* ]] \
     || { echo "FAIL: unloadable containment-actions fixture has no unresolved symbol" >&2; exit 1; }
 expect_failure "unloadable containment-actions plugin" "Latte containment-actions plugin cannot be loaded" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$unloadable_action" --prefix /usr --check-only
+
+hanging_core="$work/hanging-core-plugin"
+cp -a "$good" "$hanging_core"
+hanging_core_path="$hanging_core/usr/lib/qt6/qml/org/kde/latte/core/liblattecoreplugin.so"
+build_qt_plugin "$hanging_core_path" LatteCorePlugin \
+    org.qt-project.Qt.QQmlExtensionInterface "" \
+    '#include <csignal>
+#include <unistd.h>
+__attribute__((constructor)) static void hang_in_constructor() { std::signal(SIGTERM, SIG_IGN); while (true) pause(); }'
+expect_failure "hanging plugin constructor" "loader timed out" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$hanging_core" --prefix /usr --check-only
+echo "PASS: plugin slots require expected Qt types and plugin loading is bounded"
 
 escaped_qml_content="$work/escaped-qml-content"
 cp -a "$good" "$escaped_qml_content"
@@ -709,4 +804,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (54 focused controls)"
+echo "installed-package-gate-selftest: PASS (56 focused controls)"
