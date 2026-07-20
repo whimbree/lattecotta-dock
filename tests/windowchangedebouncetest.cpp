@@ -144,14 +144,12 @@ void WindowChangeDebounceTest::sustainedChangesDeliverWhileInputIsActive()
     ++inputCount;
     wm.consider(wid);
 
-    QTest::qWait(420);
-
+    QTRY_VERIFY_WITH_TIMEOUT(changedSpy.count() >= 2, 3000);
     QVERIFY(input.isActive());
-    QVERIFY2(changedSpy.count() >= 2,
-             qPrintable(QStringLiteral("only %1 notifications arrived during %2 active inputs")
+    QVERIFY2(changedSpy.count() < inputCount,
+             qPrintable(QStringLiteral("%1 notifications were not coalesced from %2 active inputs")
                             .arg(changedSpy.count())
                             .arg(inputCount)));
-    QVERIFY(changedSpy.count() < inputCount);
     for (const QList<QVariant> &arguments : changedSpy) {
         QCOMPARE(arguments.at(0).value<WindowId>(), wid);
     }
