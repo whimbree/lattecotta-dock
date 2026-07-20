@@ -1,0 +1,55 @@
+pkgbase = latte-dock
+	pkgdesc = Dock-style launcher and task manager for Plasma 6
+	pkgver = 0.10.77
+	pkgrel = 1
+	url = https://github.com/whimbree/lattecotta-dock
+	arch = x86_64
+	license = GPL-2.0-or-later AND LGPL-2.0-or-later AND (LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-scancode-kde-accepted-lgpl)
+	makedepends = cmake>=3.16
+	makedepends = extra-cmake-modules>=6.5
+	makedepends = ninja
+	makedepends = pkgconf
+	makedepends = plasma-wayland-protocols>=1.6
+	makedepends = wayland-protocols
+	depends = hicolor-icon-theme
+	depends = karchive>=6.5
+	depends = kconfig>=6.5
+	depends = kcoreaddons>=6.5
+	depends = kcrash>=6.5
+	depends = kdbusaddons>=6.5
+	depends = kdeclarative>=6.5
+	depends = kglobalaccel>=6.5
+	depends = kguiaddons>=6.5
+	depends = ki18n>=6.5
+	depends = kiconthemes>=6.5
+	depends = kio>=6.5
+	depends = kjobwidgets>=6.5
+	depends = kirigami>=6.5
+	depends = knewstuff>=6.5
+	depends = knotifications>=6.5
+	depends = kpackage>=6.5
+	depends = kpipewire>=6.5
+	depends = kservice>=6.5
+	depends = ksvg>=6.5
+	depends = kwayland>=6.5
+	depends = kwidgetsaddons>=6.5
+	depends = kwindowsystem>=6.5
+	depends = kwin>=6.5
+	depends = kxmlgui>=6.5
+	depends = layer-shell-qt>=6.5
+	depends = libksysguard>=6.5
+	depends = libplasma>=6.5
+	depends = plasma-activities>=6.5
+	depends = plasma-activities-stats>=6.5
+	depends = plasma-pa>=6.5
+	depends = plasma-workspace>=6.5
+	depends = qqc2-desktop-style>=6.5
+	depends = qt6-5compat>=6.6
+	depends = qt6-base>=6.6
+	depends = qt6-declarative>=6.6
+	depends = qt6-wayland>=6.6
+	depends = wayland
+	source = latte-dock-0.10.77-0e3af93b4659a53696177a11f7d3714caaa27d56.tar.gz
+	sha256sums = cf32687b24401e061886daad9cc3c9e49b6bf77b80a67b9c990681384c599e75
+
+pkgname = latte-dock

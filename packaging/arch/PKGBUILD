@@ -1,0 +1,102 @@
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Maintainer: Bree Spektor <20343235+whimbree@users.noreply.github.com>
+#
+# Adapted from the earlier in-tree Arch recipe at e04cfd83e236718c59ba75cc22801a756e0a7c5d
+# and its license correction at ddf675945ef06b6afdd33ab0bb6f7f664ce2a817.
+#
+# This recipe consumes a deterministic archive of the source-tree commit below.
+# Generate it from the repository root before running makepkg:
+#
+#   git archive --format=tar.gz --prefix=latte-dock-0.10.77/ \
+#     --output=packaging/arch/latte-dock-0.10.77-0e3af93b4659a53696177a11f7d3714caaa27d56.tar.gz \
+#     0e3af93b4659a53696177a11f7d3714caaa27d56
+
+pkgname=latte-dock
+pkgver=0.10.77
+pkgrel=1
+pkgdesc='Dock-style launcher and task manager for Plasma 6'
+arch=(x86_64)
+url='https://github.com/whimbree/lattecotta-dock'
+# Arch's SPDX catalog uses the ScanCode identifier for the source tree's
+# LicenseRef-KDE-Accepted-LGPL text.
+license=('GPL-2.0-or-later AND LGPL-2.0-or-later AND (LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-scancode-kde-accepted-lgpl)')
+
+depends=(
+    'hicolor-icon-theme'
+    'karchive>=6.5'
+    'kconfig>=6.5'
+    'kcoreaddons>=6.5'
+    'kcrash>=6.5'
+    'kdbusaddons>=6.5'
+    'kdeclarative>=6.5'
+    'kglobalaccel>=6.5'
+    'kguiaddons>=6.5'
+    'ki18n>=6.5'
+    'kiconthemes>=6.5'
+    'kio>=6.5'
+    'kjobwidgets>=6.5'
+    'kirigami>=6.5'
+    'knewstuff>=6.5'
+    'knotifications>=6.5'
+    'kpackage>=6.5'
+    'kpipewire>=6.5'
+    'kservice>=6.5'
+    'ksvg>=6.5'
+    'kwayland>=6.5'
+    'kwidgetsaddons>=6.5'
+    'kwindowsystem>=6.5'
+    'kwin>=6.5'
+    'kxmlgui>=6.5'
+    'layer-shell-qt>=6.5'
+    'libksysguard>=6.5'
+    'libplasma>=6.5'
+    'plasma-activities>=6.5'
+    'plasma-activities-stats>=6.5'
+    'plasma-pa>=6.5'
+    'plasma-workspace>=6.5'
+    'qqc2-desktop-style>=6.5'
+    'qt6-5compat>=6.6'
+    'qt6-base>=6.6'
+    'qt6-declarative>=6.6'
+    'qt6-wayland>=6.6'
+    'wayland'
+)
+makedepends=(
+    'cmake>=3.16'
+    'extra-cmake-modules>=6.5'
+    'ninja'
+    'pkgconf'
+    'plasma-wayland-protocols>=1.6'
+    'wayland-protocols'
+)
+
+_commit=0e3af93b4659a53696177a11f7d3714caaa27d56
+_source_dir="${pkgname}-${pkgver}"
+source=("${pkgname}-${pkgver}-${_commit}.tar.gz")
+sha256sums=('cf32687b24401e061886daad9cc3c9e49b6bf77b80a67b9c990681384c599e75')
+
+build() {
+    cmake -S "${_source_dir}" -B build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DBUILD_TESTING=OFF
+    cmake --build build
+}
+
+package() {
+    DESTDIR="${pkgdir}" cmake --install build
+
+    local license_file
+    for license_file in GPL-2.0-or-later LGPL-2.0-or-later LGPL-2.1-only \
+            LGPL-3.0-only; do
+        install -Dm644 "${_source_dir}/LICENSES/${license_file}.txt" \
+            "${pkgdir}/usr/share/licenses/${pkgname}/${license_file}.txt"
+    done
+    install -Dm644 "${_source_dir}/LICENSES/LicenseRef-KDE-Accepted-LGPL.txt" \
+        "${pkgdir}/usr/share/licenses/${pkgname}/LicenseRef-scancode-kde-accepted-lgpl.txt"
+    install -Dm644 "${_source_dir}/packaging/ATTRIBUTION.md" \
+        "${pkgdir}/usr/share/licenses/${pkgname}/ATTRIBUTION.md"
+}
