@@ -131,9 +131,12 @@ audit_package_tree() {
 }
 
 audit_elf_search_paths() {
-    local label="$1" elf="$2" origin search_path entry expanded normalized resolved
+    local label="$1" elf="$2" require_elf="${3:-1}" origin search_path entry expanded normalized resolved
     local -a search_paths=() entries=()
-    readelf -h -- "$elf" >/dev/null 2>&1 || return 0
+    if ! readelf -h -- "$elf" >/dev/null 2>&1; then
+        [[ "$require_elf" == 0 ]] && return 0
+        fail "$label is not a valid ELF artifact: $elf"
+    fi
 
     mapfile -t search_paths < <(latte_package_gate_read_elf_search_paths "$elf")
     origin="$(dirname "$elf")"
@@ -158,6 +161,16 @@ audit_elf_search_paths() {
                 || fail "$label ELF RUNPATH/RPATH entry escapes the package prefix: $entry -> $resolved"
         done
     done
+}
+
+require_loadable_plugin() {
+    local label="$1" plugin="$2" loader_output
+    loader_output="$(
+        LD_BIND_NOW=1 perl -MDynaLoader -e '
+            my $handle = DynaLoader::dl_load_file($ARGV[0], 0x02);
+            die DynaLoader::dl_error() unless $handle;
+        ' "$plugin" 2>&1
+    )" || fail "$label cannot be loaded from the installed artifact $plugin: $loader_output"
 }
 
 require_one_match() {
@@ -288,14 +301,28 @@ audit_package_tree "Latte data tree" "$package_data/latte"
 [[ -d "$package_data/latte/indicators/default" ]] \
     || fail "package is incomplete: missing default indicator under $package_data/latte/indicators"
 
-command -v readelf >/dev/null 2>&1 \
-    || fail "required validation command 'readelf' is missing; install binutils for the package gate"
-audit_elf_search_paths "installed binary" "$binary"
-audit_elf_search_paths "Latte containment-actions plugin" "$action_plugin"
-audit_elf_search_paths "Latte indicator package-structure plugin" "$indicator_package_plugin"
-mapfile -d '' -t latte_qml_files < <(find "$package_qml/org/kde/latte" -type f -print0)
-for latte_qml_file in "${latte_qml_files[@]}"; do
-    audit_elf_search_paths "Latte QML artifact $latte_qml_file" "$latte_qml_file"
+for validation_command in readelf perl; do
+    command -v "$validation_command" >/dev/null 2>&1 \
+        || fail "required validation command '$validation_command' is missing"
+done
+audit_elf_search_paths "installed binary" "$binary" 0
+package_plugin_labels=(
+    "Latte core QML plugin"
+    "Latte containment QML plugin"
+    "Latte tasks QML plugin"
+    "Latte containment-actions plugin"
+    "Latte indicator package-structure plugin"
+)
+package_plugin_paths=(
+    "$core_plugin"
+    "$containment_plugin"
+    "$tasks_plugin"
+    "$action_plugin"
+    "$indicator_package_plugin"
+)
+for ((plugin_index = 0; plugin_index < ${#package_plugin_paths[@]}; plugin_index++)); do
+    audit_elf_search_paths "${package_plugin_labels[$plugin_index]}" "${package_plugin_paths[$plugin_index]}"
+    require_loadable_plugin "${package_plugin_labels[$plugin_index]}" "${package_plugin_paths[$plugin_index]}"
 done
 
 : "${LATTE_QML_MODULE_PATH:?installed-package-gate needs an explicit distro QML allow-list in LATTE_QML_MODULE_PATH}"

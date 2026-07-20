@@ -32,17 +32,16 @@ make_package() {
         "$data/plasma/plasmoids/org.kde.latte.plasmoid" \
         "$data/applications" \
         "$data/latte/indicators/default"
-    printf '#!/usr/bin/env bash\nexit 0\n' >"$root/usr/bin/latte-dock"
-    chmod +x "$root/usr/bin/latte-dock"
+    cp "$fixture_binary" "$root/usr/bin/latte-dock"
     : >"$qml/org/kde/latte/core/qmldir"
-    : >"$qml/org/kde/latte/core/liblattecoreplugin.so"
+    cp "$fixture_plugin" "$qml/org/kde/latte/core/liblattecoreplugin.so"
     : >"$qml/org/kde/latte/components/deep/Installed.qml"
     : >"$qml/org/kde/latte/private/containment/qmldir"
-    : >"$qml/org/kde/latte/private/containment/liblattecontainmentplugin.so"
+    cp "$fixture_plugin" "$qml/org/kde/latte/private/containment/liblattecontainmentplugin.so"
     : >"$qml/org/kde/latte/private/tasks/qmldir"
-    : >"$qml/org/kde/latte/private/tasks/liblattetasksplugin.so"
-    : >"$plugins/kpackage/packagestructure/latte_indicator.so"
-    : >"$plugins/plasma/containmentactions/org.kde.latte.contextmenu.so"
+    cp "$fixture_plugin" "$qml/org/kde/latte/private/tasks/liblattetasksplugin.so"
+    cp "$fixture_plugin" "$plugins/kpackage/packagestructure/latte_indicator.so"
+    cp "$fixture_plugin" "$plugins/plasma/containmentactions/org.kde.latte.contextmenu.so"
     : >"$data/plasma/shells/org.kde.latte.shell/metadata.json"
     : >"$data/plasma/shells/org.kde.latte.shell/Installed.qml"
     : >"$data/plasma/plasmoids/org.kde.latte.containment/metadata.json"
@@ -86,6 +85,18 @@ expect_failure() {
 framework="$work/framework-qml"
 runtime_data="$work/framework-data"
 mkdir -p "$framework" "$runtime_data"
+
+elf_source="$work/elf-fixture.c"
+fixture_binary="$work/fixture-binary"
+fixture_plugin="$work/fixture-plugin.so"
+fixture_object="$work/elf-fixture.o"
+printf 'int fixture(void) { return 0; }\nint main(void) { return fixture(); }\n' >"$elf_source"
+printf '#!/usr/bin/env bash\nexit 0\n' >"$fixture_binary"
+chmod +x "$fixture_binary"
+cc -fPIC -c "$elf_source" -o "$fixture_object"
+NIX_LDFLAGS= NIX_LDFLAGS_BEFORE= ld -shared "$fixture_object" -o "$fixture_plugin"
+readelf -h "$fixture_plugin" >/dev/null 2>&1 \
+    || { echo "FAIL: positive package plugin ELF fixture is invalid" >&2; exit 1; }
 
 good="$work/good"
 make_package "$good"
@@ -216,6 +227,39 @@ expect_failure "containment-actions plugin symlink escape" "resolves outside the
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$escaped_action_plugin" --prefix /usr --check-only
 
+invalid_plugin_specs=(
+    "core QML|usr/lib/qt6/qml/org/kde/latte/core/liblattecoreplugin.so"
+    "containment QML|usr/lib/qt6/qml/org/kde/latte/private/containment/liblattecontainmentplugin.so"
+    "tasks QML|usr/lib/qt6/qml/org/kde/latte/private/tasks/liblattetasksplugin.so"
+    "indicator package-structure|usr/lib/qt6/plugins/kpackage/packagestructure/latte_indicator.so"
+    "containment-actions|usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so"
+)
+for invalid_plugin_spec in "${invalid_plugin_specs[@]}"; do
+    invalid_plugin_label="${invalid_plugin_spec%%|*}"
+    invalid_plugin_path="${invalid_plugin_spec#*|}"
+    invalid_plugin_root="$work/invalid-${invalid_plugin_label// /-}-plugin"
+    cp -a "$good" "$invalid_plugin_root"
+    printf 'not an ELF artifact\n' >"$invalid_plugin_root/$invalid_plugin_path"
+    expect_failure "invalid $invalid_plugin_label plugin ELF" "is not a valid ELF artifact" \
+        env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+        bash "$gate" --root "$invalid_plugin_root" --prefix /usr --check-only
+done
+
+unloadable_action="$work/unloadable-action-plugin"
+cp -a "$good" "$unloadable_action"
+unloadable_source="$work/unloadable-plugin.c"
+unloadable_object="$work/unloadable-plugin.o"
+printf 'extern void missing_latte_gate_symbol(void);\nvoid fixture(void) { missing_latte_gate_symbol(); }\n' >"$unloadable_source"
+cc -fPIC -c "$unloadable_source" -o "$unloadable_object"
+NIX_LDFLAGS= NIX_LDFLAGS_BEFORE= ld -shared "$unloadable_object" -o \
+    "$unloadable_action/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so"
+[[ "$(readelf -Ws "$unloadable_action/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so")" \
+        == *missing_latte_gate_symbol* ]] \
+    || { echo "FAIL: unloadable containment-actions fixture has no unresolved symbol" >&2; exit 1; }
+expect_failure "unloadable containment-actions plugin" "Latte containment-actions plugin cannot be loaded" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$unloadable_action" --prefix /usr --check-only
+
 escaped_qml_content="$work/escaped-qml-content"
 cp -a "$good" "$escaped_qml_content"
 outside_qml="$work/preinstalled-system-content.qml"
@@ -308,8 +352,6 @@ expect_failure "Latte runtime-tree root symlink" "Latte data tree root must not 
 
 hostile_loader="$work/foreign loader"
 mkdir -p "$hostile_loader"
-elf_source="$work/elf-fixture.c"
-printf 'int fixture(void) { return 0; }\nint main(void) { return fixture(); }\n' >"$elf_source"
 
 rpath_binary="$work/rpath-binary"
 cp -a "$good" "$rpath_binary"
@@ -323,8 +365,7 @@ expect_failure "binary ELF RUNPATH escape" "installed binary ELF RUNPATH/RPATH e
 
 rpath_action="$work/rpath-action-plugin"
 cp -a "$good" "$rpath_action"
-NIX_LDFLAGS= NIX_LDFLAGS_BEFORE= \
-    cc -shared -fPIC "$elf_source" -Wl,-rpath,"$hostile_loader" \
+NIX_LDFLAGS= NIX_LDFLAGS_BEFORE= ld -shared "$fixture_object" -rpath "$hostile_loader" \
     -o "$rpath_action/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so"
 readelf -d "$rpath_action/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so" \
     | grep -Fq "$hostile_loader" \
@@ -465,4 +506,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (36 focused controls)"
+echo "installed-package-gate-selftest: PASS (42 focused controls)"
