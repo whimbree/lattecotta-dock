@@ -203,6 +203,8 @@ action_metadata="$work/action-metadata.json"
 indicator_metadata="$work/indicator-metadata.json"
 wrong_action_metadata="$work/wrong-action-metadata.json"
 wrong_indicator_metadata="$work/wrong-indicator-metadata.json"
+string_action_metadata="$work/string-action-metadata.json"
+array_indicator_metadata="$work/array-indicator-metadata.json"
 printf '%s\n' \
     '{"KPlugin":{"Id":"org.kde.latte.contextmenu","ServiceTypes":["Plasma/ContainmentActions"]}}' \
     >"$action_metadata"
@@ -215,6 +217,12 @@ printf '%s\n' \
 printf '%s\n' \
     '{"KPackageStructure":"Plasma/Applet","X-KDE-ParentApp":"org.kde.latte-dock"}' \
     >"$wrong_indicator_metadata"
+printf '%s\n' \
+    '{"KPlugin":{"Id":"org.kde.latte.contextmenu","ServiceTypes":"Plasma/ContainmentActions"}}' \
+    >"$string_action_metadata"
+printf '%s\n' \
+    '{"KPackageStructure":["Latte/Indicator"],"X-KDE-ParentApp":"org.kde.latte-dock"}' \
+    >"$array_indicator_metadata"
 fixture_core_plugin="$work/liblattecoreplugin.so"
 fixture_containment_plugin="$work/liblattecontainmentplugin.so"
 fixture_tasks_plugin="$work/liblattetasksplugin.so"
@@ -604,6 +612,16 @@ expect_failure "valid containment-actions plugin with the wrong category" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$wrong_category_action" --prefix /usr --check-only
 
+string_category_action="$work/string-category-action-plugin"
+cp -a "$good" "$string_category_action"
+build_qt_plugin \
+    "$string_category_action/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so" \
+    MenuFactory org.kde.KPluginFactory "$string_action_metadata"
+expect_failure "containment-actions plugin with string ServiceTypes metadata" \
+    "metadata does not declare the org.kde.latte.contextmenu Plasma/ContainmentActions type" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$string_category_action" --prefix /usr --check-only
+
 wrong_category_indicator="$work/wrong-category-indicator-plugin"
 cp -a "$good" "$wrong_category_indicator"
 build_qt_plugin \
@@ -613,6 +631,16 @@ expect_failure "valid indicator plugin with the wrong package category" \
     "metadata does not declare the Latte/Indicator package-structure type for org.kde.latte-dock" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$wrong_category_indicator" --prefix /usr --check-only
+
+array_category_indicator="$work/array-category-indicator-plugin"
+cp -a "$good" "$array_category_indicator"
+build_qt_plugin \
+    "$array_category_indicator/usr/lib/qt6/plugins/kpackage/packagestructure/latte_indicator.so" \
+    latte_packagestructure_indicator_factory org.kde.KPluginFactory "$array_indicator_metadata"
+expect_failure "indicator plugin with array package-structure metadata" \
+    "metadata does not declare the Latte/Indicator package-structure type for org.kde.latte-dock" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$array_category_indicator" --prefix /usr --check-only
 
 unloadable_action="$work/unloadable-action-plugin"
 cp -a "$good" "$unloadable_action"
@@ -1130,4 +1158,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (75 focused controls)"
+echo "installed-package-gate-selftest: PASS (77 focused controls)"

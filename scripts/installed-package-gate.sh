@@ -572,8 +572,8 @@ package_plugin_metadata_filters=(
     'true'
     'true'
     'true'
-    '.MetaData.KPlugin.Id == "org.kde.latte.contextmenu" and (.MetaData.KPlugin.ServiceTypes | index("Plasma/ContainmentActions") != null)'
-    '.MetaData.KPackageStructure == "Latte/Indicator" and .MetaData["X-KDE-ParentApp"] == "org.kde.latte-dock"'
+    '(.MetaData.KPlugin.Id | type == "string") and .MetaData.KPlugin.Id == "org.kde.latte.contextmenu" and (.MetaData.KPlugin.ServiceTypes | type == "array") and (.MetaData.KPlugin.ServiceTypes | any(. == "Plasma/ContainmentActions"))'
+    '(.MetaData.KPackageStructure | type == "string") and .MetaData.KPackageStructure == "Latte/Indicator" and (.MetaData["X-KDE-ParentApp"] | type == "string") and .MetaData["X-KDE-ParentApp"] == "org.kde.latte-dock"'
 )
 package_plugin_metadata_descriptions=(
     "the Latte core QML extension type"
