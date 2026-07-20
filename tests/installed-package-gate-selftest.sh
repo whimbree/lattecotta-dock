@@ -353,6 +353,80 @@ expect_failure "mapped CMake build-tree provider" "running dock mapped a CMake b
     latte_package_gate_audit_mapped_paths "$build_maps" "$mapped_prefix" "$repo" \
     expected_space_mappings empty_required_mappings
 
+status_cleanup_log="$work/status-cleanup.log"
+set +e
+bash -c '
+    source "$1"
+    cleanup_log="$2"
+    cleanup_probe() { printf "cleanup\n" >>"$cleanup_log"; return 91; }
+    latte_package_gate_install_exit_cleanup cleanup_probe
+    exit 37
+' bash "$repo/scripts/lib-installed-package-gate.sh" "$status_cleanup_log"
+status_cleanup_rc=$?
+set -e
+[[ "$status_cleanup_rc" -eq 37 && "$(<"$status_cleanup_log")" == cleanup ]] \
+    || { echo "FAIL: EXIT cleanup did not preserve status 37 or run exactly once" >&2; exit 1; }
+echo "PASS: EXIT cleanup preserves an existing failure status"
+
+for signal_case in INT:130 TERM:143; do
+    signal="${signal_case%%:*}"
+    expected_signal_status="${signal_case##*:}"
+    signal_log="$work/signal-$signal.log"
+    set +e
+    bash -c '
+        source "$1"
+        cleanup_log="$2"
+        cleanup_probe() { printf "cleanup\n" >>"$cleanup_log"; }
+        latte_package_gate_install_exit_cleanup cleanup_probe
+        kill -s "$3" "$$"
+        printf "PASS\n" >>"$2"
+    ' bash "$repo/scripts/lib-installed-package-gate.sh" "$signal_log" "$signal"
+    signal_status=$?
+    set -e
+    [[ "$signal_status" -eq "$expected_signal_status" ]] \
+        || { echo "FAIL: $signal exited $signal_status instead of $expected_signal_status" >&2; exit 1; }
+    [[ "$(<"$signal_log")" == cleanup ]] \
+        || { echo "FAIL: $signal continued after cleanup or skipped cleanup" >&2; exit 1; }
+    echo "PASS: $signal terminates through cleanup without reaching PASS"
+done
+
+term_ignored_ready="$work/term-ignored.ready"
+bash -c '
+    trap "" TERM
+    : >"$1"
+    while :; do sleep 1; done
+' bash "$term_ignored_ready" &
+term_ignored_pid=$!
+for ((ready_wait = 0; ready_wait < 50; ready_wait++)); do
+    [[ -e "$term_ignored_ready" ]] && break
+    sleep 0.01
+done
+[[ -e "$term_ignored_ready" ]] \
+    || { kill -KILL "$term_ignored_pid" 2>/dev/null || true; echo "FAIL: TERM-ignoring fixture did not start" >&2; exit 1; }
+latte_package_gate_stop_process "$term_ignored_pid" "TERM-ignoring fixture" 1 0.01 50 0.01
+kill -0 "$term_ignored_pid" 2>/dev/null \
+    && { echo "FAIL: cleanup left the TERM-ignoring fixture alive" >&2; exit 1; }
+echo "PASS: cleanup escalates a TERM-ignoring process to SIGKILL"
+
+bounded_wait_log="$work/unbounded-wait-called"
+set +e
+bounded_wait_output="$(
+    (
+        source "$repo/scripts/lib-installed-package-gate.sh"
+        kill() { return 0; }
+        sleep() { :; }
+        wait() { : >"$bounded_wait_log"; }
+        latte_package_gate_stop_process 424242 "unkillable fixture" 1 0 1 0
+    ) 2>&1
+)"
+bounded_wait_status=$?
+set -e
+[[ "$bounded_wait_status" -eq 2 && "$bounded_wait_output" == *"still exists after bounded SIGKILL wait"* ]] \
+    || { echo "FAIL: simulated unkillable cleanup was not bounded" >&2; exit 1; }
+[[ ! -e "$bounded_wait_log" ]] \
+    || { echo "FAIL: cleanup called unbounded wait while the process still existed" >&2; exit 1; }
+echo "PASS: post-SIGKILL cleanup returns without an unbounded wait"
+
 incomplete="$work/incomplete"
 cp -a "$good" "$incomplete"
 rm "$incomplete/usr/lib/qt6/qml/org/kde/latte/private/tasks/liblattetasksplugin.so"
@@ -360,4 +434,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (4 positive contracts, 24 rejection controls)"
+echo "installed-package-gate-selftest: PASS (33 focused controls)"

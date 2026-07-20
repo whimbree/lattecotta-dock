@@ -144,3 +144,55 @@ latte_package_gate_audit_mapped_paths() {
         echo "installed-package-gate: mapped artifact verified: ${expected_paths[$required]}"
     done
 }
+
+latte_package_gate_wait_until_process_exits() {
+    local pid="$1" attempts="$2" delay="$3" attempt
+    for ((attempt = 0; attempt < attempts; attempt++)); do
+        kill -0 "$pid" 2>/dev/null || return 0
+        sleep "$delay"
+    done
+    ! kill -0 "$pid" 2>/dev/null
+}
+
+latte_package_gate_stop_process() {
+    local pid="$1" label="$2"
+    local term_attempts="${3:-25}" term_delay="${4:-0.2}"
+    local kill_attempts="${5:-25}" kill_delay="${6:-0.2}"
+
+    kill -0 "$pid" 2>/dev/null || return 0
+    kill -TERM "$pid" 2>/dev/null || true
+    if latte_package_gate_wait_until_process_exits "$pid" "$term_attempts" "$term_delay"; then
+        wait "$pid" 2>/dev/null || true
+        return 0
+    fi
+
+    echo "installed-package-gate: cleanup: $label survived SIGTERM; sending SIGKILL" >&2
+    kill -KILL "$pid" 2>/dev/null || true
+    if ! latte_package_gate_wait_until_process_exits "$pid" "$kill_attempts" "$kill_delay"; then
+        echo "installed-package-gate: cleanup: $label still exists after bounded SIGKILL wait" >&2
+        return 2
+    fi
+    wait "$pid" 2>/dev/null || true
+}
+
+_latte_package_gate_exit_with_cleanup() {
+    local status=$? cleanup_status
+    trap - EXIT INT TERM
+    set +e
+    "$LATTE_PACKAGE_GATE_EXIT_CLEANUP_CALLBACK"
+    cleanup_status=$?
+    if [[ "$status" -eq 0 && "$cleanup_status" -ne 0 ]]; then
+        status="$cleanup_status"
+    fi
+    exit "$status"
+}
+
+latte_package_gate_install_exit_cleanup() {
+    local callback="$1"
+    declare -F "$callback" >/dev/null \
+        || { echo "installed-package-gate: FAIL: cleanup callback is not a function: $callback" >&2; return 2; }
+    LATTE_PACKAGE_GATE_EXIT_CLEANUP_CALLBACK="$callback"
+    trap _latte_package_gate_exit_with_cleanup EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+}

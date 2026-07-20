@@ -368,23 +368,14 @@ source "$repo/scripts/lib-nested-kwin.sh"
 
 dock_pid=""
 cleanup() {
-    local cleanup_wait
-    set +e
+    local cleanup_status=0
     if [[ -n "$dock_pid" ]] && kill -0 "$dock_pid" 2>/dev/null; then
-        kill -TERM "$dock_pid" 2>/dev/null
-        for ((cleanup_wait = 0; cleanup_wait < 25; cleanup_wait++)); do
-            kill -0 "$dock_pid" 2>/dev/null || break
-            sleep 0.2
-        done
-        if kill -0 "$dock_pid" 2>/dev/null; then
-            echo "installed-package-gate: cleanup: dock survived SIGTERM; sending SIGKILL" >&2
-            kill -KILL "$dock_pid" 2>/dev/null
-        fi
-        wait "$dock_pid" 2>/dev/null
+        latte_package_gate_stop_process "$dock_pid" "dock (pid $dock_pid)" || cleanup_status=2
     fi
-    nested_kwin_cleanup
+    nested_kwin_cleanup || cleanup_status=2
+    return "$cleanup_status"
 }
-trap cleanup EXIT INT TERM
+latte_package_gate_install_exit_cleanup cleanup
 
 nested_kwin_prepare
 mkdir -p "$NESTED_RT/kwin-config" "$NESTED_RT/kwin-cache"
@@ -489,19 +480,9 @@ latte_package_gate_audit_mapped_paths "/proc/$dock_pid/maps" "$artifact_prefix" 
     expected_mapped_artifacts required_mapped_artifacts
 
 kill -TERM "$dock_pid"
-exited=0
-for ((i = 0; i < 125; i++)); do
-    if ! kill -0 "$dock_pid" 2>/dev/null; then
-        exited=1
-        break
-    fi
-    sleep 0.2
-done
-[[ "$exited" == 1 ]] \
+latte_package_gate_wait_until_process_exits "$dock_pid" 125 0.2 \
     || fail "installed dock (pid $dock_pid) survived SIGTERM for 25 seconds"
 wait "$dock_pid" 2>/dev/null || true
 dock_pid=""
 
-cleanup
-trap - EXIT INT TERM
 echo "installed-package-gate: PASS (installed executable, QML plugins, data, startup, and shutdown verified)"
