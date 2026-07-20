@@ -38,6 +38,12 @@ distfiles="${homepage}/archive/${_commit}.tar.gz"
 checksum=f4165095b81d9f2a1b699f1a774f45ed46983e3c645eb37ede931096c45ddf72
 
 post_install() {
+	local appstream="${DESTDIR}/usr/share/metainfo/org.kde.latte-dock.appdata.xml"
+	[ -f "$appstream" ] || msg_error "installed AppStream metadata is missing\n"
+	if grep -Fq '<library>liblatte2plugin.so</library>' "$appstream"; then
+		msg_error "AppStream metadata advertises absent liblatte2plugin.so\n"
+	fi
+
 	vlicense LICENSES/LicenseRef-KDE-Accepted-LGPL.txt
 	vlicense packaging/ATTRIBUTION.md ATTRIBUTION.md
 }

@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# Stage this recipe into a clean void-packages checkout and build it from the
+# exact committed source HEAD. --stage-only prepares the checkout without
+# invoking xbps-src.
+set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: packaging/void/build-package [--stage-only] ABSOLUTE_VOID_PACKAGES_CHECKOUT
+
+Stages srcpkgs/latte-dock, binds its source to this repository's exact clean
+HEAD, and runs `xbps-src pkg latte-dock` unless --stage-only is supplied.
+EOF
+}
+
+fail() {
+    echo "build-package: $*" >&2
+    exit 2
+}
+
+stage_only=0
+case "${1:-}" in
+    --help|-h)
+        usage
+        exit 0
+        ;;
+    --stage-only)
+        stage_only=1
+        shift
+        ;;
+esac
+
+[[ $# -eq 1 ]] || {
+    usage >&2
+    exit 2
+}
+[[ "$1" == /* ]] || fail "void-packages checkout must be an absolute path"
+[[ -d "$1" ]] || fail "void-packages checkout does not exist or is not a directory: $1"
+
+for command_name in cp git gzip install mkdir mktemp mv realpath rm sha256sum tar; do
+    command -v "$command_name" >/dev/null 2>&1 \
+        || fail "required command '$command_name' is missing"
+done
+
+script_dir="${BASH_SOURCE[0]%/*}"
+[[ "$script_dir" != "${BASH_SOURCE[0]}" ]] || script_dir=.
+repo="$(cd "$script_dir/../.." && pwd -P)"
+void_packages="$(realpath "$1" 2>/dev/null)" \
+    || fail "cannot resolve void-packages checkout: $1"
+[[ -x "$void_packages/xbps-src" && -d "$void_packages/srcpkgs" ]] \
+    || fail "not a void-packages checkout: $void_packages"
+void_git_root="$(git -C "$void_packages" rev-parse --show-toplevel 2>/dev/null)" \
+    || fail "void-packages checkout is not a Git worktree: $void_packages"
+[[ "$(realpath "$void_git_root")" == "$void_packages" ]] \
+    || fail "path must name the void-packages worktree root: $void_packages"
+
+git -C "$repo" diff --quiet --ignore-submodules -- \
+    || fail "tracked source changes prevent exact-HEAD provenance"
+git -C "$repo" diff --cached --quiet --ignore-submodules -- \
+    || fail "staged source changes prevent exact-HEAD provenance"
+
+recipe="$repo/packaging/void/srcpkgs/latte-dock"
+template="$recipe/template"
+version=""
+while IFS= read -r line; do
+    case "$line" in
+        version=*) version="${line#version=}" ;;
+    esac
+done <"$template"
+[[ -n "$version" ]] || fail "cannot read version from $template"
+
+destination="$void_packages/srcpkgs/latte-dock"
+if [[ -e "$destination" ]]; then
+    [[ -d "$destination" ]] || fail "destination is not a directory: $destination"
+    [[ -z "$(git -C "$void_packages" status --porcelain --untracked-files=all -- srcpkgs/latte-dock)" ]] \
+        || fail "destination has local changes: $destination"
+fi
+
+commit="$(git -C "$repo" rev-parse --verify HEAD)"
+work="$(mktemp -d /tmp/latte-void-package.XXXXXX)"
+staging=""
+cleanup() {
+    [[ -z "$staging" ]] || rm -rf "$staging"
+    rm -rf "$work"
+}
+trap cleanup EXIT INT TERM
+
+archive="$work/$commit.tar.gz"
+git -C "$repo" archive --format=tar --prefix="lattecotta-dock-$commit/" "$commit" \
+    | gzip -n -9 >"$archive"
+contents_checksum="$(tar -xf "$archive" --to-stdout | sha256sum)"
+contents_checksum="${contents_checksum%% *}"
+
+source_cache="$void_packages/hostdir/sources/latte-dock-$version"
+cached_archive="$source_cache/$commit.tar.gz"
+mkdir -p "$source_cache"
+if [[ -e "$cached_archive" ]]; then
+    cached_checksum="$(tar -xf "$cached_archive" --to-stdout | sha256sum)"
+    cached_checksum="${cached_checksum%% *}"
+    [[ "$cached_checksum" == "$contents_checksum" ]] \
+        || fail "cached source archive has different contents: $cached_archive"
+else
+    install -m644 "$archive" "$cached_archive"
+fi
+
+staging="$(mktemp -d "$void_packages/srcpkgs/.latte-dock.stage.XXXXXX")"
+mkdir -p "$staging/patches"
+commit_replacements=0
+checksum_replacements=0
+while IFS= read -r line; do
+    case "$line" in
+        _commit=*)
+            printf '_commit=%s\n' "$commit"
+            ((commit_replacements += 1))
+            ;;
+        checksum=*)
+            printf 'checksum=@%s\n' "$contents_checksum"
+            ((checksum_replacements += 1))
+            ;;
+        *) printf '%s\n' "$line" ;;
+    esac
+done <"$template" >"$staging/template"
+[[ "$commit_replacements" -eq 1 && "$checksum_replacements" -eq 1 ]] \
+    || fail "template source provenance fields are not unique"
+cp "$recipe/patches/fix-appstream-component-id.patch" "$staging/patches/"
+
+rm -rf "$destination"
+mv "$staging" "$destination"
+staging=""
+
+echo "source_commit=$commit"
+echo "source_contents_sha256=$contents_checksum"
+echo "staged_recipe=$destination"
+echo "source_archive=$cached_archive"
+
+if [[ "$stage_only" -eq 0 ]]; then
+    (cd "$void_packages" && ./xbps-src pkg latte-dock)
+fi

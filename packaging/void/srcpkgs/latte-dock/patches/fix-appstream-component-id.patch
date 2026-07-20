@@ -2,8 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Bree Spektor
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# Keep the hyphenated application name in the final reverse-DNS segment. The
-# desktop launchable remains org.kde.latte-dock.desktop.
+# Keep the hyphenated application name in the final reverse-DNS segment and
+# remove the stale library claim. The desktop launchable and binary stay.
 diff --git a/app/org.kde.latte-dock.appdata.xml.cmake b/app/org.kde.latte-dock.appdata.xml.cmake
 --- a/app/org.kde.latte-dock.appdata.xml.cmake
 +++ b/app/org.kde.latte-dock.appdata.xml.cmake
@@ -14,3 +14,11 @@ diff --git a/app/org.kde.latte-dock.appdata.xml.cmake b/app/org.kde.latte-dock.a
 +  <id>org.kde.latte-dock</id>
    <extends>org.kde.plasmashell</extends>
    <name>Latte</name>
+@@ -212,7 +212,6 @@
+   <project_group>KDE</project_group>
+   <provides>
+     <binary>latte-dock</binary>
+-    <library>liblatte2plugin.so</library>
+   </provides>
+   <launchable type="desktop-id">org.kde.latte-dock.desktop</launchable>
+   <releases>
