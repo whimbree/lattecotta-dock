@@ -1,36 +1,55 @@
 /*
     SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 David Goree <davidgoree2003@gmail.com> (latte-dock-qt6, transplanted)
     SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// Behavioral regression test for AbstractWindowInterface::considerWindowChanged.
-// A minimal concrete subclass of the abstract interface exercises the debounce
-// timer directly: normal geometry/title churn is delayed 150 ms, while a
-// discrete maximized state edge flushes synchronously.
+// Behavioral regression test for AbstractWindowInterface's window-change
+// coalescing and its real tracker consumers. The concrete interface and mutable
+// requestInfo registry scaffold were transplanted from latte-dock-qt6
+// (tests/lastactivewindowtest.cpp at 81384003,
+// github.com/CaptSilver/latte-dock-qt6).
 
 #include "wm/abstractwindowinterface.h"
+#include "wm/tracker/lastactivewindow.h"
+#include "wm/tracker/trackedgeneralinfo.h"
+#include "wm/tracker/windowstracker.h"
 
 #include <QGuiApplication>
 #include <QObject>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QtTest>
 
 using namespace Latte::WindowSystem;
 
-//! Concrete WM that implements the pure virtuals as no-ops and exposes the
-//! protected considerWindowChanged() to the test so the real debounce path runs.
 class TestableWindowInterface : public AbstractWindowInterface
 {
     Q_OBJECT
+
 public:
     explicit TestableWindowInterface(QObject *parent = nullptr)
-        : AbstractWindowInterface(parent) {}
-
-    void consider(WindowId wid, bool immediate = false)
+        : AbstractWindowInterface(parent)
     {
-        considerWindowChanged(wid, immediate);
+    }
+
+    void consider(const WindowId &wid)
+    {
+        considerWindowChanged(wid);
+    }
+
+    void announce(const WindowInfoWrap &winfo)
+    {
+        m_windowInfo[winfo.wid()] = winfo;
+        Q_EMIT windowAdded(winfo.wid());
+    }
+
+    void change(const WindowInfoWrap &winfo)
+    {
+        m_windowInfo[winfo.wid()] = winfo;
+        consider(winfo.wid());
     }
 
     void setViewExtraFlags(QObject *, bool, Latte::Types::Visibility) override {}
@@ -39,7 +58,7 @@ public:
     void removeViewStruts(QWindow &) override {}
 
     WindowId activeWindow() override { return WindowId(); }
-    WindowInfoWrap requestInfo(WindowId) override { return WindowInfoWrap(); }
+    WindowInfoWrap requestInfo(WindowId wid) override { return m_windowInfo.value(wid); }
     WindowInfoWrap requestInfoActive() override { return WindowInfoWrap(); }
 
     void skipTaskBar(const QDialog &) override {}
@@ -69,6 +88,9 @@ public:
     void switchToPreviousVirtualDesktop() override {}
     void setFrameExtents(QWindow *, const QMargins &) override {}
     void setInputMask(QWindow *, const QRect &) override {}
+
+private:
+    QHash<WindowId, WindowInfoWrap> m_windowInfo;
 };
 
 class WindowChangeDebounceTest : public QObject
@@ -76,74 +98,146 @@ class WindowChangeDebounceTest : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
-    void normalDebounceDelaysUntilTimerFires();
-    void immediateFlushesDuringActiveDebounce();
-    void immediateFlushesUnrelatedPendingFirst();
+    void sustainedChangesDeliverWhileInputIsActive();
+    void burstCoalescesAndConsumersReadLatestState();
+    void differentWindowFlushesPendingBeforeStartingDeadline();
+    void sustainedChangesPropagateMaximizeAndRestoreToLastActiveWindow();
 
 private:
     static WindowId makeWid(int id)
     {
         return WindowId::fromWaylandUuid(QByteArray::number(id));
     }
+
+    static WindowInfoWrap makeShownWindow(const WindowId &wid, int revision, bool maximized)
+    {
+        WindowInfoWrap winfo;
+        winfo.setWid(wid);
+        winfo.setIsValid(true);
+        winfo.setIsActive(true);
+        winfo.setIsOnAllDesktops(true);
+        winfo.setIsOnAllActivities(true);
+        winfo.setIsMaxVert(maximized);
+        winfo.setIsMaxHoriz(maximized);
+        winfo.setDisplay(QStringLiteral("revision-%1").arg(revision));
+        winfo.setGeometry(QRect(revision, revision, 100, 100));
+        return winfo;
+    }
 };
 
-void WindowChangeDebounceTest::normalDebounceDelaysUntilTimerFires()
+void WindowChangeDebounceTest::sustainedChangesDeliverWhileInputIsActive()
 {
     TestableWindowInterface wm;
-    QSignalSpy spy(&wm, &AbstractWindowInterface::windowChanged);
-
+    QSignalSpy changedSpy(&wm, &AbstractWindowInterface::windowChanged);
     const WindowId wid = makeWid(1);
 
-    wm.consider(wid);
-    wm.consider(wid);
+    int inputCount = 0;
+    QTimer input;
+    input.setTimerType(Qt::PreciseTimer);
+    input.setInterval(40);
+    connect(&input, &QTimer::timeout, &wm, [&]() {
+        ++inputCount;
+        wm.consider(wid);
+    });
+
+    input.start();
+    ++inputCount;
     wm.consider(wid);
 
-    QCOMPARE(spy.count(), 0);
+    QTest::qWait(420);
 
-    QTest::qWait(50);
-    QCOMPARE(spy.count(), 0);
+    QVERIFY(input.isActive());
+    QVERIFY2(changedSpy.count() >= 2,
+             qPrintable(QStringLiteral("only %1 notifications arrived during %2 active inputs")
+                            .arg(changedSpy.count())
+                            .arg(inputCount)));
+    QVERIFY(changedSpy.count() < inputCount);
+    for (const QList<QVariant> &arguments : changedSpy) {
+        QCOMPARE(arguments.at(0).value<WindowId>(), wid);
+    }
 
-    QTest::qWait(200);
-    QCOMPARE(spy.count(), 1);
-    QCOMPARE(spy.takeFirst().at(0).value<WindowId>(), wid);
+    input.stop();
 }
 
-void WindowChangeDebounceTest::immediateFlushesDuringActiveDebounce()
+void WindowChangeDebounceTest::burstCoalescesAndConsumersReadLatestState()
 {
     TestableWindowInterface wm;
-    QSignalSpy spy(&wm, &AbstractWindowInterface::windowChanged);
-
+    Tracker::Windows *windows = wm.windowsTracker();
+    QSignalSpy interfaceSpy(&wm, &AbstractWindowInterface::windowChanged);
+    QSignalSpy trackerSpy(windows, &Tracker::Windows::windowChanged);
     const WindowId wid = makeWid(2);
 
-    wm.consider(wid);
-    QCOMPARE(spy.count(), 0);
+    wm.announce(makeShownWindow(wid, 0, false));
+    for (int revision = 1; revision <= 5; ++revision) {
+        wm.change(makeShownWindow(wid, revision, revision == 5));
+    }
 
-    wm.consider(wid, true);
-    QCOMPARE(spy.count(), 1);
-    QCOMPARE(spy.takeFirst().at(0).value<WindowId>(), wid);
+    QTRY_COMPARE_WITH_TIMEOUT(interfaceSpy.count(), 1, 500);
+    QCOMPARE(trackerSpy.count(), 1);
+    QCOMPARE(interfaceSpy.at(0).at(0).value<WindowId>(), wid);
+    QCOMPARE(trackerSpy.at(0).at(0).value<WindowId>(), wid);
+
+    const WindowInfoWrap consumed = windows->infoFor(wid);
+    QCOMPARE(consumed.display(), QStringLiteral("revision-5"));
+    QCOMPARE(consumed.geometry(), QRect(5, 5, 100, 100));
+    QVERIFY(consumed.isMaximized());
 
     QTest::qWait(200);
-    QCOMPARE(spy.count(), 0);
+    QCOMPARE(interfaceSpy.count(), 1);
+    QCOMPARE(trackerSpy.count(), 1);
 }
 
-void WindowChangeDebounceTest::immediateFlushesUnrelatedPendingFirst()
+void WindowChangeDebounceTest::differentWindowFlushesPendingBeforeStartingDeadline()
 {
     TestableWindowInterface wm;
-    QSignalSpy spy(&wm, &AbstractWindowInterface::windowChanged);
+    QSignalSpy changedSpy(&wm, &AbstractWindowInterface::windowChanged);
+    const WindowId first = makeWid(3);
+    const WindowId second = makeWid(4);
 
-    const WindowId pending = makeWid(3);
-    const WindowId immediate = makeWid(4);
+    wm.consider(first);
+    wm.consider(first);
+    wm.consider(second);
 
-    wm.consider(pending);
-    QCOMPARE(spy.count(), 0);
+    QCOMPARE(changedSpy.count(), 1);
+    QCOMPARE(changedSpy.at(0).at(0).value<WindowId>(), first);
 
-    wm.consider(immediate, true);
-    QCOMPARE(spy.count(), 2);
-    QCOMPARE(spy.at(0).at(0).value<WindowId>(), pending);
-    QCOMPARE(spy.at(1).at(0).value<WindowId>(), immediate);
+    QTRY_COMPARE_WITH_TIMEOUT(changedSpy.count(), 2, 500);
+    QCOMPARE(changedSpy.at(1).at(0).value<WindowId>(), second);
+}
 
-    QTest::qWait(200);
-    QCOMPARE(spy.count(), 2);
+void WindowChangeDebounceTest::sustainedChangesPropagateMaximizeAndRestoreToLastActiveWindow()
+{
+    TestableWindowInterface wm;
+    Tracker::TrackedGeneralInfo trackedInfo(wm.windowsTracker());
+    trackedInfo.setEnabled(true);
+    Tracker::LastActiveWindow *lastActive = trackedInfo.lastActiveWindow();
+    const WindowId wid = makeWid(5);
+
+    wm.announce(makeShownWindow(wid, 0, false));
+    trackedInfo.setActiveWindow(wid);
+    QVERIFY(lastActive->isValid());
+    QVERIFY(!lastActive->isMaximized());
+
+    int revision = 0;
+    bool maximized = true;
+    QTimer input;
+    input.setTimerType(Qt::PreciseTimer);
+    input.setInterval(40);
+    connect(&input, &QTimer::timeout, &wm, [&]() {
+        wm.change(makeShownWindow(wid, ++revision, maximized));
+    });
+
+    input.start();
+    wm.change(makeShownWindow(wid, ++revision, maximized));
+    QTRY_VERIFY_WITH_TIMEOUT(lastActive->isMaximized(), 500);
+    QVERIFY(input.isActive());
+
+    maximized = false;
+    wm.change(makeShownWindow(wid, ++revision, maximized));
+    QTRY_VERIFY_WITH_TIMEOUT(!lastActive->isMaximized(), 500);
+    QVERIFY(input.isActive());
+
+    input.stop();
 }
 
 int main(int argc, char *argv[])

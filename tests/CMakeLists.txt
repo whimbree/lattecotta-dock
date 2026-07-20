@@ -85,9 +85,9 @@ target_include_directories(lastactivewindowtest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
-# The windowChanged debounce: normal geometry/title/active churn waits 150 ms,
-# but a discrete maximized-change edge flushes synchronously (avoids the
-# maximize-animation geometry stream re-arming the timer for seconds).
+# The windowChanged coalescer: sustained same-window churn has a fixed 150 ms
+# delivery deadline, consumers read the latest state at delivery, and a new
+# window flushes the pending id before starting its own deadline.
 ecm_add_test(windowchangedebouncetest.cpp
     TEST_NAME windowchangedebouncetest
     LINK_LIBRARIES lattedock-core Qt6::Test

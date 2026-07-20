@@ -1,6 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2016 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2016 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -94,7 +95,6 @@ public:
 
 private Q_SLOTS:
     void updateWindow();
-    void updateWindowMaximized();
     void windowUnmapped();
 
 private:
@@ -131,5 +131,4 @@ private:
 }
 
 #endif // WAYLANDINTERFACE_H
-
 

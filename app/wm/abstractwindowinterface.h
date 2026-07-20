@@ -1,6 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2016 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2016 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -161,16 +162,15 @@ protected:
 
     QPointer<KActivities::Consumer> m_activities;
 
-    //! Sending too fast plenty of signals for the same window
-    //! has no reason and can create HIGH CPU usage. This Timer
-    //! can delay the batch sending of signals for the same window
+    //! Same-window changes share one fixed delivery deadline. A different
+    //! window flushes this pending id before receiving its own deadline.
     WindowId m_windowChangedWaiting;
     QTimer m_windowWaitingTimer;
 
     //! Plasma taskmanager rules ile
     KSharedConfig::Ptr rulesConfig;
 
-    void considerWindowChanged(WindowId wid, bool immediate = false);
+    void considerWindowChanged(WindowId wid);
 
     bool isIgnored(const WindowId &wid) const;
     bool isRegisteredPlasmaIgnoredWindow(const WindowId &wid) const;

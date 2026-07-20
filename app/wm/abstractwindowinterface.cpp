@@ -1,6 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2016 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2016 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
 
     SPDX-License-Identifier: GPL-2.0-or-later
 */
@@ -375,49 +376,25 @@ void AbstractWindowInterface::switchToPreviousActivity()
     activitiesController.setCurrentActivity(runningActivities.at(nextPos));
 }
 
-//! Delay window changed triggering
-void AbstractWindowInterface::considerWindowChanged(WindowId wid, bool immediate)
+//! Coalesce window changes without moving the first event's deadline
+void AbstractWindowInterface::considerWindowChanged(WindowId wid)
 {
-    //! Consider if the windowChanged signal should be sent DIRECTLY or WAIT
-
-    if (immediate) {
-        if (m_windowWaitingTimer.isActive()) {
-            WindowId pending = m_windowChangedWaiting;
-            m_windowWaitingTimer.stop();
-
-            if (!pending.isEmpty() && pending != wid) {
-                Q_EMIT windowChanged(pending);
-            }
-        }
-
-        m_windowChangedWaiting = WindowId();
-        Q_EMIT windowChanged(wid);
-        return;
-    }
-
-    if (m_windowChangedWaiting == wid && m_windowWaitingTimer.isActive()) {
-        //! window should be sent later
+    if (!m_windowWaitingTimer.isActive()) {
+        m_windowChangedWaiting = wid;
         m_windowWaitingTimer.start();
         return;
     }
 
-    if (m_windowChangedWaiting != wid && !m_windowWaitingTimer.isActive()) {
-        //! window should be sent later
-        m_windowChangedWaiting = wid;
-        m_windowWaitingTimer.start();
+    if (m_windowChangedWaiting == wid) {
+        return;
     }
 
-    if (m_windowChangedWaiting != wid && m_windowWaitingTimer.isActive()) {
-        m_windowWaitingTimer.stop();
-        //! sent previous waiting window
-        Q_EMIT windowChanged(m_windowChangedWaiting);
+    m_windowWaitingTimer.stop();
+    Q_EMIT windowChanged(m_windowChangedWaiting);
 
-        //! retrigger waiting for the upcoming window
-        m_windowChangedWaiting = wid;
-        m_windowWaitingTimer.start();
-    }
+    m_windowChangedWaiting = wid;
+    m_windowWaitingTimer.start();
 }
 
 }
 }
-
