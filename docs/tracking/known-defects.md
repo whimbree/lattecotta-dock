@@ -315,7 +315,10 @@ so "what is known broken" is one scan. Full detail migrates on next touch.
   avoided) and action dispatch is single-source via TaskActions.js (the second ng
   root cause avoided). Driven proof: 30 seeded tasks-page values reflect through
   appletConfigData, and a launchersGroup Unique->Global change alters the running
-  bar. So this port needs neither wire-up nor hide.
+  bar. This resolves config transport only; it does not prove that every real
+  Tasks control opens or that every configured action executes. The settings
+  surface completion plan owns those interaction and runtime checks, so this
+  port still needs neither the old wire-up fix nor a hidden Tasks page.
 - HISTORY: the inherited upstream half-finished feature that latte-dock-ng hid
   (9faccabda). Detail: docs/archive/ng-upstream-audit.md:323 and CLAUDE.md's
   stub-tracking cautionary tale.
@@ -829,8 +832,10 @@ carries its own detail or points into the plan and the reference docs.
   the D21 investigation.
 
 ### D24 - TypeSelection Dock/Panel presets write two dead keys
-- STATUS: OPEN (CONFIRMED harmless-but-inert; DISPOSITION pending Bree). Found by
-  the CL-3 behavior-page audit (2026-07-19, AU-3d / the S-a check).
+- STATUS: OPEN (confirmed harmless-but-inert; tracked independently as
+  SC-M1 (the D24 dead TypeSelection write cleanup)). Found by the CL-3 behavior-page
+  audit (2026-07-19, AU-3d (the TypeSelection dead-key audit) and S-a (the
+  TypeSelection dead-key check)).
 - The Type-selection presets (shell/.../controls/TypeSelection.qml, four write
   sites) write `solidPanel` and `colorizeTransparentPanels` when picking Dock or
   Panel. Neither key exists in the containment schema (config/main.xml) and a
@@ -840,8 +845,11 @@ carries its own detail or points into the plan and the reference docs.
 - INHERITED, not a port regression: a deprecated `solidPanel` schema key was
   removed upstream long ago and these writes were never cleaned up; the Qt6
   reference fork carries the identical dead writes.
-- DISPOSITION PENDING (Bree): remove the four dead write lines in
-  TypeSelection.qml, or accept as inert. Harmless either way (nothing reads them).
+- RECOMMENDED DIRECTION: remove the four dead write lines in
+  `TypeSelection.qml` under SC-M1. This is an appearance/schema cleanup and is
+  not part of D30 (Behavior mouse actions expose fixed booleans instead of full
+  choices). No compatibility path is needed because no reader or schema entry
+  exists.
 
 ### D28 - Show-desktop applet icon stays white on a light-colored panel
 - FIXED (0390582fa). On a "Light colors" or "Layout colors" panel the

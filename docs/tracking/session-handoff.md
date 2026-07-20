@@ -91,6 +91,47 @@ Gentoo and Void followed in PRs #85 and #86, with current evidence recorded
 above. No settings or defect state changed, and no new defect was found or
 filed.
 
+## 2026-07-20: settings completion plan limited to evidence and scaffold work
+
+`docs/tracking/settings-surface-completion-plan.md` now separates the per-view
+and global settings initiative into one-PR source inventory, read-only registry,
+driver, shared-component, page, migration, runtime-core, observability, and e2e
+matrix units with explicit dependencies. Its C1-C9 (nine-property control
+completion) contract still requires reachability, real operation, exact writes,
+runtime effects, reflection, persistence, complete choices, lifecycle cleanup,
+and accessibility.
+
+Approval covers only the evidence-first and scaffold sequence: SC-F1 (the
+per-view source inventory and evidence ledger), SC-F2 (the source-to-ledger
+coverage gate), SC-O1 (the read-only settings-control D-Bus registry),
+SC-D1 (the pointer and keyboard driver), SC-D2 (the popup and lifecycle helper),
+SC-C1 through SC-C5 (the five shared-control component families), and the three
+focused evidence/guard units below. Page behavior changes, action expansion,
+schemas, migrations, and maintained-continuation divergences are not approved
+by the plan.
+
+- D29 (task-icon middle click appears to execute left-click behavior) remains
+  OPEN and unproven. SC-T1 (the D29 middle-click evidence capture) must record
+  exact row kind, stored action, event recipient, command or model request, and
+  independent effect before any solution is selected. Any real Qt5 divergence
+  requires explicit maintainer sign-off.
+- D30 (Behavior mouse actions expose fixed booleans instead of full choices)
+  remains OPEN and code-grounded. SC-B1 (the D30 current-contract
+  investigation) precedes the product decision. Typed core/API work, each
+  protocol operation family, migration, UI, observability, and each nested
+  gesture matrix are separate later PR units. No expanded action model is
+  approved.
+- D56 (pure-launcher task wheel uses inherited asymmetric activation) is
+  ACCEPTED as Qt5-faithful after a disposable nested capture at `6765b2320`.
+  Positive wheel activates the launcher through `TasksModel.requestActivate`,
+  negative wheel no-ops, and manual scrolling controls whether `ScrollNone`
+  reaches the same no-overflow path. SC-W1 (the D56 launcher-wheel regression
+  guard) is the permanent-test follow-up. This is separate from D29.
+- D24 (TypeSelection Dock/Panel presets write two dead keys) remains OPEN as
+  SC-M1 (the D24 dead TypeSelection write cleanup), independent of D30.
+  D31 (valid Justify splitter moves reset after restart) remains FIXED by PR #73
+  and is outside the settings-completion ownership.
+
 ## 2026-07-20: D25 (task icons stay stale after icon-theme changes) fixed
 
 PR #76 landed the icon-theme refresh path on `origin/main`. `Kirigami.Icon`

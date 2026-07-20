@@ -1000,6 +1000,23 @@ into C++. There is no drop-in replacement to import.
       to a real command. The offered set is transcribed from the config
       combos, so if a combo gains an option the transcription must gain
       it too)
+- [ ] Complete the real settings-control and runtime-behavior acceptance in
+      `docs/tracking/settings-surface-completion-plan.md`. The work is split into
+      one-PR source inventory, read-only registry, driver, component-family,
+      page, migration, runtime-core, observability, and e2e matrix units, with
+      explicit dependencies. Approval currently covers only the evidence-first
+      and scaffold sequence. D29 (task-icon middle click appears to execute
+      left-click behavior) must capture its exact row, stored action, event
+      recipient, request, and independent effect before any fix is selected.
+      D30 (Behavior mouse actions expose fixed booleans instead of full choices)
+      remains code-grounded but has no approved action expansion.
+      D56 (pure-launcher task wheel uses inherited asymmetric activation) is
+      accepted as Qt5-faithful and needs a permanent regression guard. D24 (TypeSelection
+      Dock/Panel presets write two dead keys) stays an independent appearance/
+      schema cleanup. Any Qt5 divergence requires explicit maintainer sign-off.
+      D31 (valid Justify splitter moves reset after restart) was fixed by PR #73
+      and is not owned by this workstream.
+      Commits:
 - [x] Route wheel events to badges/sub-regions *inside* the tasks
       plasmoid explicitly, not just per-applet: `DragDrop.DropArea`
       blocks wheel event delivery in Qt6, so even though the

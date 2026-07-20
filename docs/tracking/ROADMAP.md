@@ -22,12 +22,28 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   completed recipe scope. No hosted CI, official package or repository, release,
   tag, artifact upload, package publication, sponsorship, or distribution
   endorsement exists.
-- [Edit-mode settings audit](edit-mode-settings-audit-plan.md) - a driven audit
-  proving every edit-mode control keeps its contract (applies, right key, stays
-  in sync). COMPLETE - CL-0 (harness), CL-1 (length), wave-2 (CL-2/3/4/6:
-  appearance, behavior, effects, chrome), and CL-5 (tasks page; D10 resolved as
-  "applies", no wire-up needed) all landed. Small follow-ups remain: the control
-  56 / 90 readback gaps and the D24 dead-keys disposition.
+- [Edit-mode settings audit](edit-mode-settings-audit-plan.md) - the completed
+  wiring/readback ledger. It proves expected keys and reflected values, but is
+  not end-to-end control or runtime-behavior completion evidence.
+- [Settings surface completion](settings-surface-completion-plan.md) - approval
+  is limited to SC-F1 (the per-view source inventory and evidence ledger),
+  SC-F2 (the source-to-ledger coverage gate), SC-O1 (the read-only
+  settings-control D-Bus registry), SC-D1 (the pointer and keyboard control
+  drivers), SC-D2 (the popup and lifecycle driver helpers), SC-C1 (the ComboBox
+  and ComboBoxButton family), SC-C2 (the slider and numeric-field family), SC-C3
+  (the text-entry family), SC-C4 (the checkable and grouped-button family), SC-C5
+  (the color-control and dialog family), SC-T1 (the middle-click evidence
+  capture), SC-B1 (the empty-area action investigation), and SC-W1 (the
+  launcher-wheel regression guard). Per-view pages come first; global Qt Widgets
+  settings follow under the same C1-C9 (nine-property control completion)
+  contract. D29 (task-icon middle click appears to execute
+  left-click behavior) remains unproven. D30 (Behavior mouse actions expose fixed
+  booleans instead of full choices) is code-grounded but has no approved action
+  expansion. D56 (pure-launcher task wheel uses inherited asymmetric activation)
+  is accepted as Qt5-faithful pending a permanent regression guard. D24 (TypeSelection
+  Dock/Panel presets write two dead keys) is an independent small cleanup.
+  D31 (valid Justify splitter moves reset after restart) is already fixed by PR
+  #73 and is outside this plan.
 - [E2e interaction tests](e2e-interaction-test-plan.md) - the nested-vehicle
   interaction matrix. The interaction DRIVER layer (C-I chunks) landed; the
   scenario and abort chunks (C-S/C-A) and C-I5 (moveViewToScreen) are pending; a
