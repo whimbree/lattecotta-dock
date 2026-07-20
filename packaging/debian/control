@@ -3,11 +3,11 @@ Section: kde
 Priority: optional
 Maintainer: Bree Spektor <20343235+whimbree@users.noreply.github.com>
 Build-Depends:
+ appstream,
  cmake (>= 3.16),
  debhelper-compat (= 13),
  extra-cmake-modules (>= 6.5.0),
- gettext,
- git,
+ gettext, git,
  kwayland-dev (>= 6.5.0),
  libkf6archive-dev (>= 6.5.0),
  libkf6config-dev (>= 6.5.0),
