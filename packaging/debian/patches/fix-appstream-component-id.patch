@@ -1,0 +1,17 @@
+Description: Keep the hyphen in the final AppStream ID segment
+ The desktop suffix made latte-dock a domain segment, where AppStream forbids
+ hyphens. Dropping that suffix aligns the component ID with the metadata file
+ without changing the desktop, D-Bus, plugin, or package identifiers.
+Author: Bree Spektor <20343235+whimbree@users.noreply.github.com>
+Forwarded: no
+Last-Update: 2026-07-20
+--- a/app/org.kde.latte-dock.appdata.xml.cmake
++++ b/app/org.kde.latte-dock.appdata.xml.cmake
+@@ -1,6 +1,6 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <component type="addon">
+-  <id>org.kde.latte-dock.desktop</id>
++  <id>org.kde.latte-dock</id>
+   <extends>org.kde.plasmashell</extends>
+   <name>Latte</name>
+   <name xml:lang="ar">لاتيه</name>

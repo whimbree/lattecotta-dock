@@ -1,0 +1,36 @@
+.\" SPDX-FileCopyrightText: 2026 Bree Spektor
+.\" SPDX-FileCopyrightText: 2026 Latte Dock contributors
+.\" SPDX-License-Identifier: GPL-2.0-or-later
+.TH LATTE-DOCK 1 "July 2026" "Lattecotta Dock 0.10.77" "User Commands"
+.SH NAME
+latte-dock \- dock-style launcher and task manager for Plasma 6
+.SH SYNOPSIS
+.B latte-dock
+.RI [ options ]
+.SH DESCRIPTION
+.B latte-dock
+runs Lattecotta Dock in a Plasma Wayland session. It provides launchers,
+task management, indicator themes, multiple layouts, and parabolic icon
+effects.
+.SH OPTIONS
+.TP
+.BR \-h , " " \-\-help
+Show command-line help.
+.TP
+.BR \-v , " " \-\-version
+Show version information.
+.TP
+.BR \-r , " " \-\-replace
+Replace the running Latte instance.
+.TP
+.BR \-d , " " \-\-debug
+Write debugging messages to standard output.
+.TP
+.BI \-\-layout " name"
+Load the named layout at startup.
+.TP
+.B \-\-clear-cache
+Clear the QML cache before startup.
+.SH SEE ALSO
+.BR plasmashell (1),
+.BR kwin_wayland (1)
