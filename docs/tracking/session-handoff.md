@@ -39,13 +39,16 @@ only after successful completion.
 The installed `latte-dock` target must be ELF, so check-only and runtime
 `/proc/<pid>/exe` provenance use one contract. All five plugin slots require
 their exact Qt IID and class; containment actions and indicator package
-structure also require their category metadata. A version-verified Qt 6
-inspector is selected ahead of any unsuffixed tool. Metadata inspection and
-immediate-binding `dlopen` run under fixed timeouts. Normal dock startup must
-map all three QML plugins and the containment-actions plugin from the installed
-root. The indicator package structure is intentionally not a startup mapping:
-it is used while opening or installing indicator packages, so its applicable
-runtime proof is bounded metadata validation plus `dlopen`. Literal absolute
+structure also require typed category metadata: containment service types are
+an array with exact membership, while indicator package structure and parent
+application are strings. A version-verified Qt 6 inspector is selected ahead of
+any unsuffixed tool; each exact-format major-version probe is independently
+bounded and a failed candidate falls through. Metadata inspection and
+immediate-binding `dlopen` run under fixed timeouts. Normal dock startup must map
+all three QML plugins and the containment-actions plugin from the installed root.
+The indicator package structure is intentionally not a startup mapping: it is
+used while opening or installing indicator packages, so its applicable runtime
+proof is bounded metadata validation plus `dlopen`. Literal absolute
 RUNPATH/RPATH entries are rejected for isolated roots because the host loader
 cannot apply package-root namespace semantics; `$ORIGIN`-relative entries and
 contained live-root absolute entries remain valid.
@@ -54,8 +57,10 @@ Dock shutdown and cleanup target the complete `setsid` process group with
 bounded TERM/KILL escalation, including the leader-exits/descendant-survives
 case. Polling distinguishes absent groups from `pgrep` operational failures and
 counts zombie-only groups as stopped, so no failure path enters an unbounded
-wait. Validation now preflights `env`; unused `sort` and self-test `grep`
-requirements are removed.
+wait. Optional mapping registration returns success explicitly, so the
+startup-inactive indicator cannot terminate the runtime under `set -e`.
+Validation now preflights `env`; unused `sort` and self-test `grep` requirements
+are removed.
 
 Positive acceptance was driven in the cached Arch package environment with:
 `podman run --rm --security-opt label=disable -v "$PWD:/src:ro"
@@ -67,17 +72,21 @@ Release payload installed under a fresh `/tmp` root, the dock settled under
 nested KWin, `/proc` reported the exact installed executable and four startup
 plugin mappings, forbidden ambient variables were absent, SIGTERM produced
 status 0, the process group disappeared, and nested cleanup completed. The
-focused self-test passed 72 controls, including stale same-prefix ownership,
+recorded Arch run predates `bc7981939` and the final-review fixes, so it remains
+historical acceptance rather than exact-head evidence. The focused self-test
+passed 77 controls, including stale same-prefix ownership,
 partial producers, non-ELF launchers, absolute-link namespaces, deterministic
 Qt 6 tool selection, wrong-but-valid plugin metadata, polling failures, a real
 unreaped zombie, selected-artifact tree and manifest containment, coherent ELF
-search-path semantics, and a TERM-ignoring surviving descendant.
+search-path semantics, optional mapping continuation, bounded exact version
+parsing, typed plugin categories, and a TERM-ignoring surviving descendant.
 
 The install-assertion idea is credited to latte-dock-ng's
 `docker/verify-install.sh` at exact commit
 `9c12a79aaf9350e73059da5b293c931218419c05`; the nested-runtime implementation
 is original. Review follow-up commits: `6257b5ce2`, `5d3ce250d`, `43c736644`,
-`41eec828c`, `5da9a49a0`, `2fdce6968`, `bc7981939`.
+`41eec828c`, `5da9a49a0`, `2fdce6968`, `bc7981939`, `270b72fb1`, `cc1176e82`,
+`31b768e5a`.
 
 ## 2026-07-20 SESSION: D27 (stale maximize work area) latency follow-up
 

@@ -691,7 +691,8 @@ format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
       d7e4f7723, 52d18f4de, 70faf758e, 21acc0445, 770cbad33,
       560937549, 5fd6d0741, 11472197a, 771b96fe0, 660c85525,
       660a6f211, 6257b5ce2, 5d3ce250d, 43c736644, 41eec828c,
-      5da9a49a0, 2fdce6968, bc7981939.
+      5da9a49a0, 2fdce6968, bc7981939, 270b72fb1, cc1176e82,
+      31b768e5a.
 - [ ] F1 packaging/debian/ (control, rules via dh cmake, changelog,
       DEP-5 copyright from the SPDX audit); build .deb in the Ubuntu-family
       container, install, gate. Commits:

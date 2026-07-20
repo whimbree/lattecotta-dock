@@ -358,6 +358,40 @@ carries its own detail or points into the plan and the reference docs.
   suite passes 232 cases, the QML compile gate compiles 129 files, and
   AutoSize's 24 curated qmllint warnings drop to zero.
 
+### D55 - String service metadata passed containment-actions category checks
+- STATUS: FIXED (PR #72 branch, 31b768e5a).
+- FOUND: 2026-07-20, final independent review of the installed-package gate.
+- ROOT CAUSE: jq `index()` searches both arrays and strings, so a scalar
+  `ServiceTypes` value containing `Plasma/ContainmentActions` passed the category
+  filter without the required metadata schema.
+- FIX: require string IDs, an array `ServiceTypes` value with exact member
+  equality, and explicit string types for indicator package structure and parent
+  application metadata.
+- EVIDENCE: a containment-actions plugin with string `ServiceTypes` and an
+  indicator plugin with array package-structure metadata are rejected; valid
+  typed metadata still passes.
+
+### D54 - Qt inspector version probes could hang or accept unrelated text
+- STATUS: FIXED (PR #72 branch, cc1176e82).
+- FOUND: 2026-07-20, final independent review of the installed-package gate.
+- ROOT CAUSE: `qtplugininfo --version` had no deadline and accepted any 6.x
+  substring, including unrelated diagnostic text from a Qt 5 candidate.
+- FIX: bound every candidate probe, require one exact qplugininfo-family version
+  line, parse its numeric major, and continue after timeout or malformed output.
+- EVIDENCE: misleading multiline output and a 60-second candidate are skipped;
+  the next real Qt 6 inspector is selected within the fixed bound.
+
+### D53 - Optional indicator mapping terminated the runtime gate
+- STATUS: FIXED (PR #72 branch, 270b72fb1).
+- FOUND: 2026-07-20, final independent review of the installed-package gate.
+- ROOT CAUSE: mapped-artifact registration returned the status of its final
+  `required == 1` comparison. The optional indicator returned 1 under `set -e`,
+  stopping before map audit, shutdown, and PASS.
+- FIX: make every successful registration return zero explicitly and preserve
+  collision failure as a separate status-2 path.
+- EVIDENCE: optional registration under active `set -e` reaches its following
+  assertions with the expected map entry and an unchanged required set.
+
 ### D52 - Selected package artifacts bypassed package-namespace resolution
 - STATUS: FIXED (PR #72 branch, bc7981939).
 - FOUND: 2026-07-20, cross-check against the complete extraction-root contract.
@@ -407,7 +441,9 @@ carries its own detail or points into the plan and the reference docs.
   immediately with the missing-`env` diagnostic; all 67 focused controls pass.
 
 ### D48 - Plugin inspection could silently select a Qt 5 tool
-- STATUS: FIXED (PR #72 branch, 41eec828c).
+- STATUS: FIXED (PR #72 branch, 41eec828c; bounded exact parsing completed by
+  D54 (Qt inspector version probes could hang or accept unrelated text) in
+  cc1176e82).
 - FOUND: 2026-07-20, second independent review of the installed-package gate.
 - ROOT CAUSE: unsuffixed `qtplugininfo` was selected before Qt 6-specific names,
   and no version check established which Qt major supplied the command.
@@ -545,7 +581,9 @@ carries its own detail or points into the plan and the reference docs.
   returned within its fixed bound without calling `wait` on a live group.
 
 ### D35 - Arbitrary shared libraries passed installed plugin validation
-- STATUS: FIXED (PR #72 branch, 771b96fe0).
+- STATUS: FIXED (PR #72 branch, 771b96fe0; typed category validation completed
+  by D55 (string service metadata passed containment-actions category checks) in
+  31b768e5a).
 - FOUND: 2026-07-20, independent review of the installed-package gate.
 - ROOT CAUSE: valid ELF plus successful `dlopen` did not establish that a file
   was the expected QML, containment-actions, or KPackage plugin. The unbounded
