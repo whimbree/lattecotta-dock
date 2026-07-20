@@ -272,7 +272,13 @@ void VisibilityManager::setMode(Latte::Types::Visibility mode)
             updateStrutsBasedOnLayoutsAndActivities();
         }
 
-        m_connections[base] = connect(this, &VisibilityManager::strutsThicknessChanged, &VisibilityManager::updateStrutsAfterTimer);
+        //! Thickness is the layer-shell exclusive-zone payload. Publish its
+        //! discrete state change immediately so clients receive the new work
+        //! area together with the panel transition. Geometry churn remains on
+        //! the throttled path below to avoid the floating-panel feedback loop.
+        m_connections[base] = connect(this, &VisibilityManager::strutsThicknessChanged, this, [&]() {
+            updateStrutsBasedOnLayoutsAndActivities();
+        });
 
         // disabling this call because it was creating too many struts calls and   ???
         // could create reduced responsiveness for DynamicStruts Scenario(for example ??

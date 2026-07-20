@@ -5,8 +5,8 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// Source-level guards for three one-token correctness fixes whose full runtime
-// object graphs cannot be constructed offscreen:
+// Source-level guards for small routing/token correctness fixes whose owning
+// View / Corona / settings-dialog graphs cannot be constructed offscreen:
 //
 //   * VisibilityManager::updateSidebarState  '==' typo for '=' (the sidebar
 //     state was compared and discarded, never set)
@@ -14,14 +14,16 @@
 //     arithmetic plus unqualified self-call, infinite recursion)
 //   * View::WindowsTracker enabled Binding  plural property typo (the floating
 //     gap requester never enabled tracking for AlwaysVisible views)
+//   * VisibilityManager strut routing: discrete exclusive-zone thickness
+//     changes publish directly while geometry churn stays throttled
 //
 // The first two guards follow David Goree's latte-dock-qt6
 // (tests/sourceguardtest.cpp at 81384003, github.com/CaptSilver/latte-dock-qt6):
 // read the real source, brace-match the function body, strip whitespace and
 // assert the fixed token form both positively and negatively, so the typo
 // cannot silently return. Only those two cases are adopted; the WindowsTracker
-// Binding guard is specific to this tree. The rest of his file pins their
-// delegation-helper architecture, which this tree deliberately does not share
+// and strut-routing guards are specific to this tree. The rest of his file pins
+// a delegation-helper architecture that this tree deliberately does not share
 // (docs/archive/captsilver-testability-adoption.md, the not-adopting list).
 
 #include <QFile>
@@ -43,7 +45,7 @@ private:
         return QString::fromUtf8(f.readAll());
     }
 
-    // Brace-matched body (including the outer braces) after the first signature or object token.
+    // Brace-matched body after the first signature or object token.
     static QString functionBody(const QString &src, const QString &sig)
     {
         const int s = src.indexOf(sig);
@@ -78,6 +80,7 @@ private Q_SLOTS:
     void visibilityManager_updateSidebarState_assignsState();
     void layoutsController_modeIsChanged_delegatesToModel();
     void windowsTrackerBinding_tracksHiddenFloatingGap();
+    void visibilityManager_strutThicknessBypassesGeometryThrottle();
 };
 
 void SourceGuardTest::visibilityManager_updateSidebarState_assignsState()
@@ -123,6 +126,23 @@ void SourceGuardTest::windowsTrackerBinding_tracksHiddenFloatingGap()
              "WindowsTracker must enable for the singular screenEdgeMarginEnabled hide-gap arm");
     QVERIFY2(!binding.contains(QStringLiteral("root.screenEdgeMarginsEnabled")),
              "WindowsTracker hide-gap arm uses the nonexistent plural screenEdgeMarginsEnabled property");
+}
+
+void SourceGuardTest::visibilityManager_strutThicknessBypassesGeometryThrottle()
+{
+    const QString s = stripped(functionBody(readFile(QStringLiteral("app/view/visibilitymanager.cpp")),
+                                            QStringLiteral("void VisibilityManager::setMode(Latte::Types::Visibility mode)")));
+    QVERIFY2(!s.isEmpty(), "VisibilityManager::setMode() not found");
+    QVERIFY2(s.contains(QStringLiteral("connect(this,&VisibilityManager::strutsThicknessChanged,this,[&](){updateStrutsBasedOnLayoutsAndActivities();})")),
+             "strutsThicknessChanged must publish the layer-shell exclusive zone directly");
+    QVERIFY2(!s.contains(QStringLiteral("connect(this,&VisibilityManager::strutsThicknessChanged,&VisibilityManager::updateStrutsAfterTimer)")),
+             "strutsThicknessChanged must not wait behind the geometry throttle");
+    QVERIFY2(s.contains(QStringLiteral("connect(m_latteView,&Latte::View::absoluteGeometryChanged,this,&VisibilityManager::updateStrutsAfterTimer)")),
+             "absoluteGeometryChanged must retain the floating-panel feedback throttle");
+    QVERIFY2(s.contains(QStringLiteral("connect(m_corona->screenPool(),&Latte::ScreenPool::screenGeometryChanged,this,&VisibilityManager::updateStrutsAfterTimer)")),
+             "screenGeometryChanged must retain the floating-panel feedback throttle");
+    QVERIFY2(s.contains(QStringLiteral("connect(m_latteView->positioner(),&ViewPart::Positioner::isOffScreenChanged,this,&VisibilityManager::updateStrutsAfterTimer)")),
+             "isOffScreenChanged must retain the floating-panel feedback throttle");
 }
 
 QTEST_GUILESS_MAIN(SourceGuardTest)
