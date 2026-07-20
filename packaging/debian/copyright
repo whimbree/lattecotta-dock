@@ -181,7 +181,7 @@ Files: .kde-ci.yml
 Copyright: None
 License: CC0-1.0
 
-Files: packaging/debian/*
+Files: debian/*
 Copyright: 2026 Bree Spektor
            2026 Latte Dock contributors
 License: GPL-2.0-or-later
@@ -212,11 +212,15 @@ License: LGPL-2.1-only
  On Debian systems, the complete text of the GNU Lesser General Public
  License version 2.1 can be found in /usr/share/common-licenses/LGPL-2.1.
 
-License: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
- This library may be redistributed and/or modified under the terms of the
- GNU Lesser General Public License version 2.1, version 3, or the KDE
- accepted LGPL proxy clause below.
+License: LGPL-3.0-only
+ This library is free software; you can redistribute it and/or modify it
+ under the terms of the GNU Lesser General Public License version 3 as
+ published by the Free Software Foundation.
  .
+ On Debian systems, the complete text of the GNU Lesser General Public License
+ version 3 can be found in /usr/share/common-licenses/LGPL-3.
+
+License: LicenseRef-KDE-Accepted-LGPL
  This library is free software; you can redistribute it and/or modify it
  under the terms of the GNU Lesser General Public License as published by
  the Free Software Foundation; either version 3 of the license or (at your
@@ -229,9 +233,6 @@ License: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
  FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  more details.
  .
- On Debian systems, the complete texts of versions 2.1 and 3 can be found in
- /usr/share/common-licenses/LGPL-2.1 and /usr/share/common-licenses/LGPL-3.
-
 License: CC0-1.0
  To the extent possible under law, the author(s) have dedicated all copyright
  and related and neighboring rights to this work to the public domain
