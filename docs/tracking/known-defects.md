@@ -329,6 +329,27 @@ carries its own detail or points into the plan and the reference docs.
 
 ## Fixed (kept for the record)
 
+### D32 - Always Visible floating docks fail to track maximized windows when hiding the floating gap
+- STATUS: FIXED (PR #71; commit filled after merge).
+- FOUND: 2026-07-20, the strengthened D27 (maximize transitions leave a stale
+  floating-gap work area) nested acceptance fixture reported
+  `trackerData.enabled=false` while KWin showed a maximized `1600x894` frame.
+- ROOT CAUSE: the `View::WindowsTracker` enabled binding read nonexistent
+  `root.screenEdgeMarginsEnabled`, while `main.qml` declares the singular
+  `screenEdgeMarginEnabled`. In an Always Visible default fixture, every other
+  tracking requester is false, so the hide-gap option never enabled tracking.
+  Disabled tracking clears `existsWindowMaximized`, preventing all downstream
+  maximize-length and floating-gap behavior. A richer real layout can mask the
+  defect when another applet independently requests window tracking.
+- FIX: read the declared singular property. This is the intended Qt5 behavior:
+  upstream Qt5 commit `79705e9753edc45cfceccd432da86acbab6ae9b8`
+  introduced the typo, and both reference forks retain it.
+- EVIDENCE: a marker-scoped source guard isolates the tracker binding, requires
+  the singular hide-gap arm, and rejects the plural spelling. Restoring the
+  typo makes the focused test fail; restoring the fix passes. The QML compile
+  gate loaded all 129 eligible package files, the qmllint ratchet held, and the
+  complete fast gate passed.
+
 ### D27 - Maximize state detection delayed by geometryChanged re-arming the debounce timer
 - STATUS: FIXED (PR #61, branch d27-windowchanged-immediate-flush, de9cc4f6a + 15d71f04b + 4f61732c4).
 - FOUND: 2026-07-19, code-reading of the window-tracking signal path while investigating a maximize gap.

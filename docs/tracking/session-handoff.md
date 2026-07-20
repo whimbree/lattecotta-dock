@@ -1,7 +1,20 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-19.
+Last updated 2026-07-20.
+
+## 2026-07-20: D32 (disabled Always Visible floating-gap tracking)
+
+PR #71 fixes an inherited one-character tracker-enablement defect found while
+hardening the D27 (maximize transitions leave a stale floating-gap work area)
+nested acceptance. `BindingsExternal.qml` read nonexistent
+`root.screenEdgeMarginsEnabled`; the declared property is singular. A hermetic
+Always Visible layout therefore reported `trackerData.enabled=false` even with
+`hideFloatingGapForMaximized=true`, while a richer real layout could mask the
+bug through an unrelated applet tracking requester. The fix selects the
+declared property. A marker-scoped source guard fails when the plural spelling
+is restored; QML compile, qmllint, and the complete fast gate pass. Independent
+review and merge remain.
 
 ## 2026-07-19 SESSION: D27 + D28 panel bugs fixed and delivered live
 

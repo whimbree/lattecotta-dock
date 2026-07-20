@@ -1298,6 +1298,20 @@ multi-view, multi-monitor setup.
       to Bree - steps in docs/agent-logs/2026-07-18-maximize-length-repaint.md.
       Commits: (to fill post-rebase)
 
+- [x] D32 (Always Visible floating docks fail to track maximized windows when
+      hiding the floating gap): the `View::WindowsTracker` enabled binding
+      read nonexistent `root.screenEdgeMarginsEnabled` instead of the declared
+      singular `screenEdgeMarginEnabled`. With no independent applet tracking
+      requester, Always Visible left tracking disabled, cleared
+      `existsWindowMaximized`, and made both maximize-length and hide-gap
+      behavior inert. The typo came from upstream Qt5 commit
+      `79705e9753edc45cfceccd432da86acbab6ae9b8` and survives in both reference
+      forks; selecting the declared property restores the intended behavior.
+      A marker-scoped source guard requires the singular arm and rejects the
+      plural spelling; restoring the typo makes it fail. QML compile, qmllint,
+      and the complete fast gate pass.
+      Commits: <filled after merge>
+
 - [x] Render-thread crash whenever an overflowing dock relayouts (enter
       edit mode, add a widget, right-click an applet in edit mode - all
       one backtrace: buildRenderLists SEGV during QSGRhiLayer::grab).
