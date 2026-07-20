@@ -459,7 +459,7 @@ audit_package_tree "Latte data tree" "$package_data/latte"
 [[ -d "$package_data/latte/indicators/default" ]] \
     || fail "package is incomplete: missing default indicator under $package_data/latte/indicators"
 
-audit_elf_search_paths "installed binary" "$binary" 0
+audit_elf_search_paths "installed binary" "$binary"
 package_plugin_labels=(
     "Latte core QML plugin"
     "Latte containment QML plugin"

@@ -4,8 +4,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # Fast provenance checks for scripts/installed-package-gate.sh. The fixture is
-# intentionally not runnable: --check-only verifies package discovery and the
-# rejection boundaries without requiring a compositor or Qt runtime.
+# an ELF executable but not a dock runtime: --check-only verifies package
+# discovery and the rejection boundaries without requiring a compositor.
 set -euo pipefail
 
 for required_command in \
@@ -182,9 +182,8 @@ fixture_object="$work/elf-fixture.o"
 printf '%s\n' \
     'int fixture(void) { return 0; }' \
     'int main(void) { return fixture(); }' >"$elf_source"
-printf '#!/usr/bin/env bash\nexit 0\n' >"$fixture_binary"
-chmod +x "$fixture_binary"
 cc -fPIC -c "$elf_source" -o "$fixture_object"
+NIX_LDFLAGS= NIX_LDFLAGS_BEFORE= ld --build-id -e main "$fixture_object" -o "$fixture_binary"
 NIX_LDFLAGS= NIX_LDFLAGS_BEFORE= ld --build-id -shared "$fixture_object" -o "$fixture_plugin"
 readelf -h "$fixture_plugin" >/dev/null 2>&1 \
     || { echo "FAIL: generic shared-library fixture is invalid" >&2; exit 1; }
@@ -310,6 +309,14 @@ expect_failure "PATH fallback" "PATH fallback is forbidden" \
     bash "$gate" --root "$missing_binary" --prefix /usr --check-only
 [[ ! -e "$work/path-fallback-ran" ]] \
     || { echo "FAIL: fallback latte-dock from PATH was executed" >&2; exit 1; }
+
+non_elf_binary="$work/non-elf-binary"
+cp -a "$good" "$non_elf_binary"
+printf '#!/usr/bin/env bash\nexit 0\n' >"$non_elf_binary/usr/bin/latte-dock"
+chmod +x "$non_elf_binary/usr/bin/latte-dock"
+expect_failure "non-ELF executable wrapper" "installed binary is not a valid ELF artifact" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$non_elf_binary" --prefix /usr --check-only
 
 expect_failure "source tree root" "inside the source/build tree" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
@@ -878,4 +885,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (57 focused controls)"
+echo "installed-package-gate-selftest: PASS (58 focused controls)"
