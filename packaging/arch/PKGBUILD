@@ -21,7 +21,7 @@ arch=(x86_64)
 url='https://github.com/whimbree/lattecotta-dock'
 # Arch's SPDX catalog uses the ScanCode identifier for the source tree's
 # LicenseRef-KDE-Accepted-LGPL text.
-license=('GPL-2.0-or-later AND LGPL-2.0-or-later AND (LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-scancode-kde-accepted-lgpl)')
+license=('CC0-1.0 AND GPL-2.0-or-later AND LGPL-2.0-or-later AND (LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-scancode-kde-accepted-lgpl)')
 
 depends=(
     'hicolor-icon-theme'
@@ -90,8 +90,8 @@ package() {
     DESTDIR="${pkgdir}" cmake --install build
 
     local license_file
-    for license_file in GPL-2.0-or-later LGPL-2.0-or-later LGPL-2.1-only \
-            LGPL-3.0-only; do
+    for license_file in CC0-1.0 GPL-2.0-or-later LGPL-2.0-or-later \
+            LGPL-2.1-only LGPL-3.0-only; do
         install -Dm644 "${_source_dir}/LICENSES/${license_file}.txt" \
             "${pkgdir}/usr/share/licenses/${pkgname}/${license_file}.txt"
     done

@@ -4,7 +4,7 @@ pkgbase = latte-dock
 	pkgrel = 1
 	url = https://github.com/whimbree/lattecotta-dock
 	arch = x86_64
-	license = GPL-2.0-or-later AND LGPL-2.0-or-later AND (LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-scancode-kde-accepted-lgpl)
+	license = CC0-1.0 AND GPL-2.0-or-later AND LGPL-2.0-or-later AND (LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-scancode-kde-accepted-lgpl)
 	makedepends = cmake>=3.16
 	makedepends = extra-cmake-modules>=6.5
 	makedepends = ninja
