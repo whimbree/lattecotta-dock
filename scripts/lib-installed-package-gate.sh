@@ -154,6 +154,19 @@ latte_package_gate_wait_until_process_exits() {
     ! kill -0 "$pid" 2>/dev/null
 }
 
+latte_package_gate_require_exit_status() {
+    local pid="$1" expected_status="$2" label="$3" actual_status
+    if wait "$pid"; then
+        actual_status=0
+    else
+        actual_status=$?
+    fi
+    [[ "$actual_status" -eq "$expected_status" ]] || {
+        echo "installed-package-gate: FAIL: $label exited with status $actual_status, expected $expected_status" >&2
+        return 2
+    }
+}
+
 latte_package_gate_stop_process() {
     local pid="$1" label="$2"
     local term_attempts="${3:-25}" term_delay="${4:-0.2}"

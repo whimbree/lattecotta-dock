@@ -537,6 +537,63 @@ set -e
     || { echo "FAIL: process-group cleanup called unbounded wait while members still existed" >&2; exit 1; }
 echo "PASS: nested-style post-SIGKILL cleanup never waits on a live group"
 
+clean_term_ready="$work/clean-term.ready"
+bash -c '
+    trap "exit 0" TERM
+    : >"$1"
+    while :; do sleep 1; done
+' bash "$clean_term_ready" &
+clean_term_pid=$!
+for ((ready_wait = 0; ready_wait < 50; ready_wait++)); do
+    [[ -e "$clean_term_ready" ]] && break
+    sleep 0.01
+done
+[[ -e "$clean_term_ready" ]] \
+    || { kill -KILL "$clean_term_pid" 2>/dev/null || true; echo "FAIL: clean-SIGTERM fixture did not start" >&2; exit 1; }
+kill -TERM "$clean_term_pid"
+latte_package_gate_wait_until_process_exits "$clean_term_pid" 200 0.01 \
+    || { echo "FAIL: clean-SIGTERM fixture did not exit" >&2; exit 1; }
+latte_package_gate_require_exit_status "$clean_term_pid" 0 "clean-SIGTERM fixture"
+echo "PASS: expected zero SIGTERM wait status is preserved"
+
+aborted_status_log="$work/aborted-status.log"
+bash -c 'ulimit -c 0; kill -ABRT "$$"' &
+aborted_pid=$!
+latte_package_gate_wait_until_process_exits "$aborted_pid" 200 0.01 \
+    || { kill -KILL "$aborted_pid" 2>/dev/null || true; echo "FAIL: SIGABRT fixture did not exit" >&2; exit 1; }
+set +e
+latte_package_gate_require_exit_status "$aborted_pid" 0 "SIGABRT fixture" 2>"$aborted_status_log"
+aborted_status_rc=$?
+set -e
+[[ "$aborted_status_rc" -eq 2 && "$(<"$aborted_status_log")" == *"status 134, expected 0"* ]] \
+    || { echo "FAIL: prompt SIGABRT was not rejected by wait status" >&2; exit 1; }
+echo "PASS: prompt SIGABRT exit status is rejected"
+
+nonzero_term_ready="$work/nonzero-term.ready"
+bash -c '
+    trap "exit 7" TERM
+    : >"$1"
+    while :; do sleep 1; done
+' bash "$nonzero_term_ready" &
+nonzero_term_pid=$!
+for ((ready_wait = 0; ready_wait < 50; ready_wait++)); do
+    [[ -e "$nonzero_term_ready" ]] && break
+    sleep 0.01
+done
+[[ -e "$nonzero_term_ready" ]] \
+    || { kill -KILL "$nonzero_term_pid" 2>/dev/null || true; echo "FAIL: nonzero-SIGTERM fixture did not start" >&2; exit 1; }
+kill -TERM "$nonzero_term_pid"
+latte_package_gate_wait_until_process_exits "$nonzero_term_pid" 200 0.01 \
+    || { kill -KILL "$nonzero_term_pid" 2>/dev/null || true; echo "FAIL: nonzero-SIGTERM fixture did not exit" >&2; exit 1; }
+nonzero_status_log="$work/nonzero-status.log"
+set +e
+latte_package_gate_require_exit_status "$nonzero_term_pid" 0 "nonzero-SIGTERM fixture" 2>"$nonzero_status_log"
+nonzero_status_rc=$?
+set -e
+[[ "$nonzero_status_rc" -eq 2 && "$(<"$nonzero_status_log")" == *"status 7, expected 0"* ]] \
+    || { echo "FAIL: nonzero SIGTERM wait status was not rejected" >&2; exit 1; }
+echo "PASS: nonzero SIGTERM wait status is rejected"
+
 incomplete="$work/incomplete"
 cp -a "$good" "$incomplete"
 rm "$incomplete/usr/lib/qt6/qml/org/kde/latte/private/tasks/liblattetasksplugin.so"
@@ -544,4 +601,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (44 focused controls)"
+echo "installed-package-gate-selftest: PASS (47 focused controls)"

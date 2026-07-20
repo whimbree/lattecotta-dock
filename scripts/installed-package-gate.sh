@@ -523,7 +523,9 @@ latte_package_gate_audit_mapped_paths "/proc/$dock_pid/maps" "$artifact_prefix" 
 kill -TERM "$dock_pid"
 latte_package_gate_wait_until_process_exits "$dock_pid" 125 0.2 \
     || fail "installed dock (pid $dock_pid) survived SIGTERM for 25 seconds"
-wait "$dock_pid" 2>/dev/null || true
+# KSignalHandler turns SIGTERM into qGuiApp->quit(), so a clean installed
+# shutdown returns from the event loop with status zero rather than 143.
+latte_package_gate_require_exit_status "$dock_pid" 0 "installed dock after SIGTERM"
 dock_pid=""
 
 echo "installed-package-gate: PASS (installed executable, QML plugins, data, startup, and shutdown verified)"
