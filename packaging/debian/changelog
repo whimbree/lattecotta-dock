@@ -1,0 +1,7 @@
+latte-dock (0.10.77) unstable; urgency=medium
+
+  * Add Phase F1 (the Debian-family native package recipe).
+  * Build the production CMake payload with debhelper and Ninja.
+  * Declare the Plasma 6, Qt 6, KF6, KWin, Wayland, and QML runtime.
+
+ -- Bree Spektor <20343235+whimbree@users.noreply.github.com>  Mon, 20 Jul 2026 14:45:46 +0000

@@ -1,0 +1,89 @@
+Source: latte-dock
+Section: kde
+Priority: optional
+Maintainer: Bree Spektor <20343235+whimbree@users.noreply.github.com>
+Build-Depends:
+ cmake (>= 3.16),
+ debhelper-compat (= 13),
+ extra-cmake-modules (>= 6.5.0),
+ gettext,
+ kwayland-dev (>= 6.5.0),
+ libkf6archive-dev (>= 6.5.0),
+ libkf6config-dev (>= 6.5.0),
+ libkf6coreaddons-dev (>= 6.5.0),
+ libkf6crash-dev (>= 6.5.0),
+ libkf6dbusaddons-dev (>= 6.5.0),
+ libkf6globalaccel-dev (>= 6.5.0),
+ libkf6guiaddons-dev (>= 6.5.0),
+ libkf6i18n-dev (>= 6.5.0),
+ libkf6iconthemes-dev (>= 6.5.0),
+ libkf6kio-dev (>= 6.5.0),
+ libkf6newstuff-dev (>= 6.5.0),
+ libkf6notifications-dev (>= 6.5.0),
+ libkf6package-dev (>= 6.5.0),
+ libkf6service-dev (>= 6.5.0),
+ libkf6svg-dev (>= 6.5.0) | kf6-ksvg-dev (>= 6.5.0),
+ libkf6windowsystem-dev (>= 6.5.0),
+ libkf6xmlgui-dev (>= 6.5.0),
+ libkirigami-dev (>= 6.5.0),
+ libksysguard-dev (>= 6.5.0),
+ liblayershellqtinterface-dev (>= 6.5.0),
+ libplasma-dev (>= 6.5.0),
+ libplasmaactivities-dev (>= 6.5.0) | plasma-activities-dev (>= 6.5.0),
+ libplasmaactivitiesstats-dev (>= 6.5.0) | plasma-activities-stats-dev (>= 6.5.0),
+ libwayland-dev,
+ ninja-build,
+ pkgconf,
+ plasma-wayland-protocols (>= 1.6),
+ plasma-workspace-dev (>= 6.5.0),
+ qt6-base-dev (>= 6.6.0),
+ qt6-declarative-dev (>= 6.6.0),
+ qt6-wayland-dev (>= 6.6.0),
+ wayland-protocols
+Standards-Version: 4.7.2
+Homepage: https://github.com/whimbree/lattecotta-dock
+Vcs-Browser: https://github.com/whimbree/lattecotta-dock
+Vcs-Git: https://github.com/whimbree/lattecotta-dock.git
+Rules-Requires-Root: no
+
+Package: latte-dock
+Architecture: any
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+ kactivitymanagerd (>= 6.5.0),
+ kpackagetool6,
+ kwin-wayland (>= 6.5.0),
+ libqt6wlshellintegration6 (>= 6.6.0),
+ plasma-desktoptheme (>= 6.5.0),
+ plasma-pa (>= 6.5.0),
+ qml6-module-org-kde-activities,
+ qml6-module-org-kde-desktop | kf6-qqc2-desktop-style,
+ qml6-module-org-kde-draganddrop,
+ qml6-module-org-kde-graphicaleffects,
+ qml6-module-org-kde-kirigami,
+ qml6-module-org-kde-kquickcontrolsaddons,
+ qml6-module-org-kde-ksvg | kf6-ksvg,
+ qml6-module-org-kde-kwindowsystem,
+ qml6-module-org-kde-pipewire,
+ qml6-module-org-kde-plasma-workspace | plasma-workspace (>= 6.5.0),
+ qml6-module-org-kde-taskmanager | plasma-workspace (>= 6.5.0),
+ qml6-module-qt5compat-graphicaleffects,
+ qml6-module-qtqml,
+ qml6-module-qtqml-models,
+ qml6-module-qtquick,
+ qml6-module-qtquick-controls,
+ qml6-module-qtquick-dialogs,
+ qml6-module-qtquick-effects | qt6-declarative,
+ qml6-module-qtquick-layouts,
+ qml6-module-qtquick-shapes | qt6-declarative,
+ qml6-module-qtquick-templates,
+ qml6-module-qtquick-tooling | qt6-declarative,
+ qml6-module-qtquick-window
+Recommends:
+ breeze-icon-theme,
+ fonts-noto-core
+Description: dock-style launcher and task manager for Plasma 6
+ Lattecotta Dock is a Plasma 6 and Qt 6 continuation of Latte Dock. It
+ provides multiple layouts, task management, launchers, indicator themes,
+ and parabolic icon effects on the Plasma Wayland desktop.
