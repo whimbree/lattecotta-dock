@@ -78,8 +78,12 @@ source=("${pkgname}-${pkgver}-${_commit}.tar.gz")
 sha256sums=('cf32687b24401e061886daad9cc3c9e49b6bf77b80a67b9c990681384c599e75')
 
 build() {
+    # Arch owns optimization through makepkg.conf. The None configuration keeps
+    # those flags authoritative while explicit NDEBUG retains release semantics.
     cmake -S "${_source_dir}" -B build -G Ninja \
-        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_BUILD_TYPE=None \
+        -DCMAKE_C_FLAGS_NONE=-DNDEBUG \
+        -DCMAKE_CXX_FLAGS_NONE=-DNDEBUG \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DBUILD_TESTING=OFF
