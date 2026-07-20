@@ -223,6 +223,23 @@ latte_package_gate_audit_mapped_paths() {
     done
 }
 
+latte_package_gate_register_expected_mapping() {
+    local expected_name="$1" required_name="$2" label="$3" path="$4" required="$5"
+    local name="${path##*/}"
+    local -n expected_paths="$expected_name"
+    local -n required_paths="$required_name"
+
+    [[ -z "${expected_paths[$name]+present}" ]] || {
+        echo "installed-package-gate: FAIL: installed $label has mapped-artifact basename '$name', already used by ${expected_paths[$name]}" >&2
+        return 2
+    }
+    expected_paths["$name"]="$path"
+    if [[ "$required" == 1 ]]; then
+        required_paths+=("$name")
+    fi
+    return 0
+}
+
 latte_package_gate_read_environment_value() {
     local environment_file="$1" variable="$2" output_name="$3" parsed_value
     local -n output_value="$output_name"

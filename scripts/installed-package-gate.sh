@@ -800,19 +800,18 @@ indicator_package_plugin_resolved="$(realpath "$indicator_package_plugin" 2>/dev
     || fail "cannot resolve installed indicator package-structure plugin for mapping validation"
 declare -A expected_mapped_artifacts=()
 required_mapped_artifacts=()
-register_expected_mapped_artifact() {
-    local label="$1" path="$2" required="$3" name="${path##*/}"
-    [[ -z "${expected_mapped_artifacts[$name]+present}" ]] \
-        || fail "installed $label has mapped-artifact basename '$name', already used by ${expected_mapped_artifacts[$name]}"
-    expected_mapped_artifacts["$name"]="$path"
-    [[ "$required" == 1 ]] && required_mapped_artifacts+=("$name")
-}
-register_expected_mapped_artifact "binary" "$binary" 1
-register_expected_mapped_artifact "core QML plugin" "$core_plugin_resolved" 1
-register_expected_mapped_artifact "containment QML plugin" "$containment_plugin_resolved" 1
-register_expected_mapped_artifact "tasks QML plugin" "$tasks_plugin_resolved" 1
-register_expected_mapped_artifact "containment-actions plugin" "$action_plugin_resolved" 1
-register_expected_mapped_artifact "indicator package-structure plugin" \
+latte_package_gate_register_expected_mapping expected_mapped_artifacts \
+    required_mapped_artifacts "binary" "$binary" 1
+latte_package_gate_register_expected_mapping expected_mapped_artifacts \
+    required_mapped_artifacts "core QML plugin" "$core_plugin_resolved" 1
+latte_package_gate_register_expected_mapping expected_mapped_artifacts \
+    required_mapped_artifacts "containment QML plugin" "$containment_plugin_resolved" 1
+latte_package_gate_register_expected_mapping expected_mapped_artifacts \
+    required_mapped_artifacts "tasks QML plugin" "$tasks_plugin_resolved" 1
+latte_package_gate_register_expected_mapping expected_mapped_artifacts \
+    required_mapped_artifacts "containment-actions plugin" "$action_plugin_resolved" 1
+latte_package_gate_register_expected_mapping expected_mapped_artifacts \
+    required_mapped_artifacts "indicator package-structure plugin" \
     "$indicator_package_plugin_resolved" 0
 # latte_indicator.so is a KPackage structure used while opening/installing
 # indicator packages, not by normal dock startup. Its applicable runtime

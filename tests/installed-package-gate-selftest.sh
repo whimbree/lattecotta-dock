@@ -799,6 +799,15 @@ latte_package_gate_audit_mapped_paths "$maps_with_spaces" "$mapped_prefix" "$rep
     expected_space_mappings required_space_mappings >/dev/null
 echo "PASS: /proc maps pathnames with spaces preserve exact installed-artifact identity"
 
+declare -A optional_mapping=()
+optional_mapping_required=()
+latte_package_gate_register_expected_mapping optional_mapping \
+    optional_mapping_required "optional indicator" "$mapped_prefix/latte_indicator.so" 0
+[[ "${optional_mapping[latte_indicator.so]}" == "$mapped_prefix/latte_indicator.so" \
+        && "${#optional_mapping_required[@]}" -eq 0 ]] \
+    || { echo "FAIL: optional mapped-artifact registration changed the required set" >&2; exit 1; }
+echo "PASS: optional mapped-artifact registration continues under set -e"
+
 set +e
 partial_maps_output="$(
     (
@@ -1097,4 +1106,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (72 focused controls)"
+echo "installed-package-gate-selftest: PASS (73 focused controls)"
