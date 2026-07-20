@@ -67,14 +67,18 @@ Positive acceptance was driven in the cached Arch package environment with:
 localhost/latte-ci-arch:latest bash -lc 'cmake -S /src -B /build -G Ninja
 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF && cmake --build /build
 --parallel "$(nproc)" && BUILD=/build
-/src/tests/installed-package-gate-runtime-test.sh'`. Exit status was 0. The
-Release payload installed under a fresh `/tmp` root, the dock settled under
+/src/tests/installed-package-gate-runtime-test.sh'`. The successful command
+mounted exact source head `3ee077529` read-only and exited 0. Its code head was
+`31b768e5a`; `3ee077529` added only the tracking records above after all three
+final-review code fixes. This evidence correction moves the branch through
+tracking documentation only and does not alter the tested runtime tree.
+
+The Release payload installed under a fresh `/tmp` root, the dock settled under
 nested KWin, `/proc` reported the exact installed executable and four startup
 plugin mappings, forbidden ambient variables were absent, SIGTERM produced
-status 0, the process group disappeared, and nested cleanup completed. The
-recorded Arch run predates `bc7981939` and the final-review fixes, so it remains
-historical acceptance rather than exact-head evidence. The focused self-test
-passed 77 controls, including stale same-prefix ownership,
+status 0, the process group disappeared, nested cleanup completed, and both
+installed-package PASS lines were reached. The focused self-test passed 77
+controls, including stale same-prefix ownership,
 partial producers, non-ELF launchers, absolute-link namespaces, deterministic
 Qt 6 tool selection, wrong-but-valid plugin metadata, polling failures, a real
 unreaped zombie, selected-artifact tree and manifest containment, coherent ELF

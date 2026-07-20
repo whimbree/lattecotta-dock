@@ -390,7 +390,9 @@ carries its own detail or points into the plan and the reference docs.
 - FIX: make every successful registration return zero explicitly and preserve
   collision failure as a separate status-2 path.
 - EVIDENCE: optional registration under active `set -e` reaches its following
-  assertions with the expected map entry and an unchanged required set.
+  assertions with the expected map entry and an unchanged required set. The
+  Arch package runtime at exact mounted source head `3ee077529` continued
+  through mapping audit, clean shutdown, and both PASS lines.
 
 ### D52 - Selected package artifacts bypassed package-namespace resolution
 - STATUS: FIXED (PR #72 branch, bc7981939).
@@ -595,9 +597,9 @@ carries its own detail or points into the plan and the reference docs.
   startup-inactive indicator package structure is validated by metadata and
   bounded loading.
 - EVIDENCE: a generic library, valid plugins with wrong IID, class, or category,
-  and a valid QML plugin with a TERM-ignoring constructor are rejected. A real
-  Arch package run mapped all four startup plugin categories from the installed
-  root.
+  and a valid QML plugin with a TERM-ignoring constructor are rejected. The Arch
+  package runtime at exact mounted source head `3ee077529` mapped all four
+  startup plugin categories from the installed root.
 
 ### D34 - Partial artifact scanners could produce vacuous gate success
 - STATUS: FIXED (PR #72 branch, 11472197a).
