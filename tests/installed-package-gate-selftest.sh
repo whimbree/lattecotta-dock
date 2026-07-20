@@ -8,7 +8,19 @@
 # rejection boundaries without requiring a compositor or Qt runtime.
 set -euo pipefail
 
-repo="$(cd "$(dirname "$0")/.." && pwd)"
+for required_command in \
+        awk bash cc chmod cp env grep ld ln mkdir mktemp mv pgrep readelf realpath rm setsid sleep sort; do
+    command -v "$required_command" >/dev/null 2>&1 || {
+        printf "installed-package-gate-selftest: FAIL: required command '%s' is missing\n" \
+            "$required_command" >&2
+        exit 1
+    }
+done
+unset required_command
+
+script_dir="${BASH_SOURCE[0]%/*}"
+[[ "$script_dir" != "${BASH_SOURCE[0]}" ]] || script_dir=.
+repo="$(cd "$script_dir/.." && pwd -P)"
 gate="$repo/scripts/installed-package-gate.sh"
 source "$repo/scripts/lib-installed-package-gate.sh"
 work="$(mktemp -d /tmp/latte-installed-gate-selftest.XXXXXX)"
@@ -85,6 +97,12 @@ expect_failure() {
 framework="$work/framework-qml"
 runtime_data="$work/framework-data"
 mkdir -p "$framework" "$runtime_data"
+
+missing_awk_path="$work/missing-awk-path"
+mkdir -p "$missing_awk_path"
+expect_failure "missing awk parser" "required validation command 'awk' is missing" \
+    env PATH="$missing_awk_path" LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    "$(command -v bash)" "$gate" --root "$work/not-used" --prefix /usr --check-only
 
 elf_source="$work/elf-fixture.c"
 fixture_binary="$work/fixture-binary"
@@ -601,4 +619,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (47 focused controls)"
+echo "installed-package-gate-selftest: PASS (48 focused controls)"

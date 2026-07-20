@@ -9,7 +9,9 @@
 # build, or falling back to another Latte installation.
 set -euo pipefail
 
-repo="$(cd "$(dirname "$0")/.." && pwd)"
+script_dir="${BASH_SOURCE[0]%/*}"
+[[ "$script_dir" != "${BASH_SOURCE[0]}" ]] || script_dir=.
+repo="$(cd "$script_dir/.." && pwd -P)"
 source "$repo/scripts/lib-installed-package-gate.sh"
 for loader_variable in "${latte_package_gate_loader_variables[@]}"; do
     unset "$loader_variable"
@@ -35,6 +37,17 @@ fail() {
     echo "installed-package-gate: FAIL: $*" >&2
     exit 2
 }
+
+require_commands() {
+    local phase="$1" required_command
+    shift
+    for required_command in "$@"; do
+        command -v "$required_command" >/dev/null 2>&1 \
+            || fail "required $phase command '$required_command' is missing"
+    done
+}
+
+require_commands validation awk cat dirname find perl readelf readlink realpath
 
 path_is_within() {
     local path="$1" base="$2"
@@ -301,10 +314,6 @@ audit_package_tree "Latte data tree" "$package_data/latte"
 [[ -d "$package_data/latte/indicators/default" ]] \
     || fail "package is incomplete: missing default indicator under $package_data/latte/indicators"
 
-for validation_command in readelf perl; do
-    command -v "$validation_command" >/dev/null 2>&1 \
-        || fail "required validation command '$validation_command' is missing"
-done
 audit_elf_search_paths "installed binary" "$binary" 0
 package_plugin_labels=(
     "Latte core QML plugin"
@@ -387,10 +396,11 @@ if [[ "$check_only" == 1 ]]; then
     exit 0
 fi
 
-for command in kwin_wayland dbus-run-session busctl pgrep setsid; do
-    command -v "$command" >/dev/null 2>&1 \
-        || fail "required runtime command '$command' is missing; install the package-gate dependencies"
-done
+require_commands runtime \
+    busctl cat chmod dbus-run-session env find kwin_wayland mkdir mktemp pgrep rm seq setsid sh sleep sort tail tr
+if ! command -v fusermount3 >/dev/null 2>&1 && ! command -v fusermount >/dev/null 2>&1; then
+    fail "required runtime command 'fusermount3' or 'fusermount' is missing"
+fi
 
 source "$repo/scripts/lib-nested-kwin.sh"
 
