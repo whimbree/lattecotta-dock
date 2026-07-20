@@ -267,9 +267,18 @@ source "$repo/scripts/lib-nested-kwin.sh"
 
 dock_pid=""
 cleanup() {
+    local cleanup_wait
     set +e
     if [[ -n "$dock_pid" ]] && kill -0 "$dock_pid" 2>/dev/null; then
         kill -TERM "$dock_pid" 2>/dev/null
+        for ((cleanup_wait = 0; cleanup_wait < 25; cleanup_wait++)); do
+            kill -0 "$dock_pid" 2>/dev/null || break
+            sleep 0.2
+        done
+        if kill -0 "$dock_pid" 2>/dev/null; then
+            echo "installed-package-gate: cleanup: dock survived SIGTERM; sending SIGKILL" >&2
+            kill -KILL "$dock_pid" 2>/dev/null
+        fi
         wait "$dock_pid" 2>/dev/null
     fi
     nested_kwin_cleanup
