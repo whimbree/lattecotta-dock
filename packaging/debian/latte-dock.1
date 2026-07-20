@@ -29,6 +29,30 @@ Write debugging messages to standard output.
 .BI \-\-layout " name"
 Load the named layout at startup.
 .TP
+.B \-\-default-layout
+Import and load the default layout at startup.
+.TP
+.BR \-\-available-layouts , " " \-\-available-dock-templates , " " \-\-available-layout-templates
+List the available layouts, dock templates, or layout templates.
+.TP
+.BI \-\-import-layout " absolute-file"
+Import and load a layout file.
+.TP
+.BI \-\-suggested-layout-name " name"
+Set the suggested name used with an imported layout.
+.TP
+.BI \-\-import-full " file"
+Import a complete configuration.
+.TP
+.BI \-\-add-dock " template"
+Add a dock or panel from the named template.
+.TP
+.BR \-\-single , " " \-\-multiple
+Use single-layout or activity-based multiple-layout memory mode.
+.TP
+.BR \-\-enable-autostart , " " \-\-disable-autostart
+Enable or disable application autostart.
+.TP
 .B \-\-clear-cache
 Clear the QML cache before startup.
 .SH SEE ALSO
