@@ -260,6 +260,33 @@ positive="$(
     || { echo "FAIL: ambient QML paths leaked into the validated allow-list" >&2; echo "$positive" >&2; exit 1; }
 echo "PASS: explicit package root accepted and hostile ambient paths ignored"
 
+absolute_internal="$work/absolute-internal-link"
+cp -a "$good" "$absolute_internal"
+absolute_internal_dir="$absolute_internal/usr/lib/qt6/qml/org/kde/latte/components/deep"
+mv "$absolute_internal_dir/Installed.qml" "$absolute_internal_dir/AbsoluteTarget.qml"
+ln -s /usr/lib/qt6/qml/org/kde/latte/components/deep/AbsoluteTarget.qml \
+    "$absolute_internal_dir/Installed.qml"
+absolute_internal_output="$(run_check "$absolute_internal")"
+[[ "$absolute_internal_output" == *"installed-package-gate: CHECK OK"* ]] \
+    || { echo "FAIL: isolated package rejected an in-tree absolute namespace symlink" >&2; echo "$absolute_internal_output" >&2; exit 1; }
+echo "PASS: isolated roots resolve absolute symlinks inside the package namespace"
+
+live_absolute="$work/live-absolute-link"
+cp -a "$good" "$live_absolute"
+live_absolute_dir="$live_absolute/usr/lib/qt6/qml/org/kde/latte/components/deep"
+mv "$live_absolute_dir/Installed.qml" "$live_absolute_dir/AbsoluteTarget.qml"
+ln -s "$live_absolute_dir/AbsoluteTarget.qml" "$live_absolute_dir/Installed.qml"
+live_absolute_manifest="$work/live-absolute.manifest"
+write_package_manifest "$live_absolute" "$live_absolute_manifest" "" /
+live_absolute_output="$(
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+        bash "$gate" --root / --prefix "$live_absolute/usr" \
+        --manifest "$live_absolute_manifest" --check-only
+)"
+[[ "$live_absolute_output" == *"installed-package-gate: CHECK OK"* ]] \
+    || { echo "FAIL: live root rejected an in-tree host-absolute symlink" >&2; echo "$live_absolute_output" >&2; exit 1; }
+echo "PASS: live roots retain host-absolute symlink semantics"
+
 partial_find_bin="$work/partial-find-bin"
 mkdir -p "$partial_find_bin"
 printf '#!/usr/bin/env bash\nprintf "%%s\\0" %q\nexit 73\n' \
@@ -451,8 +478,9 @@ cp -a "$good" "$escaped_qml_content"
 outside_qml="$work/preinstalled-system-content.qml"
 : >"$outside_qml"
 rm "$escaped_qml_content/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
-ln -s "$outside_qml" "$escaped_qml_content/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
-expect_failure "nested QML content symlink escape" "Latte QML tree contains a symlink escaping its installed runtime tree" \
+escaped_qml_link="$escaped_qml_content/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
+ln -s "$(realpath --relative-to="$(dirname "$escaped_qml_link")" "$outside_qml")" "$escaped_qml_link"
+expect_failure "nested QML content symlink escape" "Latte QML tree contains a symlink target escaping the package root" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$escaped_qml_content" --prefix /usr --check-only
 
@@ -462,38 +490,47 @@ outside_qml_directory="$work/preinstalled-system-qml-directory"
 mkdir -p "$outside_qml_directory"
 : >"$outside_qml_directory/Injected.qml"
 rm -rf "$escaped_qml_directory/usr/lib/qt6/qml/org/kde/latte/components/deep"
-ln -s "$outside_qml_directory" "$escaped_qml_directory/usr/lib/qt6/qml/org/kde/latte/components/deep"
-expect_failure "nested external QML directory symlink" "Latte QML tree contains a symlink escaping its installed runtime tree" \
+escaped_qml_directory_link="$escaped_qml_directory/usr/lib/qt6/qml/org/kde/latte/components/deep"
+ln -s "$(realpath --relative-to="$(dirname "$escaped_qml_directory_link")" "$outside_qml_directory")" \
+    "$escaped_qml_directory_link"
+expect_failure "nested external QML directory symlink" "Latte QML tree contains a symlink target escaping the package root" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$escaped_qml_directory" --prefix /usr --check-only
 
 source_qml="$work/source-qml-content"
 cp -a "$good" "$source_qml"
+source_provider="$source_qml/usr/share/source-provider"
+mkdir -p "$source_provider"
+: >"$source_provider/CMakeLists.txt"
+: >"$source_provider/Generated.qml"
 rm "$source_qml/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
-ln -s "$repo/CMakeLists.txt" "$source_qml/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
-expect_failure "nested QML source-tree provider" "Latte QML tree contains a symlink into the source/build tree" \
+ln -s /usr/share/source-provider/Generated.qml \
+    "$source_qml/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
+expect_failure "nested QML source-tree provider" "Latte QML tree contains a symlink into a source tree" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$source_qml" --prefix /usr --check-only
 
-build_provider="$work/external-build-provider"
+build_qml="$work/build-qml-content"
+cp -a "$good" "$build_qml"
+build_provider="$build_qml/usr/share/external-build-provider"
 mkdir -p "$build_provider"
 : >"$build_provider/CMakeCache.txt"
 : >"$build_provider/generated.qml"
-build_qml="$work/build-qml-content"
-cp -a "$good" "$build_qml"
 rm "$build_qml/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
-ln -s "$build_provider/generated.qml" "$build_qml/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
+ln -s /usr/share/external-build-provider/generated.qml \
+    "$build_qml/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
 expect_failure "nested QML build-tree provider" "Latte QML tree contains a symlink into a CMake build tree" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$build_qml" --prefix /usr --check-only
 
-stage_provider="$work/provider/_qmlstage"
-mkdir -p "$stage_provider"
-: >"$stage_provider/Staged.qml"
 stage_qml="$work/stage-qml-content"
 cp -a "$good" "$stage_qml"
+stage_provider="$stage_qml/usr/share/provider/_qmlstage"
+mkdir -p "$stage_provider"
+: >"$stage_provider/Staged.qml"
 rm "$stage_qml/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
-ln -s "$stage_provider/Staged.qml" "$stage_qml/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
+ln -s /usr/share/provider/_qmlstage/Staged.qml \
+    "$stage_qml/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
 expect_failure "nested QML development-stage provider" "Latte QML tree contains a symlink into a development _qmlstage" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$stage_qml" --prefix /usr --check-only
@@ -511,8 +548,9 @@ cp -a "$good" "$escaped_data_content"
 outside_data="$work/preinstalled-system-indicator.qml"
 : >"$outside_data"
 rm "$escaped_data_content/usr/share/latte/indicators/default/Installed.qml"
-ln -s "$outside_data" "$escaped_data_content/usr/share/latte/indicators/default/Installed.qml"
-expect_failure "nested Latte data symlink escape" "Latte data tree contains a symlink escaping its installed runtime tree" \
+escaped_data_link="$escaped_data_content/usr/share/latte/indicators/default/Installed.qml"
+ln -s "$(realpath --relative-to="$(dirname "$escaped_data_link")" "$outside_data")" "$escaped_data_link"
+expect_failure "nested Latte data symlink escape" "Latte data tree contains a symlink target escaping the package root" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$escaped_data_content" --prefix /usr --check-only
 
@@ -522,7 +560,7 @@ internal_unowned="$cross_tree_qml/usr/share/internal-provider"
 mkdir -p "$internal_unowned"
 : >"$internal_unowned/Injected.qml"
 rm "$cross_tree_qml/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
-ln -s "$internal_unowned/Injected.qml" \
+ln -s /usr/share/internal-provider/Injected.qml \
     "$cross_tree_qml/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
 expect_failure "in-prefix cross-tree QML symlink" "Latte QML tree contains a symlink escaping its installed runtime tree" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
@@ -885,4 +923,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (58 focused controls)"
+echo "installed-package-gate-selftest: PASS (60 focused controls)"

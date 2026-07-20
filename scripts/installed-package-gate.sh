@@ -81,6 +81,62 @@ path_is_within() {
     [[ "$base" == / || "$path" == "$base" || "$path" == "$base/"* ]]
 }
 
+# realpath follows absolute links from host /. Walk each component so an
+# absolute link inside an extraction root restarts from that package root.
+resolve_package_namespace_path() {
+    local label="$1" raw="$2" normalized relative resolved pending component candidate
+    local target remainder link_count=0
+
+    if [[ "$package_root" == / ]]; then
+        resolve_native_path "$label" "$raw"
+        return
+    fi
+
+    normalized="$(realpath -ms -- "$raw" 2>/dev/null)" \
+        || fail "$label cannot be normalized in the package namespace: $raw"
+    path_is_within "$normalized" "$package_root" \
+        || fail "$label escapes the package root: $raw"
+    relative="${normalized#"$package_root"}"
+    pending="${relative#/}"
+    resolved="$package_root"
+
+    while [[ -n "$pending" ]]; do
+        component="${pending%%/*}"
+        if [[ "$pending" == */* ]]; then
+            remainder="${pending#*/}"
+        else
+            remainder=""
+        fi
+        candidate="$resolved/$component"
+        if [[ -L "$candidate" ]]; then
+            ((link_count += 1))
+            [[ "$link_count" -le 40 ]] \
+                || fail "$label contains more than 40 chained symlinks: $raw"
+            target="$(readlink "$candidate")" \
+                || fail "$label contains an unreadable symlink: $candidate"
+            if [[ "$target" == /* ]]; then
+                candidate="$package_root/${target#/}"
+            else
+                candidate="$resolved/$target"
+            fi
+            [[ -z "$remainder" ]] || candidate="$candidate/$remainder"
+            normalized="$(realpath -ms -- "$candidate" 2>/dev/null)" \
+                || fail "$label cannot normalize a chained symlink target: $candidate"
+            path_is_within "$normalized" "$package_root" \
+                || fail "$label escapes the package root through a symlink: $normalized"
+            relative="${normalized#"$package_root"}"
+            pending="${relative#/}"
+            resolved="$package_root"
+            continue
+        fi
+        resolved="$candidate"
+        pending="$remainder"
+    done
+
+    [[ -e "$resolved" ]] || fail "$label does not exist in the package namespace: $raw"
+    printf '%s\n' "$resolved"
+}
+
 resolve_native_path() {
     local label="$1" raw="$2" resolved
     case "$raw" in
@@ -151,7 +207,8 @@ collect_find_results() {
 }
 
 audit_package_tree() {
-    local label="$1" tree="$2" tree_resolved entry link target target_candidate target_normalized link_resolved provider_dir
+    local label="$1" tree="$2" tree_resolved entry link target target_candidate target_normalized
+    local logical_target link_resolved provider_dir
     local -a tree_entries=() tree_links=()
     [[ ! -L "$tree" ]] || fail "$label root must not be a symlink: $tree"
     [[ -d "$tree" ]] || fail "package is incomplete: missing $label at $tree"
@@ -167,27 +224,39 @@ audit_package_tree() {
     for link in "${tree_links[@]}"; do
         target="$(readlink "$link")" \
             || fail "$label contains an unreadable symlink: $link"
-        if [[ "$target" == /* ]]; then
+        if [[ "$target" == /* && "$package_root" != / ]]; then
+            target_candidate="$package_root/${target#/}"
+        elif [[ "$target" == /* ]]; then
             target_candidate="$target"
         else
             target_candidate="$(dirname "$link")/$target"
         fi
-        target_normalized="$(realpath -m "$target_candidate" 2>/dev/null)" \
+        target_normalized="$(realpath -ms -- "$target_candidate" 2>/dev/null)" \
             || fail "$label symlink target cannot be normalized: $link -> $target"
-        case "$target_normalized" in
+        path_is_within "$target_normalized" "$package_root" \
+            || fail "$label contains a symlink target escaping the package root: $link -> $target_normalized"
+        if [[ "$package_root" == / ]]; then
+            logical_target="$target_normalized"
+        else
+            logical_target="${target_normalized#"$package_root"}"
+            [[ -n "$logical_target" ]] || logical_target=/
+        fi
+        case "$logical_target" in
             /nix/store/*)
-                fail "$label contains a symlink into /nix/store: $link -> $target_normalized"
-                ;;
-            "$repo"|"$repo/"*)
-                fail "$label contains a symlink into the source/build tree: $link -> $target_normalized"
-                ;;
-            *'/_qmlstage'|*'/_qmlstage/'*)
-                fail "$label contains a symlink into a development _qmlstage: $link -> $target_normalized"
+                fail "$label contains a symlink into /nix/store: $link -> $logical_target"
                 ;;
         esac
-        [[ -e "$link" ]] \
-            || fail "$label contains a broken symlink: $link -> $target"
-        provider_dir="$target_normalized"
+        link_resolved="$(resolve_package_namespace_path "$label symlink" "$target_candidate")" \
+            || fail "$label contains a broken or unresolvable symlink: $link -> $target"
+        case "$link_resolved" in
+            "$repo"|"$repo/"*)
+                fail "$label contains a symlink into the source/build tree: $link -> $link_resolved"
+                ;;
+            *'/_qmlstage'|*'/_qmlstage/'*)
+                fail "$label contains a symlink into a development _qmlstage: $link -> $link_resolved"
+                ;;
+        esac
+        provider_dir="$link_resolved"
         [[ -d "$provider_dir" ]] || provider_dir="$(dirname "$provider_dir")"
         while [[ "$provider_dir" != / ]]; do
             if [[ -e "$provider_dir/.git" || -f "$provider_dir/CMakeLists.txt" ]]; then
@@ -198,7 +267,6 @@ audit_package_tree() {
             fi
             provider_dir="$(dirname "$provider_dir")"
         done
-        link_resolved="$(resolve_native_path "$label symlink" "$link")"
         path_is_within "$link_resolved" "$tree_resolved" \
             || fail "$label contains a symlink escaping its installed runtime tree: $link -> $link_resolved"
     done
