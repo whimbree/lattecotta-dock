@@ -8,9 +8,8 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 %:
 	dh $@ --buildsystem=cmake+ninja
 
-override_dh_auto_configure:
-	dh_auto_configure -- \
-		-DBUILD_TESTING=OFF \
-		-DCMAKE_BUILD_TYPE=Release
-
+# The qmllint baseline deliberately pins the Nix merge-gate toolchain and
+# rejects distro qmllint versions. The package build runs every other CTest
+# entry; gate-all runs the pinned qmllint gate on the final commit.
 override_dh_auto_test:
+	dh_auto_test -- --exclude-regex '^qmllintgate$$'
