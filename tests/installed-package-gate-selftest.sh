@@ -10,7 +10,7 @@ set -euo pipefail
 
 for required_command in \
         awk bash c++ cc chmod cp dirname env find ld ln mkdir mktemp mv patchelf pgrep \
-        pkg-config readelf realpath rm setsid sleep; do
+        pkg-config readelf realpath rm setsid sleep timeout; do
     command -v "$required_command" >/dev/null 2>&1 || {
         printf "installed-package-gate-selftest: FAIL: required command '%s' is missing\n" \
             "$required_command" >&2
@@ -260,6 +260,30 @@ if latte_package_gate_choose_qt6_plugin_info rejected_qt_plugin_info "$fake_qt5_
     exit 1
 fi
 echo "PASS: Qt 5-only qtplugininfo is rejected by version"
+
+misleading_qt_plugin_info="$work/misleading-qtplugininfo"
+printf '#!/usr/bin/env bash\nprintf "diagnostic 6.99.0\\nqplugininfo 5.15.2\\n"\n' \
+    >"$misleading_qt_plugin_info"
+chmod +x "$misleading_qt_plugin_info"
+selected_qt_plugin_info=""
+latte_package_gate_choose_qt6_plugin_info selected_qt_plugin_info \
+    "$misleading_qt_plugin_info" "$real_qt_plugin_info"
+[[ "$selected_qt_plugin_info" == "$real_qt_plugin_info" ]] \
+    || { echo "FAIL: unrelated 6.x output was accepted as a Qt 6 tool version" >&2; exit 1; }
+echo "PASS: misleading version output is skipped for the next Qt 6 candidate"
+
+hanging_qt_plugin_info="$work/hanging-qtplugininfo"
+printf '#!/usr/bin/env bash\nexec sleep 60\n' >"$hanging_qt_plugin_info"
+chmod +x "$hanging_qt_plugin_info"
+selected_qt_plugin_info=""
+qt_version_probe_start="$SECONDS"
+latte_package_gate_choose_qt6_plugin_info selected_qt_plugin_info \
+    "$hanging_qt_plugin_info" "$real_qt_plugin_info"
+qt_version_probe_seconds=$((SECONDS - qt_version_probe_start))
+[[ "$selected_qt_plugin_info" == "$real_qt_plugin_info" \
+        && "$qt_version_probe_seconds" -lt 10 ]] \
+    || { echo "FAIL: hanging version probe did not continue boundedly to the next candidate" >&2; exit 1; }
+echo "PASS: hanging version probes time out and continue to the next Qt 6 candidate"
 
 expect_failure "live root without ownership manifest" \
     "--manifest is required with --root /" \
@@ -1106,4 +1130,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (73 focused controls)"
+echo "installed-package-gate-selftest: PASS (75 focused controls)"

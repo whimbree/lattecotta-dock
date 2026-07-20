@@ -34,8 +34,14 @@ unset latte_package_gate_loader_variable
 
 _latte_package_gate_qt_plugin_info_is_qt6() {
     local tool="$1" version_output
-    version_output="$("$tool" --version 2>&1)" || return 1
-    [[ "$version_output" =~ (^|[^0-9])6\.[0-9]+(\.[0-9]+)?([^0-9]|$) ]]
+    local version_pattern='^(qplugininfo|qtplugininfo|qtplugininfo6|qtplugininfo-qt6)[[:space:]]+([0-9]+)\.([0-9]+)(\.([0-9]+))?$'
+
+    version_output="$(timeout --kill-after=1s 2s "$tool" --version 2>&1)" \
+        || return 1
+    [[ "$version_output" != *$'\n'* && "$version_output" =~ $version_pattern ]] \
+        || return 1
+    [[ "${BASH_REMATCH[2]}" == 6 ]] || return 1
+    return 0
 }
 
 latte_package_gate_choose_qt6_plugin_info() {
