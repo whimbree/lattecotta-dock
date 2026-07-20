@@ -44,34 +44,45 @@ set_konsole_maximized() {
     local enabled="$1"
     e2e_kwin_js "for (const w of workspace.windowList()) {
         if (w.resourceClass === 'org.kde.konsole' && w.caption.includes('LATTE D27 MAXIMIZE')) {
+            workspace.activeWindow = w;
             w.setMaximize($enabled, $enabled);
-            print('@TAG@|changed');
+            print('@TAG@|' + w.internalId);
         }
     }"
 }
 
+active_window_id() {
+    e2e_kwin_js 'print("@TAG@|" + (workspace.activeWindow ? workspace.activeWindow.internalId : "none"));' | tail -1
+}
+
 konsole_frame_geometry() {
-    local window geometry x y width height extra
+    local window geometry x y width height output extra
     window="$(e2e_dumpwins | grep '|org.kde.konsole|LATTE D27 MAXIMIZE' | tail -1)" || return 1
     [[ -n "$window" ]] || return 1
     geometry="$(awk -F'|' '{ split($4, g, " "); split(g[1], p, ","); split(g[2], s, "x"); print p[1], p[2], s[1], s[2] }' <<<"$window")"
     read -r x y width height extra <<< "$geometry"
+    output="$(awk -F'|' '{ print $5 }' <<<"$window")"
     [[ -z "$extra" && "$x" =~ ^-?[0-9]+$ && "$y" =~ ^-?[0-9]+$ && "$width" =~ ^[0-9]+$ && "$height" =~ ^[0-9]+$ ]] || return 1
-    printf '%s %s %s %s\n' "$x" "$y" "$width" "$height"
+    (( width > 0 && height > 0 )) || return 1
+    [[ -n "$output" ]] || return 1
+    printf '%s %s %s %s %s\n' "$x" "$y" "$width" "$height" "$output"
 }
 
 assert_konsole_work_area() {
-    local phase="$1" geometry kx ky kw kh expected_boundary actual_boundary
+    local phase="$1" geometry kx ky kw kh output expected_x expected_y expected_w expected_h
     geometry="$(konsole_frame_geometry)" || e2e_fail "$phase maximize has no valid Konsole frame geometry"
-    read -r kx ky kw kh <<< "$geometry"
+    read -r kx ky kw kh output <<< "$geometry"
+    [[ "$output" == "$screen" ]] || e2e_fail "$phase maximize placed the Konsole fixture on output '$output'; expected discovered output '$screen'"
+    expected_x=$screen_x
+    expected_w=$screen_w
+    expected_h=$((screen_h - max_strut))
     if [[ "$edge" == top ]]; then
-        expected_boundary=$((screen_y + max_strut))
-        actual_boundary=$ky
+        expected_y=$((screen_y + max_strut))
     else
-        expected_boundary=$((screen_y + screen_h - max_strut))
-        actual_boundary=$((ky + kh))
+        expected_y=$screen_y
     fi
-    (( actual_boundary == expected_boundary )) || e2e_fail "$phase maximize kept a stale $edge work-area boundary at $actual_boundary; expected $expected_boundary from screen and ${max_strut}px strut"
+    (( kx == expected_x && ky == expected_y && kw == expected_w && kh == expected_h )) \
+        || e2e_fail "$phase maximize has frame $kx,$ky ${kw}x${kh}; expected exact $edge work area $expected_x,$expected_y ${expected_w}x${expected_h} on output '$screen' from the ${max_strut}px strut"
 }
 
 cleanup() {
@@ -131,7 +142,9 @@ done
 tracker_enabled="$(e2e_json trackerData u "$view" | python3 -c 'import json, sys; print(str(json.load(sys.stdin)["enabled"]).lower())')"
 [[ "$tracker_enabled" == true ]] || e2e_fail "Always Visible hide-gap fixture did not enable window tracking"
 
-read -r base_w base_strut base_published screen_x screen_y screen_w screen_h edge <<< "$(e2e_view_field "$view" '"%d %d %d %d %d %d %d %s" % (v["absoluteGeometry"][2], v["strutsThickness"], v["publishedStruts"][3], v["screenGeometry"][0], v["screenGeometry"][1], v["screenGeometry"][2], v["screenGeometry"][3], v["edge"])')"
+read -r base_w base_strut base_published screen_x screen_y screen_w screen_h edge screen <<< "$(e2e_view_field "$view" '"%d %d %d %d %d %d %d %s %s" % (v["absoluteGeometry"][2], v["strutsThickness"], v["publishedStruts"][3], v["screenGeometry"][0], v["screenGeometry"][1], v["screenGeometry"][2], v["screenGeometry"][3], v["edge"], v["screen"])')"
+(( screen_w > 0 && screen_h > 0 )) || e2e_fail "view $view reported invalid output dimensions ${screen_w}x${screen_h}"
+[[ -n "$screen" ]] || e2e_fail "view $view did not report its output name"
 (( base_w * 100 < screen_w * 90 )) || e2e_fail "fixture view $view did not start at a floating length ($base_w of ${screen_w}px)"
 (( base_strut == base_published )) || e2e_fail "base strut was not published (thickness=$base_strut published=$base_published)"
 
@@ -146,27 +159,29 @@ done
 
 #! Konsole can remember a maximized state from an earlier nested run. Normalize
 #! the fixture before generating the first maximize edge.
-[[ "$(set_konsole_maximized false)" == changed ]] || e2e_fail "KWin did not normalize the Konsole maximize fixture"
+fixture_id="$(set_konsole_maximized false)" || e2e_fail "KWin did not normalize the Konsole maximize fixture"
+[[ -n "$fixture_id" && "$fixture_id" != *$'\n'* ]] || e2e_fail "KWin found multiple tagged Konsole fixtures"
 for _ in $(seq 1 40); do
-    read -r tracked normalized_published <<< "$(e2e_json trackerData u "$view" | python3 -c '
+    read -r active_maximized exists_maximized normalized_published <<< "$(e2e_json trackerData u "$view" | python3 -c '
 import json, sys
-print(str(json.load(sys.stdin)["existsWindowMaximized"]).lower(), end=" ")
+tracker = json.load(sys.stdin)
+print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMaximized"]).lower(), end=" ")
 '; e2e_view_field "$view" 'v["publishedStruts"][3]')"
-    [[ "$tracked" == false && "$normalized_published" == "$base_strut" ]] && break
+    [[ "$active_maximized" == false && "$exists_maximized" == false && "$normalized_published" == "$base_strut" ]] && break
     sleep 0.25
 done
-[[ "$tracked" == false && "$normalized_published" == "$base_strut" ]] || e2e_fail "Konsole fixture did not normalize to restored state"
+[[ "$active_maximized" == false && "$exists_maximized" == false && "$normalized_published" == "$base_strut" ]] || e2e_fail "Konsole fixture did not normalize to restored state"
 
-[[ "$(set_konsole_maximized true)" == changed ]] || e2e_fail "KWin did not find the Konsole maximize fixture"
+[[ "$(set_konsole_maximized true)" == "$fixture_id" ]] || e2e_fail "KWin did not maximize the tagged Konsole fixture"
 
 maximized=false
 for _ in $(seq 1 40); do
-    read -r tracked max_w max_strut max_published <<< "$(e2e_json trackerData u "$view" | python3 -c '
+    read -r active_maximized exists_maximized max_w max_strut max_published <<< "$(e2e_json trackerData u "$view" | python3 -c '
 import json, sys
 t = json.load(sys.stdin)
-print(str(t["existsWindowMaximized"]).lower(), end=" ")
+print(str(t["activeWindowMaximized"]).lower(), str(t["existsWindowMaximized"]).lower(), end=" ")
 '; e2e_view_field "$view" '"%d %d %d" % (v["absoluteGeometry"][2], v["strutsThickness"], v["publishedStruts"][3])')"
-    if [[ "$tracked" == true && "$max_strut" == "$max_published" ]]; then
+    if [[ "$active_maximized" == true && "$exists_maximized" == true && "$max_strut" == "$max_published" ]]; then
         maximized=true
         break
     fi
@@ -175,27 +190,30 @@ done
 if [[ "$maximized" != true ]]; then
     tracker_payload="$(e2e_json trackerData u "$view" 2>/dev/null || true)"
     frame_geometry="$(konsole_frame_geometry 2>/dev/null || true)"
-    e2e_fail "maximized window did not reach tracker and the published strut (tracked=$tracked thickness=$max_strut published=$max_published frame='${frame_geometry:-unavailable}' tracker='${tracker_payload:-unavailable}')"
+    e2e_fail "active tagged window did not reach tracker and the published strut (active=$active_maximized exists=$exists_maximized thickness=$max_strut published=$max_published frame='${frame_geometry:-unavailable}' tracker='${tracker_payload:-unavailable}')"
 fi
 (( max_strut < base_strut )) || e2e_fail "maximized floating gap did not shrink the strut ($base_strut -> $max_strut)"
+(( max_strut > 0 && max_strut < screen_h )) || e2e_fail "maximized strut $max_strut is invalid for ${screen_w}x${screen_h} output '$screen'"
+[[ "$(active_window_id)" == "$fixture_id" ]] || e2e_fail "tagged Konsole was not active when activeWindowMaximized became true"
 
 assert_konsole_work_area first
 
-[[ "$(set_konsole_maximized false)" == changed ]] || e2e_fail "KWin did not restore the Konsole maximize fixture"
+[[ "$(set_konsole_maximized false)" == "$fixture_id" ]] || e2e_fail "KWin did not restore the tagged Konsole fixture"
 
 restored=false
 for _ in $(seq 1 40); do
-    read -r tracked restored_w restored_published <<< "$(e2e_json trackerData u "$view" | python3 -c '
+    read -r active_maximized exists_maximized restored_w restored_published <<< "$(e2e_json trackerData u "$view" | python3 -c '
 import json, sys
-print(str(json.load(sys.stdin)["existsWindowMaximized"]).lower(), end=" ")
+tracker = json.load(sys.stdin)
+print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMaximized"]).lower(), end=" ")
 '; e2e_view_field "$view" '"%d %d" % (v["absoluteGeometry"][2], v["publishedStruts"][3])')"
-    if [[ "$tracked" == false && "$restored_published" == "$base_strut" ]] && (( restored_w * 100 < screen_w * 90 )); then
+    if [[ "$active_maximized" == false && "$exists_maximized" == false && "$restored_published" == "$base_strut" ]] && (( restored_w * 100 < screen_w * 90 )); then
         restored=true
         break
     fi
     sleep 0.25
 done
-[[ "$restored" == true ]] || e2e_fail "restored window left maximize state or full-width geometry behind (tracked=$tracked width=$restored_w)"
+[[ "$restored" == true ]] || e2e_fail "restored window left active/exists maximize state or full-width geometry behind (active=$active_maximized exists=$exists_maximized width=$restored_w)"
 
 #! Keep the second maximize close to the restore and require the reservation to
 #! land well below the old one-second delay.
@@ -205,16 +223,21 @@ set_konsole_maximized true >/dev/null &
 shortcut_pid=$!
 reservation_ms=-1
 for _ in $(seq 1 100); do
-    published="$(e2e_view_field "$view" 'v["publishedStruts"][3]')"
-    if [[ "$published" == "$max_strut" ]]; then
+    read -r active_maximized exists_maximized published <<< "$(e2e_json trackerData u "$view" | python3 -c '
+import json, sys
+tracker = json.load(sys.stdin)
+print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMaximized"]).lower(), end=" ")
+'; e2e_view_field "$view" 'v["publishedStruts"][3]')"
+    if [[ "$active_maximized" == true && "$exists_maximized" == true && "$published" == "$max_strut" ]]; then
         reservation_ms=$(( ($(date +%s%N) - start_ns) / 1000000 ))
         break
     fi
     sleep 0.01
 done
-wait "$shortcut_pid"
+wait "$shortcut_pid" || e2e_fail "KWin did not find the tagged Konsole fixture during the second maximize"
 (( reservation_ms >= 0 )) || e2e_fail "second maximize never published the $max_strut px strut"
 (( reservation_ms < 750 )) || e2e_fail "second maximize waited ${reservation_ms}ms behind the geometry throttle"
+[[ "$(active_window_id)" == "$fixture_id" ]] || e2e_fail "tagged Konsole was not active during the timed maximize transition"
 
 assert_konsole_work_area second
 

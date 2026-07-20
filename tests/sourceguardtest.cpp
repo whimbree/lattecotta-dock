@@ -14,6 +14,8 @@
 //     arithmetic plus unqualified self-call, infinite recursion)
 //   * View::WindowsTracker enabled Binding  plural property typo (the floating
 //     gap requester never enabled tracking for AlwaysVisible views)
+//   * Wayland window-signal routing: maximize edges stay immediate while noisy
+//     window properties stay coalesced
 //   * VisibilityManager strut routing: discrete exclusive-zone thickness
 //     changes publish directly while geometry churn stays throttled
 //
@@ -21,14 +23,15 @@
 // (tests/sourceguardtest.cpp at 81384003, github.com/CaptSilver/latte-dock-qt6):
 // read the real source, brace-match the function body, strip whitespace and
 // assert the fixed token form both positively and negatively, so the typo
-// cannot silently return. Only those two cases are adopted; the WindowsTracker
-// and strut-routing guards are specific to this tree. The rest of his file pins
-// a delegation-helper architecture that this tree deliberately does not share
+// cannot silently return. Only those two cases are adopted; the remaining
+// guards are specific to this tree. The rest of his file pins a
+// delegation-helper architecture that this tree deliberately does not share
 // (docs/archive/captsilver-testability-adoption.md, the not-adopting list).
 
 #include <QFile>
 #include <QRegularExpression>
 #include <QString>
+#include <QStringList>
 #include <QtTest>
 
 class SourceGuardTest : public QObject
@@ -80,6 +83,7 @@ private Q_SLOTS:
     void visibilityManager_updateSidebarState_assignsState();
     void layoutsController_modeIsChanged_delegatesToModel();
     void windowsTrackerBinding_tracksHiddenFloatingGap();
+    void waylandWindowSignals_keepDeliveryPolicy();
     void visibilityManager_strutThicknessBypassesGeometryThrottle();
 };
 
@@ -128,19 +132,58 @@ void SourceGuardTest::windowsTrackerBinding_tracksHiddenFloatingGap()
              "WindowsTracker hide-gap arm uses the nonexistent plural screenEdgeMarginsEnabled property");
 }
 
+void SourceGuardTest::waylandWindowSignals_keepDeliveryPolicy()
+{
+    const QString s = stripped(functionBody(readFile(QStringLiteral("app/wm/waylandinterface.cpp")),
+                                            QStringLiteral("void WaylandInterface::trackWindow(KWayland::Client::PlasmaWindow *w)")));
+    QVERIFY2(!s.isEmpty(), "WaylandInterface::trackWindow() not found");
+
+    const QString maximizedSignal = QStringLiteral("&PlasmaWindow::maximizedChanged");
+    QCOMPARE(s.count(maximizedSignal), 1);
+    QVERIFY2(s.contains(QStringLiteral("connect(w,&PlasmaWindow::maximizedChanged,this,&WaylandInterface::updateWindowMaximized);")),
+             "maximizedChanged must retain its immediate updateWindowMaximized route");
+
+    const QStringList noisySignals{
+        QStringLiteral("activeChanged"),
+        QStringLiteral("titleChanged"),
+        QStringLiteral("fullscreenChanged"),
+        QStringLiteral("geometryChanged"),
+        QStringLiteral("minimizedChanged"),
+        QStringLiteral("shadedChanged"),
+        QStringLiteral("skipTaskbarChanged"),
+        QStringLiteral("onAllDesktopsChanged"),
+        QStringLiteral("parentWindowChanged"),
+        QStringLiteral("plasmaVirtualDesktopEntered"),
+        QStringLiteral("plasmaVirtualDesktopLeft"),
+        QStringLiteral("plasmaActivityEntered"),
+        QStringLiteral("plasmaActivityLeft"),
+    };
+    for (const QString &signal : noisySignals) {
+        const QString signalReference = QStringLiteral("&PlasmaWindow::%1").arg(signal);
+        const QString expectedConnection = QStringLiteral("connect(w,%1,this,&WaylandInterface::updateWindow);").arg(signalReference);
+        QCOMPARE(s.count(signalReference), 1);
+        QVERIFY2(s.contains(expectedConnection),
+                 qPrintable(QStringLiteral("%1 must retain its coalesced updateWindow route").arg(signal)));
+    }
+}
+
 void SourceGuardTest::visibilityManager_strutThicknessBypassesGeometryThrottle()
 {
     const QString s = stripped(functionBody(readFile(QStringLiteral("app/view/visibilitymanager.cpp")),
                                             QStringLiteral("void VisibilityManager::setMode(Latte::Types::Visibility mode)")));
     QVERIFY2(!s.isEmpty(), "VisibilityManager::setMode() not found");
+    QCOMPARE(s.count(QStringLiteral("&VisibilityManager::strutsThicknessChanged")), 1);
     QVERIFY2(s.contains(QStringLiteral("connect(this,&VisibilityManager::strutsThicknessChanged,this,[&](){updateStrutsBasedOnLayoutsAndActivities();})")),
              "strutsThicknessChanged must publish the layer-shell exclusive zone directly");
     QVERIFY2(!s.contains(QStringLiteral("connect(this,&VisibilityManager::strutsThicknessChanged,&VisibilityManager::updateStrutsAfterTimer)")),
              "strutsThicknessChanged must not wait behind the geometry throttle");
+    QCOMPARE(s.count(QStringLiteral("&Latte::View::absoluteGeometryChanged")), 1);
     QVERIFY2(s.contains(QStringLiteral("connect(m_latteView,&Latte::View::absoluteGeometryChanged,this,&VisibilityManager::updateStrutsAfterTimer)")),
              "absoluteGeometryChanged must retain the floating-panel feedback throttle");
+    QCOMPARE(s.count(QStringLiteral("&Latte::ScreenPool::screenGeometryChanged")), 1);
     QVERIFY2(s.contains(QStringLiteral("connect(m_corona->screenPool(),&Latte::ScreenPool::screenGeometryChanged,this,&VisibilityManager::updateStrutsAfterTimer)")),
              "screenGeometryChanged must retain the floating-panel feedback throttle");
+    QCOMPARE(s.count(QStringLiteral("&ViewPart::Positioner::isOffScreenChanged")), 1);
     QVERIFY2(s.contains(QStringLiteral("connect(m_latteView->positioner(),&ViewPart::Positioner::isOffScreenChanged,this,&VisibilityManager::updateStrutsAfterTimer)")),
              "isOffScreenChanged must retain the floating-panel feedback throttle");
 }
