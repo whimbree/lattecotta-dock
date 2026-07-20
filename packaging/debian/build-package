@@ -30,6 +30,8 @@ mkdir -p "$output_dir"
 git -C "$repo" archive --format=tar --prefix="$source_name/" HEAD \
     | tar -xf - -C "$output_dir"
 mv "$source_dir/packaging/debian" "$source_dir/debian"
+# The tracked Nix result link is a local build entry point, not upstream source.
+rm "$source_dir/result"
 
 # Normalize the archive metadata so the same Git tree produces the same orig tarball.
 tar --sort=name --mtime="@$source_epoch" --clamp-mtime \
