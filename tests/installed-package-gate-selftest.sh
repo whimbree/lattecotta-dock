@@ -201,12 +201,20 @@ readelf -h "$fixture_plugin" >/dev/null 2>&1 \
 
 action_metadata="$work/action-metadata.json"
 indicator_metadata="$work/indicator-metadata.json"
+wrong_action_metadata="$work/wrong-action-metadata.json"
+wrong_indicator_metadata="$work/wrong-indicator-metadata.json"
 printf '%s\n' \
     '{"KPlugin":{"Id":"org.kde.latte.contextmenu","ServiceTypes":["Plasma/ContainmentActions"]}}' \
     >"$action_metadata"
 printf '%s\n' \
     '{"KPackageStructure":"Latte/Indicator","X-KDE-ParentApp":"org.kde.latte-dock"}' \
     >"$indicator_metadata"
+printf '%s\n' \
+    '{"KPlugin":{"Id":"org.kde.latte.contextmenu","ServiceTypes":["Plasma/Applet"]}}' \
+    >"$wrong_action_metadata"
+printf '%s\n' \
+    '{"KPackageStructure":"Plasma/Applet","X-KDE-ParentApp":"org.kde.latte-dock"}' \
+    >"$wrong_indicator_metadata"
 fixture_core_plugin="$work/liblattecoreplugin.so"
 fixture_containment_plugin="$work/liblattecontainmentplugin.so"
 fixture_tasks_plugin="$work/liblattetasksplugin.so"
@@ -484,6 +492,46 @@ cp "$fixture_plugin" \
 expect_failure "generic shared library in a plugin slot" "has no valid Qt plugin metadata" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$generic_action" --prefix /usr --check-only
+
+wrong_iid_core="$work/wrong-iid-core-plugin"
+cp -a "$good" "$wrong_iid_core"
+build_qt_plugin \
+    "$wrong_iid_core/usr/lib/qt6/qml/org/kde/latte/core/liblattecoreplugin.so" \
+    LatteCorePlugin org.kde.KPluginFactory
+expect_failure "valid core plugin with the wrong IID" \
+    "Latte core QML plugin has IID 'org.kde.KPluginFactory', expected 'org.qt-project.Qt.QQmlExtensionInterface'" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$wrong_iid_core" --prefix /usr --check-only
+
+wrong_class_action="$work/wrong-class-action-plugin"
+cp -a "$good" "$wrong_class_action"
+build_qt_plugin \
+    "$wrong_class_action/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so" \
+    WrongMenuFactory org.kde.KPluginFactory "$action_metadata"
+expect_failure "valid containment-actions plugin with the wrong class" \
+    "Latte containment-actions plugin has class 'WrongMenuFactory', expected 'MenuFactory'" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$wrong_class_action" --prefix /usr --check-only
+
+wrong_category_action="$work/wrong-category-action-plugin"
+cp -a "$good" "$wrong_category_action"
+build_qt_plugin \
+    "$wrong_category_action/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so" \
+    MenuFactory org.kde.KPluginFactory "$wrong_action_metadata"
+expect_failure "valid containment-actions plugin with the wrong category" \
+    "metadata does not declare the org.kde.latte.contextmenu Plasma/ContainmentActions type" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$wrong_category_action" --prefix /usr --check-only
+
+wrong_category_indicator="$work/wrong-category-indicator-plugin"
+cp -a "$good" "$wrong_category_indicator"
+build_qt_plugin \
+    "$wrong_category_indicator/usr/lib/qt6/plugins/kpackage/packagestructure/latte_indicator.so" \
+    latte_packagestructure_indicator_factory org.kde.KPluginFactory "$wrong_indicator_metadata"
+expect_failure "valid indicator plugin with the wrong package category" \
+    "metadata does not declare the Latte/Indicator package-structure type for org.kde.latte-dock" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$wrong_category_indicator" --prefix /usr --check-only
 
 unloadable_action="$work/unloadable-action-plugin"
 cp -a "$good" "$unloadable_action"
@@ -961,4 +1009,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (63 focused controls)"
+echo "installed-package-gate-selftest: PASS (67 focused controls)"
