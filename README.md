@@ -110,13 +110,16 @@ phases, one commit-traceable checklist item per task. The coarse picture:
       isolated from the live session - asserting over the D-Bus surface
       first and over pixel goldens only where pixels are the thing under
       test (hover previews, drag reorder, wheel routing, lifecycle)
-- [ ] Distro packaging beyond NixOS: local recipes are available for
-      Debian-family `.deb` packages, a shared Fedora/openSUSE `.rpm`, and
-      Arch `PKGBUILD`/`.SRCINFO`. Locally built packages from all four target
-      environments have passed the installed-artifact gate under nested KWin.
-      Gentoo and Void recipes remain pending. No PPA, Copr, OBS project, AUR
-      package, official repository package, release artifact, or other package
-      publication exists.
+- [x] Local native packaging beyond NixOS: all five recipe formats are
+      available for Debian-family `.deb` packages, a shared Fedora/openSUSE
+      `.rpm`, Arch `PKGBUILD`/`.SRCINFO`, a Gentoo ebuild overlay, and a Void
+      `xbps-src` template. The Debian-family, shared RPM, Arch, and Void formats
+      have fresh-environment install proof. Gentoo has a built GPKG, a Portage-
+      owned manifest, package/source reinstall evidence, and installed-artifact
+      proof through exact mappings, nested-KWin startup, and clean shutdown. No
+      official package or repository, package publication, package-artifact CI,
+      release, tag, artifact upload, sponsorship, or distribution endorsement
+      exists.
 - [ ] Accessibility: keyboard navigation for every interactive surface,
       Accessible roles/names on every interactive item, and a
       screen-reader pass with Orca as the acceptance test. Two pieces
@@ -264,11 +267,17 @@ published through a distribution repository or package service:
   [`make-snapshot-source.sh`](packaging/rpm/make-snapshot-source.sh) helper.
 - Arch package: [`packaging/arch/PKGBUILD`](packaging/arch/PKGBUILD) with its
   generated [`packaging/arch/.SRCINFO`](packaging/arch/.SRCINFO).
+- Gentoo ebuild overlay: [`packaging/gentoo/`](packaging/gentoo/).
+- Void `xbps-src` template and staging helper:
+  [`packaging/void/`](packaging/void/).
 
-These recipes have been validated by installing their locally built artifacts
-in fresh KDE neon, Fedora, openSUSE Tumbleweed, and Arch environments and
-running the installed-package nested-runtime gate. They are source-tree build
-inputs, not an announcement of uploaded or officially endorsed packages.
+The Debian-family, shared RPM, Arch, and Void artifacts were installed in fresh
+target environments and ran the installed-package nested-runtime gate. The
+Gentoo recipe produced a local GPKG; its package/source reinstall supplied the
+Portage-owned manifest, and the installed-artifact gate passed exact executable
+and plugin mappings, nested-KWin startup, and clean shutdown. These are source-
+tree build inputs, not official or published packages. No package-artifact CI,
+release, tag, upload, sponsorship, or distribution endorsement exists.
 
 ### From source (any distro)
 

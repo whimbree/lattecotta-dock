@@ -3,6 +3,36 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-20.
 
+## 2026-07-20: packaging wave B native recipes finalized
+
+PR #85 landed F5 (the Void native package recipe) as post-rebase commits
+`ea1bc5acb` and `ced7a48a5`. A fresh Void checkout built exact source head
+`fbdc3a3150b5fe4dad788e189101e9989129fbb8`; xlint, XBPS package integrity,
+desktop-file and AppStream validation, the 552-entry owned-file manifest, and
+the installed-package gate through five mappings, nested-KWin startup, and clean
+shutdown all passed. The fast repository gate passed 94/94 plus all 77 focused
+installed-package controls at that same pre-rebase head `fbdc3a315`.
+
+PR #86 landed F4 (the Gentoo native package recipe) as post-rebase commit
+`22cb06836`. Portage resolved the test and no-test closures, the forced source
+rebuild passed all 90 selected tests, rebuilt GPKG metadata recorded the exact
+Vulkan subslot requirements, and pkgcheck and Manifest QA passed. The built GPKG
+and package/source reinstall produced a 552-object Portage-owned manifest; the
+installed-package gate passed exact mappings, nested-KWin startup, and clean
+shutdown. The fast repository gate passed 94 CTest entries, qmllint, all 13 scene
+probes, and matrix fixtures at pre-rebase head
+`d38e12ed26a198b56b76773adae8ae8c5534713a`.
+
+All five local recipe formats now exist. Wave A (the Debian-family, shared RPM,
+and Arch formats) and Void have fresh/clean target install evidence as recorded
+above and in their PRs. Gentoo has package/source reinstall evidence rather than
+a pristine first-install environment, without reducing its built-package,
+ownership, or installed-runtime proof. F6 (the package-artifact CI task) remains
+pending and outside this recipe-finalization scope. No official package or
+repository, package publication, hosted CI, release, tag, artifact upload,
+sponsorship, or distribution endorsement exists. No settings-plan or defect
+state changed.
+
 ## 2026-07-20: packaging wave A native recipes finalized
 
 PRs #80, #81, and #82 landed F3 (the Arch native PKGBUILD and generated
@@ -57,8 +87,9 @@ Their post-rebase equivalents are `a04c47614`, `85ed78b2c`, and `f1184c3d3`;
 F1's later `71fa379c2` follow-up changed only manpage aliases and passed its
 focused documentation and lint checks. No hosted CI, official repository,
 release, tag, upload, publication, sponsorship, or endorsement was created.
-Gentoo and Void recipes remain pending. No settings or defect state changed,
-and no new defect was found or filed.
+Gentoo and Void followed in PRs #85 and #86, with current evidence recorded
+above. No settings or defect state changed, and no new defect was found or
+filed.
 
 ## 2026-07-20: D25 (task icons stay stale after icon-theme changes) fixed
 

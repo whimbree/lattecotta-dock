@@ -31,12 +31,10 @@ gate; the distro matrix is the release/periodic gate.
 
 The procedural entry point remains `docs/prompts/multi-distro-ci-orchestrator-
 prompt.md`; the execution prompt retains the standing mission and context.
-Phases A-C (local distro containers, headless gates, and golden tiers), F1
-(the Debian-family native recipe), F2 (the shared Fedora/openSUSE RPM recipe),
-and F3 (the Arch native PKGBUILD) are complete. F4 (the Gentoo recipe) and F5
-(the Void recipe) are active and open at this snapshot. F6 (package-artifact
-CI), Phase D (the hosted CI matrix), Phase E (the release), and Phase G (package
-upstreaming) remain pending and are outside the current recipe-wave scope.
+Phases A-C (local distro containers, headless gates, and golden tiers) and F1-F5
+(the five local native package recipes) are complete. F6 (package-artifact CI),
+Phase D (the hosted CI matrix), Phase E (the release), and Phase G (package
+upstreaming) remain pending and are outside the completed local-recipe scope.
 
 The driving session remains an ORCHESTRATOR for the parallel work: it owns
 shared packaging metadata and serial landing, and farms one self-contained
@@ -138,9 +136,9 @@ distro.
   - **Gentoo** and **Void** - source/minimalist nerd distros; already
     Phase F4/F5 formats and natural CI legs.
 - **CI**: matrix, one leg per distro, `container:` on official base
-  images, runner-agnostic (DECISION 6). Runners are x86_64 - fine,
-  lavapipe is CPU. Build the dep layer once and cache it to keep legs
-  fast. Upload actual/expected/diff PNG triples as artifacts on failure.
+  images, runner-agnostic (DECISION 6, the hosted-CI runner choice). Runners are
+  x86_64 - fine, lavapipe is CPU. Build the dep layer once and cache it to keep
+  legs fast. Upload actual/expected/diff PNG triples as artifacts on failure.
 
 ## The golden-per-distro strategy (the crux)
 
@@ -656,14 +654,11 @@ packaging task needs a proven build env for its distro first).
 Two tiers - the honest cut is recipes vs upstreaming, not
 mainstream vs obscure:
 
-- **Tier 1 - in-repo recipes + CI-validated packages (automatable, do all
-  five formats now).** The marginal cost of the "obscure" formats is small
-  once the container build works, so there is no reason to split them into
-  a later wave. Each format's recipe lives in-repo under packaging/<fmt>/;
-  CI builds it in that distro's container, installs the built package, and
-  runs the gates against the INSTALLED package (not just the build tree).
-  The SPDX attribution audit (David Goree, Michail, the KDE authors) feeds
-  directly into debian/copyright (DEP-5) and the rpm %license block.
+- **Tier 1 - in-repo recipes plus package-artifact CI.** All five local recipes
+  now live under `packaging/<fmt>/`. F6 (the package-artifact CI task) is the
+  pending automation half; no package-artifact CI exists yet. The SPDX
+  attribution audit (David Goree, Michail, the KDE authors) feeds directly into
+  `debian/copyright` (DEP-5) and the RPM `%license` block.
 - **Tier 2 - upstreaming into official channels (the real second wave;
   social/process, not code, so an agent cannot "do it now").** Low-friction
   channels we control first (AUR, Void void-packages PR, a Gentoo overlay/
@@ -739,12 +734,57 @@ format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
       `makepkg --printsrcinfo`. The fast repository gate passed 94/94 at
       pre-rebase `90f610c59`, patch-equivalent to post-rebase `85ed78b2c`.
       Commits: 59e9367ff, bfc62b3e0, 85ed78b2c.
-- [ ] F4 packaging/gentoo/ ebuild (cmake + kde eclasses, USE flags) in an
-      overlay layout; build in a Gentoo container, gate. Commits:
-- [ ] F5 packaging/void/ template (xbps-src) in a void-packages layout;
-      build in a Void container, install, gate. Commits:
-- [ ] F6 CI: extend the matrix to build + install + gate each package
-      format as an artifact (registry/runner per DECISION 6). Commits:
+- [x] F4 (the Gentoo native package recipe): `packaging/gentoo/` supplies an
+      EAPI 8 local overlay pinned to exact source commit `f1184c3d3`, with
+      explicit Qt 6, KF6, Plasma 6, KWin, Wayland, QML, PipeWire, and audio
+      dependencies. The test-enabled Portage depgraph matched
+      `qtbase-6.11.1[vulkan]` and `qtdeclarative-6.11.1-r1[vulkan]` and exited 0;
+      a temporary test-disabled depgraph resolved `qtbase`, `qtdeclarative`,
+      `qtmultimedia`, and `qtquick3d` with `-vulkan` and exited 0. The forced
+      `USE=test` source rebuild passed all 90 selected tests under Qt 6.11.1,
+      KF6 6.27.0, and Plasma 6.6.6. Its rebuilt GPKG metadata records concrete
+      `qtbase:6/6.11.1=[vulkan]` and `qtdeclarative:6/6.11.1=[vulkan]`
+      dependencies. `pkgcheck scan -v /var/db/repos/lattecotta` exited 0 with no
+      findings, and `ebuild ... clean manifest` exited 0. Portage produced local
+      unsigned artifact `latte-dock-0.10.77_p20260720-5.gpkg.tar` with SHA-256
+      `577ca280a6dc338030323066dffa2579109a6f371af7d80d625a0a40d366aaa4`.
+      Its Portage-owned `/usr` manifest contains 552 objects; the installed-
+      package gate with `--root / --prefix /usr` exited 0 through nested-KWin
+      startup, exact executable and plugin mappings, and clean shutdown.
+      `LATTE_GATE_FAST=1 scripts/gate-all.sh` exited 0 at pre-rebase head
+      `d38e12ed26a198b56b76773adae8ae8c5534713a`, with 94 CTest entries,
+      qmllint, all 13 scene probes, and matrix fixtures green.
+      Commits: 22cb06836.
+- [x] F5 (the Void native package recipe): `packaging/void/` supplies a directly
+      stageable `void-packages/srcpkgs/latte-dock` tree and a clean-source
+      staging helper. Void `xlint` and ShellCheck passed; argument, dirty-source,
+      modified-destination, patch-application, and exact-provenance helper paths
+      were exercised. A fresh `void-packages` checkout at
+      `af364dd90499741882e1012b0bfd5727b17af7db` built exact source head
+      `fbdc3a3150b5fe4dad788e189101e9989129fbb8` through the helper. The source-
+      content SHA-256 is
+      `f34981e2ba7e5d4e1e086792fc9ec15e27d2b826f5a5daa789d4243d64cd7484`; the
+      resulting `latte-dock-0.10.77_1.x86_64.xbps` SHA-256 is
+      `f7edf5709af736d75ddcaaf47e3b7202accc2794f95b0f949e5ed670317931f6`.
+      A separate container from the untouched Void glibc-full base installed
+      the package from the local XBPS repository. `xbps-pkgdb -a`,
+      `desktop-file-validate`, and `appstreamcli validate --no-net` passed; the
+      installed metadata contains `org.kde.latte-dock` exactly once and no stale
+      library provider. The 552-entry `xbps-query` package-owned `/usr` manifest
+      has SHA-256 `1e3b5a320728dcde5877c83d3506ed6e0fba1a2f8db382442600ff884ae11e0e`.
+      The installed-package gate with `--root / --prefix /usr` exited 0 through
+      nested-KWin startup, five mapped-artifact provenance checks, and clean
+      shutdown. `LATTE_GATE_FAST=1 scripts/gate-all.sh` exited 0 at pre-rebase
+      head `fbdc3a3150b5fe4dad788e189101e9989129fbb8`, with all 77 installed-
+      package refusal controls, 94/94 tests, qmllint, all 13 scene probes, and
+      matrix fixtures green.
+      Commits: ea1bc5acb, ced7a48a5.
+- [ ] F6 (the package-artifact CI task): extend the matrix to build each native
+      package artifact in its distro environment, install that artifact, and
+      run the installed-package gate against it (registry/runner per DECISION
+      6). Package CI will add this automation; it does not exist yet. This task
+      remains pending and is explicitly outside the completed local-recipe
+      scope. Commits:
 
 ### Phase G - Tier 2 upstreaming (later wave; needs Bree's hands)
 - [ ] G1 Low-friction channels we control: AUR push, Void PR, Gentoo
