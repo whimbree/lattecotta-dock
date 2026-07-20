@@ -10,6 +10,11 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
+source "$repo/scripts/lib-installed-package-gate.sh"
+for loader_variable in "${latte_package_gate_loader_variables[@]}"; do
+    unset "$loader_variable"
+done
+unset loader_variable
 
 usage() {
     cat <<'EOF'
@@ -124,6 +129,36 @@ audit_package_tree() {
     done
 }
 
+audit_elf_search_paths() {
+    local label="$1" elf="$2" origin search_path entry expanded normalized resolved
+    local -a search_paths=() entries=()
+    readelf -h -- "$elf" >/dev/null 2>&1 || return 0
+
+    mapfile -t search_paths < <(latte_package_gate_read_elf_search_paths "$elf")
+    origin="$(dirname "$elf")"
+    for search_path in "${search_paths[@]}"; do
+        case "$search_path" in
+            :*|*:|*::* ) fail "$label ELF RUNPATH/RPATH contains an empty loader search entry: $search_path" ;;
+        esac
+        IFS=':' read -r -a entries <<<"$search_path"
+        for entry in "${entries[@]}"; do
+            expanded="${entry//\$\{ORIGIN\}/$origin}"
+            expanded="${expanded//\$ORIGIN/$origin}"
+            [[ "$expanded" != *'$'* ]] \
+                || fail "$label ELF RUNPATH/RPATH uses an unsupported dynamic loader token: $entry"
+            [[ "$expanded" == /* ]] \
+                || fail "$label ELF RUNPATH/RPATH entry is relative to ambient working state: $entry"
+            normalized="$(realpath -m "$expanded" 2>/dev/null)" \
+                || fail "$label ELF RUNPATH/RPATH entry cannot be normalized: $entry"
+            resolved="$(resolve_native_path "$label ELF RUNPATH/RPATH entry" "$normalized")"
+            [[ -d "$resolved" ]] \
+                || fail "$label ELF RUNPATH/RPATH entry is not an installed directory: $entry -> $resolved"
+            path_is_within "$resolved" "$artifact_prefix" \
+                || fail "$label ELF RUNPATH/RPATH entry escapes the package prefix: $entry -> $resolved"
+        done
+    done
+}
+
 require_one_match() {
     local label="$1"
     shift
@@ -226,7 +261,7 @@ require_package_file "tasks QML module metadata" "$package_qml/org/kde/latte/pri
 audit_package_tree "Latte QML tree" "$package_qml/org/kde/latte"
 
 mapfile -d '' -t action_plugins < <(
-    find "${library_roots[@]}" -type f \
+    find "${library_roots[@]}" \
         -path '*/plasma/containmentactions/org.kde.latte.contextmenu.so' -print0
 )
 action_plugin="$(require_one_match "Latte containment-actions plugin" "${action_plugins[@]}")"
@@ -235,6 +270,8 @@ package_plugins="${action_plugin%/plasma/containmentactions/org.kde.latte.contex
 package_plugins="$(resolve_native_path "installed Latte plugin root" "$package_plugins")"
 path_is_within "$package_plugins" "$artifact_prefix" \
     || fail "installed Latte plugin root escapes the package prefix: $package_plugins"
+indicator_package_plugin="$package_plugins/kpackage/packagestructure/latte_indicator.so"
+require_package_file "Latte indicator package-structure plugin" "$indicator_package_plugin"
 
 package_data="$(resolve_native_path "installed Latte data root" "$artifact_prefix/share")"
 path_is_within "$package_data" "$artifact_prefix" \
@@ -249,6 +286,16 @@ audit_package_tree "Latte tasks applet package" "$package_data/plasma/plasmoids/
 audit_package_tree "Latte data tree" "$package_data/latte"
 [[ -d "$package_data/latte/indicators/default" ]] \
     || fail "package is incomplete: missing default indicator under $package_data/latte/indicators"
+
+command -v readelf >/dev/null 2>&1 \
+    || fail "required validation command 'readelf' is missing; install binutils for the package gate"
+audit_elf_search_paths "installed binary" "$binary"
+audit_elf_search_paths "Latte containment-actions plugin" "$action_plugin"
+audit_elf_search_paths "Latte indicator package-structure plugin" "$indicator_package_plugin"
+mapfile -d '' -t latte_qml_files < <(find "$package_qml/org/kde/latte" -type f -print0)
+for latte_qml_file in "${latte_qml_files[@]}"; do
+    audit_elf_search_paths "Latte QML artifact $latte_qml_file" "$latte_qml_file"
+done
 
 : "${LATTE_QML_MODULE_PATH:?installed-package-gate needs an explicit distro QML allow-list in LATTE_QML_MODULE_PATH}"
 case "$LATTE_QML_MODULE_PATH" in
@@ -362,7 +409,7 @@ dock_log="$NESTED_RT/latte-dock.log"
 
 echo "installed-package-gate: starting installed dock in the nested compositor"
 setsid env \
-    -u LD_LIBRARY_PATH -u LD_PRELOAD \
+    "${latte_package_gate_loader_unset_args[@]}" \
     -u QML_IMPORT_PATH -u NIXPKGS_QT6_QML_IMPORT_PATH -u NIXPKGS_QML_SEARCH_PATHS \
     -u QT_PLUGIN_PATH \
     QML2_IMPORT_PATH="$qml_import_path" \
@@ -418,33 +465,28 @@ actual_plugins="$(awk -F= '$1 == "LATTE_EXTRA_PLUGIN_PATHS" {sub(/^[^=]*=/, "");
     || fail "running QML2_IMPORT_PATH differs from the validated allow-list (actual '$actual_qml', expected '$qml_import_path')"
 [[ "$actual_plugins" == "$package_plugins" ]] \
     || fail "running LATTE_EXTRA_PLUGIN_PATHS differs from the installed plugin root (actual '$actual_plugins', expected '$package_plugins')"
-for forbidden in QML_IMPORT_PATH NIXPKGS_QT6_QML_IMPORT_PATH NIXPKGS_QML_SEARCH_PATHS QT_PLUGIN_PATH LD_LIBRARY_PATH LD_PRELOAD; do
+for forbidden in QML_IMPORT_PATH NIXPKGS_QT6_QML_IMPORT_PATH NIXPKGS_QML_SEARCH_PATHS QT_PLUGIN_PATH \
+        "${latte_package_gate_loader_variables[@]}"; do
     [[ "$process_env" != *$'\n'"$forbidden="* && "$process_env" != "$forbidden="* ]] \
         || fail "forbidden ambient variable $forbidden leaked into the installed dock"
 done
 
-audit_mapped_plugin() {
-    local name="$1" expected="$2" expected_resolved mapped_resolved
-    expected_resolved="$(realpath "$expected")"
-    mapfile -t mapped_paths < <(
-        awk -v suffix="/$name" \
-            'length($NF) >= length(suffix) && substr($NF, length($NF) - length(suffix) + 1) == suffix {print $NF}' \
-            "/proc/$dock_pid/maps" | sort -u
-    )
-    [[ "${#mapped_paths[@]}" -gt 0 ]] \
-        || fail "$name is not mapped by the settled dock; the installed QML module did not load"
-    for mapped in "${mapped_paths[@]}"; do
-        mapped_resolved="$(realpath "$mapped" 2>/dev/null)" \
-            || fail "cannot resolve mapped $name path: $mapped"
-        [[ "$mapped_resolved" == "$expected_resolved" ]] \
-            || fail "$name mapped from $mapped_resolved, expected installed artifact $expected_resolved"
-    done
-    echo "installed-package-gate: mapped plugin verified: $expected_resolved"
-}
-
-audit_mapped_plugin liblattecoreplugin.so "$core_plugin"
-audit_mapped_plugin liblattecontainmentplugin.so "$containment_plugin"
-audit_mapped_plugin liblattetasksplugin.so "$tasks_plugin"
+declare -A expected_mapped_artifacts=(
+    [latte-dock]="$binary"
+    [liblattecoreplugin.so]="$(realpath "$core_plugin")"
+    [liblattecontainmentplugin.so]="$(realpath "$containment_plugin")"
+    [liblattetasksplugin.so]="$(realpath "$tasks_plugin")"
+    [org.kde.latte.contextmenu.so]="$(realpath "$action_plugin")"
+    [latte_indicator.so]="$(realpath "$indicator_package_plugin")"
+)
+required_mapped_artifacts=(
+    latte-dock
+    liblattecoreplugin.so
+    liblattecontainmentplugin.so
+    liblattetasksplugin.so
+)
+latte_package_gate_audit_mapped_paths "/proc/$dock_pid/maps" "$artifact_prefix" "$repo" \
+    expected_mapped_artifacts required_mapped_artifacts
 
 kill -TERM "$dock_pid"
 exited=0

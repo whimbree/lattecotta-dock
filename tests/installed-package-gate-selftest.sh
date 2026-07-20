@@ -10,6 +10,7 @@ set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 gate="$repo/scripts/installed-package-gate.sh"
+source "$repo/scripts/lib-installed-package-gate.sh"
 work="$(mktemp -d /tmp/latte-installed-gate-selftest.XXXXXX)"
 trap 'rm -rf "$work"' EXIT
 
@@ -24,6 +25,7 @@ make_package() {
         "$qml/org/kde/latte/components/deep" \
         "$qml/org/kde/latte/private/containment" \
         "$qml/org/kde/latte/private/tasks" \
+        "$plugins/kpackage/packagestructure" \
         "$plugins/plasma/containmentactions" \
         "$data/plasma/shells/org.kde.latte.shell" \
         "$data/plasma/plasmoids/org.kde.latte.containment" \
@@ -39,6 +41,7 @@ make_package() {
     : >"$qml/org/kde/latte/private/containment/liblattecontainmentplugin.so"
     : >"$qml/org/kde/latte/private/tasks/qmldir"
     : >"$qml/org/kde/latte/private/tasks/liblattetasksplugin.so"
+    : >"$plugins/kpackage/packagestructure/latte_indicator.so"
     : >"$plugins/plasma/containmentactions/org.kde.latte.contextmenu.so"
     : >"$data/plasma/shells/org.kde.latte.shell/metadata.json"
     : >"$data/plasma/shells/org.kde.latte.shell/Installed.qml"
@@ -108,6 +111,21 @@ positive="$(
         && "$positive" != *"hostile-plugins"* ]] \
     || { echo "FAIL: ambient QML paths leaked into the validated allow-list" >&2; echo "$positive" >&2; exit 1; }
 echo "PASS: explicit package root accepted and hostile ambient paths ignored"
+
+loader_probe="$({
+    LD_AUDIT=/dev/null LD_PRELOAD=/dev/null \
+        env "${latte_package_gate_loader_unset_args[@]}" \
+        bash -c '
+            shift
+            for variable in "$@"; do
+                [[ ! -v "$variable" ]] || exit 1
+            done
+            printf clean
+        ' bash "${latte_package_gate_loader_variables[@]}"
+} 2>/dev/null)"
+[[ "$loader_probe" == clean ]] \
+    || { echo "FAIL: dynamic-loader injection variables survived the launch scrub" >&2; exit 1; }
+echo "PASS: dynamic-loader injection variables, including LD_AUDIT, are removed"
 
 missing_binary="$work/missing-binary"
 cp -a "$good" "$missing_binary"
@@ -188,6 +206,16 @@ expect_failure "QML plugin symlink escape" "resolves outside the package prefix"
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$escaped_plugin" --prefix /usr --check-only
 
+escaped_action_plugin="$work/escaped-action-plugin"
+cp -a "$good" "$escaped_action_plugin"
+outside_action_plugin="$work/preinstalled-system-contextmenu.so"
+: >"$outside_action_plugin"
+rm "$escaped_action_plugin/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so"
+ln -s "$outside_action_plugin" "$escaped_action_plugin/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so"
+expect_failure "containment-actions plugin symlink escape" "resolves outside the package prefix" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$escaped_action_plugin" --prefix /usr --check-only
+
 escaped_qml_content="$work/escaped-qml-content"
 cp -a "$good" "$escaped_qml_content"
 outside_qml="$work/preinstalled-system-content.qml"
@@ -247,6 +275,84 @@ expect_failure "nested Latte data symlink escape" "Latte data tree contains a sy
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$escaped_data_content" --prefix /usr --check-only
 
+hostile_loader="$work/foreign loader"
+mkdir -p "$hostile_loader"
+elf_source="$work/elf-fixture.c"
+printf 'int fixture(void) { return 0; }\nint main(void) { return fixture(); }\n' >"$elf_source"
+
+rpath_binary="$work/rpath-binary"
+cp -a "$good" "$rpath_binary"
+NIX_LDFLAGS= NIX_LDFLAGS_BEFORE= \
+    cc "$elf_source" -Wl,-rpath,"$hostile_loader" -o "$rpath_binary/usr/bin/latte-dock"
+readelf -d "$rpath_binary/usr/bin/latte-dock" | grep -Fq "$hostile_loader" \
+    || { echo "FAIL: hostile binary RUNPATH fixture has no requested entry" >&2; exit 1; }
+expect_failure "binary ELF RUNPATH escape" "installed binary ELF RUNPATH/RPATH entry escapes the package prefix" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$rpath_binary" --prefix /usr --check-only
+
+rpath_action="$work/rpath-action-plugin"
+cp -a "$good" "$rpath_action"
+NIX_LDFLAGS= NIX_LDFLAGS_BEFORE= \
+    cc -shared -fPIC "$elf_source" -Wl,-rpath,"$hostile_loader" \
+    -o "$rpath_action/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so"
+readelf -d "$rpath_action/usr/lib/qt6/plugins/plasma/containmentactions/org.kde.latte.contextmenu.so" \
+    | grep -Fq "$hostile_loader" \
+    || { echo "FAIL: hostile containment-actions RUNPATH fixture has no requested entry" >&2; exit 1; }
+expect_failure "lazy containment-actions ELF RUNPATH escape" "Latte containment-actions plugin ELF RUNPATH/RPATH entry escapes the package prefix" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$rpath_action" --prefix /usr --check-only
+
+mapped_artifact="$work/mapped artifact"
+mapped_prefix="$mapped_artifact/usr"
+mkdir -p "$mapped_prefix/bin" "$mapped_prefix/lib/qt6/qml/org/kde/latte/core"
+mapped_binary="$mapped_prefix/bin/latte-dock"
+mapped_core="$mapped_prefix/lib/qt6/qml/org/kde/latte/core/liblattecoreplugin.so"
+: >"$mapped_binary"
+: >"$mapped_core"
+maps_with_spaces="$work/maps with spaces"
+printf '1000-2000 r-xp 00000000 00:00 1 %s\n2000-3000 r--p 00000000 00:00 2 %s\n' \
+    "$mapped_binary" "$mapped_core" >"$maps_with_spaces"
+mapfile -t parsed_space_paths < <(latte_package_gate_read_mapped_paths "$maps_with_spaces")
+[[ "${parsed_space_paths[0]}" == "$mapped_binary" && "${parsed_space_paths[1]}" == "$mapped_core" ]] \
+    || { echo "FAIL: /proc maps parser split a pathname containing spaces" >&2; exit 1; }
+declare -A expected_space_mappings=(
+    [latte-dock]="$mapped_binary"
+    [liblattecoreplugin.so]="$mapped_core"
+)
+required_space_mappings=(latte-dock liblattecoreplugin.so)
+latte_package_gate_audit_mapped_paths "$maps_with_spaces" "$mapped_prefix" "$repo" \
+    expected_space_mappings required_space_mappings >/dev/null
+echo "PASS: /proc maps pathnames with spaces preserve exact installed-artifact identity"
+
+foreign_mapped_root="$work/foreign mapped runtime"
+mkdir -p "$foreign_mapped_root"
+foreign_mapped_core="$foreign_mapped_root/liblattecoreplugin.so"
+: >"$foreign_mapped_core"
+hostile_maps="$work/hostile maps with spaces"
+printf '1000-2000 r-xp 00000000 00:00 1 %s\n2000-3000 r--p 00000000 00:00 2 %s\n' \
+    "$mapped_binary" "$foreign_mapped_core" >"$hostile_maps"
+expect_failure "foreign mapped Latte runtime with spaces" "mapped Latte runtime escapes the package prefix" \
+    latte_package_gate_audit_mapped_paths "$hostile_maps" "$mapped_prefix" "$repo" \
+    expected_space_mappings required_space_mappings
+
+nix_maps="$work/nix-provider.maps"
+printf '1000-2000 r-xp 00000000 00:00 1 /nix/store/fake-latte-provider/lib/libQt6Core.so.6\n' >"$nix_maps"
+empty_required_mappings=()
+expect_failure "mapped Nix runtime provider" "running dock mapped a Nix artifact" \
+    latte_package_gate_audit_mapped_paths "$nix_maps" "$mapped_prefix" "$repo" \
+    expected_space_mappings empty_required_mappings
+
+mapped_build_provider="$work/mapped-build-provider"
+mkdir -p "$mapped_build_provider/lib"
+: >"$mapped_build_provider/CMakeCache.txt"
+: >"$mapped_build_provider/lib/libQt6Core.so.6"
+build_maps="$work/build-provider.maps"
+printf '1000-2000 r-xp 00000000 00:00 1 %s\n' \
+    "$mapped_build_provider/lib/libQt6Core.so.6" >"$build_maps"
+expect_failure "mapped CMake build-tree provider" "running dock mapped a CMake build tree artifact" \
+    latte_package_gate_audit_mapped_paths "$build_maps" "$mapped_prefix" "$repo" \
+    expected_space_mappings empty_required_mappings
+
 incomplete="$work/incomplete"
 cp -a "$good" "$incomplete"
 rm "$incomplete/usr/lib/qt6/qml/org/kde/latte/private/tasks/liblattetasksplugin.so"
@@ -254,4 +360,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (1 valid contract, 18 rejection controls)"
+echo "installed-package-gate-selftest: PASS (4 positive contracts, 24 rejection controls)"
