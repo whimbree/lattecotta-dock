@@ -51,6 +51,7 @@ audio indicators, parabolic zoom, edit mode with drag rearranging,
 per-applet context menus and settings, the three bundled indicator styles,
 layer-shell placement with struts and auto-hide/dodge visibility modes,
 layout management with templates and import/export, applet colorization,
+immediate work-area updates when maximize state changes a floating gap,
 and the full settings UI. Beyond upstream parity, the port has grown
 continuation features of its own, the first being resizable applet popups
 with per-applet size persistence.

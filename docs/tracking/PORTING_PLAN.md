@@ -1310,7 +1310,33 @@ multi-view, multi-monitor setup.
       A marker-scoped source guard requires the singular arm and rejects the
       plural spelling; restoring the typo makes it fail. QML compile, qmllint,
       and the complete fast gate pass.
-      Commits: <filled after merge>
+      Commits: 54572f495, 33c72b34e
+
+- [x] D27 (maximize transitions leave a stale floating-gap work area):
+      preserve maximize as a synchronous semantic edge and publish its
+      resulting layer-shell reservation without the geometry throttle. The
+      original `windowChanged` timer restarted forever under KWin's maximize
+      geometry stream; PR #61 fixed that starvation by holding the first
+      150 ms deadline, but a live trace exposed two remaining delays. The
+      discrete `PlasmaWindow::maximizedChanged` edge still shared the
+      coalesced route, and `strutsThicknessChanged` fed the one-second
+      `updateStrutsAfterTimer()` path intended for geometry feedback. The
+      measured thickness changed `44 -> 26` 1.069 s before the new exclusive
+      zone reached `setViewStruts()`. FIX: typed
+      `WindowChangeDelivery::{Coalesced,Immediate}` routes maximize directly
+      while preserving coalescing for noisy window properties; direct
+      thickness publication updates the layer-shell zone synchronously while
+      absolute/screen/off-screen geometry remains throttled. GUARDS:
+      `windowchangedebouncetest` pins immediate same-window delivery,
+      unrelated-pending ordering, and no late duplicate;
+      `sourceguardtest` pins direct thickness versus throttled geometry and
+      fails when the old connection is restored; both passed 20 consecutive
+      runs. `tests/e2e/071-maximized-window-length.sh` drove a real nested
+      Wayland client, measured 69 ms, and verified KWin's 88 px work area.
+      Two cleaned real-session Firefox runs measured 114 ms and exact
+      `0,26 1440x2534` KWin frame geometry.
+      Commits: 983685c00, f6d5271c4 (bounded coalescing, PR #61),
+      <follow-up filled after merge>
 
 - [x] Render-thread crash whenever an overflowing dock relayouts (enter
       edit mode, add a widget, right-click an applet in edit mode - all

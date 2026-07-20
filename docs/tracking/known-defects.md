@@ -330,7 +330,7 @@ carries its own detail or points into the plan and the reference docs.
 ## Fixed (kept for the record)
 
 ### D32 - Always Visible floating docks fail to track maximized windows when hiding the floating gap
-- STATUS: FIXED (PR #71; commit filled after merge).
+- STATUS: FIXED (PR #71, 54572f495 + 33c72b34e).
 - FOUND: 2026-07-20, the strengthened D27 (maximize transitions leave a stale
   floating-gap work area) nested acceptance fixture reported
   `trackerData.enabled=false` while KWin showed a maximized `1600x894` frame.
@@ -350,13 +350,43 @@ carries its own detail or points into the plan and the reference docs.
   gate loaded all 129 eligible package files, the qmllint ratchet held, and the
   complete fast gate passed.
 
-### D27 - Maximize state detection delayed by geometryChanged re-arming the debounce timer
-- STATUS: FIXED (PR #61, branch d27-windowchanged-immediate-flush, de9cc4f6a + 15d71f04b + 4f61732c4).
-- FOUND: 2026-07-19, code-reading of the window-tracking signal path while investigating a maximize gap.
-- SYMPTOM: when a window is maximized, the dock does not update its maximize-state consumers (autohide, colorizer, maximize-length, etc.) until the maximize animation finishes, leaving a visible gap where the old state is still acted on.
-- ROOT CAUSE: AbstractWindowInterface::considerWindowChanged() batches windowChanged signals behind a 150 ms single-shot timer to avoid high CPU from rapid signal churn. PlasmaWindow::geometryChanged() fires repeatedly during the KWin maximize animation, so each geometry change re-armed the timer and the maximize edge did not propagate until the animation stream ended.
-- FIX: add an immediate flush path to considerWindowChanged() and route PlasmaWindow::maximizedChanged() through a dedicated WaylandInterface::updateWindowMaximized() slot that uses it. Other signals (geometry, title, active, etc.) stay on the debounced path. The immediate path also flushes any unrelated pending window first, preserving ordering.
-- EVIDENCE: unit test windowchangedebouncetest exercises the three edge cases (normal debounce waits, immediate flushes during active debounce, unrelated pending window emitted first).
+### D27 - Maximize transitions leave a stale floating-gap work area
+- STATUS: FIXED (PR #61 bounded continuous window-change starvation in
+  983685c00 + f6d5271c4; the synchronous maximize/exclusive-zone follow-up
+  commits are filled after merge).
+- FOUND: 2026-07-19, live on a floating top panel, then traced through the
+  window-tracking and layer-shell publication paths.
+- SYMPTOM: maximizing a window leaves the client below the floating panel's
+  old gap for about one second. The panel has already removed its visible gap,
+  but KWin still applies the old work area until Latte publishes the smaller
+  layer-shell exclusive zone.
+- ROOT CAUSE: two independent throttles sat in series. First,
+  `AbstractWindowInterface::considerWindowChanged()` treated the discrete
+  `PlasmaWindow::maximizedChanged()` edge like geometry/title churn. PR #61
+  stopped same-window changes from moving the timer deadline forever, but
+  still allowed the semantic maximize edge to wait up to 150 ms. Second,
+  `VisibilityManager::strutsThicknessChanged` called
+  `updateStrutsAfterTimer()`, the one-second geometry throttle retained to
+  prevent a floating-panel feedback loop. Instrumentation measured the
+  thickness changing `44 -> 26` at `1784527923148` and the new exclusive zone
+  reaching `setViewStruts()` at `1784527924217`: a 1.069 s stale work area.
+- FIX: `WindowChangeDelivery::{Coalesced,Immediate}` makes delivery policy
+  explicit. `PlasmaWindow::maximizedChanged()` uses a dedicated immediate
+  route; geometry, title, active, and the other noisy signals remain
+  coalesced. An immediate change flushes an unrelated pending window first and
+  cancels a same-window timer, preserving order without a duplicate delivery.
+  `strutsThicknessChanged` now publishes directly through
+  `updateStrutsBasedOnLayoutsAndActivities()`, while
+  `absoluteGeometryChanged`, screen geometry, and off-screen churn retain the
+  one-second throttle.
+- EVIDENCE: `windowchangedebouncetest` and `sourceguardtest` passed 20
+  consecutive repetitions. Reverting only the thickness connection makes the
+  source guard fail. `tests/e2e/071-maximized-window-length.sh` drives a real
+  Wayland Konsole through restore/maximize, observed a 69 ms reservation
+  update, and verified KWin reapplied the 88 px work area. The cleaned staged
+  dock then passed two real-session Firefox runs at 114 ms with exact
+  `0,26 1440x2534` KWin frame geometry. Temporary trace instrumentation was
+  removed.
 
 ### D21 - Light/Layout applet contrast: clock has no text, show-desktop is white
 - FIXED (#46, be2db3049). In "Light colors" (themeColors=LightThemeColors=4) and "Layout

@@ -3,9 +3,32 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-20.
 
+## 2026-07-20 SESSION: D27 (stale maximize work area) latency follow-up
+
+The D27 (maximize transitions leave a stale floating-gap work area) follow-up
+is implemented and fully driven on `fix/d27-live-acceptance`. PR #61 fixed
+unbounded `windowChanged` starvation by preserving the first 150 ms deadline,
+but its records incorrectly described an immediate maximize route. A direct
+trace found two remaining delays: `PlasmaWindow::maximizedChanged` still shared
+the coalescer, and the resulting `strutsThicknessChanged` waited behind the
+one-second geometry throttle. The measured thickness changed `44 -> 26` at
+`1784527923148`; `setViewStruts()` received it at `1784527924217`, 1.069 s
+later.
+
+The follow-up adds typed immediate/coalesced window-change delivery, routes
+maximize edges immediately, and publishes discrete strut-thickness changes
+directly while retaining the throttle for absolute/screen/off-screen geometry
+churn. `windowchangedebouncetest` and `sourceguardtest` passed 20 repetitions;
+the source guard fails when the old throttled connection is restored. The new
+`tests/e2e/071-maximized-window-length.sh` drove a real nested Wayland Konsole,
+measured a 69 ms reservation update, and verified KWin reapplied the 88 px work
+area. Two cleaned real-session Firefox runs both measured 114 ms with exact
+`0,26 1440x2534` KWin frame geometry. Temporary instrumentation is removed. Full
+gate, independent review, and PR landing remain.
+
 ## 2026-07-20: D32 (disabled Always Visible floating-gap tracking)
 
-PR #71 fixes an inherited one-character tracker-enablement defect found while
+PR #71 fixed an inherited one-character tracker-enablement defect found while
 hardening the D27 (maximize transitions leave a stale floating-gap work area)
 nested acceptance. `BindingsExternal.qml` read nonexistent
 `root.screenEdgeMarginsEnabled`; the declared property is singular. A hermetic
@@ -13,23 +36,21 @@ Always Visible layout therefore reported `trackerData.enabled=false` even with
 `hideFloatingGapForMaximized=true`, while a richer real layout could mask the
 bug through an unrelated applet tracking requester. The fix selects the
 declared property. A marker-scoped source guard fails when the plural spelling
-is restored; QML compile, qmllint, and the complete fast gate pass. Independent
-review and merge remain.
+is restored; QML compile, qmllint, and the complete fast gate passed. Merged as
+PR #71 (`54572f495` + `33c72b34e`).
 
 ## 2026-07-19 SESSION: D27 + D28 panel bugs fixed and delivered live
 
-Two live panel-mode bugs reported on the real top panel were root-caused,
-fixed, reviewed, merged, and delivered to the running dock in the same session:
+Two live panel-mode bugs on the real top panel were investigated in the same
+session. D28 was fixed and delivered; D27's first fix bounded one delay, with
+the remaining end-to-end latency resolved by the 2026-07-20 follow-up above:
 
-- **D27 (maximize gap debounce lag, PR #61)** - the floating-panel gap on a
-  top panel lingered for 1-2 s after maximizing a window because
-  `AbstractWindowInterface::considerWindowChanged` re-armed its 150 ms debounce
-  on every `geometryChanged` event from KWin's maximize animation. Fix: route
-  `PlasmaWindow::maximizedChanged` through a dedicated
-  `WaylandInterface::updateWindowMaximized` slot that flushes `windowChanged`
-  synchronously, while keeping the debounce for geometry/title/active churn.
-  Regression test: `tests/windowchangedebouncetest.cpp`. Merged via PR #61;
-  asan-e2e gate green on the rebased head.
+- **D27 (window-change starvation, PR #61)** - the first investigation found
+  that `AbstractWindowInterface::considerWindowChanged` re-armed its 150 ms
+  timer on every `geometryChanged` event from KWin's maximize animation. PR #61
+  bounded that stream by preserving the first deadline. It did not route
+  maximize synchronously or cover the later exclusive-zone publication delay;
+  the 2026-07-20 entry above records the end-to-end follow-up.
 
 - **D28 (show-desktop white icon on light panels, PR #60)** - the show-desktop
   applet rendered a white icon on a light panel because the
@@ -41,9 +62,9 @@ fixed, reviewed, merged, and delivered to the running dock in the same session:
   panel colorizer scheme. E2E guard in
   `tests/e2e/110-colorizer-applet-contrast.sh`. Merged via PR #60.
 
-Both fixes are on main and were delivered live: the staged dock was rebuilt
-and restarted with the real config, and both the immediate maximize gap
-collapse and the dark show-desktop icon were observed working on the desk.
+Both PR #61 and the D28 fix are on main and were delivered live. PR #61 bounded
+window-state starvation, and the dark show-desktop icon rendered correctly;
+the D27 floating-gap latency required the 2026-07-20 follow-up above.
 
 ## 2026-07-18 (previous state)
 
