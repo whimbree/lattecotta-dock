@@ -1,23 +1,20 @@
 # Native packaging recipes
 
-Tier-1 packaging recipes for lattecotta-dock / latte-dock.
-Each recipe builds an installable artifact for its distro format using the
-per-distro container environments established in Phase A/B/C of the
-multi-distro CI plan. CI then builds, installs, and gates the installed
-package (not just the build tree).
+Local native package recipes for lattecotta-dock / latte-dock. These recipes
+build installable artifacts from the source tree, but no package has been
+uploaded or published through a distribution repository or package service.
 
 ## Layout
 
-- `debian/` - Debian/Ubuntu-family .deb package (dh cmake)
-- `rpm/` - Fedora/openSUSE .rpm package (shared .spec)
-- `arch/` - Arch Linux PKGBUILD (+ .SRCINFO)
-- `gentoo/` - Gentoo overlay ebuild
-- `void/` - Void Linux xbps-src template
+- `debian/` - Debian/Ubuntu-family `.deb` package and `build-package` helper
+- `rpm/` - shared Fedora/openSUSE `.rpm` spec and snapshot-source helper
+- `arch/` - Arch Linux `PKGBUILD` and generated `.SRCINFO`
 - `ATTRIBUTION.md` - consolidated copyright lines gathered from SPDX headers
 
 ## Gate discipline
 
-Every recipe is exercised in its target distro container via podman. The
-built package is installed inside a fresh container layer, and the headless
-gate stack (build -> ctest -> e2e smoke -> sceneprobe) is run against the
-installed binary. A recipe is not done until that gate is green.
+Each available recipe has produced a local package that was installed in a
+fresh target environment. The package-manager ownership manifest and shared
+installed-package gate then verify the installed executable, plugins, data,
+nested-KWin startup, artifact mappings, and clean shutdown. Hosted CI remains
+pending, as do the Gentoo ebuild and Void `xbps-src` template.

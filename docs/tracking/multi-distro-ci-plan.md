@@ -29,24 +29,23 @@ gate; the distro matrix is the release/periodic gate.
 
 ## Execution model (2026-07-17): orchestrator + Opus swarm
 
-The next-session entry point is `docs/prompts/multi-distro-ci-orchestrator-
-prompt.md` (supersedes the execution prompt for HOW the work is driven; the
-execution prompt still holds the standing mission/context). Direction: the
-remaining work (six more distro legs, golden tiers, CI workflow, release,
-five packaging formats) is highly parallelizable, so the driving session
-acts as an ORCHESTRATOR - it owns the shared scaffold (build-and-gate.sh,
-the Containerfile pattern, the CI skeleton, version/changelog, packaging
-metadata) and the serial-merge steps, and FARMS self-contained chunks to
-capable Opus WORKTREE subagents (one distro leg / packaging format / the
-B2 productionization per agent, batched under the 4-subagent cap). Merges
-stay serial: each returned branch gets its gate-all stamp, then an
-INDEPENDENT lean Opus review (separate cold-context agent, diff-only), then
-ff-merge - never author-and-approve in one context. The heavy lifting that
-made Arch work (the four portability fixes) is done, so new legs should
-mostly build with dep-name changes only; a leg that needs a source fix is
-probably another latent nix-ism to root-cause. Concurrency caution: podman
-and the CPU are shared, so a gate/ctest timeout under concurrent agent load
-is LOAD, not a defect - verify solo before calling a failure.
+The procedural entry point remains `docs/prompts/multi-distro-ci-orchestrator-
+prompt.md`; the execution prompt retains the standing mission and context.
+Phases A-C (local distro containers, headless gates, and golden tiers), F1
+(the Debian-family native recipe), F2 (the shared Fedora/openSUSE RPM recipe),
+and F3 (the Arch native PKGBUILD) are complete. F4 (the Gentoo recipe) and F5
+(the Void recipe) are active and open at this snapshot. F6 (package-artifact
+CI), Phase D (the hosted CI matrix), Phase E (the release), and Phase G (package
+upstreaming) remain pending and are outside the current recipe-wave scope.
+
+The driving session remains an ORCHESTRATOR for the parallel work: it owns
+shared packaging metadata and serial landing, and farms one self-contained
+format to each capable Opus worktree subagent under the four-subagent cap.
+Returned branches receive their applicable gate evidence and an independent
+lean Opus diff review before landing through the current GitHub PR rebase-merge
+workflow; authoring and approval never share one context. Podman and CPU are
+shared, so a gate or ctest timeout under concurrent agent load is load, not a
+defect; verify it solo before changing code.
 
 ## Parked prior art: cross-architecture golden determinism (2026-07-17)
 
@@ -693,16 +692,53 @@ format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
       c394c43cf, 02153ed63, 9fe8ddd1d, 3b025df03, 40ad5a245,
       ebcda72fa, 29a5e4ce6, c329eb138, 98f4ff797, 009c406dc,
       3fb92a05a.
-- [ ] F1 packaging/debian/ (control, rules via dh cmake, changelog,
-      DEP-5 copyright from the SPDX audit); build .deb in the Ubuntu-family
-      container, install, gate. Commits:
-- [ ] F2 packaging/rpm/latte-dock.spec (%cmake macros, Qt6/KF6/Plasma
-      BuildRequires, %license); build .rpm in the Fedora container,
-      install, gate. Portability sub-check: the same .spec must also build
-      on openSUSE Tumbleweed (different macros/package names/OBS) - fix
-      the divergences so one spec serves both. Commits:
-- [ ] F3 packaging/arch/PKGBUILD (+ .SRCINFO); makepkg in the Arch
-      container, install, gate. Commits:
+- [x] F1 (the Debian-family native recipe): `packaging/debian/` supplies the
+      debhelper/CMake recipe, DEP-5 metadata, manpage, quilt patch, and an
+      exact-HEAD source-build helper. A minimal Ubuntu noble root with only the
+      signed KDE neon User repository resolved all declared build dependencies;
+      the checked build passed 92/92 package tests and lintian reported no tags.
+      A fresh root installed the local `.deb`, passed `dpkg --audit` and
+      `apt-get check`, and produced a 768-entry `dpkg-query` manifest with
+      SHA-256 `43e4a2c3c13443545febb61f03fc495c7deb15f6ee9732640c3ecaefc035ff7e`.
+      The installed-package gate exited 0 after exact `/usr` executable/plugin
+      mappings, settled nested-KWin startup, and status-0 shutdown. The package
+      SHA-256 is `c1e9f343bc4bfb22c862f14d8475652d40587501b28044ce199081018141c779`.
+      The fast repository gate passed 94/94 at pre-rebase `4c937adde`,
+      patch-equivalent to post-rebase `a04c47614`; the final follow-up changed
+      only the manpage and passed `groff`, lintian, and `diff --check`.
+      Commits: 43131b00f, 43ea0f17f, 48bb23fb6, b2889ffbb, b344808a8,
+      02770a57c, 7cf2be7aa, efbefc500, 99ed25c46, 82fcc84b1,
+      aeb47d001, 07d94fe64, 3d9d58342, d497d2f78, a04c47614,
+      71fa379c2.
+- [x] F2 (the shared Fedora/openSUSE RPM recipe): one spec maps native package
+      names and CMake macros for Fedora 43 and openSUSE Tumbleweed, preserves
+      each distro's hardening, and creates commit-bound reproducible source
+      packages. Both builds produced source, runtime, debuginfo, and populated
+      debugsource RPMs and passed `%check`. Fresh installs passed `rpm -V` and
+      the installed-package gate through exact mappings, nested-KWin startup,
+      and clean shutdown. Fedora's 659-entry manifest has SHA-256
+      `828111dd72e23787f9ad82133fd274fd98a660a96397e82956ab18a30a122459`;
+      Tumbleweed's 642-entry manifest has SHA-256
+      `806453d3bb3d30ad862d23d6203f4f688e35b7b6fd144ac1a5bb741853796bd0`.
+      The runtime RPM SHA-256 values are
+      `dbbb55482915ccd622cda4c01ed9697f0a9eec77355e79fad97823cf2ebec1f1`
+      for Fedora and
+      `532e84569ad1c3de215f63d975f233031bebe55d94ba9a2cb739aeba2762ac3f`
+      for Tumbleweed. The fast repository gate passed 94/94 at pre-rebase
+      `b9f9ed439`, patch-equivalent to post-rebase `f1184c3d3`.
+      Commits: bb5e45f1f, 17e1b10fd, 3567e3c9e, 4a10ccc0a, f1184c3d3.
+- [x] F3 (the Arch native PKGBUILD and generated `.SRCINFO`): `makepkg
+      --cleanbuild` produced the main and debug packages with Arch's `-O2`
+      policy authoritative and explicit `NDEBUG`. A fresh Arch root installed
+      the local package and produced a 766-entry `pacman -Qlq` manifest with
+      SHA-256 `9c8f4c0598cbecb3632a8a4ff64124a24f0b6b9bebfdc9d1a8119abca8e6d4d6`.
+      The installed-package gate exited 0 after exact executable/plugin
+      mappings, settled nested-KWin startup, and status-0 shutdown. The package
+      SHA-256 is `2180c8f6a0630161d74cf8968627f3d216a4fc32ae6bca3d5a7e81d0afdbeebc`;
+      namcap reported zero errors and `.SRCINFO` exactly matched
+      `makepkg --printsrcinfo`. The fast repository gate passed 94/94 at
+      pre-rebase `90f610c59`, patch-equivalent to post-rebase `85ed78b2c`.
+      Commits: 59e9367ff, bfc62b3e0, 85ed78b2c.
 - [ ] F4 packaging/gentoo/ ebuild (cmake + kde eclasses, USE flags) in an
       overlay layout; build in a Gentoo container, gate. Commits:
 - [ ] F5 packaging/void/ template (xbps-src) in a void-packages layout;
@@ -716,29 +752,28 @@ format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
 - [ ] G2 Gatekept archives (Debian/Fedora/openSUSE Factory) - process,
       sponsorship, review; tracked, not agent-automatable. Commits:
 
-## Open decisions (need Bree)
+## Decisions
 
-- DECISION 1 - golden rigor per distro: the graduated model above
-  (bit-exact NixOS / bless-frozen stable / invariant+tolerance rolling)
-  vs simpler (invariant-only everywhere except NixOS). Recommendation:
-  graduated.
-- DECISION 2 - CI cadence: build+e2e on every PR vs nightly + pre-release
+- DECISION 1 (the per-distro golden-rigor model) - RESOLVED (2026-07-17):
+  use the graduated model implemented above: bit-exact NixOS, optional
+  bless-frozen stable tiers, and invariant+tolerance rolling tiers.
+- DECISION 2 (the CI cadence) - build+e2e on every PR vs nightly + pre-release
   only. Recommendation: build+e2e on PR if leg time is acceptable, full
   sceneprobe matrix nightly + on release tags.
-- DECISION 3 - RESOLVED (2026-07-17): KDE neon is the Ubuntu-family/deb
-  leg (always-current Plasma, the KDE reference env); covers Kubuntu/Pop/
-  Mint-KDE. Stock Ubuntu LTS 24.04 excluded (below floor).
-- DECISION 4 - RESOLVED (2026-07-17): openSUSE Tumbleweed IN. Widened the
-  CI test-leg set to the full KDE-enthusiast list (Arch, Tumbleweed,
-  Fedora, neon, Debian sid, Gentoo, Void); package formats stay five.
-- DECISION 5 - release gate scope: ALL matrix distros green vs NixOS +
+- DECISION 3 (the Ubuntu-family matrix leg) - RESOLVED (2026-07-17): KDE neon
+  is the Ubuntu-family/deb leg (always-current Plasma, the KDE reference env);
+  covers Kubuntu/Pop/Mint-KDE. Stock Ubuntu LTS 24.04 excluded (below floor).
+- DECISION 4 (the openSUSE Tumbleweed matrix scope) - RESOLVED (2026-07-17):
+  openSUSE Tumbleweed IN. Widened the CI test-leg set to the full
+  KDE-enthusiast list (Arch, Tumbleweed, Fedora, neon, Debian sid, Gentoo,
+  Void); package formats stay five.
+- DECISION 5 (the release-gate scope) - ALL matrix distros green vs NixOS +
   >=1 mainstream distro green.
-- DECISION 6 - runner: self-hosted Forgejo runners vs GitHub Actions
-  (undecided; keep the workflow runner-portable either way). A self-hosted
-  ARM Forgejo runner would later host the parked aarch64 golden tier.
-- DECISION 7 - packaging phasing: all five Tier-1 recipes now (the
-  recommendation - the obscure formats are cheap once the build env
-  exists) vs mainstream three now + gentoo/void in a later wave.
-- DECISION 8 - packaging swarm batching: wave A (deb, rpm, arch) + wave B
-  (gentoo, void) under the 4-subagent cap, orchestrator owns the shared
-  CI/version/copyright scaffold. Confirm the cut.
+- DECISION 6 (the hosted-CI runner) - self-hosted Forgejo runners vs GitHub
+  Actions (undecided; keep the workflow runner-portable either way). A
+  self-hosted ARM Forgejo runner would later host the parked aarch64 golden tier.
+- DECISION 7 (the Tier-1 recipe scope) - RESOLVED (2026-07-20): complete all
+  five Tier-1 recipes in this initiative.
+- DECISION 8 (the packaging swarm batch split) - RESOLVED (2026-07-20): wave A
+  is deb/rpm/arch and wave B is Gentoo/Void under the four-subagent cap; the
+  orchestrator owns shared packaging metadata and serial landing.

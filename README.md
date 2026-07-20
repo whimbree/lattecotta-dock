@@ -110,8 +110,13 @@ phases, one commit-traceable checklist item per task. The coarse picture:
       isolated from the live session - asserting over the D-Bus surface
       first and over pixel goldens only where pixels are the thing under
       test (hover previews, drag reorder, wheel routing, lifecycle)
-- [ ] Distro packaging beyond NixOS (no PPA/COPR/AUR yet; the classic
-      CMake install works everywhere the dependencies exist)
+- [ ] Distro packaging beyond NixOS: local recipes are available for
+      Debian-family `.deb` packages, a shared Fedora/openSUSE `.rpm`, and
+      Arch `PKGBUILD`/`.SRCINFO`. Locally built packages from all four target
+      environments have passed the installed-artifact gate under nested KWin.
+      Gentoo and Void recipes remain pending. No PPA, Copr, OBS project, AUR
+      package, official repository package, release artifact, or other package
+      publication exists.
 - [ ] Accessibility: keyboard navigation for every interactive surface,
       Accessible roles/names on every interactive item, and a
       screen-reader pass with Orca as the acceptance test. Two pieces
@@ -246,6 +251,24 @@ without any wiring:
 nix build github:whimbree/lattecotta-dock
 nix run github:whimbree/lattecotta-dock
 ```
+
+### Local native package recipes
+
+The repository carries native recipes that build packages locally; none are
+published through a distribution repository or package service:
+
+- Debian-family `.deb`: [`packaging/debian/`](packaging/debian/), using the
+  tracked [`build-package`](packaging/debian/build-package) helper.
+- Fedora and openSUSE `.rpm`: the shared
+  [`latte-dock.spec`](packaging/rpm/latte-dock.spec), using the tracked
+  [`make-snapshot-source.sh`](packaging/rpm/make-snapshot-source.sh) helper.
+- Arch package: [`packaging/arch/PKGBUILD`](packaging/arch/PKGBUILD) with its
+  generated [`packaging/arch/.SRCINFO`](packaging/arch/.SRCINFO).
+
+These recipes have been validated by installing their locally built artifacts
+in fresh KDE neon, Fedora, openSUSE Tumbleweed, and Arch environments and
+running the installed-package nested-runtime gate. They are source-tree build
+inputs, not an announcement of uploaded or officially endorsed packages.
 
 ### From source (any distro)
 

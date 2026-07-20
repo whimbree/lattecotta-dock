@@ -3,6 +3,63 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-20.
 
+## 2026-07-20: packaging wave A native recipes finalized
+
+PRs #80, #81, and #82 landed F3 (the Arch native PKGBUILD and generated
+`.SRCINFO`), F1 (the Debian-family native recipe), and F2 (the shared
+Fedora/openSUSE RPM recipe). Their final post-rebase commits on `origin/main`
+are:
+
+- F1: `43131b00f`, `43ea0f17f`, `48bb23fb6`, `b2889ffbb`, `b344808a8`,
+  `02770a57c`, `7cf2be7aa`, `efbefc500`, `99ed25c46`, `82fcc84b1`,
+  `aeb47d001`, `07d94fe64`, `3d9d58342`, `d497d2f78`, `a04c47614`,
+  `71fa379c2`.
+- F2: `bb5e45f1f`, `17e1b10fd`, `3567e3c9e`, `4a10ccc0a`, `f1184c3d3`.
+- F3: `59e9367ff`, `bfc62b3e0`, `85ed78b2c`.
+
+The Debian-family acceptance used a minimal Ubuntu noble root carrying only
+the signed KDE neon User repository. Its checked build passed 92/92 package
+tests, the `nocheck` build skipped the test override, and lintian reported no
+tags. A fresh root installed local package
+`c1e9f343bc4bfb22c862f14d8475652d40587501b28044ce199081018141c779`;
+`dpkg --audit` and `apt-get check` exited 0. The 768-entry `dpkg-query`
+manifest has SHA-256
+`43e4a2c3c13443545febb61f03fc495c7deb15f6ee9732640c3ecaefc035ff7e`.
+The installed-package gate mapped `/usr/bin/latte-dock`, three Latte QML
+plugins, and the containment-actions plugin from `/usr`, settled one view under
+nested KWin, and shut down with status 0.
+
+The Arch clean build produced main package
+`2180c8f6a0630161d74cf8968627f3d216a4fc32ae6bca3d5a7e81d0afdbeebc`.
+A fresh `pacman -U` install exited 0; its 766-entry `pacman -Qlq` manifest has
+SHA-256 `9c8f4c0598cbecb3632a8a4ff64124a24f0b6b9bebfdc9d1a8119abca8e6d4d6`.
+The installed-package gate verified the exact executable and four startup
+plugin mappings, settled under nested KWin, and shut down with status 0.
+Namcap reported zero errors, and `.SRCINFO` matched `makepkg --printsrcinfo`.
+
+Fedora 43 and openSUSE Tumbleweed each produced source, runtime, debuginfo, and
+populated debugsource RPMs from the reproducible source archive with SHA-256
+`98baabfbb4eccde9ecb0c553583c02bf3a7f2acfa2e946a93db7d12a0441d875`.
+Fresh roots installed runtime RPMs
+`dbbb55482915ccd622cda4c01ed9697f0a9eec77355e79fad97823cf2ebec1f1`
+(Fedora) and
+`532e84569ad1c3de215f63d975f233031bebe55d94ba9a2cb739aeba2762ac3f`
+(Tumbleweed). Both `rpm -V` checks and installed-package gates passed through
+exact installed mappings, nested-KWin startup, and clean shutdown. Fedora's
+659-entry `rpm -ql` manifest has SHA-256
+`828111dd72e23787f9ad82133fd274fd98a660a96397e82956ab18a30a122459`;
+Tumbleweed's 642-entry manifest has SHA-256
+`806453d3bb3d30ad862d23d6203f4f688e35b7b6fd144ac1a5bb741853796bd0`.
+
+The fast repository gates each passed 94/94 at pre-rebase heads `4c937adde`
+(Debian/KDE neon), `90f610c59` (Arch), and `b9f9ed439` (Fedora/Tumbleweed).
+Their post-rebase equivalents are `a04c47614`, `85ed78b2c`, and `f1184c3d3`;
+F1's later `71fa379c2` follow-up changed only manpage aliases and passed its
+focused documentation and lint checks. No hosted CI, official repository,
+release, tag, upload, publication, sponsorship, or endorsement was created.
+Gentoo and Void recipes remain pending. No settings or defect state changed,
+and no new defect was found or filed.
+
 ## 2026-07-20: D25 (task icons stay stale after icon-theme changes) fixed
 
 PR #76 landed the icon-theme refresh path on `origin/main`. `Kirigami.Icon`
