@@ -7,8 +7,8 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 include /usr/share/dpkg/architecture.mk
 
 package_test_env = env -u QML2_IMPORT_PATH -u QML_IMPORT_PATH \
-	-u NIXPKGS_QT6_QML_IMPORT_PATH -u NIXPKGS_QML_SEARCH_PATHS \
-	PATH=/usr/lib/qt6/bin:/usr/bin:/bin \
+	-u NIXPKGS_QT6_QML_IMPORT_PATH -u NIXPKGS_QML_SEARCH_PATHS -u QT_PLUGIN_PATH \
+	PATH=/usr/lib/qt6/bin:/usr/bin:/bin QT_QPA_PLATFORMTHEME= \
 	LATTE_QML_MODULE_PATH=/usr/lib/$(DEB_HOST_MULTIARCH)/qt6/qml
 
 %:
