@@ -119,6 +119,7 @@ BuildRequires:  kf6-kglobalaccel-devel >= 6.5
 BuildRequires:  kf6-kguiaddons-devel >= 6.5
 BuildRequires:  kf6-ki18n-devel >= 6.5
 BuildRequires:  kf6-kiconthemes-devel >= 6.5
+BuildRequires:  kf6-kitemmodels-devel >= 6.5
 BuildRequires:  kf6-kio-devel >= 6.5
 BuildRequires:  kf6-kirigami-devel >= 6.5
 BuildRequires:  kf6-knewstuff-devel >= 6.5
