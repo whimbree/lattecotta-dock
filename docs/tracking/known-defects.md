@@ -262,31 +262,6 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   then adopt ng's refresh if it reproduces, or resolve as HAVE if a Plasma 6 icon
   source already repaints on a theme change.
 
-### D26 - inNormalState binding-loop warning in VisibilityManager
-- STATUS: OPEN (a "Binding loop detected for inNormalState" warning was recorded
-  reproduced in this port's log by the ng-upstream commit audit; the flagged
-  declarative binding is unchanged, so it stands unless the loop condition was
-  removed elsewhere). Migrated here 2026-07-19 from that audit (its Top ADOPT
-  (adopt-this-fix) finding D) so archiving the audit does not bury the action
-  item.
-- FOUND: the ng-upstream audit (archived at docs/archive/ng-upstream-audit.md),
-  which recorded the in-log warning "Binding loop detected for inNormalState".
-  ng's own remedy is commit 73d982f0b (replace the binding with an imperative
-  recompute).
-- SYMPTOM: Qt logs "Binding loop detected for inNormalState" from
-  VisibilityManager, so the property re-evaluates until it settles instead of
-  updating once.
-- MECHANISM (code-verified 2026-07-19): inNormalState is a declarative binding
-  over two model counts at
-  containment/package/contents/ui/VisibilityManager.qml:33
-  (`inNormalState: ((animations.needBothAxis.count === 0) &&
-  (animations.needLength.count === 0))`), and this port still carries no
-  imperative recomputeInNormalState() (grep is empty). ng replaced the binding
-  with an imperative recomputeInNormalState() driven from the count-change
-  signals to break the loop.
-- NEXT: adopt ng's imperative-recompute shape (73d982f0b), or confirm the loop is
-  already absent in this tree and resolve.
-
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here
@@ -328,6 +303,60 @@ app/wm/waylandinterface.cpp:299 (Phase 4 WId), app/layouts/synchronizer.cpp:507
 carries its own detail or points into the plan and the reference docs.
 
 ## Fixed (kept for the record)
+
+### D31 - Valid Justify splitter moves reset after restart
+- STATUS: FIXED (PR #73: functional fix 91eff7c46; source-attribution commit
+  3170dd4f9).
+- FOUND: 2026-07-20, valid splitter moves restored the previous zones after
+  restart; reproduced against the production `LayoutManager` with real
+  `KConfigPropertyMap` and `KConfigLoader` state.
+- SYMPTOM: moving either Justify splitter updates the current layout, but a
+  restart restores the previous splitter positions and zone distribution while
+  the applet order remains unchanged.
+- ROOT CAUSE: `LayoutManager::saveOptions()` inserted each updated value under
+  its live `splitterPosition` or `splitterPosition2` key, then emitted
+  `KConfigPropertyMap::valueChanged` through absent `m_option` entries.
+  `m_option` contains only the lock and color-option mappings, so both splitter
+  lookups produced an empty key. The live map changed, but the backing
+  `KConfigLoader` skeleton retained the old values for reconstruction.
+- FIX: route both splitter positions through one equality-guarded writer that
+  inserts and publishes the same explicit key. The unrelated lock and color
+  option mappings remain unchanged. This is distinct from D5 (Justify splitter
+  negative-insert UB), which repairs invalid positions before insertion; D31
+  persists already-valid moved positions.
+- EVIDENCE: restoring the empty-key path makes `layoutmanagerparkingtest` fail
+  on the first notification key. The fixed path moves seeded positions
+  `1,5 -> 2,5 -> 2,4`, observes each named notification independently,
+  preserves applet order `7;8;9;10`, saves through `KConfigLoader`, reconstructs
+  the complete fixture, and restores start/main/end zone counts `1/1/2`. A
+  healthy seeded `2,4` save emits no notifications and remains byte-identical.
+  The full gate passed at pre-merge `4f505ac5b`, including the sanitized nested
+  dock; GitHub rewrote that tree-identical head to `3170dd4f9`.
+
+### D26 - VisibilityManager inNormalState binding-loop warning
+- STATUS: FIXED (PR #74, 4cc94a48f).
+- FOUND: reproduced in this port's log during the ng-upstream commit audit,
+  archived at `docs/archive/ng-upstream-audit.md`. latte-dock-ng commit
+  `73d982f0b` addresses the same warning through imperative state recomputation.
+- SYMPTOM: Qt logs `Binding loop detected for inNormalState` from
+  `VisibilityManager`, causing the property to re-evaluate through a synchronous
+  feedback cycle.
+- ROOT CAUSE: `VisibilityManager.inNormalState` is declaratively bound to the
+  animation tracker counts. Its true edge synchronously called
+  `AutoSize.updateIconSize()`, which selected a new icon-size target, entered
+  `inAutoSizeAnimation`, changed `animations.needBothAxis`, and fed the source
+  tracker while the binding was still evaluating. The declarative binding was
+  not itself the defect; the synchronous AutoSize continuation closed the loop.
+- FIX: keep `inNormalState` declarative and defer only the AutoSize continuation
+  with `Qt.callLater(sizer.updateIconSize)`. The execution-time normal-state
+  check rejects stale work, and Qt coalesces duplicate calls to the same bound
+  method. No code was transplanted from latte-dock-ng.
+- EVIDENCE: restoring the direct call makes the focused production-QML test fail
+  four assertions covering synchronous resize, uncoalesced rapid calls, stale
+  resize after a final false state, and execution before Loader teardown. The
+  deferred path passes all five focused scenarios, the complete qmlinteraction
+  suite passes 232 cases, the QML compile gate compiles 129 files, and
+  AutoSize's 24 curated qmllint warnings drop to zero.
 
 ### D32 - Always Visible floating docks fail to track maximized windows when hiding the floating gap
 - STATUS: FIXED (PR #71, 54572f495 + 33c72b34e).

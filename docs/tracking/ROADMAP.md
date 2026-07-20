@@ -41,7 +41,7 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
 
 ## Registries and state
 
-- [Known defects](known-defects.md) - the flat found-bugs registry (D1-D26), one
+- [Known defects](known-defects.md) - the flat found-bugs registry, one
   line per bug with its status (OPEN / FIXED / ACCEPTED / SUSPECTED). Scan here
   for what is known broken.
 - [Session handoff](session-handoff.md) - the rolling session state. Read first

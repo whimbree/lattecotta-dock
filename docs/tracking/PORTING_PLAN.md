@@ -2112,6 +2112,19 @@ multi-view, multi-monitor setup.
       Verified with the throwaway layout at 78 and my real
       layout, which starts again
       Commits: ad9b823f
+- [x] D26 (VisibilityManager inNormalState binding-loop warning): keep
+      `inNormalState` declarative and break the synchronous AutoSize feedback
+      edge. Its true-edge handler called `updateIconSize()` while the
+      tracker-count binding was still evaluating; selecting a target entered
+      `inAutoSizeAnimation`, changed `needBothAxis`, and fed the binding's own
+      source. `Qt.callLater(sizer.updateIconSize)` defers only that
+      continuation; the execution-time normal-state check rejects stale work
+      and duplicate calls coalesce. The focused production-QML test fails four
+      assertions with the direct call restored and passes all five scenarios
+      with the deferred continuation; qmlinteraction passes 232 cases, the QML
+      compile gate compiles 129 files, and AutoSize's 24 curated qmllint
+      warnings drop to zero.
+      Commits: 4cc94a48f
 - [x] Expose plasma applets' PRIVATE QML modules to the dock (hit live
       it live: 'module org.kde.private.desktopcontainment.folder is not
       installed'; ALL third-party applets error in the staged run while
@@ -2146,6 +2159,19 @@ multi-view, multi-monitor setup.
       sequence
       Commits: 9a6f8fb8 (id chain), c3d15966 (config-sync
       prerequisite)
+- [x] D31 (valid Justify splitter moves reset after restart): persist both
+      splitter positions through explicit KConfig keys. `saveOptions()` inserted
+      new values under their live keys but emitted `valueChanged` through absent
+      `m_option` entries, so both notifications used an empty key and the
+      backing loader restored the old zones. The equality-guarded writer now
+      inserts and publishes the same explicit key. `layoutmanagerparkingtest`
+      moves positions `1,5 -> 2,5 -> 2,4`, reconstructs the fixture, restores
+      start/main/end zone counts `1/1/2` while preserving applet order, and
+      proves that a healthy `2,4` save emits no notification and remains
+      byte-identical. This is distinct from D5 (Justify splitter negative-insert
+      UB), which repairs invalid positions.
+      Commits: 91eff7c46 (fix and regression coverage), 3170dd4f9
+      (required source attribution)
 - [x] Verify duplicated/cloned docks actually establish applet config
       sync after the initial 'org.kde.sync ... was not established'
       storm (the 1s retry in ContainmentInterface should log 'delayed

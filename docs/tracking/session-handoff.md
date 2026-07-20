@@ -3,6 +3,24 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-20.
 
+## 2026-07-20: D26 (VisibilityManager normal-state binding loop) and D31 (Justify splitter moves reset after restart)
+
+Two normal-state and splitter defects landed on `origin/main`.
+
+- PR #74 fixed D26 by deferring only the AutoSize continuation from the
+  declarative `inNormalState` true edge. The production-QML negative control
+  fails four assertions with the direct call restored; the fixed path passes
+  all five focused scenarios, 232 qmlinteraction cases, the 129-file QML compile
+  gate, and strict-on-touch qmllint with AutoSize reduced from 24 warnings to
+  zero. Post-rebase commit: `4cc94a48f`.
+- PR #73 fixed D31 by publishing each moved Justify splitter position through
+  the same explicit key inserted into the live config map. The production
+  `LayoutManager` fixture persists independent moves across complete
+  `KConfigLoader` reconstruction, restores start/main/end zone counts `1/1/2`,
+  preserves applet order, and keeps a healthy no-op byte-identical. The full
+  gate passed at pre-merge `4f505ac5b`; GitHub rewrote that tree-identical head
+  to post-rebase commits `91eff7c46` and `3170dd4f9`.
+
 ## 2026-07-20 SESSION: D27 (stale maximize work area) latency follow-up
 
 The D27 (maximize transitions leave a stale floating-gap work area) follow-up
