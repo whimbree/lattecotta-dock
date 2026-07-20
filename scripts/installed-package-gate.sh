@@ -54,7 +54,7 @@ require_commands() {
     done
 }
 
-require_commands validation awk cat dirname find jq mktemp perl readelf readlink realpath rm timeout tr
+require_commands validation awk cat dirname env find jq mktemp perl readelf readlink realpath rm timeout tr
 
 qt_plugin_info=""
 latte_package_gate_find_qt6_plugin_info qt_plugin_info \
@@ -629,7 +629,7 @@ if [[ "$check_only" == 1 ]]; then
 fi
 
 require_commands runtime \
-    busctl cat chmod dbus-run-session env find kwin_wayland mkdir mktemp pgrep rm seq setsid sh sleep sort tail tr
+    busctl cat chmod dbus-run-session env find kwin_wayland mkdir mktemp pgrep rm seq setsid sh sleep tail tr
 if ! command -v fusermount3 >/dev/null 2>&1 && ! command -v fusermount >/dev/null 2>&1; then
     fail "required runtime command 'fusermount3' or 'fusermount' is missing"
 fi

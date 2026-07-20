@@ -9,8 +9,8 @@
 set -euo pipefail
 
 for required_command in \
-        awk bash c++ cc chmod cp env find grep ld ln mkdir mktemp mv patchelf pgrep \
-        pkg-config readelf realpath rm setsid sleep sort; do
+        awk bash c++ cc chmod cp dirname env find ld ln mkdir mktemp mv patchelf pgrep \
+        pkg-config readelf realpath rm setsid sleep; do
     command -v "$required_command" >/dev/null 2>&1 || {
         printf "installed-package-gate-selftest: FAIL: required command '%s' is missing\n" \
             "$required_command" >&2
@@ -157,6 +157,17 @@ missing_awk_path="$work/missing-awk-path"
 mkdir -p "$missing_awk_path"
 expect_failure "missing awk parser" "required validation command 'awk' is missing" \
     env PATH="$missing_awk_path" LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    "$(command -v bash)" "$gate" --root "$work/not-used" --prefix /usr --check-only
+
+missing_env_path="$work/missing-env-path"
+mkdir -p "$missing_env_path"
+for available_validation_command in \
+        awk cat dirname find jq mktemp perl readelf readlink realpath rm timeout tr; do
+    ln -s "$(command -v "$available_validation_command")" \
+        "$missing_env_path/$available_validation_command"
+done
+expect_failure "missing env launcher" "required validation command 'env' is missing" \
+    env PATH="$missing_env_path" LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     "$(command -v bash)" "$gate" --root "$work/not-used" --prefix /usr --check-only
 
 qt_libexec="$(pkg-config --variable=libexecdir Qt6Core)" \
@@ -950,4 +961,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (62 focused controls)"
+echo "installed-package-gate-selftest: PASS (63 focused controls)"
