@@ -83,6 +83,7 @@ require_package_file() {
 audit_package_tree() {
     local label="$1" tree="$2" tree_resolved link target target_candidate target_normalized link_resolved provider_dir
     local -a tree_links=()
+    [[ ! -L "$tree" ]] || fail "$label root must not be a symlink: $tree"
     [[ -d "$tree" ]] || fail "package is incomplete: missing $label at $tree"
     tree_resolved="$(resolve_native_path "installed $label" "$tree")"
     path_is_within "$tree_resolved" "$artifact_prefix" \

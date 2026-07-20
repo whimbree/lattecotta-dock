@@ -226,6 +226,17 @@ expect_failure "nested QML content symlink escape" "Latte QML tree contains a sy
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$escaped_qml_content" --prefix /usr --check-only
 
+escaped_qml_directory="$work/escaped-qml-directory"
+cp -a "$good" "$escaped_qml_directory"
+outside_qml_directory="$work/preinstalled-system-qml-directory"
+mkdir -p "$outside_qml_directory"
+: >"$outside_qml_directory/Injected.qml"
+rm -rf "$escaped_qml_directory/usr/lib/qt6/qml/org/kde/latte/components/deep"
+ln -s "$outside_qml_directory" "$escaped_qml_directory/usr/lib/qt6/qml/org/kde/latte/components/deep"
+expect_failure "nested external QML directory symlink" "Latte QML tree contains a symlink escaping its installed runtime tree" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$escaped_qml_directory" --prefix /usr --check-only
+
 source_qml="$work/source-qml-content"
 cp -a "$good" "$source_qml"
 rm "$source_qml/usr/lib/qt6/qml/org/kde/latte/components/deep/Installed.qml"
@@ -286,6 +297,14 @@ ln -s "$internal_unowned/Injected.qml" \
 expect_failure "in-prefix cross-tree QML symlink" "Latte QML tree contains a symlink escaping its installed runtime tree" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$cross_tree_qml" --prefix /usr --check-only
+
+root_symlink_data="$work/root-symlink-data"
+cp -a "$good" "$root_symlink_data"
+mv "$root_symlink_data/usr/share/latte" "$root_symlink_data/usr/share/latte-real"
+ln -s latte-real "$root_symlink_data/usr/share/latte"
+expect_failure "Latte runtime-tree root symlink" "Latte data tree root must not be a symlink" \
+    env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
+    bash "$gate" --root "$root_symlink_data" --prefix /usr --check-only
 
 hostile_loader="$work/foreign loader"
 mkdir -p "$hostile_loader"
@@ -446,4 +465,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (34 focused controls)"
+echo "installed-package-gate-selftest: PASS (36 focused controls)"
