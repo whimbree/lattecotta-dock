@@ -3731,9 +3731,12 @@ polished, distributable form of it.
       `c5adbb863`, `cb659d480`, `477cdf70a`, `7246b4222`, `5c51ef221`,
       `696d383db`, `7463152e8`, and `625b6c2c0`. The mandatory recipe follow-up
       is complete on branch `build/appstream-source-repin` at provisional commit
-      `c3ad16a23`. Keep this item unchecked until that PR merges; replace the
-      provisional hash with the final post-rebase commit and then mark it
-      complete.
+      `c3ad16a23`. Five independent Arch, Debian/KDE neon, Fedora/openSUSE,
+      Gentoo, and Void validation lanes passed at exact head `45c0d27cb`,
+      including fresh-install integrity, exact AppStream structure, full
+      nested-Wayland package gates, and clean shutdown. Keep this item unchecked
+      until that PR merges; replace the provisional hash with the final
+      post-rebase commit and then mark it complete.
       Commits: 94f8dc1e5, c5adbb863, cb659d480, 477cdf70a, 7246b4222,
       5c51ef221, 696d383db, 7463152e8, 625b6c2c0, c3ad16a23 (recipe follow-up
       provisional; final post-rebase hash required)
