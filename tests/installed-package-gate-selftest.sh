@@ -30,6 +30,7 @@ trap 'rm -rf "$work"' EXIT
 write_appstream_metadata() {
     local root="$1" component_type="$2" component_id="$3" launchable="$4"
     local extends="${5:--}" library="${6:--}"
+    local replaced_component_id="${7:-org.kde.latte-dock.desktop}"
     {
         printf '%s\n' '<?xml version="1.0" encoding="utf-8"?>'
         printf '<component type="%s">\n' "$component_type"
@@ -45,6 +46,10 @@ write_appstream_metadata() {
         [[ "$library" == - ]] || printf '    <library>%s</library>\n' "$library"
         printf '  </provides>\n'
         printf '  <launchable type="desktop-id">%s</launchable>\n' "$launchable"
+        if [[ "$replaced_component_id" != - ]]; then
+            printf '  <replaces>\n    <id>%s</id>\n  </replaces>\n' \
+                "$replaced_component_id"
+        fi
         printf '%s\n' '</component>'
     } >"$root/usr/share/metainfo/org.kde.latte-dock.appdata.xml"
 }
@@ -343,6 +348,14 @@ for invalid_appstream_spec in "${invalid_appstream_specs[@]}"; do
     expect_failure "$invalid_appstream_name" "$invalid_appstream_diagnostic" \
         run_check "$invalid_appstream_root"
 done
+
+missing_appstream_migration="$work/appstream-missing-released-id-migration"
+cp -a "$good" "$missing_appstream_migration"
+write_appstream_metadata "$missing_appstream_migration" desktop-application \
+    org.kde.latte-dock org.kde.latte-dock.desktop - - -
+expect_failure "missing released AppStream ID migration" \
+    "replaces must contain only the released org.kde.latte-dock.desktop component ID" \
+    run_check "$missing_appstream_migration"
 
 expect_failure "live root without ownership manifest" \
     "--manifest is required with --root /" \
@@ -1215,4 +1228,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (84 focused controls)"
+echo "installed-package-gate-selftest: PASS (85 focused controls)"

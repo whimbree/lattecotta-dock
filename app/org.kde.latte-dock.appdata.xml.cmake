@@ -213,6 +213,9 @@
     <binary>latte-dock</binary>
   </provides>
   <launchable type="desktop-id">org.kde.latte-dock.desktop</launchable>
+  <replaces>
+    <id>org.kde.latte-dock.desktop</id>
+  </replaces>
   <releases>
     <release version="0.9.1" date="2019-08-04"/>
     <release version="0.9.0" date="2019-07-28"/>

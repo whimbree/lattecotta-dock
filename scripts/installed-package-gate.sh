@@ -365,9 +365,11 @@ my @launchables;
 my @provider_names;
 my @provider_binaries;
 my @provider_libraries;
+my @replaced_component_ids;
 my $component_type;
 my $extends_count = 0;
 my $provides_count = 0;
+my $replaces_count = 0;
 my $root_count = 0;
 
 sub reject {
@@ -384,6 +386,7 @@ sub finish_node {
         push @component_ids, $text if $node->{name} eq 'id';
         $extends_count++ if $node->{name} eq 'extends';
         $provides_count++ if $node->{name} eq 'provides';
+        $replaces_count++ if $node->{name} eq 'replaces';
         if ($node->{name} eq 'launchable') {
             push @launchables, [$text, $node->{attributes}->{type} // ''];
         }
@@ -393,6 +396,11 @@ sub finish_node {
         push @provider_names, $node->{name};
         push @provider_binaries, $text if $node->{name} eq 'binary';
         push @provider_libraries, $text if $node->{name} eq 'library';
+    }
+    if (defined $parent && defined $grandparent
+            && $parent eq 'replaces' && $grandparent eq 'component'
+            && $node->{name} eq 'id') {
+        push @replaced_component_ids, $text;
     }
 }
 
@@ -471,6 +479,10 @@ $component_type eq 'desktop-application'
     && $launchables[0]->[1] eq 'desktop-id'
     or reject('launchable must be exactly desktop-id org.kde.latte-dock.desktop');
 $extends_count == 0 or reject('standalone component must not declare extends');
+$replaces_count == 1
+    && @replaced_component_ids == 1
+    && $replaced_component_ids[0] eq 'org.kde.latte-dock.desktop'
+    or reject('replaces must contain only the released org.kde.latte-dock.desktop component ID');
 @provider_libraries == 0
     or reject("provider must not advertise library $provider_libraries[0]");
 $provides_count == 1
