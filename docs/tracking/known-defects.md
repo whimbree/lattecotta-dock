@@ -345,8 +345,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 ### D59 - Invalid standalone AppStream identity and stale library provider
 - STATUS: OPEN. The root fix is complete on branch
   `fix/appstream-source-truth` at provisional commits `8468e54c6`, `34999aa56`,
-  and `6eb4406c1`, but the defect remains open until the PR merges and final
-  post-rebase hashes replace them.
+  `6eb4406c1`, `a860385ef`, `a42843047`, and `480c831aa`, but the defect remains
+  open until the PR merges and final post-rebase hashes replace them.
 - FOUND: 2026-07-20, source-metadata audit before the first continuation
   release.
 - SYMPTOM: AppStream 1.1.3 rejects the configured metadata with
@@ -365,14 +365,23 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `build/install_manifest.txt`. The branch declares `desktop-application`
   component `org.kde.latte-dock`, retains the
   `org.kde.latte-dock.desktop` launchable, removes `extends`, and provides only
-  binary `latte-dock`. Direct validation and the configured-file CTest pass.
+  binary `latte-dock`. Upstream tag `v0.10.8` at `28f39d65d` proves that the old
+  component ID shipped, so an exact `<replaces>` relationship preserves its
+  software-center history while `org.kde.latte-dock` remains the only live ID.
+  AppStream 1.1.3 accepts this relationship. Direct validation and the
+  configured-file CTest pass, and the Nix package declares AppStream in its
+  native test closure.
   The installed-package gate additionally requires package-owned metainfo and
-  structurally rejects each wrong identity field, any extension, and the stale
-  library without requiring AppStream at runtime.
-- COMPATIBILITY: no continuation package has been released, so no alias,
-  migration, or compatibility identity is required. Debian and RPM snapshot
-  recipes consume current HEAD and no longer carry duplicate patches. Gentoo
-  and Void remain on older source until their separate post-merge repin.
+  structurally rejects each wrong identity field, a missing migration
+  relationship, any extension, and the stale library without requiring
+  AppStream at runtime.
+- COMPATIBILITY: no continuation package has been released, so no continuation
+  alias or migration is needed. The declarative `replaces` entry covers the
+  inherited upstream release history and does not preserve the invalid ID as a
+  live identity. Debian and RPM snapshot recipes consume current HEAD and no
+  longer carry duplicate patches. The tracked Gentoo and Void recipes remain on
+  older source until their separate post-merge repin. The Void helper rewrites
+  its staged recipe to current HEAD and therefore stages no old-source patch.
 
 ## Recorded elsewhere - indexed here so the flat scan is complete
 

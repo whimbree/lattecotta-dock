@@ -777,7 +777,12 @@ format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
       shutdown. `LATTE_GATE_FAST=1 scripts/gate-all.sh` exited 0 at pre-rebase
       head `fbdc3a3150b5fe4dad788e189101e9989129fbb8`, with all 77 installed-
       package refusal controls, 94/94 tests, qmllint, all 13 scene probes, and
-      matrix fixtures green.
+      matrix fixtures green. That acceptance used the original helper while its
+      then-current source still needed the AppStream patch. The tracked template
+      remains pinned to that older source and retains the patch. The helper
+      rewrites its staged copy to exact current HEAD, so it now stages no patch;
+      the package-gate self-test verifies the patch-free recipe and corrected
+      metadata inside the exact source archive.
       Commits: ea1bc5acb, ced7a48a5.
 - [ ] F6 (the package-artifact CI task): extend the matrix to build each native
       package artifact in its distro environment, install that artifact, and
