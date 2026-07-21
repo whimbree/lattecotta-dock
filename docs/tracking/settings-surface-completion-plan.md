@@ -210,14 +210,15 @@ sequence was reproduced twice. Qt5 and both reference forks retain the launcher
 exception, so no fix or divergence is selected. Temporary instrumentation was
 removed.
 
-Existing D-Bus state proves the independent effects but cannot distinguish
-`requestActivate` from `requestNewInstance`. SC-T3 (the D29 narrow dispatch
-readback) is therefore authorized to expose only the latest middle-click row
-kind and identity, configured action, dispatched operation, and monotonic
-sequence. SC-T5 (the D29 permanent runtime-effect acceptance) follows it and
-pins both observed rows and effects. SC-T4 (the D29 root fix) is not applicable.
-No action enum, persisted schema, target/action matrix, group-policy change, or
-action-surface expansion is approved.
+Existing D-Bus state proved the independent effects but could not distinguish
+`requestActivate` from `requestNewInstance`. PR #99 landed SC-T3 (the D29 narrow
+dispatch readback), which exposes only the latest middle-click row kind and
+identity, configured action, dispatched operation, and monotonic sequence.
+SC-T5 (the D29 permanent runtime-effect acceptance) is now dependency-unblocked
+and remains approved but unchecked; it will pin both observed rows and effects.
+SC-T4 (the D29 root fix) is not applicable. No action enum, persisted schema,
+target/action matrix, group-policy change, or action-surface expansion is
+approved.
 
 ### D30 (Behavior mouse actions expose fixed booleans instead of full choices)
 
@@ -459,23 +460,21 @@ in SC-R6.
       retain the launcher exception. D29 is accepted as Qt5-faithful behavior
       and a configuration-scope misunderstanding, with no divergence or fix.
       Dependencies: SC-T1. Commits: 327e2e9af
-- [ ] **SC-T3 (the D29 narrow middle-click dispatch readback):** expose only the
+- [x] **SC-T3 (the D29 narrow middle-click dispatch readback):** expose only the
       latest middle-click row identity and kind, configured action, dispatched
       operation, and monotonic sequence needed to distinguish launcher
       activation from new-instance dispatch. No setter, history, or action
-      expansion. Dependencies: SC-T2. Approved. Open in PR #99 but not merged;
-      the checkbox remains open. Commits: 9aea0d8bb, 2aa5a7a1e, c0ba3f66f,
-      9955f2035, 7f3d42a2e
-      (provisional PR hashes; replace with the final post-rebase hashes
-      after merge)
+      expansion. Dependencies: SC-T2. PR #99 landed this approved unit.
+      Commits: e87deef58, bfd30f235, e190d03b0, 4dd51fdcd, cd959cb3a
 - [x] **SC-T4 (the D29 root fix, if proven):** not applicable because SC-T2
       established Qt5-faithful behavior with no defect or selected divergence.
       Dependencies: SC-T2. Commits: N/A (accepted behavior requires no fix)
 - [ ] **SC-T5 (the D29 permanent runtime-effect acceptance):** always drive the
       pure launcher and resulting single-window row, assert the SC-T3 dispatch
       plus the zero-to-one active-window and one-to-two grouped-child effects,
-      and include a negative control. Dependencies: SC-T2 and SC-T3; SC-T4 is
-      not applicable. Approved after SC-T3. Commits:
+      and include a negative control. Dependencies: SC-T2 and completed SC-T3;
+      SC-T4 is not applicable. The existing approval is now dependency-unblocked;
+      this unit remains unchecked. Commits:
 - [x] **SC-W1 (the D56 launcher-wheel regression guard):** pin inherited pure
       launcher positive activation, negative no-op, `ScrollNone` refusal,
       manual-scroll enablement, and no-overflow behavior. Dependencies: existing

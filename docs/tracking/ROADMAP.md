@@ -36,8 +36,10 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   guard), SC-T3 (the D29 narrow dispatch readback), SC-T5 (the D29 permanent
   runtime-effect acceptance), SC-CW1 (the D57 ConfigOverlay wheel-threshold
   reproduction), and SC-WT1 (the D58 tracker-enablement root fix and regression).
-  SC-T1 (the D29 middle-click evidence capture), SC-T2 (the D29 disposition), and
-  SC-B1 (the D30 current-contract investigation) are complete evidence records.
+  SC-T1 (the D29 middle-click evidence capture), SC-T2 (the D29 disposition),
+  SC-T3 (the D29 narrow dispatch readback), and SC-B1 (the D30 current-contract
+  investigation) are complete units. SC-T5 (the D29 permanent runtime-effect
+  acceptance) remains approved and unchecked but is now dependency-unblocked.
   Per-view pages come first; global Qt Widgets settings follow under the same
   C1-C9 (nine-property control completion) contract. D29 (task-icon middle click
   appears to execute left-click behavior) is accepted as Qt5-faithful

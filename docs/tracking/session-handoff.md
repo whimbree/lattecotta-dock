@@ -3,17 +3,21 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-21.
 
-## 2026-07-21: SC-T3 (the D29 narrow middle-click dispatch readback) open in PR #99
+## 2026-07-21: SC-T3 (the D29 narrow middle-click dispatch readback) merged
 
-SC-T3 (the D29 narrow middle-click dispatch readback) is open in PR #99 from
-branch `feat/tasks-middle-click-readback`. Its implementation and
-review-hardening commits are `9aea0d8bb`, `2aa5a7a1e`, `c0ba3f66f`,
-`9955f2035`, and `7f3d42a2e`, rebased onto exact `origin/main`
-`ac1db809b7ba53992d2a71b92bfd80e236615abc`. Pre-PR independent code review
-returned MERGE; the mandatory final remote review and merge remain pending, and
-the settings-plan checkbox stays open with all five hashes provisional. D60
-(tasks QML type metadata omits two accessibility composer methods) remains
-separately recorded at `dc32d00f0`.
+PR #99 merged SC-T3 (the D29 narrow middle-click dispatch readback) into
+`origin/main` at `eb66895ca`. Final implementation and public API commit:
+`e87deef58`. D60 (tasks QML type metadata omits accessibility composer methods)
+record: `faceecd35`. Initial authoring and focused verification documentation:
+`03bdcee11` and `668c40c22`. D61 (middle-click aggregate could expose an older
+plausible event) and D62 (middle-click readback accepted inconsistent
+action-operation pairs) fix: `bfd30f235`. README and public documentation:
+`9d377b51a`. Initial production bridge guards and final collector semantic
+guards: `e190d03b0` and `4dd51fdcd`. Hash refresh documentation: `6bcbc7f0f`
+and `aa2f375a6`. D63 (task settings-inventory anchors did not follow
+middle-click QML) anchor fix and tracking: `cd959cb3a` and `f2c2ba089`. Final
+review documentation: `ca5753f62` and `eb66895ca`. D60 remains OPEN and its
+repair remains separate.
 
 `TaskMouseArea.onReleased` records at the production launcher/task dispatch
 branch without changing its operation. The tasks backend retains one typed
@@ -28,8 +32,9 @@ method is `taskMiddleClickDispatchData(u containmentId) -> s`. It returns only
 `rowIdentity`, `rowKind`, `configuredAction`, `dispatchedOperation`, and
 `sequence`, or `{}` before the first event. There is no setter, history,
 arbitrary execution, action expansion, window title, or other application
-content. SC-T5 (the D29 permanent runtime-effect acceptance) remains separate
-and was not started.
+content. SC-T5 (the D29 permanent runtime-effect acceptance) remains separate,
+approved, and unchecked. It is now dependency-unblocked; runtime acceptance was
+not started.
 
 Post-review focused application/tasks-plugin/test builds passed.
 `tasksbackendtest`, sanitizer-backed `dbusreportstest`, and `sourceguardtest`
@@ -46,19 +51,20 @@ compile gate passed 130 files, qmllint matched its 5,832-warning baseline, all
 passed. Regenerated tasks type metadata differs only by D60's two pre-existing
 composer-method omissions. SC-T5 runtime-effect acceptance was not run.
 
-The first canonical gate at `3f4ec2355` exposed D63 (task settings-inventory
-anchors did not follow middle-click QML): SC-T3 shifted every
-`TaskMouseArea.qml` source anchor, but the inventory retained pre-feature line
-numbers. Commit `7f3d42a2e` moves all nine task-row anchors and the drag-and-drop
-exemption to their exact handlers. Focused `settingsinventorytest` passes at
-270 affordances and 21 exemptions. The final canonical full gate then passed
-and stamped exact head `2fd23a08e34a10eebeab11e7cbb02c919478b8d4` before the
-branch push. This current-state correction is docs-only after that stamped
-code/tracking head; it adds no code and makes no new code-gate claim.
+The first canonical gate exposed D63 (task settings-inventory anchors did not
+follow middle-click QML): SC-T3 shifted every `TaskMouseArea.qml` source anchor,
+but the inventory retained pre-feature line numbers. Final commit `cd959cb3a`
+moves all nine task-row anchors and the drag-and-drop exemption to their exact
+handlers. Focused `settingsinventorytest` passes at 270 affordances and 21
+exemptions. The final canonical full gate passed and stamped exact pre-rebase
+head `2fd23a08e34a10eebeab11e7cbb02c919478b8d4`, whose tree matches final
+tracking commit `f2c2ba089` after GitHub's rebase merge. This current-state
+correction is docs-only after that gated code/tracking tree; it adds no code and
+makes no new code-gate claim.
 
 The QML type-dump comparison found D60. It is pre-existing and unrelated to
 SC-T3; the new Backend property, signal, and method match regenerated metadata.
-D60 was recorded without fixing the unrelated drift.
+D60 was recorded at final commit `faceecd35` without fixing the unrelated drift.
 
 ## 2026-07-21: D57 ConfigOverlay wheel threshold reproduced
 

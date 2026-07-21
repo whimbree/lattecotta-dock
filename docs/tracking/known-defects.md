@@ -262,11 +262,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - HISTORY: Qt5 and both reference forks retain the launcher exception. The
   configured task action applies after a launcher has become a window row; it
   does not replace pure-launcher activation.
-- DISPOSITION: preserve the behavior with no fix or divergence. Existing D-Bus
-  state cannot distinguish `requestActivate` from `requestNewInstance`, so
-  SC-T3 (the D29 narrow dispatch readback) remains as a small observability
-  follow-up before SC-T5 (the D29 permanent runtime-effect acceptance). SC-T4
-  (the D29 root fix) is not applicable. Temporary instrumentation was removed.
+- DISPOSITION: preserve the behavior with no fix or divergence. PR #99 landed
+  SC-T3 (the D29 narrow dispatch readback), which distinguishes
+  `requestActivate` from `requestNewInstance`. SC-T5 (the D29 permanent
+  runtime-effect acceptance) is dependency-unblocked and remains approved but
+  unchecked. SC-T4 (the D29 root fix) is not applicable. Temporary
+  instrumentation was removed.
 
 ### D30 - Behavior mouse actions expose fixed booleans instead of full choices
 - STATUS: OPEN. SC-B1 (the D30 current-contract investigation) confirmed the
@@ -421,7 +422,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   the corresponding archive metadata.
 
 ### D60 - Tasks QML type metadata omits accessibility composer methods
-- STATUS: OPEN (confirmed by generated-metadata comparison 2026-07-21).
+- STATUS: OPEN (confirmed by generated-metadata comparison 2026-07-21). The
+  defect record landed at `faceecd35`; the repair remains separate from SC-T3
+  (the D29 narrow middle-click dispatch readback).
 - FOUND: SC-T3 (the narrow dispatch readback for D29 (task-icon middle click
   appears to execute left-click behavior)) type-metadata check.
 - SYMPTOM: QML tooling cannot discover
@@ -438,7 +441,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   SC-T3.
 
 ### D61 - Middle-click aggregate could expose an older plausible event
-- STATUS: FIXED in open PR #99 (`2aa5a7a1e`); not merged.
+- STATUS: FIXED. PR #99 landed the fail-closed aggregate fix at `bfd30f235`.
 - FOUND: independent pre-PR review of SC-T3 (the D29 narrow middle-click
   dispatch readback).
 - ROOT: `collectMiddleClickDispatchData` skipped malformed candidates and only
@@ -454,11 +457,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: sanitizer-backed `dbusreportstest` covers multiple applets, newest
   selection, exact JSON, mixed no-event candidates, malformed-plus-valid
   refusal, requested-containment mismatch, and 5/10/5 duplicate refusal.
-  Source guards at `c0ba3f66f` and `9955f2035` pin the complete QML reporter
+  Source guards at `e190d03b0` and `4dd51fdcd` pin the complete QML reporter
   and live collector bridges, including the undo-window lifecycle contract.
 
 ### D62 - Middle-click readback accepted inconsistent action-operation pairs
-- STATUS: FIXED in open PR #99 (`2aa5a7a1e`); not merged.
+- STATUS: FIXED. PR #99 landed the exhaustive action-operation mapping at
+  `bfd30f235`.
 - FOUND: independent pre-PR review of SC-T3 (the D29 narrow middle-click
   dispatch readback).
 - ROOT: the backend and D-Bus parser validated enum ranges and the launcher
@@ -472,12 +476,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: `tasksbackendtest` and sanitizer-backed `dbusreportstest` cover all
   six task pairs, all six launcher exceptions, every known unoffered action,
   unknown values, and mismatched row/action/operation combinations. The exact
-  production reporter forwarding is pinned at `c0ba3f66f`.
+  production reporter forwarding is pinned at `e190d03b0`.
 
 ### D63 - Task settings-inventory anchors did not follow middle-click QML
-- STATUS: FIXED in open PR #99 (`7f3d42a2e`); not merged.
+- STATUS: FIXED. PR #99 landed the inventory-anchor correction at `cd959cb3a`.
 - FOUND: canonical full gate for SC-T3 (the D29 narrow middle-click dispatch
-  readback) at `3f4ec2355`.
+  readback) before the anchor correction.
 - ROOT: `TaskMouseArea.qml` accepted-buttons moved from line 19 to 20 because it
   precedes the inserted reporter helpers. Subsequent pointer-handler anchors
   shifted by 25 lines, while wheel and timer anchors shifted by 26 because they
@@ -487,8 +491,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FIX: all nine task-row anchors and the drag-and-drop exemption now point to
   their exact accepted-buttons, handler, wheel, timer, and drag-handler lines.
 - EVIDENCE: focused `settingsinventorytest` passes at 270 affordances and 21
-  exemptions. The final canonical full gate passed and stamped exact head
-  `2fd23a08e34a10eebeab11e7cbb02c919478b8d4` before push.
+  exemptions. The final canonical full gate passed and stamped exact pre-rebase
+  head `2fd23a08e34a10eebeab11e7cbb02c919478b8d4`, whose tree matches final
+  tracking commit `f2c2ba089` after GitHub's rebase merge.
 
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
