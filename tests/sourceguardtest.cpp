@@ -12,8 +12,8 @@
 //     state was compared and discarded, never set)
 //   * Settings::Controller::Layouts::modeIsChanged  missing '>' (pointer
 //     arithmetic plus unqualified self-call, infinite recursion)
-//   * View::WindowsTracker enabled Binding  plural property typo (the floating
-//     gap requester never enabled tracking for AlwaysVisible views)
+//   * View::WindowsTracker enabled Binding requesters, including empty-area
+//     window actions and the floating-gap property spelling
 //   * Wayland window-signal routing: maximize edges stay immediate while noisy
 //     window properties stay coalesced
 //   * VisibilityManager strut routing: discrete exclusive-zone thickness
@@ -82,7 +82,7 @@ private:
 private Q_SLOTS:
     void visibilityManager_updateSidebarState_assignsState();
     void layoutsController_modeIsChanged_delegatesToModel();
-    void windowsTrackerBinding_tracksHiddenFloatingGap();
+    void windowsTrackerBinding_keepsRequesters();
     void waylandWindowSignals_keepDeliveryPolicy();
     void visibilityManager_strutThicknessBypassesGeometryThrottle();
 };
@@ -110,7 +110,7 @@ void SourceGuardTest::layoutsController_modeIsChanged_delegatesToModel()
              "modeIsChanged has the missing-'>' pointer-arithmetic / self-recursion typo");
 }
 
-void SourceGuardTest::windowsTrackerBinding_tracksHiddenFloatingGap()
+void SourceGuardTest::windowsTrackerBinding_keepsRequesters()
 {
     const QString source = readFile(QStringLiteral("containment/package/contents/ui/BindingsExternal.qml"));
     const int section = source.indexOf(QStringLiteral("//! View::WindowsTracker bindings"));
@@ -126,6 +126,24 @@ void SourceGuardTest::windowsTrackerBinding_tracksHiddenFloatingGap()
     QVERIFY2(binding.contains(trackerTarget)
              && binding.contains(QStringLiteral("property:\"enabled\"")),
              "View::WindowsTracker enabled Binding not found after its section marker");
+
+    const QStringList requesterArms{
+        QStringLiteral("LatteCore.Types.AlwaysVisible"),
+        QStringLiteral("LatteCore.Types.WindowsGoBelow"),
+        QStringLiteral("LatteCore.Types.AutoHide"),
+        QStringLiteral("||indexer.clientsTrackingWindowsCount>0"),
+        QStringLiteral("||root.dragActiveWindowEnabled"),
+        QStringLiteral("||Plasmoid.configuration.closeActiveWindowEnabled"),
+        QStringLiteral("||Plasmoid.configuration.scrollAction===LatteContainment.Types.ScrollToggleMinimized"),
+        QStringLiteral("root.backgroundOnlyOnMaximized"),
+        QStringLiteral("Plasmoid.configuration.solidBackgroundForMaximized"),
+        QStringLiteral("root.disablePanelShadowMaximized"),
+        QStringLiteral("root.windowColors!==LatteContainment.Types.NoneWindowColors"),
+    };
+    for (const QString &arm : requesterArms) {
+        QVERIFY2(binding.contains(arm),
+                 qPrintable(QStringLiteral("WindowsTracker requester arm is missing: %1").arg(arm)));
+    }
     QVERIFY2(binding.contains(hideGapArm),
              "WindowsTracker must enable for the singular screenEdgeMarginEnabled hide-gap arm");
     QVERIFY2(!binding.contains(QStringLiteral("root.screenEdgeMarginsEnabled")),

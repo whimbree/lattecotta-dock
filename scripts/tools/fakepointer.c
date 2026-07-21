@@ -11,6 +11,7 @@
  *
  * usage: fakepointer move <x> <y>
  *        fakepointer click <x> <y>     (left click at absolute position)
+ *        fakepointer middleclick <x> <y>
  *        fakepointer rightclick <x> <y>
  *        fakepointer drag <x1> <y1> <x2> <y2> [x3 y3 ...]  (left press, glide
  *          through every waypoint in one hold, release at the last)
@@ -86,6 +87,7 @@
 
 #define BTN_LEFT 0x110
 #define BTN_RIGHT 0x111
+#define BTN_MIDDLE 0x112
 
 static struct org_kde_kwin_fake_input *fake_input = NULL;
 //! the interface version actually bound, so each verb can check the version
@@ -164,8 +166,8 @@ int main(int argc, char **argv)
         || (isscroll && argc != 6)
         || (iswheel && argc != 5)
         || (!isdrag && !isglide && !isscroll && !iswheel
-            && (argc != 4 || (strcmp(argv[1], "move") && strcmp(argv[1], "click") && strcmp(argv[1], "rightclick"))))) {
-        fprintf(stderr, "usage: %s move|click|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>  |  %s wheel <x> <y> <angle-delta>  |  %s key <keysym> [down|up|press]  |  %s dragkey <keysym> <x1> <y1> <x2> <y2> [x3 y3 ...]\n"
+            && (argc != 4 || (strcmp(argv[1], "move") && strcmp(argv[1], "click") && strcmp(argv[1], "middleclick") && strcmp(argv[1], "rightclick"))))) {
+        fprintf(stderr, "usage: %s move|click|middleclick|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>  |  %s wheel <x> <y> <angle-delta>  |  %s key <keysym> [down|up|press]  |  %s dragkey <keysym> <x1> <y1> <x2> <y2> [x3 y3 ...]\n"
                         "  scroll: positive detents scroll up, negative down; one detent = one wheel click\n"
                         "  wheel:  signed vertical Qt angleDelta for one event; useful for threshold checks\n"
                         "  key:    <keysym> is an XKB name (Escape, Up, Return, space) or a numeric literal; state defaults to press (down then up)\n"
@@ -311,8 +313,13 @@ int main(int argc, char **argv)
         wl_fixed_from_double(x), wl_fixed_from_double(y));
     wl_display_roundtrip(display);
 
-    if (strcmp(argv[1], "click") == 0 || strcmp(argv[1], "rightclick") == 0) {
-        uint32_t btn = (strcmp(argv[1], "rightclick") == 0) ? BTN_RIGHT : BTN_LEFT;
+    if (strcmp(argv[1], "click") == 0 || strcmp(argv[1], "middleclick") == 0 || strcmp(argv[1], "rightclick") == 0) {
+        uint32_t btn = BTN_LEFT;
+        if (strcmp(argv[1], "middleclick") == 0) {
+            btn = BTN_MIDDLE;
+        } else if (strcmp(argv[1], "rightclick") == 0) {
+            btn = BTN_RIGHT;
+        }
         usleep(100000);
         org_kde_kwin_fake_input_button(fake_input, btn, 1);
         wl_display_roundtrip(display);
