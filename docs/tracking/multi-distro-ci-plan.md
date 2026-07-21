@@ -688,9 +688,11 @@ format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
       ebcda72fa, 29a5e4ce6, c329eb138, 98f4ff797, 009c406dc,
       3fb92a05a.
 - [x] F1 (the Debian-family native recipe): `packaging/debian/` supplies the
-      debhelper/CMake recipe, DEP-5 metadata, manpage, quilt patch, and an
-      exact-HEAD source-build helper. A minimal Ubuntu noble root with only the
-      signed KDE neon User repository resolved all declared build dependencies;
+      debhelper/CMake recipe, DEP-5 metadata, manpage, and exact-HEAD source-build
+      helper using the `3.0 (quilt)` source format without a patch series.
+      AppStream metadata is fixed at source origin, so current HEAD needs no
+      Debian quilt patch. A minimal Ubuntu noble root with only the signed KDE
+      neon User repository resolved all declared build dependencies;
       the checked build passed 92/92 package tests and lintian reported no tags.
       A fresh root installed the local `.deb`, passed `dpkg --audit` and
       `apt-get check`, and produced a 768-entry `dpkg-query` manifest with
