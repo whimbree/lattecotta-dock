@@ -19,8 +19,10 @@
  *          motion stream, no buttons - replicates a real fast hover sweep)
  *        fakepointer scroll <x> <y> <detents> <ms-gap>
  *        fakepointer wheel <x> <y> <integer-angle-delta> [horizontal]  (one
- *          axis event in Qt angleDelta units; vertical by default, 120 is
- *          one wheel click)
+ *          nonzero axis event in Qt angleDelta units; vertical by default,
+ *          120 is one wheel click)
+ *        fakepointer axisstop <x> <y> [horizontal]  (send the Wayland/KWin
+ *          zero-axis stop; this does not claim or produce a Qt wheel event)
  *        fakepointer key <keysym> [down|up|press]   (press = down then up, the
  *          default; down/up hold or release, e.g. a modifier. <keysym> is an
  *          XKB keysym NAME like Escape, Up, Return, space, or a numeric
@@ -159,7 +161,7 @@ static int parse_wheel_angle_delta(const char *text, int *angle_delta)
     errno = 0;
     char *end = NULL;
     const long long parsed = strtoll(text, &end, 10);
-    if (errno == ERANGE || *end != '\0' || parsed < INT_MIN || parsed > INT_MAX) {
+    if (errno == ERANGE || *end != '\0' || parsed == 0 || parsed < INT_MIN || parsed > INT_MAX) {
         return 0;
     }
 
@@ -181,6 +183,7 @@ int main(int argc, char **argv)
     int isglide = (argc > 1) && (strcmp(argv[1], "glide") == 0);
     int isscroll = (argc > 1) && (strcmp(argv[1], "scroll") == 0);
     int iswheel = (argc > 1) && (strcmp(argv[1], "wheel") == 0);
+    int isaxisstop = (argc > 1) && (strcmp(argv[1], "axisstop") == 0);
     int iskey = (argc > 1) && (strcmp(argv[1], "key") == 0);
     int isdragkey = (argc > 1) && (strcmp(argv[1], "dragkey") == 0);
 
@@ -202,14 +205,16 @@ int main(int argc, char **argv)
     } else if (((isdrag || isglide) && (argc < 6 || (argc % 2) != 0))
         || (isscroll && argc != 6)
         || (iswheel && argc != 5 && argc != 6)
-        || (!isdrag && !isglide && !isscroll && !iswheel
+        || (isaxisstop && argc != 4 && argc != 5)
+        || (!isdrag && !isglide && !isscroll && !iswheel && !isaxisstop
             && (argc != 4 || (strcmp(argv[1], "move") && strcmp(argv[1], "click") && strcmp(argv[1], "middleclick") && strcmp(argv[1], "rightclick"))))) {
-        fprintf(stderr, "usage: %s move|click|middleclick|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>  |  %s wheel <x> <y> <angle-delta> [horizontal]  |  %s key <keysym> [down|up|press]  |  %s dragkey <keysym> <x1> <y1> <x2> <y2> [x3 y3 ...]\n"
+        fprintf(stderr, "usage: %s move|click|middleclick|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>  |  %s wheel <x> <y> <integer-angle-delta> [horizontal]  |  %s axisstop <x> <y> [horizontal]  |  %s key <keysym> [down|up|press]  |  %s dragkey <keysym> <x1> <y1> <x2> <y2> [x3 y3 ...]\n"
                         "  scroll: positive detents scroll up, negative down; one detent = one wheel click\n"
-                        "  wheel:  signed integer Qt angleDelta for one axis event; vertical unless 'horizontal' is supplied\n"
+                        "  wheel:  nonzero signed integer Qt angleDelta for one axis event; vertical unless 'horizontal' is supplied\n"
+                        "  axisstop: send a zero-axis Wayland stop, which produces no Qt wheel event\n"
                         "  key:    <keysym> is an XKB name (Escape, Up, Return, space) or a numeric literal; state defaults to press (down then up)\n"
                         "  dragkey: press, glide (button held), tap <keysym> at the last point, release - one held-drag session\n",
-                argv[0], argv[0], argv[0], argv[0], argv[0], argv[0]);
+                argv[0], argv[0], argv[0], argv[0], argv[0], argv[0], argv[0]);
         return 2;
     }
 
@@ -221,11 +226,17 @@ int main(int argc, char **argv)
             return 2;
         }
         if (!parse_wheel_angle_delta(argv[4], &wheel_angle_delta)) {
-            fprintf(stderr, "invalid angle-delta '%s' (want an integer safe for Qt angleDelta and Wayland fixed-point)\n",
+            fprintf(stderr, "invalid angle-delta '%s' (want a nonzero integer safe for Qt angleDelta and Wayland fixed-point)\n",
                 argv[4]);
             return 2;
         }
         wheel_axis = (argc == 6) ? 1 /* horizontal */ : 0 /* vertical */;
+    } else if (isaxisstop) {
+        if (argc == 5 && strcmp(argv[4], "horizontal") != 0) {
+            fprintf(stderr, "unknown axisstop axis '%s' (want 'horizontal' or omit it for vertical)\n", argv[4]);
+            return 2;
+        }
+        wheel_axis = (argc == 5) ? 1 /* horizontal */ : 0 /* vertical */;
     }
 
     struct wl_display *display = wl_display_connect(NULL);
@@ -436,15 +447,19 @@ int main(int argc, char **argv)
             wl_display_roundtrip(display);
             usleep((useconds_t)gapms * 1000);
         }
-    } else if (iswheel) {
-        //! KWin/Qt multiply Wayland axis units by -12 into angleDelta. A
-        //! vertical request therefore arrives as (0, delta), while a
-        //! horizontal request arrives as (delta, 0).
+    } else if (iswheel || isaxisstop) {
         //! Match scroll's authentication/motion settle so KWin can route the
         //! one-shot axis event to pointer focus before the client disconnects.
         usleep(100000);
-        org_kde_kwin_fake_input_axis(fake_input, wheel_axis,
-            wl_fixed_from_double(-(double)wheel_angle_delta / 12.0));
+        if (isaxisstop) {
+            //! KWin forwards a zero fake-input axis as wl_pointer.axis_stop;
+            //! Qt emits no QWheelEvent. Keep this separate from wheel deltas.
+            org_kde_kwin_fake_input_axis(fake_input, wheel_axis, wl_fixed_from_int(0));
+        } else {
+            //! KWin/Qt multiply Wayland axis units by -12 into angleDelta.
+            org_kde_kwin_fake_input_axis(fake_input, wheel_axis,
+                wl_fixed_from_double(-(double)wheel_angle_delta / 12.0));
+        }
         wl_display_roundtrip(display);
     }
 
