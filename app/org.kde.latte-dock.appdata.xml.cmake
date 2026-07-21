@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<component type="addon">
-  <id>org.kde.latte-dock.desktop</id>
-  <extends>org.kde.plasmashell</extends>
+<component type="desktop-application">
+  <id>org.kde.latte-dock</id>
   <name>Latte</name>
   <name xml:lang="ar">لاتيه</name>
   <name xml:lang="az">Latte</name>
@@ -212,7 +211,6 @@
   <project_group>KDE</project_group>
   <provides>
     <binary>latte-dock</binary>
-    <library>liblatte2plugin.so</library>
   </provides>
   <launchable type="desktop-id">org.kde.latte-dock.desktop</launchable>
   <releases>

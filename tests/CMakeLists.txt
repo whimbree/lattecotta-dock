@@ -13,6 +13,17 @@ add_subdirectory(units)
 # the render gate itself is scripts/sceneprobe-gate.sh (needs nested kwin).
 add_subdirectory(sceneprobe)
 
+# D59 (invalid standalone AppStream identity and stale library provider):
+# validate the configured source metadata directly. ECM's global appstreamtest
+# reads install_manifest.txt and succeeds without inspecting anything when that
+# file is absent, which is the normal development-test state.
+find_program(APPSTREAMCLI appstreamcli REQUIRED)
+add_test(NAME appstreammetadatatest
+    COMMAND ${CMAKE_COMMAND}
+        -DAPPSTREAMCLI=${APPSTREAMCLI}
+        -DAPPSTREAM_METADATA=${CMAKE_BINARY_DIR}/app/org.kde.latte-dock.appdata.xml
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/validate-appstream.cmake)
+
 # Importer's static parser/path helpers over throwaway XDG dirs: fileVersion
 # archive classification, nameOfConfigFile (pins the Qt6 remove end-wrap
 # fix), layout paths/enumeration, standard-path ordering and the
