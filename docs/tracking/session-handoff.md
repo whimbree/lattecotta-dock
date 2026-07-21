@@ -3,18 +3,19 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-21.
 
-## 2026-07-21: SC-F2 source-coverage branch rewritten for review
+## 2026-07-21: SC-F2 source-coverage PR open
 
 Branch `test/settings-source-coverage-v2`, based on exact `origin/main`
 `989e2fc00c061d40fb379575db8a50d1e0116453`, carries SC-F2 (the source-to-ledger
-coverage gate) in three independently reviewable commits. Commit `3d2fc2bee`
-adds the syntax-aware QML/C++ scanner and its sanitized contracts. Commit
-`cec4fb429` migrates the evidence ledger to schema 2 and adds independent
-bidirectional enforcement, dynamic QML action coverage, broader C++ grammar,
-canonical source ownership, and the schema refusal matrix. The final commit
-records the public contract and tracking state. No push, PR, merge, or full gate
-has occurred, so the SC-F2 checklist item remains open and its final merge
-hashes remain unrecorded.
+coverage gate) in open PR #103. Provisional implementation commit `3d2fc2bee`
+adds the syntax-aware QML/C++ scanner and its sanitized contracts. Provisional
+implementation commit `cec4fb429` migrates the evidence ledger to schema 2 and
+adds independent bidirectional enforcement, dynamic QML action coverage,
+broader C++ grammar, canonical source ownership, and the schema refusal matrix.
+These implementation hashes remain provisional until the GitHub rebase merge.
+Independent code review returned MERGE; the mandatory final remote rereview of
+the pushed PR remains pending. SC-F2 is unmerged and remains unchecked in the
+completion plan, so final merge hashes remain unrecorded.
 
 The fixed source universe contains 58 files: 237 QML objects, 357 QML members,
 57 model elements, 57 semantic QML calls, 16 C++ constructions, and 10 C++
@@ -36,8 +37,10 @@ The focused correction gates pass in
 ASan+UBSan, and 74 inventory checks passed including every refusal mutation.
 The 97-entry/31-header coverage ratchet, the 130-file QML compile gate, the
 234-file qmllint baseline, fixed JSON count checks, and implementation diff
-checks also passed. No full
-`scripts/gate-all.sh` run was requested or performed.
+checks also passed. The full canonical `scripts/gate-all.sh` run exited 0 and
+stamped exact head `f62001a230e370a226fc9a9f008d1dc8423bf28b` before the branch
+push. This current-state correction is docs-only after that stamp; no
+implementation or test contract changed.
 
 ## 2026-07-21: SC-T5 exact-once runtime acceptance merged
 
