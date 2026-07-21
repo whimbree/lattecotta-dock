@@ -15,6 +15,7 @@
   cmake,
   ninja,
   pkg-config,
+  appstream,
   extra-cmake-modules,
   wrapQtAppsHook,
 
@@ -86,6 +87,9 @@ stdenv.mkDerivation (finalAttrs: {
     cmake
     ninja
     pkg-config
+    # BUILD_TESTING registers direct configured-metadata validation with
+    # appstreamcli, so the package test closure must provide it explicitly.
+    appstream
     extra-cmake-modules
     wrapQtAppsHook
   ];

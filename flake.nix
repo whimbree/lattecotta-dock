@@ -79,6 +79,7 @@
             cmake
             ninja
             pkg-config
+            appstream # appstreamcli for the direct configured-metadata CTest
             kdePackages.extra-cmake-modules
             jq # scripts/qmllint-gate.sh parses qmllint --json with it
             imagemagick # cropping live-verification and docs screenshots
