@@ -267,3 +267,7 @@ target_link_libraries(dbusreportstest
 # an abort, so this test both pins the repaired placement and stays the
 # tripwire if the repair is ever removed.
 latte_add_unit_test(justifysplitterstest)
+
+# SC-F2 (the source-to-ledger coverage gate): the syntax-aware QML/C++
+# settings scanner. Header-only QtCore parsing stays sanitizer-instrumented.
+latte_add_unit_test(settingssourcescannertest)

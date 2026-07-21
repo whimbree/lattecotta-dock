@@ -1,4 +1,4 @@
-96
+97
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -68,6 +68,7 @@ screengeometrycalculatortest
 screenpooltest
 scrollmathtest
 settingsinventorytest
+settingssourcescannertest
 settingsmodelstest
 settingswiringharnesstest
 shortcutshosttest
