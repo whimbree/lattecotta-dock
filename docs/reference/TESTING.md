@@ -122,19 +122,24 @@ Adopt latte-dock-qt6's three-piece shape, adapted rather than copied:
   compositor draws it elsewhere - so `e2e_assert_geometry_agrees`
   (`060-geometry-agreement.sh`) compares each view's reported origin
   against its true rendered surface position as a standing guard for
-  exactly that class. A recipe that reproduces a known-open bug carries
-  a `# e2e-expect: fail` marker: the driver reports its failure as XFAIL
-  (not counted against the suite) and its unexpected pass as XPASS (a
-  hard failure - the guarded bug is fixed, so the marker comes off and
-  the recipe becomes a real guard). `060` was XFAIL against the Phase 8
-  surface drift; that drift is fixed (see below), so `060` now PASSES
-  and carries no marker - it is a permanent standing guard. The xfail
-  mechanism has a standard limitation worth remembering for the next
-  guarded bug: an xfail recipe treats ANY failure as the expected one,
-  so a marked recipe that failed for an unrelated reason (its
-  `e2e_wait_settled` timing out on infra breakage, say) would still read
-  XFAIL and mask a new bug - keep any future marker on the narrowest
-  possible recipe and drop it the moment the guarded bug is fixed.
+  exactly that class. A known-open bug recipe should reserve one nonzero
+  status and declare `# e2e-expect: status N`, where N is 1 through 255.
+  Only status N becomes XFAIL; status 0 becomes XPASS, and every other
+  nonzero status remains FAIL. Reserve N only after the exact known signature,
+  shutdown, restoration, and residue checks complete, so infrastructure and
+  cleanup failures cannot masquerade as the known bug.
+
+  The legacy `# e2e-expect: fail` marker remains supported for recipes whose
+  every nonzero exit represents the same open condition. It maps any nonzero
+  status to XFAIL and therefore risks hiding an unrelated failure; prefer the
+  exact-status form and keep any legacy marker on the narrowest possible
+  recipe. With either marker, status 0 is XPASS until the marker is removed and
+  the recipe becomes a normal guard. No marker retains ordinary status-0 PASS
+  and nonzero FAIL behavior. Marker extraction is strict: exactly one nonempty
+  declaration is allowed. Blank, duplicate, conflicting, malformed, zero, and
+  out-of-range declarations fail before recipe execution. `060` used the legacy
+  form against the Phase 8 surface drift; that drift is fixed (see below), so
+  `060` now passes without a marker as a permanent standing guard.
   Every recipe passes SOLO and now back-to-back: the pointer-precision
   recipes (`050-drag-reorder`, `parabolic-hover-preview`) and the
   focus-grant-timed `keyboard-navigation-mode` used to flake in a long
