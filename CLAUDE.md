@@ -107,8 +107,9 @@ stale checkboxes."
   operator framing and first-person pronouns, not on the word "user"
   itself. This working-agreements file is the exception: its dated
   directive-attribution markers ("my direction, DATE") are the author's
-  own governing voice and stay. Already-pushed messages get reworded at
-  the pre-PR history cleanup, not amended now.
+  own governing voice and stay. Violating messages in unmerged branches or
+  open PRs get reworded when found; messages already on `main` stay immutable
+  under the history rule below.
 - No em-dashes, no AI-sounding marketing-style phrasing in docs, commit
   messages, or code comments - write plainly, like a programmer.
 - Codewords carry their meaning (new rule, 2026-07-19). Every short-name that
