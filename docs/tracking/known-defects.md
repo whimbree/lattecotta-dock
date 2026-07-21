@@ -438,8 +438,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   SC-T3.
 
 ### D61 - Middle-click aggregate could expose an older plausible event
-- STATUS: FIXED on local `feat/tasks-middle-click-readback` branch
-  (`2aa5a7a1e`); not merged.
+- STATUS: FIXED in open PR #99 (`2aa5a7a1e`); not merged.
 - FOUND: independent pre-PR review of SC-T3 (the D29 narrow middle-click
   dispatch readback).
 - ROOT: `collectMiddleClickDispatchData` skipped malformed candidates and only
@@ -459,8 +458,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   and live collector bridges, including the undo-window lifecycle contract.
 
 ### D62 - Middle-click readback accepted inconsistent action-operation pairs
-- STATUS: FIXED on local `feat/tasks-middle-click-readback` branch
-  (`2aa5a7a1e`); not merged.
+- STATUS: FIXED in open PR #99 (`2aa5a7a1e`); not merged.
 - FOUND: independent pre-PR review of SC-T3 (the D29 narrow middle-click
   dispatch readback).
 - ROOT: the backend and D-Bus parser validated enum ranges and the launcher
@@ -477,8 +475,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   production reporter forwarding is pinned at `c0ba3f66f`.
 
 ### D63 - Task settings-inventory anchors did not follow middle-click QML
-- STATUS: FIXED on local `feat/tasks-middle-click-readback` branch
-  (`7f3d42a2e`); not merged.
+- STATUS: FIXED in open PR #99 (`7f3d42a2e`); not merged.
 - FOUND: canonical full gate for SC-T3 (the D29 narrow middle-click dispatch
   readback) at `3f4ec2355`.
 - ROOT: the new reporter properties and helper functions shifted every
@@ -489,8 +486,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FIX: all nine task-row anchors and the drag-and-drop exemption now point to
   their exact accepted-buttons, handler, wheel, timer, and drag-handler lines.
 - EVIDENCE: focused `settingsinventorytest` passes at 270 affordances and 21
-  exemptions. The canonical full gate reruns this test at the final branch head
-  before push.
+  exemptions. The final canonical full gate passed and stamped exact head
+  `2fd23a08e34a10eebeab11e7cbb02c919478b8d4` before push.
 
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
