@@ -206,6 +206,44 @@ SC-O1 lands the registry transport, serializers, lifecycle, and a fixture-backed
 vertical slice. It does not register every production page in one PR. Shared
 component and page units add their own records as those surfaces become driven.
 
+The approved interface is one read-only per-view D-Bus method,
+`viewSettingsControlsData(u containmentId) -> s`. Corona validates that the
+containment has a current view, then delegates to its runtime registry. The
+registry is Corona-owned and remains alive until settings factories, layouts,
+views, and their QML lifetime objects have torn down. A separate value-only
+C++20 core owns the closed scalar domain, aggregate validation, deterministic
+complete-identity ordering, popup-row ordering, and compact JSON.
+
+The complete control identity is containment id, stable nonempty surface,
+positive process-monotonic load generation, nullable applet id, exact nonempty
+audit identity and kind, and nullable nonempty instance key. Generation
+identities serialize as decimal strings. Each record snapshots live effective
+visibility/enabled state, descendant keyboard focus, typed current state, and
+one or more role-named hit rectangles. Global logical and ancestor/surface-
+clipped geometry retain `QRectF` precision. `mapped:false` with null clipped
+geometry is the fully clipped or unmapped state. Popup-capable controls add
+open/mapped state, an open-generation identity, and semantic rows with stable
+scalar values and the same live state/geometry fields. No labels, pointer or
+window ids, setters, filters, registration, or execution enter public D-Bus.
+
+Geometry comes from current QQuickItem visual ancestry plus an authoritative
+registered global surface geometry provider, never cached registration
+geometry or Wayland QWindow position. Every clipping parent and the supplied
+surface bounds clip the hit. A transform or geometry that cannot truthfully be
+represented as one axis-aligned rectangle refuses the complete aggregate.
+Duplicate complete identities, malformed descriptors, unsupported live values,
+and malformed surviving entries also warn and return `[]`, never a plausible
+subset.
+
+Generation allocation is registry-only. Replacing or retargeting a scope
+retires its old generation before allocating a strictly newer one. Popup
+close/reopen also advances its generation. Lifetime-object destruction removes
+the generation synchronously; control or row destruction removes only that
+entry. Retained QObject/QQuickItem references use QPointer, and destroyed
+handlers capture numeric tokens rather than dereferencing dying objects. The
+fixture QRC/QML remains outside SC-F2 production roots. Runtime-effect readbacks
+and every production control registration remain later one-surface units.
+
 The interface is read-only. Pointer and keyboard input drive controls at
 reported geometry. No D-Bus setter may bypass a control. XML, serializer tests,
 the observability design, the interface reference, and a usage recipe land in
