@@ -22,7 +22,6 @@ Summary:        Dock and task launcher for Plasma 6
 License:        GPL-2.0-or-later AND LGPL-2.0-or-later AND (LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL) AND CC0-1.0
 URL:            https://github.com/whimbree/lattecotta-dock
 Source0:        %{name}-%{version}-%{snapshot_commit}.tar.gz
-Patch0:         latte-dock-appstream-id.patch
 
 # Fedora and openSUSE package the same Qt 6 and Plasma 6 interfaces under
 # different names. Keep every name difference here; the dependency lists and
