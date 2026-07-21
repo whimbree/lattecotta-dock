@@ -41,7 +41,7 @@ esac
 [[ "$1" == /* ]] || fail "void-packages checkout must be an absolute path"
 [[ -d "$1" ]] || fail "void-packages checkout does not exist or is not a directory: $1"
 
-for command_name in cp git gzip install mkdir mktemp mv realpath rm sha256sum tar; do
+for command_name in git gzip install mkdir mktemp mv realpath rm sha256sum tar; do
     command -v "$command_name" >/dev/null 2>&1 \
         || fail "required command '$command_name' is missing"
 done
@@ -108,7 +108,6 @@ else
 fi
 
 staging="$(mktemp -d "$void_packages/srcpkgs/.latte-dock.stage.XXXXXX")"
-mkdir -p "$staging/patches"
 commit_replacements=0
 checksum_replacements=0
 while IFS= read -r line; do
@@ -126,7 +125,6 @@ while IFS= read -r line; do
 done <"$template" >"$staging/template"
 [[ "$commit_replacements" -eq 1 && "$checksum_replacements" -eq 1 ]] \
     || fail "template source provenance fields are not unique"
-cp "$recipe/patches/fix-appstream-component-id.patch" "$staging/patches/"
 
 rm -rf "$destination"
 mv "$staging" "$destination"

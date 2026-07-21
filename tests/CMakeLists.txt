@@ -24,6 +24,12 @@ add_test(NAME appstreammetadatatest
         -DAPPSTREAM_METADATA=${CMAKE_BINARY_DIR}/app/org.kde.latte-dock.appdata.xml
         -P ${CMAKE_CURRENT_SOURCE_DIR}/validate-appstream.cmake)
 
+# The tracked Void template remains pinned to older source with a patch, while
+# build-package rewrites it to exact current HEAD. Its stage-only path must omit
+# that obsolete patch and archive the corrected source metadata.
+add_test(NAME voidpackagestagingtest
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/void-package-staging-selftest.sh)
+
 # Importer's static parser/path helpers over throwaway XDG dirs: fileVersion
 # archive classification, nameOfConfigFile (pins the Qt6 remove end-wrap
 # fix), layout paths/enumeration, standard-path ordering and the
