@@ -122,30 +122,26 @@ void SourceGuardTest::windowsTrackerBinding_keepsRequesters()
     binding = stripped(binding);
 
     const QString trackerTarget = QStringLiteral("target:latteView&&latteView.windowsTracker?latteView.windowsTracker:null");
-    const QString hideGapArm = QStringLiteral("||(root.screenEdgeMarginEnabled&&Plasmoid.configuration.hideFloatingGapForMaximized)");
     QVERIFY2(binding.contains(trackerTarget)
              && binding.contains(QStringLiteral("property:\"enabled\"")),
              "View::WindowsTracker enabled Binding not found after its section marker");
 
-    const QStringList requesterArms{
-        QStringLiteral("LatteCore.Types.AlwaysVisible"),
-        QStringLiteral("LatteCore.Types.WindowsGoBelow"),
-        QStringLiteral("LatteCore.Types.AutoHide"),
-        QStringLiteral("||indexer.clientsTrackingWindowsCount>0"),
-        QStringLiteral("||root.dragActiveWindowEnabled"),
-        QStringLiteral("||Plasmoid.configuration.closeActiveWindowEnabled"),
-        QStringLiteral("||Plasmoid.configuration.scrollAction===LatteContainment.Types.ScrollToggleMinimized"),
-        QStringLiteral("root.backgroundOnlyOnMaximized"),
-        QStringLiteral("Plasmoid.configuration.solidBackgroundForMaximized"),
-        QStringLiteral("root.disablePanelShadowMaximized"),
-        QStringLiteral("root.windowColors!==LatteContainment.Types.NoneWindowColors"),
-    };
-    for (const QString &arm : requesterArms) {
-        QVERIFY2(binding.contains(arm),
-                 qPrintable(QStringLiteral("WindowsTracker requester arm is missing: %1").arg(arm)));
-    }
-    QVERIFY2(binding.contains(hideGapArm),
-             "WindowsTracker must enable for the singular screenEdgeMarginEnabled hide-gap arm");
+    const int valueStart = binding.indexOf(QStringLiteral("value:"));
+    const int restoreStart = binding.indexOf(QStringLiteral("restoreMode:"), valueStart);
+    QVERIFY2(valueStart != -1 && restoreStart != -1, "WindowsTracker value expression not found");
+    const QString actual = binding.mid(valueStart + 6, restoreStart - valueStart - 6);
+    const QString expected = QStringLiteral(
+        "(latteView&&latteView.visibility&&!(latteView.visibility.mode===LatteCore.Types.AlwaysVisible"
+        "||latteView.visibility.mode===LatteCore.Types.WindowsGoBelow"
+        "||latteView.visibility.mode===LatteCore.Types.AutoHide))"
+        "||indexer.clientsTrackingWindowsCount>0"
+        "||root.dragActiveWindowEnabled"
+        "||Plasmoid.configuration.closeActiveWindowEnabled"
+        "||Plasmoid.configuration.scrollAction===LatteContainment.Types.ScrollToggleMinimized"
+        "||((root.backgroundOnlyOnMaximized||Plasmoid.configuration.solidBackgroundForMaximized"
+        "||root.disablePanelShadowMaximized||root.windowColors!==LatteContainment.Types.NoneWindowColors))"
+        "||(root.screenEdgeMarginEnabled&&Plasmoid.configuration.hideFloatingGapForMaximized)");
+    QCOMPARE(actual, expected);
     QVERIFY2(!binding.contains(QStringLiteral("root.screenEdgeMarginsEnabled")),
              "WindowsTracker hide-gap arm uses the nonexistent plural screenEdgeMarginsEnabled property");
 }
