@@ -36,8 +36,8 @@ the package-gate self-test requires exactly one matching staged `_commit`
 assignment and verifies the archived metadata. No continuation package has been
 released, so no continuation alias or migration was added. The `replaces`
 relationship covers only released upstream metadata. Provisional branch commits
-are `8468e54c6`, `34999aa56`, `6eb4406c1`, `a860385ef`, `a42843047`,
-`480c831aa`, `e00f4f6e9`, `2a1eb43d5`, and `5f893e43c`. The Phase 11 (Nix
+are `8468e54c6`, `34999aa56`, `6eb4406c1`, `bd34c8b7d`, `02ac32f6b`,
+`6b2d8644f`, `54d9b76ba`, `a3689e3b2`, and `c76d112a7`. The Phase 11 (Nix
 packaging and Docker build verification) item and D59 intentionally remain open
 until merge; finalization must replace those hashes with GitHub's post-rebase
 commits and mark D59 fixed.

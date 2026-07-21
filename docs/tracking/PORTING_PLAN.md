@@ -3726,12 +3726,12 @@ polished, distributable form of it.
       identity.
 
       Branch implementation is complete at provisional commits `8468e54c6`,
-      `34999aa56`, `6eb4406c1`, `a860385ef`, `a42843047`, `480c831aa`,
-      `e00f4f6e9`, `2a1eb43d5`, and `5f893e43c`. Keep this item unchecked until
+      `34999aa56`, `6eb4406c1`, `bd34c8b7d`, `02ac32f6b`, `6b2d8644f`,
+      `54d9b76ba`, `a3689e3b2`, and `c76d112a7`. Keep this item unchecked until
       the PR merges; replace these hashes with the final post-rebase commits and
       then mark it complete.
-      Commits: 8468e54c6, 34999aa56, 6eb4406c1, a860385ef, a42843047,
-      480c831aa, e00f4f6e9, 2a1eb43d5, 5f893e43c (provisional branch hashes;
+      Commits: 8468e54c6, 34999aa56, 6eb4406c1, bd34c8b7d, 02ac32f6b,
+      6b2d8644f, 54d9b76ba, a3689e3b2, c76d112a7 (provisional branch hashes;
       final post-rebase hashes required)
 
 - [ ] Write `default.nix` (Qt6/KF6 dependency list, matching Phase 1-3

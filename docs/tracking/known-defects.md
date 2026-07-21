@@ -345,8 +345,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 ### D59 - Invalid standalone AppStream identity and stale library provider
 - STATUS: OPEN. The root fix is complete on branch
   `fix/appstream-source-truth` at provisional commits `8468e54c6`, `34999aa56`,
-  `6eb4406c1`, `a860385ef`, `a42843047`, `480c831aa`, `e00f4f6e9`, `2a1eb43d5`,
-  and `5f893e43c`, but the defect remains open until the PR merges and final
+  `6eb4406c1`, `bd34c8b7d`, `02ac32f6b`, `6b2d8644f`, `54d9b76ba`, `a3689e3b2`,
+  and `c76d112a7`, but the defect remains open until the PR merges and final
   post-rebase hashes replace them.
 - FOUND: 2026-07-20, source-metadata audit before the first continuation
   release.
