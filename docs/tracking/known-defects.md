@@ -377,6 +377,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   structurally rejects each wrong identity field, a missing migration
   relationship, malformed or additional migration content, any extension, and
   the stale library without requiring AppStream at runtime.
+  Five independent native-package lanes passed at exact follow-up head
+  `45c0d27cb`: every fresh install carried the corrected identity and migration,
+  passed package integrity and the full nested-Wayland gate, and shut down with
+  status 0. No lane found a live per-distribution AppStream patch.
 - COMPATIBILITY: no continuation package has been released, so no continuation
   alias or migration is needed. The declarative `replaces` entry covers the
   inherited upstream release history and does not preserve the invalid ID as a

@@ -793,6 +793,17 @@ format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
       recipe reference. Package versions and revisions stay unchanged because no
       continuation artifact has been released. The implementation is complete on
       branch `build/appstream-source-repin` at provisional commit `c3ad16a23`.
+      Five independent external lanes passed at exact head `45c0d27cb`. Arch
+      verified 766 files and runtime SHA-256 prefix `766e5499`; Debian/KDE neon
+      passed 94/94 selected tests, lintian with no errors or warnings, and 769
+      entries with runtime prefix `9d02e711`; Fedora and openSUSE passed full RPM
+      build/install gates with 659/642 entries and runtime prefixes
+      `6e79aa2b`/`fafe9e46`; Gentoo passed Manifest, pkgcheck, 92/92 tests,
+      `qcheck` 761/761 and 552 entries with GPKG prefix `80a9a21d`; Void passed
+      xlint, build, index, pkgdb and 552 files with XBPS prefix `1fbf7988`.
+      Every artifact passed exact AppStream structure, fresh-install integrity,
+      the full nested-Wayland package gate and status-0 shutdown with no live
+      per-distribution patch.
       Keep this item unchecked until GitHub supplies the final post-rebase hash.
       Commits: c3ad16a23 (provisional branch hash; final post-rebase hash required)
 - [ ] F6 (the package-artifact CI task): extend the matrix to build each native

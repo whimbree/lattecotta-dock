@@ -49,6 +49,34 @@ Both archives contain the corrected metadata exactly. Arch source verification,
 patch-free stage-only checks, and the tracked-tree patch scan pass. No package
 version or revision changed because no continuation artifact has been released.
 
+Five independent external lanes passed at exact PR #92 head
+`45c0d27cbae8e23fdde621841a697a2c5ade59c6`. Every fresh install contained
+exactly the `desktop-application` component, `org.kde.latte-dock` ID,
+`org.kde.latte-dock.desktop` launchable and released-ID `replaces` relationship,
+with no `extends`, public library, or stale provider. Every installed package
+passed its native integrity checks and the full nested-Wayland package gate with
+status-0 shutdown.
+
+Arch reproduced source SHA-256
+`4bfda179309464052ca4805c5361478507f274a38239471b65b7fbb2b53542e6`, built a
+runtime package with SHA-256 prefix `766e5499`, and verified all 766 files without
+a patch. Debian/KDE neon passed 94/94 selected tests including direct AppStream
+validation, lintian reported no errors or warnings, 554 checksummed regular files
+covered 769 entries, and the runtime DEB SHA-256 starts with `9d02e711`; no quilt
+patch existed. Fedora and openSUSE both passed `rpmbuild -ba`, installation,
+integrity, AppStream, and the full package gate without a Patch directive or
+file; their runtime SHA-256 prefixes and manifest sizes are `6e79aa2b`/659 and
+`fafe9e46`/642 respectively. Gentoo reproduced the Manifest, passed clean
+`pkgcheck`, 92/92 selected tests and `qcheck` 761/761, produced 552 package-owned
+entries and a GPKG with SHA-256 prefix `80a9a21d`, with no `PATCHES` entry or
+file. Void passed xlint, fetch, build, repository indexing and `xbps-pkgdb`,
+produced a 552-file XBPS artifact with SHA-256 prefix `1fbf7988`, and retained a
+current-HEAD helper that stages zero patches.
+
+The repository gate previously passed and stamped exact code head `45c0d27cb`.
+This external-evidence update is documentation-only, so no later gate run is
+claimed.
+
 The Phase 11 (Nix packaging and Docker build verification) item and D59 remain
 open until the follow-up PR merges. Finalization must replace `c3ad16a23` with
 the GitHub post-rebase hash and only then mark the item and defect complete.
