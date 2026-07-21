@@ -420,6 +420,23 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   control requires exactly one matching staged `_commit` assignment and checks
   the corresponding archive metadata.
 
+### D60 - Tasks QML type metadata omits accessibility composer methods
+- STATUS: OPEN (confirmed by generated-metadata comparison 2026-07-21).
+- FOUND: SC-T3 (the narrow dispatch readback for D29 (task-icon middle click
+  appears to execute left-click behavior)) type-metadata check.
+- SYMPTOM: QML tooling cannot discover
+  `TooltipTextComposer.composeAccessibleDescription(QVariantMap)` or
+  `TooltipTextComposer.muteToggleLabel()`, although production QML calls both
+  methods and the plugin exports them at runtime.
+- EVIDENCE: regenerating `org.kde.latte.private.tasks` metadata from the built
+  plugin adds exactly those two method declarations beyond the tracked
+  `plasmoid/plugin/plugins.qmltypes` after the new SC-T3 Backend property,
+  signal, and method are matched. The runtime methods exist in
+  `tooltiptextcomposer.h/.cpp`; the tracked tooling metadata is stale.
+- NEXT: regenerate and review the complete tasks `plugins.qmltypes` file in a
+  separate tooling-metadata change. No unrelated metadata fix is included in
+  SC-T3.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here
