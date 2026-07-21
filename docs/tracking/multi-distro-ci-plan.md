@@ -510,8 +510,9 @@ pass on every distro regardless of tier.
       self-test. The exact current helper command fails with
       `undefined reference to xkb_keysym_from_name`; the documented
       Wayland-plus-xkbcommon command links successfully. This CI repair remains
-      unchecked and outside SC-T5 (the D29 permanent middle-click
-      runtime-effect acceptance) scope; PR #101 neither
+      unchecked and outside SC-T5 (the permanent runtime-effect acceptance for
+      D29, task-icon middle click appears to execute left-click behavior) scope;
+      PR #101 neither
       implements nor approves it. Dependencies: B2.
       Commits:
 - [x] B3 Run sceneprobe in-container in invariant+tolerance mode; confirm
