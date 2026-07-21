@@ -504,6 +504,13 @@ pass on every distro regardless of tier.
       the asserted rows (the nix devShell's allow-listed XDG_DATA_DIRS hides
       it); excluded from the matrix ctest, needs a hermetic scheme-path
       injection. Commits:
+- [ ] B2a (the D64 distro-gate fakepointer xkbcommon link repair): add
+      `xkbcommon` to `build_fakepointer`'s pkg-config flags and every container
+      dependency set, then run the helper build through the focused container
+      self-test. The exact current helper command fails with
+      `undefined reference to xkb_keysym_from_name`; the documented
+      Wayland-plus-xkbcommon command links successfully. Dependencies: B2.
+      Commits:
 - [x] B3 Run sceneprobe in-container in invariant+tolerance mode; confirm
       scenes render (not blank, right regions). ARCH DONE: all 13 scenes
       render and PASS in the Arch container - and bit-exact against the

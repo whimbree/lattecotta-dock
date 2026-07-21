@@ -495,6 +495,26 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   head `2fd23a08e34a10eebeab11e7cbb02c919478b8d4`, whose tree matches final
   tracking commit `f2c2ba089` after GitHub's rebase merge.
 
+### D64 - Distro-gate fakepointer build omits the xkbcommon link dependency
+- STATUS: OPEN (confirmed by the exact helper link command 2026-07-21).
+- FOUND: SC-T5 (the permanent runtime-effect acceptance for D29, task-icon
+  middle click appears to execute left-click behavior) local fakepointer build.
+- ROOT: `ci/build-and-gate.sh` compiles `scripts/tools/fakepointer.c` with only
+  `pkg-config --cflags --libs wayland-client`. The source calls
+  `xkb_keysym_from_name` for its key and drag-key verbs, so the binary also
+  requires `xkbcommon`. The live-verification build recipe already names both
+  packages.
+- EVIDENCE: running the helper's exact compiler and linker arguments against
+  the generated fake-input protocol failed with
+  `undefined reference to xkb_keysym_from_name`. Adding
+  `pkg-config --cflags --libs wayland-client xkbcommon` produced the
+  fakepointer binary used by the passing SC-T5 nested runs.
+- FIX DIRECTION: B2a (the D64 distro-gate fakepointer xkbcommon link repair) in
+  `multi-distro-ci-plan.md` adds the missing package to the helper and every
+  container dependency set, then exercises the helper build in the focused
+  container self-test. This remains separate from SC-T5 and does not require a
+  dock behavior change.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here
