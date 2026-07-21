@@ -1,0 +1,26 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Latte Dock contributors"
+            },
+            {
+                "Name": "Bree Spektor"
+            }
+        ],
+        "Description": "Deterministic ConfigOverlay length fixture",
+        "EnabledByDefault": false,
+        "Id": "org.kde.latte.separator",
+        "License": "GPL-2.0-or-later",
+        "Name": "SC-CW1 Length Fixture",
+        "Version": "1.0"
+    },
+    "X-Plasma-API": "declarativeappletscript",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-MainScript": "ui/main.qml",
+    "SPDX-FileCopyrightText": [
+        "2026 Latte Dock contributors",
+        "2026 Bree Spektor"
+    ],
+    "SPDX-License-Identifier": "GPL-2.0-or-later"
+}
