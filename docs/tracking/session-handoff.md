@@ -23,14 +23,15 @@ arbitrary execution, action expansion, window title, or other application
 content. SC-T5 (the D29 permanent runtime-effect acceptance) remains separate
 and was not started.
 
-Focused application/tasks-plugin/test builds passed before the rebase.
+Post-rebase focused application/tasks-plugin/test builds passed.
 `tasksbackendtest` and the sanitizer-backed `dbusreportstest` passed, including
 launcher `requestActivate`, task-row `requestNewInstance`, cross-applet
 monotonicity, no-event state, and malformed-state refusal. The QML compile gate
 passed 130 files, qmllint matched its 5,832-warning baseline, the coverage
 ratchet passed 96 entries and 31 paired headers, and XML validation plus
-generated adaptor compilation passed. No full gate or runtime acceptance was
-run. Focused post-rebase verification remains required.
+generated adaptor compilation passed. Regenerated tasks type metadata differs
+only by D60's two pre-existing composer-method omissions. No full gate or
+runtime acceptance was run.
 
 The QML type-dump comparison found D60. It is pre-existing and unrelated to
 SC-T3; the new Backend property, signal, and method match regenerated metadata.
