@@ -263,7 +263,8 @@ branches without changing behavior.
 
 ### D57 (ConfigOverlay wheel threshold accepts nonnegative decrease deltas)
 
-Status is OPEN at provisional local SC-CW1 commit `81ca28d95`; it is not merged.
+Status is OPEN. PR #96 landed SC-CW1 (the D57 ConfigOverlay wheel-threshold
+reproduction) at `5ec57175f`, `aa6399b44`, `709c0946b`, and `9b0672cf9`.
 `ConfigOverlay.qml` divides `wheel.angleDelta.y` by 8 but decreases for
 `angle < 12` instead of `angle < -12`. Both view axes produced +120:+8,
 -120:-8, +96:0, -96:-8, +90:-8, -90:-8, and horizontal +/-120:-8. Explicit
@@ -271,8 +272,8 @@ Status is OPEN at provisional local SC-CW1 commit `81ca28d95`; it is not merged.
 `wl_pointer.axis_stop`, and Qt emits no `QWheelEvent` in this isolated sequence.
 The following +120 still increases length. Only the complete cleaned-up matrix
 exits 57; corrected behavior exits 0 as XPASS, and partial or harness failures
-fail.
-SC-CW2 (the D57 signed decrease-threshold fix and regression promotion) remains approval-required and unapproved.
+fail. SC-CW2 (the D57 signed decrease-threshold fix and regression promotion)
+remains unchecked, approval-required, and unapproved.
 
 ### D58 (close-only and minimize-toggle settings do not enable window tracking)
 
@@ -474,18 +475,19 @@ in SC-R6.
       manual-scroll enablement, and no-overflow behavior. Dependencies: existing
       task fixture and wheel driver only. Commits: d2fa8bbd1, 3b6930851,
       c61ce8502
-- [ ] **SC-CW1 (the D57 ConfigOverlay wheel-threshold reproduction):** drive a
+- [x] **SC-CW1 (the D57 ConfigOverlay wheel-threshold reproduction):** drive a
       Latte-style applet through positive, negative, horizontal, boundary, and
       sub-threshold deltas plus an axis-stop control, recording independent
       applet-length effects. PR #95 supplied the generic prerequisites at
-      `57bc03ce0`, `7f747f944`, `fb3466223`, and `ce424574a`. Reproduction only;
-      provisional local commit `81ca28d95`, not merged. Approved. Commits:
+      `57bc03ce0`, `7f747f944`, `fb3466223`, `ce424574a`, `cd6d317b2`, and
+      `240476b9c`. Reproduction only; no production behavior changed.
+      Commits: 5ec57175f, aa6399b44, 709c0946b, 9b0672cf9
 - [ ] **SC-CW2 (the D57 signed decrease-threshold fix and regression
-      promotion):** after SC-CW1 merges and explicit approval is recorded,
-      change only the decrease comparison from `angle < 12` to `angle < -12`,
-      remove the expected-failure marker, and retain the both-axis matrix as a
-      status-0 regression after merged SC-CW1 and explicit maintainer approval.
-      Approval required; not approved. Commits:
+      promotion):** SC-CW1 is merged, but explicit approval must still be
+      recorded before changing the decrease comparison from `angle < 12` to
+      `angle < -12`, removing the expected-failure marker, and retaining the
+      both-axis matrix as a status-0 regression. Approval required; not approved.
+      Commits:
 - [x] **SC-B1 (the D30 current-contract investigation):** confirmed current
       gestures, event ownership, booleans/defaults, target lifecycle, requests,
       effects, and Qt5/fork parity across enabled, disabled, and no-target nested
@@ -681,7 +683,8 @@ Every schema migration or new runtime core found by GS-F1 receives a separate
   gate from `docs/prompts/orchestrator-prompt.md`.
 - The plan and master checklist receive post-rebase commit hashes. Newly found
   defects are filed even when fixed in the same session.
-- The ledger carries 89 checklist items and 89 `Commits:` slots. Both counts
-  change together whenever an investigation splits another root or surface.
+- The ledger carries 90 checklist items and 90 corresponding `Commits:` slots.
+  Both counts change together whenever an investigation splits another root or
+  surface.
 - No implementation agent may interpret this plan's reserved D29 or D30 units
   as approval for speculative action expansion.

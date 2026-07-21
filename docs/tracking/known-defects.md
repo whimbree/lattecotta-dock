@@ -316,7 +316,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   (task-icon middle click appears to execute left-click behavior).
 
 ### D57 - ConfigOverlay wheel threshold accepts nonnegative decrease deltas
-- STATUS: OPEN (reproduced 2026-07-21 at provisional local SC-CW1 commit `81ca28d95`; not merged).
+- STATUS: OPEN. PR #96 landed SC-CW1 (the D57 ConfigOverlay wheel-threshold
+  reproduction) at reproduction commit `5ec57175f`, tracking commit
+  `aa6399b44`, tracking trim `709c0946b`, and evidence qualifier `9b0672cf9`.
 - FOUND: 2026-07-20, SC-F1 (the per-view source inventory and evidence ledger).
 - SYMPTOM: delivered horizontal +/-120, vertical +/-90, and the vertical -96
   boundary decrease a Latte-style applet's length on either view axis.
@@ -331,7 +333,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   after cleanup; status 0 is XPASS, and partial signatures or harness failures
   remain FAIL.
 - NEXT: SC-CW2 (the D57 signed decrease-threshold fix and regression promotion)
-  is unchecked and requires explicit approval after SC-CW1 merges.
+  remains unchecked, approval-required, and unapproved. Merged SC-CW1 evidence
+  does not authorize the production fix.
 
 ### D58 - Close-only and minimize-toggle settings do not enable window tracking
 - STATUS: FIXED. PR #94 landed the root fix at `15f026887`, initial tracking at

@@ -46,9 +46,10 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   inherited contract whose evidence favors retain-and-clarify, but SC-B2 (the
   D30 product decision and sign-off gate) remains pending with no action
   expansion approved.
-  D57 (ConfigOverlay wheel threshold accepts nonnegative decrease deltas) is OPEN
-  via provisional local SC-CW1; SC-CW2 (the D57 signed decrease-threshold fix
-  and regression promotion) remains unapproved. D58 (close-only and
+  D57 (ConfigOverlay wheel threshold accepts nonnegative decrease deltas) remains
+  OPEN with its SC-CW1 reproduction merged by PR #96; SC-CW2 (the D57 signed
+  decrease-threshold fix and regression promotion) remains unchecked,
+  approval-required, and unapproved. D58 (close-only and
   minimize-toggle settings do not enable window tracking) is FIXED by PR #94
   under SC-WT1. D56 (pure-launcher task wheel uses inherited
   asymmetric activation) is accepted as Qt5-faithful with a permanent regression

@@ -3,13 +3,13 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-21.
 
-## 2026-07-21: D57 ConfigOverlay wheel threshold reproduced provisionally
+## 2026-07-21: D57 ConfigOverlay wheel threshold reproduced
 
-SC-CW1 (the D57 ConfigOverlay wheel-threshold reproduction) is provisional local
-commit `81ca28d95` on `test/settings-configoverlay-wheel`, based on exact
-`origin/main` `240476b9c8c6a7def8be6d9e39d3f781b185a993`; it is not pushed or
-merged. PR #95 supplied its generic prerequisites at `57bc03ce0`, `7f747f944`,
-`fb3466223`, and `ce424574a`.
+PR #96 landed SC-CW1 (the D57 ConfigOverlay wheel-threshold reproduction) at
+final evidence commits `5ec57175f`, `aa6399b44`, `709c0946b`, and `9b0672cf9`.
+PR #95 supplied its generic e2e prerequisites at `57bc03ce0`, `7f747f944`,
+`fb3466223`, `ce424574a`, `cd6d317b2`, and `240476b9c`; it has no separate
+settings-plan completion unit.
 
 D57 (ConfigOverlay wheel threshold accepts nonnegative decrease deltas) is OPEN:
 `ConfigOverlay.qml` decreases for `angle < 12` instead of `angle < -12`.
@@ -22,7 +22,8 @@ Status 57 requires the complete matrix, clean shutdown, byte-identical config
 restoration, and zero fixture residue. Status 0 is XPASS; input, query, partial-
 signature, shutdown, restoration, and residue failures remain FAIL. SC-CW2 (the
 D57 signed decrease-threshold fix and regression promotion) remains unchecked,
-requires merged SC-CW1 evidence and explicit approval, and is not approved.
+approval-required, and unapproved. Merged SC-CW1 evidence does not authorize the
+production fix.
 
 ## 2026-07-21: D58 tracker requester fix landed
 
