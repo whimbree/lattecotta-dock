@@ -3691,14 +3691,37 @@ applied to get latte-dock-qt6 building on Nix during live debugging.
 The bare build toolchain moved to Phase 0; this phase is the
 polished, distributable form of it.
 
-- [ ] Decide the appstream component-id question: appstreamcli 1.x
-      fails validation on org.kde.latte-dock's hyphenated rDNS id
-      (cid-rdns-contains-hyphen, found when the Phase 5 QML staging
-      briefly un-vacuumed ECM's appstreamtest). Either rename the
-      component (touches desktop file, appdata, notifyrc) or record a
-      validation override; the test is vacuous again until a real
-      install writes build/install_manifest.txt
-      Commits:
+- [ ] Correct D59 (invalid standalone AppStream identity and stale library
+      provider). Latte is a standalone executable, not an addon of Plasma
+      Shell. The complete source contract is component type
+      `desktop-application`, component ID `org.kde.latte-dock`, no `extends`,
+      and a `provides` block containing only binary `latte-dock`; the launchable
+      remains desktop ID `org.kde.latte-dock.desktop`. The old component ID
+      `org.kde.latte-dock.desktop` fails AppStream 1.1.3 with
+      `cid-rdns-contains-hyphen` because its suffix makes `latte-dock` a
+      non-final reverse-DNS segment. `liblatte2plugin.so` disappeared with the
+      complete `liblatte2` tree in commit `507393933` in 2020, and private QML
+      plugins are not public library providers.
+
+      Validation must not depend on ECM's vacuous development-state
+      `appstreamtest`, which reads only `build/install_manifest.txt`. A direct
+      CTest always validates the configured
+      `build/app/org.kde.latte-dock.appdata.xml` and asserts every identity,
+      launchable, extension, and provider invariant. The installed-package gate
+      separately requires package-owned metainfo and structurally enforces the
+      same contract without an AppStream runtime dependency. Debian and RPM
+      builders archive current HEAD, so their duplicate source patches are
+      removed. Gentoo and Void remain pinned to older source with their patches
+      unchanged until a second PR can reference this PR's final GitHub hash.
+      No continuation package has been released, so no compatibility alias or
+      migration behavior is added.
+
+      Branch implementation is complete at provisional commits `8468e54c6`,
+      `34999aa56`, and `6eb4406c1`. Keep this item unchecked until the PR merges;
+      replace these hashes with the final post-rebase commits and then mark it
+      complete.
+      Commits: 8468e54c6, 34999aa56, 6eb4406c1 (provisional branch hashes;
+      final post-rebase hashes required)
 
 - [ ] Write `default.nix` (Qt6/KF6 dependency list, matching Phase 1-3
       framework choices). Use `lib.cleanSource ./.` for `src`, not bare

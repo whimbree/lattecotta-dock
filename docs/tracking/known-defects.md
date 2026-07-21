@@ -342,6 +342,38 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   regress close-only and minimize-toggle effects. Wayland capability checks and
   typed-refusal API work remain separate plan findings, not part of D58.
 
+### D59 - Invalid standalone AppStream identity and stale library provider
+- STATUS: OPEN. The root fix is complete on branch
+  `fix/appstream-source-truth` at provisional commits `8468e54c6`, `34999aa56`,
+  and `6eb4406c1`, but the defect remains open until the PR merges and final
+  post-rebase hashes replace them.
+- FOUND: 2026-07-20, source-metadata audit before the first continuation
+  release.
+- SYMPTOM: AppStream 1.1.3 rejects the configured metadata with
+  `cid-rdns-contains-hyphen`, and package metadata describes the standalone
+  `latte-dock` executable as an addon of Plasma Shell. It also advertises
+  `liblatte2plugin.so` as a public library even though that plugin no longer
+  exists.
+- ROOT CAUSE: the inherited component kept its addon-era
+  `org.kde.latte-dock.desktop` identity and `<extends>org.kde.plasmashell</extends>`.
+  The desktop suffix makes `latte-dock` a non-final reverse-DNS segment, where
+  AppStream forbids the hyphen. Commit `507393933` removed the complete
+  `liblatte2` plugin tree in 2020, but its provider declaration remained.
+- EVIDENCE: direct validation of
+  `build/app/org.kde.latte-dock.appdata.xml` failed under AppStream 1.1.3 while
+  ECM's `appstreamtest` passed in 0.01 seconds without
+  `build/install_manifest.txt`. The branch declares `desktop-application`
+  component `org.kde.latte-dock`, retains the
+  `org.kde.latte-dock.desktop` launchable, removes `extends`, and provides only
+  binary `latte-dock`. Direct validation and the configured-file CTest pass.
+  The installed-package gate additionally requires package-owned metainfo and
+  structurally rejects each wrong identity field, any extension, and the stale
+  library without requiring AppStream at runtime.
+- COMPATIBILITY: no continuation package has been released, so no alias,
+  migration, or compatibility identity is required. Debian and RPM snapshot
+  recipes consume current HEAD and no longer carry duplicate patches. Gentoo
+  and Void remain on older source until their separate post-merge repin.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here

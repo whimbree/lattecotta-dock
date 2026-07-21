@@ -3,6 +3,38 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-20.
 
+## 2026-07-20: D59 standalone AppStream source correction in flight
+
+D59 (invalid standalone AppStream identity and stale library provider) is
+root-fixed on branch `fix/appstream-source-truth` from exact `origin/main`
+`c61ce8502a1d8a53f25b6fd6ca390030bfc80101`. The configured source metadata now
+declares desktop application `org.kde.latte-dock`, keeps desktop launchable
+`org.kde.latte-dock.desktop`, has no Plasma Shell extension, and provides only
+binary `latte-dock`. The stale `liblatte2plugin.so` provider outlived that
+plugin's 2020 removal in `507393933`.
+
+The new `appstreammetadatatest` validates the configured metadata directly, so
+ECM's absent-`install_manifest.txt` pass can no longer hide the source defect.
+AppStream 1.1.3 changed from `cid-rdns-contains-hyphen` failure to successful
+validation, and the coverage ratchet now records 96 CTest entries with 31 paired
+unit headers. The installed-package gate requires package-owned metainfo and
+parses its structure using the existing Perl dependency; its self-test passes
+84 focused controls, including missing, unowned, wrong type, wrong ID, wrong
+launchable, forbidden extension, and stale-library cases. No AppStream runtime
+dependency was added.
+
+Debian and RPM snapshot recipes no longer carry source patches that would
+double-apply against current HEAD. Gentoo and Void pins and patches remain
+unchanged for a second PR after this PR has a final GitHub hash. No continuation
+package has been released, so no compatibility alias or migration behavior was
+added. Provisional branch commits are `8468e54c6`, `34999aa56`, and `6eb4406c1`.
+The Phase 11 item and D59 intentionally remain open until merge; finalization
+must replace those hashes with GitHub's post-rebase commits and mark D59 fixed.
+
+README remains unchanged. This correction changes package metadata accuracy and
+test enforcement, not a timeless product capability, public surface, phase
+completion, or roadmap state.
+
 ## 2026-07-20: packaging wave B native recipes finalized
 
 PR #85 landed F5 (the Void native package recipe) as post-rebase commits
