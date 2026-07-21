@@ -4,6 +4,7 @@ set(lattedock-app_SRCS
     dbusreports.cpp
     infoview.cpp
     lattecorona.cpp
+    settingscontrolregistry.cpp
     screenpool.cpp
     primaryoutputwatcher.cpp
     coretypes.h

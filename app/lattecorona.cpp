@@ -16,6 +16,7 @@
 #include "screengeometrycalculator.h"
 #include "lattedockadaptor.h"
 #include "screenpool.h"
+#include "settingscontrolregistry.h"
 #include "data/generictable.h"
 #include "data/layouticondata.h"
 #include "declarativeimports/interfaces.h"
@@ -99,6 +100,7 @@ Corona::Corona(bool defaultLayoutOnStartup, QString layoutNameOnStartUp, QString
       m_layoutNameOnStartUp(layoutNameOnStartUp),
       m_activitiesConsumer(new KActivities::Consumer(this)),
       m_screenPool(new ScreenPool(KSharedConfig::openConfig(), this)),
+      m_settingsControlRegistry(new SettingsControlRegistry(this)),
       m_indicatorFactory(new Indicator::Factory(this)),
       m_universalSettings(new UniversalSettings(KSharedConfig::openConfig(), this)),
       m_globalShortcuts(new GlobalShortcuts(this)),
@@ -190,6 +192,10 @@ Corona::~Corona()
     //! calls into the wm/theme/indicator services below)
     delete m_layoutsManager;
     delete m_templatesManager;
+
+    //! settings/view lifetime objects are gone, so every destroyed callback has
+    //! retired its generation; the registry can now leave before shared services
+    delete m_settingsControlRegistry;
 
     //! services the views consumed
     delete m_plasmaGeometries;
@@ -535,6 +541,11 @@ GlobalShortcuts *Corona::globalShortcuts() const
 ScreenPool *Corona::screenPool() const
 {
     return m_screenPool;
+}
+
+SettingsControlRegistry *Corona::settingsControlRegistry() const
+{
+    return m_settingsControlRegistry;
 }
 
 UniversalSettings *Corona::universalSettings() const
@@ -1444,6 +1455,18 @@ QString Corona::viewTasksData(const uint &containmentId)
     }
 
     return DbusReports::collectTasksData(view);
+}
+
+QString Corona::viewSettingsControlsData(const uint &containmentId)
+{
+    auto view = m_layoutsManager->synchronizer()->viewForContainment(containmentId);
+
+    if (!view) {
+        qWarning() << "corona: viewSettingsControlsData queried for containment" << containmentId << "which has no view";
+        return QStringLiteral("[]");
+    }
+
+    return m_settingsControlRegistry->viewSettingsControlsData(containmentId);
 }
 
 QString Corona::taskMiddleClickDispatchData(const uint &containmentId)

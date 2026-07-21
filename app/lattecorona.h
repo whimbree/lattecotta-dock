@@ -52,6 +52,7 @@ namespace Latte {
 class CentralLayout;
 class ScreenPool;
 class GlobalShortcuts;
+class SettingsControlRegistry;
 class UniversalSettings;
 class View;
 class ViewSettingsFactory;
@@ -154,6 +155,10 @@ public:
     KActivities::Consumer *activitiesConsumer() const;
     GlobalShortcuts *globalShortcuts() const;
     ScreenPool *screenPool() const;
+    //! Internal registration surface for settings components as their own
+    //! SC-O1 (the read-only settings-control D-Bus registry) follow-up units
+    //! land. SC-O1 itself registers fixture controls only.
+    SettingsControlRegistry *settingsControlRegistry() const;
     UniversalSettings *universalSettings() const;
     ViewSettingsFactory *viewSettingsFactory() const;
     Layouts::Manager *layoutsManager() const;   
@@ -222,6 +227,11 @@ public:
     //! that containment id (warned) or the view hosts no tasks plasmoid
     //! (legitimate state, not warned).
     QString viewTasksData(const uint &containmentId);
+
+    //! Read-only D-Bus state: live registered settings controls for one view as
+    //! compact JSON. Unknown views warn and return []; a known view with no
+    //! registered controls returns [] quietly. No setter or execution path.
+    QString viewSettingsControlsData(const uint &containmentId);
 
     //! Read-only D-Bus state: the newest task-icon middle-click dispatch for
     //! one view as compact JSON. The record carries only stable application
@@ -434,6 +444,9 @@ private:
     QPointer<KAboutApplicationDialog> aboutDialog;
 
     ScreenPool *m_screenPool{nullptr};
+    //! Outlives settings factories and layouts so their QObject destruction
+    //! synchronously retires every generation before the registry is deleted.
+    SettingsControlRegistry *m_settingsControlRegistry{nullptr};
     UniversalSettings *m_universalSettings{nullptr};
     ViewSettingsFactory *m_viewSettingsFactory{nullptr};
     GlobalShortcuts *m_globalShortcuts{nullptr};

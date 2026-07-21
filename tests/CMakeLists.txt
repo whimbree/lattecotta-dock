@@ -269,6 +269,33 @@ target_compile_definitions(settingsinventorytest PRIVATE
 target_include_directories(settingsinventorytest PRIVATE
     ${CMAKE_SOURCE_DIR}/tests/units) # settingssourcescanner.h
 
+# SC-O1 (the read-only settings-control D-Bus registry) fixture vertical slice:
+# a dedicated test-only QML tree in a real QQuickWindow/QQmlEngine, registered
+# exclusively through the production C++ registry API. No production page or
+# shared component registration enters this foundation unit.
+qt6_add_resources(settingscontrolregistryfixture_QRC
+    settingscontrolregistryfixture/settingscontrolregistryfixture.qrc)
+ecm_add_test(settingscontrolregistrytest.cpp
+    ${settingscontrolregistryfixture_QRC}
+    TEST_NAME settingscontrolregistrytest
+    LINK_LIBRARIES lattedock-core Qt6::Test Qt6::Gui Qt6::Qml Qt6::Quick
+)
+set_tests_properties(settingscontrolregistrytest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QSG_RHI_BACKEND=software")
+target_include_directories(settingscontrolregistrytest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
+# The public XML and thin Corona delegation cannot be exercised by constructing
+# Corona without the full Plasma shell graph. This permanent source guard pins
+# both seams and proves controlled missing/bypass mutations red.
+ecm_add_test(settingscontrolsourceguardtest.cpp
+    TEST_NAME settingscontrolsourceguardtest
+    LINK_LIBRARIES Qt6::Test
+)
+target_compile_definitions(settingscontrolsourceguardtest PRIVATE
+    REPO_ROOT="${CMAKE_SOURCE_DIR}")
+
 # The length cluster's real-handler wiring audit (CL-1,
 # docs/tracking/edit-mode-settings-audit-plan.md): the same QML-fragment/stub-map pattern
 # as settingswiringharnesstest, plus the LengthOffsetClampBridge registered as

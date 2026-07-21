@@ -106,6 +106,13 @@
         <arg name="data" type="s" direction="out"/>
         <arg name="containmentId" type="u" direction="in"/>
     </method>
+    <!-- SC-O1 (the read-only settings-control D-Bus registry): live fixture or
+         future component registrations only. No setter, filter, registration,
+         or execution method is public. -->
+    <method name="viewSettingsControlsData">
+        <arg name="data" type="s" direction="out"/>
+        <arg name="containmentId" type="u" direction="in"/>
+    </method>
     <!-- SC-T3 (the D29 narrow middle-click dispatch readback): selects the
          newest event across every current Latte Tasks applet in the requested
          containment. Any malformed nonempty candidate or duplicate process

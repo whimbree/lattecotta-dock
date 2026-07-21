@@ -1,4 +1,4 @@
-98
+100
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -69,6 +69,8 @@ screenpooltest
 scrollmathtest
 settingsinventorytest
 settingscontrolrecordstest
+settingscontrolregistrytest
+settingscontrolsourceguardtest
 settingssourcescannertest
 settingsmodelstest
 settingswiringharnesstest
