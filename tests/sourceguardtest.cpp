@@ -101,41 +101,114 @@ private:
     static bool matchesMiddleClickCollectorBridge(const QString &body)
     {
         const QString code = normalizedCode(body);
-        const QString containment = QStringLiteral("constuintactualContainmentId=view->containment()->id();");
-        const QString scopeCheck = QStringLiteral("if(actualContainmentId!=containmentId)");
-        const QString appletLoop = QStringLiteral("for(auto*applet:view->containment()->applets())");
-        const QString propertyRead = QStringLiteral(
-            "constQVariantvalue=readLiveProperty(plasmoidRoot,\"latestMiddleClickDispatch\");");
-        const QString append = QStringLiteral(
-            "candidates.append(MiddleClickDispatchCandidate{actualContainmentId,"
-            "static_cast<int>(applet->id()),value});");
-        const QString selector = QStringLiteral(
-            "constautoselection=selectLatestMiddleClickDispatch(containmentId,candidates);");
-        const QString refusalSwitch = QStringLiteral("switch(selection.refusal)");
-        const QString serialization = QStringLiteral(
-            "caseMiddleClickDispatchRefusal::None:returnserializeMiddleClickDispatchData(selection.record);");
+        const auto capture = [&code](const QString &pattern) {
+            const auto match = QRegularExpression(pattern).match(code);
+            return match.hasMatch() ? match.captured(1) : QString{};
+        };
+        const auto position = [&code](const QString &pattern, int offset = 0) {
+            return QRegularExpression(pattern).match(code, offset).capturedStart();
+        };
 
-        const int containmentPosition = code.indexOf(containment);
-        const int scopeCheckPosition = code.indexOf(scopeCheck, containmentPosition);
-        const int loopPosition = code.indexOf(appletLoop, scopeCheckPosition);
+        const QString containmentId = capture(QStringLiteral(
+            "const(?:uint|auto)([A-Za-z_][A-Za-z0-9_]*)=view->containment\\(\\)->id\\(\\);"));
+        const QString candidates = capture(QStringLiteral(
+            "QList<MiddleClickDispatchCandidate>([A-Za-z_][A-Za-z0-9_]*);"));
+        const QString applet = capture(QStringLiteral(
+            "for\\(auto\\*([A-Za-z_][A-Za-z0-9_]*):view->containment\\(\\)->applets\\(\\)\\)"));
+        if (containmentId.isEmpty() || candidates.isEmpty() || applet.isEmpty()) {
+            return false;
+        }
+
+        const QString escapedContainmentId = QRegularExpression::escape(containmentId);
+        const QString escapedCandidates = QRegularExpression::escape(candidates);
+        const QString escapedApplet = QRegularExpression::escape(applet);
+        const QString scopeCheck = QStringLiteral("if\\(%1!=containmentId\\)").arg(escapedContainmentId);
+        const QString appletLoop = QStringLiteral(
+            "for\\(auto\\*%1:view->containment\\(\\)->applets\\(\\)\\)").arg(escapedApplet);
+        const QString pluginFilter = QStringLiteral(
+            "if\\(%1->pluginMetaData\\(\\)\\.pluginId\\(\\)!=(?:QLatin1String|QStringLiteral)"
+            "\\(\"org\\.kde\\.latte\\.plasmoid\"\\)\\)\\{continue;\\}").arg(escapedApplet);
+
+        const int containmentPosition = position(QStringLiteral(
+            "const(?:uint|auto)%1=view->containment\\(\\)->id\\(\\);").arg(escapedContainmentId));
+        const int scopeCheckPosition = position(scopeCheck, containmentPosition);
+        const int candidatesPosition = position(QStringLiteral(
+            "QList<MiddleClickDispatchCandidate>%1;").arg(escapedCandidates), scopeCheckPosition);
+        const int loopPosition = position(appletLoop, candidatesPosition);
         const int scopeRefusalPosition = code.indexOf(QStringLiteral("returnQStringLiteral(\"{}\");"), scopeCheckPosition);
-        const int missingQuickItemPosition = code.indexOf(QStringLiteral("if(!plasmoidRoot)"), loopPosition);
+        const int pluginFilterPosition = position(pluginFilter, loopPosition);
+
+        const QString quickItem = capture(
+            QStringLiteral("auto\\*?([A-Za-z_][A-Za-z0-9_]*)=PlasmaQuick::AppletQuickItem::itemForApplet\\(")
+            + escapedApplet + QStringLiteral("\\);"));
+        if (quickItem.isEmpty()) {
+            return false;
+        }
+        const QString escapedQuickItem = QRegularExpression::escape(quickItem);
+        const QString itemLookup = QStringLiteral(
+            "auto\\*?%1=PlasmaQuick::AppletQuickItem::itemForApplet\\(%2\\);")
+                                       .arg(escapedQuickItem, escapedApplet);
+        const int itemLookupPosition = position(itemLookup, pluginFilterPosition);
+        const QString missingQuickItemToken = QStringLiteral("if(!%1)").arg(quickItem);
+        const int missingQuickItemPosition = code.indexOf(missingQuickItemToken, itemLookupPosition);
+        const QString missingQuickItemBranch = functionBody(code, missingQuickItemToken);
+        const int warningPosition = missingQuickItemBranch.indexOf(QStringLiteral("qWarning()<<"));
         const int missingQuickItemContinuePosition = code.indexOf(QStringLiteral("continue;"), missingQuickItemPosition);
-        const int propertyPosition = code.indexOf(propertyRead, loopPosition);
-        const int appendPosition = code.indexOf(append, propertyPosition);
-        const int selectorPosition = code.indexOf(selector, appendPosition);
-        const int switchPosition = code.indexOf(refusalSwitch, selectorPosition);
-        const int serializationPosition = code.indexOf(serialization, switchPosition);
+
+        const QString value = capture(
+            QStringLiteral("const(?:QVariant|auto)([A-Za-z_][A-Za-z0-9_]*)=readLiveProperty\\(")
+            + escapedQuickItem + QStringLiteral(",\"latestMiddleClickDispatch\"\\);"));
+        if (value.isEmpty()) {
+            return false;
+        }
+        const QString escapedValue = QRegularExpression::escape(value);
+        const QString propertyRead = QStringLiteral(
+            "const(?:QVariant|auto)%1=readLiveProperty\\(%2,\"latestMiddleClickDispatch\"\\);")
+                                         .arg(escapedValue, escapedQuickItem);
+        const QString append = QStringLiteral(
+            "%1\\.append\\(MiddleClickDispatchCandidate\\{%2,static_cast<int>\\(%3->id\\(\\)\\),%4\\}\\);")
+                                   .arg(escapedCandidates, escapedContainmentId, escapedApplet, escapedValue);
+        const int propertyPosition = position(propertyRead, missingQuickItemPosition);
+        const int appendPosition = position(append, propertyPosition);
+
+        const QString selection = capture(
+            QStringLiteral("constauto([A-Za-z_][A-Za-z0-9_]*)=selectLatestMiddleClickDispatch\\(containmentId,")
+            + escapedCandidates + QStringLiteral("\\);"));
+        if (selection.isEmpty()) {
+            return false;
+        }
+        const QString escapedSelection = QRegularExpression::escape(selection);
+        const QString selector = QStringLiteral(
+            "constauto%1=selectLatestMiddleClickDispatch\\(containmentId,%2\\);")
+                                     .arg(escapedSelection, escapedCandidates);
+        const QString refusalSwitch = QStringLiteral("switch\\(%1\\.refusal\\)").arg(escapedSelection);
+        const QString serialization = QStringLiteral(
+            "caseMiddleClickDispatchRefusal::None:returnserializeMiddleClickDispatchData\\(%1\\.record\\);")
+                                          .arg(escapedSelection);
+        const int selectorPosition = position(selector, appendPosition);
+        const int switchPosition = position(refusalSwitch, selectorPosition);
+        const int serializationPosition = position(serialization, switchPosition);
+
+        const QRegularExpression destroyedStateAccess(
+            QStringLiteral("%1->(?:destroyed|isDestroyed)\\(\\)|"
+                           "%1->property\\(\"(?:destroyed|inScheduledDestruction)\"\\)")
+                .arg(escapedApplet),
+            QRegularExpression::CaseInsensitiveOption);
 
         return containmentPosition != -1
             && scopeCheckPosition > containmentPosition
-            && loopPosition > scopeCheckPosition
+            && candidatesPosition > scopeCheckPosition
+            && loopPosition > candidatesPosition
             && scopeRefusalPosition > scopeCheckPosition
             && scopeRefusalPosition < loopPosition
-            && missingQuickItemPosition > loopPosition
+            && pluginFilterPosition > loopPosition
+            && itemLookupPosition > pluginFilterPosition
+            && missingQuickItemPosition > itemLookupPosition
+            && warningPosition != -1
+            && missingQuickItemBranch.indexOf(QStringLiteral("continue;"), warningPosition) > warningPosition
             && missingQuickItemContinuePosition > missingQuickItemPosition
             && missingQuickItemContinuePosition < propertyPosition
-            && propertyPosition > loopPosition
+            && propertyPosition > missingQuickItemPosition
             && appendPosition > propertyPosition
             && selectorPosition > appendPosition
             && switchPosition > selectorPosition
@@ -146,6 +219,7 @@ private:
             && code.count(QStringLiteral("selectLatestMiddleClickDispatch(")) == 1
             && code.count(QStringLiteral("serializeMiddleClickDispatchData(")) == 1
             && code.lastIndexOf(QStringLiteral("returnQStringLiteral(\"{}\");")) > switchPosition
+            && !destroyedStateAccess.match(code).hasMatch()
             && !code.contains(QStringLiteral("inScheduledDestruction"));
     }
 
@@ -394,15 +468,43 @@ void SourceGuardTest::middleClickDispatch_sourceGuardsRejectControlledMutations(
     QVERIFY2(!matchesMiddleClickCollectorBridge(wrongContainment),
              "passing the wrong containment to the selector must make the collector bridge guard fail");
 
-    QString scheduledDestructionFilter = normalizedCode(collector);
+    QString destroyedAppletFilter = normalizedCode(collector);
     const QString propertyRead = QStringLiteral(
         "constQVariantvalue=readLiveProperty(plasmoidRoot,\"latestMiddleClickDispatch\");");
-    QCOMPARE(scheduledDestructionFilter.count(propertyRead), 1);
-    scheduledDestructionFilter.replace(
+    QCOMPARE(destroyedAppletFilter.count(propertyRead), 1);
+    destroyedAppletFilter.replace(
         propertyRead,
-        QStringLiteral("if(applet->property(\"inScheduledDestruction\").toBool()){continue;}") + propertyRead);
-    QVERIFY2(!matchesMiddleClickCollectorBridge(scheduledDestructionFilter),
-             "filtering Plasma's scheduled-destruction undo window must make the collector bridge guard fail");
+        QStringLiteral("if(applet->destroyed()){continue;}") + propertyRead);
+    QVERIFY2(!matchesMiddleClickCollectorBridge(destroyedAppletFilter),
+             "filtering destroyed applet state must make the collector bridge guard fail");
+
+    QString withoutPluginFilter = normalizedCode(collector);
+    const QString pluginFilter = QStringLiteral(
+        "if(applet->pluginMetaData().pluginId()!=QLatin1String(\"org.kde.latte.plasmoid\")){continue;}");
+    QCOMPARE(withoutPluginFilter.count(pluginFilter), 1);
+    withoutPluginFilter.remove(pluginFilter);
+    QVERIFY2(!matchesMiddleClickCollectorBridge(withoutPluginFilter),
+             "removing the exact Latte Tasks plugin filter must make the collector bridge guard fail");
+
+    QString wrongQuickItemSource = normalizedCode(collector);
+    QCOMPARE(wrongQuickItemSource.count(QStringLiteral("itemForApplet(applet)")), 1);
+    wrongQuickItemSource.replace(QStringLiteral("itemForApplet(applet)"),
+                                 QStringLiteral("itemForApplet(view->containment())"));
+    QVERIFY2(!matchesMiddleClickCollectorBridge(wrongQuickItemSource),
+             "reading a quick item from the wrong applet source must make the collector bridge guard fail");
+
+    QString withoutMissingItemWarning = normalizedCode(collector);
+    const QString missingQuickItemToken = QStringLiteral("if(!plasmoidRoot)");
+    const QString missingQuickItemBranch = functionBody(withoutMissingItemWarning, missingQuickItemToken);
+    QVERIFY(!missingQuickItemBranch.isEmpty());
+    QCOMPARE(missingQuickItemBranch.count(QStringLiteral("qWarning()")), 1);
+    QCOMPARE(withoutMissingItemWarning.count(missingQuickItemBranch), 1);
+    QString quietMissingQuickItemBranch = missingQuickItemBranch;
+    quietMissingQuickItemBranch.replace(QStringLiteral("qWarning()"), QStringLiteral("qDebug()"));
+    withoutMissingItemWarning.replace(missingQuickItemBranch, quietMissingQuickItemBranch);
+    QVERIFY(withoutMissingItemWarning.contains(quietMissingQuickItemBranch));
+    QVERIFY2(!matchesMiddleClickCollectorBridge(withoutMissingItemWarning),
+             "removing the loud missing-item warning must make the collector bridge guard fail");
 }
 
 QTEST_GUILESS_MAIN(SourceGuardTest)
