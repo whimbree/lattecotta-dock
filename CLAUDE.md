@@ -144,8 +144,12 @@ stale checkboxes."
   defect enumerations (those live in commit bodies and the plan). If a
   sentence only makes sense to someone who watched the work happen, it
   does not belong in the README (my correction, 2026-07-17).
-- Prefer new commits over amending, except when explicitly asked (e.g.
-  cleaning up history before opening a PR).
+- Unmerged history is freely rewriteable when that improves correctness,
+  readability, or review shape (my direction, 2026-07-21). This includes local
+  branches and open PRs; no per-rewrite permission is needed. Pushed rewrites
+  use `--force-with-lease` after verifying the remote head, and a rewritten code
+  head must pass the required gate again. Commits already on `main` are
+  immutable: correct them with new commits, never by rewriting trunk history.
 - This file and `docs/tracking/PORTING_PLAN.md` are committed, but both are live
   documents - update them as direction changes or new information comes
   in (e.g. from watching the reference forks' ongoing work) rather than
