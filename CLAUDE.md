@@ -234,14 +234,18 @@ the gates (one gate-all is the verdict), so the review is diff-reading
 only. Verdict is MERGE / MERGE
 AFTER FIXES / DO NOT MERGE with concrete findings; blockers get
 root-caused and fixed on the branch before merge, non-blocking nits get
-filed as plan items. Findings are fixed without recursive rereview
-(maintainer direction, 2026-07-21). Another independent review occurs only
-after a major code or design change, or an egregious factual or traceability
-error that invalidates the original verdict. Ordinary wording changes never
-trigger another review. The authoring session may merge after a MERGE verdict,
-or after every concrete condition in MERGE AFTER FIXES is resolved without one
-of those rereview triggers. Authoring and approving inside one context is not
-review.
+filed as plan items. Review follow-up is classified from the initial review
+(maintainer direction, refined 2026-07-21). Wording, comments, naming,
+formatting, documentation clarity, and tiny semantics-identical refactors are
+minor findings. If the initial review finds no major issue, fix those ordinary
+findings and merge without a second review. Algorithm, ownership, lifecycle,
+API, invariant, test meaning, traceability, and security issues are major. If
+the initial review finds any major issue, fix it and obtain one second
+independent review of the corrected diff before merge. That second review is
+the single follow-up review, not the start of a recursive review loop. The
+authoring session may merge immediately after a MERGE verdict, after fixing
+minor conditions in MERGE AFTER FIXES, or after the required second review for
+major findings. Authoring and approving inside one context is not review.
 
 ### Commit shape and definition of done
 
