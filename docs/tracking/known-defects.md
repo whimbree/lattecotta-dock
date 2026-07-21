@@ -269,9 +269,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   (the D29 root fix) is not applicable. Temporary instrumentation was removed.
 
 ### D30 - Behavior mouse actions expose fixed booleans instead of full choices
-- STATUS: OPEN at the product-decision gate. SC-B1 confirmed the current
-  contract and its Qt5/fork parity; SC-B2 remains pending and no action expansion
-  is approved.
+- STATUS: OPEN. SC-B1 (the D30 current-contract investigation) confirmed the
+  Qt5/fork-parity contract; SC-B2 (the D30 product decision and sign-off gate)
+  remains pending, with no action expansion approved.
 - CURRENT CONTRACT: `BehaviorConfig.qml` binds two checkable buttons to
   `dragActiveWindowEnabled` and `closeActiveWindowEnabled`, with no action model
   or popup. The first boolean owns left drag or hold-to-move and left
