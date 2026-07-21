@@ -3,7 +3,7 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-21.
 
-## 2026-07-21: D59 AppStream recipe repin in flight
+## 2026-07-21: D59 AppStream source and native recipes complete
 
 D59 (invalid standalone AppStream identity and stale library provider) was
 source-corrected by merged PR #91. Its final implementation commits are
@@ -28,10 +28,12 @@ and stale-library cases. No AppStream runtime dependency was added. AppStream is
 an explicit native test dependency in both `package.nix` and the development
 shell; a sandboxed `nix build .# --no-link` completed successfully.
 
-The mandatory follow-up is in flight on branch `build/appstream-source-repin` at
-provisional commit `c3ad16a23`. Arch, Gentoo, and Void now pin merged head
-`804519254`; Gentoo and Void delete their obsolete AppStream patches, while Arch
-had no patch. Debian and RPM already carried no AppStream patch after PR #91.
+PR #92 landed the mandatory recipe follow-up at final implementation commit
+`dbba5ea48`; `ba32d824c`, `72796622b`, and `4eb2e3d67` record tracking,
+independent acceptance, and the final Debian wording correction. Arch, Gentoo,
+and Void now pin merged PR #91 head `804519254`; Gentoo and Void delete their
+obsolete AppStream patches, while Arch had no patch. Debian and RPM already
+carried no AppStream patch after PR #91.
 The final contract is no per-distribution AppStream patch file or live recipe
 reference anywhere in the tracked tree. The Void current-HEAD staging helper
 also remains patch-free.
@@ -49,7 +51,7 @@ Both archives contain the corrected metadata exactly. Arch source verification,
 patch-free stage-only checks, and the tracked-tree patch scan pass. No package
 version or revision changed because no continuation artifact has been released.
 
-Five independent external lanes passed at exact PR #92 head
+Five independent external lanes passed at exact pre-rebase PR #92 head
 `45c0d27cbae8e23fdde621841a697a2c5ade59c6`. Every fresh install contained
 exactly the `desktop-application` component, `org.kde.latte-dock` ID,
 `org.kde.latte-dock.desktop` launchable and released-ID `replaces` relationship,
@@ -73,13 +75,12 @@ file. Void passed xlint, fetch, build, repository indexing and `xbps-pkgdb`,
 produced a 552-file XBPS artifact with SHA-256 prefix `1fbf7988`, and retained a
 current-HEAD helper that stages zero patches.
 
-The repository gate previously passed and stamped exact code head `45c0d27cb`.
-This external-evidence update is documentation-only, so no later gate run is
-claimed.
+The repository gate passed and stamped exact pre-rebase head `45c0d27cb`.
+GitHub rewrote the recipe implementation to final commit `dbba5ea48` without
+changing the validated tree.
 
-The Phase 11 (Nix packaging and Docker build verification) item and D59 remain
-open until the follow-up PR merges. Finalization must replace `c3ad16a23` with
-the GitHub post-rebase hash and only then mark the item and defect complete.
+The Phase 11 (Nix packaging and Docker build verification) item and D59 are
+complete. F6 (the package-artifact CI task) remains open and out of scope.
 
 README remains unchanged. This correction changes package metadata accuracy and
 test enforcement, not a timeless product capability, public surface, phase

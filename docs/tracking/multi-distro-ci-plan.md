@@ -786,16 +786,16 @@ format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
       without a patch; the package-gate self-test verifies that patch-free recipe
       and corrected metadata inside the exact source archive.
       Commits: ea1bc5acb, ced7a48a5.
-- [ ] Repin the F3-F5 native recipes after D59 (invalid standalone AppStream
+- [x] Repin the F3-F5 native recipes after D59 (invalid standalone AppStream
       identity and stale library provider) was corrected. Arch, Gentoo, and Void
-      must consume merged PR #91 head `804519254`; Gentoo and Void must delete
-      their obsolete patches, while Arch keeps its patch-free design. Debian and
+      consume merged PR #91 head `804519254`; Gentoo and Void delete their
+      obsolete patches, while Arch keeps its patch-free design. Debian and
       RPM already consume corrected current source without patches. The final
       tracked tree must contain no per-distribution AppStream patch file or live
       recipe reference. Package versions and revisions stay unchanged because no
-      continuation artifact has been released. The implementation is complete on
-      branch `build/appstream-source-repin` at provisional commit `c3ad16a23`.
-      Five independent external lanes passed at exact head `45c0d27cb`. Arch
+      continuation artifact has been released. PR #92 landed the implementation
+      at `dbba5ea48`. Five independent external lanes passed at exact pre-rebase
+      head `45c0d27cb`. Arch
       verified 766 files and runtime SHA-256 prefix `766e5499`; Debian/KDE neon
       passed 94/94 selected tests, lintian with no errors or warnings, and 769
       entries with runtime prefix `9d02e711`; Fedora and openSUSE passed full RPM
@@ -806,8 +806,7 @@ format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
       Every artifact passed exact AppStream structure, fresh-install integrity,
       the full nested-Wayland package gate and status-0 shutdown with no live
       per-distribution patch.
-      Keep this item unchecked until GitHub supplies the final post-rebase hash.
-      Commits: c3ad16a23 (provisional branch hash; final post-rebase hash required)
+      Commits: dbba5ea48, ba32d824c, 72796622b, 4eb2e3d67
 - [ ] F6 (the package-artifact CI task): extend the matrix to build each native
       package artifact in its distro environment, install that artifact, and
       run the installed-package gate against it (registry/runner per DECISION

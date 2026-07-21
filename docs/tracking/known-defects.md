@@ -343,12 +343,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   typed-refusal API work remain separate plan findings, not part of D58.
 
 ### D59 - Invalid standalone AppStream identity and stale library provider
-- STATUS: OPEN. PR #91 landed the source correction at final commits
+- STATUS: FIXED. PR #91 landed the source correction at final commits
   `94f8dc1e5`, `c5adbb863`, `cb659d480`, `477cdf70a`, `7246b4222`, `5c51ef221`,
-  `696d383db`, `7463152e8`, and `625b6c2c0`. The mandatory recipe repin is in
-  flight on branch `build/appstream-source-repin` at provisional commit
-  `c3ad16a23`; keep this defect open until that PR merges and its final
-  post-rebase hash replaces the provisional one.
+  `696d383db`, `7463152e8`, and `625b6c2c0`. PR #92 repinned every remaining
+  native recipe and deleted the Gentoo and Void patches at `dbba5ea48`, with
+  tracking and acceptance finalized by `ba32d824c`, `72796622b`, and
+  `4eb2e3d67`.
 - FOUND: 2026-07-20, source-metadata audit before the first continuation
   release.
 - SYMPTOM: AppStream 1.1.3 rejects the configured metadata with
@@ -377,17 +377,19 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   structurally rejects each wrong identity field, a missing migration
   relationship, malformed or additional migration content, any extension, and
   the stale library without requiring AppStream at runtime.
-  Five independent native-package lanes passed at exact follow-up head
+  Five independent native-package lanes passed at exact pre-rebase PR #92 head
   `45c0d27cb`: every fresh install carried the corrected identity and migration,
   passed package integrity and the full nested-Wayland gate, and shut down with
-  status 0. No lane found a live per-distribution AppStream patch.
+  status 0. GitHub rewrote the recipe implementation to final commit
+  `dbba5ea48`; no lane or current recipe has a live per-distribution AppStream
+  patch.
 - COMPATIBILITY: no continuation package has been released, so no continuation
   alias or migration is needed. The declarative `replaces` entry covers the
   inherited upstream release history and does not preserve the invalid ID as a
   live identity. Debian and RPM snapshot recipes consume current HEAD and no
-  longer carry duplicate patches. The follow-up branch pins Arch, Gentoo, and
-  Void to merged PR #91 head `804519254`; Gentoo and Void no longer carry their
-  old patches, and Arch never carried one. The required final tree has no
+  longer carry duplicate patches. PR #92 pins Arch, Gentoo, and Void to merged
+  PR #91 head `804519254`; Gentoo and Void no longer carry their old patches,
+  and Arch never carried one. The final tree has no
   per-distribution AppStream patch file or live recipe reference. The Void helper
   also rewrites its staged recipe to current HEAD without a patch; the package
   control requires exactly one matching staged `_commit` assignment and checks

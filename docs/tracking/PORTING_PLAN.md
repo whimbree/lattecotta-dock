@@ -3691,7 +3691,7 @@ applied to get latte-dock-qt6 building on Nix during live debugging.
 The bare build toolchain moved to Phase 0; this phase is the
 polished, distributable form of it.
 
-- [ ] Correct D59 (invalid standalone AppStream identity and stale library
+- [x] Correct D59 (invalid standalone AppStream identity and stale library
       provider). Latte is a standalone executable, not an addon of Plasma
       Shell. The complete source contract is component type
       `desktop-application`, component ID `org.kde.latte-dock`, no `extends`,
@@ -3716,9 +3716,9 @@ polished, distributable form of it.
       runtime dependency. The Nix package and development shell declare
       AppStream as a native test tool, and the pure package derivation must build
       with tests enabled. Debian and RPM builders archive current HEAD, so their
-      duplicate source patches are removed. The mandatory follow-up pins Arch,
-      Gentoo, and Void to merged PR #91 head `804519254`; Gentoo and Void delete
-      their now-obsolete patches, while Arch had no patch to remove. The final
+      duplicate source patches are removed. PR #92 pins Arch, Gentoo, and Void
+      to merged PR #91 head `804519254`; Gentoo and Void delete their
+      now-obsolete patches, while Arch had no patch to remove. The final
       contract is zero per-distribution AppStream patch files and zero live
       recipe references across all five formats. The Void helper is distinct: it
       rewrites the staged recipe to exact current HEAD and must stage exactly
@@ -3729,17 +3729,16 @@ polished, distributable form of it.
 
       PR #91 landed the source correction at final commits `94f8dc1e5`,
       `c5adbb863`, `cb659d480`, `477cdf70a`, `7246b4222`, `5c51ef221`,
-      `696d383db`, `7463152e8`, and `625b6c2c0`. The mandatory recipe follow-up
-      is complete on branch `build/appstream-source-repin` at provisional commit
-      `c3ad16a23`. Five independent Arch, Debian/KDE neon, Fedora/openSUSE,
-      Gentoo, and Void validation lanes passed at exact head `45c0d27cb`,
-      including fresh-install integrity, exact AppStream structure, full
-      nested-Wayland package gates, and clean shutdown. Keep this item unchecked
-      until that PR merges; replace the provisional hash with the final
-      post-rebase commit and then mark it complete.
+      `696d383db`, `7463152e8`, and `625b6c2c0`. PR #92 landed the recipe repin
+      and patch deletion at `dbba5ea48`, with tracking and acceptance commits
+      `ba32d824c`, `72796622b`, and `4eb2e3d67`. Five independent Arch,
+      Debian/KDE neon, Fedora/openSUSE, Gentoo, and Void validation lanes passed
+      at exact pre-rebase head `45c0d27cb`, including fresh-install integrity,
+      exact AppStream structure, full nested-Wayland package gates, and clean
+      shutdown. The final recipe implementation is `dbba5ea48`.
       Commits: 94f8dc1e5, c5adbb863, cb659d480, 477cdf70a, 7246b4222,
-      5c51ef221, 696d383db, 7463152e8, 625b6c2c0, c3ad16a23 (recipe follow-up
-      provisional; final post-rebase hash required)
+      5c51ef221, 696d383db, 7463152e8, 625b6c2c0, dbba5ea48, ba32d824c,
+      72796622b, 4eb2e3d67
 
 - [ ] Write `default.nix` (Qt6/KF6 dependency list, matching Phase 1-3
       framework choices). Use `lib.cleanSource ./.` for `src`, not bare
