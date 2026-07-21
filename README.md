@@ -64,9 +64,11 @@ pure C++ cores with sanitized unit tests, the dock's runtime state is
 inspectable and drivable over D-Bus
 ([D-Bus interface reference](docs/reference/dbus-interface-reference.md)),
 including a read-only query for the latest task-icon middle-click dispatch,
-and rendering is guarded by a committed-golden scene gate that runs on
-pure CPU. Inherited bugs found along the way are fixed at origin, each
-with its evidence in the commit body.
+rendering is guarded by a committed-golden scene gate that runs on pure CPU,
+and an independent settings-source gate keeps every interactive declaration,
+handler, contracted lifecycle hook, and dynamic menu action linked to the
+provisional evidence ledger or an explicit exemption. Inherited bugs found
+along the way are fixed at origin, each with its evidence in the commit body.
 
 Roadmap
 =======
@@ -165,7 +167,7 @@ How it is built
 ===============
 
 Every fix names its root cause and the evidence in its commit body, and
-the tree defends itself: 94 ctest entries and 31 paired unit headers,
+the tree defends itself: 97 ctest entries and 31 paired unit headers,
 with the unit suites running under ASan+UBSan with forced asserts, a QML
 compile gate that loads every shipped QML file in a real engine, contract tests
 that pin the exact libplasma/KSvg/Qt behaviors the dock relies on (so a

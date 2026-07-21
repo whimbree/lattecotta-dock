@@ -3,6 +3,42 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-21.
 
+## 2026-07-21: SC-F2 source-coverage branch rewritten for review
+
+Branch `test/settings-source-coverage-v2`, based on exact `origin/main`
+`989e2fc00c061d40fb379575db8a50d1e0116453`, carries SC-F2 (the source-to-ledger
+coverage gate) in three independently reviewable commits. Commit `3d2fc2bee`
+adds the syntax-aware QML/C++ scanner and its sanitized contracts. Commit
+`cec4fb429` migrates the evidence ledger to schema 2 and adds independent
+bidirectional enforcement, dynamic QML action coverage, broader C++ grammar,
+canonical source ownership, and the schema refusal matrix. The final commit
+records the public contract and tracking state. No push, PR, merge, or full gate
+has occurred, so the SC-F2 checklist item remains open and its final merge
+hashes remain unrecorded.
+
+The fixed source universe contains 58 files: 237 QML objects, 357 QML members,
+57 model elements, 57 semantic QML calls, 16 C++ constructions, and 10 C++
+action calls, for 734 candidates total. Mappings cover 271 provisional
+affordances and 25 explicit exemptions through 16 exact representatives and
+1,259 coverage relations. The 25th exemption is the shipped public `SpinBox`,
+which has no live per-view settings instantiation. Source lines are diagnostics
+only. Dynamic menu helper declarations are not calls; `Component.onCompleted`
+and `Component.onDestruction` are candidates on every QML object; and C++ lambda
+ancestry survives mutable/noexcept/attribute/trailing-return forms. Every
+identity also requires coverage in its declared source file. The final
+correction counts only accepted site and representative links and pins all
+1,259 relations. Standalone `newSeparator` calls are statement-local creation
+boundaries with a following-creation digest for stable disambiguation; the
+factory construction and all separator calls map to the structural exemption.
+
+The focused correction gates pass in
+`/tmp/opencode/latte-sc-f2-rewrite-build`: 20 scanner checks ran under
+ASan+UBSan, and 74 inventory checks passed including every refusal mutation.
+The 97-entry/31-header coverage ratchet, the 130-file QML compile gate, the
+234-file qmllint baseline, fixed JSON count checks, and implementation diff
+checks also passed. No full
+`scripts/gate-all.sh` run was requested or performed.
+
 ## 2026-07-21: SC-T5 exact-once runtime acceptance merged
 
 PR #101 merged SC-T5 (the permanent runtime-effect acceptance for D29,

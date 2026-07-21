@@ -147,6 +147,48 @@ SC-F2 compares the independent inventory and checked ledger in both directions.
 Later registry comparison is a third source. No source may define and certify
 its own coverage universe.
 
+The source side is derived independently from recursive shell configuration and
+control roots, every public shared-component QML file, recursive bundled-
+indicator configuration roots, and the explicit runtime QML and C++ surfaces
+that can execute per-view actions. The shared-component `private` directory is
+excluded deliberately. Its three live settings uses are visual-only:
+`TextFieldFocus` and `ButtonShadow` decorate `ComboBox`, while `RoundShadow`
+decorates `Slider`. A permanent scanner check permits only contracted lifecycle
+members in those three declarations and verifies that the input-capable
+`MobileCursor` and `MobileTextActionsToolBar` names remain absent from tokenized
+live settings QML; their only current ComboBox references are commented out.
+Any future live private input helper must become an explicit source root.
+
+Schema 2 stores exact stable selectors instead of line anchors. QML ids and
+named ancestry are preferred, anonymous nodes use normalized full-node SHA-256,
+model rows carry value keys, and bounded dynamic menu construction, insertion,
+and signal wiring carry semantic call selectors. Helper declarations never
+count as invocations. `Component.onCompleted` and `Component.onDestruction` are
+the exact lifecycle-member set and are candidates on every QML object without
+promoting arbitrary `onFoo` notifications. C++ actions support qualified and
+globally qualified types, aliases, inferred and typed copy initialization, and
+lambda ancestry across `mutable`, `noexcept`, attributes, and trailing returns.
+Lines remain diagnostics only. Intentional non-controls use exact
+representatives that must resolve once; prefix, wildcard, or inherited coverage
+is not accepted. Every affordance and exemption must also have a mapping in its
+declared canonical source file, so an unrelated shared implementation cannot
+certify the owner.
+
+The fixed baseline is 734 candidates across 58 files: 237 QML objects, 357 QML
+members, 57 static model elements, 57 semantic QML calls, 16 C++ constructions,
+and 10 C++ calls. Sixteen representatives complete the reverse mapping to 271
+affordances and 25 explicit exemptions through exactly 1,259 accepted coverage
+relations across sites and representatives. Invalid mappings contribute no
+relations. The 25th exemption is the shipped public `SpinBox`, which has no live
+per-view settings instantiation; a future use in a scanned settings surface
+creates its own unmapped candidate. Permanent red mutations cover malformed
+schema shapes and field types, duplicate and wildcard links, source-universe
+drift, stale measurements and selectors, candidates disguised as
+representatives, globally uncovered identities, missing canonical ownership, a
+new valid relation, a new `createNewItem` action, and lifecycle changes or
+additions on noninteractive objects. Fixed assertions pin every count
+independently of the JSON measurements.
+
 SC-F2 is a hard gate for every later registry, driver, component, and page
 registration. No production control registration or driver work starts through
 a transitive shortcut before that gate lands.
@@ -445,6 +487,12 @@ in the D29 chain; wheel remains in SC-R6.
 - [ ] **SC-A4 (the edit-mode Close action):** close the settings ensemble from
       each active sub-surface and prove lifecycle cleanup. Dependencies: SC-P9,
       SC-P11. Commits:
+- [ ] **SC-A5 (the move-current-view-to-another-layout action):** drive the view
+      context menu, select one other layout by stable identity, prove that the
+      current view moves without switching the global layout, survives restart,
+      excludes the current layout, and leaves no move or popup residue after an
+      abort. Dependencies: SC-F2, SC-D2, and a disposable multi-layout fixture.
+      Approval required; not approved. Commits:
 - [ ] **SC-M1 (the D24 dead TypeSelection write cleanup):** remove only the
       `solidPanel` and `colorizeTransparentPanels` writes and replace the audit's
       expected-dead-write assertions with absence guards. Dependencies: SC-P10
