@@ -316,17 +316,24 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   (task-icon middle click appears to execute left-click behavior).
 
 ### D57 - ConfigOverlay wheel threshold accepts nonnegative decrease deltas
-- STATUS: SUSPECTED (code-reading only; no driven reproduction).
+- STATUS: OPEN (reproduced 2026-07-21 by provisional local SC-CW1 commit
+  `81ca28d95`; not merged).
 - FOUND: 2026-07-20, SC-F1 (the per-view source inventory and evidence ledger).
-- SYMPTOM: zero, horizontal, and small positive wheel deltas can decrease a
-  Latte-style applet's length.
-- EVIDENCE: `containment/package/contents/ui/editmode/ConfigOverlay.qml` increases
-  length for `angle > 12`, then decreases for `angle < 12` instead of
-  `angle < -12`. The branch shape is inherited, but the real event path and
-  independent applet-length effect have not been driven.
-- NEXT: SC-CW1 (the D57 ConfigOverlay wheel-threshold reproduction) is approved
-  to drive positive, negative, zero, horizontal, and sub-threshold controls. It
-  is an evidence unit only; no fix is approved before reproduction.
+- SYMPTOM: delivered horizontal +/-120, vertical +/-90, and the vertical -96
+  boundary decrease a Latte-style applet's length on either view axis.
+- ROOT CAUSE: `containment/package/contents/ui/editmode/ConfigOverlay.qml`
+  divides `wheel.angleDelta.y` by 8, increases for `angle > 12`, then decreases
+  for `angle < 12` instead of `angle < -12`. Horizontal events therefore enter
+  the decrease arm with `angle == 0`.
+- EVIDENCE: repeated nested runs observed +120:+8, -120:-8, +96:0, -96:-8,
+  +90:-8, -90:-8, and horizontal +/-120:-8 on horizontal and vertical views.
+  Normal mode was a no-op. The explicit `axisstop` control asks KWin for
+  `wl_pointer.axis_stop`; Qt emits no `QWheelEvent` in this isolated sequence,
+  and the following +120 control still increases length. Status 57 is reserved
+  for this complete inherited matrix after successful cleanup; corrected status
+  0 is XPASS and every partial signature or harness failure remains FAIL.
+- NEXT: SC-CW2 (the D57 signed decrease-threshold fix and regression promotion)
+  is unchecked and requires explicit approval after SC-CW1 merges.
 
 ### D58 - Close-only and minimize-toggle settings do not enable window tracking
 - STATUS: FIXED provisionally on local branch `fix/settings-tracker-enablement`

@@ -46,13 +46,14 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   inherited contract whose evidence favors retain-and-clarify, but SC-B2 (the
   D30 product decision and sign-off gate) remains pending with no action
   expansion approved. D57 (ConfigOverlay wheel threshold accepts nonnegative
-  decrease deltas) remains suspected pending reproduction. D58 (close-only and
-  minimize-toggle settings do not enable window tracking) is confirmed and open
-  for its narrow root fix. D56 (pure-launcher task wheel uses inherited
-  asymmetric activation) is accepted as Qt5-faithful pending a permanent
-  regression guard. D24 (TypeSelection Dock/Panel presets write two dead keys)
-  is an independent small cleanup. D31 (valid Justify splitter moves reset after
-  restart) is already fixed by PR #73 and is outside this plan.
+  decrease deltas) is open and reproduced provisionally by local SC-CW1; SC-CW2
+  (the D57 signed decrease-threshold fix and regression promotion) remains
+  unapproved. D58 (close-only and minimize-toggle settings do not enable window
+  tracking) is confirmed and open for its narrow root fix. D56 (pure-launcher
+  task wheel uses inherited asymmetric activation) is accepted as Qt5-faithful
+  with a permanent regression guard. D24 (TypeSelection Dock/Panel presets write
+  two dead keys) is an independent small cleanup. D31 (valid Justify splitter
+  moves reset after restart) is already fixed by PR #73 and is outside this plan.
 - [E2e interaction tests](e2e-interaction-test-plan.md) - the nested-vehicle
   interaction matrix. The interaction DRIVER layer (C-I chunks) landed; the
   scenario and abort chunks (C-S/C-A) and C-I5 (moveViewToScreen) are pending; a

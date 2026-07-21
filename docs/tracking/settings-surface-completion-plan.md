@@ -263,13 +263,17 @@ branches without changing behavior.
 
 ### D57 (ConfigOverlay wheel threshold accepts nonnegative decrease deltas)
 
-Status is SUSPECTED from code-reading only. `ConfigOverlay.qml` increases applet
-length for `angle > 12`, then decreases for `angle < 12` instead of
-`angle < -12`. Zero, horizontal, and small positive deltas can therefore enter
-the decrease branch. The shape is inherited, but no driven reproduction exists.
-SC-CW1 is approved only to reproduce the real event path with positive,
-negative, zero, horizontal, and sub-threshold controls. A fix is not approved
-until that evidence records the actual effect.
+Status is OPEN from provisional local SC-CW1 commit `81ca28d95`; the reproduction
+is not merged. `ConfigOverlay.qml` divides `wheel.angleDelta.y` by 8, increases
+for `angle > 12`, then decreases for `angle < 12` instead of `angle < -12`.
+Repeated nested runs on horizontal and vertical views observed +120:+8,
+-120:-8, +96:0, -96:-8, +90:-8, -90:-8, and horizontal +/-120:-8. The explicit
+`axisstop` control requests `wl_pointer.axis_stop`; Qt emits no `QWheelEvent` in
+this isolated sequence, and a following +120 control still increases length.
+The recipe exits 57 only for the complete inherited matrix after cleanup, exits
+0 for the corrected XPASS matrix, and fails every partial or harness signature.
+SC-CW2 (the D57 signed decrease-threshold fix and regression promotion) remains
+approval-required and is not approved.
 
 ### D58 (close-only and minimize-toggle settings do not enable window tracking)
 
@@ -474,11 +478,18 @@ in SC-R6.
       task fixture and wheel driver only. Commits: d2fa8bbd1, 3b6930851,
       c61ce8502
 - [ ] **SC-CW1 (the D57 ConfigOverlay wheel-threshold reproduction):** drive a
-      Latte-style applet through positive, negative, zero, horizontal, and
-      sub-threshold wheel deltas and record independent applet-length effects.
-      This unit reproduces only; any fix requires a new approved item.
-      Dependencies: existing fakepointer wheel driver, ConfigOverlay fixture,
-      and applet-length readback. Approved. Commits:
+      Latte-style applet through positive, negative, horizontal, boundary, and
+      sub-threshold wheel deltas, plus an explicit axis-stop control, and record
+      independent applet-length effects. This unit reproduces only. PR #95
+      supplied the generic prerequisites at `57bc03ce0`, `7f747f944`,
+      `fb3466223`, and `ce424574a`. Provisional local reproduction commit:
+      `81ca28d95`; not merged. Approved. Commits:
+- [ ] **SC-CW2 (the D57 signed decrease-threshold fix and regression
+      promotion):** after SC-CW1 merges and explicit approval is recorded,
+      change only the decrease comparison from `angle < 12` to `angle < -12`,
+      remove the expected-failure marker, and retain the complete both-axis
+      matrix as a status-0 regression. Dependencies: merged SC-CW1 and explicit
+      maintainer approval. Approval required; not approved. Commits:
 - [x] **SC-B1 (the D30 current-contract investigation):** confirmed current
       gestures, event ownership, booleans/defaults, target lifecycle, requests,
       effects, and Qt5/fork parity across enabled, disabled, and no-target nested

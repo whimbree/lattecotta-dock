@@ -3,6 +3,31 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-21.
 
+## 2026-07-21: D57 ConfigOverlay wheel threshold reproduced provisionally
+
+SC-CW1 (the D57 ConfigOverlay wheel-threshold reproduction) is reconstructed on
+local branch `test/settings-configoverlay-wheel` from exact `origin/main`
+`240476b9c8c6a7def8be6d9e39d3f781b185a993`. Provisional reproduction commit
+`81ca28d95` is not pushed or merged. It adds only the nested recipe and its
+hermetic Latte-style separator fixture. PR #95 already landed the generic exact-
+wheel, strict-expectation, input-validation, and axis-stop prerequisites at
+`57bc03ce0`, `7f747f944`, `fb3466223`, and `ce424574a`.
+
+D57 (ConfigOverlay wheel threshold accepts nonnegative decrease deltas) is OPEN.
+`ConfigOverlay.qml` divides `wheel.angleDelta.y` by 8 but decreases for
+`angle < 12` instead of `angle < -12`. Repeated live runs on both view axes
+observed +120:+8, -120:-8, +96:0, -96:-8, +90:-8, -90:-8, and horizontal
++/-120:-8. Normal mode was unchanged. The explicit `axisstop` command requests
+`wl_pointer.axis_stop`; Qt emits no `QWheelEvent` in the isolated sequence, and
+the post-stop +120 control still increases length.
+
+The recipe reserves status 57 for only the complete inherited matrix after
+clean shutdown, byte-identical config restoration, and zero fixture residue.
+Status 0 remains XPASS for corrected behavior; input, query, partial-signature,
+shutdown, restoration, and residue failures remain FAIL. SC-CW2 (the D57 signed
+decrease-threshold fix and regression promotion) is a separate unchecked item
+requiring merged SC-CW1 evidence and explicit approval. No fix is approved.
+
 ## 2026-07-21: D58 tracker requester fix verified locally
 
 D58 (close-only and minimize-toggle settings do not enable window tracking) is
