@@ -7,15 +7,24 @@ Last updated 2026-07-21.
 
 SC-O1 (the read-only settings-control D-Bus registry) is implemented on the
 isolated `feat/settings-control-registry` branch from exact base
-`ddf6fe152db4aabdc2846a97d20508ae558942cc`. It is not merged, pushed, or
-independently reviewed, and its checklist remains unchecked. Provisional code
-commits are:
+`ddf6fe152db4aabdc2846a97d20508ae558942cc`. It has received its one completed
+independent review but is not merged or pushed, and its checklist remains
+unchecked. Provisional code commits are:
 
 - `d1dea3c59` defines the value-only C++20 record, validation, deterministic
   ordering, and compact JSON core with its paired sanitized test.
 - `76bc39242` adds the Corona-owned QObject/QQuickItem registry, fixture vertical
   slice, one read-only per-view D-Bus method, generated-adaptor path, lifecycle
   cleanup, and controlled-mutation XML/delegation source guard.
+- `1b449549b` fixes all substantive findings from that review: wire-level popup
+  locator uniqueness, complete descriptor thread affinity, owned lifecycle
+  connections and popup routing cleanup, popup-relative row ancestry, and
+  fail-closed registration generations. It also adds the missing Bree Spektor
+  SPDX lines to the two modified Corona files. The flat defect registry records
+  all six findings with their plain-English descriptions.
+- `f32688a51` records the 2026-07-21 review and risk-driven gate direction in
+  `CLAUDE.md`. The review corrections did not introduce a major design change
+  or invalidate the original review, so no recursive rereview applies.
 
 The public method is
 `viewSettingsControlsData(u containmentId) -> s`. Unknown views warn and return
@@ -26,18 +35,24 @@ a dedicated QRC/QML tree outside SC-F2 (the source-to-ledger coverage gate)
 production roots and loads in a real QQuickWindow/QQmlEngine through the
 production registry API.
 
-Focused verification in `/tmp/opencode/latte-sc-o1-build` passed 3/3 ctest
-entries: `settingscontrolrecordstest`, `settingscontrolregistrytest`, and
-`settingscontrolsourceguardtest`. Only `settingscontrolrecordstest` is compiled
-with ASan+UBSan; the registry and source guard link the ordinary unsanitized app
-core. The `latte-dock` target built successfully, including generated adaptor
-method `QString viewSettingsControlsData(uint containmentId)`. The coverage
-ratchet reported 100 ctest entries and 32 paired pure headers. Direct fixture
-`qmllint` with the pinned import allow-list produced no warnings. `xmllint`
-accepted the D-Bus XML and fixture QRC. No full gate, nested/live run, D-Bus
-smoke against a running Corona, push, PR, or merge was performed.
+Initial focused verification in `/tmp/opencode/latte-sc-o1-build` passed 3/3
+ctest entries: `settingscontrolrecordstest`, `settingscontrolregistrytest`, and
+`settingscontrolsourceguardtest`. The review correction then rebuilt only
+`settingscontrolrecordstest`, `settingscontrolregistrytest`, and `latte-dock` to
+compile the changed pure core, runtime registry, generated adaptor, and
+application boundary. Sanitized `settingscontrolrecordstest` passed 11/11 cases
+for wire uniqueness and value validation. Unsanitized
+`settingscontrolregistrytest` passed 11/11 cases for descriptor threads,
+lifecycle disconnection, popup ancestry, and fail-closed registration.
 
-Next state: independent diff review and the canonical full gate remain required
+The source guard was not rerun because guarded XML and delegation text did not
+change functionally; Corona received copyright lines only. Fixture QML was
+unchanged, so QML lint and compile checks were not repeated. Test and header
+inventory was unchanged, so the coverage ratchet was not repeated. No full
+gate, nested/live run, D-Bus smoke against a running Corona, push, PR, merge, or
+recursive review was performed.
+
+Next state: the canonical full gate remains required once on final code HEAD
 before any push or PR. After merge-time hashes are known, SC-O1 can be checked
 and its final hashes recorded. Production registration starts only in the
 dependent component/page units, with no provisional ledger evidence promoted.

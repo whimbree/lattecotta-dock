@@ -517,6 +517,82 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   container self-test. This remains separate from SC-T5 and does not require a
   dock behavior change.
 
+### D65 - Popup row stable values were not unique at the wire level
+- STATUS: FIXED (`1b449549b`).
+- FOUND: 2026-07-21, independent review of SC-O1 (the read-only
+  settings-control D-Bus registry).
+- ROOT: row registration rejected duplicate semantic identity and visual index
+  but did not reject duplicate stable locator values. Distinct C++ scalar
+  alternatives can also serialize to the same JSON bytes, including integer
+  `1` and double `1.0`.
+- FIX: one pure helper derives the compact serialized scalar locator used by
+  both registration and aggregate validation. Each popup accepts exactly one
+  row per locator, including only one null.
+- EVIDENCE: sanitizer-backed `settingscontrolrecordstest` pins exact locator
+  bytes and rejects null/null and integer `1`/double `1.0`. The registry fixture
+  rejects the same pairs and retires their complete load generations.
+
+### D66 - Settings-control descriptors accepted foreign-thread objects
+- STATUS: FIXED (`1b449549b`).
+- FOUND: 2026-07-21, the SC-O1 independent review.
+- ROOT: registry calls were GUI-thread-only, but the QObject and QQuickItem
+  descriptors themselves had no affinity check. Their destruction could
+  therefore queue cleanup or run object access across threads.
+- FIX: scope lifetime, surface and geometry objects, control and popup state,
+  popup and row items, and every hit item must share the registry GUI thread.
+  Same-thread direct destruction connections make cleanup synchronous.
+- EVIDENCE: `settingscontrolregistrytest` moves each descriptor category to a
+  live worker thread, verifies loud refusal and complete generation retirement,
+  then returns every object to the GUI thread before destruction.
+
+### D67 - Logical registry removal left lifecycle callbacks connected
+- STATUS: FIXED (`1b449549b`).
+- FOUND: 2026-07-21, the SC-O1 independent review.
+- ROOT: destroyed and popup-notify connections were not stored, so replacement
+  removed entries but left callbacks attached. Popup routing cleanup also read
+  a QPointer after destruction had begun, leaving stale raw-key entries after
+  pointer decay.
+- FIX: scopes, controls, and rows own every connection and disconnect it before
+  logical erasure. Popup-state destruction removes routing by captured raw
+  identity and numeric token before token cleanup; the raw pointer is never
+  dereferenced.
+- EVIDENCE: repeated generation replacement followed by old owner, control,
+  row, and popup-state notification/destruction leaves the replacement intact.
+  Current popup-state notification still advances generation, and destruction
+  removes the current control synchronously.
+
+### D68 - Popup rows accepted unrelated surface items
+- STATUS: FIXED (`1b449549b`).
+- FOUND: 2026-07-21, the SC-O1 independent review.
+- ROOT: row and row-hit ancestry was checked against the settings surface, not
+  the popup item. An unrelated surface descendant could therefore become a
+  plausible popup target.
+- FIX: every row item and row hit must be the popup item or its visual
+  descendant.
+- EVIDENCE: `settingscontrolregistrytest` rejects both an unrelated row item and
+  an unrelated row hit, retiring each affected load generation.
+
+### D69 - Failed settings-control registration exposed a plausible subset
+- STATUS: FIXED (`1b449549b`).
+- FOUND: 2026-07-21, the SC-O1 independent review.
+- ROOT: malformed or duplicate registration returned failure but retained
+  controls already accepted for the same load. A query could therefore expose
+  a partial array that looked complete.
+- FIX: any control or popup-row registration refusal immediately retires the
+  complete affected load generation. Attempts through retired generation or
+  control tokens warn and refuse until a replacement generation is allocated.
+- EVIDENCE: the registry fixture starts from valid controls and rows, injects
+  duplicate and malformed registrations, verifies `[]`, and proves later use
+  of each retired token refuses.
+
+### D70 - Corona settings-control changes omitted current copyright attribution
+- STATUS: FIXED (`1b449549b`).
+- FOUND: 2026-07-21, the SC-O1 independent review.
+- ROOT: `app/lattecorona.h` and `app/lattecorona.cpp` gained the registry
+  boundary without adding the current author's SPDX line.
+- FIX: both files now retain every existing line and add
+  `SPDX-FileCopyrightText: 2026 Bree Spektor`.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here
