@@ -300,10 +300,10 @@ red control where a defect is fixed, and its own `Commits:` trace.
 
 ### Foundation and drivers
 
-- [ ] **SC-F1 (the per-view source inventory and evidence ledger):** inventory
+- [x] **SC-F1 (the per-view source inventory and evidence ledger):** inventory
       all concrete affordances, assign stable audit identities, and add C1-C9
       ledger rows and explicit exemptions. This is independent of runtime
-      registration. Dependencies: none. Commits:
+      registration. Dependencies: none. Commits: 472711d11
 - [ ] **SC-F2 (the source-to-ledger coverage gate):** fail on an interactive
       declaration or handler without one ledger identity or exemption, and on a
       ledger source that no longer exists. Dependencies: SC-F1. Commits:
@@ -450,13 +450,11 @@ in SC-R6.
       event recipient, model requests, and independent effects. The sequence was
       reproduced twice and temporary instrumentation was removed. Dependencies:
       existing fakepointer, `appletConfigData`, and `viewTasksData`; no new
-      settings scaffold. Commits: 856a5bac1 (PROVISIONAL branch hash; final
-      post-rebase hash pending)
+      settings scaffold. Commits: 327e2e9af
 - [x] **SC-T2 (the D29 disposition and sign-off gate):** Qt5 and both forks
       retain the launcher exception. D29 is accepted as Qt5-faithful behavior
       and a configuration-scope misunderstanding, with no divergence or fix.
-      Dependencies: SC-T1. Commits: 856a5bac1 (PROVISIONAL branch hash; final
-      post-rebase hash pending)
+      Dependencies: SC-T1. Commits: 327e2e9af
 - [ ] **SC-T3 (the D29 narrow dispatch readback):** expose only the
       latest middle-click row identity and kind, configured action, dispatched
       operation, and monotonic sequence needed to distinguish launcher
@@ -470,10 +468,11 @@ in SC-R6.
       plus the zero-to-one active-window and one-to-two grouped-child effects,
       and include a negative control. Dependencies: SC-T2 and SC-T3; SC-T4 is
       not applicable. Approved after SC-T3. Commits:
-- [ ] **SC-W1 (the D56 launcher-wheel regression guard):** pin inherited pure
+- [x] **SC-W1 (the D56 launcher-wheel regression guard):** pin inherited pure
       launcher positive activation, negative no-op, `ScrollNone` refusal,
       manual-scroll enablement, and no-overflow behavior. Dependencies: existing
-      task fixture and wheel driver only. Commits:
+      task fixture and wheel driver only. Commits: d2fa8bbd1, 3b6930851,
+      c61ce8502
 - [ ] **SC-CW1 (the D57 ConfigOverlay wheel-threshold reproduction):** drive a
       Latte-style applet through positive, negative, zero, horizontal, and
       sub-threshold wheel deltas and record independent applet-length effects.
@@ -485,7 +484,7 @@ in SC-R6.
       effects, and Qt5/fork parity across enabled, disabled, and no-target nested
       cases. No production behavior changed. Dependencies: existing fakepointer
       and window/view readbacks; no new settings scaffold.
-      Commits: 856a5bac1 (PROVISIONAL branch hash; final post-rebase hash pending)
+      Commits: 327e2e9af
 - [ ] **SC-WT1 (the D58 tracker-enablement root fix and regression):** add only
       `closeActiveWindowEnabled` and `ScrollToggleMinimized` to the active-window
       tracker enablement expression, then regress close-only and minimize-toggle

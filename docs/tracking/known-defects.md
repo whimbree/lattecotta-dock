@@ -295,19 +295,23 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   refusal. Those seams require later decision units and are not part of D58.
 
 ### D56 - Pure-launcher task wheel uses inherited asymmetric activation
-- STATUS: ACCEPTED (Qt5-faithful behavior, not a Qt6 routing regression;
-  disposable nested capture at `origin/main` commit `6765b2320`).
+- STATUS: ACCEPTED (Qt5-faithful behavior, not a Qt6 routing regression).
+  PR #89 landed SC-W1 (the D56 launcher-wheel regression guard) at `d2fa8bbd1`,
+  `3b6930851`, and `c61ce8502`; the initial disposable nested capture remains at
+  `6765b2320`.
 - EVIDENCE: pure launchers receive wheel input directly in
   `TaskMouseArea`. A positive step calls `TaskItem.activateLauncher()`, then
   `TasksModel.requestActivate`; a negative step does nothing for `ScrollTasks`
   and `ScrollToggleMinimized`. `ScrollNone` refuses unless manual scrolling is
   enabled. With manual scrolling enabled and no overflow, the same positive
   launch occurs. Production does not call `TaskActions.scrollCommandFor` on
-  this path.
+  this path. The permanent nested recipe drives real `TaskMouseArea` input,
+  independently observes launcher processes, active KWin windows and task rows,
+  and pins the 400 ms burst limiter while keeping launcher classification stable.
 - HISTORY: `git blame` traces the handler and positive launcher call to Qt5
   commits `2d6b482d5f` and `e642087e31`. Both reference forks retain it.
 - DISPOSITION: preserve the behavior. SC-W1 (the D56 launcher-wheel regression
-  guard) adds permanent coverage for positive, negative, `ScrollNone`, manual
+  guard) provides permanent coverage for positive, negative, `ScrollNone`, manual
   scrolling, and no-overflow branches. This finding is separate from D29
   (task-icon middle click appears to execute left-click behavior).
 

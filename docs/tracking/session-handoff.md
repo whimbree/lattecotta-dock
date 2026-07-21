@@ -193,6 +193,12 @@ launcher-wheel regression guard), and the focused D29, D57, and D58 follow-ups
 below. Page behavior changes, action expansion, schemas, migrations, and
 maintained-continuation divergences are not approved by the plan.
 
+PR #88 landed SC-F1 at final commit `472711d11`. PR #89 landed SC-W1 at final
+commits `d2fa8bbd1`, `3b6930851`, and `c61ce8502`. These completions do not
+approve SC-F2 (the source-to-ledger coverage gate), SC-T3 (the D29 narrow
+dispatch readback), SC-CW1 (the D57 ConfigOverlay wheel-threshold reproduction),
+or SC-WT1 (the D58 tracker-enablement root fix and regression).
+
 - D29 (task-icon middle click appears to execute left-click behavior) is
   ACCEPTED as Qt5-faithful configuration-scope behavior. At `5c2223a3e`, a
   physical middle click with default `middleClickAction=2` reached a pure Dolphin
@@ -222,20 +228,23 @@ maintained-continuation divergences are not approved by the plan.
   root fix and regression) is approved. Wayland close/minimize capability checks
   and typed-refusal APIs remain separate plan findings.
 - D56 (pure-launcher task wheel uses inherited asymmetric activation) is
-  ACCEPTED as Qt5-faithful after a disposable nested capture at `6765b2320`.
-  Positive wheel activates the launcher through `TasksModel.requestActivate`,
-  negative wheel no-ops, and manual scrolling controls whether `ScrollNone`
-  reaches the same no-overflow path. SC-W1 (the D56 launcher-wheel regression
-  guard) is the permanent-test follow-up. This is separate from D29.
+  ACCEPTED as Qt5-faithful. The initial disposable nested capture at `6765b2320`
+  is now backed by the permanent SC-W1 (the D56 launcher-wheel regression guard)
+  at `d2fa8bbd1`, `3b6930851`, and `c61ce8502`. Positive wheel activates the
+  launcher through `TasksModel.requestActivate`, negative wheel no-ops, manual
+  scrolling controls whether `ScrollNone` reaches the same no-overflow path, and
+  the burst-limiter guard keeps pure-launcher classification stable. This is
+  separate from D29.
 - D24 (TypeSelection Dock/Panel presets write two dead keys) remains OPEN as
   SC-M1 (the D24 dead TypeSelection write cleanup), independent of D30.
   D31 (valid Justify splitter moves reset after restart) remains FIXED by PR #73
   and is outside the settings-completion ownership.
 
-SC-T1 (the D29 middle-click evidence capture), SC-T2 (the D29 disposition), and
-SC-B1 are provisionally checked by branch commit `856a5bac1`. This hash will be
-rewritten; its final post-rebase replacement must be recorded after merge. No
-final hash is claimed in this branch.
+PR #90 landed SC-T1 (the D29 middle-click evidence capture), SC-T2 (the D29
+disposition), and SC-B1 (the D30 current-contract investigation) at substantive
+evidence commit `327e2e9af`. Commit `7a65f6130` only updated trace metadata, and
+`35f46a981` only glossed investigation gate names; neither replaces the
+implementation/evidence mapping.
 
 ## 2026-07-20: D25 (task icons stay stale after icon-theme changes) fixed
 
