@@ -246,7 +246,7 @@ configure_mode 0 false 0
 settle_pointer
 expect_no_launch "ScrollNone with manual scrolling disabled" "$E2E_FAKEPOINTER" scroll "$wheel_x" "$wheel_y" 1 0
 
-configure_mode 0 true 1
+configure_mode 0 true 2
 settle_pointer
 expect_launch "ScrollNone with manual scrolling enabled on a one-item non-overflow row" \
     "$E2E_FAKEPOINTER" scroll "$wheel_x" "$wheel_y" 1 0
