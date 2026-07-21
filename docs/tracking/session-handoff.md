@@ -22,24 +22,25 @@ AppStream 1.1.3 changed from `cid-rdns-contains-hyphen` failure to successful
 validation, and the coverage ratchet now records 96 CTest entries with 31 paired
 unit headers. The installed-package gate requires package-owned metainfo and
 parses its structure using the existing Perl dependency; its self-test passes
-86 focused controls, including missing, unowned, wrong type, wrong ID, wrong
-launchable, missing released-ID migration, forbidden extension, and
-stale-library cases. No AppStream runtime dependency was added. AppStream is an
-explicit native test dependency in both `package.nix` and the development shell;
-a sandboxed `nix build .# --no-link` completed successfully.
+90 focused controls, including missing, unowned, wrong type, wrong ID, wrong
+launchable, missing or malformed released-ID migration, forbidden extension,
+and stale-library cases. No AppStream runtime dependency was added. AppStream is
+an explicit native test dependency in both `package.nix` and the development
+shell; a sandboxed `nix build .# --no-link` completed successfully.
 
 Debian and RPM snapshot recipes no longer carry source patches that would
 double-apply against current HEAD. Gentoo and Void pins and patches remain
 unchanged for a second PR after this PR has a final GitHub hash. The Void helper
 rewrites the tracked template to exact current HEAD, so it now stages no patch;
-the package-gate self-test verifies the staged recipe and archived metadata. No
-continuation package has been released, so no continuation alias or migration
-was added. The `replaces` relationship covers only released upstream metadata.
-Provisional branch commits are `8468e54c6`, `34999aa56`, `6eb4406c1`,
-`a860385ef`, `a42843047`, and `480c831aa`. The Phase 11 (Nix packaging and
-Docker build verification) item and D59 intentionally remain open until merge;
-finalization must replace those hashes with GitHub's post-rebase commits and
-mark D59 fixed.
+the package-gate self-test requires exactly one matching staged `_commit`
+assignment and verifies the archived metadata. No continuation package has been
+released, so no continuation alias or migration was added. The `replaces`
+relationship covers only released upstream metadata. Provisional branch commits
+are `8468e54c6`, `34999aa56`, `6eb4406c1`, `a860385ef`, `a42843047`,
+`480c831aa`, `e00f4f6e9`, `2a1eb43d5`, and `5f893e43c`. The Phase 11 (Nix
+packaging and Docker build verification) item and D59 intentionally remain open
+until merge; finalization must replace those hashes with GitHub's post-rebase
+commits and mark D59 fixed.
 
 README remains unchanged. This correction changes package metadata accuracy and
 test enforcement, not a timeless product capability, public surface, phase

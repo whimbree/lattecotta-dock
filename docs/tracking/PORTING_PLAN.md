@@ -3712,23 +3712,27 @@ polished, distributable form of it.
       `build/app/org.kde.latte-dock.appdata.xml` and asserts every identity,
       launchable, extension, and provider invariant. The installed-package gate
       separately requires package-owned metainfo and structurally enforces the
-      same contract without an AppStream runtime dependency. The Nix package and
-      development shell declare AppStream as a native test tool, and the pure
-      package derivation must build with tests enabled. Debian and RPM builders
-      archive current HEAD, so their duplicate source patches are removed. The
-      tracked Gentoo and Void recipes remain pinned to older source with their
-      patches unchanged until a second PR can reference this PR's final GitHub
-      hash. The Void helper is distinct: it rewrites the staged recipe to exact
-      current HEAD and must stage no patch. No continuation package has been
-      released, so no continuation compatibility alias or migration is added;
-      `replaces` covers only the inherited upstream release identity.
+      same contract, including exact `replaces` contents, without an AppStream
+      runtime dependency. The Nix package and development shell declare
+      AppStream as a native test tool, and the pure package derivation must build
+      with tests enabled. Debian and RPM builders archive current HEAD, so their
+      duplicate source patches are removed. The tracked Gentoo and Void recipes
+      remain pinned to older source with their patches unchanged until a second
+      PR can reference this PR's final GitHub hash. The Void helper is distinct:
+      it rewrites the staged recipe to exact current HEAD and must stage exactly
+      that `_commit`, no patch, and matching archive metadata. No continuation
+      package has been released, so no continuation compatibility alias or
+      migration is added; `replaces` covers only the inherited upstream release
+      identity.
 
       Branch implementation is complete at provisional commits `8468e54c6`,
-      `34999aa56`, `6eb4406c1`, `a860385ef`, `a42843047`, and `480c831aa`. Keep
-      this item unchecked until the PR merges; replace these hashes with the
-      final post-rebase commits and then mark it complete.
+      `34999aa56`, `6eb4406c1`, `a860385ef`, `a42843047`, `480c831aa`,
+      `e00f4f6e9`, `2a1eb43d5`, and `5f893e43c`. Keep this item unchecked until
+      the PR merges; replace these hashes with the final post-rebase commits and
+      then mark it complete.
       Commits: 8468e54c6, 34999aa56, 6eb4406c1, a860385ef, a42843047,
-      480c831aa (provisional branch hashes; final post-rebase hashes required)
+      480c831aa, e00f4f6e9, 2a1eb43d5, 5f893e43c (provisional branch hashes;
+      final post-rebase hashes required)
 
 - [ ] Write `default.nix` (Qt6/KF6 dependency list, matching Phase 1-3
       framework choices). Use `lib.cleanSource ./.` for `src`, not bare
