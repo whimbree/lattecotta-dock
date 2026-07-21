@@ -260,6 +260,15 @@ target_link_libraries(dbusreportstest
     Qt6::Gui
     Plasma::Plasma)
 
+# SC-O1 (the read-only settings-control D-Bus registry): value-only record,
+# validation, deterministic ordering, and compact JSON serialization core.
+# The QObject/QQuickItem registry is a separate behavioral test.
+latte_add_unit_test(settingscontrolrecordstest)
+target_include_directories(settingscontrolrecordstest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app)
+target_link_libraries(settingscontrolrecordstest
+    Qt6::Gui)
+
 # Justify-alignment splitter placement (containment/plugin/units/
 # justifysplitters.h): header-only pure list math. The template
 # boundary-invariant guard for the UB-catching initiative - the sanitized

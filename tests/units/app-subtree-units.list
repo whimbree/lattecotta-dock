@@ -4,6 +4,7 @@
 # paired tests/units/<basename>test.cpp for each. Add the header's line in
 # the same commit that lands it.
 app/dbusreports.h
+app/settingscontrolrecords.h
 app/layouts/activitysetalgebra.h
 app/layouts/storageidremapper.h
 app/plasma/extended/panelbackgroundscan.h
