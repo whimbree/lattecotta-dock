@@ -3716,23 +3716,27 @@ polished, distributable form of it.
       runtime dependency. The Nix package and development shell declare
       AppStream as a native test tool, and the pure package derivation must build
       with tests enabled. Debian and RPM builders archive current HEAD, so their
-      duplicate source patches are removed. The tracked Gentoo and Void recipes
-      remain pinned to older source with their patches unchanged until a second
-      PR can reference this PR's final GitHub hash. The Void helper is distinct:
-      it rewrites the staged recipe to exact current HEAD and must stage exactly
+      duplicate source patches are removed. The mandatory follow-up pins Arch,
+      Gentoo, and Void to merged PR #91 head `804519254`; Gentoo and Void delete
+      their now-obsolete patches, while Arch had no patch to remove. The final
+      contract is zero per-distribution AppStream patch files and zero live
+      recipe references across all five formats. The Void helper is distinct: it
+      rewrites the staged recipe to exact current HEAD and must stage exactly
       that `_commit`, no patch, and matching archive metadata. No continuation
-      package has been released, so no continuation compatibility alias or
-      migration is added; `replaces` covers only the inherited upstream release
-      identity.
+      package has been released, so no package version or revision changes,
+      continuation compatibility alias, or migration is added; `replaces`
+      covers only the inherited upstream release identity.
 
-      Branch implementation is complete at provisional commits `8468e54c6`,
-      `34999aa56`, `6eb4406c1`, `bd34c8b7d`, `02ac32f6b`, `6b2d8644f`,
-      `54d9b76ba`, `a3689e3b2`, and `c76d112a7`. Keep this item unchecked until
-      the PR merges; replace these hashes with the final post-rebase commits and
-      then mark it complete.
-      Commits: 8468e54c6, 34999aa56, 6eb4406c1, bd34c8b7d, 02ac32f6b,
-      6b2d8644f, 54d9b76ba, a3689e3b2, c76d112a7 (provisional branch hashes;
-      final post-rebase hashes required)
+      PR #91 landed the source correction at final commits `94f8dc1e5`,
+      `c5adbb863`, `cb659d480`, `477cdf70a`, `7246b4222`, `5c51ef221`,
+      `696d383db`, `7463152e8`, and `625b6c2c0`. The mandatory recipe follow-up
+      is complete on branch `build/appstream-source-repin` at provisional commit
+      `c3ad16a23`. Keep this item unchecked until that PR merges; replace the
+      provisional hash with the final post-rebase commit and then mark it
+      complete.
+      Commits: 94f8dc1e5, c5adbb863, cb659d480, 477cdf70a, 7246b4222,
+      5c51ef221, 696d383db, 7463152e8, 625b6c2c0, c3ad16a23 (recipe follow-up
+      provisional; final post-rebase hash required)
 
 - [ ] Write `default.nix` (Qt6/KF6 dependency list, matching Phase 1-3
       framework choices). Use `lib.cleanSource ./.` for `src`, not bare

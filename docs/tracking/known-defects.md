@@ -343,11 +343,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   typed-refusal API work remain separate plan findings, not part of D58.
 
 ### D59 - Invalid standalone AppStream identity and stale library provider
-- STATUS: OPEN. The root fix is complete on branch
-  `fix/appstream-source-truth` at provisional commits `8468e54c6`, `34999aa56`,
-  `6eb4406c1`, `bd34c8b7d`, `02ac32f6b`, `6b2d8644f`, `54d9b76ba`, `a3689e3b2`,
-  and `c76d112a7`, but the defect remains open until the PR merges and final
-  post-rebase hashes replace them.
+- STATUS: OPEN. PR #91 landed the source correction at final commits
+  `94f8dc1e5`, `c5adbb863`, `cb659d480`, `477cdf70a`, `7246b4222`, `5c51ef221`,
+  `696d383db`, `7463152e8`, and `625b6c2c0`. The mandatory recipe repin is in
+  flight on branch `build/appstream-source-repin` at provisional commit
+  `c3ad16a23`; keep this defect open until that PR merges and its final
+  post-rebase hash replaces the provisional one.
 - FOUND: 2026-07-20, source-metadata audit before the first continuation
   release.
 - SYMPTOM: AppStream 1.1.3 rejects the configured metadata with
@@ -380,11 +381,13 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   alias or migration is needed. The declarative `replaces` entry covers the
   inherited upstream release history and does not preserve the invalid ID as a
   live identity. Debian and RPM snapshot recipes consume current HEAD and no
-  longer carry duplicate patches. The tracked Gentoo and Void recipes remain on
-  older source until their separate post-merge repin. The Void helper rewrites
-  its staged recipe to current HEAD and therefore stages no old-source patch;
-  the package control requires exactly one matching staged `_commit` assignment
-  and checks the corresponding archive metadata.
+  longer carry duplicate patches. The follow-up branch pins Arch, Gentoo, and
+  Void to merged PR #91 head `804519254`; Gentoo and Void no longer carry their
+  old patches, and Arch never carried one. The required final tree has no
+  per-distribution AppStream patch file or live recipe reference. The Void helper
+  also rewrites its staged recipe to current HEAD without a patch; the package
+  control requires exactly one matching staged `_commit` assignment and checks
+  the corresponding archive metadata.
 
 ## Recorded elsewhere - indexed here so the flat scan is complete
 

@@ -1,20 +1,20 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-20.
+Last updated 2026-07-21.
 
-## 2026-07-20: D59 standalone AppStream source correction in flight
+## 2026-07-21: D59 AppStream recipe repin in flight
 
-D59 (invalid standalone AppStream identity and stale library provider) is
-root-fixed on branch `fix/appstream-source-truth` from exact `origin/main`
-`c61ce8502a1d8a53f25b6fd6ca390030bfc80101`. The configured source metadata now
-declares desktop application `org.kde.latte-dock`, keeps desktop launchable
+D59 (invalid standalone AppStream identity and stale library provider) was
+source-corrected by merged PR #91. Its final implementation commits are
+`94f8dc1e5`, `c5adbb863`, `cb659d480`, `477cdf70a`, `7246b4222`, `5c51ef221`,
+`696d383db`, `7463152e8`, and `625b6c2c0`; merged head is exact
+`80451925475d7d5b0fb6d74f6b43d782c81dc4b5`. The configured metadata declares
+desktop application `org.kde.latte-dock`, keeps desktop launchable
 `org.kde.latte-dock.desktop`, has no Plasma Shell extension, and provides only
-binary `latte-dock`. The stale `liblatte2plugin.so` provider outlived that
-plugin's 2020 removal in `507393933`. Upstream tag `v0.10.8` at `28f39d65d`
-shipped the old component ID, so the corrected component declares it under
-`replaces`. AppStream 1.1.3 accepts that migration relationship; it preserves
-software-center history without retaining the invalid ID as a live alias.
+binary `latte-dock`. Upstream tag `v0.10.8` at `28f39d65d` shipped the old
+component ID, so `replaces` preserves its software-center history without
+retaining the invalid ID as a live alias.
 
 The new `appstreammetadatatest` validates the configured metadata directly, so
 ECM's absent-`install_manifest.txt` pass can no longer hide the source defect.
@@ -28,19 +28,30 @@ and stale-library cases. No AppStream runtime dependency was added. AppStream is
 an explicit native test dependency in both `package.nix` and the development
 shell; a sandboxed `nix build .# --no-link` completed successfully.
 
-Debian and RPM snapshot recipes no longer carry source patches that would
-double-apply against current HEAD. Gentoo and Void pins and patches remain
-unchanged for a second PR after this PR has a final GitHub hash. The Void helper
-rewrites the tracked template to exact current HEAD, so it now stages no patch;
-the package-gate self-test requires exactly one matching staged `_commit`
-assignment and verifies the archived metadata. No continuation package has been
-released, so no continuation alias or migration was added. The `replaces`
-relationship covers only released upstream metadata. Provisional branch commits
-are `8468e54c6`, `34999aa56`, `6eb4406c1`, `bd34c8b7d`, `02ac32f6b`,
-`6b2d8644f`, `54d9b76ba`, `a3689e3b2`, and `c76d112a7`. The Phase 11 (Nix
-packaging and Docker build verification) item and D59 intentionally remain open
-until merge; finalization must replace those hashes with GitHub's post-rebase
-commits and mark D59 fixed.
+The mandatory follow-up is in flight on branch `build/appstream-source-repin` at
+provisional commit `c3ad16a23`. Arch, Gentoo, and Void now pin merged head
+`804519254`; Gentoo and Void delete their obsolete AppStream patches, while Arch
+had no patch. Debian and RPM already carried no AppStream patch after PR #91.
+The final contract is no per-distribution AppStream patch file or live recipe
+reference anywhere in the tracked tree. The Void current-HEAD staging helper
+also remains patch-free.
+
+Arch's deterministic local archive is 4,587,878 bytes with SHA-256
+`4bfda179309464052ca4805c5361478507f274a38239471b65b7fbb2b53542e6`. Gentoo
+and Void consume the 4,593,948-byte GitHub archive with SHA-256
+`6aad9e9b9192df1be6dcbfa114f8c8b522e9dcaa1dd38a6cb4a0359c621aaa0c`; the
+Gentoo Manifest additionally records BLAKE2B
+`4becd1ea52f28f6b60a31dd9114433a163a4a18e7eb4e15c5f2f9f465dca934c96ac1a5befcb770933d67f536a28475571bdf944204529d4a914c5090baba52c`
+and SHA512
+`6e307a94d47de2f90c7c71f7e42705854f8c9f042341d7d7b36dd4c62a47893f9ac306606a46da3b6f07dd12f701109a1bbcbc471f5645ee9f506b2d287c5e15`.
+Both archives contain the corrected metadata exactly. Arch source verification,
+`.SRCINFO` regeneration, namcap, Gentoo digest and syntax checks, Void xlint and
+patch-free stage-only checks, and the tracked-tree patch scan pass. No package
+version or revision changed because no continuation artifact has been released.
+
+The Phase 11 (Nix packaging and Docker build verification) item and D59 remain
+open until the follow-up PR merges. Finalization must replace `c3ad16a23` with
+the GitHub post-rebase hash and only then mark the item and defect complete.
 
 README remains unchanged. This correction changes package metadata accuracy and
 test enforcement, not a timeless product capability, public surface, phase

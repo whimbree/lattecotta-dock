@@ -734,8 +734,8 @@ format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
       `makepkg --printsrcinfo`. The fast repository gate passed 94/94 at
       pre-rebase `90f610c59`, patch-equivalent to post-rebase `85ed78b2c`.
       Commits: 59e9367ff, bfc62b3e0, 85ed78b2c.
-- [x] F4 (the Gentoo native package recipe): `packaging/gentoo/` supplies an
-      EAPI 8 local overlay pinned to exact source commit `f1184c3d3`, with
+- [x] F4 (the Gentoo native package recipe): its initial acceptance used the
+      EAPI 8 local overlay at exact source commit `f1184c3d3`, with
       explicit Qt 6, KF6, Plasma 6, KWin, Wayland, QML, PipeWire, and audio
       dependencies. The test-enabled Portage depgraph matched
       `qtbase-6.11.1[vulkan]` and `qtdeclarative-6.11.1-r1[vulkan]` and exited 0;
@@ -778,12 +778,23 @@ format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
       head `fbdc3a3150b5fe4dad788e189101e9989129fbb8`, with all 77 installed-
       package refusal controls, 94/94 tests, qmllint, all 13 scene probes, and
       matrix fixtures green. That acceptance used the original helper while its
-      then-current source still needed the AppStream patch. The tracked template
-      remains pinned to that older source and retains the patch. The helper
-      rewrites its staged copy to exact current HEAD, so it now stages no patch;
-      the package-gate self-test verifies the patch-free recipe and corrected
-      metadata inside the exact source archive.
+      then-current source still needed the AppStream patch. At that point the
+      tracked template was pinned to older source and retained the patch. The
+      helper later changed to rewrite its staged copy to exact current HEAD
+      without a patch; the package-gate self-test verifies that patch-free recipe
+      and corrected metadata inside the exact source archive.
       Commits: ea1bc5acb, ced7a48a5.
+- [ ] Repin the F3-F5 native recipes after D59 (invalid standalone AppStream
+      identity and stale library provider) was corrected. Arch, Gentoo, and Void
+      must consume merged PR #91 head `804519254`; Gentoo and Void must delete
+      their obsolete patches, while Arch keeps its patch-free design. Debian and
+      RPM already consume corrected current source without patches. The final
+      tracked tree must contain no per-distribution AppStream patch file or live
+      recipe reference. Package versions and revisions stay unchanged because no
+      continuation artifact has been released. The implementation is complete on
+      branch `build/appstream-source-repin` at provisional commit `c3ad16a23`.
+      Keep this item unchecked until GitHub supplies the final post-rebase hash.
+      Commits: c3ad16a23 (provisional branch hash; final post-rebase hash required)
 - [ ] F6 (the package-artifact CI task): extend the matrix to build each native
       package artifact in its distro environment, install that artifact, and
       run the installed-package gate against it (registry/runner per DECISION
