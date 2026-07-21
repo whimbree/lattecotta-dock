@@ -437,6 +437,42 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   separate tooling-metadata change. No unrelated metadata fix is included in
   SC-T3.
 
+### D61 - Middle-click aggregate could expose an older plausible event
+- STATUS: FIXED on local `feat/tasks-middle-click-readback` branch
+  (`9ea89dc2a`); not merged.
+- FOUND: independent pre-PR review of SC-T3 (the D29 narrow middle-click
+  dispatch readback).
+- ROOT: `collectMiddleClickDispatchData` skipped malformed candidates and only
+  compared a sequence with the current maximum. A valid older record could
+  therefore survive malformed state, and a nonadjacent duplicate such as
+  5/10/5 was not detected.
+- FIX: the live collector feeds every readable tasks-applet candidate into one
+  pure selector. Any malformed nonempty state, containment mismatch, or
+  globally repeated sequence refuses the complete aggregate as `{}`. Empty
+  maps remain legitimate no-event state; startup-transient missing quick items
+  remain loudly unavailable; applets in Plasma's removal undo window remain
+  queryable until actual destruction.
+- EVIDENCE: sanitizer-backed `dbusreportstest` covers multiple applets, newest
+  selection, exact JSON, mixed no-event candidates, malformed-plus-valid
+  refusal, requested-containment mismatch, and 5/10/5 duplicate refusal.
+
+### D62 - Middle-click readback accepted inconsistent action-operation pairs
+- STATUS: FIXED on local `feat/tasks-middle-click-readback` branch
+  (`9ea89dc2a`); not merged.
+- FOUND: independent pre-PR review of SC-T3 (the D29 narrow middle-click
+  dispatch readback).
+- ROOT: the backend and D-Bus parser validated enum ranges and the launcher
+  exception independently, but neither required a task row's operation to
+  match its configured action. They also accepted TaskAction values outside
+  the six-value middle-click set.
+- FIX: one exhaustive C++ mapping defines the six offered actions and their
+  task-row operations for both boundaries. Launchers may carry any offered
+  configured action but must report `RequestActivate`; task rows must report
+  the mapped operation exactly.
+- EVIDENCE: `tasksbackendtest` and sanitizer-backed `dbusreportstest` cover all
+  six task pairs, all six launcher exceptions, every known unoffered action,
+  unknown values, and mismatched row/action/operation combinations.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here

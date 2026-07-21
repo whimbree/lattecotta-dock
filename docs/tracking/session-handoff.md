@@ -3,35 +3,44 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-21.
 
-## 2026-07-21: SC-T3 middle-click dispatch readback authored locally
+## 2026-07-21: SC-T3 (the D29 narrow middle-click dispatch readback) authored locally
 
-SC-T3 (the narrow dispatch readback for D29 (task-icon middle click appears to
-execute left-click behavior)) is authored on local branch
-`feat/tasks-middle-click-readback` at implementation commit `73566f503`. It is
-not pushed, reviewed, or merged, and the settings-plan checkbox remains open
-with the hash marked provisional. D60 (tasks QML type metadata omits two
-accessibility composer methods) is recorded at `cfe9ec9c5`.
+SC-T3 (the D29 narrow middle-click dispatch readback) is authored on local
+branch `feat/tasks-middle-click-readback` at implementation commits `73566f503`
+and `9ea89dc2a`. Independent pre-PR review returned MERGE AFTER FIXES; the fixes
+have not been rereviewed, pushed, or merged, and the settings-plan checkbox
+remains open with both hashes marked provisional. D60 (tasks QML type metadata
+omits two accessibility composer methods) is recorded at `cfe9ec9c5`.
 
 `TaskMouseArea.onReleased` records at the production launcher/task dispatch
 branch without changing its operation. The tasks backend retains one typed
-event per tasks applet and assigns a process-monotonic sequence; the D-Bus
-collector selects the newest event across the view. The new read-only method is
-`taskMiddleClickDispatchData(u containmentId) -> s`. It returns only
+event per tasks applet and assigns a process-monotonic sequence. The D-Bus
+collector selects the newest event across the view only after every candidate
+passes containment, shape, action-operation, and globally unique sequence
+validation. Any malformed nonempty candidate or duplicate sequence refuses the
+aggregate as `{}`. Empty maps remain legitimate no-event state; a missing
+startup quick item remains loudly unavailable; an applet in Plasma's removal
+undo window remains queryable until actual destruction. The new read-only
+method is `taskMiddleClickDispatchData(u containmentId) -> s`. It returns only
 `rowIdentity`, `rowKind`, `configuredAction`, `dispatchedOperation`, and
 `sequence`, or `{}` before the first event. There is no setter, history,
 arbitrary execution, action expansion, window title, or other application
 content. SC-T5 (the D29 permanent runtime-effect acceptance) remains separate
 and was not started.
 
-Post-rebase focused application/tasks-plugin/test builds passed.
-`tasksbackendtest` and the sanitizer-backed `dbusreportstest` passed, including
-launcher `requestActivate`, task-row `requestNewInstance`, cross-applet
-monotonicity, no-event state, and malformed-state refusal. The QML compile gate
-passed 130 files, qmllint matched its 5,832-warning baseline, the coverage
-ratchet passed 96 entries and 31 paired headers, and XML validation plus
-generated adaptor compilation passed. Regenerated tasks type metadata differs
-only by D60's two pre-existing composer-method omissions. No full gate or
-runtime acceptance was run.
+Post-review focused application/tasks-plugin/test builds passed.
+`tasksbackendtest`, sanitizer-backed `dbusreportstest`, and `sourceguardtest`
+passed. Coverage includes all six offered task action-operation pairs and
+launcher exceptions, malformed pair refusal, multiple applets, newest
+selection, exact JSON, mixed no-event candidates, requested-containment scope,
+malformed-plus-valid aggregate refusal, global 5/10/5 duplicate refusal, the
+production QML recording branch/order and identity fallback, reporter aliases,
+and containment lifecycle. The QML compile gate passed 130 files, qmllint
+matched its 5,832-warning baseline, all 232 QML interaction checks passed, the
+coverage ratchet passed 96 entries and 31 paired headers, and XML validation
+plus generated adaptor compilation passed. Regenerated tasks type metadata
+differs only by D60's two pre-existing composer-method omissions. No full gate
+or SC-T5 runtime-effect acceptance was run.
 
 The QML type-dump comparison found D60. It is pre-existing and unrelated to
 SC-T3; the new Backend property, signal, and method match regenerated metadata.
