@@ -459,13 +459,13 @@ in SC-R6.
       retain the launcher exception. D29 is accepted as Qt5-faithful behavior
       and a configuration-scope misunderstanding, with no divergence or fix.
       Dependencies: SC-T1. Commits: 327e2e9af
-- [ ] **SC-T3 (the D29 narrow dispatch readback):** expose only the
+- [ ] **SC-T3 (the D29 narrow middle-click dispatch readback):** expose only the
       latest middle-click row identity and kind, configured action, dispatched
       operation, and monotonic sequence needed to distinguish launcher
       activation from new-instance dispatch. No setter, history, or action
-      expansion. Dependencies: SC-T2. Approved. Authored locally on
-      `feat/tasks-middle-click-readback` but not merged; the checkbox remains
-      open. Commits: 9aea0d8bb, 2aa5a7a1e, c0ba3f66f, 9955f2035, 7f3d42a2e
+      expansion. Dependencies: SC-T2. Approved. Open in PR #99 but not merged;
+      the checkbox remains open. Commits: 9aea0d8bb, 2aa5a7a1e, c0ba3f66f,
+      9955f2035, 7f3d42a2e
       (provisional local hashes; replace with the final post-rebase hashes
       after merge)
 - [x] **SC-T4 (the D29 root fix, if proven):** not applicable because SC-T2

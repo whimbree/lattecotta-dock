@@ -3,17 +3,17 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-21.
 
-## 2026-07-21: SC-T3 (the D29 narrow middle-click dispatch readback) authored locally
+## 2026-07-21: SC-T3 (the D29 narrow middle-click dispatch readback) open in PR #99
 
-SC-T3 (the D29 narrow middle-click dispatch readback) is authored on local
-branch `feat/tasks-middle-click-readback` at implementation and review-hardening
-commits `9aea0d8bb`, `2aa5a7a1e`, `c0ba3f66f`, `9955f2035`, and `7f3d42a2e`,
-rebased onto exact `origin/main`
-`ac1db809b7ba53992d2a71b92bfd80e236615abc`.
-Independent review findings are addressed; the final MERGE rereview verdict,
-push, and merge remain pending, and the settings-plan checkbox stays open with
-all five hashes marked provisional. D60 (tasks QML type metadata omits two
-accessibility composer methods) remains separately recorded at `dc32d00f0`.
+SC-T3 (the D29 narrow middle-click dispatch readback) is open in PR #99 from
+branch `feat/tasks-middle-click-readback`. Its implementation and
+review-hardening commits are `9aea0d8bb`, `2aa5a7a1e`, `c0ba3f66f`,
+`9955f2035`, and `7f3d42a2e`, rebased onto exact `origin/main`
+`ac1db809b7ba53992d2a71b92bfd80e236615abc`. Pre-PR independent code review
+returned MERGE; the mandatory final remote review and merge remain pending, and
+the settings-plan checkbox stays open with all five hashes provisional. D60
+(tasks QML type metadata omits two accessibility composer methods) remains
+separately recorded at `dc32d00f0`.
 
 `TaskMouseArea.onReleased` records at the production launcher/task dispatch
 branch without changing its operation. The tasks backend retains one typed
@@ -44,16 +44,17 @@ compile gate passed 130 files, qmllint matched its 5,832-warning baseline, all
 232 QML interaction checks passed, the coverage ratchet passed 96 entries and
 31 paired headers, and XML validation plus generated adaptor compilation
 passed. Regenerated tasks type metadata differs only by D60's two pre-existing
-composer-method omissions. The full gate has not passed yet; SC-T5
-runtime-effect acceptance was not run.
+composer-method omissions. SC-T5 runtime-effect acceptance was not run.
 
 The first canonical gate at `3f4ec2355` exposed D63 (task settings-inventory
 anchors did not follow middle-click QML): SC-T3 shifted every
 `TaskMouseArea.qml` source anchor, but the inventory retained pre-feature line
 numbers. Commit `7f3d42a2e` moves all nine task-row anchors and the drag-and-drop
 exemption to their exact handlers. Focused `settingsinventorytest` passes at
-270 affordances and 21 exemptions; the final canonical gate must validate the
-tracking head before push.
+270 affordances and 21 exemptions. The final canonical full gate then passed
+and stamped exact head `2fd23a08e34a10eebeab11e7cbb02c919478b8d4` before the
+branch push. This current-state correction is docs-only after that stamped
+code/tracking head; it adds no code and makes no new code-gate claim.
 
 The QML type-dump comparison found D60. It is pre-existing and unrelated to
 SC-T3; the new Backend property, signal, and method match regenerated metadata.
