@@ -159,6 +159,31 @@ std::optional<quint64> SettingsControlRegistry::allocateObjectToken()
     return ++m_lastObjectToken;
 }
 
+void SettingsControlRegistry::disconnectConnections(const QList<QMetaObject::Connection> &connections)
+{
+    for (const QMetaObject::Connection &connection : connections)
+    {
+        QObject::disconnect(connection);
+    }
+}
+
+bool SettingsControlRegistry::objectLivesOnRegistryThread(QObject *object, const char *role, QString &refusal) const
+{
+    if (!object || object->thread() != thread())
+    {
+        refusal = QString::fromLatin1(role) + QStringLiteral(" is not owned by the registry GUI thread");
+        return false;
+    }
+    return true;
+}
+
+void SettingsControlRegistry::retireGenerationAfterRegistrationRefusal(quint64 generation, const QString &refusal)
+{
+    qWarning() << "settings control registry: registration refused and load generation retired" << generation << ":"
+               << refusal;
+    removeGenerationByToken(generation);
+}
+
 bool SettingsControlRegistry::isVisualDescendant(QQuickItem *item, QQuickItem *ancestor)
 {
     return isVisualDescendantOf(item, ancestor);
@@ -207,7 +232,7 @@ bool SettingsControlRegistry::descriptorPropertyIsScalar(QObject *object, const 
 }
 
 bool SettingsControlRegistry::hitDescriptorsAreValid(QQuickItem *surfaceItem, const QList<HitDescriptor> &hits,
-                                                     QString &refusal) const
+                                                      QString &refusal) const
 {
     if (hits.isEmpty())
     {
@@ -218,9 +243,13 @@ bool SettingsControlRegistry::hitDescriptorsAreValid(QQuickItem *surfaceItem, co
     QSet<QString> roles;
     for (const auto &hit : hits)
     {
-        if (hit.role.isEmpty() || !hit.item || !isVisualDescendant(hit.item, surfaceItem))
+        if (hit.role.isEmpty() || !objectLivesOnRegistryThread(hit.item, "hit item", refusal) ||
+            !isVisualDescendant(hit.item, surfaceItem))
         {
-            refusal = QStringLiteral("hit role is empty or its item is outside the surface");
+            if (refusal.isEmpty())
+            {
+                refusal = QStringLiteral("hit role is empty or its item is outside the registered visual ancestry");
+            }
             return false;
         }
         if (roles.contains(hit.role))
@@ -240,10 +269,15 @@ std::optional<quint64> SettingsControlRegistry::replaceScope(const ScopeDescript
         return std::nullopt;
     }
 
+    QString refusal;
     if (descriptor.surface.isEmpty() || !descriptor.lifetimeObject || !descriptor.surfaceItem ||
-        !descriptor.geometryProvider || (descriptor.appletId && *descriptor.appletId < 0))
+        !descriptor.geometryProvider || (descriptor.appletId && *descriptor.appletId < 0) ||
+        !objectLivesOnRegistryThread(descriptor.lifetimeObject, "scope lifetime object", refusal) ||
+        !objectLivesOnRegistryThread(descriptor.surfaceItem, "scope surface item", refusal) ||
+        !objectLivesOnRegistryThread(descriptor.geometryProvider, "scope geometry provider", refusal))
     {
-        qWarning() << "settings control registry: malformed scope descriptor refused";
+        qWarning() << "settings control registry: malformed scope descriptor refused:"
+                   << (refusal.isEmpty() ? QStringLiteral("identity or object is invalid") : refusal);
         return std::nullopt;
     }
 
@@ -278,13 +312,22 @@ std::optional<quint64> SettingsControlRegistry::replaceScope(const ScopeDescript
     scope.lifetimeObject = descriptor.lifetimeObject;
     scope.surfaceItem = descriptor.surfaceItem;
     scope.geometryProvider = descriptor.geometryProvider;
-    m_scopes.insert(*generation, scope);
 
     QSet<QObject *> watched{descriptor.lifetimeObject, descriptor.surfaceItem, descriptor.geometryProvider};
     for (QObject *object : watched)
     {
-        connect(object, &QObject::destroyed, this, [this, token = *generation]() { removeGenerationByToken(token); });
+        const QMetaObject::Connection connection =
+            connect(object, &QObject::destroyed, this,
+                    [this, token = *generation]() { removeGenerationByToken(token); }, Qt::DirectConnection);
+        if (!connection)
+        {
+            disconnectConnections(scope.connections);
+            qWarning() << "settings control registry: scope destruction connection failed";
+            return std::nullopt;
+        }
+        scope.connections.append(connection);
     }
+    m_scopes.insert(*generation, std::move(scope));
     return generation;
 }
 
@@ -305,12 +348,15 @@ void SettingsControlRegistry::removeGenerationByToken(quint64 generation)
         return;
     }
 
-    const QList<quint64> controls = scopeIt->controlTokens.values();
+    ScopeEntry scope = std::move(scopeIt.value());
+    m_scopes.erase(scopeIt);
+    disconnectConnections(scope.connections);
+
+    const QList<quint64> controls = scope.controlTokens.values();
     for (const quint64 token : controls)
     {
         removeControlByToken(token);
     }
-    m_scopes.remove(generation);
 }
 
 std::optional<quint64> SettingsControlRegistry::registerControl(quint64 generation, const ControlDescriptor &descriptor)
@@ -323,22 +369,25 @@ std::optional<quint64> SettingsControlRegistry::registerControl(quint64 generati
     auto scopeIt = m_scopes.find(generation);
     if (scopeIt == m_scopes.end())
     {
-        qWarning() << "settings control registry: control registration used "
-                      "retired generation"
+        qWarning() << "settings control registry: control registration used an already retired load generation"
                    << generation;
         return std::nullopt;
     }
 
+    auto refuse = [this, generation](QString reason) -> std::optional<quint64> {
+        retireGenerationAfterRegistrationRefusal(generation, reason);
+        return std::nullopt;
+    };
+
     QString refusal;
     if (descriptor.auditIdentity.isEmpty() || descriptor.kind.isEmpty() ||
         (descriptor.instanceKey && descriptor.instanceKey->isEmpty()) || !descriptor.item ||
+        !objectLivesOnRegistryThread(descriptor.item, "control state item", refusal) ||
         !isVisualDescendant(descriptor.item, scopeIt->surfaceItem) ||
         !descriptorPropertyIsScalar(descriptor.item, descriptor.currentProperty, refusal) ||
         !hitDescriptorsAreValid(scopeIt->surfaceItem, descriptor.hits, refusal))
     {
-        qWarning() << "settings control registry: malformed control descriptor refused:"
-                   << (refusal.isEmpty() ? QStringLiteral("identity or item is invalid") : refusal);
-        return std::nullopt;
+        return refuse(refusal.isEmpty() ? QStringLiteral("malformed control identity or item") : refusal);
     }
 
     for (const quint64 token : scopeIt->controlTokens)
@@ -348,10 +397,7 @@ std::optional<quint64> SettingsControlRegistry::registerControl(quint64 generati
             std::tie(existing->auditIdentity, existing->kind, existing->instanceKey) ==
                 std::tie(descriptor.auditIdentity, descriptor.kind, descriptor.instanceKey))
         {
-            qWarning() << "settings control registry: duplicate complete control "
-                          "identity refused for"
-                       << descriptor.auditIdentity;
-            return std::nullopt;
+            return refuse(QStringLiteral("duplicate complete control identity for ") + descriptor.auditIdentity);
         }
     }
 
@@ -361,34 +407,33 @@ std::optional<quint64> SettingsControlRegistry::registerControl(quint64 generati
     {
         const auto &candidate = *descriptor.popup;
         if (!candidate.stateObject || candidate.openProperty.isEmpty() || !candidate.item ||
+            !objectLivesOnRegistryThread(candidate.stateObject, "popup state object", refusal) ||
+            !objectLivesOnRegistryThread(candidate.item, "popup item", refusal) ||
             !isVisualDescendant(candidate.item, scopeIt->surfaceItem))
         {
-            qWarning() << "settings control registry: malformed popup descriptor refused";
-            return std::nullopt;
+            return refuse(refusal.isEmpty() ? QStringLiteral("malformed popup descriptor") : refusal);
         }
 
         const int propertyIndex =
             candidate.stateObject->metaObject()->indexOfProperty(candidate.openProperty.constData());
         if (propertyIndex < 0)
         {
-            qWarning() << "settings control registry: popup open property is missing";
-            return std::nullopt;
+            return refuse(QStringLiteral("popup open property is missing"));
         }
         popupOpenProperty = candidate.stateObject->metaObject()->property(propertyIndex);
         if (popupOpenProperty.metaType().id() != QMetaType::Bool || !popupOpenProperty.hasNotifySignal())
         {
-            qWarning() << "settings control registry: popup open property must be "
-                          "bool with a notify signal";
-            return std::nullopt;
+            return refuse(QStringLiteral("popup open property must be bool with a notify signal"));
         }
 
-        popup = PopupEntry{candidate.stateObject, candidate.openProperty, candidate.item, std::nullopt};
+        popup = PopupEntry{candidate.stateObject, candidate.openProperty, candidate.item, candidate.stateObject,
+                           std::nullopt};
     }
 
     const auto token = allocateObjectToken();
     if (!token)
     {
-        return std::nullopt;
+        return refuse(QStringLiteral("object token allocation failed"));
     }
 
     ControlEntry entry;
@@ -404,8 +449,6 @@ std::optional<quint64> SettingsControlRegistry::registerControl(quint64 generati
         entry.hits.append(HitEntry{hit.role, hit.item});
     }
     entry.popup = popup;
-    m_controls.insert(*token, entry);
-    scopeIt->controlTokens.insert(*token);
 
     QSet<QObject *> watched{descriptor.item};
     for (const auto &hit : descriptor.hits)
@@ -419,22 +462,46 @@ std::optional<quint64> SettingsControlRegistry::registerControl(quint64 generati
     }
     for (QObject *object : watched)
     {
-        connect(object, &QObject::destroyed, this, [this, token = *token]() { removeControlByToken(token); });
+        QObject *popupRoutingIdentity =
+            descriptor.popup && object == descriptor.popup->stateObject ? descriptor.popup->stateObject : nullptr;
+        const QMetaObject::Connection connection = connect(
+            object, &QObject::destroyed, this,
+            [this, token = *token, popupRoutingIdentity]() {
+                if (popupRoutingIdentity)
+                {
+                    m_popupTokensByStateObject.remove(popupRoutingIdentity, token);
+                }
+                removeControlByToken(token);
+            },
+            Qt::DirectConnection);
+        if (!connection)
+        {
+            disconnectConnections(entry.connections);
+            return refuse(QStringLiteral("control destruction connection failed"));
+        }
+        entry.connections.append(connection);
     }
 
     if (descriptor.popup)
     {
-        m_popupTokensByStateObject.insert(descriptor.popup->stateObject, *token);
         const int slotIndex = metaObject()->indexOfSlot("onPopupOpenPropertyChanged()");
         Q_ASSERT(slotIndex >= 0);
         const QMetaObject::Connection connection = QObject::connect(
-            descriptor.popup->stateObject, popupOpenProperty.notifySignal(), this, metaObject()->method(slotIndex));
+            descriptor.popup->stateObject, popupOpenProperty.notifySignal(), this, metaObject()->method(slotIndex),
+            Qt::DirectConnection);
         if (!connection)
         {
-            qWarning() << "settings control registry: popup notify connection failed";
-            removeControlByToken(*token);
-            return std::nullopt;
+            disconnectConnections(entry.connections);
+            return refuse(QStringLiteral("popup notify connection failed"));
         }
+        entry.connections.append(connection);
+    }
+
+    m_controls.insert(*token, std::move(entry));
+    scopeIt->controlTokens.insert(*token);
+    if (descriptor.popup)
+    {
+        m_popupTokensByStateObject.insert(descriptor.popup->stateObject, *token);
         updatePopupGeneration(*token);
         if (!m_controls.contains(*token))
         {
@@ -452,20 +519,24 @@ void SettingsControlRegistry::removeControlByToken(quint64 controlToken)
         return;
     }
 
-    if (controlIt->popup && controlIt->popup->stateObject)
+    ControlEntry control = std::move(controlIt.value());
+    m_controls.erase(controlIt);
+    disconnectConnections(control.connections);
+
+    if (control.popup && control.popup->routingIdentity)
     {
-        m_popupTokensByStateObject.remove(controlIt->popup->stateObject, controlToken);
+        m_popupTokensByStateObject.remove(control.popup->routingIdentity, controlToken);
     }
-    for (const auto &row : controlIt->rows)
+    for (const auto &row : control.rows)
     {
+        disconnectConnections(row.connections);
         m_rowParents.remove(row.token);
     }
-    auto scopeIt = m_scopes.find(controlIt->scopeGeneration);
+    auto scopeIt = m_scopes.find(control.scopeGeneration);
     if (scopeIt != m_scopes.end())
     {
         scopeIt->controlTokens.remove(controlToken);
     }
-    m_controls.erase(controlIt);
 }
 
 bool SettingsControlRegistry::registerPopupRow(quint64 controlToken, const PopupRowDescriptor &descriptor)
@@ -476,11 +547,20 @@ bool SettingsControlRegistry::registerPopupRow(quint64 controlToken, const Popup
     }
 
     auto controlIt = m_controls.find(controlToken);
-    if (controlIt == m_controls.end() || !controlIt->popup)
+    if (controlIt == m_controls.end())
     {
-        qWarning() << "settings control registry: popup row registration used "
-                      "unknown or non-popup control token";
+        qWarning() << "settings control registry: popup row registration used a control token from an already "
+                      "retired generation";
         return false;
+    }
+    const quint64 generation = controlIt->scopeGeneration;
+    auto refuse = [this, generation](QString reason) {
+        retireGenerationAfterRegistrationRefusal(generation, reason);
+        return false;
+    };
+    if (!controlIt->popup)
+    {
+        return refuse(QStringLiteral("popup row registration used a non-popup control"));
     }
     auto scopeIt = m_scopes.find(controlIt->scopeGeneration);
     if (scopeIt == m_scopes.end())
@@ -491,35 +571,37 @@ bool SettingsControlRegistry::registerPopupRow(quint64 controlToken, const Popup
     }
 
     QString refusal;
+    const auto valueLocator = SettingsControls::serializedScalarLocator(descriptor.value);
+    QQuickItem *popupItem = controlIt->popup->item;
     if (descriptor.auditIdentity.isEmpty() || descriptor.kind.isEmpty() ||
         (descriptor.instanceKey && descriptor.instanceKey->isEmpty()) || descriptor.visualIndex < 0 ||
-        !descriptor.item || !SettingsControls::scalarIsValid(descriptor.value) ||
-        !isVisualDescendant(descriptor.item, scopeIt->surfaceItem) ||
+        !descriptor.item || !valueLocator || !popupItem ||
+        !objectLivesOnRegistryThread(descriptor.item, "popup row state item", refusal) ||
+        !objectLivesOnRegistryThread(popupItem, "popup item", refusal) ||
+        !isVisualDescendant(descriptor.item, popupItem) ||
         !descriptorPropertyIsScalar(descriptor.item, descriptor.currentProperty, refusal) ||
-        !hitDescriptorsAreValid(scopeIt->surfaceItem, descriptor.hits, refusal))
+        !hitDescriptorsAreValid(popupItem, descriptor.hits, refusal))
     {
-        qWarning() << "settings control registry: malformed popup row descriptor refused:"
-                   << (refusal.isEmpty() ? QStringLiteral("identity, value, index, or item is invalid") : refusal);
-        return false;
+        return refuse(refusal.isEmpty() ? QStringLiteral("malformed popup row identity, value, index, or ancestry")
+                                        : refusal);
     }
 
     for (const auto &row : controlIt->rows)
     {
         if (row.visualIndex == descriptor.visualIndex ||
+            row.valueLocator == *valueLocator ||
             std::tie(row.auditIdentity, row.kind, row.instanceKey) ==
                 std::tie(descriptor.auditIdentity, descriptor.kind, descriptor.instanceKey))
         {
-            qWarning() << "settings control registry: duplicate popup row identity "
-                          "or visual index refused for"
-                       << descriptor.auditIdentity;
-            return false;
+            return refuse(QStringLiteral("duplicate popup row identity, visual index, or serialized stable value for ")
+                          + descriptor.auditIdentity);
         }
     }
 
     const auto token = allocateObjectToken();
     if (!token)
     {
-        return false;
+        return refuse(QStringLiteral("popup row token allocation failed"));
     }
 
     PopupRowEntry row;
@@ -529,15 +611,13 @@ bool SettingsControlRegistry::registerPopupRow(quint64 controlToken, const Popup
     row.instanceKey = descriptor.instanceKey;
     row.visualIndex = descriptor.visualIndex;
     row.value = descriptor.value;
+    row.valueLocator = *valueLocator;
     row.item = descriptor.item;
     row.currentProperty = descriptor.currentProperty;
     for (const auto &hit : descriptor.hits)
     {
         row.hits.append(HitEntry{hit.role, hit.item});
     }
-    controlIt->rows.append(row);
-    m_rowParents.insert(*token, controlToken);
-
     QSet<QObject *> watched{descriptor.item};
     for (const auto &hit : descriptor.hits)
     {
@@ -545,8 +625,18 @@ bool SettingsControlRegistry::registerPopupRow(quint64 controlToken, const Popup
     }
     for (QObject *object : watched)
     {
-        connect(object, &QObject::destroyed, this, [this, token = *token]() { removeRowByToken(token); });
+        const QMetaObject::Connection connection =
+            connect(object, &QObject::destroyed, this, [this, token = *token]() { removeRowByToken(token); },
+                    Qt::DirectConnection);
+        if (!connection)
+        {
+            disconnectConnections(row.connections);
+            return refuse(QStringLiteral("popup row destruction connection failed"));
+        }
+        row.connections.append(connection);
     }
+    controlIt->rows.append(std::move(row));
+    m_rowParents.insert(*token, controlToken);
     return true;
 }
 
@@ -569,7 +659,9 @@ void SettingsControlRegistry::removeRowByToken(quint64 rowToken)
     {
         if (rowIt->token == rowToken)
         {
+            PopupRowEntry row = std::move(*rowIt);
             controlIt->rows.erase(rowIt);
+            disconnectConnections(row.connections);
             break;
         }
     }
@@ -610,7 +702,9 @@ void SettingsControlRegistry::updatePopupGeneration(quint64 controlToken)
         const auto generation = allocateGeneration();
         if (!generation)
         {
-            removeControlByToken(controlToken);
+            const quint64 scopeGeneration = controlIt->scopeGeneration;
+            retireGenerationAfterRegistrationRefusal(scopeGeneration,
+                                                      QStringLiteral("popup generation allocation failed"));
             return;
         }
         controlIt->popup->generation = generation;
@@ -623,9 +717,9 @@ SettingsControlRegistry::snapshotHit(const ScopeEntry &scope, const HitEntry &en
 {
     QQuickItem *item = entry.item;
     QQuickItem *surfaceItem = scope.surfaceItem;
-    if (!item || !surfaceItem || entry.role.isEmpty())
+    if (!item || !surfaceItem || entry.role.isEmpty() || item->thread() != thread() || surfaceItem->thread() != thread())
     {
-        refusal = QStringLiteral("destroyed or malformed live hit entry");
+        refusal = QStringLiteral("destroyed, cross-thread, or malformed live hit entry");
         return std::nullopt;
     }
     if (!inspectTransformsToSurface(item, surfaceItem, refusal))
@@ -718,9 +812,9 @@ SettingsControlRegistry::snapshotState(const ScopeEntry &scope, QQuickItem *item
                                        const QList<HitEntry> &hits, const QRectF &surfaceGeometry, bool surfaceMapped,
                                        QString &refusal) const
 {
-    if (!item || !scope.surfaceItem)
+    if (!item || !scope.surfaceItem || item->thread() != thread() || scope.surfaceItem->thread() != thread())
     {
-        refusal = QStringLiteral("state item or surface was destroyed");
+        refusal = QStringLiteral("state item or surface was destroyed or moved off the registry GUI thread");
         return std::nullopt;
     }
 
@@ -780,9 +874,10 @@ SettingsControlRegistry::snapshotControl(ScopeEntry &scope, ControlEntry &entry,
     {
         return record;
     }
-    if (!entry.popup->stateObject || !entry.popup->item)
+    if (!entry.popup->stateObject || !entry.popup->item || entry.popup->stateObject->thread() != thread() ||
+        entry.popup->item->thread() != thread())
     {
-        refusal = QStringLiteral("popup object was destroyed without control cleanup");
+        refusal = QStringLiteral("popup object was destroyed or moved off the registry GUI thread without cleanup");
         return std::nullopt;
     }
 
@@ -844,10 +939,11 @@ QString SettingsControlRegistry::viewSettingsControlsData(uint containmentId)
         {
             continue;
         }
-        if (!scope.surfaceItem || !scope.geometryProvider || !scope.lifetimeObject)
+        if (!scope.surfaceItem || !scope.geometryProvider || !scope.lifetimeObject ||
+            scope.surfaceItem->thread() != thread() || scope.geometryProvider->thread() != thread() ||
+            scope.lifetimeObject->thread() != thread())
         {
-            qWarning() << "settings control registry: destroyed scope entry remained "
-                          "live; refusing view"
+            qWarning() << "settings control registry: destroyed or cross-thread scope entry remained live; refusing view"
                        << containmentId;
             return QStringLiteral("[]");
         }

@@ -15,8 +15,11 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QTest>
+#include <QThread>
 
 #include <memory>
+#include <tuple>
+#include <utility>
 
 using namespace Latte;
 
@@ -32,6 +35,76 @@ class GeometryProvider : public SettingsControlSurfaceGeometryProvider
     {
         return geometry;
     }
+};
+
+class PopupState : public QObject
+{
+    Q_OBJECT
+    Q_PROPERTY(bool open READ isOpen WRITE setOpen NOTIFY openChanged)
+
+  public:
+    bool isOpen() const
+    {
+        return m_open;
+    }
+
+    void setOpen(bool open)
+    {
+        if (m_open == open)
+        {
+            return;
+        }
+        m_open = open;
+        Q_EMIT openChanged();
+    }
+
+  Q_SIGNALS:
+    void openChanged();
+
+  private:
+    bool m_open{false};
+};
+
+class ForeignThreadObjects
+{
+  public:
+    ForeignThreadObjects()
+    {
+        m_thread.start();
+    }
+
+    ~ForeignThreadObjects()
+    {
+        QThread *guiThread = QCoreApplication::instance()->thread();
+        for (QObject *object : std::as_const(m_objects))
+        {
+            const bool invoked = QMetaObject::invokeMethod(
+                object, [object, guiThread]() { object->moveToThread(guiThread); }, Qt::BlockingQueuedConnection);
+            if (!invoked || object->thread() != guiThread)
+            {
+                qFatal("failed to return foreign test object to the GUI thread");
+            }
+        }
+        m_thread.quit();
+        m_thread.wait();
+        qDeleteAll(m_objects);
+    }
+
+    template<typename T>
+    T *create()
+    {
+        auto *object = new T;
+        if (!object->moveToThread(&m_thread))
+        {
+            qFatal("failed to move test object to the foreign thread");
+        }
+        m_objects.append(object);
+        return object;
+    }
+
+  private:
+    QThread m_thread;
+    QList<QObject *> m_objects;
 };
 
 struct Fixture
@@ -135,7 +208,11 @@ class SettingsControlRegistryTest : public QObject
     void popupRowsTrackOpenGenerationsAndIndividualDestruction();
     void controlAndOwnerDestructionCleanOnlyTheirScope();
     void reloadAndRetargetAllocateStrictlyNewerGenerations();
-    void duplicateMalformedAndUnsupportedLiveEntriesRefuse();
+    void replacementsDisconnectRetiredLifecycleCallbacks();
+    void crossThreadScopeAndDescriptorObjectsRetireRegistrations();
+    void popupRowsRequirePopupAncestryAndUniqueWireValues();
+    void registrationFailuresRetireWholeLoadGeneration();
+    void unsupportedLiveEntriesRefuseWholeView();
 };
 
 void SettingsControlRegistryTest::snapshotsLiveGeometryStateFocusAndCurrentValues()
@@ -294,35 +371,316 @@ void SettingsControlRegistryTest::reloadAndRetargetAllocateStrictlyNewerGenerati
              QString::number(retarget));
 }
 
-void SettingsControlRegistryTest::duplicateMalformedAndUnsupportedLiveEntriesRefuse()
+void SettingsControlRegistryTest::replacementsDisconnectRetiredLifecycleCallbacks()
+{
+    Fixture fixture;
+    auto firstOwner = std::make_unique<QObject>();
+    auto secondOwner = std::make_unique<QObject>();
+    auto thirdOwner = std::make_unique<QObject>();
+    auto firstPopupState = std::make_unique<PopupState>();
+    auto thirdPopupState = std::make_unique<PopupState>();
+
+    const auto firstGeneration = fixture.registry.replaceScope(
+        {7, QStringLiteral("fixture.primary"), std::nullopt, firstOwner.get(), fixture.root,
+         &fixture.geometryProvider});
+    QVERIFY(firstGeneration);
+    const quint64 firstToken = fixture.addControl(
+        *firstGeneration, fixture.item("controlA"), QStringLiteral("old.popup"), QStringLiteral("combo"),
+        std::nullopt,
+        SettingsControlRegistry::PopupDescriptor{firstPopupState.get(), QByteArrayLiteral("open"),
+                                                 fixture.item("popupItem")});
+    QVERIFY(fixture.registry.registerPopupRow(firstToken, {QStringLiteral("old.row"),
+                                                           QStringLiteral("option"),
+                                                           std::nullopt,
+                                                           0,
+                                                           QStringLiteral("old"),
+                                                           fixture.item("popupRow"),
+                                                           QByteArrayLiteral("currentValue"),
+                                                           {{QStringLiteral("row"), fixture.item("popupRow")}}}));
+
+    const auto secondGeneration = fixture.registry.replaceScope(
+        {7, QStringLiteral("fixture.primary"), std::nullopt, secondOwner.get(), fixture.root,
+         &fixture.geometryProvider});
+    QVERIFY(secondGeneration);
+    QVERIFY(*secondGeneration > *firstGeneration);
+    fixture.addControl(*secondGeneration, fixture.item("controlB"), QStringLiteral("second"),
+                       QStringLiteral("button"));
+
+    firstPopupState->setOpen(true);
+    firstPopupState.reset();
+    firstOwner.reset();
+    delete fixture.item("popupRow");
+    delete fixture.item("controlA");
+    QCOMPARE(fixture.data().size(), 1);
+    QCOMPARE(fixture.data().at(0).toObject().value(QStringLiteral("auditIdentity")).toString(),
+             QStringLiteral("second"));
+
+    const auto thirdGeneration = fixture.registry.replaceScope(
+        {7, QStringLiteral("fixture.primary"), std::nullopt, thirdOwner.get(), fixture.root,
+         &fixture.geometryProvider});
+    QVERIFY(thirdGeneration);
+    QVERIFY(*thirdGeneration > *secondGeneration);
+    fixture.addControl(*thirdGeneration, fixture.item("controlB"), QStringLiteral("current.popup"),
+                       QStringLiteral("combo"), std::nullopt,
+                       SettingsControlRegistry::PopupDescriptor{thirdPopupState.get(), QByteArrayLiteral("open"),
+                                                                fixture.item("popupItem")});
+
+    secondOwner.reset();
+    QCOMPARE(fixture.data().size(), 1);
+    thirdPopupState->setOpen(true);
+    const QJsonObject popup =
+        fixture.data().at(0).toObject().value(QStringLiteral("popup")).toObject();
+    QVERIFY(popup.value(QStringLiteral("open")).toBool());
+    QVERIFY(popup.value(QStringLiteral("generation")).toString().toULongLong() > *thirdGeneration);
+
+    thirdPopupState.reset();
+    QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));
+}
+
+void SettingsControlRegistryTest::crossThreadScopeAndDescriptorObjectsRetireRegistrations()
+{
+    Fixture fixture;
+    ForeignThreadObjects foreign;
+    QObject *foreignOwner = foreign.create<QObject>();
+    QQuickItem *foreignSurface = foreign.create<QQuickItem>();
+    GeometryProvider *foreignProvider = foreign.create<GeometryProvider>();
+    QQuickItem *foreignItem = foreign.create<QQuickItem>();
+    PopupState *foreignPopupState = foreign.create<PopupState>();
+
+    QVERIFY(!fixture.registry.replaceScope({7, QStringLiteral("foreign.owner"), std::nullopt, foreignOwner,
+                                            fixture.root, &fixture.geometryProvider}));
+    QVERIFY(!fixture.registry.replaceScope({7, QStringLiteral("foreign.surface"), std::nullopt,
+                                            fixture.lifetime.get(), foreignSurface, &fixture.geometryProvider}));
+    QVERIFY(!fixture.registry.replaceScope({7, QStringLiteral("foreign.provider"), std::nullopt,
+                                            fixture.lifetime.get(), fixture.root, foreignProvider}));
+
+    quint64 generation = fixture.openScope();
+    QVERIFY(!fixture.registry.registerControl(generation, {QStringLiteral("foreign.control"),
+                                                            QStringLiteral("button"),
+                                                            std::nullopt,
+                                                            foreignItem,
+                                                            QByteArrayLiteral("currentValue"),
+                                                            {{QStringLiteral("primary"), fixture.item("controlA")}},
+                                                            std::nullopt}));
+    QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));
+
+    generation = fixture.openScope();
+    QVERIFY(!fixture.registry.registerControl(generation, {QStringLiteral("foreign.hit"),
+                                                            QStringLiteral("button"),
+                                                            std::nullopt,
+                                                            fixture.item("controlA"),
+                                                            QByteArrayLiteral("currentValue"),
+                                                            {{QStringLiteral("primary"), foreignItem}},
+                                                            std::nullopt}));
+    QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));
+
+    generation = fixture.openScope();
+    QVERIFY(!fixture.registry.registerControl(
+        generation,
+        {QStringLiteral("foreign.popup.state"), QStringLiteral("combo"), std::nullopt,
+         fixture.item("popupControl"), QByteArrayLiteral("currentValue"),
+         {{QStringLiteral("primary"), fixture.item("popupControl")}},
+         SettingsControlRegistry::PopupDescriptor{foreignPopupState, QByteArrayLiteral("open"),
+                                                  fixture.item("popupItem")}}));
+    QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));
+
+    generation = fixture.openScope();
+    QVERIFY(!fixture.registry.registerControl(
+        generation,
+        {QStringLiteral("foreign.popup.item"), QStringLiteral("combo"), std::nullopt,
+         fixture.item("popupControl"), QByteArrayLiteral("currentValue"),
+         {{QStringLiteral("primary"), fixture.item("popupControl")}},
+         SettingsControlRegistry::PopupDescriptor{fixture.item("popupControl"), QByteArrayLiteral("popupOpen"),
+                                                  foreignItem}}));
+    QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));
+
+    generation = fixture.openScope();
+    quint64 token = fixture.addControl(
+        generation, fixture.item("popupControl"), QStringLiteral("foreign.row.item"), QStringLiteral("combo"),
+        std::nullopt,
+        SettingsControlRegistry::PopupDescriptor{fixture.item("popupControl"), QByteArrayLiteral("popupOpen"),
+                                                 fixture.item("popupItem")});
+    QVERIFY(!fixture.registry.registerPopupRow(token, {QStringLiteral("foreign.row"),
+                                                        QStringLiteral("option"),
+                                                        std::nullopt,
+                                                        0,
+                                                        QStringLiteral("foreign"),
+                                                        foreignItem,
+                                                        QByteArrayLiteral("currentValue"),
+                                                        {{QStringLiteral("row"), fixture.item("popupRow")}}}));
+    QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));
+
+    generation = fixture.openScope();
+    token = fixture.addControl(
+        generation, fixture.item("popupControl"), QStringLiteral("foreign.row.hit"), QStringLiteral("combo"),
+        std::nullopt,
+        SettingsControlRegistry::PopupDescriptor{fixture.item("popupControl"), QByteArrayLiteral("popupOpen"),
+                                                 fixture.item("popupItem")});
+    QVERIFY(!fixture.registry.registerPopupRow(token, {QStringLiteral("foreign.hit.row"),
+                                                        QStringLiteral("option"),
+                                                        std::nullopt,
+                                                        0,
+                                                        QStringLiteral("foreign-hit"),
+                                                        fixture.item("popupRow"),
+                                                        QByteArrayLiteral("currentValue"),
+                                                        {{QStringLiteral("row"), foreignItem}}}));
+    QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));
+}
+
+void SettingsControlRegistryTest::popupRowsRequirePopupAncestryAndUniqueWireValues()
+{
+    Fixture fixture;
+
+    auto openPopup = [&fixture](QString identity) {
+        const quint64 generation = fixture.openScope();
+        const quint64 token = fixture.addControl(
+            generation, fixture.item("popupControl"), std::move(identity), QStringLiteral("combo"), std::nullopt,
+            SettingsControlRegistry::PopupDescriptor{fixture.item("popupControl"),
+                                                     QByteArrayLiteral("popupOpen"), fixture.item("popupItem")});
+        return std::pair{generation, token};
+    };
+
+    auto [generation, token] = openPopup(QStringLiteral("unrelated.row"));
+    QVERIFY(!fixture.registry.registerPopupRow(token, {QStringLiteral("outside.row"),
+                                                        QStringLiteral("option"),
+                                                        std::nullopt,
+                                                        0,
+                                                        QStringLiteral("outside"),
+                                                        fixture.item("controlA"),
+                                                        QByteArrayLiteral("currentValue"),
+                                                        {{QStringLiteral("row"), fixture.item("controlA")}}}));
+    QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));
+    QVERIFY(!fixture.registry.registerControl(generation, {QStringLiteral("retired"),
+                                                            QStringLiteral("button"),
+                                                            std::nullopt,
+                                                            fixture.item("controlB"),
+                                                            QByteArrayLiteral("currentValue"),
+                                                            {{QStringLiteral("primary"), fixture.item("controlB")}},
+                                                            std::nullopt}));
+
+    std::tie(generation, token) = openPopup(QStringLiteral("unrelated.hit"));
+    QVERIFY(!fixture.registry.registerPopupRow(token, {QStringLiteral("outside.hit"),
+                                                        QStringLiteral("option"),
+                                                        std::nullopt,
+                                                        0,
+                                                        QStringLiteral("outside-hit"),
+                                                        fixture.item("popupRow"),
+                                                        QByteArrayLiteral("currentValue"),
+                                                        {{QStringLiteral("row"), fixture.item("controlA")}}}));
+    QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));
+
+    std::tie(generation, token) = openPopup(QStringLiteral("numeric.values"));
+    QVERIFY(fixture.registry.registerPopupRow(token, {QStringLiteral("integer.row"),
+                                                       QStringLiteral("option"),
+                                                       std::nullopt,
+                                                       0,
+                                                       qint64{1},
+                                                       fixture.item("popupRow"),
+                                                       QByteArrayLiteral("currentValue"),
+                                                       {{QStringLiteral("row"), fixture.item("popupRow")}}}));
+    QVERIFY(!fixture.registry.registerPopupRow(token, {QStringLiteral("double.row"),
+                                                        QStringLiteral("option"),
+                                                        std::nullopt,
+                                                        1,
+                                                        1.0,
+                                                        fixture.item("popupSeparator"),
+                                                        QByteArrayLiteral("currentValue"),
+                                                        {{QStringLiteral("row"), fixture.item("popupSeparator")}}}));
+    QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));
+
+    std::tie(generation, token) = openPopup(QStringLiteral("null.values"));
+    QVERIFY(fixture.registry.registerPopupRow(token, {QStringLiteral("null.first"),
+                                                       QStringLiteral("separator"),
+                                                       std::nullopt,
+                                                       0,
+                                                       std::monostate{},
+                                                       fixture.item("popupRow"),
+                                                       QByteArrayLiteral("currentValue"),
+                                                       {{QStringLiteral("row"), fixture.item("popupRow")}}}));
+    QVERIFY(!fixture.registry.registerPopupRow(token, {QStringLiteral("null.second"),
+                                                        QStringLiteral("separator"),
+                                                        std::nullopt,
+                                                        1,
+                                                        std::monostate{},
+                                                        fixture.item("popupSeparator"),
+                                                        QByteArrayLiteral("currentValue"),
+                                                        {{QStringLiteral("row"), fixture.item("popupSeparator")}}}));
+    QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));
+}
+
+void SettingsControlRegistryTest::registrationFailuresRetireWholeLoadGeneration()
+{
+    Fixture fixture;
+    quint64 generation = fixture.openScope();
+    fixture.addControl(generation, fixture.item("controlA"), QStringLiteral("duplicate"), QStringLiteral("button"),
+                       QStringLiteral("one"));
+    QVERIFY(!fixture.registry.registerControl(generation, {QStringLiteral("duplicate"),
+                                                            QStringLiteral("button"),
+                                                            QStringLiteral("one"),
+                                                            fixture.item("controlB"),
+                                                            QByteArrayLiteral("currentValue"),
+                                                            {{QStringLiteral("primary"), fixture.item("controlB")}},
+                                                            std::nullopt}));
+    QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));
+    QVERIFY(!fixture.registry.registerControl(generation, {QStringLiteral("after.retirement"),
+                                                            QStringLiteral("button"),
+                                                            std::nullopt,
+                                                            fixture.item("controlB"),
+                                                            QByteArrayLiteral("currentValue"),
+                                                            {{QStringLiteral("primary"), fixture.item("controlB")}},
+                                                            std::nullopt}));
+
+    generation = fixture.openScope();
+    fixture.addControl(generation, fixture.item("controlA"), QStringLiteral("valid.before.bad"),
+                       QStringLiteral("button"));
+    QVERIFY(!fixture.registry.registerControl(generation, {QStringLiteral("missing.property"),
+                                                            QStringLiteral("button"),
+                                                            std::nullopt,
+                                                            fixture.item("controlB"),
+                                                            QByteArrayLiteral("missing"),
+                                                            {{QStringLiteral("primary"), fixture.item("controlB")}},
+                                                            std::nullopt}));
+    QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));
+
+    generation = fixture.openScope();
+    const quint64 token = fixture.addControl(
+        generation, fixture.item("popupControl"), QStringLiteral("popup.before.bad.row"), QStringLiteral("combo"),
+        std::nullopt,
+        SettingsControlRegistry::PopupDescriptor{fixture.item("popupControl"), QByteArrayLiteral("popupOpen"),
+                                                 fixture.item("popupItem")});
+    QVERIFY(fixture.registry.registerPopupRow(token, {QStringLiteral("valid.row"),
+                                                       QStringLiteral("option"),
+                                                       std::nullopt,
+                                                       0,
+                                                       QStringLiteral("valid"),
+                                                       fixture.item("popupRow"),
+                                                       QByteArrayLiteral("currentValue"),
+                                                       {{QStringLiteral("row"), fixture.item("popupRow")}}}));
+    QVERIFY(!fixture.registry.registerPopupRow(token, {QString(),
+                                                        QStringLiteral("option"),
+                                                        std::nullopt,
+                                                        1,
+                                                        QStringLiteral("bad"),
+                                                        fixture.item("popupSeparator"),
+                                                        QByteArrayLiteral("currentValue"),
+                                                        {{QStringLiteral("row"), fixture.item("popupSeparator")}}}));
+    QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));
+    QVERIFY(!fixture.registry.registerPopupRow(token, {QStringLiteral("after.retirement"),
+                                                        QStringLiteral("option"),
+                                                        std::nullopt,
+                                                        2,
+                                                        QStringLiteral("late"),
+                                                        fixture.item("popupSeparator"),
+                                                        QByteArrayLiteral("currentValue"),
+                                                        {{QStringLiteral("row"), fixture.item("popupSeparator")}}}));
+}
+
+void SettingsControlRegistryTest::unsupportedLiveEntriesRefuseWholeView()
 {
     Fixture fixture;
     const quint64 generation = fixture.openScope();
     QQuickItem *control = fixture.item("controlA");
-    fixture.addControl(generation, control, QStringLiteral("duplicate"), QStringLiteral("button"),
-                       QStringLiteral("one"));
-    QVERIFY(!fixture.registry.registerControl(generation, {QStringLiteral("duplicate"),
-                                                           QStringLiteral("button"),
-                                                           QStringLiteral("one"),
-                                                           fixture.item("controlB"),
-                                                           QByteArrayLiteral("currentValue"),
-                                                           {{QStringLiteral("primary"), fixture.item("controlB")}},
-                                                           std::nullopt}));
-    QVERIFY(!fixture.registry.registerControl(generation, {QString(),
-                                                           QStringLiteral("button"),
-                                                           std::nullopt,
-                                                           fixture.item("controlB"),
-                                                           QByteArrayLiteral("currentValue"),
-                                                           {{QStringLiteral("primary"), fixture.item("controlB")}},
-                                                           std::nullopt}));
-    QVERIFY(!fixture.registry.registerControl(generation, {QStringLiteral("missing-property"),
-                                                           QStringLiteral("button"),
-                                                           std::nullopt,
-                                                           fixture.item("controlB"),
-                                                           QByteArrayLiteral("missing"),
-                                                           {{QStringLiteral("primary"), fixture.item("controlB")}},
-                                                           std::nullopt}));
-    QCOMPARE(fixture.data().size(), 1);
+    fixture.addControl(generation, control, QStringLiteral("live.invalid"), QStringLiteral("button"));
 
     control->setRotation(15.0);
     QCOMPARE(fixture.registry.viewSettingsControlsData(7), QStringLiteral("[]"));

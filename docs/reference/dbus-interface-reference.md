@@ -97,9 +97,13 @@ call viewSettingsControlsData u 1      # s: JSON array of registered settings co
 #   Popup: open, mapped, generation (decimal string|null), rows. Each row carries
 #   auditIdentity, kind, instanceKey, visualIndex, stable value, hits, visible,
 #   enabled, focused, current. Locate rows by stable value, never label/index.
+#   Exactly one row may have each compact serialized JSON value per popup:
+#   duplicate nulls and integer 1 versus double 1.0 therefore conflict.
 #   Generations are process-local monotonic identities. Re-query immediately
 #   before input and reject a changed/missing load or popup generation.
-#   Any malformed live entry refuses the complete view as [] with a warning.
+#   A duplicate or malformed registration retires its complete load generation;
+#   it remains [] until replacement. Any malformed live entry also refuses the
+#   complete view as [] with a warning.
 call taskMiddleClickDispatchData u 1   # s: JSON object - latest task-icon middle-click dispatch
 #   rowIdentity, rowKind (launcher|task), configuredAction,
 #   dispatchedOperation, sequence. The D29 pair (task-icon middle click appears
@@ -287,6 +291,8 @@ jq -e --arg surface "$surface" --arg audit "$audit" --arg kind "$kind" \
 Popup input adds the same check for `.popup.open`, `.popup.mapped`, and the
 observed string `.popup.generation`. Row resolution uses `.popup.rows[] |
 select(.value == $stable_value)`; labels and `visualIndex` are not locators.
+Registration guarantees exactly one row with the locator's compact serialized
+JSON bytes inside that popup.
 
 Isolated testing: the whole surface works identically inside the
 nested-kwin vehicle (private bus) - see the session-handoff nested
@@ -300,7 +306,10 @@ is why nested runs wrap the dock in `dbus-run-session`.
 - `viewSettingsControlsData` on a known view with no registered controls: `"[]"`
   without a warning. An unknown view warns. Any malformed live scope, control,
   hit, popup, or row refuses the whole requested view as `"[]"` with a warning;
-  no valid-looking subset is returned.
+  no valid-looking subset is returned. A duplicate or malformed control or
+  popup-row registration immediately retires its complete load generation.
+  Further registrations through that generation or its control tokens warn and
+  refuse until a new generation replaces it.
 - `taskMiddleClickDispatchData` before any middle-click event: `"{}"` without
   a warning. Empty maps are legitimate no-event candidates. Any malformed or
   unknown nonempty candidate, out-of-scope candidate, or duplicate sequence

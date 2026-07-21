@@ -72,6 +72,7 @@ class SettingsControlRecordsTest : public QObject
 
 private Q_SLOTS:
     void everyScalarAlternativeKeepsItsJsonType();
+    void serializedScalarLocatorsMatchWireValues();
     void controlRecordPinsExactKeysTypesAndFractions();
     void nullOptionalsAndNonPopupAreExplicit();
     void emptyAggregateIsCompactArray();
@@ -98,6 +99,26 @@ void SettingsControlRecordsTest::everyScalarAlternativeKeepsItsJsonType()
              std::numeric_limits<qint64>::max());
     QCOMPARE(serializeScalar(std::get<double>(values.at(3))).toDouble(), 12.75);
     QCOMPARE(serializeScalar(std::get<QString>(values.at(4))).toString(), QStringLiteral("exact"));
+}
+
+void SettingsControlRecordsTest::serializedScalarLocatorsMatchWireValues()
+{
+    const auto nullLocator = serializedScalarLocator(std::monostate{});
+    const auto secondNullLocator = serializedScalarLocator(std::monostate{});
+    const auto integerLocator = serializedScalarLocator(qint64{1});
+    const auto doubleLocator = serializedScalarLocator(1.0);
+    const auto boolLocator = serializedScalarLocator(true);
+    const auto stringLocator = serializedScalarLocator(QStringLiteral("1"));
+
+    QVERIFY(nullLocator);
+    QCOMPARE(*nullLocator, QByteArrayLiteral("null"));
+    QCOMPARE(nullLocator, secondNullLocator);
+    QVERIFY(integerLocator);
+    QCOMPARE(*integerLocator, QByteArrayLiteral("1"));
+    QCOMPARE(integerLocator, doubleLocator);
+    QVERIFY(boolLocator != integerLocator);
+    QVERIFY(stringLocator != integerLocator);
+    QVERIFY(!serializedScalarLocator(std::numeric_limits<double>::infinity()));
 }
 
 void SettingsControlRecordsTest::controlRecordPinsExactKeysTypesAndFractions()
@@ -292,6 +313,12 @@ void SettingsControlRecordsTest::malformedPopupStatesRefuseWholeAggregate()
     refuses(PopupRecord{false, false, std::nullopt, {duplicate, duplicate}});
     refuses(PopupRecord{false, false, std::nullopt,
                         {duplicate, row(QStringLiteral("other"), 0, QStringLiteral("other"))}});
+    refuses(PopupRecord{false, false, std::nullopt,
+                        {row(QStringLiteral("integer"), 0, qint64{1}),
+                         row(QStringLiteral("double"), 1, 1.0)}});
+    refuses(PopupRecord{false, false, std::nullopt,
+                        {row(QStringLiteral("null.first"), 0, std::monostate{}),
+                         row(QStringLiteral("null.second"), 1, std::monostate{})}});
 }
 
 QTEST_MAIN(SettingsControlRecordsTest)

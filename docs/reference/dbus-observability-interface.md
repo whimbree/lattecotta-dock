@@ -143,9 +143,13 @@ Landed before or during the 2026-07-16 stabilization session:
   popup transitions, and destruction are live QObject/QQuickItem concerns.
   `settingscontrolrecords.h` is a value-only C++20 core that owns the closed
   scalar domain, validation, complete-identity ordering, popup-row ordering,
-  and compact JSON. The registry outlives settings factories and views during
-  Corona teardown, so lifetime-object destruction synchronously retires its
-  generation before the registry itself is deleted.
+  exact serialized scalar locator identity, and compact JSON. Every registered
+  QObject/QQuickItem must have the registry's GUI-thread affinity. The registry
+  owns and disconnects every lifecycle and popup-notify connection when an
+  entry is logically removed, and same-thread destruction synchronously cleans
+  the entry. The registry outlives settings factories and views during Corona
+  teardown, so lifetime-object destruction retires its generation before the
+  registry itself is deleted.
 
   Every control carries numeric `containmentId`, stable nonempty `surface`, decimal
   string `loadGeneration`, nullable numeric `appletId`, exact nonempty
@@ -161,9 +165,12 @@ Landed before or during the 2026-07-16 stabilization session:
   and deterministic semantic `rows`. Rows carry exact audit identity and kind,
   nullable instance key, numeric `visualIndex`, stable scalar `value`, hit
   records, and the same visible/enabled/focused/current state. Stable row value,
-  never a localized label or visual index, is the future locator identity.
-  Pointer values, window ids, localized labels, setters, filters, registration,
-  and execution are not exposed.
+  never a localized label or visual index, is the future locator identity. Each
+  popup must contain exactly one row for each compact serialized JSON value.
+  Values with identical wire bytes conflict, including two null values and
+  integer `1` versus double `1.0`. Every row item and hit must be the popup item
+  or its visual descendant. Pointer values, window ids, localized labels,
+  setters, filters, registration, and execution are not exposed.
 
   Geometry is recomputed at every query from current visual ancestry and the
   registered surface placement authority. It is clipped through every
@@ -178,11 +185,15 @@ Landed before or during the 2026-07-16 stabilization session:
   before a newer one is allocated, even when the old QML object survives.
   Popup close/reopen similarly receives a newer generation. Lifetime-object
   destruction removes the whole scope, while control or row destruction
-  removes only that entry. Destroyed handlers capture numeric tokens and never
-  cast a dying QObject. Duplicate complete identities, malformed descriptors,
-  unsupported current values, and any malformed live entry are warned and
-  refused. No partial plausible array is returned. Unknown views warn and
-  return `[]`; known views with no controls return `[]` quietly.
+  removes only that entry. Destroyed handlers capture numeric tokens and popup
+  routing identity before pointer decay and never cast a dying QObject.
+  Duplicate or malformed control and popup-row registration retires the whole
+  affected load generation immediately. It remains `[]`, and further
+  registration with its old generation or control tokens warns and refuses,
+  until a replacement generation is allocated. Unsupported current values and
+  any malformed live entry also warn and refuse the complete query. No partial
+  plausible array is returned. Unknown views warn and return `[]`; known views
+  with no controls return `[]` quietly.
 - `taskMiddleClickDispatchData(u containmentId) -> s` (JSON object, added
   2026-07-21 for SC-T3, the narrow dispatch readback for D29 (task-icon middle
   click appears to execute left-click behavior)).

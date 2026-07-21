@@ -223,26 +223,34 @@ one or more role-named hit rectangles. Global logical and ancestor/surface-
 clipped geometry retain `QRectF` precision. `mapped:false` with null clipped
 geometry is the fully clipped or unmapped state. Popup-capable controls add
 open/mapped state, an open-generation identity, and semantic rows with stable
-scalar values and the same live state/geometry fields. No labels, pointer or
-window ids, setters, filters, registration, or execution enter public D-Bus.
+scalar values and the same live state/geometry fields. A stable value is the
+row locator, and its compact serialized JSON bytes must identify exactly one row
+per popup. Null/null and integer `1`/double `1.0` therefore conflict. Every row
+item and row hit is the popup item or its visual descendant. No labels, pointer
+or window ids, setters, filters, registration, or execution enter public D-Bus.
 
 Geometry comes from current QQuickItem visual ancestry plus an authoritative
 registered global surface geometry provider, never cached registration
 geometry or Wayland QWindow position. Every clipping parent and the supplied
 surface bounds clip the hit. A transform or geometry that cannot truthfully be
 represented as one axis-aligned rectangle refuses the complete aggregate.
-Duplicate complete identities, malformed descriptors, unsupported live values,
-and malformed surviving entries also warn and return `[]`, never a plausible
-subset.
+Duplicate complete identities or malformed control or popup-row registration
+retires the affected load generation immediately. The view remains `[]`, and
+registration through its old generation or control tokens warns and refuses,
+until a replacement generation is allocated. Unsupported live values and
+malformed surviving entries also warn and return `[]`, never a plausible subset.
 
 Generation allocation is registry-only. Replacing or retargeting a scope
 retires its old generation before allocating a strictly newer one. Popup
 close/reopen also advances its generation. Lifetime-object destruction removes
 the generation synchronously; control or row destruction removes only that
 entry. Retained QObject/QQuickItem references use QPointer, and destroyed
-handlers capture numeric tokens rather than dereferencing dying objects. The
-fixture QRC/QML remains outside SC-F2 production roots. Runtime-effect readbacks
-and every production control registration remain later one-surface units.
+handlers capture numeric tokens and popup routing identity rather than
+dereferencing dying objects. Every registered object has the registry GUI
+thread's affinity, every owned connection is disconnected on logical removal,
+and cleanup is synchronous. The fixture QRC/QML remains outside SC-F2
+production roots. Runtime-effect readbacks and every production control
+registration remain later one-surface units.
 
 The interface is read-only. Pointer and keyboard input drive controls at
 reported geometry. No D-Bus setter may bypass a control. XML, serializer tests,

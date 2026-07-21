@@ -11,6 +11,7 @@
 
 #include <QByteArray>
 #include <QHash>
+#include <QMetaObject>
 #include <QMultiHash>
 #include <QObject>
 #include <QPointer>
@@ -121,6 +122,7 @@ class SettingsControlRegistry : public QObject
         QPointer<QQuickItem> surfaceItem;
         QPointer<SettingsControlSurfaceGeometryProvider> geometryProvider;
         QSet<quint64> controlTokens;
+        QList<QMetaObject::Connection> connections;
     };
 
     struct PopupEntry
@@ -128,6 +130,7 @@ class SettingsControlRegistry : public QObject
         QPointer<QObject> stateObject;
         QByteArray openProperty;
         QPointer<QQuickItem> item;
+        QObject *routingIdentity{nullptr};
         std::optional<quint64> generation;
     };
 
@@ -139,9 +142,11 @@ class SettingsControlRegistry : public QObject
         std::optional<QString> instanceKey;
         int visualIndex{-1};
         SettingsControls::Scalar value;
+        QByteArray valueLocator;
         QPointer<QQuickItem> item;
         QByteArray currentProperty;
         QList<HitEntry> hits;
+        QList<QMetaObject::Connection> connections;
     };
 
     struct ControlEntry
@@ -156,11 +161,15 @@ class SettingsControlRegistry : public QObject
         QList<HitEntry> hits;
         std::optional<PopupEntry> popup;
         QList<PopupRowEntry> rows;
+        QList<QMetaObject::Connection> connections;
     };
 
     bool requireGuiThread(const char *operation) const;
     std::optional<quint64> allocateGeneration();
     std::optional<quint64> allocateObjectToken();
+    static void disconnectConnections(const QList<QMetaObject::Connection> &connections);
+    bool objectLivesOnRegistryThread(QObject *object, const char *role, QString &refusal) const;
+    void retireGenerationAfterRegistrationRefusal(quint64 generation, const QString &refusal);
     void removeGenerationByToken(quint64 generation);
     void removeControlByToken(quint64 controlToken);
     void removeRowByToken(quint64 rowToken);

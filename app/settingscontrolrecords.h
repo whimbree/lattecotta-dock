@@ -13,6 +13,7 @@
 #include <QJsonValue>
 #include <QList>
 #include <QRectF>
+#include <QSet>
 #include <QString>
 
 #include <algorithm>
@@ -108,6 +109,19 @@ inline QJsonValue serializeScalar(const Scalar &value)
     }, value);
 }
 
+//! Return the exact compact JSON bytes used for a scalar in the wire payload.
+//! The one-element array is only a QJsonDocument container and is stripped.
+inline std::optional<QByteArray> serializedScalarLocator(const Scalar &value)
+{
+    if (!scalarIsValid(value)) {
+        return std::nullopt;
+    }
+
+    const QByteArray wrapped = QJsonDocument(QJsonArray{serializeScalar(value)}).toJson(QJsonDocument::Compact);
+    Q_ASSERT(wrapped.size() >= 2 && wrapped.front() == '[' && wrapped.back() == ']');
+    return wrapped.sliced(1, wrapped.size() - 2);
+}
+
 inline bool rectIsFiniteAndPositive(const QRectF &rect)
 {
     return std::isfinite(rect.x()) && std::isfinite(rect.y())
@@ -200,6 +214,7 @@ inline QString validatePopup(PopupRecord &popup, const QString &path)
 
     QList<decltype(rowIdentityKey(PopupRowRecord{}))> identities;
     QList<int> visualIndexes;
+    QSet<QByteArray> valueLocators;
     for (auto &row : popup.rows) {
         if (row.auditIdentity.isEmpty() || row.kind.isEmpty()) {
             return path + QStringLiteral(" has a row with empty identity or kind");
@@ -210,7 +225,8 @@ inline QString validatePopup(PopupRecord &popup, const QString &path)
         if (row.visualIndex < 0) {
             return path + QStringLiteral(" has a row with a negative visual index");
         }
-        if (!scalarIsValid(row.value)) {
+        const auto valueLocator = serializedScalarLocator(row.value);
+        if (!valueLocator) {
             return path + QStringLiteral(" has a row with a non-finite stable value");
         }
 
@@ -228,8 +244,13 @@ inline QString validatePopup(PopupRecord &popup, const QString &path)
             return path + QStringLiteral(" has duplicate row visual index ")
                 + QString::number(row.visualIndex);
         }
+        if (valueLocators.contains(*valueLocator)) {
+            return path + QStringLiteral(" has duplicate serialized stable row value ")
+                + QString::fromUtf8(*valueLocator);
+        }
         identities.append(identity);
         visualIndexes.append(row.visualIndex);
+        valueLocators.insert(*valueLocator);
     }
 
     std::sort(popup.rows.begin(), popup.rows.end(), [](const auto &left, const auto &right) {
