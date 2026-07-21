@@ -3,19 +3,26 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-21.
 
-## 2026-07-21: SC-F2 source-coverage PR open
+## 2026-07-21: SC-F2 source-coverage gate merged
 
-Branch `test/settings-source-coverage-v2`, based on exact `origin/main`
-`989e2fc00c061d40fb379575db8a50d1e0116453`, carries SC-F2 (the source-to-ledger
-coverage gate) in open PR #103. Provisional implementation commit `3d2fc2bee`
-adds the syntax-aware QML/C++ scanner and its sanitized contracts. Provisional
-implementation commit `cec4fb429` migrates the evidence ledger to schema 2 and
-adds independent bidirectional enforcement, dynamic QML action coverage,
-broader C++ grammar, canonical source ownership, and the schema refusal matrix.
-These implementation hashes remain provisional until the GitHub rebase merge.
-Independent code review returned MERGE; the mandatory final remote rereview of
-the pushed PR remains pending. SC-F2 is unmerged and remains unchecked in the
-completion plan, so final merge hashes remain unrecorded.
+PR #103 merged SC-F2 (the source-to-ledger coverage gate). The mandatory final
+remote rereview returned MERGE, and exact `origin/main` head is
+`31f9bb3565f574c334124050bcd74d532a310fcc`. The final rewritten commits are:
+
+- `7eda16ca0f9389414e89014980b4958074e66b47` adds the syntax-aware QML/C++
+  scanner and its sanitized contracts.
+- `6089fdea92fd8c574d1106ea7a9d943553881922` migrates the evidence ledger to
+  schema 2 and enforces independent bidirectional coverage, dynamic QML action
+  coverage, broader C++ grammar, canonical source ownership, and the schema
+  refusal matrix.
+- `14ecdf9dda6a618969af2491628be022f730ca24` records the coverage contract.
+- `31f9bb3565f574c334124050bcd74d532a310fcc` records the post-gate handoff and
+  is the final main head.
+
+SC-F2 is complete and checked in the completion plan. The next approved work is
+SC-O1 (the read-only settings-control D-Bus registry). This completion does not
+approve SC-A5 (the move-current-view-to-another-layout action) or any adjacent
+unchecked work.
 
 The fixed source universe contains 58 files: 237 QML objects, 357 QML members,
 57 model elements, 57 semantic QML calls, 16 C++ constructions, and 10 C++
@@ -32,15 +39,17 @@ correction counts only accepted site and representative links and pins all
 boundaries with a following-creation digest for stable disambiguation; the
 factory construction and all separator calls map to the structural exemption.
 
-The focused correction gates pass in
+The focused correction gates passed in
 `/tmp/opencode/latte-sc-f2-rewrite-build`: 20 scanner checks ran under
 ASan+UBSan, and 74 inventory checks passed including every refusal mutation.
 The 97-entry/31-header coverage ratchet, the 130-file QML compile gate, the
 234-file qmllint baseline, fixed JSON count checks, and implementation diff
 checks also passed. The full canonical `scripts/gate-all.sh` run exited 0 and
-stamped exact head `f62001a230e370a226fc9a9f008d1dc8423bf28b` before the branch
-push. This current-state correction is docs-only after that stamp; no
-implementation or test contract changed.
+stamped exact pre-rebase branch head
+`f62001a230e370a226fc9a9f008d1dc8423bf28b` before the branch push. That hash is
+retained only as historical gate evidence, not implementation traceability; the
+final implementation hashes are listed above. The post-gate change was
+docs-only, so no implementation or test contract changed after the stamp.
 
 ## 2026-07-21: SC-T5 exact-once runtime acceptance merged
 
@@ -435,11 +444,12 @@ below. Page behavior changes, action expansion, schemas, migrations, and
 maintained-continuation divergences are not approved by the plan.
 
 PR #88 landed SC-F1 at final commit `472711d11`. PR #89 landed SC-W1 at final
-commits `d2fa8bbd1`, `3b6930851`, and `c61ce8502`. SC-F2 (the source-to-ledger
-coverage gate) remains incomplete. SC-T3 (the D29 narrow dispatch readback)
-subsequently merged through PR #99 and is complete; PR #101 subsequently merged
-SC-T5 (the D29 permanent runtime-effect acceptance) at final implementation
-commit `382268a92`. These completions do not widen any adjacent unit.
+commits `d2fa8bbd1`, `3b6930851`, and `c61ce8502`. PR #103 subsequently landed
+SC-F2 (the source-to-ledger coverage gate) at final commits `7eda16ca0`,
+`6089fdea9`, `14ecdf9dd`, and `31f9bb356`. SC-T3 (the D29 narrow dispatch
+readback) merged through PR #99 and is complete; PR #101 merged SC-T5 (the D29
+permanent runtime-effect acceptance) at final implementation commit
+`382268a92`. These completions do not widen any adjacent unit.
 
 - D29 (task-icon middle click appears to execute left-click behavior) is
   ACCEPTED as Qt5-faithful configuration-scope behavior. At `5c2223a3e`, a

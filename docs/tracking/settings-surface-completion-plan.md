@@ -353,9 +353,12 @@ red control where a defect is fixed, and its own `Commits:` trace.
       all concrete affordances, assign stable audit identities, and add C1-C9
       ledger rows and explicit exemptions. This is independent of runtime
       registration. Dependencies: none. Commits: 472711d11
-- [ ] **SC-F2 (the source-to-ledger coverage gate):** fail on an interactive
+- [x] **SC-F2 (the source-to-ledger coverage gate):** fail on an interactive
       declaration or handler without one ledger identity or exemption, and on a
-      ledger source that no longer exists. Dependencies: SC-F1. Commits:
+      ledger source that no longer exists. PR #103 landed the syntax scanner,
+      schema-2 inventory enforcement, documented coverage contract, and final
+      review-state record. Dependencies: SC-F1. Commits: 7eda16ca0,
+      6089fdea9, 14ecdf9dd, 31f9bb356
 - [ ] **SC-O1 (the read-only settings-control D-Bus registry):** expose only
       inventory-required identity, instance, generation, geometry, state, and
       popup-row data through a fixture vertical slice; document and test
@@ -738,7 +741,7 @@ Every schema migration or new runtime core found by GS-F1 receives a separate
   gate from `docs/prompts/orchestrator-prompt.md`.
 - The plan and master checklist receive post-rebase commit hashes. Newly found
   defects are filed even when fixed in the same session.
-- The ledger carries 90 checklist items and 90 corresponding `Commits:` slots.
+- The ledger carries 91 checklist items and 91 corresponding `Commits:` slots.
   Both counts change together whenever an investigation splits another root or
   surface.
 - No implementation agent may interpret this plan's reserved D29 or D30 units
