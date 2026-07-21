@@ -38,6 +38,8 @@ assert_exactly_one("<id>org[.]kde[.]latte-dock</id>"
     "org.kde.latte-dock component ID")
 assert_exactly_one("<launchable type=\"desktop-id\">org[.]kde[.]latte-dock[.]desktop</launchable>"
     "org.kde.latte-dock.desktop launchable")
+assert_exactly_one("<replaces> <id>org[.]kde[.]latte-dock[.]desktop</id> </replaces>"
+    "migration from the released org.kde.latte-dock.desktop component ID")
 
 if(metadata_compact MATCHES "<extends[ >]")
     message(FATAL_ERROR "standalone AppStream metadata must not extend another component")
