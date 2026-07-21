@@ -345,8 +345,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 ### D59 - Invalid standalone AppStream identity and stale library provider
 - STATUS: OPEN. The root fix is complete on branch
   `fix/appstream-source-truth` at provisional commits `8468e54c6`, `34999aa56`,
-  `6eb4406c1`, `a860385ef`, `a42843047`, and `480c831aa`, but the defect remains
-  open until the PR merges and final post-rebase hashes replace them.
+  `6eb4406c1`, `a860385ef`, `a42843047`, `480c831aa`, `e00f4f6e9`, `2a1eb43d5`,
+  and `5f893e43c`, but the defect remains open until the PR merges and final
+  post-rebase hashes replace them.
 - FOUND: 2026-07-20, source-metadata audit before the first continuation
   release.
 - SYMPTOM: AppStream 1.1.3 rejects the configured metadata with
@@ -373,15 +374,17 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   native test closure.
   The installed-package gate additionally requires package-owned metainfo and
   structurally rejects each wrong identity field, a missing migration
-  relationship, any extension, and the stale library without requiring
-  AppStream at runtime.
+  relationship, malformed or additional migration content, any extension, and
+  the stale library without requiring AppStream at runtime.
 - COMPATIBILITY: no continuation package has been released, so no continuation
   alias or migration is needed. The declarative `replaces` entry covers the
   inherited upstream release history and does not preserve the invalid ID as a
   live identity. Debian and RPM snapshot recipes consume current HEAD and no
   longer carry duplicate patches. The tracked Gentoo and Void recipes remain on
   older source until their separate post-merge repin. The Void helper rewrites
-  its staged recipe to current HEAD and therefore stages no old-source patch.
+  its staged recipe to current HEAD and therefore stages no old-source patch;
+  the package control requires exactly one matching staged `_commit` assignment
+  and checks the corresponding archive metadata.
 
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
