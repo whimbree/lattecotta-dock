@@ -50,6 +50,8 @@ private Q_SLOTS:
     void windowViewAvailableIsQueryable();
     void middleClickDispatchStartsEmpty();
     void middleClickDispatchDistinguishesLauncherAndTask();
+    void middleClickDispatchAcceptsEveryOfferedPair_data();
+    void middleClickDispatchAcceptsEveryOfferedPair();
     void middleClickDispatchSequenceIsProcessMonotonic();
     void middleClickDispatchRefusesMalformedInput();
 
@@ -260,6 +262,56 @@ void TasksBackendTest::middleClickDispatchDistinguishesLauncherAndTask()
     QCOMPARE(spy.count(), 2);
 }
 
+void TasksBackendTest::middleClickDispatchAcceptsEveryOfferedPair_data()
+{
+    QTest::addColumn<int>("configuredAction");
+    QTest::addColumn<QString>("taskToken");
+    QTest::addColumn<int>("taskOperation");
+
+    using Action = Latte::Tasks::Types;
+    using Operation = Latte::Tasks::MiddleClickOperation;
+    QTest::newRow("none") << static_cast<int>(Action::NoneAction) << QString()
+                          << static_cast<int>(Operation::None);
+    QTest::newRow("close") << static_cast<int>(Action::Close) << QStringLiteral("close")
+                           << static_cast<int>(Operation::RequestClose);
+    QTest::newRow("new instance") << static_cast<int>(Action::NewInstance) << QStringLiteral("newInstance")
+                                  << static_cast<int>(Operation::RequestNewInstance);
+    QTest::newRow("toggle minimized") << static_cast<int>(Action::ToggleMinimized) << QStringLiteral("toggleMinimized")
+                                      << static_cast<int>(Operation::RequestToggleMinimized);
+    QTest::newRow("cycle") << static_cast<int>(Action::CycleThroughTasks) << QStringLiteral("cycleOrActivate")
+                           << static_cast<int>(Operation::CycleOrActivate);
+    QTest::newRow("toggle grouping") << static_cast<int>(Action::ToggleGrouping) << QStringLiteral("toggleGrouping")
+                                     << static_cast<int>(Operation::RequestToggleGrouping);
+}
+
+void TasksBackendTest::middleClickDispatchAcceptsEveryOfferedPair()
+{
+    QFETCH(int, configuredAction);
+    QFETCH(QString, taskToken);
+    QFETCH(int, taskOperation);
+
+    Backend backend;
+    QVERIFY(backend.recordMiddleClickDispatch(QStringLiteral("applications:task.desktop"),
+                                              false,
+                                              configuredAction,
+                                              taskToken));
+    QVariantMap event = backend.latestMiddleClickDispatch();
+    QCOMPARE(event.value(QStringLiteral("configuredAction")).toInt(), configuredAction);
+    QCOMPARE(event.value(QStringLiteral("dispatchedOperation")).toInt(), taskOperation);
+    const qint64 taskSequence = event.value(QStringLiteral("sequence")).toLongLong();
+
+    //! The pure-launcher exception applies to every offered configured action.
+    QVERIFY(backend.recordMiddleClickDispatch(QStringLiteral("applications:launcher.desktop"),
+                                              true,
+                                              configuredAction,
+                                              QStringLiteral("activate")));
+    event = backend.latestMiddleClickDispatch();
+    QCOMPARE(event.value(QStringLiteral("configuredAction")).toInt(), configuredAction);
+    QCOMPARE(event.value(QStringLiteral("dispatchedOperation")).toInt(),
+             static_cast<int>(Latte::Tasks::MiddleClickOperation::RequestActivate));
+    QCOMPARE(event.value(QStringLiteral("sequence")).toLongLong(), taskSequence + 1);
+}
+
 void TasksBackendTest::middleClickDispatchSequenceIsProcessMonotonic()
 {
     Backend first;
@@ -291,19 +343,41 @@ void TasksBackendTest::middleClickDispatchRefusesMalformedInput()
 {
     Backend backend;
 
-    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("unknown configured action")));
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("outside the offered middle-click set")));
     QVERIFY(!backend.recordMiddleClickDispatch(QStringLiteral("applications:test.desktop"), true, 99,
                                                QStringLiteral("activate")));
+
+    const QList<int> unofferedActions{
+        Latte::Tasks::Types::PresentWindows,
+        Latte::Tasks::Types::PreviewWindows,
+        Latte::Tasks::Types::HighlightWindows,
+        Latte::Tasks::Types::PreviewAndHighlightWindows};
+    for (const int action : unofferedActions) {
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("outside the offered middle-click set")));
+        QVERIFY(!backend.recordMiddleClickDispatch(QStringLiteral("applications:test.desktop"), true,
+                                                   action,
+                                                   QStringLiteral("activate")));
+    }
 
     QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("unknown operation")));
     QVERIFY(!backend.recordMiddleClickDispatch(QStringLiteral("applications:test.desktop"), false,
                                                Latte::Tasks::Types::NewInstance,
                                                QStringLiteral("teleport")));
 
-    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("row kind and operation disagree")));
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("configured action, row kind, and operation disagree")));
     QVERIFY(!backend.recordMiddleClickDispatch(QStringLiteral("applications:test.desktop"), false,
                                                Latte::Tasks::Types::NewInstance,
                                                QStringLiteral("activate")));
+
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("configured action, row kind, and operation disagree")));
+    QVERIFY(!backend.recordMiddleClickDispatch(QStringLiteral("applications:test.desktop"), false,
+                                               Latte::Tasks::Types::Close,
+                                               QStringLiteral("newInstance")));
+
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("configured action, row kind, and operation disagree")));
+    QVERIFY(!backend.recordMiddleClickDispatch(QStringLiteral("applications:test.desktop"), true,
+                                               Latte::Tasks::Types::Close,
+                                               QStringLiteral("close")));
 
     QVERIFY(backend.latestMiddleClickDispatch().isEmpty());
 }

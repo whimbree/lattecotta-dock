@@ -527,8 +527,9 @@ target_include_directories(visualhostwindowtest PRIVATE
     ${CMAKE_BINARY_DIR}/app)
 
 # Source guards for small fixes behind object graphs that cannot be built
-# offscreen: sidebar assignment, layouts delegation, tracker enablement, and
-# the split between immediate strut publication and throttled geometry churn.
+# offscreen: sidebar assignment, layouts delegation, tracker enablement,
+# middle-click dispatch wiring/lifecycle, and the split between immediate strut
+# publication and throttled geometry churn.
 ecm_add_test(sourceguardtest.cpp
     TEST_NAME sourceguardtest
     LINK_LIBRARIES Qt6::Test

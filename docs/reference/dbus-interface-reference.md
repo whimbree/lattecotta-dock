@@ -90,6 +90,9 @@ call taskMiddleClickDispatchData u 1   # s: JSON object - latest task-icon middl
 #   launcher + newInstance + requestActivate, then
 #   task + newInstance + requestNewInstance. sequence increases process-wide;
 #   "{}" means no middle click has been recorded since this dock started.
+#   Every current tasks applet participates. Any malformed nonempty candidate
+#   or duplicate sequence refuses the aggregate as "{}"; an applet remains
+#   queryable through Plasma's removal undo window until actual destruction.
 #   Read-only latest event: no setter, no history, no titles or window content.
 call trackerData u 1                   # s: JSON object - the windows-tracker facts
 #   enabled, activeWindowTouching, activeWindowTouchingEdge,
@@ -230,8 +233,12 @@ is why nested runs wrap the dock in `dbus-run-session`.
 
 - Unknown containment id: empty JSON (`"[]"`/`"{}"`) + qWarning.
 - `taskMiddleClickDispatchData` before any middle-click event: `"{}"` without
-  a warning. Malformed or unknown internal dispatch state is refused as `"{}"`
-  with a qWarning instead of being coerced into a plausible event.
+  a warning. Empty maps are legitimate no-event candidates. Any malformed or
+  unknown nonempty candidate, out-of-scope candidate, or duplicate sequence
+  across the requested containment is refused as one aggregate `"{}"` with a
+  qWarning instead of being skipped in favor of an older plausible event. A
+  startup-transient tasks applet with no quick item is unavailable rather than
+  malformed and is skipped with a warning.
 - `setViewVisibilityMode` with a name viewsData never reports:
   refused with a qWarning naming the expectation; nothing changes.
 - `activateTaskAt` that cannot resolve an entry: qWarning

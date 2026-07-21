@@ -18,6 +18,8 @@
 //     window properties stay coalesced
 //   * VisibilityManager strut routing: discrete exclusive-zone thickness
 //     changes publish directly while geometry churn stays throttled
+//   * SC-T3 (the D29 narrow middle-click dispatch readback): the production QML
+//     branch, stable identity, reporter aliases, and containment-lifecycle scope
 //
 // The first two guards follow David Goree's latte-dock-qt6
 // (tests/sourceguardtest.cpp at 81384003, github.com/CaptSilver/latte-dock-qt6):
@@ -85,6 +87,8 @@ private Q_SLOTS:
     void windowsTrackerBinding_keepsRequesters();
     void waylandWindowSignals_keepDeliveryPolicy();
     void visibilityManager_strutThicknessBypassesGeometryThrottle();
+    void middleClickDispatch_keepsProductionRecordingContract();
+    void middleClickDispatch_keepsContainmentLifecycleScope();
 };
 
 void SourceGuardTest::visibilityManager_updateSidebarState_assignsState()
@@ -200,6 +204,69 @@ void SourceGuardTest::visibilityManager_strutThicknessBypassesGeometryThrottle()
     QCOMPARE(s.count(QStringLiteral("&ViewPart::Positioner::isOffScreenChanged")), 1);
     QVERIFY2(s.contains(QStringLiteral("connect(m_latteView->positioner(),&ViewPart::Positioner::isOffScreenChanged,this,&VisibilityManager::updateStrutsAfterTimer)")),
              "isOffScreenChanged must retain the floating-panel feedback throttle");
+}
+
+void SourceGuardTest::middleClickDispatch_keepsProductionRecordingContract()
+{
+    const QString mouseAreaSource = readFile(QStringLiteral("plasmoid/package/contents/ui/task/TaskMouseArea.qml"));
+    const QString release = stripped(functionBody(mouseAreaSource, QStringLiteral("onReleased: (mouse) =>")));
+    QVERIFY2(!release.isEmpty(), "TaskMouseArea.onReleased not found");
+
+    const int middleBranchStart = release.indexOf(
+        QStringLiteral("elseif(mouse.button==Qt.MiddleButton&&!root.disableAllWindowsFunctionality){"));
+    const int leftBranchStart = release.indexOf(QStringLiteral("elseif(mouse.button==Qt.LeftButton){"), middleBranchStart);
+    QVERIFY2(middleBranchStart != -1 && leftBranchStart > middleBranchStart,
+             "production middle-click branch not found before the left-click branch");
+    const QString middleBranch = release.mid(middleBranchStart, leftBranchStart - middleBranchStart);
+    QVERIFY2(middleBranch.contains(QStringLiteral(
+                 "if(!taskItem.isLauncher){executeStandardAction(root.middleClickAction,true);}"
+                 "else{taskMouseArea.recordMiddleClickDispatch(\"activate\");activateTask();}")),
+             "middle-click recording must stay in the production task/launcher dispatch branch");
+    QVERIFY2(!middleBranch.contains(QStringLiteral("isGroupParent"))
+                 && !middleBranch.contains(QStringLiteral("isStartup")),
+             "grouped and startup rows must retain task classification; only isLauncher selects the launcher exception");
+
+    const QString execute = stripped(functionBody(mouseAreaSource, QStringLiteral("function executeStandardAction(action, recordsMiddleClick)")));
+    const int recordPosition = execute.indexOf(QStringLiteral("taskMouseArea.recordMiddleClickDispatch(command);"));
+    const int dispatchPosition = execute.indexOf(QStringLiteral("switch(command)"));
+    QVERIFY2(recordPosition != -1 && dispatchPosition > recordPosition,
+             "task-row dispatch recording must precede the selected production operation");
+
+    const QString identity = stripped(functionBody(mouseAreaSource, QStringLiteral("function stableRowIdentity()")));
+    QVERIFY2(identity.contains(QStringLiteral("taskMouseArea.dispatchModel.LauncherUrlWithoutIcon"))
+                 && identity.contains(QStringLiteral("launcherIdentity.length>0?launcherIdentity:String(taskMouseArea.dispatchModel.AppId||\"\")")),
+             "row identity must prefer LauncherUrlWithoutIcon and fall back to AppId");
+
+    const QString taskItemSource = stripped(readFile(QStringLiteral("plasmoid/package/contents/ui/task/TaskItem.qml")));
+    QVERIFY2(taskItemSource.contains(QStringLiteral("propertyboolisGroupParent:(IsGroupParent===true)?true:false"))
+                 && taskItemSource.contains(QStringLiteral("propertyboolisLauncher:(IsLauncher===true)?true:false"))
+                 && taskItemSource.contains(QStringLiteral("propertyboolisStartup:(IsStartup===true)?true:false")),
+             "TaskItem grouped, launcher, and startup model classifications must remain explicit");
+    const QString reporterWiring = stripped(functionBody(taskItemSource, QStringLiteral("TaskMouseArea")));
+    QVERIFY2(reporterWiring.contains(QStringLiteral("dispatchReporter:root.middleClickDispatchReporter"))
+                 && reporterWiring.contains(QStringLiteral("dispatchModel:taskItem.m"))
+                 && reporterWiring.contains(QStringLiteral("dispatchIsLauncher:taskItem.isLauncher"))
+                 && reporterWiring.contains(QStringLiteral("configuredMiddleClickAction:root.middleClickAction")),
+             "TaskItem must wire production model, classification, action, and reporter into TaskMouseArea");
+
+    const QString mainSource = stripped(readFile(QStringLiteral("plasmoid/package/contents/ui/main.qml")));
+    QVERIFY2(mainSource.contains(QStringLiteral("readonlypropertyaliaslatestMiddleClickDispatch:backend.latestMiddleClickDispatch"))
+                 && mainSource.contains(QStringLiteral("readonlypropertyaliasmiddleClickDispatchReporter:backend")),
+             "tasks root must retain both backend reporter aliases");
+}
+
+void SourceGuardTest::middleClickDispatch_keepsContainmentLifecycleScope()
+{
+    const QString collector = stripped(functionBody(readFile(QStringLiteral("app/dbusreports.cpp")),
+                                                    QStringLiteral("QString collectMiddleClickDispatchData")));
+    QVERIFY2(!collector.isEmpty(), "collectMiddleClickDispatchData not found");
+    QVERIFY2(collector.contains(QStringLiteral("for(auto*applet:view->containment()->applets())")),
+             "middle-click collection must iterate the requested view's current containment applets");
+    QVERIFY2(!collector.contains(QStringLiteral("inScheduledDestruction")),
+             "applets in Plasma's undo window remain queryable until actual destruction removes them");
+    QVERIFY2(collector.contains(QStringLiteral("hasnoquickitemyet;taskMiddleClickDispatchDatacannotberead"))
+                 && collector.contains(QStringLiteral("continue;")),
+             "a startup-transient missing quick item must remain a loud, intentional unavailable candidate");
 }
 
 QTEST_GUILESS_MAIN(SourceGuardTest)

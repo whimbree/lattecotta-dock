@@ -62,9 +62,14 @@ private Q_SLOTS:
     void windowTaskOrderReadbackTracksAppIdAcrossReorder();
     void middleClickDispatchSerializesLauncherAndTaskOperations();
     void middleClickDispatchNoEventSerializesAsEmptyObject();
-    void middleClickDispatchMapParsingAcceptsBackendShape();
+    void middleClickDispatchMapParsingAcceptsEveryOfferedPair_data();
+    void middleClickDispatchMapParsingAcceptsEveryOfferedPair();
     void middleClickDispatchMapParsingRefusesMalformedState_data();
     void middleClickDispatchMapParsingRefusesMalformedState();
+    void middleClickDispatchAggregateSelectsNewestAndSerializesExactly();
+    void middleClickDispatchAggregateRefusesGlobalDuplicateSequence();
+    void middleClickDispatchAggregateRefusesMalformedCandidate();
+    void middleClickDispatchAggregateHandlesNoEventAndContainmentScope();
 
     void themeColorsModeNames_data();
     void themeColorsModeNames();
@@ -103,6 +108,20 @@ static QStringList sortedKeys(const QJsonObject &json)
     QStringList keys = json.keys();
     keys.sort();
     return keys;
+}
+
+static QVariantMap middleClickDispatchMap(const QString &rowIdentity,
+                                          Tasks::MiddleClickRowKind rowKind,
+                                          Tasks::Types::TaskAction configuredAction,
+                                          Tasks::MiddleClickOperation operation,
+                                          qint64 sequence)
+{
+    return {
+        {QStringLiteral("rowIdentity"), rowIdentity},
+        {QStringLiteral("rowKind"), static_cast<int>(rowKind)},
+        {QStringLiteral("configuredAction"), static_cast<int>(configuredAction)},
+        {QStringLiteral("dispatchedOperation"), static_cast<int>(operation)},
+        {QStringLiteral("sequence"), QVariant::fromValue(sequence)}};
 }
 
 //! Every enum-name mapping is pinned with one data row per enum value, so
@@ -771,34 +790,63 @@ void DbusReportsTest::middleClickDispatchNoEventSerializesAsEmptyObject()
     QCOMPARE(serializeMiddleClickDispatchData(std::nullopt), QStringLiteral("{}"));
 }
 
-void DbusReportsTest::middleClickDispatchMapParsingAcceptsBackendShape()
+void DbusReportsTest::middleClickDispatchMapParsingAcceptsEveryOfferedPair_data()
 {
-    const QVariantMap data{
-        {QStringLiteral("rowIdentity"), QStringLiteral("applications:org.kde.dolphin.desktop")},
-        {QStringLiteral("rowKind"), static_cast<int>(Tasks::MiddleClickRowKind::Task)},
-        {QStringLiteral("configuredAction"), static_cast<int>(Tasks::Types::NewInstance)},
-        {QStringLiteral("dispatchedOperation"), static_cast<int>(Tasks::MiddleClickOperation::RequestNewInstance)},
-        {QStringLiteral("sequence"), QVariant::fromValue<qint64>(17)}};
+    QTest::addColumn<int>("configuredAction");
+    QTest::addColumn<int>("taskOperation");
 
-    const auto record = middleClickDispatchRecordFromMap(data);
+    using Action = Tasks::Types;
+    using Operation = Tasks::MiddleClickOperation;
+    QTest::newRow("none") << static_cast<int>(Action::NoneAction) << static_cast<int>(Operation::None);
+    QTest::newRow("close") << static_cast<int>(Action::Close) << static_cast<int>(Operation::RequestClose);
+    QTest::newRow("new instance") << static_cast<int>(Action::NewInstance) << static_cast<int>(Operation::RequestNewInstance);
+    QTest::newRow("toggle minimized") << static_cast<int>(Action::ToggleMinimized)
+                                      << static_cast<int>(Operation::RequestToggleMinimized);
+    QTest::newRow("cycle") << static_cast<int>(Action::CycleThroughTasks) << static_cast<int>(Operation::CycleOrActivate);
+    QTest::newRow("toggle grouping") << static_cast<int>(Action::ToggleGrouping)
+                                     << static_cast<int>(Operation::RequestToggleGrouping);
+}
+
+void DbusReportsTest::middleClickDispatchMapParsingAcceptsEveryOfferedPair()
+{
+    QFETCH(int, configuredAction);
+    QFETCH(int, taskOperation);
+
+    const auto action = static_cast<Tasks::Types::TaskAction>(configuredAction);
+    const auto operation = static_cast<Tasks::MiddleClickOperation>(taskOperation);
+    QVariantMap data = middleClickDispatchMap(QStringLiteral("applications:org.kde.dolphin.desktop"),
+                                              Tasks::MiddleClickRowKind::Task,
+                                              action,
+                                              operation,
+                                              17);
+
+    auto record = middleClickDispatchRecordFromMap(data);
     QVERIFY(record.has_value());
     QCOMPARE(record->rowIdentity, QStringLiteral("applications:org.kde.dolphin.desktop"));
     QCOMPARE(static_cast<int>(record->rowKind), static_cast<int>(Tasks::MiddleClickRowKind::Task));
-    QCOMPARE(static_cast<int>(record->configuredAction), static_cast<int>(Tasks::Types::NewInstance));
-    QCOMPARE(static_cast<int>(record->dispatchedOperation), static_cast<int>(Tasks::MiddleClickOperation::RequestNewInstance));
+    QCOMPARE(static_cast<int>(record->configuredAction), configuredAction);
+    QCOMPARE(static_cast<int>(record->dispatchedOperation), taskOperation);
     QCOMPARE(record->sequence, 17);
+
+    //! Every offered action is valid on a launcher only with RequestActivate.
+    data.insert(QStringLiteral("rowKind"), static_cast<int>(Tasks::MiddleClickRowKind::Launcher));
+    data.insert(QStringLiteral("dispatchedOperation"), static_cast<int>(Tasks::MiddleClickOperation::RequestActivate));
+    record = middleClickDispatchRecordFromMap(data);
+    QVERIFY(record.has_value());
+    QCOMPARE(static_cast<int>(record->configuredAction), configuredAction);
+    QCOMPARE(static_cast<int>(record->dispatchedOperation),
+             static_cast<int>(Tasks::MiddleClickOperation::RequestActivate));
 }
 
 void DbusReportsTest::middleClickDispatchMapParsingRefusesMalformedState_data()
 {
     QTest::addColumn<QVariantMap>("data");
 
-    const QVariantMap valid{
-        {QStringLiteral("rowIdentity"), QStringLiteral("applications:test.desktop")},
-        {QStringLiteral("rowKind"), static_cast<int>(Tasks::MiddleClickRowKind::Launcher)},
-        {QStringLiteral("configuredAction"), static_cast<int>(Tasks::Types::NewInstance)},
-        {QStringLiteral("dispatchedOperation"), static_cast<int>(Tasks::MiddleClickOperation::RequestActivate)},
-        {QStringLiteral("sequence"), QVariant::fromValue<qint64>(1)}};
+    const QVariantMap valid = middleClickDispatchMap(QStringLiteral("applications:test.desktop"),
+                                                     Tasks::MiddleClickRowKind::Launcher,
+                                                     Tasks::Types::NewInstance,
+                                                     Tasks::MiddleClickOperation::RequestActivate,
+                                                     1);
 
     QVariantMap malformed = valid;
     malformed.remove(QStringLiteral("rowIdentity"));
@@ -813,6 +861,22 @@ void DbusReportsTest::middleClickDispatchMapParsingRefusesMalformedState_data()
     QTest::newRow("unknown action") << malformed;
 
     malformed = valid;
+    malformed.insert(QStringLiteral("configuredAction"), static_cast<int>(Tasks::Types::PresentWindows));
+    QTest::newRow("unoffered present-windows action") << malformed;
+
+    malformed = valid;
+    malformed.insert(QStringLiteral("configuredAction"), static_cast<int>(Tasks::Types::PreviewWindows));
+    QTest::newRow("unoffered preview-windows action") << malformed;
+
+    malformed = valid;
+    malformed.insert(QStringLiteral("configuredAction"), static_cast<int>(Tasks::Types::HighlightWindows));
+    QTest::newRow("unoffered highlight-windows action") << malformed;
+
+    malformed = valid;
+    malformed.insert(QStringLiteral("configuredAction"), static_cast<int>(Tasks::Types::PreviewAndHighlightWindows));
+    QTest::newRow("unoffered preview-and-highlight action") << malformed;
+
+    malformed = valid;
     malformed.insert(QStringLiteral("dispatchedOperation"), 99);
     QTest::newRow("unknown operation") << malformed;
 
@@ -821,18 +885,117 @@ void DbusReportsTest::middleClickDispatchMapParsingRefusesMalformedState_data()
     QTest::newRow("task row with launcher operation") << malformed;
 
     malformed = valid;
+    malformed.insert(QStringLiteral("rowKind"), static_cast<int>(Tasks::MiddleClickRowKind::Task));
+    malformed.insert(QStringLiteral("configuredAction"), static_cast<int>(Tasks::Types::Close));
+    malformed.insert(QStringLiteral("dispatchedOperation"), static_cast<int>(Tasks::MiddleClickOperation::RequestNewInstance));
+    QTest::newRow("task action operation mismatch") << malformed;
+
+    malformed = valid;
+    malformed.insert(QStringLiteral("dispatchedOperation"), static_cast<int>(Tasks::MiddleClickOperation::RequestNewInstance));
+    QTest::newRow("launcher non-activate operation") << malformed;
+
+    malformed = valid;
     malformed.insert(QStringLiteral("sequence"), QVariant::fromValue<qint64>(0));
     QTest::newRow("nonpositive sequence") << malformed;
 
     malformed = valid;
     malformed.insert(QStringLiteral("sequence"), QStringLiteral("1"));
     QTest::newRow("coercible sequence type") << malformed;
+
+    malformed = valid;
+    malformed.insert(QStringLiteral("unexpected"), true);
+    QTest::newRow("unexpected field") << malformed;
 }
 
 void DbusReportsTest::middleClickDispatchMapParsingRefusesMalformedState()
 {
     QFETCH(QVariantMap, data);
     QVERIFY(!middleClickDispatchRecordFromMap(data).has_value());
+}
+
+void DbusReportsTest::middleClickDispatchAggregateSelectsNewestAndSerializesExactly()
+{
+    const QList<MiddleClickDispatchCandidate> candidates{
+        {7, 100, QVariantMap{}},
+        {7, 101, middleClickDispatchMap(QStringLiteral("applications:first.desktop"),
+                                        Tasks::MiddleClickRowKind::Task,
+                                        Tasks::Types::Close,
+                                        Tasks::MiddleClickOperation::RequestClose,
+                                        5)},
+        {7, 102, middleClickDispatchMap(QStringLiteral("applications:newest.desktop"),
+                                        Tasks::MiddleClickRowKind::Task,
+                                        Tasks::Types::NewInstance,
+                                        Tasks::MiddleClickOperation::RequestNewInstance,
+                                        10)}};
+
+    const auto selection = selectLatestMiddleClickDispatch(7, candidates);
+    QCOMPARE(static_cast<int>(selection.refusal), static_cast<int>(MiddleClickDispatchRefusal::None));
+    QVERIFY(selection.record.has_value());
+    QCOMPARE(selection.record->sequence, 10);
+    QCOMPARE(serializeMiddleClickDispatchData(selection.record),
+             QStringLiteral("{\"configuredAction\":\"newInstance\",\"dispatchedOperation\":\"requestNewInstance\","
+                            "\"rowIdentity\":\"applications:newest.desktop\",\"rowKind\":\"task\",\"sequence\":10}"));
+}
+
+void DbusReportsTest::middleClickDispatchAggregateRefusesGlobalDuplicateSequence()
+{
+    const auto candidate = [](int appletId, qint64 sequence) {
+        return MiddleClickDispatchCandidate{
+            7,
+            appletId,
+            middleClickDispatchMap(QStringLiteral("applications:%1.desktop").arg(appletId),
+                                   Tasks::MiddleClickRowKind::Launcher,
+                                   Tasks::Types::Close,
+                                   Tasks::MiddleClickOperation::RequestActivate,
+                                   sequence)};
+    };
+    const auto selection = selectLatestMiddleClickDispatch(
+        7, {candidate(101, 5), candidate(102, 10), candidate(103, 5)});
+
+    QCOMPARE(static_cast<int>(selection.refusal),
+             static_cast<int>(MiddleClickDispatchRefusal::DuplicateSequence));
+    QCOMPARE(selection.appletId, 103);
+    QCOMPARE(selection.duplicateSequence, 5);
+    QVERIFY(!selection.record.has_value());
+    QCOMPARE(serializeMiddleClickDispatchData(selection.record), QStringLiteral("{}"));
+}
+
+void DbusReportsTest::middleClickDispatchAggregateRefusesMalformedCandidate()
+{
+    const QList<MiddleClickDispatchCandidate> candidates{
+        {7, 101, middleClickDispatchMap(QStringLiteral("applications:valid.desktop"),
+                                        Tasks::MiddleClickRowKind::Task,
+                                        Tasks::Types::Close,
+                                        Tasks::MiddleClickOperation::RequestClose,
+                                        5)},
+        {7, 102, QStringLiteral("non-map state")}};
+
+    const auto selection = selectLatestMiddleClickDispatch(7, candidates);
+    QCOMPARE(static_cast<int>(selection.refusal), static_cast<int>(MiddleClickDispatchRefusal::MalformedState));
+    QCOMPARE(selection.appletId, 102);
+    QVERIFY(!selection.record.has_value());
+    QCOMPARE(serializeMiddleClickDispatchData(selection.record), QStringLiteral("{}"));
+}
+
+void DbusReportsTest::middleClickDispatchAggregateHandlesNoEventAndContainmentScope()
+{
+    const QVariantMap noEvent;
+    auto selection = selectLatestMiddleClickDispatch(7, {{7, 101, noEvent}, {7, 102, noEvent}});
+    QCOMPARE(static_cast<int>(selection.refusal), static_cast<int>(MiddleClickDispatchRefusal::None));
+    QVERIFY(!selection.record.has_value());
+    QCOMPARE(serializeMiddleClickDispatchData(selection.record), QStringLiteral("{}"));
+
+    const QVariantMap valid = middleClickDispatchMap(QStringLiteral("applications:other.desktop"),
+                                                     Tasks::MiddleClickRowKind::Launcher,
+                                                     Tasks::Types::NewInstance,
+                                                     Tasks::MiddleClickOperation::RequestActivate,
+                                                     6);
+    selection = selectLatestMiddleClickDispatch(7, {{8, 201, valid}});
+    QCOMPARE(static_cast<int>(selection.refusal),
+             static_cast<int>(MiddleClickDispatchRefusal::ContainmentMismatch));
+    QCOMPARE(selection.candidateContainmentId, 8U);
+    QCOMPARE(selection.appletId, 201);
+    QVERIFY(!selection.record.has_value());
 }
 
 void DbusReportsTest::themeColorsModeNames_data()

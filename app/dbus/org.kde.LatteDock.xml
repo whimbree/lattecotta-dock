@@ -106,6 +106,12 @@
         <arg name="data" type="s" direction="out"/>
         <arg name="containmentId" type="u" direction="in"/>
     </method>
+    <!-- SC-T3 (the D29 narrow middle-click dispatch readback): selects the
+         newest event across every current Latte Tasks applet in the requested
+         containment. Any malformed nonempty candidate or duplicate process
+         sequence refuses the aggregate as {}; an applet in Plasma's undo
+         window remains current until actual destruction removes it from
+         containment iteration. -->
     <method name="taskMiddleClickDispatchData">
         <arg name="data" type="s" direction="out"/>
         <arg name="containmentId" type="u" direction="in"/>

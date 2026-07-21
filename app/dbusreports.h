@@ -25,6 +25,7 @@
 #include <QJsonValue>
 #include <QList>
 #include <QRect>
+#include <QSet>
 #include <QString>
 #include <QVariant>
 #include <QVariantMap>
@@ -155,6 +156,31 @@ struct TaskRecord {
     bool demandsAttention{false};
     int badge{0};
     QRect geometry;
+};
+
+//! One tasks applet's latest dispatch property as seen by the aggregate
+//! collector. Keeping containment and applet identity beside the untrusted
+//! QVariant lets the pure selector enforce query scope and report the exact
+//! candidate that invalidated the aggregate.
+struct MiddleClickDispatchCandidate {
+    uint containmentId{0};
+    int appletId{-1};
+    QVariant state;
+};
+
+enum class MiddleClickDispatchRefusal {
+    None = 0,
+    ContainmentMismatch,
+    MalformedState,
+    DuplicateSequence
+};
+
+struct MiddleClickDispatchSelection {
+    std::optional<Tasks::MiddleClickDispatchRecord> record;
+    MiddleClickDispatchRefusal refusal{MiddleClickDispatchRefusal::None};
+    uint candidateContainmentId{0};
+    int appletId{-1};
+    qint64 duplicateSequence{0};
 };
 
 //! One applet of a view as viewAppletsData() reports it
@@ -493,25 +519,6 @@ inline std::optional<Tasks::MiddleClickRowKind> middleClickRowKindFromValue(int 
     return std::nullopt;
 }
 
-inline std::optional<Tasks::Types::TaskAction> taskActionFromValue(int value)
-{
-    switch (value) {
-    case Tasks::Types::NoneAction:
-    case Tasks::Types::Close:
-    case Tasks::Types::NewInstance:
-    case Tasks::Types::ToggleMinimized:
-    case Tasks::Types::CycleThroughTasks:
-    case Tasks::Types::ToggleGrouping:
-    case Tasks::Types::PresentWindows:
-    case Tasks::Types::PreviewWindows:
-    case Tasks::Types::HighlightWindows:
-    case Tasks::Types::PreviewAndHighlightWindows:
-        return static_cast<Tasks::Types::TaskAction>(value);
-    }
-
-    return std::nullopt;
-}
-
 inline std::optional<Tasks::MiddleClickOperation> middleClickOperationFromValue(int value)
 {
     switch (value) {
@@ -539,7 +546,8 @@ inline std::optional<Tasks::MiddleClickDispatchRecord> middleClickDispatchRecord
     const QVariant operationValue = data.value(QStringLiteral("dispatchedOperation"));
     const QVariant sequenceValue = data.value(QStringLiteral("sequence"));
 
-    if (rowIdentity.typeId() != QMetaType::QString || rowIdentity.toString().isEmpty()
+    if (data.size() != 5
+        || rowIdentity.typeId() != QMetaType::QString || rowIdentity.toString().isEmpty()
         || rowKindValue.typeId() != QMetaType::Int
         || configuredActionValue.typeId() != QMetaType::Int
         || operationValue.typeId() != QMetaType::Int
@@ -548,23 +556,84 @@ inline std::optional<Tasks::MiddleClickDispatchRecord> middleClickDispatchRecord
     }
 
     const auto rowKind = middleClickRowKindFromValue(rowKindValue.toInt());
-    const auto configuredAction = taskActionFromValue(configuredActionValue.toInt());
+    const auto action = Tasks::classifyOfferedMiddleClickAction(configuredActionValue.toInt());
     const auto operation = middleClickOperationFromValue(operationValue.toInt());
     const qint64 sequence = sequenceValue.toLongLong();
 
-    if (!rowKind || !configuredAction || !operation || sequence <= 0
-        || ((*rowKind == Tasks::MiddleClickRowKind::Launcher)
-            != (*operation == Tasks::MiddleClickOperation::RequestActivate))) {
+    if (!rowKind || !action || !operation || sequence <= 0
+        || !Tasks::middleClickDispatchPairIsValid(*rowKind, *action, *operation)) {
         return std::nullopt;
     }
 
     Tasks::MiddleClickDispatchRecord record;
     record.rowIdentity = rowIdentity.toString();
     record.rowKind = *rowKind;
-    record.configuredAction = *configuredAction;
+    record.configuredAction = action->configuredAction;
     record.dispatchedOperation = *operation;
     record.sequence = sequence;
     return record;
+}
+
+//! Select one newest event only when every reported candidate is trustworthy.
+//! Empty maps are the legitimate no-event state. A candidate from another
+//! containment, malformed nonempty state, or any repeated sequence invalidates
+//! the whole aggregate instead of allowing an older plausible event through.
+inline MiddleClickDispatchSelection selectLatestMiddleClickDispatch(
+    uint requestedContainmentId,
+    const QList<MiddleClickDispatchCandidate> &candidates)
+{
+    std::optional<Tasks::MiddleClickDispatchRecord> latest;
+    QSet<qint64> sequences;
+
+    for (const auto &candidate : candidates) {
+        if (candidate.containmentId != requestedContainmentId) {
+            MiddleClickDispatchSelection result;
+            result.refusal = MiddleClickDispatchRefusal::ContainmentMismatch;
+            result.candidateContainmentId = candidate.containmentId;
+            result.appletId = candidate.appletId;
+            return result;
+        }
+
+        if (candidate.state.typeId() != QMetaType::QVariantMap) {
+            MiddleClickDispatchSelection result;
+            result.refusal = MiddleClickDispatchRefusal::MalformedState;
+            result.candidateContainmentId = candidate.containmentId;
+            result.appletId = candidate.appletId;
+            return result;
+        }
+
+        const QVariantMap data = candidate.state.toMap();
+        if (data.isEmpty()) {
+            continue;
+        }
+
+        const auto record = middleClickDispatchRecordFromMap(data);
+        if (!record) {
+            MiddleClickDispatchSelection result;
+            result.refusal = MiddleClickDispatchRefusal::MalformedState;
+            result.candidateContainmentId = candidate.containmentId;
+            result.appletId = candidate.appletId;
+            return result;
+        }
+
+        if (sequences.contains(record->sequence)) {
+            MiddleClickDispatchSelection result;
+            result.refusal = MiddleClickDispatchRefusal::DuplicateSequence;
+            result.candidateContainmentId = candidate.containmentId;
+            result.appletId = candidate.appletId;
+            result.duplicateSequence = record->sequence;
+            return result;
+        }
+
+        sequences.insert(record->sequence);
+        if (!latest || record->sequence > latest->sequence) {
+            latest = record;
+        }
+    }
+
+    MiddleClickDispatchSelection result;
+    result.record = latest;
+    return result;
 }
 
 inline QJsonObject serializeMiddleClickDispatchRecord(const Tasks::MiddleClickDispatchRecord &record)

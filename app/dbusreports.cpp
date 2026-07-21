@@ -403,8 +403,19 @@ QString collectMiddleClickDispatchData(const Latte::View *view, uint containment
     }
 
     Q_ASSERT(view->containment());
-    std::optional<Tasks::MiddleClickDispatchRecord> latest;
+    const uint actualContainmentId = view->containment()->id();
+    if (actualContainmentId != containmentId) {
+        qWarning() << "dbusreports: taskMiddleClickDispatchData resolved requested containment"
+                   << containmentId << "to view containment" << actualContainmentId;
+        return QStringLiteral("{}");
+    }
 
+    QList<MiddleClickDispatchCandidate> candidates;
+
+    //! Plasma keeps an applet in containment()->applets() during its undo
+    //! window. It remains queryable here until actual destruction removes it
+    //! from this iteration; filtering scheduled destruction would hide live
+    //! state while Plasma still owns the applet.
     for (auto *applet : view->containment()->applets()) {
         if (applet->pluginMetaData().pluginId() != QLatin1String("org.kde.latte.plasmoid")) {
             continue;
@@ -418,39 +429,30 @@ QString collectMiddleClickDispatchData(const Latte::View *view, uint containment
         }
 
         const QVariant value = readLiveProperty(plasmoidRoot, "latestMiddleClickDispatch");
-        if (!value.isValid()) {
-            continue;
-        }
-        if (value.typeId() != QMetaType::QVariantMap) {
-            qWarning() << "dbusreports: tasks plasmoid" << applet->id()
-                       << "exposes malformed latestMiddleClickDispatch state";
-            continue;
-        }
-
-        const QVariantMap data = value.toMap();
-        if (data.isEmpty()) {
-            continue;
-        }
-
-        const auto record = middleClickDispatchRecordFromMap(data);
-        if (!record) {
-            qWarning() << "dbusreports: tasks plasmoid" << applet->id()
-                       << "exposes malformed or unknown latestMiddleClickDispatch state";
-            continue;
-        }
-
-        if (latest && latest->sequence == record->sequence) {
-            qWarning() << "dbusreports: tasks plasmoids expose duplicate middle-click dispatch sequence"
-                       << record->sequence;
-            continue;
-        }
-
-        if (!latest || record->sequence > latest->sequence) {
-            latest = record;
-        }
+        candidates.append(MiddleClickDispatchCandidate{
+            actualContainmentId, static_cast<int>(applet->id()), value});
     }
 
-    return serializeMiddleClickDispatchData(latest);
+    const auto selection = selectLatestMiddleClickDispatch(containmentId, candidates);
+    switch (selection.refusal) {
+    case MiddleClickDispatchRefusal::None:
+        return serializeMiddleClickDispatchData(selection.record);
+    case MiddleClickDispatchRefusal::ContainmentMismatch:
+        qWarning() << "dbusreports: tasks plasmoid" << selection.appletId
+                   << "belongs to containment" << selection.candidateContainmentId
+                   << "outside requested containment" << containmentId;
+        break;
+    case MiddleClickDispatchRefusal::MalformedState:
+        qWarning() << "dbusreports: tasks plasmoid" << selection.appletId
+                   << "exposes malformed or unknown latestMiddleClickDispatch state; refusing aggregate";
+        break;
+    case MiddleClickDispatchRefusal::DuplicateSequence:
+        qWarning() << "dbusreports: tasks plasmoids expose duplicate middle-click dispatch sequence"
+                   << selection.duplicateSequence << "; refusing aggregate";
+        break;
+    }
+
+    return QStringLiteral("{}");
 }
 
 QString collectColorizerData(const Latte::View *view)

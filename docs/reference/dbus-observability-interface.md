@@ -144,8 +144,16 @@ Landed before or during the 2026-07-16 stabilization session:
   when the dock process restarts and provides ordering without retaining event
   history. `TaskMouseArea.onReleased` records at the production branch that
   selects the operation; the report does not infer dispatch from downstream
-  model effects. No setter, execution hook, window title, or application
-  content is exposed.
+  model effects. Every current Latte Tasks applet in the requested containment
+  participates in the aggregate. A malformed nonempty candidate, candidate
+  outside that containment, or duplicate sequence anywhere in the candidate
+  set refuses the complete aggregate as `{}` rather than returning an older
+  plausible event. An empty backend map is a legitimate no-event candidate. A
+  tasks applet whose quick item does not exist yet is a startup-transient
+  unavailable candidate and is skipped with a warning. Plasma keeps applets in
+  containment iteration during the removal undo window, so their last event
+  remains queryable until actual destruction removes the applet. No setter,
+  execution hook, window title, or application content is exposed.
 - `trackerData(u containmentId) -> s` (JSON): the windows-tracker
   facts per view - activeWindowTouching, activeWindowMaximized,
   existsWindowTouching, existsWindowMaximized, lastActiveWindow

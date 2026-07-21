@@ -74,27 +74,6 @@ namespace {
 // retaining a history or relying on wall-clock time.
 qint64 s_middleClickDispatchSequence{0};
 
-std::optional<Latte::Tasks::Types::TaskAction> taskActionFromConfigValue(int value)
-{
-    using Action = Latte::Tasks::Types::TaskAction;
-
-    switch (value) {
-    case Action::NoneAction:
-    case Action::Close:
-    case Action::NewInstance:
-    case Action::ToggleMinimized:
-    case Action::CycleThroughTasks:
-    case Action::ToggleGrouping:
-    case Action::PresentWindows:
-    case Action::PreviewWindows:
-    case Action::HighlightWindows:
-    case Action::PreviewAndHighlightWindows:
-        return static_cast<Action>(value);
-    }
-
-    return std::nullopt;
-}
-
 std::optional<Latte::Tasks::MiddleClickOperation> middleClickOperationFromToken(const QString &token)
 {
     using Operation = Latte::Tasks::MiddleClickOperation;
@@ -192,9 +171,10 @@ bool Backend::recordMiddleClickDispatch(const QString &rowIdentity,
         return false;
     }
 
-    const auto action = taskActionFromConfigValue(configuredAction);
+    const auto action = Latte::Tasks::classifyOfferedMiddleClickAction(configuredAction);
     if (!action) {
-        qWarning() << "tasks backend: refusing middle-click dispatch with unknown configured action" << configuredAction;
+        qWarning() << "tasks backend: refusing middle-click dispatch with configured action outside the offered middle-click set"
+                   << configuredAction;
         return false;
     }
 
@@ -204,8 +184,10 @@ bool Backend::recordMiddleClickDispatch(const QString &rowIdentity,
         return false;
     }
 
-    if (isLauncher != (*parsedOperation == Latte::Tasks::MiddleClickOperation::RequestActivate)) {
-        qWarning() << "tasks backend: refusing middle-click dispatch whose row kind and operation disagree";
+    const auto rowKind = isLauncher ? Latte::Tasks::MiddleClickRowKind::Launcher
+                                    : Latte::Tasks::MiddleClickRowKind::Task;
+    if (!Latte::Tasks::middleClickDispatchPairIsValid(rowKind, *action, *parsedOperation)) {
+        qWarning() << "tasks backend: refusing middle-click dispatch whose configured action, row kind, and operation disagree";
         return false;
     }
 
@@ -216,9 +198,8 @@ bool Backend::recordMiddleClickDispatch(const QString &rowIdentity,
 
     Latte::Tasks::MiddleClickDispatchRecord record;
     record.rowIdentity = rowIdentity;
-    record.rowKind = isLauncher ? Latte::Tasks::MiddleClickRowKind::Launcher
-                                : Latte::Tasks::MiddleClickRowKind::Task;
-    record.configuredAction = *action;
+    record.rowKind = rowKind;
+    record.configuredAction = action->configuredAction;
     record.dispatchedOperation = *parsedOperation;
     record.sequence = ++s_middleClickDispatchSequence;
 
