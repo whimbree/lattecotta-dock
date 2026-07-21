@@ -130,6 +130,59 @@ Landed before or during the 2026-07-16 stabilization session:
   dbusreportstest windowTaskOrderReadbackTracksAppIdAcrossReorder).
   Launchers reorder through the identical path and additionally persist
   their order to the tasks-applet `launchers` config key.
+- `viewSettingsControlsData(u containmentId) -> s` (JSON array, added by
+  SC-O1 (the read-only settings-control D-Bus registry)). This is the per-view
+  settings-control location and inspection surface. SC-O1 supplies the
+  transport, registry, lifecycle, serializer, and a test-only fixture vertical
+  slice. Production controls register only with their later component or page
+  units, so a current production view legitimately reports `[]` until one of
+  those units lands.
+
+  The implementation is deliberately hybrid. `SettingsControlRegistry` is a
+  Corona-owned QObject registry because QML objects, visual ancestry, focus,
+  popup transitions, and destruction are live QObject/QQuickItem concerns.
+  `settingscontrolrecords.h` is a value-only C++20 core that owns the closed
+  scalar domain, validation, complete-identity ordering, popup-row ordering,
+  and compact JSON. The registry outlives settings factories and views during
+  Corona teardown, so lifetime-object destruction synchronously retires its
+  generation before the registry itself is deleted.
+
+  Every control carries numeric `containmentId`, stable nonempty `surface`, decimal
+  string `loadGeneration`, nullable numeric `appletId`, exact nonempty
+  `auditIdentity` and `kind`, nullable nonempty `instanceKey`, effective
+  `visible`/`enabled`, descendant-aware `focused`, typed `current`, one or more
+  `hits`, and nullable `popup`. The scalar domain is JSON null, bool, integer,
+  double, or string only. Each hit has a stable `role`, fractional
+  `[x,y,width,height]` `globalGeometry`, `mapped`, and nullable
+  `clippedGeometry`. Null clipped geometry plus `mapped:false` is the explicit
+  fully clipped or unmapped state.
+
+  Popup records carry `open`, `mapped`, decimal string or null `generation`,
+  and deterministic semantic `rows`. Rows carry exact audit identity and kind,
+  nullable instance key, numeric `visualIndex`, stable scalar `value`, hit
+  records, and the same visible/enabled/focused/current state. Stable row value,
+  never a localized label or visual index, is the future locator identity.
+  Pointer values, window ids, localized labels, setters, filters, registration,
+  and execution are not exposed.
+
+  Geometry is recomputed at every query from current visual ancestry and the
+  registered surface placement authority. It is clipped through every
+  `QQuickItem::clip` ancestor and the supplied global surface bounds. Wayland
+  `QWindow::position()` is not treated as a global coordinate. Rotation,
+  shear, projective or mirrored transforms, non-finite values, and invalid hit
+  sizes cannot be represented by the one-rectangle contract and therefore
+  refuse the complete requested aggregate as `[]` with a warning.
+
+  Registry generations are positive and process-monotonic; callers cannot
+  choose them. Replacing or retargeting a scope retires its previous generation
+  before a newer one is allocated, even when the old QML object survives.
+  Popup close/reopen similarly receives a newer generation. Lifetime-object
+  destruction removes the whole scope, while control or row destruction
+  removes only that entry. Destroyed handlers capture numeric tokens and never
+  cast a dying QObject. Duplicate complete identities, malformed descriptors,
+  unsupported current values, and any malformed live entry are warned and
+  refused. No partial plausible array is returned. Unknown views warn and
+  return `[]`; known views with no controls return `[]` quietly.
 - `taskMiddleClickDispatchData(u containmentId) -> s` (JSON object, added
   2026-07-21 for SC-T3, the narrow dispatch readback for D29 (task-icon middle
   click appears to execute left-click behavior)).
@@ -311,6 +364,12 @@ the in-process KConfigPropertyMap caches).
   corona -> layouts -> views and serializes; Corona methods stay
   one-liners delegating to it. Keeps lattecorona.cpp from growing
   another thousand lines.
+- The settings-control read is the deliberate hybrid exception to the
+  DbusReports collector shape. QObject/QQuickItem lifecycle lives in
+  `app/settingscontrolregistry.{h,cpp}`; the value snapshot and serializer live
+  in `app/settingscontrolrecords.h`. Corona still follows the same thin
+  delegation rule after validating that the requested containment has a current
+  view.
 - Every JSON field reads EXISTING state objects (View, Positioner,
   VisibilityManager, ContainmentInterface, trackers). If a field has
   no clean getter yet, add the getter, never a parallel cache.

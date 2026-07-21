@@ -3,6 +3,45 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-21.
 
+## 2026-07-21: SC-O1 settings-control registry implementation is provisional
+
+SC-O1 (the read-only settings-control D-Bus registry) is implemented on the
+isolated `feat/settings-control-registry` branch from exact base
+`ddf6fe152db4aabdc2846a97d20508ae558942cc`. It is not merged, pushed, or
+independently reviewed, and its checklist remains unchecked. Provisional code
+commits are:
+
+- `d1dea3c59` defines the value-only C++20 record, validation, deterministic
+  ordering, and compact JSON core with its paired sanitized test.
+- `76bc39242` adds the Corona-owned QObject/QQuickItem registry, fixture vertical
+  slice, one read-only per-view D-Bus method, generated-adaptor path, lifecycle
+  cleanup, and controlled-mutation XML/delegation source guard.
+
+The public method is
+`viewSettingsControlsData(u containmentId) -> s`. Unknown views warn and return
+`[]`; known views with no controls return `[]` quietly. No production QML page
+or control is registered yet, by design. Runtime-effect readbacks, setters,
+filters, registration, and execution are outside this unit. The test fixture is
+a dedicated QRC/QML tree outside SC-F2 (the source-to-ledger coverage gate)
+production roots and loads in a real QQuickWindow/QQmlEngine through the
+production registry API.
+
+Focused verification in `/tmp/opencode/latte-sc-o1-build` passed 3/3 ctest
+entries: `settingscontrolrecordstest`, `settingscontrolregistrytest`, and
+`settingscontrolsourceguardtest`. Only `settingscontrolrecordstest` is compiled
+with ASan+UBSan; the registry and source guard link the ordinary unsanitized app
+core. The `latte-dock` target built successfully, including generated adaptor
+method `QString viewSettingsControlsData(uint containmentId)`. The coverage
+ratchet reported 100 ctest entries and 32 paired pure headers. Direct fixture
+`qmllint` with the pinned import allow-list produced no warnings. `xmllint`
+accepted the D-Bus XML and fixture QRC. No full gate, nested/live run, D-Bus
+smoke against a running Corona, push, PR, or merge was performed.
+
+Next state: independent diff review and the canonical full gate remain required
+before any push or PR. After merge-time hashes are known, SC-O1 can be checked
+and its final hashes recorded. Production registration starts only in the
+dependent component/page units, with no provisional ledger evidence promoted.
+
 ## 2026-07-21: SC-F2 source-coverage gate merged
 
 PR #103 merged SC-F2 (the source-to-ledger coverage gate). The mandatory final

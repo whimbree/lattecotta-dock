@@ -83,6 +83,23 @@ call viewTasksData u 1                 # s: JSON array per task entry (tasks vie
 #   index+appId are the window-task ORDER readback (G4): index is the
 #   model row (moves on reorder), appId the stable per-window identity;
 #   track a window by appId, read its index before/after a task drag
+call viewSettingsControlsData u 1      # s: JSON array of registered settings controls for view 1
+#   SC-O1 (the read-only settings-control D-Bus registry) currently registers
+#   only its test fixture. Production views therefore return [] until a later
+#   component/page unit registers its own controls.
+#   Per control: containmentId (number), surface, loadGeneration (decimal
+#   string), appletId (number|null), auditIdentity, kind, instanceKey
+#   (string|null), hits, visible, enabled, focused, current, popup (object|null).
+#   A hit: role, globalGeometry [x,y,width,height] with QRectF precision,
+#   clippedGeometry ([...] or null), mapped. mapped=false plus null clippedGeometry
+#   is fully clipped/unmapped, not a zero-size target.
+#   current is exactly null/bool/integer/double/string. No object/array coercion.
+#   Popup: open, mapped, generation (decimal string|null), rows. Each row carries
+#   auditIdentity, kind, instanceKey, visualIndex, stable value, hits, visible,
+#   enabled, focused, current. Locate rows by stable value, never label/index.
+#   Generations are process-local monotonic identities. Re-query immediately
+#   before input and reject a changed/missing load or popup generation.
+#   Any malformed live entry refuses the complete view as [] with a warning.
 call taskMiddleClickDispatchData u 1   # s: JSON object - latest task-icon middle-click dispatch
 #   rowIdentity, rowKind (launcher|task), configuredAction,
 #   dispatchedOperation, sequence. The D29 pair (task-icon middle click appears
@@ -223,6 +240,54 @@ Pretty-print a payload (the reply is a quoted, escaped string):
 call viewsData | sed 's/^s "//; s/"$//; s/\\"/"/g' | jq .
 ```
 
+Query settings controls with `qdbus6`, whose string reply pipes directly to
+`jq`:
+
+```bash
+view=1
+qdbus6 org.kde.lattedock /Latte \
+  org.kde.LatteDock.viewSettingsControlsData "$view" | jq .
+```
+
+Generation values are decimal strings on purpose. JSON numbers cannot preserve
+all 64-bit identities through IEEE-754 consumers. A driver stores the complete
+identity and observed generation, then re-queries immediately before input. A
+missing record or changed generation is stale and must abort rather than fall
+back to another instance:
+
+```bash
+view=1
+surface='primary-settings'
+audit='appearance.zoom'
+kind='slider'
+instance='main'
+applet_json=null
+
+snapshot="$(qdbus6 org.kde.lattedock /Latte \
+  org.kde.LatteDock.viewSettingsControlsData "$view")"
+load_generation="$(jq -er --arg surface "$surface" --arg audit "$audit" \
+  --arg kind "$kind" --arg instance "$instance" --argjson applet "$applet_json" \
+  '.[] | select(.surface == $surface and .appletId == $applet
+                and .auditIdentity == $audit and .kind == $kind
+                and .instanceKey == $instance) | .loadGeneration' \
+  <<<"$snapshot")"
+
+fresh="$(qdbus6 org.kde.lattedock /Latte \
+  org.kde.LatteDock.viewSettingsControlsData "$view")"
+jq -e --arg surface "$surface" --arg audit "$audit" --arg kind "$kind" \
+  --arg instance "$instance" --argjson applet "$applet_json" \
+  --arg generation "$load_generation" \
+  '.[] | select(.surface == $surface and .appletId == $applet
+                and .auditIdentity == $audit and .kind == $kind
+                and .instanceKey == $instance
+                and .loadGeneration == $generation)' \
+  <<<"$fresh" >/dev/null || { printf '%s\n' 'stale settings control' >&2; exit 1; }
+```
+
+Popup input adds the same check for `.popup.open`, `.popup.mapped`, and the
+observed string `.popup.generation`. Row resolution uses `.popup.rows[] |
+select(.value == $stable_value)`; labels and `visualIndex` are not locators.
+
 Isolated testing: the whole surface works identically inside the
 nested-kwin vehicle (private bus) - see the session-handoff nested
 recipes and tests/e2e. Remember the dock exits instantly if another
@@ -232,6 +297,10 @@ is why nested runs wrap the dock in `dbus-run-session`.
 ## Refusal semantics (what "wrong input" does)
 
 - Unknown containment id: empty JSON (`"[]"`/`"{}"`) + qWarning.
+- `viewSettingsControlsData` on a known view with no registered controls: `"[]"`
+  without a warning. An unknown view warns. Any malformed live scope, control,
+  hit, popup, or row refuses the whole requested view as `"[]"` with a warning;
+  no valid-looking subset is returned.
 - `taskMiddleClickDispatchData` before any middle-click event: `"{}"` without
   a warning. Empty maps are legitimate no-event candidates. Any malformed or
   unknown nonempty candidate, out-of-scope candidate, or duplicate sequence
@@ -253,4 +322,8 @@ New surfaces land in three places in the same change: the adaptor XML
 (app/dbus/org.kde.LatteDock.xml), the design doc's decision record,
 and this reference with a real invocation. The serializers live in
 app/dbusreports.{h,cpp}; their pure layers are pinned by
-tests/units/dbusreportstest.cpp - extend the test with any new field.
+tests/units/dbusreportstest.cpp - extend the test with any new field. The
+settings-control registry is the documented exception: its value serializer is
+`app/settingscontrolrecords.h` with the paired sanitized
+`settingscontrolrecordstest`; its QObject/QQuickItem collector is
+`app/settingscontrolregistry.{h,cpp}` with `settingscontrolregistrytest`.

@@ -63,7 +63,9 @@ visibility masks, badges, scrolling, colorization decisions) lives in
 pure C++ cores with sanitized unit tests, the dock's runtime state is
 inspectable and drivable over D-Bus
 ([D-Bus interface reference](docs/reference/dbus-interface-reference.md)),
-including a read-only query for the latest task-icon middle-click dispatch,
+including a read-only query for the latest task-icon middle-click dispatch
+and a lifecycle-safe read-only settings-control registry whose production
+controls join alongside their component and page tests,
 rendering is guarded by a committed-golden scene gate that runs on pure CPU,
 and an independent settings-source gate keeps every interactive declaration,
 handler, contracted lifecycle hook, and dynamic menu action linked to the
