@@ -246,6 +246,16 @@ set_tests_properties(settingswiringharnesstest PROPERTIES
 target_include_directories(settingswiringharnesstest PRIVATE
     ${CMAKE_SOURCE_DIR}/tests/units) # configsnapshotdiff.h
 
+# SC-F1 per-view settings inventory: schema integrity, stable identities,
+# source anchors and complete linkage to the 1-121 logical catalog.
+ecm_add_test(settingsinventorytest.cpp
+    TEST_NAME settingsinventorytest
+    LINK_LIBRARIES Qt6::Test
+)
+target_compile_definitions(settingsinventorytest PRIVATE
+    REPO_ROOT="${CMAKE_SOURCE_DIR}"
+    SETTINGS_INVENTORY_PATH="${CMAKE_SOURCE_DIR}/tests/data/per-view-settings-inventory.json")
+
 # The length cluster's real-handler wiring audit (CL-1,
 # docs/tracking/edit-mode-settings-audit-plan.md): the same QML-fragment/stub-map pattern
 # as settingswiringharnesstest, plus the LengthOffsetClampBridge registered as
