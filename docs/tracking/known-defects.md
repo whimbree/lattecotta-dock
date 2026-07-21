@@ -476,6 +476,21 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   unknown values, and mismatched row/action/operation combinations. The exact
   production reporter forwarding is pinned at `c0ba3f66f`.
 
+### D63 - Task settings-inventory anchors did not follow middle-click QML
+- STATUS: FIXED on local `feat/tasks-middle-click-readback` branch; final hash
+  pending the tracking follow-up.
+- FOUND: canonical full gate for SC-T3 (the D29 narrow middle-click dispatch
+  readback) at `3f4ec2355`.
+- ROOT: the new reporter properties and helper functions shifted every
+  `TaskMouseArea.qml` source anchor by 25 lines, with one additional line after
+  launcher dispatch recording. The inventory retained its pre-SC-T3 line
+  numbers; most still landed on unrelated nonempty lines, while hover-exit
+  landed on line 100's blank separator and made `settingsinventorytest` fail.
+- FIX: all nine task-row anchors and the drag-and-drop exemption now point to
+  their exact accepted-buttons, handler, wheel, timer, and drag-handler lines.
+- EVIDENCE: focused `settingsinventorytest` passes at 270 affordances and 21
+  exemptions. Full-gate evidence is recorded after the final tracking commit.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here
