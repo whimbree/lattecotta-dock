@@ -83,6 +83,7 @@ private Q_SLOTS:
     void enumerateViewsOfInactiveLayout();
     void validatePersistedRelationshipGraphs_data();
     void validatePersistedRelationshipGraphs();
+    void restoreRemovalSnapshotReplacesPartialGroup();
 
     //! clones
     void detectClonedViewsOnlyForLatteContainments();
@@ -183,6 +184,47 @@ void StorageTest::validatePersistedRelationshipGraphs()
 
     const Latte::Data::ViewsTable views = Storage::self()->views(path);
     QCOMPARE(views.relationshipValidationError().isEmpty(), valid);
+}
+
+void StorageTest::restoreRemovalSnapshotReplacesPartialGroup()
+{
+    const QString snapshotPath = m_dir.filePath(QStringLiteral("removal-snapshot.layout.latte"));
+    const QString destinationPath = m_dir.filePath(QStringLiteral("removal-destination.layout.latte"));
+
+    {
+        const KSharedConfigPtr snapshot = KSharedConfig::openConfig(snapshotPath);
+        KConfigGroup containments(snapshot, QStringLiteral("Containments"));
+        KConfigGroup containment = containments.group(QStringLiteral("12"));
+        containment.writeEntry(QStringLiteral("plugin"), QStringLiteral("org.kde.latte.containment"));
+        containment.writeEntry(QStringLiteral("isClonedFrom"), 1);
+        containment.writeEntry(QStringLiteral("linkPlacement"),
+                               static_cast<int>(Latte::Data::View::LinkPlacement::ExplicitTarget));
+        KConfigGroup applet = containment.group(QStringLiteral("Applets")).group(QStringLiteral("40"));
+        applet.writeEntry(QStringLiteral("plugin"), QStringLiteral("org.kde.plasma.minimizeall"));
+        snapshot->sync();
+    }
+
+    {
+        const KSharedConfigPtr destination = KSharedConfig::openConfig(destinationPath);
+        KConfigGroup containments(destination, QStringLiteral("Containments"));
+        KConfigGroup partial = containments.group(QStringLiteral("12"));
+        partial.writeEntry(QStringLiteral("plugin"), QStringLiteral("org.kde.latte.containment"));
+        partial.writeEntry(QStringLiteral("stalePartialValue"), true);
+        destination->sync();
+    }
+
+    QVERIFY(Storage::self()->restoreView(destinationPath, snapshotPath));
+
+    const KSharedConfigPtr restored = KSharedConfig::openConfig(destinationPath);
+    const KConfigGroup containments(restored, QStringLiteral("Containments"));
+    const KConfigGroup containment = containments.group(QStringLiteral("12"));
+    QCOMPARE(containment.readEntry(QStringLiteral("isClonedFrom"), -1), 1);
+    QCOMPARE(containment.readEntry(QStringLiteral("linkPlacement"), -1),
+             static_cast<int>(Latte::Data::View::LinkPlacement::ExplicitTarget));
+    QVERIFY(!containment.hasKey(QStringLiteral("stalePartialValue")));
+    QCOMPARE(containment.group(QStringLiteral("Applets")).group(QStringLiteral("40"))
+                 .readEntry(QStringLiteral("plugin"), QString{}),
+             QStringLiteral("org.kde.plasma.minimizeall"));
 }
 
 QString StorageTest::writeLayoutFixture(const QString &name)

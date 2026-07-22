@@ -1736,6 +1736,37 @@ void Storage::removeView(const QString &filepath, const Data::View &viewData)
     }
 }
 
+bool Storage::restoreView(const QString &filepath, const QString &snapshotFile)
+{
+    if (filepath.isEmpty() || snapshotFile.isEmpty()) {
+        qCritical() << "Storage::restoreView refused an empty destination or snapshot path";
+        return false;
+    }
+
+    const KSharedConfigPtr sourceFile = KSharedConfig::openConfig(snapshotFile);
+    const KConfigGroup sourceContainments(sourceFile, QStringLiteral("Containments"));
+    const QStringList containmentIds = sourceContainments.groupList();
+    if (containmentIds.isEmpty()) {
+        qCritical() << "Storage::restoreView refused an empty removal snapshot" << snapshotFile;
+        return false;
+    }
+
+    const KSharedConfigPtr destinationFile = KSharedConfig::openConfig(filepath);
+    KConfigGroup destinationContainments(destinationFile, QStringLiteral("Containments"));
+    for (const QString &containmentId : containmentIds) {
+        //! Plasma recreates a partial group before destroyedChanged(false).
+        //! Replace only the identities captured by this transaction so stale
+        //! partial values cannot override the complete pre-removal snapshot.
+        destinationContainments.group(containmentId).deleteGroup();
+        KConfigGroup destination = destinationContainments.group(containmentId);
+        sourceContainments.group(containmentId).copyTo(&destination);
+        destination.sync();
+    }
+
+    destinationFile->reparseConfiguration();
+    return true;
+}
+
 void Storage::removeContainment(const QString &filepath, const QString &containmentId)
 {
     if (containmentId.isEmpty()) {

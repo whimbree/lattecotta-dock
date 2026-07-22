@@ -823,6 +823,7 @@ void GenericLayout::containmentDestroyed(QObject *cont)
 
     if (containment) {
         cancelRemovalCommit(containment);
+        m_singleLayoutRemovalSnapshots.remove(containment);
 
         int containmentIndex = m_containments.indexOf(containment);
 
@@ -867,6 +868,8 @@ void GenericLayout::destroyedChanged(bool destroyed)
     }
 
     Latte::View *view{nullptr};
+    const auto memoryUsage = m_corona->layoutsManager()->memoryUsage();
+    const bool isDockContainment = Layouts::Storage::self()->isLatteContainment(containment);
 
     if (destroyed) {
         view = m_latteViews.take(containment);
@@ -889,7 +892,6 @@ void GenericLayout::destroyedChanged(bool destroyed)
         Q_EMIT viewsCountChanged();
     }
 
-    const auto memoryUsage = m_corona->layoutsManager()->memoryUsage();
     if (memoryUsage == MemoryUsage::MultipleLayouts) {
         //! The per-layout file is Latte's restart authority. Commit both
         //! sides of Plasma's undo transaction: Storage omits scheduled
@@ -897,13 +899,60 @@ void GenericLayout::destroyedChanged(bool destroyed)
         //! the still-live containment subtree back with its original ids and
         //! configuration.
         Layouts::Storage::self()->syncToLayoutFile(this, false);
-    } else if (!destroyed && memoryUsage == MemoryUsage::SingleLayout) {
-        //! Plasma deletes the containment group when removal starts. Its Undo
-        //! action restores the live objects, but it does not recreate that
-        //! group in the explicitly loaded layout file. Save the restored
-        //! corona immediately so a restart cannot reapply the tombstone.
-        m_corona->saveLayout(file());
+    } else if (memoryUsage == MemoryUsage::SingleLayout && isDockContainment) {
+        //! The explicitly loaded layout file is this mode's restart authority.
+        //! Commit both transaction edges synchronously. saveLayout() still
+        //! serializes a destroyed live QObject, so the removal edge deletes
+        //! that owned subtree explicitly. Plasma's Undo restores the live
+        //! objects from memory, so the reverse edge restores the exact snapshot
+        //! taken before the tombstone was committed.
+        if (destroyed) {
+            if (view && m_singleLayoutRemovalSnapshots.contains(containment)) {
+                Layouts::Storage::self()->removeView(file(), view->data());
+            } else if (!view && m_singleLayoutRemovalSnapshots.contains(containment)) {
+                Layouts::Storage::self()->removeContainment(
+                    file(), QString::number(containment->id()));
+            } else {
+                qCritical() << "layout:" << name()
+                            << "cannot persist reversible removal for containment"
+                            << containment->id() << "without its prepared snapshot";
+            }
+        } else {
+            const QString snapshot = m_singleLayoutRemovalSnapshots.take(containment);
+            if (!Layouts::Storage::self()->restoreView(file(), snapshot)) {
+                qCritical() << "layout:" << name()
+                            << "could not restore containment" << containment->id()
+                            << "after removal Undo";
+            }
+        }
     }
+}
+
+bool GenericLayout::prepareViewRemoval(Plasma::Containment *containment)
+{
+    if (!containment || !m_corona || !contains(containment)) {
+        qCritical() << "layout:" << name()
+                    << "cannot prepare removal for an unowned containment" << containment;
+        return false;
+    }
+
+    if (m_corona->layoutsManager()->memoryUsage() != MemoryUsage::SingleLayout
+            || !Layouts::Storage::self()->isLatteContainment(containment)
+            || m_singleLayoutRemovalSnapshots.contains(containment)) {
+        return true;
+    }
+
+    const QString snapshot = Layouts::Storage::self()->storedView(
+        this, static_cast<int>(containment->id()));
+    if (snapshot.isEmpty()) {
+        qCritical() << "layout:" << name()
+                    << "refusing removal because containment" << containment->id()
+                    << "could not be snapshotted for Undo";
+        return false;
+    }
+
+    m_singleLayoutRemovalSnapshots.insert(containment, snapshot);
+    return true;
 }
 
 void GenericLayout::cancelRemovalCommit(Plasma::Containment *containment)
@@ -1813,6 +1862,9 @@ void GenericLayout::removeView(const Latte::Data::View &viewData)
     }
 
     Plasma::Containment *viewcontainment = containmentForId(viewData.id.toUInt());
+    if (!prepareViewRemoval(viewcontainment)) {
+        return;
+    }
     destroyContainment(viewcontainment);
 }
 
