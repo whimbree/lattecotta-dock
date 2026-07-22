@@ -4205,7 +4205,7 @@ prerequisites in the phases above are done.
       f1a76d7a4, e781b4d0b, 05bcb00c5, b7795aa6d, df1fe812f,
       ef32c280f, 1457ab790, c9f74689c, 683a17048, c69ad6e86,
       19ef4ff7d, 5bcde4f40, 98dcbf894, 5c90f9431, 34be80813,
-      8fdf36188, 1d8730a3a, 5b8bb9542, 184370cdc
+      8fdf36188, 1d8730a3a, 5b8bb9542, 184370cdc, 8e703bb83
 - [x] Mitigate D111 (linked-root removal was not one reversible transaction).
       Refuse removal at live-view, layout-storage, and settings-model boundaries
       while explicit members remain. Keep legacy derived fanout removable and
@@ -4223,6 +4223,12 @@ prerequisites in the phases above are done.
       the source QAction visibility into the relationship-aware removal action
       before menu insertion.
       Commits: 1d8730a3a
+- [x] Fix D114 (linked-source removal controls raised the QML warning
+      baseline). Mark the shell-provided `latteView` and `i18n` boundary around
+      the complete touched binding block. The strict-on-touch ratchet removes
+      all five introduced warnings and three inherited warnings from the same
+      block.
+      Commits: 8e703bb83
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

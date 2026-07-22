@@ -1102,6 +1102,20 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: the identity contract requires the exact visibility transfer and
   passes with the focused context-menu source checks.
 
+### D114 - Linked-source removal controls raised the QML warning baseline
+- STATUS: FIXED on `feat/create-linked-dock` (`8e703bb83`).
+- FOUND: 2026-07-22, post-review canonical gate for Create Linked Dock.
+- SYMPTOM: `qmllintgate` reported five additional curated unqualified-access
+  warnings in `LatteDockConfiguration.qml`.
+- ROOT: the new removal policy bindings read shell-provided `latteView` and
+  `i18n` context properties without marking that structural boundary for the
+  static analyzer.
+- FIX: apply the existing context-property annotation to the complete touched
+  removal binding block. This also retires three inherited warnings already in
+  that block.
+- EVIDENCE: the per-file count falls from 94 to 91. The final canonical gate
+  passes the 5,828-warning ratchet across 234 eligible QML files.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.

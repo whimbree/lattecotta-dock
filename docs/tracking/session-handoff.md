@@ -111,6 +111,16 @@ claiming shared screen groups through value-layer and KConfig fixtures. D113
 (hidden applet remove actions resurfaced in the wrapper) is fixed by `1d8730a3a`,
 which preserves the source action's visibility.
 
+The canonical rerun then found and fixed D114 (linked-source removal controls
+raised the QML warning baseline). Commit `8e703bb83` documents the shell context
+boundary around the complete touched binding block and shrinks that file's
+curated warning count from 94 to 91. The final `scripts/gate-all.sh` run exited
+0 and stamped exact source and test head
+`8e703bb83694db8cbf072561dfc0ad6cb87f90d2`: 104/104 CTest entries, the
+5,828-warning full-stage qmllint ratchet over 234 eligible files, all 13 scene
+probes, three nested ASan/UBSan recipes, and the complete output-matrix fixture
+passed.
+
 Same-edge physical stack order, accumulated offsets, reservation, and activation
 regions remain the next separate slice. Create Linked deliberately accepts an
 occupied edge and does not use free-edge rejection. Detach and a group-wide

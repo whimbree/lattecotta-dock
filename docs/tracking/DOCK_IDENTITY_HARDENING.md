@@ -392,6 +392,14 @@ while explicit persistent members remain, with derived All Screens teardown
 unchanged. Value and KConfig fixtures cover the expanded graph domain, and the
 menu wrapper copies visibility. A group-wide root-removal transaction remains
 open lifecycle work.
+The post-review canonical gate found D114 (linked-source removal controls
+raised the QML warning baseline). The shell-provided `latteView` and `i18n`
+boundary is now explicit around the complete touched binding block. This
+removes all five introduced warnings plus three inherited warnings from that
+block. The final gate passed at exact source and test head
+`8e703bb83694db8cbf072561dfc0ad6cb87f90d2` with 104/104 CTest entries,
+5,828 curated warnings across 234 eligible QML files, all 13 render probes,
+three nested ASan/UBSan recipes, and the complete output-matrix fixture.
 
 Each slice requires a failing regression first, pure-core ASan and UBSan tests
 where a value model can carry the invariant, nested-KWin state and render
