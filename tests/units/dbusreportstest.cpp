@@ -54,6 +54,7 @@ private Q_SLOTS:
     void dockCollectionOrderingStabilizesViewAndControllerTokens();
     void dockRelationshipClassification_data();
     void dockRelationshipClassification();
+    void dockRelationshipGraphAcceptsOnlyDirectLiveOriginals();
     void dockSystemSnapshotSerializesTypedRuntimeState();
     void dockSystemSnapshotCanonicalizesShuffledViewsAndCloneIds();
     void dockSystemSnapshotKeepsConfigureModeIsolatedToEditedView();
@@ -594,6 +595,35 @@ void DbusReportsTest::dockRelationshipClassification()
     QCOMPARE(classification->logicalDockId, logicalDockId);
     QCOMPARE(classification->originalDockId, originalDockId);
     QCOMPARE(static_cast<int>(classification->relationship), relationship);
+}
+
+void DbusReportsTest::dockRelationshipGraphAcceptsOnlyDirectLiveOriginals()
+{
+    const DockLineageInput independent{7U, 7, true, false, true};
+    const DockLineageInput original{30U, 30, true, false, false};
+    const DockLineageInput lowClone{41U, 30, false, true, false};
+    const DockLineageInput highClone{51U, 30, false, true, false};
+
+    const auto valid = classifyDockRelationshipGraph(
+        {highClone, independent, lowClone, original});
+    QVERIFY(valid);
+    QCOMPARE(valid->size(), 4);
+    QCOMPARE(valid->value(41).logicalDockId, 30U);
+    QCOMPARE(valid->value(51).relationship, DockRelationship::ScreensGroupClone);
+
+    const QList<QList<DockLineageInput>> invalidGraphs{
+        {lowClone},
+        {independent, DockLineageInput{41U, 7, false, true, false}},
+        {DockLineageInput{41U, 51, false, true, false},
+         DockLineageInput{51U, 41, false, true, false}},
+        {original, DockLineageInput{41U, 51, false, true, false},
+         DockLineageInput{51U, 30, false, true, false}},
+        {original, original},
+        {original, DockLineageInput{0U, 30, false, true, false}}};
+
+    for (const auto &invalid : invalidGraphs) {
+        QVERIFY(!classifyDockRelationshipGraph(invalid));
+    }
 }
 
 void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()

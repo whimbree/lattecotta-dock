@@ -82,7 +82,9 @@
     <method name="viewsData">
         <arg name="data" type="s" direction="out"/>
     </method>
-    <!-- Atomic schema-versioned all-docks topology/runtime snapshot. The
+    <!-- Atomic schema-versioned all-docks topology/runtime snapshot. Invalid
+         clone lineage is logged and refused as an empty string, never returned
+         as a plausible partial snapshot. The
          stacking object deliberately reports available=false: the current
          runtime has no authority for same-edge stack order or accumulation,
          so canonical array order must never be interpreted as stack order. -->

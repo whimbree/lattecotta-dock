@@ -136,24 +136,32 @@ private:
     static bool matchesDockRelationshipClassifierRoute(const QString &body)
     {
         const QString code = normalizedCode(body);
+        const int lineageInput = code.indexOf(QStringLiteral(
+            "lineages.append(DockLineageInput{persistentDockId,"));
         const int classification = code.indexOf(QStringLiteral(
-            "constautorelationship=classifyDockRelationship(DockLineageInput{"));
+            "constautorelationships=classifyDockRelationshipGraph(lineages);"), lineageInput);
+        const int refusal = code.indexOf(QStringLiteral("if(!relationships){"), classification);
+        const int refusalReturn = code.indexOf(QStringLiteral("returnstd::nullopt;"), refusal);
         const int logicalAssignment = code.indexOf(QStringLiteral(
-            "record.logicalDockId=relationship->logicalDockId;"), classification);
+            "record.logicalDockId=relationship.logicalDockId;"), refusalReturn);
         const int originalAssignment = code.indexOf(QStringLiteral(
-            "record.originalDockId=relationship->originalDockId;"), logicalAssignment);
+            "record.originalDockId=relationship.originalDockId;"), logicalAssignment);
         const int relationshipAssignment = code.indexOf(QStringLiteral(
-            "record.relationship=relationship->relationship;"), originalAssignment);
+            "record.relationship=relationship.relationship;"), originalAssignment);
         const int identityLookup = code.indexOf(QStringLiteral("identities->idFor(view);"));
 
-        return classification != -1
+        return lineageInput != -1
+            && classification > lineageInput
+            && refusal > classification
+            && refusalReturn > refusal
             && logicalAssignment > classification
             && originalAssignment > logicalAssignment
             && relationshipAssignment > originalAssignment
             && identityLookup > relationshipAssignment
             && code.contains(QStringLiteral(
-                "qCritical()<<\"dbusreports:refusingmalformeddocklineageforcontainment\""))
-            && code.contains(QStringLiteral("Q_ASSERT(relationship.has_value());continue;"))
+                "qCritical()<<\"dbusreports:refusingdock-systemsnapshotwithmalformeddocklineage\""))
+            && code.contains(QStringLiteral("Q_ASSERT(relationships.has_value());returnstd::nullopt;"))
+            && !code.contains(QStringLiteral("continue;"))
             && !code.contains(QStringLiteral(
                 "record.logicalDockId=view->isCloned()?"));
     }
@@ -443,7 +451,7 @@ void SourceGuardTest::dockSystemCollection_keepsPureRouting()
 {
     const QString source = readFile(QStringLiteral("app/dbusreports.cpp"));
     const QString systemCollector = functionBody(
-        source, QStringLiteral("DockSystemSnapshot collectDockSystemSnapshot"));
+        source, QStringLiteral("collectDockSystemSnapshot("));
     QVERIFY2(!systemCollector.isEmpty(), "collectDockSystemSnapshot not found");
     QVERIFY2(matchesDockCollectionOrderingRoute(systemCollector),
              "dock-system collection must order persistent ids before every identity lookup");
@@ -455,7 +463,7 @@ void SourceGuardTest::dockSystemCollection_sourceGuardsRejectControlledMutations
 {
     const QString source = readFile(QStringLiteral("app/dbusreports.cpp"));
     const QString systemCollector = functionBody(
-        source, QStringLiteral("DockSystemSnapshot collectDockSystemSnapshot"));
+        source, QStringLiteral("collectDockSystemSnapshot("));
     QVERIFY(matchesDockCollectionOrderingRoute(systemCollector));
     QString unorderedCollection = normalizedCode(systemCollector);
     QCOMPARE(unorderedCollection.count(QStringLiteral(
@@ -468,9 +476,9 @@ void SourceGuardTest::dockSystemCollection_sourceGuardsRejectControlledMutations
 
     QVERIFY(matchesDockRelationshipClassifierRoute(systemCollector));
     QString directRelationship = normalizedCode(systemCollector);
-    QCOMPARE(directRelationship.count(QStringLiteral("classifyDockRelationship(")), 1);
-    directRelationship.replace(QStringLiteral("classifyDockRelationship("),
-                               QStringLiteral("legacyDockRelationship("));
+    QCOMPARE(directRelationship.count(QStringLiteral("classifyDockRelationshipGraph(")), 1);
+    directRelationship.replace(QStringLiteral("classifyDockRelationshipGraph("),
+                               QStringLiteral("legacyDockRelationshipGraph("));
     QVERIFY2(!matchesDockRelationshipClassifierRoute(directRelationship),
              "bypassing the relationship classifier must fail the collector guard");
 }

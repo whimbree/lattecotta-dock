@@ -368,8 +368,9 @@ struct DockCollectionOrderInput {
 }
 
 //! Live lineage facts needed to classify one dock without a View dependency.
-//! Original views identify themselves as their group; clones must point to a
-//! distinct positive original, which keeps the relationship graph acyclic.
+//! Original views identify themselves as their group; clones carry a distinct
+//! positive target. classifyDockRelationshipGraph() validates that the target
+//! is a live screens-group original, making cycles and clone chains invalid.
 struct DockLineageInput {
     uint persistentDockId{0};
     int groupId{-1};
@@ -414,6 +415,43 @@ classifyDockRelationship(const DockLineageInput &lineage) noexcept
         DockRelationship::ScreensGroupClone};
 }
 
+using DockRelationshipGraph = QHash<uint, DockRelationshipClassification>;
+
+//! Validate the whole live relationship graph before any view is serialized.
+//! A clone may point only to a present screens-group original. This direct-root
+//! rule rejects missing targets, standalone targets, clone chains, and cycles
+//! without a recursive traversal.
+[[nodiscard]] inline std::optional<DockRelationshipGraph>
+classifyDockRelationshipGraph(const QList<DockLineageInput> &lineages)
+{
+    DockRelationshipGraph graph;
+    graph.reserve(lineages.size());
+
+    for (const auto &lineage : lineages) {
+        const auto classification = classifyDockRelationship(lineage);
+        if (!classification || graph.contains(lineage.persistentDockId)) {
+            return std::nullopt;
+        }
+
+        graph.insert(lineage.persistentDockId, *classification);
+    }
+
+    for (const auto &lineage : lineages) {
+        const auto &classification = graph.value(lineage.persistentDockId);
+        if (classification.relationship != DockRelationship::ScreensGroupClone) {
+            continue;
+        }
+
+        const auto target = graph.constFind(classification.logicalDockId);
+        if (target == graph.constEnd()
+            || target->relationship != DockRelationship::ScreensGroupOriginal) {
+            return std::nullopt;
+        }
+    }
+
+    return graph;
+}
+
 //! The live QObject graph behind one dock. Tokens are opaque, process-local,
 //! and comparable within and across dockSystemData() snapshots. An empty token
 //! means that optional controller does not currently exist.
@@ -438,7 +476,7 @@ struct DockSystemViewRecord {
     uint logicalDockId{0};
     int originalDockId{-1};
     DockRelationship relationship{DockRelationship::Single};
-    std::optional<Types::ScreensGroup> screensGroup;
+    Types::ScreensGroup screensGroup{Types::SingleScreenGroup};
     QList<uint> cloneDockIds;
 
     QString layout;
@@ -1298,8 +1336,7 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
     json[QStringLiteral("originalDockId")] = record.originalDockId < 0
         ? QJsonValue(QJsonValue::Null) : QJsonValue(record.originalDockId);
     json[QStringLiteral("relationship")] = dockRelationshipName(record.relationship);
-    json[QStringLiteral("screensGroup")] = record.screensGroup
-        ? QJsonValue(screensGroupName(*record.screensGroup)) : QJsonValue(QJsonValue::Null);
+    json[QStringLiteral("screensGroup")] = screensGroupName(record.screensGroup);
 
     QJsonArray cloneDockIds;
     for (const uint id : record.cloneDockIds) {
@@ -1477,10 +1514,11 @@ QString collectViewsData(const QList<Latte::View *> &views, bool globalConfigure
 //! Snapshot every live dock synchronously from its current runtime authorities.
 //! The caller owns the process-local sequence and identity registry so tokens
 //! remain comparable across D-Bus calls without adding identity state to View.
-DockSystemSnapshot collectDockSystemSnapshot(const QList<Latte::View *> &views,
-                                              bool globalConfigureAppletsMode,
-                                              quint64 snapshotSequence,
-                                              RuntimeObjectIdentityRegistry *identities);
+std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
+    const QList<Latte::View *> &views,
+    bool globalConfigureAppletsMode,
+    quint64 snapshotSequence,
+    RuntimeObjectIdentityRegistry *identities);
 
 //! Collect and compact-serialize dockSystemData() in one synchronous call.
 QString collectDockSystemData(const QList<Latte::View *> &views,

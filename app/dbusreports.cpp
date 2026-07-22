@@ -705,10 +705,11 @@ QString collectViewsData(const QList<Latte::View *> &views, bool globalConfigure
     return serializeViewRecords(records);
 }
 
-DockSystemSnapshot collectDockSystemSnapshot(const QList<Latte::View *> &views,
-                                              bool globalConfigureAppletsMode,
-                                              quint64 snapshotSequence,
-                                              RuntimeObjectIdentityRegistry *identities)
+std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
+    const QList<Latte::View *> &views,
+    bool globalConfigureAppletsMode,
+    quint64 snapshotSequence,
+    RuntimeObjectIdentityRegistry *identities)
 {
     Q_ASSERT(identities);
 
@@ -722,14 +723,37 @@ DockSystemSnapshot collectDockSystemSnapshot(const QList<Latte::View *> &views,
     //! runtime view ids and shared-controller tokens do not depend on hash
     //! iteration order.
     QList<DockCollectionOrderInput> collectionOrder;
+    QList<DockLineageInput> lineages;
     collectionOrder.reserve(views.size());
+    lineages.reserve(views.size());
     for (qsizetype sourceIndex = 0; sourceIndex < views.size(); ++sourceIndex) {
         const auto *view = views.at(sourceIndex);
-        Q_ASSERT(view);
-        Q_ASSERT(view->containment());
+        if (!view || !view->containment()) {
+            qCritical() << "dbusreports: refusing dock-system snapshot with a null view or containment";
+            Q_ASSERT(view && view->containment());
+            return std::nullopt;
+        }
         const uint persistentDockId = view->containment()->id();
-        Q_ASSERT(persistentDockId > 0);
         collectionOrder.append(DockCollectionOrderInput{persistentDockId, sourceIndex});
+        lineages.append(DockLineageInput{
+            persistentDockId,
+            view->groupId(),
+            view->isOriginal(),
+            view->isCloned(),
+            view->isSingle()});
+    }
+
+    const auto relationships = classifyDockRelationshipGraph(lineages);
+    if (!relationships) {
+        qCritical() << "dbusreports: refusing dock-system snapshot with malformed dock lineage"
+                    << lineages.size() << "records";
+        for (const auto &lineage : lineages) {
+            qCritical() << "dbusreports: lineage containment" << lineage.persistentDockId
+                        << "group" << lineage.groupId << "original" << lineage.isOriginal
+                        << "clone" << lineage.isCloned << "single" << lineage.isSingle;
+        }
+        Q_ASSERT(relationships.has_value());
+        return std::nullopt;
     }
     const QList<qsizetype> orderedSourceIndexes =
         orderDockCollectionByPersistentId(collectionOrder);
@@ -740,7 +764,8 @@ DockSystemSnapshot collectDockSystemSnapshot(const QList<Latte::View *> &views,
     QHash<uint, Types::ScreensGroup> originalScreensGroups;
     for (const qsizetype sourceIndex : orderedSourceIndexes) {
         const auto *view = views.at(sourceIndex);
-        if (view->isOriginal()) {
+        const auto relationship = relationships->value(view->containment()->id());
+        if (relationship.relationship == DockRelationship::ScreensGroupOriginal) {
             originalScreensGroups.insert(view->containment()->id(), view->screensGroup());
         }
     }
@@ -752,34 +777,20 @@ DockSystemSnapshot collectDockSystemSnapshot(const QList<Latte::View *> &views,
 
         DockSystemViewRecord record;
         record.persistentDockId = view->containment()->id();
-        const auto relationship = classifyDockRelationship(DockLineageInput{
-            record.persistentDockId,
-            view->groupId(),
-            view->isOriginal(),
-            view->isCloned(),
-            view->isSingle()});
-        if (!relationship) {
-            qCritical() << "dbusreports: refusing malformed dock lineage for containment"
-                        << record.persistentDockId << "group" << view->groupId()
-                        << "original" << view->isOriginal() << "clone" << view->isCloned()
-                        << "single" << view->isSingle();
-            Q_ASSERT(relationship.has_value());
-            continue;
-        }
-        record.logicalDockId = relationship->logicalDockId;
-        record.originalDockId = relationship->originalDockId;
-        record.relationship = relationship->relationship;
+        const auto relationship = relationships->value(record.persistentDockId);
+        record.logicalDockId = relationship.logicalDockId;
+        record.originalDockId = relationship.originalDockId;
+        record.relationship = relationship.relationship;
 
         if (record.relationship == DockRelationship::ScreensGroupClone) {
             const auto group = originalScreensGroups.constFind(record.logicalDockId);
             if (group == originalScreensGroups.constEnd()) {
-                qWarning() << "dbusreports: clone" << record.persistentDockId
-                           << "has no current original" << record.logicalDockId
-                           << "in the atomic dock-system snapshot";
-                record.screensGroup.reset();
-            } else {
-                record.screensGroup = group.value();
+                qCritical() << "dbusreports: validated clone" << record.persistentDockId
+                            << "lost original screen-group authority" << record.logicalDockId;
+                Q_ASSERT(group != originalScreensGroups.constEnd());
+                return std::nullopt;
             }
+            record.screensGroup = group.value();
         } else if (record.relationship == DockRelationship::Single) {
             record.screensGroup = Types::SingleScreenGroup;
         } else {
@@ -870,10 +881,11 @@ QString collectDockSystemData(const QList<Latte::View *> &views,
                               quint64 snapshotSequence,
                               RuntimeObjectIdentityRegistry *identities)
 {
-    return serializeDockSystemSnapshot(collectDockSystemSnapshot(views,
-                                                                  globalConfigureAppletsMode,
-                                                                  snapshotSequence,
-                                                                  identities));
+    const auto snapshot = collectDockSystemSnapshot(views,
+                                                     globalConfigureAppletsMode,
+                                                     snapshotSequence,
+                                                     identities);
+    return snapshot ? serializeDockSystemSnapshot(*snapshot) : QString();
 }
 
 QString collectScreensData(Latte::ScreenPool *pool)

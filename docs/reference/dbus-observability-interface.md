@@ -173,11 +173,14 @@ Landed before or during the 2026-07-16 stabilization session:
   `effectiveIconSize` comes from the live Metrics object;
   `availablePrimaryLength` is the containment root's current logical-pixel
   `maxLength`, the length the autosizer consumes.
-  `screensGroup` can be null only during an invalid or transitional state where
-  a current clone's original is absent from the same atomic snapshot; inventing
-  a single-screen policy would hide that missing authority. The visibility,
-  startup, relocation, deletion, and ready fields come directly from View,
-  Positioner, and VisibilityManager and make unsettled records explicit.
+  `screensGroup` is always a string in a valid response. Whole-graph validation
+  requires every clone to point directly to a present screens-group original.
+  Missing targets, standalone targets, duplicate persistent ids, clone chains,
+  and cycles invalidate the complete query. The collector logs every lineage
+  input at critical severity and returns an empty D-Bus string, never a smaller
+  but plausible JSON snapshot. The visibility, startup, relocation, deletion,
+  and ready fields come directly from View, Positioner, and VisibilityManager
+  and make unsettled records explicit.
 
   The object identities name, respectively, the View window, Plasma
   containment, live KConfig property map, GenericLayout, QML layout manager,

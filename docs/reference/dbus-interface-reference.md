@@ -88,8 +88,10 @@ Per dock:
   source. Under the current behavior, a duplicated all-screens policy produces
   a new screens-group original and its own clones; duplicating a single-screen
   dock produces a `single` record.
-  `screensGroup` is null only when a current clone's original is absent from
-  the same snapshot, because no live authority can supply the group policy.
+  `screensGroup` is always a string in a valid response. Before serialization,
+  every clone must point directly to a present screens-group original. Missing
+  targets, clone chains, cycles, duplicate persistent ids, and standalone
+  targets invalidate the whole query rather than producing partial JSON.
 - Placement: `layout`, `screenId`, `screen`, `onPrimary`, `type`, `edge`,
   `orientation`, `alignment`, `maximumLengthRatio`, and `offsetRatio`.
 - Sizing: `configuredIconSize`, `effectiveIconSize`,
@@ -127,6 +129,10 @@ Per dock:
 capability. No runtime authority models same-edge stack order or accumulated
 offsets yet. Do not interpret canonical `views` array order as physical stack
 order.
+
+An internal lineage-invariant failure logs every relationship input at critical
+severity and returns an empty D-Bus string. It never returns a smaller but
+otherwise plausible `views` array.
 
 Example relationship checks:
 
