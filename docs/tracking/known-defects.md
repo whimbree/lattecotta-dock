@@ -812,6 +812,22 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   compile successfully. No live-desktop, nested-KWin, or full-gate result is
   claimed for this focused branch.
 
+### D83 - Removed duplicate containment survives the undo window in persistent layout state
+- STATUS: OPEN, CONFIRMED in the baseline nested vehicle.
+- FOUND: 2026-07-21, baseline `duplicate-view-idremap` acceptance run at
+  `16eb58ea4` before the D77 implementation.
+- SYMPTOM: removing a newly created independent duplicate destroys its runtime
+  containment, but the duplicate's persistent containment group remains in the
+  layout after the removal window has expired.
+- EVIDENCE: duplicate containment 12 was independent with `IsClonedFrom: -1`.
+  The log recorded `dock containment destroyed changed!!!!` at 21:31:13, while
+  the containment group was still present after the recipe's 120-second poll.
+- ROOT CAUSE: not yet established. Runtime destruction completes, so the open
+  failure is in persistent containment retirement or synchronization after the
+  undo window, not clone ancestry or `OriginalView` membership.
+- DISPOSITION: keep separate from D77. Instrument the persistent removal and
+  layout-sync boundary before changing cleanup behavior.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here

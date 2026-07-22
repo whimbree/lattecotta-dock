@@ -192,6 +192,10 @@ merge.
 - Whether the reported Duplicate Dock sequence entered through D-Bus, an older
   UI surface, or a screen-group operation. Every current action boundary now
   applies the same role policy, but the historical entry route remains unknown.
+- D83 (removed duplicate containment survives the undo window in persistent
+  layout state) is a separate confirmed persistence failure. Runtime destruction
+  completes, but the layout group survives the 120-second baseline poll; its
+  persistent removal boundary still requires instrumentation.
 - Which same-edge reservation policy best matches intended daily-driver
   behavior for mixed visibility modes. The stack still requires deterministic
   physical order under every policy.

@@ -197,6 +197,13 @@ gate was run. No runtime view ID, dock-system D-Bus snapshot, placement
 normalization, or same-edge stack coordinator was added. Placement and stacking
 remain separate open slices.
 
+The baseline nested run also confirmed D83 (removed duplicate containment
+survives the undo window in persistent layout state), which is not fixed by this
+branch. Independent duplicate containment 12 had `IsClonedFrom: -1` and logged
+runtime destruction at 21:31:13, but its persistent group remained after the
+120-second poll. D83 stays OPEN pending instrumentation at the persistent
+removal and layout-sync boundary.
+
 ## 2026-07-21: SC-F2 source-coverage gate merged
 
 PR #103 merged SC-F2 (the source-to-ledger coverage gate). The mandatory final

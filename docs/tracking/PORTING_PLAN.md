@@ -1267,6 +1267,15 @@ multi-view, multi-monitor setup.
       Commits: 21d24eedc, 8855bb8b9, 50ea86092, 7e036a789,
       5fc6e786f, 7b900efd2, dbbbe842a, 88a3ec931, 6c39171b8
 
+- [ ] Fix D83 (removed duplicate containment survives the undo window in
+      persistent layout state). Baseline nested evidence at `16eb58ea4` shows
+      independent duplicate containment 12 with `IsClonedFrom: -1`; its runtime
+      containment logged destruction at 21:31:13, but its persistent layout
+      group remained after the recipe's 120-second poll. This is separate from
+      D77 clone lineage and runtime membership. Instrument the persistent
+      removal and layout-sync boundary before changing cleanup behavior.
+      Commits:
+
 - [x] Bottom-dock layer surface drifts left of its reported geometry
       (filed 2026-07-17 from the e2e promotion unit, evidence in
       docs/agent-logs/2026-07-17-e2e-promotion.md finding 6; root-caused,
