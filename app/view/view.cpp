@@ -596,7 +596,7 @@ void View::duplicateView()
         return;
     }
 
-    QString storedTmpViewFilepath = m_layout->storedView(containment()->id());
+    const QString storedTmpViewFilepath = m_layout->storedView(containment()->id());
     createViewFromTemplate(storedTmpViewFilepath, TemplateImportRelationship::IndependentSnapshot);
 }
 
@@ -623,7 +623,7 @@ void View::createViewFromTemplate(const QString &templateFile, const TemplateImp
         return;
     }
 
-    Data::ViewsTable templateviews = Layouts::Storage::self()->views(templateFile);
+    const Data::ViewsTable templateviews = Layouts::Storage::self()->views(templateFile);
 
     if (templateviews.rowCount() <= 0) {
         return;
@@ -640,9 +640,9 @@ void View::createViewFromTemplate(const QString &templateFile, const TemplateImp
         nextdata.screensGroup = Latte::Types::SingleScreenGroup;
     }
 
-    int scrId = onPrimary() ? m_corona->screenPool()->primaryScreenId() : m_positioner->currentScreenId();
+    const int scrId = onPrimary() ? m_corona->screenPool()->primaryScreenId() : m_positioner->currentScreenId();
 
-    QList<Plasma::Types::Location> freeedges = m_layout->freeEdges(scrId);
+    const QList<Plasma::Types::Location> freeedges = m_layout->freeEdges(scrId);
 
     if (!freeedges.contains(nextdata.edge)) {
         nextdata.edge = (freeedges.count() > 0 ? freeedges[0] : Plasma::Types::BottomEdge);
