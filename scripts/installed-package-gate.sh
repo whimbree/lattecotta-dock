@@ -243,13 +243,17 @@ audit_package_tree() {
         esac
         provider_dir="$link_resolved"
         [[ -d "$provider_dir" ]] || provider_dir="$(dirname "$provider_dir")"
-        while [[ "$provider_dir" != / ]]; do
+        # An isolated package root is the provenance boundary already proved
+        # above. Markers on its external ancestors describe the staging host,
+        # not the installed content. A live --root / check still walks to /.
+        while path_is_within "$provider_dir" "$package_root"; do
             if [[ -e "$provider_dir/.git" || -f "$provider_dir/CMakeLists.txt" ]]; then
                 fail "$label contains a symlink into a source tree: $link -> $target_normalized"
             fi
             if [[ -f "$provider_dir/CMakeCache.txt" || -d "$provider_dir/CMakeFiles" ]]; then
                 fail "$label contains a symlink into a CMake build tree: $link -> $target_normalized"
             fi
+            [[ "$provider_dir" != "$package_root" ]] || break
             provider_dir="$(dirname "$provider_dir")"
         done
         path_is_within "$link_resolved" "$tree_resolved" \

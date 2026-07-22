@@ -485,6 +485,16 @@ absolute_internal_output="$(run_check "$absolute_internal")"
     || { echo "FAIL: isolated package rejected an in-tree absolute namespace symlink" >&2; echo "$absolute_internal_output" >&2; exit 1; }
 echo "PASS: isolated roots resolve absolute symlinks inside the package namespace"
 
+source_marked_parent="$work/source-marked-parent"
+isolated_below_source="$source_marked_parent/installed-root"
+mkdir -p "$source_marked_parent"
+: >"$source_marked_parent/CMakeLists.txt"
+cp -a "$absolute_internal" "$isolated_below_source"
+isolated_below_source_output="$(run_check "$isolated_below_source")"
+[[ "$isolated_below_source_output" == *"installed-package-gate: CHECK OK"* ]] \
+    || { echo "FAIL: isolated package inherited an external ancestor's source-tree marker" >&2; echo "$isolated_below_source_output" >&2; exit 1; }
+echo "PASS: isolated package provenance stops at the package root"
+
 selected_absolute="$work/selected-absolute-links"
 cp -a "$good" "$selected_absolute"
 selected_binary_target="$selected_absolute/usr/libexec/latte-dock.real"
