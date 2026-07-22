@@ -305,6 +305,8 @@ View View::toIndependentSnapshot() const
     snapshot.isClonedFrom = ISCLONEDNULL;
     snapshot.screensGroup = Latte::Types::SingleScreenGroup;
     snapshot.linkPlacement = LinkPlacement::ScreenGroupDerived;
+    snapshot.isMoveOrigin = false;
+    snapshot.isMoveDestination = false;
     return snapshot;
 }
 

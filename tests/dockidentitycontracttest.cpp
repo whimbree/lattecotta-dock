@@ -540,6 +540,12 @@ void DockIdentityContractTest::clipboardCopyBreaksLinkedLineage()
         QStringLiteral("setClipboardContents(clipboardviews)"), normalizeRelationship);
     QVERIFY2(normalizeRelationship >= 0 && publishClipboard > normalizeRelationship,
              "Copy must remove linked lineage before publishing clipboard records");
+
+    const QString viewDataSource = readFile(QStringLiteral("app/data/viewdata.cpp"));
+    const QString snapshot = normalized(functionBody(
+        viewDataSource, QStringLiteral("View View::toIndependentSnapshot")));
+    QVERIFY(snapshot.contains(QStringLiteral("snapshot.isMoveOrigin=false")));
+    QVERIFY(snapshot.contains(QStringLiteral("snapshot.isMoveDestination=false")));
 }
 
 void DockIdentityContractTest::refusedLayoutMoveCancelsRelocation()

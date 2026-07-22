@@ -66,7 +66,7 @@ private Q_SLOTS:
     void layout_activityAndTemplateChecks();
     void layout_operatorEqualExclusions();
     void view_stateMachine();
-    void view_independentSnapshotBreaksRelationshipOnly();
+    void view_independentSnapshotBreaksRelationshipAndMoveState();
     void view_explicitLinkedMemberOwnsPlacement();
     void view_alignmentNormalization_data();
     void view_alignmentNormalization();
@@ -490,7 +490,7 @@ void DataTypesTest::view_stateMachine()
     QVERIFY(!v.hasSubContainment(QStringLiteral("nope")));
 }
 
-void DataTypesTest::view_independentSnapshotBreaksRelationshipOnly()
+void DataTypesTest::view_independentSnapshotBreaksRelationshipAndMoveState()
 {
     Data::View linked(QStringLiteral("12"), QStringLiteral("Linked Dock"));
     linked.setState(Data::View::OriginFromLayout,
@@ -517,17 +517,18 @@ void DataTypesTest::view_independentSnapshotBreaksRelationshipOnly()
     expected.isClonedFrom = Data::View::ISCLONEDNULL;
     expected.screensGroup = Latte::Types::SingleScreenGroup;
     expected.linkPlacement = Data::View::LinkPlacement::ScreenGroupDerived;
+    expected.isMoveOrigin = false;
+    expected.isMoveDestination = false;
 
     const Data::View snapshot = linked.toIndependentSnapshot();
 
     QCOMPARE(snapshot, expected);
     //! View::operator== intentionally ignores transient model state because it
     //! is not part of settings persistence. Compare those fields directly so
-    //! this test still proves that relationship normalization changes only the
-    //! relationship fields.
+    //! the snapshot cannot retain Cut/Paste transaction identity.
     QCOMPARE(snapshot.isActive, linked.isActive);
-    QCOMPARE(snapshot.isMoveOrigin, linked.isMoveOrigin);
-    QCOMPARE(snapshot.isMoveDestination, linked.isMoveDestination);
+    QVERIFY(!snapshot.isMoveOrigin);
+    QVERIFY(!snapshot.isMoveDestination);
     QCOMPARE(snapshot.errors, linked.errors);
     QCOMPARE(snapshot.warnings, linked.warnings);
     QCOMPARE(snapshot.isClonedFrom, Data::View::ISCLONEDNULL);
