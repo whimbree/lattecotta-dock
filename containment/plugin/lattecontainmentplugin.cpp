@@ -13,6 +13,7 @@
 #include "backgroundstateresolver.h"
 #include "layoutmanager.h"
 #include "maskgeometrybridge.h"
+#include "placementnormalizer.h"
 #include "types.h"
 
 // Qt
@@ -28,4 +29,5 @@ void LatteContainmentPlugin::registerTypes(const char *uri)
     qmlRegisterType<Latte::Containment::ColorizerDecider>(uri, 0, 1, "ColorizerDecider");
     qmlRegisterType<Latte::Containment::BackgroundStateResolver>(uri, 0, 1, "BackgroundStateResolver");
     qmlRegisterType<Latte::Containment::MaskGeometryBridge>(uri, 0, 1, "MaskGeometryBridge");
+    qmlRegisterType<Latte::Containment::PlacementNormalizer>(uri, 0, 1, "PlacementNormalizer");
 }

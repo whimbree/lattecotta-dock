@@ -23,6 +23,33 @@ PlasmaComponents.Page {
     width: content.width + content.Layout.leftMargin * 2
     height: content.height + Kirigami.Units.smallSpacing * 2
 
+    readonly property var placementConfiguration: plasmoid.configuration
+    readonly property var placementNormalizer: lengthClamp
+
+    //! Fine-value scroll/click handlers bypass the slider-specific functions,
+    //! so they enter the same complete placement transaction directly.
+    function applyNormalizedPlacement(requestedMaxLength, requestedMinLength, requestedOffset) {
+        const normalized = page.placementNormalizer.normalizePlacement(requestedMaxLength,
+                                                                        requestedMinLength,
+                                                                        requestedOffset,
+                                                                        page.placementConfiguration.alignment);
+        if (!normalized.accepted) {
+            return false;
+        }
+
+        if (page.placementConfiguration.offset !== normalized.offset) {
+            page.placementConfiguration.offset = normalized.offset;
+        }
+        if (page.placementConfiguration.minLength !== normalized.minLength) {
+            page.placementConfiguration.minLength = normalized.minLength;
+        }
+        if (page.placementConfiguration.maxLength !== normalized.maxLength) {
+            page.placementConfiguration.maxLength = normalized.maxLength;
+        }
+
+        return true;
+    }
+
     TextMetrics {
         id: defaultFontMetrics
         text: "M"
@@ -356,19 +383,25 @@ PlasmaComponents.Page {
                             onScrolledUp: (wheel) => {
                                 var ctrlModifier = (wheel.modifiers & Qt.ControlModifier);
                                 if (ctrlModifier) {
-                                    plasmoid.configuration.maxLength = plasmoid.configuration.maxLength + smallStep;
+                                    page.applyNormalizedPlacement(page.placementConfiguration.maxLength + smallStep,
+                                                                  page.placementConfiguration.minLength,
+                                                                  page.placementConfiguration.offset);
                                 }
                             }
 
                             onScrolledDown: (wheel) => {
                                 var ctrlModifier = (wheel.modifiers & Qt.ControlModifier);
                                 if (ctrlModifier) {
-                                    plasmoid.configuration.maxLength = plasmoid.configuration.maxLength - smallStep;
+                                    page.applyNormalizedPlacement(page.placementConfiguration.maxLength - smallStep,
+                                                                  page.placementConfiguration.minLength,
+                                                                  page.placementConfiguration.offset);
                                 }
                             }
 
                             onClicked: {
-                                plasmoid.configuration.maxLength = Math.round(plasmoid.configuration.maxLength);
+                                page.applyNormalizedPlacement(Math.round(page.placementConfiguration.maxLength),
+                                                              page.placementConfiguration.minLength,
+                                                              page.placementConfiguration.offset);
                             }
                         }
                     }
@@ -404,11 +437,9 @@ PlasmaComponents.Page {
 
                         function updateMinLength() {
                             if (!pressed  && viewConfig.isReady) {
-                                plasmoid.configuration.minLength = value; //Math.min(value, plasmoid.configuration.maxLength);
-
-                                if (plasmoid.configuration.minLength > maxLengthSlider.value) {
-                                    maxLengthSlider.updateMaxLength();
-                                }
+                                page.applyNormalizedPlacement(page.placementConfiguration.maxLength,
+                                                              value,
+                                                              page.placementConfiguration.offset);
                             } else {
                                 if (value > plasmoid.configuration.maxLength) {
                                     value = plasmoid.configuration.maxLength
@@ -456,19 +487,25 @@ PlasmaComponents.Page {
                             onScrolledUp: (wheel) => {
                                 var ctrlModifier = (wheel.modifiers & Qt.ControlModifier);
                                 if (ctrlModifier) {
-                                    plasmoid.configuration.minLength = plasmoid.configuration.minLength + smallStep;
+                                    page.applyNormalizedPlacement(page.placementConfiguration.maxLength,
+                                                                  page.placementConfiguration.minLength + smallStep,
+                                                                  page.placementConfiguration.offset);
                                 }
                             }
 
                             onScrolledDown: (wheel) => {
                                 var ctrlModifier = (wheel.modifiers & Qt.ControlModifier);
                                 if (ctrlModifier) {
-                                    plasmoid.configuration.minLength = plasmoid.configuration.minLength - smallStep;
+                                    page.applyNormalizedPlacement(page.placementConfiguration.maxLength,
+                                                                  page.placementConfiguration.minLength - smallStep,
+                                                                  page.placementConfiguration.offset);
                                 }
                             }
 
                             onClicked: {
-                                plasmoid.configuration.minLength = Math.round(plasmoid.configuration.minLength);
+                                page.applyNormalizedPlacement(page.placementConfiguration.maxLength,
+                                                              Math.round(page.placementConfiguration.minLength),
+                                                              page.placementConfiguration.offset);
                             }
                         }
                     }
@@ -584,19 +621,25 @@ PlasmaComponents.Page {
                             onScrolledUp: (wheel) => {
                                 var ctrlModifier = (wheel.modifiers & Qt.ControlModifier);
                                 if (ctrlModifier) {
-                                    plasmoid.configuration.offset= plasmoid.configuration.offset + smallStep;
+                                    page.applyNormalizedPlacement(page.placementConfiguration.maxLength,
+                                                                  page.placementConfiguration.minLength,
+                                                                  page.placementConfiguration.offset + smallStep);
                                 }
                             }
 
                             onScrolledDown: (wheel) => {
                                 var ctrlModifier = (wheel.modifiers & Qt.ControlModifier);
                                 if (ctrlModifier) {
-                                    plasmoid.configuration.offset = plasmoid.configuration.offset - smallStep;
+                                    page.applyNormalizedPlacement(page.placementConfiguration.maxLength,
+                                                                  page.placementConfiguration.minLength,
+                                                                  page.placementConfiguration.offset - smallStep);
                                 }
                             }
 
                             onClicked: {
-                                plasmoid.configuration.offset = Math.round(plasmoid.configuration.offset);
+                                page.applyNormalizedPlacement(page.placementConfiguration.maxLength,
+                                                              page.placementConfiguration.minLength,
+                                                              Math.round(page.placementConfiguration.offset));
                             }
                         }
                     }

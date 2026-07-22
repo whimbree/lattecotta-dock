@@ -441,7 +441,7 @@ ContainmentItem {
             }
 
             root.updateIndexes();
-            Plasmoid.configuration.alignment = latteView.alignment;
+            root.applyNormalizedPlacement(latteView.alignment);
             fastLayoutManager.save();
         }
     }
@@ -498,21 +498,12 @@ ContainmentItem {
     }
 
     onIsVerticalChanged: {
-        if (isVertical) {
-            if (Plasmoid.configuration.alignment === LatteCore.Types.Left)
-                Plasmoid.configuration.alignment = LatteCore.Types.Top;
-            else if (Plasmoid.configuration.alignment === LatteCore.Types.Right)
-                Plasmoid.configuration.alignment = LatteCore.Types.Bottom;
-        } else {
-            if (Plasmoid.configuration.alignment === LatteCore.Types.Top)
-                Plasmoid.configuration.alignment = LatteCore.Types.Left;
-            else if (Plasmoid.configuration.alignment === LatteCore.Types.Bottom)
-                Plasmoid.configuration.alignment = LatteCore.Types.Right;
-        }
+        applyNormalizedPlacement(Plasmoid.configuration.alignment);
     }
 
     Component.onCompleted: {
         upgrader_v010_alignment();
+        applyNormalizedPlacement(Plasmoid.configuration.alignment);
 
         fastLayoutManager.restore();
         Plasmoid.internalAction("configure").visible = !Plasmoid.immutable;
@@ -714,6 +705,36 @@ ContainmentItem {
             Plasmoid.configuration.alignmentUpgraded = true;
         }
     }
+
+    //! The sole containment-side write boundary for output, semantic
+    //! alignment, length, and offset. Offset is committed before alignment so
+    //! a negative centered value never becomes an edge margin, even for one
+    //! binding evaluation between the two writes.
+    function applyNormalizedPlacement(requestedAlignment) {
+        const normalized = placementNormalizer.normalize(Plasmoid.location,
+                                                         requestedAlignment,
+                                                         Plasmoid.configuration.minLength,
+                                                         Plasmoid.configuration.maxLength,
+                                                         Plasmoid.configuration.offset);
+        if (!normalized.accepted) {
+            return false;
+        }
+
+        if (Plasmoid.configuration.offset !== normalized.offset) {
+            Plasmoid.configuration.offset = normalized.offset;
+        }
+        if (Plasmoid.configuration.minLength !== normalized.minLength) {
+            Plasmoid.configuration.minLength = normalized.minLength;
+        }
+        if (Plasmoid.configuration.maxLength !== normalized.maxLength) {
+            Plasmoid.configuration.maxLength = normalized.maxLength;
+        }
+        if (Plasmoid.configuration.alignment !== normalized.alignment) {
+            Plasmoid.configuration.alignment = normalized.alignment;
+        }
+
+        return true;
+    }
     //END functions
 
     ///////////////BEGIN components
@@ -750,6 +771,10 @@ ContainmentItem {
     //! predicate cluster (EX-13; units/backgroundstate.h)
     LatteContainment.BackgroundStateResolver {
         id: _backgroundState
+    }
+
+    LatteContainment.PlacementNormalizer {
+        id: placementNormalizer
     }
 
     LatteContainment.LayoutManager{

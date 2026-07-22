@@ -65,6 +65,13 @@ QVariantMap toMap(const LengthState &state)
             {QStringLiteral("offset"), state.offset}};
 }
 
+QVariantMap toNormalizationMap(const LengthState &state, bool accepted)
+{
+    QVariantMap map = toMap(state);
+    map.insert(QStringLiteral("accepted"), accepted);
+    return map;
+}
+
 } // namespace
 
 namespace Latte {
@@ -73,6 +80,18 @@ namespace Settings {
 LengthOffsetClampBridge::LengthOffsetClampBridge(QObject *parent)
     : QObject(parent)
 {
+}
+
+QVariantMap LengthOffsetClampBridge::normalizePlacement(double maxLength, double minLength,
+                                                         double offset, int alignment) const
+{
+    if (refusedNonFinite("normalizePlacement", {maxLength, minLength, offset})) {
+        return toNormalizationMap({maxLength, minLength, offset}, false);
+    }
+
+    return toNormalizationMap(LengthOffsetClamp::normalizePlacement(
+                                  {maxLength, minLength, offset}, alignmentKindOf(alignment)),
+                              true);
 }
 
 QVariantMap LengthOffsetClampBridge::clampMaxLengthByStep(double maxLength, double minLength,

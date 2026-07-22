@@ -144,7 +144,7 @@
 1	share/plasma/shells/org.kde.latte.shell/contents/configuration/config.qml
 94	share/plasma/shells/org.kde.latte.shell/contents/configuration/LatteDockConfiguration.qml
 8	share/plasma/shells/org.kde.latte.shell/contents/configuration/LatteDockSecondaryConfiguration.qml
-243	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/AppearanceConfig.qml
+225	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/AppearanceConfig.qml
 250	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/BehaviorConfig.qml
 63	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/EffectsConfig.qml
 238	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/TasksConfig.qml

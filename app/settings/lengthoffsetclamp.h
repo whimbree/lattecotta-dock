@@ -8,6 +8,9 @@
 #ifndef LENGTHOFFSETCLAMP_H
 #define LENGTHOFFSETCLAMP_H
 
+// local
+#include "placementstate.h"
+
 // Qt
 #include <QtGlobal>
 
@@ -102,43 +105,52 @@ struct OffsetClamp {
     double offset;
 };
 
-//! THE deduplicated block: after maxLength changed, pull the offset back
-//! so the dock stays fully on-screen. This existed byte-identically in
+inline PlacementState::Alignment placementAlignmentOf(Alignment alignment)
+{
+    switch (alignment) {
+    case Alignment::Edge:
+        return PlacementState::Alignment::Start;
+    case Alignment::Centered:
+        return PlacementState::Alignment::Center;
+    case Alignment::Justify:
+        return PlacementState::Alignment::Justify;
+    }
+
+    Q_UNREACHABLE_RETURN(PlacementState::Alignment::Center);
+}
+
+//! Route a complete length state through the placement invariant. Bottom is a
+//! representative edge here because percent bounds depend on semantic
+//! alignment, not axis; the containment boundary supplies the real edge when
+//! translating Start/End back to physical alignment names.
+inline LengthState normalizePlacement(LengthState state, Alignment alignment)
+{
+    const auto placement = PlacementState::normalize({
+        PlacementState::OutputEdge::Bottom,
+        placementAlignmentOf(alignment),
+        state.minLength,
+        state.maxLength,
+        state.offset,
+    });
+
+    return {placement.maxLengthPercent(), placement.minLengthPercent(),
+            placement.offsetPercent()};
+}
+
+//! Compatibility entry for the deduplicated block that ran after maxLength
+//! changed. The original QML only pulled offset back on-screen; all callers now
+//! enter the complete placement transaction so a startup or external state is
+//! normalized identically. This existed byte-identically in
 //! both QML copies ("centered and justify alignments based on offset and
 //! get out of the screen in some cases", per the inherited comment);
 //! divergence between them was the config-corruption class this unit
-//! exists to end. Never resizes, never touches minLength.
+//! exists to end.
 inline LengthState pullOffsetOnScreen(LengthState state, Alignment alignment)
 {
     Q_ASSERT(std::isfinite(state.maxLength) && std::isfinite(state.minLength)
              && std::isfinite(state.offset));
 
-    const bool centered = hasCenteredGeometry(alignment);
-    const bool overflows = (std::fabs(state.offset) + state.maxLength) > 100.0;
-    //! a centered dock leaves the screen earlier: each half extends
-    //! maxLength/2 from the offset anchor around the screen middle
-    const bool centeredSpills =
-        centered && (std::fabs(state.offset) + state.maxLength / 2.0 > 50.0);
-
-    if (!overflows && !centeredSpills) {
-        return state;
-    }
-
-    if (centered) {
-        double suggested = (state.offset < 0) ? std::min(0.0, -(100.0 - state.maxLength))
-                                              : std::max(0.0, 100.0 - state.maxLength);
-
-        if (std::fabs(suggested) + state.maxLength / 2.0 > 50.0) {
-            suggested = (suggested < 0) ? -(50.0 - state.maxLength / 2.0)
-                                        : (50.0 - state.maxLength / 2.0);
-        }
-
-        state.offset = suggested;
-    } else {
-        state.offset = std::max(0.0, 100.0 - state.maxLength);
-    }
-
-    return state;
+    return normalizePlacement(state, alignment);
 }
 
 //! the maxLength ruler's wheel step (RulerMouseArea.qml body): a coupled
@@ -232,29 +244,22 @@ inline OffsetClamp clampOffset(double maxLength, double requestedOffset, Alignme
 {
     Q_ASSERT(std::isfinite(maxLength) && std::isfinite(requestedOffset));
 
-    const OffsetBounds bounds = offsetSliderBounds(maxLength, alignment);
+    //! Normalize maximum before deriving the slider rail. Deriving the rail
+    //! from an invalid maximum and healing maximum afterwards made a second
+    //! application move offset again; one transaction must converge at once.
+    const LengthState initial = normalizePlacement({maxLength, 0.0, requestedOffset}, alignment);
+    const OffsetBounds bounds = offsetSliderBounds(initial.maxLength, alignment);
     //! min(max(from, x), to) exactly as the shipped QML composed it, NOT
     //! std::clamp: a hand-edited config can carry maxLength > 100, which
     //! inverts the bounds (from > to), and this composition order defines
     //! the result (= to) where std::clamp would be undefined behavior
-    const double offset = std::min(std::max(bounds.from, requestedOffset), bounds.to);
+    const double offset = std::min(std::max(bounds.from, initial.offset), bounds.to);
 
-    const bool centered = hasCenteredGeometry(alignment);
-    const bool overflows = (std::fabs(offset) + maxLength) > 100.0;
-    const bool centeredSpills = centered && (std::fabs(offset) + maxLength / 2.0 > 50.0);
-
-    if (overflows || centeredSpills) {
-        //! unreachable while maxLength is in [0,100] - the bounds clamp
-        //! above already enforces both conditions (factor <= (100-max)/2)
-        //! - but live for an out-of-range config, where it heals
-        //! maxLength back on-screen (the offset settles within one more
-        //! application for edge alignments;
-        //! clampOffset_outOfRangeMaxLengthSelfHeals pins the sequence)
-        maxLength = centered ? 2.0 * (50.0 - std::fabs(offset))
-                             : 100.0 - std::fabs(offset);
-    }
-
-    return {maxLength, offset};
+    //! minLength is deliberately 0: the offset control does not own that key.
+    //! The common placement transaction still clamps maximum and offset in one
+    //! application, including a hand-edited maximum outside the percent domain.
+    const LengthState normalized = normalizePlacement({initial.maxLength, 0.0, offset}, alignment);
+    return {normalized.maxLength, normalized.offset};
 }
 
 } // namespace LengthOffsetClamp

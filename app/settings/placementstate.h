@@ -19,6 +19,14 @@ namespace Latte {
 namespace Settings {
 namespace PlacementState {
 
+//! This core owns one dock's persisted placement invariant only. It does not
+//! consume peer footprints: a bottom dock's alignment currently changes a
+//! vertical neighbor's available height and therefore its local AutoSize
+//! result. That confirmed cross-dock chain belongs to the forthcoming explicit
+//! output-edge solver, together with same-edge rank and cumulative reservation.
+//! Adding peer corrections here would preserve the current split reservation
+//! model instead of giving it one owner.
+
 //! Physical output edge. The closed enum keeps floating and unknown locations
 //! out of the pure placement domain; QML-facing bridges refuse those values.
 enum class OutputEdge {
@@ -148,6 +156,12 @@ private:
 //! first brought into their persisted percent domains, then the offset is
 //! bounded against the effective maximum. Edge offsets are always inward and
 //! therefore non-negative; centered offsets may move in either direction.
+//!
+//! DEVIATION from Qt5: its alignment-change path wrote the new physical
+//! alignment without revalidating offset, so a negative Center offset became a
+//! negative edge margin. This maintained continuation treats that reachable
+//! off-output placement as an upstream defect and normalizes the whole state at
+//! every entry point.
 inline NormalizedPlacement normalize(RequestedPlacement requested)
 {
     Q_ASSERT(std::isfinite(requested.minLengthPercent)

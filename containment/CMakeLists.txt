@@ -10,6 +10,7 @@ set(containment_SRCS
     plugin/colorizerdecider.cpp
     plugin/backgroundstateresolver.cpp
     plugin/maskgeometrybridge.cpp
+    plugin/placementnormalizer.cpp
     plugin/layoutmanager.cpp
     plugin/lattecontainmentplugin.cpp
 )
@@ -23,6 +24,10 @@ target_link_libraries(lattecontainmentplugin
                       KF6::ConfigQml
                       Plasma::Plasma
                       Plasma::PlasmaQuick)
+
+target_include_directories(lattecontainmentplugin PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
 
 install(TARGETS lattecontainmentplugin DESTINATION ${KDE_INSTALL_QMLDIR}/org/kde/latte/private/containment)
 

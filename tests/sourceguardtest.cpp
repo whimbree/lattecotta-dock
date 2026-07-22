@@ -18,6 +18,8 @@
 //     window properties stay coalesced
 //   * VisibilityManager strut routing: discrete exclusive-zone thickness
 //     changes publish directly while geometry churn stays throttled
+//   * Containment placement routing: startup, orientation changes, and the
+//     live View alignment signal all use the normalized placement transaction
 //   * SC-T3 (the D29 narrow middle-click dispatch readback): the production QML
 //     branch, stable identity, reporter aliases, and containment-lifecycle scope
 //
@@ -229,6 +231,7 @@ private Q_SLOTS:
     void windowsTrackerBinding_keepsRequesters();
     void waylandWindowSignals_keepDeliveryPolicy();
     void visibilityManager_strutThicknessBypassesGeometryThrottle();
+    void containmentPlacement_routesEveryAlignmentEntryThroughNormalizer();
     void middleClickDispatch_keepsProductionRecordingContract();
     void middleClickDispatch_keepsContainmentLifecycleScope();
     void middleClickDispatch_sourceGuardsRejectControlledMutations();
@@ -347,6 +350,47 @@ void SourceGuardTest::visibilityManager_strutThicknessBypassesGeometryThrottle()
     QCOMPARE(s.count(QStringLiteral("&ViewPart::Positioner::isOffScreenChanged")), 1);
     QVERIFY2(s.contains(QStringLiteral("connect(m_latteView->positioner(),&ViewPart::Positioner::isOffScreenChanged,this,&VisibilityManager::updateStrutsAfterTimer)")),
              "isOffScreenChanged must retain the floating-panel feedback throttle");
+}
+
+void SourceGuardTest::containmentPlacement_routesEveryAlignmentEntryThroughNormalizer()
+{
+    const QString source = readFile(QStringLiteral("containment/package/contents/ui/main.qml"));
+    const QString transaction = stripped(functionBody(
+        source, QStringLiteral("function applyNormalizedPlacement(requestedAlignment)")));
+    QVERIFY2(!transaction.isEmpty(), "applyNormalizedPlacement() not found");
+    QVERIFY2(transaction.contains(QStringLiteral(
+                 "placementNormalizer.normalize(Plasmoid.location,requestedAlignment,"
+                 "Plasmoid.configuration.minLength,Plasmoid.configuration.maxLength,"
+                 "Plasmoid.configuration.offset)")),
+             "the containment transaction must delegate the complete state to PlacementNormalizer");
+
+    const int offsetWrite = transaction.indexOf(QStringLiteral(
+        "Plasmoid.configuration.offset=normalized.offset;"));
+    const int alignmentWrite = transaction.indexOf(QStringLiteral(
+        "Plasmoid.configuration.alignment=normalized.alignment;"));
+    QVERIFY2(offsetWrite >= 0 && alignmentWrite > offsetWrite,
+             "normalized offset must commit before edge alignment can consume it");
+
+    const QString alignmentHandler = stripped(functionBody(source,
+                                                             QStringLiteral("onAlignmentChanged:")));
+    QVERIFY2(alignmentHandler.contains(
+                 QStringLiteral("root.applyNormalizedPlacement(latteView.alignment);")),
+             "the real View alignment signal must use the placement transaction");
+    QVERIFY2(!alignmentHandler.contains(
+                 QStringLiteral("Plasmoid.configuration.alignment=latteView.alignment;")),
+             "the real View alignment signal must not write raw alignment");
+
+    const QString orientationHandler = stripped(functionBody(source,
+                                                               QStringLiteral("onIsVerticalChanged:")));
+    QVERIFY2(orientationHandler.contains(QStringLiteral(
+                 "applyNormalizedPlacement(Plasmoid.configuration.alignment);")),
+             "orientation changes must translate semantic alignment through the transaction");
+
+    const QString startupHandler = stripped(functionBody(source,
+                                                           QStringLiteral("Component.onCompleted:")));
+    QVERIFY2(startupHandler.contains(QStringLiteral(
+                 "applyNormalizedPlacement(Plasmoid.configuration.alignment);")),
+             "startup restoration must normalize persisted placement before layout restore");
 }
 
 void SourceGuardTest::middleClickDispatch_keepsProductionRecordingContract()

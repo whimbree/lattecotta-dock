@@ -32,6 +32,12 @@ class LengthOffsetClampBridge : public QObject
 public:
     explicit LengthOffsetClampBridge(QObject *parent = nullptr);
 
+    //! Complete placement write -> {accepted, maxLength, minLength, offset}.
+    //! Used by startup restoration and settings handlers that write a fine
+    //! value directly rather than going through a slider-specific operation.
+    Q_INVOKABLE QVariantMap normalizePlacement(double maxLength, double minLength,
+                                                double offset, int alignment) const;
+
     //! ruler wheel step -> {maxLength, minLength, offset}
     Q_INVOKABLE QVariantMap clampMaxLengthByStep(double maxLength, double minLength,
                                                  double offset, double step,

@@ -5,9 +5,14 @@
 */
 
 #include "../../app/settings/placementstate.h"
+#include "../../containment/plugin/placementnormalizer.h"
+#include <coretypes.h>
 
 // Qt
 #include <QTest>
+
+// Plasma
+#include <Plasma/Plasma>
 
 // C++
 #include <array>
@@ -23,6 +28,8 @@ private Q_SLOTS:
     void normalizationMatrix_keepsSolvedExtentInsideOutput();
     void centerToEdgeTransition_removesNegativeOffset();
     void normalization_isIdempotent();
+    void qmlBoundary_translatesAndNormalizesAtomically();
+    void qmlBoundary_refusesUnknownEnums();
 };
 
 void PlacementStateTest::semanticAlignment_translatesAcrossEveryEdge()
@@ -121,6 +128,53 @@ void PlacementStateTest::normalization_isIdempotent()
             }
         }
     }
+}
+
+void PlacementStateTest::qmlBoundary_translatesAndNormalizesAtomically()
+{
+    Latte::Containment::PlacementNormalizer normalizer;
+
+    const QVariantMap horizontal = normalizer.normalize(Plasma::Types::BottomEdge,
+                                                        Latte::Types::Top,
+                                                        20.0, 60.0, -17.0);
+    QCOMPARE(horizontal.value(QStringLiteral("accepted")).toBool(), true);
+    QCOMPARE(horizontal.value(QStringLiteral("alignment")).toInt(),
+             static_cast<int>(Latte::Types::Left));
+    QCOMPARE(horizontal.value(QStringLiteral("offset")).toDouble(), 0.0);
+
+    const QVariantMap vertical = normalizer.normalize(Plasma::Types::LeftEdge,
+                                                      Latte::Types::Right,
+                                                      20.0, 60.0, 13.0);
+    QCOMPARE(vertical.value(QStringLiteral("accepted")).toBool(), true);
+    QCOMPARE(vertical.value(QStringLiteral("alignment")).toInt(),
+             static_cast<int>(Latte::Types::Bottom));
+    QCOMPARE(vertical.value(QStringLiteral("offset")).toDouble(), 13.0);
+
+    const QVariantMap centered = normalizer.normalize(Plasma::Types::RightEdge,
+                                                      Latte::Types::Center,
+                                                      20.0, 60.0, -17.0);
+    QCOMPARE(centered.value(QStringLiteral("alignment")).toInt(),
+             static_cast<int>(Latte::Types::Center));
+    QCOMPARE(centered.value(QStringLiteral("offset")).toDouble(), -17.0);
+}
+
+void PlacementStateTest::qmlBoundary_refusesUnknownEnums()
+{
+    Latte::Containment::PlacementNormalizer normalizer;
+
+    QTest::ignoreMessage(QtCriticalMsg,
+                         "PlacementNormalizer.normalize: refused invalid placement, location 0 alignment 0 min/max/offset 20 60 0");
+    const QVariantMap floating = normalizer.normalize(Plasma::Types::Floating,
+                                                      Latte::Types::Center,
+                                                      20.0, 60.0, 0.0);
+    QCOMPARE(floating.value(QStringLiteral("accepted")).toBool(), false);
+
+    QTest::ignoreMessage(QtCriticalMsg,
+                         "PlacementNormalizer.normalize: refused invalid placement, location 4 alignment -1 min/max/offset 20 60 0");
+    const QVariantMap none = normalizer.normalize(Plasma::Types::BottomEdge,
+                                                  Latte::Types::NoneAlignment,
+                                                  20.0, 60.0, 0.0);
+    QCOMPARE(none.value(QStringLiteral("accepted")).toBool(), false);
 }
 
 QTEST_GUILESS_MAIN(PlacementStateTest)
