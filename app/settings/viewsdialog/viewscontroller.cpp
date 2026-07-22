@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2021 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -334,18 +335,20 @@ void Views::duplicateSelectedViews()
     Latte::Data::Layout currentlayout = m_handler->currentData();
 
     for(int i=0; i<selectedviews.rowCount(); ++i) {
+        Latte::Data::View duplicatedview = selectedviews[i].toIndependentSnapshot();
+
         if (selectedviews[i].state() == Data::View::IsCreated) {
-            QString storedviewpath = m_handler->layoutsController()->templatesKeeper()->storedView(currentlayout.id, selectedviews[i].id);
-            Latte::Data::View duplicatedview = selectedviews[i];
+            const QString storedviewpath = m_handler->layoutsController()->templatesKeeper()->storedView(currentlayout.id, selectedviews[i].id);
             duplicatedview.setState(Data::View::OriginFromLayout, storedviewpath, currentlayout.id, selectedviews[i].id);
-            duplicatedview.isActive = false;
-            appendViewFromViewTemplate(duplicatedview);
         } else if (selectedviews[i].state() == Data::View::OriginFromViewTemplate
                    || selectedviews[i].state() == Data::View::OriginFromLayout) {
-            Latte::Data::View duplicatedview = selectedviews[i];
-            duplicatedview.isActive = false;
-            appendViewFromViewTemplate(duplicatedview);
+            //! The origin metadata is already suitable for another import.
+        } else {
+            continue;
         }
+
+        duplicatedview.isActive = false;
+        appendViewFromViewTemplate(duplicatedview);
     }
 }
 
@@ -1090,4 +1093,3 @@ void Views::saveConfig()
 }
 }
 }
-

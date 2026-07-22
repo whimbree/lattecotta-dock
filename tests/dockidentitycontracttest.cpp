@@ -117,12 +117,18 @@ void DockIdentityContractTest::duplicateNormalizesRelationshipBeforeImport()
     const QString create = normalized(functionBody(viewSource, QStringLiteral("void View::createViewFromTemplate")));
 
     const int independent = create.indexOf(QStringLiteral("relationship==TemplateImportRelationship::IndependentSnapshot"));
-    const int clearSource = create.indexOf(QStringLiteral("nextdata.isClonedFrom=Data::View::ISCLONEDNULL"), independent);
-    const int clearScreenGroup = create.indexOf(QStringLiteral("nextdata.screensGroup=Latte::Types::SingleScreenGroup"), clearSource);
-    const int import = create.indexOf(QStringLiteral("m_layout->newView(nextdata);"), clearScreenGroup);
+    const int normalize = create.indexOf(QStringLiteral("templateviews[0].toIndependentSnapshot()"), independent);
+    const int import = create.indexOf(QStringLiteral("m_layout->newView(nextdata);"), normalize);
 
-    QVERIFY2(independent >= 0 && clearSource > independent && clearScreenGroup > clearSource && import > clearScreenGroup,
-             "independent duplication must clear both persisted relationship fields before import");
+    QVERIFY2(independent >= 0 && normalize > independent && import > normalize,
+             "live-view duplication must normalize relationship state before import");
+
+    const QString settingsSource = readFile(QStringLiteral("app/settings/viewsdialog/viewscontroller.cpp"));
+    const QString duplicateSelected = normalized(functionBody(settingsSource, QStringLiteral("void Views::duplicateSelectedViews")));
+    const int settingsNormalize = duplicateSelected.indexOf(QStringLiteral("selectedviews[i].toIndependentSnapshot()"));
+    const int settingsAppend = duplicateSelected.indexOf(QStringLiteral("appendViewFromViewTemplate(duplicatedview);"), settingsNormalize);
+    QVERIFY2(settingsNormalize >= 0 && settingsAppend > settingsNormalize,
+             "layouts-dialog duplication must normalize relationship state before import");
 
     const QString menuSource = readFile(QStringLiteral("containmentactions/contextmenu/menu.cpp"));
     const QString visibility = normalized(functionBody(menuSource, QStringLiteral("void Menu::updateVisibleActions")));

@@ -629,15 +629,19 @@ void View::createViewFromTemplate(const QString &templateFile, const TemplateImp
         return;
     }
 
-    Data::View nextdata = templateviews[0];
+    Data::View nextdata = relationship == TemplateImportRelationship::IndependentSnapshot
+            ? templateviews[0].toIndependentSnapshot()
+            : templateviews[0];
 
     if (relationship == TemplateImportRelationship::IndependentSnapshot) {
         //! Duplicate Dock copies configuration values, not the source's dock
-        //! relationship. Clearing both persisted relationship fields prevents
+        //! relationship. The shared value transformation clears both persisted
+        //! relationship fields before any Duplicate entry point imports data.
+        //! This prevents
         //! an All Screens source from spawning a new linked replica ensemble
         //! and prevents a visible replica from retaining its original.
-        nextdata.isClonedFrom = Data::View::ISCLONEDNULL;
-        nextdata.screensGroup = Latte::Types::SingleScreenGroup;
+        Q_ASSERT(nextdata.isClonedFrom == Data::View::ISCLONEDNULL);
+        Q_ASSERT(nextdata.screensGroup == Latte::Types::SingleScreenGroup);
     }
 
     const int scrId = onPrimary() ? m_corona->screenPool()->primaryScreenId() : m_positioner->currentScreenId();
