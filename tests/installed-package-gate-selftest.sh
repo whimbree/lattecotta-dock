@@ -25,6 +25,40 @@ repo="$(cd "$script_dir/.." && pwd -P)"
 gate="$repo/scripts/installed-package-gate.sh"
 source "$repo/scripts/lib-installed-package-gate.sh"
 
+fixture_ancestor_has_development_marker() {
+    local ancestor="$1"
+    [[ -e "$ancestor/.git" || -f "$ancestor/CMakeLists.txt" \
+            || -f "$ancestor/CMakeCache.txt" || -d "$ancestor/CMakeFiles" ]]
+}
+
+find_fixture_development_ancestor() {
+    local current_ancestor="$1" marker_predicate="$2" output_name="$3"
+    local -n output_ancestor="$output_name"
+    output_ancestor=""
+    while :; do
+        if "$marker_predicate" "$current_ancestor"; then
+            output_ancestor="$current_ancestor"
+            return 0
+        fi
+        [[ "$current_ancestor" != / ]] || break
+        current_ancestor="$(dirname "$current_ancestor")"
+    done
+    return 1
+}
+
+require_marker_free_fixture_ancestry() {
+    local fixture_path="$1"
+    local marker_predicate="${2:-fixture_ancestor_has_development_marker}"
+    local marked_ancestor=""
+    if find_fixture_development_ancestor \
+            "$fixture_path" "$marker_predicate" marked_ancestor; then
+        echo "installed-package-gate-selftest: FAIL: live-root fixture parent has a source/build-marked ancestor: $marked_ancestor" >&2
+        echo "  Set LATTE_PACKAGE_GATE_SELFTEST_TMPDIR to a marker-free writable directory." >&2
+        return 2
+    fi
+    return 0
+}
+
 # --root / fixtures use real host-absolute paths. Their ancestry is therefore
 # part of the production provenance contract, unlike an isolated package root.
 # Keep the synthetic live tree outside source/build-marked ancestors so those
@@ -34,18 +68,25 @@ fixture_parent="${LATTE_PACKAGE_GATE_SELFTEST_TMPDIR:-${XDG_RUNTIME_DIR:-/var/tm
     || { echo "installed-package-gate-selftest: FAIL: fixture parent must be an absolute writable directory: $fixture_parent" >&2; exit 1; }
 fixture_parent="$(realpath "$fixture_parent")" \
     || { echo "installed-package-gate-selftest: FAIL: fixture parent cannot be resolved: $fixture_parent" >&2; exit 1; }
-fixture_ancestor="$fixture_parent"
-# The production live-root walk intentionally checks every real ancestor.
-while [[ "$fixture_ancestor" != / ]]; do
-    if [[ -e "$fixture_ancestor/.git" || -f "$fixture_ancestor/CMakeLists.txt" \
-            || -f "$fixture_ancestor/CMakeCache.txt" || -d "$fixture_ancestor/CMakeFiles" ]]; then
-        echo "installed-package-gate-selftest: FAIL: live-root fixture parent has a source/build-marked ancestor: $fixture_ancestor" >&2
-        echo "  Set LATTE_PACKAGE_GATE_SELFTEST_TMPDIR to a marker-free writable directory." >&2
-        exit 1
-    fi
-    fixture_ancestor="$(dirname "$fixture_ancestor")"
-done
-unset fixture_ancestor
+
+# The injected predicate proves the production-aligned preflight checks /,
+# without creating a source/build marker on the real host root.
+fixture_root_marker_probe() {
+    [[ "$1" == / ]]
+}
+set +e
+fixture_root_probe_output="$(require_marker_free_fixture_ancestry \
+    "$fixture_parent" fixture_root_marker_probe 2>&1)"
+fixture_root_probe_status=$?
+set -e
+[[ "$fixture_root_probe_status" -eq 2 \
+        && "$fixture_root_probe_output" == *"source/build-marked ancestor: /"* ]] \
+    || { echo "installed-package-gate-selftest: FAIL: live-root fixture preflight did not reject an injected host-root marker" >&2; exit 1; }
+unset -f fixture_root_marker_probe
+unset fixture_root_probe_output fixture_root_probe_status
+echo "PASS: live-root fixture preflight rejects a source/build marker at host root"
+
+require_marker_free_fixture_ancestry "$fixture_parent"
 
 work="$(mktemp -d "$fixture_parent/latte-installed-gate-selftest.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
@@ -1327,4 +1368,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (90 focused controls)"
+echo "installed-package-gate-selftest: PASS (91 focused controls)"
