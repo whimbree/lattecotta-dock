@@ -11,6 +11,7 @@
 // local
 #include <coretypes.h>
 #include "schemecolors.h"
+#include "ignoredwindowregistry.h"
 #include "tasktools.h"
 #include "windowinfowrap.h"
 #include "tracker/windowstracker.h"
@@ -113,8 +114,8 @@ public:
     QString currentDesktop();
     QString currentActivity();
 
-    virtual void registerIgnoredWindow(WindowId wid);
-    virtual void unregisterIgnoredWindow(WindowId wid);
+    virtual void registerIgnoredWindow(WindowId wid, const QObject *owner);
+    virtual void unregisterIgnoredWindow(WindowId wid, const QObject *owner);
 
     void registerPlasmaIgnoredWindow(WindowId wid);
     void unregisterPlasmaIgnoredWindow(WindowId wid);
@@ -159,7 +160,7 @@ protected:
 
     //! windows that must be ignored from tracking, a good example are Latte::Views and
     //! their Configuration windows
-    QList<WindowId> m_ignoredWindows;
+    IgnoredWindowRegistry m_ignoredWindowRegistry;
     //! identified plasma panels
     QList<WindowId> m_plasmaIgnoredWindows;
 

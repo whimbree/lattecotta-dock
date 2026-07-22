@@ -131,6 +131,12 @@ latte_add_unit_test(windowidtest)
 target_include_directories(windowidtest PRIVATE
     ${CMAKE_SOURCE_DIR}/app)
 
+# Owner-aware ignored-window registrations: one owner's teardown cannot make a
+# window trackable while another exclusion remains.
+latte_add_unit_test(ignoredwindowregistrytest)
+target_include_directories(ignoredwindowregistrytest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app)
+
 latte_add_unit_test(extraviewhintstest)
 target_include_directories(extraviewhintstest PRIVATE
     ${CMAKE_SOURCE_DIR}/app)

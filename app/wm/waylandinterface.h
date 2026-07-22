@@ -84,8 +84,7 @@ public:
     void setFrameExtents(QWindow *view, const QMargins &margins) override;
     void setInputMask(QWindow *window, const QRect &rect) override;
 
-    void registerIgnoredWindow(WindowId wid) override;
-    void unregisterIgnoredWindow(WindowId wid) override;
+    void registerIgnoredWindow(WindowId wid, const QObject *owner) override;
 
     void initWindowManagement(KWayland::Client::PlasmaWindowManagement *windowManagement);
 

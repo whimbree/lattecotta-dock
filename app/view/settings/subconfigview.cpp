@@ -116,7 +116,7 @@ SubConfigView::~SubConfigView()
 
     m_corona->dialogShadows()->removeWindow(this);
 
-    m_corona->wm()->unregisterIgnoredWindow(m_waylandWindowId);
+    m_corona->wm()->unregisterIgnoredWindow(m_waylandWindowId, this);
 
     for (const auto &var : connections) {
         QObject::disconnect(var);
@@ -345,11 +345,11 @@ void SubConfigView::updateWaylandId()
 
     if (m_waylandWindowId != newId) {
         if (!m_waylandWindowId.isEmpty()) {
-            m_corona->wm()->unregisterIgnoredWindow(m_waylandWindowId);
+            m_corona->wm()->unregisterIgnoredWindow(m_waylandWindowId, this);
         }
 
         m_waylandWindowId = newId;
-        m_corona->wm()->registerIgnoredWindow(m_waylandWindowId);
+        m_corona->wm()->registerIgnoredWindow(m_waylandWindowId, this);
     }
 }
 

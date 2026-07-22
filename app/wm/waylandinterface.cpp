@@ -63,7 +63,7 @@ void WaylandInterface::initWindowManagement(KWayland::Client::PlasmaWindowManage
     connect(m_windowManagement, &PlasmaWindowManagement::windowCreated, this, &WaylandInterface::windowCreatedProxy);
     connect(m_windowManagement, &PlasmaWindowManagement::activeWindowChanged, this, [&]() noexcept {
         auto w = m_windowManagement->activeWindow();
-        if (!w || (w && (!m_ignoredWindows.contains(WindowId::fromWaylandUuid(w->uuid())))) ) {
+        if (!w || (w && !m_ignoredWindowRegistry.contains(WindowId::fromWaylandUuid(w->uuid())))) {
             Q_EMIT activeWindowChanged(w ? WindowId::fromWaylandUuid(w->uuid()) : WindowId());
         }
 
@@ -130,26 +130,17 @@ KWayland::Client::PlasmaShell *WaylandInterface::waylandCoronaInterface() const
 }
 
 //! Register Latte Ignored Windows in order to NOT be tracked
-void WaylandInterface::registerIgnoredWindow(WindowId wid)
+void WaylandInterface::registerIgnoredWindow(WindowId wid, const QObject *owner)
 {
-    if (!wid.isEmpty() && !m_ignoredWindows.contains(wid)) {
-        m_ignoredWindows.append(wid);
+    const bool alreadyIgnored = m_ignoredWindowRegistry.contains(wid);
+    AbstractWindowInterface::registerIgnoredWindow(wid, owner);
 
+    if (!alreadyIgnored && m_ignoredWindowRegistry.contains(wid)) {
         KWayland::Client::PlasmaWindow *w = windowFor(wid);
 
         if (w) {
             untrackWindow(w);
         }
-
-        Q_EMIT windowChanged(wid);
-    }
-}
-
-void WaylandInterface::unregisterIgnoredWindow(WindowId wid)
-{
-    if (m_ignoredWindows.contains(wid)) {
-        m_ignoredWindows.removeAll(wid);
-        Q_EMIT windowRemoved(wid);
     }
 }
 
@@ -746,7 +737,7 @@ bool WaylandInterface::isAcceptableWindow(const KWayland::Client::PlasmaWindow *
     } else if ((w->appId() == QLatin1String("latte-dock"))
                || (w->appId().startsWith(QLatin1String("ksmserver")))) {
         if (isFullScreenWindow(w)) {
-            registerIgnoredWindow(WindowId::fromWaylandUuid(w->uuid()));
+            registerIgnoredWindow(WindowId::fromWaylandUuid(w->uuid()), w);
             return false;
         }
     }

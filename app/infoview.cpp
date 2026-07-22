@@ -136,11 +136,11 @@ void InfoView::updateWaylandId()
 
     if (m_trackedWindowId != newId) {
         if (!m_trackedWindowId.isEmpty()) {
-            m_corona->wm()->unregisterIgnoredWindow(m_trackedWindowId);
+            m_corona->wm()->unregisterIgnoredWindow(m_trackedWindowId, this);
         }
 
         m_trackedWindowId = newId;
-        m_corona->wm()->registerIgnoredWindow(m_trackedWindowId);
+        m_corona->wm()->registerIgnoredWindow(m_trackedWindowId, this);
     }
 }
 

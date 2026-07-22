@@ -135,7 +135,7 @@ Tracker::Windows *AbstractWindowInterface::windowsTracker() const
 
 bool AbstractWindowInterface::isIgnored(const WindowId &wid) const
 {
-    return WindowTrackingPredicates::isIgnored(m_ignoredWindows, wid);
+    return WindowTrackingPredicates::isIgnored(m_ignoredWindowRegistry.windows(), wid);
 }
 
 bool AbstractWindowInterface::isFullScreenWindow(const QRect &wGeometry) const
@@ -220,7 +220,7 @@ bool AbstractWindowInterface::isSidepanel(const QRect &wGeometry) const
 //! lives in WindowTrackingPredicates with a pinned truth table
 bool AbstractWindowInterface::hasBlockedTracking(const WindowId &wid) const
 {
-    return WindowTrackingPredicates::hasBlockedTracking(m_ignoredWindows, m_plasmaIgnoredWindows, m_whitelistedWindows, wid);
+    return WindowTrackingPredicates::hasBlockedTracking(m_ignoredWindowRegistry.windows(), m_plasmaIgnoredWindows, m_whitelistedWindows, wid);
 }
 
 bool AbstractWindowInterface::isRegisteredPlasmaIgnoredWindow(const WindowId &wid) const
@@ -278,18 +278,28 @@ void AbstractWindowInterface::onVirtualDesktopNavigationWrappingAroundChanged(bo
 }
 
 //! Register Latte Ignored Windows in order to NOT be tracked
-void AbstractWindowInterface::registerIgnoredWindow(WindowId wid)
+void AbstractWindowInterface::registerIgnoredWindow(WindowId wid, const QObject *owner)
 {
-    if (!wid.isEmpty() && !m_ignoredWindows.contains(wid)) {
-        m_ignoredWindows.append(wid);
+    if (!owner) {
+        qWarning() << "AbstractWindowInterface: refused ignored-window registration without an owner for" << wid;
+        return;
+    }
+
+    const auto change = m_ignoredWindowRegistry.registerOwner(wid, reinterpret_cast<quintptr>(owner));
+    if (change == IgnoredWindowRegistry::Change::BecameIgnored) {
         Q_EMIT windowChanged(wid);
     }
 }
 
-void AbstractWindowInterface::unregisterIgnoredWindow(WindowId wid)
+void AbstractWindowInterface::unregisterIgnoredWindow(WindowId wid, const QObject *owner)
 {
-    if (m_ignoredWindows.contains(wid)) {
-        m_ignoredWindows.removeAll(wid);
+    if (!owner) {
+        qWarning() << "AbstractWindowInterface: refused ignored-window removal without an owner for" << wid;
+        return;
+    }
+
+    const auto change = m_ignoredWindowRegistry.unregisterOwner(wid, reinterpret_cast<quintptr>(owner));
+    if (change == IgnoredWindowRegistry::Change::BecameTrackable) {
         Q_EMIT windowRemoved(wid);
     }
 }
@@ -330,9 +340,7 @@ void AbstractWindowInterface::windowRemovedSlot(WindowId wid)
         unregisterPlasmaIgnoredWindow(wid);
     }
 
-    if (m_ignoredWindows.contains(wid)) {
-        unregisterIgnoredWindow(wid);
-    }
+    static_cast<void>(m_ignoredWindowRegistry.clear(wid));
 
     if (m_whitelistedWindows.contains(wid)) {
         unregisterWhitelistedWindow(wid);

@@ -14,6 +14,7 @@ app/view/inputmaskflush.h
 app/view/positionergeometry.h
 app/view/settings/retargetrequeststate.h
 app/view/viewactionpolicy.h
+app/wm/ignoredwindowregistry.h
 app/wm/windowid.h
 app/wm/windowtrackingpredicates.h
 app/wm/tracker/extraviewhints.h
