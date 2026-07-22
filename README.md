@@ -57,6 +57,9 @@ and the full settings UI. Beyond upstream parity, the port has grown
 continuation features of its own, the first being resizable applet popups
 with per-applet size persistence.
 
+Dock identity boundaries keep screen-group clones inside one original's
+lifecycle and treat independent duplicates as separate docks.
+
 The stabilization initiative is complete: the feel-critical QML math
 (parabolic zoom, previews, launcher ordering, drag classification,
 visibility masks, badges, scrolling, colorization decisions) lives in

@@ -782,6 +782,35 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - ROOT: making two observational View accessors const modified both source
   files without adding the current 2026 modification copyright line.
 - FIX: retain all existing SPDX lines and add Bree Spektor to both files.
+### D77 - Dock duplication retains clone lineage and edit ownership
+- STATUS: FIXED on `fix/dock-identity-isolation` (`8855bb8b9`, `50ea86092`,
+  `7e036a789`, `5fc6e786f`, `7b900efd2`, `88a3ec931`, `6c39171b8`; focused
+  caller contract `dbbbe842a`).
+- FOUND: 2026-07-21, dock duplication and edit-mode identity investigation.
+- SYMPTOM: duplicating a screen-group clone through a non-menu action produced
+  another clone instead of an independent dock. Rapid edit retargets could
+  leave an older containment configuring, clone edit exit could miss the
+  original session, and runtime recreation could temporarily expose
+  original-only context-menu actions on a persistent clone.
+- ROOT CAUSE: clone capabilities were presentation policy rather than runtime
+  policy, so public action boundaries still accepted clone `Data::View` with
+  its `isClonedFrom` ancestry. The shared edit chrome queued unversioned
+  retarget callbacks and entry and exit did not resolve one authoritative
+  target. Clone membership and several Wayland registrations also lacked
+  explicit lifetime ownership.
+- FIX: one role-and-action policy refuses duplicate, export, move, and remove
+  for clones while leaving originals fully capable. Edit retargeting is
+  cancelable and generation-checked, ends the old configuring session before
+  rebind, and resolves clone entry and exit to the same original. Clone
+  membership is destruction-safe. Exact Wayland title matching, owner-counted
+  ignored windows, replaceable output subscriptions, and persistent
+  containment identity close the related runtime ownership gaps.
+- EVIDENCE: sanitizer-backed `viewactionpolicytest`,
+  `retargetrequeststatetest`, `windowtrackingpredicatestest`, and
+  `ignoredwindowregistrytest` pass. `dockidentitycontracttest` pins the
+  production boundaries. `lattedock-core` and the containment-actions plugin
+  compile successfully. No live-desktop, nested-KWin, or full-gate result is
+  claimed for this focused branch.
 
 ## Recorded elsewhere - indexed here so the flat scan is complete
 

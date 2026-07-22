@@ -173,6 +173,30 @@ work is SC-D1 (the pointer and keyboard control drivers), which remains
 unchecked. SC-A5 (the move-current-view-to-another-layout action) remains
 approval-required, unapproved, and unchecked. No adjacent work was completed.
 
+## 2026-07-21: D77 dock identity isolation prepared for draft review
+
+D77 (dock duplication retains clone lineage and edit ownership) is fixed on
+`fix/dock-identity-isolation` and is ready for a draft PR and independent cold
+diff review. The implementation is intentionally limited to the first identity
+and lifecycle slice in `docs/tracking/DOCK_IDENTITY_HARDENING.md`.
+
+The branch commits establish a shared original/clone capability policy
+(`8855bb8b9`), serialize settings-chrome ownership and clone edit targeting
+(`50ea86092`), retire clone membership during destruction (`7e036a789`), require
+exact Wayland window titles (`5fc6e786f`), count ignored-window owners
+(`7b900efd2` plus caller contract `dbbbe842a`), replace stale output geometry
+subscriptions (`88a3ec931`), and preserve persistent clone menu identity across
+runtime view recreation (`6c39171b8`). The investigation and ownership model
+began at `21d24eedc`.
+
+Focused sanitizer-backed tests pass for action policy, retarget generations,
+exact window identity, and ignored-window ownership. The production source
+contract passes, and both `lattedock-core` and
+`plasma_containmentactions_lattecontextmenu` compile. No live desktop or full
+gate was run. No runtime view ID, dock-system D-Bus snapshot, placement
+normalization, or same-edge stack coordinator was added. Placement and stacking
+remain separate open slices.
+
 ## 2026-07-21: SC-F2 source-coverage gate merged
 
 PR #103 merged SC-F2 (the source-to-ledger coverage gate). The mandatory final

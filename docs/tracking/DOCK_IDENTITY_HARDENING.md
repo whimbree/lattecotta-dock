@@ -1,10 +1,12 @@
 # Dock identity, placement, and replication hardening
 
-Status: investigation complete, implementation pending (2026-07-21)
+Status: D77 (dock duplication retains clone lineage and edit ownership) identity
+and lifecycle slice implemented; placement and stacking slices pending
+(2026-07-21)
 
 This record defines the ownership model used to investigate dock duplication,
 screen-group cloning, edit mode, placement, and same-edge stacking. It separates
-confirmed causes from hypotheses before behavior changes land.
+confirmed causes from hypotheses and records which repairs have landed.
 
 ## Terms and identity diagram
 
@@ -39,9 +41,11 @@ Corona
   +-- output-edge stack coordinator: missing
 ```
 
-`runtime OriginalView #A` is descriptive only. The tree has no explicit runtime
-view identifier yet. A runtime generation must be added for diagnostics and for
-rejecting stale deferred work. It is never persisted.
+`runtime OriginalView #A` is descriptive only. This slice adds no runtime view
+identifier or dock-system snapshot. Edit-chrome retargeting carries its own
+process-local request generation because that is the boundary with deferred
+work. Broader runtime identity diagnostics remain a separate observability
+decision.
 
 ## Identity and ownership map
 
@@ -50,7 +54,7 @@ rejecting stale deferred work. It is never persisted.
 | Logical dock | One independent containment, or one original plus its explicit screen-group clones | Original persistent containment | Original containment ID | Independent duplication creates a new logical dock | Identity stays stable | Selects the intended edit target | Ends when the original and its explicit clones are removed |
 | Persistent dock record | Unique per containment | Layout configuration | Containment ID | All containment and applet IDs are regenerated | Screen, edge, alignment, and length state update on the same record | Supplies menu and edit target identity | Removed with the containment configuration |
 | Containment | Unique per visible original or clone | Plasma Corona and layout | Containment ID | Must be newly imported with remapped IDs | Persists placement and QML configuration | Own `userConfiguring` is the per-view edit presentation state | Destroyed by layout removal; no runtime view may retain it |
-| Runtime dock view | Unique QObject and QWindow per active containment | `GenericLayout` containment-to-view map | Not persisted | Constructed fresh | Remaps or recreates its layer surface and keeps its runtime generation | Holds only a non-owning pointer to shared edit chrome | Disconnects, unregisters, and deletes all child managers |
+| Runtime dock view | Unique QObject and QWindow per active containment | `GenericLayout` containment-to-view map | Not persisted | Constructed fresh | Remaps or recreates its layer surface | Holds only a non-owning pointer to shared edit chrome | Disconnects, unregisters, and deletes all child managers |
 | Per-output view | A screen-group clone is one separate containment and runtime view | `OriginalView` owns clone membership; layout owns runtime registration | Clone containment ID plus `isClonedFrom` | Independent duplication must not create this relationship | Screen-group policy derives output placement; runtime geometry remains local | Clone edit requests intentionally resolve to the original | Clone must unregister from the original before destruction |
 | Clone relationship | Shared logical group, explicit and acyclic | Original persistent dock | Clone record's `isClonedFrom` | Copied only when duplicating a complete logical group, never a single independent dock | Source remains valid and placement policy is explicit | Menu wording and edit targeting use the same relation | Source removal destroys or detaches all clones without dangling members |
 | Applet layout | Unique QML object and applet IDs per containment | Containment runtime | Applet groups under containment ID | Deep-copied and ID-remapped | Local geometry recalculates for that view | Its containment controls edit presentation | Destroyed with containment and view |
@@ -62,25 +66,28 @@ rejecting stale deferred work. It is never persisted.
 
 ## Confirmed causes
 
-### Independent duplication can preserve clone ancestry
+### Independent duplication can preserve clone ancestry (fixed)
 
-The D-Bus `duplicateView()` action accepts a `ClonedView`, although the clone's
-context menu hides Duplicate Dock. `ClonedView::data()` records the original
-containment in `isClonedFrom`. Storage first remaps an orphaned source to `-1`,
-then `Storage::newView()` overlays the captured `Data::View` and writes the old
-`isClonedFrom` value back. The result is another live clone rather than an
-independent duplicate.
+Before the repair, the D-Bus `duplicateView()` action accepted a `ClonedView`,
+although the clone's context menu hid Duplicate Dock. `ClonedView::data()`
+recorded the original containment in `isClonedFrom`. Storage first remapped an
+orphaned source to `-1`, then `Storage::newView()` overlaid the captured
+`Data::View` and wrote the old `isClonedFrom` value back. The result was another
+live clone rather than an independent duplicate. Runtime capability checks now
+refuse duplication and the other original-only actions for clone roles.
 
 This explains order-dependent clone membership, Edit Original Dock wording, and
 edit requests opening the original on another output when duplication is driven
 through D-Bus or another path that bypasses the menu restriction.
 
-### Deferred edit-chrome retargets are not cancelable
+### Deferred edit-chrome retargets are not cancelable (fixed)
 
-`PrimaryConfigView::setParentView()` schedules an unversioned 400 ms retarget.
-An A to B to C sequence can run both callbacks. The first callback starts B's
-configuring session. The second rebinds directly to C without ending B's
-session, leaving more than one containment with `userConfiguring=true`.
+`PrimaryConfigView::setParentView()` scheduled an unversioned 400 ms retarget.
+An A to B to C sequence could run both callbacks. The first callback started
+B's configuring session. The second rebound directly to C without ending B's
+session, leaving more than one containment with `userConfiguring=true`. The
+retarget is now cancelable and generation-checked, and every rebind ends the old
+session first.
 
 ### Same-edge stacking has no ownership model
 
@@ -113,14 +120,18 @@ neighbor's internal length without changing the compositor work area.
 
 ## Additional confirmed lifecycle hazards
 
-- `ClonedView` destruction does not unregister itself from `OriginalView`'s raw
-  clone list.
-- `Positioner` adds output-geometry signal connections on each output move
-  without replacing the prior set.
-- Edit-chrome title matching uses prefix matching, so a title for containment 1
-  can match containment 10.
-- The ignored-window registry is a global set without reference counts, so one
-  owner can remove an entry still required by another owner.
+- `ClonedView` destruction did not unregister itself from `OriginalView`'s raw
+  clone list. Clone membership now uses `QPointer` and unregisters before
+  teardown.
+- `Positioner` added output-geometry signal connections on each output move
+  without replacing the prior set. One owned connection now replaces the old
+  subscription.
+- Edit-chrome title matching used prefix matching, so a title for containment 1
+  could match containment 10. Wayland lookup now requires exact app ID and
+  title identity.
+- The ignored-window registry was a global set without owner counts, so one
+  owner could remove an entry still required by another owner. First-owner and
+  last-owner transitions now govern tracking.
 - D-Bus edit diagnostics report the global configure-applets flag for every
   view instead of each view's effective `editMode && configureApplets` state.
 
@@ -130,11 +141,12 @@ visible symptom.
 
 ## Minimal architectural repair
 
-1. Make relationship creation explicit. Independent duplication always clears
-   clone ancestry after ID remapping. Screen-group clone construction is the
-   only path allowed to set `isClonedFrom`.
-2. Give every runtime view a monotonic process-local generation. Delayed work
-   carries both the target and generation and is rejected when superseded.
+1. Make relationship creation explicit. Independent duplication accepts only
+   original roles and creates remapped containment and applet IDs. Screen-group
+   clone construction is the only path allowed to set `isClonedFrom`.
+2. Give each deferred edit-chrome retarget a monotonic process-local request
+   generation. Delayed work carries both the target and request generation and
+   is rejected when superseded.
 3. Make edit-chrome ownership a single transition with one cancelable pending
    target. Ending the old containment's configuring session precedes every
    rebind.
@@ -148,22 +160,27 @@ visible symptom.
 7. Replace blanket clone configuration mirroring with explicit content and
    placement projections. Existing screen-group clones may retain derived
    placement as a named policy; independent duplicates share nothing mutable.
-8. Expose one atomic, canonically sorted dock-system snapshot over D-Bus. The
-   snapshot includes relationship, runtime generation, output, placement,
-   stack, edit owner, icon sizing input, geometry, pending work, and owned
-   object identities.
+8. Keep broader runtime identity diagnostics in the observability track. This
+   repair does not add a runtime view ID or dock-system D-Bus snapshot.
 
 ## Implementation and verification slices
 
-1. Relationship, duplication, edit targeting, lifecycle cleanup, and atomic
-   identity observability.
-2. Placement normalization and bounded visible geometry across all edges and
+1. [x] Relationship capability policy, independent duplication, edit targeting,
+   lifecycle cleanup, exact Wayland identity, owner-scoped registrations, and
+   persistent context-menu identity.
+2. [ ] Placement normalization and bounded visible geometry across all edges and
    semantic alignments.
-3. Same-edge stack solving, persistence, layer-shell application, reserved
+3. [ ] Same-edge stack solving, persistence, layer-shell application, reserved
    space, and activation routing.
-4. Multi-view nested-KWin fixtures and deterministic operation replay across
+4. [ ] Multi-view nested-KWin fixtures and deterministic operation replay across
    duplication, movement, orientation, alignment, editing, destruction, and
    reload.
+
+The completed slice is covered by sanitizer-backed pure-core tests for action
+policy, retarget request generations, exact title matching, and ignored-window
+ownership, plus a production source contract and successful focused production
+compiles. No live-desktop run, nested-KWin replay, or full repository gate is
+claimed for this branch.
 
 Each slice requires a failing regression first, pure-core ASan and UBSan tests
 where a value model can carry the invariant, nested-KWin state and render
@@ -173,8 +190,8 @@ merge.
 ## Open questions requiring runtime evidence
 
 - Whether the reported Duplicate Dock sequence entered through D-Bus, an older
-  UI surface, or a screen-group operation. All can now be distinguished by the
-  authoritative relationship snapshot.
+  UI surface, or a screen-group operation. Every current action boundary now
+  applies the same role policy, but the historical entry route remains unknown.
 - Which same-edge reservation policy best matches intended daily-driver
   behavior for mixed visibility modes. The stack still requires deterministic
   physical order under every policy.

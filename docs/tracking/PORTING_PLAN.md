@@ -1245,6 +1245,28 @@ wallpaper stacking across the dock and CanvasConfigView surfaces).
 PHASE OPENED 2026-07-11 (go given), starting from live crashes on a
 multi-view, multi-monitor setup.
 
+- [x] Fix D77 (dock duplication retains clone lineage and edit ownership).
+      Clone-only actions were hidden in one menu surface but remained callable
+      through `View`, Corona, and D-Bus boundaries; deferred settings retargets
+      could rebind out of order and leave the old containment configuring; and
+      clone destruction retained raw membership in the original. Runtime action
+      policy now refuses duplicate, export, move, and remove for clones while
+      preserving every action for originals, including an All Screens original.
+      Edit entry and exit resolve one original target, the old session ends
+      before rebind, and pending retargets are cancelable and generation-checked.
+      Clone membership uses `QPointer` and unregisters before teardown. The same
+      hardening makes Wayland title lookup exact, counts ignored-window owners,
+      replaces stale output geometry subscriptions, derives context-menu clone
+      role from the persistent containment during runtime recreation, and fails
+      closed on malformed menu identity. Focused sanitizer-backed pure-core
+      tests, the dock identity source contract, and production compiles cover
+      the slice. Live-desktop, nested-KWin, and full-gate claims are deliberately
+      absent from this focused branch. Placement normalization and same-edge
+      stacking remain separate unchecked work in
+      `docs/tracking/DOCK_IDENTITY_HARDENING.md`.
+      Commits: 21d24eedc, 8855bb8b9, 50ea86092, 7e036a789,
+      5fc6e786f, 7b900efd2, dbbbe842a, 88a3ec931, 6c39171b8
+
 - [x] Bottom-dock layer surface drifts left of its reported geometry
       (filed 2026-07-17 from the e2e promotion unit, evidence in
       docs/agent-logs/2026-07-17-e2e-promotion.md finding 6; root-caused,
