@@ -1252,6 +1252,44 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   corrected runs mapped the first and retargeted canvases at the reported
   `0,88 146x824`; `layershellmappingtest` also passes.
 
+### D123 - Same-edge regression did not pin the cache key
+- STATUS: FIXED (`8bb8f7ab7`), pending PR #115.
+- FOUND: 2026-07-22, independent review of PR #115.
+- SYMPTOM: the edit-canvas regression could pass without exercising the
+  unchanged-rectangle branch that caused D122 (same-edge edit canvas retarget
+  lost layer anchors).
+- ROOT: placing both docks on the left edge was assumed to produce identical
+  canvas rectangles, but the recipe never asserted that equality.
+- FIX: read both published canvas rectangles after settlement and refuse the
+  test unless the complete cache keys are identical before edit mode opens.
+- EVIDENCE: two fresh runs report both peers at exactly `0,88 146x824` before
+  either canvas mapping is checked.
+
+### D124 - Canvas regression accepted an ambiguous layer surface
+- STATUS: FIXED (`8bb8f7ab7`), pending PR #115.
+- FOUND: 2026-07-22, independent review of PR #115.
+- SYMPTOM: a same-sized dock or stale config surface could satisfy the
+  compositor assertion before the intended edit canvas was examined.
+- ROOT: the recipe selected the first top-layer `latte-dock` surface whose
+  width and height matched the reported canvas.
+- FIX: require exactly one matching live KWin surface, compare its complete
+  geometry, retain its compositor UUID, and require a different UUID after
+  the hide-and-remap retarget.
+- EVIDENCE: two fresh runs find one exact canvas per pass and observe distinct
+  KWin UUIDs across each same-geometry retarget.
+
+### D125 - Failed duplicate discovery leaked fixture state
+- STATUS: FIXED (`8bb8f7ab7`), pending PR #115.
+- FOUND: 2026-07-22, independent review of PR #115.
+- SYMPTOM: if duplication succeeded but ID discovery timed out, cleanup could
+  stop the fixture with the extra dock still persisted for later recipes.
+- ROOT: teardown removed only the discovered `view_b`; an empty discovery
+  result discarded ownership of every newly created ID.
+- FIX: snapshot all pre-test IDs and remove every ID absent from that snapshot
+  during teardown, including partial-failure paths.
+- EVIDENCE: teardown recomputes every ID absent from the original snapshot and
+  submits each one for removal before the clean fixture stop.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.

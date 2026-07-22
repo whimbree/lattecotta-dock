@@ -67,9 +67,9 @@ Applet membership and ordinary settings stay linked, while orientation-dependent
 applet length and effective sizing remain local to each output view. Runtime
 recreation and output disconnects preserve the persistent relationship and
 rebind only the views eligible on active outputs.
-Shared edit chrome reasserts its compositor placement and view-local input mask
-when retargeting, including between separate docks that legitimately occupy the
-same output edge and canvas rectangle.
+The shared edit canvas reasserts its compositor placement and view-local input
+mask when retargeting, including between separate docks that legitimately
+occupy the same output edge and canvas rectangle.
 Legacy On All Screens members retain their derived-output behavior. A linked
 source stays protected from removal until its explicit members are removed, so
 one-containment Undo cannot leave a partial relationship.
