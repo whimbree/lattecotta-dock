@@ -15,7 +15,7 @@ high-rate traces stay in categorized logging.
 Landed before or during the 2026-07-16 stabilization session:
 
 - Actions (coarse, user-equivalent): quitApplication, addView,
-  removeView, duplicateView, moveViewToLayout, exportViewTemplate,
+  removeView, duplicateView, createLinkedView, moveViewToLayout, exportViewTemplate,
   switchToLayout, importLayoutFile, showSettingsWindow,
   toggleHiddenState, setAutostart, updateDockItemBadge,
   activateLauncherMenu, setBackgroundFromBroadcast(+enable),
@@ -79,7 +79,7 @@ Landed before or during the 2026-07-16 stabilization session:
   `editMode && universalSettings.inConfigureAppletsMode`, not the raw global
   toggle. A global rearrange session therefore does not report unrelated docks
   as configuring applets.
-- `dockSystemData() -> s` (compact JSON object, schema version 1; added by C0
+- `dockSystemData() -> s` (compact JSON object, schema version 2; added by C0
   (the atomic dock-system observability snapshot)). This is the relational
   all-docks read. One synchronous call captures the global configuration mode
   and every current dock, then serializes docks in ascending
@@ -87,7 +87,7 @@ Landed before or during the 2026-07-16 stabilization session:
   decimal string; it identifies calls, not state changes.
   ```json
   {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "snapshotSequence": "14",
     "globalConfigureAppletsMode": true,
     "stacking": {
@@ -99,9 +99,10 @@ Landed before or during the 2026-07-16 stabilization session:
       "persistentDockId": 17,
       "logicalDockId": 4,
       "originalDockId": 4,
-      "relationship": "screensGroupClone",
-      "screensGroup": "allScreens",
-      "cloneDockIds": [],
+      "relationship": "linkedMember",
+      "linkPlacement": "explicitTarget",
+      "screensGroup": "single",
+      "linkedDockIds": [],
       "layout": "My Layout",
       "screenId": 2,
       "screen": "DP-2",
@@ -153,13 +154,19 @@ Landed before or during the 2026-07-16 stabilization session:
   }
   ```
   `persistentDockId` is the Plasma containment id. `logicalDockId` is the
-  original containment id for a screens-group clone and otherwise equals the
-  persistent id. `originalDockId` is null except on clones. Duplication carries
-  no durable relation to its source. Under the current behavior, duplicating an
-  all-screens policy creates a new screens-group original and that new group's
-  own clones; duplicating a single-screen dock creates a `single` record.
-  Screens-group originals carry their canonically sorted clone ids in
-  `cloneDockIds`; other records carry an empty array.
+  direct root containment id for a linked member and otherwise equals the
+  persistent id. `originalDockId` is null except on linked members.
+  Independent duplication carries no durable relation to its source. The
+  relationship values are `independent`, `linkedRoot`, and `linkedMember`.
+  Linked roots carry their canonically sorted direct member ids in
+  `linkedDockIds`; other records carry an empty array.
+
+  A linked member's `linkPlacement` is `screenGroupDerived` for automatic
+  output fanout or `explicitTarget` for the first-class Create Linked action.
+  The field is null on independent docks and linked roots. A derived member's
+  output assignment belongs to the root screen-group policy. An explicitly
+  placed member owns its output, edge, alignment, visibility, appearance, edit
+  presentation, and removal while applet membership and settings remain linked.
 
   `runtimeViewId` and every `objects` value are opaque process-local identities.
   They are assigned monotonically on first observation, remain stable for the
@@ -173,14 +180,16 @@ Landed before or during the 2026-07-16 stabilization session:
   `effectiveIconSize` comes from the live Metrics object;
   `availablePrimaryLength` is the containment root's current logical-pixel
   `maxLength`, the length the autosizer consumes.
-  `screensGroup` is always a string in a valid response. Whole-graph validation
-  requires every clone to point directly to a present screens-group original.
-  Missing targets, standalone targets, duplicate persistent ids, clone chains,
-  and cycles invalidate the complete query. The collector logs every lineage
-  input at critical severity and returns an empty D-Bus string, never a smaller
-  but plausible JSON snapshot. The visibility, startup, relocation, deletion,
-  and ready fields come directly from View, Positioner, and VisibilityManager
-  and make unsettled records explicit.
+  `screensGroup` is always a string in a valid response. A derived member
+  reports its root's screen-group policy. An explicitly placed member reports
+  its local `single` policy. Whole-graph validation requires every linked
+  member to point directly to a present linked root. Missing targets,
+  independent targets, duplicate persistent ids, member chains, and cycles
+  invalidate the complete query. The collector logs every lineage input at
+  critical severity and returns an empty D-Bus string, never a smaller but
+  plausible JSON snapshot. The visibility, startup, relocation, deletion, and
+  ready fields come directly from View, Positioner, and VisibilityManager and
+  make unsettled records explicit.
 
   The object identities name, respectively, the View window, Plasma
   containment, live KConfig property map, GenericLayout, QML layout manager,

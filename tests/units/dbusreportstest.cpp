@@ -43,6 +43,8 @@ private Q_SLOTS:
     void screensGroupNames();
     void dockRelationshipNames_data();
     void dockRelationshipNames();
+    void linkPlacementNames_data();
+    void linkPlacementNames();
     void visibilityModeNames_data();
     void visibilityModeNames();
     void rectSerialization();
@@ -56,10 +58,10 @@ private Q_SLOTS:
     void dockCollectionOrderingStabilizesViewAndControllerTokens();
     void dockRelationshipClassification_data();
     void dockRelationshipClassification();
-    void dockRelationshipGraphAcceptsOnlyDirectLiveOriginals();
+    void dockRelationshipGraphAcceptsOnlyDirectLiveRoots();
     void dockSystemSnapshotSerializesTypedRuntimeState();
     void dockSystemSnapshotPinsNullableWireStates();
-    void dockSystemSnapshotCanonicalizesShuffledViewsAndCloneIds();
+    void dockSystemSnapshotCanonicalizesShuffledViewsAndLinkedIds();
     void dockSystemSnapshotKeepsConfigureModeIsolatedToEditedView();
 
     void appletRecordSerialization();
@@ -269,13 +271,12 @@ void DbusReportsTest::dockRelationshipNames_data()
     QTest::addColumn<int>("relationship");
     QTest::addColumn<QString>("name");
 
-    QTest::newRow("single") << static_cast<int>(DockRelationship::Single) << QStringLiteral("single");
-    QTest::newRow("screensGroupOriginal")
-        << static_cast<int>(DockRelationship::ScreensGroupOriginal)
-        << QStringLiteral("screensGroupOriginal");
-    QTest::newRow("screensGroupClone")
-        << static_cast<int>(DockRelationship::ScreensGroupClone)
-        << QStringLiteral("screensGroupClone");
+    QTest::newRow("independent")
+        << static_cast<int>(DockRelationship::Independent) << QStringLiteral("independent");
+    QTest::newRow("linkedRoot")
+        << static_cast<int>(DockRelationship::LinkedRoot) << QStringLiteral("linkedRoot");
+    QTest::newRow("linkedMember")
+        << static_cast<int>(DockRelationship::LinkedMember) << QStringLiteral("linkedMember");
 }
 
 void DbusReportsTest::dockRelationshipNames()
@@ -284,6 +285,27 @@ void DbusReportsTest::dockRelationshipNames()
     QFETCH(QString, name);
 
     QCOMPARE(dockRelationshipName(static_cast<DockRelationship>(relationship)), name);
+}
+
+void DbusReportsTest::linkPlacementNames_data()
+{
+    QTest::addColumn<int>("placement");
+    QTest::addColumn<QString>("name");
+
+    QTest::newRow("screen group derived")
+        << static_cast<int>(Data::View::LinkPlacement::ScreenGroupDerived)
+        << QStringLiteral("screenGroupDerived");
+    QTest::newRow("explicit target")
+        << static_cast<int>(Data::View::LinkPlacement::ExplicitTarget)
+        << QStringLiteral("explicitTarget");
+}
+
+void DbusReportsTest::linkPlacementNames()
+{
+    QFETCH(int, placement);
+    QFETCH(QString, name);
+
+    QCOMPARE(linkPlacementName(static_cast<Data::View::LinkPlacement>(placement)), name);
 }
 
 void DbusReportsTest::visibilityModeNames_data()
@@ -588,36 +610,59 @@ void DbusReportsTest::dockRelationshipClassification_data()
     QTest::addColumn<bool>("isOriginal");
     QTest::addColumn<bool>("isCloned");
     QTest::addColumn<bool>("isSingle");
+    QTest::addColumn<int>("linkPlacement");
     QTest::addColumn<bool>("valid");
     QTest::addColumn<uint>("logicalDockId");
     QTest::addColumn<int>("originalDockId");
     QTest::addColumn<int>("relationship");
 
     QTest::newRow("standalone")
-        << 7U << 7 << true << false << true << true
-        << 7U << -1 << static_cast<int>(DockRelationship::Single);
-    QTest::newRow("screens-group original")
-        << 30U << 30 << true << false << false << true
-        << 30U << -1 << static_cast<int>(DockRelationship::ScreensGroupOriginal);
-    QTest::newRow("valid clone")
-        << 41U << 30 << false << true << false << true
-        << 30U << 30 << static_cast<int>(DockRelationship::ScreensGroupClone);
+        << 7U << 7 << true << false << true
+        << static_cast<int>(Data::View::LinkPlacement::ScreenGroupDerived) << true
+        << 7U << -1 << static_cast<int>(DockRelationship::Independent);
+    QTest::newRow("linked root")
+        << 30U << 30 << true << false << false
+        << static_cast<int>(Data::View::LinkPlacement::ScreenGroupDerived) << true
+        << 30U << -1 << static_cast<int>(DockRelationship::LinkedRoot);
+    QTest::newRow("screen-group member")
+        << 41U << 30 << false << true << false
+        << static_cast<int>(Data::View::LinkPlacement::ScreenGroupDerived) << true
+        << 30U << 30 << static_cast<int>(DockRelationship::LinkedMember);
+    QTest::newRow("explicit member")
+        << 51U << 30 << false << true << false
+        << static_cast<int>(Data::View::LinkPlacement::ExplicitTarget) << true
+        << 30U << 30 << static_cast<int>(DockRelationship::LinkedMember);
 
-    const int ignoredRelationship = static_cast<int>(DockRelationship::Single);
+    const int derived = static_cast<int>(Data::View::LinkPlacement::ScreenGroupDerived);
+    const int ignoredRelationship = static_cast<int>(DockRelationship::Independent);
     QTest::newRow("zero persistent id")
-        << 0U << 0 << true << false << true << false << 0U << -1 << ignoredRelationship;
+        << 0U << 0 << true << false << true << derived << false
+        << 0U << -1 << ignoredRelationship;
     QTest::newRow("neither original nor clone")
-        << 7U << 7 << false << false << true << false << 0U << -1 << ignoredRelationship;
+        << 7U << 7 << false << false << true << derived << false
+        << 0U << -1 << ignoredRelationship;
     QTest::newRow("both original and clone")
-        << 7U << 7 << true << true << false << false << 0U << -1 << ignoredRelationship;
+        << 7U << 7 << true << true << false << derived << false
+        << 0U << -1 << ignoredRelationship;
     QTest::newRow("original points elsewhere")
-        << 30U << 7 << true << false << false << false << 0U << -1 << ignoredRelationship;
+        << 30U << 7 << true << false << false << derived << false
+        << 0U << -1 << ignoredRelationship;
+    QTest::newRow("original has explicit placement")
+        << 30U << 30 << true << false << false
+        << static_cast<int>(Data::View::LinkPlacement::ExplicitTarget) << false
+        << 0U << -1 << ignoredRelationship;
     QTest::newRow("clone marked single")
-        << 41U << 30 << false << true << true << false << 0U << -1 << ignoredRelationship;
+        << 41U << 30 << false << true << true << derived << false
+        << 0U << -1 << ignoredRelationship;
     QTest::newRow("clone missing original")
-        << 41U << -1 << false << true << false << false << 0U << -1 << ignoredRelationship;
+        << 41U << -1 << false << true << false << derived << false
+        << 0U << -1 << ignoredRelationship;
     QTest::newRow("self-referential clone cycle")
-        << 41U << 41 << false << true << false << false << 0U << -1 << ignoredRelationship;
+        << 41U << 41 << false << true << false << derived << false
+        << 0U << -1 << ignoredRelationship;
+    QTest::newRow("invalid placement enum")
+        << 41U << 30 << false << true << false << 99 << false
+        << 0U << -1 << ignoredRelationship;
 }
 
 void DbusReportsTest::dockRelationshipClassification()
@@ -627,13 +672,19 @@ void DbusReportsTest::dockRelationshipClassification()
     QFETCH(bool, isOriginal);
     QFETCH(bool, isCloned);
     QFETCH(bool, isSingle);
+    QFETCH(int, linkPlacement);
     QFETCH(bool, valid);
     QFETCH(uint, logicalDockId);
     QFETCH(int, originalDockId);
     QFETCH(int, relationship);
 
     const auto classification = classifyDockRelationship(DockLineageInput{
-        persistentDockId, groupId, isOriginal, isCloned, isSingle});
+        persistentDockId,
+        groupId,
+        isOriginal,
+        isCloned,
+        isSingle,
+        static_cast<Data::View::LinkPlacement>(linkPlacement)});
     QCOMPARE(classification.has_value(), valid);
 
     if (!classification) {
@@ -645,29 +696,33 @@ void DbusReportsTest::dockRelationshipClassification()
     QCOMPARE(static_cast<int>(classification->relationship), relationship);
 }
 
-void DbusReportsTest::dockRelationshipGraphAcceptsOnlyDirectLiveOriginals()
+void DbusReportsTest::dockRelationshipGraphAcceptsOnlyDirectLiveRoots()
 {
-    const DockLineageInput independent{7U, 7, true, false, true};
-    const DockLineageInput original{30U, 30, true, false, false};
-    const DockLineageInput lowClone{41U, 30, false, true, false};
-    const DockLineageInput highClone{51U, 30, false, true, false};
+    constexpr auto derived = Data::View::LinkPlacement::ScreenGroupDerived;
+    constexpr auto explicitTarget = Data::View::LinkPlacement::ExplicitTarget;
+    const DockLineageInput independent{7U, 7, true, false, true, derived};
+    const DockLineageInput original{30U, 30, true, false, false, derived};
+    const DockLineageInput lowMember{41U, 30, false, true, false, derived};
+    const DockLineageInput highMember{51U, 30, false, true, false, explicitTarget};
 
     const auto valid = classifyDockRelationshipGraph(
-        {highClone, independent, lowClone, original});
+        {highMember, independent, lowMember, original});
     QVERIFY(valid);
     QCOMPARE(valid->size(), 4);
     QCOMPARE(valid->value(41).logicalDockId, 30U);
-    QCOMPARE(valid->value(51).relationship, DockRelationship::ScreensGroupClone);
+    QCOMPARE(valid->value(51).relationship, DockRelationship::LinkedMember);
+    QVERIFY(valid->value(41).linkPlacement == derived);
+    QVERIFY(valid->value(51).linkPlacement == explicitTarget);
 
     const QList<QList<DockLineageInput>> invalidGraphs{
-        {lowClone},
-        {independent, DockLineageInput{41U, 7, false, true, false}},
-        {DockLineageInput{41U, 51, false, true, false},
-         DockLineageInput{51U, 41, false, true, false}},
-        {original, DockLineageInput{41U, 51, false, true, false},
-         DockLineageInput{51U, 30, false, true, false}},
+        {lowMember},
+        {independent, DockLineageInput{41U, 7, false, true, false, derived}},
+        {DockLineageInput{41U, 51, false, true, false, derived},
+         DockLineageInput{51U, 41, false, true, false, explicitTarget}},
+        {original, DockLineageInput{41U, 51, false, true, false, derived},
+         DockLineageInput{51U, 30, false, true, false, explicitTarget}},
         {original, original},
-        {original, DockLineageInput{0U, 30, false, true, false}}};
+        {original, DockLineageInput{0U, 30, false, true, false, derived}}};
 
     for (const auto &invalid : invalidGraphs) {
         QVERIFY(!classifyDockRelationshipGraph(invalid));
@@ -681,8 +736,9 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     record.persistentDockId = 7;
     record.logicalDockId = 3;
     record.originalDockId = 3;
-    record.relationship = DockRelationship::ScreensGroupClone;
-    record.screensGroup = Types::AllScreensGroup;
+    record.relationship = DockRelationship::LinkedMember;
+    record.linkPlacement = Data::View::LinkPlacement::ExplicitTarget;
+    record.screensGroup = Types::SingleScreenGroup;
     record.layout = QStringLiteral("Work");
     record.screenId = 2;
     record.screen = QStringLiteral("DP-2");
@@ -740,7 +796,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(sortedKeys(root), (QStringList{
         QStringLiteral("globalConfigureAppletsMode"), QStringLiteral("schemaVersion"),
         QStringLiteral("snapshotSequence"), QStringLiteral("stacking"), QStringLiteral("views")}));
-    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), DockSystemSnapshot::SchemaVersion);
+    QCOMPARE(DockSystemSnapshot::SchemaVersion, 2);
+    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 2);
     QCOMPARE(root.value(QStringLiteral("snapshotSequence")).toString(), QStringLiteral("41"));
     QCOMPARE(root.value(QStringLiteral("globalConfigureAppletsMode")).toBool(), true);
     const QJsonValue stackingValue = root.value(QStringLiteral("stacking"));
@@ -764,7 +821,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("absoluteGeometry"), QStringLiteral("alignment"),
         QStringLiteral("appletsLayoutGeometry"),
         QStringLiteral("appliedInputMask"), QStringLiteral("availablePrimaryLength"),
-        QStringLiteral("canvasGeometry"), QStringLiteral("cloneDockIds"),
+        QStringLiteral("canvasGeometry"),
         QStringLiteral("configuredIconSize"), QStringLiteral("edge"),
         QStringLiteral("editMode"), QStringLiteral("effectiveConfigureAppletsMode"),
         QStringLiteral("effectiveIconSize"), QStringLiteral("effectsRect"),
@@ -772,6 +829,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("inRelocationAnimation"), QStringLiteral("inStartup"),
         QStringLiteral("inputMask"), QStringLiteral("isHidden"),
         QStringLiteral("isOffScreen"), QStringLiteral("layout"),
+        QStringLiteral("linkPlacement"), QStringLiteral("linkedDockIds"),
         QStringLiteral("localGeometry"), QStringLiteral("logicalDockId"),
         QStringLiteral("maskRect"), QStringLiteral("maximumLengthRatio"),
         QStringLiteral("maximumNormalThickness"), QStringLiteral("normalThickness"),
@@ -788,8 +846,9 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(view.value(QStringLiteral("persistentDockId")).toInt(), 7);
     QCOMPARE(view.value(QStringLiteral("logicalDockId")).toInt(), 3);
     QCOMPARE(view.value(QStringLiteral("originalDockId")).toInt(), 3);
-    QCOMPARE(view.value(QStringLiteral("relationship")).toString(), QStringLiteral("screensGroupClone"));
-    QCOMPARE(view.value(QStringLiteral("screensGroup")).toString(), QStringLiteral("allScreens"));
+    QCOMPARE(view.value(QStringLiteral("relationship")).toString(), QStringLiteral("linkedMember"));
+    QCOMPARE(view.value(QStringLiteral("linkPlacement")).toString(), QStringLiteral("explicitTarget"));
+    QCOMPARE(view.value(QStringLiteral("screensGroup")).toString(), QStringLiteral("single"));
     QCOMPARE(view.value(QStringLiteral("orientation")).toString(), QStringLiteral("vertical"));
     QCOMPARE(view.value(QStringLiteral("configuredIconSize")).toInt(), 64);
     QCOMPARE(view.value(QStringLiteral("effectiveIconSize")).toInt(), 52);
@@ -812,6 +871,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
 
     const QStringList stringFields{
         QStringLiteral("runtimeViewId"), QStringLiteral("relationship"),
+        QStringLiteral("linkPlacement"),
         QStringLiteral("screensGroup"), QStringLiteral("layout"), QStringLiteral("screen"),
         QStringLiteral("type"), QStringLiteral("edge"), QStringLiteral("orientation"),
         QStringLiteral("alignment"), QStringLiteral("visibilityMode")};
@@ -828,7 +888,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("inDelete"), QStringLiteral("inReadyState"), QStringLiteral("editMode"),
         QStringLiteral("effectiveConfigureAppletsMode"), QStringLiteral("settingsWindowShown")};
     const QStringList arrayFields{
-        QStringLiteral("cloneDockIds"), QStringLiteral("windowGeometry"),
+        QStringLiteral("linkedDockIds"), QStringLiteral("windowGeometry"),
         QStringLiteral("absoluteGeometry"), QStringLiteral("localGeometry"),
         QStringLiteral("screenGeometry"), QStringLiteral("canvasGeometry"),
         QStringLiteral("effectsRect"), QStringLiteral("appletsLayoutGeometry"),
@@ -858,7 +918,7 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     record.runtimeViewId = 1;
     record.persistentDockId = 7;
     record.logicalDockId = 7;
-    record.relationship = DockRelationship::Single;
+    record.relationship = DockRelationship::Independent;
     record.screensGroup = Types::SingleScreenGroup;
 
     DockSystemSnapshot snapshot;
@@ -869,6 +929,7 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
         serializeDockSystemSnapshot(snapshot).toUtf8())
                                  .object().value(QStringLiteral("views")).toArray().at(0).toObject();
     requireJsonType(view, QStringLiteral("originalDockId"), QJsonValue::Null);
+    requireJsonType(view, QStringLiteral("linkPlacement"), QJsonValue::Null);
     requireJsonType(view, QStringLiteral("configuredIconSize"), QJsonValue::Null);
     requireJsonType(view, QStringLiteral("effectiveIconSize"), QJsonValue::Null);
     requireJsonType(view, QStringLiteral("availablePrimaryLength"), QJsonValue::Null);
@@ -881,13 +942,13 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     }
 }
 
-void DbusReportsTest::dockSystemSnapshotCanonicalizesShuffledViewsAndCloneIds()
+void DbusReportsTest::dockSystemSnapshotCanonicalizesShuffledViewsAndLinkedIds()
 {
     DockSystemViewRecord original;
     original.runtimeViewId = 30;
     original.persistentDockId = 30;
     original.logicalDockId = 30;
-    original.relationship = DockRelationship::ScreensGroupOriginal;
+    original.relationship = DockRelationship::LinkedRoot;
     original.screensGroup = Types::AllScreensGroup;
 
     DockSystemViewRecord highClone;
@@ -895,7 +956,8 @@ void DbusReportsTest::dockSystemSnapshotCanonicalizesShuffledViewsAndCloneIds()
     highClone.persistentDockId = 51;
     highClone.logicalDockId = 30;
     highClone.originalDockId = 30;
-    highClone.relationship = DockRelationship::ScreensGroupClone;
+    highClone.relationship = DockRelationship::LinkedMember;
+    highClone.linkPlacement = Data::View::LinkPlacement::ScreenGroupDerived;
     highClone.screensGroup = Types::AllScreensGroup;
 
     DockSystemViewRecord lowClone = highClone;
@@ -921,7 +983,7 @@ void DbusReportsTest::dockSystemSnapshotCanonicalizesShuffledViewsAndCloneIds()
     QCOMPARE(views.at(1).toObject().value(QStringLiteral("persistentDockId")).toInt(), 30);
     QCOMPARE(views.at(2).toObject().value(QStringLiteral("persistentDockId")).toInt(), 41);
     QCOMPARE(views.at(3).toObject().value(QStringLiteral("persistentDockId")).toInt(), 51);
-    QCOMPARE(views.at(1).toObject().value(QStringLiteral("cloneDockIds")).toArray(),
+    QCOMPARE(views.at(1).toObject().value(QStringLiteral("linkedDockIds")).toArray(),
              (QJsonArray{41, 51}));
 }
 

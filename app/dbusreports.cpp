@@ -740,7 +740,8 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
             view->groupId(),
             view->isOriginal(),
             view->isCloned(),
-            view->isSingle()});
+            view->isSingle(),
+            view->linkPlacement()});
     }
 
     const auto relationships = classifyDockRelationshipGraph(lineages);
@@ -750,7 +751,8 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         for (const auto &lineage : lineages) {
             qCritical() << "dbusreports: lineage containment" << lineage.persistentDockId
                         << "group" << lineage.groupId << "original" << lineage.isOriginal
-                        << "clone" << lineage.isCloned << "single" << lineage.isSingle;
+                        << "clone" << lineage.isCloned << "single" << lineage.isSingle
+                        << "link placement" << static_cast<int>(lineage.linkPlacement);
         }
         Q_ASSERT(relationships.has_value());
         return std::nullopt;
@@ -758,15 +760,15 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
     const QList<qsizetype> orderedSourceIndexes =
         orderDockCollectionByPersistentId(collectionOrder);
 
-    //! ClonedView::screensGroup() intentionally reports SingleScreenGroup.
-    //! Resolve the live group's policy from its original, the authority that
-    //! owns and persists that policy, before collecting clone records.
-    QHash<uint, Types::ScreensGroup> originalScreensGroups;
+    //! Screen-group-derived members report SingleScreenGroup locally. Resolve
+    //! their policy from the root that owns it. Explicitly placed linked
+    //! members retain their own local SingleScreenGroup policy.
+    QHash<uint, Types::ScreensGroup> rootScreensGroups;
     for (const qsizetype sourceIndex : orderedSourceIndexes) {
         const auto *view = views.at(sourceIndex);
         const auto relationship = relationships->value(view->containment()->id());
-        if (relationship.relationship == DockRelationship::ScreensGroupOriginal) {
-            originalScreensGroups.insert(view->containment()->id(), view->screensGroup());
+        if (relationship.relationship == DockRelationship::LinkedRoot) {
+            rootScreensGroups.insert(view->containment()->id(), view->screensGroup());
         }
     }
 
@@ -781,17 +783,21 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.logicalDockId = relationship.logicalDockId;
         record.originalDockId = relationship.originalDockId;
         record.relationship = relationship.relationship;
+        record.linkPlacement = relationship.linkPlacement;
 
-        if (record.relationship == DockRelationship::ScreensGroupClone) {
-            const auto group = originalScreensGroups.constFind(record.logicalDockId);
-            if (group == originalScreensGroups.constEnd()) {
-                qCritical() << "dbusreports: validated clone" << record.persistentDockId
-                            << "lost original screen-group authority" << record.logicalDockId;
-                Q_ASSERT(group != originalScreensGroups.constEnd());
+        const bool derivesScreenGroup = record.linkPlacement
+                == Data::View::LinkPlacement::ScreenGroupDerived;
+        if (record.relationship == DockRelationship::LinkedMember && derivesScreenGroup) {
+            const auto group = rootScreensGroups.constFind(record.logicalDockId);
+            if (group == rootScreensGroups.constEnd()) {
+                qCritical() << "dbusreports: validated linked member" << record.persistentDockId
+                            << "lost root screen-group authority" << record.logicalDockId;
+                Q_ASSERT(group != rootScreensGroups.constEnd());
                 return std::nullopt;
             }
             record.screensGroup = group.value();
-        } else if (record.relationship == DockRelationship::Single) {
+        } else if (record.relationship == DockRelationship::Independent
+                   || record.relationship == DockRelationship::LinkedMember) {
             record.screensGroup = Types::SingleScreenGroup;
         } else {
             record.screensGroup = view->screensGroup();

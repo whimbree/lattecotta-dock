@@ -70,7 +70,7 @@ true with `isOffScreen`), what the compositor was told to reserve.
 call dockSystemData                    # s: compact schema-versioned JSON object
 ```
 
-Top level: `schemaVersion` (currently 1), `snapshotSequence` (decimal string,
+Top level: `schemaVersion` (currently 2), `snapshotSequence` (decimal string,
 process-local monotonic call identity), `globalConfigureAppletsMode`,
 `stacking`, and `views`. The complete view list is captured synchronously and
 serialized in ascending `persistentDockId` order, so repeated snapshots do not
@@ -80,18 +80,23 @@ Per dock:
 
 - Identity and relationship: `runtimeViewId` (decimal string),
   `persistentDockId`, `logicalDockId`, `originalDockId` (number or null),
-  `relationship` (`single|screensGroupOriginal|screensGroupClone`),
+  `relationship` (`independent|linkedRoot|linkedMember`), `linkPlacement`
+  (`screenGroupDerived|explicitTarget`, or null),
   `screensGroup` (`single|allScreens|allSecondaryScreens`), and
-  `cloneDockIds`. `persistentDockId` is the containment id. A clone's logical
-  id and original id name its original containment. Every other dock's logical
-  id equals its persistent id. Duplication creates no lasting relation to its
-  source. Under the current behavior, a duplicated all-screens policy produces
-  a new screens-group original and its own clones; duplicating a single-screen
-  dock produces a `single` record.
-  `screensGroup` is always a string in a valid response. Before serialization,
-  every clone must point directly to a present screens-group original. Missing
-  targets, clone chains, cycles, duplicate persistent ids, and standalone
-  targets invalidate the whole query rather than producing partial JSON.
+  `linkedDockIds`. `persistentDockId` is the containment id. A linked member's
+  logical id and original id name its direct relationship root. Every other
+  dock's logical id equals its persistent id. `linkPlacement` is present only
+  on linked members. `screenGroupDerived` means the root owns output fanout;
+  `explicitTarget` means the member owns its output, edge, and placement.
+  Independent duplication creates no lasting relation to its source. A linked
+  root carries its canonically sorted direct members in `linkedDockIds`; other
+  records carry an empty array.
+  `screensGroup` is always a string in a valid response. A derived member
+  reports the root's screen-group policy, while an explicitly placed member
+  reports its local `single` policy. Before serialization, every linked member
+  must point directly to a present linked root. Missing targets, member chains,
+  cycles, duplicate persistent ids, and independent targets invalidate the
+  whole query rather than producing partial JSON.
 - Placement: `layout`, `screenId`, `screen`, `onPrimary`, `type`, `edge`,
   `orientation`, `alignment`, `maximumLengthRatio`, and `offsetRatio`.
 - Sizing: `configuredIconSize`, `effectiveIconSize`,
@@ -139,7 +144,7 @@ Example relationship checks:
 ```bash
 state=$(call dockSystemData)
 # jq examples after extracting the D-Bus string payload:
-jq '.views | map({persistentDockId,logicalDockId,relationship,cloneDockIds})' <<<"$state"
+jq '.views | map({persistentDockId,logicalDockId,relationship,linkPlacement,linkedDockIds})' <<<"$state"
 jq '[.views[] | select(.effectiveConfigureAppletsMode)] | length' <<<"$state"
 ```
 
@@ -293,6 +298,8 @@ call showWidgetExplorer u 1            # open view 1's widget explorer (the "Add
                                        # window if the containment id has no view. No readback of
                                        # its own; the window appears in the compositor dump
 call duplicateView u 1
+call createLinkedView uii 1 2 4       # containment, stable screen-pool id,
+                                       # Plasma edge enum; occupied edges are valid
 call removeView u 1                    # UNDO WINDOW: containment survives until the
                                        # notification closes or ~60s; restarting inside
                                        # that window resurrects it (see live-verification skill)

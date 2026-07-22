@@ -10,6 +10,7 @@
 // local
 #include <coretypes.h>
 #include "apptypes.h"
+#include "data/viewdata.h"
 #include "../plasmoid/plugin/middleclickdispatch.h"
 //! the containment plugin's enum home, included relatively: the theme and
 //! window color modes colorizerData() names live there (a header-only
@@ -347,9 +348,9 @@ struct ViewRecord {
 }
 
 enum class DockRelationship {
-    Single,
-    ScreensGroupOriginal,
-    ScreensGroupClone
+    Independent,
+    LinkedRoot,
+    LinkedMember
 };
 
 //! The value-only part of live collection ordering. sourceIndex points back to
@@ -381,40 +382,58 @@ struct DockCollectionOrderInput {
 }
 
 //! Live lineage facts needed to classify one dock without a View dependency.
-//! Original views identify themselves as their group; clones carry a distinct
-//! positive target. classifyDockRelationshipGraph() validates that the target
-//! is a live screens-group original, making cycles and clone chains invalid.
+//! Root views identify themselves as their group; linked members carry a
+//! distinct positive target and their placement-ownership policy.
+//! classifyDockRelationshipGraph() validates that the target is a live linked
+//! root, making cycles and member chains invalid.
 struct DockLineageInput {
     uint persistentDockId{0};
     int groupId{-1};
     bool isOriginal{false};
     bool isCloned{false};
     bool isSingle{false};
+    Data::View::LinkPlacement linkPlacement{Data::View::LinkPlacement::ScreenGroupDerived};
 };
 
 struct DockRelationshipClassification {
     uint logicalDockId{0};
     int originalDockId{-1};
-    DockRelationship relationship{DockRelationship::Single};
+    DockRelationship relationship{DockRelationship::Independent};
+    std::optional<Data::View::LinkPlacement> linkPlacement;
 };
+
+[[nodiscard]] constexpr bool isValidLinkPlacement(
+    Data::View::LinkPlacement placement) noexcept
+{
+    switch (placement) {
+    case Data::View::LinkPlacement::ScreenGroupDerived:
+    case Data::View::LinkPlacement::ExplicitTarget:
+        return true;
+    }
+
+    return false;
+}
 
 [[nodiscard]] constexpr std::optional<DockRelationshipClassification>
 classifyDockRelationship(const DockLineageInput &lineage) noexcept
 {
-    if (lineage.persistentDockId == 0 || lineage.isOriginal == lineage.isCloned) {
+    if (lineage.persistentDockId == 0 || lineage.isOriginal == lineage.isCloned
+            || !isValidLinkPlacement(lineage.linkPlacement)) {
         return std::nullopt;
     }
 
     if (lineage.isOriginal) {
-        if (lineage.groupId != static_cast<int>(lineage.persistentDockId)) {
+        if (lineage.groupId != static_cast<int>(lineage.persistentDockId)
+                || lineage.linkPlacement != Data::View::LinkPlacement::ScreenGroupDerived) {
             return std::nullopt;
         }
 
         return DockRelationshipClassification{
             lineage.persistentDockId,
             -1,
-            lineage.isSingle ? DockRelationship::Single
-                             : DockRelationship::ScreensGroupOriginal};
+            lineage.isSingle ? DockRelationship::Independent
+                             : DockRelationship::LinkedRoot,
+            std::nullopt};
     }
 
     if (lineage.isSingle || lineage.groupId <= 0
@@ -425,15 +444,16 @@ classifyDockRelationship(const DockLineageInput &lineage) noexcept
     return DockRelationshipClassification{
         static_cast<uint>(lineage.groupId),
         lineage.groupId,
-        DockRelationship::ScreensGroupClone};
+        DockRelationship::LinkedMember,
+        lineage.linkPlacement};
 }
 
 using DockRelationshipGraph = QHash<uint, DockRelationshipClassification>;
 
 //! Validate the whole live relationship graph before any view is serialized.
-//! A clone may point only to a present screens-group original. This direct-root
-//! rule rejects missing targets, standalone targets, clone chains, and cycles
-//! without a recursive traversal.
+//! A linked member may point only to a present linked root. This direct-root
+//! rule rejects missing targets, independent targets, member chains, and
+//! cycles without a recursive traversal.
 [[nodiscard]] inline std::optional<DockRelationshipGraph>
 classifyDockRelationshipGraph(const QList<DockLineageInput> &lineages)
 {
@@ -451,13 +471,13 @@ classifyDockRelationshipGraph(const QList<DockLineageInput> &lineages)
 
     for (const auto &lineage : lineages) {
         const auto &classification = graph.value(lineage.persistentDockId);
-        if (classification.relationship != DockRelationship::ScreensGroupClone) {
+        if (classification.relationship != DockRelationship::LinkedMember) {
             continue;
         }
 
         const auto target = graph.constFind(classification.logicalDockId);
         if (target == graph.constEnd()
-            || target->relationship != DockRelationship::ScreensGroupOriginal) {
+            || target->relationship != DockRelationship::LinkedRoot) {
             return std::nullopt;
         }
     }
@@ -480,17 +500,19 @@ struct DockObjectIdentities {
 };
 
 //! One dock in the atomic dockSystemData() snapshot. persistentDockId is the
-//! Plasma containment id. logicalDockId is the original containment for a
-//! screens-group clone and otherwise equals persistentDockId. Duplication does
-//! not establish a relationship and therefore has no source field here.
+//! Plasma containment id. logicalDockId is the relationship root containment
+//! for a linked member and otherwise equals persistentDockId. Independent
+//! duplication does not establish a relationship and therefore has no source
+//! field here.
 struct DockSystemViewRecord {
     quint64 runtimeViewId{0};
     uint persistentDockId{0};
     uint logicalDockId{0};
     int originalDockId{-1};
-    DockRelationship relationship{DockRelationship::Single};
+    DockRelationship relationship{DockRelationship::Independent};
+    std::optional<Data::View::LinkPlacement> linkPlacement;
     Types::ScreensGroup screensGroup{Types::SingleScreenGroup};
-    QList<uint> cloneDockIds;
+    QList<uint> linkedDockIds;
 
     QString layout;
     int screenId{-1};
@@ -543,7 +565,7 @@ struct DockStackModelRecord {
 };
 
 struct DockSystemSnapshot {
-    static constexpr int SchemaVersion = 1;
+    static constexpr int SchemaVersion = 2;
 
     quint64 snapshotSequence{0};
     bool globalConfigureAppletsMode{false};
@@ -665,12 +687,24 @@ inline QString screensGroupName(Types::ScreensGroup group)
 inline QString dockRelationshipName(DockRelationship relationship)
 {
     switch (relationship) {
-    case DockRelationship::Single:
-        return QStringLiteral("single");
-    case DockRelationship::ScreensGroupOriginal:
-        return QStringLiteral("screensGroupOriginal");
-    case DockRelationship::ScreensGroupClone:
-        return QStringLiteral("screensGroupClone");
+    case DockRelationship::Independent:
+        return QStringLiteral("independent");
+    case DockRelationship::LinkedRoot:
+        return QStringLiteral("linkedRoot");
+    case DockRelationship::LinkedMember:
+        return QStringLiteral("linkedMember");
+    }
+
+    Q_UNREACHABLE();
+}
+
+inline QString linkPlacementName(Data::View::LinkPlacement placement)
+{
+    switch (placement) {
+    case Data::View::LinkPlacement::ScreenGroupDerived:
+        return QStringLiteral("screenGroupDerived");
+    case Data::View::LinkPlacement::ExplicitTarget:
+        return QStringLiteral("explicitTarget");
     }
 
     Q_UNREACHABLE();
@@ -1288,6 +1322,13 @@ inline QJsonValue serializeOptionalInt(const std::optional<int> &value)
     return value ? QJsonValue(*value) : QJsonValue(QJsonValue::Null);
 }
 
+inline QJsonValue serializeOptionalLinkPlacement(
+    const std::optional<Data::View::LinkPlacement> &placement)
+{
+    return placement ? QJsonValue(linkPlacementName(*placement))
+                     : QJsonValue(QJsonValue::Null);
+}
+
 inline QJsonValue serializeOptionalObjectToken(const QString &token)
 {
     return token.isEmpty() ? QJsonValue(QJsonValue::Null) : QJsonValue(token);
@@ -1309,23 +1350,23 @@ inline QJsonObject serializeDockObjectIdentities(const DockObjectIdentities &obj
 
 inline QList<DockSystemViewRecord> canonicalizeDockSystemViews(QList<DockSystemViewRecord> records)
 {
-    QHash<uint, QList<uint>> clonesByOriginal;
+    QHash<uint, QList<uint>> membersByRoot;
 
     for (const auto &record : records) {
-        if (record.relationship == DockRelationship::ScreensGroupClone) {
-            clonesByOriginal[record.logicalDockId].append(record.persistentDockId);
+        if (record.relationship == DockRelationship::LinkedMember) {
+            membersByRoot[record.logicalDockId].append(record.persistentDockId);
         }
     }
 
-    for (auto it = clonesByOriginal.begin(); it != clonesByOriginal.end(); ++it) {
+    for (auto it = membersByRoot.begin(); it != membersByRoot.end(); ++it) {
         std::sort(it.value().begin(), it.value().end());
     }
 
     for (auto &record : records) {
-        if (record.relationship == DockRelationship::ScreensGroupOriginal) {
-            record.cloneDockIds = clonesByOriginal.value(record.persistentDockId);
+        if (record.relationship == DockRelationship::LinkedRoot) {
+            record.linkedDockIds = membersByRoot.value(record.persistentDockId);
         } else {
-            record.cloneDockIds.clear();
+            record.linkedDockIds.clear();
         }
     }
 
@@ -1349,13 +1390,14 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
     json[QStringLiteral("originalDockId")] = record.originalDockId < 0
         ? QJsonValue(QJsonValue::Null) : QJsonValue(record.originalDockId);
     json[QStringLiteral("relationship")] = dockRelationshipName(record.relationship);
+    json[QStringLiteral("linkPlacement")] = serializeOptionalLinkPlacement(record.linkPlacement);
     json[QStringLiteral("screensGroup")] = screensGroupName(record.screensGroup);
 
-    QJsonArray cloneDockIds;
-    for (const uint id : record.cloneDockIds) {
-        cloneDockIds.append(static_cast<qint64>(id));
+    QJsonArray linkedDockIds;
+    for (const uint id : record.linkedDockIds) {
+        linkedDockIds.append(static_cast<qint64>(id));
     }
-    json[QStringLiteral("cloneDockIds")] = cloneDockIds;
+    json[QStringLiteral("linkedDockIds")] = linkedDockIds;
 
     json[QStringLiteral("layout")] = record.layout;
     json[QStringLiteral("screenId")] = record.screenId;
