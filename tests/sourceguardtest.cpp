@@ -20,6 +20,8 @@
 //     changes publish directly while geometry churn stays throttled
 //   * Views reporting: global applet rearrangement is effective only for the
 //     dock that is locally in edit mode
+//   * Layout-length animation tracking: horizontal and vertical changes share
+//     one registration path and the settle timer owns the matching removal
 //   * Dock-system reporting: persistent-id ordering and original/clone
 //     relationship classification stay on their pure seams
 //   * SC-T3 (the D29 narrow middle-click dispatch readback): the production QML
@@ -111,6 +113,50 @@ private:
         return code.count(effectiveAssignment) == 1
             && !code.contains(QStringLiteral(
                 "record.inConfigureAppletsMode=globalConfigureAppletsMode;"));
+    }
+
+    static bool matchesLengthAnimationTrackerContract(const QString &source)
+    {
+        const QString normalizedSource = normalizedCode(source);
+        const QString registration = normalizedCode(functionBody(
+            source, QStringLiteral("function registerLengthAnimation()")));
+        const QString horizontal = normalizedCode(functionBody(
+            source, QStringLiteral("onContentsWidthChanged:")));
+        const QString vertical = normalizedCode(functionBody(
+            source, QStringLiteral("onContentsHeightChanged:")));
+        const int timerStart = source.indexOf(QStringLiteral("id:delayUpdateMaskArea"));
+        const QString settlement = timerStart == -1
+            ? QString{}
+            : normalizedCode(functionBody(source.mid(timerStart), QStringLiteral("onTriggered:")));
+
+        const QString registerCall = QStringLiteral(
+            "layoutsContainer.registerLengthAnimation();");
+        const QString addEvent = QStringLiteral(
+            "animations.needLength.addEvent(layoutsContainer);");
+        const QString removeEvent = QStringLiteral(
+            "animations.needLength.removeEvent(layoutsContainer);");
+
+        const int registrationSetsActive = registration.indexOf(QStringLiteral(
+            "layoutsContainer.animationSent=true;"));
+        const int registrationAddsEvent = registration.indexOf(addEvent);
+        const int settlementRemovesEvent = settlement.indexOf(removeEvent);
+        const int settlementClearsActive = settlement.indexOf(QStringLiteral(
+            "layoutsContainer.animationSent=false;"));
+
+        return !registration.isEmpty()
+            && horizontal.count(registerCall) == 1
+            && vertical.count(registerCall) == 1
+            && !horizontal.contains(QStringLiteral("animations.needLength."))
+            && !vertical.contains(QStringLiteral("animations.needLength."))
+            && registration.count(addEvent) == 1
+            && !registration.contains(removeEvent)
+            && registrationSetsActive != -1
+            && registrationAddsEvent > registrationSetsActive
+            && settlement.count(removeEvent) == 1
+            && settlementRemovesEvent != -1
+            && settlementClearsActive > settlementRemovesEvent
+            && normalizedSource.count(addEvent) == 1
+            && normalizedSource.count(removeEvent) == 1;
     }
 
     static bool matchesDockCollectionOrderingRoute(const QString &body)
@@ -315,6 +361,8 @@ private Q_SLOTS:
     void visibilityManager_strutThicknessBypassesGeometryThrottle();
     void viewsDataConfigureMode_keepsPerViewContract();
     void viewsDataConfigureMode_sourceGuardRejectsGlobalLeak();
+    void layoutLengthChanges_shareAnimationTrackerRegistration();
+    void layoutLengthChanges_sourceGuardRejectsVerticalRemoval();
     void dockSystemCollection_keepsPureRouting();
     void dockSystemCollection_sourceGuardsRejectControlledMutations();
     void dockSystemIdentityRegistry_keepsLifetimeAndAffinityContract();
@@ -463,6 +511,32 @@ void SourceGuardTest::viewsDataConfigureMode_sourceGuardRejectsGlobalLeak()
         "record.inConfigureAppletsMode=globalConfigureAppletsMode;"));
     QVERIFY2(!matchesEffectiveConfigureModeCollection(collector),
              "restoring the direct global D76 assignment must fail the collector guard");
+}
+
+void SourceGuardTest::layoutLengthChanges_shareAnimationTrackerRegistration()
+{
+    const QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    QVERIFY2(matchesLengthAnimationTrackerContract(source),
+             "both layout axes must register one length animation and let the settle timer remove it");
+}
+
+void SourceGuardTest::layoutLengthChanges_sourceGuardRejectsVerticalRemoval()
+{
+    QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    QVERIFY(matchesLengthAnimationTrackerContract(source));
+
+    const QString registrationCall = QStringLiteral(
+        "layoutsContainer.registerLengthAnimation();");
+    const int verticalStart = source.indexOf(QStringLiteral("onContentsHeightChanged:"));
+    const int verticalCall = source.indexOf(registrationCall, verticalStart);
+    QVERIFY(verticalStart != -1 && verticalCall > verticalStart);
+
+    source.replace(verticalCall, registrationCall.size(), QStringLiteral(
+        "animations.needLength.removeEvent(layoutsContainer);"));
+    QVERIFY2(!matchesLengthAnimationTrackerContract(source),
+             "restoring the vertical remove-at-start defect must fail the tracker contract");
 }
 
 void SourceGuardTest::dockSystemCollection_keepsPureRouting()
