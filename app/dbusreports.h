@@ -549,6 +549,10 @@ struct DockSystemViewRecord {
     bool inStartup{false};
     bool isOffScreen{false};
     bool inRelocationAnimation{false};
+    bool inRelocationShowing{false};
+    bool geometrySettled{false};
+    quint64 relocationGeneration{0};
+    quint64 appliedRelocationGeneration{0};
     bool inDelete{false};
     bool inReadyState{false};
     bool editMode{false};
@@ -1434,6 +1438,10 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
     json[QStringLiteral("inStartup")] = record.inStartup;
     json[QStringLiteral("isOffScreen")] = record.isOffScreen;
     json[QStringLiteral("inRelocationAnimation")] = record.inRelocationAnimation;
+    json[QStringLiteral("inRelocationShowing")] = record.inRelocationShowing;
+    json[QStringLiteral("geometrySettled")] = record.geometrySettled;
+    json[QStringLiteral("relocationGeneration")] = QString::number(record.relocationGeneration);
+    json[QStringLiteral("appliedRelocationGeneration")] = QString::number(record.appliedRelocationGeneration);
     json[QStringLiteral("inDelete")] = record.inDelete;
     json[QStringLiteral("inReadyState")] = record.inReadyState;
     json[QStringLiteral("editMode")] = record.editMode;

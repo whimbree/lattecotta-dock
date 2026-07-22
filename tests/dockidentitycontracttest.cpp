@@ -69,6 +69,9 @@ private Q_SLOTS:
     void cloneEditRequestsResolveOneOriginalTarget();
     void cloneDestructionUnregistersMembership();
     void outputRetargetReplacesGeometryConnection();
+    void relocationHandoffStopsOldRevealBeforeClaim();
+    void relocationCompletionRejectsSupersededGeneration();
+    void geometrySettlementIncludesDeferredWork();
     void ignoredWindowCleanupRetainsOtherOwners();
     void persistentMenuIdentitySurvivesRuntimeGap();
     void geometryDiagnosticsReadEachViewsSizingAuthority();
@@ -228,6 +231,65 @@ void DockIdentityContractTest::outputRetargetReplacesGeometryConnection()
 
     QVERIFY(disconnectOld >= 0 && replaceConnection > disconnectOld);
     QCOMPARE(setScreen.count(QStringLiteral("&QScreen::geometryChanged")), 1);
+}
+
+void DockIdentityContractTest::relocationHandoffStopsOldRevealBeforeClaim()
+{
+    const QString source = readFile(
+        QStringLiteral("containment/package/contents/ui/VisibilityManager.qml"));
+    const QString handoff = normalized(functionBody(
+        source, QStringLiteral("function slotHideDockDuringLocationChange")));
+
+    const int stopOldReveal = handoff.indexOf(
+        QStringLiteral("slidingAnimationAutoHiddenIn.stop();"));
+    const int claimHide = handoff.indexOf(
+        QStringLiteral("manager.inRelocationHiding=true;"), stopOldReveal);
+    const int startHide = handoff.indexOf(
+        QStringLiteral("slidingAnimationAutoHiddenOut.init();"), claimHide);
+    QVERIFY2(stopOldReveal >= 0 && claimHide > stopOldReveal && startHide > claimHide,
+             "a new relocation must stop the old reveal before claiming its hide transaction");
+}
+
+void DockIdentityContractTest::relocationCompletionRejectsSupersededGeneration()
+{
+    const QString source = readFile(QStringLiteral("app/view/positioner.cpp"));
+    const QString schedule = normalized(functionBody(
+        source, QStringLiteral("void Positioner::scheduleLastRepositionApplyEvent")));
+    const QString setNext = normalized(functionBody(
+        source, QStringLiteral("void Positioner::setNextLocation")));
+
+    const int capture = schedule.indexOf(QStringLiteral("scheduledGeneration=m_relocationGeneration"));
+    const int reject = schedule.indexOf(
+        QStringLiteral("scheduledGeneration!=m_relocationGeneration"), capture);
+    const int apply = schedule.indexOf(QStringLiteral("onLastRepositionApplyEvent();"), reject);
+    QVERIFY2(capture >= 0 && reject > capture && apply > reject,
+             "delayed relocation completion must reject an older placement generation");
+
+    const int increment = setNext.indexOf(QStringLiteral("++m_relocationGeneration;"));
+    const int beginHide = setNext.indexOf(QStringLiteral("Q_EMIThidingForRelocationStarted();"));
+    QVERIFY2(increment >= 0 && beginHide > increment,
+             "a relocation generation must be claimed before asynchronous hiding begins");
+}
+
+void DockIdentityContractTest::geometrySettlementIncludesDeferredWork()
+{
+    const QString source = readFile(QStringLiteral("app/view/positioner.cpp"));
+    const QString settled = normalized(functionBody(
+        source, QStringLiteral("bool Positioner::geometryIsSettled")));
+
+    const QStringList requiredAuthorities{
+        QStringLiteral("m_relocationGeneration==m_appliedRelocationGeneration"),
+        QStringLiteral("!inRelocationAnimation()"),
+        QStringLiteral("!m_inRelocationShowing"),
+        QStringLiteral("!m_screenSyncTimer.isActive()"),
+        QStringLiteral("!m_syncGeometryTimer.isActive()"),
+        QStringLiteral("!m_validateGeometryTimer.isActive()"),
+        QStringLiteral("m_view->screen()==m_screenToFollow"),
+    };
+
+    for (const auto &authority : requiredAuthorities) {
+        QVERIFY2(settled.contains(authority), qPrintable(authority));
+    }
 }
 
 void DockIdentityContractTest::ignoredWindowCleanupRetainsOtherOwners()

@@ -65,10 +65,16 @@ public:
     void setSlideOffset(int offset);
 
     bool inLayoutUnloading();
-    bool inRelocationAnimation();
+    bool inRelocationAnimation() const;
 
     bool inRelocationShowing() const;
     void setInRelocationShowing(bool active);
+
+    //! True only after the newest placement generation has applied and all
+    //! deferred geometry reconciliation owned by this view has drained.
+    bool geometryIsSettled() const;
+    quint64 relocationGeneration() const;
+    quint64 appliedRelocationGeneration() const;
 
     bool inSlideAnimation() const;
     void setInSlideAnimation(bool active);
@@ -153,6 +159,7 @@ private Q_SLOTS:
 private:
     void init();
     void initSignalingForLocationChangeSliding();
+    void scheduleLastRepositionApplyEvent();
 
     void updateFormFactor();
     void resizeWindow(QRect availableScreenRect = QRect());
@@ -205,6 +212,8 @@ private:
     //!used for relocation properties group
     bool m_repositionFromViewSettingsWindow{false};
     bool m_repositionIsAnimated{false};
+    quint64 m_relocationGeneration{0};
+    quint64 m_appliedRelocationGeneration{0};
 
     QString m_nextLayoutName;
     Latte::Types::ScreensGroup m_nextScreensGroup{Latte::Types::SingleScreenGroup};

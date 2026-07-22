@@ -251,6 +251,15 @@ Item{
 
     //! functions used for sliding out/in during location/screen changes
     function slotHideDockDuringLocationChange() : void {
+        //! A new relocation owns the hide transaction. Finish any older
+        //! relocation's reveal before claiming that ownership: its onStopped
+        //! clears inRelocationHiding, which would otherwise erase the new
+        //! transaction while the hide animation is still running and strand
+        //! Positioner's pending screen/edge state forever.
+        if (slidingAnimationAutoHiddenIn.running) {
+            slidingAnimationAutoHiddenIn.stop();
+        }
+
         manager.inRelocationHiding = true;
 
         if(!slidingAnimationAutoHiddenOut.running) {

@@ -864,6 +864,10 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.inStartup = view->positioner()->inStartup();
         record.isOffScreen = view->positioner()->isOffScreen();
         record.inRelocationAnimation = view->positioner()->inRelocationAnimation();
+        record.inRelocationShowing = view->positioner()->inRelocationShowing();
+        record.geometrySettled = view->positioner()->geometryIsSettled();
+        record.relocationGeneration = view->positioner()->relocationGeneration();
+        record.appliedRelocationGeneration = view->positioner()->appliedRelocationGeneration();
         record.inDelete = view->inDelete();
         record.inReadyState = view->inReadyState();
         record.editMode = view->inEditMode();

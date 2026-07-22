@@ -771,6 +771,10 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     record.inStartup = true;
     record.isOffScreen = true;
     record.inRelocationAnimation = true;
+    record.inRelocationShowing = true;
+    record.geometrySettled = true;
+    record.relocationGeneration = 17;
+    record.appliedRelocationGeneration = 16;
     record.inDelete = true;
     record.inReadyState = true;
     record.editMode = true;
@@ -820,13 +824,15 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(sortedKeys(view), (QStringList{
         QStringLiteral("absoluteGeometry"), QStringLiteral("alignment"),
         QStringLiteral("appletsLayoutGeometry"),
-        QStringLiteral("appliedInputMask"), QStringLiteral("availablePrimaryLength"),
+        QStringLiteral("appliedInputMask"), QStringLiteral("appliedRelocationGeneration"),
+        QStringLiteral("availablePrimaryLength"),
         QStringLiteral("canvasGeometry"),
         QStringLiteral("configuredIconSize"), QStringLiteral("edge"),
         QStringLiteral("editMode"), QStringLiteral("effectiveConfigureAppletsMode"),
         QStringLiteral("effectiveIconSize"), QStringLiteral("effectsRect"),
-        QStringLiteral("inDelete"), QStringLiteral("inReadyState"),
-        QStringLiteral("inRelocationAnimation"), QStringLiteral("inStartup"),
+        QStringLiteral("geometrySettled"), QStringLiteral("inDelete"),
+        QStringLiteral("inReadyState"), QStringLiteral("inRelocationAnimation"),
+        QStringLiteral("inRelocationShowing"), QStringLiteral("inStartup"),
         QStringLiteral("inputMask"), QStringLiteral("isHidden"),
         QStringLiteral("isOffScreen"), QStringLiteral("layout"),
         QStringLiteral("linkPlacement"), QStringLiteral("linkedDockIds"),
@@ -837,7 +843,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("onPrimary"), QStringLiteral("orientation"),
         QStringLiteral("originalDockId"), QStringLiteral("persistentDockId"),
         QStringLiteral("publishedStruts"), QStringLiteral("relationship"),
-        QStringLiteral("runtimeViewId"), QStringLiteral("screen"),
+        QStringLiteral("relocationGeneration"), QStringLiteral("runtimeViewId"),
+        QStringLiteral("screen"),
         QStringLiteral("screenGeometry"), QStringLiteral("screenId"),
         QStringLiteral("screensGroup"), QStringLiteral("settingsWindowShown"),
         QStringLiteral("strutsThickness"), QStringLiteral("type"),
@@ -858,6 +865,10 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(view.value(QStringLiteral("visibilityMode")).toString(), QStringLiteral("dodgeActive"));
     QCOMPARE(view.value(QStringLiteral("isHidden")).toBool(), true);
     QCOMPARE(view.value(QStringLiteral("inRelocationAnimation")).toBool(), true);
+    QCOMPARE(view.value(QStringLiteral("inRelocationShowing")).toBool(), true);
+    QCOMPARE(view.value(QStringLiteral("geometrySettled")).toBool(), true);
+    QCOMPARE(view.value(QStringLiteral("relocationGeneration")).toString(), QStringLiteral("17"));
+    QCOMPARE(view.value(QStringLiteral("appliedRelocationGeneration")).toString(), QStringLiteral("16"));
     QCOMPARE(view.value(QStringLiteral("inReadyState")).toBool(), true);
     QCOMPARE(view.value(QStringLiteral("effectiveConfigureAppletsMode")).toBool(), true);
     const QJsonObject objects = view.value(QStringLiteral("objects")).toObject();
@@ -870,7 +881,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
              QStringLiteral("object-23"));
 
     const QStringList stringFields{
-        QStringLiteral("runtimeViewId"), QStringLiteral("relationship"),
+        QStringLiteral("runtimeViewId"), QStringLiteral("relocationGeneration"),
+        QStringLiteral("appliedRelocationGeneration"), QStringLiteral("relationship"),
         QStringLiteral("linkPlacement"),
         QStringLiteral("screensGroup"), QStringLiteral("layout"), QStringLiteral("screen"),
         QStringLiteral("type"), QStringLiteral("edge"), QStringLiteral("orientation"),
@@ -885,6 +897,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     const QStringList booleanFields{
         QStringLiteral("onPrimary"), QStringLiteral("isHidden"), QStringLiteral("inStartup"),
         QStringLiteral("isOffScreen"), QStringLiteral("inRelocationAnimation"),
+        QStringLiteral("inRelocationShowing"), QStringLiteral("geometrySettled"),
         QStringLiteral("inDelete"), QStringLiteral("inReadyState"), QStringLiteral("editMode"),
         QStringLiteral("effectiveConfigureAppletsMode"), QStringLiteral("settingsWindowShown")};
     const QStringList arrayFields{

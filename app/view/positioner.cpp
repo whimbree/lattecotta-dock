@@ -24,12 +24,21 @@
 // Qt
 #include <QDebug>
 
+// C++
+#include <chrono>
+
 // KDE
 #include <KWayland/Client/plasmashell.h>
 #include <KWayland/Client/surface.h>
 #include <KWindowSystem>
 
 #define RELOCATIONSHOWINGEVENT "viewInRelocationShowing"
+
+using namespace std::chrono_literals;
+
+namespace {
+constexpr auto RelocationApplyDelay = 100ms;
+}
 
 namespace Latte {
 namespace ViewPart {
@@ -263,6 +272,31 @@ void Positioner::setInRelocationShowing(bool active)
     } else {
         m_view->visibility()->removeBlockHidingEvent(RELOCATIONSHOWINGEVENT);
     }
+
+    Q_EMIT inRelocationShowingChanged();
+}
+
+bool Positioner::geometryIsSettled() const
+{
+    return m_relocationGeneration == m_appliedRelocationGeneration
+        && !inRelocationAnimation()
+        && !m_inRelocationShowing
+        && !m_inSlideAnimation
+        && !m_screenSyncTimer.isActive()
+        && !m_syncGeometryTimer.isActive()
+        && !m_validateGeometryTimer.isActive()
+        && m_view
+        && m_view->screen() == m_screenToFollow;
+}
+
+quint64 Positioner::relocationGeneration() const
+{
+    return m_relocationGeneration;
+}
+
+quint64 Positioner::appliedRelocationGeneration() const
+{
+    return m_appliedRelocationGeneration;
 }
 
 bool Positioner::isOffScreen() const
@@ -802,6 +836,9 @@ void Positioner::updateFormFactor()
 
 void Positioner::onLastRepositionApplyEvent()
 {
+    Q_ASSERT(!inRelocationAnimation());
+
+    m_appliedRelocationGeneration = m_relocationGeneration;
     m_view->effects()->setAnimationsBlocked(false);
     setInRelocationShowing(true);
     Q_EMIT showingAfterRelocationFinished();
@@ -811,6 +848,28 @@ void Positioner::onLastRepositionApplyEvent()
         m_repositionFromViewSettingsWindow = false;
         m_view->showSettingsWindow();
     }
+}
+
+void Positioner::scheduleLastRepositionApplyEvent()
+{
+    const quint64 scheduledGeneration = m_relocationGeneration;
+    QTimer::singleShot(RelocationApplyDelay, this, [this, scheduledGeneration]() {
+        if (scheduledGeneration != m_relocationGeneration) {
+            qDebug() << "Ignoring superseded relocation completion generation"
+                     << scheduledGeneration << "for view" << m_view->validTitle()
+                     << "; current generation is" << m_relocationGeneration;
+            return;
+        }
+
+        if (inRelocationAnimation()) {
+            qCritical() << "Refusing to complete relocation generation"
+                        << scheduledGeneration << "for view" << m_view->validTitle()
+                        << "while placement changes remain pending";
+            return;
+        }
+
+        onLastRepositionApplyEvent();
+    });
 }
 
 void Positioner::initSignalingForLocationChangeSliding()
@@ -826,9 +885,7 @@ void Positioner::initSignalingForLocationChangeSliding()
 
             //! make sure that View has been repositioned properly in next screen edge and show view afterwards
             if (isrelocationlastevent) {
-                QTimer::singleShot(100, this, [this]() {
-                    onLastRepositionApplyEvent();
-                });
+                scheduleLastRepositionApplyEvent();
             }
         }
     });
@@ -853,9 +910,7 @@ void Positioner::initSignalingForLocationChangeSliding()
 
             //! make sure that View has been repositioned properly in next screen and show view afterwards
             if (isrelocationlastevent) {
-                QTimer::singleShot(100, this, [this]() {
-                    onLastRepositionApplyEvent();
-                });
+                scheduleLastRepositionApplyEvent();
             }
         }
     });
@@ -868,9 +923,7 @@ void Positioner::initSignalingForLocationChangeSliding()
 
             //! make sure that View has been repositioned properly in next layout and show view afterwards
             if (isrelocationlastevent) {
-                QTimer::singleShot(100, this, [this]() {
-                    onLastRepositionApplyEvent();
-                });
+                scheduleLastRepositionApplyEvent();
             }
         }
     });
@@ -930,7 +983,7 @@ bool Positioner::inLayoutUnloading()
     return m_inLayoutUnloading;
 }
 
-bool Positioner::inRelocationAnimation()
+bool Positioner::inRelocationAnimation() const
 {
     return ((m_nextScreenEdge != Plasma::Types::Floating) || !m_nextLayoutName.isEmpty() || !m_nextScreenName.isEmpty());
 }
@@ -1109,10 +1162,15 @@ void Positioner::setNextLocation(const QString layoutName, const int screensGrou
     m_repositionIsAnimated = isanimated;
     m_repositionFromViewSettingsWindow = m_view->settingsWindowIsShown();
 
+    if (haschanges) {
+        ++m_relocationGeneration;
+    }
+
     if (isanimated) {
         Q_EMIT hidingForRelocationStarted();
     } else if (haschanges){
         Q_EMIT hidingForRelocationFinished();
+        m_appliedRelocationGeneration = m_relocationGeneration;
     }
 }
 
