@@ -228,10 +228,12 @@ settings-inventory tests. The mandatory second cold review found D97
 (independent snapshot test ignores transient view fields), not a production
 fault: persistence equality deliberately omitted five transient fields from the
 preservation check. Direct assertions now cover those fields. The final
-canonical repository gate passed at `defaa0c7a` with 104/104 CTest entries,
+canonical repository gate passed at exact pre-merge head
+`defaa0c7ad1a0e376937bf07f035430ecc977407` with 104/104 CTest entries,
 coverage and QML ratchets, 13 scene probes, three sanitizer recipes, and the
-deterministic output matrix. This later commit only replaces pre-rewrite hashes
-in documentation and changes no validated source or test content.
+deterministic output matrix. GitHub rebased the validated source and test tree
+through `b6ba7ab15`; the documentation-only merge tail `8f2c3073d` changes no
+validated source or test content.
 
 Each slice requires a failing regression first, pure-core ASan and UBSan tests
 where a value model can carry the invariant, nested-KWin state and render
