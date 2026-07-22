@@ -111,6 +111,15 @@ Item{
     property bool animationSent: false
     property bool shouldCheckHalfs: (Plasmoid.configuration.alignment === LatteCore.Types.Justify) && (_mainLayout.children>1)
 
+    function registerLengthAnimation() : void {
+        if (layoutsContainer.animationSent) {
+            return;
+        }
+
+        layoutsContainer.animationSent = true;
+        animations.needLength.addEvent(layoutsContainer);
+    }
+
     property int contentsWidth: root.isHorizontal ? _startLayout.width + _mainLayout.width + _endLayout.width :
                                                     Math.max(_startLayout.width, _mainLayout.width ,_endLayout.width)
     property int contentsHeight: root.isVertical ? _startLayout.height + _mainLayout.height + _endLayout.height :
@@ -215,10 +224,7 @@ Item{
                 autosize.updateIconSize();
             }
 
-            if (!animationSent) {
-                animationSent = true;
-                animations.needLength.addEvent(layoutsContainer);
-            }
+            layoutsContainer.registerLengthAnimation();
 
             contentsLengthChanged();
 
@@ -240,10 +246,7 @@ Item{
                 autosize.updateIconSize();
             }
 
-            if (!animationSent) {
-                animationSent = true;
-                animations.needLength.removeEvent(layoutsContainer);
-            }
+            layoutsContainer.registerLengthAnimation();
 
             contentsLengthChanged();
 
