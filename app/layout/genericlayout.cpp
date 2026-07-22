@@ -889,13 +889,20 @@ void GenericLayout::destroyedChanged(bool destroyed)
         Q_EMIT viewsCountChanged();
     }
 
-    if (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::MultipleLayouts) {
+    const auto memoryUsage = m_corona->layoutsManager()->memoryUsage();
+    if (memoryUsage == MemoryUsage::MultipleLayouts) {
         //! The per-layout file is Latte's restart authority. Commit both
         //! sides of Plasma's undo transaction: Storage omits scheduled
         //! containments while destroyed is true, then an undo signal writes
         //! the still-live containment subtree back with its original ids and
         //! configuration.
         Layouts::Storage::self()->syncToLayoutFile(this, false);
+    } else if (!destroyed && memoryUsage == MemoryUsage::SingleLayout) {
+        //! Plasma deletes the containment group when removal starts. Its Undo
+        //! action restores the live objects, but it does not recreate that
+        //! group in the explicitly loaded layout file. Save the restored
+        //! corona immediately so a restart cannot reapply the tombstone.
+        m_corona->saveLayout(file());
     }
 }
 

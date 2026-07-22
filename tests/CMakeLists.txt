@@ -1,5 +1,16 @@
 include(ECMAddTests)
 
+# Test-only freedesktop notification endpoint. Nested removal acceptance uses
+# it to activate libplasma's real Undo action instead of waiting for or mocking
+# the resulting destroyedChanged(false) transition.
+add_executable(latte-test-notification-service
+    helpers/fakenotificationservice.cpp
+)
+target_link_libraries(latte-test-notification-service PRIVATE
+    Qt6::Core
+    Qt6::DBus
+)
+
 # Behavioral tests drive the real compiled application code through the
 # lattedock-core object library - no mocks of Latte's own logic, per
 # docs/reference/TESTING.md. QT_QPA_PLATFORM=offscreen keeps them headless.
