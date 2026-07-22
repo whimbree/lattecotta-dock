@@ -159,6 +159,11 @@ View *ClonedView::configurationTargetView()
     return m_originalView.data();
 }
 
+View *ClonedView::relationshipRootView()
+{
+    return m_originalView.data();
+}
+
 ViewPart::Indicator *ClonedView::indicator() const
 {
     return m_linkPlacement == Data::View::LinkPlacement::ExplicitTarget

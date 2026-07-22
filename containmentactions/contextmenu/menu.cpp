@@ -15,10 +15,16 @@
 #include <QAction>
 #include <QDebug>
 #include <QFont>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QMenu>
 #include <QtDBus>
 #include <QTimer>
 #include <QLatin1String>
+
+// C++
+#include <array>
 
 // KDE
 #include <KLocalizedString>
@@ -222,6 +228,7 @@ QList<QAction *> Menu::contextualActions()
 
     m_data.clear();
     m_viewTemplates.clear();
+    m_screensData.clear();
     QDBusInterface iface("org.kde.lattedock", "/Latte", "", QDBusConnection::sessionBus());
 
     if (iface.isValid()) {
@@ -230,14 +237,19 @@ QList<QAction *> Menu::contextualActions()
 
         QDBusReply<QStringList> templatesData = iface.call("viewTemplatesData");
         m_viewTemplates = templatesData.value();
+
+        const QDBusReply<QString> screensData = iface.call("screensData");
+        m_screensData = screensData.value();
     }
 
     m_contextDataValid = updateViewData();
     m_actionsAlwaysShown = m_contextDataValid ? m_data.value(ACTIONSALWAYSSHOWN).split(";;") : QStringList{};
 
     QString configureActionText = (m_view.type == DockView) ? i18n("&Edit Dock...") : i18n("&Edit Panel...");
-    if (m_view.isCloned) {
+    if (m_view.isCloned && !m_view.isExplicitlyLinked) {
         configureActionText = (m_view.type == DockView) ? i18n("&Edit Original Dock...") : i18n("&Edit Original Panel...");
+    } else if (m_view.isExplicitlyLinked) {
+        configureActionText = (m_view.type == DockView) ? i18n("&Edit Linked Dock...") : i18n("&Edit Linked Panel...");
     }
     m_actions[Latte::Data::ContextMenu::EDITVIEWACTION]->setText(configureActionText);
 
@@ -301,7 +313,7 @@ void Menu::updateVisibleActions()
     if (m_view.isCloned) {
         m_actions[Latte::Data::ContextMenu::EXPORTVIEWTEMPLATEACTION]->setVisible(false);
         m_actions[Latte::Data::ContextMenu::MOVEVIEWACTION]->setVisible(false);
-        m_actions[Latte::Data::ContextMenu::REMOVEVIEWACTION]->setVisible(false);
+        m_actions[Latte::Data::ContextMenu::REMOVEVIEWACTION]->setVisible(m_view.isExplicitlyLinked);
     }
 
     // because sometimes they are disabled unexpectedly, we should reenable them
@@ -452,13 +464,17 @@ bool Menu::updateViewData()
     bool typeOk{false};
     bool cloneOk{false};
     bool countOk{false};
+    bool placementOk{false};
     const int type = vdata.value(0).toInt(&typeOk);
     const int isCloned = vdata.value(1).toInt(&cloneOk);
     const int clonesCount = vdata.value(2).toInt(&countOk);
+    const int linkPlacement = vdata.value(3).toInt(&placementOk);
 
-    if (vdata.count() != 3 || !typeOk || !cloneOk || !countOk
+    if (vdata.count() != 4 || !typeOk || !cloneOk || !countOk || !placementOk
             || type < static_cast<int>(DockView) || type > static_cast<int>(PanelView)
-            || (isCloned != 0 && isCloned != 1) || clonesCount < 0) {
+            || (isCloned != 0 && isCloned != 1) || clonesCount < 0
+            || linkPlacement < 0 || linkPlacement > 1
+            || (isCloned == 0 && linkPlacement != 0)) {
         qWarning() << "context menu: malformed dock identity data" << vdata
                    << "; refusing original-only actions";
         return false;
@@ -467,6 +483,7 @@ bool Menu::updateViewData()
     m_view.type = static_cast<ViewType>(type);
     m_view.isCloned = isCloned;
     m_view.clonesCount = clonesCount;
+    m_view.isExplicitlyLinked = isCloned && linkPlacement == 1;
     return true;
 }
 
@@ -491,12 +508,114 @@ void Menu::populateViewTemplates()
         duplicateAction->setToolTip(m_actions[Latte::Data::ContextMenu::DUPLICATEVIEWACTION]->toolTip());
         duplicateAction->setIcon(m_actions[Latte::Data::ContextMenu::DUPLICATEVIEWACTION]->icon());
         connect(duplicateAction, &QAction::triggered, m_actions[Latte::Data::ContextMenu::DUPLICATEVIEWACTION], &QAction::triggered);
+
+        QMenu *const linkedMenu = m_addViewMenu->addMenu(
+            m_view.type == DockView ? i18n("Create &Linked Dock") : i18n("Create &Linked Panel"));
+        linkedMenu->setIcon(QIcon::fromTheme(QStringLiteral("insert-link")));
+        linkedMenu->setToolTipsVisible(true);
+        linkedMenu->menuAction()->setToolTip(
+            i18n("Share applets and their settings while keeping placement and visibility independent"));
+        populateLinkedViewTargets(linkedMenu);
+    }
+}
+
+void Menu::populateLinkedViewTargets(QMenu *menu)
+{
+    Q_ASSERT(menu);
+
+    QJsonParseError error;
+    const QJsonDocument document = QJsonDocument::fromJson(m_screensData.toUtf8(), &error);
+    if (error.error != QJsonParseError::NoError || !document.isArray()) {
+        qWarning() << "context menu: refused malformed screensData for linked dock targets" << error.errorString();
+        menu->setEnabled(false);
+        return;
+    }
+
+    static constexpr std::array<int, 4> edgeTargets{
+        static_cast<int>(Plasma::Types::TopEdge),
+        static_cast<int>(Plasma::Types::RightEdge),
+        static_cast<int>(Plasma::Types::BottomEdge),
+        static_cast<int>(Plasma::Types::LeftEdge),
+    };
+
+    const auto edgeText = [](const int edge) {
+        switch (static_cast<Plasma::Types::Location>(edge)) {
+        case Plasma::Types::TopEdge:
+            return i18nc("screen edge", "Top");
+        case Plasma::Types::RightEdge:
+            return i18nc("screen edge", "Right");
+        case Plasma::Types::BottomEdge:
+            return i18nc("screen edge", "Bottom");
+        case Plasma::Types::LeftEdge:
+            return i18nc("screen edge", "Left");
+        default:
+            Q_UNREACHABLE();
+        }
+    };
+
+    int activeScreenCount{0};
+    for (const QJsonValue &value : document.array()) {
+        const QJsonObject screen = value.toObject();
+        if (!screen.value(QStringLiteral("isActive")).toBool()) {
+            continue;
+        }
+
+        const int screenId = screen.value(QStringLiteral("id")).toInt(-1);
+        const QString screenName = screen.value(QStringLiteral("name")).toString();
+        if (screenId < 0 || screenName.isEmpty()) {
+            qWarning() << "context menu: refused malformed active output record" << screen;
+            menu->setEnabled(false);
+            return;
+        }
+
+        ++activeScreenCount;
+        QMenu *const screenMenu = menu->addMenu(screenName);
+        screenMenu->setIcon(QIcon::fromTheme(QStringLiteral("video-display")));
+
+        for (const int edge : edgeTargets) {
+            QAction *const edgeAction = screenMenu->addAction(edgeText(edge));
+            QVariantMap request;
+            request.insert(QStringLiteral("action"), QStringLiteral("createLinked"));
+            request.insert(QStringLiteral("screenId"), screenId);
+            request.insert(QStringLiteral("edge"), edge);
+            edgeAction->setData(request);
+        }
+    }
+
+    if (activeScreenCount == 0) {
+        qWarning() << "context menu: no active output is available for a linked dock target";
+        menu->setEnabled(false);
     }
 }
 
 void Menu::addView(QAction *action)
 {
-    const QString templateId = action->data().toString();
+    const QVariant actionData = action->data();
+    if (actionData.metaType().id() == QMetaType::QVariantMap) {
+        const QVariantMap request = actionData.toMap();
+        bool screenOk{false};
+        bool edgeOk{false};
+        const int screenId = request.value(QStringLiteral("screenId")).toInt(&screenOk);
+        const int edge = request.value(QStringLiteral("edge")).toInt(&edgeOk);
+        if (request.value(QStringLiteral("action")).toString() != QLatin1String("createLinked")
+                || !screenOk || !edgeOk) {
+            qWarning() << "context menu: refused malformed linked dock request" << request;
+            return;
+        }
+
+        QTimer::singleShot(400, [this, screenId, edge]() {
+            QDBusInterface iface("org.kde.lattedock", "/Latte", "", QDBusConnection::sessionBus());
+            if (iface.isValid()) {
+                iface.call("createLinkedView", containment()->id(), screenId, edge);
+            }
+        });
+        return;
+    }
+
+    const QString templateId = actionData.toString();
+    if (templateId.isEmpty()) {
+        return;
+    }
 
     QTimer::singleShot(400, [this, templateId]() {
         QDBusInterface iface("org.kde.lattedock", "/Latte", "", QDBusConnection::sessionBus());

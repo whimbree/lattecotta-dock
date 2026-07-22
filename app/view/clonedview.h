@@ -43,6 +43,7 @@ public:
     Latte::Data::View::LinkPlacement linkPlacement() const override;
 
     Latte::View *configurationTargetView() override;
+    Latte::View *relationshipRootView() override;
 
     ViewPart::Indicator *indicator() const override;
     Latte::Data::View data() const override;

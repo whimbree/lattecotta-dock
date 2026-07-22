@@ -1209,6 +1209,7 @@ QStringList Corona::contextMenuData(const uint &containmentId)
     Types::ViewType viewType{Types::DockView};
     bool isCloned{true};
     int clonesCount{0};
+    int linkPlacement{static_cast<int>(Data::View::LinkPlacement::ScreenGroupDerived)};
 
     auto *synchronizer = m_layoutsManager->synchronizer();
     auto *view = synchronizer->viewForContainment(containmentId);
@@ -1243,8 +1244,11 @@ QStringList Corona::contextMenuData(const uint &containmentId)
 
     if (persistentContainment) {
         isCloned = Layouts::Storage::self()->isClonedView(persistentContainment);
+        linkPlacement = persistentContainment->config().readEntry(
+            "linkPlacement", static_cast<int>(Data::View::LinkPlacement::ScreenGroupDerived));
     } else if (view) {
         isCloned = view->isCloned();
+        linkPlacement = static_cast<int>(view->linkPlacement());
     } else {
         qWarning() << "corona: context menu data requested for unknown containment"
                    << containmentId << "; refusing original-only actions";
@@ -1253,6 +1257,15 @@ QStringList Corona::contextMenuData(const uint &containmentId)
     if (view && persistentContainment && view->isCloned() != isCloned) {
         qWarning() << "corona: runtime and persistent clone roles disagree for containment"
                    << containmentId << "; using persistent role";
+    }
+
+    if (linkPlacement < static_cast<int>(Data::View::LinkPlacement::ScreenGroupDerived)
+            || linkPlacement > static_cast<int>(Data::View::LinkPlacement::ExplicitTarget)
+            || (!isCloned
+                && linkPlacement == static_cast<int>(Data::View::LinkPlacement::ExplicitTarget))) {
+        qWarning() << "corona: malformed persistent link placement" << linkPlacement
+                   << "for containment" << containmentId << "; refusing identity-owned actions";
+        linkPlacement = -1;
     }
 
     if (!isCloned && view && view->isOriginal()) {
@@ -1297,9 +1310,11 @@ QStringList Corona::contextMenuData(const uint &containmentId)
     if (!isCloned) { /*View*/
         viewtype << "0";              //original view
         viewtype << QString::number(clonesCount);
+        viewtype << QString::number(linkPlacement);
     } else {
         viewtype << "1";              //cloned view
         viewtype << "0";              //has no clones
+        viewtype << QString::number(linkPlacement);
     }
 
     data << viewtype.join(";;");
@@ -1729,6 +1744,26 @@ void Corona::duplicateView(const uint &containmentId)
     }
 
     view->duplicateView();
+}
+
+void Corona::createLinkedView(const uint &containmentId, const int &screenId, const int &edge)
+{
+    auto *const view = m_layoutsManager->synchronizer()->viewForContainment(
+        static_cast<int>(containmentId));
+    if (!view) {
+        qWarning() << "corona: createLinkedView requested for containment" << containmentId
+                   << "which has no view";
+        return;
+    }
+
+    const auto role = view->actionRole();
+    if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::CreateLinked)) {
+        qWarning() << "corona: createLinkedView refused by the view relationship policy for containment"
+                   << containmentId;
+        return;
+    }
+
+    view->createLinkedView(screenId, static_cast<Plasma::Types::Location>(edge));
 }
 
 void Corona::exportViewTemplate(const uint &containmentId)
