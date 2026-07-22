@@ -1231,6 +1231,27 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: the pinned build completes. The identity contract requires refusal
   before unassignment and full pending-state cancellation before reveal.
 
+### D122 - Same-edge edit canvas retarget lost layer anchors
+- STATUS: FIXED (`dc1517aec`), pending PR.
+- FOUND: 2026-07-22, live vertical-dock edit-mode acceptance.
+- SYMPTOM: the edit header for a left dock appeared near the middle of the
+  output even though the dock and its reported canvas geometry stayed on the
+  left edge.
+- ROOT: shared config chrome clears its old layer-shell anchors during a
+  retarget. `CanvasConfigView::syncGeometry()` returned early when the target
+  canvas rectangle matched its cache. Separate same-edge docks legitimately
+  have identical rectangles, so the cache suppressed both compositor
+  placement and the target view's input-mask refresh. KWin centered the
+  unanchored vertical surface.
+- FIX: reassert Wayland canvas placement and the view-owned input mask on every
+  synchronization. Keep rectangle equality only as the condition for resize
+  work and the non-Wayland `setPosition()` path.
+- EVIDENCE: the live dock reported `[1440,425,140,1440]` while KWin mapped the
+  surface at `[2650,425,140,1440]`. The pre-fix nested same-edge retarget
+  reported `0,0 146x912` while KWin mapped `727,44 146x912`. Two fresh
+  corrected runs mapped the first and retargeted canvases at the reported
+  `0,88 146x824`; `layershellmappingtest` also passes.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.
