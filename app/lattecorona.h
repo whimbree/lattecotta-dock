@@ -339,6 +339,7 @@ public Q_SLOTS:
     void showWidgetExplorer(const uint &containmentId);
 
     void duplicateView(const uint &containmentId);
+    void createLinkedView(const uint &containmentId, const int &screenId, const int &edge);
     void exportViewTemplate(const uint &containmentId);
     void moveViewToLayout(const uint &containmentId, const QString &layoutName);
     void removeView(const uint &containmentId);

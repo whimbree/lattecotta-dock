@@ -67,6 +67,82 @@ Loader {
             font: Kirigami.Theme.defaultFont
         }
 
+        QQC2.Dialog {
+            id: createLinkedViewDialog
+
+            anchors.centerIn: parent
+            modal: true
+            // Plasma injects i18n into the shell context; qmllint cannot resolve it statically.
+            // qmllint disable unqualified
+            title: dialog.viewIsPanel ? i18n("Create Linked Panel") : i18n("Create Linked Dock")
+            // qmllint enable unqualified
+            standardButtons: QQC2.Dialog.Ok | QQC2.Dialog.Cancel
+            width: Math.min(dialog.width - 2 * Kirigami.Units.largeSpacing,
+                            28 * Kirigami.Units.gridUnit)
+
+            // Plasma injects i18nc into the shell context; qmllint cannot resolve it statically.
+            // qmllint disable unqualified
+            readonly property var edgeTargets: [
+                { text: i18nc("screen edge", "Top"), edge: PlasmaCore.Types.TopEdge },
+                { text: i18nc("screen edge", "Right"), edge: PlasmaCore.Types.RightEdge },
+                { text: i18nc("screen edge", "Bottom"), edge: PlasmaCore.Types.BottomEdge },
+                { text: i18nc("screen edge", "Left"), edge: PlasmaCore.Types.LeftEdge }
+            ]
+            // qmllint enable unqualified
+
+            // The shell supplies both objects as context properties at runtime.
+            // qmllint disable unqualified
+            onAccepted: {
+                var targetScreen = universalSettings.screens[linkedScreen.currentIndex];
+                var targetEdge = createLinkedViewDialog.edgeTargets[linkedEdge.currentIndex].edge;
+                latteView.createLinkedViewOnScreen(targetScreen.name, targetEdge);
+            }
+            // qmllint enable unqualified
+
+            ColumnLayout {
+                width: parent.width
+                spacing: Kirigami.Units.smallSpacing
+
+                PlasmaComponents3.Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    // Plasma injects i18n into the shell context; qmllint cannot resolve it statically.
+                    // qmllint disable unqualified
+                    text: i18n("Applet content and settings stay linked. Placement, visibility, and dock appearance remain independent.")
+                    // qmllint enable unqualified
+                }
+
+                PlasmaComponents3.Label {
+                    // qmllint disable unqualified
+                    text: i18n("Output")
+                    // qmllint enable unqualified
+                }
+
+                QQC2.ComboBox {
+                    id: linkedScreen
+                    Layout.fillWidth: true
+                    // universalSettings is a shell context property.
+                    // qmllint disable unqualified
+                    model: universalSettings.screens
+                    // qmllint enable unqualified
+                    textRole: "name"
+                }
+
+                PlasmaComponents3.Label {
+                    // qmllint disable unqualified
+                    text: i18n("Screen edge")
+                    // qmllint enable unqualified
+                }
+
+                QQC2.ComboBox {
+                    id: linkedEdge
+                    Layout.fillWidth: true
+                    model: createLinkedViewDialog.edgeTargets
+                    textRole: "text"
+                }
+            }
+        }
+
         //! chosen size to be applied, if the user has set or not a different scale for the settings window
         property int chosenWidth: userScaleWidth !== 1 ? userScaleWidth * proposedWidth : proposedWidth
         property int chosenHeight: userScaleHeight !== 1 ? userScaleHeight * heightLevel * proposedHeight : heightLevel * proposedHeight
@@ -531,6 +607,8 @@ Loader {
                                 latteView.newView(item.templateId);
                             } else if (item && item.actionId === "duplicate:") {
                                 latteView.duplicateView();
+                            } else if (item && item.actionId === "createLinked:") {
+                                createLinkedViewDialog.open();
                             }
 
                             actionsComboBtn.comboBox.currentIndex = -1;
@@ -558,6 +636,7 @@ Loader {
                         target: latteView
                         function onTypeChanged() {
                             actionsComboBtn.updateDuplicateText();
+                            actionsComboBtn.updateCreateLinkedText();
                         }
                     }
 
@@ -574,6 +653,10 @@ Loader {
                         var duplicate = {actionId: 'duplicate:', enabled: true, name: '', icon: 'edit-copy'};
                         actionsModel.append(duplicate);
                         updateDuplicateText();
+
+                        var createLinked = {actionId: 'createLinked:', enabled: true, name: '', icon: 'insert-link'};
+                        actionsModel.append(createLinked);
+                        updateCreateLinkedText();
 
                         var separator = {isSeparator: true};
                         actionsModel.append(separator);
@@ -607,6 +690,21 @@ Loader {
                             if (item.actionId === "duplicate:") {
                                 var duplicateText = latteView.type === LatteCore.Types.DockView ? i18n("Duplicate Dock") : i18n("Duplicate Panel")
                                 item.name = duplicateText;
+                                break;
+                            }
+                        }
+                    }
+
+                    function updateCreateLinkedText() {
+                        for (var i=0; i<actionsModel.count; ++i) {
+                            var item = actionsModel.get(i);
+                            if (item.actionId === "createLinked:") {
+                                // latteView and i18n are shell context properties.
+                                // qmllint disable unqualified
+                                item.name = latteView.type === LatteCore.Types.DockView
+                                        ? i18n("Create Linked Dock...")
+                                        : i18n("Create Linked Panel...");
+                                // qmllint enable unqualified
                                 break;
                             }
                         }

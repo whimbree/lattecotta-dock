@@ -46,6 +46,11 @@
     <method name="duplicateView">
         <arg name="containmentId" type="u" direction="in"/>
     </method>
+    <method name="createLinkedView">
+        <arg name="containmentId" type="u" direction="in"/>
+        <arg name="screenId" type="i" direction="in"/>
+        <arg name="edge" type="i" direction="in"/>
+    </method>
     <method name="moveViewToLayout">
         <arg name="containmentId" type="u" direction="in"/>
         <arg name="layoutName" type="s" direction="in"/>

@@ -256,6 +256,11 @@ public:
     //! views own themselves; screen-group clones resolve to their original.
     virtual Latte::View *configurationTargetView();
 
+    //! The persistent root for applet synchronization. Unlike
+    //! configurationTargetView(), explicit linked members resolve to the root
+    //! here while keeping their own edit presentation.
+    virtual Latte::View *relationshipRootView();
+
     QVariantList containmentActions() const;
 
     QQuickView *configView() const;
@@ -298,7 +303,10 @@ public Q_SLOTS:
     Q_INVOKABLE void newView(const QString &templateFile);
     Q_INVOKABLE void removeView();
     Q_INVOKABLE void duplicateView();
+    Q_INVOKABLE void createLinkedViewOnScreen(const QString &screenName, int edge);
     Q_INVOKABLE void exportTemplate();
+
+    void createLinkedView(int targetScreenId, Plasma::Types::Location targetEdge);
 
     Q_INVOKABLE bool mimeContainsPlasmoid(QMimeData *mimeData, QString name);
 

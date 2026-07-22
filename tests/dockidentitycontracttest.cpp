@@ -84,6 +84,7 @@ void DockIdentityContractTest::relationshipActionsGuardEveryProductionBoundary()
     const QString coronaSource = readFile(QStringLiteral("app/lattecorona.cpp"));
     const QList<Boundary> coronaBoundaries{
         {QStringLiteral("void Corona::duplicateView"), QStringLiteral("Action::Duplicate"), QStringLiteral("view->duplicateView();")},
+        {QStringLiteral("void Corona::createLinkedView"), QStringLiteral("Action::CreateLinked"), QStringLiteral("view->createLinkedView(screenId,static_cast<Plasma::Types::Location>(edge));")},
         {QStringLiteral("void Corona::exportViewTemplate"), QStringLiteral("Action::ExportTemplate"), QStringLiteral("view->exportTemplate();")},
         {QStringLiteral("void Corona::moveViewToLayout"), QStringLiteral("Action::MoveToLayout"), QStringLiteral("view->positioner()->setNextLocation")},
         {QStringLiteral("void Corona::removeView"), QStringLiteral("Action::Remove"), QStringLiteral("view->removeView();")},
@@ -99,6 +100,7 @@ void DockIdentityContractTest::relationshipActionsGuardEveryProductionBoundary()
     const QString viewSource = readFile(QStringLiteral("app/view/view.cpp"));
     const QList<Boundary> viewBoundaries{
         {QStringLiteral("void View::duplicateView"), QStringLiteral("Action::Duplicate"), QStringLiteral("createViewFromTemplate(storedTmpViewFilepath,TemplateImportRelationship::IndependentSnapshot);")},
+        {QStringLiteral("void View::createLinkedView(const int"), QStringLiteral("Action::CreateLinked"), QStringLiteral("m_layout->newView(linked);")},
         {QStringLiteral("void View::exportTemplate"), QStringLiteral("Action::ExportTemplate"), QStringLiteral("exportDlg->show();")},
         {QStringLiteral("void View::removeView"), QStringLiteral("Action::Remove"), QStringLiteral("removeAct->trigger();")},
     };
@@ -138,7 +140,7 @@ void DockIdentityContractTest::duplicateNormalizesRelationshipBeforeImport()
     QVERIFY(!cloneActions.contains(QStringLiteral("DUPLICATEVIEWACTION]->setVisible(false)")));
     QVERIFY(cloneActions.contains(QStringLiteral("EXPORTVIEWTEMPLATEACTION]->setVisible(false)")));
     QVERIFY(cloneActions.contains(QStringLiteral("MOVEVIEWACTION]->setVisible(false)")));
-    QVERIFY(cloneActions.contains(QStringLiteral("REMOVEVIEWACTION]->setVisible(false)")));
+    QVERIFY(cloneActions.contains(QStringLiteral("REMOVEVIEWACTION]->setVisible(m_view.isExplicitlyLinked)")));
 }
 
 void DockIdentityContractTest::retargetIsLatestRequestOnlyAndEndsOldSessionFirst()
@@ -175,7 +177,15 @@ void DockIdentityContractTest::cloneEditRequestsResolveOneOriginalTarget()
 {
     const QString cloneSource = readFile(QStringLiteral("app/view/clonedview.cpp"));
     const QString target = normalized(functionBody(cloneSource, QStringLiteral("View *ClonedView::configurationTargetView")));
-    QCOMPARE(target, QStringLiteral("{returnm_originalView.data();}"));
+    QVERIFY(target.contains(QStringLiteral("m_linkPlacement==Data::View::LinkPlacement::ExplicitTarget")));
+    QVERIFY(target.contains(QStringLiteral("returnthis;")));
+    QVERIFY(target.contains(QStringLiteral("returnm_originalView.data();")));
+
+    const QString configure = normalized(functionBody(cloneSource, QStringLiteral("void ClonedView::showConfigurationInterface")));
+    const int explicitBranch = configure.indexOf(QStringLiteral("LinkPlacement::ExplicitTarget"));
+    const int localEdit = configure.indexOf(QStringLiteral("View::showConfigurationInterface(applet);"), explicitBranch);
+    const int linkedEdit = configure.indexOf(QStringLiteral("configurationTargetView()"), localEdit);
+    QVERIFY(explicitBranch >= 0 && localEdit > explicitBranch && linkedEdit > localEdit);
 
     const QString coronaSource = readFile(QStringLiteral("app/lattecorona.cpp"));
     const QString editMode = normalized(functionBody(coronaSource, QStringLiteral("void Corona::setViewEditMode")));
@@ -247,6 +257,7 @@ void DockIdentityContractTest::persistentMenuIdentitySurvivesRuntimeGap()
     QVERIFY(contextData.contains(QStringLiteral("layout->containmentForId(containmentId)")));
     QVERIFY(contextData.contains(QStringLiteral("isClonedView(persistentContainment)")));
     QVERIFY(contextData.contains(QStringLiteral("persistentContainment->config().readEntry(\"viewType\"")));
+    QVERIFY(contextData.contains(QStringLiteral("persistentContainment->config().readEntry(\"linkPlacement\"")));
     QVERIFY(contextData.contains(QStringLiteral("if(!isCloned)")));
 
     const QString menuSource = readFile(QStringLiteral("containmentactions/contextmenu/menu.cpp"));
@@ -256,6 +267,7 @@ void DockIdentityContractTest::persistentMenuIdentitySurvivesRuntimeGap()
 
     QVERIFY(parseView.contains(QStringLiteral("m_view=ViewTypeData{};")));
     QVERIFY(parseView.contains(QStringLiteral("returnfalse;")));
+    QVERIFY(parseView.contains(QStringLiteral("vdata.count()!=4")));
     QVERIFY(populateTemplates.contains(QStringLiteral("if(m_contextDataValid)")));
     QVERIFY(!populateTemplates.contains(QStringLiteral("!m_view.isCloned")));
     QVERIFY(visibleActions.contains(QStringLiteral("setVisible(m_contextDataValid&&!configuring)")));

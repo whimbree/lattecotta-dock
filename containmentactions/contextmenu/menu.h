@@ -34,6 +34,7 @@ struct ViewTypeData {
     ViewType type{ViewType::DockView};
     bool isCloned{true};
     int clonesCount{0};
+    bool isExplicitlyLinked{false};
 };
 
 class Menu : public Plasma::ContainmentActions
@@ -52,6 +53,7 @@ private Q_SLOTS:
     void populateLayouts();
     void populateMoveToLayouts();
     void populateViewTemplates();
+    void populateLinkedViewTargets(QMenu *menu);
     void quitApplication();
     void requestConfiguration();
     void requestWidgetExplorer();
@@ -65,6 +67,7 @@ private Q_SLOTS:
 private:
     QStringList m_data;
     QStringList m_viewTemplates;
+    QString m_screensData;
 
     QStringList m_actionsAlwaysShown;
     QStringList m_activeLayoutNames;

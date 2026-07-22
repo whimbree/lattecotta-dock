@@ -600,6 +600,73 @@ void View::duplicateView()
     createViewFromTemplate(storedTmpViewFilepath, TemplateImportRelationship::IndependentSnapshot);
 }
 
+void View::createLinkedViewOnScreen(const QString &screenName, const int edge)
+{
+    const int screenId = m_corona->screenPool()->id(screenName);
+    if (screenId < ScreenPool::FIRSTSCREENID) {
+        qWarning() << "View::createLinkedViewOnScreen refused unknown output" << screenName;
+        return;
+    }
+
+    createLinkedView(screenId, static_cast<Plasma::Types::Location>(edge));
+}
+
+void View::createLinkedView(const int targetScreenId, const Plasma::Types::Location targetEdge)
+{
+    const auto role = actionRole();
+    if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::CreateLinked)) {
+        qWarning() << "View::createLinkedView refused by the view relationship policy";
+        return;
+    }
+
+    const bool validEdge = targetEdge == Plasma::Types::TopEdge
+            || targetEdge == Plasma::Types::BottomEdge
+            || targetEdge == Plasma::Types::LeftEdge
+            || targetEdge == Plasma::Types::RightEdge;
+    if (!validEdge) {
+        qWarning() << "View::createLinkedView refused invalid edge" << targetEdge;
+        return;
+    }
+
+    if (!m_corona->screenPool()->hasScreenId(targetScreenId)
+            || !m_corona->screenPool()->isScreenActive(targetScreenId)) {
+        qWarning() << "View::createLinkedView refused inactive or unknown output id" << targetScreenId;
+        return;
+    }
+
+    View *const root = relationshipRootView();
+    if (!root || !root->isOriginal() || !root->containment() || !containment()
+            || !m_layout || root->layout() != m_layout) {
+        qWarning() << "View::createLinkedView refused malformed or cross-layout relationship root";
+        return;
+    }
+
+    const QString templateFile = m_layout->storedView(containment()->id());
+    if (templateFile.isEmpty()) {
+        qWarning() << "View::createLinkedView could not capture containment" << containment()->id();
+        return;
+    }
+
+    const Data::ViewsTable templateViews = Layouts::Storage::self()->views(templateFile);
+    if (templateViews.rowCount() != 1) {
+        qWarning() << "View::createLinkedView expected one captured source view, found"
+                   << templateViews.rowCount();
+        return;
+    }
+
+    Data::View linked = templateViews[0].toExplicitLinkedMember(
+        root->containment()->id(), targetScreenId, targetEdge);
+    linked.name = i18nc("explicitly linked copy of dock or panel, name", "Linked copy of %1", name());
+    linked.setState(Data::View::OriginFromViewTemplate, templateFile);
+
+    //! Occupied edges are valid. Same-edge stacking is coordinated after view
+    //! creation, so this path deliberately does not consult freeEdges().
+    const Data::View created = m_layout->newView(linked);
+    if (!created.isValid()) {
+        qWarning() << "View::createLinkedView failed to import the linked member";
+    }
+}
+
 void View::exportTemplate()
 {
     const auto role = actionRole();
@@ -694,6 +761,11 @@ QQuickView *View::configView() const
 }
 
 View *View::configurationTargetView()
+{
+    return this;
+}
+
+View *View::relationshipRootView()
 {
     return this;
 }
