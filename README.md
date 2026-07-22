@@ -67,6 +67,8 @@ Applet membership and ordinary settings stay linked, while orientation-dependent
 applet length and effective sizing remain local to each output view. Runtime
 recreation and output disconnects preserve the persistent relationship and
 rebind only the views eligible on active outputs.
+Horizontal and vertical layout changes use the same per-view animation tracker,
+so automatic sizing waits for settled content on both axes.
 The shared edit canvas reasserts its compositor placement and view-local input
 mask when retargeting, including between separate docks that legitimately
 occupy the same output edge and canvas rectangle.
