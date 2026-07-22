@@ -117,7 +117,12 @@ Per dock:
   `inputMask`, and `appliedInputMask` use dock-window-local coordinates.
   Thickness values are logical pixels as well.
 - Runtime state: `visibilityMode`, `isHidden`, `inStartup`, `isOffScreen`,
-  `inRelocationAnimation`, `inDelete`, and `inReadyState`.
+  `inRelocationAnimation`, `inRelocationShowing`, `geometrySettled`,
+  `relocationGeneration`, `appliedRelocationGeneration`, `inDelete`, and
+  `inReadyState`. Generations are process-local decimal strings. Settlement
+  requires the requested and applied generations to match, the target screen
+  to own the view, and all positioner screen, geometry, validation, slide, and
+  reveal work to have drained.
 - Edit state: `editMode`, `effectiveConfigureAppletsMode`, and
   `settingsWindowShown`. The effective field is true only for an edited view
   while the top-level global toggle is true.

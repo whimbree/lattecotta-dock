@@ -831,7 +831,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   source and test tree through `b6ba7ab15`.
 
 ### D83 - Removed duplicate containment survives the undo window in persistent layout state
-- STATUS: OPEN, CONFIRMED in the baseline nested vehicle.
+- STATUS: FIXED on `feat/create-linked-dock` (`09a61e537`, `43b86fe64`).
 - FOUND: 2026-07-21, baseline `duplicate-view-idremap` acceptance run at
   `16eb58ea4` before the D77 implementation.
 - SYMPTOM: removing a newly created independent duplicate destroys its runtime
@@ -840,11 +840,95 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: duplicate containment 12 was independent with `IsClonedFrom: -1`.
   The log recorded `dock containment destroyed changed!!!!` at 21:31:13, while
   the containment group was still present after the recipe's 120-second poll.
-- ROOT CAUSE: not yet established. Runtime destruction completes, so the open
-  failure is in persistent containment retirement or synchronization after the
-  undo window, not clone ancestry or `OriginalView` membership.
-- DISPOSITION: keep separate from D77. Instrument the persistent removal and
-  layout-sync boundary before changing cleanup behavior.
+- ROOT CAUSE: two independent persistence boundaries failed. MultipleLayouts
+  synchronization copied every live containment QObject, including Plasma's
+  transient destroyed objects, back into the per-layout file. In the nested
+  session, the notification service was absent, so libplasma's removal
+  notification disappeared without emitting `KNotification::closed`; its
+  cleanup callback never committed final destruction.
+- FIX: Storage treats destroyed containments and their owned subcontainment
+  trees as persistence tombstones and validates the retained projection before
+  replacing the prior config group. GenericLayout owns a per-containment
+  fallback transaction for Plasma's same 60-second Undo window; Undo, a newer
+  request, and final destruction cancel the old timer.
+- EVIDENCE: storage, identity, and libplasma signal-order contracts pass. The
+  seeded nested stress observed the removed member leave runtime and disk,
+  recreated a direct-root member, and restored exactly the five intended docks
+  after restart.
+
+### D98 - Dock-system sizing diagnostics read the edit controller
+- STATUS: FIXED on `feat/create-linked-dock` (`2c1e656c7`).
+- FOUND: 2026-07-22, exact linked-dock sizing reproduction.
+- SYMPTOM: every settled dock reported null `availablePrimaryLength`, so the
+  first cross-dock sizing transition could not be attributed.
+- ROOT: `dockSystemData` read `maxLength` from the containment edit root. The
+  orientation-specific value consumed by AutoSize belongs to that view's live
+  Metrics object.
+- FIX: expose the Metrics value and collect both effective icon size and
+  available primary length from that same per-view sizing authority.
+- EVIDENCE: the D-Bus schema and production source contract pass. The linked
+  acceptance reports non-null independent sizing values for every member and
+  keeps the portrait vertical member unchanged while the bottom root changes
+  alignment.
+
+### D99 - Programmatic applet creation did not notify linked members
+- STATUS: FIXED on `feat/create-linked-dock` (`dcd95bb42`).
+- FOUND: 2026-07-22, Create Linked Dock acceptance.
+- SYMPTOM: adding an applet by plug-in ID changed only the addressed dock even
+  though every linked member subscribed to `appletCreated`.
+- ROOT: the successful creation path never emitted the declared relationship
+  signal.
+- FIX: split announcing external creation from local coordinator fanout. The
+  first path emits once; member copies use the local-only path and cannot feed
+  the event back into the group.
+- EVIDENCE: the source contract pins the single announcing boundary. Nested
+  KWin observed the same plug-in multiset and disjoint applet IDs in the root
+  and both members.
+
+### D100 - Startup cleanup deleted explicitly placed linked docks
+- STATUS: FIXED on `feat/create-linked-dock` (`ea8e60dce`).
+- FOUND: 2026-07-22, first explicit-linked persistence reload.
+- SYMPTOM: linked containment records were correct on disk, but restart removed
+  the explicitly placed members before their views were constructed.
+- ROOT: cleanup treated every `isClonedFrom` record as disposable
+  screen-group fanout. Enumeration order could also construct a member before
+  its relationship root.
+- FIX: only `ScreenGroupDerived` members are regenerated and cleaned. Explicit
+  members remain ordinary screen-map participants, and startup stable-partitions
+  roots before members.
+- EVIDENCE: storage fixtures and both nested linked recipes restore direct-root
+  members with the same persistent IDs, outputs, edges, and distinct runtime
+  objects.
+
+### D101 - Rapid placement changes lost relocation ownership
+- STATUS: FIXED on `feat/create-linked-dock` (`ce7a632e3`).
+- FOUND: 2026-07-22, seeded linked-dock operation storm.
+- SYMPTOM: a second move could remain forever in relocation animation, or the
+  model could report its new output and edge while local geometry still
+  described the previous orientation.
+- ROOT: an older reveal animation's `onStopped` cleared the newer hide
+  transaction. Delayed completion callbacks also carried no placement
+  generation, and `inRelocationAnimation` excluded the deferred screen and
+  geometry reconciliation queues.
+- FIX: stop the old reveal before claiming a new hide, version every placement
+  request, reject superseded completion callbacks, and expose requested versus
+  applied generations plus `geometrySettled` after every owned queue drains.
+- EVIDENCE: identity and D-Bus contracts pass. Seed 127934575 completed 28
+  placements and seven edit transitions, then held all geometry and sizing
+  fields unchanged for two seconds before an equivalent persistence reload.
+
+### D102 - Viewless containments missed the removal fallback
+- STATUS: FIXED on `feat/create-linked-dock` (`0ea1c8112`).
+- FOUND: 2026-07-22, removal-ownership review after D83.
+- SYMPTOM: a removed embedded containment could remain transient forever when
+  the notification backend failed, even though dock containments retired.
+- ROOT: GenericLayout armed its notification-independent commit only inside the
+  `Latte::View` parking branch. Embedded subcontainments are registered but have
+  no dock View.
+- FIX: every registered containment owns the fallback transaction. Only the
+  view-map parking remains conditional.
+- EVIDENCE: the source contract requires the timer arm after the view-only
+  branch; production compiles and the focused identity contract passes.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).

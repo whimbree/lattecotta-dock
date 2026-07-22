@@ -71,10 +71,11 @@ the full context; this list is the map, not the territory):
    long to appear at login) and the startup retry-exhaustion deadlock.
 3. Phase 8: dock visibility across screen lock/unlock (observed live:
    docks can fail to come back).
-4. Phase 8 continuation: Create Linked Dock… as the explicit synchronized
-   copy action, with persistent relationship identity, member-local placement,
-   and migration from legacy `ClonedView` / `isClonedFrom` records. Its applet
-   order and dual-monitor prerequisites are complete.
+4. DONE 2026-07-22: Phase 8 Create Linked Dock… is the explicit synchronized
+   copy action, with persistent direct-root relationship identity, member-local
+   placement and edit presentation, explicit applet synchronization, and
+   deterministic two-output replay. Legacy `ClonedView` / `isClonedFrom`
+   records retain their screen-group-derived behavior.
 5. Phase 7: edit-mode entry/exit detection research (the subsystem
    that took a reference fork 8+ attempts; ours works but the
    detection contract was never nailed down) plus the drag-reorder
@@ -1317,14 +1318,50 @@ multi-view, multi-monitor setup.
       instead of relying on persistence equality to cover them.
       Commits: f207d6560
 
-- [ ] Fix D83 (removed duplicate containment survives the undo window in
-      persistent layout state). Baseline nested evidence at `16eb58ea4` shows
-      independent duplicate containment 12 with `IsClonedFrom: -1`; its runtime
-      containment logged destruction at 21:31:13, but its persistent layout
-      group remained after the recipe's 120-second poll. This is separate from
-      D77 clone lineage and runtime membership. Instrument the persistent
-      removal and layout-sync boundary before changing cleanup behavior.
-      Commits:
+- [x] Fix D83 (removed duplicate containment survives the undo window in
+      persistent layout state). Plasma keeps the containment QObject alive
+      during Undo, but MultipleLayouts synchronization copied that transient
+      destroyed object back to disk. The nested notification failure also
+      prevented libplasma's `KNotification::closed` cleanup from committing.
+      Storage now projects destroyed containments and their owned
+      subcontainments as tombstones. GenericLayout owns a generation-checked
+      fallback for Plasma's same 60-second window, canceled by Undo or final
+      destruction. The seeded nested replay observes disk retirement before
+      replacement and restores the intended topology after restart.
+      Commits: 09a61e537, 43b86fe64
+
+- [x] Fix D98 (dock-system sizing diagnostics read the edit controller).
+      Collect effective icon size and available primary length from each
+      view's live Metrics authority, which is the object AutoSize consumes.
+      The exact linked acceptance observes non-null values and cross-output
+      sizing isolation.
+      Commits: 2c1e656c7
+
+- [x] Fix D99 (programmatic applet creation did not notify linked members).
+      Announce a successful external plug-in creation once, then fan out
+      through a local-only path that cannot feed back into the relationship.
+      Nested KWin observes equal plug-in multisets with disjoint applet IDs.
+      Commits: dcd95bb42
+
+- [x] Fix D100 (startup cleanup deleted explicitly placed linked docks).
+      Regenerate only screen-group-derived members and stable-partition roots
+      before members during startup. Explicit members retain their persistent
+      IDs, output, edge, and direct-root relation through reload.
+      Commits: ea8e60dce
+
+- [x] Fix D101 (rapid placement changes lost relocation ownership). Stop an
+      older reveal before the next hide owns the transaction, version every
+      placement request, reject superseded delayed completions, and define
+      geometry settlement across the view's screen, geometry, validation, and
+      reveal queues. Seed 127934575 completes 28 placements and holds the
+      converged geometry stable.
+      Commits: ce7a632e3, 39fb979bc
+
+- [x] Fix D102 (viewless containments missed the removal fallback). Arm the
+      notification-independent commit for every registered containment, not
+      only objects with a dock View. The view map remains conditional while
+      embedded containment cleanup follows the same Undo transaction.
+      Commits: 0ea1c8112
 
 - [x] Bottom-dock layer surface drifts left of its reported geometry
       (filed 2026-07-17 from the e2e promotion unit, evidence in
@@ -4097,17 +4134,24 @@ prerequisites in the phases above are done.
       one variable, clean profile). File under Phase 8 launcher
       persistence follow-ups.
       Commits: none (finding, not yet isolated)
-- [ ] Create Linked Dock…: first-class synchronized copies with user-chosen
-      placement. The internal replica relationship can reuse understood parts
-      of the legacy `ClonedView` sync machinery, but every member needs fresh
-      persistent, containment, applet, runtime, output, placement, geometry,
-      and edit-registration identities. Full design, settled decisions
-      (relationship keying, sync scope, editability, lifecycle/detach, and
-      migration) and prerequisite tracking live in
-      `docs/reference/dock-replication-design.md`. The cloned-view order-sync
-      and live dual-monitor prerequisites are complete. The user-facing action
-      remains unimplemented.
-      Commits:
+- [x] Create Linked Dock…: first-class synchronized copies with user-chosen
+      active output and edge, including an occupied edge. A typed placement
+      policy distinguishes legacy screen-group-derived fanout from explicit
+      members. Every member receives fresh containment, applet, runtime,
+      configuration, layout-controller, geometry-controller, and edit-controller
+      identities. Applet membership, order, and settings synchronize through
+      the direct root; explicit members own placement, visibility, appearance,
+      removal, and edit presentation. Duplicate Dock remains an independent
+      snapshot from every role. D-Bus exposes the validated relationship graph,
+      per-view sizing authority, object tokens, placement generations, and
+      geometry settlement. Exact and seeded nested recipes cover separated
+      portrait topology, same-edge creation, sizing isolation, edit ownership,
+      applet fanout, removal, replacement, convergence, and reload. Detach and
+      relationship-aware root-removal choices remain a separate continuation
+      item in `docs/reference/dock-replication-design.md`.
+      Commits: 6a9183fc6, fe1230670, ea7a77f0e, 9ba2429e1,
+      2b133d839, 2c1e656c7, dcd95bb42, ea8e60dce, ce7a632e3,
+      09a61e537, 43b86fe64, 39fb979bc
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

@@ -3,6 +3,67 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-22.
 
+## 2026-07-22: explicit linked docks and independent duplication implemented
+
+The `feat/create-linked-dock` branch separates the two user-visible operations.
+Duplicate Dock remains the D77 relation-breaking snapshot from any visible
+role. Create Linked Dock… now creates a synchronized direct-root member on a
+selected active output and edge, including an occupied edge. The member gets
+fresh persistent containment and applet IDs plus distinct runtime view,
+configuration, layout-controller, geometry-controller, and edit-controller
+objects. Applet membership, order, and settings synchronize. Output, edge,
+alignment, visibility, appearance, removal, runtime geometry, and edit
+presentation stay local.
+
+The persisted `Data::View::LinkPlacement` policy separates legacy
+`ScreenGroupDerived` members from `ExplicitTarget` members (`6a9183fc6`). The
+runtime action and ownership split landed in `fe1230670` and `ea7a77f0e`.
+Schema-v2 `dockSystemData` reports direct-root membership, placement policy,
+member lists, and opaque per-view object identities (`9ba2429e1`), while the
+coarse placement action drives the same validated transaction as the UI
+(`2b133d839`). Sizing diagnostics now read each view's Metrics authority
+(`2c1e656c7`). Programmatic applet creation announces exactly once and fans out
+through a local-only path (`dcd95bb42`). Startup loads roots before members and
+only discards derived fanout (`ea8e60dce`).
+
+The operation storm found D101 (rapid placement changes lost relocation
+ownership). A previous reveal could clear a newer hide transaction, and delayed
+completion carried no request identity. Commit `ce7a632e3` stops the old reveal
+before handoff, versions every placement request, rejects superseded callbacks,
+and exposes requested versus applied generations plus a geometry-settled state
+that includes all deferred positioner queues.
+
+The removal phase established both causes of D83 (removed duplicate containment
+survives the undo window in persistent layout state). MultipleLayouts copied
+Plasma's transient destroyed QObject back to disk; separately, the nested
+notification failure prevented `KNotification::closed` from committing final
+destruction. Commit `09a61e537` projects destroyed containment trees as
+persistence tombstones. Commit `43b86fe64` owns a generation-checked fallback
+for Plasma's same 60-second Undo window and cancels it on Undo or final object
+destruction.
+
+The immediate removal-ownership review found D102 (viewless containments missed
+the removal fallback): the first fallback arm sat inside the dock-View parking
+branch. Embedded containments are registered without a dock View and could
+therefore remain transient under the same notification failure. The timer now
+belongs to every registered containment; only view-map parking is conditional
+(`0ea1c8112`).
+
+`39fb979bc` adds the exact linked-dock acceptance and deterministic stress
+recipes. The first uses a separated portrait secondary output, creates a member
+on the root's already occupied edge, verifies direct-root lineage, per-member
+sizing and edit ownership, synchronized applet sets with disjoint IDs,
+independent duplication, and reload. Seed 127934575 performs 28 placements,
+seven edit transitions, two independent duplicates, one member removal and
+replacement, a two-second geometry stability comparison, and restart. Both
+recipes pass. Focused storage, data, action-policy, identity, libplasma removal,
+and D-Bus tests pass. QML compilation passed after the relocation handoff fix.
+
+Same-edge physical stack order, accumulated offsets, reservation, and activation
+regions remain the next separate slice. Create Linked deliberately accepts an
+occupied edge and does not use free-edge rejection. Detach and relationship-aware
+root-removal choices also remain continuation UX work.
+
 ## 2026-07-22: PR #110 observability merged
 
 PR #110 separates D76 (global applet-configure readback marked unrelated
@@ -271,11 +332,11 @@ matrix. GitHub rebased the validated source and test tree through `b6ba7ab15`
 and merged PR #109 at documentation-only tail `8f2c3073d`.
 
 The baseline nested run also confirmed D83 (removed duplicate containment
-survives the undo window in persistent layout state), which is not fixed by this
-branch. Independent duplicate containment 12 had `IsClonedFrom: -1` and logged
-runtime destruction at 21:31:13, but its persistent group remained after the
-120-second poll. D83 stays OPEN pending instrumentation at the persistent
-removal and layout-sync boundary.
+survives the undo window in persistent layout state), which was not fixed by
+that branch. Independent duplicate containment 12 had `IsClonedFrom: -1` and
+logged runtime destruction at 21:31:13, but its persistent group remained after
+the 120-second poll. The 2026-07-22 section above records the later persistence
+tombstone and notification-fallback fix.
 
 ## 2026-07-21: SC-F2 source-coverage gate merged
 
@@ -2142,8 +2203,8 @@ and their logs carry everything needed to finish.
    f7561df37 (viewAppletsOrder D-Bus readback). Live-verified: clone
    spawned on DP-3 via AllScreensGroup, per-position plugin identity
    match. Linked-dock design prerequisites both discharged. The
-   Create Linked Dock… continuation feature is unblocked but remains
-   unimplemented. All gates
+   Create Linked Dock… continuation feature was unblocked here and was
+   implemented in the 2026-07-22 section above. All gates
    green (46 ctest, ratchet, build-check both variants).
 
 3. PARTIAL - Lock/unlock visibility (priority item 3): one clean

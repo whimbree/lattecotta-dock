@@ -57,10 +57,12 @@ and the full settings UI. Beyond upstream parity, the port has grown
 continuation features of its own, the first being resizable applet popups
 with per-applet size persistence.
 
-Dock identity boundaries keep linked screen-group members inside one original's
-lifecycle. Duplicate Dock creates one independent snapshot from the live dock or
-layouts dialog, including when the source is linked; the user-placed Create
-Linked Dock… action remains on the continuation roadmap.
+Dock identity boundaries distinguish independent snapshots from linked content.
+Duplicate Dock creates one independent snapshot from the live dock or layouts
+dialog, including when the source is linked. Create Linked Dock… adds a
+synchronized member on a selected output and edge while keeping placement,
+visibility, appearance, removal, and edit presentation local to that member.
+Legacy On All Screens members retain their derived-output behavior.
 
 The stabilization initiative is complete: the feel-critical QML math
 (parabolic zoom, previews, launcher ordering, drag classification,
@@ -150,8 +152,9 @@ phases, one commit-traceable checklist item per task. The coarse picture:
 - [ ] Companion applets as sibling repos consumed by flake input: the
       Latte separator applet, then a full Qt 6 port of
       [applet-window-appmenu](https://github.com/psifidotos/applet-window-appmenu)
-- [ ] Further continuation features: Create Linked Dock…, background color
-      picker, scrollable group previews
+- [ ] Further continuation features: same-edge physical stack coordination,
+      linked-dock detach and root-removal choices, background color picker,
+      scrollable group previews
 
 The high-priority slice of what remains, from the plan's own ordering
 (each item carries its full context in its phase section there):

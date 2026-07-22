@@ -136,6 +136,10 @@ Landed before or during the 2026-07-16 stabilization session:
       "inStartup": false,
       "isOffScreen": false,
       "inRelocationAnimation": false,
+      "inRelocationShowing": false,
+      "geometrySettled": true,
+      "relocationGeneration": "7",
+      "appliedRelocationGeneration": "7",
       "inDelete": false,
       "inReadyState": true,
       "editMode": true,
@@ -189,8 +193,14 @@ Landed before or during the 2026-07-16 stabilization session:
   invalidate the complete query. The collector logs every lineage input at
   critical severity and returns an empty D-Bus string, never a smaller but
   plausible JSON snapshot. The visibility, startup, relocation, deletion, and
-  ready fields come directly from View, Positioner, and VisibilityManager and
-  make unsettled records explicit.
+  ready fields come directly from View, Positioner, and VisibilityManager.
+  Placement generations are process-local decimal strings. A delayed completion
+  may apply only when its captured generation still equals
+  `relocationGeneration`; `appliedRelocationGeneration` records the last accepted
+  completion. `geometrySettled` additionally requires equal generations, no
+  pending relocation or reveal, no slide, screen agreement, and drained screen,
+  geometry, and validation timers. This is the convergence authority for tests,
+  not an inference from a momentarily unchanged rectangle.
 
   The object identities name, respectively, the View window, Plasma
   containment, live KConfig property map, GenericLayout, QML layout manager,

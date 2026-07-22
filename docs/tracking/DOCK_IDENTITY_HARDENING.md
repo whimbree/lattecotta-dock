@@ -1,8 +1,8 @@
 # Dock identity, placement, and replication hardening
 
-Status: D77 (dock duplication retains clone lineage and edit ownership) identity,
-lifecycle, and independent Duplicate Dock slice implemented; explicit linked-dock,
-placement, and stacking slices pending (2026-07-21)
+Status: independent Duplicate Dock and explicit Create Linked Dock implemented;
+bounded placement and same-edge stacking slices remain separate work
+(2026-07-22)
 
 This record defines the ownership model used to investigate dock duplication,
 screen-group cloning, edit mode, placement, and same-edge stacking. It separates
@@ -16,8 +16,9 @@ The user-facing operations have three distinct jobs:
 - **Duplicate Dock** takes one snapshot of the visible source and creates one
   independent dock. It does not retain a source pointer or a dock-level
   synchronization relationship.
-- **Create Linked Dock…** is the planned action for a synchronized copy. It
-  is not implemented by D77.
+- **Create Linked Dock…** creates a synchronized copy on a selected active
+  output and edge. Applet content is linked while placement, visibility,
+  appearance, removal, and edit presentation remain member-local.
 
 The internal design calls the synchronized relation a **replica relationship**.
 `ClonedView`, `isCloned`, and `isClonedFrom` are legacy compatibility and
@@ -29,7 +30,7 @@ layout file
   +-- persistent containment 41 --------------------------+
   |     persistent dock id: 41                            |
   |     logical dock id: 41                               |
-  |     relationship: linked screen-group original        |
+  |     relationship: linked root                         |
   |                                                       |
   |     runtime OriginalView #A, output DP-1               |
   |       owns Positioner, Effects, Visibility, QML layout|
@@ -38,9 +39,10 @@ layout file
   |       persistent dock id: 57                          |
   |       logical dock id: 41                             |
   |       clone source id: 41                             |
-  |       runtime linked replica #B, output DP-2            |
-  |       legacy runtime type: ClonedView                   |
-  |       owns its runtime managers and QML layout         |
+  |       link placement: explicit target                 |
+  |       runtime linked member #B, output DP-2           |
+  |       legacy runtime type: ClonedView                 |
+  |       owns placement, edit, managers and QML layout   |
   |                                                       |
   +-- persistent containment 63                            |
         persistent dock id: 63                            |
@@ -69,14 +71,14 @@ that is the boundary with deferred work.
 | Persistent dock record | Unique per containment | Layout configuration | Containment ID | All containment and applet IDs are regenerated | Screen, edge, alignment, and length state update on the same record | Supplies menu and edit target identity | Removed with the containment configuration |
 | Containment | Unique per visible original or clone | Plasma Corona and layout | Containment ID | Must be newly imported with remapped IDs | Persists placement and QML configuration | Own `userConfiguring` is the per-view edit presentation state | Destroyed by layout removal; no runtime view may retain it |
 | Runtime dock view | Unique QObject and QWindow per active containment | `GenericLayout` containment-to-view map | Not persisted | Constructed fresh | Remaps or recreates its layer surface | Holds only a non-owning pointer to shared edit chrome | Disconnects, unregisters, and deletes all child managers |
-| Per-output view | A linked screen-group replica is one separate containment and runtime view | `OriginalView` owns replica membership; layout owns runtime registration | Replica containment ID plus legacy `isClonedFrom` | Duplicate Dock clears this relationship | Screen-group policy derives output placement; runtime geometry remains local | Replica edit requests intentionally resolve to the original | Replica must unregister from the original before destruction |
-| Replica relationship | Shared logical group, explicit and acyclic | Original persistent dock | Replica record's legacy `isClonedFrom` | Created only by an explicit linked operation; Duplicate Dock never copies it | Source remains valid and placement policy is explicit | Menu wording and edit targeting use the same relation | Source removal destroys or detaches all replicas without dangling members |
+| Per-output view | Every linked member is one separate containment and runtime view | `OriginalView` owns relationship membership; layout owns runtime registration | Member containment ID plus `isClonedFrom` and `linkPlacement` | Duplicate Dock clears this relationship | Derived members follow screen-group output policy; explicit members own output and edge | Derived members edit the root; explicit members edit themselves | Member unregisters from the root before destruction |
+| Linked relationship | Shared logical group, explicit and acyclic | Root persistent dock | Member `isClonedFrom=<root id>` | Create Linked extends the direct-root group; Duplicate never copies it | `linkPlacement` names derived versus member-local placement ownership | Menu wording and edit targeting use the same runtime role | Root removal destroys members; member removal unregisters without dangling entries |
 | Applet layout | Unique QML object and applet IDs per containment | Containment runtime | Applet groups under containment ID | Deep-copied and ID-remapped | Local geometry recalculates for that view | Its containment controls edit presentation | Destroyed with containment and view |
-| Geometry controller | Unique `Positioner` per runtime view | Runtime `View` QObject parent | Derived, not persisted | Constructed fresh | Consumes that view's output plus explicit peer-footprint solution | Edit thickness may change local placement | QObject parent destruction disconnects all registrations |
+| Geometry controller | Unique `Positioner` per runtime view | Runtime `View` QObject parent | Derived, not persisted | Constructed fresh | Consumes that view's output and owns monotonic relocation generations | Edit thickness may change local placement | QObject parent destruction cancels timers and callbacks |
 | Applet sizing | Unique `AutoSize` and effective icon state per containment | Containment QML tree | Configured values only | Config copied; effective values recomputed | Consumes the same view's solved primary length | Recomputes only for local edit geometry | QML tree destruction |
 | Edit-mode controller | One reusable chrome ensemble, one current owner, one requested generation | `ViewSettingsFactory` under Corona | Not persisted | Never copied | Retarget is one cancelable generation | Exactly one effective owner; clone requests resolve explicitly | Cancels deferred work and clears the old containment before rebinding |
 | Stacking controller | Missing in the current tree | Required owner: layout or Corona placement domain | Required key: output, edge, stable rank | New duplicate gets a stable independent rank | Re-solves membership atomically | Routes activation without merging edit identity | Removes membership before view destruction |
-| Configuration object | Unique mutable map per containment; selected linked-replica values are synchronized | Containment | Containment configuration group | Deep-copied into fresh groups for Duplicate Dock | Placement values must pass one normalization boundary | Menu and edit relationship are read from runtime identity | Destroyed with containment; signal contexts must be the receiving view |
+| Configuration object | Unique mutable map per containment; applet configuration is synchronized explicitly | Containment | Containment configuration group | Deep-copied into fresh groups for Duplicate Dock | Explicit members keep containment placement and appearance local | Menu and edit relationship are read from runtime identity | Destroyed with containment; signal contexts are the receiving view |
 
 ## Confirmed causes
 
@@ -109,6 +111,50 @@ Launcher groups remain orthogonal. A copied Tasks applet can still carry an
 explicit Layout or Global launcher-group choice, just as any two independent
 docks can opt into that shared launcher list. That opt-in content service is not
 a dock replica relationship.
+
+### Explicit linked placement was indistinguishable from derived fanout (fixed)
+
+The legacy relation had one persisted marker, `isClonedFrom`, and every reader
+interpreted it as disposable screen-group fanout. Reusing that marker alone for
+a user-placed linked dock caused screen reconciliation and startup cleanup to
+move or delete the new member. It also gave containment-level configuration and
+edit targeting the broader legacy synchronization scope.
+
+Each linked member now carries a typed placement policy. `ScreenGroupDerived`
+retains existing behavior. `ExplicitTarget` gives the member local output,
+edge, alignment, visibility, appearance, removal, and edit presentation while
+the direct root coordinates applet membership, order, and settings. Startup
+loads roots before members and only regenerates derived records. The relation
+graph is validated as direct-root and acyclic before D-Bus observation.
+
+### Programmatic applet creation bypassed linked synchronization (fixed)
+
+The linked relation listened for `ContainmentInterface::appletCreated`, but the
+successful plug-in-ID creation path never emitted it. A new applet therefore
+appeared only in the addressed containment. The external creation boundary now
+announces one relationship event, while coordinator fanout uses a local-only
+creation path to prevent feedback. Every member receives the same plug-in
+multiset with fresh applet IDs.
+
+### Rapid relocation had two unowned completion paths (fixed)
+
+A previous reveal animation could clear `inRelocationHiding` after a newer hide
+claimed it, stranding the new screen or edge request. Delayed 100 ms completion
+callbacks also carried no request identity and could publish completion for a
+newer move. The next hide now stops the old reveal before claiming ownership,
+and every move carries a monotonic generation. Superseded callbacks are
+discarded. `geometrySettled` becomes true only after the newest generation is
+applied and the view's screen, geometry, validation, and reveal queues drain.
+
+### Removed containments remained persistent (fixed)
+
+Plasma keeps a removed containment alive during its 60-second Undo window.
+MultipleLayouts synchronization copied that transient QObject back into the
+layout file, while a missing notification service could prevent libplasma's
+`KNotification::closed` cleanup from ever committing the destruction. Storage
+now treats destroyed containments and their owned subcontainments as persistence
+tombstones. GenericLayout owns a same-duration fallback transaction that Undo
+or final destruction cancels, so runtime and persistent retirement agree.
 
 ### Deferred edit-chrome retargets are not cancelable (fixed)
 
@@ -173,9 +219,9 @@ visible symptom.
 
 1. Make relationship creation explicit. Duplicate Dock accepts either relation
    role, clears both dock-relationship fields, and creates remapped containment
-   and applet IDs. Existing screen-group construction is the only current path
-   allowed to set `isClonedFrom`; future Create Linked Dock… will be the
-   explicit user-placed path.
+   and applet IDs. Screen-group construction sets a derived relationship;
+   Create Linked Dock… sets the explicit user-placed policy. Both point
+   directly to the same validated root model.
 2. Give each deferred edit-chrome retarget a monotonic process-local request
    generation. Delayed work carries both the target and request generation and
    is rejected when superseded.
@@ -194,8 +240,8 @@ visible symptom.
    placement as a named policy; independent duplicates share no dock-owned
    mutable state.
 8. Keep runtime identity diagnostics in C0 (the atomic dock-system observability
-   snapshot). Relationship changes must preserve its fail-closed graph and
-   per-view ownership contract.
+   snapshot). Relationship changes preserve its fail-closed graph, per-view
+   ownership contract, and requested-versus-applied relocation generations.
 
 ## Implementation and verification slices
 
@@ -207,11 +253,13 @@ visible symptom.
    semantic alignments.
 3. [ ] Same-edge stack solving, persistence, layer-shell application, reserved
    space, and activation routing.
-4. [ ] Multi-view nested-KWin fixtures and deterministic operation replay across
+4. [x] Multi-view nested-KWin fixtures and deterministic operation replay across
    duplication, movement, orientation, alignment, editing, destruction, and
    reload.
+5. [x] Explicit linked relationship creation, member-local placement and edit
+   ownership, applet synchronization, persistent restoration, and removal.
 
-The completed slice is covered by sanitizer-backed pure-core tests for action
+The completed slices are covered by sanitizer-backed pure-core tests for action
 policy, retarget request generations, exact title matching, and ignored-window
 ownership, plus a production source contract and successful focused production
 compiles. Nested KWin drove the edit-retarget cancel race within 178 ms and
@@ -233,7 +281,13 @@ canonical repository gate passed at exact pre-merge head
 coverage and QML ratchets, 13 scene probes, three sanitizer recipes, and the
 deterministic output matrix. GitHub rebased the validated source and test tree
 through `b6ba7ab15`; the documentation-only merge tail `8f2c3073d` changes no
-validated source or test content.
+validated source or test content. The explicit-linked acceptance then created
+two direct-root members, including one on an already occupied edge and one on a
+separated portrait output, kept every runtime and applet identity disjoint,
+proved local placement, visibility, sizing, and edit behavior, and restored the
+same relationship after restart. Seed 127934575 replayed 28 placements, seven
+edit transitions, two independent duplicates, removal, replacement, and reload;
+the settled geometry and sizing snapshot remained unchanged after two seconds.
 
 Each slice requires a failing regression first, pure-core ASan and UBSan tests
 where a value model can carry the invariant, nested-KWin state and render
@@ -242,13 +296,9 @@ merge.
 
 ## Open questions requiring runtime evidence
 
-- The future Create Linked Dock… action still needs identity-keyed replica
-  placement, explicit synchronization scope, lifecycle and detach UX, and
-  migration handling. D77 does not implement that action.
-- D83 (removed duplicate containment survives the undo window in persistent
-  layout state) is a separate confirmed persistence failure. Runtime destruction
-  completes, but the layout group survives the 120-second baseline poll; its
-  persistent removal boundary still requires instrumentation.
+- Linked members have no detach action yet. Removing the root removes the
+  relationship; a relationship-aware root-removal choice dialog also remains
+  future UX work.
 - Which same-edge reservation policy best matches intended daily-driver
   behavior for mixed visibility modes. The stack still requires deterministic
   physical order under every policy.

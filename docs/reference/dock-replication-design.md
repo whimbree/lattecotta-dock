@@ -1,8 +1,8 @@
 # Dock duplication and linked-dock design
 
-Design direction settled 2026-07-21. Status: Duplicate Dock independence is
-implemented by D77 (dock duplication retains clone lineage and edit ownership).
-Create Linked Dock… remains design-only.
+Design direction settled 2026-07-21 and implemented 2026-07-22. Duplicate Dock
+is an independent snapshot. Create Linked Dock… is the explicit synchronized
+operation.
 
 ## User-facing operations
 
@@ -10,8 +10,8 @@ The interface names three operations by what they do:
 
 1. **New Dock** creates a dock from a selected template.
 2. **Duplicate Dock** creates one independent snapshot of the visible source.
-3. **Create Linked Dock…** will create a synchronized copy with explicit
-   placement. This action is not implemented yet.
+3. **Create Linked Dock…** creates a synchronized copy on a selected active
+   output and edge, with member-local placement.
 
 Duplicate, Replicate, and Clone must not appear as three neighboring actions.
 Those words read as synonyms without internal context. The synchronized action
@@ -58,37 +58,43 @@ services that intentionally synchronize pinned launchers across otherwise
 independent docks. They do not create a dock replica relationship, retain a dock
 source pointer, or merge edit and placement ownership.
 
-## Existing linked docks
+## Linked docks
 
-The current On All Screens and On All Secondary Screens settings create linked
-screen-group members. The original and every linked member have distinct
+On All Screens and On All Secondary Screens create derived linked members.
+Create Linked Dock… creates explicitly placed linked members. The root and
+every linked member have distinct
 containment, applet, runtime, output, placement, geometry, and edit-registration
 identities. The relationship itself is one explicit logical group:
 
 - the original owns relationship membership;
-- each persisted linked member carries legacy
-  `isClonedFrom=<original containment id>`;
+- each persisted linked member carries `isClonedFrom=<root containment id>`
+  and a typed `linkPlacement` policy;
 - each runtime legacy `ClonedView` holds a guarded pointer to the original;
-- content and selected configuration properties synchronize through explicit
+- applet membership, order, and applet settings synchronize through explicit
   connections;
-- output and runtime geometry remain local to each member;
-- edit requests resolve to one authoritative relationship target.
+- output, edge, alignment, visibility, appearance, edit presentation, and
+  runtime geometry remain local to an explicitly placed member;
+- derived members retain the legacy root-owned screen-group placement and edit
+  target;
+- menu wording and edit behavior derive from the same runtime relationship
+  role.
 
 Existing persisted linked layouts remain linked during migration. D77 does not
 rewrite their records or detach their members.
 
-## Create Linked Dock… target
+## Create Linked Dock… contract
 
-Create Linked Dock… will expose the linked relationship independently of the
-screen-group selector. It creates a synchronized copy that can be placed by an
-explicit screen and edge choice, including on the same screen as the original.
+Create Linked Dock… exposes the linked relationship independently of the
+screen-group selector. It can target any active output and edge, including an
+edge already occupied by another dock or panel. Occupied edges are valid input;
+physical stacking is a separate placement-coordinator responsibility.
 
 The target implementation must satisfy these rules:
 
-1. **Relationship identity.** One explicit relationship identity owns an
-   original and its linked members. A member is keyed by persistent member
-   identity, not by screen ID. Screen is a property because more than one
-   linked member may eventually occupy the same output.
+1. **Relationship identity.** The persistent root containment is the logical
+   relationship identity. Every member points directly to it. A member is keyed
+   by persistent containment identity, never by screen ID, so multiple members
+   can occupy the same output and edge.
 2. **Fresh per-member identity.** Every linked member receives fresh persistent
    containment and applet IDs, a fresh runtime view, fresh output and placement
    state, fresh geometry controllers, and a distinct edit registration.
@@ -99,13 +105,15 @@ The target implementation must satisfy these rules:
    persistence, and migration derive from the same relation. No surface infers
    relationship semantics from window title, pointer ancestry, or presentation
    wording.
-5. **Editability.** A linked member opens the relationship's content settings
-   with visible relationship context. Placement controls act on the selected
-   member. The shared edit chrome still has exactly one effective owner and one
+5. **Editability.** An explicitly placed member opens its own edit presentation
+   as Edit Linked Dock or Panel. Placement and containment settings act on the
+   selected member. Applet changes flow through the root content coordinator.
+   The shared edit chrome still has exactly one effective owner and one
    cancelable pending target.
-6. **Lifecycle.** Removing the original offers relationship-aware choices such
-   as removing linked members or detaching them. Detach clears the relation and
-   leaves fresh independent identities intact.
+6. **Lifecycle.** An explicitly placed member owns its own Remove action and
+   unregisters from the root. Removing the root removes its remaining members,
+   matching the existing relationship lifetime. A detach action and a
+   root-removal choice dialog remain future UX work.
 7. **Migration.** Legacy `ClonedView` and `isClonedFrom` records load as linked
    relationships without changing behavior. Any schema migration must be
    explicit, reversible at the file boundary, and covered by real persisted
@@ -127,8 +135,19 @@ The target implementation must satisfy these rules:
       created exactly one independent dock per invocation with disjoint applet
       IDs, observed a visibility-mode change propagate only inside the existing
       relationship, and kept identities stable across restart.
-- [ ] Add the Create Linked Dock… action and placement flow.
-- [ ] Replace screen-ID-keyed membership assumptions with persistent member
-      identity where same-output linked placement requires it.
-- [ ] Add explicit relationship schema and migration fixtures before retiring
-      legacy clone terminology from internal APIs.
+- [x] Add the Create Linked Dock… action and active-output/edge placement flow
+      (`ea7a77f0e`, 2026-07-22).
+- [x] Key relationship membership by persistent member identity and separate
+      explicit placement from screen-group-derived placement
+      (`6a9183fc6`, `fe1230670`, 2026-07-22).
+- [x] Persist and validate the explicit placement policy while retaining the
+      legacy default for existing layouts (`6a9183fc6`, `ea8e60dce`,
+      2026-07-22).
+- [x] Synchronize applet creation without feedback and keep every applet
+      instance identity disjoint (`dcd95bb42`, 2026-07-22).
+- [x] Cover exact creation, occupied-edge coexistence, local edit and placement,
+      sizing isolation, removal, deterministic operation replay, and restart
+      (`39fb979bc`, 2026-07-22).
+- [ ] Add detach and relationship-aware root-removal choices.
+- [ ] Retire legacy clone terminology from internal APIs in a dedicated
+      migration after persisted compatibility no longer depends on it.
