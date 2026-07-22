@@ -5,6 +5,10 @@ Last updated 2026-07-22.
 
 ## 2026-07-22: same-edge edit canvas placement hardened
 
+PR #115 merged the canvas placement repair and its review corrections. The
+exact GitHub rebase-merge head is
+`5e0c4576eeeb49c22c82f36e5aa65a6b216cbb7d`.
+
 D122 (same-edge edit canvas retarget lost its layer anchors) was reproduced
 live on a left dock. Latte reported canvas geometry
 `[1440,425,140,1440]`, but KWin mapped the layer surface at
@@ -16,7 +20,7 @@ The shared config chrome clears layer-shell anchors during every retarget.
 `CanvasConfigView::syncGeometry()` previously returned when its cached canvas
 rectangle was unchanged. Separate docks on the same output edge legitimately
 share that rectangle, so the second dock never reapplied compositor placement
-or its view-local input mask. Commit `dc1517aec` reasserts both ownership
+or its view-local input mask. Commit `c4cdd03b2` reasserts both ownership
 surfaces on every Wayland synchronization while retaining the cache for resize
 and non-Wayland position work.
 
@@ -31,13 +35,21 @@ regression did not pin the cache key) allowed a geometry difference to bypass
 the old early-return path. D124 (canvas regression accepted an ambiguous layer
 surface) selected the first same-sized top-layer Latte window. D125 (failed
 duplicate discovery leaked fixture state) could lose ownership of a created
-dock before teardown. Commit `8bb8f7ab7` asserts exact peer geometry, requires
+dock before teardown. Commit `f7b125f35` asserts exact peer geometry, requires
 one concrete canvas with a new KWin UUID after remap, and removes every view ID
 absent from the pre-test snapshot. Two fresh processes pass with identical
-`0,88 146x824` cache keys and distinct canvas generations. Commit `91633b169`
+`0,88 146x824` cache keys and distinct canvas generations. Commit `f533c091c`
 adds the required source attribution and removes the now-redundant show-time
 input-mask refresh. The README names the shared edit canvas rather than all
 shared edit chrome.
+
+The final independent rereview returned MERGE with no remaining findings. The
+canonical gate exited 0 at the exact pre-rebase branch head
+`b0f7441e8d12268239bde2a5099376e4fad30e6e`: all 104 CTest entries, QML
+compile and lint checks, 13 scene probes, three sanitized integration recipes,
+and the deterministic matrix fixture passed. GitHub rewrote the five branch
+commit hashes during the required rebase merge; the merged tree is content
+identical to that stamped head.
 
 ## 2026-07-22: linked runtime lifecycle and sizing ownership hardened
 

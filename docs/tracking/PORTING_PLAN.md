@@ -4277,18 +4277,18 @@ prerequisites in the phases above are done.
       resize and non-Wayland position work. A nested compositor recipe compares
       Latte's reported canvas with KWin's mapped surface across the exact
       same-edge handoff.
-      Commits: dc1517aec
+      Commits: c4cdd03b2
 - [x] Fix D123 (same-edge regression did not pin the cache key). Assert exact
       equality of both settled canvas rectangles before opening edit mode.
-      Commits: 8bb8f7ab7
+      Commits: f7b125f35
 - [x] Fix D124 (canvas regression accepted an ambiguous layer surface).
       Require one exact-size compositor candidate, compare its full geometry,
       and prove the KWin surface generation changes across retarget.
-      Commits: 8bb8f7ab7
+      Commits: f7b125f35
 - [x] Fix D125 (failed duplicate discovery leaked fixture state). Snapshot the
       original topology and remove every post-snapshot view ID during teardown,
       including paths where duplicate discovery never completes.
-      Commits: 8bb8f7ab7
+      Commits: f7b125f35
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

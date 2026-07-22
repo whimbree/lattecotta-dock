@@ -1232,7 +1232,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   before unassignment and full pending-state cancellation before reveal.
 
 ### D122 - Same-edge edit canvas retarget lost layer anchors
-- STATUS: FIXED (`dc1517aec`), pending PR.
+- STATUS: FIXED in PR #115 (`c4cdd03b2`).
 - FOUND: 2026-07-22, live vertical-dock edit-mode acceptance.
 - SYMPTOM: the edit header for a left dock appeared near the middle of the
   output even though the dock and its reported canvas geometry stayed on the
@@ -1253,7 +1253,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `0,88 146x824`; `layershellmappingtest` also passes.
 
 ### D123 - Same-edge regression did not pin the cache key
-- STATUS: FIXED (`8bb8f7ab7`), pending PR #115.
+- STATUS: FIXED in PR #115 (`f7b125f35`).
 - FOUND: 2026-07-22, independent review of PR #115.
 - SYMPTOM: the edit-canvas regression could pass without exercising the
   unchanged-rectangle branch that caused D122 (same-edge edit canvas retarget
@@ -1266,7 +1266,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   either canvas mapping is checked.
 
 ### D124 - Canvas regression accepted an ambiguous layer surface
-- STATUS: FIXED (`8bb8f7ab7`), pending PR #115.
+- STATUS: FIXED in PR #115 (`f7b125f35`).
 - FOUND: 2026-07-22, independent review of PR #115.
 - SYMPTOM: a same-sized dock or stale config surface could satisfy the
   compositor assertion before the intended edit canvas was examined.
@@ -1279,7 +1279,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   KWin UUIDs across each same-geometry retarget.
 
 ### D125 - Failed duplicate discovery leaked fixture state
-- STATUS: FIXED (`8bb8f7ab7`), pending PR #115.
+- STATUS: FIXED in PR #115 (`f7b125f35`).
 - FOUND: 2026-07-22, independent review of PR #115.
 - SYMPTOM: if duplication succeeded but ID discovery timed out, cleanup could
   stop the fixture with the extra dock still persisted for later recipes.
