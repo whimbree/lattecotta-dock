@@ -66,6 +66,7 @@ private Q_SLOTS:
     void retargetIsLatestRequestOnlyAndEndsOldSessionFirst();
     void cloneEditRequestsResolveOneOriginalTarget();
     void cloneDestructionUnregistersMembership();
+    void ignoredWindowCleanupRetainsOtherOwners();
 };
 
 void DockIdentityContractTest::retargetIsLatestRequestOnlyAndEndsOldSessionFirst()
@@ -127,6 +128,27 @@ void DockIdentityContractTest::cloneDestructionUnregistersMembership()
     const int forget = removeClone.indexOf(QStringLiteral("forgetClone(view);"));
     const int removeContainment = removeClone.indexOf(QStringLiteral("view->layout()->removeView(view->data());"));
     QVERIFY(forget >= 0 && removeContainment > forget);
+}
+
+void DockIdentityContractTest::ignoredWindowCleanupRetainsOtherOwners()
+{
+    const QStringList ownerFiles{
+        QStringLiteral("app/infoview.cpp"),
+        QStringLiteral("app/view/helpers/subwindow.cpp"),
+        QStringLiteral("app/view/positioner.cpp"),
+        QStringLiteral("app/view/settings/subconfigview.cpp"),
+    };
+
+    for (const auto &file : ownerFiles) {
+        const QString code = normalized(readFile(file));
+        QVERIFY2(code.contains(QStringLiteral("registerIgnoredWindow")), qPrintable(file));
+        QVERIFY2(!QRegularExpression(QStringLiteral("(?:un)?registerIgnoredWindow\\([^,;]+\\);"))
+                      .match(code).hasMatch(),
+                 qPrintable(file + QStringLiteral(" has an ownerless ignored-window call")));
+    }
+
+    const QString wayland = normalized(readFile(QStringLiteral("app/wm/waylandinterface.cpp")));
+    QVERIFY(wayland.contains(QStringLiteral("registerIgnoredWindow(WindowId::fromWaylandUuid(w->uuid()),w);")));
 }
 
 QTEST_GUILESS_MAIN(DockIdentityContractTest)
