@@ -102,7 +102,6 @@ Item {
     TaskComponents.ThemeAwareIcon {
         id: taskIconItem
         anchors.fill: parent
-        //roundToIconSize: false
         iconSource: decoration
         visible: !badgesLoader.active
 
@@ -203,7 +202,7 @@ Item {
                         height: taskIconItem.height
                         smooth: taskIconItem.smooth
                         source: taskIconItem.source
-                        //roundToIconSize: taskIconItem.roundToIconSize
+                        roundToIconSize: false
                         active: taskIconItem.active
 
                         Loader{
