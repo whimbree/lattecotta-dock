@@ -1198,6 +1198,36 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   alignment, shared launcher edits, output reconnect, and whole-group runtime
   recreation while launcher configuration continues to synchronize.
 
+### D120 - Copy preserved stale linked lineage
+- STATUS: FIXED on `feat/create-linked-dock` (`2255a1af0`, `37ab7b7fc`).
+- FOUND: 2026-07-22, final independent linked-dock review.
+- SYMPTOM: copying an explicit linked member through the layouts dialog could
+  paste a record whose root was absent or was an unrelated dock with the same
+  numeric ID. Restart could reject the destination relationship graph.
+- ROOT: Copy exported one selected containment but retained `isClonedFrom` and
+  `ExplicitTarget`. Storage reapplied that clipboard metadata after remapping
+  local containment and applet IDs.
+- FIX: normalize every Copy record through `toIndependentSnapshot()` before
+  clipboard publication. Cut retains origin identity only for the checked move
+  transaction.
+- EVIDENCE: the identity contract pins normalization before clipboard
+  publication; the value contract proves ordinary configuration survives while
+  relationship roles reset.
+
+### D121 - Late move refusal left relocation pending
+- STATUS: FIXED on `feat/create-linked-dock` (`5acb90525`, `37ab7b7fc`).
+- FOUND: 2026-07-22, final independent linked-dock review.
+- SYMPTOM: if a dock relationship gained an explicit member after relocation
+  hiding began, the manager refused the now-partial cross-layout move but the
+  dock remained hidden with a pending layout forever.
+- ROOT: `Manager::moveView()` returned no result. The positioner cleared its
+  pending layout only after `layoutChanged`, which a refused move never emits.
+- FIX: the manager returns checked success and refuses before unassignment. A
+  failed positioner move clears every pending placement component and schedules
+  the ordinary delayed reveal and generation settlement path.
+- EVIDENCE: the pinned build completes. The identity contract requires refusal
+  before unassignment and full pending-state cancellation before reveal.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.

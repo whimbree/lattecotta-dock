@@ -169,6 +169,31 @@ reconciles derived fanout only after the complete relationship has rebound.
 The diagnostic driver is gated by `LATTE_DEBUG_DBUS=1`; `dockSystemData` proves
 that runtime identities rotate while persistent containment IDs do not.
 
+### Layouts-dialog Copy retained linked lineage (fixed)
+
+Copy exported only the selected containment, but its clipboard record retained
+`isClonedFrom` and `ExplicitTarget`. ID remapping could then leave the pasted
+member pointing to no root or to an unrelated dock with the same numeric ID in
+the destination layout. The destination relationship graph could fail startup
+validation after restart.
+
+Copy now converts every record through `toIndependentSnapshot()` before
+clipboard publication. This is the same relation-breaking policy as Duplicate
+Dock. Cut remains distinct because it preserves origin identity only for the
+checked move transaction.
+
+### Late layout-move refusal never completed relocation (fixed)
+
+The positioner hid a dock before calling a void layout-move transaction. A root
+could gain an explicit member during that animation. The final persistent guard
+then refused the now-partial move correctly, but no `layoutChanged` signal
+cleared the pending target, leaving the dock hidden and geometry unsettled.
+
+The manager now returns a checked success value and refuses before unassigning
+the source containment. On failure the positioner clears pending layout,
+screen, edge, alignment, and screen-group state, then completes the same
+generation through the ordinary delayed reveal path.
+
 ### Output eligibility consumed transient runtime screen state (fixed)
 
 When an output disconnected, Qt temporarily reported the surviving primary
@@ -363,6 +388,8 @@ through the wrong authority:
 | Geometry and sizing controllers | Unique per runtime view | No shared cache found; stale relocation callbacks crossed generations, transient screen state overrode persisted placement, and applet `length` crossed orientations | Relocation, output authority, and linked applet length fixed; independent reservation and stacking slices remain open |
 | Runtime relationship membership | Persistent records outlive runtime views; live members require a live root generation | Root destruction deleted persistent members, while root-only recreation stranded surviving member pointers | Fixed; teardown is nonpersistent, recreation replaces the complete eligible group root-first |
 | Cross-layout move transaction | One independent dock or a coordinated derived-only group | Explicit roots and members could move alone; stale Cut could import before later source refusal | Fixed; one persistent predicate is revalidated before any destination import |
+| Layouts-dialog clipboard | Independent snapshots for Copy; origin identity only for Cut | Copy retained a linked member's root ID while importing only that member | Fixed; Copy normalizes through `toIndependentSnapshot()` before publication |
+| Relocation completion | Every started generation either commits or cancels and reveals | Late manager refusal returned no result, so a hidden dock retained its pending layout | Fixed; checked refusal clears the full request and schedules normal completion |
 | Same-edge rank and activation regions | Shared only through a future output-edge coordinator | No authority exists, so every surface independently claims the same edge | Open |
 
 ## Deterministic replay results
@@ -375,6 +402,8 @@ through the wrong authority:
 | Disconnect and reconnect a member output after root changes | Runtime screen fallback kept the member mapped to primary; offline applet changes had no guaranteed replay | The member runtime parks, its persistent record remains, and reconnect restores exact shared applet content while preserving local `length` |
 | Recreate a linked root runtime | Only the root rotated, leaving member root pointers stale | Root and all live members receive fresh runtime IDs root-first; the unrelated Duplicate and every persistent containment ID stay unchanged |
 | Disconnect the root output while members target another output | Members could outlive the missing runtime coordinator or teardown could remove persistence | The complete linked runtime group parks; every containment record remains; reconnect rebuilds a fresh complete generation |
+| Copy a linked member between layouts | Paste could preserve a missing or unrelated numeric root reference | The pasted dock is an independent snapshot with no relationship lineage |
+| Reject a move after its hide animation starts | No failure result cleared the pending layout, so the dock remained hidden | Refusal occurs before unassignment; all pending placement state clears and the same generation reveals normally |
 | Remove and recreate a member | Persistent tombstones could be overwritten or never committed | The removed member leaves runtime and disk, replacement receives a fresh identity, and reload restores only intended records |
 | Remove a linked applet, then restart inside Undo | A member projection could resurrect | Root and every member remain removed in runtime and persistence |
 | Invoke real dock and applet Undo | No executable relationship-aware coverage | Applet projection, full dock subtree, direct-root relationship, and reload all recover deterministically |

@@ -4211,7 +4211,8 @@ prerequisites in the phases above are done.
       ef32c280f, 1457ab790, c9f74689c, 683a17048, c69ad6e86,
       19ef4ff7d, 5bcde4f40, 98dcbf894, 5c90f9431, 34be80813,
       8fdf36188, 1d8730a3a, 5b8bb9542, 184370cdc, 8e703bb83,
-      70fd515f8, 9ba2fa1e3, 8020fe31e, af70eb2a8, 5637b6709
+      70fd515f8, 9ba2fa1e3, 8020fe31e, af70eb2a8, 5637b6709,
+      2255a1af0, 5acb90525, 37ab7b7fc
 - [x] Mitigate D111 (linked-root removal was not one reversible transaction).
       Refuse removal at live-view, layout-storage, and settings-model boundaries
       while explicit members remain. Keep legacy derived fanout removable and
@@ -4259,6 +4260,16 @@ prerequisites in the phases above are done.
       policy applied on linked import, live forwarding, Undo, and full
       reconciliation. Keep ordinary applet settings linked.
       Commits: af70eb2a8, 5637b6709
+- [x] Fix D120 (Copy preserved stale linked lineage). Normalize every
+      layouts-dialog Copy through the independent-snapshot policy before
+      clipboard publication. Cut alone preserves origin identity for its
+      checked move transaction.
+      Commits: 2255a1af0, 37ab7b7fc
+- [x] Fix D121 (late move refusal left relocation pending). Return checked
+      success from the manager transaction, refuse before source unassignment,
+      and clear the complete pending placement request before the normal reveal
+      and settlement path.
+      Commits: 5acb90525, 37ab7b7fc
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

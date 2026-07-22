@@ -106,6 +106,8 @@ The target implementation must satisfy these rules:
 2. **Fresh per-member identity.** Every linked member receives fresh persistent
    containment and applet IDs, a fresh runtime view, fresh output and placement
    state, fresh geometry controllers, and a distinct edit registration.
+   Layouts-dialog Copy also produces independent snapshots; Cut alone preserves
+   origin identity for its checked move transaction.
 3. **Synchronization scope.** Content synchronization is explicit. Placement,
    output, edge, alignment, visibility policy, runtime geometry, applet-local
    length, and transient edit presentation are not blanket-copied through the
@@ -195,6 +197,13 @@ The target implementation must satisfy these rules:
       layouts-dialog, manager, and final Cut/Paste transaction boundaries.
       Revalidate the current persisted origin immediately before import so a
       stale Cut cannot degrade into Copy (2026-07-22).
+- [x] Normalize layouts-dialog Copy through the same independent-snapshot
+      policy as Duplicate Dock. A copied member never carries a cross-layout
+      root ID into Paste (2026-07-22).
+- [x] Make the layout move transaction report success. A relationship that
+      becomes ineligible during the hide animation is refused before source
+      unassignment, then the positioner cancels every pending placement
+      component and reveals the dock through normal settlement (2026-07-22).
 - [ ] Add detach and relationship-aware root-removal choices.
 - [ ] Retire legacy clone terminology from internal APIs in a dedicated
       migration after persisted compatibility no longer depends on it.

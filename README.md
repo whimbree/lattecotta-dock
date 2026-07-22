@@ -59,7 +59,8 @@ with per-applet size persistence.
 
 Dock identity boundaries distinguish independent snapshots from linked content.
 Duplicate Dock creates one independent snapshot from the live dock or layouts
-dialog, including when the source is linked. Create Linked Dock… adds a
+dialog, including when the source is linked. Copy and Paste in the layouts
+dialog use the same independent-snapshot policy. Create Linked Dock… adds a
 synchronized member on a selected output and edge while keeping placement,
 visibility, appearance, removal, and edit presentation local to that member.
 Applet membership and ordinary settings stay linked, while orientation-dependent

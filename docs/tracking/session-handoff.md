@@ -5,6 +5,13 @@ Last updated 2026-07-22.
 
 ## 2026-07-22: linked runtime lifecycle and sizing ownership hardened
 
+The final cold review found D120 (Copy preserved stale linked lineage) and D121
+(late move refusal left relocation pending). Layouts-dialog Copy now uses the
+same independent-snapshot normalization as Duplicate Dock. The layout manager
+returns checked success and refuses before unassignment; a positioner that
+receives refusal clears the complete pending placement request and reveals the
+dock through normal generation settlement.
+
 The final Create Linked Dock review exposed three blocking boundaries: root
 runtime recreation replaced only the root and stranded member pointers, Cut
 validation could become stale before destination import, and executable output
@@ -41,14 +48,15 @@ compile-time policy excludes that key from linked import, both live directions,
 Undo restoration, and full reconciliation. Ordinary launcher configuration
 continues to synchronize. Independent Duplicate Dock keeps its copied snapshot.
 
-Focused results are green: `dockidentitycontracttest` 22/22 and
+Focused results are green: `dockidentitycontracttest` 24/24 and
 `datatypestest` 47/47. The expanded two-output acceptance passes a separated
 portrait topology, occupied-edge coexistence, exact linked applet convergence,
 local length stability, member and root output disconnect/reconnect, complete
 runtime recreation, independent duplication, and process reload. The removal
 and Undo recipe, seed 127934575 operation storm, and independent Duplicate
-recipe also pass. The full repository gate and a fresh cold diff review remain
-required after final documentation and commits.
+recipe also pass. The canonical gate passed at `a9605fc8e` before the final
+cold-review corrections; the final post-correction gate and rereview remain
+required.
 
 ## 2026-07-22: explicit linked docks and independent duplication implemented
 
