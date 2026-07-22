@@ -37,6 +37,11 @@
       ["chrome.views.menu.main","split-main",10,"primary settings mapped","pointer,keyboard","open or close Add/Duplicate popup","transient","basic,advanced; popup abort","OOOOOOOOO"],
       ["chrome.views.menu.arrow","split-arrow",10,"primary settings mapped","pointer,keyboard","open or close Add/Duplicate popup","transient","basic,advanced; popup abort","OOOOOOOOO"],
       ["chrome.views.duplicate.row","popup-action",10,"Add/Duplicate popup mapped","pointer row,keyboard row","duplicate current view","transient","dock,panel; disposable layout","OOOOOOOOO"],
+      ["chrome.views.create-linked.row","popup-action",10,"Add/Duplicate popup mapped","pointer row,keyboard row","open the linked-view target dialog","transient","dock,panel; original,linked source","OOOOOOOOO"],
+      ["chrome.views.linked.output","combo",10,"linked-view target dialog mapped","pointer popup,keyboard","select the output for a linked view","transient","one,multiple outputs; portrait,landscape; separated,touching","OOOOOOOOO"],
+      ["chrome.views.linked.edge","combo",10,"linked-view target dialog mapped","pointer popup,keyboard","select the edge for a linked view","transient","top,right,bottom,left; occupied edge","OOOOOOOOO"],
+      ["chrome.views.linked.accept","dialog-action",10,"linked-view target dialog mapped","pointer,keyboard accept","create a linked view on the selected output and edge","persistent","dock,panel; occupied edge; original,linked source","OOOOOOOOO"],
+      ["chrome.views.linked.cancel","dialog-action",10,"linked-view target dialog mapped","Escape,cancel","close without creating a linked view","transient","before,after target changes","OOOOOOOOO"],
       ["chrome.views.add-template.row","popup-action",10,"one enabled row per view template","pointer row,keyboard row","add view from selected template","transient","each template; dock,panel result","OOOOOOOOO"],
       ["chrome.remove","button",11,"advanced mode","pointer,keyboard,AT press","request current view removal; undo remains possible","transient","dock,panel; abort/undo; restart","OOOOOOOOO"],
       ["chrome.close","button",12,"primary settings mapped","pointer,keyboard,AT press","hide primary settings and edit chrome","transient","basic,advanced; popup/drag active","OOOOOOOOO"]
@@ -327,6 +332,8 @@
       ["context.remove-view","context-action",11,"noncloned view and action visible","pointer,keyboard","request current view removal","transient","dock,panel; abort/undo; restart","OOOOOOOOO"],
       ["context.add-view.template.row","popup-action",10,"one submenu row per view template","pointer row,keyboard row","add view from selected template","transient","each template; dock,panel result","OOOOOOOOO"],
       ["context.duplicate-view.row","popup-action",10,"Add View submenu mapped; valid original or linked view","pointer row,keyboard row","create one independent snapshot of the current view","transient","dock,panel; original,linked source; relationship severed","OOOOOOOOO"],
+      ["context.create-linked.menu","popup-action",10,"Add View submenu mapped; valid relationship data","pointer row,keyboard row","open output and edge target submenus for a linked view","transient","dock,panel; one,multiple outputs","OOOOOOOOO"],
+      ["context.create-linked.edge-row","popup-action",10,"active output submenu mapped","pointer row,keyboard row","create a linked view on the selected output edge","persistent","all active outputs; all edges; occupied edge","OOOOOOOOO"],
       ["context.move-view-to-layout.row","popup-action","none:move-view-between-layouts","one row per other layout when multiple layouts are active","pointer row,keyboard row","move the current view to the selected layout","persistent","single,multiple layouts; current layout excluded; cloned view exclusion","OOOOOOOOO"]
     ]}
   ],
@@ -359,7 +366,7 @@
   ],
   "sourceCoverage": {
     "siteFields": ["selector","covers"],
-    "measured": {"files":58,"candidates":734,"qmlObjects":237,"qmlMembers":357,"qmlModelElements":57,"qmlCalls":57,"cppConstructions":16,"cppCalls":10},
+    "measured": {"files":58,"candidates":742,"qmlObjects":241,"qmlMembers":359,"qmlModelElements":57,"qmlCalls":57,"cppConstructions":16,"cppCalls":12},
     "files": [
       {"path":"app/view/settings/indicatoruimanager.cpp","sites":[
       ],"representatives":[
@@ -397,6 +404,8 @@
         ["qml-member|id:configurationArea/type:Connections#sha256:0ec7ccbcd51b1994410ad7c79c2d56a3b6a099af4dbde210c7558bf31828fbd8|name:onHeightChanged",["overlay.applet.reorder"]],
         ["qml-object|id:configurationArea/id:hideTimer",["exempt.overlay.tooltip-wrapper"]],
         ["qml-member|id:configurationArea/id:hideTimer|name:onTriggered",["exempt.overlay.tooltip-wrapper"]],
+        ["qml-object|id:configurationArea/id:tooltip",["exempt.overlay.tooltip-wrapper"]],
+        ["qml-member|id:configurationArea/id:tooltip|name:onVisualParentChanged",["exempt.overlay.tooltip-wrapper"]],
         ["qml-object|id:configurationArea/id:tooltip/id:tooltipMouseArea",["exempt.overlay.tooltip-wrapper"]],
         ["qml-member|id:configurationArea/id:tooltip/id:tooltipMouseArea|name:onEntered",["exempt.overlay.tooltip-wrapper"]],
         ["qml-member|id:configurationArea/id:tooltip/id:tooltipMouseArea|name:onExited",["exempt.overlay.tooltip-wrapper"]],
@@ -454,7 +463,9 @@
         ["cpp-site|scope:function:Menu::populateMoveToLayouts|signature-sha256:542aedd35c694b3cbe9c6d1d6eae2ddee9d4b95d3a01bd5898102730a8f73285|operation:addAction|receiver:m_moveToLayoutMenu|sha256:07ff8b8562cf41fb7a917f00f322b2d55a229b51750e19de6a75811116dd90e0",["context.move-view-to-layout.row"]],
         ["cpp-site|scope:function:Menu::populateViewTemplates|signature-sha256:542aedd35c694b3cbe9c6d1d6eae2ddee9d4b95d3a01bd5898102730a8f73285|operation:addAction|receiver:QAction\u001f*\u001ftemplateAction\u001f=\u001fm_addViewMenu|sha256:d316a18433e59ced3086202c553ab0094d4b070b79f864142fe1cdfd2661b879",["context.add-view.template.row"]],
         ["cpp-site|scope:function:Menu::populateViewTemplates|signature-sha256:542aedd35c694b3cbe9c6d1d6eae2ddee9d4b95d3a01bd5898102730a8f73285|operation:addSeparator|receiver:m_addViewMenu|sha256:caccf7c833bbb493dbc669bbbedd4cac00bb55f78c260035f65f1a135149a147",["exempt.context.structural-items"]],
-        ["cpp-site|scope:function:Menu::populateViewTemplates|signature-sha256:542aedd35c694b3cbe9c6d1d6eae2ddee9d4b95d3a01bd5898102730a8f73285|operation:addAction|receiver:QAction\u001f*\u001fduplicateAction\u001f=\u001fm_addViewMenu|sha256:f42fbbbc8d6816028fc73c94358c317847acb03bfe44f26d6859acc66d243cf8",["context.duplicate-view.row"]]
+        ["cpp-site|scope:function:Menu::populateViewTemplates|signature-sha256:542aedd35c694b3cbe9c6d1d6eae2ddee9d4b95d3a01bd5898102730a8f73285|operation:addAction|receiver:QAction\u001f*\u001fduplicateAction\u001f=\u001fm_addViewMenu|sha256:f42fbbbc8d6816028fc73c94358c317847acb03bfe44f26d6859acc66d243cf8",["context.duplicate-view.row"]],
+        ["cpp-site|scope:function:Menu::populateViewTemplates|signature-sha256:542aedd35c694b3cbe9c6d1d6eae2ddee9d4b95d3a01bd5898102730a8f73285|operation:menuAction|receiver:linkedMenu|sha256:928e4f32813019fe9985df42186a35cede186c0fa4014ef8b95f1439807186f7",["context.create-linked.menu"]],
+        ["cpp-site|scope:function:Menu::populateLinkedViewTargets|signature-sha256:3c69dff708380767df23f73105996a744a52b9e7b9d22c93919611799fa39581|operation:addAction|receiver:QAction\u001f*\u001fconst\u001fedgeAction\u001f=\u001fscreenMenu|sha256:4f9ee62becb6279f95e270dab107bbfe0ec57dd0dc30eacbe502979872bf3f92",["context.create-linked.edge-row"]]
       ],"representatives":[
       ]},
       {"path":"declarativeimports/components/AddItem.qml","sites":[
@@ -808,6 +819,10 @@
         ["qml-member|id:dialog|name:Component.onCompleted",["chrome.resize.drag","chrome.resize.reset"]],
         ["qml-member|id:dialog/type:Connections#sha256:556f29c5108800e841d67a9aa19a845ea4c5e2c63d12b9e8c6a49147c095f0f5|name:onCurrentScreenNameChanged",["chrome.resize.drag","chrome.resize.reset"]],
         ["qml-member|id:dialog/id:backgroundFrameSvgItem|name:Component.onCompleted",["chrome.resize.drag","chrome.resize.reset"]],
+        ["qml-object|id:dialog/id:createLinkedViewDialog",["chrome.views.linked.accept","chrome.views.linked.cancel"]],
+        ["qml-member|id:dialog/id:createLinkedViewDialog|name:onAccepted",["chrome.views.linked.accept"]],
+        ["qml-object|id:dialog/id:createLinkedViewDialog/id:linkedScreen",["chrome.views.linked.output"]],
+        ["qml-object|id:dialog/id:createLinkedViewDialog/id:linkedEdge",["chrome.views.linked.edge"]],
         ["qml-member|id:dialog/id:content|name:Keys.onPressed",["chrome.close.escape"]],
         ["qml-member|id:dialog/id:content|name:Component.onCompleted",["chrome.close.escape"]],
         ["qml-object|id:dialog/id:content/id:header/id:pinButton",["chrome.pin"]],
@@ -830,12 +845,12 @@
         ["qml-member|id:dialog/id:content/id:pagesBackground/id:hiddenPages/id:behaviorPage|name:Component.onCompleted",["chrome.tab.behavior"]],
         ["qml-object|id:dialog/id:content/id:actionButtons/id:actionsComboBtn",["chrome.views.menu.main","chrome.views.menu.arrow"]],
         ["qml-member|id:dialog/id:content/id:actionButtons/id:actionsComboBtn|name:Component.onCompleted",["chrome.views.menu.main","chrome.views.menu.arrow"]],
-        ["qml-member|id:dialog/id:content/id:actionButtons/id:actionsComboBtn/type:Connections#sha256:93981d30105b78f7327bedb0e4ebe80073fbedc95018f327edcd175a4a5a2cdf|name:Component.onCompleted",["chrome.views.duplicate.row","chrome.views.add-template.row","exempt.chrome.add-separator"]],
-        ["qml-member|id:dialog/id:content/id:actionButtons/id:actionsComboBtn/type:Connections#sha256:93981d30105b78f7327bedb0e4ebe80073fbedc95018f327edcd175a4a5a2cdf|name:onActivated",["chrome.views.duplicate.row","chrome.views.add-template.row"]],
-        ["qml-member|id:dialog/id:content/id:actionButtons/id:actionsComboBtn/type:Connections#sha256:93981d30105b78f7327bedb0e4ebe80073fbedc95018f327edcd175a4a5a2cdf|name:onEnabledChanged",["chrome.views.duplicate.row","chrome.views.add-template.row","exempt.chrome.add-separator"]],
-        ["qml-member|id:dialog/id:content/id:actionButtons/id:actionsComboBtn/type:Connections#sha256:83f2cffb7817d62bae54ee4e7399fd86404a7468b7c622c32727f9a13149aa4c|name:onIsReadyChanged",["chrome.views.duplicate.row","chrome.views.add-template.row","exempt.chrome.add-separator"]],
-        ["qml-member|id:dialog/id:content/id:actionButtons/id:actionsComboBtn/type:Connections#sha256:59fa2f4f10ebd9848e0dc95ff14c2d20fe0593a7c835bab14f0a329332ca11a5|name:onTypeChanged",["chrome.views.duplicate.row"]],
-        ["qml-member|id:dialog/id:content/id:actionButtons/id:actionsComboBtn/type:Connections#sha256:eaacca87cd7a685b6d9514317bfeaea109b4bec56718ecd9db94931bb6655276|name:onViewTemplatesChanged",["chrome.views.duplicate.row","chrome.views.add-template.row","exempt.chrome.add-separator"]],
+        ["qml-member|id:dialog/id:content/id:actionButtons/id:actionsComboBtn/type:Connections#sha256:57e8e6e75014b2a566a024bce48ae557c77235569170706b6f7fa0322972bdd6|name:Component.onCompleted",["chrome.views.duplicate.row","chrome.views.create-linked.row","chrome.views.add-template.row","exempt.chrome.add-separator"]],
+        ["qml-member|id:dialog/id:content/id:actionButtons/id:actionsComboBtn/type:Connections#sha256:57e8e6e75014b2a566a024bce48ae557c77235569170706b6f7fa0322972bdd6|name:onActivated",["chrome.views.duplicate.row","chrome.views.create-linked.row","chrome.views.add-template.row"]],
+        ["qml-member|id:dialog/id:content/id:actionButtons/id:actionsComboBtn/type:Connections#sha256:57e8e6e75014b2a566a024bce48ae557c77235569170706b6f7fa0322972bdd6|name:onEnabledChanged",["chrome.views.duplicate.row","chrome.views.create-linked.row","chrome.views.add-template.row","exempt.chrome.add-separator"]],
+        ["qml-member|id:dialog/id:content/id:actionButtons/id:actionsComboBtn/type:Connections#sha256:83f2cffb7817d62bae54ee4e7399fd86404a7468b7c622c32727f9a13149aa4c|name:onIsReadyChanged",["chrome.views.duplicate.row","chrome.views.create-linked.row","chrome.views.add-template.row","exempt.chrome.add-separator"]],
+        ["qml-member|id:dialog/id:content/id:actionButtons/id:actionsComboBtn/type:Connections#sha256:67c4046dd9f520af4e06e19355934fc6a301d928d41ed6f92d68e3090b49578d|name:onTypeChanged",["chrome.views.duplicate.row","chrome.views.create-linked.row"]],
+        ["qml-member|id:dialog/id:content/id:actionButtons/id:actionsComboBtn/type:Connections#sha256:eaacca87cd7a685b6d9514317bfeaea109b4bec56718ecd9db94931bb6655276|name:onViewTemplatesChanged",["chrome.views.duplicate.row","chrome.views.create-linked.row","chrome.views.add-template.row","exempt.chrome.add-separator"]],
         ["qml-object|id:dialog/id:content/id:actionButtons/id:removeView",["chrome.remove"]],
         ["qml-member|id:dialog/id:content/id:actionButtons/id:removeView|name:onClicked",["chrome.remove"]],
         ["qml-object|id:dialog/id:content/id:actionButtons/id:closeButton",["chrome.close"]],

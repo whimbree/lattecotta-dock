@@ -65,7 +65,7 @@ struct ParsedInventory
     int coverageRelations{0};
 };
 
-constexpr int ExpectedCoverageRelations = 1259;
+constexpr int ExpectedCoverageRelations = 1274;
 
 struct ValidationResult
 {
@@ -1171,18 +1171,18 @@ void SettingsInventoryTest::validatesInventory()
 {
     const ValidationResult result = validateInventory(inventoryObject());
     QVERIFY2(result.errors.isEmpty(), qPrintable(result.errors.join(QLatin1Char('\n'))));
-    QCOMPARE(result.inventory.affordances, 271);
+    QCOMPARE(result.inventory.affordances, 278);
     QCOMPARE(result.inventory.exemptions, 25);
     QCOMPARE(result.inventory.representatives, 16);
     QCOMPARE(result.inventory.coverageRelations, ExpectedCoverageRelations);
     QCOMPARE(result.inventory.measured.value(QStringLiteral("files")).toInt(), 58);
-    QCOMPARE(result.inventory.measured.value(QStringLiteral("candidates")).toInt(), 734);
-    QCOMPARE(result.inventory.measured.value(QStringLiteral("qmlObjects")).toInt(), 237);
-    QCOMPARE(result.inventory.measured.value(QStringLiteral("qmlMembers")).toInt(), 357);
+    QCOMPARE(result.inventory.measured.value(QStringLiteral("candidates")).toInt(), 742);
+    QCOMPARE(result.inventory.measured.value(QStringLiteral("qmlObjects")).toInt(), 241);
+    QCOMPARE(result.inventory.measured.value(QStringLiteral("qmlMembers")).toInt(), 359);
     QCOMPARE(result.inventory.measured.value(QStringLiteral("qmlModelElements")).toInt(), 57);
     QCOMPARE(result.inventory.measured.value(QStringLiteral("qmlCalls")).toInt(), 57);
     QCOMPARE(result.inventory.measured.value(QStringLiteral("cppConstructions")).toInt(), 16);
-    QCOMPARE(result.inventory.measured.value(QStringLiteral("cppCalls")).toInt(), 10);
+    QCOMPARE(result.inventory.measured.value(QStringLiteral("cppCalls")).toInt(), 12);
     const QJsonArray exemptions = inventoryObject().value(QStringLiteral("exemptions")).toArray();
     QCOMPARE(exemptions.size(), 25);
     const QJsonObject twentyFifthExemption = exemptions.at(24).toObject();
@@ -1484,7 +1484,7 @@ void SettingsInventoryTest::rejectsCoverageRelationCountDrift()
 {
     const QJsonObject mutation = addCoverageRelation(inventoryObject(), QStringLiteral("canvas.maximum-length.wheel"));
     const QString errors = validateInventory(mutation).errors.join(QLatin1Char('\n'));
-    QVERIFY2(errors.contains(QStringLiteral("coverage relation count is stale: expected 1259, ledger has 1260")),
+    QVERIFY2(errors.contains(QStringLiteral("coverage relation count is stale: expected 1274, ledger has 1275")),
              qPrintable(errors));
 }
 

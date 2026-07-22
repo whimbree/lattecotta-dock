@@ -443,7 +443,7 @@ inline bool interactiveType(const QString &qualifiedType)
     const QString leaf = qualifiedType.section(QLatin1Char('.'), -1);
     static const QSet<QString> exact{
         QStringLiteral("Action"),       QStringLiteral("Button"),         QStringLiteral("CheckBox"),         QStringLiteral("CheckDelegate"),
-        QStringLiteral("ColorDialog"),
+        QStringLiteral("ColorDialog"),  QStringLiteral("Dialog"),
         QStringLiteral("ComboBox"),     QStringLiteral("ComboBoxButton"), QStringLiteral("ContextMenuLayer"), QStringLiteral("DragHandler"),
         QStringLiteral("HeaderSwitch"), QStringLiteral("ItemDelegate"),   QStringLiteral("Menu"),             QStringLiteral("MenuItem"),
         QStringLiteral("MouseArea"),

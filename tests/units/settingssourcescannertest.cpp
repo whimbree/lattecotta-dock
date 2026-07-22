@@ -70,6 +70,10 @@ Item {
         target: root
         function onActivated() { root.activate() }
     }
+    Dialog {
+        id: targetDialog
+        onAccepted: root.activate()
+    }
     CheckDelegate { id: checkDelegate }
     SpinBox { id: spinBox }
 }
@@ -78,8 +82,10 @@ Item {
     const QSet<QString> selectors = result.candidateSelectors();
 
     QVERIFY2(result.errors.isEmpty(), qPrintable(result.errors.join(QLatin1Char('\n'))));
-    QCOMPARE(result.candidates.size(), 10);
+    QCOMPARE(result.candidates.size(), 12);
     QVERIFY(selectors.contains(QStringLiteral("qml-object|id:root/id:choice")));
+    QVERIFY(selectors.contains(QStringLiteral("qml-object|id:root/id:targetDialog")));
+    QVERIFY(selectors.contains(QStringLiteral("qml-member|id:root/id:targetDialog|name:onAccepted")));
     QVERIFY(selectors.contains(QStringLiteral("qml-object|id:root/id:checkDelegate")));
     QVERIFY(selectors.contains(QStringLiteral("qml-object|id:root/id:spinBox")));
     QVERIFY(selectors.contains(QStringLiteral("qml-member|id:root/id:choice|name:onClicked")));
