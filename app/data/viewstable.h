@@ -33,6 +33,11 @@ public:
 
     bool hasContainmentId(const QString &cid) const;
 
+    //! Explicit members are persistent relationship records. A root cannot be
+    //! removed as one Plasma containment transaction while any of these
+    //! records remain because Undo would restore only the root.
+    [[nodiscard]] bool hasExplicitLinkedMembers(const QString &rootId) const;
+
     //! Empty means that every linked member names a present direct root.
     //! Persisted chains, cycles, missing roots, and duplicate identities are
     //! rejected before any runtime view is constructed.

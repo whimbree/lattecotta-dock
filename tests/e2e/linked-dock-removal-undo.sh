@@ -125,6 +125,42 @@ print(next(v["runtimeViewId"] for v in json.load(sys.stdin)["views"]
            if v["persistentDockId"] == want))
 ' "$member_id" <<<"$created")"
 
+# Root removal is intentionally refused until the complete relationship can
+# participate in one reversible Plasma transaction. This is narrower than the
+# legacy all-screens lifetime: only persistent explicit members block it.
+member_persisted=false
+for _ in $(seq 1 80); do
+    if [[ "$(kreadconfig6 --file "$E2E_LAYOUT" --group Containments --group "$member_id" --key isClonedFrom --default -1)" == "$root_id" ]]; then
+        member_persisted=true
+        break
+    fi
+    sleep 0.1
+done
+[[ "$member_persisted" == true ]] \
+    || e2e_fail "linked member did not reach persistence before root-removal refusal"
+before_refused_root_notification="$(notification_delivery_count)"
+e2e_call removeView u "$root_id" >/dev/null \
+    || e2e_fail "linked-root removal refusal call failed"
+sleep 0.5
+after_refusal="$(snapshot)"
+python3 -c '
+import json, sys
+root_id, member_id = map(int, sys.argv[1:])
+views = json.load(sys.stdin)["views"]
+root = next((v for v in views if v["persistentDockId"] == root_id), None)
+member = next((v for v in views if v["persistentDockId"] == member_id), None)
+if not (len(views) == 2 and root and member
+        and root["linkedDockIds"] == [member_id]
+        and member["originalDockId"] == root_id
+        and not root["inDelete"] and not member["inDelete"]):
+    raise SystemExit("linked-root removal changed the live relationship")
+' "$root_id" "$member_id" <<<"$after_refusal" \
+    || e2e_fail "linked-root removal was not refused atomically"
+[[ "$(notification_delivery_count)" == "$before_refused_root_notification" ]] \
+    || e2e_fail "refused linked-root removal created an Undo transaction"
+[[ "$(kreadconfig6 --file "$E2E_LAYOUT" --group Containments --group "$member_id" --key isClonedFrom --default -1)" == "$root_id" ]] \
+    || e2e_fail "refused linked-root removal changed persistence"
+
 # Structural applet add/remove starts from the linked member. The direct root
 # owns the transaction, while both containments keep distinct applet ids and
 # mirror the real libplasma Undo state.

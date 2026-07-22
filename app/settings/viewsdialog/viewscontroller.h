@@ -63,6 +63,7 @@ public:
     void sortByColumn(int column, Qt::SortOrder order);
 
     bool hasSelectedView() const;
+    bool canRemoveSelectedViews();
     int selectedViewsCount() const;
     const Latte::Data::View currentData(const QString &id);
     const Data::ViewsTable selectedViewsCurrentData() const;
@@ -155,4 +156,3 @@ private:
 }
 
 #endif
-

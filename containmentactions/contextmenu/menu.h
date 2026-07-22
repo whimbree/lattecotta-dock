@@ -34,6 +34,7 @@ struct ViewTypeData {
     ViewType type{ViewType::DockView};
     bool isCloned{true};
     int clonesCount{0};
+    int explicitLinkedMembersCount{0};
     bool isExplicitlyLinked{false};
 };
 

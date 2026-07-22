@@ -347,6 +347,11 @@ void Views::appendTemporaryView(const Latte::Data::View &view)
 
 void Views::removeView(const QString &id)
 {
+    if (m_viewsTable.hasExplicitLinkedMembers(id)) {
+        qWarning() << "Views model refused linked-root removal; remove linked members first:" << id;
+        return;
+    }
+
     int index = m_viewsTable.indexOf(id);
 
     if (index >= 0) {

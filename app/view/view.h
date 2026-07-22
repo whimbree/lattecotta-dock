@@ -70,6 +70,7 @@ class View : public PlasmaQuick::ContainmentView
     Q_PROPERTY(bool alternativesIsShown READ alternativesIsShown NOTIFY alternativesIsShownChanged)
     Q_PROPERTY(bool behaveAsPlasmaPanel READ behaveAsPlasmaPanel WRITE setBehaveAsPlasmaPanel NOTIFY behaveAsPlasmaPanelChanged)
     Q_PROPERTY(bool byPassWM READ byPassWM WRITE setByPassWM NOTIFY byPassWMChanged)
+    Q_PROPERTY(bool canRemove READ canRemove NOTIFY canRemoveChanged)
     Q_PROPERTY(bool containsDrag READ containsDrag NOTIFY containsDragChanged)
     Q_PROPERTY(bool inSettingsAdvancedMode READ inSettingsAdvancedMode NOTIFY inSettingsAdvancedModeChanged)
 
@@ -149,6 +150,8 @@ public:
 
     bool containsDrag() const;
     bool containsMouse() const;
+
+    [[nodiscard]] virtual bool canRemove() const;
 
     bool byPassWM() const;
     void setByPassWM(bool bypass);
@@ -340,6 +343,7 @@ Q_SIGNALS:
     void alignmentChanged();
     void behaveAsPlasmaPanelChanged();
     void byPassWMChanged();
+    void canRemoveChanged();
     void colorizerChanged();
     void configWindowGeometryChanged(); // is called from config windows
     void containmentActionsChanged();

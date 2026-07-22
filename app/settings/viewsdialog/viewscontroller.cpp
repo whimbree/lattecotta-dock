@@ -152,6 +152,20 @@ bool Views::hasSelectedView() const
     return m_view->selectionModel()->hasSelection();
 }
 
+bool Views::canRemoveSelectedViews()
+{
+    const Data::ViewsTable selected = selectedViewsCurrentData();
+    const Data::ViewsTable &all = m_model->currentViewsData();
+
+    for (int index = 0; index < selected.rowCount(); ++index) {
+        if (all.hasExplicitLinkedMembers(selected[index].id)) {
+            return false;
+        }
+    }
+
+    return selected.rowCount() > 0;
+}
+
 int Views::selectedViewsCount() const
 {
     return m_view->selectionModel()->selectedRows(Model::Views::IDCOLUMN).count();
@@ -354,7 +368,8 @@ void Views::duplicateSelectedViews()
 
 void Views::removeSelectedViews()
 {
-    if (!hasSelectedView()) {
+    if (!hasSelectedView() || !canRemoveSelectedViews()) {
+        qWarning() << "Views controller refused linked-root removal; remove linked members first";
         return;
     }
 

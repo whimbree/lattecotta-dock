@@ -32,6 +32,9 @@ public:
     bool isSingle() const override;
 
     int clonesCount() const;
+    int explicitLinkedMembersCount() const;
+
+    [[nodiscard]] bool canRemove() const override;
 
     int expectedScreenIdFromScreenGroup(const Latte::Types::ScreensGroup &nextScreensGroup) const;
 

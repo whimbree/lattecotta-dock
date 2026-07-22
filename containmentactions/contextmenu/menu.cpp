@@ -320,6 +320,16 @@ void Menu::updateVisibleActions()
     for(auto actionName: m_actions.keys()) {
         m_actions[actionName]->setEnabled(true);
     }
+
+    QAction *const removeAction = m_actions[Latte::Data::ContextMenu::REMOVEVIEWACTION];
+    const bool rootHasExplicitMembers = !m_view.isCloned
+            && m_view.explicitLinkedMembersCount > 0;
+    removeAction->setEnabled(!rootHasExplicitMembers);
+    const QString removalExplanation = rootHasExplicitMembers
+            ? i18n("Remove linked docks or panels before removing their source")
+            : QString{};
+    removeAction->setToolTip(removalExplanation);
+    removeAction->setStatusTip(removalExplanation);
 }
 
 
@@ -465,16 +475,21 @@ bool Menu::updateViewData()
     bool cloneOk{false};
     bool countOk{false};
     bool placementOk{false};
+    bool explicitCountOk{false};
     const int type = vdata.value(0).toInt(&typeOk);
     const int isCloned = vdata.value(1).toInt(&cloneOk);
     const int clonesCount = vdata.value(2).toInt(&countOk);
     const int linkPlacement = vdata.value(3).toInt(&placementOk);
+    const int explicitLinkedMembersCount = vdata.value(4).toInt(&explicitCountOk);
 
-    if (vdata.count() != 4 || !typeOk || !cloneOk || !countOk || !placementOk
+    if (vdata.count() != 5 || !typeOk || !cloneOk || !countOk || !placementOk
+            || !explicitCountOk
             || type < static_cast<int>(DockView) || type > static_cast<int>(PanelView)
             || (isCloned != 0 && isCloned != 1) || clonesCount < 0
+            || explicitLinkedMembersCount < 0 || explicitLinkedMembersCount > clonesCount
             || linkPlacement < 0 || linkPlacement > 1
-            || (isCloned == 0 && linkPlacement != 0)) {
+            || (isCloned == 0 && linkPlacement != 0)
+            || (isCloned != 0 && explicitLinkedMembersCount != 0)) {
         qWarning() << "context menu: malformed dock identity data" << vdata
                    << "; refusing original-only actions";
         return false;
@@ -483,6 +498,7 @@ bool Menu::updateViewData()
     m_view.type = static_cast<ViewType>(type);
     m_view.isCloned = isCloned;
     m_view.clonesCount = clonesCount;
+    m_view.explicitLinkedMembersCount = explicitLinkedMembersCount;
     m_view.isExplicitlyLinked = isCloned && linkPlacement == 1;
     return true;
 }

@@ -1856,6 +1856,14 @@ void GenericLayout::removeView(const Latte::Data::View &viewData)
         return;
     }
 
+    const Data::ViewsTable currentViews = viewsTable();
+    if (currentViews.hasExplicitLinkedMembers(viewData.id)) {
+        qCritical() << "layout:" << name() << "refused removal of linked root"
+                    << viewData.id
+                    << "because member removal is not one reversible Plasma transaction; remove linked members first";
+        return;
+    }
+
     if (!isActive()) {
         Layouts::Storage::self()->removeView(file(), viewData);
         return;

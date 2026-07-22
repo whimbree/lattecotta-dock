@@ -727,8 +727,9 @@ void View::createViewFromTemplate(const QString &templateFile, const TemplateImp
 void View::removeView()
 {
     const auto role = actionRole();
-    if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::Remove)) {
-        qWarning() << "View::removeView refused for screen-group clone";
+    if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::Remove)
+            || !canRemove()) {
+        qWarning() << "View::removeView refused because this relationship role cannot be removed alone";
         return;
     }
 
@@ -1171,6 +1172,11 @@ void View::setContainsDrag(bool contains)
 bool View::containsMouse() const
 {
     return m_containsMouse;
+}
+
+bool View::canRemove() const
+{
+    return ViewActionPolicy::permits(actionRole(), ViewActionPolicy::Action::Remove);
 }
 
 int View::normalThickness() const

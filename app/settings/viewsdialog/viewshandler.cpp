@@ -499,9 +499,15 @@ void ViewsHandler::onCurrentLayoutIndexChanged(int row)
 void ViewsHandler::onSelectionChanged()
 {
     bool hasselected = m_viewsController->hasSelectedView();
+    const bool canRemove = m_viewsController->canRemoveSelectedViews();
 
     setTwinProperty(m_duplicateViewAction, TWINENABLED, hasselected);
-    setTwinProperty(m_removeViewAction, TWINENABLED, hasselected);
+    setTwinProperty(m_removeViewAction, TWINENABLED, canRemove);
+    const QString removeToolTip = !hasselected || canRemove
+            ? i18n("Remove selected view")
+            : i18n("Remove linked docks or panels before removing their source");
+    m_removeViewAction->setToolTip(removeToolTip);
+    m_ui->removeBtn->setToolTip(removeToolTip);
     setTwinProperty(m_exportViewAction, TWINENABLED, hasselected);
     m_viewExportSubMenu->setEnabled(hasselected);
 }

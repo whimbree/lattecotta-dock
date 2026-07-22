@@ -715,11 +715,15 @@ Loader {
                 PlasmaComponents.Button {
                     id: removeView
                     Layout.fillWidth: true
-                    enabled: dialog.advancedLevel
-                    text: i18n("Remove")
+                    enabled: dialog.advancedLevel && latteView.canRemove
+                    text: latteView.canRemove
+                            ? i18n("Remove")
+                            : i18n("Remove linked docks first")
                     icon.name: "delete"
-                    opacity: enabled ? 1 : 0
-                    QQC2.ToolTip.text: i18n("Remove current dock")
+                    opacity: dialog.advancedLevel ? 1 : 0
+                    QQC2.ToolTip.text: latteView.canRemove
+                            ? i18n("Remove current dock")
+                            : i18n("Remove linked docks or panels before removing their source")
                     QQC2.ToolTip.visible: hovered
 
                     onClicked: latteView.removeView()

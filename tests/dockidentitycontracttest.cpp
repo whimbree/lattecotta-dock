@@ -78,6 +78,7 @@ private Q_SLOTS:
     void geometryDiagnosticsReadEachViewsSizingAuthority();
     void appletMutationsUseRelationshipBoundary();
     void startupValidatesRelationshipGraphBeforeConstruction();
+    void linkedRootRemovalIsRefusedAtEveryBoundary();
 };
 
 void DockIdentityContractTest::relationshipActionsGuardEveryProductionBoundary()
@@ -369,10 +370,12 @@ void DockIdentityContractTest::persistentMenuIdentitySurvivesRuntimeGap()
 
     QVERIFY(parseView.contains(QStringLiteral("m_view=ViewTypeData{};")));
     QVERIFY(parseView.contains(QStringLiteral("returnfalse;")));
-    QVERIFY(parseView.contains(QStringLiteral("vdata.count()!=4")));
+    QVERIFY(parseView.contains(QStringLiteral("vdata.count()!=5")));
     QVERIFY(populateTemplates.contains(QStringLiteral("if(m_contextDataValid)")));
     QVERIFY(!populateTemplates.contains(QStringLiteral("!m_view.isCloned")));
     QVERIFY(visibleActions.contains(QStringLiteral("setVisible(m_contextDataValid&&!configuring)")));
+    QVERIFY(visibleActions.contains(QStringLiteral("m_view.explicitLinkedMembersCount>0")));
+    QVERIFY(visibleActions.contains(QStringLiteral("removeAction->setEnabled(!rootHasExplicitMembers)")));
 }
 
 void DockIdentityContractTest::geometryDiagnosticsReadEachViewsSizingAuthority()
@@ -439,6 +442,33 @@ void DockIdentityContractTest::startupValidatesRelationshipGraphBeforeConstructi
              "the complete persisted relationship graph must be validated before startup constructs a view");
     QVERIFY(add.contains(QStringLiteral("qobject_cast<Latte::OriginalView*>(view)")));
     QVERIFY(add.contains(QStringLiteral("if(!originalview)")));
+}
+
+void DockIdentityContractTest::linkedRootRemovalIsRefusedAtEveryBoundary()
+{
+    const QString viewSource = readFile(QStringLiteral("app/view/view.cpp"));
+    const QString removeView = normalized(functionBody(viewSource, QStringLiteral("void View::removeView")));
+    const int viewGuard = removeView.indexOf(QStringLiteral("||!canRemove())"));
+    const int trigger = removeView.indexOf(QStringLiteral("removeAct->trigger()"));
+    QVERIFY(viewGuard >= 0 && trigger > viewGuard);
+
+    const QString layoutSource = readFile(QStringLiteral("app/layout/genericlayout.cpp"));
+    const QString removePersisted = normalized(functionBody(
+        layoutSource, QStringLiteral("void GenericLayout::removeView")));
+    const int relationshipGuard = removePersisted.indexOf(
+        QStringLiteral("currentViews.hasExplicitLinkedMembers(viewData.id)"));
+    const int destroy = removePersisted.indexOf(QStringLiteral("destroyContainment(viewcontainment)"));
+    QVERIFY(relationshipGuard >= 0 && destroy > relationshipGuard);
+
+    const QString modelSource = readFile(QStringLiteral("app/settings/viewsdialog/viewsmodel.cpp"));
+    const QString removeModel = normalized(functionBody(
+        modelSource, QStringLiteral("void Views::removeView")));
+    QVERIFY(removeModel.contains(QStringLiteral("m_viewsTable.hasExplicitLinkedMembers(id)")));
+
+    const QString settingsQml = normalized(readFile(
+        QStringLiteral("shell/package/contents/configuration/LatteDockConfiguration.qml")));
+    QVERIFY(settingsQml.contains(QStringLiteral("enabled:dialog.advancedLevel&&latteView.canRemove")));
+    QVERIFY(settingsQml.contains(QStringLiteral("Removelinkeddocksfirst")));
 }
 
 QTEST_GUILESS_MAIN(DockIdentityContractTest)

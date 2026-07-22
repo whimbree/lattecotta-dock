@@ -63,6 +63,18 @@ int OriginalView::clonesCount() const
     });
 }
 
+int OriginalView::explicitLinkedMembersCount() const
+{
+    return std::count_if(m_clones.cbegin(), m_clones.cend(), [](const auto &clone) {
+        return clone && clone->linkPlacement() == Data::View::LinkPlacement::ExplicitTarget;
+    });
+}
+
+bool OriginalView::canRemove() const
+{
+    return View::canRemove() && explicitLinkedMembersCount() == 0;
+}
+
 int OriginalView::expectedScreenIdFromScreenGroup(const Latte::Types::ScreensGroup &nextScreensGroup) const
 {
     Data::View view = data();
@@ -99,6 +111,7 @@ void OriginalView::addClone(Latte::ClonedView *view)
     }
 
     m_clones << view;
+    Q_EMIT canRemoveChanged();
     if (view->linkPlacement() == Data::View::LinkPlacement::ScreenGroupDerived) {
         m_waitingCreation.removeAll(view->positioner()->currentScreenId());
     }
@@ -106,9 +119,13 @@ void OriginalView::addClone(Latte::ClonedView *view)
 
 void OriginalView::forgetClone(Latte::ClonedView *view)
 {
+    const int previousCount = m_clones.count();
     m_clones.removeIf([view](const auto &clone) {
         return clone.isNull() || clone.data() == view;
     });
+    if (m_clones.count() != previousCount) {
+        Q_EMIT canRemoveChanged();
+    }
 }
 
 void OriginalView::removeClone(Latte::ClonedView *view)

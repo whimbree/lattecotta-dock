@@ -73,6 +73,7 @@ private Q_SLOTS:
     void screen_serializeRoundTrip();
     void screen_isScreensGroup();
     void viewsTable_hasContainmentIdRecursion();
+    void viewsTable_findsOnlyExplicitLinkedMembers();
     void viewsTable_rejectsMalformedRelationshipGraphs_data();
     void viewsTable_rejectsMalformedRelationshipGraphs();
     void viewsTable_subtractedAndOnlyOriginals();
@@ -693,6 +694,27 @@ void DataTypesTest::viewsTable_hasContainmentIdRecursion()
     QVERIFY(views.hasContainmentId(QStringLiteral("201")));
     // absent
     QVERIFY(!views.hasContainmentId(QStringLiteral("999")));
+}
+
+void DataTypesTest::viewsTable_findsOnlyExplicitLinkedMembers()
+{
+    Data::View root{QStringLiteral("1"), QStringLiteral("Root")};
+    Data::View explicitMember{QStringLiteral("2"), QStringLiteral("Explicit")};
+    explicitMember.isClonedFrom = 1;
+    explicitMember.linkPlacement = Data::View::LinkPlacement::ExplicitTarget;
+
+    Data::View derivedMember{QStringLiteral("3"), QStringLiteral("Derived")};
+    derivedMember.isClonedFrom = 1;
+    derivedMember.linkPlacement = Data::View::LinkPlacement::ScreenGroupDerived;
+
+    Data::ViewsTable views;
+    views << root << derivedMember;
+    QVERIFY(!views.hasExplicitLinkedMembers(root.id));
+
+    views << explicitMember;
+    QVERIFY(views.hasExplicitLinkedMembers(root.id));
+    QVERIFY(!views.hasExplicitLinkedMembers(explicitMember.id));
+    QVERIFY(!views.hasExplicitLinkedMembers(QStringLiteral("not-an-id")));
 }
 
 void DataTypesTest::viewsTable_rejectsMalformedRelationshipGraphs_data()

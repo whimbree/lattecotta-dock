@@ -6,6 +6,8 @@
 
 #include "viewstable.h"
 
+#include <algorithm>
+
 #include <QDebug>
 #include <QSet>
 
@@ -94,6 +96,19 @@ bool ViewsTable::hasContainmentId(const QString &cid) const
     }
 
     return false;
+}
+
+bool ViewsTable::hasExplicitLinkedMembers(const QString &rootId) const
+{
+    bool parsed{false};
+    const int root = rootId.toInt(&parsed);
+    if (!parsed || root <= 0) {
+        return false;
+    }
+
+    return std::any_of(m_list.cbegin(), m_list.cend(), [root](const View &view) {
+        return view.isExplicitlyLinked() && view.isClonedFrom == root;
+    });
 }
 
 QString ViewsTable::relationshipValidationError() const

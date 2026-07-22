@@ -1209,6 +1209,7 @@ QStringList Corona::contextMenuData(const uint &containmentId)
     Types::ViewType viewType{Types::DockView};
     bool isCloned{true};
     int clonesCount{0};
+    int explicitLinkedMembersCount{0};
     int linkPlacement{static_cast<int>(Data::View::LinkPlacement::ScreenGroupDerived)};
 
     auto *synchronizer = m_layoutsManager->synchronizer();
@@ -1271,6 +1272,7 @@ QStringList Corona::contextMenuData(const uint &containmentId)
     if (!isCloned && view && view->isOriginal()) {
         if (auto *originalView = qobject_cast<Latte::OriginalView *>(view)) {
             clonesCount = originalView->clonesCount();
+            explicitLinkedMembersCount = originalView->explicitLinkedMembersCount();
         }
     } else if (!isCloned && persistentLayout) {
         for (const auto *containment : *persistentLayout->containments()) {
@@ -1278,6 +1280,11 @@ QStringList Corona::contextMenuData(const uint &containmentId)
                     && containment->config().readEntry("isClonedFrom", Layouts::Storage::IDNULL)
                         == static_cast<int>(containmentId)) {
                 ++clonesCount;
+                const int memberPlacement = containment->config().readEntry(
+                    "linkPlacement", static_cast<int>(Data::View::LinkPlacement::ScreenGroupDerived));
+                if (memberPlacement == static_cast<int>(Data::View::LinkPlacement::ExplicitTarget)) {
+                    ++explicitLinkedMembersCount;
+                }
             }
         }
     }
@@ -1311,10 +1318,12 @@ QStringList Corona::contextMenuData(const uint &containmentId)
         viewtype << "0";              //original view
         viewtype << QString::number(clonesCount);
         viewtype << QString::number(linkPlacement);
+        viewtype << QString::number(explicitLinkedMembersCount);
     } else {
         viewtype << "1";              //cloned view
         viewtype << "0";              //has no clones
         viewtype << QString::number(linkPlacement);
+        viewtype << "0";              //has no linked members
     }
 
     data << viewtype.join(";;");
