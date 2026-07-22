@@ -1273,7 +1273,8 @@ multi-view, multi-monitor setup.
       Duplicate path found by the first cold review. The final canonical full
       gate passed at exact pre-merge head
       `defaa0c7ad1a0e376937bf07f035430ecc977407` after both review rounds,
-      D97's direct transient-state assertions, and the commit-message cleanup.
+      the direct transient-state assertions for D97 (independent snapshot test
+      ignores transient view fields), and the commit-message cleanup.
       GitHub rebased the validated source and test tree through `b6ba7ab15` and
       merged PR #109 at documentation-only tail `8f2c3073d`. Placement
       normalization and same-edge stacking remain separate unchecked work in
