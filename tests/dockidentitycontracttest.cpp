@@ -68,6 +68,7 @@ private Q_SLOTS:
     void cloneDestructionUnregistersMembership();
     void outputRetargetReplacesGeometryConnection();
     void ignoredWindowCleanupRetainsOtherOwners();
+    void persistentMenuIdentitySurvivesRuntimeGap();
 };
 
 void DockIdentityContractTest::retargetIsLatestRequestOnlyAndEndsOldSessionFirst()
@@ -161,6 +162,28 @@ void DockIdentityContractTest::ignoredWindowCleanupRetainsOtherOwners()
 
     const QString wayland = normalized(readFile(QStringLiteral("app/wm/waylandinterface.cpp")));
     QVERIFY(wayland.contains(QStringLiteral("registerIgnoredWindow(WindowId::fromWaylandUuid(w->uuid()),w);")));
+}
+
+void DockIdentityContractTest::persistentMenuIdentitySurvivesRuntimeGap()
+{
+    const QString coronaSource = readFile(QStringLiteral("app/lattecorona.cpp"));
+    const QString contextData = normalized(functionBody(coronaSource, QStringLiteral("QStringList Corona::contextMenuData")));
+
+    QVERIFY(contextData.contains(QStringLiteral("boolisCloned{true};")));
+    QVERIFY(contextData.contains(QStringLiteral("layout->containmentForId(containmentId)")));
+    QVERIFY(contextData.contains(QStringLiteral("isClonedView(persistentContainment)")));
+    QVERIFY(contextData.contains(QStringLiteral("persistentContainment->config().readEntry(\"viewType\"")));
+    QVERIFY(contextData.contains(QStringLiteral("if(!isCloned)")));
+
+    const QString menuSource = readFile(QStringLiteral("containmentactions/contextmenu/menu.cpp"));
+    const QString parseView = normalized(functionBody(menuSource, QStringLiteral("bool Menu::updateViewData")));
+    const QString populateTemplates = normalized(functionBody(menuSource, QStringLiteral("void Menu::populateViewTemplates")));
+    const QString visibleActions = normalized(functionBody(menuSource, QStringLiteral("void Menu::updateVisibleActions")));
+
+    QVERIFY(parseView.contains(QStringLiteral("m_view=ViewTypeData{};")));
+    QVERIFY(parseView.contains(QStringLiteral("returnfalse;")));
+    QVERIFY(populateTemplates.contains(QStringLiteral("if(m_contextDataValid&&!m_view.isCloned)")));
+    QVERIFY(visibleActions.contains(QStringLiteral("setVisible(m_contextDataValid&&!configuring)")));
 }
 
 QTEST_GUILESS_MAIN(DockIdentityContractTest)

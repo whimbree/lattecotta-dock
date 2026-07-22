@@ -1,5 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2018 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -53,7 +55,7 @@ private Q_SLOTS:
     void quitApplication();
     void requestConfiguration();
     void requestWidgetExplorer();
-    void updateViewData();
+    bool updateViewData();
     void updateVisibleActions();
 
     void addView(QAction *action);
@@ -68,6 +70,7 @@ private:
     QStringList m_activeLayoutNames;
 
     ViewTypeData m_view;
+    bool m_contextDataValid{false};
 
     QHash<QString, QAction *> m_actions;
 

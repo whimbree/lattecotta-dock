@@ -1,5 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2018 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -230,9 +232,8 @@ QList<QAction *> Menu::contextualActions()
         m_viewTemplates = templatesData.value();
     }
 
-    m_actionsAlwaysShown = m_data[ACTIONSALWAYSSHOWN].split(";;");
-
-    updateViewData();
+    m_contextDataValid = updateViewData();
+    m_actionsAlwaysShown = m_contextDataValid ? m_data.value(ACTIONSALWAYSSHOWN).split(";;") : QStringList{};
 
     QString configureActionText = (m_view.type == DockView) ? i18n("&Edit Dock...") : i18n("&Edit Panel...");
     if (m_view.isCloned) {
@@ -246,7 +247,7 @@ QList<QAction *> Menu::contextualActions()
     const QString exportTemplateText = (m_view.type == DockView) ? i18n("E&xport Dock as Template") : i18n("E&xport Panel as Template");
     m_actions[Latte::Data::ContextMenu::EXPORTVIEWTEMPLATEACTION]->setText(exportTemplateText);
 
-    m_activeLayoutNames = m_data[ACTIVELAYOUTSINDEX].split(";;");
+    m_activeLayoutNames = m_contextDataValid ? m_data.value(ACTIVELAYOUTSINDEX).split(";;") : QStringList{};
     const QString moveText = (m_view.type == DockView) ? i18n("&Move Dock To Layout") : i18n("&Move Panel To Layout");
     m_actions[Latte::Data::ContextMenu::MOVEVIEWACTION]->setText(moveText);
 
@@ -294,7 +295,7 @@ void Menu::updateVisibleActions()
     m_actions[Latte::Data::ContextMenu::MOVEVIEWACTION]->setVisible(isshown);
 
     // special actions
-    m_actions[Latte::Data::ContextMenu::EDITVIEWACTION]->setVisible(!configuring);
+    m_actions[Latte::Data::ContextMenu::EDITVIEWACTION]->setVisible(m_contextDataValid && !configuring);
     m_actions[Latte::Data::ContextMenu::SECTIONACTION]->setVisible(true);
 
     if (m_view.isCloned) {
@@ -315,16 +316,29 @@ void Menu::populateLayouts()
 {
     m_switchLayoutsMenu->clear();
 
-    LayoutsMemoryUsage memoryUsage = static_cast<LayoutsMemoryUsage>((m_data[MEMORYINDEX]).toInt());
-    QStringList activeNames = m_data[ACTIVELAYOUTSINDEX].split(";;");
-    QStringList currentNames = m_data[CURRENTLAYOUTSINDEX].split(";;");
+    if (!m_contextDataValid) {
+        return;
+    }
+
+    LayoutsMemoryUsage memoryUsage = static_cast<LayoutsMemoryUsage>(m_data.value(MEMORYINDEX).toInt());
+    QStringList activeNames = m_data.value(ACTIVELAYOUTSINDEX).split(";;");
+    QStringList currentNames = m_data.value(CURRENTLAYOUTSINDEX).split(";;");
 
     QList<LayoutInfo> layoutsmenulist;
 
-    QStringList layoutsdata = m_data[LAYOUTMENUINDEX].split(";;");
+    QStringList layoutsdata = m_data.value(LAYOUTMENUINDEX).split(";;");
 
     for (int i=0; i<layoutsdata.count(); ++i) {
+        if (layoutsdata[i].isEmpty()) {
+            continue;
+        }
+
         QStringList cdata = layoutsdata[i].split("**");
+
+        if (cdata.count() != 3) {
+            qWarning() << "context menu: ignored malformed layout record" << layoutsdata[i];
+            continue;
+        }
 
         LayoutInfo info;
         info.layoutName = cdata[0];
@@ -373,19 +387,32 @@ void Menu::populateMoveToLayouts()
 {
     m_moveToLayoutMenu->clear();
 
-    LayoutsMemoryUsage memoryUsage = static_cast<LayoutsMemoryUsage>((m_data[MEMORYINDEX]).toInt());
+    if (!m_contextDataValid) {
+        return;
+    }
+
+    LayoutsMemoryUsage memoryUsage = static_cast<LayoutsMemoryUsage>(m_data.value(MEMORYINDEX).toInt());
 
     if (memoryUsage == LayoutsMemoryUsage::MultipleLayouts) {
-        QStringList activeNames = m_data[ACTIVELAYOUTSINDEX].split(";;");
-        QStringList currentNames = m_data[CURRENTLAYOUTSINDEX].split(";;");
-        QString viewLayoutName = m_data[VIEWLAYOUTINDEX];
+        QStringList activeNames = m_data.value(ACTIVELAYOUTSINDEX).split(";;");
+        QStringList currentNames = m_data.value(CURRENTLAYOUTSINDEX).split(";;");
+        QString viewLayoutName = m_data.value(VIEWLAYOUTINDEX);
 
         QList<LayoutInfo> layoutsmenulist;
 
-        QStringList layoutsdata = m_data[LAYOUTMENUINDEX].split(";;");
+        QStringList layoutsdata = m_data.value(LAYOUTMENUINDEX).split(";;");
 
         for (int i=0; i<layoutsdata.count(); ++i) {
+            if (layoutsdata[i].isEmpty()) {
+                continue;
+            }
+
             QStringList cdata = layoutsdata[i].split("**");
+
+            if (cdata.count() != 3) {
+                qWarning() << "context menu: ignored malformed move-layout record" << layoutsdata[i];
+                continue;
+            }
 
             LayoutInfo info;
             info.layoutName = cdata[0];
@@ -413,12 +440,35 @@ void Menu::populateMoveToLayouts()
     }
 }
 
-void Menu::updateViewData()
+bool Menu::updateViewData()
 {
-    QStringList vdata = m_data[VIEWTYPEINDEX].split(";;");
-    m_view.type = static_cast<ViewType>((vdata[0]).toInt());
-    m_view.isCloned = vdata[1].toInt();
-    m_view.clonesCount = vdata[2].toInt();
+    m_view = ViewTypeData{};
+
+    if (m_data.count() <= VIEWTYPEINDEX) {
+        qWarning() << "context menu: missing dock identity data; refusing original-only actions";
+        return false;
+    }
+
+    const QStringList vdata = m_data.value(VIEWTYPEINDEX).split(";;");
+    bool typeOk{false};
+    bool cloneOk{false};
+    bool countOk{false};
+    const int type = vdata.value(0).toInt(&typeOk);
+    const int isCloned = vdata.value(1).toInt(&cloneOk);
+    const int clonesCount = vdata.value(2).toInt(&countOk);
+
+    if (vdata.count() != 3 || !typeOk || !cloneOk || !countOk
+            || type < static_cast<int>(DockView) || type > static_cast<int>(PanelView)
+            || (isCloned != 0 && isCloned != 1) || clonesCount < 0) {
+        qWarning() << "context menu: malformed dock identity data" << vdata
+                   << "; refusing original-only actions";
+        return false;
+    }
+
+    m_view.type = static_cast<ViewType>(type);
+    m_view.isCloned = isCloned;
+    m_view.clonesCount = clonesCount;
+    return true;
 }
 
 void Menu::populateViewTemplates()
@@ -436,11 +486,13 @@ void Menu::populateViewTemplates()
         templateAction->setData(m_viewTemplates[i+1]);
     }
 
-    QAction *templatesSeparatorAction = m_addViewMenu->addSeparator();
-    QAction *duplicateAction = m_addViewMenu->addAction(m_actions[Latte::Data::ContextMenu::DUPLICATEVIEWACTION]->text());
-    duplicateAction->setToolTip(m_actions[Latte::Data::ContextMenu::DUPLICATEVIEWACTION]->toolTip());
-    duplicateAction->setIcon(m_actions[Latte::Data::ContextMenu::DUPLICATEVIEWACTION]->icon());
-    connect(duplicateAction, &QAction::triggered, m_actions[Latte::Data::ContextMenu::DUPLICATEVIEWACTION], &QAction::triggered);
+    if (m_contextDataValid && !m_view.isCloned) {
+        m_addViewMenu->addSeparator();
+        QAction *duplicateAction = m_addViewMenu->addAction(m_actions[Latte::Data::ContextMenu::DUPLICATEVIEWACTION]->text());
+        duplicateAction->setToolTip(m_actions[Latte::Data::ContextMenu::DUPLICATEVIEWACTION]->toolTip());
+        duplicateAction->setIcon(m_actions[Latte::Data::ContextMenu::DUPLICATEVIEWACTION]->icon());
+        connect(duplicateAction, &QAction::triggered, m_actions[Latte::Data::ContextMenu::DUPLICATEVIEWACTION], &QAction::triggered);
+    }
 }
 
 void Menu::addView(QAction *action)

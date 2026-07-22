@@ -28,6 +28,7 @@
 #include "layout/genericlayout.h"
 #include "layouts/importer.h"
 #include "layouts/manager.h"
+#include "layouts/storage.h"
 #include "layouts/synchronizer.h"
 #include "shortcuts/globalshortcuts.h"
 #include "package/lattepackage.h"
@@ -1206,10 +1207,66 @@ QStringList Corona::contextMenuData(const uint &containmentId)
 {
     QStringList data;
     Types::ViewType viewType{Types::DockView};
-    auto view = m_layoutsManager->synchronizer()->viewForContainment(containmentId);
+    bool isCloned{true};
+    int clonesCount{0};
+
+    auto *synchronizer = m_layoutsManager->synchronizer();
+    auto *view = synchronizer->viewForContainment(containmentId);
+    Layout::GenericLayout *persistentLayout{nullptr};
+    Plasma::Containment *persistentContainment{nullptr};
+
+    for (auto *layout : synchronizer->centralLayouts()) {
+        if (auto *containment = layout->containmentForId(containmentId)) {
+            persistentLayout = layout;
+            persistentContainment = containment;
+            break;
+        }
+    }
+
+    if (!persistentContainment && view) {
+        persistentLayout = view->layout();
+        persistentContainment = view->containment();
+    }
 
     if (view) {
         viewType = view->type();
+    } else if (persistentContainment) {
+        const int storedViewType = persistentContainment->config().readEntry("viewType", static_cast<int>(Types::DockView));
+        if (storedViewType < static_cast<int>(Types::DockView)
+                || storedViewType > static_cast<int>(Types::PanelView)) {
+            qWarning() << "corona: invalid persistent view type" << storedViewType
+                       << "for containment" << containmentId << "; using dock type";
+        } else {
+            viewType = static_cast<Types::ViewType>(storedViewType);
+        }
+    }
+
+    if (persistentContainment) {
+        isCloned = Layouts::Storage::self()->isClonedView(persistentContainment);
+    } else if (view) {
+        isCloned = view->isCloned();
+    } else {
+        qWarning() << "corona: context menu data requested for unknown containment"
+                   << containmentId << "; refusing original-only actions";
+    }
+
+    if (view && persistentContainment && view->isCloned() != isCloned) {
+        qWarning() << "corona: runtime and persistent clone roles disagree for containment"
+                   << containmentId << "; using persistent role";
+    }
+
+    if (!isCloned && view && view->isOriginal()) {
+        if (auto *originalView = qobject_cast<Latte::OriginalView *>(view)) {
+            clonesCount = originalView->clonesCount();
+        }
+    } else if (!isCloned && persistentLayout) {
+        for (const auto *containment : *persistentLayout->containments()) {
+            if (containment
+                    && containment->config().readEntry("isClonedFrom", Layouts::Storage::IDNULL)
+                        == static_cast<int>(containmentId)) {
+                ++clonesCount;
+            }
+        }
     }
 
     data << QString::number((int)m_layoutsManager->memoryUsage()); // Memory Usage
@@ -1232,20 +1289,16 @@ QStringList Corona::contextMenuData(const uint &containmentId)
     }
 
     data << layoutsmenu.join(";;");
-    data << (view ? view->layout()->name() : QString());   //Selected View layout*/
+    data << (persistentLayout ? persistentLayout->name() : QString());   //Selected View layout*/
 
     QStringList viewtype;
     viewtype << QString::number((int)viewType); //Selected View type
 
-    if (view && view->isOriginal()) { /*View*/
-        auto originalview = qobject_cast<Latte::OriginalView *>(view);
+    if (!isCloned) { /*View*/
         viewtype << "0";              //original view
-        viewtype <<  QString::number(originalview->clonesCount());
-    } else if (view && view->isCloned()) {
-        viewtype << "1";              //cloned view
-        viewtype << "0";              //has no clones
+        viewtype << QString::number(clonesCount);
     } else {
-        viewtype << "0";              //original view
+        viewtype << "1";              //cloned view
         viewtype << "0";              //has no clones
     }
 
