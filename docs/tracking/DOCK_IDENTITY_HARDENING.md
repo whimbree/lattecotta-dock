@@ -380,6 +380,10 @@ group with the exact relationship and applet snapshot. The first final gate
 also caught a reusable widget-explorer delegate reaching past its injected page
 contract to production's `latteView`; the corrected page boundary passes the
 accessible press-action regression and shrinks the qmllint baseline.
+The canonical gate passed at exact head
+`00dc6da9f4dae7591a884f243cc5ab8ad841be20` with 104/104 CTest entries,
+5,831 curated full-stage QML warnings, 13 render probes, three nested sanitizer
+recipes, and the complete output-matrix fixture.
 
 Each slice requires a failing regression first, pure-core ASan and UBSan tests
 where a value model can carry the invariant, nested-KWin state and render

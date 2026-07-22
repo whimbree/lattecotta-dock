@@ -1045,8 +1045,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   replaceable `addApplet` interface to every delegate. Document the injected
   edit-overlay and Tasks-plasmoid boundaries for qmllint.
 - EVIDENCE: `qmlinteraction` passes all 231 assertions, including the real
-  shipped delegate's accessible press action. `qmllintgate` passes at 5,830
-  curated warnings, one fewer than before the correction.
+  shipped delegate's accessible press action. The canonical `qmllintgate`
+  passes at 5,831 curated warnings, one fewer than the full-stage baseline
+  before the correction.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
