@@ -27,9 +27,8 @@ void AutoSizeStepper::clearHistory()
     m_history.clear();
 }
 
-QVariantMap AutoSizeStepper::step(double layoutLength, double maxLength, double itemLength,
-                                  int currentIconSize, int maxIconSize, double zoomFactor,
-                                  int appliedIconSize)
+QVariantMap AutoSizeStepper::step(double layoutLength, double maxLength, int currentIconSize,
+                                  int maxIconSize, double zoomFactor, int appliedIconSize)
 {
     //! AutoSize.qml's maxLength <= 0 no-geometry contract returns before
     //! calling in (ad9b823f), lengths are widths/heights and cannot be
@@ -38,13 +37,13 @@ QVariantMap AutoSizeStepper::step(double layoutLength, double maxLength, double 
     //! any of these is a shell bug, never something to search around
     //! silently
     const bool measurementIsValid = maxLength > 0
-            && layoutLength >= 0 && itemLength >= 0
+            && layoutLength >= 0
             && currentIconSize >= 1 && maxIconSize >= 1
             && zoomFactor >= 1;
 
     if (!measurementIsValid) {
         qCritical() << "AutoSizeStepper.step: invalid measurement, layoutLength" << layoutLength
-                    << "maxLength" << maxLength << "itemLength" << itemLength
+                    << "maxLength" << maxLength
                     << "currentIconSize" << currentIconSize << "maxIconSize" << maxIconSize
                     << "zoomFactor" << zoomFactor << "- refusing to step";
         return QVariantMap();
@@ -53,7 +52,6 @@ QVariantMap AutoSizeStepper::step(double layoutLength, double maxLength, double 
     AutoSizeEngine::AutoSizeInput input;
     input.layoutLength = layoutLength;
     input.maxLength = maxLength;
-    input.itemLength = itemLength;
     input.currentIconSize = currentIconSize;
     input.maxIconSize = maxIconSize;
     input.zoomFactor = zoomFactor;

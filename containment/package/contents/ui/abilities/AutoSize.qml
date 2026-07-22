@@ -42,7 +42,7 @@ Item {
     readonly property bool inAutoSizeAnimation: !sizer.inCalculatedIconSize
 
     //! The search itself - shrink/grow branch selection, the stepping
-    //! loops, the asymmetric limits and the endless-loop protector - lives
+    //! fit calculation, stable-row limits and endless-loop protector - lives
     //! in the AutoSizeEngine core (containment/plugin/units/
     //! autosizeengine.h, pinned by tests/units/autosizeenginetest.cpp and
     //! tests/qml/tst_autosize.qml). The stepper owns the prediction
@@ -151,7 +151,6 @@ Item {
 
             const result = stepper.step(layoutLength,
                                         sizer.containment.maxLength,
-                                        sizer.metrics.totals.length,
                                         sizer.metrics.iconSize,
                                         sizer.metrics.maxIconSize,
                                         sizer.parabolic.factor.zoom,

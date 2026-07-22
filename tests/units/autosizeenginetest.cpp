@@ -51,29 +51,30 @@ private Q_SLOTS:
     void history_ringTruncatesToNewestEntries();
     void history_producesEndlessLoop_truthTable();
     void step_shrinksAndRecordsPrediction();
-    void step_keepsCurrentInsideRobustnessBand();
+    void step_keepsCurrentInsideZoomedEndSlack();
     void step_growsOnlyFromOwnAppliedSize();
     void step_growToCeilingRestoresAutomatic();
     void step_growMidRangeAppliesSize();
     void step_protectorBlocksRepeatingGrow();
     void step_noFitGrowKeepsCurrentAndHistory();
-    void step_zeroItemLengthCollapsesTheBand();
+    void step_zoomDisabledUsesExactLimit();
     void step_zeroLayoutLengthGrowsToCeiling();
     void step_growRightAfterBoundaryShrinkIsRejected();
     void step_shrinkChoosesSameLargestFitAcrossCeilings();
     void step_growUsesSpaceBelowTheNextEightPixelBucket();
+    void step_hoverZoomDoesNotReduceRestingFit();
 };
 
 namespace {
 
 //! a step() input around one measured layout snapshot; fields mirror the
 //! QML shell's reads (see AutoSizeInput's comments)
-AutoSizeInput makeInput(double layoutLength, double maxLength, double itemLength,
-                        int currentIconSize, int maxIconSize, double zoomFactor,
+AutoSizeInput makeInput(double layoutLength, double maxLength, int currentIconSize,
+                        int maxIconSize, double zoomFactor,
                         std::optional<int> appliedIconSize)
 {
-    return AutoSizeInput{layoutLength, maxLength, itemLength,
-                         currentIconSize, maxIconSize, zoomFactor, appliedIconSize};
+    return AutoSizeInput{layoutLength, maxLength, currentIconSize,
+                         maxIconSize, zoomFactor, appliedIconSize};
 }
 
 }
@@ -152,13 +153,12 @@ void AutoSizeEngineTest::shrink_terminatesForEveryIconSize()
 {
     // the ad9b823f named regression, driven through step(): a barely
     // positive maxLength (the smallest geometry the shell's <= 0 contract
-    // lets through) makes toShrinkLimit negative, so the length condition
-    // can never break the loop and only the floor exit can. Every icon
+    // lets through) cannot fit even the floor projection. Every icon
     // size from 16 to 256, including the live 78, must land exactly on the
     // 16px floor and return.
     for (int size = 16; size <= 256; ++size) {
         History history;
-        const AutoSizeInput input = makeInput(10.0 * size, /*maxLength*/ 1.0, /*itemLength*/ size,
+        const AutoSizeInput input = makeInput(10.0 * size, /*maxLength*/ 1.0,
                                               size, size, 1.6, std::nullopt);
         const AutoSizeStep result = step(input, history);
 
@@ -297,11 +297,10 @@ void AutoSizeEngineTest::history_producesEndlessLoop_truthTable()
 
 void AutoSizeEngineTest::step_shrinksAndRecordsPrediction()
 {
-    // layout 1000 at icon 64, maxLength 1100, one zoomed 64px item reserved:
-    // toShrinkLimit = 1100 - 1.6*64 = 997.6, overflow. Size 63 projects
-    // 984.375 and is the largest fitting integer below the 64px ceiling.
+    // The settled 1000px row overflows a 997.6px budget. Size 63 projects
+    // 984.375px and is the largest fitting integer below the 64px ceiling.
     History history;
-    const AutoSizeInput input = makeInput(1000.0, 1100.0, 64.0, 64, 64, 1.6, std::nullopt);
+    const AutoSizeInput input = makeInput(1000.0, 997.6, 64, 64, 1.6, std::nullopt);
     const AutoSizeStep result = step(input, history);
 
     const auto *applied = std::get_if<ApplySize>(&result);
@@ -312,15 +311,13 @@ void AutoSizeEngineTest::step_shrinksAndRecordsPrediction()
     QCOMPARE(history.at(0).predictedLength, 984);
 }
 
-void AutoSizeEngineTest::step_keepsCurrentInsideRobustnessBand()
+void AutoSizeEngineTest::step_keepsCurrentInsideZoomedEndSlack()
 {
-    // the asymmetric limits: toShrinkLimit = 1000 - 1.6*64 = 897.6,
-    // toGrowLimit = 1000 - 1.2*1.6*64 = 877.12. A layout inside the band
-    // must neither shrink nor grow - this margin is exactly what prevents
-    // a grow immediately after a shrink at the boundary (upstream's
-    // robustness comment; the oscillation the asymmetry prevents)
+    // Zoom-enabled growth keeps only the 2px end slack. A settled 999px row
+    // is below the 1000px shrink limit but above the strict 998px grow limit,
+    // so it stays put without reserving a temporary hovered icon.
     History history;
-    const AutoSizeInput input = makeInput(890.0, 1000.0, 64.0, 64, 64, 1.6, std::optional<int>(64));
+    const AutoSizeInput input = makeInput(999.0, 1000.0, 64, 64, 1.6, std::optional<int>(64));
     const AutoSizeStep result = step(input, history);
 
     QVERIFY(std::holds_alternative<KeepCurrent>(result));
@@ -329,14 +326,14 @@ void AutoSizeEngineTest::step_keepsCurrentInsideRobustnessBand()
 
 void AutoSizeEngineTest::step_growsOnlyFromOwnAppliedSize()
 {
-    // growable snapshot (layout 500 far under toGrowLimit 1877.12), but the
+    // growable snapshot (layout 500 far under toGrowLimit 1998), but the
     // search never grows from a size it did not apply itself: automatic
     // sizing (absent) and a foreign size must both keep current
     History history;
-    const AutoSizeInput automatic = makeInput(500.0, 2000.0, 64.0, 32, 64, 1.6, std::nullopt);
+    const AutoSizeInput automatic = makeInput(500.0, 2000.0, 32, 64, 1.6, std::nullopt);
     QVERIFY(std::holds_alternative<KeepCurrent>(step(automatic, history)));
 
-    const AutoSizeInput foreign = makeInput(500.0, 2000.0, 64.0, 32, 64, 1.6, std::optional<int>(48));
+    const AutoSizeInput foreign = makeInput(500.0, 2000.0, 32, 64, 1.6, std::optional<int>(48));
     QVERIFY(std::holds_alternative<KeepCurrent>(step(foreign, history)));
 
     QCOMPARE(history.size(), 0);
@@ -347,7 +344,7 @@ void AutoSizeEngineTest::step_growToCeilingRestoresAutomatic()
     // same snapshot grown from its own applied size saturates at the
     // ceiling: the constraint is gone, distinct from applying max as a size
     History history;
-    const AutoSizeInput input = makeInput(500.0, 2000.0, 64.0, 32, 64, 1.6, std::optional<int>(32));
+    const AutoSizeInput input = makeInput(500.0, 2000.0, 32, 64, 1.6, std::optional<int>(32));
     const AutoSizeStep result = step(input, history);
 
     QVERIFY(std::holds_alternative<RestoreAutomaticMax>(result));
@@ -358,10 +355,10 @@ void AutoSizeEngineTest::step_growToCeilingRestoresAutomatic()
 
 void AutoSizeEngineTest::step_growMidRangeAppliesSize()
 {
-    // toGrowLimit = 1500 - 1.2*1.0*500 = 900. Size 57 projects
+    // With zoom disabled the 900px grow limit is exact. Size 57 projects
     // 890.625 and fits; size 58 projects 906.25 and does not.
     History history;
-    const AutoSizeInput input = makeInput(500.0, 1500.0, 500.0, 32, 64, 1.0, std::optional<int>(32));
+    const AutoSizeInput input = makeInput(500.0, 900.0, 32, 64, 1.0, std::optional<int>(32));
     const AutoSizeStep result = step(input, history);
 
     const auto *applied = std::get_if<ApplySize>(&result);
@@ -379,18 +376,18 @@ void AutoSizeEngineTest::step_protectorBlocksRepeatingGrow()
     // must leave the history untouched; clearing the history re-arms it
     History history;
 
-    const AutoSizeInput growInput = makeInput(500.0, 1500.0, 500.0, 32, 64, 1.0, std::optional<int>(32));
+    const AutoSizeInput growInput = makeInput(500.0, 900.0, 32, 64, 1.0, std::optional<int>(32));
     QVERIFY(std::holds_alternative<ApplySize>(step(growInput, history))); // records (500, 891)
 
     // after applying 57 the row measures 890.625 and overflows a tighter
-    // geometry: toShrinkLimit = 800 - 1.0*100 = 700, size 44 projects
-    // 687.5 and fits. This records (891, 688), a shrink undoing the grow.
-    const AutoSizeInput shrinkInput = makeInput(890.625, 800.0, 100.0, 57, 64,
+    // geometry: the 800px limit selects size 51, which projects 796.875px.
+    // This records (891, 797), a shrink undoing the grow.
+    const AutoSizeInput shrinkInput = makeInput(890.625, 800.0, 57, 64,
                                                 1.0, std::optional<int>(57));
     const AutoSizeStep shrunk = step(shrinkInput, history);
     const auto *applied = std::get_if<ApplySize>(&shrunk);
     QVERIFY(applied);
-    QCOMPARE(applied->iconSize, 44);
+    QCOMPARE(applied->iconSize, 51);
     QCOMPARE(history.size(), 2);
 
     // the same grow prediction (500, 891) two passes later: blocked
@@ -407,34 +404,33 @@ void AutoSizeEngineTest::step_noFitGrowKeepsCurrentAndHistory()
     // candidate 33 projects 515.625 and exceeds the limit: keep current, and
     // the failed attempt records no prediction
     History history;
-    const AutoSizeInput input = makeInput(500.0, 630.0, 100.0, 32, 64, 1.0, std::optional<int>(32));
+    const AutoSizeInput input = makeInput(500.0, 510.0, 32, 64, 1.0, std::optional<int>(32));
     const AutoSizeStep result = step(input, history);
 
     QVERIFY(std::holds_alternative<KeepCurrent>(result));
     QCOMPARE(history.size(), 0);
 }
 
-void AutoSizeEngineTest::step_zeroItemLengthCollapsesTheBand()
+void AutoSizeEngineTest::step_zoomDisabledUsesExactLimit()
 {
-    // itemLength 0 makes both limits equal maxLength (no zoom reserve to
-    // subtract): under it grows, over it shrinks, exactly at it keeps -
-    // the degenerate band is empty, not a trap. The grow stops at 63 because
+    // Zoom factor 1 makes both limits equal maxLength: under it grows, over
+    // it shrinks, exactly at it keeps. The grow stops at 63 because
     // the ceiling candidate 64 projects exactly 1000, and strict < keeps a
     // projection at the limit out.
     History history;
 
-    const AutoSizeInput under = makeInput(500.0, 1000.0, 0.0, 32, 64, 1.6, std::optional<int>(32));
+    const AutoSizeInput under = makeInput(500.0, 1000.0, 32, 64, 1.0, std::optional<int>(32));
     const AutoSizeStep grown = step(under, history);
     const auto *applied = std::get_if<ApplySize>(&grown);
     QVERIFY(applied);
     QCOMPARE(applied->iconSize, 63);
 
     history.clear();
-    const AutoSizeInput over = makeInput(1500.0, 1000.0, 0.0, 32, 64, 1.6, std::optional<int>(32));
+    const AutoSizeInput over = makeInput(1500.0, 1000.0, 32, 64, 1.0, std::optional<int>(32));
     QVERIFY(std::holds_alternative<ApplySize>(step(over, history)));
 
     history.clear();
-    const AutoSizeInput exact = makeInput(1000.0, 1000.0, 0.0, 32, 64, 1.6, std::optional<int>(32));
+    const AutoSizeInput exact = makeInput(1000.0, 1000.0, 32, 64, 1.0, std::optional<int>(32));
     QVERIFY(std::holds_alternative<KeepCurrent>(step(exact, history)));
 }
 
@@ -443,26 +439,24 @@ void AutoSizeEngineTest::step_zeroLayoutLengthGrowsToCeiling()
     // an empty row projects 0 at every candidate, so a grow saturates at
     // the ceiling and restores automatic sizing instead of looping
     History history;
-    const AutoSizeInput input = makeInput(0.0, 1000.0, 64.0, 32, 64, 1.6, std::optional<int>(32));
+    const AutoSizeInput input = makeInput(0.0, 1000.0, 32, 64, 1.6, std::optional<int>(32));
     QVERIFY(std::holds_alternative<RestoreAutomaticMax>(step(input, history)));
 }
 
 void AutoSizeEngineTest::step_growRightAfterBoundaryShrinkIsRejected()
 {
-    // the spec's asymmetric-limits case, driven as consecutive passes: a
-    // shrink exits just under the shrink limit (1000 at icon 64 against
-    // toShrinkLimit 897.6 applies 57, projecting 890.625). The re-measure
-    // remains above toGrowLimit 877.12, so the asymmetric margin leaves no
-    // room for an immediate bounce-back grow.
+    // A 1000px row at icon 64 shrinks against a 900px budget to size 57,
+    // projecting 890.625px. The re-measure remains above the zoom-enabled
+    // 898px grow limit, so the 2px end slack prevents an immediate bounce.
     History history;
 
-    const AutoSizeInput overflow = makeInput(1000.0, 1000.0, 64.0, 64, 64, 1.6, std::nullopt);
+    const AutoSizeInput overflow = makeInput(1000.0, 900.0, 64, 64, 1.6, std::nullopt);
     const AutoSizeStep shrunk = step(overflow, history);
     const auto *applied = std::get_if<ApplySize>(&shrunk);
     QVERIFY(applied);
     QCOMPARE(applied->iconSize, 57);
 
-    const AutoSizeInput remeasured = makeInput(890.625, 1000.0, 64.0, 57, 64,
+    const AutoSizeInput remeasured = makeInput(890.625, 900.0, 57, 64,
                                                1.6, std::optional<int>(57));
     QVERIFY(std::holds_alternative<KeepCurrent>(step(remeasured, history)));
     QCOMPARE(history.size(), 1); // the rejected grow recorded nothing
@@ -478,8 +472,7 @@ void AutoSizeEngineTest::step_shrinkChoosesSameLargestFitAcrossCeilings()
         History history;
         const double layoutLength = 21.4 * configuredCeiling;
         const AutoSizeInput input = makeInput(layoutLength,
-                                              /*maxLength*/ 691.0,
-                                              /*itemLength*/ 30.0,
+                                              /*maxLength*/ 643.0,
                                               configuredCeiling,
                                               configuredCeiling,
                                               /*zoomFactor*/ 1.6,
@@ -497,13 +490,13 @@ void AutoSizeEngineTest::step_shrinkChoosesSameLargestFitAcrossCeilings()
 void AutoSizeEngineTest::step_growUsesSpaceBelowTheNextEightPixelBucket()
 {
     // Live-shaped settled geometry: at size 44 the row is 965px long and
-    // the grow limit is 1228 - 1.2*1.6*50 = 1132px. Size 51 projects to
-    // 1118.52px and fits; size 52 projects to 1140.45px and does not. A
-    // search that tests only 52 must not strand the row at 44.
+    // the zoom-enabled grow limit is 1226px after adding incremental hover
+    // extent. Size 54 produces 1184.32px of resting row plus 32.4px of zoom
+    // growth and fits; size 55 reaches 1239.25px total and does not. A search
+    // that tests only eight-pixel jumps must not strand the row at 44.
     History history;
     const AutoSizeInput input = makeInput(/*layoutLength*/ 965.0,
                                           /*maxLength*/ 1228.0,
-                                          /*itemLength*/ 50.0,
                                           /*currentIconSize*/ 44,
                                           /*maxIconSize*/ 68,
                                           /*zoomFactor*/ 1.6,
@@ -512,7 +505,32 @@ void AutoSizeEngineTest::step_growUsesSpaceBelowTheNextEightPixelBucket()
     const auto *applied = std::get_if<ApplySize>(&result);
 
     QVERIFY(applied);
-    QCOMPARE(applied->iconSize, 51);
+    QCOMPARE(applied->iconSize, 54);
+}
+
+void AutoSizeEngineTest::step_hoverZoomDoesNotReduceRestingFit()
+{
+    // Live-shaped bottom dock: the resting row is 1114px inside a 1228px
+    // Maximum Length budget at size 50. Size 53 projects to 1180.84px at
+    // rest, then its 42.4px incremental hover growth reaches 1223.24px.
+    // Size 54 would reach 1246.32px. The temporary presentation must not
+    // shrink a fitting resting row, and growth must leave only the 2px end
+    // slack after accounting for zoom.
+    History history;
+    const AutoSizeInput input = makeInput(/*layoutLength*/ 1114.0,
+                                          /*maxLength*/ 1228.0,
+                                          /*currentIconSize*/ 50,
+                                          /*maxIconSize*/ 114,
+                                          /*zoomFactor*/ 1.8,
+                                          /*appliedIconSize*/ 50);
+    const AutoSizeStep result = step(input, history);
+
+    const auto *const applied = std::get_if<ApplySize>(&result);
+    QVERIFY(applied);
+    QCOMPARE(applied->iconSize, 53);
+    QCOMPARE(history.size(), 1);
+    QCOMPARE(history.at(0).currentLength, 1114);
+    QCOMPARE(history.at(0).predictedLength, 1181);
 }
 
 QTEST_GUILESS_MAIN(AutoSizeEngineTest)

@@ -30,7 +30,7 @@ Item {
     property bool inConfigureAppletsMode: false
     property bool isHorizontal: true
     property bool isVertical: false
-    property real maxLength: 1100
+    property real maxLength: 997.6
 
     property int destroyedContinuationCalls: 0
     property int rapidContinuationCalls: 0
@@ -182,7 +182,7 @@ Item {
             metricsMock.totals.length = 64;
             layoutsMock.mainLayout.length = 1000;
             parabolicMock.factor.zoom = 1.6;
-            root.maxLength = 1100;
+            root.maxLength = 997.6;
             root.destroyedContinuationCalls = 0;
             root.rapidContinuationCalls = 0;
         }
@@ -279,7 +279,7 @@ Item {
             wait(0);
 
             compare(sizer.iconSize, -1,
-                    "the robustness band has no target and must leave automatic sizing selected");
+                    "a fitting automatic row has no target and must stay automatic");
             compare(productionAnimations.needBothAxis.count, 0,
                     "without a target AutoSize cannot feed back into the tracker count");
             compare(visibilityManager.inNormalState, true,
