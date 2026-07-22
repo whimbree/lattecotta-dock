@@ -210,8 +210,8 @@ Item {
             compare(sizer.iconSize, -1,
                     "normal-state notification must not resize synchronously inside the count binding");
             wait(0);
-            compare(sizer.iconSize, 56,
-                    "the Qt5 resize result must still be applied on the next event-loop turn");
+            compare(sizer.iconSize, 63,
+                    "the largest fitting size must be applied on the next event-loop turn");
 
             metricsMock.iconSize = 60;
             compare(productionAnimations.needBothAxis.count, 1,

@@ -4,13 +4,12 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-//! Shell pin for the automatic item sizer (EX-04). The stepping loops and
-//! branch selection this file used to drive in code/autosize.js live in
+//! Shell pin for the automatic item sizer (EX-04). The fit calculation and
+//! branch selection live in
 //! the AutoSizeEngine core now (containment/plugin/units/autosizeengine.h;
 //! tests/units/autosizeenginetest.cpp pins the full case tables, including
-//! the ad9b823f termination property over sizes 16..256 - the upstream
-//! 747d4870 equality exits spun forever for sizes not congruent modulo the
-//! step, the live case was iconSize=78 hanging the dock at 100% CPU).
+//! the ad9b823f termination property over sizes 16..256 and the largest-fit
+//! result independent of the configured ceiling's remainder modulo 8).
 //! What must stay pinned HERE is the shell: the AutoSizeStepper the
 //! containment ability instantiates resolves from the staged install,
 //! delegates to the core, maps the core's alternatives onto the sizer's
@@ -35,13 +34,13 @@ TestCase {
         stepper.clearHistory();
     }
 
-    function test_shrinkAppliesSteppedSize() {
+    function test_shrinkAppliesLargestFittingSize() {
         //! layout 1000 at icon 64 against maxLength 1100 and one zoomed 64px
-        //! item reserved: toShrinkLimit 997.6, candidate 56 projects 875 and
-        //! fits (row from the autosizeenginetest equivalence table)
+        //! item reserved: toShrinkLimit 997.6. Size 63 projects 984.375 and
+        //! is the largest fit below the ceiling.
         var result = stepper.step(1000, 1100, 64, 64, 64, 1.6, -1);
         verify(result.found, "an overflowing layout must find a shrunk size");
-        compare(result.nextIconSize, 56);
+        compare(result.nextIconSize, 63);
     }
 
     function test_shrinkTerminatesForTheLiveIconSize78() {
@@ -63,10 +62,10 @@ TestCase {
     }
 
     function test_growMidRangeAppliesConcreteSize() {
-        //! toGrowLimit 900: candidates 40/48/56 fit, 64 does not
+        //! toGrowLimit 900: size 57 fits and size 58 does not
         var result = stepper.step(500, 1500, 500, 32, 64, 1.0, 32);
         verify(result.found);
-        compare(result.nextIconSize, 56);
+        compare(result.nextIconSize, 57);
     }
 
     function test_automaticSizingNeverGrows() {
@@ -83,17 +82,26 @@ TestCase {
         verify(!result.found, "inside the band the size must stay put");
     }
 
+    function test_liveShapedGrowUsesTheLargestFittingPixelSize() {
+        //! At size 44 the 965px row has room to grow beneath a 1132px grow
+        //! limit. Size 51 fits and size 52 does not; the shell must expose
+        //! the largest fit instead of stopping because an 8px jump missed it.
+        var result = stepper.step(965, 1228, 50, 44, 68, 1.6, 44);
+        verify(result.found);
+        compare(result.nextIconSize, 51);
+    }
+
     function test_historyPersistsAcrossPassesAndClears() {
         //! the endless-loop protector needs state across calls: a grow, the
         //! shrink undoing it, then the identical grow again is rejected;
         //! clearing the history re-arms it (the sizer's isActive flip)
         var grow = stepper.step(500, 1500, 500, 32, 64, 1.0, 32);
         verify(grow.found);
-        compare(grow.nextIconSize, 56);
+        compare(grow.nextIconSize, 57);
 
-        var shrink = stepper.step(875, 800, 100, 56, 64, 1.0, 56);
+        var shrink = stepper.step(890.625, 800, 100, 57, 64, 1.0, 57);
         verify(shrink.found);
-        compare(shrink.nextIconSize, 40);
+        compare(shrink.nextIconSize, 44);
 
         var blocked = stepper.step(500, 1500, 500, 32, 64, 1.0, 32);
         verify(!blocked.found, "the protector must block the repeating grow");
@@ -101,7 +109,7 @@ TestCase {
         stepper.clearHistory();
         var rearmed = stepper.step(500, 1500, 500, 32, 64, 1.0, 32);
         verify(rearmed.found, "a cleared history re-arms the grow");
-        compare(rearmed.nextIconSize, 56);
+        compare(rearmed.nextIconSize, 57);
     }
 
     function test_invalidMeasurementIsRefused() {
