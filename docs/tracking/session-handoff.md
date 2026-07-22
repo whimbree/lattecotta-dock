@@ -3,6 +3,29 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-22.
 
+## 2026-07-22: same-edge edit canvas placement hardened
+
+D122 (same-edge edit canvas retarget lost its layer anchors) was reproduced
+live on a left dock. Latte reported canvas geometry
+`[1440,425,140,1440]`, but KWin mapped the layer surface at
+`[2650,425,140,1440]`, centered across the landscape output. Dock identity,
+output ownership, and the QML header position inside the canvas remained
+correct.
+
+The shared config chrome clears layer-shell anchors during every retarget.
+`CanvasConfigView::syncGeometry()` previously returned when its cached canvas
+rectangle was unchanged. Separate docks on the same output edge legitimately
+share that rectangle, so the second dock never reapplied compositor placement
+or its view-local input mask. Commit `dc1517aec` reasserts both ownership
+surfaces on every Wayland synchronization while retaining the cache for resize
+and non-Wayland position work.
+
+The deterministic nested recipe creates two independent left-edge docks and
+retargets the shared edit chrome directly between them. Before the fix, Latte
+reported `0,0 146x912` while KWin mapped `727,44 146x912`. Two fresh corrected
+runs mapped the first and retargeted canvases at the reported
+`0,88 146x824`; `layershellmappingtest` passes.
+
 ## 2026-07-22: linked runtime lifecycle and sizing ownership hardened
 
 PR #113 merged the complete independent Duplicate Dock and Create Linked Dock

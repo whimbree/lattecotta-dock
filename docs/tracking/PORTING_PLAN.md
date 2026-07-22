@@ -4270,6 +4270,14 @@ prerequisites in the phases above are done.
       and clear the complete pending placement request before the normal reveal
       and settlement path.
       Commits: 427b97d68, 02809355a
+- [x] Fix D122 (same-edge edit canvas retarget lost its layer anchors).
+      Reassert Wayland placement and the selected view's input mask whenever
+      shared edit chrome retargets, even when separate same-edge docks have an
+      identical canvas rectangle. Keep the geometry cache only for actual
+      resize and non-Wayland position work. A nested compositor recipe compares
+      Latte's reported canvas with KWin's mapped surface across the exact
+      same-edge handoff.
+      Commits: dc1517aec
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
