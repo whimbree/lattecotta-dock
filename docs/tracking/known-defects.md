@@ -783,11 +783,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   files without adding the current 2026 modification copyright line.
 - FIX: retain all existing SPDX lines and add Bree Spektor to both files.
 ### D77 - Dock duplication retains clone lineage and edit ownership
-- STATUS: FIXED on `fix/dock-identity-isolation` (`aad2f524f`, `5de3f98d3`,
-  `bf6602737`, `b72c6147c`, `103147995`, `d819fbb91`, `8082a504f`,
-  `c7568e90b`, `8dbac9eb3`, `d70f65cc9`, `67b5aa5ea`; focused caller
-  contract `eb5b6d47b`; shared layouts-dialog correction `efe1ec216`; runtime
-  recipes `84f476185`, `d70f65cc9`).
+- STATUS: FIXED IN PR #109 (`8f2c3073d`; implementation `d9ca7bcfb`, `0234aba66`,
+  `896f8e20b`, `a2a93b965`, `2d5184665`, `0f04cb7ef`, `5585c708a`,
+  `b99bbe4be`, `2695d2355`, `2e97f88b6`, `5d9166ed9`; focused caller
+  contract `bce41d191`; shared layouts-dialog correction `ebb517a67`; runtime
+  recipes `3a7b01f25`, `2e97f88b6`).
 - FOUND: 2026-07-21, dock duplication and edit-mode identity investigation.
 - SYMPTOM: Duplicate Dock on an ordinary All Screens source created another
   linked multi-output ensemble instead of one independent dock. Duplicating a
@@ -825,8 +825,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   nonlinked dock (13 and 14), found no containment or applet ID overlap, kept
   the original relation intact, propagated a visibility-mode change from the
   original only to its linked replica, and preserved all four identities across
-  restart. The final canonical full gate passed at `defaa0c7a` after both cold
-  review corrections and the commit-message cleanup.
+  restart. The final canonical full gate passed at exact pre-merge head
+  `defaa0c7ad1a0e376937bf07f035430ecc977407` after both cold review
+  corrections and the commit-message cleanup. GitHub rebased the validated
+  source and test tree through `b6ba7ab15`.
 
 ### D83 - Removed duplicate containment survives the undo window in persistent layout state
 - STATUS: OPEN, CONFIRMED in the baseline nested vehicle.
@@ -845,7 +847,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   layout-sync boundary before changing cleanup behavior.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
-- STATUS: FIXED on `fix/dock-identity-isolation` (`d26aaf8de`).
+- STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.
 - SYMPTOM: `settingsinventorytest` rejected one new `addSeparator()` source
   candidate and one ledger identity that no longer resolved.
@@ -861,7 +863,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   canonical rerun provide the correction evidence.
 
 ### D94 - Dock identity tests were absent from the coverage ratchet
-- STATUS: FIXED on `fix/dock-identity-isolation` (`a1304933b`).
+- STATUS: FIXED IN PR #109 (`f31d14c49`).
 - FOUND: 2026-07-22, second canonical gate on the rebased identity branch.
 - SYMPTOM: all 104 CTest entries passed, then the coverage ratchet rejected four
   additions relative to its committed 100-target ledger.
@@ -874,7 +876,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   headers. The final canonical rerun provides whole-tree evidence.
 
 ### D95 - Layouts-dialog Duplicate preserves linked relationship state
-- STATUS: FIXED on `fix/dock-identity-isolation` (`efe1ec216`).
+- STATUS: FIXED IN PR #109 (`ebb517a67`).
 - FOUND: 2026-07-22, mandatory cold review of PR #109.
 - SYMPTOM: Duplicate in the layouts dialog could create another linked ensemble
   from an All Screens or All Secondary Screens source, even though Duplicate in
@@ -890,10 +892,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: `datatypestest` proves the source is unchanged, every unrelated
   field survives, and both relationship fields normalize. The production source
   contract proves both callers transform before import. The final canonical
-  gate passes at `defaa0c7a`.
+  gate passed at exact pre-merge head
+  `defaa0c7ad1a0e376937bf07f035430ecc977407`.
 
 ### D96 - Duplicate settings inventory still claims linked exclusion
-- STATUS: FIXED on `fix/dock-identity-isolation` (`e50464334`).
+- STATUS: FIXED IN PR #109 (`f755d9008`).
 - FOUND: 2026-07-22, mandatory cold review of PR #109.
 - ROOT: the settings ledger retained the old noncloned precondition and cloned
   exclusion matrix after Duplicate became valid from a linked member.
@@ -902,7 +905,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: `settingsinventorytest` passes with the corrected semantic row.
 
 ### D97 - Independent snapshot test ignores transient view fields
-- STATUS: FIXED on `fix/dock-identity-isolation` (`7b63afe63`).
+- STATUS: FIXED IN PR #109 (`f207d6560`).
 - FOUND: 2026-07-22, mandatory second cold review of PR #109.
 - SYMPTOM: `datatypestest` claimed that relationship normalization preserved
   every unrelated `Data::View` field, but the main equality assertion could not
@@ -914,8 +917,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FIX: seed all five omitted fields and compare them directly on the returned
   snapshot. The persistence-oriented equality assertion remains in place for
   the fields it is designed to cover.
-- EVIDENCE: the focused `datatypestest` and the final canonical gate at
-  `defaa0c7a` pass with the direct transient-field assertions.
+- EVIDENCE: the focused `datatypestest` and the final canonical gate at exact
+  pre-merge head `defaa0c7ad1a0e376937bf07f035430ecc977407` pass with the
+  direct transient-field assertions.
 
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
