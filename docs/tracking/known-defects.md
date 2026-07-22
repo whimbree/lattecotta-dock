@@ -1032,6 +1032,22 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   header, and QML path changed by the branch.
 - EVIDENCE: a complete changed-source scan reports no missing attribution.
 
+### D110 - Widget explorer delegate bypassed its mutation injection
+- STATUS: FIXED on `feat/create-linked-dock` (`94283dfb4`).
+- FOUND: 2026-07-22, final canonical gate for Create Linked Dock.
+- SYMPTOM: the Add Widgets accessibility press action stopped adding an applet,
+  and the strict-on-touch qmllint ratchet increased in three changed files.
+- ROOT: the relationship-aware add path made the reusable AppletDelegate read
+  the production-only `latteView` context object directly. Its component test
+  intentionally supplies the page contract instead. New injected QML reads were
+  also left implicit rather than documenting their context boundary.
+- FIX: keep `latteView` at the WidgetExplorer page boundary and expose one
+  replaceable `addApplet` interface to every delegate. Document the injected
+  edit-overlay and Tasks-plasmoid boundaries for qmllint.
+- EVIDENCE: `qmlinteraction` passes all 231 assertions, including the real
+  shipped delegate's accessible press action. `qmllintgate` passes at 5,830
+  curated warnings, one fewer than before the correction.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.

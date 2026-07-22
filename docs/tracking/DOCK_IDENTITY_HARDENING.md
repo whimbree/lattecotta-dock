@@ -376,7 +376,10 @@ publish programmatic order, validate the whole persisted graph before runtime,
 and drive libplasma's real notification action. The expanded notification
 recipe proves applet and dock Undo, reload after Undo, and shutdown during an
 applet Undo window. The focused storage test proves that Undo replaces a partial
-group with the exact relationship and applet snapshot.
+group with the exact relationship and applet snapshot. The first final gate
+also caught a reusable widget-explorer delegate reaching past its injected page
+contract to production's `latteView`; the corrected page boundary passes the
+accessible press-action regression and shrinks the qmllint baseline.
 
 Each slice requires a failing regression first, pure-core ASan and UBSan tests
 where a value model can carry the invariant, nested-KWin state and render

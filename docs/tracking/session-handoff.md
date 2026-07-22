@@ -85,6 +85,15 @@ Plasma's partial groups on Undo. The expanded dual-output recipe passes applet
 Undo, dock Undo, reload after Undo, and shutdown inside the applet Undo window.
 `storagetest` independently pins exact partial-group replacement.
 
+The first final gate then found D110 (widget explorer delegate bypassed its
+mutation injection). AppletDelegate reached directly for production's
+`latteView`, so the shipped delegate's accessibility fixture could no longer
+replace the mutation target. Commit `94283dfb4` keeps that dependency at the
+WidgetExplorer page boundary and documents the other injected QML reads. The
+focused rerun passes all 231 QML interaction assertions and the 5,830-warning
+qmllint ratchet, one warning below the previous baseline. A complete final gate
+rerun remains required after this documentation commit.
+
 Same-edge physical stack order, accumulated offsets, reservation, and activation
 regions remain the next separate slice. Create Linked deliberately accepts an
 occupied edge and does not use free-edge rejection. Detach and relationship-aware

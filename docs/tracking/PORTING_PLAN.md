@@ -1406,6 +1406,12 @@ multi-view, multi-monitor setup.
       modification copyright to every changed source path.
       Commits: 46051f280
 
+- [x] Fix D110 (widget explorer delegate bypassed its mutation injection). Keep
+      the production `latteView` dependency at the page boundary and give the
+      reusable delegate one explicit add interface. Mark other injected QML
+      relationship reads for the strict-on-touch lint contract.
+      Commits: 94283dfb4
+
 - [x] Bottom-dock layer surface drifts left of its reported geometry
       (filed 2026-07-17 from the e2e promotion unit, evidence in
       docs/agent-logs/2026-07-17-e2e-promotion.md finding 6; root-caused,
@@ -4196,7 +4202,8 @@ prerequisites in the phases above are done.
       5a97d18f9, dafb6d0c7, 148da3e1b, c53887f9b, 9c5620d99,
       f1a76d7a4, e781b4d0b, 05bcb00c5, b7795aa6d, df1fe812f,
       43705d032, 96d7abe61, b93fa2cde, be4918abd, 6cdd589a8,
-      43918705d, cda3b564c, 20dfb4fc4, dacb06140, 46051f280
+      43918705d, cda3b564c, 20dfb4fc4, dacb06140, 46051f280,
+      94283dfb4
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
