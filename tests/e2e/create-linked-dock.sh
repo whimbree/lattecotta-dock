@@ -11,9 +11,21 @@
 # e2e-mode: nested-only
 set -uo pipefail
 source "${E2E_REPO:?run through scripts/run-multi-output-e2e.sh}/tests/e2e/lib.sh"
+source "$E2E_REPO/tests/e2e/matrix/applet-reorder-driver.sh"
+source "$E2E_REPO/tests/e2e/matrix/task-reorder-lib.sh"
 
 [[ "${E2E_OUTPUT_COUNT:-1}" -eq 2 ]] \
     || e2e_fail "create-linked-dock needs the dual-output vehicle"
+
+readonly original_layout="$E2E_ARTIFACTS/create-linked-dock.original.layout.latte"
+cp "$E2E_LAYOUT" "$original_layout" \
+    || e2e_fail "could not preserve the pre-scenario layout"
+restore_original_layout() {
+    e2e_dock_stop >/dev/null 2>&1 || true
+    cp "$original_layout" "$E2E_LAYOUT" || return 1
+    e2e_dock_start >/dev/null 2>&1 || return 1
+}
+trap restore_original_layout EXIT
 
 snapshot() { e2e_json dockSystemData; }
 
@@ -70,6 +82,34 @@ view_applet_ids() {
     e2e_json viewAppletsData u "$1" | python3 -c '
 import json, sys
 print(" ".join(str(a["id"]) for a in json.load(sys.stdin)))
+'
+}
+
+view_plugin_order() {
+    e2e_json viewAppletsData u "$1" | python3 -c '
+import json, sys
+print(" ".join(a["plugin"] for a in json.load(sys.stdin)))
+'
+}
+
+tasks_applet_id() {
+    e2e_json viewAppletsData u "$1" | python3 -c '
+import json, sys
+ids = [a["id"] for a in json.load(sys.stdin) if a["plugin"] == "org.kde.latte.plasmoid"]
+if len(ids) != 1:
+    sys.exit("expected one Latte Tasks applet, got %r" % ids)
+print(ids[0])
+'
+}
+
+tasks_launchers_config() {
+    local view="$1" applet
+    applet="$(tasks_applet_id "$view")" || return 1
+    e2e_json appletConfigData uu "$view" "$applet" | python3 -c '
+import json, sys
+config = json.load(sys.stdin)["config"]
+values = {key: value for key, value in config.items() if key.startswith("launchers")}
+print(json.dumps(values, sort_keys=True, separators=(",", ":")))
 '
 }
 
@@ -244,12 +284,63 @@ import json, sys
 sys.exit(0 if not any(v["editMode"] for v in json.load(sys.stdin)["views"]) else 1)
 ' 'linked member edit mode did not close' >/dev/null
 
-# Applet content remains linked. Add one resolvable plugin to the root and wait
+# Temporarily expose the occupied-edge member on the primary top edge while
+# pointer-driven mutations run. Same-edge overlap remains supported and is
+# restored below; a covered view is not a valid pointer target.
+e2e_call setViewPlacement uiii "$same_edge_id" "$primary_id" 3 0 >/dev/null \
+    || e2e_fail "could not expose the linked member for pointer-driven mutations"
+wait_for_snapshot "
+import json, sys
+views = {v[\"persistentDockId\"]: v for v in json.load(sys.stdin)[\"views\"]}
+sys.exit(0 if views[$same_edge_id][\"edge\"] == \"top\"
+         and views[$same_edge_id][\"alignment\"] == \"center\"
+         and views[$root_id][\"edge\"] == \"bottom\" else 1)
+" 'linked member did not settle on its temporary pointer-test edge' >/dev/null
+
+# A Tasks launcher reorder is an applet-CONFIG mutation, not a containment
+# applet reorder. Drive it from an editable linked member and require the live
+# launchers config and rendered launcher order to converge across the group.
+mapfile -t task_apps < <(taskdrag_order "$same_edge_id" | tr ' ' '\n')
+[[ "${#task_apps[@]}" -ge 2 ]] \
+    || e2e_fail "linked-member config test needs at least two launchers"
+before_task_order="$(taskdrag_launcher_order "$same_edge_id")"
+before_launchers_config="$(tasks_launchers_config "$same_edge_id")" \
+    || e2e_fail "could not read linked-member launcher config"
+after_task_order="$before_task_order"
+for _ in $(seq 1 4); do
+    taskdrag_reorder "$same_edge_id" "${task_apps[0]}" "${task_apps[1]}" \
+        || e2e_fail "linked-member task reorder driver failed"
+    after_task_order="$(taskdrag_launcher_order "$same_edge_id")"
+    [[ "$after_task_order" != "$before_task_order" ]] && break
+done
+[[ "$after_task_order" != "$before_task_order" ]] \
+    || e2e_fail "linked-member task reorder did not change launcher order"
+
+config_sync=false
+for _ in $(seq 1 80); do
+    root_task_order="$(taskdrag_launcher_order "$root_id")"
+    remote_task_order="$(taskdrag_launcher_order "$remote_id")"
+    root_launchers_config="$(tasks_launchers_config "$root_id")"
+    member_launchers_config="$(tasks_launchers_config "$same_edge_id")"
+    remote_launchers_config="$(tasks_launchers_config "$remote_id")"
+    if [[ "$root_task_order" == "$after_task_order" && "$remote_task_order" == "$after_task_order" \
+            && "$member_launchers_config" != "$before_launchers_config" \
+            && "$root_launchers_config" == "$member_launchers_config" \
+            && "$remote_launchers_config" == "$member_launchers_config" ]]; then
+        config_sync=true
+        break
+    fi
+    sleep 0.25
+done
+[[ "$config_sync" == true ]] \
+    || e2e_fail "member-originated applet config did not converge across the linked group"
+
+# Applet content remains linked. Add one resolvable plugin from a MEMBER and wait
 # until every member has the same plugin multiset with disjoint instance ids.
 before_plugin_count="$(view_plugins "$root_id" | wc -w)"
-added_plugin=org.kde.latte.plasmoid
-e2e_call addApplet us "$root_id" "$added_plugin" >/dev/null \
-    || e2e_fail "could not add the staged Latte applet to the linked root"
+added_plugin=org.kde.plasma.minimizeall
+e2e_call addApplet us "$remote_id" "$added_plugin" >/dev/null \
+    || e2e_fail "could not add the installed plasmoid from a linked member"
 applet_sync=false
 for _ in $(seq 1 120); do
     root_plugins="$(view_plugins "$root_id")"
@@ -275,6 +366,43 @@ ids = [int(value) for value in sys.stdin.read().split()]
 if len(ids) != len(set(ids)):
     sys.exit("linked containments share applet instance identities")
 ' <<<"$all_applet_ids" || e2e_fail "linked members reused mutable applet identities"
+
+# Reorder containment applets from a member. Instance ids differ by design, so
+# the relationship coordinator translates the member order to root ids and the
+# observable plugin sequence must then agree everywhere.
+before_applet_order="$(view_plugin_order "$same_edge_id")"
+applet_reorder_attempt "$same_edge_id" commit 0 1 \
+    || e2e_fail "linked-member applet reorder did not commit"
+after_applet_order="$(view_plugin_order "$same_edge_id")"
+[[ "$after_applet_order" != "$before_applet_order" ]] \
+    || e2e_fail "linked-member applet reorder left the plugin sequence unchanged"
+order_sync=false
+for _ in $(seq 1 80); do
+    if [[ "$(view_plugin_order "$root_id")" == "$after_applet_order" \
+            && "$(view_plugin_order "$remote_id")" == "$after_applet_order" ]]; then
+        order_sync=true
+        break
+    fi
+    sleep 0.25
+done
+if [[ "$order_sync" != true ]]; then
+    printf 'expected plugin order: %s\nroot plugin order: %s\nremote plugin order: %s\n' \
+        "$after_applet_order" "$(view_plugin_order "$root_id")" \
+        "$(view_plugin_order "$remote_id")" >&2
+    e2e_fail "member-originated applet order did not converge across the linked group"
+fi
+
+# Return the member to the already occupied edge. The relationship and content
+# operations above must not rewrite placement ownership.
+e2e_call setViewPlacement uiii "$same_edge_id" "$primary_id" 4 0 >/dev/null \
+    || e2e_fail "could not restore the linked member to the occupied edge"
+wait_for_snapshot "
+import json, sys
+views = {v[\"persistentDockId\"]: v for v in json.load(sys.stdin)[\"views\"]}
+sys.exit(0 if views[$same_edge_id][\"edge\"] == \"bottom\"
+         and views[$same_edge_id][\"alignment\"] == \"center\"
+         and views[$root_id][\"edge\"] == \"bottom\" else 1)
+" 'linked member did not return to the occupied edge' >/dev/null
 
 # Duplicate the explicit member. The result must be independent and must not be
 # added to the root's linkedDockIds.

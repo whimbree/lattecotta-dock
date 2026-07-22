@@ -76,7 +76,8 @@ private Q_SLOTS:
     void ignoredWindowCleanupRetainsOtherOwners();
     void persistentMenuIdentitySurvivesRuntimeGap();
     void geometryDiagnosticsReadEachViewsSizingAuthority();
-    void appletCreationNotifiesRelationshipWithoutFeedback();
+    void appletMutationsUseRelationshipBoundary();
+    void startupValidatesRelationshipGraphBeforeConstruction();
 };
 
 void DockIdentityContractTest::relationshipActionsGuardEveryProductionBoundary()
@@ -390,16 +391,52 @@ void DockIdentityContractTest::geometryDiagnosticsReadEachViewsSizingAuthority()
         QStringLiteral("readLiveProperty(editController,\"maxLength\")")));
 }
 
-void DockIdentityContractTest::appletCreationNotifiesRelationshipWithoutFeedback()
+void DockIdentityContractTest::appletMutationsUseRelationshipBoundary()
 {
     const QString coronaSource = normalized(readFile(QStringLiteral("app/lattecorona.cpp")));
-    const QString interfaceSource = normalized(readFile(QStringLiteral("app/view/containmentinterface.cpp")));
-    const QString linkedSource = normalized(readFile(QStringLiteral("app/view/clonedview.cpp")));
+    const QString viewHeader = normalized(readFile(QStringLiteral("app/view/view.h")));
+    const QString linkedRaw = readFile(QStringLiteral("app/view/clonedview.cpp"));
+    const QString linkedSource = normalized(linkedRaw);
+    const QString containmentInterface = normalized(readFile(QStringLiteral("app/view/containmentinterface.cpp")));
+    const QString widgetExplorer = normalized(readFile(QStringLiteral("shell/package/contents/views/WidgetExplorer.qml")));
+    const QString dragDrop = normalized(readFile(QStringLiteral("containment/package/contents/ui/DragDropArea.qml")));
+    const QString configOverlay = normalized(readFile(QStringLiteral("containment/package/contents/ui/editmode/ConfigOverlay.qml")));
+    const QString contextLayer = normalized(readFile(QStringLiteral("app/declarativeimports/contextmenulayerquickitem.cpp")));
 
-    QVERIFY(coronaSource.contains(QStringLiteral("extendedInterface()->addAppletAndNotify(pluginId)")));
-    QVERIFY(interfaceSource.contains(QStringLiteral("Q_EMITappletCreated(pluginId)")));
-    QVERIFY(linkedSource.contains(QStringLiteral("extendedInterface()->addApplet(pluginId)")));
-    QVERIFY(!linkedSource.contains(QStringLiteral("extendedInterface()->addAppletAndNotify(pluginId)")));
+    QVERIFY(viewHeader.contains(QStringLiteral("Q_INVOKABLEvirtualbooladdApplet(constQString&pluginId);")));
+    QVERIFY(viewHeader.contains(QStringLiteral("Q_INVOKABLEvirtualboolremoveApplet(intappletId);")));
+    QVERIFY(coronaSource.contains(QStringLiteral("view->addApplet(pluginId)")));
+    QVERIFY(coronaSource.contains(QStringLiteral("view->removeApplet(static_cast<int>(appletId))")));
+    QVERIFY(widgetExplorer.contains(QStringLiteral("latteView.addApplet(pluginName)")));
+    QVERIFY(dragDrop.contains(QStringLiteral("latteView.synchronizeDroppedApplet(event.mimeData,eventx,eventy)")));
+    QVERIFY(configOverlay.contains(QStringLiteral("latteView.removeApplet(currentApplet.applet.plasmoid.id)")));
+    QVERIFY(contextLayer.contains(QStringLiteral("m_latteView->removeApplet(appletId)")));
+    QVERIFY(!containmentInterface.contains(QStringLiteral("Q_EMITapplet->appletDeleted(applet)")));
+    QVERIFY(containmentInterface.contains(QStringLiteral("QMetaObject::invokeMethod(applet,\"askDestroy\",Qt::DirectConnection)")));
+    QVERIFY(linkedSource.contains(QStringLiteral("destroyAppletImmediately(m_currentAppletIds[id])")));
+
+    const QString add = normalized(functionBody(linkedRaw, QStringLiteral("bool ClonedView::addApplet")));
+    const QString remove = normalized(functionBody(linkedRaw, QStringLiteral("bool ClonedView::removeApplet")));
+    const QString reorder = normalized(functionBody(linkedRaw, QStringLiteral("void ClonedView::updateOriginalAppletsOrder")));
+    QVERIFY2(add.contains(QStringLiteral("m_originalView->addApplet(pluginId)")), qPrintable(add));
+    QVERIFY(remove.contains(QStringLiteral("originalAppletId(appletId)")));
+    QVERIFY(remove.contains(QStringLiteral("m_originalView->removeApplet(originalId)")));
+    QVERIFY(reorder.contains(QStringLiteral("translateToOriginalsOrder(clonedOrder)")));
+    QVERIFY(reorder.contains(QStringLiteral("m_originalView->extendedInterface()->setAppletsOrder(originalOrder)")));
+}
+
+void DockIdentityContractTest::startupValidatesRelationshipGraphBeforeConstruction()
+{
+    const QString source = readFile(QStringLiteral("app/layout/genericlayout.cpp"));
+    const QString initialize = normalized(functionBody(source, QStringLiteral("bool GenericLayout::initContainments")));
+    const QString add = normalized(functionBody(source, QStringLiteral("void GenericLayout::addView")));
+
+    const int validate = initialize.indexOf(QStringLiteral("persistedViews.relationshipValidationError()"));
+    const int construct = initialize.indexOf(QStringLiteral("addNextStartupView(pending)"), validate);
+    QVERIFY2(validate >= 0 && construct > validate,
+             "the complete persisted relationship graph must be validated before startup constructs a view");
+    QVERIFY(add.contains(QStringLiteral("qobject_cast<Latte::OriginalView*>(view)")));
+    QVERIFY(add.contains(QStringLiteral("if(!originalview)")));
 }
 
 QTEST_GUILESS_MAIN(DockIdentityContractTest)
