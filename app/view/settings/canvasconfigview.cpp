@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2018 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -241,11 +242,6 @@ void CanvasConfigView::showEvent(QShowEvent *ev)
     }
 
     syncGeometry();
-
-    //! syncGeometry() short-circuits on unchanged geometry and its init-time
-    //! run happened before the wayland surface existed, so carve the input
-    //! region explicitly now that the surface is up
-    updateInputRegion();
 
     //! show Canvas on top of all other panels/docks and show
     //! its parent view on top afterwards
