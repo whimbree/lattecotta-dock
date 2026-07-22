@@ -7,9 +7,9 @@ Last updated 2026-07-21.
 
 SC-O1 (the read-only settings-control D-Bus registry) is implemented on the
 isolated `feat/settings-control-registry` branch from exact base
-`ddf6fe152db4aabdc2846a97d20508ae558942cc`. It has received its one completed
-independent review but is not merged or pushed, and its checklist remains
-unchecked. Provisional code commits are:
+`ddf6fe152db4aabdc2846a97d20508ae558942cc`. It has completed the initial
+independent review and the one warranted second review, but is not merged or
+pushed, and its checklist remains unchecked. Provisional commits are:
 
 - `d1dea3c59` defines the value-only C++20 record, validation, deterministic
   ordering, and compact JSON core with its paired sanitized test.
@@ -23,8 +23,21 @@ unchecked. Provisional code commits are:
   SPDX lines to the two modified Corona files. The flat defect registry records
   all six findings with their plain-English descriptions.
 - `f32688a51` records the 2026-07-21 review and risk-driven gate direction in
-  `CLAUDE.md`. The review corrections did not introduce a major design change
-  or invalidate the original review, so no recursive rereview applies.
+  `CLAUDE.md`.
+- `a00c62cf2` refines that direction: algorithm, ownership, lifecycle, API,
+  invariant, test meaning, traceability, and security findings require fixes
+  followed by one second review; ordinary corrections do not.
+- `29b11243c` fixes the warranted second review's five MERGE AFTER FIXES
+  findings: cross-scope tombstones, migration-safe `Qt::AutoConnection`
+  cleanup, JSON-safe integer locators, count-only cleanup diagnostics, and the
+  associated stale-generation contracts. The following docs/tracking commit
+  records the five second-review defects with plain-English descriptions.
+
+The initial review found major ownership, lifecycle, invariant, test meaning,
+and traceability issues under the refined heuristic, so one second independent
+review was required. That second review returned MERGE AFTER FIXES with the five
+findings above. Those findings are resolved. The review sequence ends here; no
+recursive third review applies.
 
 The public method is
 `viewSettingsControlsData(u containmentId) -> s`. Unknown views warn and return
@@ -35,22 +48,22 @@ a dedicated QRC/QML tree outside SC-F2 (the source-to-ledger coverage gate)
 production roots and loads in a real QQuickWindow/QQmlEngine through the
 production registry API.
 
-Initial focused verification in `/tmp/opencode/latte-sc-o1-build` passed 3/3
-ctest entries: `settingscontrolrecordstest`, `settingscontrolregistrytest`, and
-`settingscontrolsourceguardtest`. The review correction then rebuilt only
-`settingscontrolrecordstest`, `settingscontrolregistrytest`, and `latte-dock` to
-compile the changed pure core, runtime registry, generated adaptor, and
-application boundary. Sanitized `settingscontrolrecordstest` passed 11/11 cases
-for wire uniqueness and value validation. Unsanitized
-`settingscontrolregistrytest` passed 11/11 cases for descriptor threads,
-lifecycle disconnection, popup ancestry, and fail-closed registration.
+Initial focused verification in `/tmp/opencode/latte-sc-o1-build` passed the
+serializer, registry, and source-guard entries. The second-review correction
+then built only `settingscontrolrecordstest`, `settingscontrolregistrytest`, and
+`latte-dock` to compile the changed pure core, runtime registry, generated
+adaptor, and application boundary. Sanitized `settingscontrolrecordstest`
+passed 12/12 cases for exact wire uniqueness and both JSON-safe integer
+boundaries. Unsanitized `settingscontrolregistrytest` passed 14/14 cases for
+two-scope poisoning, post-registration migration, owner cleanup, diagnostics,
+and stale tokens.
 
 The source guard was not rerun because guarded XML and delegation text did not
 change functionally; Corona received copyright lines only. Fixture QML was
 unchanged, so QML lint and compile checks were not repeated. Test and header
 inventory was unchanged, so the coverage ratchet was not repeated. No full
-gate, nested/live run, D-Bus smoke against a running Corona, push, PR, merge, or
-recursive review was performed.
+gate, nested/live run, D-Bus smoke against a running Corona, push, PR, or merge
+was performed.
 
 Next state: the canonical full gate remains required once on final code HEAD
 before any push or PR. After merge-time hashes are known, SC-O1 can be checked

@@ -533,33 +533,39 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   rejects the same pairs and retires their complete load generations.
 
 ### D66 - Settings-control descriptors accepted foreign-thread objects
-- STATUS: FIXED (`1b449549b`).
+- STATUS: FIXED (`1b449549b`; post-registration migration completion
+  `29b11243c`).
 - FOUND: 2026-07-21, the SC-O1 independent review.
 - ROOT: registry calls were GUI-thread-only, but the QObject and QQuickItem
   descriptors themselves had no affinity check. Their destruction could
   therefore queue cleanup or run object access across threads.
 - FIX: scope lifetime, surface and geometry objects, control and popup state,
-  popup and row items, and every hit item must share the registry GUI thread.
-  Same-thread direct destruction connections make cleanup synchronous.
+  popup and row items, and every hit item must share the registry GUI thread at
+  registration.
+  `Qt::AutoConnection` keeps cleanup synchronous while affinity holds and queues
+  it safely to the registry thread after illegal post-registration migration.
 - EVIDENCE: `settingscontrolregistrytest` moves each descriptor category to a
   live worker thread, verifies loud refusal and complete generation retirement,
-  then returns every object to the GUI thread before destruction.
+  then returns every object to the GUI thread before destruction. Separate
+  post-registration cases prove migrated signal and destruction delivery does
+  not mutate registry counts until GUI-thread event processing.
 
 ### D67 - Logical registry removal left lifecycle callbacks connected
-- STATUS: FIXED (`1b449549b`).
+- STATUS: FIXED (`1b449549b`; count-based cleanup proof `29b11243c`).
 - FOUND: 2026-07-21, the SC-O1 independent review.
 - ROOT: destroyed and popup-notify connections were not stored, so replacement
   removed entries but left callbacks attached. Popup routing cleanup also read
   a QPointer after destruction had begun, leaving stale raw-key entries after
   pointer decay.
-- FIX: scopes, controls, and rows own every connection and disconnect it before
-  logical erasure. Popup-state destruction removes routing by captured raw
-  identity and numeric token before token cleanup; the raw pointer is never
-  dereferenced.
+- FIX: scopes, controls, and rows own every connection. Removal captures the
+  entry, erases its owning and secondary route/row bookkeeping, then disconnects
+  the captured handles. Popup-state destruction removes routing by captured raw
+  identity and numeric token; the raw pointer is never dereferenced.
 - EVIDENCE: repeated generation replacement followed by old owner, control,
   row, and popup-state notification/destruction leaves the replacement intact.
   Current popup-state notification still advances generation, and destruction
-  removes the current control synchronously.
+  removes the current control synchronously. Count diagnostics remain constant
+  across five replacements and reach zero after explicit retirement.
 
 ### D68 - Popup rows accepted unrelated surface items
 - STATUS: FIXED (`1b449549b`).
@@ -573,17 +579,20 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   an unrelated row hit, retiring each affected load generation.
 
 ### D69 - Failed settings-control registration exposed a plausible subset
-- STATUS: FIXED (`1b449549b`).
+- STATUS: FIXED (`1b449549b`; cross-scope completion `29b11243c`).
 - FOUND: 2026-07-21, the SC-O1 independent review.
 - ROOT: malformed or duplicate registration returned failure but retained
   controls already accepted for the same load. A query could therefore expose
   a partial array that looked complete.
-- FIX: any control or popup-row registration refusal immediately retires the
-  complete affected load generation. Attempts through retired generation or
-  control tokens warn and refuse until a replacement generation is allocated.
+- FIX: any control or popup-row registration refusal immediately poisons the
+  complete affected load generation. An exact-scope tombstone now also blocks
+  other surviving scopes in the containment until matching valid replacement
+  or owner destruction. Attempts through retired generation or control tokens
+  warn and refuse.
 - EVIDENCE: the registry fixture starts from valid controls and rows, injects
   duplicate and malformed registrations, verifies `[]`, and proves later use
-  of each retired token refuses.
+  of each retired token refuses. A two-scope fixture proves a sibling cannot
+  escape the tombstone.
 
 ### D70 - Corona settings-control changes omitted current copyright attribution
 - STATUS: FIXED (`1b449549b`).
@@ -592,6 +601,62 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   boundary without adding the current author's SPDX line.
 - FIX: both files now retain every existing line and add
   `SPDX-FileCopyrightText: 2026 Bree Spektor`.
+
+### D71 - Invalid settings scope did not poison sibling scopes
+- STATUS: FIXED (`29b11243c`).
+- FOUND: 2026-07-21, warranted second independent review of SC-O1 (the
+  read-only settings-control D-Bus registry).
+- ROOT: removing the failed generation erased all evidence of its invalid load,
+  so a surviving surface or applet scope could still look like the complete
+  containment.
+- FIX: an exact containment/surface/applet tombstone blocks the aggregate until
+  matching valid replacement or captured-owner destruction. Unrelated scope
+  replacement cannot clear it.
+- EVIDENCE: the two-scope fixture covers sibling survival, unrelated
+  replacement, matching restoration, owner cleanup, and stale
+  invalid-generation refusal.
+
+### D72 - Forced direct cleanup could mutate the registry from a foreign thread
+- STATUS: FIXED (`29b11243c`).
+- FOUND: 2026-07-21, the warranted second SC-O1 review.
+- ROOT: forced `Qt::DirectConnection` ignored receiver affinity after an object
+  illegally migrated following valid registration.
+- FIX: lifecycle and popup-notify connections use `Qt::AutoConnection`; migrated
+  objects fail queries closed and queue cleanup to the GUI thread.
+- EVIDENCE: parentless popup-state and lifetime objects migrate, signal, and die
+  on a worker without changing counts before GUI event delivery.
+
+### D73 - Popup integer locators exceeded interoperable JSON precision
+- STATUS: FIXED (`29b11243c`).
+- FOUND: 2026-07-21, the warranted second SC-O1 review.
+- ROOT: qint64 row values beyond IEEE-754 exact integer precision could change
+  identity in common JSON consumers.
+- FIX: integer locators are restricted to
+  `[-9007199254740991, 9007199254740991]`; other scalar wire-uniqueness rules
+  remain unchanged.
+- EVIDENCE: sanitizer-backed boundary tests accept both limits and reject each
+  adjacent outside value; registry refusal poisons the load.
+
+### D74 - Settings-control cleanup claims lacked a state-count oracle
+- STATUS: FIXED (`29b11243c`).
+- FOUND: 2026-07-21, the warranted second SC-O1 review.
+- ROOT: output-only assertions could pass while stale route or connection
+  bookkeeping accumulated for process lifetime.
+- FIX: a non-D-Bus internal diagnostics value exposes counts only for
+  generations, controls, rows, routes, owned connections, and tombstones.
+- EVIDENCE: five replacements hold counts constant; row and popup-state
+  destruction reduce them; explicit generation retirement reaches all zeroes.
+
+### D75 - Handoff ended the review sequence before required major follow-up
+- STATUS: FIXED (this provisional docs/tracking commit).
+- FOUND: 2026-07-21, applying the refined review-severity heuristic to the
+  initial SC-O1 findings.
+- ROOT: the handoff classified the initial fixes as requiring no further review,
+  although ownership, lifecycle, invariant, test meaning, and traceability
+  findings require one second independent review under the current rule.
+- FIX: the handoff records the initial major findings, the warranted second
+  review and its MERGE AFTER FIXES result, the correction commits, and the end
+  of the review sequence without a third review.
 
 ## Recorded elsewhere - indexed here so the flat scan is complete
 

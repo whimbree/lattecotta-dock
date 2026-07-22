@@ -99,11 +99,13 @@ call viewSettingsControlsData u 1      # s: JSON array of registered settings co
 #   enabled, focused, current. Locate rows by stable value, never label/index.
 #   Exactly one row may have each compact serialized JSON value per popup:
 #   duplicate nulls and integer 1 versus double 1.0 therefore conflict.
+#   Integer row values are limited to [-9007199254740991,9007199254740991],
+#   the range JSON/IEEE-754 consumers preserve exactly as locator identity.
 #   Generations are process-local monotonic identities. Re-query immediately
 #   before input and reject a changed/missing load or popup generation.
-#   A duplicate or malformed registration retires its complete load generation;
-#   it remains [] until replacement. Any malformed live entry also refuses the
-#   complete view as [] with a warning.
+#   A duplicate or malformed registration poisons its exact scope. The complete
+#   containment remains [] until that scope is validly replaced or its owner is
+#   destroyed. Any malformed live entry also refuses the complete view as [].
 call taskMiddleClickDispatchData u 1   # s: JSON object - latest task-icon middle-click dispatch
 #   rowIdentity, rowKind (launcher|task), configuredAction,
 #   dispatchedOperation, sequence. The D29 pair (task-icon middle click appears
@@ -292,7 +294,8 @@ Popup input adds the same check for `.popup.open`, `.popup.mapped`, and the
 observed string `.popup.generation`. Row resolution uses `.popup.rows[] |
 select(.value == $stable_value)`; labels and `visualIndex` are not locators.
 Registration guarantees exactly one row with the locator's compact serialized
-JSON bytes inside that popup.
+JSON bytes inside that popup. Integer locators outside the exact interoperable
+range `[-9007199254740991, 9007199254740991]` are refused.
 
 Isolated testing: the whole surface works identically inside the
 nested-kwin vehicle (private bus) - see the session-handoff nested
@@ -307,9 +310,12 @@ is why nested runs wrap the dock in `dbus-run-session`.
   without a warning. An unknown view warns. Any malformed live scope, control,
   hit, popup, or row refuses the whole requested view as `"[]"` with a warning;
   no valid-looking subset is returned. A duplicate or malformed control or
-  popup-row registration immediately retires its complete load generation.
-  Further registrations through that generation or its control tokens warn and
-  refuse until a new generation replaces it.
+  popup-row registration immediately poisons its complete load generation and
+  retains an exact-scope tombstone. Any other surviving scope in the same
+  containment is also hidden. Unrelated replacement does not clear the
+  tombstone; valid replacement of that exact scope or destruction of its owner
+  does. Further registrations through the old generation or control tokens warn
+  and refuse.
 - `taskMiddleClickDispatchData` before any middle-click event: `"{}"` without
   a warning. Empty maps are legitimate no-event candidates. Any malformed or
   unknown nonempty candidate, out-of-scope candidate, or duplicate sequence
