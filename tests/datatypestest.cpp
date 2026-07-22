@@ -65,6 +65,7 @@ private Q_SLOTS:
     void layout_activityAndTemplateChecks();
     void layout_operatorEqualExclusions();
     void view_stateMachine();
+    void view_independentSnapshotBreaksRelationshipOnly();
     void view_operatorQStringMarkers();
     void screen_serializeRoundTrip();
     void screen_isScreensGroup();
@@ -467,6 +468,37 @@ void DataTypesTest::view_stateMachine()
     v.subcontainments << Data::Generic(QStringLiteral("sub1"), QStringLiteral("Sub One"));
     QVERIFY(v.hasSubContainment(QStringLiteral("sub1")));
     QVERIFY(!v.hasSubContainment(QStringLiteral("nope")));
+}
+
+void DataTypesTest::view_independentSnapshotBreaksRelationshipOnly()
+{
+    Data::View linked(QStringLiteral("12"), QStringLiteral("Linked Dock"));
+    linked.setState(Data::View::OriginFromLayout,
+                    QStringLiteral("/tmp/source.view.latte"),
+                    QStringLiteral("Layout"),
+                    QStringLiteral("1"));
+    linked.isActive = true;
+    linked.onPrimary = false;
+    linked.isClonedFrom = 1;
+    linked.screen = 11;
+    linked.screenEdgeMargin = 7;
+    linked.maxLength = 0.73F;
+    linked.edge = Plasma::Types::LeftEdge;
+    linked.alignment = Latte::Types::Top;
+    linked.screensGroup = Latte::Types::AllSecondaryScreensGroup;
+    linked.subcontainments << Data::Generic(QStringLiteral("31"), QStringLiteral("Applet Container"));
+
+    Data::View expected = linked;
+    expected.isClonedFrom = Data::View::ISCLONEDNULL;
+    expected.screensGroup = Latte::Types::SingleScreenGroup;
+
+    const Data::View snapshot = linked.toIndependentSnapshot();
+
+    QCOMPARE(snapshot, expected);
+    QCOMPARE(snapshot.isClonedFrom, Data::View::ISCLONEDNULL);
+    QCOMPARE(snapshot.screensGroup, Latte::Types::SingleScreenGroup);
+    QCOMPARE(linked.isClonedFrom, 1);
+    QCOMPARE(linked.screensGroup, Latte::Types::AllSecondaryScreensGroup);
 }
 
 void DataTypesTest::view_operatorQStringMarkers()

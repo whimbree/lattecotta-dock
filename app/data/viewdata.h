@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2021 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -70,6 +71,8 @@ public:
 
     bool isHorizontal() const;
     bool isVertical() const;
+
+    [[nodiscard]] View toIndependentSnapshot() const;
 
     QString originFile() const;
     QString originLayout() const;

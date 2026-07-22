@@ -273,6 +273,14 @@ bool View::isVertical() const
     return (edge == Plasma::Types::LeftEdge || edge == Plasma::Types::RightEdge);
 }
 
+View View::toIndependentSnapshot() const
+{
+    View snapshot{*this};
+    snapshot.isClonedFrom = ISCLONEDNULL;
+    snapshot.screensGroup = Latte::Types::SingleScreenGroup;
+    return snapshot;
+}
+
 bool View::hasViewTemplateOrigin() const
 {
     return m_state == OriginFromViewTemplate;
