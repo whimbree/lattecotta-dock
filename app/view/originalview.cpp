@@ -42,7 +42,7 @@ OriginalView::~OriginalView()
 
 bool OriginalView::isSingle() const
 {
-    return m_screensGroup == Latte::Types::SingleScreenGroup;
+    return m_screensGroup == Latte::Types::SingleScreenGroup && clonesCount() == 0;
 }
 
 bool OriginalView::isOriginal() const
@@ -74,6 +74,11 @@ Latte::Types::ScreensGroup OriginalView::screensGroup() const
     return m_screensGroup;
 }
 
+Data::View::LinkPlacement OriginalView::linkPlacement() const
+{
+    return Data::View::LinkPlacement::ScreenGroupDerived;
+}
+
 void OriginalView::setScreensGroup(const Latte::Types::ScreensGroup &group)
 {
     if (m_screensGroup == group) {
@@ -93,7 +98,9 @@ void OriginalView::addClone(Latte::ClonedView *view)
     }
 
     m_clones << view;
-    m_waitingCreation.removeAll(view->positioner()->currentScreenId());
+    if (view->linkPlacement() == Data::View::LinkPlacement::ScreenGroupDerived) {
+        m_waitingCreation.removeAll(view->positioner()->currentScreenId());
+    }
 }
 
 void OriginalView::forgetClone(Latte::ClonedView *view)
@@ -144,6 +151,7 @@ void OriginalView::createClone(int screenId)
     nextdata.onPrimary = false;
     nextdata.screensGroup = Latte::Types::SingleScreenGroup;
     nextdata.isClonedFrom = containment()->id();
+    nextdata.linkPlacement = Data::View::LinkPlacement::ScreenGroupDerived;
     nextdata.screen = screenId;
 
     nextdata.setState(Data::View::OriginFromViewTemplate, templateFile);
@@ -172,6 +180,19 @@ void OriginalView::cleanClones()
     }
 }
 
+void OriginalView::cleanScreenGroupClones()
+{
+    const auto clones = m_clones;
+    for (const auto &clone : clones) {
+        if (!clone) {
+            forgetClone(nullptr);
+            qWarning() << "OriginalView: pruned a destroyed clone from the membership list";
+        } else if (clone->linkPlacement() == Data::View::LinkPlacement::ScreenGroupDerived) {
+            removeClone(clone.data());
+        }
+    }
+}
+
 void OriginalView::reconsiderScreen()
 {
     View::reconsiderScreen();
@@ -190,7 +211,9 @@ void OriginalView::setNextLocationForClones(const QString layoutName, int edge, 
             continue;
         }
 
-        clone->positioner()->setNextLocation(layoutName, Latte::Types::SingleScreenGroup, "", edge, alignment);
+        if (clone->linkPlacement() == Data::View::LinkPlacement::ScreenGroupDerived) {
+            clone->positioner()->setNextLocation(layoutName, Latte::Types::SingleScreenGroup, "", edge, alignment);
+        }
     }
 }
 
@@ -246,8 +269,13 @@ void OriginalView::addApplet(QObject *mimedata, const int &x, const int &y, cons
 
 void OriginalView::syncClonesToScreens()
 {
-    if (isSingle() || (containment() && containment()->destroyed())) {
+    if (containment() && containment()->destroyed()) {
         cleanClones();
+        return;
+    }
+
+    if (m_screensGroup == Latte::Types::SingleScreenGroup) {
+        cleanScreenGroupClones();
         return;
     }
 
@@ -269,6 +297,10 @@ void OriginalView::syncClonesToScreens()
     for (const auto &clone : m_clones) {
         if (!clone) {
             qWarning() << "OriginalView: found a destroyed clone during screen synchronization";
+            continue;
+        }
+
+        if (clone->linkPlacement() == Data::View::LinkPlacement::ExplicitTarget) {
             continue;
         }
 

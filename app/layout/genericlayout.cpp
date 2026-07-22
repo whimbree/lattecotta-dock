@@ -955,7 +955,8 @@ void GenericLayout::addView(Plasma::Containment *containment)
         }
 
         auto originalview = qobject_cast<Latte::OriginalView *>(view);
-        latteView = new Latte::ClonedView(m_corona, originalview, nextScreen, byPassWM);
+        latteView = new Latte::ClonedView(
+            m_corona, originalview, viewdata.linkPlacement, nextScreen, byPassWM);
     }
 
     qDebug().noquote() << "Adding View:" << viewdata.id << "- Passed ALL checks !!!";

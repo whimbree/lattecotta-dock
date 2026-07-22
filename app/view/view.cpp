@@ -590,7 +590,7 @@ void View::moveToScreen(QScreen *nextScreen)
 
 void View::duplicateView()
 {
-    const auto role = isCloned() ? ViewActionPolicy::Role::Clone : ViewActionPolicy::Role::Original;
+    const auto role = actionRole();
     if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::Duplicate)) {
         qWarning() << "View::duplicateView refused by the view relationship policy";
         return;
@@ -602,7 +602,7 @@ void View::duplicateView()
 
 void View::exportTemplate()
 {
-    const auto role = isCloned() ? ViewActionPolicy::Role::Clone : ViewActionPolicy::Role::Original;
+    const auto role = actionRole();
     if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::ExportTemplate)) {
         qWarning() << "View::exportTemplate refused for screen-group clone";
         return;
@@ -659,7 +659,7 @@ void View::createViewFromTemplate(const QString &templateFile, const TemplateImp
 
 void View::removeView()
 {
-    const auto role = isCloned() ? ViewActionPolicy::Role::Clone : ViewActionPolicy::Role::Original;
+    const auto role = actionRole();
     if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::Remove)) {
         qWarning() << "View::removeView refused for screen-group clone";
         return;
@@ -696,6 +696,17 @@ QQuickView *View::configView() const
 View *View::configurationTargetView()
 {
     return this;
+}
+
+ViewActionPolicy::Role View::actionRole() const
+{
+    if (isOriginal()) {
+        return ViewActionPolicy::Role::Original;
+    }
+
+    return linkPlacement() == Data::View::LinkPlacement::ExplicitTarget
+            ? ViewActionPolicy::Role::ExplicitLinkedMember
+            : ViewActionPolicy::Role::ScreenGroupReplica;
 }
 
 void View::showConfigurationInterface(Plasma::Applet *applet)

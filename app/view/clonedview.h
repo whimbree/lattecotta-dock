@@ -25,7 +25,11 @@ class ClonedView : public View
 public:
     static const int ERRORAPPLETID = -999;
 
-    ClonedView(Plasma::Corona *corona, Latte::OriginalView *originalView, QScreen *targetScreen = nullptr, bool byPassX11WM = false);
+    ClonedView(Plasma::Corona *corona,
+               Latte::OriginalView *originalView,
+               Latte::Data::View::LinkPlacement linkPlacement,
+               QScreen *targetScreen = nullptr,
+               bool byPassX11WM = false);
     ~ClonedView();
 
     bool isOriginal() const override;
@@ -36,6 +40,7 @@ public:
     int groupId() const override;
 
     Latte::Types::ScreensGroup screensGroup() const override;
+    Latte::Data::View::LinkPlacement linkPlacement() const override;
 
     Latte::View *configurationTargetView() override;
 
@@ -76,6 +81,7 @@ private:
     static QStringList CONTAINMENTMANUALSYNCEDPROPERTIES;
 
     QPointer<Latte::OriginalView> m_originalView;
+    const Latte::Data::View::LinkPlacement m_linkPlacement;
     QHash<int, int> m_currentAppletIds;
 
     //! deferred original->clone syncs (the structuralSyncReady gap): a sync

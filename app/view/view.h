@@ -53,6 +53,9 @@ namespace Latte {
 class Corona;
 class Interfaces;
 class GenericLayout;
+namespace ViewActionPolicy {
+enum class Role;
+}
 }
 
 namespace Latte {
@@ -246,6 +249,8 @@ public:
     virtual bool isOriginal() const = 0; //means that this view is an original view that can be autocloned to other screens
     virtual bool isSingle() const = 0; //means that this view is not related to clones and screen groups in any way
     virtual Latte::Types::ScreensGroup screensGroup() const = 0;
+    virtual Latte::Data::View::LinkPlacement linkPlacement() const = 0;
+    ViewActionPolicy::Role actionRole() const;
 
     //! The runtime view that owns this view's shared edit session. Original
     //! views own themselves; screen-group clones resolve to their original.

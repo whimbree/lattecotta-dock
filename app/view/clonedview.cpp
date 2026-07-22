@@ -19,9 +19,14 @@ QStringList ClonedView::CONTAINMENTMANUALSYNCEDPROPERTIES = QStringList()
         << QString("lockedZoomApplets")
         << QString("userBlocksColorizingApplets");  
 
-ClonedView::ClonedView(Plasma::Corona *corona, Latte::OriginalView *originalView, QScreen *targetScreen, bool byPassX11WM)
+ClonedView::ClonedView(Plasma::Corona *corona,
+                       Latte::OriginalView *originalView,
+                       const Latte::Data::View::LinkPlacement linkPlacement,
+                       QScreen *targetScreen,
+                       bool byPassX11WM)
     : View(corona, targetScreen, byPassX11WM),
-      m_originalView(originalView)
+      m_originalView(originalView),
+      m_linkPlacement(linkPlacement)
 {
     m_originalView->addClone(this);
     initSync();
@@ -38,30 +43,34 @@ void ClonedView::initSync()
 {
     connect(m_originalView, &View::containmentChanged, this, &View::groupIdChanged);
 
-    //! Update Visibility From Original
-    connect(m_originalView->visibility(), &Latte::ViewPart::VisibilityManager::modeChanged, this, [&]() {
-        visibility()->setMode(m_originalView->visibility()->mode());
-    });
+    if (m_linkPlacement == Data::View::LinkPlacement::ScreenGroupDerived) {
+        //! Screen-group replicas inherit visibility because they are multiple
+        //! output surfaces for one placement policy. Explicit linked members
+        //! own visibility independently and synchronize applet content only.
+        connect(m_originalView->visibility(), &Latte::ViewPart::VisibilityManager::modeChanged, this, [&]() {
+            visibility()->setMode(m_originalView->visibility()->mode());
+        });
 
-    connect(m_originalView->visibility(), &Latte::ViewPart::VisibilityManager::raiseOnDesktopChanged, this, [&]() {
-        visibility()->setRaiseOnDesktop(m_originalView->visibility()->raiseOnDesktop());
-    });
+        connect(m_originalView->visibility(), &Latte::ViewPart::VisibilityManager::raiseOnDesktopChanged, this, [&]() {
+            visibility()->setRaiseOnDesktop(m_originalView->visibility()->raiseOnDesktop());
+        });
 
-    connect(m_originalView->visibility(), &Latte::ViewPart::VisibilityManager::raiseOnActivityChanged, this, [&]() {
-        visibility()->setRaiseOnActivity(m_originalView->visibility()->raiseOnActivity());
-    });
+        connect(m_originalView->visibility(), &Latte::ViewPart::VisibilityManager::raiseOnActivityChanged, this, [&]() {
+            visibility()->setRaiseOnActivity(m_originalView->visibility()->raiseOnActivity());
+        });
 
-    connect(m_originalView->visibility(), &Latte::ViewPart::VisibilityManager::enableKWinEdgesChanged, this, [&]() {
-        visibility()->setEnableKWinEdges(m_originalView->visibility()->enableKWinEdges());
-    });
+        connect(m_originalView->visibility(), &Latte::ViewPart::VisibilityManager::enableKWinEdgesChanged, this, [&]() {
+            visibility()->setEnableKWinEdges(m_originalView->visibility()->enableKWinEdges());
+        });
 
-    connect(m_originalView->visibility(), &Latte::ViewPart::VisibilityManager::timerShowChanged, this, [&]() {
-        visibility()->setTimerShow(m_originalView->visibility()->timerShow());
-    });
+        connect(m_originalView->visibility(), &Latte::ViewPart::VisibilityManager::timerShowChanged, this, [&]() {
+            visibility()->setTimerShow(m_originalView->visibility()->timerShow());
+        });
 
-    connect(m_originalView->visibility(), &Latte::ViewPart::VisibilityManager::timerHideChanged, this, [&]() {
-        visibility()->setTimerHide(m_originalView->visibility()->timerHide());
-    });
+        connect(m_originalView->visibility(), &Latte::ViewPart::VisibilityManager::timerHideChanged, this, [&]() {
+            visibility()->setTimerHide(m_originalView->visibility()->timerHide());
+        });
+    }
 
 
     //! Update Applets from Clone -> OriginalView
@@ -80,7 +89,9 @@ void ClonedView::initSync()
     });
 
     //! Update Applets and Containment from OrigalView -> Clone
-    connect(m_originalView->extendedInterface(), &Latte::ViewPart::ContainmentInterface::containmentConfigPropertyChanged, this, &ClonedView::updateContainmentConfigProperty);
+    if (m_linkPlacement == Data::View::LinkPlacement::ScreenGroupDerived) {
+        connect(m_originalView->extendedInterface(), &Latte::ViewPart::ContainmentInterface::containmentConfigPropertyChanged, this, &ClonedView::updateContainmentConfigProperty);
+    }
     connect(m_originalView->extendedInterface(), &Latte::ViewPart::ContainmentInterface::appletConfigPropertyChanged, this, &ClonedView::onOriginalAppletConfigPropertyChanged);
     connect(m_originalView->extendedInterface(), &Latte::ViewPart::ContainmentInterface::appletInScheduledDestructionChanged, this, &ClonedView::onOriginalAppletInScheduledDestructionChanged);
     connect(m_originalView->extendedInterface(), &Latte::ViewPart::ContainmentInterface::appletRemoved, this, &ClonedView::onOriginalAppletRemoved);
@@ -95,8 +106,9 @@ void ClonedView::initSync()
         extendedInterface()->addApplet(data, x, y);
     });
 
-    //! Indicator
-    connect(m_originalView, &Latte::View::indicatorChanged, this, &ClonedView::indicatorChanged);
+    if (m_linkPlacement == Data::View::LinkPlacement::ScreenGroupDerived) {
+        connect(m_originalView, &Latte::View::indicatorChanged, this, &ClonedView::indicatorChanged);
+    }
 }
 
 bool ClonedView::isSingle() const
@@ -133,14 +145,25 @@ Latte::Types::ScreensGroup ClonedView::screensGroup() const
     return Latte::Types::SingleScreenGroup;
 }
 
+Data::View::LinkPlacement ClonedView::linkPlacement() const
+{
+    return m_linkPlacement;
+}
+
 View *ClonedView::configurationTargetView()
 {
+    if (m_linkPlacement == Data::View::LinkPlacement::ExplicitTarget) {
+        return this;
+    }
+
     return m_originalView.data();
 }
 
 ViewPart::Indicator *ClonedView::indicator() const
 {
-    return m_originalView->indicator();
+    return m_linkPlacement == Data::View::LinkPlacement::ExplicitTarget
+            ? View::indicator()
+            : m_originalView->indicator();
 }
 
 
@@ -201,6 +224,7 @@ Latte::Data::View ClonedView::data() const
 {
     Latte::Data::View vdata = View::data();
     vdata.isClonedFrom = m_originalView->containment()->id();
+    vdata.linkPlacement = m_linkPlacement;
     return vdata;
 }
 
@@ -253,6 +277,11 @@ void ClonedView::showConfigurationInterface(Plasma::Applet *applet)
     Plasma::Containment *c = qobject_cast<Plasma::Containment *>(applet);
 
     if (Layouts::Storage::self()->isLatteContainment(c)) {
+        if (m_linkPlacement == Data::View::LinkPlacement::ExplicitTarget) {
+            View::showConfigurationInterface(applet);
+            return;
+        }
+
         if (auto *target = configurationTargetView()) {
             target->showSettingsWindow();
         } else {

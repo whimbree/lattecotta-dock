@@ -36,6 +36,7 @@ public:
     int expectedScreenIdFromScreenGroup(const Latte::Types::ScreensGroup &nextScreensGroup) const;
 
     Latte::Types::ScreensGroup screensGroup() const override;
+    Latte::Data::View::LinkPlacement linkPlacement() const override;
     void setScreensGroup(const Latte::Types::ScreensGroup &group);
 
     void addClone(Latte::ClonedView *view);
@@ -58,6 +59,7 @@ private Q_SLOTS:
     void saveConfig();
 
 private:
+    void cleanScreenGroupClones();
     void createClone(int screenId);
     void forgetClone(Latte::ClonedView *view);
     void removeClone(Latte::ClonedView *view);
