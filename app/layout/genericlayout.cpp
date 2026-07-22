@@ -26,6 +26,7 @@
 // Qt
 #include <QDebug>
 #include <QScreen>
+#include <QSet>
 #include <QTimer>
 
 // Plasma
@@ -40,6 +41,8 @@
 // C++
 #include <algorithm>
 #include <chrono>
+#include <iterator>
+#include <memory>
 #include <utility>
 
 namespace Latte {
@@ -51,6 +54,8 @@ namespace {
 //! the transaction still commits when the notification backend disappears
 //! without emitting KNotification::closed.
 constexpr auto RemovalUndoWindow = std::chrono::seconds{60};
+constexpr auto ConfigurationCloseDelay = std::chrono::milliseconds{350};
+constexpr auto RuntimeViewReplacementDelay = std::chrono::milliseconds{250};
 }
 
 GenericLayout::GenericLayout(QObject *parent, QString layoutFile, QString assignedName)
@@ -1385,59 +1390,174 @@ QList<Plasma::Containment *> GenericLayout::unassignFromLayout(Plasma::Containme
 
 void GenericLayout::recreateView(Plasma::Containment *containment, bool delayed)
 {
-    if (!m_corona || m_viewsToRecreate.contains(containment) || !containment || !m_latteViews.contains(containment)) {
+    if (!m_corona || !containment || !m_latteViews.contains(containment)) {
         return;
     }
 
-    int delay = delayed ? 350 : 0;
-    m_viewsToRecreate << containment;
+    View *const requestedView = m_latteViews.value(containment);
+    auto *const relationshipRoot = qobject_cast<OriginalView *>(requestedView);
+
+    QList<QPointer<Plasma::Containment>> containmentsToRecreate{containment};
+    if (relationshipRoot) {
+        //! Replacing a relationship root also replaces every live member.
+        //! ClonedView keeps its root as a QPointer, so leaving member runtimes
+        //! alive would strand them on the destroyed generation. Persistent
+        //! containment identities remain unchanged and the replacement root
+        //! is constructed before its members below.
+        for (View *const view : std::as_const(m_latteViews)) {
+            if (view && view != relationshipRoot
+                    && view->relationshipRootView() == relationshipRoot
+                    && view->containment()) {
+                containmentsToRecreate << view->containment();
+            }
+        }
+    }
+
+    const bool alreadyRecreating = std::any_of(
+        containmentsToRecreate.cbegin(), containmentsToRecreate.cend(),
+        [this](const QPointer<Plasma::Containment> &candidate) {
+            return candidate && m_viewsToRecreate.contains(candidate.data());
+        });
+    if (alreadyRecreating) {
+        qWarning() << "recreate: refused overlapping runtime-view replacement for containment"
+                   << containment->id();
+        return;
+    }
+
+    QList<const Plasma::Containment *> recreationKeys;
+    recreationKeys.reserve(containmentsToRecreate.size());
+    for (const auto &candidate : std::as_const(containmentsToRecreate)) {
+        Q_ASSERT(candidate);
+        const Plasma::Containment *const key = candidate.data();
+        recreationKeys << key;
+        m_viewsToRecreate.insert(key);
+    }
+
+    const bool recreatesRelationship = relationshipRoot != nullptr;
+    const auto clearRecreationRecords = [this, recreationKeys]() {
+        for (const Plasma::Containment *const key : recreationKeys) {
+            m_viewsToRecreate.remove(key);
+        }
+    };
+
+    const auto delay = delayed ? ConfigurationCloseDelay : std::chrono::milliseconds::zero();
 
     //! give the time to config window to close itself first and then recreate the dock
     //! step:1 remove the latteview
-    QTimer::singleShot(delay, this, [this, containment]() {
-        //! the wait for the config window is exactly why this can race: the view
-        //! can be legitimately removed while the delay runs (screen sync, layout
-        //! unload), and QHash::operator[] on the gone key would insert a null
-        //! entry and crash on the dereference below
-        if (!m_latteViews.contains(containment)) {
-            //! only the pointer value is printed: a destroyed containment is one
-            //! of the ways its view disappears from m_latteViews, so containment
-            //! must not be dereferenced on this path
-            qWarning() << "recreate - step 1: the view for containment"
-                       << (void *)containment << "was removed during the recreation delay; aborting the recreation";
-            m_viewsToRecreate.removeAll(containment);
+    QTimer::singleShot(delay, this, [this, containmentsToRecreate,
+                                      clearRecreationRecords, recreatesRelationship]() {
+        const auto rootContainment = containmentsToRecreate.constFirst();
+        if (!rootContainment || !m_latteViews.contains(rootContainment.data())) {
+            qWarning() << "recreate - step 1: the requested view disappeared during the recreation delay";
+            clearRecreationRecords();
             return;
         }
 
-        auto view = m_latteViews[containment];
-        view->disconnectSensitiveSignals();
+        QList<View *> viewsToDelete;
+        viewsToDelete.reserve(containmentsToRecreate.size());
+
+        //! Members are queued before the root so their destructors can still
+        //! unregister from the live root. QObject::deleteLater preserves event
+        //! posting order within this thread.
+        for (auto it = std::next(containmentsToRecreate.cbegin());
+             it != containmentsToRecreate.cend(); ++it) {
+            if (*it) {
+                if (View *const view = m_latteViews.take(it->data())) {
+                    viewsToDelete << view;
+                }
+            }
+        }
+        if (View *const rootView = m_latteViews.take(rootContainment.data())) {
+            viewsToDelete << rootView;
+        }
+
+        if (viewsToDelete.isEmpty()) {
+            qCritical() << "recreate - step 1: no runtime views remained for the scheduled replacement";
+            clearRecreationRecords();
+            return;
+        }
+
+        struct DestructionState {
+            int remaining{0};
+            bool replacementScheduled{false};
+        };
+        const auto destruction = std::make_shared<DestructionState>();
+        destruction->remaining = viewsToDelete.size();
 
         //! step:2 add the new latteview
-        connect(view, &QObject::destroyed, this, [this, containment]() {
-            auto view = m_latteViews.take(containment);
-            QTimer::singleShot(250, this, [this, containment]() {
-                //! the containment can be destroyed during this second delay
-                //! (its destruction removes it from m_containments, a pointer
-                //! comparison that never dereferences), and addView on a dangling
-                //! containment would crash; the recreation record is cleared on
-                //! every arm so an aborted recreation cannot block future ones
-                if (!m_containments.contains(containment)) {
-                    qWarning() << "recreate - step 2: containment" << (void *)containment
-                               << "was destroyed during the recreation delay; aborting the recreation";
-                } else if (m_latteViews.contains(containment)) {
-                    qWarning() << "recreate - step 2: containment" << containment->id()
-                               << "already has a view again; skipping the duplicate addView";
-                } else {
-                    qDebug() << "recreate - step 2: adding dock for containment:" << containment->id();
-                    addView(containment);
+        for (View *const view : std::as_const(viewsToDelete)) {
+            view->disconnectSensitiveSignals();
+            connect(view, &QObject::destroyed, this,
+                    [this, containmentsToRecreate, clearRecreationRecords,
+                     destruction, recreatesRelationship]() {
+                Q_ASSERT(destruction->remaining > 0);
+                --destruction->remaining;
+                if (destruction->remaining != 0) {
+                    return;
                 }
 
-                m_viewsToRecreate.removeAll(containment);
-            });
-        });
+                Q_ASSERT(!destruction->replacementScheduled);
+                destruction->replacementScheduled = true;
+                QTimer::singleShot(RuntimeViewReplacementDelay, this,
+                                   [this, containmentsToRecreate,
+                                    clearRecreationRecords, recreatesRelationship]() {
+                    const Layout::ViewsMap eligibleViews = validViewsMap();
+                    bool rootRuntimeReady{!recreatesRelationship};
 
-        view->deleteLater();
+                    for (int index = 0; index < containmentsToRecreate.size(); ++index) {
+                        const auto &candidate = containmentsToRecreate[index];
+                        if (!candidate || !m_containments.contains(candidate.data())) {
+                            qWarning() << "recreate - step 2: a containment was destroyed during runtime replacement";
+                            continue;
+                        }
+                        if (!mapContainsId(&eligibleViews, candidate->id())) {
+                            qWarning() << "recreate - step 2: containment" << candidate->id()
+                                       << "is no longer eligible on an active output";
+                            continue;
+                        }
+                        if (recreatesRelationship && index > 0 && !rootRuntimeReady) {
+                            qWarning() << "recreate - step 2: linked member" << candidate->id()
+                                       << "cannot outlive its runtime root";
+                            continue;
+                        }
+                        if (m_latteViews.contains(candidate.data())) {
+                            qWarning() << "recreate - step 2: containment" << candidate->id()
+                                       << "already has a runtime view; skipping duplicate construction";
+                            if (recreatesRelationship && index == 0) {
+                                rootRuntimeReady = true;
+                            }
+                            continue;
+                        }
+
+                        qDebug() << "recreate - step 2: adding dock for containment:" << candidate->id();
+                        addView(candidate.data());
+                        if (recreatesRelationship && index == 0) {
+                            rootRuntimeReady = m_latteViews.contains(candidate.data());
+                        }
+                    }
+
+                    clearRecreationRecords();
+
+                    //! Initial root synchronization was suppressed while the
+                    //! relationship was incomplete. Reconcile derived output
+                    //! members only after every preserved member has rebound.
+                    const auto rootContainment = containmentsToRecreate.constFirst();
+                    if (rootContainment) {
+                        if (auto *const root = qobject_cast<OriginalView *>(
+                                m_latteViews.value(rootContainment.data()))) {
+                            root->synchronizeScreenGroupMembers();
+                        }
+                    }
+                });
+            });
+            view->deleteLater();
+        }
     });
+}
+
+bool GenericLayout::isRecreatingView(const Plasma::Containment *containment) const
+{
+    return containment && m_viewsToRecreate.contains(containment);
 }
 
 

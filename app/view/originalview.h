@@ -43,6 +43,8 @@ public:
     void setScreensGroup(const Latte::Types::ScreensGroup &group);
 
     void addClone(Latte::ClonedView *view);
+    void retireScreenGroupDerivedClonesForRuntimeUnload();
+    void synchronizeScreenGroupMembers();
     void setNextLocationForClones(const QString layoutName, int edge, int alignment);
     [[nodiscard]] bool addApplet(const QString &pluginId) override;
     [[nodiscard]] bool removeApplet(int appletId) override;
@@ -57,9 +59,7 @@ public Q_SLOTS:
 Q_SIGNALS:
     void screensGroupChanged();    
 
-private Q_SLOTS:    
-    void syncClonesToScreens();
-
+private Q_SLOTS:
     void restoreConfig();
     void saveConfig();
 
@@ -72,6 +72,7 @@ private:
 private:
     Latte::Types::ScreensGroup m_screensGroup{Latte::Types::SingleScreenGroup};
     QList<QPointer<Latte::ClonedView>> m_clones;
+    QMetaObject::Connection m_relationshipTableConnection;
 
     QList<int> m_waitingCreation;
 

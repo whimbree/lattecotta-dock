@@ -318,6 +318,7 @@ public Q_SLOTS:
     Q_INVOKABLE void exportTemplate();
 
     void createLinkedView(int targetScreenId, Plasma::Types::Location targetEdge);
+    void reloadRuntimeView();
 
     Q_INVOKABLE bool mimeContainsPlasmoid(QMimeData *mimeData, QString name);
 
@@ -411,7 +412,6 @@ private Q_SLOTS:
     void hideWindowsForSlidingOut();
     void preferredViewForShortcutsChangedSlot(Latte::View *view);
     void releaseGrab();
-    void reloadSource();
     void updateTransientWindowsTracking();
     void statusChanged(Plasma::Types::ItemStatus);
 

@@ -340,6 +340,11 @@ public Q_SLOTS:
 
     void duplicateView(const uint &containmentId);
     void createLinkedView(const uint &containmentId, const int &screenId, const int &edge);
+    //! Debug-gated D-Bus lifecycle driver. It follows the same runtime
+    //! recreation path used after an installed custom indicator changes.
+    //! Persistent containment identity and configuration are preserved;
+    //! dockSystemData reports the new runtimeViewId generation.
+    void reloadView(const uint &containmentId);
     void setViewPlacement(const uint &containmentId,
                           const int &screenId,
                           const int &edge,
@@ -441,6 +446,7 @@ private:
 
     bool m_activitiesStarting{true};
     bool m_defaultLayoutOnStartup{false}; //! this is used to enforce loading the default layout on startup
+    const bool m_debugDbusEnabled{false};
 
     LifecyclePhase m_lifecyclePhase{LifecyclePhase::Startup};
 

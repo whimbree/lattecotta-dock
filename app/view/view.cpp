@@ -420,7 +420,7 @@ void View::init(Plasma::Containment *plasma_containment)
 
     connect(this, &View::indicatorPluginChanged, this, [&](const QString &indicatorId) {
         if (m_indicator && m_indicator->isCustomIndicator() && m_indicator->type() == indicatorId) {
-            reloadSource();
+            reloadRuntimeView();
         }
     });
 
@@ -463,7 +463,7 @@ void View::init(Plasma::Containment *plasma_containment)
     qDebug() << "SOURCE:" << source();
 }
 
-void View::reloadSource()
+void View::reloadRuntimeView()
 {
     if (m_layout && containment()) {
         // if (settingsWindowIsShown()) {

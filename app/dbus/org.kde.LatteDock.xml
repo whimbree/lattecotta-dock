@@ -51,6 +51,13 @@
         <arg name="screenId" type="i" direction="in"/>
         <arg name="edge" type="i" direction="in"/>
     </method>
+    <!-- Debug-gated by LATTE_DEBUG_DBUS=1. Recreate the runtime window through
+         the same path used after a custom indicator package changes.
+         Persistent identity and configuration do not change; dockSystemData
+         exposes the replacement runtimeViewId. -->
+    <method name="reloadView">
+        <arg name="containmentId" type="u" direction="in"/>
+    </method>
     <method name="setViewPlacement">
         <arg name="containmentId" type="u" direction="in"/>
         <arg name="screenId" type="i" direction="in"/>

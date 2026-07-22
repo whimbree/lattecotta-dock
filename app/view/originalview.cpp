@@ -27,19 +27,25 @@ OriginalView::OriginalView(Plasma::Corona *corona, QScreen *targetScreen, bool b
             return;
         }
 
-        connect(containment(), &Plasma::Applet::destroyedChanged, this, &OriginalView::syncClonesToScreens);
+        connect(containment(), &Plasma::Applet::destroyedChanged, this, &OriginalView::synchronizeScreenGroupMembers);
         restoreConfig();
     });
 
-    connect(this, &View::layoutChanged, this, &OriginalView::syncClonesToScreens);
-    connect(this, &OriginalView::screensGroupChanged, this, &OriginalView::syncClonesToScreens);
+    connect(this, &View::layoutChanged, this, &OriginalView::synchronizeScreenGroupMembers);
+    connect(this, &View::layoutChanged, this, [this]() {
+        QObject::disconnect(m_relationshipTableConnection);
+        if (layout()) {
+            m_relationshipTableConnection = connect(
+                layout(), &Layout::GenericLayout::viewsCountChanged,
+                this, &View::canRemoveChanged);
+        }
+        Q_EMIT canRemoveChanged();
+    });
+    connect(this, &OriginalView::screensGroupChanged, this, &OriginalView::synchronizeScreenGroupMembers);
     connect(this, &OriginalView::screensGroupChanged, this, &OriginalView::saveConfig);
 }
 
-OriginalView::~OriginalView()
-{
-    cleanClones();
-}
+OriginalView::~OriginalView() = default;
 
 bool OriginalView::isSingle() const
 {
@@ -134,6 +140,11 @@ void OriginalView::forgetClone(Latte::ClonedView *view)
     }
 }
 
+void OriginalView::retireScreenGroupDerivedClonesForRuntimeUnload()
+{
+    cleanScreenGroupClones();
+}
+
 void OriginalView::removeClone(Latte::ClonedView *view)
 {
     if (!view || std::none_of(m_clones.cbegin(), m_clones.cend(), [view](const auto &clone) {
@@ -220,7 +231,7 @@ void OriginalView::cleanScreenGroupClones()
 void OriginalView::reconsiderScreen()
 {
     View::reconsiderScreen();
-    syncClonesToScreens();
+    synchronizeScreenGroupMembers();
 }
 
 void OriginalView::setNextLocationForClones(const QString layoutName, int edge, int alignment)
@@ -311,8 +322,12 @@ void OriginalView::addApplet(QObject *mimedata, const int x, const int y, const 
     }
 }
 
-void OriginalView::syncClonesToScreens()
+void OriginalView::synchronizeScreenGroupMembers()
 {
+    if (layout() && containment() && layout()->isRecreatingView(containment())) {
+        return;
+    }
+
     if (containment() && containment()->destroyed()) {
         cleanClones();
         return;

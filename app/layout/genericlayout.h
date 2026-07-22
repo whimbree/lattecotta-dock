@@ -19,6 +19,7 @@
 #include <QQuickView>
 #include <QPointer>
 #include <QScreen>
+#include <QSet>
 
 // Plasma
 #include <Plasma/Plasma>
@@ -117,6 +118,7 @@ public:
     virtual void addView(Plasma::Containment *containment);
     void recreateView(Plasma::Containment *containment, bool delayed = true);
     bool hasLatteView(Plasma::Containment *containment);
+    [[nodiscard]] bool isRecreatingView(const Plasma::Containment *containment) const;
 
     bool newView(const QString &templateName);
     Data::View newView(const Latte::Data::View &nextViewData);
@@ -221,7 +223,7 @@ private:
     QStringList m_unloadedContainmentsIds;
 
     //! try to avoid crashes from recreating the same views all the time
-    QList<const Plasma::Containment *> m_viewsToRecreate;
+    QSet<const Plasma::Containment *> m_viewsToRecreate;
 
     //! Containments that are pending screen/state updates
     Latte::Data::ViewsTable m_pendingContainmentUpdates;

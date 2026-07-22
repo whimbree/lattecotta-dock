@@ -98,6 +98,7 @@ namespace Latte {
 Corona::Corona(bool defaultLayoutOnStartup, QString layoutNameOnStartUp, QString addViewTemplateName, int userSetMemoryUsage, QObject *parent)
     : Plasma::Corona(parent),
       m_defaultLayoutOnStartup(defaultLayoutOnStartup),
+      m_debugDbusEnabled(qEnvironmentVariableIntValue("LATTE_DEBUG_DBUS") == 1),
       m_startupAddViewTemplateName(addViewTemplateName),
       m_userSetMemoryUsage(userSetMemoryUsage),
       m_layoutNameOnStartUp(layoutNameOnStartUp),
@@ -116,6 +117,10 @@ Corona::Corona(bool defaultLayoutOnStartup, QString layoutNameOnStartUp, QString
       m_plasmaGeometries(new PlasmaExtended::ScreenGeometries(this)),
       m_dialogShadows(new PanelShadows(this, QStringLiteral("dialogs/background")))
 {
+    if (m_debugDbusEnabled) {
+        qWarning() << "Latte debug D-Bus lifecycle mutations are enabled";
+    }
+
     connect(qApp, &QApplication::aboutToQuit, this, &Corona::onAboutToQuit);
 
     //! watch every window the process shows so applet-created transient
@@ -1760,6 +1765,24 @@ void Corona::createLinkedView(const uint &containmentId, const int &screenId, co
     }
 
     view->createLinkedView(screenId, static_cast<Plasma::Types::Location>(edge));
+}
+
+void Corona::reloadView(const uint &containmentId)
+{
+    if (!m_debugDbusEnabled) {
+        qWarning() << "corona: reloadView requires LATTE_DEBUG_DBUS=1";
+        return;
+    }
+
+    auto *const view = m_layoutsManager->synchronizer()->viewForContainment(
+        static_cast<int>(containmentId));
+    if (!view) {
+        qWarning() << "corona: reloadView requested for containment" << containmentId
+                   << "which has no runtime view";
+        return;
+    }
+
+    view->reloadRuntimeView();
 }
 
 void Corona::setViewPlacement(const uint &containmentId,
