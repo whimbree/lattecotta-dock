@@ -1199,20 +1199,23 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   recreation while launcher configuration continues to synchronize.
 
 ### D120 - Copy preserved stale linked lineage
-- STATUS: FIXED on `feat/create-linked-dock` (`2255a1af0`, `37ab7b7fc`).
+- STATUS: FIXED on `feat/create-linked-dock` (`2255a1af0`, `37ab7b7fc`,
+  `8ef1de775`).
 - FOUND: 2026-07-22, final independent linked-dock review.
 - SYMPTOM: copying an explicit linked member through the layouts dialog could
   paste a record whose root was absent or was an unrelated dock with the same
   numeric ID. Restart could reject the destination relationship graph.
-- ROOT: Copy exported one selected containment but retained `isClonedFrom` and
-  `ExplicitTarget`. Storage reapplied that clipboard metadata after remapping
-  local containment and applet IDs.
+- ROOT: Copy exported one selected containment but retained `isClonedFrom`,
+  `ExplicitTarget`, and the transient Cut/Paste move flags. Storage reapplied
+  the relationship metadata after remapping local containment and applet IDs;
+  a copied unsaved move destination could also masquerade as a later Cut.
 - FIX: normalize every Copy record through `toIndependentSnapshot()` before
-  clipboard publication. Cut retains origin identity only for the checked move
-  transaction.
+  clipboard publication. The value operation clears linked lineage and both
+  move-transaction flags. Cut alone retains checked origin identity.
 - EVIDENCE: the identity contract pins normalization before clipboard
   publication; the value contract proves ordinary configuration survives while
-  relationship roles reset.
+  relationship and move roles reset. `datatypestest` passes 47/47 and
+  `dockidentitycontracttest` passes 24/24.
 
 ### D121 - Late move refusal left relocation pending
 - STATUS: FIXED on `feat/create-linked-dock` (`5acb90525`, `37ab7b7fc`).

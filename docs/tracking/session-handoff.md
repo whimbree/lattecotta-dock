@@ -12,6 +12,12 @@ returns checked success and refuses before unassignment; a positioner that
 receives refusal clears the complete pending placement request and reveals the
 dock through normal generation settlement.
 
+The focused rereview confirmed both transaction fixes, then found that the
+central independent-snapshot operation still retained transient Cut/Paste move
+flags. Commit `8ef1de775` clears both flags with linked lineage. Copying an
+unsaved move destination can no longer make a later Paste remove its source;
+Cut remains the only clipboard action that carries checked move identity.
+
 The final Create Linked Dock review exposed three blocking boundaries: root
 runtime recreation replaced only the root and stranded member pointers, Cut
 validation could become stale before destination import, and executable output
