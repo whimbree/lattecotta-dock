@@ -831,7 +831,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   source and test tree through `b6ba7ab15`.
 
 ### D83 - Removed duplicate containment survives the undo window in persistent layout state
-- STATUS: FIXED on `feat/create-linked-dock` (`09a61e537`, `43b86fe64`).
+- STATUS: FIXED on `feat/create-linked-dock` (`f1a76d7a4`, `e781b4d0b`).
 - FOUND: 2026-07-21, baseline `duplicate-view-idremap` acceptance run at
   `16eb58ea4` before the D77 implementation.
 - SYMPTOM: removing a newly created independent duplicate destroys its runtime
@@ -857,7 +857,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   after restart.
 
 ### D98 - Dock-system sizing diagnostics read the edit controller
-- STATUS: FIXED on `feat/create-linked-dock` (`2c1e656c7`).
+- STATUS: FIXED on `feat/create-linked-dock` (`dafb6d0c7`).
 - FOUND: 2026-07-22, exact linked-dock sizing reproduction.
 - SYMPTOM: every settled dock reported null `availablePrimaryLength`, so the
   first cross-dock sizing transition could not be attributed.
@@ -872,7 +872,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   alignment.
 
 ### D99 - Programmatic applet creation did not notify linked members
-- STATUS: FIXED on `feat/create-linked-dock` (`dcd95bb42`).
+- STATUS: FIXED on `feat/create-linked-dock` (`148da3e1b`).
 - FOUND: 2026-07-22, Create Linked Dock acceptance.
 - SYMPTOM: adding an applet by plug-in ID changed only the addressed dock even
   though every linked member subscribed to `appletCreated`.
@@ -886,7 +886,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   and both members.
 
 ### D100 - Startup cleanup deleted explicitly placed linked docks
-- STATUS: FIXED on `feat/create-linked-dock` (`ea8e60dce`).
+- STATUS: FIXED on `feat/create-linked-dock` (`c53887f9b`).
 - FOUND: 2026-07-22, first explicit-linked persistence reload.
 - SYMPTOM: linked containment records were correct on disk, but restart removed
   the explicitly placed members before their views were constructed.
@@ -901,7 +901,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   objects.
 
 ### D101 - Rapid placement changes lost relocation ownership
-- STATUS: FIXED on `feat/create-linked-dock` (`ce7a632e3`).
+- STATUS: FIXED on `feat/create-linked-dock` (`9c5620d99`).
 - FOUND: 2026-07-22, seeded linked-dock operation storm.
 - SYMPTOM: a second move could remain forever in relocation animation, or the
   model could report its new output and edge while local geometry still
@@ -918,7 +918,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   fields unchanged for two seconds before an equivalent persistence reload.
 
 ### D102 - Viewless containments missed the removal fallback
-- STATUS: FIXED on `feat/create-linked-dock` (`0ea1c8112`).
+- STATUS: FIXED on `feat/create-linked-dock` (`b7795aa6d`).
 - FOUND: 2026-07-22, removal-ownership review after D83.
 - SYMPTOM: a removed embedded containment could remain transient forever when
   the notification backend failed, even though dock containments retired.
@@ -931,7 +931,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   branch; production compiles and the focused identity contract passes.
 
 ### D103 - Linked-dock controls escaped the settings inventory
-- STATUS: FIXED on `feat/create-linked-dock` (`4fc64590f`).
+- STATUS: FIXED on `feat/create-linked-dock` (`df1fe812f`).
 - FOUND: 2026-07-22, canonical gate for Create Linked Dock.
 - SYMPTOM: `settingsinventorytest` rejected the new linked popup, output and
   edge selectors, context-menu target actions, and changed action-model
@@ -947,6 +947,90 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: the scanner unit test proves that a dialog and its accepted handler
   become candidates. `settingssourcescannertest` and `settingsinventorytest`
   pass with the expanded checked counts.
+
+### D104 - Linked member mutations depended on applet position
+- STATUS: FIXED on `feat/create-linked-dock` (`96d7abe61`).
+- FOUND: 2026-07-22, mandatory cold review of Create Linked Dock.
+- SYMPTOM: an add, drop, remove, reorder, or configuration edit originating in
+  a linked member could update only that member or address the wrong root applet
+  after local order changed.
+- ROOT: structural entry paths bypassed the runtime View relationship boundary,
+  and member-to-root translation fell back to positional order instead of the
+  established applet identity map.
+- FIX: every structural mutation enters through the addressed View, resolves to
+  the direct root, and fans out through stable root-to-member ID mappings with
+  feedback guards. A member-local ID is never treated as a root ID.
+- EVIDENCE: the source contract pins all QML, context-menu, D-Bus, add, drop,
+  remove, reorder, and configuration boundaries. The dual-output acceptance
+  drives each operation from the root and every member and observes equal
+  plug-in order with disjoint local IDs.
+
+### D105 - Programmatic applet order changes were not published
+- STATUS: FIXED on `feat/create-linked-dock` (`b93fa2cde`).
+- FOUND: 2026-07-22, mandatory cold review of Create Linked Dock.
+- SYMPTOM: a linked reorder could settle visually in the addressed containment
+  without notifying the root coordinator on a non-Justify layout.
+- ROOT: the low-level layout method updated the order property but emitted the
+  relationship-facing order signal only from the pointer-driven path.
+- FIX: publish every successful programmatic order change through the same
+  signal. Coordinator feedback guards prevent the projection from looping.
+- EVIDENCE: the identity source contract requires publication from the
+  low-level setter, and the all-members acceptance holds equal plug-in order.
+
+### D106 - Malformed linked graphs reached startup construction
+- STATUS: FIXED on `feat/create-linked-dock` (`be4918abd`).
+- FOUND: 2026-07-22, mandatory cold review of Create Linked Dock.
+- SYMPTOM: a missing root, member chain, cycle, duplicate persistent ID, or bad
+  placement policy could reach startup as a plausible partial relationship and
+  a null root cast.
+- ROOT: D-Bus observation validated the complete table, but startup constructed
+  runtime views record by record without applying the same graph contract.
+- FIX: validate the full persisted ViewsTable before constructing any runtime
+  member and refuse the layout with the concrete validation error.
+- EVIDENCE: storage fixtures cover valid direct roots and every rejected graph
+  shape; the production source contract pins validation before construction.
+
+### D107 - Linked applet removal left member projections persistent
+- STATUS: FIXED on `feat/create-linked-dock` (`cda3b564c`, `dacb06140`).
+- FOUND: 2026-07-22, real-notification Undo acceptance added after mandatory
+  cold review.
+- SYMPTOM: removal from a linked member created or mirrored independent Plasma
+  transactions. Shutdown inside the root Undo window could resurrect the
+  member applet from its still-present configuration group.
+- ROOT: scheduled-destruction state was mirrored as if it were ordinary applet
+  configuration. It is transaction ownership, and only the root notification
+  was authoritative for the logical content operation.
+- FIX: the root owns one reversible Plasma transaction. Member projections are
+  destroyed immediately; Undo recreates them from the live root with fresh
+  member-local IDs and copied configuration.
+- EVIDENCE: the dual-output recipe removes through a member, invokes the fake
+  freedesktop notification service's real Undo action, removes again, restarts
+  inside the Undo window, and rejects runtime or persisted resurrection in
+  either containment.
+
+### D108 - Single-layout dock Undo lacked a complete restoration source
+- STATUS: FIXED on `feat/create-linked-dock` (`6cdd589a8`, `20dfb4fc4`).
+- FOUND: 2026-07-22, executable dock-removal Undo acceptance.
+- SYMPTOM: the forward persistence tombstone correctly removed a linked member,
+  but Undo could restore only a partial containment group and lose relationship,
+  placement, subcontainment, or applet state on the next reload.
+- ROOT: the deleted layout-file subtree was the only complete persistence
+  source. Plasma revived in-memory objects but did not reconstruct that subtree.
+- FIX: snapshot the exact owned subtree before triggering removal, refuse the
+  operation if the reversible snapshot cannot be prepared, and replace Plasma's
+  partial groups from the snapshot on Undo.
+- EVIDENCE: `storagetest` proves partial-group replacement. The nested
+  notification recipe restores the same member containment ID and direct-root
+  relationship, reloads successfully, and then proves restart tombstones.
+
+### D109 - Linked-dock source changes lacked current copyright attribution
+- STATUS: FIXED on `feat/create-linked-dock` (`46051f280`).
+- FOUND: 2026-07-22, mandatory cold review of Create Linked Dock.
+- ROOT: six modified source files retained prior authors but omitted the current
+  2026 modification copyright line.
+- FIX: preserve every existing SPDX line and add Bree Spektor to every C++,
+  header, and QML path changed by the branch.
+- EVIDENCE: a complete changed-source scan reports no missing attribution.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).

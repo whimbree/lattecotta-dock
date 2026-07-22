@@ -488,18 +488,20 @@ Landed before or during the 2026-07-16 stabilization session:
   absolute end.
 - `removeApplet(u containmentId, u appletId)` (added 2026-07-18 with the
   e2e interaction suite, C-I4/P4) - the coarse "Remove this Widget" the
-  applet context menu triggers: Applet::destroy() on the applet with
-  that instance id. It rides the libplasma UNDO WINDOW exactly as
-  removeView does: destroy() marks the applet destroyed() and holds the
-  object alive while the "Widget Removed" undo notification is open
-  (~60s libplasma fallback timer), so the applet does NOT vanish from
-  the readback immediately - it lingers with inScheduledDestruction=true
-  and leaves viewAppletsData/viewAppletsOrder only once the window ends
-  (a restart inside the window resurrects it, same trap as removeView).
+  applet context menu triggers. The addressed runtime view is the mutation
+  boundary. Independent views ask that applet to begin Plasma's reversible
+  destruction transaction. A linked member first translates its local applet
+  identity to the relationship root, which owns the one transaction and undo
+  notification for the group. The root applet remains observable with
+  `inScheduledDestruction=true`; member projections are retired immediately so
+  their persistence tombstones are durable. Undo keeps the root applet identity
+  and recreates each member projection with a fresh member-local identity and a
+  copy of the root configuration. A restart during the Undo window preserves
+  removal in every containment instead of resurrecting a member projection.
   Two refusals, both loud with NO applet removed (reads-never-construct
   extended to this mutator): a containment id with no view, and an
-  applet id that names no applet on the view. Readback: the applet's
-  inScheduledDestruction field in viewAppletsData flips to true.
+  applet id that names no applet on the addressed view. Readback:
+  `viewAppletsData` shows the root transaction and the member projection set.
 - `showWidgetExplorer(u containmentId)` (added 2026-07-18 with the e2e
   interaction suite, C-I9/P8) - the coarse "Add Widgets..." the
   containment context menu triggers (Menu::requestWidgetExplorer ->

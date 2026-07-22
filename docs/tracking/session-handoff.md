@@ -21,14 +21,14 @@ runtime action and ownership split landed in `fe1230670` and `ea7a77f0e`.
 Schema-v2 `dockSystemData` reports direct-root membership, placement policy,
 member lists, and opaque per-view object identities (`9ba2429e1`), while the
 coarse placement action drives the same validated transaction as the UI
-(`2b133d839`). Sizing diagnostics now read each view's Metrics authority
-(`2c1e656c7`). Programmatic applet creation announces exactly once and fans out
-through a local-only path (`dcd95bb42`). Startup loads roots before members and
-only discards derived fanout (`ea8e60dce`).
+(`5a97d18f9`). Sizing diagnostics now read each view's Metrics authority
+(`dafb6d0c7`). Programmatic applet creation announces exactly once and fans out
+through a local-only path (`148da3e1b`). Startup loads roots before members and
+only discards derived fanout (`c53887f9b`).
 
 The operation storm found D101 (rapid placement changes lost relocation
 ownership). A previous reveal could clear a newer hide transaction, and delayed
-completion carried no request identity. Commit `ce7a632e3` stops the old reveal
+completion carried no request identity. Commit `9c5620d99` stops the old reveal
 before handoff, versions every placement request, rejects superseded callbacks,
 and exposes requested versus applied generations plus a geometry-settled state
 that includes all deferred positioner queues.
@@ -37,8 +37,8 @@ The removal phase established both causes of D83 (removed duplicate containment
 survives the undo window in persistent layout state). MultipleLayouts copied
 Plasma's transient destroyed QObject back to disk; separately, the nested
 notification failure prevented `KNotification::closed` from committing final
-destruction. Commit `09a61e537` projects destroyed containment trees as
-persistence tombstones. Commit `43b86fe64` owns a generation-checked fallback
+destruction. Commit `f1a76d7a4` projects destroyed containment trees as
+persistence tombstones. Commit `e781b4d0b` owns a generation-checked fallback
 for Plasma's same 60-second Undo window and cancels it on Undo or final object
 destruction.
 
@@ -47,16 +47,16 @@ the removal fallback): the first fallback arm sat inside the dock-View parking
 branch. Embedded containments are registered without a dock View and could
 therefore remain transient under the same notification failure. The timer now
 belongs to every registered containment; only view-map parking is conditional
-(`0ea1c8112`).
+(`b7795aa6d`).
 
 The canonical gate found D103 (linked-dock controls escaped the settings
 inventory). The source scanner knew `ColorDialog` but not an ordinary QML
 `Dialog`, so accept and cancel lifecycle ownership could not be audited. Commit
-`4fc64590f` classifies dialogs as interactive and records all seven new linked
+`df1fe812f` classifies dialogs as interactive and records all seven new linked
 creation affordances with exact source selectors. Both inventory tests pass
 with 278 affordances, 742 candidates, and 1274 coverage relations.
 
-`39fb979bc` adds the exact linked-dock acceptance and deterministic stress
+`05bcb00c5` adds the exact linked-dock acceptance and deterministic stress
 recipes. The first uses a separated portrait secondary output, creates a member
 on the root's already occupied edge, verifies direct-root lineage, per-member
 sizing and edit ownership, synchronized applet sets with disjoint IDs,
@@ -65,6 +65,25 @@ seven edit transitions, two independent duplicates, one member removal and
 replacement, a two-second geometry stability comparison, and restart. Both
 recipes pass. Focused storage, data, action-policy, identity, libplasma removal,
 and D-Bus tests pass. QML compilation passed after the relocation handoff fix.
+
+The mandatory cold review returned MERGE AFTER FIXES. D104 (linked member
+mutations depended on applet position) is fixed by `96d7abe61`; every structural
+entry path now reaches the direct root through stable applet-ID mappings. D105
+(programmatic applet order changes were not published) is fixed by
+`b93fa2cde`. D106 (malformed linked graphs reached startup construction) is
+fixed by `be4918abd`, which validates the complete persisted table before any
+runtime member is created. D109 (linked-dock source changes lacked current
+copyright attribution) is fixed by `46051f280`.
+
+The executable notification follow-up exposed D107 (linked applet removal left
+member projections persistent) and D108 (single-layout dock Undo lacked a
+complete restoration source). Commits `cda3b564c` and `dacb06140` keep one root
+applet transaction, retire member projections immediately, recreate them only
+on Undo, and prove restart cannot resurrect them. Commits `6cdd589a8` and
+`20dfb4fc4` snapshot the complete dock subtree before removal and replace
+Plasma's partial groups on Undo. The expanded dual-output recipe passes applet
+Undo, dock Undo, reload after Undo, and shutdown inside the applet Undo window.
+`storagetest` independently pins exact partial-group replacement.
 
 Same-edge physical stack order, accumulated offsets, reservation, and activation
 regions remain the next separate slice. Create Linked deliberately accepts an

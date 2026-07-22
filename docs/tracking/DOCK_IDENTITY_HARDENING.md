@@ -67,18 +67,18 @@ that is the boundary with deferred work.
 
 | Entity | Unique or shared | Lifetime owner | Persistence key | Duplication | Output or orientation change | Edit mode | Cleanup |
 |---|---|---|---|---|---|---|---|
-| Logical dock | One independent containment, or one original plus its explicit linked replicas | Original persistent containment | Original containment ID | Duplicate Dock creates one new independent logical dock | Identity stays stable | Selects the intended edit target | Ends when the original and its explicit replicas are removed |
+| Logical dock | One independent containment, or one original plus its linked members | Original persistent containment | Original containment ID | Duplicate Dock creates one new independent logical dock | Identity stays stable | Selects the intended edit target | Ends when the original and all linked members are removed |
 | Persistent dock record | Unique per containment | Layout configuration | Containment ID | All containment and applet IDs are regenerated | Screen, edge, alignment, and length state update on the same record | Supplies menu and edit target identity | Removed with the containment configuration |
 | Containment | Unique per visible original or clone | Plasma Corona and layout | Containment ID | Must be newly imported with remapped IDs | Persists placement and QML configuration | Own `userConfiguring` is the per-view edit presentation state | Destroyed by layout removal; no runtime view may retain it |
 | Runtime dock view | Unique QObject and QWindow per active containment | `GenericLayout` containment-to-view map | Not persisted | Constructed fresh | Remaps or recreates its layer surface | Holds only a non-owning pointer to shared edit chrome | Disconnects, unregisters, and deletes all child managers |
 | Per-output view | Every linked member is one separate containment and runtime view | `OriginalView` owns relationship membership; layout owns runtime registration | Member containment ID plus `isClonedFrom` and `linkPlacement` | Duplicate Dock clears this relationship | Derived members follow screen-group output policy; explicit members own output and edge | Derived members edit the root; explicit members edit themselves | Member unregisters from the root before destruction |
 | Linked relationship | Shared logical group, explicit and acyclic | Root persistent dock | Member `isClonedFrom=<root id>` | Create Linked extends the direct-root group; Duplicate never copies it | `linkPlacement` names derived versus member-local placement ownership | Menu wording and edit targeting use the same runtime role | Root removal destroys members; member removal unregisters without dangling entries |
-| Applet layout | Unique QML object and applet IDs per containment | Containment runtime | Applet groups under containment ID | Deep-copied and ID-remapped | Local geometry recalculates for that view | Its containment controls edit presentation | Destroyed with containment and view |
+| Applet layout | Unique QML object, applet ID, and config group per containment; one explicit content projection per relationship | Root view coordinates structural mutations; each containment owns its projection | Applet groups under containment ID | Deep-copied and ID-remapped | Local geometry recalculates for that view | Its containment controls edit presentation | Root transaction removes every projection; Undo recreates member-local identities and config; containment teardown destroys the remainder |
 | Geometry controller | Unique `Positioner` per runtime view | Runtime `View` QObject parent | Derived, not persisted | Constructed fresh | Consumes that view's output and owns monotonic relocation generations | Edit thickness may change local placement | QObject parent destruction cancels timers and callbacks |
 | Applet sizing | Unique `AutoSize` and effective icon state per containment | Containment QML tree | Configured values only | Config copied; effective values recomputed | Consumes the same view's solved primary length | Recomputes only for local edit geometry | QML tree destruction |
 | Edit-mode controller | One reusable chrome ensemble, one current owner, one requested generation | `ViewSettingsFactory` under Corona | Not persisted | Never copied | Retarget is one cancelable generation | Exactly one effective owner; clone requests resolve explicitly | Cancels deferred work and clears the old containment before rebinding |
-| Stacking controller | Missing in the current tree | Required owner: layout or Corona placement domain | Required key: output, edge, stable rank | New duplicate gets a stable independent rank | Re-solves membership atomically | Routes activation without merging edit identity | Removes membership before view destruction |
-| Configuration object | Unique mutable map per containment; applet configuration is synchronized explicitly | Containment | Containment configuration group | Deep-copied into fresh groups for Duplicate Dock | Explicit members keep containment placement and appearance local | Menu and edit relationship are read from runtime identity | Destroyed with containment; signal contexts are the receiving view |
+| Stacking controller | Missing in the current tree | Required owner: layout or Corona placement domain | Required key: output, edge, stable rank | New duplicate gets a stable independent rank | Re-solves membership atomically without assuming adjacent outputs | Owns one activation mechanism with the exact eligible region set, which may be disjoint | Removes membership before view destruction |
+| Configuration object | Unique mutable map per containment; linked applet values are copied between projections | Containment owns storage; relationship root owns mutation routing | Containment configuration group | Deep-copied into fresh groups for Duplicate Dock | Explicit members keep containment placement and appearance local | Menu and edit relationship are read from runtime identity | Destroyed with containment; Undo restores the snapshotted group; signal contexts are the receiving view |
 
 ## Confirmed causes
 
@@ -127,14 +127,38 @@ the direct root coordinates applet membership, order, and settings. Startup
 loads roots before members and only regenerates derived records. The relation
 graph is validated as direct-root and acyclic before D-Bus observation.
 
-### Programmatic applet creation bypassed linked synchronization (fixed)
+### Applet structural mutations lacked one relationship owner (fixed)
 
 The linked relation listened for `ContainmentInterface::appletCreated`, but the
-successful plug-in-ID creation path never emitted it. A new applet therefore
-appeared only in the addressed containment. The external creation boundary now
-announces one relationship event, while coordinator fanout uses a local-only
-creation path to prevent feedback. Every member receives the same plug-in
-multiset with fresh applet IDs.
+successful plug-in-ID creation path never emitted it. Other add, drop, remove,
+and reorder paths entered below the runtime `View` boundary or assumed member
+applets had matching positions. A mutation could therefore update only the
+addressed containment, route a member removal through its independent Plasma
+transaction, or associate the wrong applet after an order change.
+
+Every structural action now enters through the addressed runtime `View` and is
+translated to the direct root. The root owns one transaction and projects the
+result to every member through stable applet-ID maps. Programmatic order changes
+publish the same order signal as pointer-driven changes. Member projection IDs
+remain fresh and unrelated to root IDs.
+
+Plasma Undo exposed a second ownership error. Mirroring the root applet's
+scheduled-destruction flag left the member applet configuration persistent, so
+shutdown inside the Undo window resurrected that projection. The root now owns
+the only reversible Plasma transaction. Member projections are retired
+immediately, then recreated with fresh local IDs and copied root configuration
+if Undo reverses the transaction. Restart during the window preserves the
+removal in every containment.
+
+### Persisted relationship graphs reached runtime partially validated (fixed)
+
+Startup previously classified relationship records while constructing views.
+A missing root, member-to-member edge, cycle, duplicate persistent ID, or
+invalid placement policy could reach a null root cast or leave a plausible
+partial runtime group. Storage now validates the complete table as one direct,
+acyclic graph before creating any relationship runtime object. A malformed
+graph is refused with the concrete validation error instead of being partially
+loaded.
 
 ### Rapid relocation had two unowned completion paths (fixed)
 
@@ -156,6 +180,15 @@ now treats destroyed containments and their owned subcontainments as persistence
 tombstones. GenericLayout owns a same-duration fallback transaction that Undo
 or final destruction cancels, so runtime and persistent retirement agree.
 
+Single-layout Undo had the reverse fault: the forward tombstone deleted the
+only complete persistent subtree, while Plasma revived only its in-memory
+objects and partial groups. Saving those objects could not reconstruct linked
+ownership, placement, subcontainments, and applet configuration exactly. The
+layout now captures the owned subtree before removal, refuses a reversible
+removal if that snapshot fails, and replaces Plasma's partial groups from the
+snapshot on Undo. The containment ID and complete relationship record survive
+Undo, while restart inside the window still observes the tombstone.
+
 ### Deferred edit-chrome retargets are not cancelable (fixed)
 
 `PrimaryConfigView::setParentView()` scheduled an unversioned 400 ms retarget.
@@ -173,6 +206,14 @@ screen and edge views originate in `QHash::values()` and have no deterministic
 tie-break. Every layer surface independently requests the same anchor and its
 own exclusive zone. Latte's internal available-rectangle model separately uses
 the deepest footprint rather than a solved physical stack.
+
+The required coordinator is keyed by Latte output identity and edge, not by
+monitor adjacency. Portrait, landscape, overlapping-coordinate, fully touching,
+partially touching, and separated output arrangements do not change stack
+membership. KWin supplies each output's geometry; Latte must solve only within
+the selected output rectangle. Activation ownership is one coordinator-owned
+mechanism with one or more exact eligible regions. It must not widen two
+separated partial-width docks into one continuous activation surface.
 
 ### Alignment changes bypass the placement invariant
 
@@ -215,6 +256,40 @@ These faults share the session-wide theme of unversioned or unowned runtime
 registrations. They do not prove one shared persistent object causes every
 visible symptom.
 
+## Shared-state audit
+
+No duplicate was found sharing a containment QObject, applet QObject, runtime
+View, Positioner, AutoSize object, or mutable KConfig group with its source.
+The confirmed violations were copied relationship fields and mutations routed
+through the wrong authority:
+
+| State or identity | Intended ownership | Confirmed violation | Status |
+|---|---|---|---|
+| `screensGroup` and `isClonedFrom` | Relationship policy on the new persistent record | Duplicate Dock retained both fields and therefore created or rejoined a linked group | Fixed; one const snapshot transformation clears the relation |
+| Persistent containment ID | Unique per dock record | No shared ID found; every import remaps it | Regression-pinned |
+| Applet ID | Unique per containment | Member-to-root routing used positional coincidence after reorder | Fixed; explicit ID maps route every mutation |
+| Runtime view identity | Unique per live QObject | No copied runtime ID found; the opaque diagnostic token is process-local | Regression-pinned |
+| Mutable containment configuration | Unique per containment | No shared KConfig object found; blanket linked mirroring gave some member-local fields root ownership | Fixed for explicit members through typed placement ownership and explicit content projection |
+| Applet removal transaction | One logical content transaction at the relationship root | Scheduled-destruction state was mirrored into member-local transactions and persistence | Fixed; root owns Undo, members own disposable projections |
+| Edit chrome | Intentionally one reusable factory-owned ensemble | Unversioned retarget callbacks and inconsistent linked target resolution left stale edit owners | Fixed; one cancelable generation and one authoritative relationship target |
+| Geometry and sizing controllers | Unique per runtime view | No shared cache found; stale relocation callbacks and conflicting reservation models changed a peer's solved geometry | Relocation fixed; reservation and stacking slices remain open |
+| Same-edge rank and activation regions | Shared only through a future output-edge coordinator | No authority exists, so every surface independently claims the same edge | Open |
+
+## Deterministic replay results
+
+| Scenario | Before | After linked-identity repair |
+|---|---|---|
+| Duplicate an All Screens source | A fresh root immediately produced another linked ensemble | Exactly one independent containment with fresh applet IDs |
+| Duplicate from a linked member | Relationship lineage could be retained or the action was hidden | Exactly one independent containment; the source group remains unchanged |
+| Rapid output, edge, and alignment changes | An older reveal could clear a newer move and strand geometry | Seed 127934575 completed 28 placements and seven edit transitions; two settled snapshots remained byte-equivalent for geometry and sizing |
+| Remove and recreate a member | Persistent tombstones could be overwritten or never committed | The removed member leaves runtime and disk, replacement receives a fresh identity, and reload restores only intended records |
+| Remove a linked applet, then restart inside Undo | A member projection could resurrect | Root and every member remain removed in runtime and persistence |
+| Invoke real dock and applet Undo | No executable relationship-aware coverage | Applet projection, full dock subtree, direct-root relationship, and reload all recover deterministically |
+
+Same-edge physical composition and final alignment bounds are deliberately not
+listed as passing. Their independent coordinator and normalization slices have
+not landed yet.
+
 ## Minimal architectural repair
 
 1. Make relationship creation explicit. Duplicate Dock accepts either relation
@@ -222,24 +297,28 @@ visible symptom.
    and applet IDs. Screen-group construction sets a derived relationship;
    Create Linked Dock… sets the explicit user-placed policy. Both point
    directly to the same validated root model.
-2. Give each deferred edit-chrome retarget a monotonic process-local request
+2. Route linked applet structure through the direct root while retaining unique
+   per-containment applet identities and configuration groups. Validate the
+   complete persisted relation before constructing any runtime member.
+3. Give each deferred edit-chrome retarget a monotonic process-local request
    generation. Delayed work carries both the target and request generation and
    is rejected when superseded.
-3. Make edit-chrome ownership a single transition with one cancelable pending
+4. Make edit-chrome ownership a single transition with one cancelable pending
    target. Ending the old containment's configuring session precedes every
    rebind.
-4. Route every placement mutation through one normalization transaction for
+5. Route every placement mutation through one normalization transaction for
    output, edge, semantic alignment, minimum and maximum length, and offset.
-5. Add one output-edge stack coordinator with stable persisted ranks,
-   cumulative insets, activation ownership, and a single reservation policy.
-6. Keep compositor work-area reservation separate from Latte's partial
+6. Add one output-edge stack coordinator with stable persisted ranks,
+   cumulative insets, activation ownership over an exact region set, and a
+   single reservation policy.
+7. Keep compositor work-area reservation separate from Latte's partial
    dock-to-dock avoidance footprint. Autosizing consumes only the final solved
    geometry for its own view.
-7. Replace blanket replica configuration mirroring with explicit content and
+8. Replace blanket replica configuration mirroring with explicit content and
    placement projections. Existing screen-group replicas may retain derived
    placement as a named policy; independent duplicates share no dock-owned
    mutable state.
-8. Keep runtime identity diagnostics in C0 (the atomic dock-system observability
+9. Keep runtime identity diagnostics in C0 (the atomic dock-system observability
    snapshot). Relationship changes preserve its fail-closed graph, per-view
    ownership contract, and requested-versus-applied relocation generations.
 
@@ -257,7 +336,8 @@ visible symptom.
    duplication, movement, orientation, alignment, editing, destruction, and
    reload.
 5. [x] Explicit linked relationship creation, member-local placement and edit
-   ownership, applet synchronization, persistent restoration, and removal.
+   ownership, root-coordinated applet synchronization from every member,
+   validated startup restoration, reversible removal, and restart tombstones.
 
 The completed slices are covered by sanitizer-backed pure-core tests for action
 policy, retarget request generations, exact title matching, and ignored-window
@@ -288,6 +368,15 @@ proved local placement, visibility, sizing, and edit behavior, and restored the
 same relationship after restart. Seed 127934575 replayed 28 placements, seven
 edit transitions, two independent duplicates, removal, replacement, and reload;
 the settled geometry and sizing snapshot remained unchanged after two seconds.
+The first explicit-linked cold review then found mutation routing below the
+relationship boundary, positional applet mapping, incomplete startup graph
+validation, untested real Undo, missing current copyright lines, and stale
+D-Bus prose. The corrections route structural mutations from every member,
+publish programmatic order, validate the whole persisted graph before runtime,
+and drive libplasma's real notification action. The expanded notification
+recipe proves applet and dock Undo, reload after Undo, and shutdown during an
+applet Undo window. The focused storage test proves that Undo replaces a partial
+group with the exact relationship and applet snapshot.
 
 Each slice requires a failing regression first, pure-core ASan and UBSan tests
 where a value model can carry the invariant, nested-KWin state and render
@@ -305,3 +394,21 @@ merge.
 - Whether partial dock-to-dock corner avoidance should remain under Wayland or
   be replaced by the compositor's edge-wide work-area contract. The current
   split cannot remain implicit.
+
+## Current release severity
+
+- **Release blocker:** missing same-edge stack order, cumulative inset,
+  reservation, and exact activation-region ownership. Supported layouts can
+  overlap or reserve space nondeterministically.
+- **Release blocker:** Start and End alignment can leave the rendered rectangle
+  outside its selected output because alignment bypasses placement
+  normalization.
+- **Beta blocker:** partial-footprint and layer-shell reservation disagreement
+  can resize a perpendicular dock after a peer alignment change. The affected
+  AutoSize instance is local, but its input geometry is not yet authoritative.
+- **Known issue:** linked members have no Detach action or relationship-aware
+  root-removal choice dialog. Current root-removes-group behavior is explicit
+  and persistence-safe.
+- **Cosmetic:** legacy `ClonedView`, `isCloned`, and `isClonedFrom` names remain
+  in internal and persisted compatibility APIs. User-facing actions use
+  Duplicate Dock and Create Linked Dock… consistently.

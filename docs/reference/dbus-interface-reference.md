@@ -290,12 +290,14 @@ call addApplet us 1 "org.kde.plasma.marginsseparator"  # add an installed plasmo
                                        # no view or the plugin id is not installed. Readback:
                                        # viewAppletsData / viewAppletsOrder grow by one
 call removeApplet uu 1 42               # remove applet instance 42 from view 1 - the coarse
-                                       # "Remove this Widget". UNDO WINDOW (same as removeView):
-                                       # the applet lingers with inScheduledDestruction=true until
-                                       # the notification closes or ~60s; a restart inside the
-                                       # window resurrects it. Refused loudly with NO removal if the
-                                       # containment id has no view or the applet id names no applet.
-                                       # Readback: viewAppletsData's inScheduledDestruction flips
+                                       # "Remove this Widget". The addressed view routes linked
+                                       # content mutations through its relationship root. The root
+                                       # applet owns the one Plasma Undo transaction and reports
+                                       # inScheduledDestruction=true; member projections disappear
+                                       # immediately. Undo recreates member-local instances with fresh
+                                       # IDs and copied root configuration. Restart inside the window
+                                       # keeps every projection removed. Refused loudly with NO removal
+                                       # if either id is unknown
 call showWidgetExplorer u 1            # open view 1's widget explorer (the "Add Widgets..."
                                        # context menu action). Exists as the drag SOURCE for the
                                        # e2e DND driver: the explorer's AppletDelegate offers the
@@ -304,13 +306,18 @@ call showWidgetExplorer u 1            # open view 1's widget explorer (the "Add
                                        # its own; the window appears in the compositor dump
 call duplicateView u 1
 call createLinkedView uii 1 2 4       # containment, stable screen-pool id,
-                                       # Plasma edge enum; occupied edges are valid
+                                       # Plasma edge enum; occupied edges are valid. Creates one
+                                       # fresh direct-root member with linked applet content and
+                                       # member-local output, edge, alignment, visibility, appearance,
+                                       # geometry, removal, and edit presentation
 call setViewPlacement uiii 1 2 5 3    # containment, stable screen-pool id,
                                        # edge, alignment; start/end is normalized
                                        # for the target orientation
-call removeView u 1                    # UNDO WINDOW: containment survives until the
-                                       # notification closes or ~60s; restarting inside
-                                       # that window resurrects it (see live-verification skill)
+call removeView u 1                    # UNDO WINDOW: the runtime containment survives until the
+                                       # notification closes or ~60s, but its persistent subtree is
+                                       # tombstoned immediately. Undo restores the same containment id
+                                       # and complete pre-removal subtree; restart inside the window
+                                       # keeps it removed
 call moveViewToLayout us 1 "Other Layout"
 call exportViewTemplate u 1
 call switchToLayout s "My Layout"

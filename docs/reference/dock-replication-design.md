@@ -70,8 +70,13 @@ identities. The relationship itself is one explicit logical group:
 - each persisted linked member carries `isClonedFrom=<root containment id>`
   and a typed `linkPlacement` policy;
 - each runtime legacy `ClonedView` holds a guarded pointer to the original;
-- applet membership, order, and applet settings synchronize through explicit
-  connections;
+- every applet instance and configuration group remains containment-local;
+- the root is the single structural transaction coordinator for applet add,
+  drop, remove, reorder, and Undo, regardless of which member originated the
+  action;
+- applet membership, order, and settings synchronize as explicit projections
+  with stable root-to-member identity maps, never by equal local IDs or
+  positional coincidence;
 - output, edge, alignment, visibility, appearance, edit presentation, and
   runtime geometry remain local to an explicitly placed member;
 - derived members retain the legacy root-owned screen-group placement and edit
@@ -112,8 +117,10 @@ The target implementation must satisfy these rules:
    cancelable pending target.
 6. **Lifecycle.** An explicitly placed member owns its own Remove action and
    unregisters from the root. Removing the root removes its remaining members,
-   matching the existing relationship lifetime. A detach action and a
-   root-removal choice dialog remain future UX work.
+   matching the existing relationship lifetime. Runtime removal immediately
+   writes a persistence tombstone. Plasma Undo restores the same containment ID
+   and its complete pre-removal subtree from a transaction snapshot. A detach
+   action and a root-removal choice dialog remain future UX work.
 7. **Migration.** Legacy `ClonedView` and `isClonedFrom` records load as linked
    relationships without changing behavior. Any schema migration must be
    explicit, reversible at the file boundary, and covered by real persisted
@@ -141,13 +148,23 @@ The target implementation must satisfy these rules:
       explicit placement from screen-group-derived placement
       (`6a9183fc6`, `fe1230670`, 2026-07-22).
 - [x] Persist and validate the explicit placement policy while retaining the
-      legacy default for existing layouts (`6a9183fc6`, `ea8e60dce`,
+      legacy default for existing layouts (`6a9183fc6`, `c53887f9b`,
       2026-07-22).
 - [x] Synchronize applet creation without feedback and keep every applet
-      instance identity disjoint (`dcd95bb42`, 2026-07-22).
+      instance identity disjoint (`148da3e1b`, 2026-07-22).
+- [x] Route add, drop, remove, reorder, configuration, and Undo through the
+      direct root from every member. Member projections retain separate applet
+      identities; Undo may allocate a fresh member-local ID while copying the
+      root configuration (`96d7abe61`, `b93fa2cde`, `cda3b564c`, 2026-07-22).
+- [x] Validate the complete persisted direct-root graph before runtime
+      construction and refuse missing targets, chains, cycles, duplicate IDs,
+      and invalid placement policy (`be4918abd`, 2026-07-22).
+- [x] Persist removal tombstones before restart and restore Plasma Undo from an
+      exact pre-removal snapshot in single-layout mode (`f1a76d7a4`,
+      `e781b4d0b`, `6cdd589a8`, `20dfb4fc4`, 2026-07-22).
 - [x] Cover exact creation, occupied-edge coexistence, local edit and placement,
       sizing isolation, removal, deterministic operation replay, and restart
-      (`39fb979bc`, 2026-07-22).
+      (`05bcb00c5`, `43918705d`, `dacb06140`, 2026-07-22).
 - [ ] Add detach and relationship-aware root-removal choices.
 - [ ] Retire legacy clone terminology from internal APIs in a dedicated
       migration after persisted compatibility no longer depends on it.
