@@ -1,4 +1,4 @@
-100
+104
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -23,6 +23,7 @@ coretoolstest
 datatypestest
 dbusreportstest
 destroyedtypedemotiontest
+dockidentitycontracttest
 dropclassifiertest
 editmodehandleactiontest
 effectshandleraudittest
@@ -35,6 +36,7 @@ importerregressiontest
 indicatorfactoryremovaltest
 indicatormetadatatest
 indicatorsknsrctest
+ignoredwindowregistrytest
 inputmaskflushtest
 justifysplitterstest
 lastactivewindowtest
@@ -61,6 +63,7 @@ qmllintgate
 qmltooltiprules
 quitteardowncontractstest
 representationswitchtest
+retargetrequeststatetest
 rowentrytest
 sceneprobe_imagecompare
 schemesmodeltest
@@ -88,6 +91,7 @@ themeawareicontest
 tooltiptexttest
 universalsettingstest
 userconfiguringcontracttest
+viewactionpolicytest
 viewmodelstest
 visibilityrevealtest
 visibleindextest
