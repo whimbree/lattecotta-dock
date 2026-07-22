@@ -1722,6 +1722,12 @@ void Corona::duplicateView(const uint &containmentId)
         return;
     }
 
+    const auto role = view->isCloned() ? ViewActionPolicy::Role::Clone : ViewActionPolicy::Role::Original;
+    if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::Duplicate)) {
+        qWarning() << "corona: duplicateView refused for screen-group clone containment" << containmentId;
+        return;
+    }
+
     view->duplicateView();
 }
 
@@ -1730,6 +1736,12 @@ void Corona::exportViewTemplate(const uint &containmentId)
     auto view = m_layoutsManager->synchronizer()->viewForContainment((int)containmentId);
     if (!view) {
         qWarning() << "corona: exportViewTemplate requested for containment" << containmentId << "which has no view";
+        return;
+    }
+
+    const auto role = view->isCloned() ? ViewActionPolicy::Role::Clone : ViewActionPolicy::Role::Original;
+    if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::ExportTemplate)) {
+        qWarning() << "corona: exportViewTemplate refused for screen-group clone containment" << containmentId;
         return;
     }
 
@@ -1767,6 +1779,12 @@ void Corona::removeView(const uint &containmentId)
     auto view = m_layoutsManager->synchronizer()->viewForContainment((int)containmentId);
     if (!view) {
         qWarning() << "corona: removeView requested for containment" << containmentId << "which has no view";
+        return;
+    }
+
+    const auto role = view->isCloned() ? ViewActionPolicy::Role::Clone : ViewActionPolicy::Role::Original;
+    if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::Remove)) {
+        qWarning() << "corona: removeView refused for screen-group clone containment" << containmentId;
         return;
     }
 

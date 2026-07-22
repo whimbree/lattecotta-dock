@@ -64,12 +64,51 @@ private:
 
 private Q_SLOTS:
     void retargetIsLatestRequestOnlyAndEndsOldSessionFirst();
+    void cloneActionsGuardEveryProductionBoundary();
     void cloneEditRequestsResolveOneOriginalTarget();
     void cloneDestructionUnregistersMembership();
     void outputRetargetReplacesGeometryConnection();
     void ignoredWindowCleanupRetainsOtherOwners();
     void persistentMenuIdentitySurvivesRuntimeGap();
 };
+
+void DockIdentityContractTest::cloneActionsGuardEveryProductionBoundary()
+{
+    struct Boundary {
+        QString signature;
+        QString action;
+        QString effect;
+    };
+
+    const QString coronaSource = readFile(QStringLiteral("app/lattecorona.cpp"));
+    const QList<Boundary> coronaBoundaries{
+        {QStringLiteral("void Corona::duplicateView"), QStringLiteral("Action::Duplicate"), QStringLiteral("view->duplicateView();")},
+        {QStringLiteral("void Corona::exportViewTemplate"), QStringLiteral("Action::ExportTemplate"), QStringLiteral("view->exportTemplate();")},
+        {QStringLiteral("void Corona::moveViewToLayout"), QStringLiteral("Action::MoveToLayout"), QStringLiteral("view->positioner()->setNextLocation")},
+        {QStringLiteral("void Corona::removeView"), QStringLiteral("Action::Remove"), QStringLiteral("view->removeView();")},
+    };
+
+    for (const auto &boundary : coronaBoundaries) {
+        const QString body = normalized(functionBody(coronaSource, boundary.signature));
+        const int policy = body.indexOf(QStringLiteral("ViewActionPolicy::permits(role,ViewActionPolicy::") + boundary.action);
+        const int effect = body.indexOf(boundary.effect);
+        QVERIFY2(policy >= 0 && effect > policy, qPrintable(boundary.signature));
+    }
+
+    const QString viewSource = readFile(QStringLiteral("app/view/view.cpp"));
+    const QList<Boundary> viewBoundaries{
+        {QStringLiteral("void View::duplicateView"), QStringLiteral("Action::Duplicate"), QStringLiteral("newView(storedTmpViewFilepath);")},
+        {QStringLiteral("void View::exportTemplate"), QStringLiteral("Action::ExportTemplate"), QStringLiteral("exportDlg->show();")},
+        {QStringLiteral("void View::removeView"), QStringLiteral("Action::Remove"), QStringLiteral("removeAct->trigger();")},
+    };
+
+    for (const auto &boundary : viewBoundaries) {
+        const QString body = normalized(functionBody(viewSource, boundary.signature));
+        const int policy = body.indexOf(QStringLiteral("ViewActionPolicy::permits(role,ViewActionPolicy::") + boundary.action);
+        const int effect = body.indexOf(boundary.effect);
+        QVERIFY2(policy >= 0 && effect > policy, qPrintable(boundary.signature));
+    }
+}
 
 void DockIdentityContractTest::retargetIsLatestRequestOnlyAndEndsOldSessionFirst()
 {
