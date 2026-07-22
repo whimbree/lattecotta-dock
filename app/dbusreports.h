@@ -86,7 +86,7 @@ public:
             return 0;
         }
 
-        assertGuiThreadAffinity(object);
+        Q_ASSERT(hasRequiredThreadAffinity(object));
         auto existing = m_ids.find(object);
 
         if (existing != m_ids.end()) {
@@ -106,7 +106,7 @@ public:
         const QMetaObject::Connection retirement =
             QObject::connect(trackedObject, &QObject::destroyed, this,
                              [this, object, id]() {
-                                 Q_ASSERT(QThread::currentThread() == thread());
+                                 Q_ASSERT(hasRequiredThreadAffinity(this));
                                  auto entry = m_ids.find(object);
                                  if (entry != m_ids.end() && entry->id == id) {
                                      m_ids.erase(entry);
@@ -122,19 +122,32 @@ public:
         return id == 0 ? QString() : QStringLiteral("object-%1").arg(id);
     }
 
+    //! Internal diagnostics for tests. The count is deliberately not exposed
+    //! over D-Bus; it proves that destruction retires an entry immediately,
+    //! before an address is reused or another snapshot is requested.
+    [[nodiscard]] qsizetype trackedObjectCount() const
+    {
+        Q_ASSERT(hasRequiredThreadAffinity(this));
+        return m_ids.size();
+    }
+
+    //! Pure observation of the registry's internal GUI-thread precondition.
+    //! idFor() asserts this before any lookup or mutation.
+    [[nodiscard]] bool hasRequiredThreadAffinity(const QObject *object) const noexcept
+    {
+        const auto *const application = QCoreApplication::instance();
+        return application
+            && thread() == application->thread()
+            && QThread::currentThread() == thread()
+            && object
+            && object->thread() == thread();
+    }
+
 private:
     struct IdentityEntry {
         QPointer<QObject> object;
         quint64 id{0};
     };
-
-    void assertGuiThreadAffinity(const QObject *object) const
-    {
-        Q_ASSERT(QCoreApplication::instance());
-        Q_ASSERT(thread() == QCoreApplication::instance()->thread());
-        Q_ASSERT(QThread::currentThread() == thread());
-        Q_ASSERT(object->thread() == thread());
-    }
 
     quint64 m_nextId{1};
     QHash<const QObject *, IdentityEntry> m_ids;

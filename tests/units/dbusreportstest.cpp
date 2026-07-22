@@ -16,6 +16,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QTest>
+#include <QThread>
 #include <QVariantMap>
 
 // C++
@@ -51,6 +52,7 @@ private Q_SLOTS:
     void recordsSerializeAsCompactJsonArray();
     void configureAppletsModeRequiresLocalEditMode();
     void runtimeObjectIdentitiesAreOpaqueStableAndMonotonic();
+    void runtimeObjectIdentitiesRequireGuiThreadAffinity();
     void dockCollectionOrderingStabilizesViewAndControllerTokens();
     void dockRelationshipClassification_data();
     void dockRelationshipClassification();
@@ -451,6 +453,7 @@ void DbusReportsTest::configureAppletsModeRequiresLocalEditMode()
 void DbusReportsTest::runtimeObjectIdentitiesAreOpaqueStableAndMonotonic()
 {
     RuntimeObjectIdentityRegistry identities;
+    QCOMPARE(identities.trackedObjectCount(), 0);
     alignas(QObject) std::byte objectStorage[sizeof(QObject)];
     auto *const objectAddress = reinterpret_cast<QObject *>(objectStorage);
     auto *const first = std::construct_at(objectAddress);
@@ -461,20 +464,54 @@ void DbusReportsTest::runtimeObjectIdentitiesAreOpaqueStableAndMonotonic()
 
     QVERIFY(firstId > 0);
     QVERIFY(secondId > firstId);
+    QCOMPARE(identities.trackedObjectCount(), 2);
     QCOMPARE(identities.idFor(first), firstId);
     QCOMPARE(identities.tokenFor(first), QStringLiteral("object-%1").arg(firstId));
     QVERIFY(!identities.tokenFor(first).contains(QStringLiteral("0x")));
 
     void *const reusedAddress = first;
     std::destroy_at(first);
+    QCOMPARE(identities.trackedObjectCount(), 1);
     auto *const replacement = std::construct_at(objectAddress);
     QCOMPARE(static_cast<void *>(replacement), reusedAddress);
 
     const quint64 replacementId = identities.idFor(replacement);
     QVERIFY(replacementId > secondId);
     QVERIFY(replacementId != firstId);
+    QCOMPARE(identities.trackedObjectCount(), 2);
 
     std::destroy_at(replacement);
+    QCOMPARE(identities.trackedObjectCount(), 1);
+}
+
+void DbusReportsTest::runtimeObjectIdentitiesRequireGuiThreadAffinity()
+{
+    RuntimeObjectIdentityRegistry identities;
+    QObject mainThreadObject;
+    QVERIFY(identities.hasRequiredThreadAffinity(&mainThreadObject));
+
+    QThread worker;
+    QObject workerContext;
+    QVERIFY(workerContext.moveToThread(&worker));
+    worker.start();
+
+    QVERIFY(!identities.hasRequiredThreadAffinity(&workerContext));
+
+    bool workerCallAccepted = true;
+    bool moveBackSucceeded = false;
+    QThread *const mainThread = QCoreApplication::instance()->thread();
+    QVERIFY(QMetaObject::invokeMethod(
+        &workerContext,
+        [&]() {
+            workerCallAccepted = identities.hasRequiredThreadAffinity(&mainThreadObject);
+            moveBackSucceeded = workerContext.moveToThread(mainThread);
+        },
+        Qt::BlockingQueuedConnection));
+    QVERIFY(!workerCallAccepted);
+    QVERIFY(moveBackSucceeded);
+
+    worker.quit();
+    QVERIFY(worker.wait());
 }
 
 void DbusReportsTest::dockCollectionOrderingStabilizesViewAndControllerTokens()

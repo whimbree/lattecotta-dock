@@ -166,6 +166,22 @@ private:
                 "record.logicalDockId=view->isCloned()?"));
     }
 
+    static bool matchesRuntimeIdentityRegistryContract(const QString &body)
+    {
+        const QString code = normalizedCode(body);
+        return code.count(QStringLiteral("Q_ASSERT(hasRequiredThreadAffinity(object));")) == 1
+            && code.count(QStringLiteral("Q_ASSERT(hasRequiredThreadAffinity(this));")) == 2
+            && code.count(QStringLiteral("m_ids.erase(existing);")) == 1
+            && code.count(QStringLiteral("m_ids.erase(entry);")) == 1
+            && code.contains(QStringLiteral(
+                "QObject::connect(trackedObject,&QObject::destroyed,this,"))
+            && code.contains(QStringLiteral("},Qt::DirectConnection);Q_ASSERT(retirement);"))
+            && code.contains(QStringLiteral("returnm_ids.size();"))
+            && code.contains(QStringLiteral(
+                "returnapplication&&thread()==application->thread()"
+                "&&QThread::currentThread()==thread()&&object&&object->thread()==thread();"));
+    }
+
     static bool matchesMiddleClickCollectorBridge(const QString &body)
     {
         const QString code = normalizedCode(body);
@@ -301,6 +317,8 @@ private Q_SLOTS:
     void viewsDataConfigureMode_sourceGuardRejectsGlobalLeak();
     void dockSystemCollection_keepsPureRouting();
     void dockSystemCollection_sourceGuardsRejectControlledMutations();
+    void dockSystemIdentityRegistry_keepsLifetimeAndAffinityContract();
+    void dockSystemIdentityRegistry_sourceGuardsRejectControlledMutations();
     void middleClickDispatch_keepsProductionRecordingContract();
     void middleClickDispatch_keepsContainmentLifecycleScope();
     void middleClickDispatch_sourceGuardsRejectControlledMutations();
@@ -481,6 +499,48 @@ void SourceGuardTest::dockSystemCollection_sourceGuardsRejectControlledMutations
                                QStringLiteral("legacyDockRelationshipGraph("));
     QVERIFY2(!matchesDockRelationshipClassifierRoute(directRelationship),
              "bypassing the relationship classifier must fail the collector guard");
+}
+
+void SourceGuardTest::dockSystemIdentityRegistry_keepsLifetimeAndAffinityContract()
+{
+    const QString source = readFile(QStringLiteral("app/dbusreports.h"));
+    const int registryStart = source.indexOf(QStringLiteral(
+        "class RuntimeObjectIdentityRegistry final"));
+    const int registryEnd = source.indexOf(QStringLiteral("//! One view's windows-tracker facts"),
+                                           registryStart);
+    QVERIFY2(registryStart != -1 && registryEnd > registryStart,
+             "RuntimeObjectIdentityRegistry class not found");
+    const QString registry = source.mid(registryStart, registryEnd - registryStart);
+    QVERIFY2(matchesRuntimeIdentityRegistryContract(registry),
+             "runtime identity retirement and GUI-affinity contract drifted");
+}
+
+void SourceGuardTest::dockSystemIdentityRegistry_sourceGuardsRejectControlledMutations()
+{
+    const QString source = readFile(QStringLiteral("app/dbusreports.h"));
+    const int registryStart = source.indexOf(QStringLiteral(
+        "class RuntimeObjectIdentityRegistry final"));
+    const int registryEnd = source.indexOf(QStringLiteral("//! One view's windows-tracker facts"),
+                                           registryStart);
+    QString registry = normalizedCode(source.mid(registryStart, registryEnd - registryStart));
+    QVERIFY(matchesRuntimeIdentityRegistryContract(registry));
+
+    QString queuedRetirement = registry;
+    queuedRetirement.replace(QStringLiteral("Qt::DirectConnection"),
+                             QStringLiteral("Qt::AutoConnection"));
+    QVERIFY2(!matchesRuntimeIdentityRegistryContract(queuedRetirement),
+             "queued retirement must fail the immediate-lifetime guard");
+
+    QString uncheckedCaller = registry;
+    uncheckedCaller.replace(QStringLiteral("QThread::currentThread()==thread()"),
+                            QStringLiteral("true"));
+    QVERIFY2(!matchesRuntimeIdentityRegistryContract(uncheckedCaller),
+             "removing caller-thread affinity must fail the registry guard");
+
+    QString unretiredGeneration = registry;
+    unretiredGeneration.replace(QStringLiteral("m_ids.erase(entry);"), QString());
+    QVERIFY2(!matchesRuntimeIdentityRegistryContract(unretiredGeneration),
+             "removing synchronous generation retirement must fail the registry guard");
 }
 
 void SourceGuardTest::middleClickDispatch_keepsProductionRecordingContract()
