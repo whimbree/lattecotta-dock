@@ -407,6 +407,7 @@ void Positioner::setScreenToFollow(QScreen *scr, bool updateScreenId)
 
     qDebug() << "setScreenToFollow() called for screen:" << scr->name() << " update:" << updateScreenId;
 
+    QObject::disconnect(m_screenGeometryConnection);
     m_screenToFollow = scr;
 
     if (updateScreenId) {
@@ -418,7 +419,7 @@ void Positioner::setScreenToFollow(QScreen *scr, bool updateScreenId)
 
     updateContainmentScreen();
 
-    connect(scr, &QScreen::geometryChanged, this, &Positioner::screenGeometryChanged);
+    m_screenGeometryConnection = connect(scr, &QScreen::geometryChanged, this, &Positioner::screenGeometryChanged);
     syncGeometry();
     m_view->updateAbsoluteGeometry(true);
     qDebug() << "setScreenToFollow() ended...";
