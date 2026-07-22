@@ -24,7 +24,30 @@ script_dir="${BASH_SOURCE[0]%/*}"
 repo="$(cd "$script_dir/.." && pwd -P)"
 gate="$repo/scripts/installed-package-gate.sh"
 source "$repo/scripts/lib-installed-package-gate.sh"
-work="$(mktemp -d /tmp/latte-installed-gate-selftest.XXXXXX)"
+
+# --root / fixtures use real host-absolute paths. Their ancestry is therefore
+# part of the production provenance contract, unlike an isolated package root.
+# Keep the synthetic live tree outside source/build-marked ancestors so those
+# fixtures test link semantics rather than an unrelated staging marker.
+fixture_parent="${LATTE_PACKAGE_GATE_SELFTEST_TMPDIR:-${XDG_RUNTIME_DIR:-/var/tmp}}"
+[[ "$fixture_parent" == /* && -d "$fixture_parent" && -w "$fixture_parent" ]] \
+    || { echo "installed-package-gate-selftest: FAIL: fixture parent must be an absolute writable directory: $fixture_parent" >&2; exit 1; }
+fixture_parent="$(realpath "$fixture_parent")" \
+    || { echo "installed-package-gate-selftest: FAIL: fixture parent cannot be resolved: $fixture_parent" >&2; exit 1; }
+fixture_ancestor="$fixture_parent"
+# The production live-root walk intentionally checks every real ancestor.
+while [[ "$fixture_ancestor" != / ]]; do
+    if [[ -e "$fixture_ancestor/.git" || -f "$fixture_ancestor/CMakeLists.txt" \
+            || -f "$fixture_ancestor/CMakeCache.txt" || -d "$fixture_ancestor/CMakeFiles" ]]; then
+        echo "installed-package-gate-selftest: FAIL: live-root fixture parent has a source/build-marked ancestor: $fixture_ancestor" >&2
+        echo "  Set LATTE_PACKAGE_GATE_SELFTEST_TMPDIR to a marker-free writable directory." >&2
+        exit 1
+    fi
+    fixture_ancestor="$(dirname "$fixture_ancestor")"
+done
+unset fixture_ancestor
+
+work="$(mktemp -d "$fixture_parent/latte-installed-gate-selftest.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
 write_appstream_metadata() {
