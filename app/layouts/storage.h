@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2020 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -80,6 +81,7 @@ public:
     void updateView(const Layout::GenericLayout *layout, const Data::View &viewData);
     void updateView(KConfigGroup viewGroup, const Data::View &viewData);
     QString storedView(const Layout::GenericLayout *layout, const int &containmentId); //returns temp filepath containing all view data
+    [[nodiscard]] bool restoreView(const QString &filepath, const QString &snapshotFile);
 
     void moveToLayoutFile(const QString &layoutName);
     QStringList storedLayoutsInMultipleFile();

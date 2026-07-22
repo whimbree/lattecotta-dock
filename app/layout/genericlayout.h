@@ -120,6 +120,7 @@ public:
 
     bool newView(const QString &templateName);
     Data::View newView(const Latte::Data::View &nextViewData);
+    [[nodiscard]] bool prepareViewRemoval(Plasma::Containment *containment);
     void removeView(const Latte::Data::View &viewData);
     void updateView(const Latte::Data::View &viewData);    
     QString storedView(const int &containmentId); //returns temp filepath containing all view data
@@ -176,6 +177,7 @@ protected:
     QHash<const Plasma::Containment *, Latte::View *> m_latteViews;
     QHash<const Plasma::Containment *, Latte::View *> m_waitingLatteViews;
     QHash<const Plasma::Containment *, QTimer *> m_removalCommitTimers;
+    QHash<const Plasma::Containment *, QString> m_singleLayoutRemovalSnapshots;
 
 private Q_SLOTS:
     void addContainment(Plasma::Containment *containment);

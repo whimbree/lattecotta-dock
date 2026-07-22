@@ -736,6 +736,10 @@ void View::removeView()
         QAction *removeAct = action("remove");
 
         if (removeAct) {
+            if (!m_layout->prepareViewRemoval(containment())) {
+                qCritical() << "View::removeView refused because the reversible removal snapshot failed";
+                return;
+            }
             removeAct->trigger();
         }
     }
