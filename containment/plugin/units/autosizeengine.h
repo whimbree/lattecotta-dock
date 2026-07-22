@@ -24,8 +24,10 @@ namespace Latte {
 //! The automatic icon-size search as a pure step function (EX-04 in
 //! docs/tracking/QML_EXTRACTION_PLAN.md), extracted from the containment ability
 //! AutoSize.qml and code/autosize.js. One call decides one pass: shrink
-//! when the applet row overflows the available length, grow when it fits
-//! with room to spare, otherwise keep the current size. The QML shell
+//! when the settled applet row overflows the available length, grow when the
+//! row plus one icon's incremental hover growth fits, otherwise keep the
+//! current size. Temporary hover zoom does not make a fitting resting row
+//! shrink. The QML shell
 //! keeps its timers, gates and property bindings and asks here for
 //! decisions only.
 //!
@@ -39,6 +41,30 @@ namespace AutoSizeEngine {
 
 //! the search never proposes anything below this floor
 inline constexpr int minIconSize = 16;
+
+//! Keep one logical pixel clear at each primary-axis end after accounting
+//! for incremental hover growth. This absorbs rounding at the strict grow
+//! boundary without double-counting the icon already present in the row.
+inline constexpr double zoomedGrowSlack = 2.0;
+static_assert(zoomedGrowSlack > 0.0,
+              "zoomed growth needs a positive boundary-rounding margin");
+
+constexpr double zoomedGrowLimit(double maxLength, double zoomFactor) noexcept
+{
+    return maxLength - (zoomFactor > 1.0 ? zoomedGrowSlack : 0.0);
+}
+static_assert(zoomedGrowLimit(1228.0, 1.8) == 1226.0,
+              "zoomed growth must reserve only the two-pixel end slack");
+
+//! The resting row already contains the base icon. Only the extra extent
+//! introduced by hover zoom belongs in the growth fit calculation.
+constexpr double incrementalZoomLengthAtIconSize(int iconSize, double zoomFactor) noexcept
+{
+    return static_cast<double>(iconSize) * (zoomFactor - 1.0);
+}
+static_assert(incrementalZoomLengthAtIconSize(50, 1.8) > 39.99
+              && incrementalZoomLengthAtIconSize(50, 1.8) < 40.01,
+              "hover occupancy must count only growth beyond the base icon");
 
 //! history ring bounds: past historyMaxSize entries the ring is cut back
 //! to the newest historyMinSize
@@ -266,13 +292,12 @@ struct AutoSizeInput {
     //! onMaxLengthChanged re-run; reaching the core with <= 0 is a shell
     //! bug and asserts.
     double maxLength;
-    //! one item's total length at currentIconSize (metrics.totals.length)
-    double itemLength;
     //! the size layoutLength was measured at (metrics.iconSize)
     int currentIconSize;
     //! the configured ceiling (metrics.maxIconSize)
     int maxIconSize;
-    //! parabolic zoom factor; the limits reserve room for a zoomed item
+    //! parabolic zoom factor; growth reserves only the icon's incremental
+    //! zoom extent plus the small end slack, not the full hovered item
     double zoomFactor;
     //! the search's own last applied size; absent means automatic sizing
     //! (the shell's -1). Growing is only allowed from a size this search
@@ -283,21 +308,22 @@ struct AutoSizeInput {
 //! One pass of the automatic icon-size search over a measured layout
 //! snapshot. Shrink when the row overflows the shrink limit (always
 //! applies and records its prediction); grow when the row sits under the
-//! deliberately tighter grow limit AND the current size is the search's
+//! slightly tighter grow limit AND the current size is the search's
 //! own applied size (applies only when a larger integer size fits and the
 //! history's endless-loop protector stays quiet); keep the current size
-//! otherwise. The band between the two limits is upstream's robustness
-//! margin: the grow limit reserves 1.2x the zoomed item so early
-//! calculations cannot oscillate between a shrink and the grow that
-//! re-arms it.
+//! otherwise. Shrinking uses the full settled-row budget, so a transient
+//! hover cannot make the persistent layout smaller. Growth accounts for the
+//! incremental zoom extent and leaves one logical pixel at each end. The
+//! prediction history remains the structural protection against a measured
+//! shrink/grow cycle.
 inline AutoSizeStep step(const AutoSizeInput &input, History &history)
 {
     Q_ASSERT(input.maxLength > 0); //! the QML shell's <= 0 contract keeps this out
     Q_ASSERT(input.currentIconSize >= 1); //! projection divides by it
     Q_ASSERT(input.maxIconSize >= 1); //! a non-positive ceiling is a caller bug
 
-    const double toShrinkLimit = input.maxLength - (input.zoomFactor * input.itemLength);
-    const double toGrowLimit = input.maxLength - (1.2 * input.zoomFactor * input.itemLength);
+    const double toShrinkLimit = input.maxLength;
+    const double toGrowLimit = zoomedGrowLimit(input.maxLength, input.zoomFactor);
 
     if (input.layoutLength > toShrinkLimit) {
         //! must shrink
@@ -314,9 +340,11 @@ inline AutoSizeStep step(const AutoSizeInput &input, History &history)
 
     if (input.layoutLength < toGrowLimit && atOwnAppliedSize) {
         //! must grow probably
+        const double zoomedLengthAtCurrentSize = input.layoutLength
+                + incrementalZoomLengthAtIconSize(input.currentIconSize, input.zoomFactor);
         const std::optional<GrowResult> grown = growToLargestFittingSize(input.maxIconSize,
                                                                          input.currentIconSize,
-                                                                         input.layoutLength,
+                                                                         zoomedLengthAtCurrentSize,
                                                                          toGrowLimit);
 
         if (!grown) {
@@ -326,7 +354,9 @@ inline AutoSizeStep step(const AutoSizeInput &input, History &history)
         //! predictions are recorded rounded; layout lengths are never
         //! negative here, where JS Math.round and qRound agree
         const int intLength = qRound(input.layoutLength);
-        const int intNextLength = qRound(grown->projectedLength);
+        const int intNextLength = qRound(projectLengthAtIconSize(grown->iconSize,
+                                                                 input.currentIconSize,
+                                                                 input.layoutLength));
 
         if (!history.producesEndlessLoop(intLength, intNextLength)) {
             history.addPrediction(intLength, intNextLength);
