@@ -58,6 +58,7 @@ private Q_SLOTS:
     void dockRelationshipClassification();
     void dockRelationshipGraphAcceptsOnlyDirectLiveOriginals();
     void dockSystemSnapshotSerializesTypedRuntimeState();
+    void dockSystemSnapshotPinsNullableWireStates();
     void dockSystemSnapshotCanonicalizesShuffledViewsAndCloneIds();
     void dockSystemSnapshotKeepsConfigureModeIsolatedToEditedView();
 
@@ -129,6 +130,16 @@ static QStringList sortedKeys(const QJsonObject &json)
     QStringList keys = json.keys();
     keys.sort();
     return keys;
+}
+
+static void requireJsonType(const QJsonObject &json,
+                            const QString &key,
+                            QJsonValue::Type expected)
+{
+    const auto actual = json.value(key).type();
+    QVERIFY2(actual == expected,
+             qPrintable(QStringLiteral("%1 has JSON type %2, expected %3")
+                            .arg(key).arg(static_cast<int>(actual)).arg(static_cast<int>(expected))));
 }
 
 static QVariantMap middleClickDispatchMap(const QString &rowIdentity,
@@ -742,6 +753,12 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(stacking.value(QStringLiteral("available")).toBool(), false);
     QVERIFY(!stacking.value(QStringLiteral("reason")).toString().isEmpty());
 
+    requireJsonType(root, QStringLiteral("schemaVersion"), QJsonValue::Double);
+    requireJsonType(root, QStringLiteral("snapshotSequence"), QJsonValue::String);
+    requireJsonType(root, QStringLiteral("globalConfigureAppletsMode"), QJsonValue::Bool);
+    requireJsonType(root, QStringLiteral("stacking"), QJsonValue::Object);
+    requireJsonType(root, QStringLiteral("views"), QJsonValue::Array);
+
     const QJsonObject view = root.value(QStringLiteral("views")).toArray().at(0).toObject();
     QCOMPARE(sortedKeys(view), (QStringList{
         QStringLiteral("absoluteGeometry"), QStringLiteral("alignment"),
@@ -792,6 +809,76 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("layoutController"), QStringLiteral("view")}));
     QCOMPARE(objects.value(QStringLiteral("layoutController")).toString(),
              QStringLiteral("object-23"));
+
+    const QStringList stringFields{
+        QStringLiteral("runtimeViewId"), QStringLiteral("relationship"),
+        QStringLiteral("screensGroup"), QStringLiteral("layout"), QStringLiteral("screen"),
+        QStringLiteral("type"), QStringLiteral("edge"), QStringLiteral("orientation"),
+        QStringLiteral("alignment"), QStringLiteral("visibilityMode")};
+    const QStringList numberFields{
+        QStringLiteral("persistentDockId"), QStringLiteral("logicalDockId"),
+        QStringLiteral("originalDockId"), QStringLiteral("screenId"),
+        QStringLiteral("maximumLengthRatio"), QStringLiteral("offsetRatio"),
+        QStringLiteral("configuredIconSize"), QStringLiteral("effectiveIconSize"),
+        QStringLiteral("availablePrimaryLength"), QStringLiteral("normalThickness"),
+        QStringLiteral("maximumNormalThickness"), QStringLiteral("strutsThickness")};
+    const QStringList booleanFields{
+        QStringLiteral("onPrimary"), QStringLiteral("isHidden"), QStringLiteral("inStartup"),
+        QStringLiteral("isOffScreen"), QStringLiteral("inRelocationAnimation"),
+        QStringLiteral("inDelete"), QStringLiteral("inReadyState"), QStringLiteral("editMode"),
+        QStringLiteral("effectiveConfigureAppletsMode"), QStringLiteral("settingsWindowShown")};
+    const QStringList arrayFields{
+        QStringLiteral("cloneDockIds"), QStringLiteral("windowGeometry"),
+        QStringLiteral("absoluteGeometry"), QStringLiteral("localGeometry"),
+        QStringLiteral("screenGeometry"), QStringLiteral("canvasGeometry"),
+        QStringLiteral("effectsRect"), QStringLiteral("appletsLayoutGeometry"),
+        QStringLiteral("maskRect"), QStringLiteral("inputMask"),
+        QStringLiteral("appliedInputMask"), QStringLiteral("publishedStruts")};
+    for (const auto &key : stringFields) {
+        requireJsonType(view, key, QJsonValue::String);
+    }
+    for (const auto &key : numberFields) {
+        requireJsonType(view, key, QJsonValue::Double);
+    }
+    for (const auto &key : booleanFields) {
+        requireJsonType(view, key, QJsonValue::Bool);
+    }
+    for (const auto &key : arrayFields) {
+        requireJsonType(view, key, QJsonValue::Array);
+    }
+    requireJsonType(view, QStringLiteral("objects"), QJsonValue::Object);
+    for (const auto &key : objects.keys()) {
+        requireJsonType(objects, key, QJsonValue::String);
+    }
+}
+
+void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
+{
+    DockSystemViewRecord record;
+    record.runtimeViewId = 1;
+    record.persistentDockId = 7;
+    record.logicalDockId = 7;
+    record.relationship = DockRelationship::Single;
+    record.screensGroup = Types::SingleScreenGroup;
+
+    DockSystemSnapshot snapshot;
+    snapshot.snapshotSequence = 1;
+    snapshot.views = {record};
+
+    const QJsonObject view = QJsonDocument::fromJson(
+        serializeDockSystemSnapshot(snapshot).toUtf8())
+                                 .object().value(QStringLiteral("views")).toArray().at(0).toObject();
+    requireJsonType(view, QStringLiteral("originalDockId"), QJsonValue::Null);
+    requireJsonType(view, QStringLiteral("configuredIconSize"), QJsonValue::Null);
+    requireJsonType(view, QStringLiteral("effectiveIconSize"), QJsonValue::Null);
+    requireJsonType(view, QStringLiteral("availablePrimaryLength"), QJsonValue::Null);
+    requireJsonType(view, QStringLiteral("screensGroup"), QJsonValue::String);
+    QCOMPARE(view.value(QStringLiteral("screensGroup")).toString(), QStringLiteral("single"));
+
+    const QJsonObject objects = view.value(QStringLiteral("objects")).toObject();
+    for (const auto &key : objects.keys()) {
+        requireJsonType(objects, key, QJsonValue::Null);
+    }
 }
 
 void DbusReportsTest::dockSystemSnapshotCanonicalizesShuffledViewsAndCloneIds()
