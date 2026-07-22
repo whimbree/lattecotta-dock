@@ -62,7 +62,9 @@ Duplicate Dock creates one independent snapshot from the live dock or layouts
 dialog, including when the source is linked. Create Linked Dock… adds a
 synchronized member on a selected output and edge while keeping placement,
 visibility, appearance, removal, and edit presentation local to that member.
-Legacy On All Screens members retain their derived-output behavior.
+Legacy On All Screens members retain their derived-output behavior. A linked
+source stays protected from removal until its explicit members are removed, so
+one-containment Undo cannot leave a partial relationship.
 
 The stabilization initiative is complete: the feel-critical QML math
 (parabolic zoom, previews, launcher ordering, drag classification,

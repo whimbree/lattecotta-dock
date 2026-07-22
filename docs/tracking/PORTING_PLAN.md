@@ -4195,15 +4195,34 @@ prerequisites in the phases above are done.
       per-view sizing authority, object tokens, placement generations, and
       geometry settlement. Exact and seeded nested recipes cover separated
       portrait topology, same-edge creation, sizing isolation, edit ownership,
-      applet fanout, removal, replacement, convergence, and reload. Detach and
-      relationship-aware root-removal choices remain a separate continuation
-      item in `docs/reference/dock-replication-design.md`.
+      applet fanout, removal, replacement, convergence, and reload. Root removal
+      is refused while explicit members remain because no group-wide Plasma
+      Undo transaction exists; derived All Screens removal remains available.
+      Detach and relationship-aware root-removal choices remain a separate
+      continuation item in `docs/reference/dock-replication-design.md`.
       Commits: 6a9183fc6, fe1230670, ea7a77f0e, 9ba2429e1,
       5a97d18f9, dafb6d0c7, 148da3e1b, c53887f9b, 9c5620d99,
       f1a76d7a4, e781b4d0b, 05bcb00c5, b7795aa6d, df1fe812f,
       43705d032, 96d7abe61, b93fa2cde, be4918abd, 6cdd589a8,
       43918705d, cda3b564c, 20dfb4fc4, dacb06140, 46051f280,
-      94283dfb4
+      94283dfb4, db8f830f2, 37e6713a9, 31311e158
+- [x] Mitigate D111 (linked-root removal was not one reversible transaction).
+      Refuse removal at live-view, layout-storage, and settings-model boundaries
+      while explicit members remain. Keep legacy derived fanout removable and
+      explain the limitation in every visible removal surface. The nested
+      notification recipe proves refusal mutates no live, persisted, or Undo
+      state. A group-wide root-removal transaction remains open continuation
+      work.
+      Commits: 31311e158
+- [x] Fix D112 (startup accepted malformed dock identity roles). Require
+      canonical positive decimal containment IDs and single-output ownership
+      for every explicit linked member. Cover both the value layer and real
+      KConfig fixtures.
+      Commits: 37e6713a9
+- [x] Fix D113 (hidden applet remove actions resurfaced in the wrapper). Copy
+      the source QAction visibility into the relationship-aware removal action
+      before menu insertion.
+      Commits: db8f830f2
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

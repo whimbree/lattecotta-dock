@@ -116,11 +116,15 @@ The target implementation must satisfy these rules:
    The shared edit chrome still has exactly one effective owner and one
    cancelable pending target.
 6. **Lifecycle.** An explicitly placed member owns its own Remove action and
-   unregisters from the root. Removing the root removes its remaining members,
-   matching the existing relationship lifetime. Runtime removal immediately
-   writes a persistence tombstone. Plasma Undo restores the same containment ID
-   and its complete pre-removal subtree from a transaction snapshot. A detach
-   action and a root-removal choice dialog remain future UX work.
+   unregisters from the root. Runtime removal immediately writes a persistence
+   tombstone. Plasma Undo restores the same containment ID and its complete
+   pre-removal subtree from a transaction snapshot. Root removal is temporarily
+   refused while persistent explicit members remain because Plasma provides one
+   containment transaction and cannot atomically restore the complete
+   relationship. The settings and context-menu surfaces explain that linked
+   members must be removed first. Derived All Screens members do not trigger
+   this gate. A group-wide transaction, detach action, and root-removal choice
+   dialog remain future lifecycle work.
 7. **Migration.** Legacy `ClonedView` and `isClonedFrom` records load as linked
    relationships without changing behavior. Any schema migration must be
    explicit, reversible at the file boundary, and covered by real persisted
@@ -158,13 +162,18 @@ The target implementation must satisfy these rules:
       root configuration (`96d7abe61`, `b93fa2cde`, `cda3b564c`, 2026-07-22).
 - [x] Validate the complete persisted direct-root graph before runtime
       construction and refuse missing targets, chains, cycles, duplicate IDs,
-      and invalid placement policy (`be4918abd`, 2026-07-22).
+      noncanonical containment IDs, and invalid placement roles (`be4918abd`,
+      `37e6713a9`, 2026-07-22).
 - [x] Persist removal tombstones before restart and restore Plasma Undo from an
       exact pre-removal snapshot in single-layout mode (`f1a76d7a4`,
       `e781b4d0b`, `6cdd589a8`, `20dfb4fc4`, 2026-07-22).
 - [x] Cover exact creation, occupied-edge coexistence, local edit and placement,
       sizing isolation, removal, deterministic operation replay, and restart
       (`05bcb00c5`, `43918705d`, `dacb06140`, 2026-07-22).
+- [x] Refuse linked-root removal at every runtime and persistence boundary until
+      a group-wide reversible transaction exists. Keep derived All Screens
+      removal available and prove refusal changes no runtime, persisted, or
+      notification state (`31311e158`, 2026-07-22).
 - [ ] Add detach and relationship-aware root-removal choices.
 - [ ] Retire legacy clone terminology from internal APIs in a dedicated
       migration after persisted compatibility no longer depends on it.

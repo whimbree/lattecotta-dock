@@ -1049,6 +1049,59 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   passes at 5,831 curated warnings, one fewer than the full-stage baseline
   before the correction.
 
+### D111 - Linked-root removal was not one reversible transaction
+- STATUS: MITIGATED on `feat/create-linked-dock` (`31311e158`). Persistent
+  corruption is refused. A group-wide removal transaction remains open.
+- SEVERITY: KNOWN ISSUE for the first linked-dock release. RELEASE BLOCKER for
+  enabling root removal while explicit members remain.
+- FOUND: 2026-07-22, final independent review of Create Linked Dock.
+- SYMPTOM: removing a relationship root eventually cascaded through
+  `OriginalView::cleanClones()`, but each persistent member entered a separate
+  containment removal. Plasma Undo owned only the initiating root transaction,
+  so a partial replay could restore a root or member without its relationship.
+- ROOT: root and explicit members are separate persistent containments, while
+  the legacy teardown assumed derived replicas with no independent persistence
+  lifetime. No group transaction snapshot or notification owner existed.
+- MITIGATION: one ViewsTable predicate identifies only `ExplicitTarget`
+  members. The live view, active and inactive layout removal, layouts dialog,
+  settings button, and context menu all refuse root removal until those members
+  are removed individually. Derived All Screens members remain removable with
+  their root. The disabled surfaces explain the required order.
+- EVIDENCE: the identity contract pins every refusal before containment
+  destruction. The real-notification nested recipe attempts root removal and
+  observes the same two live views, direct-root graph, persisted member record,
+  and notification delivery count.
+- NEXT: implement one relationship snapshot, tombstone, notification owner,
+  and Undo restore covering the root and every persistent explicit member.
+
+### D112 - Startup accepted malformed dock identity roles
+- STATUS: FIXED on `feat/create-linked-dock` (`37e6713a9`).
+- FOUND: 2026-07-22, final independent review of Create Linked Dock.
+- SYMPTOM: an alphabetic or zero containment identity could pass full-graph
+  validation, and an explicitly placed linked member could also claim a
+  multi-output screen group.
+- ROOT: relationship validation compared opaque ID strings for duplication and
+  graph edges without checking the containment ID domain. Placement validation
+  checked enum ranges but not the incompatible combination of `ExplicitTarget`
+  with a shared screen group.
+- FIX: require canonical positive decimal containment IDs and
+  `SingleScreenGroup` for every explicit linked member before runtime view
+  construction.
+- EVIDENCE: value-layer cases and real KConfig fixtures reject alphabetic,
+  zero, leading-zero, and explicit multi-output records. The focused data and
+  storage tests pass.
+
+### D113 - Hidden applet remove actions resurfaced in the wrapper
+- STATUS: FIXED on `feat/create-linked-dock` (`db8f830f2`).
+- FOUND: 2026-07-22, final independent review of Create Linked Dock.
+- SYMPTOM: an applet that hid its internal Remove action could receive a visible
+  relationship-aware Remove entry in Latte's context menu.
+- ROOT: the wrapper copied text, icon, and enabled state, but a new QAction
+  defaults to visible and the source visibility was omitted.
+- FIX: copy visibility before inserting the wrapper into the menu.
+- EVIDENCE: the identity contract requires the exact visibility transfer and
+  passes with the focused context-menu source checks.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.

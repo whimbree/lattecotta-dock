@@ -97,10 +97,25 @@ gate then exited 0 at exact head
 ASan/UBSan recipes, and the complete output-matrix fixture passed. This
 documentation-only tail changes no validated source or test content.
 
+The final cold rereview found three additional boundary defects. D111
+(linked-root removal was not one reversible transaction) exposed a mismatch
+between one Plasma containment Undo and `OriginalView` cascading separate
+persistent member removals. Commit `31311e158` refuses only roots with explicit
+persistent members at the view, layout, layouts-dialog, settings-button, and
+context-menu boundaries. The nested notification recipe proves the refusal
+changes no live view, persistence record, or notification count. A group-wide
+relationship transaction remains open; ordinary derived All Screens removal is
+unchanged. D112 (startup accepted malformed dock identity roles) is fixed by
+`37e6713a9`, which rejects noncanonical containment IDs and explicit members
+claiming shared screen groups through value-layer and KConfig fixtures. D113
+(hidden applet remove actions resurfaced in the wrapper) is fixed by `db8f830f2`,
+which preserves the source action's visibility.
+
 Same-edge physical stack order, accumulated offsets, reservation, and activation
 regions remain the next separate slice. Create Linked deliberately accepts an
-occupied edge and does not use free-edge rejection. Detach and relationship-aware
-root-removal choices also remain continuation UX work.
+occupied edge and does not use free-edge rejection. Detach and a group-wide
+relationship removal transaction also remain continuation lifecycle work;
+linked roots stay protected until their explicit members are removed.
 
 ## 2026-07-22: PR #110 observability merged
 
