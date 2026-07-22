@@ -42,6 +42,7 @@
 #include "view/originalview.h"
 #include "view/positioner.h"
 #include "view/view.h"
+#include "view/viewactionpolicy.h"
 #include "view/visibilitymanager.h"
 #include "view/settings/primaryconfigview.h"
 #include "view/settings/viewsettingsfactory.h"
@@ -1651,23 +1652,40 @@ void Corona::showWidgetExplorer(const uint &containmentId)
 void Corona::duplicateView(const uint &containmentId)
 {
     auto view = m_layoutsManager->synchronizer()->viewForContainment((int)containmentId);
-    if (view) {
-        view->duplicateView();
+    if (!view) {
+        qWarning() << "corona: duplicateView requested for containment" << containmentId << "which has no view";
+        return;
     }
+
+    view->duplicateView();
 }
 
 void Corona::exportViewTemplate(const uint &containmentId)
 {
     auto view = m_layoutsManager->synchronizer()->viewForContainment((int)containmentId);
-    if (view) {
-        view->exportTemplate();
+    if (!view) {
+        qWarning() << "corona: exportViewTemplate requested for containment" << containmentId << "which has no view";
+        return;
     }
+
+    view->exportTemplate();
 }
 
 void Corona::moveViewToLayout(const uint &containmentId, const QString &layoutName)
 {
     auto view = m_layoutsManager->synchronizer()->viewForContainment((int)containmentId);
-    if (view && !layoutName.isEmpty() && view->layout()->name() != layoutName) {
+    if (!view) {
+        qWarning() << "corona: moveViewToLayout requested for containment" << containmentId << "which has no view";
+        return;
+    }
+
+    const auto role = view->isCloned() ? ViewActionPolicy::Role::Clone : ViewActionPolicy::Role::Original;
+    if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::MoveToLayout)) {
+        qWarning() << "corona: moveViewToLayout refused for screen-group clone containment" << containmentId;
+        return;
+    }
+
+    if (!layoutName.isEmpty() && view->layout()->name() != layoutName) {
         Latte::Types::ScreensGroup screensgroup{Latte::Types::SingleScreenGroup};
 
         if (view->isOriginal()) {
@@ -1682,9 +1700,12 @@ void Corona::moveViewToLayout(const uint &containmentId, const QString &layoutNa
 void Corona::removeView(const uint &containmentId)
 {
     auto view = m_layoutsManager->synchronizer()->viewForContainment((int)containmentId);
-    if (view) {
-        view->removeView();
+    if (!view) {
+        qWarning() << "corona: removeView requested for containment" << containmentId << "which has no view";
+        return;
     }
+
+    view->removeView();
 }
 
 void Corona::setBackgroundFromBroadcast(QString activity, QString screenName, QString filename)

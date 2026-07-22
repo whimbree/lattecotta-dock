@@ -104,6 +104,10 @@ target_link_libraries(positionergeometrytest
 # Header-only, QRect-only; Qt6::Test brings QtCore.
 latte_add_unit_test(inputmaskflushtest)
 
+# Independent-dock action policy: screen-group clones cannot be duplicated,
+# exported, moved, or removed outside the original's lifecycle.
+latte_add_unit_test(viewactionpolicytest)
+
 # EX-23 WindowTrackingPredicates + ExtraViewHints: two header-only cores,
 # one spec. The predicates test needs windowinfowrap's types (Qt Gui);
 # the hints test needs the Plasma location enum.

@@ -12,6 +12,7 @@
 #include "effects.h"
 #include "positioner.h"
 #include "visibilitymanager.h"
+#include "viewactionpolicy.h"
 #include "settings/primaryconfigview.h"
 #include "settings/secondaryconfigview.h"
 #include "settings/viewsettingsfactory.h"
@@ -589,12 +590,24 @@ void View::moveToScreen(QScreen *nextScreen)
 
 void View::duplicateView()
 {
+    const auto role = isCloned() ? ViewActionPolicy::Role::Clone : ViewActionPolicy::Role::Original;
+    if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::Duplicate)) {
+        qWarning() << "View::duplicateView refused for screen-group clone";
+        return;
+    }
+
     QString storedTmpViewFilepath = m_layout->storedView(containment()->id());
     newView(storedTmpViewFilepath);
 }
 
 void View::exportTemplate()
 {
+    const auto role = isCloned() ? ViewActionPolicy::Role::Clone : ViewActionPolicy::Role::Original;
+    if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::ExportTemplate)) {
+        qWarning() << "View::exportTemplate refused for screen-group clone";
+        return;
+    }
+
     Latte::Settings::Dialog::ExportTemplateDialog *exportDlg = new Latte::Settings::Dialog::ExportTemplateDialog(this);
     exportDlg->show();
 }
@@ -627,6 +640,12 @@ void View::newView(const QString &templateFile)
 
 void View::removeView()
 {
+    const auto role = isCloned() ? ViewActionPolicy::Role::Clone : ViewActionPolicy::Role::Original;
+    if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::Remove)) {
+        qWarning() << "View::removeView refused for screen-group clone";
+        return;
+    }
+
     if (m_layout) {
         QAction *removeAct = action("remove");
 
