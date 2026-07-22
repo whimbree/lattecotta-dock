@@ -65,6 +65,7 @@ private:
 private Q_SLOTS:
     void retargetIsLatestRequestOnlyAndEndsOldSessionFirst();
     void cloneEditRequestsResolveOneOriginalTarget();
+    void cloneDestructionUnregistersMembership();
 };
 
 void DockIdentityContractTest::retargetIsLatestRequestOnlyAndEndsOldSessionFirst()
@@ -109,6 +110,23 @@ void DockIdentityContractTest::cloneEditRequestsResolveOneOriginalTarget()
     QVERIFY(editMode.contains(QStringLiteral("configView->parentView()!=configurationTarget")));
     QVERIFY(configureApplets.contains(QStringLiteral("view->configurationTargetView()")));
     QVERIFY(configureApplets.contains(QStringLiteral("!configurationTarget->inEditMode()")));
+}
+
+void DockIdentityContractTest::cloneDestructionUnregistersMembership()
+{
+    const QString originalHeader = normalized(readFile(QStringLiteral("app/view/originalview.h")));
+    QVERIFY(originalHeader.contains(QStringLiteral("QList<QPointer<Latte::ClonedView>>m_clones;")));
+    QVERIFY(originalHeader.contains(QStringLiteral("voidforgetClone(Latte::ClonedView*view);")));
+
+    const QString cloneSource = readFile(QStringLiteral("app/view/clonedview.cpp"));
+    const QString destructor = normalized(functionBody(cloneSource, QStringLiteral("ClonedView::~ClonedView")));
+    QVERIFY(destructor.contains(QStringLiteral("m_originalView->forgetClone(this);")));
+
+    const QString originalSource = readFile(QStringLiteral("app/view/originalview.cpp"));
+    const QString removeClone = normalized(functionBody(originalSource, QStringLiteral("void OriginalView::removeClone")));
+    const int forget = removeClone.indexOf(QStringLiteral("forgetClone(view);"));
+    const int removeContainment = removeClone.indexOf(QStringLiteral("view->layout()->removeView(view->data());"));
+    QVERIFY(forget >= 0 && removeContainment > forget);
 }
 
 QTEST_GUILESS_MAIN(DockIdentityContractTest)

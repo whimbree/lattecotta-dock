@@ -28,6 +28,9 @@ ClonedView::ClonedView(Plasma::Corona *corona, Latte::OriginalView *originalView
 
 ClonedView::~ClonedView()
 {
+    if (m_originalView) {
+        m_originalView->forgetClone(this);
+    }
 }
 
 void ClonedView::initSync()

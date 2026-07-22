@@ -58,13 +58,16 @@ private Q_SLOTS:
 
 private:
     void createClone(int screenId);
+    void forgetClone(Latte::ClonedView *view);
     void removeClone(Latte::ClonedView *view);
 
 private:
     Latte::Types::ScreensGroup m_screensGroup{Latte::Types::SingleScreenGroup};
-    QList<Latte::ClonedView *> m_clones;
+    QList<QPointer<Latte::ClonedView>> m_clones;
 
     QList<int> m_waitingCreation;
+
+    friend class Latte::ClonedView;
 };
 
 }

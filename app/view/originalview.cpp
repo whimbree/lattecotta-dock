@@ -10,6 +10,9 @@
 #include "../screenpool.h"
 #include "../layouts/storage.h"
 
+// C++
+#include <algorithm>
+
 // KDE
 #include <KLocalizedString>
 
@@ -53,7 +56,9 @@ bool OriginalView::isCloned() const
 
 int OriginalView::clonesCount() const
 {
-    return m_clones.count();
+    return std::count_if(m_clones.cbegin(), m_clones.cend(), [](const auto &clone) {
+        return !clone.isNull();
+    });
 }
 
 int OriginalView::expectedScreenIdFromScreenGroup(const Latte::Types::ScreensGroup &nextScreensGroup) const
@@ -80,7 +85,9 @@ void OriginalView::setScreensGroup(const Latte::Types::ScreensGroup &group)
 
 void OriginalView::addClone(Latte::ClonedView *view)
 {
-    if (m_clones.contains(view)) {
+    if (!view || std::any_of(m_clones.cbegin(), m_clones.cend(), [view](const auto &clone) {
+        return clone.data() == view;
+    })) {
         return;
     }
 
@@ -88,20 +95,29 @@ void OriginalView::addClone(Latte::ClonedView *view)
     m_waitingCreation.removeAll(view->positioner()->currentScreenId());
 }
 
+void OriginalView::forgetClone(Latte::ClonedView *view)
+{
+    m_clones.removeIf([view](const auto &clone) {
+        return clone.isNull() || clone.data() == view;
+    });
+}
+
 void OriginalView::removeClone(Latte::ClonedView *view)
 {
-    if (!m_clones.contains(view)) {
+    if (!view || std::none_of(m_clones.cbegin(), m_clones.cend(), [view](const auto &clone) {
+        return clone.data() == view;
+    })) {
         return;
     }
 
-    int idx = m_clones.indexOf(view);
-    auto cloned = m_clones.takeAt(idx);
+    forgetClone(view);
 
-    if (!cloned->layout()) {
+    if (!view->layout()) {
+        qWarning() << "OriginalView: clone was unregistered without a layout to remove its containment";
         return;
     }
-    cloned->positioner()->slideOutDuringExit();
-    cloned->layout()->removeView(cloned->data());
+    view->positioner()->slideOutDuringExit();
+    view->layout()->removeView(view->data());
 }
 
 void OriginalView::createClone(int screenId)
@@ -144,7 +160,14 @@ void OriginalView::cleanClones()
     }
 
     while(!m_clones.isEmpty()) {
-        removeClone(m_clones[0]);
+        auto clone = m_clones.constFirst();
+        if (!clone) {
+            m_clones.removeFirst();
+            qWarning() << "OriginalView: pruned a destroyed clone from the membership list";
+            continue;
+        }
+
+        removeClone(clone.data());
     }
 }
 
@@ -160,7 +183,12 @@ void OriginalView::setNextLocationForClones(const QString layoutName, int edge, 
         return;
     }
 
-    for (const auto clone : m_clones) {
+    for (const auto &clone : m_clones) {
+        if (!clone) {
+            qWarning() << "OriginalView: skipped a destroyed clone while moving the clone set";
+            continue;
+        }
+
         clone->positioner()->setNextLocation(layoutName, Latte::Types::SingleScreenGroup, "", edge, alignment);
     }
 }
@@ -175,7 +203,12 @@ void OriginalView::addApplet(const QString &pluginId, const int &excludecloneid)
     extendedInterface()->addApplet(pluginId);
 
     // add applet in clones and exclude the one that probably produced this triggering
-    for(const auto clone: m_clones) {
+    for (const auto &clone : m_clones) {
+        if (!clone) {
+            qWarning() << "OriginalView: skipped a destroyed clone while adding an applet";
+            continue;
+        }
+
         if (clone->containment()->id() == excludecloneid) {
             // this way we make sure that an applet will not be double added
             continue;
@@ -195,7 +228,12 @@ void OriginalView::addApplet(QObject *mimedata, const int &x, const int &y, cons
     extendedInterface()->addApplet(mimedata, x, y);
 
     // add applet in clones and exclude the one that probably produced this triggering
-    for(const auto clone: m_clones) {
+    for (const auto &clone : m_clones) {
+        if (!clone) {
+            qWarning() << "OriginalView: skipped a destroyed clone while dropping an applet";
+            continue;
+        }
+
         if (clone->containment()->id() == excludecloneid) {
             // this way we make sure that an applet will not be double added
             continue;
@@ -227,7 +265,12 @@ void OriginalView::syncClonesToScreens()
 
     QList<Latte::ClonedView *> removable;
 
-    for (const auto clone : m_clones) {
+    for (const auto &clone : m_clones) {
+        if (!clone) {
+            qWarning() << "OriginalView: found a destroyed clone during screen synchronization";
+            continue;
+        }
+
         if (secondaryscreens.contains(clone->positioner()->currentScreenId())) {
             // do nothing valid clone
             secondaryscreens.removeAll(clone->positioner()->currentScreenId());
@@ -236,6 +279,8 @@ void OriginalView::syncClonesToScreens()
             removable << clone;
         }
     }
+
+    forgetClone(nullptr);
 
     for (const auto scrid : secondaryscreens) {
         if (removable.count() > 0) {
