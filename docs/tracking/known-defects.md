@@ -783,34 +783,48 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   files without adding the current 2026 modification copyright line.
 - FIX: retain all existing SPDX lines and add Bree Spektor to both files.
 ### D77 - Dock duplication retains clone lineage and edit ownership
-- STATUS: FIXED on `fix/dock-identity-isolation` (`8855bb8b9`, `50ea86092`,
-  `7e036a789`, `5fc6e786f`, `7b900efd2`, `88a3ec931`, `6c39171b8`; focused
-  caller contract `dbbbe842a`).
+- STATUS: FIXED on `fix/dock-identity-isolation` (`1732a9b9a`, `66d64541d`,
+  `5a3355190`, `7232332ef`, `9348674dd`, `7ba95549f`, `2cf2f6cb0`,
+  `34a94a935`, `2e6e1c3e6`, `7c95493de`; focused caller contract
+  `35beda6ba`; runtime recipes `61d07f23b`, `7c95493de`).
 - FOUND: 2026-07-21, dock duplication and edit-mode identity investigation.
-- SYMPTOM: duplicating a screen-group clone through a non-menu action produced
-  another clone instead of an independent dock. Rapid edit retargets could
-  leave an older containment configuring, clone edit exit could miss the
-  original session, and runtime recreation could temporarily expose
-  original-only context-menu actions on a persistent clone.
-- ROOT CAUSE: clone capabilities were presentation policy rather than runtime
-  policy, so public action boundaries still accepted clone `Data::View` with
-  its `isClonedFrom` ancestry. The shared edit chrome queued unversioned
-  retarget callbacks and entry and exit did not resolve one authoritative
-  target. Clone membership and several Wayland registrations also lacked
-  explicit lifetime ownership.
-- FIX: one role-and-action policy refuses duplicate, export, move, and remove
-  for clones while leaving originals fully capable. Edit retargeting is
-  cancelable and generation-checked, ends the old configuring session before
-  rebind, and resolves clone entry and exit to the same original. Clone
-  membership is destruction-safe. Exact Wayland title matching, owner-counted
-  ignored windows, replaceable output subscriptions, and persistent
-  containment identity close the related runtime ownership gaps.
+- SYMPTOM: Duplicate Dock on an ordinary All Screens source created another
+  linked multi-output ensemble instead of one independent dock. Duplicating a
+  linked replica through a non-menu action could retain its source, while the
+  menu hid the operation. Rapid edit retargets could leave an older containment
+  configuring, replica edit exit could miss the original session, and runtime
+  recreation could temporarily expose relation-owned context-menu actions on a
+  persistent replica.
+- ROOT CAUSE: the template-copy path also copied `screensGroup`, so an imported
+  All Screens original immediately created new persisted `isClonedFrom`
+  members and runtime `ClonedView` synchronization. A replica capture could
+  separately overlay its old `isClonedFrom` after Storage orphaned the unmapped
+  source. Relationship capabilities were presentation policy rather than one
+  runtime policy. The shared edit chrome queued unversioned retarget callbacks,
+  and entry and exit did not resolve one authoritative target. Replica
+  membership and several Wayland registrations also lacked explicit lifetime
+  ownership.
+- FIX: Duplicate Dock is a relation-breaking snapshot from either an original
+  or a linked replica. It clears `isClonedFrom`, normalizes `screensGroup` to
+  `SingleScreenGroup`, stays visible on replica menus, and creates one fresh
+  containment and applet identity set. Export, move, and remove remain owned by
+  the relationship original. Existing linked layouts remain linked. Edit
+  retargeting is cancelable and generation-checked, ends the old configuring
+  session before rebind, and resolves linked-member entry and exit to the same
+  original. Replica membership is destruction-safe. Exact Wayland title
+  matching, owner-counted ignored windows, replaceable output subscriptions,
+  and persistent containment identity close the related runtime ownership gaps.
 - EVIDENCE: sanitizer-backed `viewactionpolicytest`,
   `retargetrequeststatetest`, `windowtrackingpredicatestest`, and
   `ignoredwindowregistrytest` pass. `dockidentitycontracttest` pins the
-  production boundaries. `lattedock-core` and the containment-actions plugin
-  compile successfully. No live-desktop, nested-KWin, or full-gate result is
-  claimed for this focused branch.
+  production boundaries. `latte-dock` and the containment-actions plugin
+  compile successfully. Nested KWin canceled the B edit request in 178 ms and
+  kept both docks out through the old timeout. The dual-output acceptance made
+  All Screens original 1 and linked replica 12 each produce exactly one fresh
+  nonlinked dock (13 and 14), found no containment or applet ID overlap, kept
+  the original relation intact, propagated a visibility-mode change from the
+  original only to its linked replica, and preserved all four identities across
+  restart. The canonical full gate remains required before push.
 
 ### D83 - Removed duplicate containment survives the undo window in persistent layout state
 - STATUS: OPEN, CONFIRMED in the baseline nested vehicle.

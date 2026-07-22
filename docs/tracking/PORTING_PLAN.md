@@ -71,9 +71,10 @@ the full context; this list is the map, not the territory):
    long to appear at login) and the startup retry-exhaustion deadlock.
 3. Phase 8: dock visibility across screen lock/unlock (observed live:
    docks can fail to come back).
-4. Phase 8: multi-screen cloned-view applet-order sync (explicit sync
-   instead of racing writes; prerequisite for the Replicate Dock
-   continuation feature).
+4. Phase 8 continuation: Create Linked Dock… as the explicit synchronized
+   copy action, with persistent relationship identity, member-local placement,
+   and migration from legacy `ClonedView` / `isClonedFrom` records. Its applet
+   order and dual-monitor prerequisites are complete.
 5. Phase 7: edit-mode entry/exit detection research (the subsystem
    that took a reference fork 8+ attempts; ours works but the
    detection contract was never nailed down) plus the drag-reorder
@@ -1246,26 +1247,34 @@ PHASE OPENED 2026-07-11 (go given), starting from live crashes on a
 multi-view, multi-monitor setup.
 
 - [x] Fix D77 (dock duplication retains clone lineage and edit ownership).
-      Clone-only actions were hidden in one menu surface but remained callable
-      through `View`, Corona, and D-Bus boundaries; deferred settings retargets
-      could rebind out of order and leave the old containment configuring; and
-      clone destruction retained raw membership in the original. Runtime action
-      policy now refuses duplicate, export, move, and remove for clones while
-      preserving every action for originals, including an All Screens original.
-      Edit entry and exit resolve one original target, the old session ends
-      before rebind, and pending retargets are cancelable and generation-checked.
-      Clone membership uses `QPointer` and unregisters before teardown. The same
+      Duplicate Dock copied relationship state as well as configuration. An
+      ordinary All Screens source therefore created another persisted linked
+      ensemble, while a visible linked replica could restore its old
+      `isClonedFrom` after import or was refused by an action guard. Duplicate
+      Dock now works from either relationship role, clears `isClonedFrom`, and
+      normalizes `screensGroup` to `SingleScreenGroup` before import. It creates
+      exactly one independent containment with fresh applet IDs and stays
+      visible on replica menus. Export, move, and remove remain owned by the
+      original, and existing linked layouts remain linked. Deferred settings
+      retargets are cancelable and generation-checked; edit entry and exit
+      resolve one original target and end the old session before rebind. Replica
+      membership uses `QPointer` and unregisters before teardown. The same
       hardening makes Wayland title lookup exact, counts ignored-window owners,
-      replaces stale output geometry subscriptions, derives context-menu clone
-      role from the persistent containment during runtime recreation, and fails
-      closed on malformed menu identity. Focused sanitizer-backed pure-core
-      tests, the dock identity source contract, and production compiles cover
-      the slice. Live-desktop, nested-KWin, and full-gate claims are deliberately
-      absent from this focused branch. Placement normalization and same-edge
-      stacking remain separate unchecked work in
+      replaces stale output geometry subscriptions, derives context-menu role
+      from the persistent containment during runtime recreation, and fails
+      closed on malformed menu identity. Focused sanitizer-backed pure-core and
+      source-contract tests pass; production targets compile. Nested KWin drove
+      the early-exit retarget inside 178 ms. The dual-output acceptance
+      duplicated from All Screens original 1 and linked replica 12, observed
+      exactly one nonlinked dock per call with disjoint applet IDs, preserved
+      the existing relationship, propagated a visibility-mode change only
+      inside that relationship, and retained all identities after restart. The
+      canonical full gate remains required before push. Placement
+      normalization and same-edge stacking remain separate unchecked work in
       `docs/tracking/DOCK_IDENTITY_HARDENING.md`.
-      Commits: 21d24eedc, 8855bb8b9, 50ea86092, 7e036a789,
-      5fc6e786f, 7b900efd2, dbbbe842a, 88a3ec931, 6c39171b8
+      Commits: 144022798, 1732a9b9a, 66d64541d, 5a3355190,
+      7232332ef, 9348674dd, 35beda6ba, 7ba95549f, 2cf2f6cb0,
+      34a94a935, 2e6e1c3e6, 672ec73cd, 61d07f23b, 7c95493de
 
 - [ ] Fix D83 (removed duplicate containment survives the undo window in
       persistent layout state). Baseline nested evidence at `16eb58ea4` shows
@@ -4047,13 +4056,16 @@ prerequisites in the phases above are done.
       one variable, clean profile). File under Phase 8 launcher
       persistence follow-ups.
       Commits: none (finding, not yet isolated)
-- [ ] Replicate Dock: first-class live-mirrored views with user-chosen
-      placement, riding the existing ClonedView sync machinery. Full
-      design, settled decisions (keying, sync scope, editability,
-      lifecycle/detach) and prerequisite tracking:
-      docs/reference/dock-replication-design.md. Blocked on the Phase 8
-      cloned-view order-sync item and a live screens-group clone
-      verification
+- [ ] Create Linked Dock…: first-class synchronized copies with user-chosen
+      placement. The internal replica relationship can reuse understood parts
+      of the legacy `ClonedView` sync machinery, but every member needs fresh
+      persistent, containment, applet, runtime, output, placement, geometry,
+      and edit-registration identities. Full design, settled decisions
+      (relationship keying, sync scope, editability, lifecycle/detach, and
+      migration) and prerequisite tracking live in
+      `docs/reference/dock-replication-design.md`. The cloned-view order-sync
+      and live dual-monitor prerequisites are complete. The user-facing action
+      remains unimplemented.
       Commits:
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,

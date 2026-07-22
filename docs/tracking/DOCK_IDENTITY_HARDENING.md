@@ -1,14 +1,27 @@
 # Dock identity, placement, and replication hardening
 
-Status: D77 (dock duplication retains clone lineage and edit ownership) identity
-and lifecycle slice implemented; placement and stacking slices pending
-(2026-07-21)
+Status: D77 (dock duplication retains clone lineage and edit ownership) identity,
+lifecycle, and independent Duplicate Dock slice implemented; explicit linked-dock,
+placement, and stacking slices pending (2026-07-21)
 
 This record defines the ownership model used to investigate dock duplication,
 screen-group cloning, edit mode, placement, and same-edge stacking. It separates
 confirmed causes from hypotheses and records which repairs have landed.
 
-## Terms and identity diagram
+## User-facing terms and identity diagram
+
+The user-facing operations have three distinct jobs:
+
+- **New Dock** creates a dock from a selected template.
+- **Duplicate Dock** takes one snapshot of the visible source and creates one
+  independent dock. It does not retain a source pointer or a dock-level
+  synchronization relationship.
+- **Create Linked Dock…** is the planned action for a synchronized copy. It
+  is not implemented by D77.
+
+The internal design calls the synchronized relation a **replica relationship**.
+`ClonedView`, `isCloned`, and `isClonedFrom` are legacy compatibility and
+migration terms for that relation, not additional user-facing operations.
 
 ```text
 layout file
@@ -16,7 +29,7 @@ layout file
   +-- persistent containment 41 --------------------------+
   |     persistent dock id: 41                            |
   |     logical dock id: 41                               |
-  |     relationship: screen-group original               |
+  |     relationship: linked screen-group original        |
   |                                                       |
   |     runtime OriginalView #A, output DP-1               |
   |       owns Positioner, Effects, Visibility, QML layout|
@@ -25,13 +38,14 @@ layout file
   |       persistent dock id: 57                          |
   |       logical dock id: 41                             |
   |       clone source id: 41                             |
-  |       runtime ClonedView #B, output DP-2               |
+  |       runtime linked replica #B, output DP-2            |
+  |       legacy runtime type: ClonedView                   |
   |       owns its runtime managers and QML layout         |
   |                                                       |
   +-- persistent containment 63                            |
         persistent dock id: 63                            |
         logical dock id: 63                               |
-        relationship: independent duplicate              |
+        relationship: independent Duplicate Dock         |
         runtime OriginalView #C, output DP-1               |
         owns its runtime managers and QML layout           |
 
@@ -51,34 +65,50 @@ decision.
 
 | Entity | Unique or shared | Lifetime owner | Persistence key | Duplication | Output or orientation change | Edit mode | Cleanup |
 |---|---|---|---|---|---|---|---|
-| Logical dock | One independent containment, or one original plus its explicit screen-group clones | Original persistent containment | Original containment ID | Independent duplication creates a new logical dock | Identity stays stable | Selects the intended edit target | Ends when the original and its explicit clones are removed |
+| Logical dock | One independent containment, or one original plus its explicit linked replicas | Original persistent containment | Original containment ID | Duplicate Dock creates one new independent logical dock | Identity stays stable | Selects the intended edit target | Ends when the original and its explicit replicas are removed |
 | Persistent dock record | Unique per containment | Layout configuration | Containment ID | All containment and applet IDs are regenerated | Screen, edge, alignment, and length state update on the same record | Supplies menu and edit target identity | Removed with the containment configuration |
 | Containment | Unique per visible original or clone | Plasma Corona and layout | Containment ID | Must be newly imported with remapped IDs | Persists placement and QML configuration | Own `userConfiguring` is the per-view edit presentation state | Destroyed by layout removal; no runtime view may retain it |
 | Runtime dock view | Unique QObject and QWindow per active containment | `GenericLayout` containment-to-view map | Not persisted | Constructed fresh | Remaps or recreates its layer surface | Holds only a non-owning pointer to shared edit chrome | Disconnects, unregisters, and deletes all child managers |
-| Per-output view | A screen-group clone is one separate containment and runtime view | `OriginalView` owns clone membership; layout owns runtime registration | Clone containment ID plus `isClonedFrom` | Independent duplication must not create this relationship | Screen-group policy derives output placement; runtime geometry remains local | Clone edit requests intentionally resolve to the original | Clone must unregister from the original before destruction |
-| Clone relationship | Shared logical group, explicit and acyclic | Original persistent dock | Clone record's `isClonedFrom` | Copied only when duplicating a complete logical group, never a single independent dock | Source remains valid and placement policy is explicit | Menu wording and edit targeting use the same relation | Source removal destroys or detaches all clones without dangling members |
+| Per-output view | A linked screen-group replica is one separate containment and runtime view | `OriginalView` owns replica membership; layout owns runtime registration | Replica containment ID plus legacy `isClonedFrom` | Duplicate Dock clears this relationship | Screen-group policy derives output placement; runtime geometry remains local | Replica edit requests intentionally resolve to the original | Replica must unregister from the original before destruction |
+| Replica relationship | Shared logical group, explicit and acyclic | Original persistent dock | Replica record's legacy `isClonedFrom` | Created only by an explicit linked operation; Duplicate Dock never copies it | Source remains valid and placement policy is explicit | Menu wording and edit targeting use the same relation | Source removal destroys or detaches all replicas without dangling members |
 | Applet layout | Unique QML object and applet IDs per containment | Containment runtime | Applet groups under containment ID | Deep-copied and ID-remapped | Local geometry recalculates for that view | Its containment controls edit presentation | Destroyed with containment and view |
 | Geometry controller | Unique `Positioner` per runtime view | Runtime `View` QObject parent | Derived, not persisted | Constructed fresh | Consumes that view's output plus explicit peer-footprint solution | Edit thickness may change local placement | QObject parent destruction disconnects all registrations |
 | Applet sizing | Unique `AutoSize` and effective icon state per containment | Containment QML tree | Configured values only | Config copied; effective values recomputed | Consumes the same view's solved primary length | Recomputes only for local edit geometry | QML tree destruction |
 | Edit-mode controller | One reusable chrome ensemble, one current owner, one requested generation | `ViewSettingsFactory` under Corona | Not persisted | Never copied | Retarget is one cancelable generation | Exactly one effective owner; clone requests resolve explicitly | Cancels deferred work and clears the old containment before rebinding |
 | Stacking controller | Missing in the current tree | Required owner: layout or Corona placement domain | Required key: output, edge, stable rank | New duplicate gets a stable independent rank | Re-solves membership atomically | Routes activation without merging edit identity | Removes membership before view destruction |
-| Configuration object | Unique mutable map per containment; selected screen-clone values are synchronized | Containment | Containment configuration group | Deep-copied for independent duplication | Placement values must pass one normalization boundary | Menu and edit relationship are read from runtime identity | Destroyed with containment; signal contexts must be the receiving view |
+| Configuration object | Unique mutable map per containment; selected linked-replica values are synchronized | Containment | Containment configuration group | Deep-copied into fresh groups for Duplicate Dock | Placement values must pass one normalization boundary | Menu and edit relationship are read from runtime identity | Destroyed with containment; signal contexts must be the receiving view |
 
 ## Confirmed causes
 
-### Independent duplication can preserve clone ancestry (fixed)
+### Duplicate Dock retained source relationship fields (fixed)
 
-Before the repair, the D-Bus `duplicateView()` action accepted a `ClonedView`,
-although the clone's context menu hid Duplicate Dock. `ClonedView::data()`
-recorded the original containment in `isClonedFrom`. Storage first remapped an
-orphaned source to `-1`, then `Storage::newView()` overlaid the captured
-`Data::View` and wrote the old `isClonedFrom` value back. The result was another
-live clone rather than an independent duplicate. Runtime capability checks now
-refuse duplication and the other original-only actions for clone roles.
+The creation path always copied a stored template, but its captured `Data::View`
+also carried relationship state. Two concrete paths violated the independent
+snapshot contract:
 
-This explains order-dependent clone membership, Edit Original Dock wording, and
-edit requests opening the original on another output when duplication is driven
-through D-Bus or another path that bypasses the menu restriction.
+1. Duplicating an ordinary All Screens original copied
+   `screensGroup=AllScreensGroup`. The imported containment was a fresh
+   `OriginalView`, but `OriginalView::syncClonesToScreens()` immediately created
+   another persistent containment with `isClonedFrom=<new original id>`.
+   `ClonedView` then retained `m_originalView` and installed live configuration
+   synchronization connections. The result was a second linked ensemble, not
+   one independent dock.
+2. Duplicating a visible linked replica captured its legacy `isClonedFrom`
+   source. Storage first orphaned the unmapped source, then the captured
+   `Data::View` overlay wrote the old source ID back. Earlier D77 work avoided
+   the fault by refusing Duplicate at replica action boundaries, but that also
+   removed the promised operation from an ordinary visible dock.
+
+Duplicate Dock now clears `isClonedFrom` and normalizes `screensGroup` to
+`SingleScreenGroup` before import. It is available from either relationship
+role and creates exactly one fresh containment with remapped applet IDs. Export,
+move, and remove remain owned by the relationship original. Existing persisted
+linked layouts are not rewritten and remain linked during migration.
+
+Launcher groups remain orthogonal. A copied Tasks applet can still carry an
+explicit Layout or Global launcher-group choice, just as any two independent
+docks can opt into that shared launcher list. That opt-in content service is not
+a dock replica relationship.
 
 ### Deferred edit-chrome retargets are not cancelable (fixed)
 
@@ -141,9 +171,11 @@ visible symptom.
 
 ## Minimal architectural repair
 
-1. Make relationship creation explicit. Independent duplication accepts only
-   original roles and creates remapped containment and applet IDs. Screen-group
-   clone construction is the only path allowed to set `isClonedFrom`.
+1. Make relationship creation explicit. Duplicate Dock accepts either relation
+   role, clears both dock-relationship fields, and creates remapped containment
+   and applet IDs. Existing screen-group construction is the only current path
+   allowed to set `isClonedFrom`; future Create Linked Dock… will be the
+   explicit user-placed path.
 2. Give each deferred edit-chrome retarget a monotonic process-local request
    generation. Delayed work carries both the target and request generation and
    is rejected when superseded.
@@ -157,17 +189,18 @@ visible symptom.
 6. Keep compositor work-area reservation separate from Latte's partial
    dock-to-dock avoidance footprint. Autosizing consumes only the final solved
    geometry for its own view.
-7. Replace blanket clone configuration mirroring with explicit content and
-   placement projections. Existing screen-group clones may retain derived
-   placement as a named policy; independent duplicates share nothing mutable.
+7. Replace blanket replica configuration mirroring with explicit content and
+   placement projections. Existing screen-group replicas may retain derived
+   placement as a named policy; independent duplicates share no dock-owned
+   mutable state.
 8. Keep broader runtime identity diagnostics in the observability track. This
    repair does not add a runtime view ID or dock-system D-Bus snapshot.
 
 ## Implementation and verification slices
 
-1. [x] Relationship capability policy, independent duplication, edit targeting,
-   lifecycle cleanup, exact Wayland identity, owner-scoped registrations, and
-   persistent context-menu identity.
+1. [x] Relationship capability policy, independent Duplicate Dock from original
+   and replica sources, edit targeting, lifecycle cleanup, exact Wayland
+   identity, owner-scoped registrations, and persistent context-menu identity.
 2. [ ] Placement normalization and bounded visible geometry across all edges and
    semantic alignments.
 3. [ ] Same-edge stack solving, persistence, layer-shell application, reserved
@@ -179,8 +212,14 @@ visible symptom.
 The completed slice is covered by sanitizer-backed pure-core tests for action
 policy, retarget request generations, exact title matching, and ignored-window
 ownership, plus a production source contract and successful focused production
-compiles. No live-desktop run, nested-KWin replay, or full repository gate is
-claimed for this branch.
+compiles. Nested KWin drove the edit-retarget cancel race within 178 ms and
+observed both views through the old timeout. A dual-output nested run created an
+All Screens original and linked replica, duplicated from each, observed exactly
+one independent containment per call with disjoint applet IDs, and verified all
+four identities after restart. A visibility-mode change propagated from the
+original to its linked replica but bypassed both duplicates, proving the
+production synchronization connection retained only its intended members. The
+canonical repository gate remains required before push.
 
 Each slice requires a failing regression first, pure-core ASan and UBSan tests
 where a value model can carry the invariant, nested-KWin state and render
@@ -189,9 +228,9 @@ merge.
 
 ## Open questions requiring runtime evidence
 
-- Whether the reported Duplicate Dock sequence entered through D-Bus, an older
-  UI surface, or a screen-group operation. Every current action boundary now
-  applies the same role policy, but the historical entry route remains unknown.
+- The future Create Linked Dock… action still needs identity-keyed replica
+  placement, explicit synchronization scope, lifecycle and detach UX, and
+  migration handling. D77 does not implement that action.
 - D83 (removed duplicate containment survives the undo window in persistent
   layout state) is a separate confirmed persistence failure. Runtime destruction
   completes, but the layout group survives the 120-second baseline poll; its

@@ -57,8 +57,10 @@ and the full settings UI. Beyond upstream parity, the port has grown
 continuation features of its own, the first being resizable applet popups
 with per-applet size persistence.
 
-Dock identity boundaries keep screen-group clones inside one original's
-lifecycle and treat independent duplicates as separate docks.
+Dock identity boundaries keep linked screen-group members inside one original's
+lifecycle. Duplicate Dock creates one independent snapshot even when invoked on
+a linked member; the user-placed Create Linked Dock… action remains on the
+continuation roadmap.
 
 The stabilization initiative is complete: the feel-critical QML math
 (parabolic zoom, previews, launcher ordering, drag classification,
@@ -148,7 +150,7 @@ phases, one commit-traceable checklist item per task. The coarse picture:
 - [ ] Companion applets as sibling repos consumed by flake input: the
       Latte separator applet, then a full Qt 6 port of
       [applet-window-appmenu](https://github.com/psifidotos/applet-window-appmenu)
-- [ ] Further continuation features: dock replication, background color
+- [ ] Further continuation features: Create Linked Dock…, background color
       picker, scrollable group previews
 
 The high-priority slice of what remains, from the plan's own ordering
