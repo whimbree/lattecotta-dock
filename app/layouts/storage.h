@@ -61,7 +61,9 @@ public:
 
     bool isClonedView(const Plasma::Containment *containment) const;
     bool isClonedView(const KConfigGroup &containmentGroup) const;
-    void removeAllClonedViews(const QString &filepath);
+    bool isScreenGroupDerivedView(const Plasma::Containment *containment) const;
+    bool isScreenGroupDerivedView(const KConfigGroup &containmentGroup) const;
+    void removeScreenGroupDerivedViews(const QString &filepath);
 
     int subContainmentId(const KConfigGroup &appletGroup) const;
 

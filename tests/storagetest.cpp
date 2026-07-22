@@ -84,7 +84,7 @@ private Q_SLOTS:
 
     //! clones
     void detectClonedViewsOnlyForLatteContainments();
-    void removeAllClonedViewsKeepsOriginals();
+    void removeScreenGroupDerivedViewsKeepsPersistentRelationships();
 
     //! removal
     void removeContainmentDeletesExactlyThatGroup();
@@ -450,7 +450,7 @@ void StorageTest::detectClonedViewsOnlyForLatteContainments()
     QVERIFY(!Storage::self()->isClonedView(nonlatte));
 }
 
-void StorageTest::removeAllClonedViewsKeepsOriginals()
+void StorageTest::removeScreenGroupDerivedViewsKeepsPersistentRelationships()
 {
     const QString path = m_dir.filePath(QStringLiteral("clonesremove.latte"));
     {
@@ -461,15 +461,22 @@ void StorageTest::removeAllClonedViewsKeepsOriginals()
         KConfigGroup c10 = conts.group(QStringLiteral("10"));
         c10.writeEntry(QStringLiteral("plugin"), QStringLiteral("org.kde.latte.containment"));
         c10.writeEntry(QStringLiteral("isClonedFrom"), 1);
+        KConfigGroup c11 = conts.group(QStringLiteral("11"));
+        c11.writeEntry(QStringLiteral("plugin"), QStringLiteral("org.kde.latte.containment"));
+        c11.writeEntry(QStringLiteral("isClonedFrom"), 1);
+        c11.writeEntry(
+            QStringLiteral("linkPlacement"),
+            static_cast<int>(Latte::Data::View::LinkPlacement::ExplicitTarget));
         ptr->sync();
     }
 
-    Storage::self()->removeAllClonedViews(path);
+    Storage::self()->removeScreenGroupDerivedViews(path);
 
     KConfig fresh(path);
     KConfigGroup conts = fresh.group(QStringLiteral("Containments"));
-    QVERIFY(conts.hasGroup(QStringLiteral("1")));   // original kept
-    QVERIFY(!conts.hasGroup(QStringLiteral("10"))); // clone removed
+    QVERIFY(conts.hasGroup(QStringLiteral("1")));    // relationship root kept
+    QVERIFY(!conts.hasGroup(QStringLiteral("10"))); // derived replica removed
+    QVERIFY(conts.hasGroup(QStringLiteral("11")));  // explicit linked member kept
 }
 
 void StorageTest::removeContainmentDeletesExactlyThatGroup()
@@ -606,8 +613,8 @@ void StorageTest::stripUnapprovedAppletsFromExportedTemplate()
     // both applets carry a [Configuration] subgroup so the strip is
     // observable: exportTemplate deletes the config subgroups of unapproved,
     // non-subcontainment applets and leaves the approved applet intact.
-    // (a dedicated non-clone fixture: exportTemplate's removeAllClonedViews
-    // pass would drop the shared fixture's isClonedFrom containment)
+    // (a dedicated non-clone fixture: exportTemplate's derived-view cleanup
+    // pass would drop the shared fixture's legacy derived containment)
     const QString origin = m_dir.filePath(QStringLiteral("exportsrc.latte"));
     {
         KSharedConfigPtr ptr = KSharedConfig::openConfig(origin);

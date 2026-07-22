@@ -227,7 +227,7 @@ void Storage::importToCorona(const Layout::GenericLayout *layout)
     //! Setting mutable for create a containment
     layout->corona()->setImmutability(Plasma::Types::Mutable);
 
-    removeAllClonedViews(layout->file());
+    removeScreenGroupDerivedViews(layout->file());
 
     QString temp1FilePath = m_storageTmpDir.path() +  "/" + layout->name() + ".multiple.views";
     //! we need to copy first the layout file because the kde cache
@@ -528,7 +528,7 @@ void Storage::syncToLayoutFile(const Layout::GenericLayout *layout, bool removeL
     }
 
     filePtr->reparseConfiguration();
-    removeAllClonedViews(layout->file());
+    removeScreenGroupDerivedViews(layout->file());
 }
 
 void Storage::moveToLayoutFile(const QString &layoutName)
@@ -566,7 +566,7 @@ void Storage::moveToLayoutFile(const QString &layoutName)
     }
 
     layoutFilePtr->reparseConfiguration();
-    removeAllClonedViews(layoutFilePath);
+    removeScreenGroupDerivedViews(layoutFilePath);
 }
 
 QList<Plasma::Containment *> Storage::importLayoutFile(const Layout::GenericLayout *layout, QString file)
@@ -757,7 +757,7 @@ bool Storage::exportTemplate(const QString &originFile, const QString &destinati
     KConfigGroup layoutSettingsGrp(destFilePtr, "LayoutSettings");
     clearExportedLayoutSettings(layoutSettingsGrp);
     destFilePtr->reparseConfiguration();
-    removeAllClonedViews(destinationFile);
+    removeScreenGroupDerivedViews(destinationFile);
 
     return true;
 }
@@ -854,7 +854,7 @@ bool Storage::exportTemplate(const Layout::GenericLayout *layout, Plasma::Contai
     KConfigGroup layoutSettingsGrp(destFilePtr, "LayoutSettings");
     clearExportedLayoutSettings(layoutSettingsGrp);
     destFilePtr->reparseConfiguration();
-    removeAllClonedViews(destinationFile);
+    removeScreenGroupDerivedViews(destinationFile);
 
     return true;
 }
@@ -1472,30 +1472,45 @@ bool Storage::isClonedView(const KConfigGroup &containmentGroup) const
     return (isClonedFrom != IDNULL);
 }
 
-void Storage::removeAllClonedViews(const QString &filepath)
+bool Storage::isScreenGroupDerivedView(const Plasma::Containment *containment) const
+{
+    return containment && isScreenGroupDerivedView(containment->config());
+}
+
+bool Storage::isScreenGroupDerivedView(const KConfigGroup &containmentGroup) const
+{
+    if (!isClonedView(containmentGroup)) {
+        return false;
+    }
+
+    const int linkPlacement = containmentGroup.readEntry(
+        "linkPlacement", static_cast<int>(Data::View::LinkPlacement::ScreenGroupDerived));
+    return linkPlacement == static_cast<int>(Data::View::LinkPlacement::ScreenGroupDerived);
+}
+
+void Storage::removeScreenGroupDerivedViews(const QString &filepath)
 {
     KSharedConfigPtr lFile = KSharedConfig::openConfig(filepath);
     KConfigGroup containmentGroups = KConfigGroup(lFile, "Containments");
 
-    QList<Data::View> clones;
+    QList<Data::View> derivedViews;
 
     for (const auto &contId : containmentGroups.groupList()) {
-        if (isClonedView(containmentGroups.group(contId))) {
-            clones << view(containmentGroups.group(contId));
+        if (isScreenGroupDerivedView(containmentGroups.group(contId))) {
+            derivedViews << view(containmentGroups.group(contId));
         }
     }
 
-    if (clones.size() <= 0) {
+    if (derivedViews.isEmpty()) {
         return;
     }
 
-    if (clones.count()>0) {
-        qDebug() << "org.kde.layout :: Removing clones from file: " << filepath;
-    }
+    qDebug() << "org.kde.layout :: Removing derived screen-group views from file:" << filepath;
 
-    for (const auto &clonedata : clones) {
-        qDebug() << "org.kde.layout :: Removing clone:" << clonedata.id << " and its subcontainments:" << clonedata.subcontainments;
-        removeView(filepath, clonedata);
+    for (const auto &derivedView : derivedViews) {
+        qDebug() << "org.kde.layout :: Removing derived screen-group view:" << derivedView.id
+                 << "and its subcontainments:" << derivedView.subcontainments;
+        removeView(filepath, derivedView);
     }
 }
 

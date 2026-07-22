@@ -35,6 +35,9 @@
 #include <KActionCollection>
 #include <KConfigGroup>
 
+// C++
+#include <algorithm>
+
 namespace Latte {
 namespace Layout {
 
@@ -1085,6 +1088,21 @@ bool GenericLayout::initContainments()
         }
     }
 
+    //! A linked member needs its relationship root's runtime coordinator.
+    //! Load roots first while preserving the on-disk order within each role.
+    //! Screen-group replicas are normally absent here, while explicit linked
+    //! members persist and follow their root in the second partition.
+    const auto startupRank = [](const QPointer<Plasma::Containment> &containment) {
+        if (!containment) {
+            return 2;
+        }
+
+        return Layouts::Storage::self()->isClonedView(containment) ? 1 : 0;
+    };
+    std::stable_sort(pending.begin(), pending.end(), [&](const auto &left, const auto &right) {
+        return startupRank(left) < startupRank(right);
+    });
+
     addNextStartupView(pending);
 
     m_hasInitializedContainments = true;
@@ -1382,7 +1400,7 @@ Layout::ViewsMap GenericLayout::validViewsMap()
 
     for (const auto containment : m_containments) {
         if (Layouts::Storage::self()->isLatteContainment(containment)
-                && !Layouts::Storage::self()->isClonedView(containment)) {
+                && !Layouts::Storage::self()->isScreenGroupDerivedView(containment)) {
             Data::View view = hasLatteView(containment) ? m_latteViews[containment]->data() : Latte::Layouts::Storage::self()->view(this, containment);
             view.screen = Layouts::Storage::self()->expectedViewScreenId(m_corona, view);
 

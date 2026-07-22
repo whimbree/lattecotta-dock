@@ -665,7 +665,7 @@ void TabLayouts::exportLayoutForBackup()
             }
 
             // cleanup clones from exported file
-            Latte::Layouts::Storage::self()->removeAllClonedViews(file);
+            Latte::Layouts::Storage::self()->removeScreenGroupDerivedViews(file);
 
             CentralLayout layoutS(this, file);
             layoutS.setActivities(QStringList());
@@ -898,4 +898,3 @@ void TabLayouts::saveConfig()
 }
 }
 }
-

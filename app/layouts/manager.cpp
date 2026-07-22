@@ -338,7 +338,7 @@ void Manager::setOnActivities(QString layoutName, QStringList activities)
 
 void Manager::cleanupOnStartup(QString path)
 {
-    Layouts::Storage::self()->removeAllClonedViews(path);
+    Layouts::Storage::self()->removeScreenGroupDerivedViews(path);
 
     KSharedConfigPtr filePtr = KSharedConfig::openConfig(path);
 
