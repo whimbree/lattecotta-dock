@@ -234,6 +234,13 @@ statement identity. The one structural exemption now follows the scanner's
 direct `m_addViewMenu` receiver identity. No inventory rule or coverage scope
 was weakened. The final canonical gate must rerun after this correction.
 
+The second canonical run then passed all 104 CTest entries and stopped at D94
+(dock identity tests were absent from the coverage ratchet). The branch had
+registered four new targets without adding them to the exact target ledger.
+Commit `5efe665c2` adds all four in sorted order; the focused ratchet passes with
+104 CTest entries and 35 paired unit headers. The final exact-head canonical
+gate remains required.
+
 The baseline nested run also confirmed D83 (removed duplicate containment
 survives the undo window in persistent layout state), which is not fixed by this
 branch. Independent duplicate containment 12 had `IsClonedFrom: -1` and logged

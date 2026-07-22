@@ -858,6 +858,19 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   only this exact ledger mismatch. The focused inventory test and final
   canonical rerun provide the correction evidence.
 
+### D94 - Dock identity tests were absent from the coverage ratchet
+- STATUS: FIXED on `fix/dock-identity-isolation` (`5efe665c2`).
+- FOUND: 2026-07-22, second canonical gate on the rebased identity branch.
+- SYMPTOM: all 104 CTest entries passed, then the coverage ratchet rejected four
+  additions relative to its committed 100-target ledger.
+- ROOT: PR #109 registered `dockidentitycontracttest`,
+  `ignoredwindowregistrytest`, `retargetrequeststatetest`, and
+  `viewactionpolicytest` in CMake without recording those targets in the
+  coverage baseline.
+- FIX: add all four targets in sorted order and update the exact count to 104.
+- EVIDENCE: the focused ratchet passes with 104 CTest entries and 35 paired unit
+  headers. The final canonical rerun provides whole-tree evidence.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here

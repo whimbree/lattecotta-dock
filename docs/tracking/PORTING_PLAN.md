@@ -1285,6 +1285,11 @@ multi-view, multi-monitor setup.
       broaden or bypass the inventory gate.
       Commits: e0d9e21ac
 
+- [x] Fix D94 (dock identity tests were absent from the coverage ratchet). Add
+      all four PR #109 targets to the sorted target ledger and raise its exact
+      count from 100 to 104. The paired-header check now covers 35 unit headers.
+      Commits: 5efe665c2
+
 - [ ] Fix D83 (removed duplicate containment survives the undo window in
       persistent layout state). Baseline nested evidence at `16eb58ea4` shows
       independent duplicate containment 12 with `IsClonedFrom: -1`; its runtime
