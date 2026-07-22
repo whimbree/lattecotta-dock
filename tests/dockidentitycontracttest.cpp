@@ -71,6 +71,7 @@ private Q_SLOTS:
     void outputRetargetReplacesGeometryConnection();
     void ignoredWindowCleanupRetainsOtherOwners();
     void persistentMenuIdentitySurvivesRuntimeGap();
+    void geometryDiagnosticsReadEachViewsSizingAuthority();
 };
 
 void DockIdentityContractTest::relationshipActionsGuardEveryProductionBoundary()
@@ -272,6 +273,22 @@ void DockIdentityContractTest::persistentMenuIdentitySurvivesRuntimeGap()
     QVERIFY(populateTemplates.contains(QStringLiteral("if(m_contextDataValid)")));
     QVERIFY(!populateTemplates.contains(QStringLiteral("!m_view.isCloned")));
     QVERIFY(visibleActions.contains(QStringLiteral("setVisible(m_contextDataValid&&!configuring)")));
+}
+
+void DockIdentityContractTest::geometryDiagnosticsReadEachViewsSizingAuthority()
+{
+    const QString metricsSource = normalized(readFile(
+        QStringLiteral("containment/package/contents/ui/abilities/privates/MetricsPrivate.qml")));
+    const QString containmentSource = normalized(readFile(
+        QStringLiteral("containment/package/contents/ui/main.qml")));
+    const QString reportsSource = normalized(readFile(QStringLiteral("app/dbusreports.cpp")));
+
+    QVERIFY(metricsSource.contains(QStringLiteral("propertyintavailablePrimaryLength:0")));
+    QVERIFY(containmentSource.contains(QStringLiteral("availablePrimaryLength:root.maxLength")));
+    QVERIFY(reportsSource.contains(
+        QStringLiteral("readLiveProperty(metrics,\"availablePrimaryLength\")")));
+    QVERIFY(!reportsSource.contains(
+        QStringLiteral("readLiveProperty(editController,\"maxLength\")")));
 }
 
 QTEST_GUILESS_MAIN(DockIdentityContractTest)

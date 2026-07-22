@@ -13,6 +13,9 @@ import "./metrics" as MetricsPrivateTypes
 
 AbilityHost.Metrics {
     id: mets
+    // The containment's orientation-specific length consumed by AutoSize.
+    // C++ reads it through latteView.metrics for per-view diagnostics.
+    property int availablePrimaryLength: 0
     property Item animations: null
     property Item autosize: null
     property Item background: null

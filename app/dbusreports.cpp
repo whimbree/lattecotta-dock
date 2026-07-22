@@ -832,15 +832,17 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
             if (effectiveIconSize.isValid()) {
                 record.effectiveIconSize = effectiveIconSize.toInt();
             }
+
+            const QVariant availableLength = readLiveProperty(metrics, "availablePrimaryLength");
+            if (availableLength.isValid()) {
+                record.availablePrimaryLength = availableLength.toInt();
+            } else {
+                qWarning() << "dbusreports: containment" << record.persistentDockId
+                           << "metrics exposes no availablePrimaryLength";
+            }
         }
 
         const auto *const editController = view->rootObject();
-        if (editController) {
-            const QVariant availableLength = readLiveProperty(editController, "maxLength");
-            if (availableLength.isValid()) {
-                record.availablePrimaryLength = availableLength.toInt();
-            }
-        }
 
         record.normalThickness = view->normalThickness();
         record.maximumNormalThickness = view->maxNormalThickness();

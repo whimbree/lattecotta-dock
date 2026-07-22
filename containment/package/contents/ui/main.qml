@@ -1077,6 +1077,7 @@ ContainmentItem {
 
     Ability.Metrics {
         id: _metrics
+        availablePrimaryLength: root.maxLength
         animations: _animations
         autosize: _autosize
         background: _background
