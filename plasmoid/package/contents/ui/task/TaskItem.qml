@@ -886,7 +886,10 @@ AbilityItem.BasicItem {
     Connections {
         target: pulseAudio.item
         ignoreUnknownSignals: true // Plasma-PA might not be available
-        onStreamsChanged: taskItem.updateAudioStreams()
+
+        function onStreamsChanged() {
+            taskItem.updateAudioStreams();
+        }
     }
 
     //fix bug #478, when changing form factor sometimes the tasks are not positioned
