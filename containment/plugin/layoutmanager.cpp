@@ -1074,7 +1074,7 @@ int LayoutManager::dndSpacerIndex()
 
 void LayoutManager::requestAppletsOrder(const QList<int> &order)
 {
-    Latte::Types::Alignment alignment = static_cast<Latte::Types::Alignment>((*m_configuration)[QStringLiteral("alignment")].toInt());
+    const auto alignment = static_cast<Latte::Types::Alignment>((*m_configuration)[QStringLiteral("alignment")].toInt());
     QQuickItem *nextlayout = alignment != Latte::Types::Justify ? m_mainLayout : m_startLayout;
     QQuickItem *previousitem = nullptr;
 
@@ -1106,8 +1106,13 @@ void LayoutManager::requestAppletsOrder(const QList<int> &order)
 
     if (alignment == Latte::Types::Justify) {
         moveAppletsBasedOnJustifyAlignment();
-        save();
     }
+
+    //! Programmatic linked-order propagation must publish the same model and
+    //! persistence update as a pointer-driven reorder. Saving only justified
+    //! layouts left centered/start/end roots visually moved but authoritative
+    //! appletOrder unchanged, so the change could not reach other members.
+    save();
 }
 
 void LayoutManager::requestAppletsInLockedZoom(const QList<int> &applets)

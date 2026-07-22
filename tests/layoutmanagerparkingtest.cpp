@@ -137,6 +137,7 @@ private Q_SLOTS:
     void initTestCase();
     void parkingLifecycle();
     void parkingWithoutContainerRefusesLoudly();
+    void persistProgrammaticCenteredOrder();
     void persistIndependentJustifySplitterMovesAcrossRestart();
     void leaveHealthyJustifySplitterConfigByteStable();
 
@@ -402,6 +403,35 @@ void LayoutManagerParkingTest::parkingWithoutContainerRefusesLoudly()
 
     QVERIFY(lm->appletsInScheduledDestruction().isEmpty());
     QCOMPARE(parkedSpy.count(), 0);
+
+    delete f.host;
+}
+
+void LayoutManagerParkingTest::persistProgrammaticCenteredOrder()
+{
+    QObject arena;
+    Fixture f;
+    buildFixture(f, &arena);
+
+    Plasma::Applet *const first = createRealApplet(f, 7);
+    Plasma::Applet *const second = createRealApplet(f, 8);
+    Plasma::Applet *const third = createRealApplet(f, 9);
+    QVERIFY(first && second && third);
+
+    f.manager->addAppletItem(first, -1, -1);
+    f.manager->addAppletItem(second, -1, -1);
+    f.manager->addAppletItem(third, -1, -1);
+    QCOMPARE(f.manager->appletOrder(), (QList<int>{7, 8, 9}));
+
+    QSignalSpy orderSpy(f.manager, &Latte::Containment::LayoutManager::appletOrderChanged);
+    QVERIFY(orderSpy.isValid());
+
+    f.manager->requestAppletsOrder({8, 7, 9});
+
+    QCOMPARE(appletIdsIn(f.mainLayout), (QList<int>{8, 7, 9}));
+    QCOMPARE(f.manager->appletOrder(), (QList<int>{8, 7, 9}));
+    QCOMPARE(f.configMap->value(QStringLiteral("appletOrder")).toString(), QStringLiteral("8;7;9"));
+    QCOMPARE(orderSpy.count(), 1);
 
     delete f.host;
 }
