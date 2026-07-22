@@ -1,74 +1,72 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-21.
+Last updated 2026-07-22.
 
-## 2026-07-21: SC-O1 settings-control registry implementation is provisional
+## 2026-07-22: SC-O1 settings-control registry merged
 
-SC-O1 (the read-only settings-control D-Bus registry) is implemented on the
-isolated `feat/settings-control-registry` branch from exact base
-`ddf6fe152db4aabdc2846a97d20508ae558942cc`. It has completed the initial
-independent review and the one warranted second review, but is not merged or
-pushed, and its checklist remains unchecked. Provisional commits are:
+PR #105 merged SC-O1 (the read-only settings-control D-Bus registry). Exact
+`origin/main` head is `01b462b70208d9cb84c7bfe589247f3f9f3b2fa0`. The final
+rewritten commits are:
 
-- `d1dea3c59` defines the value-only C++20 record, validation, deterministic
-  ordering, and compact JSON core with its paired sanitized test.
-- `76bc39242` adds the Corona-owned QObject/QQuickItem registry, fixture vertical
-  slice, one read-only per-view D-Bus method, generated-adaptor path, lifecycle
-  cleanup, and controlled-mutation XML/delegation source guard.
-- `1b449549b` fixes all substantive findings from that review: wire-level popup
-  locator uniqueness, complete descriptor thread affinity, owned lifecycle
-  connections and popup routing cleanup, popup-relative row ancestry, and
-  fail-closed registration generations. It also adds the missing Bree Spektor
-  SPDX lines to the two modified Corona files. The flat defect registry records
-  all six findings with their plain-English descriptions.
-- `f32688a51` records the 2026-07-21 review and risk-driven gate direction in
-  `CLAUDE.md`.
-- `a00c62cf2` refines that direction: algorithm, ownership, lifecycle, API,
-  invariant, test meaning, traceability, and security findings require fixes
-  followed by one second review; ordinary corrections do not.
-- `29b11243c` fixes the warranted second review's five MERGE AFTER FIXES
-  findings: cross-scope tombstones, migration-safe `Qt::AutoConnection`
-  cleanup, JSON-safe integer locators, count-only cleanup diagnostics, and the
-  associated stale-generation contracts. The following docs/tracking commit
-  records the five second-review defects with plain-English descriptions.
+- `288b273cdd44de69dcce12fa76768639473cb3c3` defines the value-only C++20
+  records, aggregate validation, deterministic ordering, compact JSON
+  serialization, and paired sanitized tests.
+- `d8558ad7d41354c36bf7f53195f1878ab9fd7bb5` adds the Corona-owned runtime
+  registry, read-only per-view D-Bus method, generated adaptor path, fixture
+  vertical slice, lifecycle cleanup, and controlled-mutation source guard.
+- `522ffa4031737f64d53c633d4baab9d25b939524` defines the public query contract,
+  design, usage recipe, and initial completion tracking.
+- `523c6f4687c2849e872c3ed250f656145c9263c8` fixes the initial review findings:
+  wire-level popup locator uniqueness, descriptor thread affinity, owned
+  lifecycle connections, popup routing cleanup and ancestry, fail-closed load
+  generations, and missing Corona copyright lines.
+- `3f7ea99796d7684e38379fb782ede10addfe4f19` bounds reviews and gates to
+  invalidated engineering risks.
+- `c51a125880137e46710f289bf964522c96046923` records D65-D70 from the initial
+  review and its focused correction evidence.
+- `036df9618b67fe01be6f26745cdb688c07482486` classifies review follow-up by
+  finding severity and requires one second review after major findings.
+- `015200981da01a22b82ffa95d9b946c25788714c` fixes the second review findings:
+  cross-scope tombstones, migration-safe `Qt::AutoConnection` cleanup,
+  JSON-safe integer locators, count-only cleanup diagnostics, and the associated
+  stale-generation contracts.
+- `a5b086d29382b5e5698979a8f66e22919350acc3` records D71-D75, the final query
+  contract refinements, and completion of the required second review.
+- `01b462b70208d9cb84c7bfe589247f3f9f3b2fa0` requires independent rereview of
+  every CRITICAL fix and is the final merged main head.
 
-The initial review found major ownership, lifecycle, invariant, test meaning,
-and traceability issues under the refined heuristic, so one second independent
-review was required. That second review returned MERGE AFTER FIXES with the five
-findings above. Those findings are resolved. The review sequence ends here; no
-recursive third review applies.
+The initial independent review found major ownership, lifecycle, invariant,
+test-meaning, and traceability issues, so the severity rule required one second
+independent review after correction. That second review returned MERGE AFTER
+FIXES with five findings, all fixed by `015200981` and recorded by `a5b086d29`.
+No finding in either review was classified CRITICAL, so the CRITICAL-fix
+rereview exception did not require a third review.
 
 The public method is
 `viewSettingsControlsData(u containmentId) -> s`. Unknown views warn and return
 `[]`; known views with no controls return `[]` quietly. No production QML page
-or control is registered yet, by design. Runtime-effect readbacks, setters,
-filters, registration, and execution are outside this unit. The test fixture is
-a dedicated QRC/QML tree outside SC-F2 (the source-to-ledger coverage gate)
-production roots and loads in a real QQuickWindow/QQmlEngine through the
-production registry API.
+or control registration and no runtime-effect readback expansion landed in
+SC-O1. Setters, filters, production registration, execution, and additional
+readbacks remain in dependent component, page, and oracle units. The test
+fixture remains a dedicated QRC/QML tree outside SC-F2 (the source-to-ledger
+coverage gate) production roots and loads in a real QQuickWindow/QQmlEngine
+through the production registry API.
 
-Initial focused verification in `/tmp/opencode/latte-sc-o1-build` passed the
-serializer, registry, and source-guard entries. The second-review correction
-then built only `settingscontrolrecordstest`, `settingscontrolregistrytest`, and
-`latte-dock` to compile the changed pure core, runtime registry, generated
-adaptor, and application boundary. Sanitized `settingscontrolrecordstest`
-passed 12/12 cases for exact wire uniqueness and both JSON-safe integer
-boundaries. Unsanitized `settingscontrolregistrytest` passed 14/14 cases for
-two-scope poisoning, post-registration migration, owner cleanup, diagnostics,
-and stale tokens.
+The canonical `scripts/gate-all.sh` run exited 0 and stamped exact pre-rebase
+head `8c3191d914e90dd18ca3081f822f756616017af3`. That hash is retained only as
+historical exact full-gate stamp evidence, not implementation traceability. Key
+results were 100/100 CTest entries, 100 coverage-ratchet entries with 32 paired
+unit headers, the 130-file QML compile gate, the 234-file and 5,832-warning
+qmllint baseline, all 13 scene probes, and the full ASan e2e and matrix-fixture
+gates. The pre-rebase and merged heads have the same tree,
+`754304b009cb545203c3c8163168d8dcbdf6b875`, so the merged tree is the final
+gated tree.
 
-The source guard was not rerun because guarded XML and delegation text did not
-change functionally; Corona received copyright lines only. Fixture QML was
-unchanged, so QML lint and compile checks were not repeated. Test and header
-inventory was unchanged, so the coverage ratchet was not repeated. No full
-gate, nested/live run, D-Bus smoke against a running Corona, push, PR, or merge
-was performed.
-
-Next state: the canonical full gate remains required once on final code HEAD
-before any push or PR. After merge-time hashes are known, SC-O1 can be checked
-and its final hashes recorded. Production registration starts only in the
-dependent component/page units, with no provisional ledger evidence promoted.
+SC-O1 is complete and checked in the settings completion plan. The next approved
+work is SC-D1 (the pointer and keyboard control drivers), which remains
+unchecked. SC-A5 (the move-current-view-to-another-layout action) remains
+approval-required, unapproved, and unchecked. No adjacent work was completed.
 
 ## 2026-07-21: SC-F2 source-coverage gate merged
 

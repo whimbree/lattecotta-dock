@@ -412,11 +412,13 @@ red control where a defect is fixed, and its own `Commits:` trace.
       schema-2 inventory enforcement, documented coverage contract, and final
       review-state record. Dependencies: SC-F1. Commits: 7eda16ca0,
       6089fdea9, 14ecdf9dd, 31f9bb356
-- [ ] **SC-O1 (the read-only settings-control D-Bus registry):** expose only
+- [x] **SC-O1 (the read-only settings-control D-Bus registry):** expose only
       inventory-required identity, instance, generation, geometry, state, and
       popup-row data through a fixture vertical slice; document and test
       destruction cleanup. Production registrations land with their component
-      or page units. Dependencies: SC-F1 and SC-F2. Commits:
+      or page units. PR #105 landed this approved unit. Dependencies: SC-F1 and
+      SC-F2. Commits: 288b273cd, d8558ad7d, 522ffa403, 523c6f468, c51a12588,
+      015200981, a5b086d29
 - [ ] **SC-D1 (the pointer and keyboard control drivers):** locate one registry
       record and operate buttons, rows, sliders, and fields through real input.
       Negative controls must catch disabled input, wrong geometry, a popup that

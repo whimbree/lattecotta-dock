@@ -518,7 +518,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   dock behavior change.
 
 ### D65 - Popup row stable values were not unique at the wire level
-- STATUS: FIXED (`1b449549b`).
+- STATUS: FIXED (`523c6f468`).
 - FOUND: 2026-07-21, independent review of SC-O1 (the read-only
   settings-control D-Bus registry).
 - ROOT: row registration rejected duplicate semantic identity and visual index
@@ -533,8 +533,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   rejects the same pairs and retires their complete load generations.
 
 ### D66 - Settings-control descriptors accepted foreign-thread objects
-- STATUS: FIXED (`1b449549b`; post-registration migration completion
-  `29b11243c`).
+- STATUS: FIXED (`523c6f468`; post-registration migration completion
+  `015200981`).
 - FOUND: 2026-07-21, the SC-O1 independent review.
 - ROOT: registry calls were GUI-thread-only, but the QObject and QQuickItem
   descriptors themselves had no affinity check. Their destruction could
@@ -551,7 +551,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   not mutate registry counts until GUI-thread event processing.
 
 ### D67 - Logical registry removal left lifecycle callbacks connected
-- STATUS: FIXED (`1b449549b`; count-based cleanup proof `29b11243c`).
+- STATUS: FIXED (`523c6f468`; count-based cleanup proof `015200981`).
 - FOUND: 2026-07-21, the SC-O1 independent review.
 - ROOT: destroyed and popup-notify connections were not stored, so replacement
   removed entries but left callbacks attached. Popup routing cleanup also read
@@ -568,7 +568,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   across five replacements and reach zero after explicit retirement.
 
 ### D68 - Popup rows accepted unrelated surface items
-- STATUS: FIXED (`1b449549b`).
+- STATUS: FIXED (`523c6f468`).
 - FOUND: 2026-07-21, the SC-O1 independent review.
 - ROOT: row and row-hit ancestry was checked against the settings surface, not
   the popup item. An unrelated surface descendant could therefore become a
@@ -579,7 +579,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   an unrelated row hit, retiring each affected load generation.
 
 ### D69 - Failed settings-control registration exposed a plausible subset
-- STATUS: FIXED (`1b449549b`; cross-scope completion `29b11243c`).
+- STATUS: FIXED (`523c6f468`; cross-scope completion `015200981`).
 - FOUND: 2026-07-21, the SC-O1 independent review.
 - ROOT: malformed or duplicate registration returned failure but retained
   controls already accepted for the same load. A query could therefore expose
@@ -595,7 +595,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   escape the tombstone.
 
 ### D70 - Corona settings-control changes omitted current copyright attribution
-- STATUS: FIXED (`1b449549b`).
+- STATUS: FIXED (`523c6f468`).
 - FOUND: 2026-07-21, the SC-O1 independent review.
 - ROOT: `app/lattecorona.h` and `app/lattecorona.cpp` gained the registry
   boundary without adding the current author's SPDX line.
@@ -603,7 +603,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `SPDX-FileCopyrightText: 2026 Bree Spektor`.
 
 ### D71 - Invalid settings scope did not poison sibling scopes
-- STATUS: FIXED (`29b11243c`).
+- STATUS: FIXED (`015200981`).
 - FOUND: 2026-07-21, warranted second independent review of SC-O1 (the
   read-only settings-control D-Bus registry).
 - ROOT: removing the failed generation erased all evidence of its invalid load,
@@ -617,7 +617,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   invalid-generation refusal.
 
 ### D72 - Forced direct cleanup could mutate the registry from a foreign thread
-- STATUS: FIXED (`29b11243c`).
+- STATUS: FIXED (`015200981`).
 - FOUND: 2026-07-21, the warranted second SC-O1 review.
 - ROOT: forced `Qt::DirectConnection` ignored receiver affinity after an object
   illegally migrated following valid registration.
@@ -627,7 +627,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   on a worker without changing counts before GUI event delivery.
 
 ### D73 - Popup integer locators exceeded interoperable JSON precision
-- STATUS: FIXED (`29b11243c`).
+- STATUS: FIXED (`015200981`).
 - FOUND: 2026-07-21, the warranted second SC-O1 review.
 - ROOT: qint64 row values beyond IEEE-754 exact integer precision could change
   identity in common JSON consumers.
@@ -638,7 +638,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   adjacent outside value; registry refusal poisons the load.
 
 ### D74 - Settings-control cleanup claims lacked a state-count oracle
-- STATUS: FIXED (`29b11243c`).
+- STATUS: FIXED (`015200981`).
 - FOUND: 2026-07-21, the warranted second SC-O1 review.
 - ROOT: output-only assertions could pass while stale route or connection
   bookkeeping accumulated for process lifetime.
@@ -648,7 +648,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   destruction reduce them; explicit generation retirement reaches all zeroes.
 
 ### D75 - Handoff ended the review sequence before required major follow-up
-- STATUS: FIXED (this provisional docs/tracking commit).
+- STATUS: FIXED (`a5b086d29`).
 - FOUND: 2026-07-21, applying the refined review-severity heuristic to the
   initial SC-O1 findings.
 - ROOT: the handoff classified the initial fixes as requiring no further review,
