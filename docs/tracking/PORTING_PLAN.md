@@ -4295,6 +4295,27 @@ prerequisites in the phases above are done.
       removal owned by the existing settle timer so AutoSize cannot consume a
       stream of animated vertical heights.
       Commits: e5930c301
+- [x] Fix D127 (automatic sizing stranded usable length in modulo-8 buckets).
+      Replace remainder-class stepping with a direct largest-fitting-integer
+      projection and a one-pixel floating-point boundary correction.
+      Commits: eee511c62
+- [x] Fix D128 (task artwork painted smaller than its autosized slot). Disable
+      Kirigami standard-size rounding for task icons and their temporary copies;
+      pin complete painting in a non-standard 63 px slot.
+      Commits: b1d993279
+- [x] Fix D129 (automatic sizing reserved a full hovered icon). Size the
+      persistent dock from its settled row, and reserve only one icon's
+      incremental hover growth plus two logical pixels of total end slack when
+      considering growth.
+      Commits: 25390b5d1
+- [x] Fix D130 (settings bars ignored or stole wheel input). Use Qt's native
+      per-slider wheel behavior only after a click gives the control active
+      focus, leaving unfocused wheel events to page scrolling.
+      Commits: 711391bb5
+- [x] Fix D131 (screen-relative sizing obscured its meaning and mode). Name the
+      screen-height reference, show its resolved pixel ceiling and Off sentinel,
+      and explain how to restore mutually exclusive Absolute Size control.
+      Commits: 0e7693bce
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

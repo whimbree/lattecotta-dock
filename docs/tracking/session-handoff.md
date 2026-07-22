@@ -3,6 +3,44 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-22.
 
+## 2026-07-22: automatic sizing now models the visible resting dock
+
+Live acceptance after D126 exposed three independent reasons a stable dock
+could still look smaller than its available span. D127 (automatic sizing
+stranded usable length in modulo-8 buckets) came from the inherited `+/- 8`
+candidate search. The configured ceiling selected one remainder class, so
+valid intermediate integer sizes were unreachable. Commit `eee511c62` solves
+the linear fit directly and applies only a one-pixel floating-point correction
+at the exact comparison boundary. Identical geometry now selects the same
+effective size under ceilings 31, 50, 64, 68, and 127.
+
+D128 (task artwork painted smaller than its autosized slot) was a separate
+rendering mismatch. Kirigami rounded a non-standard slot down to a standard
+icon raster, so a 63 px layout allocation could show only 48 px artwork.
+Commit `b1d993279` disables standard-size rounding at the shared task icon and
+its temporary copies. The render regression requires a named icon to paint a
+complete 63 px slot, including both corners.
+
+D129 (automatic sizing reserved a full hovered icon) was a fit-model error.
+The resting row already included the base task icon, but both old limits
+subtracted the full zoomed item again. Commit `25390b5d1` makes shrinking depend
+only on the settled row. Growth adds one icon's incremental zoom extent and
+keeps two logical pixels of total slack after that projection. The live-shaped
+1114 px row in a 1228 px budget grows from 50 to 53 px; its stable projection
+plus 1.8x incremental zoom reaches 1223.24 px, while 54 px does not fit.
+`qmlinteraction` and `autosizeenginetest` pass.
+
+The settings acceptance also retired D130 (settings bars ignored or stole
+wheel input) and D131 (screen-relative sizing obscured its meaning and mode).
+The shared slider accepts Qt's native wheel path only after a click gives it
+focus, so scrolling a page over an unfocused bar cannot mutate configuration.
+The interaction regression drives both paths. The old Relative Size label is
+now Screen height, displays the resolved pixel ceiling by default, reads Off at
+its sentinel, and explains that turning it off restores Absolute Size. This was
+confirmed against live D-Bus state: the affected right dock had persisted 2.7
+percent during the earlier always-enabled wheel experiment, while the other
+docks remained at the `-1` Off sentinel.
+
 ## 2026-07-22: side-dock automatic sizing waits for length settlement
 
 D126 (side docks resize from intermediate layout frames) was reproduced on the

@@ -69,6 +69,11 @@ recreation and output disconnects preserve the persistent relationship and
 rebind only the views eligible on active outputs.
 Horizontal and vertical layout changes use the same per-view animation tracker,
 so automatic sizing waits for settled content on both axes.
+The automatic-size solver uses every fitting integer icon size, sizes the
+persistent dock from its settled row, and reserves only incremental hover zoom
+before painting task artwork into the complete fitted slot. Settings sliders
+accept wheel input after being clicked without stealing ordinary page scrolling,
+and screen-height sizing shows its resolved pixel ceiling and explicit Off mode.
 The shared edit canvas reasserts its compositor placement and view-local input
 mask when retargeting, including between separate docks that legitimately
 occupy the same output edge and canvas rectangle.

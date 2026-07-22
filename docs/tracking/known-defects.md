@@ -1317,6 +1317,86 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   placement geometry remained constant. A fresh staged process remained at the
   same settled size for 180 additional samples. Temporary telemetry was removed.
 
+### D127 - Automatic sizing stranded usable length in modulo-8 buckets
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`eee511c62`).
+- FOUND: 2026-07-22, live automatic-size acceptance on horizontal and vertical
+  docks.
+- SYMPTOM: a dock could remain visibly smaller even though another valid icon
+  size fit its Maximum Length. The selected result also depended on the
+  configured icon-size ceiling's remainder modulo eight.
+- ROOT: the inherited search tested only `current +/- 8` candidates. Each
+  configured ceiling therefore searched one remainder class and skipped valid
+  integer sizes between buckets.
+- FIX: solve the linear projection directly for the largest fitting integer,
+  then correct the floating-point boundary by at most one pixel using the real
+  inclusive shrink or strict grow comparison.
+- EVIDENCE: the pure regression gives identical geometry the same result under
+  ceilings 31, 50, 64, 68, and 127. The live-shaped 44 px case selects the
+  valid intermediate fit. `autosizeenginetest` passed 23/23 under ASan+UBSan,
+  and live docks converged without post-input movement.
+
+### D128 - Task artwork painted smaller than its autosized slot
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`b1d993279`).
+- FOUND: 2026-07-22, live inspection after the integer automatic-size search.
+- SYMPTOM: the layout could consume a computed non-standard slot while the
+  visible task icon remained at the next smaller standard icon size, making
+  correctly occupied space look empty.
+- ROOT: `Kirigami.Icon.roundToIconSize` rounded task artwork to standard theme
+  sizes. A 63 px task slot could paint only 48 px of icon artwork.
+- FIX: disable standard-size rounding at the shared task icon and both task
+  icon copies that bypass it. The fitted layout slot remains authoritative.
+- EVIDENCE: `themeawareicontest` renders a 63 px named icon and requires the
+  painted dimensions and both corner pixels to occupy the complete slot.
+
+### D129 - Automatic sizing reserved a full hovered icon
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`25390b5d1`).
+- FOUND: 2026-07-22, live comparison of settled row length, Maximum Length,
+  and hover zoom.
+- SYMPTOM: automatic sizing could discard roughly one full icon of available
+  edge length. A temporary hover presentation could also force the persistent
+  resting row smaller.
+- ROOT: both fit limits subtracted a complete zoomed item even though the
+  settled row already included that item's base extent. The base icon was
+  counted twice and hover state participated in shrink decisions.
+- FIX: shrink only when the settled row exceeds Maximum Length. Growth projects
+  the settled row with one icon's incremental zoom extent and two logical
+  pixels of total end slack. Prediction history records settled geometry.
+- EVIDENCE: the live-shaped 1114 px row inside a 1228 px budget grows from 50
+  to 53 px, whose settled projection plus 1.8x incremental zoom is 1223.24 px;
+  54 px does not fit. `qmlinteraction` and `autosizeenginetest` pass.
+
+### D130 - Settings bars ignored or stole wheel input
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`711391bb5`).
+- FOUND: 2026-07-22, live Appearance settings acceptance with a real mouse.
+- SYMPTOM: settings sliders ignored the wheel. A first always-enabled repair
+  then changed Screen height while the settings page was being scrolled,
+  persisting 2.7 percent and unexpectedly disabling Absolute Size.
+- ROOT: every Appearance and Effects slider explicitly disabled Qt's native
+  wheel path. Enabling it for unfocused hovered controls made a page-scroll
+  gesture mutate configuration.
+- FIX: a settings slider accepts native wheel events only after a click gives
+  it active focus. Unfocused bars leave the wheel event to the page.
+- EVIDENCE: the interaction regression proves page scrolling over an unfocused
+  slider is non-mutating, a real handle click arms wheel input, and opposite
+  notches apply and restore exactly one declared step. `qmlinteraction` and
+  `qmlcompilegate` pass.
+
+### D131 - Screen-relative sizing obscured its meaning and mode
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`0e7693bce`).
+- FOUND: 2026-07-22, live recovery from the persisted D130 wheel mutation.
+- SYMPTOM: `Relative Size: 2.7%` did not say what the percentage referenced,
+  and Absolute Size appeared permanently broken while the mutually exclusive
+  mode was active.
+- ROOT: the label hid that the percentage used the output's full screen height,
+  showed the stored percentage instead of its resolved size, and provided no
+  explanation beside the disabled Absolute Size row.
+- FIX: name the control Screen height, show the resolved pixel ceiling by
+  default, expose the stored percentage on hover, label its sentinel Off, and
+  state that turning it off restores Absolute Size.
+- EVIDENCE: `appearancehandleraudittest` pins all labels and display semantics;
+  `qmlcompilegate` passes. Live D-Bus readback distinguished the affected dock's
+  2.7 percent configuration from the other docks' `-1` Off sentinel.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.
