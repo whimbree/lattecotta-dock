@@ -72,6 +72,7 @@ private Q_SLOTS:
     void relocationHandoffStopsOldRevealBeforeClaim();
     void relocationCompletionRejectsSupersededGeneration();
     void geometrySettlementIncludesDeferredWork();
+    void containmentRemovalCommitsWithoutNotificationClose();
     void ignoredWindowCleanupRetainsOtherOwners();
     void persistentMenuIdentitySurvivesRuntimeGap();
     void geometryDiagnosticsReadEachViewsSizingAuthority();
@@ -290,6 +291,38 @@ void DockIdentityContractTest::geometrySettlementIncludesDeferredWork()
     for (const auto &authority : requiredAuthorities) {
         QVERIFY2(settled.contains(authority), qPrintable(authority));
     }
+}
+
+void DockIdentityContractTest::containmentRemovalCommitsWithoutNotificationClose()
+{
+    const QString source = readFile(QStringLiteral("app/layout/genericlayout.cpp"));
+    const QString schedule = normalized(functionBody(
+        source, QStringLiteral("void GenericLayout::scheduleRemovalCommit")));
+    const QString cancel = normalized(functionBody(
+        source, QStringLiteral("void GenericLayout::cancelRemovalCommit")));
+    const QString transition = normalized(functionBody(
+        source, QStringLiteral("void GenericLayout::destroyedChanged")));
+    const QString finalDestruction = normalized(functionBody(
+        source, QStringLiteral("void GenericLayout::containmentDestroyed")));
+
+    QVERIFY(source.contains(QStringLiteral(
+        "constexpr auto RemovalUndoWindow = std::chrono::seconds{60};")));
+    QVERIFY(schedule.contains(QStringLiteral("cancelRemovalCommit(containment);")));
+    QVERIFY(schedule.contains(QStringLiteral(
+        "m_removalCommitTimers.value(containment)==timer")));
+    QVERIFY(schedule.contains(QStringLiteral("if(containment->destroyed())")));
+    QVERIFY(schedule.contains(QStringLiteral("containment->destroy();")));
+    QVERIFY(cancel.contains(QStringLiteral("m_removalCommitTimers.take(containment)")));
+
+    const int park = transition.indexOf(QStringLiteral(
+        "m_waitingLatteViews[containment]=view;"));
+    const int arm = transition.indexOf(QStringLiteral(
+        "scheduleRemovalCommit(containment);"), park);
+    const int undo = transition.indexOf(QStringLiteral(
+        "cancelRemovalCommit(containment);"), arm);
+    QVERIFY2(park >= 0 && arm > park && undo > arm,
+             "remove must arm one commit timer and Undo must cancel it");
+    QVERIFY(finalDestruction.contains(QStringLiteral("cancelRemovalCommit(containment);")));
 }
 
 void DockIdentityContractTest::ignoredWindowCleanupRetainsOtherOwners()

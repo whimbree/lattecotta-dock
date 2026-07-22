@@ -29,6 +29,8 @@ class Containment;
 class Types;
 }
 
+class QTimer;
+
 namespace Latte {
 class Corona;
 class ScreenPool;
@@ -173,6 +175,7 @@ protected:
 
     QHash<const Plasma::Containment *, Latte::View *> m_latteViews;
     QHash<const Plasma::Containment *, Latte::View *> m_waitingLatteViews;
+    QHash<const Plasma::Containment *, QTimer *> m_removalCommitTimers;
 
 private Q_SLOTS:
     void addContainment(Plasma::Containment *containment);
@@ -182,6 +185,9 @@ private Q_SLOTS:
     void onLastConfigViewChangedFrom(Latte::View *view);
 
 private:
+    void cancelRemovalCommit(Plasma::Containment *containment);
+    void scheduleRemovalCommit(Plasma::Containment *containment);
+
     //! It can be used in order for LatteViews to not be created automatically when
     //! their corresponding containments are created e.g. copyView functionality
     bool blockAutomaticLatteViewCreation() const;

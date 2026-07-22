@@ -26,6 +26,7 @@
 // Qt
 #include <QDebug>
 #include <QScreen>
+#include <QTimer>
 
 // Plasma
 #include <Plasma/Plasma>
@@ -38,9 +39,18 @@
 
 // C++
 #include <algorithm>
+#include <chrono>
 
 namespace Latte {
 namespace Layout {
+
+namespace {
+//! libplasma's public removal action exposes a 60-second Undo notification.
+//! The contract test pins that duration; this independent timer guarantees
+//! the transaction still commits when the notification backend disappears
+//! without emitting KNotification::closed.
+constexpr auto RemovalUndoWindow = std::chrono::seconds{60};
+}
 
 GenericLayout::GenericLayout(QObject *parent, QString layoutFile, QString assignedName)
     : AbstractLayout (parent, layoutFile, assignedName)
@@ -811,6 +821,8 @@ void GenericLayout::containmentDestroyed(QObject *cont)
     Plasma::Containment *containment = reinterpret_cast<Plasma::Containment *>(cont);
 
     if (containment) {
+        cancelRemovalCommit(containment);
+
         int containmentIndex = m_containments.indexOf(containment);
 
         if (containmentIndex >= 0) {
@@ -859,12 +871,14 @@ void GenericLayout::destroyedChanged(bool destroyed)
         view = m_latteViews.take(containment);
         if (view) {
             m_waitingLatteViews[containment] = view;
+            scheduleRemovalCommit(containment);
         }
     } else {
         view = m_waitingLatteViews.take(containment);
         if (view) {
             m_latteViews[containment] = view;
         }
+        cancelRemovalCommit(containment);
     }
 
     if (view) {
@@ -882,6 +896,47 @@ void GenericLayout::destroyedChanged(bool destroyed)
         //! configuration.
         Layouts::Storage::self()->syncToLayoutFile(this, false);
     }
+}
+
+void GenericLayout::cancelRemovalCommit(Plasma::Containment *containment)
+{
+    if (auto *const timer = m_removalCommitTimers.take(containment)) {
+        timer->stop();
+        timer->deleteLater();
+    }
+}
+
+void GenericLayout::scheduleRemovalCommit(Plasma::Containment *containment)
+{
+    Q_ASSERT(containment);
+
+    cancelRemovalCommit(containment);
+
+    auto *const timer = new QTimer(this);
+    timer->setSingleShot(true);
+    timer->setInterval(RemovalUndoWindow);
+    m_removalCommitTimers.insert(containment, timer);
+
+    connect(timer, &QTimer::timeout, this, [this, containment, timer]() {
+        const bool ownsCurrentGeneration = m_removalCommitTimers.value(containment) == timer;
+        Q_ASSERT(ownsCurrentGeneration);
+        if (!ownsCurrentGeneration) {
+            qCritical() << "layout:" << name()
+                        << "refusing a stale containment-removal commit for" << containment;
+            return;
+        }
+
+        m_removalCommitTimers.remove(containment);
+        timer->deleteLater();
+
+        if (containment->destroyed()) {
+            //! Applet::destroy() commits immediately when the applet is
+            //! already in Plasma's transient Undo state.
+            containment->destroy();
+        }
+    });
+
+    timer->start();
 }
 
 void GenericLayout::renameLayout(QString newName)
