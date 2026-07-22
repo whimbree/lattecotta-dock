@@ -3,15 +3,14 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-22.
 
-## 2026-07-21: D81 and D82 prerequisite corrections completed review
+## 2026-07-21: D81 and D82 prerequisite corrections merged
 
-PR #108 carries the standalone prerequisites discovered while gating C0 (the
+PR #108 merged the standalone prerequisites discovered while gating C0 (the
 atomic dock-system observability snapshot): D81 (installed-package audit
 crossed its isolated package-root boundary and saw unrelated ancestor markers)
 and D82 (TaskItem Connections syntax exceeded the curated Qt 6 lint ratchet).
-Neither correction is merged. PR #110 remains based on PR #108's named
-`fix/deterministic-pinned-gates` branch and must continue to expose only the C0
-commits after that prerequisite branch advances.
+Exact post-rebase `origin/main` head is
+`06ba567fcb9bc48c36679a321563eaa5f22f11ae`.
 
 The initial independent review returned MERGE AFTER FIXES with a major
 test-meaning finding. The D81 live-root fixture invoked `--root /` from below
@@ -41,11 +40,12 @@ warnings across 234 files, all 13 scene probes passed, and the package matrix
 passed. ASan e2e was intentionally skipped by `LATTE_GATE_FAST=1` and remains a
 merge-time gate.
 
-No additional cold review is required. The root-omission finding was major but
+No additional cold review was required. The root-omission finding was major but
 not critical, and the severity rule defines this completed second review as the
-single follow-up rather than the start of another review loop. PR #108 remains
-unmerged. Replace the provisional branch hashes in the Phase 11 checklist with
-post-rebase hashes and tick D81/D82 only after PR #108 merges.
+single follow-up rather than the start of another review loop. The rewritten
+implementation commits are `7148a54d8`, `fcb71e8b4`, and `ff732466e` for D81,
+and `728d69a62` for D82. The companion record commits are `0b1a85262`,
+`3a5a28c74`, `bb4f0595a`, and `06ba567fc`.
 
 ## 2026-07-22: SC-O1 settings-control registry merged
 

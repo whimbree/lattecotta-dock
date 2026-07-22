@@ -3740,7 +3740,7 @@ polished, distributable form of it.
       5c51ef221, 696d383db, 7463152e8, 625b6c2c0, dbba5ea48, ba32d824c,
       72796622b, 4eb2e3d67
 
-- [ ] Merge D81 (installed-package audit crossed its isolated package-root
+- [x] Merge D81 (installed-package audit crossed its isolated package-root
       boundary and saw unrelated ancestor markers) through PR #108. Isolated
       package provenance now stops after checking the package root, while live
       `--root /` validation keeps its complete host-root walk. The initial
@@ -3753,20 +3753,19 @@ polished, distributable form of it.
       acceptance beneath an explicitly marked external parent, injected
       host-root marker refusal without host mutation, and live-root
       host-absolute symlink semantics. The canonical fast gate exits 0 at exact
-      executable head `06da33ae0a71e7505b9800662956afbbbfc7110e`.
+      executable branch head `06da33ae0a71e7505b9800662956afbbbfc7110e`.
       No third review is required because the follow-up finding was major but
       not critical; the severity rule makes the second review the single
-      follow-up. Keep this item unchecked until PR #108 merges.
-      Commits: pending PR #108 merge; branch commits `bd620c89b`, `29322fb93`,
-      `06da33ae0`
-- [ ] Merge D82 (TaskItem Connections syntax exceeded the curated Qt 6 lint
+      follow-up. PR #108 merged through GitHub on 2026-07-22.
+      Commits: 7148a54d8, fcb71e8b4, ff732466e
+- [x] Merge D82 (TaskItem Connections syntax exceeded the curated Qt 6 lint
       ratchet) through PR #108. The PulseAudio stream handler uses explicit
       function syntax without changing its target, optional-signal contract, or
       `updateAudioStreams()` action. The QML compile gate accepts every staged
       package file and qmllint returns `TaskItem.qml` to the checked-in
-      211-warning ceiling. The required second review is complete; keep this
-      item unchecked until PR #108 merges.
-      Commits: pending PR #108 merge; branch commit `4f90ed05f`
+      211-warning ceiling. The required second review completed before PR #108
+      merged through GitHub on 2026-07-22.
+      Commits: 728d69a62
 
 - [ ] Write `default.nix` (Qt6/KF6 dependency list, matching Phase 1-3
       framework choices). Use `lib.cleanSource ./.` for `src`, not bare

@@ -659,7 +659,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   of the review sequence without a third review.
 
 ### D81 - Installed-package audit crossed its isolated package-root boundary
-- STATUS: FIXED IN PR #108 (`bd620c89b`, `29322fb93`, `06da33ae0`;
+- STATUS: FIXED (PR #108; `7148a54d8`, `fcb71e8b4`, `ff732466e`;
   standalone package-provenance and fixture corrections).
 - FOUND: 2026-07-21, the C0 (atomic dock-system observability snapshot) branch's
   required fast gate under a `/tmp` worktree.
@@ -684,7 +684,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   real marker-free ancestry.
 
 ### D82 - TaskItem Connections syntax exceeded the curated Qt 6 lint ratchet
-- STATUS: FIXED IN PR #108 (`4f90ed05f`; standalone QML syntax correction).
+- STATUS: FIXED (PR #108; `728d69a62`; standalone QML syntax correction).
 - FOUND: 2026-07-21, the C0 (atomic dock-system observability snapshot) branch's
   required fast gate under pinned Qt 6.11.1.
 - ROOT: `TaskItem.qml` retained the deprecated implicit `Connections` handler
