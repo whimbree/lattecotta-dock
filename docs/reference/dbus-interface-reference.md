@@ -310,6 +310,11 @@ call createLinkedView uii 1 2 4       # containment, stable screen-pool id,
                                        # fresh direct-root member with linked applet content and
                                        # member-local output, edge, alignment, visibility, appearance,
                                        # geometry, removal, and edit presentation
+LATTE_DEBUG_DBUS=1 latte-dock ...      # enable diagnostic lifecycle mutations at process startup
+call reloadView u 1                    # debug-gated runtime recreation. Persistent containment and
+                                       # configuration stay unchanged; dockSystemData reports fresh
+                                       # runtimeViewId tokens for the root and every live linked member.
+                                       # Unknown ids and calls without the gate are refused loudly
 call setViewPlacement uiii 1 2 5 3    # containment, stable screen-pool id,
                                        # edge, alignment; start/end is normalized
                                        # for the target orientation

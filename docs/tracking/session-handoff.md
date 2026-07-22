@@ -3,6 +3,53 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-22.
 
+## 2026-07-22: linked runtime lifecycle and sizing ownership hardened
+
+The final Create Linked Dock review exposed three blocking boundaries: root
+runtime recreation replaced only the root and stranded member pointers, Cut
+validation could become stale before destination import, and executable output
+disconnect/reconnect coverage was absent. The follow-up found two additional
+causes while driving those boundaries.
+
+Runtime teardown no longer owns persistent member deletion.
+`GenericLayout::recreateView()` replaces a complete live relationship,
+constructs the root before members, and rechecks persisted output eligibility
+after its delay. The diagnostic `reloadView` D-Bus driver requires
+`LATTE_DEBUG_DBUS=1`; `dockSystemData` supplies the runtime-generation readback.
+Moving a root, explicit member, or partial explicit group across layouts is
+refused through one persistent `ViewsTable` predicate. The layouts dialog
+revalidates the current origin graph before importing any Cut/Paste destination,
+so a relationship changed after Cut cancels atomically instead of becoming a
+copy.
+
+The first output-disconnect run confirmed that `validViewsMap()` consumed
+transient runtime screen state. Qt and Plasma reported the surviving primary
+screen while the portrait output disappeared, so the member was remapped
+instead of parked. Pending placement now wins during a transaction; otherwise
+the persisted containment KConfig record is authoritative. Disabling the
+member output removes only its runtime, preserves direct-root persistence, and
+reconnect restores it to the same separated portrait output. Disabling the
+root output parks the complete relationship even when members target another
+active output; reconnect reconstructs the whole group root-first.
+
+Offline applet changes now converge through an event-driven `ClonedView`
+reconciliation barrier once both endpoint inventories and configuration maps
+are ready. The exact configuration comparison then exposed the Tasks applet's
+`length` key as per-view orientation geometry. ConfigOverlay writes local width
+or height, but linked import and forwarding had treated it as shared. One
+compile-time policy excludes that key from linked import, both live directions,
+Undo restoration, and full reconciliation. Ordinary launcher configuration
+continues to synchronize. Independent Duplicate Dock keeps its copied snapshot.
+
+Focused results are green: `dockidentitycontracttest` 22/22 and
+`datatypestest` 47/47. The expanded two-output acceptance passes a separated
+portrait topology, occupied-edge coexistence, exact linked applet convergence,
+local length stability, member and root output disconnect/reconnect, complete
+runtime recreation, independent duplication, and process reload. The removal
+and Undo recipe, seed 127934575 operation storm, and independent Duplicate
+recipe also pass. The full repository gate and a fresh cold diff review remain
+required after final documentation and commits.
+
 ## 2026-07-22: explicit linked docks and independent duplication implemented
 
 The `feat/create-linked-dock` branch separates the two user-visible operations.

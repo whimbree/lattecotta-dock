@@ -46,8 +46,8 @@ Landed before or during the 2026-07-16 stabilization session:
 5. **The debug gate.** Fine-grained mutations useful only for tests
    (e.g. forcing a visibility state) require the dock to run with
    LATTE_DEBUG_DBUS=1 (env, checked once at startup, logged loudly).
-   Nothing in this document's action list needs it so far; the gate
-   is specified now so a future need does not improvise.
+   `reloadView` uses this gate. The environment value is read once while
+   Corona is constructed and enablement is logged at warning severity.
 
 ## Read surface (new)
 
@@ -440,7 +440,19 @@ Landed before or during the 2026-07-16 stabilization session:
 - Existing lifecycleState() gains nothing; it stays the tiny liveness
   probe (poll for "running").
 
-## Action surface (new, all coarse user actions)
+## Action surface
+
+`reloadView(u containmentId)` is the one debug-gated lifecycle action. It
+requires `LATTE_DEBUG_DBUS=1` at process startup and otherwise refuses loudly.
+The action recreates the addressed runtime through the custom-indicator reload
+path. Recreating a relationship root replaces every live linked runtime, builds
+the root first, and rebinds each member without changing persistent containment
+identity or configuration. `dockSystemData` exposes the changed
+`runtimeViewId` tokens. An output that becomes inactive during the delayed
+replacement is revalidated from persisted placement and is not remapped or
+recreated on another output.
+
+The remaining actions are coarse user actions:
 
 - `setViewEditMode(u containmentId, b editing)` - what Edit Dock and
   its Close button do. The e2e replacement for the kglobalaccel

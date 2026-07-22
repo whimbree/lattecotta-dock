@@ -1,7 +1,8 @@
 # Dock identity, placement, and replication hardening
 
 Status: independent Duplicate Dock and explicit Create Linked Dock implemented;
-bounded placement and same-edge stacking slices remain separate work
+linked runtime lifecycle and sizing ownership hardened; bounded placement and
+same-edge stacking slices remain separate work
 (2026-07-22)
 
 This record defines the ownership model used to investigate dock duplication,
@@ -72,13 +73,13 @@ that is the boundary with deferred work.
 | Containment | Unique per visible original or clone | Plasma Corona and layout | Containment ID | Must be newly imported with remapped IDs | Persists placement and QML configuration | Own `userConfiguring` is the per-view edit presentation state | Destroyed by layout removal; no runtime view may retain it |
 | Runtime dock view | Unique QObject and QWindow per active containment | `GenericLayout` containment-to-view map | Not persisted | Constructed fresh | Remaps or recreates its layer surface | Holds only a non-owning pointer to shared edit chrome | Disconnects, unregisters, and deletes all child managers |
 | Per-output view | Every linked member is one separate containment and runtime view | `OriginalView` owns relationship membership; layout owns runtime registration | Member containment ID plus `isClonedFrom` and `linkPlacement` | Duplicate Dock clears this relationship | Derived members follow screen-group output policy; explicit members own output and edge | Derived members edit the root; explicit members edit themselves | Member unregisters from the root before destruction |
-| Linked relationship | Shared logical group, explicit and acyclic | Root persistent dock | Member `isClonedFrom=<root id>` | Create Linked extends the direct-root group; Duplicate never copies it | `linkPlacement` names derived versus member-local placement ownership | Menu wording and edit targeting use the same runtime role | Root removal destroys members; member removal unregisters without dangling entries |
-| Applet layout | Unique QML object, applet ID, and config group per containment; one explicit content projection per relationship | Root view coordinates structural mutations; each containment owns its projection | Applet groups under containment ID | Deep-copied and ID-remapped | Local geometry recalculates for that view | Its containment controls edit presentation | Root transaction removes every projection; Undo recreates member-local identities and config; containment teardown destroys the remainder |
+| Linked relationship | Shared logical group, explicit and acyclic | Root persistent dock | Member `isClonedFrom=<root id>` | Create Linked extends the direct-root group; Duplicate never copies it | `linkPlacement` names derived versus member-local placement ownership | Menu wording and edit targeting use the same runtime role | Explicit root removal is refused while members persist; member removal unregisters without dangling entries; runtime unload never deletes persistence |
+| Applet layout | Unique QML object, applet ID, and config group per containment; one explicit content projection per relationship | Root view coordinates structural mutations; each containment owns its projection and per-view geometry keys | Applet groups under containment ID | Deep-copied and ID-remapped; linked import clears per-view `length` | Local geometry and applet length recalculate for that view | Its containment controls edit presentation | Root transaction removes every projection; Undo recreates member-local identities and shared config while keeping local geometry excluded; containment teardown destroys the remainder |
 | Geometry controller | Unique `Positioner` per runtime view | Runtime `View` QObject parent | Derived, not persisted | Constructed fresh | Consumes that view's output and owns monotonic relocation generations | Edit thickness may change local placement | QObject parent destruction cancels timers and callbacks |
-| Applet sizing | Unique `AutoSize` and effective icon state per containment | Containment QML tree | Configured values only | Config copied; effective values recomputed | Consumes the same view's solved primary length | Recomputes only for local edit geometry | QML tree destruction |
+| Applet sizing | Unique `AutoSize`, effective icon state, and applet `length` per containment | Containment QML tree | Configured dock values plus per-applet local `length` | Independent Duplicate copies the snapshot; linked creation clears local `length`; effective values recompute | Consumes the same view's solved primary length and orientation | Recomputes only for local edit geometry | QML tree destruction |
 | Edit-mode controller | One reusable chrome ensemble, one current owner, one requested generation | `ViewSettingsFactory` under Corona | Not persisted | Never copied | Retarget is one cancelable generation | Exactly one effective owner; clone requests resolve explicitly | Cancels deferred work and clears the old containment before rebinding |
 | Stacking controller | Missing in the current tree | Required owner: layout or Corona placement domain | Required key: output, edge, stable rank | New duplicate gets a stable independent rank | Re-solves membership atomically without assuming adjacent outputs | Owns one activation mechanism with the exact eligible region set, which may be disjoint | Removes membership before view destruction |
-| Configuration object | Unique mutable map per containment; linked applet values are copied between projections | Containment owns storage; relationship root owns mutation routing | Containment configuration group | Deep-copied into fresh groups for Duplicate Dock | Explicit members keep containment placement and appearance local | Menu and edit relationship are read from runtime identity | Destroyed with containment; Undo restores the snapshotted group; signal contexts are the receiving view |
+| Configuration object | Unique mutable map per containment; an explicit policy selects linked applet keys | Containment owns storage; relationship root owns shared mutation routing; each view owns applet geometry keys | Containment configuration group | Deep-copied into fresh groups for Duplicate Dock; linked import removes per-view keys | Explicit members keep containment placement, appearance, and applet length local | Menu and edit relationship are read from runtime identity | Destroyed with containment; Undo and reconnect restore shared values without overwriting local keys; signal contexts are the receiving view |
 
 ## Confirmed causes
 
@@ -149,6 +150,89 @@ the only reversible Plasma transaction. Member projections are retired
 immediately, then recreated with fresh local IDs and copied root configuration
 if Undo reverses the transaction. Restart during the window preserves the
 removal in every containment.
+
+### Runtime teardown owned persistent relationship cleanup (fixed)
+
+`OriginalView::~OriginalView()` called `cleanClones()`. That was safe only
+under the legacy assumption that every clone was disposable screen-group
+fanout. Runtime destruction also occurs during indicator reload, layout unload,
+and output loss, so the destructor could remove persistent explicit members as
+if the logical relationship had been deleted. Root recreation separately
+replaced only the root runtime. Every surviving `ClonedView` then held a null
+root `QPointer` and could not synchronize or edit coherently.
+
+Runtime destruction no longer mutates persistent relationship membership.
+Screen-group-derived records are retired only through the named output-policy
+path. Recreating a root collects its complete live group, queues members before
+the root for orderly unregistration, constructs the root before members, and
+reconciles derived fanout only after the complete relationship has rebound.
+The diagnostic driver is gated by `LATTE_DEBUG_DBUS=1`; `dockSystemData` proves
+that runtime identities rotate while persistent containment IDs do not.
+
+### Output eligibility consumed transient runtime screen state (fixed)
+
+When an output disconnected, Qt temporarily reported the surviving primary
+screen through the still-live window and Plasma containment. `validViewsMap()`
+read that runtime-derived value, reclassified the explicit member as eligible
+on primary, and kept its stale surface alive. Reading through the layout-aware
+Storage overload did not fix the defect because that overload deliberately
+overlaid the live containment screen onto the persistent record.
+
+Output eligibility now reads a pending explicit placement transaction first
+and otherwise reads the containment's persisted KConfig placement directly.
+It never consults the transient QWindow or Plasma screen assignment. A removed
+member output parks that runtime without deleting the persistent relationship.
+Reconnect adds roots before members and reconstructs only records eligible on
+currently active outputs. Runtime recreation repeats the same eligibility check
+after its delay so an intervening disconnect cannot resurrect a stale surface.
+
+### Reconnected members lacked an authoritative applet projection (fixed)
+
+A member rebuilt after output reconnect began with the stale applet subtree
+captured before it went offline. Root changes made while that member had no
+runtime had no recipient, and startup readiness signals could arrive before
+AppletQuickItem configuration maps existed. No later event guaranteed a full
+structural and configuration comparison.
+
+`ClonedView` now pauses member-originated feedback behind a reconciliation
+barrier. Once both endpoint inventories and configuration maps are ready, it
+prunes stale member applets, creates missing projections with fresh IDs, copies
+shared configuration, and reapplies order, locked-zoom, and coloring lists.
+Delayed configuration readiness emits the same progress signal, so completion
+is event-driven rather than polled or silently abandoned.
+
+### Applet-local length was mirrored across orientations (fixed)
+
+The exact linked sizing reproducer kept `configuredIconSize`,
+`effectiveIconSize`, and `availablePrimaryLength` stable, but the first
+different state was the Tasks applet's dynamic `length` setting. ConfigOverlay
+writes that key from the local resize handle using height for vertical views
+and width for horizontal views. Linked signal forwarding and full KConfig
+reconciliation treated it as ordinary shared content, so one orientation could
+overwrite the other view's applet length and force its internal icon fit.
+
+One compile-time policy now classifies `length` as per-view applet geometry.
+Linked template import clears it, both live signal directions ignore it, Undo
+restoration excludes it, and full reconnect reconciliation preserves the
+target's local value or absence. Launcher settings and other content keys still
+synchronize. Independent Duplicate Dock keeps the captured value because its
+new containment owns an unrelated snapshot.
+
+### Cross-layout moves could split a linked relationship (fixed)
+
+The legacy layout move transaction can move an original plus derived All
+Screens projections, but it has no transaction for independently persistent
+explicit members. Moving a root or explicit member alone could leave a
+cross-layout `isClonedFrom` reference. The layouts dialog added a second race:
+Cut and Paste span multiple UI events, so a root could gain an explicit member
+after Cut. Destination import then succeeded before source removal refused,
+silently degrading Move into Copy.
+
+The persistent `ViewsTable` now owns the move predicate. Runtime actions,
+context menus, the layouts dialog, and `Layouts::Manager` all consult it. Save
+re-reads and revalidates the current origin graph before importing any
+destination, so a stale transaction cancels atomically with a visible warning.
+Derived-only groups keep their legacy coordinated move.
 
 ### Persisted relationship graphs reached runtime partially validated (fixed)
 
@@ -223,17 +307,21 @@ new alignment without normalizing a negative center offset. The QML background
 and applet layout then apply a negative edge margin and render past the output.
 Startup and external configuration writes can bypass the same invariant.
 
-### Cross-dock icon resizing is local autosizing after peer geometry changes
+### Partial-footprint peer resizing remains a separate hypothesis
 
-A bottom alignment change alters its partial internal footprint. A same-output
-vertical dock receives the available-region invalidation, selects a shorter
-rectangle, and resizes. Its own `AutoSize` instance then reduces its effective
-icon size. No global icon cache or shared autosizer is involved.
+The exact linked reproducer did not change the remote view's dock-level
+`configuredIconSize`, `effectiveIconSize`, or `availablePrimaryLength`. Its
+first divergent value was the applet-local `length` described above. This rules
+out a shared AutoSize instance or global icon cache for that reproduction.
 
-The defect is the disagreement between two reservation models. Layer shell can
-publish only an edge-wide scalar exclusive zone, while Latte internally applies
-an alignment-aware partial footprint. A dock's alignment can therefore change a
-neighbor's internal length without changing the compositor work area.
+A separate reservation discrepancy remains plausible for independent
+perpendicular docks. Layer shell publishes an edge-wide scalar exclusive zone,
+while Latte's internal available-rectangle model applies an alignment-aware
+partial footprint. Static reading suggests one dock's alignment could change a
+neighbor's solved length without changing compositor work area, but that path
+has not yet been demonstrated by the exact independent-dock nested matrix. It
+remains a hypothesis for the stacking and placement slice, not a confirmed
+cause of the linked sizing defect.
 
 ## Additional confirmed lifecycle hazards
 
@@ -269,10 +357,12 @@ through the wrong authority:
 | Persistent containment ID | Unique per dock record | No shared ID found; every import remaps it | Regression-pinned |
 | Applet ID | Unique per containment | Member-to-root routing used positional coincidence after reorder | Fixed; explicit ID maps route every mutation |
 | Runtime view identity | Unique per live QObject | No copied runtime ID found; the opaque diagnostic token is process-local | Regression-pinned |
-| Mutable containment configuration | Unique per containment | No shared KConfig object found; blanket linked mirroring gave some member-local fields root ownership | Fixed for explicit members through typed placement ownership and explicit content projection |
+| Mutable containment configuration | Unique per containment | No shared KConfig object found; blanket linked mirroring gave applet-local `length` root-owned relationship semantics | Fixed through the compile-time shared-versus-local key policy on import, live signals, Undo, and reconciliation |
 | Applet removal transaction | One logical content transaction at the relationship root | Scheduled-destruction state was mirrored into member-local transactions and persistence | Fixed; root owns Undo, members own disposable projections |
 | Edit chrome | Intentionally one reusable factory-owned ensemble | Unversioned retarget callbacks and inconsistent linked target resolution left stale edit owners | Fixed; one cancelable generation and one authoritative relationship target |
-| Geometry and sizing controllers | Unique per runtime view | No shared cache found; stale relocation callbacks and conflicting reservation models changed a peer's solved geometry | Relocation fixed; reservation and stacking slices remain open |
+| Geometry and sizing controllers | Unique per runtime view | No shared cache found; stale relocation callbacks crossed generations, transient screen state overrode persisted placement, and applet `length` crossed orientations | Relocation, output authority, and linked applet length fixed; independent reservation and stacking slices remain open |
+| Runtime relationship membership | Persistent records outlive runtime views; live members require a live root generation | Root destruction deleted persistent members, while root-only recreation stranded surviving member pointers | Fixed; teardown is nonpersistent, recreation replaces the complete eligible group root-first |
+| Cross-layout move transaction | One independent dock or a coordinated derived-only group | Explicit roots and members could move alone; stale Cut could import before later source refusal | Fixed; one persistent predicate is revalidated before any destination import |
 | Same-edge rank and activation regions | Shared only through a future output-edge coordinator | No authority exists, so every surface independently claims the same edge | Open |
 
 ## Deterministic replay results
@@ -282,6 +372,9 @@ through the wrong authority:
 | Duplicate an All Screens source | A fresh root immediately produced another linked ensemble | Exactly one independent containment with fresh applet IDs |
 | Duplicate from a linked member | Relationship lineage could be retained or the action was hidden | Exactly one independent containment; the source group remains unchanged |
 | Rapid output, edge, and alignment changes | An older reveal could clear a newer move and strand geometry | Seed 127934575 completed 28 placements and seven edit transitions; two settled snapshots remained byte-equivalent for geometry and sizing |
+| Disconnect and reconnect a member output after root changes | Runtime screen fallback kept the member mapped to primary; offline applet changes had no guaranteed replay | The member runtime parks, its persistent record remains, and reconnect restores exact shared applet content while preserving local `length` |
+| Recreate a linked root runtime | Only the root rotated, leaving member root pointers stale | Root and all live members receive fresh runtime IDs root-first; the unrelated Duplicate and every persistent containment ID stay unchanged |
+| Disconnect the root output while members target another output | Members could outlive the missing runtime coordinator or teardown could remove persistence | The complete linked runtime group parks; every containment record remains; reconnect rebuilds a fresh complete generation |
 | Remove and recreate a member | Persistent tombstones could be overwritten or never committed | The removed member leaves runtime and disk, replacement receives a fresh identity, and reload restores only intended records |
 | Remove a linked applet, then restart inside Undo | A member projection could resurrect | Root and every member remain removed in runtime and persistence |
 | Invoke real dock and applet Undo | No executable relationship-aware coverage | Applet projection, full dock subtree, direct-root relationship, and reload all recover deterministically |
@@ -314,10 +407,10 @@ not landed yet.
 7. Keep compositor work-area reservation separate from Latte's partial
    dock-to-dock avoidance footprint. Autosizing consumes only the final solved
    geometry for its own view.
-8. Replace blanket replica configuration mirroring with explicit content and
-   placement projections. Existing screen-group replicas may retain derived
-   placement as a named policy; independent duplicates share no dock-owned
-   mutable state.
+8. Replace blanket replica configuration mirroring with explicit shared-content
+   and per-view geometry projections. Applet `length` is local across both
+   explicit and screen-group-derived members. Independent duplicates share no
+   dock-owned mutable state.
 9. Keep runtime identity diagnostics in C0 (the atomic dock-system observability
    snapshot). Relationship changes preserve its fail-closed graph, per-view
    ownership contract, and requested-versus-applied relocation generations.
@@ -337,7 +430,9 @@ not landed yet.
    reload.
 5. [x] Explicit linked relationship creation, member-local placement and edit
    ownership, root-coordinated applet synchronization from every member,
-   validated startup restoration, reversible removal, and restart tombstones.
+   validated startup restoration, reversible removal, restart tombstones,
+   per-view applet sizing keys, output lifecycle, and whole-group runtime
+   recreation.
 
 The completed slices are covered by sanitizer-backed pure-core tests for action
 policy, retarget request generations, exact title matching, and ignored-window
@@ -401,6 +496,19 @@ block. The final gate passed at exact source and test head
 5,828 curated warnings across 234 eligible QML files, all 13 render probes,
 three nested ASan/UBSan recipes, and the complete output-matrix fixture.
 
+The post-review lifecycle extension then disconnected an explicit member's
+separated portrait output, changed root applet structure while the member was
+offline, and required exact shared configuration convergence after reconnect.
+It recreated the root through the debug-gated production reload path and
+observed fresh runtime identities for the complete linked group while the
+independent Duplicate retained its runtime identity. It moved the root onto the
+portrait output, disconnected that output, observed only the independent dock
+remain live, then reconnected and recovered the complete persistent group. The
+Tasks applet's local `length` remained stable through root alignment, shared
+launcher edits, output reconnect, and root runtime recreation. The removal and
+Undo recipe, seed 127934575 operation storm, and independent Duplicate recipe
+also pass after these lifecycle changes.
+
 Each slice requires a failing regression first, pure-core ASan and UBSan tests
 where a value model can carry the invariant, nested-KWin state and render
 agreement for compositor behavior, and an independent cold diff review before
@@ -427,9 +535,10 @@ merge.
 - **Release blocker:** Start and End alignment can leave the rendered rectangle
   outside its selected output because alignment bypasses placement
   normalization.
-- **Beta blocker:** partial-footprint and layer-shell reservation disagreement
-  can resize a perpendicular dock after a peer alignment change. The affected
-  AutoSize instance is local, but its input geometry is not yet authoritative.
+- **Beta blocker:** the partial-footprint and layer-shell reservation
+  disagreement may resize an independent perpendicular dock after a peer
+  alignment change. Static ownership is inconsistent, but the independent-dock
+  executable matrix still has to confirm or reject this separate hypothesis.
 - **Known issue:** linked members have no Detach action or relationship-aware
   root-removal choice dialog. Linked roots remain protected until their
   explicit members are removed. Enabling root removal without one group-wide

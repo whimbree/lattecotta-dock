@@ -74,9 +74,12 @@ identities. The relationship itself is one explicit logical group:
 - the root is the single structural transaction coordinator for applet add,
   drop, remove, reorder, and Undo, regardless of which member originated the
   action;
-- applet membership, order, and settings synchronize as explicit projections
-  with stable root-to-member identity maps, never by equal local IDs or
-  positional coincidence;
+- applet membership, order, and shared settings synchronize as explicit
+  projections with stable root-to-member identity maps, never by equal local
+  IDs or positional coincidence;
+- applet `length` remains per-view because ConfigOverlay writes it from the
+  local orientation and resize handle. Linked template import, live signals,
+  Undo restoration, and reconnect reconciliation all exclude that key;
 - output, edge, alignment, visibility, appearance, edit presentation, and
   runtime geometry remain local to an explicitly placed member;
 - derived members retain the legacy root-owned screen-group placement and edit
@@ -104,8 +107,9 @@ The target implementation must satisfy these rules:
    containment and applet IDs, a fresh runtime view, fresh output and placement
    state, fresh geometry controllers, and a distinct edit registration.
 3. **Synchronization scope.** Content synchronization is explicit. Placement,
-   output, edge, alignment, visibility policy, runtime geometry, and transient
-   edit presentation are not blanket-copied through the relationship.
+   output, edge, alignment, visibility policy, runtime geometry, applet-local
+   length, and transient edit presentation are not blanket-copied through the
+   relationship.
 4. **One relationship policy.** Menu capabilities, edit targeting, lifecycle,
    persistence, and migration derive from the same relation. No surface infers
    relationship semantics from window title, pointer ancestry, or presentation
@@ -124,7 +128,12 @@ The target implementation must satisfy these rules:
    relationship. The settings and context-menu surfaces explain that linked
    members must be removed first. Derived All Screens members do not trigger
    this gate. A group-wide transaction, detach action, and root-removal choice
-   dialog remain future lifecycle work.
+   dialog remain future lifecycle work. Destroying or recreating a runtime
+   view never removes its persistent relationship record. Replacing a root
+   runtime replaces and rebinds its complete live member group root-first.
+   Output disconnect parks ineligible runtimes while preserving their records;
+   reconnect reconstructs the root before members and reconciles the full
+   applet projection.
 7. **Migration.** Legacy `ClonedView` and `isClonedFrom` records load as linked
    relationships without changing behavior. Any schema migration must be
    explicit, reversible at the file boundary, and covered by real persisted
@@ -174,6 +183,18 @@ The target implementation must satisfy these rules:
       a group-wide reversible transaction exists. Keep derived All Screens
       removal available and prove refusal changes no runtime, persisted, or
       notification state (`184370cdc`, 2026-07-22).
+- [x] Keep runtime recreation and output availability separate from persistent
+      relationship ownership. Replace complete live groups root-first, park
+      members whose persisted output is inactive, and rebuild applet
+      projections after reconnect (2026-07-22).
+- [x] Define applet `length` as per-view geometry state and exclude it from
+      linked template import, both live configuration directions, Undo restore,
+      and full reconnect reconciliation. Shared launcher configuration remains
+      synchronized (2026-07-22).
+- [x] Refuse cross-layout moves for explicit relationships at the view, menu,
+      layouts-dialog, manager, and final Cut/Paste transaction boundaries.
+      Revalidate the current persisted origin immediately before import so a
+      stale Cut cannot degrade into Copy (2026-07-22).
 - [ ] Add detach and relationship-aware root-removal choices.
 - [ ] Retire legacy clone terminology from internal APIs in a dedicated
       migration after persisted compatibility no longer depends on it.

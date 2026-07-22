@@ -1116,6 +1116,88 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: the per-file count falls from 94 to 91. The final canonical gate
   passes the 5,828-warning ratchet across 234 eligible QML files.
 
+### D115 - Cross-layout moves could split explicit linked relationships
+- STATUS: FIXED on `feat/create-linked-dock` (`70fd515f8`, `5637b6709`).
+- FOUND: 2026-07-22, post-review relationship-boundary audit.
+- SYMPTOM: a root or explicit linked member could be moved to another layout
+  without the rest of its relationship. A stale layouts-dialog Cut could also
+  import a destination after the root gained a member, then fail source removal
+  and silently become Copy.
+- ROOT: the legacy move transaction coordinates only an original and its
+  screen-group-derived fanout. Move eligibility was inferred independently at
+  UI and runtime entry points, and Cut was not revalidated at the save boundary.
+- FIX: one persistent `ViewsTable` predicate governs runtime actions, menus,
+  layouts-dialog selection, and `Layouts::Manager`. Save re-reads the current
+  origin graph and cancels before any destination import if the relationship
+  changed after Cut.
+- EVIDENCE: value tests cover independent, explicit, and derived-only roles.
+  The production contract pins final revalidation before both import paths.
+
+### D116 - Runtime root replacement stranded or deleted linked members
+- STATUS: FIXED on `feat/create-linked-dock` (`9ba2fa1e3`, `5637b6709`).
+- FOUND: 2026-07-22, final independent review and executable recreation pass.
+- SYMPTOM: custom-indicator runtime reload replaced only the root, leaving live
+  members with null root pointers. Runtime root teardown could also remove
+  persistent members through destructor cleanup.
+- ROOT: runtime and persistent relationship lifetimes shared the same
+  `cleanClones()` path, while recreation tracked only one containment.
+- FIX: runtime destruction is nonpersistent. Root recreation collects the
+  complete live relationship, queues members before the root, reconstructs the
+  root first, rebinds eligible members, and reconciles only after the complete
+  group exists. The reload driver is gated by `LATTE_DEBUG_DBUS=1`.
+- EVIDENCE: the two-output recipe observes fresh runtime IDs for the root and
+  every linked member, unchanged persistent IDs and content, and an unchanged
+  runtime ID for the independent Duplicate.
+
+### D117 - Output disconnect remapped a linked member to primary
+- STATUS: FIXED on `feat/create-linked-dock` (`8020fe31e`, `5637b6709`).
+- FOUND: 2026-07-22, executable output disconnect and reconnect pass.
+- SYMPTOM: disabling the portrait output left its explicit linked member live
+  and remapped to the primary output instead of parking it.
+- ROOT: output eligibility read live View or layout-overlaid containment screen
+  state. Qt and Plasma temporarily reported the surviving primary while the
+  removed output's window was being retired, overwriting placement authority.
+- FIX: pending explicit placement wins while a transaction is active;
+  otherwise eligibility reads persisted containment KConfig directly. Runtime
+  screen fallback is never an ownership source. Delayed recreation rechecks the
+  same eligibility before constructing a view.
+- EVIDENCE: disconnect removes the member runtime but preserves its exact
+  `isClonedFrom`, output, edge, and containment record. Reconnect restores it to
+  the separated portrait output.
+
+### D118 - Offline linked members missed root applet changes
+- STATUS: FIXED on `feat/create-linked-dock` (`af70eb2a8`, `5637b6709`).
+- FOUND: 2026-07-22, executable output reconnect pass.
+- SYMPTOM: a member recreated after its output returned retained stale applet
+  structure or configuration from before disconnect.
+- ROOT: live signals had no recipient while the runtime was absent, and
+  initialization could complete before AppletQuickItem configuration maps were
+  ready. No event guaranteed a later full projection comparison.
+- FIX: member feedback pauses behind an event-driven reconciliation barrier.
+  Once both endpoint inventories are ready, stale projections are pruned,
+  missing ones receive fresh local IDs, shared configuration is copied, and
+  order plus per-applet lists are reapplied.
+- EVIDENCE: the root gains applets while the remote member is offline.
+  Reconnect converges exact plug-in order and shared KConfig values with
+  disjoint applet IDs.
+
+### D119 - Linked applet length crossed orientation boundaries
+- STATUS: FIXED on `feat/create-linked-dock` (`af70eb2a8`, `5637b6709`).
+- FOUND: 2026-07-22, exact cross-orientation content convergence pass.
+- SYMPTOM: changing a horizontal dock could overwrite the Tasks applet length
+  in a linked vertical dock and force a different internal icon fit.
+- ROOT: ConfigOverlay writes `length` from the local width or height resize
+  handle, but blanket linked configuration forwarding treated that geometry as
+  shared content. Dock-level icon and available-length metrics remained stable;
+  applet `length` was the first divergent value.
+- FIX: a compile-time policy classifies `length` as per-view. Linked template
+  import, both live signal directions, Undo restoration, and reconnect
+  reconciliation exclude it. Independent Duplicate Dock still copies it as
+  part of its unrelated snapshot.
+- EVIDENCE: the portrait member's local length stays stable through root
+  alignment, shared launcher edits, output reconnect, and whole-group runtime
+  recreation while launcher configuration continues to synchronize.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.

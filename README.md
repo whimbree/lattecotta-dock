@@ -62,6 +62,10 @@ Duplicate Dock creates one independent snapshot from the live dock or layouts
 dialog, including when the source is linked. Create Linked Dock… adds a
 synchronized member on a selected output and edge while keeping placement,
 visibility, appearance, removal, and edit presentation local to that member.
+Applet membership and ordinary settings stay linked, while orientation-dependent
+applet length and effective sizing remain local to each output view. Runtime
+recreation and output disconnects preserve the persistent relationship and
+rebind only the views eligible on active outputs.
 Legacy On All Screens members retain their derived-output behavior. A linked
 source stays protected from removal until its explicit members are removed, so
 one-containment Undo cannot leave a partial relationship.

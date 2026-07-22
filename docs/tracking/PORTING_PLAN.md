@@ -73,8 +73,9 @@ the full context; this list is the map, not the territory):
    docks can fail to come back).
 4. DONE 2026-07-22: Phase 8 Create Linked Dock… is the explicit synchronized
    copy action, with persistent direct-root relationship identity, member-local
-   placement and edit presentation, explicit applet synchronization, and
-   deterministic two-output replay. Legacy `ClonedView` / `isClonedFrom`
+   placement and edit presentation, explicit shared-versus-local applet
+   configuration, output-safe runtime recreation, and deterministic two-output
+   replay. Legacy `ClonedView` / `isClonedFrom`
    records retain their screen-group-derived behavior.
 5. Phase 7: edit-mode entry/exit detection research (the subsystem
    that took a reference fork 8+ attempts; ours works but the
@@ -4195,8 +4196,12 @@ prerequisites in the phases above are done.
       per-view sizing authority, object tokens, placement generations, and
       geometry settlement. Exact and seeded nested recipes cover separated
       portrait topology, same-edge creation, sizing isolation, edit ownership,
-      applet fanout, removal, replacement, convergence, and reload. Root removal
-      is refused while explicit members remain because no group-wide Plasma
+      applet fanout, removal, replacement, convergence, and reload. Output
+      disconnect parks runtimes without deleting persistence; reconnect
+      rebuilds roots before members and reconciles offline applet changes.
+      Applet `length` remains per-view across orientations while ordinary
+      settings stay linked. Root removal is refused while explicit members
+      remain because no group-wide Plasma
       Undo transaction exists; derived All Screens removal remains available.
       Detach and relationship-aware root-removal choices remain a separate
       continuation item in `docs/reference/dock-replication-design.md`.
@@ -4205,7 +4210,8 @@ prerequisites in the phases above are done.
       f1a76d7a4, e781b4d0b, 05bcb00c5, b7795aa6d, df1fe812f,
       ef32c280f, 1457ab790, c9f74689c, 683a17048, c69ad6e86,
       19ef4ff7d, 5bcde4f40, 98dcbf894, 5c90f9431, 34be80813,
-      8fdf36188, 1d8730a3a, 5b8bb9542, 184370cdc, 8e703bb83
+      8fdf36188, 1d8730a3a, 5b8bb9542, 184370cdc, 8e703bb83,
+      70fd515f8, 9ba2fa1e3, 8020fe31e, af70eb2a8, 5637b6709
 - [x] Mitigate D111 (linked-root removal was not one reversible transaction).
       Refuse removal at live-view, layout-storage, and settings-model boundaries
       while explicit members remain. Keep legacy derived fanout removable and
@@ -4229,6 +4235,30 @@ prerequisites in the phases above are done.
       all five introduced warnings and three inherited warnings from the same
       block.
       Commits: 8e703bb83
+- [x] Fix D115 (cross-layout moves could split explicit linked relationships).
+      Centralize persistent move eligibility, refuse partial explicit groups at
+      every UI and runtime boundary, and re-read the origin graph immediately
+      before any Cut/Paste destination import.
+      Commits: 70fd515f8, 5637b6709
+- [x] Fix D116 (runtime root replacement stranded or deleted linked members).
+      Separate runtime teardown from persistence, recreate the complete live
+      relationship root-first, and expose the production reload path only
+      through the debug D-Bus gate.
+      Commits: 9ba2fa1e3, 5637b6709
+- [x] Fix D117 (output disconnect remapped a linked member to primary). Make
+      pending placement or persisted KConfig authoritative for eligibility;
+      never derive ownership from the transient QWindow or Plasma screen.
+      Recheck eligibility after delayed runtime recreation.
+      Commits: 8020fe31e, 5637b6709
+- [x] Fix D118 (offline linked members missed root applet changes). Add an
+      event-driven readiness barrier and reconcile applet structure, shared
+      configuration, order, locked zoom, and coloring after reconnect.
+      Commits: af70eb2a8, 5637b6709
+- [x] Fix D119 (linked applet length crossed orientation boundaries). Define
+      Tasks applet `length` as per-view geometry through one compile-time
+      policy applied on linked import, live forwarding, Undo, and full
+      reconciliation. Keep ordinary applet settings linked.
+      Commits: af70eb2a8, 5637b6709
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
