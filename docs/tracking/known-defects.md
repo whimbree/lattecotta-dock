@@ -658,6 +658,23 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   review and its MERGE AFTER FIXES result, the correction commits, and the end
   of the review sequence without a third review.
 
+### D81 - Installed-package audit crossed its isolated package-root boundary
+- STATUS: FIXED (`bd620c89b`; standalone package-provenance correction).
+- FOUND: 2026-07-21, the C0 (atomic dock-system observability snapshot) branch's
+  required fast gate under a `/tmp` worktree.
+- ROOT: recursive package-link validation first proved a target belonged to the
+  isolated package root, then scanned development-provider markers beyond that
+  boundary up to `/`. An unrelated `/tmp/.git` therefore classified every
+  synthetic package beneath `/tmp` as a source tree.
+- FIX: development-provider traversal stops after checking the isolated
+  package root. Live `--root /` validation still reaches `/`, and the existing
+  direct source/build markers inside a package remain refusals.
+- EVIDENCE: the focused installed-package self-test places a valid internally
+  linked package beneath an external parent carrying `CMakeLists.txt` and
+  requires acceptance. All 90 provenance, parser, link, ELF, loader, mapping,
+  signal, and cleanup controls pass with the real external `/tmp/.git` marker
+  also present.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here
