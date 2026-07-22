@@ -81,7 +81,6 @@ PlasmaComponents.Page {
                         from: 16
                         to: 512
                         stepSize: dialog.advancedLevel || (plasmoid.configuration.iconSize % 8 !== 0) || dialog.viewIsPanel ? 2 : 8
-                        wheelEnabled: false
 
                         function updateIconSize() {
                             if (!pressed) {
@@ -130,7 +129,6 @@ PlasmaComponents.Page {
                         from: 1.0
                         to: (latteView.visibility.mode === LatteCore.Types.SidebarOnDemand || latteView.visibility.mode === LatteCore.Types.SidebarAutoHide)  ? 25 : 12
                         stepSize: 0.1
-                        wheelEnabled: false
 
                         function updateProportionIconSize() {
                             if (!pressed) {
@@ -194,7 +192,6 @@ PlasmaComponents.Page {
                         from: 1
                         to: 2.25
                         stepSize: 0.05
-                        wheelEnabled: false
 
                         function updateZoomLevel() {
                             if (!pressed) {
@@ -265,7 +262,6 @@ PlasmaComponents.Page {
                         from: 0
                         to: 100
                         stepSize: 1
-                        wheelEnabled: false
 
                         readonly property int localMinValue: 1
 
@@ -394,7 +390,6 @@ PlasmaComponents.Page {
                         from: 0
                         to: 100
                         stepSize: 1
-                        wheelEnabled: false
 
                         //! config drives the handle through a proxy property, not a
                         //! declarative `value:` binding, so a drag cannot clobber the
@@ -491,7 +486,6 @@ PlasmaComponents.Page {
                         id: offsetSlider
                         Layout.fillWidth: true
                         stepSize: 1
-                        wheelEnabled: false
 
                         //! these properties are used in order to not update view_offset incorrectly when the primary config view
                         //! is changing between different views
@@ -665,7 +659,6 @@ PlasmaComponents.Page {
                         from: 0
                         to: marginsColumn.maxMargin
                         stepSize: 1
-                        wheelEnabled: false
 
                         onPressedChanged: {
                             if (!pressed) {
@@ -710,7 +703,6 @@ PlasmaComponents.Page {
                         from: 0
                         to: 60
                         stepSize: 1
-                        wheelEnabled: false
                         minimumInternalValue: latteView.indicator.info.minThicknessPadding * 100
 
                         onPressedChanged: {
@@ -757,7 +749,6 @@ PlasmaComponents.Page {
                         from: -1
                         to: 256
                         stepSize: 1
-                        wheelEnabled: false
 
                         onPressedChanged: {
                             if (!pressed) {
@@ -949,7 +940,6 @@ PlasmaComponents.Page {
                         from: 0
                         to: 100
                         stepSize: 1
-                        wheelEnabled: false
 
                         function updatePanelSize() {
                             if (!pressed)
@@ -999,7 +989,6 @@ PlasmaComponents.Page {
                         from: -1
                         to: 100
                         stepSize: 1
-                        wheelEnabled: false
 
                         function updatePanelTransparency() {
                             if (!pressed)
@@ -1048,7 +1037,6 @@ PlasmaComponents.Page {
                         from: -1
                         to: 50
                         stepSize: 1
-                        wheelEnabled: false
 
                         function updateBackgroundRadius() {
                             if (!pressed) {
@@ -1091,7 +1079,6 @@ PlasmaComponents.Page {
                         from: -1
                         to: 50
                         stepSize: 1
-                        wheelEnabled: false
 
                         function updateBackgroundShadowSize() {
                             if (!pressed) {

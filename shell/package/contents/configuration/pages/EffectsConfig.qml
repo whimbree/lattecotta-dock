@@ -81,7 +81,6 @@ PlasmaComponents.Page {
                         from: 0
                         to: 100
                         stepSize: 5
-                        wheelEnabled: false
 
                         function updateShadowSize() {
                             if (!pressed)
@@ -128,7 +127,6 @@ PlasmaComponents.Page {
                         from: 0
                         to: 100
                         stepSize: 5
-                        wheelEnabled: false
 
                         function updateShadowOpacity() {
                             if (!pressed)

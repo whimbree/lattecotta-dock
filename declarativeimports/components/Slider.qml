@@ -1,5 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2019 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -26,6 +28,11 @@ T.Slider {
     rightPadding: Kirigami.Units.smallSpacing
 
     snapMode: T.Slider.SnapOnRelease
+    //! Use Qt's native wheel path after a click gives this control focus, so
+    //! every settings bar follows its own stepSize, bounds and orientation.
+    //! Leaving unfocused bars wheel-disabled lets settings pages scroll over
+    //! them without silently changing configuration.
+    wheelEnabled: activeFocus
 
     readonly property bool minimumInternalValueIsSet: (minimumInternalValue!==from && minimumInternalValue !== -10000)
     property int minimumInternalValue: -10000
