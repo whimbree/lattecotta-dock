@@ -106,8 +106,8 @@ The target implementation must satisfy these rules:
 2. **Fresh per-member identity.** Every linked member receives fresh persistent
    containment and applet IDs, a fresh runtime view, fresh output and placement
    state, fresh geometry controllers, and a distinct edit registration.
-   Layouts-dialog Copy also produces independent snapshots; Cut alone preserves
-   origin identity for its checked move transaction.
+   Layouts-dialog Copy also produces independent snapshots with no move flags;
+   Cut alone preserves origin identity for its checked move transaction.
 3. **Synchronization scope.** Content synchronization is explicit. Placement,
    output, edge, alignment, visibility policy, runtime geometry, applet-local
    length, and transient edit presentation are not blanket-copied through the

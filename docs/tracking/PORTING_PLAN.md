@@ -4262,9 +4262,9 @@ prerequisites in the phases above are done.
       Commits: af70eb2a8, 5637b6709
 - [x] Fix D120 (Copy preserved stale linked lineage). Normalize every
       layouts-dialog Copy through the independent-snapshot policy before
-      clipboard publication. Cut alone preserves origin identity for its
-      checked move transaction.
-      Commits: 2255a1af0, 37ab7b7fc
+      clipboard publication, clearing linked lineage and both move flags. Cut
+      alone preserves origin identity for its checked move transaction.
+      Commits: 2255a1af0, 37ab7b7fc, 8ef1de775
 - [x] Fix D121 (late move refusal left relocation pending). Return checked
       success from the manager transaction, refuse before source unassignment,
       and clear the complete pending placement request before the normal reveal

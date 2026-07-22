@@ -179,8 +179,9 @@ validation after restart.
 
 Copy now converts every record through `toIndependentSnapshot()` before
 clipboard publication. This is the same relation-breaking policy as Duplicate
-Dock. Cut remains distinct because it preserves origin identity only for the
-checked move transaction.
+Dock. The value operation clears both move-transaction flags as well as linked
+lineage. Cut remains distinct because it preserves origin identity only for
+the checked move transaction.
 
 ### Late layout-move refusal never completed relocation (fixed)
 
