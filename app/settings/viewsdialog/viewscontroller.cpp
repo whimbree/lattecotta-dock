@@ -152,7 +152,7 @@ bool Views::hasSelectedView() const
     return m_view->selectionModel()->hasSelection();
 }
 
-bool Views::canRemoveSelectedViews()
+bool Views::canRemoveSelectedViews() const
 {
     const Data::ViewsTable selected = selectedViewsCurrentData();
     const Data::ViewsTable &all = m_model->currentViewsData();
