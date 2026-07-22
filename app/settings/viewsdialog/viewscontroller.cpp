@@ -1053,7 +1053,12 @@ void Views::save()
             origin->updateView(pastedactiveview);
         } else {
             //! offscreen_view->onscreen_view
-            m_handler->corona()->layoutsManager()->moveView(originlayoutname, originviewid, destinationlayoutname);
+            if (!m_handler->corona()->layoutsManager()->moveView(
+                    originlayoutname, originviewid, destinationlayoutname)) {
+                qCritical() << "Views controller failed to commit the revalidated move of containment"
+                            << originviewid << "to" << destinationlayoutname;
+                continue;
+            }
             //!is needed in order for layout to not trigger another move
             pastedactiveview.setState(Data::View::IsCreated, QString(), QString(), QString());
             central->updateView(pastedactiveview);

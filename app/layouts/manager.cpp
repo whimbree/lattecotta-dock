@@ -34,6 +34,9 @@
 #include <KPackage/Package>
 #include <KNotification>
 
+// C++
+#include <utility>
+
 namespace Latte {
 namespace Layouts {
 
@@ -266,43 +269,56 @@ void Manager::loadLayoutOnStartup(QString layoutName)
     m_synchronizer->switchToLayout(layoutName);
 }
 
-void Manager::moveView(QString originLayoutName, uint originViewId, QString destinationLayoutName)
+bool Manager::moveView(const QString &originLayoutName,
+                       const uint originViewId,
+                       const QString &destinationLayoutName)
 {
     if (memoryUsage() != Latte::MemoryUsage::MultipleLayouts
             || originLayoutName.isEmpty()
             || destinationLayoutName.isEmpty()
             || originViewId <= 0
             || originLayoutName == destinationLayoutName) {
-        return;
+        qWarning() << "layout manager refused invalid move request"
+                   << originLayoutName << originViewId << destinationLayoutName;
+        return false;
     }
 
-    auto originlayout = m_synchronizer->layout(originLayoutName);
-    auto destinationlayout = m_synchronizer->layout(destinationLayoutName);
+    Layout::GenericLayout *const originLayout = m_synchronizer->layout(originLayoutName);
+    Layout::GenericLayout *const destinationLayout = m_synchronizer->layout(destinationLayoutName);
 
-    if (!originlayout || !destinationlayout || originlayout == destinationlayout) {
-        return;
+    if (!originLayout || !destinationLayout || originLayout == destinationLayout) {
+        qCritical() << "layout manager could not resolve distinct move endpoints"
+                    << originLayoutName << destinationLayoutName;
+        return false;
     }
 
-    Plasma::Containment *originviewcontainment = originlayout->containmentForId(originViewId);
-    Latte::View *originview = originlayout->viewForContainment(originViewId);
+    Plasma::Containment *const originViewContainment = originLayout->containmentForId(originViewId);
+    Latte::View *const originView = originLayout->viewForContainment(originViewId);
 
-    if (!originviewcontainment) {
-        return;
+    if (!originViewContainment) {
+        qCritical() << "layout manager could not find containment" << originViewId
+                    << "in origin layout" << originLayoutName;
+        return false;
     }
 
-    const Data::ViewsTable originViews = originlayout->viewsTable();
+    const Data::ViewsTable originViews = originLayout->viewsTable();
     if (!originViews.participatesInLegacyLayoutMove(QString::number(originViewId))) {
         qCritical() << "layout manager refused moving containment" << originViewId
                     << "from" << originLayoutName
                     << "because its dock relationship cannot cross layouts as one containment";
-        return;
+        return false;
     }
 
-    QList<Plasma::Containment *> origincontainments = originlayout->unassignFromLayout(originviewcontainment);
-
-    if (origincontainments.size() > 0) {
-        destinationlayout->assignToLayout(originview, origincontainments);
+    QList<Plasma::Containment *> originContainments =
+        originLayout->unassignFromLayout(originViewContainment);
+    if (originContainments.isEmpty()) {
+        qCritical() << "layout manager failed to unassign containment" << originViewId
+                    << "from" << originLayoutName;
+        return false;
     }
+
+    destinationLayout->assignToLayout(originView, std::move(originContainments));
+    return true;
 }
 
 void Manager::loadLatteLayout(QString layoutPath)

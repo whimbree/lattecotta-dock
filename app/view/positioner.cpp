@@ -938,7 +938,14 @@ void Positioner::initSignalingForLocationChangeSliding()
 
         //! LAYOUT
         if (!m_nextLayoutName.isEmpty()) {
-            m_corona->layoutsManager()->moveView(m_view->layout()->name(), m_view->containment()->id(), m_nextLayoutName);
+            const QString destinationLayoutName = m_nextLayoutName;
+            if (!m_corona->layoutsManager()->moveView(
+                    m_view->layout()->name(), m_view->containment()->id(), destinationLayoutName)) {
+                qCritical() << "Positioner: cancelling refused relocation of containment"
+                            << m_view->containment()->id() << "to" << destinationLayoutName;
+                cancelFailedLayoutRelocation();
+                return;
+            }
         }
 
         //! SCREEN
@@ -976,6 +983,28 @@ void Positioner::initSignalingForLocationChangeSliding()
             originalview->setScreensGroup(m_nextScreensGroup);
         }
     });
+}
+
+void Positioner::cancelFailedLayoutRelocation()
+{
+    m_nextLayoutName.clear();
+    m_nextScreenName.clear();
+    m_nextScreen = nullptr;
+    m_nextScreenEdge = Plasma::Types::Floating;
+    m_nextAlignment = Latte::Types::NoneAlignment;
+    if (m_view->isOriginal()) {
+        auto *const originalView = qobject_cast<Latte::OriginalView *>(m_view);
+        Q_ASSERT(originalView);
+        m_nextScreensGroup = originalView->screensGroup();
+    } else {
+        m_nextScreensGroup = Latte::Types::SingleScreenGroup;
+    }
+
+    //! The hide animation already completed. Finish the same generation
+    //! through the normal reveal path after making every pending placement
+    //! component empty, so geometry settlement and edit-window restoration
+    //! retain their ordinary ordering.
+    scheduleLastRepositionApplyEvent();
 }
 
 bool Positioner::inLayoutUnloading()

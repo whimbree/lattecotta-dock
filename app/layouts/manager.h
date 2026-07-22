@@ -1,6 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2017 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2017 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
 
     SPDX-License-Identifier: GPL-2.0-or-later
 */
@@ -90,7 +91,9 @@ public:
     SyncedLaunchers *syncedLaunchers() const;
     Synchronizer *synchronizer() const;
 
-    void moveView(QString originLayoutName, uint originViewId, QString destinationLayoutName);
+    [[nodiscard]] bool moveView(const QString &originLayoutName,
+                                uint originViewId,
+                                const QString &destinationLayoutName);
 
 public Q_SLOTS:
     void showAboutDialog();

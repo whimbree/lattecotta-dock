@@ -157,6 +157,7 @@ private Q_SLOTS:
     void updateContainmentScreen();
 
 private:
+    void cancelFailedLayoutRelocation();
     void init();
     void initSignalingForLocationChangeSliding();
     void scheduleLastRepositionApplyEvent();
