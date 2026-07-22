@@ -544,7 +544,7 @@ lineage and that a late cross-layout move refusal left relocation pending. The
 corrections normalize Copy through the independent-snapshot boundary and make
 every started relocation end in commit or cancel-and-reveal. Focused rereview
 then found transient Cut/Paste flags at the same snapshot boundary;
-`8ef1de775` clears both flags centrally. The independent rereview returned
+`b1c6d0573` clears both flags centrally. The independent rereview returned
 MERGE. The final canonical gate exited 0 at exact executable head
 `7ee36a32b83f060db727de6b8f9550f18cf58406` with all 104 CTest entries, the
 coverage and QML ratchets, all 13 scene probes, three sanitizer recipes, and the

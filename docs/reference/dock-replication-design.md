@@ -158,33 +158,33 @@ The target implementation must satisfy these rules:
       IDs, observed a visibility-mode change propagate only inside the existing
       relationship, and kept identities stable across restart.
 - [x] Add the Create Linked Dock… action and active-output/edge placement flow
-      (`ea7a77f0e`, 2026-07-22).
+      (`94ca623a6`, 2026-07-22).
 - [x] Key relationship membership by persistent member identity and separate
       explicit placement from screen-group-derived placement
-      (`6a9183fc6`, `fe1230670`, 2026-07-22).
+      (`2b5bf8ea0`, `d8098067a`, 2026-07-22).
 - [x] Persist and validate the explicit placement policy while retaining the
-      legacy default for existing layouts (`6a9183fc6`, `c53887f9b`,
+      legacy default for existing layouts (`2b5bf8ea0`, `8adc09a88`,
       2026-07-22).
 - [x] Synchronize applet creation without feedback and keep every applet
-      instance identity disjoint (`148da3e1b`, 2026-07-22).
+      instance identity disjoint (`4b9bbb1ba`, 2026-07-22).
 - [x] Route add, drop, remove, reorder, configuration, and Undo through the
       direct root from every member. Member projections retain separate applet
       identities; Undo may allocate a fresh member-local ID while copying the
-      root configuration (`1457ab790`, `c9f74689c`, `5bcde4f40`, 2026-07-22).
+      root configuration (`7d4245f80`, `c90721575`, `8e9540f64`, 2026-07-22).
 - [x] Validate the complete persisted direct-root graph before runtime
       construction and refuse missing targets, chains, cycles, duplicate IDs,
-      noncanonical containment IDs, and invalid placement roles (`683a17048`,
-      `5b8bb9542`, 2026-07-22).
+      noncanonical containment IDs, and invalid placement roles (`3e89143fb`,
+      `824a7c8b6`, 2026-07-22).
 - [x] Persist removal tombstones before restart and restore Plasma Undo from an
-      exact pre-removal snapshot in single-layout mode (`f1a76d7a4`,
-      `e781b4d0b`, `c69ad6e86`, `98dcbf894`, 2026-07-22).
+      exact pre-removal snapshot in single-layout mode (`adb11b11f`,
+      `b92fafb56`, `c758f08a4`, `9748aa152`, 2026-07-22).
 - [x] Cover exact creation, occupied-edge coexistence, local edit and placement,
       sizing isolation, removal, deterministic operation replay, and restart
-      (`05bcb00c5`, `19ef4ff7d`, `5c90f9431`, 2026-07-22).
+      (`28a727fad`, `844031b0f`, `8d341260b`, 2026-07-22).
 - [x] Refuse linked-root removal at every runtime and persistence boundary until
       a group-wide reversible transaction exists. Keep derived All Screens
       removal available and prove refusal changes no runtime, persisted, or
-      notification state (`184370cdc`, 2026-07-22).
+      notification state (`39122837c`, 2026-07-22).
 - [x] Keep runtime recreation and output availability separate from persistent
       relationship ownership. Replace complete live groups root-first, park
       members whose persisted output is inactive, and rebuild applet

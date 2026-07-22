@@ -1329,26 +1329,26 @@ multi-view, multi-monitor setup.
       fallback for Plasma's same 60-second window, canceled by Undo or final
       destruction. The seeded nested replay observes disk retirement before
       replacement and restores the intended topology after restart.
-      Commits: f1a76d7a4, e781b4d0b
+      Commits: adb11b11f, b92fafb56
 
 - [x] Fix D98 (dock-system sizing diagnostics read the edit controller).
       Collect effective icon size and available primary length from each
       view's live Metrics authority, which is the object AutoSize consumes.
       The exact linked acceptance observes non-null values and cross-output
       sizing isolation.
-      Commits: dafb6d0c7
+      Commits: bfee4170e
 
 - [x] Fix D99 (programmatic applet creation did not notify linked members).
       Announce a successful external plug-in creation once, then fan out
       through a local-only path that cannot feed back into the relationship.
       Nested KWin observes equal plug-in multisets with disjoint applet IDs.
-      Commits: 148da3e1b
+      Commits: 4b9bbb1ba
 
 - [x] Fix D100 (startup cleanup deleted explicitly placed linked docks).
       Regenerate only screen-group-derived members and stable-partition roots
       before members during startup. Explicit members retain their persistent
       IDs, output, edge, and direct-root relation through reload.
-      Commits: c53887f9b
+      Commits: 8adc09a88
 
 - [x] Fix D101 (rapid placement changes lost relocation ownership). Stop an
       older reveal before the next hide owns the transaction, version every
@@ -1356,37 +1356,37 @@ multi-view, multi-monitor setup.
       geometry settlement across the view's screen, geometry, validation, and
       reveal queues. Seed 127934575 completes 28 placements and holds the
       converged geometry stable.
-      Commits: 9c5620d99, 05bcb00c5
+      Commits: 15dbcbea1, 28a727fad
 
 - [x] Fix D102 (viewless containments missed the removal fallback). Arm the
       notification-independent commit for every registered containment, not
       only objects with a dock View. The view map remains conditional while
       embedded containment cleanup follows the same Undo transaction.
-      Commits: b7795aa6d
+      Commits: 5353a9e94
 
 - [x] Fix D103 (linked-dock controls escaped the settings inventory). Treat an
       ordinary QML Dialog as an interactive source, then catalog linked popup,
       output, edge, accept, cancel, and context-menu target actions with exact
       source selectors. The checked ledger now covers 278 affordances through
       742 candidates and 1274 relations.
-      Commits: df1fe812f
+      Commits: ba6267def
 
 - [x] Fix D104 (linked member mutations depended on applet position). Route
       add, drop, remove, reorder, and configuration changes through the
       addressed View to the direct root. Translate only through stable applet
       identity maps and guard coordinator feedback.
-      Commits: 1457ab790
+      Commits: 7d4245f80
 
 - [x] Fix D105 (programmatic applet order changes were not published). Emit the
       same relationship-facing order signal after a successful low-level order
       update that pointer-driven reorder emits.
-      Commits: c9f74689c
+      Commits: c90721575
 
 - [x] Fix D106 (malformed linked graphs reached startup construction). Validate
       the complete persisted table before constructing any relationship runtime
       object and refuse missing roots, chains, cycles, duplicate IDs, and bad
       placement policy.
-      Commits: 683a17048
+      Commits: 3e89143fb
 
 - [x] Fix D107 (linked applet removal left member projections persistent). Keep
       one Plasma Undo transaction at the relationship root, retire member
@@ -1394,24 +1394,24 @@ multi-view, multi-monitor setup.
       copied configuration only if Undo reverses the root transaction. The
       nested recipe proves restart inside the Undo window cannot resurrect any
       projection.
-      Commits: 5bcde4f40, 5c90f9431
+      Commits: 8e9540f64, 8d341260b
 
 - [x] Fix D108 (single-layout dock Undo lacked a complete restoration source).
       Snapshot the exact owned subtree before removal, persist the tombstone,
       and replace Plasma's partial groups from that snapshot on Undo. Refuse the
       reversible removal loudly if the snapshot cannot be prepared.
-      Commits: c69ad6e86, 98dcbf894
+      Commits: c758f08a4, 9748aa152
 
 - [x] Fix D109 (linked-dock source changes lacked current copyright
       attribution). Preserve all existing SPDX lines and add the current
       modification copyright to every changed source path.
-      Commits: 34be80813
+      Commits: cf1cb6d7c
 
 - [x] Fix D110 (widget explorer delegate bypassed its mutation injection). Keep
       the production `latteView` dependency at the page boundary and give the
       reusable delegate one explicit add interface. Mark other injected QML
       relationship reads for the strict-on-touch lint contract.
-      Commits: 8fdf36188
+      Commits: 627c25008
 
 - [x] Bottom-dock layer surface drifts left of its reported geometry
       (filed 2026-07-17 from the e2e promotion unit, evidence in
@@ -4205,14 +4205,14 @@ prerequisites in the phases above are done.
       Undo transaction exists; derived All Screens removal remains available.
       Detach and relationship-aware root-removal choices remain a separate
       continuation item in `docs/reference/dock-replication-design.md`.
-      Commits: 6a9183fc6, fe1230670, ea7a77f0e, 9ba2429e1,
-      5a97d18f9, dafb6d0c7, 148da3e1b, c53887f9b, 9c5620d99,
-      f1a76d7a4, e781b4d0b, 05bcb00c5, b7795aa6d, df1fe812f,
-      ef32c280f, 1457ab790, c9f74689c, 683a17048, c69ad6e86,
-      19ef4ff7d, 5bcde4f40, 98dcbf894, 5c90f9431, 34be80813,
-      8fdf36188, 1d8730a3a, 5b8bb9542, 184370cdc, 8e703bb83,
-      70fd515f8, 9ba2fa1e3, 8020fe31e, af70eb2a8, 5637b6709,
-      2255a1af0, 5acb90525, 37ab7b7fc
+      Commits: 2b5bf8ea0, d8098067a, 94ca623a6, cbb45f511,
+      897fff4fa, bfee4170e, 4b9bbb1ba, 8adc09a88, 15dbcbea1,
+      adb11b11f, b92fafb56, 28a727fad, 5353a9e94, ba6267def,
+      98879c5c0, 7d4245f80, c90721575, 3e89143fb, c758f08a4,
+      844031b0f, 8e9540f64, 9748aa152, 8d341260b, cf1cb6d7c,
+      627c25008, a2270b0ce, 824a7c8b6, 39122837c, dca5067eb,
+      d485f78c4, 49e22845c, 72006f07c, b76ed462a, f72d0c651,
+      c135664b1, 427b97d68, 02809355a
 - [x] Mitigate D111 (linked-root removal was not one reversible transaction).
       Refuse removal at live-view, layout-storage, and settings-model boundaries
       while explicit members remain. Keep legacy derived fanout removable and
@@ -4220,56 +4220,56 @@ prerequisites in the phases above are done.
       notification recipe proves refusal mutates no live, persisted, or Undo
       state. A group-wide root-removal transaction remains open continuation
       work.
-      Commits: 184370cdc
+      Commits: 39122837c
 - [x] Fix D112 (startup accepted malformed dock identity roles). Require
       canonical positive decimal containment IDs and single-output ownership
       for every explicit linked member. Cover both the value layer and real
       KConfig fixtures.
-      Commits: 5b8bb9542
+      Commits: 824a7c8b6
 - [x] Fix D113 (hidden applet remove actions resurfaced in the wrapper). Copy
       the source QAction visibility into the relationship-aware removal action
       before menu insertion.
-      Commits: 1d8730a3a
+      Commits: a2270b0ce
 - [x] Fix D114 (linked-source removal controls raised the QML warning
       baseline). Mark the shell-provided `latteView` and `i18n` boundary around
       the complete touched binding block. The strict-on-touch ratchet removes
       all five introduced warnings and three inherited warnings from the same
       block.
-      Commits: 8e703bb83
+      Commits: dca5067eb
 - [x] Fix D115 (cross-layout moves could split explicit linked relationships).
       Centralize persistent move eligibility, refuse partial explicit groups at
       every UI and runtime boundary, and re-read the origin graph immediately
       before any Cut/Paste destination import.
-      Commits: 70fd515f8, 5637b6709
+      Commits: d485f78c4, f72d0c651
 - [x] Fix D116 (runtime root replacement stranded or deleted linked members).
       Separate runtime teardown from persistence, recreate the complete live
       relationship root-first, and expose the production reload path only
       through the debug D-Bus gate.
-      Commits: 9ba2fa1e3, 5637b6709
+      Commits: 49e22845c, f72d0c651
 - [x] Fix D117 (output disconnect remapped a linked member to primary). Make
       pending placement or persisted KConfig authoritative for eligibility;
       never derive ownership from the transient QWindow or Plasma screen.
       Recheck eligibility after delayed runtime recreation.
-      Commits: 8020fe31e, 5637b6709
+      Commits: 72006f07c, f72d0c651
 - [x] Fix D118 (offline linked members missed root applet changes). Add an
       event-driven readiness barrier and reconcile applet structure, shared
       configuration, order, locked zoom, and coloring after reconnect.
-      Commits: af70eb2a8, 5637b6709
+      Commits: b76ed462a, f72d0c651
 - [x] Fix D119 (linked applet length crossed orientation boundaries). Define
       Tasks applet `length` as per-view geometry through one compile-time
       policy applied on linked import, live forwarding, Undo, and full
       reconciliation. Keep ordinary applet settings linked.
-      Commits: af70eb2a8, 5637b6709
+      Commits: b76ed462a, f72d0c651
 - [x] Fix D120 (Copy preserved stale linked lineage). Normalize every
       layouts-dialog Copy through the independent-snapshot policy before
       clipboard publication, clearing linked lineage and both move flags. Cut
       alone preserves origin identity for its checked move transaction.
-      Commits: 2255a1af0, 37ab7b7fc, 8ef1de775
+      Commits: c135664b1, 02809355a, b1c6d0573
 - [x] Fix D121 (late move refusal left relocation pending). Return checked
       success from the manager transaction, refuse before source unassignment,
       and clear the complete pending placement request before the normal reveal
       and settlement path.
-      Commits: 5acb90525, 37ab7b7fc
+      Commits: 427b97d68, 02809355a
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

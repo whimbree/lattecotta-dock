@@ -5,6 +5,10 @@ Last updated 2026-07-22.
 
 ## 2026-07-22: linked runtime lifecycle and sizing ownership hardened
 
+PR #113 merged the complete independent Duplicate Dock and Create Linked Dock
+slice. The exact GitHub rebase-merge head is
+`c3ca390c919d6d167014a453b18be39d6b9099cc`.
+
 The final cold review found D120 (Copy preserved stale linked lineage) and D121
 (late move refusal left relocation pending). Layouts-dialog Copy now uses the
 same independent-snapshot normalization as Duplicate Dock. The layout manager
@@ -14,7 +18,7 @@ dock through normal generation settlement.
 
 The focused rereview confirmed both transaction fixes, then found that the
 central independent-snapshot operation still retained transient Cut/Paste move
-flags. Commit `8ef1de775` clears both flags with linked lineage. Copying an
+flags. Commit `b1c6d0573` clears both flags with linked lineage. Copying an
 unsaved move destination can no longer make a later Paste remove its source;
 Cut remains the only clipboard action that carries checked move identity.
 
@@ -62,7 +66,7 @@ runtime recreation, independent duplication, and process reload. The removal
 and Undo recipe, seed 127934575 operation storm, and independent Duplicate
 recipe also pass. The canonical gate passed at `a9605fc8e` before the final
 cold-review corrections. The final focused rereview returned MERGE after
-`8ef1de775` removed the last move-state leak. The post-correction canonical
+`b1c6d0573` removed the last move-state leak. The post-correction canonical
 gate exited 0 at exact executable head
 `7ee36a32b83f060db727de6b8f9550f18cf58406`: all 104 CTest entries, the
 104-target and 35-header coverage ratchet, the 234-file and 5,828-warning QML
@@ -71,7 +75,7 @@ output matrix passed.
 
 ## 2026-07-22: explicit linked docks and independent duplication implemented
 
-The `feat/create-linked-dock` branch separates the two user-visible operations.
+Merged PR #113 separates the two user-visible operations.
 Duplicate Dock remains the D77 relation-breaking snapshot from any visible
 role. Create Linked Dock… now creates a synchronized direct-root member on a
 selected active output and edge, including an occupied edge. The member gets
@@ -82,19 +86,19 @@ alignment, visibility, appearance, removal, runtime geometry, and edit
 presentation stay local.
 
 The persisted `Data::View::LinkPlacement` policy separates legacy
-`ScreenGroupDerived` members from `ExplicitTarget` members (`6a9183fc6`). The
-runtime action and ownership split landed in `fe1230670` and `ea7a77f0e`.
+`ScreenGroupDerived` members from `ExplicitTarget` members (`2b5bf8ea0`). The
+runtime action and ownership split landed in `d8098067a` and `94ca623a6`.
 Schema-v2 `dockSystemData` reports direct-root membership, placement policy,
-member lists, and opaque per-view object identities (`9ba2429e1`), while the
+member lists, and opaque per-view object identities (`cbb45f511`), while the
 coarse placement action drives the same validated transaction as the UI
-(`5a97d18f9`). Sizing diagnostics now read each view's Metrics authority
-(`dafb6d0c7`). Programmatic applet creation announces exactly once and fans out
-through a local-only path (`148da3e1b`). Startup loads roots before members and
-only discards derived fanout (`c53887f9b`).
+(`897fff4fa`). Sizing diagnostics now read each view's Metrics authority
+(`bfee4170e`). Programmatic applet creation announces exactly once and fans out
+through a local-only path (`4b9bbb1ba`). Startup loads roots before members and
+only discards derived fanout (`8adc09a88`).
 
 The operation storm found D101 (rapid placement changes lost relocation
 ownership). A previous reveal could clear a newer hide transaction, and delayed
-completion carried no request identity. Commit `9c5620d99` stops the old reveal
+completion carried no request identity. Commit `15dbcbea1` stops the old reveal
 before handoff, versions every placement request, rejects superseded callbacks,
 and exposes requested versus applied generations plus a geometry-settled state
 that includes all deferred positioner queues.
@@ -103,8 +107,8 @@ The removal phase established both causes of D83 (removed duplicate containment
 survives the undo window in persistent layout state). MultipleLayouts copied
 Plasma's transient destroyed QObject back to disk; separately, the nested
 notification failure prevented `KNotification::closed` from committing final
-destruction. Commit `f1a76d7a4` projects destroyed containment trees as
-persistence tombstones. Commit `e781b4d0b` owns a generation-checked fallback
+destruction. Commit `adb11b11f` projects destroyed containment trees as
+persistence tombstones. Commit `b92fafb56` owns a generation-checked fallback
 for Plasma's same 60-second Undo window and cancels it on Undo or final object
 destruction.
 
@@ -113,16 +117,16 @@ the removal fallback): the first fallback arm sat inside the dock-View parking
 branch. Embedded containments are registered without a dock View and could
 therefore remain transient under the same notification failure. The timer now
 belongs to every registered containment; only view-map parking is conditional
-(`b7795aa6d`).
+(`5353a9e94`).
 
 The canonical gate found D103 (linked-dock controls escaped the settings
 inventory). The source scanner knew `ColorDialog` but not an ordinary QML
 `Dialog`, so accept and cancel lifecycle ownership could not be audited. Commit
-`df1fe812f` classifies dialogs as interactive and records all seven new linked
+`ba6267def` classifies dialogs as interactive and records all seven new linked
 creation affordances with exact source selectors. Both inventory tests pass
 with 278 affordances, 742 candidates, and 1274 coverage relations.
 
-`05bcb00c5` adds the exact linked-dock acceptance and deterministic stress
+`28a727fad` adds the exact linked-dock acceptance and deterministic stress
 recipes. The first uses a separated portrait secondary output, creates a member
 on the root's already occupied edge, verifies direct-root lineage, per-member
 sizing and edit ownership, synchronized applet sets with disjoint IDs,
@@ -133,20 +137,20 @@ recipes pass. Focused storage, data, action-policy, identity, libplasma removal,
 and D-Bus tests pass. QML compilation passed after the relocation handoff fix.
 
 The mandatory cold review returned MERGE AFTER FIXES. D104 (linked member
-mutations depended on applet position) is fixed by `1457ab790`; every structural
+mutations depended on applet position) is fixed by `7d4245f80`; every structural
 entry path now reaches the direct root through stable applet-ID mappings. D105
 (programmatic applet order changes were not published) is fixed by
-`c9f74689c`. D106 (malformed linked graphs reached startup construction) is
-fixed by `683a17048`, which validates the complete persisted table before any
+`c90721575`. D106 (malformed linked graphs reached startup construction) is
+fixed by `3e89143fb`, which validates the complete persisted table before any
 runtime member is created. D109 (linked-dock source changes lacked current
-copyright attribution) is fixed by `34be80813`.
+copyright attribution) is fixed by `cf1cb6d7c`.
 
 The executable notification follow-up exposed D107 (linked applet removal left
 member projections persistent) and D108 (single-layout dock Undo lacked a
-complete restoration source). Commits `5bcde4f40` and `5c90f9431` keep one root
+complete restoration source). Commits `8e9540f64` and `8d341260b` keep one root
 applet transaction, retire member projections immediately, recreate them only
-on Undo, and prove restart cannot resurrect them. Commits `c69ad6e86` and
-`98dcbf894` snapshot the complete dock subtree before removal and replace
+on Undo, and prove restart cannot resurrect them. Commits `c758f08a4` and
+`9748aa152` snapshot the complete dock subtree before removal and replace
 Plasma's partial groups on Undo. The expanded dual-output recipe passes applet
 Undo, dock Undo, reload after Undo, and shutdown inside the applet Undo window.
 `storagetest` independently pins exact partial-group replacement.
@@ -154,7 +158,7 @@ Undo, dock Undo, reload after Undo, and shutdown inside the applet Undo window.
 The first final gate then found D110 (widget explorer delegate bypassed its
 mutation injection). AppletDelegate reached directly for production's
 `latteView`, so the shipped delegate's accessibility fixture could no longer
-replace the mutation target. Commit `8fdf36188` keeps that dependency at the
+replace the mutation target. Commit `627c25008` keeps that dependency at the
 WidgetExplorer page boundary and documents the other injected QML reads. The
 focused rerun passes all 231 QML interaction assertions. The complete canonical
 gate then exited 0 at exact head
@@ -166,19 +170,19 @@ documentation-only tail changes no validated source or test content.
 The final cold rereview found three additional boundary defects. D111
 (linked-root removal was not one reversible transaction) exposed a mismatch
 between one Plasma containment Undo and `OriginalView` cascading separate
-persistent member removals. Commit `184370cdc` refuses only roots with explicit
+persistent member removals. Commit `39122837c` refuses only roots with explicit
 persistent members at the view, layout, layouts-dialog, settings-button, and
 context-menu boundaries. The nested notification recipe proves the refusal
 changes no live view, persistence record, or notification count. A group-wide
 relationship transaction remains open; ordinary derived All Screens removal is
 unchanged. D112 (startup accepted malformed dock identity roles) is fixed by
-`5b8bb9542`, which rejects noncanonical containment IDs and explicit members
+`824a7c8b6`, which rejects noncanonical containment IDs and explicit members
 claiming shared screen groups through value-layer and KConfig fixtures. D113
-(hidden applet remove actions resurfaced in the wrapper) is fixed by `1d8730a3a`,
+(hidden applet remove actions resurfaced in the wrapper) is fixed by `a2270b0ce`,
 which preserves the source action's visibility.
 
 The canonical rerun then found and fixed D114 (linked-source removal controls
-raised the QML warning baseline). Commit `8e703bb83` documents the shell context
+raised the QML warning baseline). Commit `dca5067eb` documents the shell context
 boundary around the complete touched binding block and shrinks that file's
 curated warning count from 94 to 91. The final `scripts/gate-all.sh` run exited
 0 and stamped exact source and test head
