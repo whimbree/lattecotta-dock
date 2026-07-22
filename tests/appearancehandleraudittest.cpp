@@ -78,6 +78,7 @@ private Q_SLOTS:
     void iconSizeSliderWritesOnlyIconSize();
     void iconSizeDisplaySnapsOddToEven();
     void proportionIconSizeCollapsesUnityToDisabledSentinel();
+    void proportionIconSizeNamesItsReferenceAndShowsPixels();
     void zoomLevelStoresRoundedInverseFactor();
 
     //! AU-2b Margins (controls 57-59)
@@ -269,6 +270,29 @@ void AppearanceHandlerAuditTest::proportionIconSizeCollapsesUnityToDisabledSenti
         QVERIFY(onlyExpectedKeysChanged(before, after, {QStringLiteral("proportionIconSize")}));
         QVERIFY(valueReflects(after, QStringLiteral("proportionIconSize"), 5));
     }
+}
+
+//! D131 (the relative-size percentage hid its reference): the control is a
+//! percentage of the output's full height, not of Absolute Size. Keep that
+//! reference visible and show the resolved pixel ceiling by default; hovering
+//! may reveal the stored percentage, and the sentinel position says Off.
+void AppearanceHandlerAuditTest::proportionIconSizeNamesItsReferenceAndShowsPixels()
+{
+    QFile file(QStringLiteral(APPEARANCE_CONFIG_QML_PATH));
+    QVERIFY2(file.open(QIODevice::ReadOnly | QIODevice::Text),
+             qPrintable(file.errorString()));
+    const QString source = QString::fromUtf8(file.readAll());
+
+    QVERIFY(source.contains(QStringLiteral(
+        "i18nc(\"icon size relative to screen height\", \"Screen height\")")));
+    QVERIFY(source.contains(QStringLiteral(
+        "i18nc(\"resolved icon size in pixels, e.g. 64 px.\", \"%1 px.\"")));
+    QVERIFY(source.contains(QStringLiteral(
+        "i18nc(\"percentage of screen height, e.g. 5.0 %\", \"%1 %\"")));
+    QVERIFY(source.contains(QStringLiteral(
+        "i18nc(\"screen-relative icon sizing is disabled\", \"Off\")")));
+    QVERIFY(source.contains(QStringLiteral(
+        "i18n(\"Turn Screen height off to use Absolute size.\")")));
 }
 
 //! Control 49 (zoomSlider.updateZoomLevel): the slider is a zoom FACTOR

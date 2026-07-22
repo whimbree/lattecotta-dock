@@ -373,7 +373,8 @@ target_include_directories(appearancehandleraudittest PRIVATE
     ${CMAKE_SOURCE_DIR}/tests/units          # configsnapshotdiff.h
     ${CMAKE_SOURCE_DIR}/containment/plugin)   # types.h (ThemeColors enum)
 target_compile_definitions(appearancehandleraudittest PRIVATE
-    THEMECOLORS_MAINXML_PATH="${CMAKE_SOURCE_DIR}/containment/package/contents/config/main.xml")
+    THEMECOLORS_MAINXML_PATH="${CMAKE_SOURCE_DIR}/containment/package/contents/config/main.xml"
+    APPEARANCE_CONFIG_QML_PATH="${CMAKE_SOURCE_DIR}/shell/package/contents/configuration/pages/AppearanceConfig.qml")
 
 # The Tasks page's real-handler wiring audit (CL-5, the tasks-page settings
 # audit + the D10 disposition, docs/tracking/edit-mode-settings-audit-plan.md controls

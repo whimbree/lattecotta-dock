@@ -117,7 +117,7 @@ PlasmaComponents.Page {
                     visible: dialog.advancedLevel || plasmoid.configuration.proportionIconSize>0
 
                     PlasmaComponents.Label {
-                        text: i18nc("relative size", "Relative size")
+                        text: i18nc("icon size relative to screen height", "Screen height")
                         horizontalAlignment: Text.AlignLeft
                         enabled: proportionSizeSlider.value !== proportionSizeSlider.from
                     }
@@ -155,14 +155,14 @@ PlasmaComponents.Page {
 
                     PlasmaComponents.Label {
                         id: absoluteSizeLbl
-                        Layout.minimumWidth: defaultFontMetrics.advanceWidth * 4
-                        Layout.maximumWidth: defaultFontMetrics.advanceWidth * 4
+                        Layout.minimumWidth: defaultFontMetrics.advanceWidth * 6
+                        Layout.maximumWidth: defaultFontMetrics.advanceWidth * 6
 
                         text: proportionSizeSlider.value !== proportionSizeSlider.from ?
                                   (absoluteSizeLblMouseArea.containsMouse ?
-                                       i18nc("number in pixels, e.g. 64 px.","%1 px.", latteView.metrics.maxIconSize) :
-                                       i18nc("number in percentage, e.g. 85 %","%1 %", proportionSizeSlider.value.toFixed(1))) :
-                                  i18nc("no value in percentage","--- %")
+                                       i18nc("percentage of screen height, e.g. 5.0 %", "%1 %", proportionSizeSlider.value.toFixed(1)) :
+                                       i18nc("resolved icon size in pixels, e.g. 64 px.", "%1 px.", latteView.metrics.maxIconSize)) :
+                                  i18nc("screen-relative icon sizing is disabled", "Off")
                         horizontalAlignment: Text.AlignRight
                         enabled: proportionSizeSlider.value !== proportionSizeSlider.from
 
@@ -172,6 +172,15 @@ PlasmaComponents.Page {
                             hoverEnabled: true
                         }
                     }
+                }
+
+                PlasmaComponents.Label {
+                    Layout.minimumWidth: dialog.optionsWidth
+                    Layout.maximumWidth: Layout.minimumWidth
+                    visible: proportionSizeSlider.value !== proportionSizeSlider.from
+                    text: i18n("Turn Screen height off to use Absolute size.")
+                    wrapMode: Text.WordWrap
+                    opacity: 0.7
                 }
 
                 RowLayout {
