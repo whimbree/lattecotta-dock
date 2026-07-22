@@ -196,6 +196,7 @@ private:
 
     QString m_screenNameToFollow;
     QPointer<QScreen> m_screenToFollow;
+    QMetaObject::Connection m_screenGeometryConnection;
     QTimer m_screenSyncTimer;
     QTimer m_syncGeometryTimer;
     QTimer m_validateGeometryTimer;

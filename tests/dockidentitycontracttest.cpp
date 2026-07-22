@@ -66,6 +66,7 @@ private Q_SLOTS:
     void retargetIsLatestRequestOnlyAndEndsOldSessionFirst();
     void cloneEditRequestsResolveOneOriginalTarget();
     void cloneDestructionUnregistersMembership();
+    void outputRetargetReplacesGeometryConnection();
     void ignoredWindowCleanupRetainsOtherOwners();
 };
 
@@ -128,6 +129,17 @@ void DockIdentityContractTest::cloneDestructionUnregistersMembership()
     const int forget = removeClone.indexOf(QStringLiteral("forgetClone(view);"));
     const int removeContainment = removeClone.indexOf(QStringLiteral("view->layout()->removeView(view->data());"));
     QVERIFY(forget >= 0 && removeContainment > forget);
+}
+
+void DockIdentityContractTest::outputRetargetReplacesGeometryConnection()
+{
+    const QString source = readFile(QStringLiteral("app/view/positioner.cpp"));
+    const QString setScreen = normalized(functionBody(source, QStringLiteral("void Positioner::setScreenToFollow")));
+    const int disconnectOld = setScreen.indexOf(QStringLiteral("QObject::disconnect(m_screenGeometryConnection);"));
+    const int replaceConnection = setScreen.indexOf(QStringLiteral("m_screenGeometryConnection=connect(scr,&QScreen::geometryChanged"));
+
+    QVERIFY(disconnectOld >= 0 && replaceConnection > disconnectOld);
+    QCOMPARE(setScreen.count(QStringLiteral("&QScreen::geometryChanged")), 1);
 }
 
 void DockIdentityContractTest::ignoredWindowCleanupRetainsOtherOwners()
