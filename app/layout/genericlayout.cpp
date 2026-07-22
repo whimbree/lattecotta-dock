@@ -2002,7 +2002,11 @@ void GenericLayout::updateView(const Latte::Data::View &viewData)
     }
 
     if (!nextactivelayoutname.isEmpty()) {
-        m_corona->layoutsManager()->moveView(name(), viewData.id.toUInt(), nextactivelayoutname);
+        if (!m_corona->layoutsManager()->moveView(
+                name(), viewData.id.toUInt(), nextactivelayoutname)) {
+            qCritical() << "GenericLayout: failed to commit move for containment"
+                        << viewData.id << "to" << nextactivelayoutname;
+        }
     }
 
     //! complete update circle and inform the others about the changes
