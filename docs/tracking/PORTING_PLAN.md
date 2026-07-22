@@ -2722,7 +2722,7 @@ showed how much of the dock can only be driven by a pointer today.
       in the nested-kwin vehicle at merge. The design doc's sequencing
       section carries the per-step record.
       C0 (THE ATOMIC DOCK-SYSTEM OBSERVABILITY SNAPSHOT) IMPLEMENTED IN
-      PR #110, PENDING FINAL GATE AND FOLLOW-UP REVIEW 2026-07-22:
+      PR #110, REVIEW CORRECTIONS COMPLETE 2026-07-22:
       dockSystemData() captures every live dock synchronously in stable
       persistent-containment order. It exposes logical, persistent, runtime,
       containment, screen-group relationship, placement, sizing, geometry,
@@ -2733,13 +2733,65 @@ showed how much of the dock can only be driven by a pointer today.
       coordinator lands, so consumers cannot mistake serialization order for
       physical stack order. D76 (global applet-configure readback marked
       unrelated docks active) was split into its own root-cause commit.
-      Commits: fb81c297c (D76), f41dfff03 (C0 implementation); public contract
-      and tracking commit follows here and all hashes are replaced with final
+      The initial review and required cold follow-up both returned MERGE AFTER
+      FIXES. No CRITICAL finding occurred. The second review found D90
+      (malformed clone lineage yielded plausible partial snapshots), D85
+      (runtime identity tests missed retirement timing and thread affinity),
+      D86 (dock-system schema tests left most field types unchecked), D91
+      (C0 review defects lacked flat-registry and checklist traceability), and
+      D92 (const-touched View files omitted current copyright attribution).
+      Each is corrected and recorded below. The first canonical gate passed at
+      `cf1a85acad6342bb4c59bca0e86b41b3e4d00281`, then was invalidated by
+      those code corrections. The final canonical gate runs after this record;
+      PR #110 retains its exact-head exit-code evidence.
+      Commits: fb81c297c (D76), f41dfff03 (C0 implementation), cf1a85aca
+      (public contract), 41cf2dbab + 3f01d4e10 (D90), 1ca75ee4b (D85),
+      1f8d37d9a (D86), 731df2d94 (D92); all hashes are replaced with final
       post-rebase hashes after PR #110 merges.
       Commits: 9d183984e, f7561df37 (seeds); fdfdf5b00, 07e91e456,
       dd3046c03, 77a9586cc (step 1; the worktree merge rebased the
       hashes the agent log records); 2390e7220..bb3d8c53f (steps 2-4,
       11 commits, post-rebase)
+- [x] D84 (runtime token assignment depended on QHash traversal): order every
+      view by persistent containment id before the first registry lookup, and
+      prove fresh registries assign the same view and shared-controller tokens
+      after shuffled input.
+      Commits: f41dfff03 (PR #110; replace after merge)
+- [x] D85 (runtime identity tests missed retirement timing and thread affinity):
+      expose a count-only internal oracle, prove immediate destruction
+      retirement before address reuse, drive foreign-object and foreign-caller
+      cases, and pin the direct connection and affinity predicate against
+      controlled mutations.
+      Commits: 1ca75ee4b (PR #110; replace after merge)
+- [x] D86 (dock-system schema tests left most field types unchecked): assert
+      every top-level, per-view, geometry, and object field type plus every
+      documented nullable state.
+      Commits: 1f8d37d9a (PR #110; replace after merge)
+- [x] D87 (C0 and per-dock configure isolation shared one commit): keep D76
+      (global applet-configure readback marked unrelated docks active) in a
+      dedicated root-cause commit before the C0 feature commit.
+      Commits: fb81c297c, f41dfff03 (PR #110; replace after merge)
+- [x] D88 (the initial C0 public contract omitted identity and geometry
+      semantics): define current duplication behavior, coordinate spaces,
+      logical-pixel units, required versus optional authorities, and stacking
+      as an unavailable capability.
+      Commits: cf1a85aca (PR #110; replace after merge)
+- [x] D89 (dock-system enum mappings lacked exhaustive tests): cover every
+      orientation, screen-group, and relationship enumerator.
+      Commits: f41dfff03 (PR #110; replace after merge)
+- [x] D90 (malformed clone lineage yielded plausible partial snapshots):
+      validate the complete direct-root graph before identity observation and
+      fail the whole query for missing targets, standalone targets, duplicate
+      ids, clone chains, or cycles.
+      Commits: 41cf2dbab, 3f01d4e10 (PR #110; replace after merge)
+- [x] D91 (C0 review defects lacked flat-registry and checklist traceability):
+      record each initial and follow-up review defect in the flat registry,
+      this Phase 10 checklist, and the rolling handoff.
+      Commits: PR #110 tracking record (replace with post-rebase hash)
+- [x] D92 (const-touched View files omitted current copyright attribution):
+      retain every existing line and add the current modification copyright to
+      both sources.
+      Commits: 731df2d94 (PR #110; replace after merge)
 - [ ] Convert nondeterministic e2e tests to deterministic ones: every
       screenshot-compare or sleep-and-hope check that is really about
       STATE moves to a deterministic D-Bus-driven or offscreen-qmltest

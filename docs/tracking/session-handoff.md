@@ -3,7 +3,7 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-22.
 
-## 2026-07-22: PR #110 observability rewrite awaits its final gate and rereview
+## 2026-07-22: PR #110 observability rereview corrections complete
 
 PR #110 now separates D76 (global applet-configure readback marked unrelated
 docks active) from C0 (the atomic dock-system observability snapshot). Commit
@@ -32,9 +32,36 @@ are explicit in the public reference.
 A fresh Nix development build completed `lattedock-core`, `latte-dock`,
 `dbusreportstest`, and `sourceguardtest`; both focused tests passed. The first
 compile exposed two observational View getters that lacked const qualification;
-their declarations and definitions are now const-correct. The canonical
-`scripts/gate-all.sh` run and the required cold follow-up review remain before
-the PR can leave draft state or merge.
+their declarations and definitions are now const-correct. The canonical gate
+then exited 0 at exact head
+`cf1a85acad6342bb4c59bca0e86b41b3e4d00281`: 100/100 CTest entries, the
+100-entry/32-header coverage ratchet, the 234-file and 5,832-warning qmllint
+baseline, all 13 scene probes, 3/3 nested ASan/UBSan recipes, and the complete
+output-matrix fixture passed.
+
+The required cold follow-up review returned MERGE AFTER FIXES with five major
+findings and no CRITICAL finding. D90 (malformed clone lineage yielded plausible
+partial snapshots) is fixed by `41cf2dbab` and pinned by `3f01d4e10`: one
+whole-graph pass now rejects missing or standalone targets, duplicate ids,
+clone chains, and cycles before the first runtime identity lookup, and the
+D-Bus wrapper returns no partial JSON. D85 (runtime identity tests missed
+retirement timing and thread affinity) is fixed by `1ca75ee4b`: a count-only
+oracle proves synchronous retirement before address reuse, worker-thread cases
+drive both foreign object and foreign caller rejection, and controlled source
+mutations pin the direct connection and full affinity predicate. D86
+(dock-system schema tests left most field types unchecked) is fixed by
+`1f8d37d9a`, which asserts every wire type and nullable state. D92
+(const-touched View files omitted current copyright attribution) is fixed by
+`731df2d94`. D91 (C0 review defects lacked flat-registry and checklist
+traceability) is fixed by this record, the Phase 10 checklist, and the flat
+defect entries.
+
+The `cf1a85aca` gate stamp was invalidated by these code corrections. The final
+canonical gate runs after the review-correction and tracking commits. Its exact
+head and exit-code evidence are recorded on PR #110 before merge. Under the
+review-severity rule, a second review with only major findings ends the review
+sequence after those findings are fixed; only a CRITICAL correction requires
+another cold review.
 
 ## 2026-07-21: D81 and D82 prerequisite corrections merged
 

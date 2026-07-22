@@ -697,6 +697,92 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: the QML compile gate accepts every staged package file and the
   qmllint gate returns `TaskItem.qml` to the checked-in 211-warning ceiling.
 
+### D84 - Runtime token assignment depended on QHash traversal
+- STATUS: FIXED IN PR #110 (`f41dfff03`; replace with the post-rebase hash).
+- FOUND: 2026-07-22, initial independent C0 review.
+- ROOT: the first runtime identity-registry lookups happened while traversing
+  Synchronizer's QHash-derived view collection. A fresh process could therefore
+  assign different opaque tokens to the same persistent dock ordering.
+- FIX: read containment ids first, sort by persistent id, then perform every
+  runtime view and shared-controller lookup in that order.
+- EVIDENCE: shuffled inputs with fresh registries produce identical view and
+  shared-controller token assignments; a controlled source guard requires the
+  ordering call before the first registry lookup.
+
+### D85 - Runtime identity tests missed retirement timing and thread affinity
+- STATUS: FIXED IN PR #110 (`1ca75ee4b`; replace with the post-rebase hash).
+- FOUND: 2026-07-22, required cold C0 follow-up review.
+- ROOT: exact-address reuse still passed through the lazy cleared-QPointer
+  fallback if the destruction connection was removed. No test drove the
+  registry's GUI-thread precondition from a foreign object or caller.
+- FIX: a count-only internal oracle proves immediate retirement, and one
+  side-effect-free predicate is shared by registration, destruction, and the
+  oracle. It checks application, registry, caller, and object affinity.
+- EVIDENCE: destruction reduces the count before reconstruction at the same
+  address; worker-thread tests reject both affinity violations; controlled
+  mutations reject queued cleanup, missing erase, and a removed caller check.
+
+### D86 - Dock-system schema tests left most field types unchecked
+- STATUS: FIXED IN PR #110 (`1f8d37d9a`; replace with the post-rebase hash).
+- FOUND: 2026-07-22, required cold C0 follow-up review.
+- ROOT: the serializer test pinned every key but asserted types for only a
+  subset, so numbers, booleans, rectangles, and nullable fields could drift
+  while the key-set check remained green.
+- FIX: assert the JSON type of every top-level, view, geometry, and object field
+  in a populated record, plus every documented null in a default record.
+
+### D87 - C0 and per-dock configure isolation shared one commit
+- STATUS: FIXED IN PR #110 (`fb81c297c`, `f41dfff03`; replace after merge).
+- FOUND: 2026-07-22, initial independent C0 review.
+- ROOT: D76 (global applet-configure readback marked unrelated docks active)
+  and the new C0 read surface were grouped despite having independent causes.
+- FIX: D76 is a dedicated fix commit before the C0 feature commit.
+
+### D88 - Initial C0 documentation omitted identity and geometry semantics
+- STATUS: FIXED IN PR #110 (`cf1a85aca`; replace with the post-rebase hash).
+- FOUND: 2026-07-22, initial independent C0 review.
+- ROOT: the first public text collapsed current duplication behavior and did
+  not define geometry coordinate spaces, logical-pixel units, or required
+  versus optional runtime authorities.
+- FIX: both D-Bus references define those contracts and expose stacking as an
+  explicit unavailable capability instead of an inferred order.
+
+### D89 - Dock-system enum mappings lacked exhaustive tests
+- STATUS: FIXED IN PR #110 (`f41dfff03`; replace with the post-rebase hash).
+- FOUND: 2026-07-22, initial independent C0 review.
+- ROOT: orientation, screen-group, and relationship name switches lacked one
+  data row per enumerator, weakening their Q_UNREACHABLE exhaustiveness claim.
+- FIX: data-driven tests cover every current enumerator.
+
+### D90 - Malformed clone lineage yielded plausible partial snapshots
+- STATUS: FIXED IN PR #110 (`41cf2dbab`, `3f01d4e10`; replace after merge).
+- FOUND: 2026-07-22, required cold C0 follow-up review.
+- ROOT: lineage was classified one record at a time. A bad record was skipped,
+  missing originals produced null screen-group policy, and clone-to-clone edges
+  were never checked, despite the API promising a complete atomic snapshot.
+- FIX: validate the complete persistent-id graph before any identity lookup.
+  Every clone must target a present screens-group original directly. Any
+  missing or standalone target, duplicate id, chain, or cycle refuses the whole
+  query with critical diagnostics and an empty D-Bus string.
+- EVIDENCE: the pure graph matrix covers each valid and invalid shape; source
+  guards pin both validation-before-identity and the wrapper's fail-closed path.
+
+### D91 - C0 review defects lacked flat-registry and checklist traceability
+- STATUS: FIXED IN PR #110 (tracking commit; replace with post-rebase hash).
+- FOUND: 2026-07-22, required cold C0 follow-up review.
+- ROOT: the handoff summarized the initial findings, but the mandatory flat
+  defect registry and Phase 10 checklist did not name them individually. The
+  plan also still described a completed but later-invalidated gate as pending.
+- FIX: D84-D92 are recorded in the flat registry and as checked Phase 10 work;
+  the handoff distinguishes the first gate from the required final rerun.
+
+### D92 - Const-touched View files omitted current copyright attribution
+- STATUS: FIXED IN PR #110 (`731df2d94`; replace with the post-rebase hash).
+- FOUND: 2026-07-22, required cold C0 follow-up review.
+- ROOT: making two observational View accessors const modified both source
+  files without adding the current 2026 modification copyright line.
+- FIX: retain all existing SPDX lines and add Bree Spektor to both files.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here
