@@ -14,6 +14,10 @@ Kirigami.Icon {
 
     property var iconSource
 
+    // Task layout slots are already the authoritative fitted size. Kirigami's
+    // standard-size rounding can paint a 48 px icon inside a 63 px slot and
+    // make automatic sizing appear to leave space unused.
+    roundToIconSize: false
     source: iconSource
 
     Connections {

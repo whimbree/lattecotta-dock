@@ -4,11 +4,14 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-//! Render regression for D25 (task icons stay stale after icon-theme
-//! changes). The real shipped ThemeAwareIcon is rendered with one named QIcon
-//! while KIconTheme switches between two fixture themes that provide the same
-//! icon name as different solid colors. The QML source QVariant and cache key
-//! must stay untouched; only Kirigami.Icon's cached raster is rebuilt.
+//! Render regressions for D25 (task icons stay stale after icon-theme changes)
+//! and D128 (task artwork rounds below its autosized slot). The real shipped
+//! ThemeAwareIcon is rendered with one named QIcon while KIconTheme switches
+//! between two fixture themes that provide the same icon name as different
+//! solid colors. The QML source QVariant and cache key must stay untouched;
+//! only Kirigami.Icon's cached raster is rebuilt. Non-standard slot sizes must
+//! paint completely instead of snapping the artwork to a smaller standard
+//! icon size.
 
 // local
 #include "environment.h"
@@ -76,9 +79,11 @@ private Q_SLOTS:
     void environmentDeduplicatesLoaderNotifications();
     void namedIconRefreshesWithoutSourceReassignment();
     void namelessPixmapIconRemainsUnchanged();
+    void nonStandardSlotPaintsAtComputedSize();
 
 private:
-    void prepareView(QQuickView &view, const QIcon &icon);
+    void prepareView(QQuickView &view, const QIcon &icon,
+                     const QSize &size = QSize{64, 64});
 
     Latte::Environment *m_environment{nullptr};
 };
@@ -102,7 +107,8 @@ void ThemeAwareIconTest::cleanupTestCase()
     KIconLoader::global()->reconfigure(QString());
 }
 
-void ThemeAwareIconTest::prepareView(QQuickView &view, const QIcon &icon)
+void ThemeAwareIconTest::prepareView(QQuickView &view, const QIcon &icon,
+                                     const QSize &size)
 {
     const QStringList importPaths = QString::fromLocal8Bit(
         qgetenv("LATTE_QML_MODULE_PATH")).split(QLatin1Char(':'), Qt::SkipEmptyParts);
@@ -115,7 +121,7 @@ void ThemeAwareIconTest::prepareView(QQuickView &view, const QIcon &icon)
     view.setInitialProperties({{QStringLiteral("iconSource"), QVariant::fromValue(icon)}});
     view.setSource(QUrl::fromLocalFile(QStringLiteral(THEMEAWAREICON_QML_PATH)));
     QVERIFY2(view.status() == QQuickView::Ready, qPrintable(viewErrors(view)));
-    view.resize(64, 64);
+    view.resize(size);
     view.show();
     QVERIFY(QTest::qWaitForWindowExposed(&view));
     QTRY_VERIFY_WITH_TIMEOUT(!view.grabWindow().isNull(), 5000);
@@ -196,6 +202,31 @@ void ThemeAwareIconTest::namelessPixmapIconRemainsUnchanged()
     const QIcon refreshedSource = iconItem->property("iconSource").value<QIcon>();
     QVERIFY(refreshedSource.name().isEmpty());
     QCOMPARE(refreshedSource.cacheKey(), cacheKey);
+}
+
+void ThemeAwareIconTest::nonStandardSlotPaintsAtComputedSize()
+{
+    publishIconTheme(RedTheme);
+    const QIcon icon = KDE::icon(QString::fromLatin1(SharedIconName));
+    QVERIFY(!icon.isNull());
+
+    QQuickView view;
+    constexpr QSize slotSize{63, 63};
+    prepareView(view, icon, slotSize);
+    QObject *const iconItem = view.rootObject();
+    QVERIFY(iconItem);
+
+    QCOMPARE(iconItem->property("roundToIconSize").toBool(), false);
+    QTRY_COMPARE_WITH_TIMEOUT(iconItem->property("paintedWidth").toReal(),
+                              static_cast<qreal>(slotSize.width()), 5000);
+    QTRY_COMPARE_WITH_TIMEOUT(iconItem->property("paintedHeight").toReal(),
+                              static_cast<qreal>(slotSize.height()), 5000);
+
+    const QImage frame = view.grabWindow();
+    QVERIFY(!frame.isNull());
+    QCOMPARE(frame.pixelColor(1, 1), QColor(Qt::red));
+    QCOMPARE(frame.pixelColor(frame.width() - 2, frame.height() - 2),
+             QColor(Qt::red));
 }
 
 int main(int argc, char **argv)
