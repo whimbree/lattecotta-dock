@@ -253,9 +253,18 @@ lineage. Commit `170c827ee` centralizes the const transformation, pins its value
 semantics, and checks both callers. D96 (Duplicate settings inventory still
 claims linked exclusion) corrected the stale semantic row in `a009f8875`.
 `datatypestest`, `dockidentitycontracttest`, and `settingsinventorytest` pass on
-the correction. The canonical gate also passes at `5f616abde` with 104/104
-CTest entries, both ratchets, 13 scene probes, three sanitizer recipes, and the
-output matrix. The mandated second cold review remains required before merge.
+the correction. The canonical gate also passes at `5f616abde` and exact
+documentation head `a99008468` with 104/104 CTest entries, both ratchets, 13
+scene probes, three sanitizer recipes, and the output matrix.
+
+The mandated second cold review found no surviving shallow Duplicate caller or
+production defect in the D95 correction. It did find D97 (independent snapshot
+test ignores transient view fields): the preservation assertion reused
+`Data::View::operator==`, which deliberately omits five transient fields. The
+test now seeds and compares `isActive`, both move flags, `errors`, and `warnings`
+directly. The focused `datatypestest` passes. The same pre-merge review found two
+commit-message conformance issues; both are corrected during branch-history
+cleanup before the final gate and verdict.
 
 The baseline nested run also confirmed D83 (removed duplicate containment
 survives the undo window in persistent layout state), which is not fixed by this

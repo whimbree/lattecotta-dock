@@ -1307,6 +1307,12 @@ multi-view, multi-monitor setup.
       coverage and require the resulting relationship to be severed.
       Commits: a009f8875
 
+- [x] Fix D97 (independent snapshot test ignores transient view fields).
+      `Data::View::operator==` intentionally omits five transient fields, so the
+      relationship-only regression must seed and compare those fields directly
+      instead of relying on persistence equality to cover them.
+      Commits: 7b63afe63
+
 - [ ] Fix D83 (removed duplicate containment survives the undo window in
       persistent layout state). Baseline nested evidence at `16eb58ea4` shows
       independent duplicate containment 12 with `IsClonedFrom: -1`; its runtime

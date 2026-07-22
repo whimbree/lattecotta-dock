@@ -901,6 +901,22 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   independent result with the relationship severed.
 - EVIDENCE: `settingsinventorytest` passes with the corrected semantic row.
 
+### D97 - Independent snapshot test ignores transient view fields
+- STATUS: FIXED on `fix/dock-identity-isolation`.
+- FOUND: 2026-07-22, mandatory second cold review of PR #109.
+- SYMPTOM: `datatypestest` claimed that relationship normalization preserved
+  every unrelated `Data::View` field, but the main equality assertion could not
+  observe five transient fields.
+- ROOT: `Data::View::operator==` intentionally excludes `isActive`, both move
+  flags, `errors`, and `warnings` because they do not participate in settings
+  persistence. Reusing that operator made the snapshot test weaker than its
+  stated value-copy contract.
+- FIX: seed all five omitted fields and compare them directly on the returned
+  snapshot. The persistence-oriented equality assertion remains in place for
+  the fields it is designed to cover.
+- EVIDENCE: the focused `datatypestest` passes with the direct transient-field
+  assertions.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here

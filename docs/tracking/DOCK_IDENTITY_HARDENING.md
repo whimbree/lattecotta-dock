@@ -227,9 +227,13 @@ deterministic output matrix. The subsequent cold review found D95 (layouts-dialo
 Duplicate preserves linked relationship state) and D96 (Duplicate settings
 inventory still claims linked exclusion). Their corrections pass the focused
 data-type, source-contract, and settings-inventory tests. The canonical gate
-also passes on the corrected code and documentation at `5f616abde`: 104/104
-CTest entries, coverage and QML ratchets, 13 scene probes, three sanitizer
-recipes, and the deterministic output matrix.
+also passes on the corrected code and documentation at `5f616abde` and exact
+documentation head `a99008468`: 104/104 CTest entries, coverage and QML
+ratchets, 13 scene probes, three sanitizer recipes, and the deterministic output
+matrix. The mandatory second cold review found D97 (independent snapshot test
+ignores transient view fields), not a production fault: persistence equality
+deliberately omitted five transient fields from the preservation check. Direct
+assertions now cover those fields before the final verdict.
 
 Each slice requires a failing regression first, pure-core ASan and UBSan tests
 where a value model can carry the invariant, nested-KWin state and render
