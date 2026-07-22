@@ -871,8 +871,8 @@ void GenericLayout::destroyedChanged(bool destroyed)
         view = m_latteViews.take(containment);
         if (view) {
             m_waitingLatteViews[containment] = view;
-            scheduleRemovalCommit(containment);
         }
+        scheduleRemovalCommit(containment);
     } else {
         view = m_waitingLatteViews.take(containment);
         if (view) {

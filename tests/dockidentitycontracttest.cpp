@@ -322,6 +322,9 @@ void DockIdentityContractTest::containmentRemovalCommitsWithoutNotificationClose
         "cancelRemovalCommit(containment);"), arm);
     QVERIFY2(park >= 0 && arm > park && undo > arm,
              "remove must arm one commit timer and Undo must cancel it");
+    const int viewGuardEnd = transition.indexOf(QLatin1Char('}'), park);
+    QVERIFY2(arm > viewGuardEnd,
+             "viewless subcontainments must own the same removal commit fallback");
     QVERIFY(finalDestruction.contains(QStringLiteral("cancelRemovalCommit(containment);")));
 }
 
