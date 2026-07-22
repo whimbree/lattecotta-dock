@@ -675,6 +675,20 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   signal, and cleanup controls pass with the real external `/tmp/.git` marker
   also present.
 
+### D82 - TaskItem Connections syntax exceeded the curated Qt 6 lint ratchet
+- STATUS: FIXED (`4f90ed05f`; standalone QML syntax correction).
+- FOUND: 2026-07-21, the C0 (atomic dock-system observability snapshot) branch's
+  required fast gate under pinned Qt 6.11.1.
+- ROOT: `TaskItem.qml` retained the deprecated implicit `Connections` handler
+  form for PulseAudio stream changes. The pinned linter reproducibly counted
+  212 curated findings against the checked-in 211-warning ceiling even though
+  the QML file, both imported static qmltypes files, the lint script, and the
+  baseline were byte-identical to the branch point.
+- FIX: declare `onStreamsChanged` as an explicit function while preserving its
+  target, optional-signal contract, and `updateAudioStreams()` action.
+- EVIDENCE: the QML compile gate accepts every staged package file and the
+  qmllint gate returns `TaskItem.qml` to the checked-in 211-warning ceiling.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here
