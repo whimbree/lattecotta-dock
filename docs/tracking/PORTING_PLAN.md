@@ -1277,6 +1277,14 @@ multi-view, multi-monitor setup.
       d2772a5ca, 8828f1f2b, d3d0a170e, f63e555e5, a8bbe1b7e,
       e2f8bd1d6, 8af5b7f6d, ac6a078be, a10356c44
 
+- [x] Fix D93 (Duplicate submenu change left a stale settings-inventory
+      identity). The relationship-aware menu made the structural separator
+      conditional and removed an unused QAction binding, but the exact audited
+      source-site ledger still named the old bound statement. Update that one
+      structural exemption to the scanner's direct-receiver identity; do not
+      broaden or bypass the inventory gate.
+      Commits: e0d9e21ac
+
 - [ ] Fix D83 (removed duplicate containment survives the undo window in
       persistent layout state). Baseline nested evidence at `16eb58ea4` shows
       independent duplicate containment 12 with `IsClonedFrom: -1`; its runtime

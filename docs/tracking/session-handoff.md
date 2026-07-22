@@ -226,6 +226,14 @@ canonical full gate remains required before push. The branch now sits on C0
 fail-closed relationship graph remain the diagnostic authority. No live desktop
 run, placement normalization, or same-edge stack coordinator was added.
 
+The first rebased canonical gate passed 103 of 104 CTest entries and stopped at
+D93 (Duplicate submenu change left a stale settings-inventory identity). The
+relationship-aware submenu had removed an unused QAction binding around its
+conditional separator, while the exact source-site ledger retained the old
+statement identity. The one structural exemption now follows the scanner's
+direct `m_addViewMenu` receiver identity. No inventory rule or coverage scope
+was weakened. The final canonical gate must rerun after this correction.
+
 The baseline nested run also confirmed D83 (removed duplicate containment
 survives the undo window in persistent layout state), which is not fixed by this
 branch. Independent duplicate containment 12 had `IsClonedFrom: -1` and logged

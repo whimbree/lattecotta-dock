@@ -842,6 +842,22 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - DISPOSITION: keep separate from D77. Instrument the persistent removal and
   layout-sync boundary before changing cleanup behavior.
 
+### D93 - Duplicate submenu change left a stale settings-inventory identity
+- STATUS: FIXED on `fix/dock-identity-isolation` (`e0d9e21ac`).
+- FOUND: 2026-07-22, canonical gate on the rebased identity branch.
+- SYMPTOM: `settingsinventorytest` rejected one new `addSeparator()` source
+  candidate and one ledger identity that no longer resolved.
+- ROOT: making the Duplicate Dock submenu entry conditional also changed its
+  preceding structural separator from an unused QAction binding to a direct
+  `m_addViewMenu->addSeparator()` call. The exact audited settings inventory
+  still named the removed statement shape.
+- FIX: replace only that structural exemption identity with the scanner's new
+  direct-receiver identity. The inventory coverage and ownership rules remain
+  unchanged.
+- EVIDENCE: the first full gate passed the other 103 CTest entries and failed
+  only this exact ledger mismatch. The focused inventory test and final
+  canonical rerun provide the correction evidence.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here
