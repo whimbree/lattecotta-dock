@@ -67,20 +67,20 @@ recipes pass. Focused storage, data, action-policy, identity, libplasma removal,
 and D-Bus tests pass. QML compilation passed after the relocation handoff fix.
 
 The mandatory cold review returned MERGE AFTER FIXES. D104 (linked member
-mutations depended on applet position) is fixed by `96d7abe61`; every structural
+mutations depended on applet position) is fixed by `1457ab790`; every structural
 entry path now reaches the direct root through stable applet-ID mappings. D105
 (programmatic applet order changes were not published) is fixed by
-`b93fa2cde`. D106 (malformed linked graphs reached startup construction) is
-fixed by `be4918abd`, which validates the complete persisted table before any
+`c9f74689c`. D106 (malformed linked graphs reached startup construction) is
+fixed by `683a17048`, which validates the complete persisted table before any
 runtime member is created. D109 (linked-dock source changes lacked current
-copyright attribution) is fixed by `46051f280`.
+copyright attribution) is fixed by `34be80813`.
 
 The executable notification follow-up exposed D107 (linked applet removal left
 member projections persistent) and D108 (single-layout dock Undo lacked a
-complete restoration source). Commits `cda3b564c` and `dacb06140` keep one root
+complete restoration source). Commits `5bcde4f40` and `5c90f9431` keep one root
 applet transaction, retire member projections immediately, recreate them only
-on Undo, and prove restart cannot resurrect them. Commits `6cdd589a8` and
-`20dfb4fc4` snapshot the complete dock subtree before removal and replace
+on Undo, and prove restart cannot resurrect them. Commits `c69ad6e86` and
+`98dcbf894` snapshot the complete dock subtree before removal and replace
 Plasma's partial groups on Undo. The expanded dual-output recipe passes applet
 Undo, dock Undo, reload after Undo, and shutdown inside the applet Undo window.
 `storagetest` independently pins exact partial-group replacement.
@@ -88,11 +88,11 @@ Undo, dock Undo, reload after Undo, and shutdown inside the applet Undo window.
 The first final gate then found D110 (widget explorer delegate bypassed its
 mutation injection). AppletDelegate reached directly for production's
 `latteView`, so the shipped delegate's accessibility fixture could no longer
-replace the mutation target. Commit `94283dfb4` keeps that dependency at the
+replace the mutation target. Commit `8fdf36188` keeps that dependency at the
 WidgetExplorer page boundary and documents the other injected QML reads. The
 focused rerun passes all 231 QML interaction assertions. The complete canonical
 gate then exited 0 at exact head
-`00dc6da9f4dae7591a884f243cc5ab8ad841be20`: 104/104 CTest entries, the
+`65b27ec43a6fe3ba84a792ade1a6ecf6d10bfc7b`: 104/104 CTest entries, the
 5,831-warning full-stage qmllint ratchet, all 13 scene probes, three nested
 ASan/UBSan recipes, and the complete output-matrix fixture passed. This
 documentation-only tail changes no validated source or test content.
@@ -100,15 +100,15 @@ documentation-only tail changes no validated source or test content.
 The final cold rereview found three additional boundary defects. D111
 (linked-root removal was not one reversible transaction) exposed a mismatch
 between one Plasma containment Undo and `OriginalView` cascading separate
-persistent member removals. Commit `31311e158` refuses only roots with explicit
+persistent member removals. Commit `184370cdc` refuses only roots with explicit
 persistent members at the view, layout, layouts-dialog, settings-button, and
 context-menu boundaries. The nested notification recipe proves the refusal
 changes no live view, persistence record, or notification count. A group-wide
 relationship transaction remains open; ordinary derived All Screens removal is
 unchanged. D112 (startup accepted malformed dock identity roles) is fixed by
-`37e6713a9`, which rejects noncanonical containment IDs and explicit members
+`5b8bb9542`, which rejects noncanonical containment IDs and explicit members
 claiming shared screen groups through value-layer and KConfig fixtures. D113
-(hidden applet remove actions resurfaced in the wrapper) is fixed by `db8f830f2`,
+(hidden applet remove actions resurfaced in the wrapper) is fixed by `1d8730a3a`,
 which preserves the source action's visibility.
 
 Same-edge physical stack order, accumulated offsets, reservation, and activation

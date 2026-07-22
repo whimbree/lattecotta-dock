@@ -1374,18 +1374,18 @@ multi-view, multi-monitor setup.
       add, drop, remove, reorder, and configuration changes through the
       addressed View to the direct root. Translate only through stable applet
       identity maps and guard coordinator feedback.
-      Commits: 96d7abe61
+      Commits: 1457ab790
 
 - [x] Fix D105 (programmatic applet order changes were not published). Emit the
       same relationship-facing order signal after a successful low-level order
       update that pointer-driven reorder emits.
-      Commits: b93fa2cde
+      Commits: c9f74689c
 
 - [x] Fix D106 (malformed linked graphs reached startup construction). Validate
       the complete persisted table before constructing any relationship runtime
       object and refuse missing roots, chains, cycles, duplicate IDs, and bad
       placement policy.
-      Commits: be4918abd
+      Commits: 683a17048
 
 - [x] Fix D107 (linked applet removal left member projections persistent). Keep
       one Plasma Undo transaction at the relationship root, retire member
@@ -1393,24 +1393,24 @@ multi-view, multi-monitor setup.
       copied configuration only if Undo reverses the root transaction. The
       nested recipe proves restart inside the Undo window cannot resurrect any
       projection.
-      Commits: cda3b564c, dacb06140
+      Commits: 5bcde4f40, 5c90f9431
 
 - [x] Fix D108 (single-layout dock Undo lacked a complete restoration source).
       Snapshot the exact owned subtree before removal, persist the tombstone,
       and replace Plasma's partial groups from that snapshot on Undo. Refuse the
       reversible removal loudly if the snapshot cannot be prepared.
-      Commits: 6cdd589a8, 20dfb4fc4
+      Commits: c69ad6e86, 98dcbf894
 
 - [x] Fix D109 (linked-dock source changes lacked current copyright
       attribution). Preserve all existing SPDX lines and add the current
       modification copyright to every changed source path.
-      Commits: 46051f280
+      Commits: 34be80813
 
 - [x] Fix D110 (widget explorer delegate bypassed its mutation injection). Keep
       the production `latteView` dependency at the page boundary and give the
       reusable delegate one explicit add interface. Mark other injected QML
       relationship reads for the strict-on-touch lint contract.
-      Commits: 94283dfb4
+      Commits: 8fdf36188
 
 - [x] Bottom-dock layer surface drifts left of its reported geometry
       (filed 2026-07-17 from the e2e promotion unit, evidence in
@@ -4203,9 +4203,9 @@ prerequisites in the phases above are done.
       Commits: 6a9183fc6, fe1230670, ea7a77f0e, 9ba2429e1,
       5a97d18f9, dafb6d0c7, 148da3e1b, c53887f9b, 9c5620d99,
       f1a76d7a4, e781b4d0b, 05bcb00c5, b7795aa6d, df1fe812f,
-      43705d032, 96d7abe61, b93fa2cde, be4918abd, 6cdd589a8,
-      43918705d, cda3b564c, 20dfb4fc4, dacb06140, 46051f280,
-      94283dfb4, db8f830f2, 37e6713a9, 31311e158
+      ef32c280f, 1457ab790, c9f74689c, 683a17048, c69ad6e86,
+      19ef4ff7d, 5bcde4f40, 98dcbf894, 5c90f9431, 34be80813,
+      8fdf36188, 1d8730a3a, 5b8bb9542, 184370cdc
 - [x] Mitigate D111 (linked-root removal was not one reversible transaction).
       Refuse removal at live-view, layout-storage, and settings-model boundaries
       while explicit members remain. Keep legacy derived fanout removable and
@@ -4213,16 +4213,16 @@ prerequisites in the phases above are done.
       notification recipe proves refusal mutates no live, persisted, or Undo
       state. A group-wide root-removal transaction remains open continuation
       work.
-      Commits: 31311e158
+      Commits: 184370cdc
 - [x] Fix D112 (startup accepted malformed dock identity roles). Require
       canonical positive decimal containment IDs and single-output ownership
       for every explicit linked member. Cover both the value layer and real
       KConfig fixtures.
-      Commits: 37e6713a9
+      Commits: 5b8bb9542
 - [x] Fix D113 (hidden applet remove actions resurfaced in the wrapper). Copy
       the source QAction visibility into the relationship-aware removal action
       before menu insertion.
-      Commits: db8f830f2
+      Commits: 1d8730a3a
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

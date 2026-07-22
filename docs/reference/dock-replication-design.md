@@ -159,21 +159,21 @@ The target implementation must satisfy these rules:
 - [x] Route add, drop, remove, reorder, configuration, and Undo through the
       direct root from every member. Member projections retain separate applet
       identities; Undo may allocate a fresh member-local ID while copying the
-      root configuration (`96d7abe61`, `b93fa2cde`, `cda3b564c`, 2026-07-22).
+      root configuration (`1457ab790`, `c9f74689c`, `5bcde4f40`, 2026-07-22).
 - [x] Validate the complete persisted direct-root graph before runtime
       construction and refuse missing targets, chains, cycles, duplicate IDs,
-      noncanonical containment IDs, and invalid placement roles (`be4918abd`,
-      `37e6713a9`, 2026-07-22).
+      noncanonical containment IDs, and invalid placement roles (`683a17048`,
+      `5b8bb9542`, 2026-07-22).
 - [x] Persist removal tombstones before restart and restore Plasma Undo from an
       exact pre-removal snapshot in single-layout mode (`f1a76d7a4`,
-      `e781b4d0b`, `6cdd589a8`, `20dfb4fc4`, 2026-07-22).
+      `e781b4d0b`, `c69ad6e86`, `98dcbf894`, 2026-07-22).
 - [x] Cover exact creation, occupied-edge coexistence, local edit and placement,
       sizing isolation, removal, deterministic operation replay, and restart
-      (`05bcb00c5`, `43918705d`, `dacb06140`, 2026-07-22).
+      (`05bcb00c5`, `19ef4ff7d`, `5c90f9431`, 2026-07-22).
 - [x] Refuse linked-root removal at every runtime and persistence boundary until
       a group-wide reversible transaction exists. Keep derived All Screens
       removal available and prove refusal changes no runtime, persisted, or
-      notification state (`31311e158`, 2026-07-22).
+      notification state (`184370cdc`, 2026-07-22).
 - [ ] Add detach and relationship-aware root-removal choices.
 - [ ] Retire legacy clone terminology from internal APIs in a dedicated
       migration after persisted compatibility no longer depends on it.

@@ -380,10 +380,18 @@ group with the exact relationship and applet snapshot. The first final gate
 also caught a reusable widget-explorer delegate reaching past its injected page
 contract to production's `latteView`; the corrected page boundary passes the
 accessible press-action regression and shrinks the qmllint baseline.
-The canonical gate passed at exact head
-`00dc6da9f4dae7591a884f243cc5ab8ad841be20` with 104/104 CTest entries,
+The pre-rereview canonical gate passed on the tree now represented by
+`65b27ec43` after history cleanup, with 104/104 CTest entries,
 5,831 curated full-stage QML warnings, 13 render probes, three nested sanitizer
 recipes, and the complete output-matrix fixture.
+The final cold rereview found that linked-root teardown did not own one
+reversible transaction, persisted graph validation accepted noncanonical IDs
+and incompatible explicit placement roles, and the relationship-aware applet
+removal wrapper did not preserve source visibility. Root removal is now refused
+while explicit persistent members remain, with derived All Screens teardown
+unchanged. Value and KConfig fixtures cover the expanded graph domain, and the
+menu wrapper copies visibility. A group-wide root-removal transaction remains
+open lifecycle work.
 
 Each slice requires a failing regression first, pure-core ASan and UBSan tests
 where a value model can carry the invariant, nested-KWin state and render
@@ -392,9 +400,10 @@ merge.
 
 ## Open questions requiring runtime evidence
 
-- Linked members have no detach action yet. Removing the root removes the
-  relationship; a relationship-aware root-removal choice dialog also remains
-  future UX work.
+- Linked members have no detach action yet. Root removal is refused while
+  explicit members remain because one-containment Plasma Undo cannot restore
+  the complete relationship. A group-wide transaction and root-removal choice
+  dialog remain future lifecycle work.
 - Which same-edge reservation policy best matches intended daily-driver
   behavior for mixed visibility modes. The stack still requires deterministic
   physical order under every policy.
@@ -414,8 +423,9 @@ merge.
   can resize a perpendicular dock after a peer alignment change. The affected
   AutoSize instance is local, but its input geometry is not yet authoritative.
 - **Known issue:** linked members have no Detach action or relationship-aware
-  root-removal choice dialog. Current root-removes-group behavior is explicit
-  and persistence-safe.
+  root-removal choice dialog. Linked roots remain protected until their
+  explicit members are removed. Enabling root removal without one group-wide
+  transaction is a release blocker for that future milestone.
 - **Cosmetic:** legacy `ClonedView`, `isCloned`, and `isClonedFrom` names remain
   in internal and persisted compatibility APIs. User-facing actions use
   Duplicate Dock and Create Linked Dock… consistently.

@@ -949,7 +949,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   pass with the expanded checked counts.
 
 ### D104 - Linked member mutations depended on applet position
-- STATUS: FIXED on `feat/create-linked-dock` (`96d7abe61`).
+- STATUS: FIXED on `feat/create-linked-dock` (`1457ab790`).
 - FOUND: 2026-07-22, mandatory cold review of Create Linked Dock.
 - SYMPTOM: an add, drop, remove, reorder, or configuration edit originating in
   a linked member could update only that member or address the wrong root applet
@@ -966,7 +966,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   plug-in order with disjoint local IDs.
 
 ### D105 - Programmatic applet order changes were not published
-- STATUS: FIXED on `feat/create-linked-dock` (`b93fa2cde`).
+- STATUS: FIXED on `feat/create-linked-dock` (`c9f74689c`).
 - FOUND: 2026-07-22, mandatory cold review of Create Linked Dock.
 - SYMPTOM: a linked reorder could settle visually in the addressed containment
   without notifying the root coordinator on a non-Justify layout.
@@ -978,7 +978,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   low-level setter, and the all-members acceptance holds equal plug-in order.
 
 ### D106 - Malformed linked graphs reached startup construction
-- STATUS: FIXED on `feat/create-linked-dock` (`be4918abd`).
+- STATUS: FIXED on `feat/create-linked-dock` (`683a17048`).
 - FOUND: 2026-07-22, mandatory cold review of Create Linked Dock.
 - SYMPTOM: a missing root, member chain, cycle, duplicate persistent ID, or bad
   placement policy could reach startup as a plausible partial relationship and
@@ -991,7 +991,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   shape; the production source contract pins validation before construction.
 
 ### D107 - Linked applet removal left member projections persistent
-- STATUS: FIXED on `feat/create-linked-dock` (`cda3b564c`, `dacb06140`).
+- STATUS: FIXED on `feat/create-linked-dock` (`5bcde4f40`, `5c90f9431`).
 - FOUND: 2026-07-22, real-notification Undo acceptance added after mandatory
   cold review.
 - SYMPTOM: removal from a linked member created or mirrored independent Plasma
@@ -1009,7 +1009,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   either containment.
 
 ### D108 - Single-layout dock Undo lacked a complete restoration source
-- STATUS: FIXED on `feat/create-linked-dock` (`6cdd589a8`, `20dfb4fc4`).
+- STATUS: FIXED on `feat/create-linked-dock` (`c69ad6e86`, `98dcbf894`).
 - FOUND: 2026-07-22, executable dock-removal Undo acceptance.
 - SYMPTOM: the forward persistence tombstone correctly removed a linked member,
   but Undo could restore only a partial containment group and lose relationship,
@@ -1024,7 +1024,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   relationship, reloads successfully, and then proves restart tombstones.
 
 ### D109 - Linked-dock source changes lacked current copyright attribution
-- STATUS: FIXED on `feat/create-linked-dock` (`46051f280`).
+- STATUS: FIXED on `feat/create-linked-dock` (`34be80813`).
 - FOUND: 2026-07-22, mandatory cold review of Create Linked Dock.
 - ROOT: six modified source files retained prior authors but omitted the current
   2026 modification copyright line.
@@ -1033,7 +1033,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: a complete changed-source scan reports no missing attribution.
 
 ### D110 - Widget explorer delegate bypassed its mutation injection
-- STATUS: FIXED on `feat/create-linked-dock` (`94283dfb4`).
+- STATUS: FIXED on `feat/create-linked-dock` (`8fdf36188`).
 - FOUND: 2026-07-22, final canonical gate for Create Linked Dock.
 - SYMPTOM: the Add Widgets accessibility press action stopped adding an applet,
   and the strict-on-touch qmllint ratchet increased in three changed files.
@@ -1050,7 +1050,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   before the correction.
 
 ### D111 - Linked-root removal was not one reversible transaction
-- STATUS: MITIGATED on `feat/create-linked-dock` (`31311e158`). Persistent
+- STATUS: MITIGATED on `feat/create-linked-dock` (`184370cdc`). Persistent
   corruption is refused. A group-wide removal transaction remains open.
 - SEVERITY: KNOWN ISSUE for the first linked-dock release. RELEASE BLOCKER for
   enabling root removal while explicit members remain.
@@ -1075,7 +1075,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   and Undo restore covering the root and every persistent explicit member.
 
 ### D112 - Startup accepted malformed dock identity roles
-- STATUS: FIXED on `feat/create-linked-dock` (`37e6713a9`).
+- STATUS: FIXED on `feat/create-linked-dock` (`5b8bb9542`).
 - FOUND: 2026-07-22, final independent review of Create Linked Dock.
 - SYMPTOM: an alphabetic or zero containment identity could pass full-graph
   validation, and an explicitly placed linked member could also claim a
@@ -1092,7 +1092,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   storage tests pass.
 
 ### D113 - Hidden applet remove actions resurfaced in the wrapper
-- STATUS: FIXED on `feat/create-linked-dock` (`db8f830f2`).
+- STATUS: FIXED on `feat/create-linked-dock` (`1d8730a3a`).
 - FOUND: 2026-07-22, final independent review of Create Linked Dock.
 - SYMPTOM: an applet that hid its internal Remove action could receive a visible
   relationship-aware Remove entry in Latte's context menu.
