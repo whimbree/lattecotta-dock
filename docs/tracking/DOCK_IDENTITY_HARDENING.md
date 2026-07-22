@@ -226,8 +226,10 @@ coverage and QML ratchets, 13 scene probes, three sanitizer recipes, and the
 deterministic output matrix. The subsequent cold review found D95 (layouts-dialog
 Duplicate preserves linked relationship state) and D96 (Duplicate settings
 inventory still claims linked exclusion). Their corrections pass the focused
-data-type, source-contract, and settings-inventory tests; the changed final head
-requires another canonical gate before push.
+data-type, source-contract, and settings-inventory tests. The canonical gate
+also passes on the corrected code and documentation at `5f616abde`: 104/104
+CTest entries, coverage and QML ratchets, 13 scene probes, three sanitizer
+recipes, and the deterministic output matrix.
 
 Each slice requires a failing regression first, pure-core ASan and UBSan tests
 where a value model can carry the invariant, nested-KWin state and render
