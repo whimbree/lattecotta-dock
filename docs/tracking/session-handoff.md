@@ -3,6 +3,33 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-22.
 
+## 2026-07-22: side-dock automatic sizing waits for length settlement
+
+D126 (side docks resize from intermediate layout frames) was reproduced on the
+real dual-output layout. A 10 Hz `dockSystemData` trace caught the side dock's
+effective icon size moving `24 -> 32 -> 24` while its 691 px available length,
+1440 px window, output assignment, and placement generation stayed fixed. This
+ruled out KWin placement, output topology, stack ownership, and cross-dock
+identity sharing for this symptom.
+
+The axis-specific fault was inherited from upstream commit `6a558df10`. Before
+that animation-API refactor, both width and height changes called
+`slotAnimationsNeedLength(1)`. The refactor mapped the horizontal increment to
+`animations.needLength.addEvent(layoutsContainer)` but mapped the vertical
+increment to `removeEvent`. Side docks consequently remained in normal state
+while their content height animated, allowing AutoSize to consume transient
+frames and feed new icon-size targets back into the same layout.
+
+Commit `e5930c301` routes both axes through one
+`registerLengthAnimation()` function and leaves the matching removal with the
+existing settle timer. The focused source contract rejects the old vertical
+operation and any reintroduction of separate tracker mutations in either axis.
+`sourceguardtest`, `qmlcompilegate`, and `qmllintgate` pass. With the fixed QML
+staged into the real dock, 200 samples across edit entry, edit exit, and two
+hover cycles stayed at 24 px with unchanged geometry; a fresh staged process
+held the same converged state for another 180 samples. The temporary per-pass
+AutoSize telemetry was removed.
+
 ## 2026-07-22: same-edge edit canvas placement hardened
 
 PR #115 merged the canvas placement repair and its review corrections. The

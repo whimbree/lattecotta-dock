@@ -4289,6 +4289,12 @@ prerequisites in the phases above are done.
       original topology and remove every post-snapshot view ID during teardown,
       including paths where duplicate discovery never completes.
       Commits: f7b125f35
+- [x] Fix D126 (side docks resized from intermediate layout frames). Restore
+      the pre-refactor animation-tracker semantics through one registration path
+      shared by horizontal and vertical layout changes. Keep the matching
+      removal owned by the existing settle timer so AutoSize cannot consume a
+      stream of animated vertical heights.
+      Commits: e5930c301
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

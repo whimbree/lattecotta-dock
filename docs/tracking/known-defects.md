@@ -1290,6 +1290,33 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: teardown recomputes every ID absent from the original snapshot and
   submits each one for removal before the clean fixture stop.
 
+### D126 - Side docks resized from intermediate layout frames
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`e5930c301`).
+- FOUND: 2026-07-22, live side-dock acceptance after the edit-canvas repair.
+- SYMPTOM: a side dock repeatedly expanded and contracted while top and bottom
+  docks remained stable. A 10 Hz atomic snapshot caught the effective icon size
+  animating `24 -> 26 -> 28 -> 30 -> 32 -> 30 -> 28 -> 26 -> 24` while the
+  691 px available length, 1440 px view window, output, edge, and geometry
+  generation remained unchanged.
+- ROOT: upstream commit `6a558df10` migrated both axes from the old
+  `slotAnimationsNeedLength(1)` counter to the event-owned animation tracker.
+  The horizontal branch correctly became `needLength.addEvent`, but the
+  vertical branch became `needLength.removeEvent`. Side docks therefore stayed
+  in `inNormalState` while their content height was animating. `AutoSize` could
+  consume intermediate height frames and feed a new icon-size target back into
+  the same layout animation.
+- FIX: both axes call one `registerLengthAnimation()` function. It registers the
+  layout owner once; the existing settle timer performs the one matching
+  removal. This restores the pre-refactor semantics without changing automatic
+  sizing thresholds or adding vertical-only tolerances.
+- EVIDENCE: the focused source contract rejects the old remove-at-start
+  operation on either axis and requires one shared registration paired with one
+  settle-time removal. `sourceguardtest`, `qmlcompilegate`, and `qmllintgate`
+  pass. The fixed live dock held 24 px through 200 samples spanning edit-mode
+  entry and exit plus two hover cycles; only the edit flag changed, and all
+  placement geometry remained constant. A fresh staged process remained at the
+  same settled size for 180 additional samples. Temporary telemetry was removed.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.
