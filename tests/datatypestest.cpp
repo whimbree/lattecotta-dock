@@ -478,6 +478,8 @@ void DataTypesTest::view_independentSnapshotBreaksRelationshipOnly()
                     QStringLiteral("Layout"),
                     QStringLiteral("1"));
     linked.isActive = true;
+    linked.isMoveOrigin = true;
+    linked.isMoveDestination = true;
     linked.onPrimary = false;
     linked.isClonedFrom = 1;
     linked.screen = 11;
@@ -486,6 +488,8 @@ void DataTypesTest::view_independentSnapshotBreaksRelationshipOnly()
     linked.edge = Plasma::Types::LeftEdge;
     linked.alignment = Latte::Types::Top;
     linked.screensGroup = Latte::Types::AllSecondaryScreensGroup;
+    linked.errors = 2;
+    linked.warnings = 3;
     linked.subcontainments << Data::Generic(QStringLiteral("31"), QStringLiteral("Applet Container"));
 
     Data::View expected = linked;
@@ -495,6 +499,15 @@ void DataTypesTest::view_independentSnapshotBreaksRelationshipOnly()
     const Data::View snapshot = linked.toIndependentSnapshot();
 
     QCOMPARE(snapshot, expected);
+    //! View::operator== intentionally ignores transient model state because it
+    //! is not part of settings persistence. Compare those fields directly so
+    //! this test still proves that relationship normalization changes only the
+    //! relationship fields.
+    QCOMPARE(snapshot.isActive, linked.isActive);
+    QCOMPARE(snapshot.isMoveOrigin, linked.isMoveOrigin);
+    QCOMPARE(snapshot.isMoveDestination, linked.isMoveDestination);
+    QCOMPARE(snapshot.errors, linked.errors);
+    QCOMPARE(snapshot.warnings, linked.warnings);
     QCOMPARE(snapshot.isClonedFrom, Data::View::ISCLONEDNULL);
     QCOMPARE(snapshot.screensGroup, Latte::Types::SingleScreenGroup);
     QCOMPARE(linked.isClonedFrom, 1);
