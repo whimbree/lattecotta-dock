@@ -825,8 +825,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   nonlinked dock (13 and 14), found no containment or applet ID overlap, kept
   the original relation intact, propagated a visibility-mode change from the
   original only to its linked replica, and preserved all four identities across
-  restart. The canonical full gate passed at `81c15c789`; the later cold-review
-  correction requires a new exact-head run.
+  restart. The canonical full gate passed at `81c15c789`, then again with the
+  cold-review corrections at `5f616abde`.
 
 ### D83 - Removed duplicate containment survives the undo window in persistent layout state
 - STATUS: OPEN, CONFIRMED in the baseline nested vehicle.
@@ -889,7 +889,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   precondition without carrying side effects.
 - EVIDENCE: `datatypestest` proves the source is unchanged, every unrelated
   field survives, and both relationship fields normalize. The production source
-  contract proves both callers transform before import.
+  contract proves both callers transform before import. The full canonical gate
+  passes at `5f616abde`.
 
 ### D96 - Duplicate settings inventory still claims linked exclusion
 - STATUS: FIXED on `fix/dock-identity-isolation` (`a009f8875`).

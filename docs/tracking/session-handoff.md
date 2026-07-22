@@ -253,8 +253,9 @@ lineage. Commit `170c827ee` centralizes the const transformation, pins its value
 semantics, and checks both callers. D96 (Duplicate settings inventory still
 claims linked exclusion) corrected the stale semantic row in `a009f8875`.
 `datatypestest`, `dockidentitycontracttest`, and `settingsinventorytest` pass on
-the correction. A new exact-head canonical gate and the mandated second cold
-review remain required before merge.
+the correction. The canonical gate also passes at `5f616abde` with 104/104
+CTest entries, both ratchets, 13 scene probes, three sanitizer recipes, and the
+output matrix. The mandated second cold review remains required before merge.
 
 The baseline nested run also confirmed D83 (removed duplicate containment
 survives the undo window in persistent layout state), which is not fixed by this

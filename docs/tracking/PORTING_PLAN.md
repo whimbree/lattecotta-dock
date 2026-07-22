@@ -1271,8 +1271,8 @@ multi-view, multi-monitor setup.
       inside that relationship, and retained all identities after restart. The
       shared const snapshot transformation also closes the layouts-dialog
       Duplicate path found by the final cold review. The canonical full gate
-      passed at `81c15c789`; the review correction requires a new exact-head
-      run before push. Placement
+      passed first at `81c15c789`, then again with the review corrections at
+      `5f616abde`. Placement
       normalization and same-edge stacking remain separate unchecked work in
       `docs/tracking/DOCK_IDENTITY_HARDENING.md`.
       Commits: a92d3b454, aad2f524f, 5de3f98d3, bf6602737,
