@@ -26,6 +26,19 @@ reported `0,0 146x912` while KWin mapped `727,44 146x912`. Two fresh corrected
 runs mapped the first and retargeted canvases at the reported
 `0,88 146x824`; `layershellmappingtest` passes.
 
+The first independent review returned MERGE AFTER FIXES. D123 (same-edge
+regression did not pin the cache key) allowed a geometry difference to bypass
+the old early-return path. D124 (canvas regression accepted an ambiguous layer
+surface) selected the first same-sized top-layer Latte window. D125 (failed
+duplicate discovery leaked fixture state) could lose ownership of a created
+dock before teardown. Commit `8bb8f7ab7` asserts exact peer geometry, requires
+one concrete canvas with a new KWin UUID after remap, and removes every view ID
+absent from the pre-test snapshot. Two fresh processes pass with identical
+`0,88 146x824` cache keys and distinct canvas generations. Commit `91633b169`
+adds the required source attribution and removes the now-redundant show-time
+input-mask refresh. The README names the shared edit canvas rather than all
+shared edit chrome.
+
 ## 2026-07-22: linked runtime lifecycle and sizing ownership hardened
 
 PR #113 merged the complete independent Duplicate Dock and Create Linked Dock
