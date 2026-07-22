@@ -698,7 +698,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   qmllint gate returns `TaskItem.qml` to the checked-in 211-warning ceiling.
 
 ### D84 - Runtime token assignment depended on QHash traversal
-- STATUS: FIXED IN PR #110 (`f41dfff03`; replace with the post-rebase hash).
+- STATUS: FIXED IN PR #110 (`5591b66d7`).
 - FOUND: 2026-07-22, initial independent C0 review.
 - ROOT: the first runtime identity-registry lookups happened while traversing
   Synchronizer's QHash-derived view collection. A fresh process could therefore
@@ -710,7 +710,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   ordering call before the first registry lookup.
 
 ### D85 - Runtime identity tests missed retirement timing and thread affinity
-- STATUS: FIXED IN PR #110 (`1ca75ee4b`; replace with the post-rebase hash).
+- STATUS: FIXED IN PR #110 (`85e59ee07`).
 - FOUND: 2026-07-22, required cold C0 follow-up review.
 - ROOT: exact-address reuse still passed through the lazy cleared-QPointer
   fallback if the destruction connection was removed. No test drove the
@@ -723,7 +723,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   mutations reject queued cleanup, missing erase, and a removed caller check.
 
 ### D86 - Dock-system schema tests left most field types unchecked
-- STATUS: FIXED IN PR #110 (`1f8d37d9a`; replace with the post-rebase hash).
+- STATUS: FIXED IN PR #110 (`f9c5af8df`).
 - FOUND: 2026-07-22, required cold C0 follow-up review.
 - ROOT: the serializer test pinned every key but asserted types for only a
   subset, so numbers, booleans, rectangles, and nullable fields could drift
@@ -732,14 +732,14 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   in a populated record, plus every documented null in a default record.
 
 ### D87 - C0 and per-dock configure isolation shared one commit
-- STATUS: FIXED IN PR #110 (`fb81c297c`, `f41dfff03`; replace after merge).
+- STATUS: FIXED IN PR #110 (`c11c77ed2`, `5591b66d7`).
 - FOUND: 2026-07-22, initial independent C0 review.
 - ROOT: D76 (global applet-configure readback marked unrelated docks active)
   and the new C0 read surface were grouped despite having independent causes.
 - FIX: D76 is a dedicated fix commit before the C0 feature commit.
 
 ### D88 - Initial C0 documentation omitted identity and geometry semantics
-- STATUS: FIXED IN PR #110 (`cf1a85aca`; replace with the post-rebase hash).
+- STATUS: FIXED IN PR #110 (`9767ea4fb`).
 - FOUND: 2026-07-22, initial independent C0 review.
 - ROOT: the first public text collapsed current duplication behavior and did
   not define geometry coordinate spaces, logical-pixel units, or required
@@ -748,14 +748,14 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   explicit unavailable capability instead of an inferred order.
 
 ### D89 - Dock-system enum mappings lacked exhaustive tests
-- STATUS: FIXED IN PR #110 (`f41dfff03`; replace with the post-rebase hash).
+- STATUS: FIXED IN PR #110 (`5591b66d7`).
 - FOUND: 2026-07-22, initial independent C0 review.
 - ROOT: orientation, screen-group, and relationship name switches lacked one
   data row per enumerator, weakening their Q_UNREACHABLE exhaustiveness claim.
 - FIX: data-driven tests cover every current enumerator.
 
 ### D90 - Malformed clone lineage yielded plausible partial snapshots
-- STATUS: FIXED IN PR #110 (`41cf2dbab`, `3f01d4e10`; replace after merge).
+- STATUS: FIXED IN PR #110 (`30ecf6bfc`, `e853e196a`).
 - FOUND: 2026-07-22, required cold C0 follow-up review.
 - ROOT: lineage was classified one record at a time. A bad record was skipped,
   missing originals produced null screen-group policy, and clone-to-clone edges
@@ -768,7 +768,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   guards pin both validation-before-identity and the wrapper's fail-closed path.
 
 ### D91 - C0 review defects lacked flat-registry and checklist traceability
-- STATUS: FIXED IN PR #110 (tracking commit; replace with post-rebase hash).
+- STATUS: FIXED IN PR #110 (`4fa619870`).
 - FOUND: 2026-07-22, required cold C0 follow-up review.
 - ROOT: the handoff summarized the initial findings, but the mandatory flat
   defect registry and Phase 10 checklist did not name them individually. The
@@ -777,7 +777,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   the handoff distinguishes the first gate from the required final rerun.
 
 ### D92 - Const-touched View files omitted current copyright attribution
-- STATUS: FIXED IN PR #110 (`731df2d94`; replace with the post-rebase hash).
+- STATUS: FIXED IN PR #110 (`cd478bb06`).
 - FOUND: 2026-07-22, required cold C0 follow-up review.
 - ROOT: making two observational View accessors const modified both source
   files without adding the current 2026 modification copyright line.
@@ -829,8 +829,7 @@ carries its own detail or points into the plan and the reference docs.
 ## Fixed (kept for the record)
 
 ### D76 - Global applet-configure readback marked unrelated docks active
-- STATUS: FIXED IN PR #110 (dedicated configure-mode isolation commit; final
-  post-rebase hash is recorded after merge).
+- STATUS: FIXED IN PR #110 (`c11c77ed2`).
 - FOUND: 2026-07-21, multi-dock observability code reading.
 - SYMPTOM: `viewsData.inConfigureAppletsMode` copied the one global rearrange
   toggle into every dock record. Entering applet configuration on one edited

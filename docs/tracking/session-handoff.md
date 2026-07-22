@@ -3,12 +3,12 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-22.
 
-## 2026-07-22: PR #110 observability rereview corrections complete
+## 2026-07-22: PR #110 observability merged
 
-PR #110 now separates D76 (global applet-configure readback marked unrelated
+PR #110 separates D76 (global applet-configure readback marked unrelated
 docks active) from C0 (the atomic dock-system observability snapshot). Commit
-`fb81c297c` derives the effective configure state from each dock's edit mode and
-the one global rearrange toggle. Commit `f41dfff03` adds the schema-versioned
+`c11c77ed2` derives the effective configure state from each dock's edit mode and
+the one global rearrange toggle. Commit `5591b66d7` adds the schema-versioned
 `dockSystemData()` query and its deterministic value-layer tests. The public
 contract and this traceability update remain a separate documentation commit.
 
@@ -41,24 +41,25 @@ output-matrix fixture passed.
 
 The required cold follow-up review returned MERGE AFTER FIXES with five major
 findings and no CRITICAL finding. D90 (malformed clone lineage yielded plausible
-partial snapshots) is fixed by `41cf2dbab` and pinned by `3f01d4e10`: one
+partial snapshots) is fixed by `30ecf6bfc` and pinned by `e853e196a`: one
 whole-graph pass now rejects missing or standalone targets, duplicate ids,
 clone chains, and cycles before the first runtime identity lookup, and the
 D-Bus wrapper returns no partial JSON. D85 (runtime identity tests missed
-retirement timing and thread affinity) is fixed by `1ca75ee4b`: a count-only
+retirement timing and thread affinity) is fixed by `85e59ee07`: a count-only
 oracle proves synchronous retirement before address reuse, worker-thread cases
 drive both foreign object and foreign caller rejection, and controlled source
 mutations pin the direct connection and full affinity predicate. D86
 (dock-system schema tests left most field types unchecked) is fixed by
-`1f8d37d9a`, which asserts every wire type and nullable state. D92
+`f9c5af8df`, which asserts every wire type and nullable state. D92
 (const-touched View files omitted current copyright attribution) is fixed by
-`731df2d94`. D91 (C0 review defects lacked flat-registry and checklist
+`cd478bb06`. D91 (C0 review defects lacked flat-registry and checklist
 traceability) is fixed by this record, the Phase 10 checklist, and the flat
 defect entries.
 
 The `cf1a85aca` gate stamp was invalidated by these code corrections. The final
-canonical gate runs after the review-correction and tracking commits. Its exact
-head and exit-code evidence are recorded on PR #110 before merge. Under the
+canonical gate exited 0 at exact pre-merge head
+`11bd5f5dcfaf43bcc42f5eea5153bf2f42213448`; GitHub then rebased the reviewed
+commits onto `main`, ending at `4fa619870`. Under the
 review-severity rule, a second review with only major findings ends the review
 sequence after those findings are fixed; only a CRITICAL correction requires
 another cold review.
