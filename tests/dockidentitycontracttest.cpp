@@ -413,7 +413,8 @@ void DockIdentityContractTest::appletMutationsUseRelationshipBoundary()
     QVERIFY(contextLayer.contains(QStringLiteral("m_latteView->removeApplet(appletId)")));
     QVERIFY(!containmentInterface.contains(QStringLiteral("Q_EMITapplet->appletDeleted(applet)")));
     QVERIFY(containmentInterface.contains(QStringLiteral("QMetaObject::invokeMethod(applet,\"askDestroy\",Qt::DirectConnection)")));
-    QVERIFY(linkedSource.contains(QStringLiteral("destroyAppletImmediately(m_currentAppletIds[id])")));
+    QVERIFY(linkedSource.contains(QStringLiteral("destroyAppletImmediately(memberId)")));
+    QVERIFY(linkedSource.contains(QStringLiteral("restoreAppletFrom(originalApplet.applet)")));
 
     const QString add = normalized(functionBody(linkedRaw, QStringLiteral("bool ClonedView::addApplet")));
     const QString remove = normalized(functionBody(linkedRaw, QStringLiteral("bool ClonedView::removeApplet")));

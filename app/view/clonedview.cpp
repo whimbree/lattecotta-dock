@@ -402,11 +402,49 @@ void ClonedView::onOriginalAppletConfigPropertyChanged(const int &id, const QStr
 
 void ClonedView::onOriginalAppletInScheduledDestructionChanged(const int &id, const bool &enabled)
 {
-    if (!m_currentAppletIds.contains(id)) {
+    if (enabled) {
+        if (!m_currentAppletIds.contains(id)) {
+            qCritical() << "ClonedView: cannot begin linked applet removal without a mapped member instance for root applet"
+                        << id;
+            return;
+        }
+
+        //! The relationship root owns the one reversible Plasma transaction
+        //! and notification. Member applets are projections, so retire their
+        //! local objects immediately. This makes their persistence tombstones
+        //! durable even if the process exits during the root's Undo window.
+        m_pendingOrderSync = true;
+        const int memberId = m_currentAppletIds.take(id);
+        if (!extendedInterface()->destroyAppletImmediately(memberId)) {
+            qCritical() << "ClonedView: failed to retire linked member applet" << memberId
+                        << "for root applet" << id;
+        }
         return;
     }
 
-    extendedInterface()->setAppletInScheduledDestruction(m_currentAppletIds[id], enabled);
+    if (m_currentAppletIds.contains(id)) {
+        qCritical() << "ClonedView: cannot restore root applet" << id
+                    << "because a member instance is still mapped";
+        return;
+    }
+
+    const ViewPart::AppletInterfaceData originalApplet =
+        m_originalView->extendedInterface()->appletDataForId(id);
+    if (originalApplet.id <= 0 || !originalApplet.applet) {
+        qCritical() << "ClonedView: cannot restore linked member for missing root applet" << id;
+        return;
+    }
+
+    m_pendingOrderSync = true;
+    const int memberId = extendedInterface()->restoreAppletFrom(originalApplet.applet);
+    if (memberId <= 0) {
+        return;
+    }
+
+    m_currentAppletIds.insert(id, memberId);
+    onOriginalAppletsOrderChanged();
+    onOriginalAppletsInLockedZoomChanged(m_originalView->extendedInterface()->appletsInLockedZoom());
+    onOriginalAppletsDisabledColoringChanged(m_originalView->extendedInterface()->appletsDisabledColoring());
 }
 
 void ClonedView::updateContainmentConfigProperty(const QString &key, const QVariant &value)

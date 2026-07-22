@@ -26,6 +26,7 @@
 
 // KDE
 #include <KDesktopFile>
+#include <KConfigGroup>
 #include <KLocalizedString>
 #include <KPluginMetaData>
 #include <KConfigPropertyMap>
@@ -973,6 +974,32 @@ bool ContainmentInterface::destroyAppletImmediately(const int &id)
     return true;
 }
 
+int ContainmentInterface::restoreAppletFrom(const Plasma::Applet *sourceApplet)
+{
+    if (!sourceApplet || !m_view->containment()) {
+        qCritical() << "ContainmentInterface: cannot restore a linked applet without source and target containments";
+        return -1;
+    }
+
+    const QString pluginId = sourceApplet->pluginMetaData().pluginId();
+    Plasma::Applet *const restoredApplet = m_view->containment()->createApplet(pluginId);
+    if (!restoredApplet) {
+        qCritical() << "ContainmentInterface: failed to restore linked applet" << pluginId;
+        return -1;
+    }
+
+    //! Linked applet instances have separate identities and configuration
+    //! groups. Undo recreates the member projection from the still-live root
+    //! before its QML item initializes, so it observes the complete settings
+    //! snapshot instead of a sequence of partial property updates.
+    const KConfigGroup sourceConfig = sourceApplet->config();
+    KConfigGroup restoredConfig = restoredApplet->config();
+    sourceConfig.copyTo(&restoredConfig);
+    restoredConfig.sync();
+
+    return static_cast<int>(restoredApplet->id());
+}
+
 
 void ContainmentInterface::setAppletsOrder(const QList<int> &order)
 {
@@ -997,15 +1024,6 @@ void ContainmentInterface::setAppletsDisabledColoring(const QList<int> &applets)
                               "requestAppletsDisabledColoring",
                               Qt::DirectConnection,
                               Q_ARG(QList<int>, applets));
-}
-
-void ContainmentInterface::setAppletInScheduledDestruction(const int &id, const bool &enabled)
-{
-    QMetaObject::invokeMethod(m_layoutManager,
-                              "setAppletInScheduledDestruction",
-                              Qt::DirectConnection,
-                              Q_ARG(int, id),
-                              Q_ARG(bool, enabled));
 }
 
 void ContainmentInterface::updateContainmentConfigProperty(const QString &key, const QVariant &value)

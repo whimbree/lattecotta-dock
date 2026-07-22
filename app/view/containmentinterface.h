@@ -140,10 +140,10 @@ public:
     void addApplet(QObject *metadata, int x, int y);
     bool removeApplet(const int &id);
     bool destroyAppletImmediately(const int &id);
+    [[nodiscard]] int restoreAppletFrom(const Plasma::Applet *sourceApplet);
     void setAppletsOrder(const QList<int> &order);
     void setAppletsInLockedZoom(const QList<int> &applets);
     void setAppletsDisabledColoring(const QList<int> &applets);
-    void setAppletInScheduledDestruction(const int &id, const bool &enabled);
     void updateContainmentConfigProperty(const QString &key, const QVariant &value);
     void updateAppletConfigProperty(const int &id, const QString &key, const QVariant &value);
 
