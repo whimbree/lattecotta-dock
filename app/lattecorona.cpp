@@ -1766,6 +1766,56 @@ void Corona::createLinkedView(const uint &containmentId, const int &screenId, co
     view->createLinkedView(screenId, static_cast<Plasma::Types::Location>(edge));
 }
 
+void Corona::setViewPlacement(const uint &containmentId,
+                              const int &screenId,
+                              const int &edge,
+                              const int &alignment)
+{
+    auto *const view = m_layoutsManager->synchronizer()->viewForContainment(
+        static_cast<int>(containmentId));
+    if (!view) {
+        qWarning() << "corona: setViewPlacement requested for containment" << containmentId
+                   << "which has no view";
+        return;
+    }
+
+    const auto role = view->actionRole();
+    if (!ViewActionPolicy::permits(role, ViewActionPolicy::Action::Relocate)) {
+        qWarning() << "corona: setViewPlacement refused for screen-group replica containment"
+                   << containmentId;
+        return;
+    }
+
+    if (!m_screenPool->hasScreenId(screenId) || !m_screenPool->isScreenActive(screenId)) {
+        qWarning() << "corona: setViewPlacement refused inactive or unknown output id" << screenId;
+        return;
+    }
+
+    const auto location = static_cast<Plasma::Types::Location>(edge);
+    const bool validEdge = location == Plasma::Types::TopEdge
+            || location == Plasma::Types::BottomEdge
+            || location == Plasma::Types::LeftEdge
+            || location == Plasma::Types::RightEdge;
+    const auto normalizedAlignment = Data::View::normalizeAlignmentForEdge(
+        static_cast<Types::Alignment>(alignment), location);
+    if (!validEdge || normalizedAlignment == Types::NoneAlignment) {
+        qWarning() << "corona: setViewPlacement refused edge/alignment" << edge << alignment;
+        return;
+    }
+
+    const QString connector = m_screenPool->connector(screenId);
+    if (connector.isEmpty()) {
+        qWarning() << "corona: setViewPlacement found no connector for active output id" << screenId;
+        return;
+    }
+
+    view->positioner()->setNextLocation(QString(),
+                                        Types::SingleScreenGroup,
+                                        connector,
+                                        location,
+                                        normalizedAlignment);
+}
+
 void Corona::exportViewTemplate(const uint &containmentId)
 {
     auto view = m_layoutsManager->synchronizer()->viewForContainment((int)containmentId);

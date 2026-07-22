@@ -30,6 +30,7 @@ void ViewActionPolicyTest::screenGroupOriginalRetainsIndependentDockActions()
     //! import, so the new dock remains one independent snapshot.
     QVERIFY(permits(Role::Original, Action::Duplicate));
     QVERIFY(permits(Role::Original, Action::CreateLinked));
+    QVERIFY(permits(Role::Original, Action::Relocate));
     QVERIFY(permits(Role::Original, Action::ExportTemplate));
     QVERIFY(permits(Role::Original, Action::MoveToLayout));
     QVERIFY(permits(Role::Original, Action::Remove));
@@ -39,6 +40,7 @@ void ViewActionPolicyTest::screenGroupReplicaCannotEscapeRootOwnership()
 {
     QVERIFY(permits(Role::ScreenGroupReplica, Action::Duplicate));
     QVERIFY(permits(Role::ScreenGroupReplica, Action::CreateLinked));
+    QVERIFY(!permits(Role::ScreenGroupReplica, Action::Relocate));
     QVERIFY(!permits(Role::ScreenGroupReplica, Action::ExportTemplate));
     QVERIFY(!permits(Role::ScreenGroupReplica, Action::MoveToLayout));
     QVERIFY(!permits(Role::ScreenGroupReplica, Action::Remove));
@@ -48,6 +50,7 @@ void ViewActionPolicyTest::explicitLinkedMemberOwnsPlacementAndRemoval()
 {
     QVERIFY(permits(Role::ExplicitLinkedMember, Action::Duplicate));
     QVERIFY(permits(Role::ExplicitLinkedMember, Action::CreateLinked));
+    QVERIFY(permits(Role::ExplicitLinkedMember, Action::Relocate));
     QVERIFY(!permits(Role::ExplicitLinkedMember, Action::ExportTemplate));
     QVERIFY(!permits(Role::ExplicitLinkedMember, Action::MoveToLayout));
     QVERIFY(permits(Role::ExplicitLinkedMember, Action::Remove));

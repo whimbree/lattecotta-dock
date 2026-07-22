@@ -14,6 +14,7 @@ enum class Action
 {
     Duplicate,
     CreateLinked,
+    Relocate,
     ExportTemplate,
     MoveToLayout,
     Remove,
@@ -37,6 +38,8 @@ constexpr bool permits(const Role role, const Action action)
     case Action::Duplicate:
     case Action::CreateLinked:
         return true;
+    case Action::Relocate:
+        return role != Role::ScreenGroupReplica;
     case Action::ExportTemplate:
     case Action::MoveToLayout:
         return role == Role::Original;

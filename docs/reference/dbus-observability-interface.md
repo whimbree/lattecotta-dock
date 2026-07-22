@@ -15,7 +15,8 @@ high-rate traces stay in categorized logging.
 Landed before or during the 2026-07-16 stabilization session:
 
 - Actions (coarse, user-equivalent): quitApplication, addView,
-  removeView, duplicateView, createLinkedView, moveViewToLayout, exportViewTemplate,
+  removeView, duplicateView, createLinkedView, setViewPlacement,
+  moveViewToLayout, exportViewTemplate,
   switchToLayout, importLayoutFile, showSettingsWindow,
   toggleHiddenState, setAutostart, updateDockItemBadge,
   activateLauncherMenu, setBackgroundFromBroadcast(+enable),

@@ -300,6 +300,9 @@ call showWidgetExplorer u 1            # open view 1's widget explorer (the "Add
 call duplicateView u 1
 call createLinkedView uii 1 2 4       # containment, stable screen-pool id,
                                        # Plasma edge enum; occupied edges are valid
+call setViewPlacement uiii 1 2 5 3    # containment, stable screen-pool id,
+                                       # edge, alignment; start/end is normalized
+                                       # for the target orientation
 call removeView u 1                    # UNDO WINDOW: containment survives until the
                                        # notification closes or ~60s; restarting inside
                                        # that window resurrects it (see live-verification skill)
