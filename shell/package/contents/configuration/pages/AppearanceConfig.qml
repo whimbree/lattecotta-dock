@@ -254,6 +254,7 @@ PlasmaComponents.Page {
                                                                offsetLbl.implicitWidth)
 
                 RowLayout {
+                    id: maxLengthRow
                     Layout.minimumWidth: dialog.optionsWidth
                     Layout.maximumWidth: Layout.minimumWidth
                     spacing: Kirigami.Units.smallSpacing
@@ -380,6 +381,7 @@ PlasmaComponents.Page {
                 }
 
                 RowLayout {
+                    id: minLengthRow
                     Layout.minimumWidth: dialog.optionsWidth
                     Layout.maximumWidth: Layout.minimumWidth
                     spacing: Kirigami.Units.smallSpacing
@@ -479,6 +481,7 @@ PlasmaComponents.Page {
                 }
 
                 RowLayout {
+                    id: offsetRow
                     Layout.minimumWidth: dialog.optionsWidth
                     Layout.maximumWidth: Layout.minimumWidth
                     spacing: Kirigami.Units.smallSpacing
