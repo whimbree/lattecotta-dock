@@ -84,6 +84,10 @@ private Q_SLOTS:
     void effectsArea_decisionTable_data();
     void effectsArea_decisionTable();
 
+    // MultiLayered.qml dock background length and centered placement
+    void dockBackground_keepsCompleteVisualInsideSpan();
+    void centeredDockOffset_staysInsideView();
+
     // MultiLayered.qml:56-125
     void edgePadding_decisionTable_data();
     void edgePadding_decisionTable();
@@ -626,6 +630,34 @@ void BackgroundStateTest::effectsArea_decisionTable()
     QFETCH(EffectsAreaEnv, env);
     QFETCH(QRectF, expected);
     QCOMPARE(resolveEffectsArea(env), expected);
+}
+
+void BackgroundStateTest::dockBackground_keepsCompleteVisualInsideSpan()
+{
+    //! Live D140 (zoomed side-dock chrome clipped at both ends) shape: the
+    //! resting solid background requests 1230 px in a 1240 px primary span
+    //! with 40 px of length-axis shadow. Hover requests 1307 px after the row
+    //! grows, but the complete visual stays in that span.
+    static_assert(fitDockBackgroundLength(1230.0, 1240.0, 40.0) == 1200.0);
+    static_assert(fitDockBackgroundLength(1307.0, 1240.0, 40.0) == 1200.0);
+
+    QCOMPARE(fitDockBackgroundLength(900.0, 1240.0, 40.0), 900.0);
+    QCOMPARE(fitDockBackgroundLength(1307.0, 1240.0, 40.0), 1200.0);
+
+    Latte::Containment::BackgroundStateResolver resolver;
+    QCOMPARE(resolver.dockBackgroundLength(1307.0, 1240.0, 40.0), 1200.0);
+}
+
+void BackgroundStateTest::centeredDockOffset_staysInsideView()
+{
+    static_assert(fitCenteredDockOffset(-34.0, 1240.0, 1240.0) == 0.0);
+    static_assert(fitCenteredDockOffset(80.0, 1000.0, 1240.0) == 80.0);
+    static_assert(fitCenteredDockOffset(160.0, 1000.0, 1240.0) == 120.0);
+
+    QCOMPARE(fitCenteredDockOffset(-160.0, 1000.0, 1240.0), -120.0);
+
+    Latte::Containment::BackgroundStateResolver resolver;
+    QCOMPARE(resolver.centeredDockOffset(-34.0, 1240.0, 1240.0), 0.0);
 }
 
 void BackgroundStateTest::edgePadding_decisionTable_data()

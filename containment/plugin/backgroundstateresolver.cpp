@@ -208,6 +208,46 @@ QRectF BackgroundStateResolver::effectsArea(bool compositingActive,
     return BackgroundState::resolveEffectsArea(env);
 }
 
+double BackgroundStateResolver::dockBackgroundLength(double requestedBackgroundLength,
+                                                      double maximumVisualLength,
+                                                      double shadowMarginsLength) const
+{
+    if (!std::isfinite(requestedBackgroundLength)
+            || !std::isfinite(maximumVisualLength)
+            || !std::isfinite(shadowMarginsLength)
+            || requestedBackgroundLength < 0.0
+            || maximumVisualLength < 0.0
+            || shadowMarginsLength < 0.0) {
+        qCritical() << "BackgroundStateResolver.dockBackgroundLength: invalid geometry"
+                    << requestedBackgroundLength << maximumVisualLength
+                    << shadowMarginsLength;
+        return 0.0;
+    }
+
+    return BackgroundState::fitDockBackgroundLength(requestedBackgroundLength,
+                                                     maximumVisualLength,
+                                                     shadowMarginsLength);
+}
+
+double BackgroundStateResolver::centeredDockOffset(double requestedOffset,
+                                                    double visualLength,
+                                                    double viewPrimaryLength) const
+{
+    if (!std::isfinite(requestedOffset)
+            || !std::isfinite(visualLength)
+            || !std::isfinite(viewPrimaryLength)
+            || visualLength < 0.0
+            || viewPrimaryLength < visualLength) {
+        qCritical() << "BackgroundStateResolver.centeredDockOffset: invalid geometry"
+                    << requestedOffset << visualLength << viewPrimaryLength;
+        return 0.0;
+    }
+
+    return BackgroundState::fitCenteredDockOffset(requestedOffset,
+                                                   visualLength,
+                                                   viewPrimaryLength);
+}
+
 double BackgroundStateResolver::edgePadding(bool borderIsPresent,
                                             bool paddingLiesOnLengthAxis,
                                             bool customRadiusIsEnabled,

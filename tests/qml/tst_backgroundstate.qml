@@ -62,6 +62,16 @@ TestCase {
         compare(area.height, 1);
     }
 
+    function test_zoomBorrowsBackgroundPaddingButKeepsChromeInView() {
+        compare(resolver.dockBackgroundLength(1230, 1240, 40), 1200);
+        compare(resolver.dockBackgroundLength(1307, 1240, 40), 1200);
+        compare(resolver.centeredDockOffset(-34, 1240, 1240), 0);
+
+        //! A shorter dock keeps its available centered movement.
+        compare(resolver.dockBackgroundLength(900, 1240, 40), 900);
+        compare(resolver.centeredDockOffset(80, 940, 1240), 80);
+    }
+
     function test_edgePaddingScalesRoundnessBeyondMargins() {
         //! (radius 12 - margin 2) * factor 0.5
         compare(resolver.edgePadding(true, true, true, 12.0, 0.0, 0.0, 2.0, 0.5), 5.0);
