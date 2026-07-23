@@ -224,7 +224,8 @@ private:
         const QString metrics = normalizedCode(effectMetrics);
         const QString shadowed = normalizedCode(shadowedItem);
 
-        return layered.contains(QStringLiteral(
+        return custom.contains(QStringLiteral("pragmaComponentBehavior:Bound"))
+            && layered.contains(QStringLiteral(
                 "importorg.kde.latte.components1.0asLatteComponents"))
             && custom.contains(QStringLiteral(
                 "layer.enabled:main.shadowEnabled&&main.shadowSize>0"))
@@ -748,6 +749,17 @@ void SourceGuardTest::dockBackgroundShadow_sourceGuardsRejectAspectScaledRendere
                                                        originalMetrics,
                                                        originalShadowed),
              "restoring the aspect-scaled Kirigami renderer must fail the guard");
+
+    QString unboundEffect = originalCustom;
+    const QString boundPragma = QStringLiteral("pragma ComponentBehavior: Bound\n\n");
+    QCOMPARE(unboundEffect.count(boundPragma), 1);
+    unboundEffect.remove(boundPragma);
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(unboundEffect,
+                                                       originalEffect,
+                                                       originalLayered,
+                                                       originalMetrics,
+                                                       originalShadowed),
+             "leaving the layer effect's outer-id capture unbound must fail the guard");
 
     QString guessedMargins = originalLayered;
     guessedMargins.replace(QStringLiteral("barLine.customShadowPaintMargin"),
