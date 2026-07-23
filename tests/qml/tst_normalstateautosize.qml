@@ -87,13 +87,6 @@ Item {
         property int fillApplets: 0
     }
 
-    Item {
-        id: parabolicMock
-        property QtObject factor: QtObject {
-            property real zoom: 1.6
-        }
-    }
-
     Component {
         id: productionSizerComponent
         ContainmentAbility.AutoSize {
@@ -104,7 +97,6 @@ Item {
             layouts: layoutsMock
             layouter: layouterMock
             metrics: metricsMock
-            parabolic: parabolicMock
             view: viewMock
             visibility: visibilityManager
         }
@@ -120,7 +112,6 @@ Item {
             layouts: layoutsMock
             layouter: layouterMock
             metrics: metricsMock
-            parabolic: parabolicMock
             view: viewMock
             visibility: visibilityManager
 
@@ -140,7 +131,6 @@ Item {
             layouts: layoutsMock
             layouter: layouterMock
             metrics: metricsMock
-            parabolic: parabolicMock
             view: viewMock
             visibility: visibilityManager
 
@@ -183,7 +173,6 @@ Item {
             metricsMock.portionIconSize = -1;
             metricsMock.totals.length = 64;
             layoutsMock.mainLayout.length = 1000;
-            parabolicMock.factor.zoom = 1.6;
             root.backgroundLengthPadding = 0;
             root.maxLength = 997.6;
             root.destroyedContinuationCalls = 0;

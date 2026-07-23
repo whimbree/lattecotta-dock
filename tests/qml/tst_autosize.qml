@@ -37,7 +37,7 @@ TestCase {
     function test_shrinkAppliesLargestFittingSize() {
         //! A settled 1000px row overflows the 997.6px budget. Size 63
         //! projects 984.375px and is the largest fit below the ceiling.
-        var result = stepper.step(1000, 997.6, 64, 64, 1.6, -1);
+        var result = stepper.step(1000, 997.6, 64, 64, -1);
         verify(result.found, "an overflowing layout must find a shrunk size");
         compare(result.nextIconSize, 63);
     }
@@ -47,7 +47,7 @@ TestCase {
         //! maxLength makes every shrink limit unsatisfiable, so only the
         //! floor exit can terminate the loop - at the non-step-multiple 78
         //! the inherited equality exit spun forever
-        var result = stepper.step(780, 1, 78, 78, 1.6, -1);
+        var result = stepper.step(780, 1, 78, 78, -1);
         verify(result.found, "the unsatisfiable shrink must still land on the floor");
         compare(result.nextIconSize, 16);
     }
@@ -55,14 +55,14 @@ TestCase {
     function test_growToCeilingRestoresAutomaticSentinel() {
         //! a grow that reaches maxIconSize maps to the sizer's -1 sentinel
         //! at this boundary (the core reports a distinct alternative)
-        var result = stepper.step(500, 2000, 32, 64, 1.6, 32);
+        var result = stepper.step(500, 2000, 32, 64, 32);
         verify(result.found, "a roomy layout grown from its own applied size must apply");
         compare(result.nextIconSize, -1);
     }
 
     function test_growMidRangeAppliesConcreteSize() {
-        //! toGrowLimit 900: size 57 fits and size 58 does not
-        var result = stepper.step(500, 900, 32, 64, 1.0, 32);
+        //! resting grow limit 898: size 57 fits and size 58 does not
+        var result = stepper.step(500, 900, 32, 64, 32);
         verify(result.found);
         compare(result.nextIconSize, 57);
     }
@@ -70,53 +70,53 @@ TestCase {
     function test_automaticSizingNeverGrows() {
         //! appliedIconSize -1 passes the sizer's untouched sentinel in: the
         //! search never grows from a size it did not apply itself
-        var result = stepper.step(500, 2000, 32, 64, 1.6, -1);
+        var result = stepper.step(500, 2000, 32, 64, -1);
         verify(!result.found, "automatic sizing must not grow");
     }
 
-    function test_zoomedEndSlackKeepsCurrent() {
+    function test_restingEndSlackKeepsCurrent() {
         //! A 999px resting row fits the 1000px shrink budget but is above
-        //! the 998px zoom-enabled growth boundary, so neither branch fires.
-        var result = stepper.step(999, 1000, 64, 64, 1.6, 64);
+        //! the 998px resting growth boundary, so neither branch fires.
+        var result = stepper.step(999, 1000, 64, 64, 64);
         verify(!result.found, "inside the band the size must stay put");
     }
 
     function test_liveShapedGrowUsesTheLargestFittingPixelSize() {
-        //! At size 44 the 965px row has room to grow. Size 54 fits after
-        //! adding its incremental hover zoom and size 55 does not; the shell
-        //! must expose the largest fit instead of testing eight-pixel jumps.
-        var result = stepper.step(965, 1228, 44, 68, 1.6, 44);
+        //! At size 44 the 965px row has room to grow. Size 55 fits the resting
+        //! content budget and size 56 does not; the shell must expose the
+        //! largest fit instead of testing eight-pixel jumps.
+        var result = stepper.step(965, 1228, 44, 68, 44);
         verify(result.found);
-        compare(result.nextIconSize, 54);
+        compare(result.nextIconSize, 55);
     }
 
-    function test_hoverZoomReservesOnlyIncrementalGrowth() {
-        //! The live bottom-dock snapshot has a 1114px resting row at size
-        //! 50 inside a 1228px budget. Size 53 reaches 1180.84px at rest and
-        //! 1223.24px after incremental 1.8x hover growth; size 54 would
-        //! exceed the budget. The base icon must not be counted twice.
-        var result = stepper.step(1114, 1228, 50, 114, 1.8, 50);
+    function test_transientHoverIsNotAPersistentFitInput() {
+        //! The live bottom-dock snapshot has a 1114px resting row at size 50
+        //! inside a 1228px budget. Size 55 reaches 1225.4px and size 56 would
+        //! exceed the 1226px resting grow boundary. The API has no hover-zoom
+        //! argument because temporary presentation does not own persistent fit.
+        var result = stepper.step(1114, 1228, 50, 114, 50);
         verify(result.found);
-        compare(result.nextIconSize, 53);
+        compare(result.nextIconSize, 55);
     }
 
     function test_historyPersistsAcrossPassesAndClears() {
         //! the endless-loop protector needs state across calls: a grow, the
         //! shrink undoing it, then the identical grow again is rejected;
         //! clearing the history re-arms it (the sizer's isActive flip)
-        var grow = stepper.step(500, 900, 32, 64, 1.0, 32);
+        var grow = stepper.step(500, 900, 32, 64, 32);
         verify(grow.found);
         compare(grow.nextIconSize, 57);
 
-        var shrink = stepper.step(890.625, 800, 57, 64, 1.0, 57);
+        var shrink = stepper.step(890.625, 800, 57, 64, 57);
         verify(shrink.found);
         compare(shrink.nextIconSize, 51);
 
-        var blocked = stepper.step(500, 900, 32, 64, 1.0, 32);
+        var blocked = stepper.step(500, 900, 32, 64, 32);
         verify(!blocked.found, "the protector must block the repeating grow");
 
         stepper.clearHistory();
-        var rearmed = stepper.step(500, 900, 32, 64, 1.0, 32);
+        var rearmed = stepper.step(500, 900, 32, 64, 32);
         verify(rearmed.found, "a cleared history re-arms the grow");
         compare(rearmed.nextIconSize, 57);
     }
@@ -127,15 +127,13 @@ TestCase {
         //! in the log) and reports nothing found instead of searching
         //! against garbage limits - same for the other measurements no
         //! valid shell can produce
-        verify(!stepper.step(1000, 0, 64, 64, 1.6, -1).found,
+        verify(!stepper.step(1000, 0, 64, 64, -1).found,
                "a zero maxLength must be refused");
-        verify(!stepper.step(-5, 1000, 64, 64, 1.6, -1).found,
+        verify(!stepper.step(-5, 1000, 64, 64, -1).found,
                "a negative layout length must be refused");
-        verify(!stepper.step(1000, 1000, 0, 64, 1.6, -1).found,
+        verify(!stepper.step(1000, 1000, 0, 64, -1).found,
                "a zero current icon size must be refused");
-        verify(!stepper.step(1000, 1000, 64, 0, 1.6, -1).found,
+        verify(!stepper.step(1000, 1000, 64, 0, -1).found,
                "a zero max icon size must be refused");
-        verify(!stepper.step(1000, 1000, 64, 64, 0.5, -1).found,
-               "a zoom factor below 1 must be refused");
     }
 }

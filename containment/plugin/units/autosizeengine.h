@@ -24,10 +24,10 @@ namespace Latte {
 //! The automatic icon-size search as a pure step function (EX-04 in
 //! docs/tracking/QML_EXTRACTION_PLAN.md), extracted from the containment ability
 //! AutoSize.qml and code/autosize.js. One call decides one pass: shrink
-//! when the settled applet row overflows the available length, grow when the
-//! row plus one icon's incremental hover growth fits, otherwise keep the
-//! current size. Temporary hover zoom does not make a fitting resting row
-//! shrink. The QML shell
+//! when the settled applet row overflows the available length, grow when a
+//! larger resting row fits, otherwise keep the current size. Temporary hover
+//! zoom is presentation state and does not participate in the persistent fit.
+//! The QML shell
 //! keeps its timers, gates and property bindings and asks here for
 //! decisions only.
 //!
@@ -42,29 +42,19 @@ namespace AutoSizeEngine {
 //! the search never proposes anything below this floor
 inline constexpr int minIconSize = 16;
 
-//! Keep one logical pixel clear at each primary-axis end after accounting
-//! for incremental hover growth. This absorbs rounding at the strict grow
-//! boundary without double-counting the icon already present in the row.
-inline constexpr double zoomedGrowSlack = 2.0;
-static_assert(zoomedGrowSlack > 0.0,
-              "zoomed growth needs a positive boundary-rounding margin");
+//! Keep one logical pixel clear at each primary-axis end of a resting row.
+//! This absorbs layout and projection rounding at the strict grow boundary
+//! without treating a transient parabolic hover curve as persistent content.
+inline constexpr double settledGrowSlack = 2.0;
+static_assert(settledGrowSlack > 0.0,
+              "settled growth needs a positive boundary-rounding margin");
 
-constexpr double zoomedGrowLimit(double maxLength, double zoomFactor) noexcept
+constexpr double settledGrowLimit(double maxLength) noexcept
 {
-    return maxLength - (zoomFactor > 1.0 ? zoomedGrowSlack : 0.0);
+    return maxLength - settledGrowSlack;
 }
-static_assert(zoomedGrowLimit(1228.0, 1.8) == 1226.0,
-              "zoomed growth must reserve only the two-pixel end slack");
-
-//! The resting row already contains the base icon. Only the extra extent
-//! introduced by hover zoom belongs in the growth fit calculation.
-constexpr double incrementalZoomLengthAtIconSize(int iconSize, double zoomFactor) noexcept
-{
-    return static_cast<double>(iconSize) * (zoomFactor - 1.0);
-}
-static_assert(incrementalZoomLengthAtIconSize(50, 1.8) > 39.99
-              && incrementalZoomLengthAtIconSize(50, 1.8) < 40.01,
-              "hover occupancy must count only growth beyond the base icon");
+static_assert(settledGrowLimit(1228.0) == 1226.0,
+              "resting growth must reserve the two-pixel end slack");
 
 //! history ring bounds: past historyMaxSize entries the ring is cut back
 //! to the newest historyMinSize
@@ -296,9 +286,6 @@ struct AutoSizeInput {
     int currentIconSize;
     //! the configured ceiling (metrics.maxIconSize)
     int maxIconSize;
-    //! parabolic zoom factor; growth reserves only the icon's incremental
-    //! zoom extent plus the small end slack, not the full hovered item
-    double zoomFactor;
     //! the search's own last applied size; absent means automatic sizing
     //! (the shell's -1). Growing is only allowed from a size this search
     //! applied itself, never past automatic.
@@ -308,14 +295,13 @@ struct AutoSizeInput {
 //! One pass of the automatic icon-size search over a measured layout
 //! snapshot. Shrink when the row overflows the shrink limit (always
 //! applies and records its prediction); grow when the row sits under the
-//! slightly tighter grow limit AND the current size is the search's
+//! slightly tighter resting-row grow limit AND the current size is the search's
 //! own applied size (applies only when a larger integer size fits and the
 //! history's endless-loop protector stays quiet); keep the current size
-//! otherwise. Shrinking uses the full settled-row budget, so a transient
-//! hover cannot make the persistent layout smaller. Growth accounts for the
-//! incremental zoom extent and leaves one logical pixel at each end. The
-//! prediction history remains the structural protection against a measured
-//! shrink/grow cycle.
+//! otherwise. Both branches consume only settled geometry, so transient hover
+//! presentation cannot resize the persistent layout. Growth leaves one logical
+//! pixel at each end. The prediction history remains the structural protection
+//! against a measured shrink/grow cycle.
 inline AutoSizeStep step(const AutoSizeInput &input, History &history)
 {
     Q_ASSERT(input.maxLength > 0); //! the QML shell's <= 0 contract keeps this out
@@ -323,7 +309,7 @@ inline AutoSizeStep step(const AutoSizeInput &input, History &history)
     Q_ASSERT(input.maxIconSize >= 1); //! a non-positive ceiling is a caller bug
 
     const double toShrinkLimit = input.maxLength;
-    const double toGrowLimit = zoomedGrowLimit(input.maxLength, input.zoomFactor);
+    const double toGrowLimit = settledGrowLimit(input.maxLength);
 
     if (input.layoutLength > toShrinkLimit) {
         //! must shrink
@@ -340,11 +326,9 @@ inline AutoSizeStep step(const AutoSizeInput &input, History &history)
 
     if (input.layoutLength < toGrowLimit && atOwnAppliedSize) {
         //! must grow probably
-        const double zoomedLengthAtCurrentSize = input.layoutLength
-                + incrementalZoomLengthAtIconSize(input.currentIconSize, input.zoomFactor);
         const std::optional<GrowResult> grown = growToLargestFittingSize(input.maxIconSize,
                                                                          input.currentIconSize,
-                                                                         zoomedLengthAtCurrentSize,
+                                                                         input.layoutLength,
                                                                          toGrowLimit);
 
         if (!grown) {

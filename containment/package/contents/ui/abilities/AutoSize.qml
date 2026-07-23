@@ -20,7 +20,6 @@ Item {
     required property Item layouts
     required property Item layouter
     required property Item metrics
-    required property Item parabolic
     required property QtObject view
     required property Item visibility
 
@@ -164,7 +163,6 @@ Item {
                                         availableContentLength,
                                         sizer.metrics.iconSize,
                                         sizer.metrics.maxIconSize,
-                                        sizer.parabolic.factor.zoom,
                                         sizer.iconSize);
 
             if (result.found) {

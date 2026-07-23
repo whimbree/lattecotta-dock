@@ -42,7 +42,7 @@ public Q_SLOTS:
     //! the sizer's iconSize property verbatim (-1 included), the core
     //! sees std::optional and a distinct variant alternative.
     Q_INVOKABLE QVariantMap step(double layoutLength, double maxLength, int currentIconSize,
-                                 int maxIconSize, double zoomFactor, int appliedIconSize);
+                                 int maxIconSize, int appliedIconSize);
 
 private:
     AutoSizeEngine::History m_history;

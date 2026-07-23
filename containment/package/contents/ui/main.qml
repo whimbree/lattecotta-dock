@@ -1039,7 +1039,6 @@ ContainmentItem {
         layouts: layoutsContainer
         layouter: _layouter
         metrics: _metrics
-        parabolic: _parabolic
         view: latteView
         visibility: visibilityManager
     }
