@@ -70,9 +70,10 @@ rebind only the views eligible on active outputs.
 Horizontal and vertical layout changes use the same per-view animation tracker,
 so automatic sizing waits for settled content on both axes.
 The automatic-size solver uses every fitting integer icon size, sizes the
-persistent dock from its settled row, and reserves only incremental hover zoom
-plus the background's real end padding before painting task artwork into the
-complete fitted slot. Settings sliders
+persistent dock from its settled row, leaves a two-pixel rounding margin, and
+uses the background's real post-padding content span before painting task
+artwork into the complete fitted slot. Temporary hover zoom does not resize the
+resting dock. Settings sliders
 accept wheel input after being clicked without stealing ordinary page scrolling,
 and screen-height sizing shows its resolved pixel ceiling and explicit Off mode.
 The shared edit canvas reasserts its compositor placement and view-local input

@@ -23,12 +23,15 @@ complete 63 px slot, including both corners.
 
 D129 (automatic sizing reserved a full hovered icon) was a fit-model error.
 The resting row already included the base task icon, but both old limits
-subtracted the full zoomed item again. Commit `25390b5d1` makes shrinking depend
-only on the settled row. Growth adds one icon's incremental zoom extent and
-keeps two logical pixels of total slack after that projection. The live-shaped
-1114 px row in a 1228 px budget grows from 50 to 53 px; its stable projection
-plus 1.8x incremental zoom reaches 1223.24 px, while 54 px does not fit.
-`qmlinteraction` and `autosizeenginetest` pass.
+subtracted the full zoomed item again. Commit `25390b5d1` made shrinking depend
+only on the settled row, while its growth path retained one approximate
+incremental-hover reserve. Independent review then found D135 (hover
+presentation reduced the stable autosize fit). Commit `d8faf2d49` removes zoom
+from the sizing API entirely. The live-shaped 1114 px row in a 1228 px budget
+now grows from 50 to 55 px; its 1225.4 px stable projection fits the 1226 px
+growth boundary, while 56 px does not. Temporary hover presentation cannot
+resize the persistent resting dock. `qmlinteraction` and `autosizeenginetest`
+pass.
 
 The settings acceptance also retired D130 (settings bars ignored or stole
 wheel input) and D131 (screen-relative sizing obscured its meaning and mode).
@@ -51,6 +54,18 @@ and D-Bus `availablePrimaryLength`. The rebuilt dock settled at 54 px with its
 complete y=25, height=1190 effects rectangle inside the canvas. The regression
 subtracts 28 px of background padding before selecting the largest fit and is
 orientation-neutral.
+
+Independent review also found D136 (padding changes left autosize on a stale
+budget). Commit `4387f0210` observes `contentsMaxLength` itself and defers the
+refit through the existing stable-state gate. The integration regression keeps
+outer `maxLength` fixed while padding growth shrinks 63 px to 60 px and padding
+release regrows it to 63 px. D137 (D-Bus references described stale raw-length
+semantics) is corrected in `b18a3c0cf`; both public references now describe the
+post-padding applet span. D138 (sub-floor icon ranges entered the autosize core)
+is fixed in `eb7168c`, which refuses invalid floor, ceiling, and applied-size
+state at the QML boundary and asserts the same invariant in the core. D139
+(touched inherited QML omitted adaptation attribution) is fixed in
+`2c4e99430`.
 
 The first canonical gate also exposed two settings bookkeeping defects. D132
 (length-control inventory anchors depended on source hashes) is fixed by commit

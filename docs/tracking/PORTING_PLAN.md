@@ -4304,10 +4304,10 @@ prerequisites in the phases above are done.
       pin complete painting in a non-standard 63 px slot.
       Commits: b1d993279
 - [x] Fix D129 (automatic sizing reserved a full hovered icon). Size the
-      persistent dock from its settled row, and reserve only one icon's
-      incremental hover growth plus two logical pixels of total end slack when
-      considering growth.
-      Commits: 25390b5d1
+      persistent dock from its settled row. The initial repair removed hover
+      from shrinking but retained an approximate incremental-hover growth
+      reserve; D135 removes that remaining presentation input.
+      Commits: 25390b5d1, d8faf2d49
 - [x] Fix D130 (settings bars ignored or stole wheel input). Use Qt's native
       per-slider wheel behavior only after a click gives the control active
       focus, leaving unfocused wheel events to page scrolling.
@@ -4328,6 +4328,25 @@ prerequisites in the phases above are done.
       layouter-owned post-padding content budget on every orientation, publish
       that same value through D-Bus, and pin the live-shaped 28 px padding case.
       Commits: 71a8081ab
+- [x] Fix D135 (hover presentation reduced the stable autosize fit). Remove
+      zoom from the sizing API and solve persistent growth from only the
+      settled applet row, with two logical pixels of total rounding slack.
+      Commits: d8faf2d49
+- [x] Fix D136 (padding changes left autosize on a stale budget). Observe
+      `layouter.contentsMaxLength` directly, defer through the normal geometry
+      gate, and pin settled padding growth and reduction in both directions.
+      Commits: 4387f0210
+- [x] Fix D137 (D-Bus references described stale raw-length semantics). Define
+      `availablePrimaryLength` as the layouter's post-padding applet span in
+      both public interface references.
+      Commits: b18a3c0cf
+- [x] Fix D138 (sub-floor icon ranges entered the autosize core). Refuse
+      current, ceiling, and applied sizes outside the 16 px to configured-max
+      contract at the QML boundary and assert the same invariant in the core.
+      Commits: eb7168c
+- [x] Fix D139 (touched inherited QML omitted adaptation attribution). Add the
+      current adaptation copyright beside all preserved original authors.
+      Commits: 2c4e99430
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

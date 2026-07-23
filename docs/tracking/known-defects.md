@@ -1349,7 +1349,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   painted dimensions and both corner pixels to occupy the complete slot.
 
 ### D129 - Automatic sizing reserved a full hovered icon
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`25390b5d1`).
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`25390b5d1`,
+  completed by D135 in `d8faf2d49`).
 - FOUND: 2026-07-22, live comparison of settled row length, Maximum Length,
   and hover zoom.
 - SYMPTOM: automatic sizing could discard roughly one full icon of available
@@ -1358,12 +1359,14 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - ROOT: both fit limits subtracted a complete zoomed item even though the
   settled row already included that item's base extent. The base icon was
   counted twice and hover state participated in shrink decisions.
-- FIX: shrink only when the settled row exceeds Maximum Length. Growth projects
-  the settled row with one icon's incremental zoom extent and two logical
-  pixels of total end slack. Prediction history records settled geometry.
+- FIX: shrink and grow only from settled row geometry. D129 first removed hover
+  from the shrink decision but retained an approximate incremental-hover
+  reserve for growth. D135 removed zoom from the sizing API entirely and kept
+  only two logical pixels of total rounding slack. Prediction history records
+  settled geometry.
 - EVIDENCE: the live-shaped 1114 px row inside a 1228 px budget grows from 50
-  to 53 px, whose settled projection plus 1.8x incremental zoom is 1223.24 px;
-  54 px does not fit. `qmlinteraction` and `autosizeenginetest` pass.
+  to 55 px; its 1225.4 px stable projection fits the 1226 px growth boundary,
+  while 56 px does not. `qmlinteraction` and `autosizeenginetest` pass.
 
 ### D130 - Settings bars ignored or stole wheel input
 - STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`711391bb5`).
@@ -1440,6 +1443,79 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   complete y=25, height=1190 effects rectangle inside the 1240 px canvas.
   `qmlinteraction`, `autosizeenginetest`, `dockidentitycontracttest`,
   `qmlcompilegate`, and `qmllintgate` pass.
+
+### D135 - Hover presentation reduced the stable autosize fit
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`d8faf2d49`).
+- FOUND: 2026-07-22, independent review of PR #116 and live acceptance of the
+  stable-resting-layout requirement.
+- SYMPTOM: the D129 growth repair still left usable resting space because it
+  reserved one icon's approximate incremental zoom extent. That proxy neither
+  described the complete parabolic curve nor matched the intended persistent
+  sizing semantics.
+- ROOT: `AutoSizeInput` treated transient hover presentation as ownership input
+  for the persistent applet-row fit.
+- FIX: remove zoom from the stepper API and pure-core input. Both shrink and
+  grow solve only the settled row, with one logical pixel of rounding margin at
+  each primary-axis end.
+- EVIDENCE: the live-shaped 965 px row grows from 44 to 55 px, and the 1114 px
+  row grows from 50 to 55 px. Both largest-fit cases stop before their next
+  integer projection crosses the stable boundary. The 227-case QML interaction
+  suite and `autosizeenginetest` pass.
+
+### D136 - Padding changes left autosize on a stale budget
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`4387f0210`).
+- FOUND: 2026-07-22, independent review of PR #116.
+- SYMPTOM: changing background margins, rounding, indicators, or theme extents
+  after settlement could leave the previous automatic icon size in place.
+- ROOT: AutoSize consumed `layouter.contentsMaxLength` but listened only for
+  changes to outer `containment.maxLength`. The content budget can change while
+  that outer span remains constant.
+- FIX: observe `contentsMaxLength` directly and defer refitting through the
+  existing normal-state and animation gates so dependent geometry bindings
+  settle first.
+- EVIDENCE: the shipped-ability integration test settles at 63 px, changes only
+  end padding to shrink to 60 px, then releases the padding and regrows to
+  63 px without changing `containment.maxLength`. The QML interaction suite
+  passes.
+
+### D137 - D-Bus references described stale raw-length semantics
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`b18a3c0cf`).
+- FOUND: 2026-07-22, independent review of PR #116.
+- SYMPTOM: both public D-Bus references said `availablePrimaryLength` was raw
+  containment `maxLength` after D134 changed the live authority.
+- ROOT: the observability implementation and contract test changed with D134,
+  but its prose references did not.
+- FIX: define the field as layouter `contentsMaxLength`, the applet span after
+  primary-axis background end padding is removed.
+- EVIDENCE: both public interface references now match the QML binding and the
+  source contract that rejects the old edit-controller `maxLength` read.
+
+### D138 - Sub-floor icon ranges entered the autosize core
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`eb7168c`).
+- FOUND: 2026-07-22, independent review of PR #116.
+- SYMPTOM: positive sizes below the 16 px floor, current sizes above their
+  configured ceiling, and invalid applied-size state reached the pure search.
+  Some were normalized into plausible output instead of identifying the caller
+  defect.
+- ROOT: the QML boundary checked positivity but not the engine's complete range
+  invariant.
+- FIX: refuse the invalid external measurement with a complete `qCritical`
+  state dump and assert the same floor, ceiling, and applied-size contract at
+  the pure core.
+- EVIDENCE: the staged QML shell rejects sub-floor current and ceiling values,
+  an above-ceiling current value, and applied values outside the valid range.
+  `qmlinteraction` and `autosizeenginetest` pass.
+
+### D139 - Touched inherited QML omitted adaptation attribution
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`2c4e99430`).
+- FOUND: 2026-07-22, independent review of PR #116.
+- SYMPTOM: `LayoutsContainer.qml` and `EffectsConfig.qml` were modified on the
+  branch without recording the current adaptation copyright.
+- ROOT: the functional edits preserved the inherited authors but omitted the
+  additional attribution required for modified files.
+- FIX: add the current adaptation line beside every preserved original author.
+- EVIDENCE: both touched headers retain their inherited copyright lines and add
+  the 2026 Bree Spektor line.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
