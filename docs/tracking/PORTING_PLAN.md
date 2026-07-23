@@ -4368,7 +4368,7 @@ prerequisites in the phases above are done.
       the aspect-dependent Kirigami render node with one fixed-pixel effect,
       share its padding metric with placement, and pin both end-hover geometry
       and a tall scene-probe fixture.
-      Commits: b03a68005
+      Commits: b03a68005, 545e79c34
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

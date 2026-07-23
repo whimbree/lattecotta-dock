@@ -1588,7 +1588,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   183-warning `MultiLayered.qml` lint baseline pass.
 
 ### D144 - Aspect-scaled background shadow clipped side docks
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`b03a68005`).
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`b03a68005`,
+  `545e79c34`).
 - FOUND: 2026-07-22, live first-and-last-item hover acceptance after D140.
 - SYMPTOM: the solid background stayed inside the side-dock canvas, but the
   visible drop shadow remained tight against or clipped by the output ends.
@@ -1611,7 +1612,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   retain visible end shadow. A 5:1 scene-probe fixture pins equal fixed-pixel
   shadow reach on both axes. QML interaction tests pin the shared 22 px padding,
   and production-source mutations reject the Kirigami renderer, a missing
-  module import, private padding math, or disconnected placement geometry.
+  module import, unbound layer inputs, private padding math, or disconnected
+  placement geometry. The touched custom background drops from 66 to 64 curated
+  QML lint warnings while deletion of the old helper removes six more.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
