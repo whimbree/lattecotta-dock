@@ -223,13 +223,25 @@ private:
         const QString layered = normalizedCode(multiLayered);
         const QString metrics = normalizedCode(effectMetrics);
         const QString shadowed = normalizedCode(shadowedItem);
+        const int backgroundShadowStart = custom.indexOf(QStringLiteral(
+            "BackgroundShadow{id:backgroundShadow"));
+        const int painterStart = custom.indexOf(QStringLiteral(
+            "Rectangle{id:painter"));
+        const QString backgroundShadowBlock = backgroundShadowStart >= 0
+                && painterStart > backgroundShadowStart
+            ? custom.mid(backgroundShadowStart, painterStart - backgroundShadowStart)
+            : QString{};
 
-        return custom.contains(QStringLiteral(
-                "BackgroundShadow{id:backgroundShadow"))
-            && custom.contains(QStringLiteral(
+        return !backgroundShadowBlock.isEmpty()
+            && backgroundShadowBlock.contains(QStringLiteral(
                 "visible:main.shadowEnabled&&main.shadowSize>0"))
-            && custom.contains(QStringLiteral("blur:main.shadowSize"))
+            && backgroundShadowBlock.contains(QStringLiteral("blur:main.shadowSize"))
+            && backgroundShadowBlock.contains(QStringLiteral("z:painter.z-1"))
+            && !backgroundShadowBlock.contains(QStringLiteral("opacity:"))
             && custom.contains(QStringLiteral("opacity:backgroundOpacity"))
+            && custom.contains(QStringLiteral(
+                "readonlypropertyaliasshadowPaintMargin:"
+                "backgroundShadow.paintMargin"))
             && !custom.contains(QStringLiteral("layer.effect:BackgroundShadow{"))
             && !custom.contains(QStringLiteral("Kirigami.ShadowedRectangle"))
             && effect.contains(QStringLiteral(
@@ -762,16 +774,41 @@ void SourceGuardTest::dockBackgroundShadow_sourceGuardsRejectAspectScaledRendere
              "restoring the aspect-scaled Kirigami renderer must fail the guard");
 
     QString opacityCoupled = originalCustom;
-    const QString siblingOrder = QStringLiteral("z: painter.z - 1");
-    QCOMPARE(opacityCoupled.count(siblingOrder), 1);
-    opacityCoupled.replace(siblingOrder,
-                           QStringLiteral("layer.effect: BackgroundShadow {"));
+    const QString independentBlur = QStringLiteral("blur: main.shadowSize");
+    QCOMPARE(opacityCoupled.count(independentBlur), 1);
+    opacityCoupled.replace(independentBlur,
+                           QStringLiteral("opacity: main.backgroundOpacity\n"
+                                          "        blur: main.shadowSize"));
     QVERIFY2(!matchesAspectIndependentBackgroundShadow(opacityCoupled,
                                                        originalEffect,
                                                        originalLayered,
                                                        originalMetrics,
                                                        originalShadowed),
-             "attaching the shadow to the translucent source layer must fail the guard");
+             "binding sibling opacity to background opacity must fail the guard");
+
+    QString frontStacked = originalCustom;
+    const QString behindPainter = QStringLiteral("z: painter.z - 1");
+    QCOMPARE(frontStacked.count(behindPainter), 1);
+    frontStacked.replace(behindPainter, QStringLiteral("z: painter.z + 1"));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(frontStacked,
+                                                       originalEffect,
+                                                       originalLayered,
+                                                       originalMetrics,
+                                                       originalShadowed),
+             "placing the shadow over its painter must fail the guard");
+
+    QString disconnectedAlias = originalCustom;
+    const QString liveMargin = QStringLiteral(
+        "readonly property alias shadowPaintMargin: backgroundShadow.paintMargin");
+    QCOMPARE(disconnectedAlias.count(liveMargin), 1);
+    disconnectedAlias.replace(liveMargin,
+                              QStringLiteral("readonly property int shadowPaintMargin: 20"));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(disconnectedAlias,
+                                                       originalEffect,
+                                                       originalLayered,
+                                                       originalMetrics,
+                                                       originalShadowed),
+             "replacing the renderer-owned margin alias must fail the guard");
 
     QString guessedMargins = originalLayered;
     guessedMargins.replace(QStringLiteral("barLine.customShadowPaintMargin"),
