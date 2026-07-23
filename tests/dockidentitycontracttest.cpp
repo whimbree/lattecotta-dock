@@ -393,7 +393,8 @@ void DockIdentityContractTest::geometryDiagnosticsReadEachViewsSizingAuthority()
     const QString reportsSource = normalized(readFile(QStringLiteral("app/dbusreports.cpp")));
 
     QVERIFY(metricsSource.contains(QStringLiteral("propertyintavailablePrimaryLength:0")));
-    QVERIFY(containmentSource.contains(QStringLiteral("availablePrimaryLength:root.maxLength")));
+    QVERIFY(containmentSource.contains(
+        QStringLiteral("availablePrimaryLength:_layouter.contentsMaxLength")));
     QVERIFY(reportsSource.contains(
         QStringLiteral("readLiveProperty(metrics,\"availablePrimaryLength\")")));
     QVERIFY(!reportsSource.contains(

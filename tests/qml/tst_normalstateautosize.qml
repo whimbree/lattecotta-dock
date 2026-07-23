@@ -30,6 +30,7 @@ Item {
     property bool inConfigureAppletsMode: false
     property bool isHorizontal: true
     property bool isVertical: false
+    property real backgroundLengthPadding: 0
     property real maxLength: 997.6
 
     property int destroyedContinuationCalls: 0
@@ -82,6 +83,7 @@ Item {
 
     Item {
         id: layouterMock
+        property real contentsMaxLength: root.maxLength - root.backgroundLengthPadding
         property int fillApplets: 0
     }
 
@@ -182,6 +184,7 @@ Item {
             metricsMock.totals.length = 64;
             layoutsMock.mainLayout.length = 1000;
             parabolicMock.factor.zoom = 1.6;
+            root.backgroundLengthPadding = 0;
             root.maxLength = 997.6;
             root.destroyedContinuationCalls = 0;
             root.rapidContinuationCalls = 0;
@@ -218,6 +221,17 @@ Item {
                     "an intermediate animated metric must feed the real AutoSize event into the real Tracker");
             compare(visibilityManager.inNormalState, false,
                     "the target size must make the declarative normal-state binding false again");
+        }
+
+        function test_backgroundEndPaddingIsExcludedFromFitBudget() {
+            root.backgroundLengthPadding = 28;
+            sizer = createBlockedSizer(productionSizerComponent);
+
+            productionAnimations.needLength.removeEvent(blocker);
+            wait(0);
+
+            compare(sizer.iconSize, 62,
+                    "the applet row must fit beside both background end paddings");
         }
 
         function test_rapidNormalStateNotificationsDeduplicate() {

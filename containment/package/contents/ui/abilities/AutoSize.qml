@@ -139,6 +139,17 @@ Item {
                 && (sizer.visibility.inNormalState && sizer.isActive) /*in normal and auto size active state*/
                 && (sizer.metrics.iconSize === sizer.metrics.maxIconSize || sizer.metrics.iconSize === sizer.iconSize) /*not during animations*/) {
 
+            //! The background owns primary-axis end padding outside the
+            //! measured applet row. The layouter's content budget already
+            //! subtracts it from maxLength, so the final background stays
+            //! inside the view on horizontal and vertical edges.
+            const availableContentLength = sizer.layouter.contentsMaxLength;
+            if (availableContentLength <= 0) {
+                console.error("AutoSize: background end padding leaves no content length within maxLength",
+                              sizer.containment.maxLength, availableContentLength);
+                return;
+            }
+
             //!doubler timer
             if (!doubleCallAutomaticUpdateIconSize.secondTimeCallApplied) {
                 doubleCallAutomaticUpdateIconSize.start();
@@ -150,7 +161,7 @@ Item {
                         sizer.layouts.startLayout.length + sizer.layouts.mainLayout.length + sizer.layouts.endLayout.length : sizer.layouts.mainLayout.length
 
             const result = stepper.step(layoutLength,
-                                        sizer.containment.maxLength,
+                                        availableContentLength,
                                         sizer.metrics.iconSize,
                                         sizer.metrics.maxIconSize,
                                         sizer.parabolic.factor.zoom,
