@@ -25,7 +25,13 @@ Item {
 
     readonly property int maxLength: root.myView.alignment === LatteCore.Types.Justify ? contentsMaxLength : Math.min(root.minLength, contentsMaxLength)
 
-    readonly property int contentsMaxLength: root.maxLength - background.totals.paddingsLength
+    //! Applets own only the span left after the complete length-axis chrome.
+    //! Stable end padding and shadow margins both precede autosize; transient
+    //! parabolic growth may borrow padding later without changing this budget.
+    readonly property int contentsMaxLength: {
+        const backgroundTotals = background.totals;
+        return root.maxLength - backgroundTotals.paddingsLength - backgroundTotals.shadowsLength;
+    }
 
     readonly property Item startLayout: LayouterElements.AppletsContainer {
         grid: _fillsPrivate.layouts.startLayout
