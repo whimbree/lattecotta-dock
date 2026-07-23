@@ -24,6 +24,8 @@
 //     one registration path and the settle timer owns the matching removal
 //   * Centered applet-row placement: background-only parabolic clamping cannot
 //     feed back into the stable content offset
+//   * Dock background routing: Justify joins all dock alignments in the
+//     shadow-aware visual fit while panel mode retains its full-span path
 //   * Dock-system reporting: persistent-id ordering and original/clone
 //     relationship classification stay on their pure seams
 //   * SC-T3 (the D29 narrow middle-click dispatch readback): the production QML
@@ -175,6 +177,37 @@ private:
                    "?inJustifyCenterOffset:root.offset"))
             && !offsetBinding.contains(QStringLiteral(
                 "background.offset-parabolicOffsetting"));
+    }
+
+    static bool matchesDockBackgroundFitRouting(const QString &source)
+    {
+        const int lengthStart = source.indexOf(QStringLiteral("\n    length: {"));
+        const int offsetStart = source.indexOf(QStringLiteral("\n    offset: {"));
+        if (lengthStart == -1 || offsetStart == -1) {
+            return false;
+        }
+
+        const QString lengthBinding = normalizedCode(functionBody(
+            source.mid(lengthStart), QStringLiteral("length:")));
+        const QString offsetBinding = normalizedCode(functionBody(
+            source.mid(offsetStart), QStringLiteral("offset:")));
+
+        const int panelPath = lengthBinding.indexOf(QStringLiteral(
+            "if(root.behaveAsPlasmaPanel&&LatteCore.WindowSystem.compositingActive)"));
+        const int requestedLength = lengthBinding.indexOf(QStringLiteral(
+            "constrequestedLength=myView.alignment===LatteCore.Types.Justify"
+            "?maximumLength:Math.max("));
+        const int fittedLength = lengthBinding.indexOf(QStringLiteral(
+            "returnbackgroundStateResolver.dockBackgroundLength("
+            "requestedLength,maximumLength,barLine.totals.shadowsLength);"));
+
+        return panelPath != -1
+            && requestedLength > panelPath
+            && fittedLength > requestedLength
+            && !lengthBinding.contains(QStringLiteral(
+                "if(myView.alignment===LatteCore.Types.Justify){returnroot.maxLength;}"))
+            && offsetBinding.contains(QStringLiteral(
+                "if(myView.alignment===LatteCore.Types.Justify){return0;}"));
     }
 
     static bool matchesDockCollectionOrderingRoute(const QString &body)
@@ -383,6 +416,8 @@ private Q_SLOTS:
     void layoutLengthChanges_sourceGuardRejectsVerticalRemoval();
     void centeredAppletOffset_ignoresBoundedBackgroundMovement();
     void centeredAppletOffset_sourceGuardRejectsVisualFeedback();
+    void dockBackgroundFit_includesJustifyDockMode();
+    void dockBackgroundFit_sourceGuardsRejectBypasses();
     void dockSystemCollection_keepsPureRouting();
     void dockSystemCollection_sourceGuardsRejectControlledMutations();
     void dockSystemIdentityRegistry_keepsLifetimeAndAffinityContract();
@@ -580,6 +615,44 @@ void SourceGuardTest::centeredAppletOffset_sourceGuardRejectsVisualFeedback()
         "? inJustifyCenterOffset : background.offset - parabolicOffsetting"));
     QVERIFY2(!matchesCenteredAppletOffsetOwnership(source),
              "restoring visual-offset feedback must fail the applet placement guard");
+}
+
+void SourceGuardTest::dockBackgroundFit_includesJustifyDockMode()
+{
+    const QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/MultiLayered.qml"));
+    QVERIFY2(matchesDockBackgroundFitRouting(source),
+             "dock-mode Justify must share the shadow-aware complete-visual fit");
+}
+
+void SourceGuardTest::dockBackgroundFit_sourceGuardsRejectBypasses()
+{
+    const QString original = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/MultiLayered.qml"));
+    QVERIFY(matchesDockBackgroundFitRouting(original));
+
+    QString lengthBypass = original;
+    const QString fittedCall = QStringLiteral(
+        "return backgroundStateResolver.dockBackgroundLength(requestedLength,\n"
+        "                                                             maximumLength,\n"
+        "                                                             barLine.totals.shadowsLength);");
+    QCOMPARE(lengthBypass.count(fittedCall), 1);
+    lengthBypass.replace(fittedCall, QStringLiteral("return requestedLength;"));
+    QVERIFY2(!matchesDockBackgroundFitRouting(lengthBypass),
+             "bypassing the complete-visual fit must fail the routing guard");
+
+    QString offsetBypass = original;
+    const QString justifyOffset = QStringLiteral(
+        "if (myView.alignment === LatteCore.Types.Justify) {\n"
+        "            return 0;\n"
+        "        }");
+    QCOMPARE(offsetBypass.count(justifyOffset), 1);
+    offsetBypass.replace(justifyOffset, QStringLiteral(
+        "if (myView.alignment === LatteCore.Types.Justify) {\n"
+        "            return root.offset;\n"
+        "        }"));
+    QVERIFY2(!matchesDockBackgroundFitRouting(offsetBypass),
+             "restoring an unconstrained Justify offset must fail the routing guard");
 }
 
 void SourceGuardTest::dockSystemCollection_keepsPureRouting()
