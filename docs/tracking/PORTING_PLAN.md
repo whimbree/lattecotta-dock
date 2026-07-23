@@ -4382,6 +4382,14 @@ prerequisites in the phases above are done.
       Retain the two-warning `MultiLayered.qml` improvement in the exact
       per-file baseline.
       Commits: <filled at merge>
+- [x] Fix D148 (shadow regressions bypassed production ownership guards). Pin
+      the real `CustomBackground` sibling order, opacity independence, and live
+      renderer-margin alias with controlled source mutations.
+      Commits: 3d775a0a2
+- [x] Fix D149 (Qt 6.9 floor stopped at CMake). Propagate the renderer API floor
+      through all five native package formats and every current installation or
+      distro-gate reference.
+      Commits: b8f492b01
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

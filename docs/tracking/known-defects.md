@@ -1659,6 +1659,36 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: the focused gate matches 151 files with 5817 curated warnings. The
   final canonical rerun provides whole-tree evidence.
 
+### D148 - Shadow regressions bypassed production ownership guards
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`3d775a0a2`).
+- FOUND: 2026-07-22, second cold review of the D145 and D146 corrections.
+- SYMPTOM: the render and metric tests exercised `BackgroundShadow` directly,
+  while the production matcher did not require the `CustomBackground` sibling
+  order, opacity independence, or live paint-margin alias. Regressions in those
+  integration bindings could pass.
+- ROOT: the source guard checked renderer selection and downstream consumption
+  but omitted three properties that stitch the renderer into production.
+- FIX: parse the production shadow block, require it behind the painter with no
+  opacity binding, and require `CustomBackground.shadowPaintMargin` to remain an
+  alias of the renderer value.
+- EVIDENCE: controlled mutations for opacity coupling, front stacking, and a
+  constant replacement of the alias are all rejected by `sourceguardtest`.
+
+### D149 - Qt 6.9 floor stopped at CMake
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`b8f492b01`).
+- FOUND: 2026-07-22, second cold review of the D145 renderer correction.
+- SYMPTOM: CMake required Qt 6.9 for `RectangularShadow`, but every native
+  package recipe and several current installation or CI references still
+  permitted Qt 6.6.
+- ROOT: the API-floor change updated the build-system authority and one distro
+  plan heading without auditing its packaging and documentation consumers.
+- FIX: propagate Qt 6.9 through Arch, Debian, RPM, Gentoo, and Void build and
+  runtime constraints, generated package metadata, current container notes,
+  both CI prompts, the distro plan, and the public requirements.
+- EVIDENCE: no current Qt 6.6 floor remains under packaging, CI, prompts, tests,
+  or README. All shell-form package recipes pass syntax checks; the final
+  canonical gate supplies the repository-wide package-contract evidence.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.

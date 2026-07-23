@@ -107,12 +107,20 @@ to placement, including zero margin for a disabled zero-pixel shadow. The Qt
 floor is now 6.9. The tall 5:1 scene probe renders a 25 percent opaque source
 over a full-strength shadow, and QML interaction coverage pins both 20 px and
 zero px footprints. Source mutations reject the old aspect-scaled renderer,
-opacity coupling, and disconnected geometry. Commit `3c4bcffbc` restores the
+opacity coupling, and disconnected geometry. Commit `31b8d3b75` restores the
 touched `ShadowedItem.qml` adaptation copyright found by the same review.
 The first canonical gate then found only D147 (shadow renderer cleanup improved
 the QML warning ratchet): removing obsolete Kirigami predicates reduced
 `MultiLayered.qml` from 183 to 181 curated warnings. The exact baseline now
 retains that improvement at 5817 warnings tree-wide.
+
+The second cold review found two completion gaps. D148 (shadow regressions
+bypassed production ownership guards) is fixed in `3d775a0a2`: the source guard
+now parses the real `CustomBackground` sibling block and rejects opacity
+coupling, front stacking, or replacement of the renderer-margin alias. D149
+(Qt 6.9 floor stopped at CMake) is fixed in `b8f492b01`: all five native package
+formats, current container notes, CI prompts, distro-plan references, and the
+public requirements now enforce the `RectangularShadow` API floor.
 
 The first canonical gate also exposed two settings bookkeeping defects. D132
 (length-control inventory anchors depended on source hashes) is fixed by commit
