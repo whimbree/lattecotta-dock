@@ -4378,6 +4378,10 @@ prerequisites in the phases above are done.
       renderer's exact blur-plus-spread margin to placement so zero paint owns
       zero space.
       Commits: 166342ca1
+- [x] Fix D147 (shadow renderer cleanup improved the QML warning ratchet).
+      Retain the two-warning `MultiLayered.qml` improvement in the exact
+      per-file baseline.
+      Commits: <filled at merge>
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
