@@ -224,16 +224,22 @@ private:
         const QString metrics = normalizedCode(effectMetrics);
         const QString shadowed = normalizedCode(shadowedItem);
 
-        return custom.contains(QStringLiteral("pragmaComponentBehavior:Bound"))
-            && layered.contains(QStringLiteral(
+        return layered.contains(QStringLiteral(
                 "importorg.kde.latte.components1.0asLatteComponents"))
             && custom.contains(QStringLiteral(
-                "layer.enabled:main.shadowEnabled&&main.shadowSize>0"))
+                "BackgroundShadow{id:backgroundShadow"))
             && custom.contains(QStringLiteral(
-                "layer.effect:BackgroundShadow{"))
+                "visible:main.shadowEnabled&&main.shadowSize>0"))
+            && custom.contains(QStringLiteral("blur:main.shadowSize"))
+            && custom.contains(QStringLiteral("opacity:backgroundOpacity"))
+            && !custom.contains(QStringLiteral("layer.effect:BackgroundShadow{"))
             && !custom.contains(QStringLiteral("Kirigami.ShadowedRectangle"))
             && effect.contains(QStringLiteral(
-                "LatteComponents.ShadowedItem{shadowVerticalOffset:0}"))
+                "importQtQuick.Effects"))
+            && effect.contains(QStringLiteral("RectangularShadow{"))
+            && effect.contains(QStringLiteral("offset:Qt.vector2d(0,0)"))
+            && effect.contains(QStringLiteral("spread:0"))
+            && !effect.contains(QStringLiteral("LatteComponents.ShadowedItem"))
             && metrics.contains(QStringLiteral(
                 "readonlypropertyintpostBlurGuardPx:2"))
             && metrics.contains(QStringLiteral(
@@ -738,28 +744,29 @@ void SourceGuardTest::dockBackgroundShadow_sourceGuardsRejectAspectScaledRendere
                                                      originalMetrics,
                                                      originalShadowed));
 
-    QString aspectScaled = originalCustom;
-    const QString fixedEffect = QStringLiteral("layer.effect: BackgroundShadow {");
+    QString aspectScaled = originalEffect;
+    const QString fixedEffect = QStringLiteral("RectangularShadow {");
     QCOMPARE(aspectScaled.count(fixedEffect), 1);
     aspectScaled.replace(fixedEffect,
-                         QStringLiteral("layer.effect: Kirigami.ShadowedRectangle {"));
-    QVERIFY2(!matchesAspectIndependentBackgroundShadow(aspectScaled,
-                                                       originalEffect,
+                         QStringLiteral("Kirigami.ShadowedRectangle {"));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(originalCustom,
+                                                       aspectScaled,
                                                        originalLayered,
                                                        originalMetrics,
                                                        originalShadowed),
              "restoring the aspect-scaled Kirigami renderer must fail the guard");
 
-    QString unboundEffect = originalCustom;
-    const QString boundPragma = QStringLiteral("pragma ComponentBehavior: Bound\n\n");
-    QCOMPARE(unboundEffect.count(boundPragma), 1);
-    unboundEffect.remove(boundPragma);
-    QVERIFY2(!matchesAspectIndependentBackgroundShadow(unboundEffect,
+    QString opacityCoupled = originalCustom;
+    const QString siblingOrder = QStringLiteral("z: painter.z - 1");
+    QCOMPARE(opacityCoupled.count(siblingOrder), 1);
+    opacityCoupled.replace(siblingOrder,
+                           QStringLiteral("layer.effect: BackgroundShadow {"));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(opacityCoupled,
                                                        originalEffect,
                                                        originalLayered,
                                                        originalMetrics,
                                                        originalShadowed),
-             "leaving the layer effect's outer-id capture unbound must fail the guard");
+             "attaching the shadow to the translucent source layer must fail the guard");
 
     QString guessedMargins = originalLayered;
     guessedMargins.replace(QStringLiteral("barLine.customShadowPaintMargin"),

@@ -30,9 +30,12 @@ set(BUG_ADDRESS "https://bugs.kde.org/enter_bug.cgi?product=lattedock")
 set(FAQS "https://userbase.kde.org/LatteDock/FAQ")
 
 # Version floors: the oldest versions either reference fork demonstrably
-# built against (latte-dock-qt6 targets KF6 6.5). Raise only when code needs
-# a newer API, lower only with an actual build against the older version.
-set(QT_MIN_VERSION "6.6.0")
+# built against (latte-dock-qt6 targets KF6 6.5). QtQuick.Effects gained
+# RectangularShadow in Qt 6.9; the dock background uses its exact pixel
+# footprint so translucent backgrounds keep an independent shadow without
+# the aspect-scaled clipping of Kirigami.ShadowedRectangle. Lower only with
+# a replacement that preserves that rendering contract on the older version.
+set(QT_MIN_VERSION "6.9.0")
 set(KF6_MIN_VERSION "6.5.0")
 set(PLASMA_MIN_VERSION "6.5.0")
 set(KDE_COMPILERSETTINGS_LEVEL "6.0.0")

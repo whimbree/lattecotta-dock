@@ -6,12 +6,13 @@
 */
 
 import QtQuick
+import QtQuick.Effects
 
-import org.kde.latte.components 1.0 as LatteComponents
-
-//! Background shadows have no directional offset. ShadowedItem supplies a
-//! fixed pixel padding on both axes, unlike Kirigami.ShadowedRectangle's
-//! aspect-ratio-scaled render node.
-LatteComponents.ShadowedItem {
-    shadowVerticalOffset: 0
+//! A background shadow is a sibling of its translucent source. Applying a
+//! layer effect to the source would multiply the shadow by source opacity.
+//! RectangularShadow instead renders only the rounded shadow and defines its
+//! scene-graph footprint in pixels, independent of the rectangle aspect ratio.
+RectangularShadow {
+    offset: Qt.vector2d(0, 0)
+    spread: 0
 }
