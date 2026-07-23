@@ -159,8 +159,9 @@ constexpr double projectLengthAtIconSize(int candidateIconSize, int currentIconS
 inline ShrinkResult shrinkToLargestFittingSize(int maxIconSize, int currentIconSize,
                                                double layoutLength, double toShrinkLimit)
 {
-    Q_ASSERT(maxIconSize >= 1); //! a non-positive ceiling is a caller bug
-    Q_ASSERT(currentIconSize >= 1); //! projection divides by it
+    Q_ASSERT(maxIconSize >= minIconSize); //! a sub-floor ceiling is invalid
+    Q_ASSERT(currentIconSize >= minIconSize); //! projection divides by it
+    Q_ASSERT(currentIconSize <= maxIconSize); //! current cannot exceed its ceiling
 
     const int largestCandidate = std::max(minIconSize, maxIconSize - 1);
     int fittingSize = minIconSize;
@@ -209,8 +210,9 @@ struct GrowResult {
 inline std::optional<GrowResult> growToLargestFittingSize(int maxIconSize, int currentIconSize,
                                                          double layoutLength, double toGrowLimit)
 {
-    Q_ASSERT(maxIconSize >= 1); //! a non-positive ceiling would "apply" size 0
-    Q_ASSERT(currentIconSize >= 1); //! projection divides by it
+    Q_ASSERT(maxIconSize >= minIconSize); //! a sub-floor ceiling is invalid
+    Q_ASSERT(currentIconSize >= minIconSize); //! projection divides by it
+    Q_ASSERT(currentIconSize <= maxIconSize); //! current cannot exceed its ceiling
 
     const double ceilingProjection = projectLengthAtIconSize(maxIconSize,
                                                              currentIconSize,
@@ -305,8 +307,12 @@ struct AutoSizeInput {
 inline AutoSizeStep step(const AutoSizeInput &input, History &history)
 {
     Q_ASSERT(input.maxLength > 0); //! the QML shell's <= 0 contract keeps this out
-    Q_ASSERT(input.currentIconSize >= 1); //! projection divides by it
-    Q_ASSERT(input.maxIconSize >= 1); //! a non-positive ceiling is a caller bug
+    Q_ASSERT(input.currentIconSize >= minIconSize); //! projection divides by it
+    Q_ASSERT(input.maxIconSize >= minIconSize); //! a sub-floor ceiling is invalid
+    Q_ASSERT(input.currentIconSize <= input.maxIconSize); //! ceiling owns the range
+    Q_ASSERT(!input.appliedIconSize
+             || (*input.appliedIconSize >= minIconSize
+                 && *input.appliedIconSize <= input.maxIconSize));
 
     const double toShrinkLimit = input.maxLength;
     const double toGrowLimit = settledGrowLimit(input.maxLength);

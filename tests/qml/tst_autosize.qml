@@ -135,5 +135,15 @@ TestCase {
                "a zero current icon size must be refused");
         verify(!stepper.step(1000, 1000, 64, 0, -1).found,
                "a zero max icon size must be refused");
+        verify(!stepper.step(1000, 1000, 15, 64, -1).found,
+               "a current icon size below the 16px floor must be refused");
+        verify(!stepper.step(1000, 1000, 16, 15, -1).found,
+               "a configured ceiling below the 16px floor must be refused");
+        verify(!stepper.step(1000, 1000, 65, 64, -1).found,
+               "a current icon size above its ceiling must be refused");
+        verify(!stepper.step(1000, 1000, 64, 64, 15).found,
+               "an applied icon size below the 16px floor must be refused");
+        verify(!stepper.step(1000, 1000, 64, 64, 65).found,
+               "an applied icon size above its ceiling must be refused");
     }
 }

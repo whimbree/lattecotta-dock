@@ -45,7 +45,7 @@ private Q_SLOTS:
     void grow_largestFitTable();
     void shrink_terminatesForEveryIconSize();
     void shrink_staysWithinBounds();
-    void shrink_clampsDegenerateInputsToFloor();
+    void shrink_unsatisfiableLimitStopsAtFloor();
     void grow_terminatesAndSaturatesForEveryIconSize();
     void grow_reportsWhenNoLargerPixelFits();
     void history_ringTruncatesToNewestEntries();
@@ -99,8 +99,6 @@ void AutoSizeEngineTest::shrink_largestFitTable()
         {24, 24, 300.0, 200.0, 16, 200.000000000000},
         {16, 16, 200.0, 100.0, 16, 200.000000000000},
         {30, 30, 433.7, 321.9, 22, 318.046666666667},
-        // a ceiling below the floor clamps up to the floor
-        {8, 8, 100.0, -1.0, 16, 200.000000000000},
         {64, 64, 0.0, -1.0, 16, 0.000000000000},
     };
 
@@ -193,12 +191,10 @@ void AutoSizeEngineTest::shrink_staysWithinBounds()
     }
 }
 
-void AutoSizeEngineTest::shrink_clampsDegenerateInputsToFloor()
+void AutoSizeEngineTest::shrink_unsatisfiableLimitStopsAtFloor()
 {
-    // inputs below the floor or nonsensical limits must still return
-    const ShrinkResult belowFloor = shrinkToLargestFittingSize(8, 8, 100.0, -1.0);
-    QCOMPARE(belowFloor.iconSize, minIconSize); // a max size below the floor clamps up
-
+    // A valid size with an unsatisfiable limit still terminates at the floor.
+    // Sub-floor input is a caller defect and is rejected at the QML boundary.
     const ShrinkResult zeroLayout = shrinkToLargestFittingSize(64, 64, 0.0, -1.0);
     QCOMPARE(zeroLayout.iconSize, minIconSize); // zero length, negative limit: floor exit
 }

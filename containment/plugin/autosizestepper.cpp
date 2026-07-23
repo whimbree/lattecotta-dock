@@ -32,12 +32,18 @@ QVariantMap AutoSizeStepper::step(double layoutLength, double maxLength, int cur
 {
     //! AutoSize.qml's maxLength <= 0 no-geometry contract returns before
     //! calling in (ad9b823f), lengths are widths/heights and cannot be
-    //! negative, and metrics' icon sizes remain positive. Arriving here
-    //! outside those contracts is a shell bug, never something to search
-    //! around silently.
+    //! negative, and metrics' icon sizes never sit below the 16px floor or
+    //! above their configured ceiling. Arriving here outside those contracts
+    //! is a shell bug, never something to search around silently.
+    const bool appliedSizeIsValid = appliedIconSize == -1
+            || (appliedIconSize >= AutoSizeEngine::minIconSize
+                && appliedIconSize <= maxIconSize);
     const bool measurementIsValid = maxLength > 0
             && layoutLength >= 0
-            && currentIconSize >= 1 && maxIconSize >= 1;
+            && currentIconSize >= AutoSizeEngine::minIconSize
+            && maxIconSize >= AutoSizeEngine::minIconSize
+            && currentIconSize <= maxIconSize
+            && appliedSizeIsValid;
 
     if (!measurementIsValid) {
         qCritical() << "AutoSizeStepper.step: invalid measurement, layoutLength" << layoutLength
