@@ -303,7 +303,10 @@ Item{
                 return background.offset + lengthTailPadding;
             }
 
-            return (root.myView.alignment === LatteCore.Types.Justify) ? inJustifyCenterOffset : background.offset - parabolicOffsetting
+            //! The applet row owns the configured placement offset. The
+            //! background adds and bounds parabolic presentation movement
+            //! independently, so its visual clamp must never move content.
+            return (root.myView.alignment === LatteCore.Types.Justify) ? inJustifyCenterOffset : root.offset
         }
 
         ignoredLength: startParabolicSpacer.length + endParabolicSpacer.length
