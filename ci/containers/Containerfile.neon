@@ -19,7 +19,7 @@
 # Edition is the stable release channel real neon users run.
 #
 # Floor check (observed 2026-07-17 in plasma:user, apt candidates on noble):
-#   Qt      6.11.1  (floor Qt6      >= 6.6 - PASS)
+#   Qt      6.11.1  (floor Qt6      >= 6.9 - PASS)
 #   KF6     6.28.0  (floor KF6      >= 6.5 - PASS)
 #   Plasma  6.7.3   (floor Plasma   >= 6.5 - PASS)
 #   kwin_wayland 6.7.3

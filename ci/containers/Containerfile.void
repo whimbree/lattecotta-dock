@@ -18,7 +18,7 @@
 # prototype loop; a Phase A3 snapshot pin is TBD for reproducible CI (same
 # open item as Arch/Tumbleweed - Void has no dated archive, so the pin would
 # be a digest). GLIBC image deliberately (musl is a separate axis, not this
-# pass). Floor is Plasma>=6.5 / Qt>=6.6 / KF6>=6.5; the versions OBSERVED at
+# pass). Floor is Plasma>=6.5 / Qt>=6.9 / KF6>=6.5; the versions OBSERVED at
 # image-build time (verified in-container 2026-07-17 via xbps-query -Rs) sail
 # well past it:
 #   Qt 6.11.1  /  KF6 6.25.0  /  libplasma + kwin 6.6.3  /  Mesa lavapipe 26.1.5

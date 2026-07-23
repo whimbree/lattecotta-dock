@@ -25,9 +25,9 @@ KEYWORDS="~amd64"
 
 COMMON_DEPEND="
 	>=dev-libs/wayland-1.15
-	>=dev-qt/qtbase-6.6.0:6=[dbus,gui,wayland,widgets]
-	>=dev-qt/qtdeclarative-6.6.0:6[widgets]
-	>=dev-qt/qtwayland-6.6.0:6
+	>=dev-qt/qtbase-6.9.0:6=[dbus,gui,wayland,widgets]
+	>=dev-qt/qtdeclarative-6.9.0:6[widgets]
+	>=dev-qt/qtwayland-6.9.0:6
 	>=kde-frameworks/karchive-${KFMIN}:6
 	>=kde-frameworks/kconfig-${KFMIN}:6[qml]
 	>=kde-frameworks/kcoreaddons-${KFMIN}:6
@@ -60,14 +60,14 @@ COMMON_DEPEND="
 DEPEND="${COMMON_DEPEND}
 	>=dev-libs/plasma-wayland-protocols-1.6
 	test? (
-		>=dev-qt/qtbase-6.6.0:6=[vulkan]
-		>=dev-qt/qtdeclarative-6.6.0:6=[vulkan]
+		>=dev-qt/qtbase-6.9.0:6=[vulkan]
+		>=dev-qt/qtdeclarative-6.9.0:6=[vulkan]
 		dev-util/vulkan-headers
 		media-libs/vulkan-loader
 	)
 "
 RDEPEND="${COMMON_DEPEND}
-	>=dev-qt/qt5compat-6.6.0:6[qml]
+	>=dev-qt/qt5compat-6.9.0:6[qml]
 	>=kde-frameworks/kdeclarative-${KFMIN}:6
 	>=kde-frameworks/qqc2-desktop-style-${KFMIN}:6
 	>=kde-plasma/kpipewire-6.5.0:6
@@ -79,7 +79,7 @@ BDEPEND="
 	sys-devel/gettext
 	virtual/pkgconfig
 	test? (
-		>=dev-qt/qtdeclarative-6.6.0:6
+		>=dev-qt/qtdeclarative-6.9.0:6
 		net-misc/rsync
 	)
 "

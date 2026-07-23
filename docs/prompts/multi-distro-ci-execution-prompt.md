@@ -42,7 +42,7 @@ plan's `- [ ]` items with commit hashes as work lands.
   is the canonical per-commit MERGE gate; the container work uses
   podman + DISTRO Qt6/KF6/Plasma/Mesa (not nix) and is the
   RELEASE/periodic gate.
-- Hard floors (CMakeLists.txt): Plasma >= 6.5, Qt >= 6.6, KF6 >= 6.5.
+- Hard floors (CMakeLists.txt): Plasma >= 6.5, Qt >= 6.9, KF6 >= 6.5.
   Excludes stock Ubuntu LTS 24.04 (Plasma 5.27). Verify each base image
   meets the floor.
 - CI TEST LEGS (build+render environments): NixOS (bit-exact home), Arch
