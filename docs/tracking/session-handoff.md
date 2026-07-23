@@ -109,6 +109,10 @@ over a full-strength shadow, and QML interaction coverage pins both 20 px and
 zero px footprints. Source mutations reject the old aspect-scaled renderer,
 opacity coupling, and disconnected geometry. Commit `3c4bcffbc` restores the
 touched `ShadowedItem.qml` adaptation copyright found by the same review.
+The first canonical gate then found only D147 (shadow renderer cleanup improved
+the QML warning ratchet): removing obsolete Kirigami predicates reduced
+`MultiLayered.qml` from 183 to 181 curated warnings. The exact baseline now
+retains that improvement at 5817 warnings tree-wide.
 
 The first canonical gate also exposed two settings bookkeeping defects. D132
 (length-control inventory anchors depended on source hashes) is fixed by commit

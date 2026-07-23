@@ -1647,6 +1647,18 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   Production-source guards pin the renderer-owned route and reject disconnected
   placement or missing metrics imports.
 
+### D147 - Shadow renderer cleanup improved the QML warning ratchet
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (commit below).
+- FOUND: 2026-07-22, first canonical gate after the D145 and D146 review fixes.
+- SYMPTOM: all other registered tests passed, but `qmllintgate` rejected a
+  two-warning improvement in `MultiLayered.qml` because its exact baseline still
+  recorded 183 curated warnings.
+- ROOT: removing the obsolete Kirigami availability predicates eliminated two
+  unqualified references without shrinking the per-file warning ledger.
+- FIX: reduce only the `MultiLayered.qml` baseline entry from 183 to 181.
+- EVIDENCE: the focused gate matches 151 files with 5817 curated warnings. The
+  final canonical rerun provides whole-tree evidence.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.
