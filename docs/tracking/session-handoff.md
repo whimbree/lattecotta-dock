@@ -41,6 +41,25 @@ confirmed against live D-Bus state: the affected right dock had persisted 2.7
 percent during the earlier always-enabled wheel experiment, while the other
 docks remained at the `-1` Off sentinel.
 
+Live testing at 100 percent Maximum Length then exposed D134 (autosize ignored
+background end padding). The solver compared only the applet row with raw
+`maxLength`, even though the rounded background adds two primary-axis paddings
+outside that row. The right dock consequently reported a 1268 px effects
+rectangle in a 1240 px canvas and clipped 14 px at each end. Commit `71a8081ab`
+uses the layouter's existing `contentsMaxLength` authority for both the solver
+and D-Bus `availablePrimaryLength`. The rebuilt dock settled at 54 px with its
+complete y=25, height=1190 effects rectangle inside the canvas. The regression
+subtracts 28 px of background padding before selecting the largest fit and is
+orientation-neutral.
+
+The first canonical gate also exposed two settings bookkeeping defects. D132
+(length-control inventory anchors depended on source hashes) is fixed by commit
+`2e931284d`, which gives the Maximum, Minimum, and Offset rows stable ids. D133
+(screen-height guidance exceeded the QML lint baseline) is fixed by commit
+`06df46103`, which retains the translated explanation while qualifying the
+touched width bindings through a typed page property. The focused inventory,
+QML compile, and QML lint gates pass.
+
 ## 2026-07-22: side-dock automatic sizing waits for length settlement
 
 D126 (side docks resize from intermediate layout frames) was reproduced on the

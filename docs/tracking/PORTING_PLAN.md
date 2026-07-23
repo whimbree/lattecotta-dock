@@ -4316,6 +4316,18 @@ prerequisites in the phases above are done.
       screen-height reference, show its resolved pixel ceiling and Off sentinel,
       and explain how to restore mutually exclusive Absolute Size control.
       Commits: 0e7693bce
+- [x] Fix D132 (length-control inventory anchors depended on source hashes).
+      Give the Maximum, Minimum, and Offset rows stable semantic ids and route
+      their slider and fine-adjust coverage identities through those anchors.
+      Commits: 2e931284d
+- [x] Fix D133 (screen-height guidance exceeded the QML lint baseline). Keep
+      the translated explanation while qualifying the touched width bindings
+      through a typed page property.
+      Commits: 06df46103
+- [x] Fix D134 (autosize ignored background end padding). Solve against the
+      layouter-owned post-padding content budget on every orientation, publish
+      that same value through D-Bus, and pin the live-shaped 28 px padding case.
+      Commits: 71a8081ab
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
