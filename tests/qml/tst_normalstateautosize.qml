@@ -223,6 +223,37 @@ Item {
                     "the applet row must fit beside both background end paddings");
         }
 
+        function test_settledPaddingChangesRefitInBothDirections() {
+            sizer = createBlockedSizer(productionSizerComponent);
+
+            productionAnimations.needLength.removeEvent(blocker);
+            wait(0);
+            compare(sizer.iconSize, 63);
+
+            //! Publish the measured row produced by the first target and let
+            //! the one-second confirmation pass settle before changing only
+            //! background padding. containment.maxLength remains unchanged.
+            metricsMock.iconSize = 63;
+            layoutsMock.mainLayout.length = 984.375;
+            wait(1100);
+            compare(visibilityManager.inNormalState, true);
+
+            root.backgroundLengthPadding = 50;
+            wait(0);
+            compare(sizer.iconSize, 60,
+                    "growing end padding must shrink against the new content budget");
+
+            metricsMock.iconSize = 60;
+            layoutsMock.mainLayout.length = 937.5;
+            wait(1100);
+            compare(visibilityManager.inNormalState, true);
+
+            root.backgroundLengthPadding = 0;
+            wait(0);
+            compare(sizer.iconSize, 63,
+                    "releasing end padding must return the stable row to the largest fit");
+        }
+
         function test_rapidNormalStateNotificationsDeduplicate() {
             sizer = createBlockedSizer(rapidCountingSizerComponent);
             root.rapidContinuationCalls = 0;

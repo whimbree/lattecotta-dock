@@ -87,6 +87,18 @@ Item {
     }
 
     Connections {
+        target: sizer.layouter
+
+        function onContentsMaxLengthChanged() {
+            //! Background padding, margins and theme extents can change the
+            //! usable span without changing containment.maxLength. Defer the
+            //! refit so all bindings publish one coherent geometry snapshot;
+            //! Qt coalesces repeated calls to this same bound method.
+            Qt.callLater(sizer.updateIconSize);
+        }
+    }
+
+    Connections {
         target: sizer.view
         function onWidthChanged() {
             if (sizer.containment.isHorizontal && sizer.metrics.portionIconSize!==-1) {
