@@ -17,6 +17,7 @@ import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.kquickcontrolsaddons 2.0
 
 import org.kde.latte.core 0.2 as LatteCore
+import org.kde.latte.components 1.0 as LatteComponents
 import org.kde.latte.private.containment 0.1 as LatteContainment
 
 import "../colorizer" as Colorizer
@@ -31,6 +32,8 @@ BackgroundProperties{
     }
 
     readonly property alias panelBackgroundSvg: solidBackground
+    readonly property int customShadowPaintMargin: LatteComponents.EffectMetrics.shadowPaddingFor(
+                                                       Math.max(0, customShadow), 0, 0)
 
     //! Layer 0: Multi-Layer container in order to provide a consistent final element that acts
     //! as a single entity/background
@@ -48,15 +51,15 @@ BackgroundProperties{
     hasTopBorder: hasAllBorders || ((solidBackground.enabledBorders & KSvg.FrameSvg.TopBorder) > 0)
     hasBottomBorder: hasAllBorders || ((solidBackground.enabledBorders & KSvg.FrameSvg.BottomBorder) > 0)
 
-    shadows.left: hasLeftBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? customShadow : shadowsSvgItem.margins.left) : 0
-    shadows.right: hasRightBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? customShadow : shadowsSvgItem.margins.right) : 0
-    shadows.top: hasTopBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? customShadow : shadowsSvgItem.margins.top) : 0
-    shadows.bottom: hasBottomBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? customShadow : shadowsSvgItem.margins.bottom) : 0
+    shadows.left: hasLeftBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? barLine.customShadowPaintMargin : shadowsSvgItem.margins.left) : 0
+    shadows.right: hasRightBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? barLine.customShadowPaintMargin : shadowsSvgItem.margins.right) : 0
+    shadows.top: hasTopBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? barLine.customShadowPaintMargin : shadowsSvgItem.margins.top) : 0
+    shadows.bottom: hasBottomBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? barLine.customShadowPaintMargin : shadowsSvgItem.margins.bottom) : 0
 
-    shadows.fixedLeft: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? customShadow : shadowsSvgItem.fixedMargins.left
-    shadows.fixedRight: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? customShadow : shadowsSvgItem.fixedMargins.right
-    shadows.fixedTop: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? customShadow : shadowsSvgItem.fixedMargins.top
-    shadows.fixedBottom: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? customShadow : shadowsSvgItem.fixedMargins.bottom
+    shadows.fixedLeft: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? barLine.customShadowPaintMargin : shadowsSvgItem.fixedMargins.left
+    shadows.fixedRight: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? barLine.customShadowPaintMargin : shadowsSvgItem.fixedMargins.right
+    shadows.fixedTop: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? barLine.customShadowPaintMargin : shadowsSvgItem.fixedMargins.top
+    shadows.fixedBottom: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? barLine.customShadowPaintMargin : shadowsSvgItem.fixedMargins.bottom
 
     //! it can accept negative values in DockMode
     screenEdgeMargin: root.screenEdgeMarginEnabled ? metrics.margin.screenEdge - shadows.tailThickness : -shadows.tailThickness
@@ -560,7 +563,8 @@ BackgroundProperties{
 
         backgroundColor: colorizerManager.backgroundColor
         shadowColor: customShadowColor
-        shadowSize: customShadowIsEnabled ? customShadow : 0
+        shadowEnabled: customShadowIsEnabled
+        shadowSize: Math.max(0, customShadow)
 
         roundness: {
             if (customRadiusIsEnabled) {

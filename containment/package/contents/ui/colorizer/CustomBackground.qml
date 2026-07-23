@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2018 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -11,10 +12,11 @@ import org.kde.ksvg 1.0 as KSvg
 
 Item{
     id: main
-    clip: !kirigamiRect.active
+    clip: !painter.layer.enabled
 
     property int borderWidth: 0
     property int roundness: 0
+    property bool shadowEnabled: shadowSize > 0
     property int shadowSize: 0
 
     property real backgroundOpacity: 1.0
@@ -103,20 +105,27 @@ Item{
         restoreMode: Binding.RestoreNone
     }
 
-    Loader {
-        id: kirigamiRect
-        anchors.fill: painter
-        active: root.kirigamiLibraryIsFound && main.shadowSize>0
-        //! this "source" approach is needed in order for KF5<=5.68 to load Latte correctly with no
-        //! qml breakage because Kirigami2.ShadowedRectangle is not present
-        source: root.kirigamiLibraryIsFound ? "KirigamiShadowedRectangle.qml" : "NormalRectangle.qml"
-    }
-
     Rectangle{
         id: painter
         anchors.verticalCenter: parent.verticalCenter
         anchors.horizontalCenter: parent.horizontalCenter
         opacity: backgroundOpacity
+
+        //! Kirigami.ShadowedRectangle expands its scene-graph node by
+        //! shadowSize multiplied by the item's aspect ratio. A tall side dock
+        //! therefore asks to paint hundreds of pixels beyond each end for a
+        //! 20 px shadow. The shared MultiEffect wrapper has a fixed pixel
+        //! footprint on both axes and replaces this rectangle's layer, so the
+        //! source is drawn once. EffectMetrics gives painting and placement
+        //! one stateless definition of that footprint.
+        layer.enabled: main.shadowEnabled && main.shadowSize > 0
+        layer.effect: BackgroundShadow {
+            shadowColor: Qt.rgba(main.shadowColor.r,
+                                 main.shadowColor.g,
+                                 main.shadowColor.b,
+                                 Math.min(1, 0.336 + main.shadowColor.a))
+            shadowSizePx: main.shadowSize
+        }
 
         width: {
             if (Plasmoid.formFactor === PlasmaCore.Types.Horizontal) {
