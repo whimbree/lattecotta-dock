@@ -22,6 +22,7 @@ PlasmaComponents.Page {
     id: page
     width: content.width + content.Layout.leftMargin * 2
     height: content.height + Kirigami.Units.smallSpacing * 2
+    readonly property real optionsWidth: dialog.optionsWidth
 
     TextMetrics {
         id: defaultFontMetrics
@@ -63,7 +64,7 @@ PlasmaComponents.Page {
                 spacing: 0
 
                 RowLayout {
-                    Layout.minimumWidth: dialog.optionsWidth
+                    Layout.minimumWidth: page.optionsWidth
                     Layout.maximumWidth: Layout.minimumWidth
                     spacing: Kirigami.Units.smallSpacing
                     enabled: proportionSizeSlider.value === 1
@@ -175,7 +176,7 @@ PlasmaComponents.Page {
                 }
 
                 PlasmaComponents.Label {
-                    Layout.minimumWidth: dialog.optionsWidth
+                    Layout.minimumWidth: page.optionsWidth
                     Layout.maximumWidth: Layout.minimumWidth
                     visible: proportionSizeSlider.value !== proportionSizeSlider.from
                     text: i18n("Turn Screen height off to use Absolute size.")
@@ -184,7 +185,7 @@ PlasmaComponents.Page {
                 }
 
                 RowLayout {
-                    Layout.minimumWidth: dialog.optionsWidth
+                    Layout.minimumWidth: page.optionsWidth
                     Layout.maximumWidth: Layout.minimumWidth
                     spacing: Kirigami.Units.smallSpacing
                     enabled: LatteCore.WindowSystem.compositingActive && plasmoid.configuration.animationsEnabled
