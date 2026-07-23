@@ -5,7 +5,6 @@
 
 import QtQuick
 import QtQuick.Effects
-import "code/EffectMath.js" as EffectMath
 
 // A MultiEffect preconfigured as a drop shadow. The root IS a MultiEffect, so
 // callers set shadowColor/source/shadowHorizontalOffset/shadowVerticalOffset
@@ -33,9 +32,10 @@ MultiEffect {
     // left/top/right/bottom respectively - per side values, NOT totals.
     // Getting that wrong draws the source scaled and offset inside itself
     // (caught live: a smaller ghost copy of every applet).
-    readonly property int shadowPaddingPx: Math.ceil(shadowSizePx
-                                                     + Math.max(Math.abs(shadowHorizontalOffset), Math.abs(shadowVerticalOffset))
-                                                     + 2)
+    readonly property int shadowPaddingPx: EffectMetrics.shadowPaddingFor(
+                                               shadowSizePx,
+                                               shadowHorizontalOffset,
+                                               shadowVerticalOffset)
     autoPaddingEnabled: false
     paddingRect: Qt.rect(shadowPaddingPx, shadowPaddingPx, shadowPaddingPx, shadowPaddingPx)
 
@@ -46,5 +46,5 @@ MultiEffect {
     // old shadow used a different offset override this.
     shadowVerticalOffset: 2
     blurMax: blurMaxPx
-    shadowBlur: EffectMath.shadowBlurFor(shadowSizePx, blurMaxPx)
+    shadowBlur: EffectMetrics.shadowBlurFor(shadowSizePx, blurMaxPx)
 }

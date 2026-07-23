@@ -1175,7 +1175,7 @@ void SettingsInventoryTest::validatesInventory()
     QCOMPARE(result.inventory.exemptions, 25);
     QCOMPARE(result.inventory.representatives, 16);
     QCOMPARE(result.inventory.coverageRelations, ExpectedCoverageRelations);
-    QCOMPARE(result.inventory.measured.value(QStringLiteral("files")).toInt(), 58);
+    QCOMPARE(result.inventory.measured.value(QStringLiteral("files")).toInt(), 59);
     QCOMPARE(result.inventory.measured.value(QStringLiteral("candidates")).toInt(), 742);
     QCOMPARE(result.inventory.measured.value(QStringLiteral("qmlObjects")).toInt(), 241);
     QCOMPARE(result.inventory.measured.value(QStringLiteral("qmlMembers")).toInt(), 359);

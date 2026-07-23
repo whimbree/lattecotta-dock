@@ -64,6 +64,21 @@ TestCase {
         shadowed.shadowSizePx = 0;
     }
 
+    function test_rendererAndLayoutSharePaddingMetric() {
+        compare(LatteComponents.EffectMetrics.shadowPaddingFor(20, 0, 0), 22,
+                "the fixed blur keeps two transparent pixels after the painted extent");
+        compare(LatteComponents.EffectMetrics.shadowPaddingFor(20, 0, 2), 24,
+                "directional offsets extend the fixed-pixel footprint");
+
+        shadowed.shadowSizePx = 20;
+        shadowed.shadowHorizontalOffset = 0;
+        shadowed.shadowVerticalOffset = 2;
+        compare(shadowed.shadowPaddingPx,
+                LatteComponents.EffectMetrics.shadowPaddingFor(20, 0, 2),
+                "the renderer must consume the same metric available to layout owners");
+        shadowed.shadowSizePx = 0;
+    }
+
     function test_effectRidersKeepThePaddingContract() {
         //! the task remove-from-group ghost rides saturation on the same
         //! layer effect and gates the shadow through shadowEnabled instead

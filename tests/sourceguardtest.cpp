@@ -26,6 +26,8 @@
 //     feed back into the stable content offset
 //   * Dock background routing: Justify joins all dock alignments in the
 //     shadow-aware visual fit while panel mode retains its full-span path
+//   * Dock background rendering: custom shadows use one fixed-pixel effect
+//     footprint on both axes and publish that footprint to geometry owners
 //   * Dock-system reporting: persistent-id ordering and original/clone
 //     relationship classification stay on their pure seams
 //   * SC-T3 (the D29 narrow middle-click dispatch readback): the production QML
@@ -208,6 +210,48 @@ private:
                 "if(myView.alignment===LatteCore.Types.Justify){returnroot.maxLength;}"))
             && offsetBinding.contains(QStringLiteral(
                 "if(myView.alignment===LatteCore.Types.Justify){return0;}"));
+    }
+
+    static bool matchesAspectIndependentBackgroundShadow(const QString &customBackground,
+                                                         const QString &backgroundShadow,
+                                                         const QString &multiLayered,
+                                                         const QString &effectMetrics,
+                                                         const QString &shadowedItem)
+    {
+        const QString custom = normalizedCode(customBackground);
+        const QString effect = normalizedCode(backgroundShadow);
+        const QString layered = normalizedCode(multiLayered);
+        const QString metrics = normalizedCode(effectMetrics);
+        const QString shadowed = normalizedCode(shadowedItem);
+
+        return layered.contains(QStringLiteral(
+                "importorg.kde.latte.components1.0asLatteComponents"))
+            && custom.contains(QStringLiteral(
+                "layer.enabled:main.shadowEnabled&&main.shadowSize>0"))
+            && custom.contains(QStringLiteral(
+                "layer.effect:BackgroundShadow{"))
+            && !custom.contains(QStringLiteral("Kirigami.ShadowedRectangle"))
+            && effect.contains(QStringLiteral(
+                "LatteComponents.ShadowedItem{shadowVerticalOffset:0}"))
+            && metrics.contains(QStringLiteral(
+                "readonlypropertyintpostBlurGuardPx:2"))
+            && metrics.contains(QStringLiteral(
+                "functionshadowPaddingFor(sizePx:real,horizontalOffset:real,"
+                "verticalOffset:real):int"))
+            && shadowed.contains(QStringLiteral(
+                "readonlypropertyintshadowPaddingPx:"
+                "EffectMetrics.shadowPaddingFor(shadowSizePx,"
+                "shadowHorizontalOffset,shadowVerticalOffset)"))
+            && layered.contains(QStringLiteral(
+                "readonlypropertyintcustomShadowPaintMargin:"
+                "LatteComponents.EffectMetrics.shadowPaddingFor("
+                "Math.max(0,customShadow),0,0)"))
+            && layered.count(QStringLiteral(
+                "barLine.customShadowPaintMargin")) == 8
+            && layered.contains(QStringLiteral(
+                "shadowEnabled:customShadowIsEnabled"))
+            && layered.contains(QStringLiteral(
+                "shadowSize:Math.max(0,customShadow)"));
     }
 
     static bool matchesDockCollectionOrderingRoute(const QString &body)
@@ -418,6 +462,8 @@ private Q_SLOTS:
     void centeredAppletOffset_sourceGuardRejectsVisualFeedback();
     void dockBackgroundFit_includesJustifyDockMode();
     void dockBackgroundFit_sourceGuardsRejectBypasses();
+    void dockBackgroundShadow_keepsFixedPixelFootprint();
+    void dockBackgroundShadow_sourceGuardsRejectAspectScaledRenderer();
     void dockSystemCollection_keepsPureRouting();
     void dockSystemCollection_sourceGuardsRejectControlledMutations();
     void dockSystemIdentityRegistry_keepsLifetimeAndAffinityContract();
@@ -653,6 +699,87 @@ void SourceGuardTest::dockBackgroundFit_sourceGuardsRejectBypasses()
         "        }"));
     QVERIFY2(!matchesDockBackgroundFitRouting(offsetBypass),
              "restoring an unconstrained Justify offset must fail the routing guard");
+}
+
+void SourceGuardTest::dockBackgroundShadow_keepsFixedPixelFootprint()
+{
+    const QString custom = readFile(QStringLiteral(
+        "containment/package/contents/ui/colorizer/CustomBackground.qml"));
+    const QString effect = readFile(QStringLiteral(
+        "containment/package/contents/ui/colorizer/BackgroundShadow.qml"));
+    const QString layered = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/MultiLayered.qml"));
+    const QString metrics = readFile(QStringLiteral(
+        "declarativeimports/components/EffectMetrics.qml"));
+    const QString shadowed = readFile(QStringLiteral(
+        "declarativeimports/components/ShadowedItem.qml"));
+
+    QVERIFY2(matchesAspectIndependentBackgroundShadow(custom, effect, layered,
+                                                       metrics, shadowed),
+             "custom background shadows must publish one fixed-pixel effect footprint");
+}
+
+void SourceGuardTest::dockBackgroundShadow_sourceGuardsRejectAspectScaledRenderer()
+{
+    const QString originalCustom = readFile(QStringLiteral(
+        "containment/package/contents/ui/colorizer/CustomBackground.qml"));
+    const QString originalEffect = readFile(QStringLiteral(
+        "containment/package/contents/ui/colorizer/BackgroundShadow.qml"));
+    const QString originalLayered = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/MultiLayered.qml"));
+    const QString originalMetrics = readFile(QStringLiteral(
+        "declarativeimports/components/EffectMetrics.qml"));
+    const QString originalShadowed = readFile(QStringLiteral(
+        "declarativeimports/components/ShadowedItem.qml"));
+    QVERIFY(matchesAspectIndependentBackgroundShadow(originalCustom,
+                                                     originalEffect,
+                                                     originalLayered,
+                                                     originalMetrics,
+                                                     originalShadowed));
+
+    QString aspectScaled = originalCustom;
+    const QString fixedEffect = QStringLiteral("layer.effect: BackgroundShadow {");
+    QCOMPARE(aspectScaled.count(fixedEffect), 1);
+    aspectScaled.replace(fixedEffect,
+                         QStringLiteral("layer.effect: Kirigami.ShadowedRectangle {"));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(aspectScaled,
+                                                       originalEffect,
+                                                       originalLayered,
+                                                       originalMetrics,
+                                                       originalShadowed),
+             "restoring the aspect-scaled Kirigami renderer must fail the guard");
+
+    QString guessedMargins = originalLayered;
+    guessedMargins.replace(QStringLiteral("barLine.customShadowPaintMargin"),
+                           QStringLiteral("customShadow"));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(originalCustom,
+                                                       originalEffect,
+                                                       guessedMargins,
+                                                       originalMetrics,
+                                                       originalShadowed),
+             "disconnecting geometry from the effect footprint must fail the guard");
+
+    QString missingMetricsImport = originalLayered;
+    const QString metricsImport = QStringLiteral(
+        "import org.kde.latte.components 1.0 as LatteComponents\n");
+    QCOMPARE(missingMetricsImport.count(metricsImport), 1);
+    missingMetricsImport.remove(metricsImport);
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(originalCustom,
+                                                       originalEffect,
+                                                       missingMetricsImport,
+                                                       originalMetrics,
+                                                       originalShadowed),
+             "removing the effect-metrics import must fail the guard");
+
+    QString divergentRenderer = originalShadowed;
+    divergentRenderer.replace(QStringLiteral(
+        "EffectMetrics.shadowPaddingFor("), QStringLiteral("Math.ceil("));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(originalCustom,
+                                                       originalEffect,
+                                                       originalLayered,
+                                                       originalMetrics,
+                                                       divergentRenderer),
+             "giving the renderer a private padding formula must fail the guard");
 }
 
 void SourceGuardTest::dockSystemCollection_keepsPureRouting()

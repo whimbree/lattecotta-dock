@@ -366,7 +366,7 @@
   ],
   "sourceCoverage": {
     "siteFields": ["selector","covers"],
-    "measured": {"files":58,"candidates":742,"qmlObjects":241,"qmlMembers":359,"qmlModelElements":57,"qmlCalls":57,"cppConstructions":16,"cppCalls":12},
+    "measured": {"files":59,"candidates":742,"qmlObjects":241,"qmlMembers":359,"qmlModelElements":57,"qmlCalls":57,"cppConstructions":16,"cppCalls":12},
     "files": [
       {"path":"app/view/settings/indicatoruimanager.cpp","sites":[
       ],"representatives":[
@@ -513,6 +513,9 @@
         ["qml-object|id:root/id:mainButton/type:MouseArea#sha256:752a6e4b04d65eda7f1eb3198f53a31dfc623ae019ea5f3181277d82cbed4f71",["chrome.views.menu.main","chrome.views.menu.arrow","behavior.visibility.dodge.main","behavior.visibility.dodge.arrow","behavior.visibility.windows.main","behavior.visibility.windows.arrow","behavior.visibility.sidebar.main","behavior.visibility.sidebar.arrow","effects.indicators.custom.main","effects.indicators.custom.arrow"]],
         ["qml-object|id:root/id:mainComboBox",["chrome.views.menu.main","chrome.views.menu.arrow","behavior.visibility.dodge.main","behavior.visibility.dodge.arrow","behavior.visibility.windows.main","behavior.visibility.windows.arrow","behavior.visibility.sidebar.main","behavior.visibility.sidebar.arrow","effects.indicators.custom.main","effects.indicators.custom.arrow"]],
         ["qml-member|id:root/id:mainComboBox|name:onIconClicked",["chrome.views.menu.main","chrome.views.menu.arrow","behavior.visibility.dodge.main","behavior.visibility.dodge.arrow","behavior.visibility.windows.main","behavior.visibility.windows.arrow","behavior.visibility.sidebar.main","behavior.visibility.sidebar.arrow","effects.indicators.custom.main","effects.indicators.custom.arrow"]]
+      ],"representatives":[
+      ]},
+      {"path":"declarativeimports/components/EffectMetrics.qml","sites":[
       ],"representatives":[
       ]},
       {"path":"declarativeimports/components/ExternalShadow.qml","sites":[
