@@ -22,6 +22,8 @@
 //     dock that is locally in edit mode
 //   * Layout-length animation tracking: horizontal and vertical changes share
 //     one registration path and the settle timer owns the matching removal
+//   * Centered applet-row placement: background-only parabolic clamping cannot
+//     feed back into the stable content offset
 //   * Dock-system reporting: persistent-id ordering and original/clone
 //     relationship classification stay on their pure seams
 //   * SC-T3 (the D29 narrow middle-click dispatch readback): the production QML
@@ -157,6 +159,22 @@ private:
             && settlementClearsActive > settlementRemovesEvent
             && normalizedSource.count(addEvent) == 1
             && normalizedSource.count(removeEvent) == 1;
+    }
+
+    static bool matchesCenteredAppletOffsetOwnership(const QString &source)
+    {
+        const int mainLayoutStart = source.indexOf(QStringLiteral("id: _mainLayout"));
+        if (mainLayoutStart == -1) {
+            return false;
+        }
+
+        const QString offsetBinding = normalizedCode(functionBody(
+            source.mid(mainLayoutStart), QStringLiteral("offset:")));
+        return offsetBinding.contains(QStringLiteral(
+                   "return(root.myView.alignment===LatteCore.Types.Justify)"
+                   "?inJustifyCenterOffset:root.offset"))
+            && !offsetBinding.contains(QStringLiteral(
+                "background.offset-parabolicOffsetting"));
     }
 
     static bool matchesDockCollectionOrderingRoute(const QString &body)
@@ -363,6 +381,8 @@ private Q_SLOTS:
     void viewsDataConfigureMode_sourceGuardRejectsGlobalLeak();
     void layoutLengthChanges_shareAnimationTrackerRegistration();
     void layoutLengthChanges_sourceGuardRejectsVerticalRemoval();
+    void centeredAppletOffset_ignoresBoundedBackgroundMovement();
+    void centeredAppletOffset_sourceGuardRejectsVisualFeedback();
     void dockSystemCollection_keepsPureRouting();
     void dockSystemCollection_sourceGuardsRejectControlledMutations();
     void dockSystemIdentityRegistry_keepsLifetimeAndAffinityContract();
@@ -537,6 +557,29 @@ void SourceGuardTest::layoutLengthChanges_sourceGuardRejectsVerticalRemoval()
         "animations.needLength.removeEvent(layoutsContainer);"));
     QVERIFY2(!matchesLengthAnimationTrackerContract(source),
              "restoring the vertical remove-at-start defect must fail the tracker contract");
+}
+
+void SourceGuardTest::centeredAppletOffset_ignoresBoundedBackgroundMovement()
+{
+    const QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    QVERIFY2(matchesCenteredAppletOffsetOwnership(source),
+             "centered applet placement must not consume the bounded visual background offset");
+}
+
+void SourceGuardTest::centeredAppletOffset_sourceGuardRejectsVisualFeedback()
+{
+    QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    QVERIFY(matchesCenteredAppletOffsetOwnership(source));
+
+    const QString stableOffset = QStringLiteral(
+        "? inJustifyCenterOffset : root.offset");
+    QCOMPARE(source.count(stableOffset), 1);
+    source.replace(stableOffset, QStringLiteral(
+        "? inJustifyCenterOffset : background.offset - parabolicOffsetting"));
+    QVERIFY2(!matchesCenteredAppletOffsetOwnership(source),
+             "restoring visual-offset feedback must fail the applet placement guard");
 }
 
 void SourceGuardTest::dockSystemCollection_keepsPureRouting()
