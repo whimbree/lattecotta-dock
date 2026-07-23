@@ -324,6 +324,37 @@ inline QRectF resolveEffectsArea(const EffectsAreaEnv &env)
     return QRectF(env.backgroundOriginInRoot, env.backgroundSize);
 }
 
+//! A dock's rounded solid background grows with the applet row. Parabolic zoom
+//! may consume its resting end padding, but the complete background visual,
+//! including its length-axis shadow margins, remains inside the configured
+//! primary span.
+inline constexpr qreal fitDockBackgroundLength(qreal requestedBackgroundLength,
+                                               qreal maximumVisualLength,
+                                               qreal shadowMarginsLength)
+{
+    Q_ASSERT(requestedBackgroundLength >= 0.0);
+    Q_ASSERT(maximumVisualLength >= 0.0);
+    Q_ASSERT(shadowMarginsLength >= 0.0);
+
+    const qreal maximumBackgroundLength = std::max(qreal{0},
+                                                   maximumVisualLength - shadowMarginsLength);
+    return std::min(requestedBackgroundLength, maximumBackgroundLength);
+}
+
+//! Keep a centered dock's configured and parabolic offset inside its actual
+//! view. When the complete visual fills the view, no offset is possible;
+//! shorter visuals retain the full symmetric movement available around them.
+inline constexpr qreal fitCenteredDockOffset(qreal requestedOffset,
+                                             qreal visualLength,
+                                             qreal viewPrimaryLength)
+{
+    Q_ASSERT(visualLength >= 0.0);
+    Q_ASSERT(viewPrimaryLength >= visualLength);
+
+    const qreal maximumOffset = (viewPrimaryLength - visualLength) / 2.0;
+    return std::clamp(requestedOffset, -maximumOffset, maximumOffset);
+}
+
 //! inputs of one edge's background padding (MultiLayered.qml:56-125; one
 //! formula, four call sites differing only in which border/margins they
 //! read and which axis the edge lies on)

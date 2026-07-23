@@ -1,6 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2016 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2016 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -106,7 +107,23 @@ BackgroundProperties{
             return root.maxLength;
         }
 
-        return Math.max(root.minLength, layoutsContainerItem.mainLayout.length + totals.paddingsLength);
+        const requestedLength = Math.max(root.minLength,
+                                         layoutsContainerItem.mainLayout.length + barLine.totals.paddingsLength);
+        const maximumLength = root.maxLength;
+
+        if (maximumLength <= 0) {
+            //! Startup has not published a usable view span yet. The dock is
+            //! offscreen in this state; the settled binding reevaluates once
+            //! the positioner supplies real geometry.
+            return requestedLength;
+        }
+
+        //! Resting end padding is presentation space, not a permanent hover
+        //! reserve. Parabolic zoom may borrow it, while the rounded background
+        //! and its drop shadow remain inside the configured primary span.
+        return backgroundStateResolver.dockBackgroundLength(requestedLength,
+                                                             maximumLength,
+                                                             barLine.totals.shadowsLength);
     }
 
     thickness: {
@@ -122,24 +139,37 @@ BackgroundProperties{
             return 0;
         }
 
-        if (root.isHorizontal) {
+        if (Plasmoid.formFactor === PlasmaCore.Types.Horizontal) {
             if (myView.alignment === LatteCore.Types.Left) {
-                return root.offset - shadows.left;
+                return root.offset - barLine.shadows.left;
             } else if (myView.alignment === LatteCore.Types.Right) {
-                return root.offset - shadows.right;
+                return root.offset - barLine.shadows.right;
             }
         }
 
-        if (root.isVertical) {
+        if (Plasmoid.formFactor === PlasmaCore.Types.Vertical) {
             if (myView.alignment === LatteCore.Types.Top) {
-                return root.offset - shadows.top;
+                return root.offset - barLine.shadows.top;
             } else if (myView.alignment === LatteCore.Types.Bottom) {
-                return root.offset - shadows.bottom;
+                return root.offset - barLine.shadows.bottom;
             }
         }
 
-        var parabolicOffseting = myView.alignment === LatteCore.Types.Center ? layoutsContainerItem.mainLayout.parabolicOffsetting : 0;
-        return root.offset + parabolicOffseting;
+        if (myView.alignment !== LatteCore.Types.Center) {
+            return root.offset;
+        }
+
+        const requestedOffset = root.offset + layoutsContainerItem.mainLayout.parabolicOffsetting;
+        const viewPrimaryLength = Plasmoid.formFactor === PlasmaCore.Types.Horizontal
+                ? barLine.parent.width : barLine.parent.height;
+        if (viewPrimaryLength < barLine.totals.visualLength) {
+            //! Same explicit startup state as the length binding above.
+            return requestedOffset;
+        }
+
+        return backgroundStateResolver.centeredDockOffset(requestedOffset,
+                                                          barLine.totals.visualLength,
+                                                          viewPrimaryLength);
     }
 
     totals.visualThickness: {
@@ -905,5 +935,3 @@ BackgroundProperties{
     ]
     //END states
 }
-
-
