@@ -1518,7 +1518,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   the 2026 Bree Spektor line.
 
 ### D140 - Zoomed side-dock chrome clipped at both ends
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`1228ecf8c`).
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`1228ecf8c`,
+  `d19a1805c`, `921bf089b`, `a0ab006f8`).
 - FOUND: 2026-07-22, live first-and-last-icon zoom acceptance on a side dock.
 - SYMPTOM: a centered 1240 px side surface expanded its solid effects rectangle
   to y=-34, height=1307 during parabolic zoom. Bounding only that solid
@@ -1533,12 +1534,58 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   span after reserving its actual length-axis shadow margins, then constrain
   centered movement using the complete background visual and its owning item.
   The same primary-axis calculation handles horizontal and vertical docks.
-- EVIDENCE: the rebuilt 1240 px side surface retains its 56 px stable icon size
-  and reports a y=20, height=1200 solid rectangle, leaving the full 20 px drop
-  shadow margin at each end. Compile-time assertions and C++/QML regressions pin
+- EVIDENCE: after the independent-review corrections, the rebuilt 1240 px side
+  surface settles at 54 px with a 1126 px post-chrome applet budget and reports
+  a y=25, height=1190 solid rectangle. Each end retains its complete 20 px drop
+  shadow plus 5 px slack. Compile-time assertions and C++/QML regressions pin
   the 1230 px resting request, 1307 px zoom request, 40 px total shadow, and
-  centered-offset limit. `backgroundstatetest`, the 240-case QML interaction
-  suite, `qmlcompilegate`, and `qmllintgate` pass.
+  centered-offset limit.
+
+### D141 - Bounded background movement shifted the applet row
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`d19a1805c`).
+- FOUND: 2026-07-22, independent review of PR #116 after the D140 chrome fit.
+- SYMPTOM: clamping a centered background's -34 px parabolic offset to zero
+  shifted the applet row by +34 px during end-icon hover.
+- ROOT: centered `mainLayout.offset` subtracted parabolic movement from
+  `background.offset`. That canceled the original unbounded background motion,
+  but fed any later visual clamp delta back into content placement.
+- FIX: keep the centered applet row on the configured placement offset. The
+  background owns its parabolic presentation movement and clamp independently.
+- EVIDENCE: `sourceguardtest` reads the production QML, requires the stable
+  content offset, and rejects a controlled mutation that restores the visual
+  feedback expression.
+
+### D142 - Stable autosize omitted background shadow margins
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`921bf089b`).
+- FOUND: 2026-07-22, independent review of PR #116 after the D140 chrome fit.
+- SYMPTOM: AutoSize could accept a resting row against the post-padding span,
+  then the background fit shortened the solid rectangle by the additional
+  shadow length. Stable content could therefore outgrow its resting chrome.
+- ROOT: `layouter.contentsMaxLength` subtracted primary-axis end padding but
+  omitted the shadow margins that are also part of stable background geometry.
+- FIX: define the authoritative applet span after both padding and shadow
+  margins. The existing `contentsMaxLength` observer refits when either inset
+  changes; transient zoom remains outside the persistent solver.
+- EVIDENCE: the shipped AutoSize integration shrinks 63 px to 60 px when only a
+  50 px shadow inset appears, then regrows to 63 px after release. The rebuilt
+  side dock settles at 54 px with `availablePrimaryLength=1126` and complete
+  chrome inside its 1240 px surface. All 241 QML interaction cases and
+  `qmllintgate` pass.
+
+### D143 - Dock-mode Justify bypassed the complete chrome fit
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`a0ab006f8`).
+- FOUND: 2026-07-22, independent review of PR #116 after the D140 chrome fit.
+- SYMPTOM: a Justify dock returned `root.maxLength` before shadow reservation,
+  so its complete visual could remain longer than its owning surface.
+- ROOT: Justify had a dedicated early return instead of sharing the dock-mode
+  background path. Its alignment states masked the corresponding offset
+  ownership rather than expressing the zero-offset contract directly.
+- FIX: preserve the composited Plasma-panel path, route every dock alignment
+  through the shadow-aware fit, and make Justify's presentation offset zero.
+- EVIDENCE: production-source guards reject direct-length and offset bypasses.
+  The QML shell pins both full-span Justify and shorter content-driven dock
+  requests. `sourceguardtest`, all 242 QML interaction cases, and the improved
+  183-warning `MultiLayered.qml` lint baseline pass.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).

@@ -71,7 +71,7 @@ Horizontal and vertical layout changes use the same per-view animation tracker,
 so automatic sizing waits for settled content on both axes.
 The automatic-size solver uses every fitting integer icon size, sizes the
 persistent dock from its settled row, leaves a two-pixel rounding margin, and
-uses the background's real post-padding content span before painting task
+uses the background's real post-chrome content span before painting task
 artwork into the complete fitted slot. Temporary hover zoom does not resize the
 resting dock; it may borrow resting end padding while the complete background
 and its drop shadows stay inside the dock's primary span. Settings sliders

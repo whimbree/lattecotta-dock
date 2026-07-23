@@ -77,6 +77,18 @@ with the complete visual. The rebuilt dock keeps its 56 px stable icon size and
 reports y=20, height=1200, leaving the full 20 px shadow margin at both ends.
 Compile-time assertions and C++/QML regressions pin the live geometry.
 
+Independent review prevented that first D140 correction from landing with
+three ownership gaps. D141 (bounded background movement shifted the applet row)
+is fixed in `d19a1805c`: centered content now consumes only the configured
+offset, while the background owns bounded parabolic presentation separately.
+D142 (stable autosize omitted background shadow margins) is fixed in
+`921bf089b`: `layouter.contentsMaxLength` now subtracts both padding and shadows,
+and a live-shaped integration case refits when only shadow length changes. D143
+(dock-mode Justify bypassed the complete chrome fit) is fixed in `a0ab006f8`:
+all dock alignments share the shadow-aware fit while the composited Plasma-panel
+path remains unchanged. The final live side dock settles at 54 px with a 1126 px
+applet budget and y=25, height=1190 solid chrome inside its 1240 px surface.
+
 The first canonical gate also exposed two settings bookkeeping defects. D132
 (length-control inventory anchors depended on source hashes) is fixed by commit
 `2e931284d`, which gives the Maximum, Minimum, and Offset rows stable ids. D133

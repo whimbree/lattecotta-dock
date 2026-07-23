@@ -4351,7 +4351,19 @@ prerequisites in the phases above are done.
       sizing independent of hover, fit the solid background after reserving its
       length-axis shadow margins, and constrain centered parabolic movement by
       the complete visual's owning span.
-      Commits: 1228ecf8c
+      Commits: 1228ecf8c, d19a1805c, 921bf089b, a0ab006f8
+- [x] Fix D141 (bounded background movement shifted the applet row). Separate
+      the stable centered content offset from bounded parabolic background
+      presentation and reject restoration of the feedback expression.
+      Commits: d19a1805c
+- [x] Fix D142 (stable autosize omitted background shadow margins). Define the
+      layouter-owned applet budget after both primary-axis padding and shadow
+      margins, and refit when either stable inset changes.
+      Commits: 921bf089b
+- [x] Fix D143 (dock-mode Justify bypassed the complete chrome fit). Preserve
+      the Plasma-panel path while routing every dock alignment through the
+      shadow-aware visual fit with explicit Justify offset ownership.
+      Commits: a0ab006f8
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
