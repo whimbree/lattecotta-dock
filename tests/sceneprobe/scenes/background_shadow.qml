@@ -17,7 +17,7 @@ Item {
     property var probeExpect: [
         { "x": 128, "y": 25, "rgba": "#552828", "tol": 0.12 },
         { "x": 104, "y": 128, "rgba": "#642424", "tol": 0.15 },
-        { "x": 128, "y": 128, "rgba": "#ffffff", "tol": 0.05 },
+        { "x": 128, "y": 128, "rgba": "#ff4040", "tol": 0.05 },
         { "x": 10, "y": 10, "rgba": "#303030", "tol": 0.05 }
     ]
 
@@ -26,16 +26,24 @@ Item {
         color: "#303030"
     }
 
-    Rectangle {
+    Item {
         anchors.centerIn: parent
         width: 40
         height: 200
-        radius: 12
-        color: "white"
-        layer.enabled: true
-        layer.effect: Colorizer.BackgroundShadow {
-            shadowColor: "red"
-            shadowSizePx: 16
+
+        Colorizer.BackgroundShadow {
+            anchors.fill: translucentSource
+            blur: 16
+            radius: translucentSource.radius
+            color: "red"
+        }
+
+        Rectangle {
+            id: translucentSource
+            anchors.fill: parent
+            radius: 12
+            color: "white"
+            opacity: 0.25
         }
     }
 }

@@ -4,8 +4,6 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-pragma ComponentBehavior: Bound
-
 import QtQuick 2.7
 
 import org.kde.plasma.plasmoid 2.0
@@ -14,7 +12,7 @@ import org.kde.ksvg 1.0 as KSvg
 
 Item{
     id: main
-    clip: !painter.layer.enabled
+    clip: !backgroundShadow.visible
 
     property int borderWidth: 0
     property int roundness: 0
@@ -107,27 +105,24 @@ Item{
         restoreMode: Binding.RestoreNone
     }
 
+    BackgroundShadow {
+        id: backgroundShadow
+        anchors.fill: painter
+        z: painter.z - 1
+        visible: main.shadowEnabled && main.shadowSize > 0
+        blur: main.shadowSize
+        radius: painter.radius
+        color: Qt.rgba(main.shadowColor.r,
+                       main.shadowColor.g,
+                       main.shadowColor.b,
+                       Math.min(1, 0.336 + main.shadowColor.a))
+    }
+
     Rectangle{
         id: painter
         anchors.verticalCenter: parent.verticalCenter
         anchors.horizontalCenter: parent.horizontalCenter
         opacity: backgroundOpacity
-
-        //! Kirigami.ShadowedRectangle expands its scene-graph node by
-        //! shadowSize multiplied by the item's aspect ratio. A tall side dock
-        //! therefore asks to paint hundreds of pixels beyond each end for a
-        //! 20 px shadow. The shared MultiEffect wrapper has a fixed pixel
-        //! footprint on both axes and replaces this rectangle's layer, so the
-        //! source is drawn once. EffectMetrics gives painting and placement
-        //! one stateless definition of that footprint.
-        layer.enabled: main.shadowEnabled && main.shadowSize > 0
-        layer.effect: BackgroundShadow {
-            shadowColor: Qt.rgba(main.shadowColor.r,
-                                 main.shadowColor.g,
-                                 main.shadowColor.b,
-                                 Math.min(1, 0.336 + main.shadowColor.a))
-            shadowSizePx: main.shadowSize
-        }
 
         width: {
             if (Plasmoid.formFactor === PlasmaCore.Types.Horizontal) {
