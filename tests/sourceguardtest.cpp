@@ -224,9 +224,7 @@ private:
         const QString metrics = normalizedCode(effectMetrics);
         const QString shadowed = normalizedCode(shadowedItem);
 
-        return layered.contains(QStringLiteral(
-                "importorg.kde.latte.components1.0asLatteComponents"))
-            && custom.contains(QStringLiteral(
+        return custom.contains(QStringLiteral(
                 "BackgroundShadow{id:backgroundShadow"))
             && custom.contains(QStringLiteral(
                 "visible:main.shadowEnabled&&main.shadowSize>0"))
@@ -237,6 +235,12 @@ private:
             && effect.contains(QStringLiteral(
                 "importQtQuick.Effects"))
             && effect.contains(QStringLiteral("RectangularShadow{"))
+            && effect.contains(QStringLiteral(
+                "importorg.kde.latte.components1.0asLatteComponents"))
+            && effect.contains(QStringLiteral(
+                "readonlypropertyintpaintMargin:"
+                "LatteComponents.EffectMetrics.rectangularShadowMarginFor("
+                "blur,spread)"))
             && effect.contains(QStringLiteral("offset:Qt.vector2d(0,0)"))
             && effect.contains(QStringLiteral("spread:0"))
             && !effect.contains(QStringLiteral("LatteComponents.ShadowedItem"))
@@ -245,14 +249,15 @@ private:
             && metrics.contains(QStringLiteral(
                 "functionshadowPaddingFor(sizePx:real,horizontalOffset:real,"
                 "verticalOffset:real):int"))
+            && metrics.contains(QStringLiteral(
+                "functionrectangularShadowMarginFor(blurPx:real,spreadPx:real):int"))
             && shadowed.contains(QStringLiteral(
                 "readonlypropertyintshadowPaddingPx:"
                 "EffectMetrics.shadowPaddingFor(shadowSizePx,"
                 "shadowHorizontalOffset,shadowVerticalOffset)"))
             && layered.contains(QStringLiteral(
                 "readonlypropertyintcustomShadowPaintMargin:"
-                "LatteComponents.EffectMetrics.shadowPaddingFor("
-                "Math.max(0,customShadow),0,0)"))
+                "overlayedBackground.shadowPaintMargin"))
             && layered.count(QStringLiteral(
                 "barLine.customShadowPaintMargin")) == 8
             && layered.contains(QStringLiteral(
@@ -778,14 +783,14 @@ void SourceGuardTest::dockBackgroundShadow_sourceGuardsRejectAspectScaledRendere
                                                        originalShadowed),
              "disconnecting geometry from the effect footprint must fail the guard");
 
-    QString missingMetricsImport = originalLayered;
+    QString missingMetricsImport = originalEffect;
     const QString metricsImport = QStringLiteral(
         "import org.kde.latte.components 1.0 as LatteComponents\n");
     QCOMPARE(missingMetricsImport.count(metricsImport), 1);
     missingMetricsImport.remove(metricsImport);
     QVERIFY2(!matchesAspectIndependentBackgroundShadow(originalCustom,
-                                                       originalEffect,
                                                        missingMetricsImport,
+                                                       originalLayered,
                                                        originalMetrics,
                                                        originalShadowed),
              "removing the effect-metrics import must fail the guard");

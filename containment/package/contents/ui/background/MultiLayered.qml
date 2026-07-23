@@ -17,7 +17,6 @@ import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.kquickcontrolsaddons 2.0
 
 import org.kde.latte.core 0.2 as LatteCore
-import org.kde.latte.components 1.0 as LatteComponents
 import org.kde.latte.private.containment 0.1 as LatteContainment
 
 import "../colorizer" as Colorizer
@@ -32,8 +31,7 @@ BackgroundProperties{
     }
 
     readonly property alias panelBackgroundSvg: solidBackground
-    readonly property int customShadowPaintMargin: LatteComponents.EffectMetrics.shadowPaddingFor(
-                                                       Math.max(0, customShadow), 0, 0)
+    readonly property int customShadowPaintMargin: overlayedBackground.shadowPaintMargin
 
     //! Layer 0: Multi-Layer container in order to provide a consistent final element that acts
     //! as a single entity/background

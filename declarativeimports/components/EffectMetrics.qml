@@ -27,4 +27,8 @@ QtObject {
                                         Math.abs(verticalOffset));
         return Math.ceil(sizePx + greatestOffset + postBlurGuardPx);
     }
+
+    function rectangularShadowMarginFor(blurPx: real, spreadPx: real): int {
+        return Math.max(0, Math.ceil(blurPx + spreadPx));
+    }
 }

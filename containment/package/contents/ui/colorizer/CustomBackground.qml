@@ -64,6 +64,7 @@ Item{
     readonly property bool drawWithoutRoundness: onlyHorizontalBorders || onlyVerticalBorders
 
     readonly property Item painterRectangle: painter
+    readonly property alias shadowPaintMargin: backgroundShadow.paintMargin
 
     Binding{
         target: main
