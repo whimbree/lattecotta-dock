@@ -1397,6 +1397,50 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `qmlcompilegate` passes. Live D-Bus readback distinguished the affected dock's
   2.7 percent configuration from the other docks' `-1` Off sentinel.
 
+### D132 - Length-control inventory anchors depended on source hashes
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`2e931284d`).
+- FOUND: 2026-07-22, first canonical gate after the settings wheel repair.
+- SYMPTOM: `settingsinventorytest` rejected the Maximum, Minimum, and Offset
+  fine-adjust areas after a behavior-neutral edit changed their anonymous
+  parent `RowLayout` hashes.
+- ROOT: those semantic controls were identified through hashes of incidental
+  parent source text rather than stable QML ids.
+- FIX: give all three rows semantic ids and map both their sliders and their
+  fine-adjust areas through those anchors.
+- EVIDENCE: `settingsinventorytest` passes with every source candidate resolved
+  exactly once.
+
+### D133 - Screen-height guidance exceeded the QML lint baseline
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`06df46103`).
+- FOUND: 2026-07-22, first canonical gate after adding the Screen height
+  explanation.
+- SYMPTOM: `qmllintgate` reported that `AppearanceConfig.qml` increased from
+  243 to 245 curated warnings.
+- ROOT: the new translated instruction added direct inherited-context accesses
+  for its text and width in a file still awaiting complete context typing.
+- FIX: retain the translated instruction, expose the dialog width through one
+  typed page property, and qualify the three touched width bindings through it.
+- EVIDENCE: `appearancehandleraudittest`, `qmlcompilegate`, and `qmllintgate`
+  pass with the previous exact per-file warning count.
+
+### D134 - Autosize ignored background end padding
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`71a8081ab`).
+- FOUND: 2026-07-22, live side-dock acceptance at 100 percent Maximum Length.
+- SYMPTOM: the side dock chose an overly large stable icon size and clipped its
+  rounded background at both ends. Its 1240 px canvas carried an effects
+  rectangle from y=-14 through y=1254.
+- ROOT: AutoSize compared the applet row with raw `maxLength`, but the
+  background added primary-axis end padding outside that row. The layouter
+  already calculated the correct post-padding content budget, but the solver
+  bypassed it.
+- FIX: solve against `layouter.contentsMaxLength` on every orientation and
+  publish that same authority as `availablePrimaryLength` over D-Bus.
+- EVIDENCE: a live-shaped QML regression subtracts 28 px of end padding before
+  selecting the largest fit. The rebuilt right dock settled at 54 px with its
+  complete y=25, height=1190 effects rectangle inside the 1240 px canvas.
+  `qmlinteraction`, `autosizeenginetest`, `dockidentitycontracttest`,
+  `qmlcompilegate`, and `qmllintgate` pass.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.
