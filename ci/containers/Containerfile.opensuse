@@ -14,7 +14,7 @@
 #
 # Rolling base: Tumbleweed is a rolling release, so this tracks :latest for
 # the local prototype loop; a Phase A3 snapshot pin (an OBS/download.o.o
-# archived repo) is TBD for reproducible CI. Floor is Plasma>=6.5 / Qt>=6.6
+# archived repo) is TBD for reproducible CI. Floor is Plasma>=6.5 / Qt>=6.9
 # / KF6>=6.5; the versions OBSERVED at image-build time (verified in-
 # container 2026-07-17) sail well past it:
 #   Qt 6.11.1  /  KF6 6.28.0  /  Plasma + kwin 6.7.3

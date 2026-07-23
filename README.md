@@ -77,7 +77,7 @@ resting dock; it may borrow resting end padding while the complete background
 and its drop shadows stay inside the dock's primary span. Custom background
 shadows use Qt's dedicated fixed-pixel rounded-shadow renderer on horizontal
 and vertical docks, remain independent of background opacity, and reserve no
-space when disabled. A side dock therefore does not scale its blur by the
+space at zero size. A side dock therefore does not scale its blur by the
 background aspect ratio. Settings
 sliders accept wheel input after being clicked without stealing ordinary page
 scrolling,
@@ -252,7 +252,7 @@ Installation
 
 ### Requirements
 
-- **Plasma >= 6.5**, **Qt >= 6.6**, **KDE Frameworks >= 6.5**
+- **Plasma >= 6.5**, **Qt >= 6.9**, **KDE Frameworks >= 6.5**
 - LayerShellQt, PlasmaWaylandProtocols
 - A Wayland session (the dock refuses to start on anything else)
 - Tools: cmake >= 3.16, ninja or make, extra-cmake-modules, a C++20

@@ -20,10 +20,10 @@
 # binpkgs installable without --binpkg-respect-use rejecting them and falling
 # back to a full source rebuild. This was the decisive resolution for the leg.
 #
-# Floor check (CMakeLists.txt requires Qt >= 6.6.0, KF6 >= 6.5.0,
+# Floor check (CMakeLists.txt requires Qt >= 6.9.0, KF6 >= 6.5.0,
 # libplasma >= 6.5.0, PlasmaWaylandProtocols >= 1.6), observed on the binhost
 # snapshot in-container 2026-07-17:
-#   dev-qt/qtbase            6.11.1   (>= 6.6.0 floor: PASS)
+#   dev-qt/qtbase            6.11.1   (>= 6.9.0 floor: PASS)
 #   kde-frameworks/kcoreaddons 6.27.0 (>= 6.5.0 floor: PASS)
 #   kde-plasma/libplasma     6.6.6    (>= 6.5.0 floor: PASS)
 #   kde-plasma/plasma-workspace 6.6.6 (LibTaskManager / NotificationManager / KWayland)
