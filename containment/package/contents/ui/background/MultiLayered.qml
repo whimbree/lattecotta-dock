@@ -103,13 +103,11 @@ BackgroundProperties{
             return root.isVertical ? root.height : root.width;
         }
 
-        if (myView.alignment === LatteCore.Types.Justify) {
-            return root.maxLength;
-        }
-
-        const requestedLength = Math.max(root.minLength,
-                                         layoutsContainerItem.mainLayout.length + barLine.totals.paddingsLength);
         const maximumLength = root.maxLength;
+        const requestedLength = myView.alignment === LatteCore.Types.Justify
+                ? maximumLength
+                : Math.max(root.minLength,
+                           layoutsContainerItem.mainLayout.length + barLine.totals.paddingsLength);
 
         if (maximumLength <= 0) {
             //! Startup has not published a usable view span yet. The dock is
@@ -130,7 +128,7 @@ BackgroundProperties{
         if (root.behaveAsPlasmaPanel) {
             return metrics.totals.thickness;
         } else {
-            return Math.min(metrics.totals.thickness, background.totals.visualThickness);
+            return Math.min(metrics.totals.thickness, barLine.totals.visualThickness);
         }
     }
 
@@ -153,6 +151,10 @@ BackgroundProperties{
             } else if (myView.alignment === LatteCore.Types.Bottom) {
                 return root.offset - barLine.shadows.bottom;
             }
+        }
+
+        if (myView.alignment === LatteCore.Types.Justify) {
+            return 0;
         }
 
         if (myView.alignment !== LatteCore.Types.Center) {

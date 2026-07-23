@@ -87,7 +87,7 @@
 85	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/applet/ParabolicArea.qml
 37	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/applet/ShortcutBadge.qml
 6	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/applet/TitleTooltipParent.qml
-184	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/MultiLayered.qml
+183	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/MultiLayered.qml
 2	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/types/Shadows.qml
 16	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/types/Totals.qml
 238	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/BindingsExternal.qml
