@@ -108,7 +108,7 @@ distro.
   wayland, mesa lavapipe / vulkan-loader + validation layers, cmake,
   ninja, gcc, jq, fonts, the imgdiff deps), builds the port with cmake
   against the DISTRO Qt/KF6 (not nix), and runs the headless gates.
-- **Distro matrix** (the Plasma 6.5 / Qt 6.6 / KF6 6.5 floors in
+- **Distro matrix** (the Plasma 6.5 / Qt 6.9 / KF6 6.5 floors in
   CMakeLists.txt are a hard selection constraint). Two axes that are
   easy to conflate: the FIVE PACKAGE FORMATS (deb/rpm/PKGBUILD/ebuild/
   xbps, Phase F) already blanket the whole ecosystem, so "add every

@@ -94,17 +94,21 @@ bounded solid rectangle still left the visible blur cut at the ends. Kirigami
 6.27 multiplies `ShadowedRectangle` scene-node expansion by the source aspect
 ratio. A 74 by 1190 side background with a 20 px shadow requested about 322 px
 outside each length-axis end, while placement correctly treated the configured
-size as 20 px. Commits `b03a68005` and `545e79c34` replace that renderer with
-the shared fixed-pixel `MultiEffect` wrapper, bind its owner inputs explicitly,
-and give painting and placement one stateless `EffectMetrics` padding authority.
-The metric reserves 22 px per side: the 20 px blur plus two transparent pixels
-after it. First-item and last-item hover
-passes kept the live effects rectangle inside the 1240 px canvas at y=25,
-height=1190 and y=22, height=1196 respectively. The scene probe pins a tall 5:1
-source, QML interaction tests pin the shared padding, and production-source
-mutations reject the old renderer, unbound layer inputs, and disconnected
-geometry. The custom background lint baseline improves by two warnings and the
-retired helper removes six more.
+size as 20 px. The first D144 correction replaced that node with a fixed-pixel
+layer effect and kept first-item and last-item hover inside the 1240 px canvas
+at y=25, height=1190 and y=22, height=1196.
+
+Cold review then caught D145 (translucent backgrounds attenuated custom
+shadows) and D146 (zero-size custom shadows reserved empty geometry). Commit
+`727f94ded` replaces the layer effect with Qt 6.9 `RectangularShadow`, a
+dedicated fixed-pixel sibling whose opacity stays independent of the painter.
+Commit `166342ca1` publishes that live renderer's exact blur-plus-spread margin
+to placement, including zero margin for a disabled zero-pixel shadow. The Qt
+floor is now 6.9. The tall 5:1 scene probe renders a 25 percent opaque source
+over a full-strength shadow, and QML interaction coverage pins both 20 px and
+zero px footprints. Source mutations reject the old aspect-scaled renderer,
+opacity coupling, and disconnected geometry. Commit `3c4bcffbc` restores the
+touched `ShadowedItem.qml` adaptation copyright found by the same review.
 
 The first canonical gate also exposed two settings bookkeeping defects. D132
 (length-control inventory anchors depended on source hashes) is fixed by commit

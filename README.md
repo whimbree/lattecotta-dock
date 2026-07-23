@@ -75,8 +75,10 @@ uses the background's real post-chrome content span before painting task
 artwork into the complete fitted slot. Temporary hover zoom does not resize the
 resting dock; it may borrow resting end padding while the complete background
 and its drop shadows stay inside the dock's primary span. Custom background
-shadows use one fixed-pixel footprint on horizontal and vertical docks, so a
-side dock does not scale its blur by the background aspect ratio. Settings
+shadows use Qt's dedicated fixed-pixel rounded-shadow renderer on horizontal
+and vertical docks, remain independent of background opacity, and reserve no
+space when disabled. A side dock therefore does not scale its blur by the
+background aspect ratio. Settings
 sliders accept wheel input after being clicked without stealing ordinary page
 scrolling,
 and screen-height sizing shows its resolved pixel ceiling and explicit Off mode.

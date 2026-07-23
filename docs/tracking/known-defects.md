@@ -1600,21 +1600,52 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   beyond each length-axis end. Latte reserved the configured 20 px because a
   shadow size is a pixel radius, so the renderer and geometry owner described
   different paint footprints.
-- FIX: replace the aspect-scaled background renderer with the shared
-  `MultiEffect` shadow wrapper. The new stateless `EffectMetrics` singleton is
-  the one authority for blur normalization and fixed per-side padding. Both
-  renderer and placement consume its 20 px blur plus a two-pixel transparent
-  guard. The custom background is a layer effect, so source and shadow render
-  once without a sibling copy.
+- FIX: replace the aspect-scaled background renderer with Qt 6.9
+  `RectangularShadow`, a dedicated rounded-shadow item with an exact pixel
+  footprint. It remains a sibling behind the background, preserving shadow
+  opacity independently of background translucency. The renderer publishes
+  its `EffectMetrics` blur-plus-spread margin directly to placement.
 - EVIDENCE: the 1240 px live side dock settled at 54 px. First-item hover kept
   the effects rectangle at y=25, height=1190; last-item hover kept it at y=22,
   height=1196. Both complete visuals remain inside the canvas and both captures
   retain visible end shadow. A 5:1 scene-probe fixture pins equal fixed-pixel
-  shadow reach on both axes. QML interaction tests pin the shared 22 px padding,
-  and production-source mutations reject the Kirigami renderer, a missing
-  module import, unbound layer inputs, private padding math, or disconnected
-  placement geometry. The touched custom background drops from 66 to 64 curated
-  QML lint warnings while deletion of the old helper removes six more.
+  reach and an independent shadow behind a 25 percent opaque background. QML
+  interaction tests pin the renderer-owned margin, including the zero-size
+  case. Production-source mutations reject the Kirigami renderer, opacity
+  coupling, a missing module import, private padding math, or disconnected
+  placement geometry.
+
+### D145 - Translucent backgrounds attenuated custom shadows
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`727f94ded`).
+- FOUND: 2026-07-22, mandatory cold review of the D144 renderer replacement.
+- SYMPTOM: reducing background opacity also weakened the custom shadow, and a
+  fully transparent background erased it. Qt5 Latte kept those values
+  independent.
+- ROOT: `painter.opacity` is composited after an item layer effect. Applying
+  `MultiEffect` as that layer therefore multiplied the rectangle and shadow by
+  the same opacity even though the removed sibling renderer did not.
+- FIX: use Qt 6.9 `RectangularShadow` as a sibling behind the painter. The
+  dedicated item renders only the rounded shadow with an exact pixel footprint,
+  so the painter retains its independent opacity binding. Raise the Qt floor to
+  the first release that provides this API.
+- EVIDENCE: the 5:1 scene probe places a 25 percent opaque rectangle over a
+  full-strength red shadow and pins both the halo and center composite. Source
+  mutations reject reconnecting the shadow as the painter layer. QML compile,
+  interaction, source-guard, and scene-probe gates pass.
+
+### D146 - Zero-size custom shadows reserved empty geometry
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`166342ca1`).
+- FOUND: 2026-07-22, mandatory cold review of the D144 renderer replacement.
+- SYMPTOM: a valid zero-pixel custom shadow reserved two pixels at every
+  eligible edge even though the renderer was disabled.
+- ROOT: background placement reused `MultiEffect` padding math, including its
+  two-pixel post-blur guard, instead of the background renderer's own footprint.
+- FIX: publish the live `RectangularShadow` blur-plus-spread margin through
+  `CustomBackground` and consume that value in `MultiLayered`. Zero blur and
+  zero spread now produce zero paint and zero placement margin.
+- EVIDENCE: QML interaction coverage pins 20 px to 20 px and 0 px to 0 px.
+  Production-source guards pin the renderer-owned route and reject disconnected
+  placement or missing metrics imports.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).

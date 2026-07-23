@@ -4369,6 +4369,15 @@ prerequisites in the phases above are done.
       share its padding metric with placement, and pin both end-hover geometry
       and a tall scene-probe fixture.
       Commits: b03a68005, 545e79c34
+- [x] Fix D145 (translucent backgrounds attenuated custom shadows). Preserve
+      Qt5's independent shadow opacity with the Qt 6.9 fixed-pixel
+      `RectangularShadow` sibling, raise the Qt floor to its API release, and
+      pin a fractional-opacity render.
+      Commits: 727f94ded
+- [x] Fix D146 (zero-size custom shadows reserved empty geometry). Publish the
+      renderer's exact blur-plus-spread margin to placement so zero paint owns
+      zero space.
+      Commits: 166342ca1
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
