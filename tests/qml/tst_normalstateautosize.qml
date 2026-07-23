@@ -31,6 +31,7 @@ Item {
     property bool isHorizontal: true
     property bool isVertical: false
     property real backgroundLengthPadding: 0
+    property real backgroundShadowLength: 0
     property real maxLength: 997.6
 
     property int destroyedContinuationCalls: 0
@@ -83,7 +84,9 @@ Item {
 
     Item {
         id: layouterMock
-        property real contentsMaxLength: root.maxLength - root.backgroundLengthPadding
+        property real contentsMaxLength: root.maxLength
+                                         - root.backgroundLengthPadding
+                                         - root.backgroundShadowLength
         property int fillApplets: 0
     }
 
@@ -174,6 +177,7 @@ Item {
             metricsMock.totals.length = 64;
             layoutsMock.mainLayout.length = 1000;
             root.backgroundLengthPadding = 0;
+            root.backgroundShadowLength = 0;
             root.maxLength = 997.6;
             root.destroyedContinuationCalls = 0;
             root.rapidContinuationCalls = 0;
@@ -252,6 +256,36 @@ Item {
             wait(0);
             compare(sizer.iconSize, 63,
                     "releasing end padding must return the stable row to the largest fit");
+        }
+
+        function test_settledShadowChangesRefitInBothDirections() {
+            sizer = createBlockedSizer(productionSizerComponent);
+
+            productionAnimations.needLength.removeEvent(blocker);
+            wait(0);
+            compare(sizer.iconSize, 63);
+
+            //! Settle the measured row before changing only the background's
+            //! length-axis shadow. The outer maximum and padding stay fixed.
+            metricsMock.iconSize = 63;
+            layoutsMock.mainLayout.length = 984.375;
+            wait(1100);
+            compare(visibilityManager.inNormalState, true);
+
+            root.backgroundShadowLength = 50;
+            wait(0);
+            compare(sizer.iconSize, 60,
+                    "growing end shadows must shrink against the complete chrome budget");
+
+            metricsMock.iconSize = 60;
+            layoutsMock.mainLayout.length = 937.5;
+            wait(1100);
+            compare(visibilityManager.inNormalState, true);
+
+            root.backgroundShadowLength = 0;
+            wait(0);
+            compare(sizer.iconSize, 63,
+                    "releasing end shadows must restore the largest stable fit");
         }
 
         function test_rapidNormalStateNotificationsDeduplicate() {

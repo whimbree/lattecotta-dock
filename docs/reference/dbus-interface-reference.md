@@ -106,8 +106,9 @@ Per dock:
   means the required containment configuration map or its `iconSize` entry is
   missing; collection logs that defect. `availablePrimaryLength` is the
   layouter's current logical-pixel `contentsMaxLength`: the containment span
-  available to applets after primary-axis background end padding is removed.
-  It is not the raw containment `maxLength` or the configured ratio.
+  available to applets after primary-axis background end padding and shadow
+  margins are removed. It is not the raw containment `maxLength` or the
+  configured ratio.
 - Geometry: `windowGeometry`, `absoluteGeometry`, `localGeometry`,
   `screenGeometry`, `canvasGeometry`, `effectsRect`,
   `appletsLayoutGeometry`, `maskRect`, `inputMask`, `appliedInputMask`,
