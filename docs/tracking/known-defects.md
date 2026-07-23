@@ -1587,6 +1587,32 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   requests. `sourceguardtest`, all 242 QML interaction cases, and the improved
   183-warning `MultiLayered.qml` lint baseline pass.
 
+### D144 - Aspect-scaled background shadow clipped side docks
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`b03a68005`).
+- FOUND: 2026-07-22, live first-and-last-item hover acceptance after D140.
+- SYMPTOM: the solid background stayed inside the side-dock canvas, but the
+  visible drop shadow remained tight against or clipped by the output ends.
+  Increasing zoom made the missing end blur easier to see.
+- ROOT: Kirigami 6.27 `ShadowedRectangle` expands its scene-graph rectangle by
+  `shadow.size` multiplied by the source aspect ratio. A 74 by 1190 vertical
+  background with a 20 px configured shadow therefore requested about 322 px
+  beyond each length-axis end. Latte reserved the configured 20 px because a
+  shadow size is a pixel radius, so the renderer and geometry owner described
+  different paint footprints.
+- FIX: replace the aspect-scaled background renderer with the shared
+  `MultiEffect` shadow wrapper. The new stateless `EffectMetrics` singleton is
+  the one authority for blur normalization and fixed per-side padding. Both
+  renderer and placement consume its 20 px blur plus a two-pixel transparent
+  guard. The custom background is a layer effect, so source and shadow render
+  once without a sibling copy.
+- EVIDENCE: the 1240 px live side dock settled at 54 px. First-item hover kept
+  the effects rectangle at y=25, height=1190; last-item hover kept it at y=22,
+  height=1196. Both complete visuals remain inside the canvas and both captures
+  retain visible end shadow. A 5:1 scene-probe fixture pins equal fixed-pixel
+  shadow reach on both axes. QML interaction tests pin the shared 22 px padding,
+  and production-source mutations reject the Kirigami renderer, a missing
+  module import, private padding math, or disconnected placement geometry.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.

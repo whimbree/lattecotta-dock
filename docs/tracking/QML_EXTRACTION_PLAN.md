@@ -605,7 +605,7 @@ org.kde.latte.plasma/package/ui/TaskBackLayer.qml,
 org.kde.latte.plasmatabstyle/package/ui/BackLayer.qml,
 org.kde.latte.plasmatabstyle/package/ui/main.qml.
 
-### declarativeimports/ (104 files, 7671 lines)
+### declarativeimports/ (105 files, 7701 lines)
 
 declarativeimports/core is C++ only (no QML). Behavioral files:
 
@@ -619,7 +619,8 @@ declarativeimports/core is C++ only (no QML). Behavioral files:
 | components/ComboBoxButton.qml | 157 | event-routing | S |
 | components/TextField.qml | 129 | state-machine, geometry-math | S |
 | components/IndicatorItem.qml | 138 | state-machine | S |
-| components/ShadowedItem.qml | 50 | geometry-math (delegates to code/EffectMath.js) | S |
+| components/ShadowedItem.qml | 50 | geometry-math (delegates to EffectMetrics singleton) | S |
+| components/EffectMetrics.qml | 30 | geometry-math | S |
 | abilities/bridge/PositionShortcuts.qml | 53 | event-routing | S |
 | abilities/bridge/ParabolicEffect.qml | 42 | event-routing | S |
 | abilities/bridge/Launchers.qml | 37 | event-routing | S |
@@ -678,8 +679,8 @@ same extraction surface:
   components/code/, containment/package/contents/code/,
   plasmoid/package/contents/code/) - the luminance math EX-19
   deduplicates.
-- declarativeimports/components/code/EffectMath.js (10) - shadow blur
-  curve.
+- declarativeimports/components/EffectMetrics.qml (30) - shadow blur and
+  fixed-pixel paint-footprint math.
 - containment/package/contents/code/MathTools.js (11).
 
 ## B. Hot-spot ranking
@@ -2860,4 +2861,3 @@ milliseconds and pixels. The mitigation is structural: they land
 first, inside the strong-model window, with glide-based live recipes
 and surgical two-commit rollbacks; every other unit is pure math with
 tables.
-

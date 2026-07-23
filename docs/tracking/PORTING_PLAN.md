@@ -4364,6 +4364,11 @@ prerequisites in the phases above are done.
       the Plasma-panel path while routing every dock alignment through the
       shadow-aware visual fit with explicit Justify offset ownership.
       Commits: a0ab006f8
+- [x] Fix D144 (aspect-scaled background shadow clipped side docks). Replace
+      the aspect-dependent Kirigami render node with one fixed-pixel effect,
+      share its padding metric with placement, and pin both end-hover geometry
+      and a tall scene-probe fixture.
+      Commits: b03a68005
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

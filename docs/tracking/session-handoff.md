@@ -89,6 +89,20 @@ all dock alignments share the shadow-aware fit while the composited Plasma-panel
 path remains unchanged. The final live side dock settles at 54 px with a 1126 px
 applet budget and y=25, height=1190 solid chrome inside its 1240 px surface.
 
+D144 (aspect-scaled background shadow clipped side docks) explained why that
+bounded solid rectangle still left the visible blur cut at the ends. Kirigami
+6.27 multiplies `ShadowedRectangle` scene-node expansion by the source aspect
+ratio. A 74 by 1190 side background with a 20 px shadow requested about 322 px
+outside each length-axis end, while placement correctly treated the configured
+size as 20 px. Commit `b03a68005` replaces that renderer with the shared
+fixed-pixel `MultiEffect` wrapper and gives painting and placement one stateless
+`EffectMetrics` padding authority. The metric reserves 22 px per side: the
+20 px blur plus two transparent pixels after it. First-item and last-item hover
+passes kept the live effects rectangle inside the 1240 px canvas at y=25,
+height=1190 and y=22, height=1196 respectively. The scene probe pins a tall 5:1
+source, QML interaction tests pin the shared padding, and production-source
+mutations reject the old renderer and disconnected geometry.
+
 The first canonical gate also exposed two settings bookkeeping defects. D132
 (length-control inventory anchors depended on source hashes) is fixed by commit
 `2e931284d`, which gives the Maximum, Minimum, and Offset rows stable ids. D133

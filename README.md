@@ -74,8 +74,11 @@ persistent dock from its settled row, leaves a two-pixel rounding margin, and
 uses the background's real post-chrome content span before painting task
 artwork into the complete fitted slot. Temporary hover zoom does not resize the
 resting dock; it may borrow resting end padding while the complete background
-and its drop shadows stay inside the dock's primary span. Settings sliders
-accept wheel input after being clicked without stealing ordinary page scrolling,
+and its drop shadows stay inside the dock's primary span. Custom background
+shadows use one fixed-pixel footprint on horizontal and vertical docks, so a
+side dock does not scale its blur by the background aspect ratio. Settings
+sliders accept wheel input after being clicked without stealing ordinary page
+scrolling,
 and screen-height sizing shows its resolved pixel ceiling and explicit Off mode.
 The shared edit canvas reasserts its compositor placement and view-local input
 mask when retargeting, including between separate docks that legitimately
