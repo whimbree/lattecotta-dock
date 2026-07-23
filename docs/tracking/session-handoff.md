@@ -67,6 +67,16 @@ state at the QML boundary and asserts the same invariant in the core. D139
 (touched inherited QML omitted adaptation attribution) is fixed in
 `2c4e99430`.
 
+Live end-icon zoom then exposed D140 (zoomed side-dock chrome clipped at both
+ends). The 1240 px side surface could request a y=-34, height=1307 solid
+background because the transient row regained resting end padding and added an
+unbounded parabolic centering offset. Bounding the solid alone still clipped
+the separately drawn drop shadow. Commit `1228ecf8c` fits the solid after
+reserving the actual length-axis shadow margins and constrains centered movement
+with the complete visual. The rebuilt dock keeps its 56 px stable icon size and
+reports y=20, height=1200, leaving the full 20 px shadow margin at both ends.
+Compile-time assertions and C++/QML regressions pin the live geometry.
+
 The first canonical gate also exposed two settings bookkeeping defects. D132
 (length-control inventory anchors depended on source hashes) is fixed by commit
 `2e931284d`, which gives the Maximum, Minimum, and Offset rows stable ids. D133

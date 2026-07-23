@@ -73,7 +73,8 @@ The automatic-size solver uses every fitting integer icon size, sizes the
 persistent dock from its settled row, leaves a two-pixel rounding margin, and
 uses the background's real post-padding content span before painting task
 artwork into the complete fitted slot. Temporary hover zoom does not resize the
-resting dock. Settings sliders
+resting dock; it may borrow resting end padding while the complete background
+and its drop shadows stay inside the dock's primary span. Settings sliders
 accept wheel input after being clicked without stealing ordinary page scrolling,
 and screen-height sizing shows its resolved pixel ceiling and explicit Off mode.
 The shared edit canvas reasserts its compositor placement and view-local input

@@ -1517,6 +1517,29 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: both touched headers retain their inherited copyright lines and add
   the 2026 Bree Spektor line.
 
+### D140 - Zoomed side-dock chrome clipped at both ends
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`1228ecf8c`).
+- FOUND: 2026-07-22, live first-and-last-icon zoom acceptance on a side dock.
+- SYMPTOM: a centered 1240 px side surface expanded its solid effects rectangle
+  to y=-34, height=1307 during parabolic zoom. Bounding only that solid
+  rectangle to the surface still cut off the drop shadow at both ends.
+- ROOT: the background added its resting end padding to the transiently expanded
+  applet row, then applied the unconstrained parabolic centering offset. The
+  shadow item adds separate length-axis margins outside the solid rectangle, so
+  a solid rectangle that filled the surface still requested an oversized
+  complete visual.
+- FIX: let transient zoom borrow resting end padding without entering the
+  persistent icon-size solver. Fit the solid background into the configured
+  span after reserving its actual length-axis shadow margins, then constrain
+  centered movement using the complete background visual and its owning item.
+  The same primary-axis calculation handles horizontal and vertical docks.
+- EVIDENCE: the rebuilt 1240 px side surface retains its 56 px stable icon size
+  and reports a y=20, height=1200 solid rectangle, leaving the full 20 px drop
+  shadow margin at each end. Compile-time assertions and C++/QML regressions pin
+  the 1230 px resting request, 1307 px zoom request, 40 px total shadow, and
+  centered-offset limit. `backgroundstatetest`, the 240-case QML interaction
+  suite, `qmlcompilegate`, and `qmllintgate` pass.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.

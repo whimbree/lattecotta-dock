@@ -4347,6 +4347,11 @@ prerequisites in the phases above are done.
 - [x] Fix D139 (touched inherited QML omitted adaptation attribution). Add the
       current adaptation copyright beside all preserved original authors.
       Commits: 2c4e99430
+- [x] Fix D140 (zoomed side-dock chrome clipped at both ends). Keep stable icon
+      sizing independent of hover, fit the solid background after reserving its
+      length-axis shadow margins, and constrain centered parabolic movement by
+      the complete visual's owning span.
+      Commits: 1228ecf8c
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
