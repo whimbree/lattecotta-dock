@@ -1,7 +1,49 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-22.
+Last updated 2026-07-23.
+
+## 2026-07-23: hover presentation uses the per-output canvas
+
+Live landscape acceptance exposed D150 (hovered applet row escaped its resting
+background). D140 had correctly kept hover zoom out of the stable autosize
+solver, but its first correction reused `root.maxLength` as the transient
+background clipping plane. The applet row could therefore expand beyond the
+rounded background while both still fit the output.
+
+The correction preserves `maximumLength` as the stable row and Justify budget.
+A content-driven dock requests background length from its live applet row, and
+the complete background visual is bounded only by that view's primary-axis
+output canvas after renderer-owned shadow margins. Each portrait or landscape
+view supplies its own canvas, so disconnected, partially touching, and fully
+touching output topologies do not enter the calculation.
+
+Live state changed from row [152,2399] and background [78,2481] at rest to row
+[54,2499] and background [20,2540] during hover, all inside canvas [0,2560].
+The new presentation oracle joins `dockSystemData` background and canvas
+geometry with `viewAppletsData` applet geometry. Its negative control uses the
+captured failure, row [54,2499] against background [225,2335], and rejects both
+escaped ends for the expected reasons. The parabolic preview recipe now checks
+composition at rest, while mapped, and after restoration, and saves a
+screenshot on failure.
+
+D151 (nested hover preview did not exercise parabolic expansion) remains open.
+Repeated synthetic glides mapped the preview but left the nested applet span at
+843 px. A temporary boundary trace recorded the task `MouseArea.onEntered` at
+zoom factor 1.59375, but neither `parabolicEntered` nor `parabolicMove` returned
+from the production view bridge. Preview mapping was therefore a vacuous proxy
+for rendered zoom. The pure geometry tests and live D-Bus acceptance cover
+D150, but deterministic nested rendered-zoom coverage must not be claimed
+until the vehicle observes a larger transient row.
+
+The same all-view watcher exposed D152 (linked portrait dock overflowed with
+automatic sizing off). Persistent dock 12 reports content [-408,1839],
+background [20,1420], and canvas [0,1440]; the captured workspace confirms
+both ends are cropped. The linked pair shares a configured and effective
+106 px size. Disabling automatic growth currently bypasses any per-view safety
+fit, so the landscape member fits while the shorter portrait member applies
+the same effective size unchanged. The fix must preserve linked configuration
+without allowing a runtime view to paint outside its own output.
 
 ## 2026-07-22: automatic sizing now models the visible resting dock
 
@@ -72,10 +114,10 @@ ends). The 1240 px side surface could request a y=-34, height=1307 solid
 background because the transient row regained resting end padding and added an
 unbounded parabolic centering offset. Bounding the solid alone still clipped
 the separately drawn drop shadow. Commit `1228ecf8c` fits the solid after
-reserving the actual length-axis shadow margins and constrains centered movement
-with the complete visual. The rebuilt dock keeps its 56 px stable icon size and
-reports y=20, height=1200, leaving the full 20 px shadow margin at both ends.
-Compile-time assertions and C++/QML regressions pin the live geometry.
+reserving the actual length-axis shadow margins and constrains centered
+movement with the complete visual. D150 later corrected that first
+implementation's use of the configured resting span as the transient boundary;
+the output-owned canvas is the hard presentation boundary.
 
 Independent review prevented that first D140 correction from landing with
 three ownership gaps. D141 (bounded background movement shifted the applet row)
