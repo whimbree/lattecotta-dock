@@ -129,6 +129,16 @@ Adopt latte-dock-qt6's three-piece shape, adapted rather than copied:
   shutdown, restoration, and residue checks complete, so infrastructure and
   cleanup failures cannot masquerade as the known bug.
 
+  Real-hardware hover and multi-output acceptance can run under
+  `scripts/tools/watch-dock-presentation.sh`. It samples every visible live
+  view, joins the painted background and output canvas with per-applet
+  geometry, and rejects the first applet that escapes either owner. A failure
+  preserves both D-Bus payloads and a full-workspace screenshot under
+  `build/_live-observations/`. A run with no geometry transition exits 2
+  instead of reporting a vacuous pass. Its optional third argument restricts
+  observation to one persistent dock id; the default audits every visible
+  view.
+
   The legacy `# e2e-expect: fail` marker remains supported for recipes whose
   every nonzero exit represents the same open condition. It maps any nonzero
   status to XFAIL and therefore risks hiding an unrelated failure; prefer the
