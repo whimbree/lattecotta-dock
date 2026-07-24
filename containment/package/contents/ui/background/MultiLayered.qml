@@ -177,17 +177,30 @@ BackgroundProperties{
 
         const requestedOffset = root.offset
                 + layoutsContainerItem.mainLayout.parabolicOffsetting;
+        const requestedVisualOffset = requestedOffset + shadowCenterCompensation;
         const viewPrimaryLength = Plasmoid.formFactor === PlasmaCore.Types.Horizontal
                 ? barLine.parent.width : barLine.parent.height;
         if (viewPrimaryLength < barLine.length) {
             //! Same explicit startup state as the length binding above.
-            return requestedOffset + shadowCenterCompensation;
+            return requestedVisualOffset;
         }
 
-        return backgroundStateResolver.centeredDockOffset(requestedOffset,
-                                                          barLine.length,
-                                                          viewPrimaryLength)
-                + shadowCenterCompensation;
+        if (viewPrimaryLength < barLine.totals.visualLength) {
+            //! The solid fits but its external paint cannot. Keep the solid
+            //! bounded without shrinking it and accept unavoidable paint
+            //! clipping at the output boundary.
+            return backgroundStateResolver.centeredDockOffset(requestedOffset,
+                                                              barLine.length,
+                                                              viewPrimaryLength)
+                    + shadowCenterCompensation;
+        }
+
+        //! When the complete visual fits, constrain the paint as well as the
+        //! solid so end-hover shadows remain visible.
+        return backgroundStateResolver.centeredDockOffset(
+                    requestedVisualOffset,
+                    barLine.totals.visualLength,
+                    viewPrimaryLength);
     }
 
     totals.visualThickness: {
