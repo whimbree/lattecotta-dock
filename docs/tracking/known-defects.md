@@ -2066,6 +2066,21 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   fit-capable solid-only mutation. Focused geometry and source-contract tests,
   all 130 QML compile probes, and all 245 QML interaction cases pass.
 
+### D171 - Centered shadow offsets raised the QML warning ratchet
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`c590d33f8`).
+- FOUND: 2026-07-24, canonical gate after the D169 shadow-ownership correction.
+- SYMPTOM: all 104 other CTest entries passed, but `qmllintgate` reported that
+  `MultiLayered.qml` increased from 181 to 182 curated warnings.
+- ROOT: the new two-condition placement path repeated the injected `myView`
+  alignment lookup. The offset binding already repeated that unqualified access
+  across its alignment branches.
+- FIX: capture alignment once in a local const and reuse it. Name the document
+  root directly in center and Justify state offsets instead of routing through
+  the inherited background context name.
+- EVIDENCE: `sourceguardtest` and `qmllintgate` pass. The touched file improves
+  from 181 to 176 curated warnings, and the ratchet records the lower count.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.
