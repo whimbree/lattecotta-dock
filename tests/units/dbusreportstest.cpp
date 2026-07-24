@@ -834,7 +834,9 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(stacking.value(QStringLiteral("available")).type(), QJsonValue::Bool);
     QCOMPARE(stacking.value(QStringLiteral("reason")).type(), QJsonValue::String);
     QCOMPARE(stacking.value(QStringLiteral("available")).toBool(), false);
-    QVERIFY(!stacking.value(QStringLiteral("reason")).toString().isEmpty());
+    QCOMPARE(stacking.value(QStringLiteral("reason")).toString(),
+             QStringLiteral("Inward same-edge stacking is unsupported; "
+                            "stable-span overlap is not yet rejected."));
 
     requireJsonType(root, QStringLiteral("schemaVersion"), QJsonValue::Double);
     requireJsonType(root, QStringLiteral("snapshotSequence"), QJsonValue::String);
