@@ -105,9 +105,8 @@ BackgroundProperties{
         }
 
         const maximumLength = root.maxLength;
-        const shadowMarginsLength = barLine.totals.shadowsLength;
         const requestedLength = myView.alignment === LatteCore.Types.Justify
-                ? Math.max(0, maximumLength - shadowMarginsLength)
+                ? maximumLength
                 : Math.max(root.minLength,
                            layoutsContainerItem.mainLayout.length + barLine.totals.paddingsLength);
 
@@ -125,13 +124,12 @@ BackgroundProperties{
             return requestedLength;
         }
 
-        //! maxLength owns the stable layout budget. Parabolic zoom is a
+        //! maxLength owns the stable solid and applet budget. Parabolic zoom is
         //! transient presentation, so its background may grow beyond that
-        //! configured span, but the complete painted visual must remain inside
-        //! the output-owned canvas.
+        //! configured span. Shadows paint outside the solid span and may be
+        //! clipped when the solid itself consumes the output-owned canvas.
         return backgroundStateResolver.dockBackgroundLength(requestedLength,
-                                                             viewPrimaryLength,
-                                                             shadowMarginsLength);
+                                                             viewPrimaryLength);
     }
 
     thickness: {
@@ -163,25 +161,33 @@ BackgroundProperties{
             }
         }
 
-        if (myView.alignment === LatteCore.Types.Justify) {
-            return 0;
-        }
-
-        if (myView.alignment !== LatteCore.Types.Center) {
+        if (myView.alignment !== LatteCore.Types.Center
+                && myView.alignment !== LatteCore.Types.Justify) {
             return root.offset;
         }
 
-        const requestedOffset = root.offset + layoutsContainerItem.mainLayout.parabolicOffsetting;
+        const tailShadowLength = Plasmoid.formFactor === PlasmaCore.Types.Horizontal
+                ? barLine.shadows.left : barLine.shadows.top;
+        const headShadowLength = Plasmoid.formFactor === PlasmaCore.Types.Horizontal
+                ? barLine.shadows.right : barLine.shadows.bottom;
+        const shadowCenterCompensation = (headShadowLength - tailShadowLength) / 2;
+        if (myView.alignment === LatteCore.Types.Justify) {
+            return shadowCenterCompensation;
+        }
+
+        const requestedOffset = root.offset
+                + layoutsContainerItem.mainLayout.parabolicOffsetting;
         const viewPrimaryLength = Plasmoid.formFactor === PlasmaCore.Types.Horizontal
                 ? barLine.parent.width : barLine.parent.height;
-        if (viewPrimaryLength < barLine.totals.visualLength) {
+        if (viewPrimaryLength < barLine.length) {
             //! Same explicit startup state as the length binding above.
-            return requestedOffset;
+            return requestedOffset + shadowCenterCompensation;
         }
 
         return backgroundStateResolver.centeredDockOffset(requestedOffset,
-                                                          barLine.totals.visualLength,
-                                                          viewPrimaryLength);
+                                                          barLine.length,
+                                                          viewPrimaryLength)
+                + shadowCenterCompensation;
     }
 
     totals.visualThickness: {
@@ -669,7 +675,7 @@ BackgroundProperties{
             PropertyChanges{
                 target: barLine
                 anchors.leftMargin: barLine.screenEdgeMargin;    anchors.rightMargin:0;     anchors.topMargin:0;    anchors.bottomMargin:0;
-                anchors.horizontalCenterOffset: 0; anchors.verticalCenterOffset: 0;
+                anchors.horizontalCenterOffset: 0; anchors.verticalCenterOffset: background.offset;
             }
         },
         ///Left
@@ -744,7 +750,7 @@ BackgroundProperties{
             PropertyChanges{
                 target: barLine
                 anchors.leftMargin: 0;    anchors.rightMargin: barLine.screenEdgeMargin;     anchors.topMargin:0;    anchors.bottomMargin:0;
-                anchors.horizontalCenterOffset: 0; anchors.verticalCenterOffset: 0;
+                anchors.horizontalCenterOffset: 0; anchors.verticalCenterOffset: background.offset;
             }
         },
         State {
@@ -817,7 +823,7 @@ BackgroundProperties{
             PropertyChanges{
                 target: barLine
                 anchors.leftMargin: 0;    anchors.rightMargin:0;     anchors.topMargin:0;    anchors.bottomMargin: barLine.screenEdgeMargin;
-                anchors.horizontalCenterOffset: 0; anchors.verticalCenterOffset: 0;
+                anchors.horizontalCenterOffset: background.offset; anchors.verticalCenterOffset: 0;
             }
         },
         State {
@@ -895,7 +901,7 @@ BackgroundProperties{
             PropertyChanges{
                 target: barLine
                 anchors.leftMargin: 0;    anchors.rightMargin:0;     anchors.topMargin: barLine.screenEdgeMargin;    anchors.bottomMargin:0;
-                anchors.horizontalCenterOffset: 0; anchors.verticalCenterOffset: 0;
+                anchors.horizontalCenterOffset: background.offset; anchors.verticalCenterOffset: 0;
             }
         },
         State {

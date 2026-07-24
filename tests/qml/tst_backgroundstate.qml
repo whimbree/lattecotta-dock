@@ -62,24 +62,24 @@ TestCase {
         compare(area.height, 1);
     }
 
-    function test_zoomBackgroundFollowsContentInsideOwningCanvas() {
+    function test_zoomBackgroundKeepsSolidInsideOwningCanvas() {
         //! The 2110 px configured resting background may temporarily follow
         //! the live 2239 px hovered row inside its 2560 px output.
-        compare(resolver.dockBackgroundLength(2110, 2560, 40), 2110);
-        compare(resolver.dockBackgroundLength(2239, 2560, 40), 2239);
+        compare(resolver.dockBackgroundLength(2110, 2560), 2110);
+        compare(resolver.dockBackgroundLength(2239, 2560), 2239);
         compare(resolver.centeredDockOffset(-34, 2279, 2560), -34);
 
-        //! The complete visual still stops at the actual output-owned canvas.
-        compare(resolver.dockBackgroundLength(2540, 2560, 40), 2520);
-        compare(resolver.dockBackgroundLength(900, 1240, 40), 900);
+        //! The solid background, not its shadow, stops at the output canvas.
+        compare(resolver.dockBackgroundLength(2540, 2560), 2540);
+        compare(resolver.dockBackgroundLength(2600, 2560), 2560);
+        compare(resolver.dockBackgroundLength(900, 1240), 900);
         compare(resolver.centeredDockOffset(80, 940, 1240), 80);
     }
 
-    function test_dockAlignmentsShareTheCompleteVisualFit() {
-        //! Justify reserves its shadows before calling the resolver; center
-        //! and the four anchored alignments may request a content-driven span.
-        compare(resolver.dockBackgroundLength(1200, 1240, 40), 1200);
-        compare(resolver.dockBackgroundLength(900, 1240, 40), 900);
+    function test_dockAlignmentsShareTheShadowIndependentSolidFit() {
+        //! All alignments share a solid span that is independent of shadows.
+        compare(resolver.dockBackgroundLength(1200, 1240), 1200);
+        compare(resolver.dockBackgroundLength(900, 1240), 900);
     }
 
     function test_smallItemsDoNotDoubleTheThemeMinimumThickness() {
