@@ -199,16 +199,11 @@ private:
                    "readonlypropertyrealjustifyOwningCanvasLength:"
                    "root.isHorizontal?parent.width:parent.height"))
             && layout.contains(QStringLiteral(
-                "readonlypropertyrealjustifyVisualLength:"
-                "background.totals.visualLength"))
-            && layout.contains(QStringLiteral(
                    "readonlypropertyrealjustifyLayoutLength:"
-                   "Math.max(0,justifyVisualLength"
-                   "-backgroundShadowTailLength-backgroundShadowHeadLength)"))
+                   "background.length"))
             && layout.contains(QStringLiteral(
                 "readonlypropertyrealjustifyLayoutOrigin:"
-                "(justifyOwningCanvasLength-justifyVisualLength)/2"
-                "+backgroundShadowTailLength"))
+                "(justifyOwningCanvasLength-justifyLayoutLength)/2"))
             && layout.count(QStringLiteral("returnjustifyLayoutOrigin;")) == 2
             && layout.contains(QStringLiteral(
                 "width:root.isHorizontal&&root.myView.alignment"
@@ -247,24 +242,37 @@ private:
             "if(root.behaveAsPlasmaPanel&&LatteCore.WindowSystem.compositingActive)"));
         const int requestedLength = lengthBinding.indexOf(QStringLiteral(
             "constrequestedLength=myView.alignment===LatteCore.Types.Justify"
-            "?Math.max(0,maximumLength-shadowMarginsLength):Math.max("));
+            "?maximumLength:Math.max("));
         const int owningCanvas = lengthBinding.indexOf(QStringLiteral(
             "constviewPrimaryLength=Plasmoid.formFactor"
             "===PlasmaCore.Types.Horizontal?barLine.parent.width:barLine.parent.height;"));
         const int fittedLength = lengthBinding.indexOf(QStringLiteral(
             "returnbackgroundStateResolver.dockBackgroundLength("
-            "requestedLength,viewPrimaryLength,shadowMarginsLength);"));
+            "requestedLength,viewPrimaryLength);"));
 
         return panelPath != -1
             && requestedLength > panelPath
             && owningCanvas > requestedLength
             && fittedLength > owningCanvas
+            && !lengthBinding.contains(QStringLiteral("shadowMarginsLength"))
             && !lengthBinding.contains(QStringLiteral(
-                "if(myView.alignment===LatteCore.Types.Justify){returnroot.maxLength;}"))
-            && !lengthBinding.contains(QStringLiteral(
-                "dockBackgroundLength(requestedLength,maximumLength,"))
+                "dockBackgroundLength(requestedLength,maximumLength)"))
             && offsetBinding.contains(QStringLiteral(
-                "if(myView.alignment===LatteCore.Types.Justify){return0;}"));
+                "constshadowCenterCompensation="
+                "(headShadowLength-tailShadowLength)/2;"))
+            && offsetBinding.contains(QStringLiteral(
+                "if(myView.alignment===LatteCore.Types.Justify)"
+                "{returnshadowCenterCompensation;}"))
+            && offsetBinding.contains(QStringLiteral(
+                "backgroundStateResolver.centeredDockOffset("
+                "requestedOffset,barLine.length,viewPrimaryLength)"
+                "+shadowCenterCompensation"))
+            && source.count(QStringLiteral(
+                "anchors.horizontalCenterOffset: background.offset;"
+                " anchors.verticalCenterOffset: 0;")) == 4
+            && source.count(QStringLiteral(
+                "anchors.horizontalCenterOffset: 0;"
+                " anchors.verticalCenterOffset: background.offset;")) == 4;
     }
 
     static bool matchesBackgroundVisualThicknessRouting(const QString &source)
@@ -286,6 +294,15 @@ private:
                    "totals.minThickness,itemThickness,sizeFraction);"))
             && !current.contains(QStringLiteral("if(totals.minThickness<"))
             && !maximum.contains(QStringLiteral("if(totals.minThickness<"));
+    }
+
+    static bool matchesShadowIndependentAppletBudget(const QString &source)
+    {
+        const QString budget = normalizedCode(functionBody(
+            source, QStringLiteral("readonly property int contentsMaxLength:")));
+        return budget.contains(QStringLiteral(
+                   "returnroot.maxLength-backgroundTotals.paddingsLength;"))
+            && !budget.contains(QStringLiteral("shadowsLength"));
     }
 
     static bool matchesAspectIndependentBackgroundShadow(const QString &customBackground,
@@ -567,6 +584,8 @@ private Q_SLOTS:
     void justifyAppletSpan_sourceGuardRejectsShadowOverlap();
     void dockBackgroundFit_includesJustifyDockMode();
     void dockBackgroundFit_sourceGuardsRejectBypasses();
+    void appletBudget_excludesInternalPaddingButNotShadows();
+    void appletBudget_sourceGuardRejectsShadowSubtraction();
     void backgroundVisualThickness_usesMonotonicCore();
     void backgroundVisualThickness_sourceGuardRejectsDivergence();
     void dockBackgroundShadow_keepsFixedPixelFootprint();
@@ -830,31 +849,31 @@ void SourceGuardTest::justifyAppletSpan_sourceGuardRejectsShadowOverlap()
     QString outerVisualOriginRestored = originalLayout;
     const QString solidOrigin = QStringLiteral(
         "readonly property real justifyLayoutOrigin: (justifyOwningCanvasLength\n"
-        "                                                 - justifyVisualLength) / 2\n"
-        "                                                + backgroundShadowTailLength");
+        "                                                 - justifyLayoutLength) / 2");
     QCOMPARE(outerVisualOriginRestored.count(solidOrigin), 1);
     outerVisualOriginRestored.replace(
         solidOrigin,
         QStringLiteral(
             "readonly property real justifyLayoutOrigin:\n"
-            "        (justifyOwningCanvasLength - root.maxLength) / 2 + background.offset"));
+            "        (justifyOwningCanvasLength - background.totals.visualLength) / 2\n"
+            "        + backgroundShadowTailLength"));
     QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(outerVisualOriginRestored,
                                                      originalMain),
-             "placing applets from the outer visual origin must fail the guard");
+             "making the applet origin depend on shadows must fail the guard");
 
-    QString symmetricShadowAssumption = originalLayout;
-    const QString asymmetricLength = QStringLiteral(
-        "- backgroundShadowTailLength\n"
-        "                                                    - backgroundShadowHeadLength");
-    QCOMPARE(symmetricShadowAssumption.count(asymmetricLength), 1);
-    symmetricShadowAssumption.replace(
-        asymmetricLength,
+    QString shadowBudgetRestored = originalLayout;
+    const QString stableLength = QStringLiteral(
+        "readonly property real justifyLayoutLength: background.length");
+    QCOMPARE(shadowBudgetRestored.count(stableLength), 1);
+    shadowBudgetRestored.replace(
+        stableLength,
         QStringLiteral(
-            "- backgroundShadowTailLength\n"
-            "                                                    - backgroundShadowTailLength"));
-    QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(symmetricShadowAssumption,
+            "readonly property real justifyLayoutLength: Math.max(\n"
+            "        0, background.totals.visualLength\n"
+            "        - backgroundShadowTailLength - backgroundShadowHeadLength)"));
+    QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(shadowBudgetRestored,
                                                      originalMain),
-             "assuming equal end shadows must fail the Justify ownership guard");
+             "deriving stable layout length from shadow chrome must fail the guard");
 
     QString layoutOwnedCanvas = originalMain;
     const QString independentCanvas = QStringLiteral(
@@ -875,7 +894,7 @@ void SourceGuardTest::dockBackgroundFit_includesJustifyDockMode()
     const QString source = readFile(QStringLiteral(
         "containment/package/contents/ui/background/MultiLayered.qml"));
     QVERIFY2(matchesDockBackgroundFitRouting(source),
-             "dock-mode Justify must share the shadow-aware complete-visual fit");
+             "dock-mode Justify must share the shadow-independent solid fit");
 }
 
 void SourceGuardTest::dockBackgroundFit_sourceGuardsRejectBypasses()
@@ -887,8 +906,7 @@ void SourceGuardTest::dockBackgroundFit_sourceGuardsRejectBypasses()
     QString lengthBypass = original;
     const QString fittedCall = QStringLiteral(
         "return backgroundStateResolver.dockBackgroundLength(requestedLength,\n"
-        "                                                             viewPrimaryLength,\n"
-        "                                                             shadowMarginsLength);");
+        "                                                             viewPrimaryLength);");
     QCOMPARE(lengthBypass.count(fittedCall), 1);
     lengthBypass.replace(fittedCall, QStringLiteral("return requestedLength;"));
     QVERIFY2(!matchesDockBackgroundFitRouting(lengthBypass),
@@ -900,23 +918,75 @@ void SourceGuardTest::dockBackgroundFit_sourceGuardsRejectBypasses()
         fittedCall,
         QStringLiteral(
             "return backgroundStateResolver.dockBackgroundLength(requestedLength,\n"
-            "                                                             maximumLength,\n"
-            "                                                             shadowMarginsLength);"));
+            "                                                             maximumLength);"));
     QVERIFY2(!matchesDockBackgroundFitRouting(restingMaximumRestored),
              "using the configured resting maximum as a hover clipping plane must fail");
+
+    QString shadowBudgetRestored = original;
+    const QString stableJustifyLength = QStringLiteral(
+        "? maximumLength\n"
+        "                : Math.max(root.minLength,");
+    QCOMPARE(shadowBudgetRestored.count(stableJustifyLength), 1);
+    shadowBudgetRestored.replace(
+        stableJustifyLength,
+        QStringLiteral(
+            "? Math.max(0, maximumLength - barLine.totals.shadowsLength)\n"
+            "                : Math.max(root.minLength,"));
+    QVERIFY2(!matchesDockBackgroundFitRouting(shadowBudgetRestored),
+             "charging shadow chrome against the solid budget must fail");
 
     QString offsetBypass = original;
     const QString justifyOffset = QStringLiteral(
         "if (myView.alignment === LatteCore.Types.Justify) {\n"
-        "            return 0;\n"
+        "            return shadowCenterCompensation;\n"
         "        }");
     QCOMPARE(offsetBypass.count(justifyOffset), 1);
     offsetBypass.replace(justifyOffset, QStringLiteral(
         "if (myView.alignment === LatteCore.Types.Justify) {\n"
-        "            return root.offset;\n"
+        "            return 0;\n"
         "        }"));
     QVERIFY2(!matchesDockBackgroundFitRouting(offsetBypass),
-             "restoring an unconstrained Justify offset must fail the routing guard");
+             "dropping asymmetric shadow compensation must fail the routing guard");
+
+    QString visualClampRestored = original;
+    const QString stableClamp = QStringLiteral(
+        "backgroundStateResolver.centeredDockOffset(requestedOffset,\n"
+        "                                                          barLine.length,\n"
+        "                                                          viewPrimaryLength)");
+    QCOMPARE(visualClampRestored.count(stableClamp), 1);
+    visualClampRestored.replace(
+        stableClamp,
+        QStringLiteral(
+            "backgroundStateResolver.centeredDockOffset(requestedOffset,\n"
+            "                                                          barLine.totals.visualLength,\n"
+            "                                                          viewPrimaryLength)"));
+    QVERIFY2(!matchesDockBackgroundFitRouting(visualClampRestored),
+             "letting shadow size constrain centered placement must fail");
+}
+
+void SourceGuardTest::appletBudget_excludesInternalPaddingButNotShadows()
+{
+    const QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/abilities/privates/LayouterPrivate.qml"));
+    QVERIFY2(matchesShadowIndependentAppletBudget(source),
+             "the stable applet budget must subtract only internal background padding");
+}
+
+void SourceGuardTest::appletBudget_sourceGuardRejectsShadowSubtraction()
+{
+    QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/abilities/privates/LayouterPrivate.qml"));
+    const QString stableBudget = QStringLiteral(
+        "return root.maxLength - backgroundTotals.paddingsLength;");
+    QCOMPARE(source.count(stableBudget), 1);
+    source.replace(
+        stableBudget,
+        QStringLiteral(
+            "return root.maxLength - backgroundTotals.paddingsLength\n"
+            "                - backgroundTotals.shadowsLength;"));
+
+    QVERIFY2(!matchesShadowIndependentAppletBudget(source),
+             "restoring shadow subtraction must fail the applet-budget guard");
 }
 
 void SourceGuardTest::backgroundVisualThickness_usesMonotonicCore()

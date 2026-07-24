@@ -35,21 +35,15 @@ Item{
     readonly property alias endLayout: _endLayout
     readonly property alias contextMenuIsShown: contextMenuLayer.menuIsShown
 
-    //! Justify's background resolves against an independent full-view canvas.
-    //! Its complete visual is centered, while the solid span begins after the
-    //! actual tail shadow and ends before the independently sized head shadow.
-    //! The asymmetry matters for themes whose two end margins differ.
+    //! Justify's solid background and applets share one stable length. Shadows
+    //! are presentation chrome and must not move or shrink that layout when
+    //! enabled. MultiLayered centers its outer visual independently, including
+    //! compensation for themes whose two end shadow margins differ.
     readonly property real justifyOwningCanvasLength: root.isHorizontal
                                                        ? parent.width : parent.height
-    readonly property real justifyVisualLength: background.totals.visualLength
-    readonly property real justifyLayoutLength: Math.max(
-                                                    0,
-                                                    justifyVisualLength
-                                                    - backgroundShadowTailLength
-                                                    - backgroundShadowHeadLength)
+    readonly property real justifyLayoutLength: background.length
     readonly property real justifyLayoutOrigin: (justifyOwningCanvasLength
-                                                 - justifyVisualLength) / 2
-                                                + backgroundShadowTailLength
+                                                 - justifyLayoutLength) / 2
 
     signal contentsLengthChanged();
 

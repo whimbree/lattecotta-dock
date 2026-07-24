@@ -90,10 +90,11 @@ Item {
         target: sizer.layouter
 
         function onContentsMaxLengthChanged() {
-            //! Background padding, margins and theme extents can change the
-            //! usable span without changing containment.maxLength. Defer the
-            //! refit so all bindings publish one coherent geometry snapshot;
-            //! Qt coalesces repeated calls to this same bound method.
+            //! Internal background padding can change the usable span without
+            //! changing containment.maxLength. Painted shadow margins are
+            //! deliberately absent from contentsMaxLength. Defer the refit so
+            //! all bindings publish one coherent geometry snapshot; Qt
+            //! coalesces repeated calls to this same bound method.
             Qt.callLater(sizer.updateIconSize);
         }
     }
@@ -150,10 +151,10 @@ Item {
                 && (sizer.visibility.inNormalState && sizer.isActive) /*in normal and auto size active state*/
                 && (sizer.metrics.iconSize === sizer.metrics.maxIconSize || sizer.metrics.iconSize === sizer.iconSize) /*not during animations*/) {
 
-            //! The background owns primary-axis end padding outside the
-            //! measured applet row. The layouter's content budget already
-            //! subtracts it from maxLength, so the final background stays
-            //! inside the view on horizontal and vertical edges.
+            //! The solid background owns primary-axis end padding outside the
+            //! measured applet row. The layouter's content budget subtracts
+            //! that internal padding from maxLength. Shadows remain external
+            //! paint and do not reduce the stable icon-size budget.
             const availableContentLength = sizer.layouter.contentsMaxLength;
             if (availableContentLength <= 0) {
                 console.error("AutoSize: background end padding leaves no content length within maxLength",

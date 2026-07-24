@@ -92,7 +92,7 @@ private Q_SLOTS:
     void effectsArea_decisionTable();
 
     // MultiLayered.qml dock background length and centered placement
-    void dockBackground_keepsCompleteVisualInsideSpan();
+    void dockBackground_keepsSolidSpanIndependentOfShadows();
     void centeredDockOffset_staysInsideView();
 
     // MultiLayered.qml totals.visualThickness / visualMaxThickness
@@ -646,24 +646,26 @@ void BackgroundStateTest::effectsArea_decisionTable()
     QCOMPARE(resolveEffectsArea(env), expected);
 }
 
-void BackgroundStateTest::dockBackground_keepsCompleteVisualInsideSpan()
+void BackgroundStateTest::dockBackground_keepsSolidSpanIndependentOfShadows()
 {
     //! Live D150 (hovered row escaped its resting background) shape: a
     //! 2110 px resting background is configured inside a 2560 px output. A
     //! center hover requests 2239 px. Both fit with 40 px of end shadows, so
     //! presentation follows content instead of clipping at the configured
     //! resting maximum.
-    static_assert(fitDockBackgroundLength(2110.0, 2560.0, 40.0) == 2110.0);
-    static_assert(fitDockBackgroundLength(2239.0, 2560.0, 40.0) == 2239.0);
+    static_assert(fitDockBackgroundLength(2110.0, 2560.0) == 2110.0);
+    static_assert(fitDockBackgroundLength(2239.0, 2560.0) == 2239.0);
 
-    //! The output-owned canvas remains the hard painted boundary.
-    static_assert(fitDockBackgroundLength(2540.0, 2560.0, 40.0) == 2520.0);
+    //! The solid background owns the configured span. A 40 px shadow does not
+    //! reduce it; only the output-owned solid canvas remains a hard bound.
+    static_assert(fitDockBackgroundLength(2540.0, 2560.0) == 2540.0);
+    static_assert(fitDockBackgroundLength(2600.0, 2560.0) == 2560.0);
 
-    QCOMPARE(fitDockBackgroundLength(900.0, 1240.0, 40.0), 900.0);
-    QCOMPARE(fitDockBackgroundLength(1307.0, 1440.0, 40.0), 1307.0);
+    QCOMPARE(fitDockBackgroundLength(900.0, 1240.0), 900.0);
+    QCOMPARE(fitDockBackgroundLength(1307.0, 1440.0), 1307.0);
 
     Latte::Containment::BackgroundStateResolver resolver;
-    QCOMPARE(resolver.dockBackgroundLength(2239.0, 2560.0, 40.0), 2239.0);
+    QCOMPARE(resolver.dockBackgroundLength(2239.0, 2560.0), 2239.0);
 }
 
 void BackgroundStateTest::centeredDockOffset_staysInsideView()

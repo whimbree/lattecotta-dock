@@ -86,7 +86,6 @@ Item {
         id: layouterMock
         property real contentsMaxLength: root.maxLength
                                          - root.backgroundLengthPadding
-                                         - root.backgroundShadowLength
         property int fillApplets: 0
     }
 
@@ -258,34 +257,32 @@ Item {
                     "releasing end padding must return the stable row to the largest fit");
         }
 
-        function test_settledShadowChangesRefitInBothDirections() {
+        function test_settledShadowChangesDoNotRefit() {
             sizer = createBlockedSizer(productionSizerComponent);
 
             productionAnimations.needLength.removeEvent(blocker);
             wait(0);
             compare(sizer.iconSize, 63);
 
-            //! Settle the measured row before changing only the background's
-            //! length-axis shadow. The outer maximum and padding stay fixed.
+            //! Settle the measured row before changing only the painted
+            //! length-axis shadow. The solid maximum and padding stay fixed.
             metricsMock.iconSize = 63;
             layoutsMock.mainLayout.length = 984.375;
             wait(1100);
             compare(visibilityManager.inNormalState, true);
+            const stableBudget = layouterMock.contentsMaxLength;
 
             root.backgroundShadowLength = 50;
             wait(0);
-            compare(sizer.iconSize, 60,
-                    "growing end shadows must shrink against the complete chrome budget");
-
-            metricsMock.iconSize = 60;
-            layoutsMock.mainLayout.length = 937.5;
-            wait(1100);
-            compare(visibilityManager.inNormalState, true);
+            compare(layouterMock.contentsMaxLength, stableBudget,
+                    "painted shadows must not reduce the stable applet budget");
+            compare(sizer.iconSize, 63,
+                    "enabling shadows must not choose smaller resting icons");
 
             root.backgroundShadowLength = 0;
             wait(0);
             compare(sizer.iconSize, 63,
-                    "releasing end shadows must restore the largest stable fit");
+                    "disabling shadows must leave the same stable fit");
         }
 
         function test_rapidNormalStateNotificationsDeduplicate() {
