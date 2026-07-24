@@ -196,12 +196,19 @@ private:
         const QString main = normalizedCode(mainSource);
 
         return layout.contains(QStringLiteral(
-                   "readonlypropertyrealjustifyLayoutLength:"
-                   "Math.max(0,background.length)"))
+                   "readonlypropertyrealjustifyOwningCanvasLength:"
+                   "root.isHorizontal?parent.width:parent.height"))
             && layout.contains(QStringLiteral(
-                "constviewPrimaryLength=root.isHorizontal"
-                "?latteView.width:latteView.height;"
-                "return(viewPrimaryLength-justifyLayoutLength)/2+background.offset;"))
+                "readonlypropertyrealjustifyVisualLength:"
+                "background.totals.visualLength"))
+            && layout.contains(QStringLiteral(
+                   "readonlypropertyrealjustifyLayoutLength:"
+                   "Math.max(0,justifyVisualLength"
+                   "-backgroundShadowTailLength-backgroundShadowHeadLength)"))
+            && layout.contains(QStringLiteral(
+                "readonlypropertyrealjustifyLayoutOrigin:"
+                "(justifyOwningCanvasLength-justifyVisualLength)/2"
+                "+backgroundShadowTailLength"))
             && layout.count(QStringLiteral("returnjustifyLayoutOrigin;")) == 2
             && layout.contains(QStringLiteral(
                 "width:root.isHorizontal&&root.myView.alignment"

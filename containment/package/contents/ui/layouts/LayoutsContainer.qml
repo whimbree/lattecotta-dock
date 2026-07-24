@@ -35,18 +35,21 @@ Item{
     readonly property alias endLayout: _endLayout
     readonly property alias contextMenuIsShown: contextMenuLayer.menuIsShown
 
-    //! The background resolves its fitted length against an independent
-    //! full-view canvas, so the applet container can consume that stable
-    //! result without feeding its own size back into the resolver.
-    readonly property real justifyLayoutLength: Math.max(0, background.length)
-    readonly property real justifyLayoutOrigin: {
-        if (!latteView) {
-            return 0;
-        }
-
-        const viewPrimaryLength = root.isHorizontal ? latteView.width : latteView.height;
-        return (viewPrimaryLength - justifyLayoutLength) / 2 + background.offset;
-    }
+    //! Justify's background resolves against an independent full-view canvas.
+    //! Its complete visual is centered, while the solid span begins after the
+    //! actual tail shadow and ends before the independently sized head shadow.
+    //! The asymmetry matters for themes whose two end margins differ.
+    readonly property real justifyOwningCanvasLength: root.isHorizontal
+                                                       ? parent.width : parent.height
+    readonly property real justifyVisualLength: background.totals.visualLength
+    readonly property real justifyLayoutLength: Math.max(
+                                                    0,
+                                                    justifyVisualLength
+                                                    - backgroundShadowTailLength
+                                                    - backgroundShadowHeadLength)
+    readonly property real justifyLayoutOrigin: (justifyOwningCanvasLength
+                                                 - justifyVisualLength) / 2
+                                                + backgroundShadowTailLength
 
     signal contentsLengthChanged();
 
