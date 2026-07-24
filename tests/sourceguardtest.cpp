@@ -261,7 +261,7 @@ private:
                 "constshadowCenterCompensation="
                 "(headShadowLength-tailShadowLength)/2;"))
             && offsetBinding.contains(QStringLiteral(
-                "if(myView.alignment===LatteCore.Types.Justify)"
+                "if(alignment===LatteCore.Types.Justify)"
                 "{returnshadowCenterCompensation;}"))
             && offsetBinding.contains(QStringLiteral(
                 "constrequestedVisualOffset="
@@ -276,11 +276,11 @@ private:
                 "requestedVisualOffset,barLine.totals.visualLength,"
                 "viewPrimaryLength)"))
             && source.count(QStringLiteral(
-                "anchors.horizontalCenterOffset: background.offset;"
+                "anchors.horizontalCenterOffset: barLine.offset;"
                 " anchors.verticalCenterOffset: 0;")) == 4
             && source.count(QStringLiteral(
                 "anchors.horizontalCenterOffset: 0;"
-                " anchors.verticalCenterOffset: background.offset;")) == 4;
+                " anchors.verticalCenterOffset: barLine.offset;")) == 4;
     }
 
     static bool matchesBackgroundVisualThicknessRouting(const QString &source)
@@ -945,12 +945,12 @@ void SourceGuardTest::dockBackgroundFit_sourceGuardsRejectBypasses()
 
     QString offsetBypass = original;
     const QString justifyOffset = QStringLiteral(
-        "if (myView.alignment === LatteCore.Types.Justify) {\n"
+        "if (alignment === LatteCore.Types.Justify) {\n"
         "            return shadowCenterCompensation;\n"
         "        }");
     QCOMPARE(offsetBypass.count(justifyOffset), 1);
     offsetBypass.replace(justifyOffset, QStringLiteral(
-        "if (myView.alignment === LatteCore.Types.Justify) {\n"
+        "if (alignment === LatteCore.Types.Justify) {\n"
         "            return 0;\n"
         "        }"));
     QVERIFY2(!matchesDockBackgroundFitRouting(offsetBypass),
