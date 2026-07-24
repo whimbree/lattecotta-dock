@@ -373,7 +373,8 @@ target_include_directories(appearancehandleraudittest PRIVATE
     ${CMAKE_SOURCE_DIR}/tests/units          # configsnapshotdiff.h
     ${CMAKE_SOURCE_DIR}/containment/plugin)   # types.h (ThemeColors enum)
 target_compile_definitions(appearancehandleraudittest PRIVATE
-    THEMECOLORS_MAINXML_PATH="${CMAKE_SOURCE_DIR}/containment/package/contents/config/main.xml")
+    THEMECOLORS_MAINXML_PATH="${CMAKE_SOURCE_DIR}/containment/package/contents/config/main.xml"
+    APPEARANCE_CONFIG_QML_PATH="${CMAKE_SOURCE_DIR}/shell/package/contents/configuration/pages/AppearanceConfig.qml")
 
 # The Tasks page's real-handler wiring audit (CL-5, the tasks-page settings
 # audit + the D10 disposition, docs/tracking/edit-mode-settings-audit-plan.md controls
@@ -894,6 +895,21 @@ target_compile_definitions(contextmenudefaulttest PRIVATE
     GENERICLAYOUT_CPP_PATH="${CMAKE_SOURCE_DIR}/app/layout/genericlayout.cpp"
     CONTEXTMENU_PLUGIN_FILE="$<TARGET_FILE:plasma_containmentactions_lattecontextmenu>"
     CONTEXTMENU_METADATA_JSON="${CMAKE_SOURCE_DIR}/containmentactions/contextmenu/plasma-containmentactions-lattecontextmenu.json")
+
+# The Layouts submenu's QWidgetAction delegate paints text outside its child
+# layout. Compile the production delegate and painter helpers directly so Qt 6
+# menu measurement is exercised rather than source-scanned.
+ecm_add_test(contracts/layoutmenuitemwidgettest.cpp
+    ${CMAKE_SOURCE_DIR}/containmentactions/contextmenu/layoutmenuitemwidget.cpp
+    ${CMAKE_BINARY_DIR}/containmentactions/contextmenu/generictools.cpp
+    TEST_NAME layoutmenuitemwidgettest
+    LINK_LIBRARIES Qt6::Test Qt6::Widgets
+)
+set_tests_properties(layoutmenuitemwidgettest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(layoutmenuitemwidgettest PRIVATE
+    ${CMAKE_SOURCE_DIR}/containmentactions/contextmenu
+    ${CMAKE_BINARY_DIR}/containmentactions/contextmenu)
 
 # Contract: Plasma 6 removed applet.action(); the edit-mode handle must
 # resolve standard actions through applet.plasmoid.internalAction(name) or

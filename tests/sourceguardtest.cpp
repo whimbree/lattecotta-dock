@@ -18,8 +18,24 @@
 //     window properties stay coalesced
 //   * VisibilityManager strut routing: discrete exclusive-zone thickness
 //     changes publish directly while geometry churn stays throttled
+//   * Occupied-geometry propagation: a changed stable dock rectangle notifies
+//     perpendicular peers before they solve their available region
 //   * Views reporting: global applet rearrangement is effective only for the
 //     dock that is locally in edit mode
+//   * Layout-length animation tracking: horizontal and vertical changes share
+//     one registration path and the settle timer owns the matching removal
+//   * Centered applet-row placement: background-only parabolic clamping cannot
+//     feed back into the stable content offset
+//   * Dock background routing: Justify joins all dock alignments in the
+//     shadow-aware visual fit while panel mode retains its full-span path
+//   * Justify applet placement: the physical applet container follows the
+//     fitted solid background instead of extending into its shadow margins
+//   * Dock background thickness: current and maximum item metrics share the
+//     monotonic theme-minimum interpolation instead of duplicating its formula
+//   * Dock background rendering: custom shadows use one fixed-pixel effect
+//     footprint on both axes and publish that footprint to geometry owners
+//   * Dock resize animation: icon size is the only animation authority and
+//     derived margins follow it without nested per-frame retargeting
 //   * Dock-system reporting: persistent-id ordering and original/clone
 //     relationship classification stay on their pure seams
 //   * SC-T3 (the D29 narrow middle-click dispatch readback): the production QML
@@ -111,6 +127,233 @@ private:
         return code.count(effectiveAssignment) == 1
             && !code.contains(QStringLiteral(
                 "record.inConfigureAppletsMode=globalConfigureAppletsMode;"));
+    }
+
+    static bool matchesLengthAnimationTrackerContract(const QString &source)
+    {
+        const QString normalizedSource = normalizedCode(source);
+        const QString registration = normalizedCode(functionBody(
+            source, QStringLiteral("function registerLengthAnimation()")));
+        const QString horizontal = normalizedCode(functionBody(
+            source, QStringLiteral("onContentsWidthChanged:")));
+        const QString vertical = normalizedCode(functionBody(
+            source, QStringLiteral("onContentsHeightChanged:")));
+        const int timerStart = source.indexOf(QStringLiteral("id:delayUpdateMaskArea"));
+        const QString settlement = timerStart == -1
+            ? QString{}
+            : normalizedCode(functionBody(source.mid(timerStart), QStringLiteral("onTriggered:")));
+
+        const QString registerCall = QStringLiteral(
+            "layoutsContainer.registerLengthAnimation();");
+        const QString addEvent = QStringLiteral(
+            "animations.needLength.addEvent(layoutsContainer);");
+        const QString removeEvent = QStringLiteral(
+            "animations.needLength.removeEvent(layoutsContainer);");
+
+        const int registrationSetsActive = registration.indexOf(QStringLiteral(
+            "layoutsContainer.animationSent=true;"));
+        const int registrationAddsEvent = registration.indexOf(addEvent);
+        const int settlementRemovesEvent = settlement.indexOf(removeEvent);
+        const int settlementClearsActive = settlement.indexOf(QStringLiteral(
+            "layoutsContainer.animationSent=false;"));
+
+        return !registration.isEmpty()
+            && horizontal.count(registerCall) == 1
+            && vertical.count(registerCall) == 1
+            && !horizontal.contains(QStringLiteral("animations.needLength."))
+            && !vertical.contains(QStringLiteral("animations.needLength."))
+            && registration.count(addEvent) == 1
+            && !registration.contains(removeEvent)
+            && registrationSetsActive != -1
+            && registrationAddsEvent > registrationSetsActive
+            && settlement.count(removeEvent) == 1
+            && settlementRemovesEvent != -1
+            && settlementClearsActive > settlementRemovesEvent
+            && normalizedSource.count(addEvent) == 1
+            && normalizedSource.count(removeEvent) == 1;
+    }
+
+    static bool matchesCenteredAppletOffsetOwnership(const QString &source)
+    {
+        const int mainLayoutStart = source.indexOf(QStringLiteral("id: _mainLayout"));
+        if (mainLayoutStart == -1) {
+            return false;
+        }
+
+        const QString offsetBinding = normalizedCode(functionBody(
+            source.mid(mainLayoutStart), QStringLiteral("offset:")));
+        return offsetBinding.contains(QStringLiteral(
+                   "return(root.myView.alignment===LatteCore.Types.Justify)"
+                   "?inJustifyCenterOffset:root.offset"))
+            && !offsetBinding.contains(QStringLiteral(
+                "background.offset-parabolicOffsetting"));
+    }
+
+    static bool matchesJustifyLayoutSolidSpanOwnership(const QString &layoutSource,
+                                                       const QString &mainSource)
+    {
+        const QString layout = normalizedCode(layoutSource);
+        const QString main = normalizedCode(mainSource);
+
+        return layout.contains(QStringLiteral(
+                   "readonlypropertyrealjustifyOwningCanvasLength:"
+                   "root.isHorizontal?parent.width:parent.height"))
+            && layout.contains(QStringLiteral(
+                "readonlypropertyrealjustifyVisualLength:"
+                "background.totals.visualLength"))
+            && layout.contains(QStringLiteral(
+                   "readonlypropertyrealjustifyLayoutLength:"
+                   "Math.max(0,justifyVisualLength"
+                   "-backgroundShadowTailLength-backgroundShadowHeadLength)"))
+            && layout.contains(QStringLiteral(
+                "readonlypropertyrealjustifyLayoutOrigin:"
+                "(justifyOwningCanvasLength-justifyVisualLength)/2"
+                "+backgroundShadowTailLength"))
+            && layout.count(QStringLiteral("returnjustifyLayoutOrigin;")) == 2
+            && layout.contains(QStringLiteral(
+                "width:root.isHorizontal&&root.myView.alignment"
+                "===LatteCore.Types.Justify"
+                "?justifyLayoutLength:parent.width"))
+            && layout.contains(QStringLiteral(
+                "height:root.isVertical&&root.myView.alignment"
+                "===LatteCore.Types.Justify"
+                "?justifyLayoutLength:parent.height"))
+            && main.contains(QStringLiteral("id:backgroundCanvas"))
+            && main.contains(QStringLiteral(
+                "x:root.isHorizontal?0:layoutsContainer.x"))
+            && main.contains(QStringLiteral(
+                "y:root.isVertical?0:layoutsContainer.y"))
+            && main.contains(QStringLiteral(
+                "width:root.isHorizontal?parent.width:layoutsContainer.width"))
+            && main.contains(QStringLiteral(
+                "height:root.isVertical?parent.height:layoutsContainer.height"))
+            && !main.contains(QStringLiteral("anchors.fill:layoutsContainer"));
+    }
+
+    static bool matchesDockBackgroundFitRouting(const QString &source)
+    {
+        const int lengthStart = source.indexOf(QStringLiteral("\n    length: {"));
+        const int offsetStart = source.indexOf(QStringLiteral("\n    offset: {"));
+        if (lengthStart == -1 || offsetStart == -1) {
+            return false;
+        }
+
+        const QString lengthBinding = normalizedCode(functionBody(
+            source.mid(lengthStart), QStringLiteral("length:")));
+        const QString offsetBinding = normalizedCode(functionBody(
+            source.mid(offsetStart), QStringLiteral("offset:")));
+
+        const int panelPath = lengthBinding.indexOf(QStringLiteral(
+            "if(root.behaveAsPlasmaPanel&&LatteCore.WindowSystem.compositingActive)"));
+        const int requestedLength = lengthBinding.indexOf(QStringLiteral(
+            "constrequestedLength=myView.alignment===LatteCore.Types.Justify"
+            "?Math.max(0,maximumLength-shadowMarginsLength):Math.max("));
+        const int owningCanvas = lengthBinding.indexOf(QStringLiteral(
+            "constviewPrimaryLength=Plasmoid.formFactor"
+            "===PlasmaCore.Types.Horizontal?barLine.parent.width:barLine.parent.height;"));
+        const int fittedLength = lengthBinding.indexOf(QStringLiteral(
+            "returnbackgroundStateResolver.dockBackgroundLength("
+            "requestedLength,viewPrimaryLength,shadowMarginsLength);"));
+
+        return panelPath != -1
+            && requestedLength > panelPath
+            && owningCanvas > requestedLength
+            && fittedLength > owningCanvas
+            && !lengthBinding.contains(QStringLiteral(
+                "if(myView.alignment===LatteCore.Types.Justify){returnroot.maxLength;}"))
+            && !lengthBinding.contains(QStringLiteral(
+                "dockBackgroundLength(requestedLength,maximumLength,"))
+            && offsetBinding.contains(QStringLiteral(
+                "if(myView.alignment===LatteCore.Types.Justify){return0;}"));
+    }
+
+    static bool matchesBackgroundVisualThicknessRouting(const QString &source)
+    {
+        const QString current = normalizedCode(functionBody(
+            source, QStringLiteral("totals.visualThickness:")));
+        const QString maximum = normalizedCode(functionBody(
+            source, QStringLiteral("totals.visualMaxThickness:")));
+
+        return current.contains(QStringLiteral(
+                   "constitemThickness=metrics.iconSize+2*metrics.margin.tailThickness;"))
+            && current.contains(QStringLiteral(
+                   "returnbackgroundStateResolver.visualThickness("
+                   "totals.minThickness,itemThickness,sizeFraction);"))
+            && maximum.contains(QStringLiteral(
+                   "constitemThickness=metrics.maxIconSize+2*metrics.margin.maxTailThickness;"))
+            && maximum.contains(QStringLiteral(
+                   "returnbackgroundStateResolver.visualThickness("
+                   "totals.minThickness,itemThickness,sizeFraction);"))
+            && !current.contains(QStringLiteral("if(totals.minThickness<"))
+            && !maximum.contains(QStringLiteral("if(totals.minThickness<"));
+    }
+
+    static bool matchesAspectIndependentBackgroundShadow(const QString &customBackground,
+                                                         const QString &backgroundShadow,
+                                                         const QString &multiLayered,
+                                                         const QString &effectMetrics,
+                                                         const QString &shadowedItem)
+    {
+        const QString custom = normalizedCode(customBackground);
+        const QString effect = normalizedCode(backgroundShadow);
+        const QString layered = normalizedCode(multiLayered);
+        const QString metrics = normalizedCode(effectMetrics);
+        const QString shadowed = normalizedCode(shadowedItem);
+        const int backgroundShadowStart = custom.indexOf(QStringLiteral(
+            "BackgroundShadow{id:backgroundShadow"));
+        const int painterStart = custom.indexOf(QStringLiteral(
+            "Rectangle{id:painter"));
+        const QString backgroundShadowBlock = backgroundShadowStart >= 0
+                && painterStart > backgroundShadowStart
+            ? custom.mid(backgroundShadowStart, painterStart - backgroundShadowStart)
+            : QString{};
+
+        return !backgroundShadowBlock.isEmpty()
+            && backgroundShadowBlock.contains(QStringLiteral(
+                "visible:main.shadowEnabled&&main.shadowSize>0"))
+            && backgroundShadowBlock.contains(QStringLiteral("blur:main.shadowSize"))
+            && backgroundShadowBlock.contains(QStringLiteral("z:painter.z-1"))
+            && backgroundShadowBlock.contains(QStringLiteral("color:main.shadowColor"))
+            && !backgroundShadowBlock.contains(QStringLiteral("opacity:"))
+            && !backgroundShadowBlock.contains(QStringLiteral("0.336"))
+            && custom.contains(QStringLiteral("opacity:backgroundOpacity"))
+            && custom.contains(QStringLiteral(
+                "readonlypropertyaliasshadowPaintMargin:"
+                "backgroundShadow.paintMargin"))
+            && !custom.contains(QStringLiteral("layer.effect:BackgroundShadow{"))
+            && !custom.contains(QStringLiteral("Kirigami.ShadowedRectangle"))
+            && effect.contains(QStringLiteral(
+                "importQtQuick.Effects"))
+            && effect.contains(QStringLiteral("RectangularShadow{"))
+            && effect.contains(QStringLiteral(
+                "importorg.kde.latte.components1.0asLatteComponents"))
+            && effect.contains(QStringLiteral(
+                "readonlypropertyintpaintMargin:"
+                "LatteComponents.EffectMetrics.rectangularShadowMarginFor("
+                "blur,spread)"))
+            && effect.contains(QStringLiteral("offset:Qt.vector2d(0,0)"))
+            && effect.contains(QStringLiteral("spread:0"))
+            && !effect.contains(QStringLiteral("LatteComponents.ShadowedItem"))
+            && metrics.contains(QStringLiteral(
+                "readonlypropertyintpostBlurGuardPx:2"))
+            && metrics.contains(QStringLiteral(
+                "functionshadowPaddingFor(sizePx:real,horizontalOffset:real,"
+                "verticalOffset:real):int"))
+            && metrics.contains(QStringLiteral(
+                "functionrectangularShadowMarginFor(blurPx:real,spreadPx:real):int"))
+            && shadowed.contains(QStringLiteral(
+                "readonlypropertyintshadowPaddingPx:"
+                "EffectMetrics.shadowPaddingFor(shadowSizePx,"
+                "shadowHorizontalOffset,shadowVerticalOffset)"))
+            && layered.contains(QStringLiteral(
+                "readonlypropertyintcustomShadowPaintMargin:"
+                "overlayedBackground.shadowPaintMargin"))
+            && layered.count(QStringLiteral(
+                "barLine.customShadowPaintMargin")) == 8
+            && layered.contains(QStringLiteral(
+                "shadowEnabled:customShadowIsEnabled"))
+            && layered.contains(QStringLiteral(
+                "shadowSize:Math.max(0,customShadow)"));
     }
 
     static bool matchesDockCollectionOrderingRoute(const QString &body)
@@ -313,8 +556,22 @@ private Q_SLOTS:
     void windowsTrackerBinding_keepsRequesters();
     void waylandWindowSignals_keepDeliveryPolicy();
     void visibilityManager_strutThicknessBypassesGeometryThrottle();
+    void occupiedGeometryChange_notifiesPerpendicularPeers();
     void viewsDataConfigureMode_keepsPerViewContract();
     void viewsDataConfigureMode_sourceGuardRejectsGlobalLeak();
+    void layoutLengthChanges_shareAnimationTrackerRegistration();
+    void layoutLengthChanges_sourceGuardRejectsVerticalRemoval();
+    void centeredAppletOffset_ignoresBoundedBackgroundMovement();
+    void centeredAppletOffset_sourceGuardRejectsVisualFeedback();
+    void justifyAppletSpan_followsSolidBackground();
+    void justifyAppletSpan_sourceGuardRejectsShadowOverlap();
+    void dockBackgroundFit_includesJustifyDockMode();
+    void dockBackgroundFit_sourceGuardsRejectBypasses();
+    void backgroundVisualThickness_usesMonotonicCore();
+    void backgroundVisualThickness_sourceGuardRejectsDivergence();
+    void dockBackgroundShadow_keepsFixedPixelFootprint();
+    void dockBackgroundShadow_sourceGuardsRejectAspectScaledRenderer();
+    void iconResizeAnimation_keepsSingleAuthority();
     void dockSystemCollection_keepsPureRouting();
     void dockSystemCollection_sourceGuardsRejectControlledMutations();
     void dockSystemIdentityRegistry_keepsLifetimeAndAffinityContract();
@@ -439,6 +696,34 @@ void SourceGuardTest::visibilityManager_strutThicknessBypassesGeometryThrottle()
              "isOffScreenChanged must retain the floating-panel feedback throttle");
 }
 
+void SourceGuardTest::occupiedGeometryChange_notifiesPerpendicularPeers()
+{
+    const QString body = stripped(functionBody(
+        readFile(QStringLiteral("app/view/view.cpp")),
+        QStringLiteral("void View::updateAbsoluteGeometry")));
+    QVERIFY2(!body.isEmpty(), "View::updateAbsoluteGeometry not found");
+
+    const QString changedAssignment = QStringLiteral(
+        "constboolgeometryChanged=m_absoluteGeometry!=absGeometry;");
+    const int decision = body.indexOf(changedAssignment);
+    const int stateWrite = body.indexOf(QStringLiteral("m_absoluteGeometry=absGeometry;"));
+    const int peerNotification = body.indexOf(QStringLiteral(
+        "if(geometryChanged||bypassChecks){"));
+    const int rectNotification = body.indexOf(QStringLiteral(
+        "Q_EMITavailableScreenRectChangedFrom(this);"), peerNotification);
+    const int regionNotification = body.indexOf(QStringLiteral(
+        "Q_EMITavailableScreenRegionChangedFrom(this);"), rectNotification);
+
+    QVERIFY2(decision >= 0 && decision < stateWrite,
+             "the geometry transition must be captured before writing the new rectangle");
+    QVERIFY2(peerNotification > stateWrite
+             && rectNotification > peerNotification
+             && regionNotification > rectNotification,
+             "a changed occupied rectangle must notify perpendicular peer solvers");
+    QVERIFY2(!body.contains(QStringLiteral("if((m_absoluteGeometry!=absGeometry)||bypassChecks)")),
+             "comparing after assignment suppresses every ordinary peer notification");
+}
+
 void SourceGuardTest::viewsDataConfigureMode_keepsPerViewContract()
 {
     const QString source = readFile(QStringLiteral("app/dbusreports.cpp"));
@@ -463,6 +748,376 @@ void SourceGuardTest::viewsDataConfigureMode_sourceGuardRejectsGlobalLeak()
         "record.inConfigureAppletsMode=globalConfigureAppletsMode;"));
     QVERIFY2(!matchesEffectiveConfigureModeCollection(collector),
              "restoring the direct global D76 assignment must fail the collector guard");
+}
+
+void SourceGuardTest::layoutLengthChanges_shareAnimationTrackerRegistration()
+{
+    const QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    QVERIFY2(matchesLengthAnimationTrackerContract(source),
+             "both layout axes must register one length animation and let the settle timer remove it");
+}
+
+void SourceGuardTest::layoutLengthChanges_sourceGuardRejectsVerticalRemoval()
+{
+    QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    QVERIFY(matchesLengthAnimationTrackerContract(source));
+
+    const QString registrationCall = QStringLiteral(
+        "layoutsContainer.registerLengthAnimation();");
+    const int verticalStart = source.indexOf(QStringLiteral("onContentsHeightChanged:"));
+    const int verticalCall = source.indexOf(registrationCall, verticalStart);
+    QVERIFY(verticalStart != -1 && verticalCall > verticalStart);
+
+    source.replace(verticalCall, registrationCall.size(), QStringLiteral(
+        "animations.needLength.removeEvent(layoutsContainer);"));
+    QVERIFY2(!matchesLengthAnimationTrackerContract(source),
+             "restoring the vertical remove-at-start defect must fail the tracker contract");
+}
+
+void SourceGuardTest::centeredAppletOffset_ignoresBoundedBackgroundMovement()
+{
+    const QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    QVERIFY2(matchesCenteredAppletOffsetOwnership(source),
+             "centered applet placement must not consume the bounded visual background offset");
+}
+
+void SourceGuardTest::centeredAppletOffset_sourceGuardRejectsVisualFeedback()
+{
+    QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    QVERIFY(matchesCenteredAppletOffsetOwnership(source));
+
+    const QString stableOffset = QStringLiteral(
+        "? inJustifyCenterOffset : root.offset");
+    QCOMPARE(source.count(stableOffset), 1);
+    source.replace(stableOffset, QStringLiteral(
+        "? inJustifyCenterOffset : background.offset - parabolicOffsetting"));
+    QVERIFY2(!matchesCenteredAppletOffsetOwnership(source),
+             "restoring visual-offset feedback must fail the applet placement guard");
+}
+
+void SourceGuardTest::justifyAppletSpan_followsSolidBackground()
+{
+    const QString layoutSource = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    const QString mainSource = readFile(QStringLiteral(
+        "containment/package/contents/ui/main.qml"));
+    QVERIFY2(matchesJustifyLayoutSolidSpanOwnership(layoutSource, mainSource),
+             "Justify applets must occupy the fitted solid background span");
+}
+
+void SourceGuardTest::justifyAppletSpan_sourceGuardRejectsShadowOverlap()
+{
+    const QString originalLayout = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    const QString originalMain = readFile(QStringLiteral(
+        "containment/package/contents/ui/main.qml"));
+    QVERIFY(matchesJustifyLayoutSolidSpanOwnership(originalLayout, originalMain));
+
+    QString outerVisualLengthRestored = originalLayout;
+    const QString solidWidth = QStringLiteral(
+        "? justifyLayoutLength : parent.width");
+    QCOMPARE(outerVisualLengthRestored.count(solidWidth), 1);
+    outerVisualLengthRestored.replace(solidWidth,
+                                      QStringLiteral("? root.maxLength : parent.width"));
+    QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(outerVisualLengthRestored,
+                                                     originalMain),
+             "restoring the outer visual width must fail the Justify ownership guard");
+
+    QString outerVisualOriginRestored = originalLayout;
+    const QString solidOrigin = QStringLiteral(
+        "readonly property real justifyLayoutOrigin: (justifyOwningCanvasLength\n"
+        "                                                 - justifyVisualLength) / 2\n"
+        "                                                + backgroundShadowTailLength");
+    QCOMPARE(outerVisualOriginRestored.count(solidOrigin), 1);
+    outerVisualOriginRestored.replace(
+        solidOrigin,
+        QStringLiteral(
+            "readonly property real justifyLayoutOrigin:\n"
+            "        (justifyOwningCanvasLength - root.maxLength) / 2 + background.offset"));
+    QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(outerVisualOriginRestored,
+                                                     originalMain),
+             "placing applets from the outer visual origin must fail the guard");
+
+    QString symmetricShadowAssumption = originalLayout;
+    const QString asymmetricLength = QStringLiteral(
+        "- backgroundShadowTailLength\n"
+        "                                                    - backgroundShadowHeadLength");
+    QCOMPARE(symmetricShadowAssumption.count(asymmetricLength), 1);
+    symmetricShadowAssumption.replace(
+        asymmetricLength,
+        QStringLiteral(
+            "- backgroundShadowTailLength\n"
+            "                                                    - backgroundShadowTailLength"));
+    QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(symmetricShadowAssumption,
+                                                     originalMain),
+             "assuming equal end shadows must fail the Justify ownership guard");
+
+    QString layoutOwnedCanvas = originalMain;
+    const QString independentCanvas = QStringLiteral(
+        "            x: root.isHorizontal ? 0 : layoutsContainer.x\n"
+        "            y: root.isVertical ? 0 : layoutsContainer.y\n"
+        "            width: root.isHorizontal ? parent.width : layoutsContainer.width\n"
+        "            height: root.isVertical ? parent.height : layoutsContainer.height");
+    QCOMPARE(layoutOwnedCanvas.count(independentCanvas), 1);
+    layoutOwnedCanvas.replace(independentCanvas,
+                              QStringLiteral("            anchors.fill: layoutsContainer"));
+    QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(originalLayout,
+                                                     layoutOwnedCanvas),
+             "making the background canvas depend on the applet span must fail the guard");
+}
+
+void SourceGuardTest::dockBackgroundFit_includesJustifyDockMode()
+{
+    const QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/MultiLayered.qml"));
+    QVERIFY2(matchesDockBackgroundFitRouting(source),
+             "dock-mode Justify must share the shadow-aware complete-visual fit");
+}
+
+void SourceGuardTest::dockBackgroundFit_sourceGuardsRejectBypasses()
+{
+    const QString original = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/MultiLayered.qml"));
+    QVERIFY(matchesDockBackgroundFitRouting(original));
+
+    QString lengthBypass = original;
+    const QString fittedCall = QStringLiteral(
+        "return backgroundStateResolver.dockBackgroundLength(requestedLength,\n"
+        "                                                             viewPrimaryLength,\n"
+        "                                                             shadowMarginsLength);");
+    QCOMPARE(lengthBypass.count(fittedCall), 1);
+    lengthBypass.replace(fittedCall, QStringLiteral("return requestedLength;"));
+    QVERIFY2(!matchesDockBackgroundFitRouting(lengthBypass),
+             "bypassing the complete-visual fit must fail the routing guard");
+
+    QString restingMaximumRestored = original;
+    QCOMPARE(restingMaximumRestored.count(fittedCall), 1);
+    restingMaximumRestored.replace(
+        fittedCall,
+        QStringLiteral(
+            "return backgroundStateResolver.dockBackgroundLength(requestedLength,\n"
+            "                                                             maximumLength,\n"
+            "                                                             shadowMarginsLength);"));
+    QVERIFY2(!matchesDockBackgroundFitRouting(restingMaximumRestored),
+             "using the configured resting maximum as a hover clipping plane must fail");
+
+    QString offsetBypass = original;
+    const QString justifyOffset = QStringLiteral(
+        "if (myView.alignment === LatteCore.Types.Justify) {\n"
+        "            return 0;\n"
+        "        }");
+    QCOMPARE(offsetBypass.count(justifyOffset), 1);
+    offsetBypass.replace(justifyOffset, QStringLiteral(
+        "if (myView.alignment === LatteCore.Types.Justify) {\n"
+        "            return root.offset;\n"
+        "        }"));
+    QVERIFY2(!matchesDockBackgroundFitRouting(offsetBypass),
+             "restoring an unconstrained Justify offset must fail the routing guard");
+}
+
+void SourceGuardTest::backgroundVisualThickness_usesMonotonicCore()
+{
+    const QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/MultiLayered.qml"));
+    QVERIFY2(matchesBackgroundVisualThicknessRouting(source),
+             "current and maximum background thickness must share the monotonic core");
+}
+
+void SourceGuardTest::backgroundVisualThickness_sourceGuardRejectsDivergence()
+{
+    const QString original = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/MultiLayered.qml"));
+    QVERIFY(matchesBackgroundVisualThicknessRouting(original));
+
+    QString formulaRestored = original;
+    const QString coreCall = QStringLiteral(
+        "return backgroundStateResolver.visualThickness(totals.minThickness,");
+    QCOMPARE(formulaRestored.count(coreCall), 2);
+    formulaRestored.replace(coreCall,
+                            QStringLiteral("return totals.minThickness + sizeFraction * ("));
+    QVERIFY2(!matchesBackgroundVisualThicknessRouting(formulaRestored),
+             "duplicating the thickness formula in QML must fail the routing guard");
+
+    QString maximumUsesCurrentMetrics = original;
+    const QString maximumMetrics = QStringLiteral(
+        "metrics.maxIconSize + 2 * metrics.margin.maxTailThickness");
+    QCOMPARE(maximumUsesCurrentMetrics.count(maximumMetrics), 1);
+    maximumUsesCurrentMetrics.replace(
+        maximumMetrics,
+        QStringLiteral("metrics.iconSize + 2 * metrics.margin.tailThickness"));
+    QVERIFY2(!matchesBackgroundVisualThicknessRouting(maximumUsesCurrentMetrics),
+             "maximum thickness must not consume current item metrics");
+}
+
+void SourceGuardTest::dockBackgroundShadow_keepsFixedPixelFootprint()
+{
+    const QString custom = readFile(QStringLiteral(
+        "containment/package/contents/ui/colorizer/CustomBackground.qml"));
+    const QString effect = readFile(QStringLiteral(
+        "containment/package/contents/ui/colorizer/BackgroundShadow.qml"));
+    const QString layered = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/MultiLayered.qml"));
+    const QString metrics = readFile(QStringLiteral(
+        "declarativeimports/components/EffectMetrics.qml"));
+    const QString shadowed = readFile(QStringLiteral(
+        "declarativeimports/components/ShadowedItem.qml"));
+
+    QVERIFY2(matchesAspectIndependentBackgroundShadow(custom, effect, layered,
+                                                       metrics, shadowed),
+             "custom background shadows must publish one fixed-pixel effect footprint");
+}
+
+void SourceGuardTest::dockBackgroundShadow_sourceGuardsRejectAspectScaledRenderer()
+{
+    const QString originalCustom = readFile(QStringLiteral(
+        "containment/package/contents/ui/colorizer/CustomBackground.qml"));
+    const QString originalEffect = readFile(QStringLiteral(
+        "containment/package/contents/ui/colorizer/BackgroundShadow.qml"));
+    const QString originalLayered = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/MultiLayered.qml"));
+    const QString originalMetrics = readFile(QStringLiteral(
+        "declarativeimports/components/EffectMetrics.qml"));
+    const QString originalShadowed = readFile(QStringLiteral(
+        "declarativeimports/components/ShadowedItem.qml"));
+    QVERIFY(matchesAspectIndependentBackgroundShadow(originalCustom,
+                                                     originalEffect,
+                                                     originalLayered,
+                                                     originalMetrics,
+                                                     originalShadowed));
+
+    QString aspectScaled = originalEffect;
+    const QString fixedEffect = QStringLiteral("RectangularShadow {");
+    QCOMPARE(aspectScaled.count(fixedEffect), 1);
+    aspectScaled.replace(fixedEffect,
+                         QStringLiteral("Kirigami.ShadowedRectangle {"));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(originalCustom,
+                                                       aspectScaled,
+                                                       originalLayered,
+                                                       originalMetrics,
+                                                       originalShadowed),
+             "restoring the aspect-scaled Kirigami renderer must fail the guard");
+
+    QString opacityCoupled = originalCustom;
+    const QString independentBlur = QStringLiteral("blur: main.shadowSize");
+    QCOMPARE(opacityCoupled.count(independentBlur), 1);
+    opacityCoupled.replace(independentBlur,
+                           QStringLiteral("opacity: main.backgroundOpacity\n"
+                                          "        blur: main.shadowSize"));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(opacityCoupled,
+                                                       originalEffect,
+                                                       originalLayered,
+                                                       originalMetrics,
+                                                       originalShadowed),
+             "binding sibling opacity to background opacity must fail the guard");
+
+    QString frontStacked = originalCustom;
+    const QString behindPainter = QStringLiteral("z: painter.z - 1");
+    QCOMPARE(frontStacked.count(behindPainter), 1);
+    frontStacked.replace(behindPainter, QStringLiteral("z: painter.z + 1"));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(frontStacked,
+                                                       originalEffect,
+                                                       originalLayered,
+                                                       originalMetrics,
+                                                       originalShadowed),
+             "placing the shadow over its painter must fail the guard");
+
+    QString kirigamiAlphaCompensation = originalCustom;
+    const QString directThemeColor = QStringLiteral("color: main.shadowColor");
+    QCOMPARE(kirigamiAlphaCompensation.count(directThemeColor), 1);
+    kirigamiAlphaCompensation.replace(
+        directThemeColor,
+        QStringLiteral(
+            "color: Qt.rgba(main.shadowColor.r,\n"
+            "                       main.shadowColor.g,\n"
+            "                       main.shadowColor.b,\n"
+            "                       Math.min(1, 0.336 + main.shadowColor.a))"));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(kirigamiAlphaCompensation,
+                                                       originalEffect,
+                                                       originalLayered,
+                                                       originalMetrics,
+                                                       originalShadowed),
+             "restoring Kirigami-specific alpha compensation must fail the guard");
+
+    QString disconnectedAlias = originalCustom;
+    const QString liveMargin = QStringLiteral(
+        "readonly property alias shadowPaintMargin: backgroundShadow.paintMargin");
+    QCOMPARE(disconnectedAlias.count(liveMargin), 1);
+    disconnectedAlias.replace(liveMargin,
+                              QStringLiteral("readonly property int shadowPaintMargin: 20"));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(disconnectedAlias,
+                                                       originalEffect,
+                                                       originalLayered,
+                                                       originalMetrics,
+                                                       originalShadowed),
+             "replacing the renderer-owned margin alias must fail the guard");
+
+    QString guessedMargins = originalLayered;
+    guessedMargins.replace(QStringLiteral("barLine.customShadowPaintMargin"),
+                           QStringLiteral("customShadow"));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(originalCustom,
+                                                       originalEffect,
+                                                       guessedMargins,
+                                                       originalMetrics,
+                                                       originalShadowed),
+             "disconnecting geometry from the effect footprint must fail the guard");
+
+    QString missingMetricsImport = originalEffect;
+    const QString metricsImport = QStringLiteral(
+        "import org.kde.latte.components 1.0 as LatteComponents\n");
+    QCOMPARE(missingMetricsImport.count(metricsImport), 1);
+    missingMetricsImport.remove(metricsImport);
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(originalCustom,
+                                                       missingMetricsImport,
+                                                       originalLayered,
+                                                       originalMetrics,
+                                                       originalShadowed),
+             "removing the effect-metrics import must fail the guard");
+
+    QString divergentRenderer = originalShadowed;
+    divergentRenderer.replace(QStringLiteral(
+        "EffectMetrics.shadowPaddingFor("), QStringLiteral("Math.ceil("));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(originalCustom,
+                                                       originalEffect,
+                                                       originalLayered,
+                                                       originalMetrics,
+                                                       divergentRenderer),
+             "giving the renderer a private padding formula must fail the guard");
+}
+
+void SourceGuardTest::iconResizeAnimation_keepsSingleAuthority()
+{
+    const QString privateMetrics = readFile(QStringLiteral(
+        "containment/package/contents/ui/abilities/privates/MetricsPrivate.qml"));
+    const QString iconBehavior = functionBody(privateMetrics,
+                                              QStringLiteral("Behavior on iconSize"));
+    QVERIFY2(!iconBehavior.isEmpty(), "icon-size Behavior not found");
+    QVERIFY2(iconBehavior.contains(QStringLiteral("SmoothedAnimation")),
+             "icon resizing must preserve velocity when its target changes");
+    QVERIFY2(iconBehavior.contains(QStringLiteral(
+                 "velocity: 240 / Math.max(animations.speedFactor.current, 0.01)")),
+             "icon resizing must keep a distance-independent velocity tied to the animation speed");
+    QVERIFY2(!iconBehavior.contains(QStringLiteral("NumberAnimation")),
+             "fixed-duration NumberAnimation makes resize speed depend on distance");
+
+    const QString marginBehavior = functionBody(privateMetrics, QStringLiteral("margin {"));
+    QVERIFY2(!marginBehavior.contains(QStringLiteral("Behavior on length"))
+             && !marginBehavior.contains(QStringLiteral("Behavior on tailThickness"))
+             && !marginBehavior.contains(QStringLiteral("Behavior on headThickness")),
+             "derived margins must not start animations that chase iconSize on every frame");
+    QVERIFY2(!privateMetrics.contains(QStringLiteral("padding {\n        Behavior on length")),
+             "derived length padding must not animate an already-animated icon size");
+
+    const QString metrics = stripped(readFile(QStringLiteral(
+        "containment/package/contents/ui/abilities/Metrics.qml")));
+    QVERIFY2(metrics.contains(QStringLiteral(
+                 "margin.tailThickness:marginMinThickness+fraction.thicknessMargin*Math.max(0,iconSize-marginMinThickness)"))
+             && metrics.contains(QStringLiteral(
+                 "background.totals.visualThickness-iconSize-margin.tailThickness")),
+             "thickness margins must derive from the animated iconSize value");
 }
 
 void SourceGuardTest::dockSystemCollection_keepsPureRouting()

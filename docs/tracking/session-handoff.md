@@ -1,7 +1,337 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-22.
+Last updated 2026-07-24.
+
+## 2026-07-24: thin Justify docks keep applets and shadows in their own spans
+
+Live top-dock comparison exposed two independent rendering regressions. D162
+(Justify applets occupied shadow-only margins) came from two geometry
+authorities. The fitted solid background correctly removed its length-axis
+shadow margins from the configured complete-visual span, but
+`LayoutsContainer` retained the outer `root.maxLength` for its physical origin
+and length. Commit `cf50d7845` makes the fitted background span authoritative
+for Justify applets. The live solid background remained
+`[126,18,1189,26]`, while the endpoint wrappers moved from x=121..1319 to
+x=131..1309.
+
+D163 (native background shadows retained Kirigami alpha compensation) came
+from D145 (background shadows used a height-distorting renderer). The old
+Kirigami `ShadowedRectangle` path explicitly added 0.336 to the theme shadow
+alpha as a renderer-matching workaround. Native Qt `RectangularShadow`
+inherited the same formula even though it consumes the supplied color
+directly. Commit `92fab9745` now passes the theme shadow color unchanged. A
+controlled mutation restores the obsolete formula and fails the production
+source guard.
+
+The first cold review refused D162's initial correction. D164 (the first D162
+correction formed a Justify geometry cycle) came from hosting the background
+inside the applet container that read its length. Commit `4edcd203d` moves the
+background's primary-axis canvas to the complete view while retaining the
+perpendicular hide animation. D165 (the first D162 correction assumed equal end
+shadows) is fixed by `6cd8ff860`, which centers the complete visual and derives
+the solid span from independent tail and head margins. D166 (the first D162
+origin mutation produced invalid QML) is fixed by `3feb54939`, which mutates
+the authoritative property with compilable old-origin and equal-shadow
+regressions.
+
+Focused source, QML compile, QML lint, image-comparison helper, and complete
+scene-probe gates pass for D162 and D163. Filtered live logging after the
+one-way correction produced no binding-loop warning, and the endpoint
+coordinates remained stable. The full canonical gate passed at `6927e6033`
+with 105 of 105 CTest entries, QML compile and lint, scene probes, nested
+ASan/UBSan replay, and the output matrix. An independent rereview returned
+MERGE with no findings. Real-layout visual acceptance remains pending.
+
+## 2026-07-24: small-size background and Layouts submenu roots fixed
+
+Live vertical sizing exposed D155 (small icons doubled the theme background
+minimum). At 24 and 26 px the inherited background formula added the complete
+item row to the theme minimum. At 28 px it changed branches and began
+subtracting the minimum first, so increasing icon size could make the
+background abruptly shrink. Commit `2322b0349` moves the calculation into one
+constexpr pure core and interpolates only the item row's nonnegative excess
+above the theme baseline. The exact 24, 26, 28, and 30 px transition,
+monotonicity across rows 0 through 64, QML boundary validation, and controlled
+production-source mutations pass.
+
+The same live session exposed D156 (Layouts submenu collapsed to its
+radio-button column). `LayoutMenuItemWidget` painted the name and icon outside
+its child layout, while Qt 6 measured the `QWidgetAction` default widget through
+`sizeHint()`. The delegate overrode only `minimumSizeHint()`, so the menu width
+contained the radio button but not the painted name. Commit `16baf03c1` routes
+both contracts through one const painted-content calculation. The exact
+production delegate test failed before the fix and now passes. The first
+canonical gate then found D157 (Layouts submenu regression was absent from the
+coverage ratchet): all 105 tests passed before the 104-entry inventory rejected
+the new target. Commit `8daf1f804` registers its exact identity.
+
+The placement direction was also clarified. Lattecotta does not provide inward
+same-edge dock stacking. Multiple partial-length docks or panels may share one
+output edge when their stable primary-axis spans do not overlap. The intended
+reservation depth is the maximum required depth, not a sum. Neither invariant
+is enforced yet: stable overlap is not rejected, and each Always Visible view
+currently publishes an independent positive exclusive zone that KWin may
+accumulate. A future output-edge validator and reservation aggregator must
+close both gaps without creating ranks, cumulative visual insets, or inward
+lanes.
+
+This is a deliberate extension of OG Latte, not a claim that its ordinary UI
+supported the workflow. Upstream `GenericLayout::freeEdges()` removed an edge
+after the first view occupied it, while persisted or imported layouts could
+still contain same-edge records without stack semantics. Lattecotta promotes
+the separated-span case to supported behavior and replaces inherited undefined
+overlap with an explicit invalid state. Commit `5ebd6b688` records the contract
+in the public roadmap, identity model, replication design, D-Bus references,
+and the typed negative capability returned at runtime. Commit `5ff991d8e`
+corrects D158 (same-edge placement notes overstated the OG Latte UI contract)
+after verifying the upstream `freeEdges()` history.
+
+The first cold review returned MERGE AFTER FIXES. D159 (stacking diagnostics
+claimed an unenforced overlap invariant) is fixed by `707d1778a`: the runtime
+and public D-Bus references now state that stable overlap is not yet rejected.
+D160 (same-edge maximum reservation depth was described as implemented) is
+fixed by `9dcf27dd8`: maximum depth remains the intended policy, but the record
+now assigns it to a missing reservation aggregator because current positive
+zones can accumulate in KWin. D161 (Layouts submenu sizing test omitted painted
+control columns) is fixed by `81fbf1ed3`, which requires the production size
+hint to contain the label, radio, and icon slots.
+
+The focused rereview found two remaining assertion gaps. Commit `313eedba0`
+pins the complete D159 public diagnostic instead of accepting any nonempty
+reason. Commit `bebe0a9f4` forces odd menu metrics and derives D161's icon
+column from the production integer arithmetic, where an odd height produces a
+17 px icon. Both focused tests pass under Qt 6.11.
+
+## 2026-07-23: partial reservations no longer place Latte visuals
+
+Live comparison exposed D153 (partial bottom reservation moved a separated
+side dock). A partial bottom dock in Always Visible mode shortened the right
+dock, while the same bottom dock in dodge mode let the right dock reach the
+output bottom. The stable rectangles did not intersect.
+
+Three ownership errors stacked. KWin applies a positive layer-shell zone to
+one rectangular per-output work area, and the visual dock surface carried that
+zone. Latte independently rebuilt occupancy from the larger masked QWindow
+instead of the already-solved stable background rectangle.
+`View::updateAbsoluteGeometry()` also compared after assigning the new
+rectangle, which suppressed ordinary peer notifications.
+
+Commits `25c74a6a3` and `6608a1d39` separate the authorities. Latte's region
+solver consumes `absoluteGeometry`; every visual layer surface follows
+Positioner's exact per-output rectangle with zone -1; and a transparent,
+inputless one-pixel surface publishes the positive reservation. Schema 3 of
+`dockSystemData` exposes the geometry, anchors, margins, edge, and zone for
+both surfaces.
+
+The 061 nested-KWin replay passed three times. A partial bottom transition
+left the actual right surface unchanged at [1216,0,384,1000], and the existing
+060 geometry-agreement replay remained green. Real-layout visual acceptance
+is still pending. KWin's ordinary client work area remains one rectangle per
+output; exact partial regions govern Latte-owned dock placement.
+
+The same live session exposed D154 (dock resize speed varied with slider
+distance). Commit `ee405a940` replaces fixed-duration icon resizing and
+several dependent margin animations with one velocity-preserving
+`SmoothedAnimation`. The QML compile gate and all 244 interaction tests pass.
+`MetricsPrivate.qml` also drops from 18 to 16 curated lint warnings. Real
+slider acceptance is still pending.
+
+## 2026-07-23: hover presentation uses the per-output canvas
+
+Live landscape acceptance exposed D150 (hovered applet row escaped its resting
+background). D140 had correctly kept hover zoom out of the stable autosize
+solver, but its first correction reused `root.maxLength` as the transient
+background clipping plane. The applet row could therefore expand beyond the
+rounded background while both still fit the output.
+
+The correction preserves `maximumLength` as the stable row and Justify budget.
+A content-driven dock requests background length from its live applet row, and
+the complete background visual is bounded only by that view's primary-axis
+output canvas after renderer-owned shadow margins. Each portrait or landscape
+view supplies its own canvas, so disconnected, partially touching, and fully
+touching output topologies do not enter the calculation.
+
+Live state changed from row [152,2399] and background [78,2481] at rest to row
+[54,2499] and background [20,2540] during hover, all inside canvas [0,2560].
+The new presentation oracle joins `dockSystemData` background and canvas
+geometry with `viewAppletsData` applet geometry. Its negative control uses the
+captured failure, row [54,2499] against background [225,2335], and rejects both
+escaped ends for the expected reasons. The parabolic preview recipe now checks
+composition at rest, while mapped, and after restoration, and saves a
+screenshot on failure.
+
+D151 (nested hover preview did not exercise parabolic expansion) remains open.
+Repeated synthetic glides mapped the preview but left the nested applet span at
+843 px. A temporary boundary trace recorded the task `MouseArea.onEntered` at
+zoom factor 1.59375, but neither `parabolicEntered` nor `parabolicMove` returned
+from the production view bridge. Preview mapping was therefore a vacuous proxy
+for rendered zoom. The pure geometry tests and live D-Bus acceptance cover
+D150, but deterministic nested rendered-zoom coverage must not be claimed
+until the vehicle observes a larger transient row.
+
+The same all-view watcher exposed D152 (linked portrait dock overflowed with
+automatic sizing off). Persistent dock 12 reports content [-408,1839],
+background [20,1420], and canvas [0,1440]; the captured workspace confirms
+both ends are cropped. The linked pair shares a configured and effective
+106 px size. Disabling automatic growth currently bypasses any per-view safety
+fit, so the landscape member fits while the shorter portrait member applies
+the same effective size unchanged. The fix must preserve linked configuration
+without allowing a runtime view to paint outside its own output.
+
+## 2026-07-22: automatic sizing now models the visible resting dock
+
+Live acceptance after D126 exposed three independent reasons a stable dock
+could still look smaller than its available span. D127 (automatic sizing
+stranded usable length in modulo-8 buckets) came from the inherited `+/- 8`
+candidate search. The configured ceiling selected one remainder class, so
+valid intermediate integer sizes were unreachable. Commit `eee511c62` solves
+the linear fit directly and applies only a one-pixel floating-point correction
+at the exact comparison boundary. Identical geometry now selects the same
+effective size under ceilings 31, 50, 64, 68, and 127.
+
+D128 (task artwork painted smaller than its autosized slot) was a separate
+rendering mismatch. Kirigami rounded a non-standard slot down to a standard
+icon raster, so a 63 px layout allocation could show only 48 px artwork.
+Commit `b1d993279` disables standard-size rounding at the shared task icon and
+its temporary copies. The render regression requires a named icon to paint a
+complete 63 px slot, including both corners.
+
+D129 (automatic sizing reserved a full hovered icon) was a fit-model error.
+The resting row already included the base task icon, but both old limits
+subtracted the full zoomed item again. Commit `25390b5d1` made shrinking depend
+only on the settled row, while its growth path retained one approximate
+incremental-hover reserve. Independent review then found D135 (hover
+presentation reduced the stable autosize fit). Commit `d8faf2d49` removes zoom
+from the sizing API entirely. The live-shaped 1114 px row in a 1228 px budget
+now grows from 50 to 55 px; its 1225.4 px stable projection fits the 1226 px
+growth boundary, while 56 px does not. Temporary hover presentation cannot
+resize the persistent resting dock. `qmlinteraction` and `autosizeenginetest`
+pass.
+
+The settings acceptance also retired D130 (settings bars ignored or stole
+wheel input) and D131 (screen-relative sizing obscured its meaning and mode).
+The shared slider accepts Qt's native wheel path only after a click gives it
+focus, so scrolling a page over an unfocused bar cannot mutate configuration.
+The interaction regression drives both paths. The old Relative Size label is
+now Screen height, displays the resolved pixel ceiling by default, reads Off at
+its sentinel, and explains that turning it off restores Absolute Size. This was
+confirmed against live D-Bus state: the affected right dock had persisted 2.7
+percent during the earlier always-enabled wheel experiment, while the other
+docks remained at the `-1` Off sentinel.
+
+Live testing at 100 percent Maximum Length then exposed D134 (autosize ignored
+background end padding). The solver compared only the applet row with raw
+`maxLength`, even though the rounded background adds two primary-axis paddings
+outside that row. The right dock consequently reported a 1268 px effects
+rectangle in a 1240 px canvas and clipped 14 px at each end. Commit `71a8081ab`
+uses the layouter's existing `contentsMaxLength` authority for both the solver
+and D-Bus `availablePrimaryLength`. The rebuilt dock settled at 54 px with its
+complete y=25, height=1190 effects rectangle inside the canvas. The regression
+subtracts 28 px of background padding before selecting the largest fit and is
+orientation-neutral.
+
+Independent review also found D136 (padding changes left autosize on a stale
+budget). Commit `4387f0210` observes `contentsMaxLength` itself and defers the
+refit through the existing stable-state gate. The integration regression keeps
+outer `maxLength` fixed while padding growth shrinks 63 px to 60 px and padding
+release regrows it to 63 px. D137 (D-Bus references described stale raw-length
+semantics) is corrected in `b18a3c0cf`; both public references now describe the
+post-padding applet span. D138 (sub-floor icon ranges entered the autosize core)
+is fixed in `eb7168c`, which refuses invalid floor, ceiling, and applied-size
+state at the QML boundary and asserts the same invariant in the core. D139
+(touched inherited QML omitted adaptation attribution) is fixed in
+`2c4e99430`.
+
+Live end-icon zoom then exposed D140 (zoomed side-dock chrome clipped at both
+ends). The 1240 px side surface could request a y=-34, height=1307 solid
+background because the transient row regained resting end padding and added an
+unbounded parabolic centering offset. Bounding the solid alone still clipped
+the separately drawn drop shadow. Commit `1228ecf8c` fits the solid after
+reserving the actual length-axis shadow margins and constrains centered
+movement with the complete visual. D150 later corrected that first
+implementation's use of the configured resting span as the transient boundary;
+the output-owned canvas is the hard presentation boundary.
+
+Independent review prevented that first D140 correction from landing with
+three ownership gaps. D141 (bounded background movement shifted the applet row)
+is fixed in `d19a1805c`: centered content now consumes only the configured
+offset, while the background owns bounded parabolic presentation separately.
+D142 (stable autosize omitted background shadow margins) is fixed in
+`921bf089b`: `layouter.contentsMaxLength` now subtracts both padding and shadows,
+and a live-shaped integration case refits when only shadow length changes. D143
+(dock-mode Justify bypassed the complete chrome fit) is fixed in `a0ab006f8`:
+all dock alignments share the shadow-aware fit while the composited Plasma-panel
+path remains unchanged. The final live side dock settles at 54 px with a 1126 px
+applet budget and y=25, height=1190 solid chrome inside its 1240 px surface.
+
+D144 (aspect-scaled background shadow clipped side docks) explained why that
+bounded solid rectangle still left the visible blur cut at the ends. Kirigami
+6.27 multiplies `ShadowedRectangle` scene-node expansion by the source aspect
+ratio. A 74 by 1190 side background with a 20 px shadow requested about 322 px
+outside each length-axis end, while placement correctly treated the configured
+size as 20 px. The first D144 correction replaced that node with a fixed-pixel
+layer effect and kept first-item and last-item hover inside the 1240 px canvas
+at y=25, height=1190 and y=22, height=1196.
+
+Cold review then caught D145 (translucent backgrounds attenuated custom
+shadows) and D146 (zero-size custom shadows reserved empty geometry). Commit
+`727f94ded` replaces the layer effect with Qt 6.9 `RectangularShadow`, a
+dedicated fixed-pixel sibling whose opacity stays independent of the painter.
+Commit `166342ca1` publishes that live renderer's exact blur-plus-spread margin
+to placement, including zero margin for a disabled zero-pixel shadow. The Qt
+floor is now 6.9. The tall 5:1 scene probe renders a 25 percent opaque source
+over a full-strength shadow, and QML interaction coverage pins both 20 px and
+zero px footprints. Source mutations reject the old aspect-scaled renderer,
+opacity coupling, and disconnected geometry. Commit `31b8d3b75` restores the
+touched `ShadowedItem.qml` adaptation copyright found by the same review.
+The first canonical gate then found only D147 (shadow renderer cleanup improved
+the QML warning ratchet): removing obsolete Kirigami predicates reduced
+`MultiLayered.qml` from 183 to 181 curated warnings. The exact baseline now
+retains that improvement at 5817 warnings tree-wide.
+
+The second cold review found two completion gaps. D148 (shadow regressions
+bypassed production ownership guards) is fixed in `3d775a0a2`: the source guard
+now parses the real `CustomBackground` sibling block and rejects opacity
+coupling, front stacking, or replacement of the renderer-margin alias. D149
+(Qt 6.9 floor stopped at CMake) is fixed in `b8f492b01`: all five native package
+formats, current container notes, CI prompts, distro-plan references, and the
+public requirements now enforce the `RectangularShadow` API floor.
+
+The first canonical gate also exposed two settings bookkeeping defects. D132
+(length-control inventory anchors depended on source hashes) is fixed by commit
+`2e931284d`, which gives the Maximum, Minimum, and Offset rows stable ids. D133
+(screen-height guidance exceeded the QML lint baseline) is fixed by commit
+`06df46103`, which retains the translated explanation while qualifying the
+touched width bindings through a typed page property. The focused inventory,
+QML compile, and QML lint gates pass.
+
+## 2026-07-22: side-dock automatic sizing waits for length settlement
+
+D126 (side docks resize from intermediate layout frames) was reproduced on the
+real dual-output layout. A 10 Hz `dockSystemData` trace caught the side dock's
+effective icon size moving `24 -> 32 -> 24` while its 691 px available length,
+1440 px window, output assignment, and placement generation stayed fixed. This
+ruled out KWin placement, output topology, stack ownership, and cross-dock
+identity sharing for this symptom.
+
+The axis-specific fault was inherited from upstream commit `6a558df10`. Before
+that animation-API refactor, both width and height changes called
+`slotAnimationsNeedLength(1)`. The refactor mapped the horizontal increment to
+`animations.needLength.addEvent(layoutsContainer)` but mapped the vertical
+increment to `removeEvent`. Side docks consequently remained in normal state
+while their content height animated, allowing AutoSize to consume transient
+frames and feed new icon-size targets back into the same layout.
+
+Commit `e5930c301` routes both axes through one
+`registerLengthAnimation()` function and leaves the matching removal with the
+existing settle timer. The focused source contract rejects the old vertical
+operation and any reintroduction of separate tracker mutations in either axis.
+`sourceguardtest`, `qmlcompilegate`, and `qmllintgate` pass. With the fixed QML
+staged into the real dock, 200 samples across edit entry, edit exit, and two
+hover cycles stayed at 24 px with unchanged geometry; a fresh staged process
+held the same converged state for another 180 samples. The temporary per-pass
+AutoSize telemetry was removed.
 
 ## 2026-07-22: same-edge edit canvas placement hardened
 
@@ -242,11 +572,12 @@ curated warning count from 94 to 91. The final `scripts/gate-all.sh` run exited
 probes, three nested ASan/UBSan recipes, and the complete output-matrix fixture
 passed.
 
-Same-edge physical stack order, accumulated offsets, reservation, and activation
-regions remain the next separate slice. Create Linked deliberately accepts an
-occupied edge and does not use free-edge rejection. Detach and a group-wide
-relationship removal transaction also remain continuation lifecycle work;
-linked roots stay protected until their explicit members are removed.
+Same-edge stable-span validation and exact activation regions remain a separate
+slice. Create Linked deliberately accepts an occupied edge so separated
+partial-length views can coexist; inward stacking is not supported. Detach and
+a group-wide relationship removal transaction also remain continuation
+lifecycle work; linked roots stay protected until their explicit members are
+removed.
 
 ## 2026-07-22: PR #110 observability merged
 
@@ -472,7 +803,7 @@ kept 1 -> 12 linked, propagated a visibility-mode change only inside 1 -> 12,
 and preserved all four identities across restart. The branch now sits on C0
 (the atomic dock-system observability snapshot), whose runtime tokens and
 fail-closed relationship graph remain the diagnostic authority. No live desktop
-run, placement normalization, or same-edge stack coordinator was added.
+run, placement normalization, or same-edge span validator was added.
 
 The first rebased canonical gate passed 103 of 104 CTest entries and stopped at
 D93 (Duplicate submenu change left a stale settings-inventory identity). The

@@ -11,7 +11,7 @@
 # tree, so this image is a cacheable deps-only layer.
 #
 # Floor check (observed 2026-07-17 in debian:testing, apt candidates):
-#   Qt      6.10.2  (floor Qt6      >= 6.6 - PASS)
+#   Qt      6.10.2  (floor Qt6      >= 6.9 - PASS)
 #   KF6     6.26.0  (floor KF6      >= 6.5 - PASS)
 #   Plasma  6.6.5   (floor Plasma   >= 6.5 - PASS)
 #   kwin_wayland 6.6.5

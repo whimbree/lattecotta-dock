@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2018 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -81,7 +82,6 @@ PlasmaComponents.Page {
                         from: 0
                         to: 100
                         stepSize: 5
-                        wheelEnabled: false
 
                         function updateShadowSize() {
                             if (!pressed)
@@ -128,7 +128,6 @@ PlasmaComponents.Page {
                         from: 0
                         to: 100
                         stepSize: 5
-                        wheelEnabled: false
 
                         function updateShadowOpacity() {
                             if (!pressed)

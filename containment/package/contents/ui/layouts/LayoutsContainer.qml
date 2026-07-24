@@ -1,6 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2016 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2016 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -34,6 +35,22 @@ Item{
     readonly property alias endLayout: _endLayout
     readonly property alias contextMenuIsShown: contextMenuLayer.menuIsShown
 
+    //! Justify's background resolves against an independent full-view canvas.
+    //! Its complete visual is centered, while the solid span begins after the
+    //! actual tail shadow and ends before the independently sized head shadow.
+    //! The asymmetry matters for themes whose two end margins differ.
+    readonly property real justifyOwningCanvasLength: root.isHorizontal
+                                                       ? parent.width : parent.height
+    readonly property real justifyVisualLength: background.totals.visualLength
+    readonly property real justifyLayoutLength: Math.max(
+                                                    0,
+                                                    justifyVisualLength
+                                                    - backgroundShadowTailLength
+                                                    - backgroundShadowHeadLength)
+    readonly property real justifyLayoutOrigin: (justifyOwningCanvasLength
+                                                 - justifyVisualLength) / 2
+                                                + backgroundShadowTailLength
+
     signal contentsLengthChanged();
 
     Binding {
@@ -47,7 +64,7 @@ Item{
             }
 
             if ( latteView && root.isHorizontal && root.myView.alignment === LatteCore.Types.Justify ){
-                return ((latteView.width/2) - (root.maxLength/2) + background.offset);
+                return justifyLayoutOrigin;
             } else {
                 if ((root.myView.inSlidingIn || root.myView.inSlidingOut) && root.isVertical){
                     return;
@@ -81,7 +98,7 @@ Item{
             }
 
             if ( latteView && root.isVertical && root.myView.alignment === LatteCore.Types.Justify ) {
-                return ((latteView.height/2) - (root.maxLength/2) + background.offset);
+                return justifyLayoutOrigin;
             } else {
                 if ((root.myView.inSlidingIn || root.myView.inSlidingOut) && root.isHorizontal){
                     return;
@@ -104,12 +121,23 @@ Item{
         }
     }
 
-    width: root.isHorizontal && root.myView.alignment === LatteCore.Types.Justify ? root.maxLength : parent.width
-    height: root.isVertical && root.myView.alignment === LatteCore.Types.Justify ? root.maxLength : parent.height
+    width: root.isHorizontal && root.myView.alignment === LatteCore.Types.Justify
+           ? justifyLayoutLength : parent.width
+    height: root.isVertical && root.myView.alignment === LatteCore.Types.Justify
+            ? justifyLayoutLength : parent.height
     z:10
 
     property bool animationSent: false
     property bool shouldCheckHalfs: (Plasmoid.configuration.alignment === LatteCore.Types.Justify) && (_mainLayout.children>1)
+
+    function registerLengthAnimation() : void {
+        if (layoutsContainer.animationSent) {
+            return;
+        }
+
+        layoutsContainer.animationSent = true;
+        animations.needLength.addEvent(layoutsContainer);
+    }
 
     property int contentsWidth: root.isHorizontal ? _startLayout.width + _mainLayout.width + _endLayout.width :
                                                     Math.max(_startLayout.width, _mainLayout.width ,_endLayout.width)
@@ -215,10 +243,7 @@ Item{
                 autosize.updateIconSize();
             }
 
-            if (!animationSent) {
-                animationSent = true;
-                animations.needLength.addEvent(layoutsContainer);
-            }
+            layoutsContainer.registerLengthAnimation();
 
             contentsLengthChanged();
 
@@ -240,10 +265,7 @@ Item{
                 autosize.updateIconSize();
             }
 
-            if (!animationSent) {
-                animationSent = true;
-                animations.needLength.removeEvent(layoutsContainer);
-            }
+            layoutsContainer.registerLengthAnimation();
 
             contentsLengthChanged();
 
@@ -299,7 +321,10 @@ Item{
                 return background.offset + lengthTailPadding;
             }
 
-            return (root.myView.alignment === LatteCore.Types.Justify) ? inJustifyCenterOffset : background.offset - parabolicOffsetting
+            //! The applet row owns the configured placement offset. The
+            //! background adds and bounds parabolic presentation movement
+            //! independently, so its visual clamp must never move content.
+            return (root.myView.alignment === LatteCore.Types.Justify) ? inJustifyCenterOffset : root.offset
         }
 
         ignoredLength: startParabolicSpacer.length + endParabolicSpacer.length

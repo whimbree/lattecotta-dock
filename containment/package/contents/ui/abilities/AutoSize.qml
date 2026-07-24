@@ -20,7 +20,6 @@ Item {
     required property Item layouts
     required property Item layouter
     required property Item metrics
-    required property Item parabolic
     required property QtObject view
     required property Item visibility
 
@@ -42,7 +41,7 @@ Item {
     readonly property bool inAutoSizeAnimation: !sizer.inCalculatedIconSize
 
     //! The search itself - shrink/grow branch selection, the stepping
-    //! loops, the asymmetric limits and the endless-loop protector - lives
+    //! fit calculation, stable-row limits and endless-loop protector - lives
     //! in the AutoSizeEngine core (containment/plugin/units/
     //! autosizeengine.h, pinned by tests/units/autosizeenginetest.cpp and
     //! tests/qml/tst_autosize.qml). The stepper owns the prediction
@@ -84,6 +83,18 @@ Item {
             if (sizer.metrics.portionIconSize!==-1) {
                 sizer.updateIconSize();
             }
+        }
+    }
+
+    Connections {
+        target: sizer.layouter
+
+        function onContentsMaxLengthChanged() {
+            //! Background padding, margins and theme extents can change the
+            //! usable span without changing containment.maxLength. Defer the
+            //! refit so all bindings publish one coherent geometry snapshot;
+            //! Qt coalesces repeated calls to this same bound method.
+            Qt.callLater(sizer.updateIconSize);
         }
     }
 
@@ -139,6 +150,17 @@ Item {
                 && (sizer.visibility.inNormalState && sizer.isActive) /*in normal and auto size active state*/
                 && (sizer.metrics.iconSize === sizer.metrics.maxIconSize || sizer.metrics.iconSize === sizer.iconSize) /*not during animations*/) {
 
+            //! The background owns primary-axis end padding outside the
+            //! measured applet row. The layouter's content budget already
+            //! subtracts it from maxLength, so the final background stays
+            //! inside the view on horizontal and vertical edges.
+            const availableContentLength = sizer.layouter.contentsMaxLength;
+            if (availableContentLength <= 0) {
+                console.error("AutoSize: background end padding leaves no content length within maxLength",
+                              sizer.containment.maxLength, availableContentLength);
+                return;
+            }
+
             //!doubler timer
             if (!doubleCallAutomaticUpdateIconSize.secondTimeCallApplied) {
                 doubleCallAutomaticUpdateIconSize.start();
@@ -150,11 +172,9 @@ Item {
                         sizer.layouts.startLayout.length + sizer.layouts.mainLayout.length + sizer.layouts.endLayout.length : sizer.layouts.mainLayout.length
 
             const result = stepper.step(layoutLength,
-                                        sizer.containment.maxLength,
-                                        sizer.metrics.totals.length,
+                                        availableContentLength,
                                         sizer.metrics.iconSize,
                                         sizer.metrics.maxIconSize,
-                                        sizer.parabolic.factor.zoom,
                                         sizer.iconSize);
 
             if (result.found) {

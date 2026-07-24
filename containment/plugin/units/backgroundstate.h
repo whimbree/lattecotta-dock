@@ -324,6 +324,55 @@ inline QRectF resolveEffectsArea(const EffectsAreaEnv &env)
     return QRectF(env.backgroundOriginInRoot, env.backgroundSize);
 }
 
+//! A dock's rounded solid background grows with the applet row. The configured
+//! maximum belongs to the stable-layout solver, not this transient presentation
+//! path. Keep the complete painted visual, including its length-axis shadow
+//! margins, inside the output-owned canvas.
+inline constexpr qreal fitDockBackgroundLength(qreal requestedBackgroundLength,
+                                               qreal owningCanvasLength,
+                                               qreal shadowMarginsLength)
+{
+    Q_ASSERT(requestedBackgroundLength >= 0.0);
+    Q_ASSERT(owningCanvasLength >= 0.0);
+    Q_ASSERT(shadowMarginsLength >= 0.0);
+
+    const qreal maximumBackgroundLength = std::max(qreal{0},
+                                                   owningCanvasLength - shadowMarginsLength);
+    return std::min(requestedBackgroundLength, maximumBackgroundLength);
+}
+
+//! Keep a centered dock's configured and parabolic offset inside its actual
+//! view. When the complete visual fills the view, no offset is possible;
+//! shorter visuals retain the full symmetric movement available around them.
+inline constexpr qreal fitCenteredDockOffset(qreal requestedOffset,
+                                             qreal visualLength,
+                                             qreal viewPrimaryLength)
+{
+    Q_ASSERT(visualLength >= 0.0);
+    Q_ASSERT(viewPrimaryLength >= visualLength);
+
+    const qreal maximumOffset = (viewPrimaryLength - visualLength) / 2.0;
+    return std::clamp(requestedOffset, -maximumOffset, maximumOffset);
+}
+
+//! MultiLayered.qml totals.visualThickness / visualMaxThickness. The theme
+//! minimum is the baseline, not an additional margin around the item row.
+//! Interpolate only the item's excess above that baseline. This keeps the
+//! result monotonic when a small item crosses the theme minimum instead of
+//! dropping by one full minimum-thickness unit at that boundary.
+inline constexpr qreal resolveBackgroundVisualThickness(qreal minimumThickness,
+                                                        qreal itemThickness,
+                                                        qreal sizeFraction)
+{
+    Q_ASSERT(minimumThickness >= 0.0);
+    Q_ASSERT(itemThickness >= 0.0);
+    Q_ASSERT(sizeFraction >= 0.0);
+    Q_ASSERT(sizeFraction <= 1.0);
+
+    const qreal itemExcess = std::max<qreal>(0.0, itemThickness - minimumThickness);
+    return minimumThickness + sizeFraction * itemExcess;
+}
+
 //! inputs of one edge's background padding (MultiLayered.qml:56-125; one
 //! formula, four call sites differing only in which border/margins they
 //! read and which axis the edge lies on)

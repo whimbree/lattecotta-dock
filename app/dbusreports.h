@@ -27,6 +27,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QList>
+#include <QMargins>
 #include <QObject>
 #include <QPointer>
 #include <QRect>
@@ -535,6 +536,7 @@ struct DockSystemViewRecord {
     QRect absoluteGeometry;
     QRect localGeometry;
     QRect screenGeometry;
+    QRect surfaceGeometry;
     QRect canvasGeometry;
     QRect effectsRect;
     QRect appletsLayoutGeometry;
@@ -543,6 +545,18 @@ struct DockSystemViewRecord {
     QRect appliedInputMask;
     int strutsThickness{0};
     QRect publishedStruts;
+    bool layerShellPresent{false};
+    QStringList layerShellAnchors;
+    QMargins layerShellMargins;
+    QString layerShellExclusiveEdge;
+    std::optional<int> layerShellExclusiveZone;
+    bool reservationSurfacePresent{false};
+    QRect reservationGeometry;
+    QRect reservationWindowGeometry;
+    QStringList reservationLayerShellAnchors;
+    QMargins reservationLayerShellMargins;
+    QString reservationLayerShellExclusiveEdge;
+    std::optional<int> reservationLayerShellExclusiveZone;
 
     Types::Visibility visibilityMode{Types::None};
     bool isHidden{false};
@@ -560,16 +574,17 @@ struct DockSystemViewRecord {
     DockObjectIdentities objects;
 };
 
-//! Same-edge stacking has no explicit authority in the current runtime. This
-//! typed negative capability is part of the schema so a consumer cannot infer
-//! an order from the canonical JSON array or from QObject creation order.
+//! Inward same-edge stacking is not a supported placement model. This typed
+//! negative capability remains in the schema so a consumer cannot infer an
+//! order from the canonical JSON array or from QObject creation order.
 struct DockStackModelRecord {
     bool available{false};
-    QString reason{QStringLiteral("No runtime authority models same-edge stack order or accumulated offsets.")};
+    QString reason{QStringLiteral(
+        "Inward same-edge stacking is unsupported; stable-span overlap is not yet rejected.")};
 };
 
 struct DockSystemSnapshot {
-    static constexpr int SchemaVersion = 2;
+    static constexpr int SchemaVersion = 3;
 
     quint64 snapshotSequence{0};
     bool globalConfigureAppletsMode{false};
@@ -1054,6 +1069,15 @@ inline QJsonArray serializeRect(const QRect &rect)
     return QJsonArray{rect.x(), rect.y(), rect.width(), rect.height()};
 }
 
+inline QJsonArray serializeMargins(const QMargins &margins)
+{
+    return QJsonArray{
+        margins.left(),
+        margins.top(),
+        margins.right(),
+        margins.bottom()};
+}
+
 inline QJsonObject serializeTrackerRecord(const TrackerRecord &record)
 {
     QJsonObject json;
@@ -1424,6 +1448,7 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
     json[QStringLiteral("absoluteGeometry")] = serializeRect(record.absoluteGeometry);
     json[QStringLiteral("localGeometry")] = serializeRect(record.localGeometry);
     json[QStringLiteral("screenGeometry")] = serializeRect(record.screenGeometry);
+    json[QStringLiteral("surfaceGeometry")] = serializeRect(record.surfaceGeometry);
     json[QStringLiteral("canvasGeometry")] = serializeRect(record.canvasGeometry);
     json[QStringLiteral("effectsRect")] = serializeRect(record.effectsRect);
     json[QStringLiteral("appletsLayoutGeometry")] = serializeRect(record.appletsLayoutGeometry);
@@ -1432,6 +1457,32 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
     json[QStringLiteral("appliedInputMask")] = serializeRect(record.appliedInputMask);
     json[QStringLiteral("strutsThickness")] = record.strutsThickness;
     json[QStringLiteral("publishedStruts")] = serializeRect(record.publishedStruts);
+    json[QStringLiteral("layerShellPresent")] = record.layerShellPresent;
+    json[QStringLiteral("layerShellAnchors")] =
+        QJsonArray::fromStringList(record.layerShellAnchors);
+    json[QStringLiteral("layerShellMargins")] = serializeMargins(record.layerShellMargins);
+    json[QStringLiteral("layerShellExclusiveEdge")] =
+        record.layerShellExclusiveEdge.isEmpty()
+            ? QJsonValue(QJsonValue::Null)
+            : QJsonValue(record.layerShellExclusiveEdge);
+    json[QStringLiteral("layerShellExclusiveZone")] =
+        serializeOptionalInt(record.layerShellExclusiveZone);
+    json[QStringLiteral("reservationSurfacePresent")] =
+        record.reservationSurfacePresent;
+    json[QStringLiteral("reservationGeometry")] =
+        serializeRect(record.reservationGeometry);
+    json[QStringLiteral("reservationWindowGeometry")] =
+        serializeRect(record.reservationWindowGeometry);
+    json[QStringLiteral("reservationLayerShellAnchors")] =
+        QJsonArray::fromStringList(record.reservationLayerShellAnchors);
+    json[QStringLiteral("reservationLayerShellMargins")] =
+        serializeMargins(record.reservationLayerShellMargins);
+    json[QStringLiteral("reservationLayerShellExclusiveEdge")] =
+        record.reservationLayerShellExclusiveEdge.isEmpty()
+            ? QJsonValue(QJsonValue::Null)
+            : QJsonValue(record.reservationLayerShellExclusiveEdge);
+    json[QStringLiteral("reservationLayerShellExclusiveZone")] =
+        serializeOptionalInt(record.reservationLayerShellExclusiveZone);
 
     json[QStringLiteral("visibilityMode")] = visibilityModeName(record.visibilityMode);
     json[QStringLiteral("isHidden")] = record.isHidden;

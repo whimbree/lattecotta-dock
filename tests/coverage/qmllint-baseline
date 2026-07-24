@@ -67,7 +67,7 @@
 8	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/privates/LaunchersPrivate.qml
 81	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/privates/layouter/AppletsContainer.qml
 10	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/privates/LayouterPrivate.qml
-18	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/privates/MetricsPrivate.qml
+16	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/privates/MetricsPrivate.qml
 9	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/privates/MyViewPrivate.qml
 3	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/privates/ParabolicEffectPrivate.qml
 8	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/privates/PositionShortcutsPrivate.qml
@@ -87,12 +87,11 @@
 85	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/applet/ParabolicArea.qml
 37	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/applet/ShortcutBadge.qml
 6	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/applet/TitleTooltipParent.qml
-184	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/MultiLayered.qml
+181	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/MultiLayered.qml
 2	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/types/Shadows.qml
 16	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/types/Totals.qml
 238	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/BindingsExternal.qml
-66	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/colorizer/CustomBackground.qml
-6	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/colorizer/KirigamiShadowedRectangle.qml
+64	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/colorizer/CustomBackground.qml
 196	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/debugger/DebugWindow.qml
 6	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/DragDropArea.qml
 91	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/editmode/ConfigOverlay.qml

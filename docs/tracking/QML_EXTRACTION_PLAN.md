@@ -451,7 +451,7 @@ subagent sweeps over every file; function names quoted here were
 re-verified by grep in the main session wherever a spec cites them.
 Line numbers appear only in section C, individually verified.
 
-### containment/ (62 files, 13159 lines)
+### containment/ (63 files, 13070 lines)
 
 Behavioral files:
 
@@ -487,12 +487,12 @@ Behavioral files:
 | abilities/privates/MyViewPrivate.qml | 95 | model-transform, state-machine | M (borderline) |
 | abilities/privates/PositionShortcutsPrivate.qml | 78 | model-transform | S (borderline) |
 | abilities/privates/ThinTooltipPrivate.qml | 56 | model-transform | S (borderline) |
-| background/MultiLayered.qml | 951 | geometry-math, state-machine | L (the ~300-line states block is presentational) |
+| background/MultiLayered.qml | 940 | geometry-math, state-machine | L (the ~300-line states block is presentational) |
 | background/types/Paddings.qml | 40 | geometry-math | S (borderline) |
 | background/types/Shadows.qml | 49 | geometry-math | S (borderline) |
 | background/types/Totals.qml | 51 | geometry-math | S (borderline) |
 | colorizer/Manager.qml | 206 | state-machine, model-transform | L |
-| colorizer/CustomBackground.qml | 237 | geometry-math | M |
+| colorizer/CustomBackground.qml | 244 | geometry-math | M |
 | editmode/ConfigOverlay.qml | 564 | geometry-math, state-machine, event-routing, ordering | L |
 | layouts/LayoutsContainer.qml | 537 | geometry-math, state-machine, event-routing | L |
 | layouts/EnvironmentActions.qml | 360 | geometry-math, event-routing | L |
@@ -507,7 +507,7 @@ abilities/privates/metrics/Fraction.qml, applet/PaddingsInConfigureApplets.qml,
 applet/TitleTooltipParent.qml, applet/EventsSinkOriginArea.qml,
 applet/colorizer/Applet.qml, applet/communicator/LatteBridge.qml,
 applet/communicator/Engine.qml (logic lives in AppletIdentifier.js),
-background/BackgroundProperties.qml, colorizer/KirigamiShadowedRectangle.qml,
+background/BackgroundProperties.qml, colorizer/BackgroundShadow.qml,
 colorizer/NormalRectangle.qml, debugger/DebugWindow.qml (861 lines of
 read-only diagnostics display), debugger/Tag.qml, layouts/AppletsContainer.qml,
 Upgrader.qml (one-shot v0.10 config migration), ContextMenuLayer.qml.
@@ -605,7 +605,7 @@ org.kde.latte.plasma/package/ui/TaskBackLayer.qml,
 org.kde.latte.plasmatabstyle/package/ui/BackLayer.qml,
 org.kde.latte.plasmatabstyle/package/ui/main.qml.
 
-### declarativeimports/ (104 files, 7671 lines)
+### declarativeimports/ (105 files, 7773 lines)
 
 declarativeimports/core is C++ only (no QML). Behavioral files:
 
@@ -619,7 +619,8 @@ declarativeimports/core is C++ only (no QML). Behavioral files:
 | components/ComboBoxButton.qml | 157 | event-routing | S |
 | components/TextField.qml | 129 | state-machine, geometry-math | S |
 | components/IndicatorItem.qml | 138 | state-machine | S |
-| components/ShadowedItem.qml | 50 | geometry-math (delegates to code/EffectMath.js) | S |
+| components/ShadowedItem.qml | 51 | geometry-math (delegates to EffectMetrics singleton) | S |
+| components/EffectMetrics.qml | 34 | geometry-math | S |
 | abilities/bridge/PositionShortcuts.qml | 53 | event-routing | S |
 | abilities/bridge/ParabolicEffect.qml | 42 | event-routing | S |
 | abilities/bridge/Launchers.qml | 37 | event-routing | S |
@@ -657,7 +658,7 @@ and Containment, abilities/items/basicitem/SeparatorItem.qml,
 TitleTooltipParent.qml, RestoreAnimation.qml,
 abilities/items/IndicatorLevel.qml, indicators/LevelOptions.qml.
 
-### JS logic files addendum (11 files, 1206 lines)
+### JS logic files addendum (10 files, 1196 lines)
 
 The .qml sweeps exclude imported .js libraries; they are part of the
 same extraction surface:
@@ -678,8 +679,6 @@ same extraction surface:
   components/code/, containment/package/contents/code/,
   plasmoid/package/contents/code/) - the luminance math EX-19
   deduplicates.
-- declarativeimports/components/code/EffectMath.js (10) - shadow blur
-  curve.
 - containment/package/contents/code/MathTools.js (11).
 
 ## B. Hot-spot ranking
@@ -2860,4 +2859,3 @@ milliseconds and pixels. The mitigation is structural: they land
 first, inside the strong-model window, with glide-based live recipes
 and surgical two-commit rollbacks; every other unit is pure math with
 tables.
-

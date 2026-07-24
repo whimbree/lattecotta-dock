@@ -8,6 +8,7 @@
 #define VISIBILITYMANAGER_H
 
 #include <array>
+#include <optional>
 
 // local
 #include <coretypes.h>
@@ -211,7 +212,7 @@ private:
 
     bool windowContainsMouse();
 
-    QRect acceptableStruts();
+    [[nodiscard]] std::optional<QRect> acceptableStruts();
 
 private Q_SLOTS:
     void dodgeAllWindows();

@@ -670,17 +670,18 @@ Latte::ViewFootprint viewFootprintOf(const Latte::View *view)
 {
     Latte::ViewFootprint footprint;
     footprint.location = view->location();
-    footprint.formFactor = view->formFactor();
-    footprint.alignment = static_cast<Latte::Types::Alignment>(view->alignment());
     footprint.hasVisibility = view->visibility() != nullptr;
     footprint.visibilityMode = footprint.hasVisibility ? view->visibility()->mode() : Latte::Types::None;
     footprint.isOffScreen = view->positioner() && view->positioner()->isOffScreen();
     footprint.behaveAsPlasmaPanel = view->behaveAsPlasmaPanel();
     footprint.normalThickness = view->normalThickness();
     footprint.screenEdgeMargin = view->screenEdgeMargin();
-    footprint.maxLength = view->maxLength();
-    footprint.offset = view->offset();
-    footprint.geometry = view->geometry();
+    footprint.occupiedGeometry = view->absoluteGeometry();
+    if (footprint.hasVisibility && !footprint.occupiedGeometry.isValid()) {
+        qWarning() << "Ignoring a reserving view without valid occupied geometry"
+                   << "containment=" << (view->containment() ? view->containment()->id() : 0)
+                   << "surface=" << view->geometry();
+    }
     return footprint;
 }
 }

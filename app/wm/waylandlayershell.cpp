@@ -16,6 +16,25 @@ namespace LayerShell {
 
 using LSW = LayerShellQt::Window;
 
+namespace {
+
+[[nodiscard]] constexpr bool isScreenEdge(Plasma::Types::Location location) noexcept
+{
+    switch (location) {
+    case Plasma::Types::TopEdge:
+    case Plasma::Types::BottomEdge:
+    case Plasma::Types::LeftEdge:
+    case Plasma::Types::RightEdge:
+        return true;
+    default:
+        return false;
+    }
+}
+
+}
+
+static bool retargetScreen(QWindow *window, LSW *ls, QScreen *screen);
+
 LSW::Anchors anchorsFor(Plasma::Types::Location location, Latte::Types::Alignment alignment,
                         bool windowSpansScreenLength)
 {
@@ -232,20 +251,21 @@ void updateAnchoring(QWindow *window, QScreen *screen,
     ls->setMargins(edgeMarginsFor(location, edgeMargin));
 }
 
-void configureView(QWindow *window, QScreen *screen,
+LSW *configureView(QWindow *window, QScreen *screen,
                    Plasma::Types::Location location, Latte::Types::Alignment alignment,
                    bool windowSpansScreenLength, int edgeMargin)
 {
     LSW *ls = LSW::get(window);
 
     if (!ls) {
-        return;
+        return nullptr;
     }
 
     ls->setScope(QStringLiteral("dock"));
     updateAnchoring(window, screen, location, alignment, windowSpansScreenLength, edgeMargin);
     ls->setLayer(LSW::LayerTop);
     ls->setKeyboardInteractivity(LSW::KeyboardInteractivityNone);
+    return ls;
 }
 
 void applyLayer(QWindow *window, Latte::Types::Visibility mode)
@@ -276,6 +296,195 @@ void setUnanchored(QWindow *window)
         ls->setExclusiveEdge(LSW::AnchorNone);
         ls->setAnchors(LSW::Anchors());
         ls->setMargins(QMargins());
+    }
+}
+
+ViewPlacement viewPlacement(Plasma::Types::Location location,
+                            const QRect &viewGeometry, const QRect &screenGeometry)
+{
+    Q_ASSERT(isScreenEdge(location));
+    Q_ASSERT(screenGeometry.isValid());
+    Q_ASSERT(viewGeometry.isValid());
+    Q_ASSERT(screenGeometry.contains(viewGeometry));
+
+    ViewPlacement placement;
+    placement.anchors = LSW::Anchors(LSW::AnchorTop) | LSW::AnchorLeft;
+    placement.margins = QMargins(viewGeometry.left() - screenGeometry.left(),
+                                 viewGeometry.top() - screenGeometry.top(), 0, 0);
+    return placement;
+}
+
+void applyViewPlacement(QWindow *window, Plasma::Types::Location location,
+                        const QRect &viewGeometry, const QRect &screenGeometry)
+{
+    if (!window) {
+        qCritical() << "LayerShell::applyViewPlacement refused a null window";
+        return;
+    }
+
+    if (!screenGeometry.isValid() || !viewGeometry.isValid()
+            || !screenGeometry.contains(viewGeometry)) {
+        qCritical() << "LayerShell::applyViewPlacement refused geometry outside its output"
+                    << "view=" << viewGeometry << "screen=" << screenGeometry;
+        return;
+    }
+
+    if (!isScreenEdge(location)) {
+        qCritical() << "LayerShell::applyViewPlacement refused non-edge location"
+                    << static_cast<int>(location);
+        return;
+    }
+
+    LSW *const ls = LSW::get(window);
+    if (!ls) {
+        qCritical() << "LayerShell::applyViewPlacement found no attached layer-shell state";
+        return;
+    }
+
+    const ViewPlacement placement = viewPlacement(location, viewGeometry, screenGeometry);
+
+    //! Geometry synchronization can run repeatedly with an unchanged
+    //! solution. Avoiding redundant layer-shell setters prevents needless
+    //! compositor configure events from feeding another geometry pass.
+    if (ls->exclusionZone() != -1) {
+        ls->setExclusiveZone(-1);
+    }
+    if (ls->exclusiveEdge() != LSW::AnchorNone) {
+        ls->setExclusiveEdge(LSW::AnchorNone);
+    }
+    if (ls->anchors() != placement.anchors) {
+        ls->setAnchors(placement.anchors);
+    }
+    if (ls->margins() != placement.margins) {
+        ls->setMargins(placement.margins);
+    }
+}
+
+ReservationPlacement reservationPlacement(Plasma::Types::Location location,
+                                          const QRect &strutGeometry,
+                                          const QRect &screenGeometry)
+{
+    Q_ASSERT(isScreenEdge(location));
+    Q_ASSERT(screenGeometry.isValid());
+    Q_ASSERT(strutGeometry.isValid());
+    Q_ASSERT(screenGeometry.contains(strutGeometry));
+
+    const bool horizontal = location == Plasma::Types::TopEdge
+            || location == Plasma::Types::BottomEdge;
+    const int lengthOffset = horizontal
+            ? strutGeometry.left() - screenGeometry.left()
+            : strutGeometry.top() - screenGeometry.top();
+
+    ReservationPlacement placement;
+    placement.exclusiveEdge = edgeFor(location);
+    placement.anchors = LSW::Anchors(placement.exclusiveEdge)
+            | (horizontal ? LSW::AnchorLeft : LSW::AnchorTop)
+            | (horizontal ? LSW::AnchorRight : LSW::AnchorBottom);
+    placement.surfaceSize = horizontal
+            ? QSize(strutGeometry.width(), 1)
+            : QSize(1, strutGeometry.height());
+    placement.exclusiveZone = exclusiveZoneFor(strutGeometry, location);
+
+    if (horizontal) {
+        placement.margins.setLeft(lengthOffset);
+        placement.margins.setRight(-lengthOffset);
+    } else {
+        placement.margins.setTop(lengthOffset);
+        placement.margins.setBottom(-lengthOffset);
+    }
+
+    return placement;
+}
+
+LSW *applyReservationPlacement(QWindow *window, QScreen *screen,
+                               Plasma::Types::Location location,
+                               const QRect &strutGeometry,
+                               const QRect &screenGeometry)
+{
+    if (!window || !screen) {
+        qCritical() << "LayerShell::applyReservationPlacement refused a null window or screen";
+        return nullptr;
+    }
+
+    if (!isScreenEdge(location) || !screenGeometry.isValid()
+            || screen->geometry() != screenGeometry
+            || !strutGeometry.isValid() || !screenGeometry.contains(strutGeometry)) {
+        qCritical() << "LayerShell::applyReservationPlacement refused invalid geometry"
+                    << "location=" << static_cast<int>(location)
+                    << "strut=" << strutGeometry << "screen=" << screenGeometry;
+        return nullptr;
+    }
+
+    const bool touchesEdge =
+            (location == Plasma::Types::TopEdge && strutGeometry.top() == screenGeometry.top())
+            || (location == Plasma::Types::BottomEdge && strutGeometry.bottom() == screenGeometry.bottom())
+            || (location == Plasma::Types::LeftEdge && strutGeometry.left() == screenGeometry.left())
+            || (location == Plasma::Types::RightEdge && strutGeometry.right() == screenGeometry.right());
+    if (!touchesEdge) {
+        qCritical() << "LayerShell::applyReservationPlacement refused a strut away from its edge"
+                    << "location=" << static_cast<int>(location)
+                    << "strut=" << strutGeometry << "screen=" << screenGeometry;
+        return nullptr;
+    }
+
+    LSW *const ls = LSW::get(window);
+    if (!ls) {
+        qCritical() << "LayerShell::applyReservationPlacement could not create layer-shell state";
+        return nullptr;
+    }
+
+    const bool remap = retargetScreen(window, ls, screen);
+    const ReservationPlacement placement = reservationPlacement(
+        location, strutGeometry, screenGeometry);
+
+    window->setMinimumSize(placement.surfaceSize);
+    window->setMaximumSize(placement.surfaceSize);
+    if (window->size() != placement.surfaceSize) {
+        window->resize(placement.surfaceSize);
+    }
+    if (ls->scope() != QStringLiteral("dock-reservation")) {
+        ls->setScope(QStringLiteral("dock-reservation"));
+    }
+    if (ls->layer() != LSW::LayerTop) {
+        ls->setLayer(LSW::LayerTop);
+    }
+    if (ls->keyboardInteractivity() != LSW::KeyboardInteractivityNone) {
+        ls->setKeyboardInteractivity(LSW::KeyboardInteractivityNone);
+    }
+    if (ls->anchors() != placement.anchors) {
+        ls->setAnchors(placement.anchors);
+    }
+    if (ls->exclusiveEdge() != placement.exclusiveEdge) {
+        ls->setExclusiveEdge(placement.exclusiveEdge);
+    }
+    if (ls->margins() != placement.margins) {
+        ls->setMargins(placement.margins);
+    }
+    if (ls->exclusionZone() != placement.exclusiveZone) {
+        ls->setExclusiveZone(placement.exclusiveZone);
+    }
+
+    if (remap) {
+        window->setVisible(true);
+    }
+    return ls;
+}
+
+void clearReservation(QWindow *window)
+{
+    if (!window) {
+        qCritical() << "LayerShell::clearReservation refused a null window";
+        return;
+    }
+
+    LSW *const ls = LSW::get(window);
+    if (!ls) {
+        qCritical() << "LayerShell::clearReservation found no attached layer-shell state";
+        return;
+    }
+
+    if (ls->exclusionZone() != 0) {
+        ls->setExclusiveZone(0);
     }
 }
 

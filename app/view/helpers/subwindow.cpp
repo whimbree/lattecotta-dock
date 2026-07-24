@@ -166,7 +166,12 @@ void SubWindow::setupWaylandIntegration()
     //! dock's own length, not the whole edge), so they keep the single-edge
     //! Center anchoring - the full-length span is only for masked dock windows.
     namespace LS = Latte::WindowSystem::LayerShell;
-    LS::configureView(this, m_latteView->screen(), m_latteView->location(), Latte::Types::Center, false);
+    if (!LS::configureView(this, m_latteView->screen(), m_latteView->location(),
+                           Latte::Types::Center, false)) {
+        qCritical() << "SubWindow could not create layer-shell state for containment"
+                    << m_latteView->containment()->id();
+        return;
+    }
     LS::setFocusPolicy(this, false);
 }
 

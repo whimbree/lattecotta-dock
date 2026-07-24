@@ -46,7 +46,8 @@ fi
 
 asan_build="$repo/build-asan"
 seed="$asan_build/_asan-seedconfig"
-recipes=(000-smoke 060-geometry-agreement 070-asan-binary-shadow)
+recipes=(000-smoke presentation-coverage-selftest 060-geometry-agreement
+         070-asan-binary-shadow)
 
 echo "asan-e2e-gate: configuring + building the sanitized tree ($asan_build)"
 cmake -S "$repo" -B "$asan_build" -G Ninja \

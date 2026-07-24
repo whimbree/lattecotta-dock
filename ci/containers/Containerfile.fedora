@@ -11,14 +11,14 @@
 # or copied source tree, so this image is a cacheable deps-only layer.
 #
 # Base tag pinned to fedora:43. Floor check (CMakeLists.txt requires Qt
-# >= 6.6.0, KF6 >= 6.5.0, libplasma >= 6.5.0), observed in-container on
+# >= 6.9.0, KF6 >= 6.5.0, libplasma >= 6.5.0), observed in-container on
 # 2026-07-17 with dnf repoquery on this tag's updates repo:
 #   libplasma            6.7.2   (>= 6.5.0 floor: PASS)
 #   plasma-workspace     6.7.2   (LibTaskManager/NotificationManager/KWayland)
 #   plasma-activities    6.7.2
 #   layer-shell-qt       6.7.2
 #   kf6-kcoreaddons      6.28.0  (>= 6.5.0 floor: PASS)
-#   qt6-qtbase           6.10.3  (>= 6.6.0 floor: PASS)
+#   qt6-qtbase           6.10.3  (>= 6.9.0 floor: PASS)
 # fedora:42 ships Plasma 6.3.x (below the 6.5 libplasma floor), so 43 is
 # the earliest Fedora stable that meets it - do NOT drop the tag to 42.
 FROM registry.fedoraproject.org/fedora:43

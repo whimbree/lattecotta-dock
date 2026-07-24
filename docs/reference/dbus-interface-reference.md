@@ -70,7 +70,7 @@ true with `isOffScreen`), what the compositor was told to reserve.
 call dockSystemData                    # s: compact schema-versioned JSON object
 ```
 
-Top level: `schemaVersion` (currently 2), `snapshotSequence` (decimal string,
+Top level: `schemaVersion` (currently 3), `snapshotSequence` (decimal string,
 process-local monotonic call identity), `globalConfigureAppletsMode`,
 `stacking`, and `views`. The complete view list is captured synchronously and
 serialized in ascending `persistentDockId` order, so repeated snapshots do not
@@ -105,17 +105,33 @@ Per dock:
   QML authorities are not constructed. A null `configuredIconSize` instead
   means the required containment configuration map or its `iconSize` entry is
   missing; collection logs that defect. `availablePrimaryLength` is the
-  containment root's current logical-pixel `maxLength`, not the configured
-  ratio.
+  layouter's current logical-pixel `contentsMaxLength`: the containment span
+  available to applets after primary-axis background end padding and shadow
+  margins are removed. It is not the raw containment `maxLength` or the
+  configured ratio.
 - Geometry: `windowGeometry`, `absoluteGeometry`, `localGeometry`,
-  `screenGeometry`, `canvasGeometry`, `effectsRect`,
+  `screenGeometry`, `surfaceGeometry`, `canvasGeometry`, `effectsRect`,
   `appletsLayoutGeometry`, `maskRect`, `inputMask`, `appliedInputMask`,
-  `strutsThickness`, and `publishedStruts`. Every rectangle is `[x,y,w,h]` in
+  `strutsThickness`, `publishedStruts`, `layerShellPresent`,
+  `layerShellAnchors`, `layerShellMargins`, `layerShellExclusiveEdge`, and
+  `layerShellExclusiveZone`, plus `reservationSurfacePresent`,
+  `reservationGeometry`, `reservationWindowGeometry`,
+  `reservationLayerShellAnchors`, `reservationLayerShellMargins`,
+  `reservationLayerShellExclusiveEdge`, and
+  `reservationLayerShellExclusiveZone`. Every rectangle is `[x,y,w,h]` in
   Qt logical pixels. `windowGeometry`, `absoluteGeometry`, `screenGeometry`,
-  `canvasGeometry`, and `publishedStruts` use virtual-desktop coordinates.
+  `surfaceGeometry`, `canvasGeometry`, and `publishedStruts` use
+  virtual-desktop coordinates.
   `localGeometry`, `effectsRect`, `appletsLayoutGeometry`, `maskRect`,
   `inputMask`, and `appliedInputMask` use dock-window-local coordinates.
-  Thickness values are logical pixels as well.
+  Thickness values are logical pixels as well. `surfaceGeometry` is
+  Positioner's solved layer-surface rectangle. The layer-shell fields report
+  the request actually attached to the visual QWindow: anchor names, margins
+  in left/top/right/bottom order, no exclusive edge, and zone -1. The
+  reservation fields report the separate transparent surface that publishes
+  the occupied edge span and positive scalar zone.
+  Missing attached state reports `layerShellPresent: false` with null edge and
+  zone, rather than a plausible placement.
 - Runtime state: `visibilityMode`, `isHidden`, `inStartup`, `isOffScreen`,
   `inRelocationAnimation`, `inRelocationShowing`, `geometrySettled`,
   `relocationGeneration`, `appliedRelocationGeneration`, `inDelete`, and
@@ -135,10 +151,12 @@ Per dock:
   stable for a QObject's lifetime and are useful only within the current
   process. They are not memory addresses.
 
-`stacking.available` is currently false and its `reason` explains the missing
-capability. No runtime authority models same-edge stack order or accumulated
-offsets yet. Do not interpret canonical `views` array order as physical stack
-order.
+`stacking.available` is permanently false because inward same-edge stacking is
+not a supported placement model. Multiple partial-length views are intended to
+share an edge only when their stable primary-axis spans do not overlap. The
+current runtime does not yet reject overlap or aggregate same-edge exclusive
+zones, so consumers must not treat `available=false` as validation success. Do
+not interpret canonical `views` array order as physical stack order.
 
 An internal lineage-invariant failure logs every relationship input at critical
 severity and returns an empty D-Bus string. It never returns a smaller but

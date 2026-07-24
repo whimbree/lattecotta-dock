@@ -19,6 +19,7 @@
 #include <QtTest>
 
 // C++
+#include <array>
 #include <limits>
 #include <type_traits>
 
@@ -35,6 +36,12 @@ static_assert(!std::is_convertible_v<ViewType, int>,
               "enum class: a ViewType cannot silently decay to a raw int");
 static_assert(!std::is_convertible_v<int, ViewType>,
               "enum class: a raw int cannot silently become a ViewType");
+static_assert(resolveBackgroundVisualThickness(28.0, 26.0, 1.0) == 28.0,
+              "items below the theme minimum must not add the minimum twice");
+static_assert(resolveBackgroundVisualThickness(28.0, 30.0, 1.0) == 30.0,
+              "full background size must reach an item above the minimum");
+static_assert(resolveBackgroundVisualThickness(28.0, 30.0, 0.5) == 29.0,
+              "partial background size interpolates only the excess");
 
 // the env structs ride through QTest data tables by value
 Q_DECLARE_METATYPE(SolidPanelEnv)
@@ -84,6 +91,15 @@ private Q_SLOTS:
     void effectsArea_decisionTable_data();
     void effectsArea_decisionTable();
 
+    // MultiLayered.qml dock background length and centered placement
+    void dockBackground_keepsCompleteVisualInsideSpan();
+    void centeredDockOffset_staysInsideView();
+
+    // MultiLayered.qml totals.visualThickness / visualMaxThickness
+    void visualThickness_boundaryTable_data();
+    void visualThickness_boundaryTable();
+    void visualThickness_isMonotonicAcrossThemeMinimum();
+
     // MultiLayered.qml:56-125
     void edgePadding_decisionTable_data();
     void edgePadding_decisionTable();
@@ -94,6 +110,8 @@ private Q_SLOTS:
     void wrapper_classifiesAlignmentAndColorEnums();
     void wrapper_refusesMalformedIndicatorCornerMargin();
     void wrapper_effectsAreaMatchesCore();
+    void wrapper_visualThicknessMatchesCore();
+    void wrapper_refusesMalformedVisualThickness();
 };
 
 // a panel-worthy environment: every clause of the Panel branch satisfied,
@@ -628,6 +646,96 @@ void BackgroundStateTest::effectsArea_decisionTable()
     QCOMPARE(resolveEffectsArea(env), expected);
 }
 
+void BackgroundStateTest::dockBackground_keepsCompleteVisualInsideSpan()
+{
+    //! Live D150 (hovered row escaped its resting background) shape: a
+    //! 2110 px resting background is configured inside a 2560 px output. A
+    //! center hover requests 2239 px. Both fit with 40 px of end shadows, so
+    //! presentation follows content instead of clipping at the configured
+    //! resting maximum.
+    static_assert(fitDockBackgroundLength(2110.0, 2560.0, 40.0) == 2110.0);
+    static_assert(fitDockBackgroundLength(2239.0, 2560.0, 40.0) == 2239.0);
+
+    //! The output-owned canvas remains the hard painted boundary.
+    static_assert(fitDockBackgroundLength(2540.0, 2560.0, 40.0) == 2520.0);
+
+    QCOMPARE(fitDockBackgroundLength(900.0, 1240.0, 40.0), 900.0);
+    QCOMPARE(fitDockBackgroundLength(1307.0, 1440.0, 40.0), 1307.0);
+
+    Latte::Containment::BackgroundStateResolver resolver;
+    QCOMPARE(resolver.dockBackgroundLength(2239.0, 2560.0, 40.0), 2239.0);
+}
+
+void BackgroundStateTest::centeredDockOffset_staysInsideView()
+{
+    static_assert(fitCenteredDockOffset(-34.0, 1240.0, 1240.0) == 0.0);
+    static_assert(fitCenteredDockOffset(80.0, 1000.0, 1240.0) == 80.0);
+    static_assert(fitCenteredDockOffset(160.0, 1000.0, 1240.0) == 120.0);
+
+    QCOMPARE(fitCenteredDockOffset(-160.0, 1000.0, 1240.0), -120.0);
+
+    Latte::Containment::BackgroundStateResolver resolver;
+    QCOMPARE(resolver.centeredDockOffset(-34.0, 1240.0, 1240.0), 0.0);
+}
+
+void BackgroundStateTest::visualThickness_boundaryTable_data()
+{
+    QTest::addColumn<double>("itemThickness");
+    QTest::addColumn<double>("sizeFraction");
+    QTest::addColumn<double>("expected");
+
+    constexpr double minimumThickness = 28.0;
+
+    QTest::newRow("24 px item at full size stays at the theme minimum")
+            << 24.0 << 1.0 << minimumThickness;
+    QTest::newRow("26 px item at full size stays at the theme minimum")
+            << 26.0 << 1.0 << minimumThickness;
+    QTest::newRow("item exactly at the minimum is continuous")
+            << minimumThickness << 1.0 << minimumThickness;
+    QTest::newRow("30 px item at full size reaches the item")
+            << 30.0 << 1.0 << 30.0;
+    QTest::newRow("30 px item at half size interpolates its excess")
+            << 30.0 << 0.5 << 29.0;
+    QTest::newRow("background size zero retains the theme minimum")
+            << 48.0 << 0.0 << minimumThickness;
+}
+
+void BackgroundStateTest::visualThickness_boundaryTable()
+{
+    QFETCH(double, itemThickness);
+    QFETCH(double, sizeFraction);
+    QFETCH(double, expected);
+
+    QCOMPARE(resolveBackgroundVisualThickness(28.0, itemThickness, sizeFraction),
+             expected);
+}
+
+void BackgroundStateTest::visualThickness_isMonotonicAcrossThemeMinimum()
+{
+    constexpr qreal minimumThickness = 28.0;
+    constexpr std::array<qreal, 5> fractions{0.0, 0.25, 0.5, 0.75, 1.0};
+
+    for (const qreal fraction : fractions) {
+        qreal previous = resolveBackgroundVisualThickness(minimumThickness, 0.0, fraction);
+
+        for (int itemThickness = 1; itemThickness <= 64; ++itemThickness) {
+            const qreal current = resolveBackgroundVisualThickness(
+                minimumThickness, static_cast<qreal>(itemThickness), fraction);
+            QVERIFY2(current >= previous,
+                     "increasing the item thickness must never shrink the background");
+            QVERIFY2(current >= minimumThickness,
+                     "the background must never fall below its theme minimum");
+            previous = current;
+        }
+    }
+
+    for (int itemThickness = 0; itemThickness <= 64; ++itemThickness) {
+        QCOMPARE(resolveBackgroundVisualThickness(
+                     minimumThickness, static_cast<qreal>(itemThickness), 1.0),
+                 std::max(minimumThickness, static_cast<qreal>(itemThickness)));
+    }
+}
+
 void BackgroundStateTest::edgePadding_decisionTable_data()
 {
     QTest::addColumn<EdgePaddingEnv>("env");
@@ -784,6 +892,30 @@ void BackgroundStateTest::wrapper_effectsAreaMatchesCore()
              QRectF(5.0, 6.0, 100.0, 40.0));
     QCOMPARE(resolver.effectsArea(false, true, true, 5.0, 6.0, 100.0, 40.0),
              QRectF(5.0, 6.0, 100.0, 40.0));
+}
+
+void BackgroundStateTest::wrapper_visualThicknessMatchesCore()
+{
+    Latte::Containment::BackgroundStateResolver resolver;
+
+    QCOMPARE(resolver.visualThickness(28.0, 26.0, 1.0), 28.0);
+    QCOMPARE(resolver.visualThickness(28.0, 30.0, 0.5), 29.0);
+    QCOMPARE(resolver.visualThickness(28.0, 30.0, 1.0), 30.0);
+}
+
+void BackgroundStateTest::wrapper_refusesMalformedVisualThickness()
+{
+    Latte::Containment::BackgroundStateResolver resolver;
+
+    QTest::ignoreMessage(QtCriticalMsg,
+                         QRegularExpression(QStringLiteral("invalid thickness inputs")));
+    QCOMPARE(resolver.visualThickness(28.0, 30.0, 1.5), 0.0);
+
+    QTest::ignoreMessage(QtCriticalMsg,
+                         QRegularExpression(QStringLiteral("invalid thickness inputs")));
+    QCOMPARE(resolver.visualThickness(
+                 28.0, std::numeric_limits<double>::quiet_NaN(), 1.0),
+             0.0);
 }
 
 QTEST_GUILESS_MAIN(BackgroundStateTest)

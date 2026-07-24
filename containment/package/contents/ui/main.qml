@@ -871,7 +871,17 @@ ContainmentItem {
         }
 
         Item{
-            anchors.fill: layoutsContainer
+            id: backgroundCanvas
+
+            //! The background resolves its primary-axis fit against the
+            //! complete view canvas. Keeping that axis independent from the
+            //! applet container prevents Justify's solid span from feeding
+            //! back into the background that computes it. The perpendicular
+            //! axis still follows the applet container's hide animation.
+            x: root.isHorizontal ? 0 : layoutsContainer.x
+            y: root.isVertical ? 0 : layoutsContainer.y
+            width: root.isHorizontal ? parent.width : layoutsContainer.width
+            height: root.isVertical ? parent.height : layoutsContainer.height
 
             Background.MultiLayered{
                 id: _background
@@ -1039,7 +1049,6 @@ ContainmentItem {
         layouts: layoutsContainer
         layouter: _layouter
         metrics: _metrics
-        parabolic: _parabolic
         view: latteView
         visibility: visibilityManager
     }
@@ -1077,7 +1086,7 @@ ContainmentItem {
 
     Ability.Metrics {
         id: _metrics
-        availablePrimaryLength: root.maxLength
+        availablePrimaryLength: _layouter.contentsMaxLength
         animations: _animations
         autosize: _autosize
         background: _background

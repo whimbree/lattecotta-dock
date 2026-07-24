@@ -14,6 +14,7 @@
 import QtQuick
 import QtTest
 import org.kde.latte.components 1.0 as LatteComponents
+import "../../containment/package/contents/ui/colorizer" as Colorizer
 
 TestCase {
     id: root
@@ -33,6 +34,14 @@ TestCase {
         source: sourceRect
         width: 24
         height: 24
+    }
+
+    Colorizer.BackgroundShadow {
+        id: backgroundShadow
+        visible: false
+        width: 40
+        height: 200
+        blur: 0
     }
 
     function test_typeResolvesThroughModuleImport() {
@@ -62,6 +71,30 @@ TestCase {
         compare(shadowed.paddingRect.height, shadowed.paddingRect.y);
         compare(shadowed.paddingRect.y, shadowed.paddingRect.x);
         shadowed.shadowSizePx = 0;
+    }
+
+    function test_rendererAndLayoutSharePaddingMetric() {
+        compare(LatteComponents.EffectMetrics.shadowPaddingFor(20, 0, 0), 22,
+                "the fixed blur keeps two transparent pixels after the painted extent");
+        compare(LatteComponents.EffectMetrics.shadowPaddingFor(20, 0, 2), 24,
+                "directional offsets extend the fixed-pixel footprint");
+
+        shadowed.shadowSizePx = 20;
+        shadowed.shadowHorizontalOffset = 0;
+        shadowed.shadowVerticalOffset = 2;
+        compare(shadowed.shadowPaddingPx,
+                LatteComponents.EffectMetrics.shadowPaddingFor(20, 0, 2),
+                "the renderer must consume the same metric available to layout owners");
+        shadowed.shadowSizePx = 0;
+    }
+
+    function test_rectangularBackgroundShadowHasExactPixelMargin() {
+        backgroundShadow.blur = 20;
+        compare(backgroundShadow.paintMargin, 20,
+                "the native rectangle shadow publishes its exact per-edge footprint");
+        backgroundShadow.blur = 0;
+        compare(backgroundShadow.paintMargin, 0,
+                "a disabled zero-pixel shadow must not reserve geometry");
     }
 
     function test_effectRidersKeepThePaddingContract() {

@@ -55,6 +55,7 @@ Item {
     property QtObject background: QtObject {
         property QtObject totals: QtObject {
             property real paddingsLength: 20
+            property real shadowsLength: 0
         }
     }
 
@@ -146,6 +147,7 @@ Item {
             root.maxLength = 800;
             root.minLength = 600;
             root.background.totals.paddingsLength = 20;
+            root.background.totals.shadowsLength = 0;
             for (var g = 0; g < grids.length; ++g) {
                 grids[g].length = 0;
                 var kids = grids[g].children;

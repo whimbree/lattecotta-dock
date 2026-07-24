@@ -44,10 +44,10 @@ pkgbase = latte-dock
 	depends = plasma-pa>=6.5
 	depends = plasma-workspace>=6.5
 	depends = qqc2-desktop-style>=6.5
-	depends = qt6-5compat>=6.6
-	depends = qt6-base>=6.6
-	depends = qt6-declarative>=6.6
-	depends = qt6-wayland>=6.6
+	depends = qt6-5compat>=6.9
+	depends = qt6-base>=6.9
+	depends = qt6-declarative>=6.9
+	depends = qt6-wayland>=6.9
 	depends = wayland
 	source = latte-dock-0.10.77-80451925475d7d5b0fb6d74f6b43d782c81dc4b5.tar.gz
 	sha256sums = 4bfda179309464052ca4805c5361478507f274a38239471b65b7fbb2b53542e6

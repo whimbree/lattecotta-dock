@@ -30,7 +30,9 @@ Item {
     property bool inConfigureAppletsMode: false
     property bool isHorizontal: true
     property bool isVertical: false
-    property real maxLength: 1100
+    property real backgroundLengthPadding: 0
+    property real backgroundShadowLength: 0
+    property real maxLength: 997.6
 
     property int destroyedContinuationCalls: 0
     property int rapidContinuationCalls: 0
@@ -82,14 +84,10 @@ Item {
 
     Item {
         id: layouterMock
+        property real contentsMaxLength: root.maxLength
+                                         - root.backgroundLengthPadding
+                                         - root.backgroundShadowLength
         property int fillApplets: 0
-    }
-
-    Item {
-        id: parabolicMock
-        property QtObject factor: QtObject {
-            property real zoom: 1.6
-        }
     }
 
     Component {
@@ -102,7 +100,6 @@ Item {
             layouts: layoutsMock
             layouter: layouterMock
             metrics: metricsMock
-            parabolic: parabolicMock
             view: viewMock
             visibility: visibilityManager
         }
@@ -118,7 +115,6 @@ Item {
             layouts: layoutsMock
             layouter: layouterMock
             metrics: metricsMock
-            parabolic: parabolicMock
             view: viewMock
             visibility: visibilityManager
 
@@ -138,7 +134,6 @@ Item {
             layouts: layoutsMock
             layouter: layouterMock
             metrics: metricsMock
-            parabolic: parabolicMock
             view: viewMock
             visibility: visibilityManager
 
@@ -181,8 +176,9 @@ Item {
             metricsMock.portionIconSize = -1;
             metricsMock.totals.length = 64;
             layoutsMock.mainLayout.length = 1000;
-            parabolicMock.factor.zoom = 1.6;
-            root.maxLength = 1100;
+            root.backgroundLengthPadding = 0;
+            root.backgroundShadowLength = 0;
+            root.maxLength = 997.6;
             root.destroyedContinuationCalls = 0;
             root.rapidContinuationCalls = 0;
         }
@@ -210,14 +206,86 @@ Item {
             compare(sizer.iconSize, -1,
                     "normal-state notification must not resize synchronously inside the count binding");
             wait(0);
-            compare(sizer.iconSize, 56,
-                    "the Qt5 resize result must still be applied on the next event-loop turn");
+            compare(sizer.iconSize, 63,
+                    "the largest fitting size must be applied on the next event-loop turn");
 
             metricsMock.iconSize = 60;
             compare(productionAnimations.needBothAxis.count, 1,
                     "an intermediate animated metric must feed the real AutoSize event into the real Tracker");
             compare(visibilityManager.inNormalState, false,
                     "the target size must make the declarative normal-state binding false again");
+        }
+
+        function test_backgroundEndPaddingIsExcludedFromFitBudget() {
+            root.backgroundLengthPadding = 28;
+            sizer = createBlockedSizer(productionSizerComponent);
+
+            productionAnimations.needLength.removeEvent(blocker);
+            wait(0);
+
+            compare(sizer.iconSize, 62,
+                    "the applet row must fit beside both background end paddings");
+        }
+
+        function test_settledPaddingChangesRefitInBothDirections() {
+            sizer = createBlockedSizer(productionSizerComponent);
+
+            productionAnimations.needLength.removeEvent(blocker);
+            wait(0);
+            compare(sizer.iconSize, 63);
+
+            //! Publish the measured row produced by the first target and let
+            //! the one-second confirmation pass settle before changing only
+            //! background padding. containment.maxLength remains unchanged.
+            metricsMock.iconSize = 63;
+            layoutsMock.mainLayout.length = 984.375;
+            wait(1100);
+            compare(visibilityManager.inNormalState, true);
+
+            root.backgroundLengthPadding = 50;
+            wait(0);
+            compare(sizer.iconSize, 60,
+                    "growing end padding must shrink against the new content budget");
+
+            metricsMock.iconSize = 60;
+            layoutsMock.mainLayout.length = 937.5;
+            wait(1100);
+            compare(visibilityManager.inNormalState, true);
+
+            root.backgroundLengthPadding = 0;
+            wait(0);
+            compare(sizer.iconSize, 63,
+                    "releasing end padding must return the stable row to the largest fit");
+        }
+
+        function test_settledShadowChangesRefitInBothDirections() {
+            sizer = createBlockedSizer(productionSizerComponent);
+
+            productionAnimations.needLength.removeEvent(blocker);
+            wait(0);
+            compare(sizer.iconSize, 63);
+
+            //! Settle the measured row before changing only the background's
+            //! length-axis shadow. The outer maximum and padding stay fixed.
+            metricsMock.iconSize = 63;
+            layoutsMock.mainLayout.length = 984.375;
+            wait(1100);
+            compare(visibilityManager.inNormalState, true);
+
+            root.backgroundShadowLength = 50;
+            wait(0);
+            compare(sizer.iconSize, 60,
+                    "growing end shadows must shrink against the complete chrome budget");
+
+            metricsMock.iconSize = 60;
+            layoutsMock.mainLayout.length = 937.5;
+            wait(1100);
+            compare(visibilityManager.inNormalState, true);
+
+            root.backgroundShadowLength = 0;
+            wait(0);
+            compare(sizer.iconSize, 63,
+                    "releasing end shadows must restore the largest stable fit");
         }
 
         function test_rapidNormalStateNotificationsDeduplicate() {
@@ -279,7 +347,7 @@ Item {
             wait(0);
 
             compare(sizer.iconSize, -1,
-                    "the robustness band has no target and must leave automatic sizing selected");
+                    "a fitting automatic row has no target and must stay automatic");
             compare(productionAnimations.needBothAxis.count, 0,
                     "without a target AutoSize cannot feed back into the tracker count");
             compare(visibilityManager.inNormalState, true,

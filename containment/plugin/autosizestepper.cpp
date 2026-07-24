@@ -27,36 +27,37 @@ void AutoSizeStepper::clearHistory()
     m_history.clear();
 }
 
-QVariantMap AutoSizeStepper::step(double layoutLength, double maxLength, double itemLength,
-                                  int currentIconSize, int maxIconSize, double zoomFactor,
-                                  int appliedIconSize)
+QVariantMap AutoSizeStepper::step(double layoutLength, double maxLength, int currentIconSize,
+                                  int maxIconSize, int appliedIconSize)
 {
     //! AutoSize.qml's maxLength <= 0 no-geometry contract returns before
     //! calling in (ad9b823f), lengths are widths/heights and cannot be
-    //! negative, metrics' icon sizes never sit below the 16px floor, and
-    //! parabolic.factor.zoom is clamped to [1, 2]: arriving here outside
-    //! any of these is a shell bug, never something to search around
-    //! silently
+    //! negative, and metrics' icon sizes never sit below the 16px floor or
+    //! above their configured ceiling. Arriving here outside those contracts
+    //! is a shell bug, never something to search around silently.
+    const bool appliedSizeIsValid = appliedIconSize == -1
+            || (appliedIconSize >= AutoSizeEngine::minIconSize
+                && appliedIconSize <= maxIconSize);
     const bool measurementIsValid = maxLength > 0
-            && layoutLength >= 0 && itemLength >= 0
-            && currentIconSize >= 1 && maxIconSize >= 1
-            && zoomFactor >= 1;
+            && layoutLength >= 0
+            && currentIconSize >= AutoSizeEngine::minIconSize
+            && maxIconSize >= AutoSizeEngine::minIconSize
+            && currentIconSize <= maxIconSize
+            && appliedSizeIsValid;
 
     if (!measurementIsValid) {
         qCritical() << "AutoSizeStepper.step: invalid measurement, layoutLength" << layoutLength
-                    << "maxLength" << maxLength << "itemLength" << itemLength
+                    << "maxLength" << maxLength
                     << "currentIconSize" << currentIconSize << "maxIconSize" << maxIconSize
-                    << "zoomFactor" << zoomFactor << "- refusing to step";
+                    << "appliedIconSize" << appliedIconSize << "- refusing to step";
         return QVariantMap();
     }
 
     AutoSizeEngine::AutoSizeInput input;
     input.layoutLength = layoutLength;
     input.maxLength = maxLength;
-    input.itemLength = itemLength;
     input.currentIconSize = currentIconSize;
     input.maxIconSize = maxIconSize;
-    input.zoomFactor = zoomFactor;
     //! the sizer's -1 = automatic sentinel becomes the core's absent state
     input.appliedIconSize = (appliedIconSize == -1) ? std::nullopt
                                                     : std::optional<int>(appliedIconSize);

@@ -67,9 +67,32 @@ Applet membership and ordinary settings stay linked, while orientation-dependent
 applet length and effective sizing remain local to each output view. Runtime
 recreation and output disconnects preserve the persistent relationship and
 rebind only the views eligible on active outputs.
+Horizontal and vertical layout changes use the same per-view animation tracker,
+so automatic sizing waits for settled content on both axes.
+Size changes use one velocity-preserving icon animation; margins and padding
+derive from that value without starting nested animations whose speed changes
+with slider distance.
+The automatic-size solver uses every fitting integer icon size, sizes the
+persistent dock from its settled row, leaves a two-pixel rounding margin, and
+uses the background's real post-chrome content span before painting task
+artwork into the complete fitted slot. Temporary hover zoom does not resize the
+resting dock; it may borrow resting end padding while the complete background
+and its drop shadows stay inside that view's output-owned canvas. Custom
+background shadows use Qt's dedicated fixed-pixel rounded-shadow renderer on
+horizontal and vertical docks, remain independent of background opacity, and
+reserve no space at zero size. A side dock therefore does not scale its blur
+by the background aspect ratio. Settings
+sliders accept wheel input after being clicked without stealing ordinary page
+scrolling,
+and screen-height sizing shows its resolved pixel ceiling and explicit Off mode.
 The shared edit canvas reasserts its compositor placement and view-local input
 mask when retargeting, including between separate docks that legitimately
 occupy the same output edge and canvas rectangle.
+Partial dock occupancy is solved from each stable background rectangle.
+Latte's visual layer surfaces follow those exact per-output results while
+separate transparent surfaces publish KWin's scalar work-area reservations, so
+a nonintersecting perpendicular dock is not shortened by another dock's masked
+canvas.
 Legacy On All Screens members retain their derived-output behavior. A linked
 source stays protected from removal until its explicit members are removed, so
 one-containment Undo cannot leave a partial relationship.
@@ -162,9 +185,9 @@ phases, one commit-traceable checklist item per task. The coarse picture:
 - [ ] Companion applets as sibling repos consumed by flake input: the
       Latte separator applet, then a full Qt 6 port of
       [applet-window-appmenu](https://github.com/psifidotos/applet-window-appmenu)
-- [ ] Further continuation features: same-edge physical stack coordination,
-      linked-dock detach and root-removal choices, background color picker,
-      scrollable group previews
+- [ ] Further continuation features: same-edge partial-span collision
+      validation, linked-dock detach and root-removal choices, background color
+      picker, scrollable group previews
 
 The high-priority slice of what remains, from the plan's own ordering
 (each item carries its full context in its phase section there):
@@ -237,7 +260,7 @@ Installation
 
 ### Requirements
 
-- **Plasma >= 6.5**, **Qt >= 6.6**, **KDE Frameworks >= 6.5**
+- **Plasma >= 6.5**, **Qt >= 6.9**, **KDE Frameworks >= 6.5**
 - LayerShellQt, PlasmaWaylandProtocols
 - A Wayland session (the dock refuses to start on anything else)
 - Tools: cmake >= 3.16, ninja or make, extra-cmake-modules, a C++20

@@ -2,12 +2,13 @@
 
 Status: independent Duplicate Dock and explicit Create Linked Dock implemented;
 linked runtime lifecycle and sizing ownership hardened; bounded placement and
-same-edge stacking slices remain separate work
-(2026-07-22)
+same-edge span validation remain separate work
+(2026-07-24)
 
 This record defines the ownership model used to investigate dock duplication,
-screen-group cloning, edit mode, placement, and same-edge stacking. It separates
-confirmed causes from hypotheses and records which repairs have landed.
+screen-group cloning, edit mode, placement, and same-edge occupancy. It
+separates confirmed causes from hypotheses and records which repairs have
+landed.
 
 ## User-facing terms and identity diagram
 
@@ -55,7 +56,7 @@ layout file
 Corona
   +-- Layout::GenericLayout owns containment-to-view maps
   +-- ViewSettingsFactory owns one reusable edit-chrome ensemble
-  +-- output-edge stack coordinator: missing
+  +-- output-edge span validator: missing
 ```
 
 `runtime OriginalView #A` is descriptive only. C0 (the atomic dock-system
@@ -78,7 +79,7 @@ that is the boundary with deferred work.
 | Geometry controller | Unique `Positioner` per runtime view | Runtime `View` QObject parent | Derived, not persisted | Constructed fresh | Consumes that view's output and owns monotonic relocation generations | Edit thickness may change local placement | QObject parent destruction cancels timers and callbacks |
 | Applet sizing | Unique `AutoSize`, effective icon state, and applet `length` per containment | Containment QML tree | Configured dock values plus per-applet local `length` | Independent Duplicate copies the snapshot; linked creation clears local `length`; effective values recompute | Consumes the same view's solved primary length and orientation | Recomputes only for local edit geometry | QML tree destruction |
 | Edit-mode controller | One reusable chrome ensemble, one current owner, one requested generation | `ViewSettingsFactory` under Corona | Not persisted | Never copied | Retarget is one cancelable generation | Exactly one effective owner; clone requests resolve explicitly | Cancels deferred work and clears the old containment before rebinding |
-| Stacking controller | Missing in the current tree | Required owner: layout or Corona placement domain | Required key: output, edge, stable rank | New duplicate gets a stable independent rank | Re-solves membership atomically without assuming adjacent outputs | Owns one activation mechanism with the exact eligible region set, which may be disjoint | Removes membership before view destruction |
+| Same-edge span validator and reservation aggregator | Missing in the current tree | Required owner: layout or Corona placement domain | Required key: output and edge | Duplicate remains independent; no rank or lane is copied | Revalidates exact stable spans and recomputes maximum depth atomically without assuming adjacent outputs | Prevents committing overlap while permitting separated partial spans | Removes membership before view destruction |
 | Configuration object | Unique mutable map per containment; an explicit policy selects linked applet keys | Containment owns storage; relationship root owns shared mutation routing; each view owns applet geometry keys | Containment configuration group | Deep-copied into fresh groups for Duplicate Dock; linked import removes per-view keys | Explicit members keep containment placement, appearance, and applet length local | Menu and edit relationship are read from runtime identity | Destroyed with containment; Undo and reconnect restore shared values without overwriting local keys; signal contexts are the receiving view |
 
 ## Confirmed causes
@@ -308,22 +309,42 @@ session, leaving more than one containment with `userConfiguring=true`. The
 retarget is now cancelable and generation-checked, and every rebind ends the old
 session first.
 
-### Same-edge stacking has no ownership model
+### Same-edge occupancy needs span validation, not stacking
 
-Multiple same-edge containments are persistable, but no stack ID, stable rank,
-cumulative inset, activation routing, or reservation coordinator exists. Equal
-screen and edge views originate in `QHash::values()` and have no deterministic
-tie-break. Every layer surface independently requests the same anchor and its
-own exclusive zone. Latte's internal available-rectangle model separately uses
-the deepest footprint rather than a solved physical stack.
+Multiple partial-length containments may share an output edge when their stable
+primary-axis spans do not overlap. Alignment, maximum length, and offset place
+each view along the edge. The intended reservation policy uses the deepest
+member rather than adding member depths. Lattecotta does not assign stable
+ranks, cumulative insets, or automatic inward lanes.
 
-The required coordinator is keyed by Latte output identity and edge, not by
-monitor adjacency. Portrait, landscape, overlapping-coordinate, fully touching,
-partially touching, and separated output arrangements do not change stack
-membership. KWin supplies each output's geometry; Latte must solve only within
-the selected output rectangle. Activation ownership is one coordinator-owned
-mechanism with one or more exact eligible regions. It must not widen two
-separated partial-width docks into one continuous activation surface.
+This is a deliberate extension of the upstream UI contract. OG Latte's
+`GenericLayout::freeEdges()` removed an edge after the first view occupied it,
+so ordinary creation and movement did not present same-edge composition as a
+first-class workflow. Persisted or imported layouts could still contain
+multiple same-edge views, and the runtime had no physical stack model for them.
+Lattecotta promotes only the separated-span case to supported behavior and
+makes stable overlap invalid.
+
+The inherited runtime can also persist overlapping same-edge spans, but their
+composition and ordering are undefined. The missing authority is therefore an
+output-edge span validator and reservation aggregator, not a stack coordinator.
+It must reject or repair a stable overlap deterministically, keep separated
+spans independent, and enforce the maximum-depth reservation rule.
+
+That policy is not implemented yet. Each Always Visible view currently
+publishes its own positive layer-shell exclusive zone. KWin processes those
+surfaces independently, so same-edge zones can accumulate even when the visual
+spans are separated. The D-Bus `stacking` object reports this missing authority;
+it does not certify that the current view list is non-overlapping or
+maximum-depth-reserved.
+
+Validation is keyed by Latte output identity and edge, not by monitor adjacency.
+Portrait, landscape, overlapping-coordinate, fully touching, partially
+touching, and separated output arrangements do not change membership. KWin
+supplies each output's geometry; Latte solves only within the selected output
+rectangle. Activation ownership may use one coordinator with multiple exact
+regions, but it must not widen separated partial-length docks into one
+continuous activation surface.
 
 ### Alignment changes bypass the placement invariant
 
@@ -333,21 +354,39 @@ new alignment without normalizing a negative center offset. The QML background
 and applet layout then apply a negative edge margin and render past the output.
 Startup and external configuration writes can bypass the same invariant.
 
-### Partial-footprint peer resizing remains a separate hypothesis
+### Partial-footprint reservation mixed three ownership layers (fixed)
 
 The exact linked reproducer did not change the remote view's dock-level
 `configuredIconSize`, `effectiveIconSize`, or `availablePrimaryLength`. Its
-first divergent value was the applet-local `length` described above. This rules
-out a shared AutoSize instance or global icon cache for that reproduction.
+first divergent value was the applet-local `length` described above. This
+rules out a shared AutoSize instance or global icon cache for that
+reproduction.
 
-A separate reservation discrepancy remains plausible for independent
-perpendicular docks. Layer shell publishes an edge-wide scalar exclusive zone,
-while Latte's internal available-rectangle model applies an alignment-aware
-partial footprint. Static reading suggests one dock's alignment could change a
-neighbor's solved length without changing compositor work area, but that path
-has not yet been demonstrated by the exact independent-dock nested matrix. It
-remains a hypothesis for the stacking and placement slice, not a confirmed
-cause of the linked sizing defect.
+The separate independent-dock discrepancy is now confirmed as D153 (partial
+bottom reservation moved a separated side dock). KWin reduces one rectangular
+per-output work area for a positive layer-shell exclusive zone. The visual
+dock surface incorrectly carried that zone, so KWin placed a perpendicular
+Latte surface inside an output-wide band. Latte also rebuilt partial occupancy
+from the larger masked QWindow instead of consuming the stable background
+rectangle, then suppressed normal footprint-change notifications by comparing
+geometry after assignment.
+
+The corrected ownership split is:
+
+- `View::absoluteGeometry()` owns the stable dock footprint consumed by other
+  Latte views.
+- `Positioner::surfaceGeometry()` owns the exact visual layer-surface
+  rectangle.
+- `ScreenSpaceReservation` owns the transparent positive-exclusive surface
+  used for ordinary client work-area reservation.
+- KWin retains ownership of its rectangular per-output work area. Latte does
+  not infer output adjacency or use another output's rectangle.
+
+Every Latte visual surface carries zone -1 and exact top-left-relative
+placement, so a coarse KWin work-area band cannot move it. The 061 nested
+replay keeps a nonintersecting right dock full-height across a partial bottom
+reservation transition and compares Positioner's rectangle with KWin's actual
+rendered surface.
 
 ## Additional confirmed lifecycle hazards
 
@@ -386,12 +425,12 @@ through the wrong authority:
 | Mutable containment configuration | Unique per containment | No shared KConfig object found; blanket linked mirroring gave applet-local `length` root-owned relationship semantics | Fixed through the compile-time shared-versus-local key policy on import, live signals, Undo, and reconciliation |
 | Applet removal transaction | One logical content transaction at the relationship root | Scheduled-destruction state was mirrored into member-local transactions and persistence | Fixed; root owns Undo, members own disposable projections |
 | Edit chrome | Intentionally one reusable factory-owned ensemble | Unversioned retarget callbacks and inconsistent linked target resolution left stale edit owners | Fixed; one cancelable generation and one authoritative relationship target |
-| Geometry and sizing controllers | Unique per runtime view | No shared cache found; stale relocation callbacks crossed generations, transient screen state overrode persisted placement, and applet `length` crossed orientations | Relocation, output authority, and linked applet length fixed; independent reservation and stacking slices remain open |
+| Geometry and sizing controllers | Unique per runtime view | No shared cache found; stale relocation callbacks crossed generations, transient screen state overrode persisted placement, and applet `length` crossed orientations | Relocation, output authority, and linked applet length fixed; alignment normalization and same-edge span validation remain open |
 | Runtime relationship membership | Persistent records outlive runtime views; live members require a live root generation | Root destruction deleted persistent members, while root-only recreation stranded surviving member pointers | Fixed; teardown is nonpersistent, recreation replaces the complete eligible group root-first |
 | Cross-layout move transaction | One independent dock or a coordinated derived-only group | Explicit roots and members could move alone; stale Cut could import before later source refusal | Fixed; one persistent predicate is revalidated before any destination import |
 | Layouts-dialog clipboard | Independent snapshots for Copy; origin identity only for Cut | Copy retained a linked member's root ID while importing only that member | Fixed; Copy normalizes through `toIndependentSnapshot()` before publication |
 | Relocation completion | Every started generation either commits or cancels and reveals | Late manager refusal returned no result, so a hidden dock retained its pending layout | Fixed; checked refusal clears the full request and schedules normal completion |
-| Same-edge rank and activation regions | Shared only through a future output-edge coordinator | No authority exists, so every surface independently claims the same edge | Open |
+| Same-edge stable spans and activation regions | Shared only through an output-edge validator; view geometry remains per-view | Overlapping persisted spans have no rejection or deterministic recovery path | Open |
 
 ## Deterministic replay results
 
@@ -409,9 +448,9 @@ through the wrong authority:
 | Remove a linked applet, then restart inside Undo | A member projection could resurrect | Root and every member remain removed in runtime and persistence |
 | Invoke real dock and applet Undo | No executable relationship-aware coverage | Applet projection, full dock subtree, direct-root relationship, and reload all recover deterministically |
 
-Same-edge physical composition and final alignment bounds are deliberately not
-listed as passing. Their independent coordinator and normalization slices have
-not landed yet.
+Same-edge overlap rejection and final alignment bounds are deliberately not
+listed as passing. Their validation and normalization slices have not landed
+yet.
 
 ## Minimal architectural repair
 
@@ -431,12 +470,18 @@ not landed yet.
    rebind.
 5. Route every placement mutation through one normalization transaction for
    output, edge, semantic alignment, minimum and maximum length, and offset.
-6. Add one output-edge stack coordinator with stable persisted ranks,
-   cumulative insets, activation ownership over an exact region set, and a
-   single reservation policy.
+6. Add one output-edge span validator and reservation aggregator. It permits
+   separated partial-length members, rejects a stable overlap before placement
+   commits, recovers malformed persisted layouts deterministically, publishes
+   only the maximum required exclusive depth, and never creates an inward lane
+   or persisted rank.
 7. Keep compositor work-area reservation separate from Latte's partial
-   dock-to-dock avoidance footprint. Autosizing consumes only the final solved
-   geometry for its own view.
+   dock-to-dock avoidance footprint. This split is implemented: autosizing and
+   peer placement consume final per-view geometry, visual layer surfaces opt
+   out of scalar work-area placement, and a separate inputless surface
+   publishes each reservation. The missing same-edge aggregator must replace
+   independent positive zones with one maximum required depth while the views
+   retain independent visual geometry.
 8. Replace blanket replica configuration mirroring with explicit shared-content
    and per-view geometry projections. Applet `length` is local across both
    explicit and screen-group-derived members. Independent duplicates share no
@@ -453,8 +498,9 @@ not landed yet.
    registrations, and persistent context-menu identity.
 2. [ ] Placement normalization and bounded visible geometry across all edges and
    semantic alignments.
-3. [ ] Same-edge stack solving, persistence, layer-shell application, reserved
-   space, and activation routing.
+3. [ ] Same-edge stable-span validation, deterministic persistence recovery,
+   maximum-depth exclusive-zone aggregation, and exact activation-region
+   routing.
 4. [x] Multi-view nested-KWin fixtures and deterministic operation replay across
    duplication, movement, orientation, alignment, editing, destruction, and
    reload.
@@ -564,25 +610,25 @@ merge.
   explicit members remain because one-containment Plasma Undo cannot restore
   the complete relationship. A group-wide transaction and root-removal choice
   dialog remain future lifecycle work.
-- Which same-edge reservation policy best matches intended daily-driver
-  behavior for mixed visibility modes. The stack still requires deterministic
-  physical order under every policy.
-- Whether partial dock-to-dock corner avoidance should remain under Wayland or
-  be replaced by the compositor's edge-wide work-area contract. The current
-  split cannot remain implicit.
+- How mixed visibility modes contribute to one edge's maximum reservation
+  depth without coupling otherwise independent views.
+- How the same-edge validator should recover an overlapping persisted layout
+  without data loss. KWin's ordinary client work area remains rectangular even
+  when Latte's own dock-to-dock avoidance uses exact regions.
 
 ## Current release severity
 
-- **Release blocker:** missing same-edge stack order, cumulative inset,
-  reservation, and exact activation-region ownership. Supported layouts can
-  overlap or reserve space nondeterministically.
+- **Beta blocker:** same-edge stable overlaps are not rejected or recovered
+  deterministically, and positive exclusive zones are not aggregated to the
+  maximum depth. Separated partial-length views are the intended model, but
+  current overlap and work-area reservation can still compose unpredictably.
 - **Release blocker:** Start and End alignment can leave the rendered rectangle
   outside its selected output because alignment bypasses placement
   normalization.
-- **Beta blocker:** the partial-footprint and layer-shell reservation
-  disagreement may resize an independent perpendicular dock after a peer
-  alignment change. Static ownership is inconsistent, but the independent-dock
-  executable matrix still has to confirm or reject this separate hypothesis.
+- **Known issue:** KWin exposes one rectangular per-output work area, so a
+  partial Latte reservation still affects ordinary maximized application
+  geometry across that output edge. Latte-owned dock placement uses exact
+  regions and no longer inherits that scalar band.
 - **Known issue:** linked members have no Detach action or relationship-aware
   root-removal choice dialog. Linked roots remain protected until their
   explicit members are removed. Enabling root removal without one group-wide

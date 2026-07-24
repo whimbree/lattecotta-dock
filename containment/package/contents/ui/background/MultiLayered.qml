@@ -1,6 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2016 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2016 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -30,6 +31,7 @@ BackgroundProperties{
     }
 
     readonly property alias panelBackgroundSvg: solidBackground
+    readonly property int customShadowPaintMargin: overlayedBackground.shadowPaintMargin
 
     //! Layer 0: Multi-Layer container in order to provide a consistent final element that acts
     //! as a single entity/background
@@ -47,15 +49,15 @@ BackgroundProperties{
     hasTopBorder: hasAllBorders || ((solidBackground.enabledBorders & KSvg.FrameSvg.TopBorder) > 0)
     hasBottomBorder: hasAllBorders || ((solidBackground.enabledBorders & KSvg.FrameSvg.BottomBorder) > 0)
 
-    shadows.left: hasLeftBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? customShadow : shadowsSvgItem.margins.left) : 0
-    shadows.right: hasRightBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? customShadow : shadowsSvgItem.margins.right) : 0
-    shadows.top: hasTopBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? customShadow : shadowsSvgItem.margins.top) : 0
-    shadows.bottom: hasBottomBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? customShadow : shadowsSvgItem.margins.bottom) : 0
+    shadows.left: hasLeftBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? barLine.customShadowPaintMargin : shadowsSvgItem.margins.left) : 0
+    shadows.right: hasRightBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? barLine.customShadowPaintMargin : shadowsSvgItem.margins.right) : 0
+    shadows.top: hasTopBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? barLine.customShadowPaintMargin : shadowsSvgItem.margins.top) : 0
+    shadows.bottom: hasBottomBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? barLine.customShadowPaintMargin : shadowsSvgItem.margins.bottom) : 0
 
-    shadows.fixedLeft: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? customShadow : shadowsSvgItem.fixedMargins.left
-    shadows.fixedRight: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? customShadow : shadowsSvgItem.fixedMargins.right
-    shadows.fixedTop: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? customShadow : shadowsSvgItem.fixedMargins.top
-    shadows.fixedBottom: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? customShadow : shadowsSvgItem.fixedMargins.bottom
+    shadows.fixedLeft: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? barLine.customShadowPaintMargin : shadowsSvgItem.fixedMargins.left
+    shadows.fixedRight: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? barLine.customShadowPaintMargin : shadowsSvgItem.fixedMargins.right
+    shadows.fixedTop: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? barLine.customShadowPaintMargin : shadowsSvgItem.fixedMargins.top
+    shadows.fixedBottom: (customDefShadowIsEnabled || customUserShadowIsEnabled) ? barLine.customShadowPaintMargin : shadowsSvgItem.fixedMargins.bottom
 
     //! it can accept negative values in DockMode
     screenEdgeMargin: root.screenEdgeMarginEnabled ? metrics.margin.screenEdge - shadows.tailThickness : -shadows.tailThickness
@@ -102,18 +104,41 @@ BackgroundProperties{
             return root.isVertical ? root.height : root.width;
         }
 
-        if (myView.alignment === LatteCore.Types.Justify) {
-            return root.maxLength;
+        const maximumLength = root.maxLength;
+        const shadowMarginsLength = barLine.totals.shadowsLength;
+        const requestedLength = myView.alignment === LatteCore.Types.Justify
+                ? Math.max(0, maximumLength - shadowMarginsLength)
+                : Math.max(root.minLength,
+                           layoutsContainerItem.mainLayout.length + barLine.totals.paddingsLength);
+
+        if (maximumLength <= 0) {
+            //! Startup has not published a usable view span yet. The dock is
+            //! offscreen in this state; the settled binding reevaluates once
+            //! the positioner supplies real geometry.
+            return requestedLength;
         }
 
-        return Math.max(root.minLength, layoutsContainerItem.mainLayout.length + totals.paddingsLength);
+        const viewPrimaryLength = Plasmoid.formFactor === PlasmaCore.Types.Horizontal
+                ? barLine.parent.width : barLine.parent.height;
+        if (viewPrimaryLength <= 0) {
+            //! The positioner has not published the owning canvas yet.
+            return requestedLength;
+        }
+
+        //! maxLength owns the stable layout budget. Parabolic zoom is a
+        //! transient presentation, so its background may grow beyond that
+        //! configured span, but the complete painted visual must remain inside
+        //! the output-owned canvas.
+        return backgroundStateResolver.dockBackgroundLength(requestedLength,
+                                                             viewPrimaryLength,
+                                                             shadowMarginsLength);
     }
 
     thickness: {
         if (root.behaveAsPlasmaPanel) {
             return metrics.totals.thickness;
         } else {
-            return Math.min(metrics.totals.thickness, background.totals.visualThickness);
+            return Math.min(metrics.totals.thickness, barLine.totals.visualThickness);
         }
     }
 
@@ -122,48 +147,59 @@ BackgroundProperties{
             return 0;
         }
 
-        if (root.isHorizontal) {
+        if (Plasmoid.formFactor === PlasmaCore.Types.Horizontal) {
             if (myView.alignment === LatteCore.Types.Left) {
-                return root.offset - shadows.left;
+                return root.offset - barLine.shadows.left;
             } else if (myView.alignment === LatteCore.Types.Right) {
-                return root.offset - shadows.right;
+                return root.offset - barLine.shadows.right;
             }
         }
 
-        if (root.isVertical) {
+        if (Plasmoid.formFactor === PlasmaCore.Types.Vertical) {
             if (myView.alignment === LatteCore.Types.Top) {
-                return root.offset - shadows.top;
+                return root.offset - barLine.shadows.top;
             } else if (myView.alignment === LatteCore.Types.Bottom) {
-                return root.offset - shadows.bottom;
+                return root.offset - barLine.shadows.bottom;
             }
         }
 
-        var parabolicOffseting = myView.alignment === LatteCore.Types.Center ? layoutsContainerItem.mainLayout.parabolicOffsetting : 0;
-        return root.offset + parabolicOffseting;
+        if (myView.alignment === LatteCore.Types.Justify) {
+            return 0;
+        }
+
+        if (myView.alignment !== LatteCore.Types.Center) {
+            return root.offset;
+        }
+
+        const requestedOffset = root.offset + layoutsContainerItem.mainLayout.parabolicOffsetting;
+        const viewPrimaryLength = Plasmoid.formFactor === PlasmaCore.Types.Horizontal
+                ? barLine.parent.width : barLine.parent.height;
+        if (viewPrimaryLength < barLine.totals.visualLength) {
+            //! Same explicit startup state as the length binding above.
+            return requestedOffset;
+        }
+
+        return backgroundStateResolver.centeredDockOffset(requestedOffset,
+                                                          barLine.totals.visualLength,
+                                                          viewPrimaryLength);
     }
 
     totals.visualThickness: {
-        var itemMargins = 2*metrics.margin.tailThickness;
-        var maximumItem = metrics.iconSize + itemMargins;
-
-        if (totals.minThickness < maximumItem) {
-            maximumItem = maximumItem - totals.minThickness;
-        }
-
-        var percentage = LatteCore.WindowSystem.compositingActive ? Plasmoid.configuration.panelSize/100 : 1;
-        return Math.max(totals.minThickness, totals.minThickness + (percentage*maximumItem));
+        const itemThickness = metrics.iconSize + 2 * metrics.margin.tailThickness;
+        const sizeFraction = LatteCore.WindowSystem.compositingActive
+                ? Plasmoid.configuration.panelSize / 100 : 1;
+        return backgroundStateResolver.visualThickness(totals.minThickness,
+                                                        itemThickness,
+                                                        sizeFraction);
     }
 
     totals.visualMaxThickness: {
-        var itemMargins = 2*metrics.margin.maxTailThickness;
-        var maximumItem = metrics.maxIconSize + itemMargins;
-
-        if (totals.minThickness < maximumItem) {
-            maximumItem = maximumItem - totals.minThickness;
-        }
-
-        var percentage = LatteCore.WindowSystem.compositingActive ? Plasmoid.configuration.panelSize/100 : 1;
-        return Math.max(totals.minThickness, totals.minThickness + (percentage*maximumItem));
+        const itemThickness = metrics.maxIconSize + 2 * metrics.margin.maxTailThickness;
+        const sizeFraction = LatteCore.WindowSystem.compositingActive
+                ? Plasmoid.configuration.panelSize / 100 : 1;
+        return backgroundStateResolver.visualThickness(totals.minThickness,
+                                                        itemThickness,
+                                                        sizeFraction);
     }
 
     totals.visualLength: {
@@ -228,7 +264,6 @@ BackgroundProperties{
     readonly property bool customShadowedRectangleIsEnabled: customRadiusIsEnabled || (customDefShadowIsEnabled || customUserShadowIsEnabled)
 
     readonly property bool customShadowIsSupported: LatteCore.WindowSystem.compositingActive
-                                                    && kirigamiLibraryIsFound
 
     //!current shadow state but do not change other values of normal mode, for example if a Dock hides its screen edge thickness
     //!shouldn't change the fact that customShadowedRectangle is still used
@@ -236,7 +271,7 @@ BackgroundProperties{
     readonly property bool customDefShadowIsEnabled: customShadowIsSupported && !customUserShadowIsEnabled && customRadiusIsEnabled
     readonly property bool customUserShadowIsEnabled: customShadowIsSupported && Plasmoid.configuration.backgroundShadowSize >= 0
 
-    readonly property bool customRadiusIsEnabled: kirigamiLibraryIsFound && Plasmoid.configuration.backgroundRadius >= 0
+    readonly property bool customRadiusIsEnabled: Plasmoid.configuration.backgroundRadius >= 0
 
     readonly property int customRadius: {
         if (customDefShadowIsEnabled && !customRadiusIsEnabled && themeExtendedBackground) {
@@ -528,7 +563,8 @@ BackgroundProperties{
 
         backgroundColor: colorizerManager.backgroundColor
         shadowColor: customShadowColor
-        shadowSize: customShadowIsEnabled ? customShadow : 0
+        shadowEnabled: customShadowIsEnabled
+        shadowSize: Math.max(0, customShadow)
 
         roundness: {
             if (customRadiusIsEnabled) {
@@ -905,5 +941,3 @@ BackgroundProperties{
     ]
     //END states
 }
-
-

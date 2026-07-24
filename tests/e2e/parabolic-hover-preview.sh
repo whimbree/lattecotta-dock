@@ -38,6 +38,14 @@ cleanup_konsole() {
 }
 trap cleanup_konsole EXIT
 
+capture_coverage_failure() {
+    local phase="$1"
+    if [[ "${E2E_MODE:-}" == "nested" ]]; then
+        e2e_screenshot "$E2E_ARTIFACTS/parabolic-coverage-$phase.png" \
+            include-cursor b false >/dev/null 2>&1 || true
+    fi
+}
+
 #! let the dock settle after konsole's task appears: adding a window task
 #! reflows the row and runs the zoom-in animation, and a glide driven while
 #! that animation is live hits the hoverEnabled gate far more often (the
@@ -54,6 +62,11 @@ tasks_view="$(e2e_tasks_view)" || e2e_fail "no tasks view"
 dock="$(e2e_view_field "$tasks_view" '"%d %d %d %d" % tuple(v["absoluteGeometry"])')"
 [[ -n "$dock" ]] || e2e_fail "no geometry for view $tasks_view"
 read -r dx dy dw dh <<< "$dock"
+
+if ! e2e_assert_applets_covered_by_background "$tasks_view"; then
+    capture_coverage_failure rest
+    e2e_fail "the resting applet row escapes its background or output canvas"
+fi
 
 #! the glide must END on a window-owning task or no preview can appear;
 #! resolve the konsole icon's rest position before the pointer distorts
@@ -97,11 +110,28 @@ for _ in $(seq 1 "$max_attempts"); do
     #! finish over the konsole task so the preview delay elapses on it
     "$E2E_FAKEPOINTER" move "$konx" "$hovery"
     sleep 1.1   #! previewsDelay (throwaway default 650ms) + build + margin
-    if e2e_dumpwins | grep -qE "$preview_re"; then mapped=1; break; fi
+    if e2e_dumpwins | grep -qE "$preview_re"; then
+        if ! e2e_assert_applets_covered_by_background "$tasks_view"; then
+            capture_coverage_failure hover
+            e2e_fail "the hovered applet row escapes its background or output canvas"
+        fi
+        mapped=1
+        break
+    fi
 done
 
 #! leave the dock so zoom restores and the preview hides
 "$E2E_FAKEPOINTER" move "$konx" $(( hovery - 400 )); sleep 1.2
+
+#! Auto-hidden views have no painted background after the pointer leaves.
+#! Always-visible fixtures still provide the final rest leg, which catches a
+#! stale hover generation that fails to restore the composition.
+if [[ "$(e2e_view_field "$tasks_view" 'str(v["isHidden"]).lower()')" == false ]]; then
+    if ! e2e_assert_applets_covered_by_background "$tasks_view"; then
+        capture_coverage_failure restored
+        e2e_fail "the restored applet row escapes its background or output canvas"
+    fi
+fi
 
 if (( mapped == 1 )); then
     echo "parabolic glide engaged; preview dialog mapped (layer=6)"

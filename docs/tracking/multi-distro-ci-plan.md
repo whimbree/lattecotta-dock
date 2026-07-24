@@ -108,7 +108,7 @@ distro.
   wayland, mesa lavapipe / vulkan-loader + validation layers, cmake,
   ninja, gcc, jq, fonts, the imgdiff deps), builds the port with cmake
   against the DISTRO Qt/KF6 (not nix), and runs the headless gates.
-- **Distro matrix** (the Plasma 6.5 / Qt 6.6 / KF6 6.5 floors in
+- **Distro matrix** (the Plasma 6.5 / Qt 6.9 / KF6 6.5 floors in
   CMakeLists.txt are a hard selection constraint). Two axes that are
   easy to conflate: the FIVE PACKAGE FORMATS (deb/rpm/PKGBUILD/ebuild/
   xbps, Phase F) already blanket the whole ecosystem, so "add every
@@ -358,14 +358,14 @@ pass on every distro regardless of tier.
       (tracks next stable), so the tag is stable enough; a digest pin can
       follow once CI caches the base. OPENSUSE TUMBLEWEED floor CHECKED
       in-container 2026-07-17 and recorded in the Containerfile comment: Qt
-      6.11.1 / KF6 6.28.0 / Plasma+kwin 6.7.3, well past the >=6.5/>=6.6
+      6.11.1 / KF6 6.28.0 / Plasma+kwin 6.7.3, past the >=6.5/>=6.9
       floor. Tumbleweed is rolling (opensuse/tumbleweed:latest for the
       prototype; an OBS/download.o.o archived-repo snapshot pin is TBD,
       same open item as Arch). FEDORA PINNED:
       registry.fedoraproject.org/fedora:43. Floor check (in-container dnf +
       rpm -q, 2026-07-17): libplasma 6.7.2 / plasma-workspace 6.7.2 /
       plasma-activities 6.7.2 / layer-shell-qt 6.7.2 / kf6-kcoreaddons
-      6.28.0 / qt6-qtbase 6.10.3 - all meet Qt>=6.6, KF6>=6.5,
+      6.28.0 / qt6-qtbase 6.10.3 - all meet Qt>=6.9, KF6>=6.5,
       libplasma>=6.5. fedora:42 ships Plasma 6.3.x (below floor), so 43 is
       the earliest qualifying Fedora stable; did NOT use ng's fedora:44 /
       USTC-mirror lines. KDE NEON PINNED:
@@ -379,7 +379,7 @@ pass on every distro regardless of tier.
       (same as Arch/Tumbleweed). VOID floor CHECKED in-container 2026-07-17 and
       recorded in the Containerfile comment: Qt 6.11.1 / KF6 6.25.0 /
       libplasma+kwin 6.6.3 / Mesa lavapipe 26.1.5 (LLVM 21.1.7), well past
-      the >=6.5/>=6.6 floor. Void is rolling and has no dated archive
+      the >=6.5/>=6.9 floor. Void is rolling and has no dated archive
       (ghcr.io/void-linux/void-glibc-full:latest for the prototype; the
       -full image's frozen packages are stale until the leg's first
       xbps-install -Suy sync, which is the initial RUN step), so a
@@ -390,7 +390,7 @@ pass on every distro regardless of tier.
       binaries) + binhost snapshot
       distfiles.gentoo.org/releases/amd64/binpackages/23.0/x86-64. Floor check
       (in-container, 2026-07-17): Qt 6.11.1 / KF6 6.27.0 / libplasma 6.6.6 /
-      plasma-workspace 6.6.6 / kwin 6.6.6 / mesa 26.0.8 - all meet Qt>=6.6,
+      plasma-workspace 6.6.6 / kwin 6.6.6 / mesa 26.0.8 - all meet Qt>=6.9,
       KF6>=6.5, libplasma>=6.5. Both the stage3 tag and the binhost path roll
       (Gentoo is a rolling source distro); a binhost REPO_REVISIONS/snapshot
       pin is TBD, the same open item as Arch/Tumbleweed. All 8 base tags

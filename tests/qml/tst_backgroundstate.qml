@@ -62,6 +62,34 @@ TestCase {
         compare(area.height, 1);
     }
 
+    function test_zoomBackgroundFollowsContentInsideOwningCanvas() {
+        //! The 2110 px configured resting background may temporarily follow
+        //! the live 2239 px hovered row inside its 2560 px output.
+        compare(resolver.dockBackgroundLength(2110, 2560, 40), 2110);
+        compare(resolver.dockBackgroundLength(2239, 2560, 40), 2239);
+        compare(resolver.centeredDockOffset(-34, 2279, 2560), -34);
+
+        //! The complete visual still stops at the actual output-owned canvas.
+        compare(resolver.dockBackgroundLength(2540, 2560, 40), 2520);
+        compare(resolver.dockBackgroundLength(900, 1240, 40), 900);
+        compare(resolver.centeredDockOffset(80, 940, 1240), 80);
+    }
+
+    function test_dockAlignmentsShareTheCompleteVisualFit() {
+        //! Justify reserves its shadows before calling the resolver; center
+        //! and the four anchored alignments may request a content-driven span.
+        compare(resolver.dockBackgroundLength(1200, 1240, 40), 1200);
+        compare(resolver.dockBackgroundLength(900, 1240, 40), 900);
+    }
+
+    function test_smallItemsDoNotDoubleTheThemeMinimumThickness() {
+        compare(resolver.visualThickness(28, 24, 1), 28);
+        compare(resolver.visualThickness(28, 26, 1), 28);
+        compare(resolver.visualThickness(28, 28, 1), 28);
+        compare(resolver.visualThickness(28, 30, 1), 30);
+        compare(resolver.visualThickness(28, 30, 0.5), 29);
+    }
+
     function test_edgePaddingScalesRoundnessBeyondMargins() {
         //! (radius 12 - margin 2) * factor 0.5
         compare(resolver.edgePadding(true, true, true, 12.0, 0.0, 0.0, 2.0, 0.5), 5.0);

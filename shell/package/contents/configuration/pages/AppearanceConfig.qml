@@ -22,6 +22,7 @@ PlasmaComponents.Page {
     id: page
     width: content.width + content.Layout.leftMargin * 2
     height: content.height + Kirigami.Units.smallSpacing * 2
+    readonly property real optionsWidth: dialog.optionsWidth
 
     TextMetrics {
         id: defaultFontMetrics
@@ -63,7 +64,7 @@ PlasmaComponents.Page {
                 spacing: 0
 
                 RowLayout {
-                    Layout.minimumWidth: dialog.optionsWidth
+                    Layout.minimumWidth: page.optionsWidth
                     Layout.maximumWidth: Layout.minimumWidth
                     spacing: Kirigami.Units.smallSpacing
                     enabled: proportionSizeSlider.value === 1
@@ -81,7 +82,6 @@ PlasmaComponents.Page {
                         from: 16
                         to: 512
                         stepSize: dialog.advancedLevel || (plasmoid.configuration.iconSize % 8 !== 0) || dialog.viewIsPanel ? 2 : 8
-                        wheelEnabled: false
 
                         function updateIconSize() {
                             if (!pressed) {
@@ -118,7 +118,7 @@ PlasmaComponents.Page {
                     visible: dialog.advancedLevel || plasmoid.configuration.proportionIconSize>0
 
                     PlasmaComponents.Label {
-                        text: i18nc("relative size", "Relative size")
+                        text: i18nc("icon size relative to screen height", "Screen height")
                         horizontalAlignment: Text.AlignLeft
                         enabled: proportionSizeSlider.value !== proportionSizeSlider.from
                     }
@@ -130,7 +130,6 @@ PlasmaComponents.Page {
                         from: 1.0
                         to: (latteView.visibility.mode === LatteCore.Types.SidebarOnDemand || latteView.visibility.mode === LatteCore.Types.SidebarAutoHide)  ? 25 : 12
                         stepSize: 0.1
-                        wheelEnabled: false
 
                         function updateProportionIconSize() {
                             if (!pressed) {
@@ -157,14 +156,14 @@ PlasmaComponents.Page {
 
                     PlasmaComponents.Label {
                         id: absoluteSizeLbl
-                        Layout.minimumWidth: defaultFontMetrics.advanceWidth * 4
-                        Layout.maximumWidth: defaultFontMetrics.advanceWidth * 4
+                        Layout.minimumWidth: defaultFontMetrics.advanceWidth * 6
+                        Layout.maximumWidth: defaultFontMetrics.advanceWidth * 6
 
                         text: proportionSizeSlider.value !== proportionSizeSlider.from ?
                                   (absoluteSizeLblMouseArea.containsMouse ?
-                                       i18nc("number in pixels, e.g. 64 px.","%1 px.", latteView.metrics.maxIconSize) :
-                                       i18nc("number in percentage, e.g. 85 %","%1 %", proportionSizeSlider.value.toFixed(1))) :
-                                  i18nc("no value in percentage","--- %")
+                                       i18nc("percentage of screen height, e.g. 5.0 %", "%1 %", proportionSizeSlider.value.toFixed(1)) :
+                                       i18nc("resolved icon size in pixels, e.g. 64 px.", "%1 px.", latteView.metrics.maxIconSize)) :
+                                  i18nc("screen-relative icon sizing is disabled", "Off")
                         horizontalAlignment: Text.AlignRight
                         enabled: proportionSizeSlider.value !== proportionSizeSlider.from
 
@@ -176,8 +175,17 @@ PlasmaComponents.Page {
                     }
                 }
 
+                PlasmaComponents.Label {
+                    Layout.minimumWidth: page.optionsWidth
+                    Layout.maximumWidth: Layout.minimumWidth
+                    visible: proportionSizeSlider.value !== proportionSizeSlider.from
+                    text: i18n("Turn Screen height off to use Absolute size.")
+                    wrapMode: Text.WordWrap
+                    opacity: 0.7
+                }
+
                 RowLayout {
-                    Layout.minimumWidth: dialog.optionsWidth
+                    Layout.minimumWidth: page.optionsWidth
                     Layout.maximumWidth: Layout.minimumWidth
                     spacing: Kirigami.Units.smallSpacing
                     enabled: LatteCore.WindowSystem.compositingActive && plasmoid.configuration.animationsEnabled
@@ -194,7 +202,6 @@ PlasmaComponents.Page {
                         from: 1
                         to: 2.25
                         stepSize: 0.05
-                        wheelEnabled: false
 
                         function updateZoomLevel() {
                             if (!pressed) {
@@ -248,6 +255,7 @@ PlasmaComponents.Page {
                                                                offsetLbl.implicitWidth)
 
                 RowLayout {
+                    id: maxLengthRow
                     Layout.minimumWidth: dialog.optionsWidth
                     Layout.maximumWidth: Layout.minimumWidth
                     spacing: Kirigami.Units.smallSpacing
@@ -265,7 +273,6 @@ PlasmaComponents.Page {
                         from: 0
                         to: 100
                         stepSize: 1
-                        wheelEnabled: false
 
                         readonly property int localMinValue: 1
 
@@ -375,6 +382,7 @@ PlasmaComponents.Page {
                 }
 
                 RowLayout {
+                    id: minLengthRow
                     Layout.minimumWidth: dialog.optionsWidth
                     Layout.maximumWidth: Layout.minimumWidth
                     spacing: Kirigami.Units.smallSpacing
@@ -394,7 +402,6 @@ PlasmaComponents.Page {
                         from: 0
                         to: 100
                         stepSize: 1
-                        wheelEnabled: false
 
                         //! config drives the handle through a proxy property, not a
                         //! declarative `value:` binding, so a drag cannot clobber the
@@ -475,6 +482,7 @@ PlasmaComponents.Page {
                 }
 
                 RowLayout {
+                    id: offsetRow
                     Layout.minimumWidth: dialog.optionsWidth
                     Layout.maximumWidth: Layout.minimumWidth
                     spacing: Kirigami.Units.smallSpacing
@@ -491,7 +499,6 @@ PlasmaComponents.Page {
                         id: offsetSlider
                         Layout.fillWidth: true
                         stepSize: 1
-                        wheelEnabled: false
 
                         //! these properties are used in order to not update view_offset incorrectly when the primary config view
                         //! is changing between different views
@@ -665,7 +672,6 @@ PlasmaComponents.Page {
                         from: 0
                         to: marginsColumn.maxMargin
                         stepSize: 1
-                        wheelEnabled: false
 
                         onPressedChanged: {
                             if (!pressed) {
@@ -710,7 +716,6 @@ PlasmaComponents.Page {
                         from: 0
                         to: 60
                         stepSize: 1
-                        wheelEnabled: false
                         minimumInternalValue: latteView.indicator.info.minThicknessPadding * 100
 
                         onPressedChanged: {
@@ -757,7 +762,6 @@ PlasmaComponents.Page {
                         from: -1
                         to: 256
                         stepSize: 1
-                        wheelEnabled: false
 
                         onPressedChanged: {
                             if (!pressed) {
@@ -949,7 +953,6 @@ PlasmaComponents.Page {
                         from: 0
                         to: 100
                         stepSize: 1
-                        wheelEnabled: false
 
                         function updatePanelSize() {
                             if (!pressed)
@@ -999,7 +1002,6 @@ PlasmaComponents.Page {
                         from: -1
                         to: 100
                         stepSize: 1
-                        wheelEnabled: false
 
                         function updatePanelTransparency() {
                             if (!pressed)
@@ -1048,7 +1050,6 @@ PlasmaComponents.Page {
                         from: -1
                         to: 50
                         stepSize: 1
-                        wheelEnabled: false
 
                         function updateBackgroundRadius() {
                             if (!pressed) {
@@ -1091,7 +1092,6 @@ PlasmaComponents.Page {
                         from: -1
                         to: 50
                         stepSize: 1
-                        wheelEnabled: false
 
                         function updateBackgroundShadowSize() {
                             if (!pressed) {

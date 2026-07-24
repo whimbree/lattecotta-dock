@@ -343,6 +343,9 @@ void DbusReportsTest::rectSerialization()
     QCOMPARE(json.at(1).toInt(), -20);
     QCOMPARE(json.at(2).toInt(), 300);
     QCOMPARE(json.at(3).toInt(), 44);
+
+    const QJsonArray margins = serializeMargins(QMargins(1, 2, 3, 4));
+    QCOMPARE(margins, QJsonArray({1, 2, 3, 4}));
 }
 
 //! one fully populated record, so every field name and value type a D-Bus
@@ -758,6 +761,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     record.absoluteGeometry = QRect(5, 6, 7, 8);
     record.localGeometry = QRect(9, 10, 11, 12);
     record.screenGeometry = QRect(0, 0, 2560, 1440);
+    record.surfaceGeometry = QRect(0, 40, 384, 1360);
     record.canvasGeometry = QRect(13, 14, 15, 16);
     record.effectsRect = QRect(17, 18, 19, 20);
     record.appletsLayoutGeometry = QRect(21, 22, 23, 24);
@@ -766,6 +770,24 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     record.appliedInputMask = QRect(33, 34, 35, 36);
     record.strutsThickness = 48;
     record.publishedStruts = QRect(0, 0, 48, 1440);
+    record.layerShellPresent = true;
+    record.layerShellAnchors = {
+        QStringLiteral("top"),
+        QStringLiteral("bottom"),
+        QStringLiteral("left")};
+    record.layerShellMargins = QMargins(0, 40, 0, 40);
+    record.layerShellExclusiveEdge = QStringLiteral("left");
+    record.layerShellExclusiveZone = 48;
+    record.reservationSurfacePresent = true;
+    record.reservationGeometry = QRect(0, 40, 48, 1360);
+    record.reservationWindowGeometry = QRect(0, 40, 1, 1360);
+    record.reservationLayerShellAnchors = {
+        QStringLiteral("top"),
+        QStringLiteral("bottom"),
+        QStringLiteral("left")};
+    record.reservationLayerShellMargins = QMargins(0, 40, 0, -40);
+    record.reservationLayerShellExclusiveEdge = QStringLiteral("left");
+    record.reservationLayerShellExclusiveZone = 48;
     record.visibilityMode = Types::DodgeActive;
     record.isHidden = true;
     record.inStartup = true;
@@ -800,8 +822,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(sortedKeys(root), (QStringList{
         QStringLiteral("globalConfigureAppletsMode"), QStringLiteral("schemaVersion"),
         QStringLiteral("snapshotSequence"), QStringLiteral("stacking"), QStringLiteral("views")}));
-    QCOMPARE(DockSystemSnapshot::SchemaVersion, 2);
-    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 2);
+    QCOMPARE(DockSystemSnapshot::SchemaVersion, 3);
+    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 3);
     QCOMPARE(root.value(QStringLiteral("snapshotSequence")).toString(), QStringLiteral("41"));
     QCOMPARE(root.value(QStringLiteral("globalConfigureAppletsMode")).toBool(), true);
     const QJsonValue stackingValue = root.value(QStringLiteral("stacking"));
@@ -812,7 +834,9 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(stacking.value(QStringLiteral("available")).type(), QJsonValue::Bool);
     QCOMPARE(stacking.value(QStringLiteral("reason")).type(), QJsonValue::String);
     QCOMPARE(stacking.value(QStringLiteral("available")).toBool(), false);
-    QVERIFY(!stacking.value(QStringLiteral("reason")).toString().isEmpty());
+    QCOMPARE(stacking.value(QStringLiteral("reason")).toString(),
+             QStringLiteral("Inward same-edge stacking is unsupported; "
+                            "stable-span overlap is not yet rejected."));
 
     requireJsonType(root, QStringLiteral("schemaVersion"), QJsonValue::Double);
     requireJsonType(root, QStringLiteral("snapshotSequence"), QJsonValue::String);
@@ -834,7 +858,10 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("inReadyState"), QStringLiteral("inRelocationAnimation"),
         QStringLiteral("inRelocationShowing"), QStringLiteral("inStartup"),
         QStringLiteral("inputMask"), QStringLiteral("isHidden"),
-        QStringLiteral("isOffScreen"), QStringLiteral("layout"),
+        QStringLiteral("isOffScreen"),
+        QStringLiteral("layerShellAnchors"), QStringLiteral("layerShellExclusiveEdge"),
+        QStringLiteral("layerShellExclusiveZone"), QStringLiteral("layerShellMargins"),
+        QStringLiteral("layerShellPresent"), QStringLiteral("layout"),
         QStringLiteral("linkPlacement"), QStringLiteral("linkedDockIds"),
         QStringLiteral("localGeometry"), QStringLiteral("logicalDockId"),
         QStringLiteral("maskRect"), QStringLiteral("maximumLengthRatio"),
@@ -843,11 +870,20 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("onPrimary"), QStringLiteral("orientation"),
         QStringLiteral("originalDockId"), QStringLiteral("persistentDockId"),
         QStringLiteral("publishedStruts"), QStringLiteral("relationship"),
-        QStringLiteral("relocationGeneration"), QStringLiteral("runtimeViewId"),
+        QStringLiteral("relocationGeneration"),
+        QStringLiteral("reservationGeometry"),
+        QStringLiteral("reservationLayerShellAnchors"),
+        QStringLiteral("reservationLayerShellExclusiveEdge"),
+        QStringLiteral("reservationLayerShellExclusiveZone"),
+        QStringLiteral("reservationLayerShellMargins"),
+        QStringLiteral("reservationSurfacePresent"),
+        QStringLiteral("reservationWindowGeometry"),
+        QStringLiteral("runtimeViewId"),
         QStringLiteral("screen"),
         QStringLiteral("screenGeometry"), QStringLiteral("screenId"),
         QStringLiteral("screensGroup"), QStringLiteral("settingsWindowShown"),
-        QStringLiteral("strutsThickness"), QStringLiteral("type"),
+        QStringLiteral("strutsThickness"), QStringLiteral("surfaceGeometry"),
+        QStringLiteral("type"),
         QStringLiteral("visibilityMode"), QStringLiteral("windowGeometry")}));
     QCOMPARE(view.value(QStringLiteral("runtimeViewId")).toString(), QStringLiteral("19"));
     QCOMPARE(view.value(QStringLiteral("persistentDockId")).toInt(), 7);
@@ -860,6 +896,26 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(view.value(QStringLiteral("configuredIconSize")).toInt(), 64);
     QCOMPARE(view.value(QStringLiteral("effectiveIconSize")).toInt(), 52);
     QCOMPARE(view.value(QStringLiteral("availablePrimaryLength")).toInt(), 900);
+    QCOMPARE(view.value(QStringLiteral("surfaceGeometry")).toArray(),
+             serializeRect(record.surfaceGeometry));
+    QCOMPARE(view.value(QStringLiteral("layerShellAnchors")).toArray(),
+             QJsonArray::fromStringList(record.layerShellAnchors));
+    QCOMPARE(view.value(QStringLiteral("layerShellMargins")).toArray(),
+             serializeMargins(record.layerShellMargins));
+    QCOMPARE(view.value(QStringLiteral("layerShellExclusiveEdge")).toString(),
+             QStringLiteral("left"));
+    QCOMPARE(view.value(QStringLiteral("layerShellExclusiveZone")).toInt(), 48);
+    QCOMPARE(view.value(QStringLiteral("reservationGeometry")).toArray(),
+             serializeRect(record.reservationGeometry));
+    QCOMPARE(view.value(QStringLiteral("reservationWindowGeometry")).toArray(),
+             serializeRect(record.reservationWindowGeometry));
+    QCOMPARE(view.value(QStringLiteral("reservationLayerShellAnchors")).toArray(),
+             QJsonArray::fromStringList(record.reservationLayerShellAnchors));
+    QCOMPARE(view.value(QStringLiteral("reservationLayerShellMargins")).toArray(),
+             serializeMargins(record.reservationLayerShellMargins));
+    QCOMPARE(view.value(QStringLiteral("reservationLayerShellExclusiveEdge")).toString(),
+             QStringLiteral("left"));
+    QCOMPARE(view.value(QStringLiteral("reservationLayerShellExclusiveZone")).toInt(), 48);
     QCOMPARE(view.value(QStringLiteral("effectsRect")).toArray(), serializeRect(record.effectsRect));
     QCOMPARE(view.value(QStringLiteral("appletsLayoutGeometry")).toArray(), serializeRect(record.appletsLayoutGeometry));
     QCOMPARE(view.value(QStringLiteral("visibilityMode")).toString(), QStringLiteral("dodgeActive"));
@@ -886,27 +942,38 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("linkPlacement"),
         QStringLiteral("screensGroup"), QStringLiteral("layout"), QStringLiteral("screen"),
         QStringLiteral("type"), QStringLiteral("edge"), QStringLiteral("orientation"),
-        QStringLiteral("alignment"), QStringLiteral("visibilityMode")};
+        QStringLiteral("alignment"), QStringLiteral("visibilityMode"),
+        QStringLiteral("layerShellExclusiveEdge"),
+        QStringLiteral("reservationLayerShellExclusiveEdge")};
     const QStringList numberFields{
         QStringLiteral("persistentDockId"), QStringLiteral("logicalDockId"),
         QStringLiteral("originalDockId"), QStringLiteral("screenId"),
         QStringLiteral("maximumLengthRatio"), QStringLiteral("offsetRatio"),
         QStringLiteral("configuredIconSize"), QStringLiteral("effectiveIconSize"),
         QStringLiteral("availablePrimaryLength"), QStringLiteral("normalThickness"),
-        QStringLiteral("maximumNormalThickness"), QStringLiteral("strutsThickness")};
+        QStringLiteral("maximumNormalThickness"), QStringLiteral("strutsThickness"),
+        QStringLiteral("layerShellExclusiveZone"),
+        QStringLiteral("reservationLayerShellExclusiveZone")};
     const QStringList booleanFields{
         QStringLiteral("onPrimary"), QStringLiteral("isHidden"), QStringLiteral("inStartup"),
         QStringLiteral("isOffScreen"), QStringLiteral("inRelocationAnimation"),
         QStringLiteral("inRelocationShowing"), QStringLiteral("geometrySettled"),
         QStringLiteral("inDelete"), QStringLiteral("inReadyState"), QStringLiteral("editMode"),
-        QStringLiteral("effectiveConfigureAppletsMode"), QStringLiteral("settingsWindowShown")};
+        QStringLiteral("effectiveConfigureAppletsMode"), QStringLiteral("settingsWindowShown"),
+        QStringLiteral("layerShellPresent"), QStringLiteral("reservationSurfacePresent")};
     const QStringList arrayFields{
         QStringLiteral("linkedDockIds"), QStringLiteral("windowGeometry"),
         QStringLiteral("absoluteGeometry"), QStringLiteral("localGeometry"),
-        QStringLiteral("screenGeometry"), QStringLiteral("canvasGeometry"),
+        QStringLiteral("screenGeometry"), QStringLiteral("surfaceGeometry"),
+        QStringLiteral("canvasGeometry"),
         QStringLiteral("effectsRect"), QStringLiteral("appletsLayoutGeometry"),
         QStringLiteral("maskRect"), QStringLiteral("inputMask"),
-        QStringLiteral("appliedInputMask"), QStringLiteral("publishedStruts")};
+        QStringLiteral("appliedInputMask"), QStringLiteral("publishedStruts"),
+        QStringLiteral("layerShellAnchors"), QStringLiteral("layerShellMargins"),
+        QStringLiteral("reservationGeometry"),
+        QStringLiteral("reservationWindowGeometry"),
+        QStringLiteral("reservationLayerShellAnchors"),
+        QStringLiteral("reservationLayerShellMargins")};
     for (const auto &key : stringFields) {
         requireJsonType(view, key, QJsonValue::String);
     }
@@ -946,6 +1013,20 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     requireJsonType(view, QStringLiteral("configuredIconSize"), QJsonValue::Null);
     requireJsonType(view, QStringLiteral("effectiveIconSize"), QJsonValue::Null);
     requireJsonType(view, QStringLiteral("availablePrimaryLength"), QJsonValue::Null);
+    requireJsonType(view, QStringLiteral("layerShellExclusiveEdge"), QJsonValue::Null);
+    requireJsonType(view, QStringLiteral("layerShellExclusiveZone"), QJsonValue::Null);
+    requireJsonType(view, QStringLiteral("layerShellPresent"), QJsonValue::Bool);
+    requireJsonType(view, QStringLiteral("layerShellAnchors"), QJsonValue::Array);
+    requireJsonType(view, QStringLiteral("layerShellMargins"), QJsonValue::Array);
+    QCOMPARE(view.value(QStringLiteral("layerShellPresent")).toBool(), false);
+    requireJsonType(view, QStringLiteral("reservationLayerShellExclusiveEdge"), QJsonValue::Null);
+    requireJsonType(view, QStringLiteral("reservationLayerShellExclusiveZone"), QJsonValue::Null);
+    requireJsonType(view, QStringLiteral("reservationSurfacePresent"), QJsonValue::Bool);
+    requireJsonType(view, QStringLiteral("reservationGeometry"), QJsonValue::Array);
+    requireJsonType(view, QStringLiteral("reservationWindowGeometry"), QJsonValue::Array);
+    requireJsonType(view, QStringLiteral("reservationLayerShellAnchors"), QJsonValue::Array);
+    requireJsonType(view, QStringLiteral("reservationLayerShellMargins"), QJsonValue::Array);
+    QCOMPARE(view.value(QStringLiteral("reservationSurfacePresent")).toBool(), false);
     requireJsonType(view, QStringLiteral("screensGroup"), QJsonValue::String);
     QCOMPARE(view.value(QStringLiteral("screensGroup")).toString(), QStringLiteral("single"));
 

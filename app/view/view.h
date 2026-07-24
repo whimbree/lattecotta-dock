@@ -27,6 +27,7 @@
 
 // C++
 #include <array>
+#include <memory>
 
 // Qt
 #include <QQuickView>
@@ -48,11 +49,17 @@ namespace PlasmaQuick {
 class AppletQuickItem;
 }
 
+namespace LayerShellQt {
+class Window;
+}
 
 namespace Latte {
 class Corona;
 class Interfaces;
 class GenericLayout;
+namespace ViewPart {
+class ScreenSpaceReservation;
+}
 namespace ViewActionPolicy {
 enum class Role;
 }
@@ -132,6 +139,12 @@ public:
     //! must run after init() and before the first show(): LayerShellQt can
     //! only turn a not-yet-created surface into a layer surface
     void setupWaylandLayerShell();
+    [[nodiscard]] const LayerShellQt::Window *layerShellWindow() const;
+    void publishScreenSpaceReservation(
+        const QRect &strutGeometry,
+        Plasma::Types::Location location);
+    void clearScreenSpaceReservation();
+    [[nodiscard]] const ViewPart::ScreenSpaceReservation *screenSpaceReservation() const;
 
     Types::ViewType type() const;
     void setType(Types::ViewType type);
@@ -438,6 +451,7 @@ private:
 
     void createViewFromTemplate(const QString &templateFile, TemplateImportRelationship relationship);
     void initSignalingForLocationChangeSliding();
+    void applyPositionedLayerShellGeometry(const QRect &geometry);
     void reanchorLayerShell();
     //! true when this view's window covers the whole screen along its length
     //! axis (a horizontal masked dock: PositionerGeometry::windowSize gives it
@@ -478,6 +492,9 @@ private:
     bool m_isTouchingTopViewAndIsBusy{false};
 
     bool m_layerShellConfigured{false};
+    //! Non-owning. LayerShellQt parents the attached state to this QWindow.
+    LayerShellQt::Window *m_layerShellWindow{nullptr};
+    std::unique_ptr<ViewPart::ScreenSpaceReservation> m_screenSpaceReservation;
 
     int m_fontPixelSize{ -1};
     int m_maxThickness{256};

@@ -1279,8 +1279,8 @@ multi-view, multi-monitor setup.
       ignores transient view fields), and the commit-message cleanup.
       GitHub rebased the validated source and test tree through `b6ba7ab15` and
       merged PR #109 at documentation-only tail `8f2c3073d`. Placement
-      normalization and same-edge stacking remain separate unchecked work in
-      `docs/tracking/DOCK_IDENTITY_HARDENING.md`.
+      normalization and same-edge stable-span validation remain separate
+      unchecked work in `docs/tracking/DOCK_IDENTITY_HARDENING.md`.
       Commits: 9d0a8a886, d9ca7bcfb, 0234aba66, 896f8e20b,
       a2a93b965, 2d5184665, bce41d191, 0f04cb7ef, 5585c708a,
       69125e11e, b99bbe4be, 2695d2355, 08fceb456, 3a7b01f25,
@@ -2897,10 +2897,11 @@ showed how much of the dock can only be driven by a pointer today.
       lifecycle, edit-mode, and QObject-authority identities in one
       schema-versioned response. Runtime tokens are process-local and retire
       with their QObject generation. Invalid lineage is refused loudly.
-      Same-edge stacking is an explicit unavailable capability until its
-      coordinator lands, so consumers cannot mistake serialization order for
-      physical stack order. D76 (global applet-configure readback marked
-      unrelated docks active) was split into its own root-cause commit.
+      Inward same-edge stacking is an explicit unsupported capability, so
+      consumers cannot mistake serialization order for physical stack order.
+      Separated partial-length views remain valid. D76 (global
+      applet-configure readback marked unrelated docks active) was split into
+      its own root-cause commit.
       The initial review and required cold follow-up both returned MERGE AFTER
       FIXES. No CRITICAL finding occurred. The second review found D90
       (malformed clone lineage yielded plausible partial snapshots), D85
@@ -2941,8 +2942,8 @@ showed how much of the dock can only be driven by a pointer today.
       Commits: c11c77ed2, 5591b66d7
 - [x] D88 (the initial C0 public contract omitted identity and geometry
       semantics): define current duplication behavior, coordinate spaces,
-      logical-pixel units, required versus optional authorities, and stacking
-      as an unavailable capability.
+      logical-pixel units, required versus optional authorities, and inward
+      stacking as an unsupported capability.
       Commits: 9767ea4fb
 - [x] D89 (dock-system enum mappings lacked exhaustive tests): cover every
       orientation, screen-group, and relationship enumerator.
@@ -4289,6 +4290,196 @@ prerequisites in the phases above are done.
       original topology and remove every post-snapshot view ID during teardown,
       including paths where duplicate discovery never completes.
       Commits: f7b125f35
+- [x] Fix D126 (side docks resized from intermediate layout frames). Restore
+      the pre-refactor animation-tracker semantics through one registration path
+      shared by horizontal and vertical layout changes. Keep the matching
+      removal owned by the existing settle timer so AutoSize cannot consume a
+      stream of animated vertical heights.
+      Commits: e5930c301
+- [x] Fix D127 (automatic sizing stranded usable length in modulo-8 buckets).
+      Replace remainder-class stepping with a direct largest-fitting-integer
+      projection and a one-pixel floating-point boundary correction.
+      Commits: eee511c62
+- [x] Fix D128 (task artwork painted smaller than its autosized slot). Disable
+      Kirigami standard-size rounding for task icons and their temporary copies;
+      pin complete painting in a non-standard 63 px slot.
+      Commits: b1d993279
+- [x] Fix D129 (automatic sizing reserved a full hovered icon). Size the
+      persistent dock from its settled row. The initial repair removed hover
+      from shrinking but retained an approximate incremental-hover growth
+      reserve; D135 removes that remaining presentation input.
+      Commits: 25390b5d1, d8faf2d49
+- [x] Fix D130 (settings bars ignored or stole wheel input). Use Qt's native
+      per-slider wheel behavior only after a click gives the control active
+      focus, leaving unfocused wheel events to page scrolling.
+      Commits: 711391bb5
+- [x] Fix D131 (screen-relative sizing obscured its meaning and mode). Name the
+      screen-height reference, show its resolved pixel ceiling and Off sentinel,
+      and explain how to restore mutually exclusive Absolute Size control.
+      Commits: 0e7693bce
+- [x] Fix D132 (length-control inventory anchors depended on source hashes).
+      Give the Maximum, Minimum, and Offset rows stable semantic ids and route
+      their slider and fine-adjust coverage identities through those anchors.
+      Commits: 2e931284d
+- [x] Fix D133 (screen-height guidance exceeded the QML lint baseline). Keep
+      the translated explanation while qualifying the touched width bindings
+      through a typed page property.
+      Commits: 06df46103
+- [x] Fix D134 (autosize ignored background end padding). Solve against the
+      layouter-owned post-padding content budget on every orientation, publish
+      that same value through D-Bus, and pin the live-shaped 28 px padding case.
+      Commits: 71a8081ab
+- [x] Fix D135 (hover presentation reduced the stable autosize fit). Remove
+      zoom from the sizing API and solve persistent growth from only the
+      settled applet row, with two logical pixels of total rounding slack.
+      Commits: d8faf2d49
+- [x] Fix D136 (padding changes left autosize on a stale budget). Observe
+      `layouter.contentsMaxLength` directly, defer through the normal geometry
+      gate, and pin settled padding growth and reduction in both directions.
+      Commits: 4387f0210
+- [x] Fix D137 (D-Bus references described stale raw-length semantics). Define
+      `availablePrimaryLength` as the layouter's post-padding applet span in
+      both public interface references.
+      Commits: b18a3c0cf
+- [x] Fix D138 (sub-floor icon ranges entered the autosize core). Refuse
+      current, ceiling, and applied sizes outside the 16 px to configured-max
+      contract at the QML boundary and assert the same invariant in the core.
+      Commits: eb7168c
+- [x] Fix D139 (touched inherited QML omitted adaptation attribution). Add the
+      current adaptation copyright beside all preserved original authors.
+      Commits: 2c4e99430
+- [x] Fix D140 (zoomed side-dock chrome clipped at both ends). Keep stable icon
+      sizing independent of hover, fit the solid background after reserving its
+      length-axis shadow margins, and constrain centered parabolic movement by
+      the complete visual's owning output canvas. D150 supersedes the initial
+      use of the configured resting span as the transient boundary.
+      Commits: 1228ecf8c, d19a1805c, 921bf089b, a0ab006f8
+- [x] Fix D141 (bounded background movement shifted the applet row). Separate
+      the stable centered content offset from bounded parabolic background
+      presentation and reject restoration of the feedback expression.
+      Commits: d19a1805c
+- [x] Fix D142 (stable autosize omitted background shadow margins). Define the
+      layouter-owned applet budget after both primary-axis padding and shadow
+      margins, and refit when either stable inset changes.
+      Commits: 921bf089b
+- [x] Fix D143 (dock-mode Justify bypassed the complete chrome fit). Preserve
+      the Plasma-panel path while routing every dock alignment through the
+      shadow-aware visual fit with explicit Justify offset ownership.
+      Commits: a0ab006f8
+- [x] Fix D144 (aspect-scaled background shadow clipped side docks). Replace
+      the aspect-dependent Kirigami render node with one fixed-pixel effect,
+      share its padding metric with placement, and pin both end-hover geometry
+      and a tall scene-probe fixture.
+      Commits: b03a68005, 545e79c34
+- [x] Fix D145 (translucent backgrounds attenuated custom shadows). Preserve
+      Qt5's independent shadow opacity with the Qt 6.9 fixed-pixel
+      `RectangularShadow` sibling, raise the Qt floor to its API release, and
+      pin a fractional-opacity render.
+      Commits: 727f94ded
+- [x] Fix D146 (zero-size custom shadows reserved empty geometry). Publish the
+      renderer's exact blur-plus-spread margin to placement so zero paint owns
+      zero space.
+      Commits: 166342ca1
+- [x] Fix D147 (shadow renderer cleanup improved the QML warning ratchet).
+      Retain the two-warning `MultiLayered.qml` improvement in the exact
+      per-file baseline.
+      Commits: <filled at merge>
+- [x] Fix D148 (shadow regressions bypassed production ownership guards). Pin
+      the real `CustomBackground` sibling order, opacity independence, and live
+      renderer-margin alias with controlled source mutations.
+      Commits: 3d775a0a2
+- [x] Fix D149 (Qt 6.9 floor stopped at CMake). Propagate the renderer API floor
+      through all five native package formats and every current installation or
+      distro-gate reference.
+      Commits: b8f492b01
+- [x] Fix D150 (hovered applet row escaped its resting background). Keep
+      maximum length authoritative for stable layout while allowing the
+      content-driven transient background to follow the live row within the
+      view's own output canvas. Add a D-Bus composition oracle with the exact
+      live failure as its negative control.
+      Commits: 3219a1761, 45092dca8
+- [ ] Fix D151 (nested hover preview did not exercise parabolic expansion).
+      Make synthetic input traverse the production view-motion bridge and
+      produce a measurably larger transient applet row before treating preview
+      mapping as rendered-zoom coverage. Preserve the geometry payload and
+      screenshot on failure.
+      Commits:
+- [ ] Fix D152 (linked portrait dock overflowed with automatic sizing off).
+      Preserve the shared configured icon size while applying a per-view
+      output safety fit to the effective size, including when automatic growth
+      is disabled.
+      Commits:
+- [x] Fix D153 (partial bottom reservation moved a separated side dock). Use
+      the already-solved stable dock rectangle as Latte's occupied footprint,
+      propagate every footprint transition to perpendicular peers, keep visual
+      surfaces at their exact per-output rectangles, and publish KWin's scalar
+      work-area reservation through a separate inputless surface.
+      Commits: 25c74a6a3, 6608a1d39
+- [x] Fix D154 (dock resize speed varied with slider distance). Replace the
+      fixed-duration icon resize and nested derived animations with one
+      velocity-preserving icon-size authority.
+      Commits: ee405a940
+- [x] Fix D155 (small icons doubled the theme background minimum). Replace the
+      threshold-discontinuous QML formula with one constexpr interpolation from
+      the theme minimum through the item row's nonnegative excess.
+      Commits: 2322b0349
+- [x] Fix D156 (Layouts submenu collapsed to its radio-button column). Give the
+      custom-painted QWidgetAction delegate one authoritative content size for
+      both Qt size-hint contracts.
+      Commits: 16baf03c1
+- [x] Fix D157 (Layouts submenu regression was absent from the coverage
+      ratchet). Register the exact CTest target in the sorted removal-detection
+      inventory.
+      Commits: 8daf1f804
+- [x] Define same-edge occupancy without inward dock stacking. Permit
+      separated partial-length spans as the intended model, keep the D-Bus
+      stack object as a typed negative capability, and replace the planned
+      rank-and-inset coordinator with stable-span validation plus maximum-depth
+      exclusive-zone aggregation.
+      Commits: 5ebd6b688
+- [x] Fix D158 (same-edge placement notes overstated the OG Latte UI
+      contract). Record upstream occupied-edge rejection and identify
+      first-class separated spans as a deliberate Lattecotta extension.
+      Commits: 5ff991d8e
+- [x] Fix D159 (stacking diagnostics claimed an unenforced overlap invariant).
+      Report stable-span validation as missing and prevent consumers from
+      treating the typed negative capability as validation success.
+      Commits: 707d1778a, 313eedba0
+- [x] Fix D160 (same-edge maximum reservation depth was described as
+      implemented). Assign the intended maximum-depth policy to a missing
+      output-edge reservation aggregator and keep the current accumulating
+      positive zones visible as a beta blocker.
+      Commits: 9dcf27dd8
+- [x] Fix D161 (Layouts submenu sizing test omitted painted control columns).
+      Bound the exact production size hint against its label, radio, and
+      height-derived icon widths, including odd style metrics.
+      Commits: 81fbf1ed3, bebe0a9f4
+- [x] Fix D162 (Justify applets occupied shadow-only margins). Make the fitted
+      solid background span authoritative for the physical applet container
+      instead of laying endpoint applets under length-axis shadows.
+      Commits: cf50d7845, 4edcd203d, 6cd8ff860, 3feb54939
+- [x] Fix D163 (native background shadows retained Kirigami alpha
+      compensation). Feed the theme shadow color directly to the Qt native
+      effect and reject restoration of the obsolete renderer workaround.
+      Commits: 92fab9745
+- [x] Fix D164 (the first D162 correction formed a Justify geometry cycle).
+      Resolve the background against a full-view primary-axis canvas instead
+      of the applet container that consumes its fitted span.
+      Commits: 4edcd203d
+- [x] Fix D165 (the first D162 correction assumed equal end shadows). Center
+      the complete visual and derive the solid span from independent tail and
+      head margins.
+      Commits: 6cd8ff860
+- [x] Fix D166 (the first D162 origin mutation produced invalid QML). Mutate
+      the authoritative property with viable old-origin and equal-shadow
+      regressions.
+      Commits: 3feb54939
+- [x] Fix D167 (thin-dock tracking used a bare D145 codeword). Add the
+      plain-English background-shadow description at first use.
+      Commits: e8ca33c2f
+- [ ] Fix D168 (thin-dock tracking commit omitted explicit verification
+      evidence). Rewrite commit `5318aec02` during pre-merge history cleanup.
+      Commits:
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

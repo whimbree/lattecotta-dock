@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2020 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -24,9 +25,9 @@ Ability.MetricsPrivate {
 
     //! Margin
     margin.length: fraction.lengthMargin * iconSize
-    margin.tailThickness: marginMinThickness + fraction.thicknessMargin * Math.max(0, _iconSize - marginMinThickness)
+    margin.tailThickness: marginMinThickness + fraction.thicknessMargin * Math.max(0, iconSize - marginMinThickness)
     margin.maxTailThickness: marginMinThickness + fraction.thicknessMargin * Math.max(0, _maxIconSize - marginMinThickness)
-    margin.headThickness: (background.isGreaterThanItemThickness ? (background.totals.visualThickness - _iconSize - margin.tailThickness) : margin.tailThickness)
+    margin.headThickness: (background.isGreaterThanItemThickness ? (background.totals.visualThickness - iconSize - margin.tailThickness) : margin.tailThickness)
     margin.maxHeadThickness: (background.isGreaterThanItemThickness ? (background.totals.visualMaxThickness - _maxIconSize - margin.maxTailThickness) : margin.maxTailThickness)
     //margin.thickness: fraction.thicknessMargin * iconSize
    // margin.maxThickness: fraction.thicknessMargin * maxIconSize

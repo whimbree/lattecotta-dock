@@ -39,11 +39,14 @@ private Q_SLOTS:
     void floatingGapMapsToEdgeMargins();
     void floatingPanelSurfaceIsLiftedOffItsEdge();
     void seededSizeForUnspannedAxes();
+    void viewPlacementPinsSolvedRectangle();
+    void appliedViewPlacementPreservesSurfacePolicy();
+    void reservationPlacementTracksOccupiedSpan();
     void canvasPlacementByEdge();
     void canvasInputRegionPlainEditMode();
     void canvasInputRegionConfigureAppletsClickThrough();
     void canvasInputRegionKeepsChromeInteractive();
-    void dockStrutZoneAppliesAndReleases();
+    void reservationZoneAppliesAndReleases();
     void canvasPlacementOptsOutOfExclusiveZones();
     void fixedPlacementOptsOutOfExclusiveZones();
     void sameScreenPlacementDoesNotRemap();
@@ -203,7 +206,8 @@ void LayerShellMappingTest::floatingPanelSurfaceIsLiftedOffItsEdge()
     LSW *ls = LSW::get(&window);
     QVERIFY(ls);
 
-    LayerShell::configureView(&window, screen, Plasma::Types::TopEdge, Latte::Types::Center, false, 16);
+    QVERIFY(LayerShell::configureView(&window, screen, Plasma::Types::TopEdge,
+                                      Latte::Types::Center, false, 16));
     QCOMPARE(ls->exclusiveEdge(), LSW::AnchorTop);
     QCOMPARE(ls->margins(), QMargins(0, 16, 0, 0));
 
@@ -246,6 +250,85 @@ void LayerShellMappingTest::seededSizeForUnspannedAxes()
     const auto leftCenter = LayerShell::anchorsFor(Plasma::Types::LeftEdge, Latte::Types::Center, false);
     QCOMPARE(LayerShell::seededLayerSize(leftCenter, Plasma::Types::LeftEdge, QSize(0, 0), screen),
              QSize(1, 1080));
+}
+
+void LayerShellMappingTest::viewPlacementPinsSolvedRectangle()
+{
+    const QRect screen(1440, 425, 2560, 1440);
+
+    //! A partial-width bottom dock does not intersect this right dock. Latte's
+    //! region solver therefore keeps the side surface full-height. The visual
+    //! surface is placed from the output's top-left, independently from
+    //! KWin's edge-wide exclusive-zone work area.
+    const QRect fullHeightRight(3616, 425, 384, 1440);
+    const auto right = LayerShell::viewPlacement(Plasma::Types::RightEdge,
+                                                 fullHeightRight, screen);
+    QCOMPARE(right.anchors, LSW::Anchors(LSW::AnchorTop | LSW::AnchorLeft));
+    QCOMPARE(right.margins, QMargins(2176, 0, 0, 0));
+
+    //! A shorter solved surface carries its exact origin and explicit size.
+    const QRect insetRight(3616, 469, 384, 1272);
+    const auto inset = LayerShell::viewPlacement(Plasma::Types::RightEdge,
+                                                 insetRight, screen);
+    QCOMPARE(inset.anchors, LSW::Anchors(LSW::AnchorTop | LSW::AnchorLeft));
+    QCOMPARE(inset.margins, QMargins(2176, 44, 0, 0));
+
+    const QRect partialBottom(1812, 1741, 1815, 124);
+    const auto bottom = LayerShell::viewPlacement(Plasma::Types::BottomEdge,
+                                                  partialBottom, screen);
+    QCOMPARE(bottom.anchors, LSW::Anchors(LSW::AnchorTop | LSW::AnchorLeft));
+    QCOMPARE(bottom.margins, QMargins(372, 1316, 0, 0));
+}
+
+void LayerShellMappingTest::appliedViewPlacementPreservesSurfacePolicy()
+{
+    QWindow window;
+    const QRect screenGeometry(0, 0, 1920, 1080);
+    const QRect viewGeometry(1872, 40, 48, 1000);
+
+    QVERIFY(LayerShell::configureView(&window, QGuiApplication::screens().at(0),
+                                      Plasma::Types::RightEdge,
+                                      Latte::Types::Center, false));
+    LayerShell::setExclusiveZone(&window, 48);
+    LSW *const ls = LSW::get(&window);
+    QVERIFY(ls);
+    ls->setLayer(LSW::LayerBottom);
+    ls->setKeyboardInteractivity(LSW::KeyboardInteractivityOnDemand);
+
+    LayerShell::applyViewPlacement(&window, Plasma::Types::RightEdge,
+                                   viewGeometry, screenGeometry);
+
+    QCOMPARE(ls->anchors(), LSW::Anchors(LSW::AnchorTop | LSW::AnchorLeft));
+    QCOMPARE(ls->margins(), QMargins(1872, 40, 0, 0));
+    QCOMPARE(ls->exclusiveEdge(), LSW::AnchorNone);
+    QCOMPARE(ls->exclusionZone(), -1);
+    QCOMPARE(ls->layer(), LSW::LayerBottom);
+    QCOMPARE(ls->keyboardInteractivity(), LSW::KeyboardInteractivityOnDemand);
+}
+
+void LayerShellMappingTest::reservationPlacementTracksOccupiedSpan()
+{
+    const QRect screen(1440, 425, 2560, 1440);
+
+    const QRect partialBottom(1812, 1741, 1815, 124);
+    const auto bottom = LayerShell::reservationPlacement(
+        Plasma::Types::BottomEdge, partialBottom, screen);
+    QCOMPARE(bottom.anchors,
+             LSW::Anchors(LSW::AnchorBottom | LSW::AnchorLeft | LSW::AnchorRight));
+    QCOMPARE(bottom.exclusiveEdge, LSW::AnchorBottom);
+    QCOMPARE(bottom.margins, QMargins(372, 0, -372, 0));
+    QCOMPARE(bottom.surfaceSize, QSize(1815, 1));
+    QCOMPARE(bottom.exclusiveZone, 124);
+
+    const QRect insetRight(3912, 469, 88, 1272);
+    const auto right = LayerShell::reservationPlacement(
+        Plasma::Types::RightEdge, insetRight, screen);
+    QCOMPARE(right.anchors,
+             LSW::Anchors(LSW::AnchorRight | LSW::AnchorTop | LSW::AnchorBottom));
+    QCOMPARE(right.exclusiveEdge, LSW::AnchorRight);
+    QCOMPARE(right.margins, QMargins(0, 44, 0, -44));
+    QCOMPARE(right.surfaceSize, QSize(1, 1272));
+    QCOMPARE(right.exclusiveZone, 88);
 }
 
 void LayerShellMappingTest::canvasPlacementByEdge()
@@ -325,20 +408,22 @@ void LayerShellMappingTest::canvasInputRegionKeepsChromeInteractive()
     QVERIFY(!region.contains(QPoint(960, 30)));
 }
 
-void LayerShellMappingTest::dockStrutZoneAppliesAndReleases()
+void LayerShellMappingTest::reservationZoneAppliesAndReleases()
 {
-    //! the dock strut flow (WaylandInterface::setViewStruts /
-    //! removeViewStruts): a dock reserves exactly its visible thickness as
-    //! the exclusive zone and releases it with 0. ec5d2316's rule has two
-    //! halves; this is the "docks use their strut zone" half.
+    //! A reservation surface publishes exactly the occupied thickness and
+    //! releases it with 0 without changing the visual dock's zone -1 policy.
     QWindow window;
-    LSW *ls = LSW::get(&window);
+    QScreen *const screen = QGuiApplication::screens().at(0);
+    LSW *const ls = LayerShell::applyReservationPlacement(
+        &window, screen, Plasma::Types::BottomEdge,
+        QRect(400, 1040, 1120, 40), screen->geometry());
     QVERIFY(ls);
 
-    LayerShell::setExclusiveZone(&window, LayerShell::exclusiveZoneFor(QRect(0, 1040, 1920, 40), Plasma::Types::BottomEdge));
     QCOMPARE(ls->exclusionZone(), 40);
+    QCOMPARE(ls->exclusiveEdge(), LSW::AnchorBottom);
+    QCOMPARE(window.size(), QSize(1120, 1));
 
-    LayerShell::setExclusiveZone(&window, 0);
+    LayerShell::clearReservation(&window);
     QCOMPARE(ls->exclusionZone(), 0);
 }
 
@@ -358,7 +443,8 @@ void LayerShellMappingTest::canvasPlacementOptsOutOfExclusiveZones()
     LSW *ls = LSW::get(&window);
     QVERIFY(ls);
 
-    LayerShell::configureView(&window, screen, Plasma::Types::BottomEdge, Latte::Types::Center, false);
+    QVERIFY(LayerShell::configureView(&window, screen, Plasma::Types::BottomEdge,
+                                      Latte::Types::Center, false));
     LayerShell::setExclusiveZone(&window, 88);
     QCOMPARE(ls->exclusiveEdge(), LSW::AnchorBottom);
 
@@ -386,7 +472,8 @@ void LayerShellMappingTest::fixedPlacementOptsOutOfExclusiveZones()
     LSW *ls = LSW::get(&window);
     QVERIFY(ls);
 
-    LayerShell::configureView(&window, screen, Plasma::Types::BottomEdge, Latte::Types::Justify, false);
+    QVERIFY(LayerShell::configureView(&window, screen, Plasma::Types::BottomEdge,
+                                      Latte::Types::Justify, false));
     LayerShell::setExclusiveZone(&window, 88);
 
     const QRect geometry(screenGeometry.x() + 100, screenGeometry.y() + 50, 600, 400);

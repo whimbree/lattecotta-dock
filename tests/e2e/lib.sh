@@ -328,3 +328,107 @@ e2e_assert_geometry_agrees() {
     fi
     (( bad == 0 ))
 }
+
+# _e2e_assert_presentation_payloads <dockSystemData-json>
+#                                   <viewAppletsData-json>
+#                                   <containment-id> [tolerance-px]
+#
+# Join the two live surfaces that a screenshot visually joins: dockSystemData
+# owns the painted background/effects rectangle, while viewAppletsData owns the
+# QML item rectangles. Keeping this as a payload-level helper makes the failure
+# detector independently self-testable with the exact D150
+# (hovered applet row escaped its resting background) shape.
+_e2e_assert_presentation_payloads() {
+    local views="$1" applets="$2" id="$3" tolerance="${4:-2}"
+    VIEWS_JSON="$views" APPLETS_JSON="$applets" python3 - "$id" "$tolerance" <<'PY'
+import json
+import os
+import sys
+
+containment_id = int(sys.argv[1])
+tolerance = int(sys.argv[2])
+snapshot = json.loads(os.environ["VIEWS_JSON"])
+applets = json.loads(os.environ["APPLETS_JSON"])
+
+matches = [
+    view for view in snapshot["views"]
+    if view["persistentDockId"] == containment_id
+]
+if len(matches) != 1:
+    raise SystemExit(
+        f"presentation coverage: expected one view {containment_id}, got {len(matches)}"
+    )
+
+view = matches[0]
+if view["isHidden"]:
+    raise SystemExit(
+        f"presentation coverage: view {containment_id} is hidden; no painted background exists"
+    )
+
+live_applets = [
+    applet for applet in applets
+    if not applet["inScheduledDestruction"]
+    and applet["geometry"][2] > 0
+    and applet["geometry"][3] > 0
+]
+if not live_applets:
+    raise SystemExit(
+        f"presentation coverage: view {containment_id} reports no live applet geometry"
+    )
+
+horizontal = view["orientation"] == "horizontal"
+primary_origin = 0 if horizontal else 1
+primary_length = 2 if horizontal else 3
+
+def interval(rect: list[int]) -> tuple[int, int]:
+    start = rect[primary_origin]
+    return start, start + rect[primary_length]
+
+background_start, background_end = interval(view["effectsRect"])
+content_intervals = [interval(applet["geometry"]) for applet in live_applets]
+content_start = min(start for start, _ in content_intervals)
+content_end = max(end for _, end in content_intervals)
+canvas_end = view["canvasGeometry"][primary_length]
+
+failures: list[str] = []
+if content_start < background_start - tolerance:
+    failures.append(
+        f"content starts at {content_start}, before background {background_start}"
+    )
+if content_end > background_end + tolerance:
+    failures.append(
+        f"content ends at {content_end}, after background {background_end}"
+    )
+if content_start < -tolerance:
+    failures.append(f"content starts at {content_start}, before canvas 0")
+if content_end > canvas_end + tolerance:
+    failures.append(f"content ends at {content_end}, after canvas {canvas_end}")
+
+if failures:
+    detail = "; ".join(failures)
+    raise SystemExit(
+        f"presentation coverage: view {containment_id} {detail}; "
+        f"content=[{content_start},{content_end}] "
+        f"background=[{background_start},{background_end}] canvas=[0,{canvas_end}]"
+    )
+
+print(
+    f"presentation coverage: view {containment_id} "
+    f"content=[{content_start},{content_end}] "
+    f"background=[{background_start},{background_end}] canvas=[0,{canvas_end}]"
+)
+PY
+}
+
+# e2e_assert_applets_covered_by_background <containment-id> [tolerance-px]
+#
+# This is the full-dock composition oracle. It catches a coherent internal
+# geometry state whose rendered applets escape either the dock background or
+# the output-owned canvas. Call it at rest and after every driven parabolic
+# transition; on failure the caller should preserve a screenshot.
+e2e_assert_applets_covered_by_background() {
+    local id="$1" tolerance="${2:-2}" views applets
+    views="$(e2e_json dockSystemData)" || return 1
+    applets="$(e2e_json viewAppletsData u "$id")" || return 1
+    _e2e_assert_presentation_payloads "$views" "$applets" "$id" "$tolerance"
+}

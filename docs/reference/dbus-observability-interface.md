@@ -80,7 +80,7 @@ Landed before or during the 2026-07-16 stabilization session:
   `editMode && universalSettings.inConfigureAppletsMode`, not the raw global
   toggle. A global rearrange session therefore does not report unrelated docks
   as configuring applets.
-- `dockSystemData() -> s` (compact JSON object, schema version 2; added by C0
+- `dockSystemData() -> s` (compact JSON object, schema version 3; added by C0
   (the atomic dock-system observability snapshot)). This is the relational
   all-docks read. One synchronous call captures the global configuration mode
   and every current dock, then serializes docks in ascending
@@ -88,12 +88,12 @@ Landed before or during the 2026-07-16 stabilization session:
   decimal string; it identifies calls, not state changes.
   ```json
   {
-    "schemaVersion": 2,
+    "schemaVersion": 3,
     "snapshotSequence": "14",
     "globalConfigureAppletsMode": true,
     "stacking": {
       "available": false,
-      "reason": "No runtime authority models same-edge stack order or accumulated offsets."
+      "reason": "Inward same-edge stacking is unsupported; stable-span overlap is not yet rejected."
     },
     "views": [{
       "runtimeViewId": "9",
@@ -123,6 +123,7 @@ Landed before or during the 2026-07-16 stabilization session:
       "absoluteGeometry": [x, y, w, h],
       "localGeometry": [x, y, w, h],
       "screenGeometry": [x, y, w, h],
+      "surfaceGeometry": [x, y, w, h],
       "canvasGeometry": [x, y, w, h],
       "effectsRect": [x, y, w, h],
       "appletsLayoutGeometry": [x, y, w, h],
@@ -131,6 +132,18 @@ Landed before or during the 2026-07-16 stabilization session:
       "appliedInputMask": [x, y, w, h],
       "strutsThickness": 48,
       "publishedStruts": [x, y, w, h],
+      "layerShellPresent": true,
+      "layerShellAnchors": ["top", "left"],
+      "layerShellMargins": [left, top, 0, 0],
+      "layerShellExclusiveEdge": "none",
+      "layerShellExclusiveZone": -1,
+      "reservationSurfacePresent": true,
+      "reservationGeometry": [x, y, w, h],
+      "reservationWindowGeometry": [x, y, w, h],
+      "reservationLayerShellAnchors": ["top", "bottom", "left"],
+      "reservationLayerShellMargins": [left, top, right, bottom],
+      "reservationLayerShellExclusiveEdge": "left",
+      "reservationLayerShellExclusiveZone": 48,
       "visibilityMode": "dodgeActive",
       "isHidden": false,
       "inStartup": false,
@@ -183,8 +196,10 @@ Landed before or during the 2026-07-16 stabilization session:
   `availablePrimaryLength` values may be null during startup or teardown.
   `configuredIconSize` comes from the containment's live configuration map;
   `effectiveIconSize` comes from the live Metrics object;
-  `availablePrimaryLength` is the containment root's current logical-pixel
-  `maxLength`, the length the autosizer consumes.
+  `availablePrimaryLength` is the layouter's current logical-pixel
+  `contentsMaxLength`, the post-chrome applet span the autosizer consumes.
+  It is smaller than raw containment `maxLength` when the background owns
+  primary-axis end padding or shadow margins.
   `screensGroup` is always a string in a valid response. A derived member
   reports its root's screen-group policy. An explicitly placed member reports
   its local `single` policy. Whole-graph validation requires every linked
@@ -211,17 +226,32 @@ Landed before or during the 2026-07-16 stabilization session:
 
   Every geometry array is `[x,y,w,h]` in Qt logical pixels, before any output
   device-pixel scaling. `windowGeometry`, `absoluteGeometry`, `screenGeometry`,
-  `canvasGeometry`, and `publishedStruts` use virtual-desktop coordinates.
+  `surfaceGeometry`, `canvasGeometry`, and `publishedStruts` use
+  virtual-desktop coordinates. `surfaceGeometry` is Positioner's solved
+  layer-surface rectangle, not the masked background rectangle. Schema 3 also
+  reports the exact visual layer-shell request state: `layerShellPresent`,
+  `layerShellAnchors`, `layerShellMargins` in left/top/right/bottom order,
+  `layerShellExclusiveEdge`, and `layerShellExclusiveZone`. The edge and zone
+  are null only when attached layer-shell state is absent. These fields expose
+  the exact visual surface, which carries zone -1 and no exclusive edge so
+  KWin cannot place it inside another dock's scalar reservation band.
+  `reservationSurfacePresent`, `reservationGeometry`,
+  `reservationWindowGeometry`, `reservationLayerShellAnchors`,
+  `reservationLayerShellMargins`, `reservationLayerShellExclusiveEdge`, and
+  `reservationLayerShellExclusiveZone` expose the separate transparent,
+  inputless surface that publishes the occupied edge footprint.
   `localGeometry`, `effectsRect`, `appletsLayoutGeometry`, `maskRect`,
   `inputMask`, and `appliedInputMask` use dock-window-local coordinates.
   `normalThickness`, `maximumNormalThickness`, and `strutsThickness` use the
   same logical-pixel unit.
 
-  `stacking.available` is deliberately false. The current runtime has no
-  explicit same-edge stack-order or accumulated-offset model. Canonical array
-  order is serialization order only and must never be treated as layer-shell
-  stack order. A later stack model requires a new authoritative runtime record,
-  not inference from containment ids, pointers, or creation order.
+  `stacking.available` is deliberately and permanently false. Multiple
+  partial-length views are intended to share an output edge only when their
+  stable primary-axis spans do not overlap. Latte does not assign ranks,
+  accumulated insets, or inward lanes. The current runtime does not yet reject
+  an overlap or aggregate same-edge exclusive zones, so this object may
+  accompany overlapping view geometry. Canonical array order is serialization
+  order only and must never be treated as layer-shell stack order.
 - `viewAppletsData(u containmentId) -> s` (JSON array, in visual order).
   Per applet: id, plugin, index in layout, geometry within the view,
   expanded state, inScheduledDestruction, lockedZoom, colorizingBlocked,

@@ -105,7 +105,7 @@ hands whenever a chunk is self-contained.
   anything. Root-cause each failure to version skew / dep name / kwin env /
   another latent nix-ism - a found defect outranks planned work and gets
   its own fix commit with evidence.
-- **Verify the floor**: each base image must meet Plasma >= 6.5 / Qt >= 6.6
+- **Verify the floor**: each base image must meet Plasma >= 6.5 / Qt >= 6.9
   / KF6 >= 6.5 (CMakeLists). Pin the base tag (A3).
 - **Standards**: small bisectable commits; conventional-commit bodies with
   mechanism -> root -> verification evidence; author voice ("caught live",

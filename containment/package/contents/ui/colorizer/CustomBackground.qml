@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2018 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -11,10 +12,11 @@ import org.kde.ksvg 1.0 as KSvg
 
 Item{
     id: main
-    clip: !kirigamiRect.active
+    clip: !backgroundShadow.visible
 
     property int borderWidth: 0
     property int roundness: 0
+    property bool shadowEnabled: shadowSize > 0
     property int shadowSize: 0
 
     property real backgroundOpacity: 1.0
@@ -62,6 +64,7 @@ Item{
     readonly property bool drawWithoutRoundness: onlyHorizontalBorders || onlyVerticalBorders
 
     readonly property Item painterRectangle: painter
+    readonly property alias shadowPaintMargin: backgroundShadow.paintMargin
 
     Binding{
         target: main
@@ -103,13 +106,18 @@ Item{
         restoreMode: Binding.RestoreNone
     }
 
-    Loader {
-        id: kirigamiRect
+    BackgroundShadow {
+        id: backgroundShadow
         anchors.fill: painter
-        active: root.kirigamiLibraryIsFound && main.shadowSize>0
-        //! this "source" approach is needed in order for KF5<=5.68 to load Latte correctly with no
-        //! qml breakage because Kirigami2.ShadowedRectangle is not present
-        source: root.kirigamiLibraryIsFound ? "KirigamiShadowedRectangle.qml" : "NormalRectangle.qml"
+        z: painter.z - 1
+        visible: main.shadowEnabled && main.shadowSize > 0
+        blur: main.shadowSize
+        radius: painter.radius
+        //! The former +0.336 alpha compensation matched Kirigami's old
+        //! ShadowedRectangle renderer. RectangularShadow consumes the theme
+        //! color directly, so carrying that renderer-specific boost forward
+        //! makes thin dock shadows look like a second dark background.
+        color: main.shadowColor
     }
 
     Rectangle{
