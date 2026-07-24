@@ -2011,7 +2011,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D168 - Thin-dock tracking commit omitted explicit verification evidence
 - STATUS: OPEN on `fix/vertical-autosize-animation-tracker`; correct during
-  pre-PR history cleanup.
+  pre-merge history cleanup.
 - FOUND: 2026-07-24, mandatory cold review of commit `5318aec02`.
 - SYMPTOM: the commit body described what the records contained but did not
   state the focused checks that had passed.
