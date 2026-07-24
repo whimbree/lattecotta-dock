@@ -24,7 +24,7 @@ both contracts through one const painted-content calculation. The exact
 production delegate test failed before the fix and now passes. The first
 canonical gate then found D157 (Layouts submenu regression was absent from the
 coverage ratchet): all 105 tests passed before the 104-entry inventory rejected
-the new target. Commit `72df9e2a5` registers its exact identity.
+the new target. Commit `8daf1f804` registers its exact identity.
 
 The placement direction was also clarified. Lattecotta does not provide inward
 same-edge dock stacking. Multiple partial-length docks or panels may share one
@@ -41,20 +41,20 @@ supported the workflow. Upstream `GenericLayout::freeEdges()` removed an edge
 after the first view occupied it, while persisted or imported layouts could
 still contain same-edge records without stack semantics. Lattecotta promotes
 the separated-span case to supported behavior and replaces inherited undefined
-overlap with an explicit invalid state. Commit `e99871822` records the contract
+overlap with an explicit invalid state. Commit `5ebd6b688` records the contract
 in the public roadmap, identity model, replication design, D-Bus references,
-and the typed negative capability returned at runtime. Commit `41e30e947`
+and the typed negative capability returned at runtime. Commit `5ff991d8e`
 corrects D158 (same-edge placement notes overstated the OG Latte UI contract)
 after verifying the upstream `freeEdges()` history.
 
 The first cold review returned MERGE AFTER FIXES. D159 (stacking diagnostics
-claimed an unenforced overlap invariant) is fixed by `473e94016`: the runtime
+claimed an unenforced overlap invariant) is fixed by `707d1778a`: the runtime
 and public D-Bus references now state that stable overlap is not yet rejected.
 D160 (same-edge maximum reservation depth was described as implemented) is
-fixed by `cf9b693d6`: maximum depth remains the intended policy, but the record
+fixed by `9dcf27dd8`: maximum depth remains the intended policy, but the record
 now assigns it to a missing reservation aggregator because current positive
 zones can accumulate in KWin. D161 (Layouts submenu sizing test omitted painted
-control columns) is fixed by `4fbd7ae9a`, which requires the production size
+control columns) is fixed by `81fbf1ed3`, which requires the production size
 hint to contain the label, radio, and icon slots.
 
 ## 2026-07-23: partial reservations no longer place Latte visuals

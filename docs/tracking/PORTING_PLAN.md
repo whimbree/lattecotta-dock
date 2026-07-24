@@ -4430,30 +4430,30 @@ prerequisites in the phases above are done.
 - [x] Fix D157 (Layouts submenu regression was absent from the coverage
       ratchet). Register the exact CTest target in the sorted removal-detection
       inventory.
-      Commits: 72df9e2a5
+      Commits: 8daf1f804
 - [x] Define same-edge occupancy without inward dock stacking. Permit
       separated partial-length spans as the intended model, keep the D-Bus
       stack object as a typed negative capability, and replace the planned
       rank-and-inset coordinator with stable-span validation plus maximum-depth
       exclusive-zone aggregation.
-      Commits: e99871822
+      Commits: 5ebd6b688
 - [x] Fix D158 (same-edge placement notes overstated the OG Latte UI
       contract). Record upstream occupied-edge rejection and identify
       first-class separated spans as a deliberate Lattecotta extension.
-      Commits: 41e30e947
+      Commits: 5ff991d8e
 - [x] Fix D159 (stacking diagnostics claimed an unenforced overlap invariant).
       Report stable-span validation as missing and prevent consumers from
       treating the typed negative capability as validation success.
-      Commits: 473e94016
+      Commits: 707d1778a
 - [x] Fix D160 (same-edge maximum reservation depth was described as
       implemented). Assign the intended maximum-depth policy to a missing
       output-edge reservation aggregator and keep the current accumulating
       positive zones visible as a beta blocker.
-      Commits: cf9b693d6
+      Commits: 9dcf27dd8
 - [x] Fix D161 (Layouts submenu sizing test omitted painted control columns).
       Bound the exact production size hint against its label, radio, and icon
       widths.
-      Commits: 4fbd7ae9a
+      Commits: 81fbf1ed3
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

@@ -1838,7 +1838,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D157 - Layouts submenu regression was absent from the coverage ratchet
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`72df9e2a5`).
+  (`8daf1f804`).
 - FOUND: 2026-07-24, first canonical gate after adding
   `layoutmenuitemwidgettest`.
 - SYMPTOM: all 105 CTest entries passed, then the coverage ratchet rejected the
@@ -1852,7 +1852,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D158 - Same-edge placement notes overstated the OG Latte UI contract
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`41e30e947`).
+  (`5ff991d8e`).
 - FOUND: 2026-07-24, source-history verification of the no-stacking placement
   decision.
 - SYMPTOM: the identity record described separated same-edge views as a normal
@@ -1869,7 +1869,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D159 - Stacking diagnostics claimed an unenforced overlap invariant
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`473e94016`).
+  (`707d1778a`).
 - FOUND: 2026-07-24, cold review of the no-inward-stacking contract.
 - SYMPTOM: `dockSystemData` said stable spans must not overlap even though the
   same snapshot could contain overlapping views.
@@ -1885,7 +1885,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D160 - Same-edge maximum reservation depth was described as implemented
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`cf9b693d6`).
+  (`9dcf27dd8`).
 - FOUND: 2026-07-24, cold review of the no-inward-stacking contract.
 - SYMPTOM: the placement record said separated same-edge members contribute
   only their maximum depth.
@@ -1899,7 +1899,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D161 - Layouts submenu sizing test omitted painted control columns
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`4fbd7ae9a`).
+  (`81fbf1ed3`).
 - FOUND: 2026-07-24, cold review of the D156 production regression.
 - SYMPTOM: a size hint only one pixel wider than the label could satisfy the
   test while still clipping the manually painted radio and icon slots.
