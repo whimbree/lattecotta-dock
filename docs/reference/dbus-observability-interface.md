@@ -197,9 +197,9 @@ Landed before or during the 2026-07-16 stabilization session:
   `configuredIconSize` comes from the containment's live configuration map;
   `effectiveIconSize` comes from the live Metrics object;
   `availablePrimaryLength` is the layouter's current logical-pixel
-  `contentsMaxLength`, the post-chrome applet span the autosizer consumes.
-  It is smaller than raw containment `maxLength` when the background owns
-  primary-axis end padding or shadow margins.
+  `contentsMaxLength`, the post-padding applet span the autosizer consumes.
+  It is smaller than raw containment `maxLength` when the solid background owns
+  internal primary-axis end padding. External shadow paint does not reduce it.
   `screensGroup` is always a string in a valid response. A derived member
   reports its root's screen-group policy. An explicitly placed member reports
   its local `single` policy. Whole-graph validation requires every linked
