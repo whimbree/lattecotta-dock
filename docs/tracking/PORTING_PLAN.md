@@ -4427,6 +4427,10 @@ prerequisites in the phases above are done.
       custom-painted QWidgetAction delegate one authoritative content size for
       both Qt size-hint contracts.
       Commits: 16baf03c1
+- [x] Fix D157 (Layouts submenu regression was absent from the coverage
+      ratchet). Register the exact CTest target in the sorted removal-detection
+      inventory.
+      Commits: 72df9e2a5
 - [x] Define same-edge occupancy without inward dock stacking. Permit
       separated partial-length spans, retain maximum-depth reservation, keep
       the D-Bus stack object as a typed negative capability, and replace the

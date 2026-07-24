@@ -1836,6 +1836,20 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   width did not contain its painted label. It now verifies the complete
   delegate width and the containing menu's adoption of that width.
 
+### D157 - Layouts submenu regression was absent from the coverage ratchet
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`72df9e2a5`).
+- FOUND: 2026-07-24, first canonical gate after adding
+  `layoutmenuitemwidgettest`.
+- SYMPTOM: all 105 CTest entries passed, then the coverage ratchet rejected the
+  new target because its committed inventory still contained 104 entries.
+- ROOT: the production delegate test was registered with CTest but its exact
+  target identity was omitted from the removal-detection baseline.
+- FIX: add the target to the sorted coverage inventory and raise the expected
+  entry count to 105.
+- EVIDENCE: the first gate reached 105 of 105 passing tests before reporting
+  the one-entry inventory diff.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.

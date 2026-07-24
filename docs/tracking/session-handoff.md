@@ -21,7 +21,10 @@ its child layout, while Qt 6 measured the `QWidgetAction` default widget through
 `sizeHint()`. The delegate overrode only `minimumSizeHint()`, so the menu width
 contained the radio button but not the painted name. Commit `16baf03c1` routes
 both contracts through one const painted-content calculation. The exact
-production delegate test failed before the fix and now passes.
+production delegate test failed before the fix and now passes. The first
+canonical gate then found D157 (Layouts submenu regression was absent from the
+coverage ratchet): all 105 tests passed before the 104-entry inventory rejected
+the new target. Commit `72df9e2a5` registers its exact identity.
 
 The placement direction was also clarified. Lattecotta does not provide inward
 same-edge dock stacking. Multiple partial-length docks or panels may share one
