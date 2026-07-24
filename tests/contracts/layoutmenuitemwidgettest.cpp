@@ -22,11 +22,11 @@ class LayoutMenuItemWidgetTest : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
-    void sizeHintIncludesPaintedText();
+    void sizeHintIncludesPaintedColumns();
     void menuUsesDelegateWidth();
 };
 
-void LayoutMenuItemWidgetTest::sizeHintIncludesPaintedText()
+void LayoutMenuItemWidgetTest::sizeHintIncludesPaintedColumns()
 {
     QMenu menu;
     QAction action(QStringLiteral("&Daily Driver Layout"), &menu);
@@ -38,9 +38,14 @@ void LayoutMenuItemWidgetTest::sizeHintIncludesPaintedText()
     QString visibleText = action.text();
     visibleText.remove(QLatin1Char('&'));
     const int paintedTextWidth = widget.fontMetrics().horizontalAdvance(visibleText);
+    const int paintedRadioWidth = widget.sizeHint().height() - 4;
+    constexpr int paintedIconWidth{16 + 2};
+    const int completePaintedWidth = paintedTextWidth
+            + paintedRadioWidth
+            + paintedIconWidth;
 
-    QVERIFY2(widget.sizeHint().width() > paintedTextWidth,
-             "the delegate width must include its painted text plus controls");
+    QVERIFY2(widget.sizeHint().width() >= completePaintedWidth,
+             "the delegate width must include its painted text, radio, and icon columns");
     QCOMPARE(widget.sizeHint(), widget.minimumSizeHint());
 }
 
