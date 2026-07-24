@@ -574,12 +574,13 @@ struct DockSystemViewRecord {
     DockObjectIdentities objects;
 };
 
-//! Same-edge stacking has no explicit authority in the current runtime. This
-//! typed negative capability is part of the schema so a consumer cannot infer
-//! an order from the canonical JSON array or from QObject creation order.
+//! Inward same-edge stacking is not a supported placement model. This typed
+//! negative capability remains in the schema so a consumer cannot infer an
+//! order from the canonical JSON array or from QObject creation order.
 struct DockStackModelRecord {
     bool available{false};
-    QString reason{QStringLiteral("No runtime authority models same-edge stack order or accumulated offsets.")};
+    QString reason{QStringLiteral(
+        "Inward same-edge stacking is unsupported; stable dock spans must not overlap.")};
 };
 
 struct DockSystemSnapshot {

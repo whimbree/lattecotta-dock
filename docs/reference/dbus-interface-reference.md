@@ -151,10 +151,10 @@ Per dock:
   stable for a QObject's lifetime and are useful only within the current
   process. They are not memory addresses.
 
-`stacking.available` is currently false and its `reason` explains the missing
-capability. No runtime authority models same-edge stack order or accumulated
-offsets yet. Do not interpret canonical `views` array order as physical stack
-order.
+`stacking.available` is permanently false because inward same-edge stacking is
+not a supported placement model. Multiple partial-length views may share an
+edge only when their stable primary-axis spans do not overlap. Do not interpret
+canonical `views` array order as physical stack order.
 
 An internal lineage-invariant failure logs every relationship input at critical
 severity and returns an empty D-Bus string. It never returns a smaller but

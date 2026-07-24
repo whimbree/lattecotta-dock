@@ -93,7 +93,7 @@ Landed before or during the 2026-07-16 stabilization session:
     "globalConfigureAppletsMode": true,
     "stacking": {
       "available": false,
-      "reason": "No runtime authority models same-edge stack order or accumulated offsets."
+      "reason": "Inward same-edge stacking is unsupported; stable dock spans must not overlap."
     },
     "views": [{
       "runtimeViewId": "9",
@@ -245,11 +245,11 @@ Landed before or during the 2026-07-16 stabilization session:
   `normalThickness`, `maximumNormalThickness`, and `strutsThickness` use the
   same logical-pixel unit.
 
-  `stacking.available` is deliberately false. The current runtime has no
-  explicit same-edge stack-order or accumulated-offset model. Canonical array
-  order is serialization order only and must never be treated as layer-shell
-  stack order. A later stack model requires a new authoritative runtime record,
-  not inference from containment ids, pointers, or creation order.
+  `stacking.available` is deliberately and permanently false. Multiple
+  partial-length views may share an output edge when their stable primary-axis
+  spans do not overlap. Latte does not assign ranks, accumulated insets, or
+  inward lanes. Canonical array order is serialization order only and must
+  never be treated as layer-shell stack order.
 - `viewAppletsData(u containmentId) -> s` (JSON array, in visual order).
   Per applet: id, plugin, index in layout, geometry within the view,
   expanded state, inScheduledDestruction, lockedZoom, colorizingBlocked,

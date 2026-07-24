@@ -733,8 +733,10 @@ void View::createLinkedView(const int targetScreenId, const Plasma::Types::Locat
     linked.name = i18nc("explicitly linked copy of dock or panel, name", "Linked copy of %1", name());
     linked.setState(Data::View::OriginFromViewTemplate, templateFile);
 
-    //! Occupied edges are valid. Same-edge stacking is coordinated after view
-    //! creation, so this path deliberately does not consult freeEdges().
+    //! Occupied edges are valid because separated partial spans may coexist.
+    //! This path deliberately does not infer an inward order or inset from
+    //! creation order. Stable same-edge overlap is an invalid placement for
+    //! the placement validator to report.
     const Data::View created = m_layout->newView(linked);
     if (!created.isValid()) {
         qWarning() << "View::createLinkedView failed to import the linked member";
