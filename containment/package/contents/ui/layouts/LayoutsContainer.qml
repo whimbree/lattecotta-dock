@@ -35,10 +35,9 @@ Item{
     readonly property alias endLayout: _endLayout
     readonly property alias contextMenuIsShown: contextMenuLayer.menuIsShown
 
-    //! Justify's configured maximum owns the complete painted visual. The
-    //! background has already removed its length-axis shadow margins from
-    //! that budget, so the applet container must occupy the same solid span
-    //! instead of extending underneath those shadows.
+    //! The background resolves its fitted length against an independent
+    //! full-view canvas, so the applet container can consume that stable
+    //! result without feeding its own size back into the resolver.
     readonly property real justifyLayoutLength: Math.max(0, background.length)
     readonly property real justifyLayoutOrigin: {
         if (!latteView) {
