@@ -1916,7 +1916,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D162 - Justify applets occupied shadow-only margins
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`cf50d7845`); real-layout visual acceptance is pending.
+  (`cf50d7845`, cycle correction `4edcd203d`, asymmetric-margin correction
+  `6cd8ff860`, mutation correction `3feb54939`); real-layout visual acceptance
+  is pending.
 - FOUND: 2026-07-24, live top-dock rendering at 22 px icon size.
 - SYMPTOM: the first and last applets extended past the solid rounded
   background, so the ends looked clipped and the shadow resembled a second
@@ -1925,12 +1927,15 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   visual span, including its two length-axis shadows. `LayoutsContainer`
   continued to use the outer `root.maxLength` for its physical origin and
   length, placing endpoint wrappers in the two shadow-only margins.
-- FIX: make the fitted solid background length and centered origin authoritative
-  for the physical Justify applet container.
+- FIX: resolve the background against an independent full-view canvas. Center
+  the complete visual, then derive the applet origin and length from the actual
+  tail and head shadow margins.
 - EVIDENCE: the live solid background remained `[126,18,1189,26]`. The first
   wrapper moved from x=121 to x=131, and the last wrapper moved from
-  x=1286..1319 to x=1276..1309. Controlled source mutations that restore the
-  outer length or origin fail.
+  x=1286..1319 to x=1276..1309. Filtered live logging produced no binding-loop
+  warning after the one-way correction. Controlled source mutations that
+  restore the outer length, old origin, applet-owned canvas, or equal-shadow
+  assumption fail.
 
 ### D163 - Native background shadows retained Kirigami alpha compensation
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
@@ -1939,14 +1944,83 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SYMPTOM: the shadow was much darker than the theme color and appeared as a
   detached background behind the dock.
 - ROOT: the former Kirigami `ShadowedRectangle` path added 0.336 to the theme
-  shadow alpha as an explicit renderer-matching workaround. The D145 native
-  `RectangularShadow` replacement retained that formula even though the new
-  effect consumes its supplied color directly.
+  shadow alpha as an explicit renderer-matching workaround. D145 (background
+  shadows used a height-distorting renderer) replaced that renderer with
+  `RectangularShadow` but retained the old formula even though the new effect
+  consumes its supplied color directly.
 - FIX: pass the theme shadow color directly to `RectangularShadow`.
 - EVIDENCE: a controlled source mutation that restores the Kirigami formula
   fails. Source, QML compile, QML lint, image-comparison helper, and complete
   scene-probe gates pass. Live comparison retains a soft shadow without the
   detached dark plate.
+
+### D164 - The first D162 correction formed a Justify geometry cycle
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`4edcd203d`).
+- FOUND: 2026-07-24, mandatory cold review of the thin-dock correction.
+- SYMPTOM: the corrected endpoint positions could settle live while remaining
+  vulnerable to binding loops, stale geometry, or collapse.
+- ROOT: the background host filled `layoutsContainer`, while
+  `layoutsContainer` read `background.length`. Positive shadows made each
+  object's primary-axis length depend on the other.
+- FIX: resolve the background's primary axis against the complete view canvas.
+  Preserve only the independent perpendicular hide-animation relationship.
+- EVIDENCE: a viable mutation restores `anchors.fill: layoutsContainer` and
+  fails the production source guard. Filtered live logging produced no
+  binding-loop warning after the correction.
+
+### D165 - The first D162 correction assumed equal end shadows
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`6cd8ff860`).
+- FOUND: 2026-07-24, mandatory cold review of the thin-dock correction.
+- SYMPTOM: themes with unequal tail and head shadow margins could displace the
+  applet row relative to the solid rounded background.
+- ROOT: the first correction centered the solid length directly. The complete
+  visual is centered instead, and the solid begins after the actual tail
+  margin.
+- FIX: center the resolved complete visual, add the tail shadow to its origin,
+  and subtract the independent tail and head shadows from its length.
+- EVIDENCE: the source guard pins both margins independently. A viable mutation
+  that substitutes the tail margin for the head margin fails.
+
+### D166 - The first D162 origin mutation produced invalid QML
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`3feb54939`).
+- FOUND: 2026-07-24, mandatory cold review of the thin-dock correction.
+- SYMPTOM: the regression test failed after an origin mutation, but the
+  replacement expression referenced a variable outside its scope.
+- ROOT: the mutation rewrote the two consumer returns instead of the
+  authoritative origin property.
+- FIX: restore the former compilable `root.maxLength` origin formula at the
+  property definition. Add the independent equal-shadow mutation.
+- EVIDENCE: the production matcher passes, while both viable semantic
+  regressions fail it.
+
+### D167 - Thin-dock tracking used a bare D145 codeword
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`.
+- FOUND: 2026-07-24, mandatory cold review of the thin-dock correction.
+- SYMPTOM: the handoff and D163 root used `D145` without its plain-English
+  description.
+- ROOT: the local defect reference was treated as sufficient context in prose
+  that must remain readable without the registry.
+- FIX: describe D145 as the background-shadow height-distortion correction at
+  first use in both records.
+- EVIDENCE: the corrected prose contains the codeword and its description
+  together.
+
+### D168 - Thin-dock tracking commit omitted explicit verification evidence
+- STATUS: OPEN on `fix/vertical-autosize-animation-tracker`; correct during
+  pre-PR history cleanup.
+- FOUND: 2026-07-24, mandatory cold review of commit `5318aec02`.
+- SYMPTOM: the commit body described what the records contained but did not
+  state the focused checks that had passed.
+- ROOT: documentation content evidence was mistaken for commit verification
+  evidence.
+- REQUIRED: preserve the current commit sequence while development continues,
+  then rewrite that body before final PR landing to name the source, QML, and
+  scene-probe results.
+- EVIDENCE: `git show --format=fuller 5318aec02` contains no explicit
+  verification paragraph.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
