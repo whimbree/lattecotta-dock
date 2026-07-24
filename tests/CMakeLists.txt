@@ -896,6 +896,21 @@ target_compile_definitions(contextmenudefaulttest PRIVATE
     CONTEXTMENU_PLUGIN_FILE="$<TARGET_FILE:plasma_containmentactions_lattecontextmenu>"
     CONTEXTMENU_METADATA_JSON="${CMAKE_SOURCE_DIR}/containmentactions/contextmenu/plasma-containmentactions-lattecontextmenu.json")
 
+# The Layouts submenu's QWidgetAction delegate paints text outside its child
+# layout. Compile the production delegate and painter helpers directly so Qt 6
+# menu measurement is exercised rather than source-scanned.
+ecm_add_test(contracts/layoutmenuitemwidgettest.cpp
+    ${CMAKE_SOURCE_DIR}/containmentactions/contextmenu/layoutmenuitemwidget.cpp
+    ${CMAKE_BINARY_DIR}/containmentactions/contextmenu/generictools.cpp
+    TEST_NAME layoutmenuitemwidgettest
+    LINK_LIBRARIES Qt6::Test Qt6::Widgets
+)
+set_tests_properties(layoutmenuitemwidgettest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(layoutmenuitemwidgettest PRIVATE
+    ${CMAKE_SOURCE_DIR}/containmentactions/contextmenu
+    ${CMAKE_BINARY_DIR}/containmentactions/contextmenu)
+
 # Contract: Plasma 6 removed applet.action(); the edit-mode handle must
 # resolve standard actions through applet.plasmoid.internalAction(name) or
 # Configure/Remove silently die with a TypeError.
