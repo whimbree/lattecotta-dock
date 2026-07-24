@@ -827,6 +827,35 @@ void SourceGuardTest::justifyAppletSpan_sourceGuardRejectsShadowOverlap()
                                                      originalMain),
              "restoring the outer visual width must fail the Justify ownership guard");
 
+    QString outerVisualOriginRestored = originalLayout;
+    const QString solidOrigin = QStringLiteral(
+        "readonly property real justifyLayoutOrigin: (justifyOwningCanvasLength\n"
+        "                                                 - justifyVisualLength) / 2\n"
+        "                                                + backgroundShadowTailLength");
+    QCOMPARE(outerVisualOriginRestored.count(solidOrigin), 1);
+    outerVisualOriginRestored.replace(
+        solidOrigin,
+        QStringLiteral(
+            "readonly property real justifyLayoutOrigin:\n"
+            "        (justifyOwningCanvasLength - root.maxLength) / 2 + background.offset"));
+    QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(outerVisualOriginRestored,
+                                                     originalMain),
+             "placing applets from the outer visual origin must fail the guard");
+
+    QString symmetricShadowAssumption = originalLayout;
+    const QString asymmetricLength = QStringLiteral(
+        "- backgroundShadowTailLength\n"
+        "                                                    - backgroundShadowHeadLength");
+    QCOMPARE(symmetricShadowAssumption.count(asymmetricLength), 1);
+    symmetricShadowAssumption.replace(
+        asymmetricLength,
+        QStringLiteral(
+            "- backgroundShadowTailLength\n"
+            "                                                    - backgroundShadowTailLength"));
+    QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(symmetricShadowAssumption,
+                                                     originalMain),
+             "assuming equal end shadows must fail the Justify ownership guard");
+
     QString layoutOwnedCanvas = originalMain;
     const QString independentCanvas = QStringLiteral(
         "            x: root.isHorizontal ? 0 : layoutsContainer.x\n"
