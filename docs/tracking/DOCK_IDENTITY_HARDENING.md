@@ -312,10 +312,18 @@ session first.
 ### Same-edge occupancy needs span validation, not stacking
 
 Multiple partial-length containments may share an output edge when their stable
-primary-axis spans do not overlap. This is the placement model used by normal
-Latte layouts: alignment, maximum length, and offset place each view along the
-edge, while the deepest member determines the edge's reservation depth. Latte
-does not assign stable ranks, cumulative insets, or automatic inward lanes.
+primary-axis spans do not overlap. Alignment, maximum length, and offset place
+each view along the edge, while the deepest member determines the edge's
+reservation depth. Lattecotta does not assign stable ranks, cumulative insets,
+or automatic inward lanes.
+
+This is a deliberate extension of the upstream UI contract. OG Latte's
+`GenericLayout::freeEdges()` removed an edge after the first view occupied it,
+so ordinary creation and movement did not present same-edge composition as a
+first-class workflow. Persisted or imported layouts could still contain
+multiple same-edge views, and the runtime had no physical stack model for them.
+Lattecotta promotes only the separated-span case to supported behavior and
+makes stable overlap invalid.
 
 The inherited runtime can also persist overlapping same-edge spans, but their
 composition and ordering are undefined. The missing authority is therefore an
