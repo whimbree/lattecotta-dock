@@ -4476,7 +4476,7 @@ prerequisites in the phases above are done.
       Commits: 3feb54939
 - [x] Fix D167 (thin-dock tracking used a bare D145 codeword). Add the
       plain-English background-shadow description at first use.
-      Commits: PENDING
+      Commits: e8ca33c2f
 - [ ] Fix D168 (thin-dock tracking commit omitted explicit verification
       evidence). Rewrite commit `5318aec02` during pre-PR history cleanup.
       Commits:
