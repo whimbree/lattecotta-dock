@@ -46,10 +46,11 @@ The shadow-off real layout and an isolated shadow-on clone now both settle at
 solid `[115,18,1209,26]`, applet span `[128,18,1183,26]`, and endpoint wrappers
 x=124 and x=1283..1316. Configured and effective icon sizes both remain 22 px.
 Focused C++ geometry and source-contract tests, all 130 QML compile probes, and
-all 245 QML interaction cases pass. The canonical gate, independent review,
-and final real-layout visual acceptance remain pending. The first canonical
-gate reached 104 of 105 passing CTest entries before D171; the complete rerun
-after that correction remains pending.
+all 245 QML interaction cases pass. The first canonical gate reached 104 of 105
+passing CTest entries before D171. The complete rerun passes at `5461b643b`
+with 105 of 105 CTest entries, QML compile and lint, every scene probe, nested
+ASan/UBSan replay, geometry agreement, and the output matrix. Independent
+review and final real-layout visual acceptance remain pending.
 
 ## 2026-07-24: thin Justify docks keep applets and shadows in their own spans
 

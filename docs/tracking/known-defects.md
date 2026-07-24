@@ -2047,7 +2047,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   After the fix, isolated shadow-on and real shadow-off runs both settle at
   `[115,18,1209,26]`, with applets `[128,18,1183,26]` and endpoint wrappers at
   x=124 and x=1283..1316. Focused C++ geometry and source-contract tests, all
-  130 QML compile probes, and all 245 QML interaction cases pass.
+  130 QML compile probes, and all 245 QML interaction cases pass. The canonical
+  gate passes all 105 CTest entries, scene probes, nested ASan/UBSan replay, and
+  the output matrix.
 
 ### D170 - The first D169 correction weakened end-hover shadow bounds
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
@@ -2080,6 +2082,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   the inherited background context name.
 - EVIDENCE: `sourceguardtest` and `qmllintgate` pass. The touched file improves
   from 181 to 176 curated warnings, and the ratchet records the lower count.
+  The canonical gate passes all 105 CTest entries.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
