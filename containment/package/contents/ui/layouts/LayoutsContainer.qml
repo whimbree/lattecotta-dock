@@ -35,6 +35,20 @@ Item{
     readonly property alias endLayout: _endLayout
     readonly property alias contextMenuIsShown: contextMenuLayer.menuIsShown
 
+    //! Justify's configured maximum owns the complete painted visual. The
+    //! background has already removed its length-axis shadow margins from
+    //! that budget, so the applet container must occupy the same solid span
+    //! instead of extending underneath those shadows.
+    readonly property real justifyLayoutLength: Math.max(0, background.length)
+    readonly property real justifyLayoutOrigin: {
+        if (!latteView) {
+            return 0;
+        }
+
+        const viewPrimaryLength = root.isHorizontal ? latteView.width : latteView.height;
+        return (viewPrimaryLength - justifyLayoutLength) / 2 + background.offset;
+    }
+
     signal contentsLengthChanged();
 
     Binding {
@@ -48,7 +62,7 @@ Item{
             }
 
             if ( latteView && root.isHorizontal && root.myView.alignment === LatteCore.Types.Justify ){
-                return ((latteView.width/2) - (root.maxLength/2) + background.offset);
+                return justifyLayoutOrigin;
             } else {
                 if ((root.myView.inSlidingIn || root.myView.inSlidingOut) && root.isVertical){
                     return;
@@ -82,7 +96,7 @@ Item{
             }
 
             if ( latteView && root.isVertical && root.myView.alignment === LatteCore.Types.Justify ) {
-                return ((latteView.height/2) - (root.maxLength/2) + background.offset);
+                return justifyLayoutOrigin;
             } else {
                 if ((root.myView.inSlidingIn || root.myView.inSlidingOut) && root.isHorizontal){
                     return;
@@ -105,8 +119,10 @@ Item{
         }
     }
 
-    width: root.isHorizontal && root.myView.alignment === LatteCore.Types.Justify ? root.maxLength : parent.width
-    height: root.isVertical && root.myView.alignment === LatteCore.Types.Justify ? root.maxLength : parent.height
+    width: root.isHorizontal && root.myView.alignment === LatteCore.Types.Justify
+           ? justifyLayoutLength : parent.width
+    height: root.isVertical && root.myView.alignment === LatteCore.Types.Justify
+            ? justifyLayoutLength : parent.height
     z:10
 
     property bool animationSent: false

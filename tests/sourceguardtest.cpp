@@ -28,6 +28,8 @@
 //     feed back into the stable content offset
 //   * Dock background routing: Justify joins all dock alignments in the
 //     shadow-aware visual fit while panel mode retains its full-span path
+//   * Justify applet placement: the physical applet container follows the
+//     fitted solid background instead of extending into its shadow margins
 //   * Dock background thickness: current and maximum item metrics share the
 //     monotonic theme-minimum interpolation instead of duplicating its formula
 //   * Dock background rendering: custom shadows use one fixed-pixel effect
@@ -185,6 +187,28 @@ private:
                    "?inJustifyCenterOffset:root.offset"))
             && !offsetBinding.contains(QStringLiteral(
                 "background.offset-parabolicOffsetting"));
+    }
+
+    static bool matchesJustifyLayoutSolidSpanOwnership(const QString &source)
+    {
+        const QString code = normalizedCode(source);
+
+        return code.contains(QStringLiteral(
+                   "readonlypropertyrealjustifyLayoutLength:"
+                   "Math.max(0,background.length)"))
+            && code.contains(QStringLiteral(
+                "constviewPrimaryLength=root.isHorizontal"
+                "?latteView.width:latteView.height;"
+                "return(viewPrimaryLength-justifyLayoutLength)/2+background.offset;"))
+            && code.count(QStringLiteral("returnjustifyLayoutOrigin;")) == 2
+            && code.contains(QStringLiteral(
+                "width:root.isHorizontal&&root.myView.alignment"
+                "===LatteCore.Types.Justify"
+                "?justifyLayoutLength:parent.width"))
+            && code.contains(QStringLiteral(
+                "height:root.isVertical&&root.myView.alignment"
+                "===LatteCore.Types.Justify"
+                "?justifyLayoutLength:parent.height"));
     }
 
     static bool matchesDockBackgroundFitRouting(const QString &source)
@@ -518,6 +542,8 @@ private Q_SLOTS:
     void layoutLengthChanges_sourceGuardRejectsVerticalRemoval();
     void centeredAppletOffset_ignoresBoundedBackgroundMovement();
     void centeredAppletOffset_sourceGuardRejectsVisualFeedback();
+    void justifyAppletSpan_followsSolidBackground();
+    void justifyAppletSpan_sourceGuardRejectsShadowOverlap();
     void dockBackgroundFit_includesJustifyDockMode();
     void dockBackgroundFit_sourceGuardsRejectBypasses();
     void backgroundVisualThickness_usesMonotonicCore();
@@ -750,6 +776,39 @@ void SourceGuardTest::centeredAppletOffset_sourceGuardRejectsVisualFeedback()
         "? inJustifyCenterOffset : background.offset - parabolicOffsetting"));
     QVERIFY2(!matchesCenteredAppletOffsetOwnership(source),
              "restoring visual-offset feedback must fail the applet placement guard");
+}
+
+void SourceGuardTest::justifyAppletSpan_followsSolidBackground()
+{
+    const QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    QVERIFY2(matchesJustifyLayoutSolidSpanOwnership(source),
+             "Justify applets must occupy the fitted solid background span");
+}
+
+void SourceGuardTest::justifyAppletSpan_sourceGuardRejectsShadowOverlap()
+{
+    const QString original = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    QVERIFY(matchesJustifyLayoutSolidSpanOwnership(original));
+
+    QString outerVisualLengthRestored = original;
+    const QString solidWidth = QStringLiteral(
+        "? justifyLayoutLength : parent.width");
+    QCOMPARE(outerVisualLengthRestored.count(solidWidth), 1);
+    outerVisualLengthRestored.replace(solidWidth,
+                                      QStringLiteral("? root.maxLength : parent.width"));
+    QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(outerVisualLengthRestored),
+             "restoring the outer visual width must fail the Justify ownership guard");
+
+    QString outerVisualOriginRestored = original;
+    const QString solidOrigin = QStringLiteral("return justifyLayoutOrigin;");
+    QCOMPARE(outerVisualOriginRestored.count(solidOrigin), 2);
+    outerVisualOriginRestored.replace(
+        solidOrigin,
+        QStringLiteral("return (viewPrimaryLength - root.maxLength) / 2;"));
+    QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(outerVisualOriginRestored),
+             "placing applets from the outer visual origin must fail the guard");
 }
 
 void SourceGuardTest::dockBackgroundFit_includesJustifyDockMode()
