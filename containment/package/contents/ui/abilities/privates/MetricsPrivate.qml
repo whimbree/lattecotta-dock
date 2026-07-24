@@ -95,8 +95,16 @@ AbilityHost.Metrics {
 
     //! BEHAVIORS
     Behavior on iconSize {
-        NumberAnimation {
-            duration: 0.8 * animations.duration.proposed
+        enabled: animations.active
+
+        //! One animation owns the resize. Margins and padding derive directly
+        //! from this animated value instead of starting animations that chase
+        //! a target changing on every frame. SmoothedAnimation preserves
+        //! velocity when a wheel or a second setting change retargets an
+        //! active resize.
+        SmoothedAnimation {
+            velocity: 240 / Math.max(animations.speedFactor.current, 0.01)
+            maximumEasingTime: 120 * animations.speedFactor.current
 
             onRunningChanged: {
                 if (!running) {
@@ -107,38 +115,8 @@ AbilityHost.Metrics {
     }
 
     margin {
-        Behavior on length {
-            NumberAnimation {
-                duration: 0.8 * animations.duration.proposed
-                easing.type: Easing.OutCubic
-            }
-        }
-
         Behavior on screenEdge {
             enabled: !root.behaveAsPlasmaPanel
-            NumberAnimation {
-                duration: 0.8 * animations.duration.proposed
-                easing.type: Easing.OutCubic
-            }
-        }
-
-        Behavior on tailThickness {
-            NumberAnimation {
-                duration: 0.8 * animations.duration.proposed
-                easing.type: Easing.OutCubic
-            }
-        }
-
-        Behavior on headThickness {
-            NumberAnimation {
-                duration: 0.8 * animations.duration.proposed
-                easing.type: Easing.OutCubic
-            }
-        }
-    }
-
-    padding {
-        Behavior on length {
             NumberAnimation {
                 duration: 0.8 * animations.duration.proposed
                 easing.type: Easing.OutCubic
