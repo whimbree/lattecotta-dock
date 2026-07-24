@@ -1755,6 +1755,52 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   12. `watch-dock-presentation.sh` rejected all four escaped boundaries and
   preserved the D-Bus payloads plus the workspace screenshot.
 
+### D153 - Partial bottom reservation moved a separated side dock
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`25c74a6a3`, `6608a1d39`); real-layout visual acceptance is pending.
+- FOUND: 2026-07-23, live comparison of a partial bottom dock in Always
+  Visible and dodge visibility modes beside a right dock.
+- SYMPTOM: enabling Always Visible on the partial-width bottom dock shortened
+  and moved the right dock upward even though the two stable dock rectangles
+  did not intersect. Dodge mode restored the right dock to the output bottom.
+- ROOT: three ownership errors stacked. KWin applies each positive layer-shell
+  exclusive zone to one rectangular per-output work area, so attaching the
+  zone to the visual dock surface also placed that visual inside an
+  output-wide bottom band. Latte independently reconstructed an occupied
+  footprint from the larger masked QWindow instead of consuming the already
+  solved stable background rectangle. `View::updateAbsoluteGeometry()` then
+  compared the new rectangle after assignment, suppressing ordinary peer
+  notifications when the occupied footprint changed.
+- FIX: make `absoluteGeometry` the sole occupied-footprint authority and
+  publish its changes before perpendicular peers solve again. Keep every Latte
+  visual surface at Positioner's exact per-output rectangle with layer-shell
+  zone -1. Publish ordinary client work-area reservation through a separate
+  transparent, inputless one-pixel surface whose length matches the occupied
+  span. `dockSystemData` schema 3 reports the requested state of both surfaces.
+- EVIDENCE: the pure region case keeps a right rectangle at
+  [1512,0,88,1000] beside bottom occupancy [378,912,844,88]. The 061 nested
+  KWin replay passed three times with the actual right surface unchanged at
+  [1216,0,384,1000] across the visibility transition. The existing 060
+  geometry-agreement replay also passes.
+
+### D154 - Dock resize speed varied with slider distance
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`ee405a940`); real-layout visual acceptance is pending.
+- FOUND: 2026-07-23, live Absolute Size slider acceptance.
+- SYMPTOM: changing the size by a large amount animated at a visibly different
+  rate from a small change, and repeated large changes produced jitter.
+- ROOT: `iconSize` used a fixed-duration `NumberAnimation`, so distance
+  directly changed pixels per second. Length margin, thickness margins, and
+  padding each owned another animation whose target derived from the changing
+  icon value, causing several nested animations to retarget every frame.
+- FIX: give icon size one velocity-preserving `SmoothedAnimation`. Derive
+  margin and padding values directly from that animated authority instead of
+  starting dependent animations.
+- EVIDENCE: the source contract rejects fixed-duration icon resizing and
+  dependent margin or padding animations. The QML compile gate and all 244
+  interaction tests pass. Removing the redundant behaviors reduces
+  `MetricsPrivate.qml` from 18 to 16 curated qmllint warnings.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.

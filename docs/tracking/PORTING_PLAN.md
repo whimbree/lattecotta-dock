@@ -4408,6 +4408,16 @@ prerequisites in the phases above are done.
       output safety fit to the effective size, including when automatic growth
       is disabled.
       Commits:
+- [x] Fix D153 (partial bottom reservation moved a separated side dock). Use
+      the already-solved stable dock rectangle as Latte's occupied footprint,
+      propagate every footprint transition to perpendicular peers, keep visual
+      surfaces at their exact per-output rectangles, and publish KWin's scalar
+      work-area reservation through a separate inputless surface.
+      Commits: 25c74a6a3, 6608a1d39
+- [x] Fix D154 (dock resize speed varied with slider distance). Replace the
+      fixed-duration icon resize and nested derived animations with one
+      velocity-preserving icon-size authority.
+      Commits: ee405a940
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

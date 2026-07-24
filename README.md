@@ -69,6 +69,9 @@ recreation and output disconnects preserve the persistent relationship and
 rebind only the views eligible on active outputs.
 Horizontal and vertical layout changes use the same per-view animation tracker,
 so automatic sizing waits for settled content on both axes.
+Size changes use one velocity-preserving icon animation; margins and padding
+derive from that value without starting nested animations whose speed changes
+with slider distance.
 The automatic-size solver uses every fitting integer icon size, sizes the
 persistent dock from its settled row, leaves a two-pixel rounding margin, and
 uses the background's real post-chrome content span before painting task
@@ -85,6 +88,11 @@ and screen-height sizing shows its resolved pixel ceiling and explicit Off mode.
 The shared edit canvas reasserts its compositor placement and view-local input
 mask when retargeting, including between separate docks that legitimately
 occupy the same output edge and canvas rectangle.
+Partial dock occupancy is solved from each stable background rectangle.
+Latte's visual layer surfaces follow those exact per-output results while
+separate transparent surfaces publish KWin's scalar work-area reservations, so
+a nonintersecting perpendicular dock is not shortened by another dock's masked
+canvas.
 Legacy On All Screens members retain their derived-output behavior. A linked
 source stays protected from removal until its explicit members are removed, so
 one-containment Undo cannot leave a partial relationship.

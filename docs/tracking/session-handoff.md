@@ -3,6 +3,40 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-23.
 
+## 2026-07-23: partial reservations no longer place Latte visuals
+
+Live comparison exposed D153 (partial bottom reservation moved a separated
+side dock). A partial bottom dock in Always Visible mode shortened the right
+dock, while the same bottom dock in dodge mode let the right dock reach the
+output bottom. The stable rectangles did not intersect.
+
+Three ownership errors stacked. KWin applies a positive layer-shell zone to
+one rectangular per-output work area, and the visual dock surface carried that
+zone. Latte independently rebuilt occupancy from the larger masked QWindow
+instead of the already-solved stable background rectangle.
+`View::updateAbsoluteGeometry()` also compared after assigning the new
+rectangle, which suppressed ordinary peer notifications.
+
+Commits `25c74a6a3` and `6608a1d39` separate the authorities. Latte's region
+solver consumes `absoluteGeometry`; every visual layer surface follows
+Positioner's exact per-output rectangle with zone -1; and a transparent,
+inputless one-pixel surface publishes the positive reservation. Schema 3 of
+`dockSystemData` exposes the geometry, anchors, margins, edge, and zone for
+both surfaces.
+
+The 061 nested-KWin replay passed three times. A partial bottom transition
+left the actual right surface unchanged at [1216,0,384,1000], and the existing
+060 geometry-agreement replay remained green. Real-layout visual acceptance
+is still pending. KWin's ordinary client work area remains one rectangle per
+output; exact partial regions govern Latte-owned dock placement.
+
+The same live session exposed D154 (dock resize speed varied with slider
+distance). Commit `ee405a940` replaces fixed-duration icon resizing and
+several dependent margin animations with one velocity-preserving
+`SmoothedAnimation`. The QML compile gate and all 244 interaction tests pass.
+`MetricsPrivate.qml` also drops from 18 to 16 curated lint warnings. Real
+slider acceptance is still pending.
+
 ## 2026-07-23: hover presentation uses the per-output canvas
 
 Live landscape acceptance exposed D150 (hovered applet row escaped its resting

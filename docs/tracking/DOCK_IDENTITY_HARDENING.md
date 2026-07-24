@@ -333,21 +333,39 @@ new alignment without normalizing a negative center offset. The QML background
 and applet layout then apply a negative edge margin and render past the output.
 Startup and external configuration writes can bypass the same invariant.
 
-### Partial-footprint peer resizing remains a separate hypothesis
+### Partial-footprint reservation mixed three ownership layers (fixed)
 
 The exact linked reproducer did not change the remote view's dock-level
 `configuredIconSize`, `effectiveIconSize`, or `availablePrimaryLength`. Its
-first divergent value was the applet-local `length` described above. This rules
-out a shared AutoSize instance or global icon cache for that reproduction.
+first divergent value was the applet-local `length` described above. This
+rules out a shared AutoSize instance or global icon cache for that
+reproduction.
 
-A separate reservation discrepancy remains plausible for independent
-perpendicular docks. Layer shell publishes an edge-wide scalar exclusive zone,
-while Latte's internal available-rectangle model applies an alignment-aware
-partial footprint. Static reading suggests one dock's alignment could change a
-neighbor's solved length without changing compositor work area, but that path
-has not yet been demonstrated by the exact independent-dock nested matrix. It
-remains a hypothesis for the stacking and placement slice, not a confirmed
-cause of the linked sizing defect.
+The separate independent-dock discrepancy is now confirmed as D153 (partial
+bottom reservation moved a separated side dock). KWin reduces one rectangular
+per-output work area for a positive layer-shell exclusive zone. The visual
+dock surface incorrectly carried that zone, so KWin placed a perpendicular
+Latte surface inside an output-wide band. Latte also rebuilt partial occupancy
+from the larger masked QWindow instead of consuming the stable background
+rectangle, then suppressed normal footprint-change notifications by comparing
+geometry after assignment.
+
+The corrected ownership split is:
+
+- `View::absoluteGeometry()` owns the stable dock footprint consumed by other
+  Latte views.
+- `Positioner::surfaceGeometry()` owns the exact visual layer-surface
+  rectangle.
+- `ScreenSpaceReservation` owns the transparent positive-exclusive surface
+  used for ordinary client work-area reservation.
+- KWin retains ownership of its rectangular per-output work area. Latte does
+  not infer output adjacency or use another output's rectangle.
+
+Every Latte visual surface carries zone -1 and exact top-left-relative
+placement, so a coarse KWin work-area band cannot move it. The 061 nested
+replay keeps a nonintersecting right dock full-height across a partial bottom
+reservation transition and compares Positioner's rectangle with KWin's actual
+rendered surface.
 
 ## Additional confirmed lifecycle hazards
 
@@ -435,8 +453,11 @@ not landed yet.
    cumulative insets, activation ownership over an exact region set, and a
    single reservation policy.
 7. Keep compositor work-area reservation separate from Latte's partial
-   dock-to-dock avoidance footprint. Autosizing consumes only the final solved
-   geometry for its own view.
+   dock-to-dock avoidance footprint. This split is implemented: autosizing and
+   peer placement consume final per-view geometry, visual layer surfaces opt
+   out of scalar work-area placement, and a separate inputless surface
+   publishes each reservation. The future stack coordinator remains the
+   authority for combining same-edge members.
 8. Replace blanket replica configuration mirroring with explicit shared-content
    and per-view geometry projections. Applet `length` is local across both
    explicit and screen-group-derived members. Independent duplicates share no
@@ -567,9 +588,10 @@ merge.
 - Which same-edge reservation policy best matches intended daily-driver
   behavior for mixed visibility modes. The stack still requires deterministic
   physical order under every policy.
-- Whether partial dock-to-dock corner avoidance should remain under Wayland or
-  be replaced by the compositor's edge-wide work-area contract. The current
-  split cannot remain implicit.
+- How the future same-edge coordinator should combine reservation surfaces for
+  separated partial members without widening activation ownership. KWin's
+  ordinary client work area remains rectangular even when Latte's own
+  dock-to-dock avoidance uses exact regions.
 
 ## Current release severity
 
@@ -579,10 +601,10 @@ merge.
 - **Release blocker:** Start and End alignment can leave the rendered rectangle
   outside its selected output because alignment bypasses placement
   normalization.
-- **Beta blocker:** the partial-footprint and layer-shell reservation
-  disagreement may resize an independent perpendicular dock after a peer
-  alignment change. Static ownership is inconsistent, but the independent-dock
-  executable matrix still has to confirm or reject this separate hypothesis.
+- **Known issue:** KWin exposes one rectangular per-output work area, so a
+  partial Latte reservation still affects ordinary maximized application
+  geometry across that output edge. Latte-owned dock placement uses exact
+  regions and no longer inherits that scalar band.
 - **Known issue:** linked members have no Detach action or relationship-aware
   root-removal choice dialog. Linked roots remain protected until their
   explicit members are removed. Enabling root removal without one group-wide
