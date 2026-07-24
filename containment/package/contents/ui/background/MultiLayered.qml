@@ -105,8 +105,9 @@ BackgroundProperties{
         }
 
         const maximumLength = root.maxLength;
+        const shadowMarginsLength = barLine.totals.shadowsLength;
         const requestedLength = myView.alignment === LatteCore.Types.Justify
-                ? maximumLength
+                ? Math.max(0, maximumLength - shadowMarginsLength)
                 : Math.max(root.minLength,
                            layoutsContainerItem.mainLayout.length + barLine.totals.paddingsLength);
 
@@ -117,12 +118,20 @@ BackgroundProperties{
             return requestedLength;
         }
 
-        //! Resting end padding is presentation space, not a permanent hover
-        //! reserve. Parabolic zoom may borrow it, while the rounded background
-        //! and its drop shadow remain inside the configured primary span.
+        const viewPrimaryLength = Plasmoid.formFactor === PlasmaCore.Types.Horizontal
+                ? barLine.parent.width : barLine.parent.height;
+        if (viewPrimaryLength <= 0) {
+            //! The positioner has not published the owning canvas yet.
+            return requestedLength;
+        }
+
+        //! maxLength owns the stable layout budget. Parabolic zoom is a
+        //! transient presentation, so its background may grow beyond that
+        //! configured span, but the complete painted visual must remain inside
+        //! the output-owned canvas.
         return backgroundStateResolver.dockBackgroundLength(requestedLength,
-                                                             maximumLength,
-                                                             barLine.totals.shadowsLength);
+                                                             viewPrimaryLength,
+                                                             shadowMarginsLength);
     }
 
     thickness: {

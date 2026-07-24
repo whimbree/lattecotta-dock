@@ -113,11 +113,12 @@ public Q_SLOTS:
                                    double backgroundWidth,
                                    double backgroundHeight) const;
 
-    //! MultiLayered.qml dock-mode primary-axis bounds. The solid background
-    //! and its length-axis shadows stay inside maxLength; the centered offset
-    //! stays inside the actual view after parabolic movement is added.
+    //! MultiLayered.qml dock-mode primary-axis bounds. maxLength constrains the
+    //! resting applet layout in QML; this helper keeps the transient background
+    //! and its length-axis shadows inside the output-owned canvas. The centered
+    //! offset stays inside that same canvas after parabolic movement is added.
     Q_INVOKABLE double dockBackgroundLength(double requestedBackgroundLength,
-                                            double maximumVisualLength,
+                                            double owningCanvasLength,
                                             double shadowMarginsLength) const;
     Q_INVOKABLE double centeredDockOffset(double requestedOffset,
                                           double visualLength,

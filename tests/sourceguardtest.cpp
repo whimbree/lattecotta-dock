@@ -198,16 +198,22 @@ private:
             "if(root.behaveAsPlasmaPanel&&LatteCore.WindowSystem.compositingActive)"));
         const int requestedLength = lengthBinding.indexOf(QStringLiteral(
             "constrequestedLength=myView.alignment===LatteCore.Types.Justify"
-            "?maximumLength:Math.max("));
+            "?Math.max(0,maximumLength-shadowMarginsLength):Math.max("));
+        const int owningCanvas = lengthBinding.indexOf(QStringLiteral(
+            "constviewPrimaryLength=Plasmoid.formFactor"
+            "===PlasmaCore.Types.Horizontal?barLine.parent.width:barLine.parent.height;"));
         const int fittedLength = lengthBinding.indexOf(QStringLiteral(
             "returnbackgroundStateResolver.dockBackgroundLength("
-            "requestedLength,maximumLength,barLine.totals.shadowsLength);"));
+            "requestedLength,viewPrimaryLength,shadowMarginsLength);"));
 
         return panelPath != -1
             && requestedLength > panelPath
-            && fittedLength > requestedLength
+            && owningCanvas > requestedLength
+            && fittedLength > owningCanvas
             && !lengthBinding.contains(QStringLiteral(
                 "if(myView.alignment===LatteCore.Types.Justify){returnroot.maxLength;}"))
+            && !lengthBinding.contains(QStringLiteral(
+                "dockBackgroundLength(requestedLength,maximumLength,"))
             && offsetBinding.contains(QStringLiteral(
                 "if(myView.alignment===LatteCore.Types.Justify){return0;}"));
     }
@@ -704,12 +710,23 @@ void SourceGuardTest::dockBackgroundFit_sourceGuardsRejectBypasses()
     QString lengthBypass = original;
     const QString fittedCall = QStringLiteral(
         "return backgroundStateResolver.dockBackgroundLength(requestedLength,\n"
-        "                                                             maximumLength,\n"
-        "                                                             barLine.totals.shadowsLength);");
+        "                                                             viewPrimaryLength,\n"
+        "                                                             shadowMarginsLength);");
     QCOMPARE(lengthBypass.count(fittedCall), 1);
     lengthBypass.replace(fittedCall, QStringLiteral("return requestedLength;"));
     QVERIFY2(!matchesDockBackgroundFitRouting(lengthBypass),
              "bypassing the complete-visual fit must fail the routing guard");
+
+    QString restingMaximumRestored = original;
+    QCOMPARE(restingMaximumRestored.count(fittedCall), 1);
+    restingMaximumRestored.replace(
+        fittedCall,
+        QStringLiteral(
+            "return backgroundStateResolver.dockBackgroundLength(requestedLength,\n"
+            "                                                             maximumLength,\n"
+            "                                                             shadowMarginsLength);"));
+    QVERIFY2(!matchesDockBackgroundFitRouting(restingMaximumRestored),
+             "using the configured resting maximum as a hover clipping plane must fail");
 
     QString offsetBypass = original;
     const QString justifyOffset = QStringLiteral(

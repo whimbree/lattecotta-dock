@@ -324,20 +324,20 @@ inline QRectF resolveEffectsArea(const EffectsAreaEnv &env)
     return QRectF(env.backgroundOriginInRoot, env.backgroundSize);
 }
 
-//! A dock's rounded solid background grows with the applet row. Parabolic zoom
-//! may consume its resting end padding, but the complete background visual,
-//! including its length-axis shadow margins, remains inside the configured
-//! primary span.
+//! A dock's rounded solid background grows with the applet row. The configured
+//! maximum belongs to the stable-layout solver, not this transient presentation
+//! path. Keep the complete painted visual, including its length-axis shadow
+//! margins, inside the output-owned canvas.
 inline constexpr qreal fitDockBackgroundLength(qreal requestedBackgroundLength,
-                                               qreal maximumVisualLength,
+                                               qreal owningCanvasLength,
                                                qreal shadowMarginsLength)
 {
     Q_ASSERT(requestedBackgroundLength >= 0.0);
-    Q_ASSERT(maximumVisualLength >= 0.0);
+    Q_ASSERT(owningCanvasLength >= 0.0);
     Q_ASSERT(shadowMarginsLength >= 0.0);
 
     const qreal maximumBackgroundLength = std::max(qreal{0},
-                                                   maximumVisualLength - shadowMarginsLength);
+                                                   owningCanvasLength - shadowMarginsLength);
     return std::min(requestedBackgroundLength, maximumBackgroundLength);
 }
 

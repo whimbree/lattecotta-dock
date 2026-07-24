@@ -62,20 +62,23 @@ TestCase {
         compare(area.height, 1);
     }
 
-    function test_zoomBorrowsBackgroundPaddingButKeepsChromeInView() {
-        compare(resolver.dockBackgroundLength(1230, 1240, 40), 1200);
-        compare(resolver.dockBackgroundLength(1307, 1240, 40), 1200);
-        compare(resolver.centeredDockOffset(-34, 1240, 1240), 0);
+    function test_zoomBackgroundFollowsContentInsideOwningCanvas() {
+        //! The 2110 px configured resting background may temporarily follow
+        //! the live 2239 px hovered row inside its 2560 px output.
+        compare(resolver.dockBackgroundLength(2110, 2560, 40), 2110);
+        compare(resolver.dockBackgroundLength(2239, 2560, 40), 2239);
+        compare(resolver.centeredDockOffset(-34, 2279, 2560), -34);
 
-        //! A shorter dock keeps its available centered movement.
+        //! The complete visual still stops at the actual output-owned canvas.
+        compare(resolver.dockBackgroundLength(2540, 2560, 40), 2520);
         compare(resolver.dockBackgroundLength(900, 1240, 40), 900);
         compare(resolver.centeredDockOffset(80, 940, 1240), 80);
     }
 
     function test_dockAlignmentsShareTheCompleteVisualFit() {
-        //! Justify requests the complete configured span; center and the four
-        //! anchored alignments may request a shorter content-driven span.
-        compare(resolver.dockBackgroundLength(1240, 1240, 40), 1200);
+        //! Justify reserves its shadows before calling the resolver; center
+        //! and the four anchored alignments may request a content-driven span.
+        compare(resolver.dockBackgroundLength(1200, 1240, 40), 1200);
         compare(resolver.dockBackgroundLength(900, 1240, 40), 900);
     }
 
