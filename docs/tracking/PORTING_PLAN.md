@@ -4457,11 +4457,29 @@ prerequisites in the phases above are done.
 - [x] Fix D162 (Justify applets occupied shadow-only margins). Make the fitted
       solid background span authoritative for the physical applet container
       instead of laying endpoint applets under length-axis shadows.
-      Commits: cf50d7845
+      Commits: cf50d7845, 4edcd203d, 6cd8ff860, 3feb54939
 - [x] Fix D163 (native background shadows retained Kirigami alpha
       compensation). Feed the theme shadow color directly to the Qt native
       effect and reject restoration of the obsolete renderer workaround.
       Commits: 92fab9745
+- [x] Fix D164 (the first D162 correction formed a Justify geometry cycle).
+      Resolve the background against a full-view primary-axis canvas instead
+      of the applet container that consumes its fitted span.
+      Commits: 4edcd203d
+- [x] Fix D165 (the first D162 correction assumed equal end shadows). Center
+      the complete visual and derive the solid span from independent tail and
+      head margins.
+      Commits: 6cd8ff860
+- [x] Fix D166 (the first D162 origin mutation produced invalid QML). Mutate
+      the authoritative property with viable old-origin and equal-shadow
+      regressions.
+      Commits: 3feb54939
+- [x] Fix D167 (thin-dock tracking used a bare D145 codeword). Add the
+      plain-English background-shadow description at first use.
+      Commits: PENDING
+- [ ] Fix D168 (thin-dock tracking commit omitted explicit verification
+      evidence). Rewrite commit `5318aec02` during pre-PR history cleanup.
+      Commits:
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

@@ -16,15 +16,30 @@ for Justify applets. The live solid background remained
 x=131..1309.
 
 D163 (native background shadows retained Kirigami alpha compensation) came
-from the renderer transition in D145. The old Kirigami
-`ShadowedRectangle` path explicitly added 0.336 to the theme shadow alpha as a
-renderer-matching workaround. Native Qt `RectangularShadow` inherited the same
-formula even though it consumes the supplied color directly. Commit
-`92fab9745` now passes the theme shadow color unchanged. A controlled mutation
-restores the obsolete formula and fails the production source guard.
+from D145 (background shadows used a height-distorting renderer). The old
+Kirigami `ShadowedRectangle` path explicitly added 0.336 to the theme shadow
+alpha as a renderer-matching workaround. Native Qt `RectangularShadow`
+inherited the same formula even though it consumes the supplied color
+directly. Commit `92fab9745` now passes the theme shadow color unchanged. A
+controlled mutation restores the obsolete formula and fails the production
+source guard.
+
+The first cold review refused D162's initial correction. D164 (the first D162
+correction formed a Justify geometry cycle) came from hosting the background
+inside the applet container that read its length. Commit `4edcd203d` moves the
+background's primary-axis canvas to the complete view while retaining the
+perpendicular hide animation. D165 (the first D162 correction assumed equal end
+shadows) is fixed by `6cd8ff860`, which centers the complete visual and derives
+the solid span from independent tail and head margins. D166 (the first D162
+origin mutation produced invalid QML) is fixed by `3feb54939`, which mutates
+the authoritative property with compilable old-origin and equal-shadow
+regressions.
 
 Focused source, QML compile, QML lint, image-comparison helper, and complete
-scene-probe gates pass. Real-layout visual acceptance remains pending.
+scene-probe gates pass for D162 and D163. Filtered live logging after the
+one-way correction produced no binding-loop warning, and the endpoint
+coordinates remained stable. The full canonical gate and independent rereview
+of the correction are pending. Real-layout visual acceptance remains pending.
 
 ## 2026-07-24: small-size background and Layouts submenu roots fixed
 
