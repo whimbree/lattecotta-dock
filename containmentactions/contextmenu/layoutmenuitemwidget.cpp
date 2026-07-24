@@ -1,5 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2021 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -16,43 +18,68 @@
 #include <QRadioButton>
 #include <QStyleOptionMenuItem>
 
-const int ICONMARGIN = 1;
-const int MARGIN = 2;
+namespace {
 
-LayoutMenuItemWidget::LayoutMenuItemWidget(QAction* action, QWidget *parent)
+constexpr int itemMargin{2};
+constexpr int contentPadding{9};
+
+}
+
+LayoutMenuItemWidget::LayoutMenuItemWidget(QAction *action, QWidget *parent)
     : QWidget(parent),
       m_action(action)
 {
-    QHBoxLayout *l = new QHBoxLayout;
+    Q_ASSERT(m_action);
 
-    auto radiobtn = new QRadioButton(this);
-    radiobtn->setCheckable(true);
-    radiobtn->setChecked(action->isChecked());
-    radiobtn->setVisible(action->isVisible() && action->isCheckable());
+    auto *const layout = new QHBoxLayout(this);
+    auto *const radioButton = new QRadioButton(this);
+    radioButton->setCheckable(true);
+    radioButton->setChecked(action->isChecked());
+    radioButton->setVisible(action->isVisible() && action->isCheckable());
 
-    l->addWidget(radiobtn);
-    setLayout(l);
+    layout->addWidget(radioButton);
 
     setMouseTracking(true);
 }
 
-void LayoutMenuItemWidget::setIcon(const bool &isBackgroundFile, const QString &iconName)
+void LayoutMenuItemWidget::setIcon(bool isBackgroundFile, const QString &iconName)
 {
     m_isBackgroundFile = isBackgroundFile;
     m_iconName = iconName;
 }
 
-QSize LayoutMenuItemWidget::minimumSizeHint() const
+QSize LayoutMenuItemWidget::paintedContentSizeHint() const
 {
-   QStyleOptionMenuItem opt;
-   QSize contentSize = fontMetrics().size(Qt::TextSingleLine | Qt::TextShowMnemonic, m_action->text());
+    Q_ASSERT(m_action);
 
-   contentSize.setHeight(contentSize.height() + 9);
-   contentSize.setWidth(contentSize.width() + 9);
-   return style()->sizeFromContents(QStyle::CT_MenuItem, &opt, contentSize, this);
+    QStyleOptionMenuItem option;
+    option.initFrom(this);
+    option.text = m_action->text();
+    option.menuItemType = QStyleOptionMenuItem::Normal;
+    option.menuHasCheckableItems = m_action->isCheckable();
+
+    QSize contentSize = fontMetrics().size(
+        Qt::TextSingleLine | Qt::TextShowMnemonic, m_action->text());
+    contentSize.rheight() += contentPadding;
+    contentSize.rwidth() += contentPadding;
+    return style()->sizeFromContents(QStyle::CT_MenuItem, &option, contentSize, this);
 }
 
-void LayoutMenuItemWidget::paintEvent(QPaintEvent* e)
+QSize LayoutMenuItemWidget::sizeHint() const
+{
+    //! QWidgetAction asks its default widget for sizeHint(), while this custom
+    //! delegate paints its icon and text outside the radio button's layout.
+    //! Returning QWidget::sizeHint() therefore measures only the radio button
+    //! and collapses the Qt 6 submenu to that narrow column.
+    return paintedContentSizeHint();
+}
+
+QSize LayoutMenuItemWidget::minimumSizeHint() const
+{
+    return paintedContentSizeHint();
+}
+
+void LayoutMenuItemWidget::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
     painter.save();
@@ -70,21 +97,33 @@ void LayoutMenuItemWidget::paintEvent(QPaintEvent* e)
     Latte::drawBackground(&painter, style(), opt);
 
     //! radio button
-    int radiosize = opt.rect.height() - 2*MARGIN;
+    const int radioSize = opt.rect.height() - 2 * itemMargin;
     QRect remained;
 
     if (qApp->layoutDirection() == Qt::LeftToRight) {
-        remained = QRect(opt.rect.x() + radiosize , opt.rect.y(), opt.rect.width() - radiosize, opt.rect.height());
+        remained = QRect(opt.rect.x() + radioSize,
+                         opt.rect.y(),
+                         opt.rect.width() - radioSize,
+                         opt.rect.height());
     } else {
-        remained = QRect(opt.rect.x() , opt.rect.y(), opt.rect.width() - radiosize, opt.rect.height());
+        remained = QRect(opt.rect.x(),
+                         opt.rect.y(),
+                         opt.rect.width() - radioSize,
+                         opt.rect.height());
     }
 
     opt.rect  = remained;
 
     //! icon
-    int thickpadding = (opt.rect.height() - qMax(16, opt.maxIconWidth)) / 2; //old value 4
-    remained = Latte::remainedFromLayoutIcon(opt, Qt::AlignLeft, 1, thickpadding);
-    Latte::drawLayoutIcon(&painter, opt, m_isBackgroundFile, m_iconName, Qt::AlignLeft, 1, thickpadding);
+    const int thickPadding = (opt.rect.height() - qMax(16, opt.maxIconWidth)) / 2; //old value 4
+    remained = Latte::remainedFromLayoutIcon(opt, Qt::AlignLeft, 1, thickPadding);
+    Latte::drawLayoutIcon(&painter,
+                          opt,
+                          m_isBackgroundFile,
+                          m_iconName,
+                          Qt::AlignLeft,
+                          1,
+                          thickPadding);
     opt.rect  = remained;
 
     //! text
@@ -94,5 +133,4 @@ void LayoutMenuItemWidget::paintEvent(QPaintEvent* e)
 
     painter.restore();
 }
-
 
