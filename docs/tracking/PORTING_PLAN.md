@@ -4454,6 +4454,14 @@ prerequisites in the phases above are done.
       Bound the exact production size hint against its label, radio, and
       height-derived icon widths, including odd style metrics.
       Commits: 81fbf1ed3, bebe0a9f4
+- [x] Fix D162 (Justify applets occupied shadow-only margins). Make the fitted
+      solid background span authoritative for the physical applet container
+      instead of laying endpoint applets under length-axis shadows.
+      Commits: cf50d7845
+- [x] Fix D163 (native background shadows retained Kirigami alpha
+      compensation). Feed the theme shadow color directly to the Qt native
+      effect and reject restoration of the obsolete renderer workaround.
+      Commits: 92fab9745
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
