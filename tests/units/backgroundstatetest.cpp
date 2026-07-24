@@ -634,18 +634,22 @@ void BackgroundStateTest::effectsArea_decisionTable()
 
 void BackgroundStateTest::dockBackground_keepsCompleteVisualInsideSpan()
 {
-    //! Live D140 (zoomed side-dock chrome clipped at both ends) shape: the
-    //! resting solid background requests 1230 px in a 1240 px primary span
-    //! with 40 px of length-axis shadow. Hover requests 1307 px after the row
-    //! grows, but the complete visual stays in that span.
-    static_assert(fitDockBackgroundLength(1230.0, 1240.0, 40.0) == 1200.0);
-    static_assert(fitDockBackgroundLength(1307.0, 1240.0, 40.0) == 1200.0);
+    //! Live D150 (hovered row escaped its resting background) shape: a
+    //! 2110 px resting background is configured inside a 2560 px output. A
+    //! center hover requests 2239 px. Both fit with 40 px of end shadows, so
+    //! presentation follows content instead of clipping at the configured
+    //! resting maximum.
+    static_assert(fitDockBackgroundLength(2110.0, 2560.0, 40.0) == 2110.0);
+    static_assert(fitDockBackgroundLength(2239.0, 2560.0, 40.0) == 2239.0);
+
+    //! The output-owned canvas remains the hard painted boundary.
+    static_assert(fitDockBackgroundLength(2540.0, 2560.0, 40.0) == 2520.0);
 
     QCOMPARE(fitDockBackgroundLength(900.0, 1240.0, 40.0), 900.0);
-    QCOMPARE(fitDockBackgroundLength(1307.0, 1240.0, 40.0), 1200.0);
+    QCOMPARE(fitDockBackgroundLength(1307.0, 1440.0, 40.0), 1307.0);
 
     Latte::Containment::BackgroundStateResolver resolver;
-    QCOMPARE(resolver.dockBackgroundLength(1307.0, 1240.0, 40.0), 1200.0);
+    QCOMPARE(resolver.dockBackgroundLength(2239.0, 2560.0, 40.0), 2239.0);
 }
 
 void BackgroundStateTest::centeredDockOffset_staysInsideView()

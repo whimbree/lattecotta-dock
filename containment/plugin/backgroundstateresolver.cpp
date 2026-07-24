@@ -209,23 +209,23 @@ QRectF BackgroundStateResolver::effectsArea(bool compositingActive,
 }
 
 double BackgroundStateResolver::dockBackgroundLength(double requestedBackgroundLength,
-                                                      double maximumVisualLength,
+                                                      double owningCanvasLength,
                                                       double shadowMarginsLength) const
 {
     if (!std::isfinite(requestedBackgroundLength)
-            || !std::isfinite(maximumVisualLength)
+            || !std::isfinite(owningCanvasLength)
             || !std::isfinite(shadowMarginsLength)
             || requestedBackgroundLength < 0.0
-            || maximumVisualLength < 0.0
+            || owningCanvasLength < 0.0
             || shadowMarginsLength < 0.0) {
         qCritical() << "BackgroundStateResolver.dockBackgroundLength: invalid geometry"
-                    << requestedBackgroundLength << maximumVisualLength
+                    << requestedBackgroundLength << owningCanvasLength
                     << shadowMarginsLength;
         return 0.0;
     }
 
     return BackgroundState::fitDockBackgroundLength(requestedBackgroundLength,
-                                                     maximumVisualLength,
+                                                     owningCanvasLength,
                                                      shadowMarginsLength);
 }
 
