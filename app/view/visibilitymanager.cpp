@@ -434,14 +434,18 @@ void VisibilityManager::updateStrutsBasedOnLayoutsAndActivities(bool forceUpdate
                                         && m_latteView->layout()->isCurrent());
 
     if (m_strutsThickness>0 && canSetStrut() && (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::SingleLayout || inMultipleLayoutsAndCurrent)) {
-        QRect computedStruts = acceptableStruts();
-        if (m_publishedStruts != computedStruts || forceUpdate) {
+        const std::optional<QRect> computedStruts = acceptableStruts();
+        if (!computedStruts) {
+            return;
+        }
+
+        if (m_publishedStruts != *computedStruts || forceUpdate) {
             //! Force update is needed when very important events happen in DE and there is a chance
             //! that previously even though struts where sent the DE did not accept them.
             //! Such a case is when STOPPING an Activity and windows faulty become invisible even
             //! though they should not. In such case setting struts when the windows are hidden
             //! the struts do not take any effect
-            m_publishedStruts = computedStruts;
+            m_publishedStruts = *computedStruts;
             m_wm->setViewStruts(*m_latteView, m_publishedStruts, m_latteView->location());
         }
     } else {
@@ -469,35 +473,48 @@ bool VisibilityManager::canSetStrut() const
     return true;
 }
 
-QRect VisibilityManager::acceptableStruts()
+std::optional<QRect> VisibilityManager::acceptableStruts()
 {
-    QRect calcs;
+    const QRect occupiedGeometry = m_latteView->absoluteGeometry();
+    const QRect outputGeometry = m_latteView->screenGeometry();
+    if (!occupiedGeometry.isValid() || !outputGeometry.contains(occupiedGeometry)) {
+        qCritical() << "VisibilityManager refused struts outside the dock output"
+                    << "occupied=" << occupiedGeometry
+                    << "output=" << outputGeometry
+                    << "containment="
+                    << (m_latteView->containment() ? m_latteView->containment()->id() : 0);
+        return std::nullopt;
+    }
 
     switch (m_latteView->location()) {
     case Plasma::Types::TopEdge: {
-        calcs = QRect(m_latteView->x(), m_latteView->screenGeometry().top(), m_latteView->width(), m_strutsThickness);
-        break;
+        return QRect(occupiedGeometry.x(), outputGeometry.top(),
+                     occupiedGeometry.width(), m_strutsThickness);
     }
 
     case Plasma::Types::BottomEdge: {
-        int y = m_latteView->screenGeometry().bottom() - m_strutsThickness + 1 /* +1, is needed in order to not leave a gap at screen_edge*/;
-        calcs = QRect(m_latteView->x(), y, m_latteView->width(), m_strutsThickness);
-        break;
+        const int y = outputGeometry.bottom() - m_strutsThickness
+                + 1 /* +1, is needed in order to not leave a gap at screen_edge*/;
+        return QRect(occupiedGeometry.x(), y,
+                     occupiedGeometry.width(), m_strutsThickness);
     }
 
     case Plasma::Types::LeftEdge: {
-        calcs = QRect(m_latteView->screenGeometry().left(), m_latteView->y(), m_strutsThickness, m_latteView->height());
-        break;
+        return QRect(outputGeometry.left(), occupiedGeometry.y(),
+                     m_strutsThickness, occupiedGeometry.height());
     }
 
     case Plasma::Types::RightEdge: {
-        int x = m_latteView->screenGeometry().right() - m_strutsThickness + 1 /* +1, is needed in order to not leave a gap at screen_edge*/;
-        calcs = QRect(x, m_latteView->y(), m_strutsThickness, m_latteView->height());
-        break;
+        const int x = outputGeometry.right() - m_strutsThickness
+                + 1 /* +1, is needed in order to not leave a gap at screen_edge*/;
+        return QRect(x, occupiedGeometry.y(),
+                     m_strutsThickness, occupiedGeometry.height());
     }
+    default:
+        qCritical() << "VisibilityManager refused struts for a non-edge dock"
+                    << static_cast<int>(m_latteView->location());
+        return std::nullopt;
     }
-
-    return calcs;
 }
 
 bool VisibilityManager::raiseOnDesktop() const

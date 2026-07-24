@@ -164,14 +164,19 @@ void WaylandInterface::setViewExtraFlags(QObject *view, bool isPanelWindow, Latt
 
 void WaylandInterface::setViewStruts(QWindow &view, const QRect &rect, Plasma::Types::Location location)
 {
-    //! The ghost-window mechanism this used to drive is gone: its
-    //! PlasmaShellSurface::PanelBehavior route reserves nothing on Plasma 6
-    //! (deprecated and ignored by KWin), and a strut-reserving helper surface
-    //! also leaves a compositor-blur bar behind its own area. The view is a
-    //! layer surface now, so the exclusive zone rides on it directly. The
-    //! rect is the currently visible panel thickness, not a max-possible
-    //! expansion value - over-reserving was a real latte-dock-ng bug.
-    LayerShell::setExclusiveZone(&view, LayerShell::exclusiveZoneFor(rect, location));
+    auto *const latteView = qobject_cast<Latte::View *>(&view);
+    if (!latteView) {
+        qCritical() << "WaylandInterface refused struts for a non-Latte view"
+                    << view.title() << rect;
+        return;
+    }
+
+    //! The visual window is a larger masked canvas. Putting the positive
+    //! exclusive zone on it makes KWin reserve that whole span and re-place
+    //! perpendicular docks inside the reduced edge-wide band. A dedicated
+    //! transparent surface publishes only the occupied footprint while the
+    //! visual surface stays at Positioner's exact rectangle.
+    latteView->publishScreenSpaceReservation(rect, location);
 }
 
 void WaylandInterface::switchToNextVirtualDesktop()
@@ -268,7 +273,13 @@ void WaylandInterface::setWindowOnActivities(const WindowId &wid, const QStringL
 
 void WaylandInterface::removeViewStruts(QWindow &view)
 {
-    LayerShell::setExclusiveZone(&view, 0);
+    auto *const latteView = qobject_cast<Latte::View *>(&view);
+    if (!latteView) {
+        qCritical() << "WaylandInterface refused to clear struts for a non-Latte view"
+                    << view.title();
+        return;
+    }
+    latteView->clearScreenSpaceReservation();
 }
 
 WindowId WaylandInterface::activeWindow()

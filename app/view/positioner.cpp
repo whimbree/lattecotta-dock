@@ -647,6 +647,11 @@ void Positioner::immediateSyncGeometry()
         resizeWindow(availableScreenRect);
         updatePosition(availableScreenRect);
         updateCanvasGeometry(availableScreenRect);
+        //! Always publish the solved rectangle after the three geometry stages.
+        //! The layer-shell adapter compares the resulting protocol state before
+        //! sending requests, so repeated stable syncs stay cheap while a changed
+        //! edge or margin is applied atomically from one complete solution.
+        Q_EMIT surfaceGeometryCalculated(m_validGeometry);
 
         qDebug() << "syncGeometry() calculations for screen: " << m_view->screen()->name() << " _ " << m_view->screen()->geometry();
         qDebug() << "syncGeometry() calculations for edge: " << m_view->location();
@@ -667,6 +672,11 @@ void Positioner::validateDockGeometry()
 QRect Positioner::canvasGeometry()
 {
     return m_canvasGeometry;
+}
+
+QRect Positioner::surfaceGeometry() const
+{
+    return m_validGeometry;
 }
 
 void Positioner::setCanvasGeometry(const QRect &geometry)

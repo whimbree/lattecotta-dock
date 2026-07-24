@@ -96,6 +96,7 @@ public:
     bool inStartup() const;
 
     QRect canvasGeometry();
+    [[nodiscard]] QRect surfaceGeometry() const;
 
     void setScreenToFollow(QScreen *scr, bool updateScreenId = true);
     void setWindowOnActivities(const Latte::WindowSystem::WindowId &wid, const QStringList &activities);
@@ -125,6 +126,7 @@ Q_SIGNALS:
     void edgeChanged();
     void screenGeometryChanged();
     void slideOffsetChanged();
+    void surfaceGeometryCalculated(const QRect &geometry);
     void windowSizeChanged();
     void winIdChanged();
 

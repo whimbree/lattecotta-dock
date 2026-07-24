@@ -93,9 +93,13 @@ QSize seededLayerSize(LayerShellQt::Window::Anchors anchors, Plasma::Types::Loca
 //! @p edgeMargin - the floating-gap offset off the anchored edge, see
 //! edgeMarginsFor(); 0 for any non-floating surface (chrome windows, masked
 //! docks) so only a behaveAsPlasmaPanel dock is ever lifted off its edge.
-void configureView(QWindow *window, QScreen *screen,
-                   Plasma::Types::Location location, Latte::Types::Alignment alignment,
-                   bool windowSpansScreenLength, int edgeMargin = 0);
+[[nodiscard]] LayerShellQt::Window *configureView(
+    QWindow *window,
+    QScreen *screen,
+    Plasma::Types::Location location,
+    Latte::Types::Alignment alignment,
+    bool windowSpansScreenLength,
+    int edgeMargin = 0);
 
 //! Re-apply only the anchors, exclusive edge, screen and seeded size for a
 //! new @p location / @p alignment. Anchors are what move a layer surface, so
@@ -133,6 +137,66 @@ struct CanvasPlacement {
     LayerShellQt::Window::Anchors anchors;
     QMargins margins;
 };
+
+//! Anchors + margins that reproduce one dock view's solved surface rectangle.
+//! Latte's available-region calculator understands partial-width and
+//! partial-height dock footprints, while layer-shell's exclusive zone is only
+//! an edge-wide scalar. Anchoring both length edges and applying the solved
+//! gaps as margins prevents KWin from re-centering a Latte surface inside that
+//! coarser exclusive-zone rectangle.
+struct ViewPlacement {
+    LayerShellQt::Window::Anchors anchors;
+    QMargins margins;
+};
+
+//! Map @p viewGeometry to layer-shell anchors and margins relative to
+//! @p screenGeometry. The view must be contained by the output. The visual
+//! surface anchors its top-left corner and opts out of every exclusive zone;
+//! its explicit size carries the solved width and height. Reserved space is a
+//! separate surface because one positive-exclusive layer surface cannot both
+//! ignore KWin's edge-wide placement band and publish a work-area reservation.
+[[nodiscard]] ViewPlacement viewPlacement(
+    Plasma::Types::Location location,
+    const QRect &viewGeometry,
+    const QRect &screenGeometry);
+
+//! Apply viewPlacement() to an already configured dock surface without
+//! changing its layer, keyboard policy, or output. The visual surface never
+//! reserves space itself.
+void applyViewPlacement(QWindow *window, Plasma::Types::Location location,
+                        const QRect &viewGeometry, const QRect &screenGeometry);
+
+//! Layer-shell state for a transparent surface that publishes one dock's
+//! occupied edge footprint independently from its larger visual canvas.
+struct ReservationPlacement {
+    LayerShellQt::Window::Anchors anchors;
+    LayerShellQt::Window::Anchor exclusiveEdge;
+    QMargins margins;
+    QSize surfaceSize;
+    int exclusiveZone{0};
+};
+
+//! Map an edge-touching @p strutGeometry to a small positive-exclusive layer
+//! surface. Both length-axis edges stay anchored so KWin processes horizontal
+//! reservations before vertical reservations, matching its documented
+//! layer-shell work-area ordering. Opposing signed margins translate the
+//! explicitly sized surface without stretching it.
+[[nodiscard]] ReservationPlacement reservationPlacement(
+    Plasma::Types::Location location,
+    const QRect &strutGeometry,
+    const QRect &screenGeometry);
+
+//! Configure and update a transparent reservation surface. Returns its
+//! LayerShellQt state, or nullptr when the surface cannot be configured.
+[[nodiscard]] LayerShellQt::Window *applyReservationPlacement(
+    QWindow *window,
+    QScreen *screen,
+    Plasma::Types::Location location,
+    const QRect &strutGeometry,
+    const QRect &screenGeometry);
+
+//! Release a reservation without destroying its mapped surface.
+void clearReservation(QWindow *window);
 
 //! Map a dock's canvas geometry (edit-mode overlay) to anchors and margins
 //! that reproduce it exactly, so the edit grid lands on the dock instead of

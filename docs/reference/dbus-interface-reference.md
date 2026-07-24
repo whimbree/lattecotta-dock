@@ -70,7 +70,7 @@ true with `isOffScreen`), what the compositor was told to reserve.
 call dockSystemData                    # s: compact schema-versioned JSON object
 ```
 
-Top level: `schemaVersion` (currently 2), `snapshotSequence` (decimal string,
+Top level: `schemaVersion` (currently 3), `snapshotSequence` (decimal string,
 process-local monotonic call identity), `globalConfigureAppletsMode`,
 `stacking`, and `views`. The complete view list is captured synchronously and
 serialized in ascending `persistentDockId` order, so repeated snapshots do not
@@ -110,14 +110,28 @@ Per dock:
   margins are removed. It is not the raw containment `maxLength` or the
   configured ratio.
 - Geometry: `windowGeometry`, `absoluteGeometry`, `localGeometry`,
-  `screenGeometry`, `canvasGeometry`, `effectsRect`,
+  `screenGeometry`, `surfaceGeometry`, `canvasGeometry`, `effectsRect`,
   `appletsLayoutGeometry`, `maskRect`, `inputMask`, `appliedInputMask`,
-  `strutsThickness`, and `publishedStruts`. Every rectangle is `[x,y,w,h]` in
+  `strutsThickness`, `publishedStruts`, `layerShellPresent`,
+  `layerShellAnchors`, `layerShellMargins`, `layerShellExclusiveEdge`, and
+  `layerShellExclusiveZone`, plus `reservationSurfacePresent`,
+  `reservationGeometry`, `reservationWindowGeometry`,
+  `reservationLayerShellAnchors`, `reservationLayerShellMargins`,
+  `reservationLayerShellExclusiveEdge`, and
+  `reservationLayerShellExclusiveZone`. Every rectangle is `[x,y,w,h]` in
   Qt logical pixels. `windowGeometry`, `absoluteGeometry`, `screenGeometry`,
-  `canvasGeometry`, and `publishedStruts` use virtual-desktop coordinates.
+  `surfaceGeometry`, `canvasGeometry`, and `publishedStruts` use
+  virtual-desktop coordinates.
   `localGeometry`, `effectsRect`, `appletsLayoutGeometry`, `maskRect`,
   `inputMask`, and `appliedInputMask` use dock-window-local coordinates.
-  Thickness values are logical pixels as well.
+  Thickness values are logical pixels as well. `surfaceGeometry` is
+  Positioner's solved layer-surface rectangle. The layer-shell fields report
+  the request actually attached to the visual QWindow: anchor names, margins
+  in left/top/right/bottom order, no exclusive edge, and zone -1. The
+  reservation fields report the separate transparent surface that publishes
+  the occupied edge span and positive scalar zone.
+  Missing attached state reports `layerShellPresent: false` with null edge and
+  zone, rather than a plausible placement.
 - Runtime state: `visibilityMode`, `isHidden`, `inStartup`, `isOffScreen`,
   `inRelocationAnimation`, `inRelocationShowing`, `geometrySettled`,
   `relocationGeneration`, `appliedRelocationGeneration`, `inDelete`, and

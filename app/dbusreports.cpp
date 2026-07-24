@@ -15,6 +15,7 @@
 #include "data/screendata.h"
 #include "view/containmentinterface.h"
 #include "view/effects.h"
+#include "view/helpers/screenspacereservation.h"
 #include "view/indicator/indicator.h"
 #include "view/positioner.h"
 #include "view/view.h"
@@ -29,6 +30,9 @@
 #include <QQmlPropertyMap>
 #include <QQuickItem>
 #include <QUrl>
+
+// LayerShellQt
+#include <LayerShellQt/window.h>
 
 // KDE
 #include <KPluginMetaData>
@@ -47,6 +51,36 @@ namespace {
 //! forward declaration: collectAppletsData reads the AppletItem delegate's
 //! live colorize properties before this helper is defined further down
 QVariant readLiveProperty(const QObject *object, const char *name);
+
+QString layerShellAnchorName(LayerShellQt::Window::Anchor anchor)
+{
+    using LSW = LayerShellQt::Window;
+    switch (anchor) {
+    case LSW::AnchorNone: return QStringLiteral("none");
+    case LSW::AnchorTop: return QStringLiteral("top");
+    case LSW::AnchorBottom: return QStringLiteral("bottom");
+    case LSW::AnchorLeft: return QStringLiteral("left");
+    case LSW::AnchorRight: return QStringLiteral("right");
+    }
+
+    Q_UNREACHABLE();
+}
+
+QStringList layerShellAnchorNames(LayerShellQt::Window::Anchors anchors)
+{
+    using LSW = LayerShellQt::Window;
+    QStringList names;
+    for (const auto anchor : {
+             LSW::AnchorTop,
+             LSW::AnchorBottom,
+             LSW::AnchorLeft,
+             LSW::AnchorRight}) {
+        if (anchors.testFlag(anchor)) {
+            names.append(layerShellAnchorName(anchor));
+        }
+    }
+    return names;
+}
 }
 
 ViewRecord collectViewRecord(const Latte::View *view, bool globalConfigureAppletsMode)
@@ -851,6 +885,7 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.absoluteGeometry = view->absoluteGeometry();
         record.localGeometry = view->localGeometry();
         record.screenGeometry = view->screenGeometry();
+        record.surfaceGeometry = view->positioner()->surfaceGeometry();
         record.canvasGeometry = view->positioner()->canvasGeometry();
         record.effectsRect = view->effects()->rect();
         record.appletsLayoutGeometry = view->effects()->appletsLayoutGeometry();
@@ -859,6 +894,42 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.appliedInputMask = view->effects()->appliedInputMask();
         record.strutsThickness = view->visibility()->strutsThickness();
         record.publishedStruts = view->visibility()->publishedStruts();
+
+        if (const auto *const layerShell = view->layerShellWindow()) {
+            record.layerShellPresent = true;
+            record.layerShellAnchors = layerShellAnchorNames(layerShell->anchors());
+            record.layerShellMargins = layerShell->margins();
+            record.layerShellExclusiveEdge =
+                layerShellAnchorName(layerShell->exclusiveEdge());
+            record.layerShellExclusiveZone = layerShell->exclusionZone();
+        } else if (!view->positioner()->inStartup()) {
+            qWarning() << "dbusreports: settled containment"
+                       << record.persistentDockId
+                       << "has no layer-shell placement state";
+        }
+
+        if (const auto *const reservation = view->screenSpaceReservation()) {
+            record.reservationSurfacePresent = true;
+            record.reservationGeometry = reservation->publishedGeometry();
+            record.reservationWindowGeometry = reservation->geometry();
+            if (const auto *const layerShell = reservation->layerShellWindow()) {
+                record.reservationLayerShellAnchors =
+                    layerShellAnchorNames(layerShell->anchors());
+                record.reservationLayerShellMargins = layerShell->margins();
+                record.reservationLayerShellExclusiveEdge =
+                    layerShellAnchorName(layerShell->exclusiveEdge());
+                record.reservationLayerShellExclusiveZone =
+                    layerShell->exclusionZone();
+            } else {
+                qWarning() << "dbusreports: containment"
+                           << record.persistentDockId
+                           << "owns a reservation window without layer-shell state";
+            }
+        } else if (!record.publishedStruts.isEmpty()) {
+            qWarning() << "dbusreports: containment"
+                       << record.persistentDockId
+                       << "publishes struts without a reservation surface";
+        }
 
         record.visibilityMode = view->visibility()->mode();
         record.isHidden = view->visibility()->isHidden();

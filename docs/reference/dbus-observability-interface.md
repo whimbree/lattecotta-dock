@@ -80,7 +80,7 @@ Landed before or during the 2026-07-16 stabilization session:
   `editMode && universalSettings.inConfigureAppletsMode`, not the raw global
   toggle. A global rearrange session therefore does not report unrelated docks
   as configuring applets.
-- `dockSystemData() -> s` (compact JSON object, schema version 2; added by C0
+- `dockSystemData() -> s` (compact JSON object, schema version 3; added by C0
   (the atomic dock-system observability snapshot)). This is the relational
   all-docks read. One synchronous call captures the global configuration mode
   and every current dock, then serializes docks in ascending
@@ -88,7 +88,7 @@ Landed before or during the 2026-07-16 stabilization session:
   decimal string; it identifies calls, not state changes.
   ```json
   {
-    "schemaVersion": 2,
+    "schemaVersion": 3,
     "snapshotSequence": "14",
     "globalConfigureAppletsMode": true,
     "stacking": {
@@ -123,6 +123,7 @@ Landed before or during the 2026-07-16 stabilization session:
       "absoluteGeometry": [x, y, w, h],
       "localGeometry": [x, y, w, h],
       "screenGeometry": [x, y, w, h],
+      "surfaceGeometry": [x, y, w, h],
       "canvasGeometry": [x, y, w, h],
       "effectsRect": [x, y, w, h],
       "appletsLayoutGeometry": [x, y, w, h],
@@ -131,6 +132,18 @@ Landed before or during the 2026-07-16 stabilization session:
       "appliedInputMask": [x, y, w, h],
       "strutsThickness": 48,
       "publishedStruts": [x, y, w, h],
+      "layerShellPresent": true,
+      "layerShellAnchors": ["top", "left"],
+      "layerShellMargins": [left, top, 0, 0],
+      "layerShellExclusiveEdge": "none",
+      "layerShellExclusiveZone": -1,
+      "reservationSurfacePresent": true,
+      "reservationGeometry": [x, y, w, h],
+      "reservationWindowGeometry": [x, y, w, h],
+      "reservationLayerShellAnchors": ["top", "bottom", "left"],
+      "reservationLayerShellMargins": [left, top, right, bottom],
+      "reservationLayerShellExclusiveEdge": "left",
+      "reservationLayerShellExclusiveZone": 48,
       "visibilityMode": "dodgeActive",
       "isHidden": false,
       "inStartup": false,
@@ -213,7 +226,20 @@ Landed before or during the 2026-07-16 stabilization session:
 
   Every geometry array is `[x,y,w,h]` in Qt logical pixels, before any output
   device-pixel scaling. `windowGeometry`, `absoluteGeometry`, `screenGeometry`,
-  `canvasGeometry`, and `publishedStruts` use virtual-desktop coordinates.
+  `surfaceGeometry`, `canvasGeometry`, and `publishedStruts` use
+  virtual-desktop coordinates. `surfaceGeometry` is Positioner's solved
+  layer-surface rectangle, not the masked background rectangle. Schema 3 also
+  reports the exact visual layer-shell request state: `layerShellPresent`,
+  `layerShellAnchors`, `layerShellMargins` in left/top/right/bottom order,
+  `layerShellExclusiveEdge`, and `layerShellExclusiveZone`. The edge and zone
+  are null only when attached layer-shell state is absent. These fields expose
+  the exact visual surface, which carries zone -1 and no exclusive edge so
+  KWin cannot place it inside another dock's scalar reservation band.
+  `reservationSurfacePresent`, `reservationGeometry`,
+  `reservationWindowGeometry`, `reservationLayerShellAnchors`,
+  `reservationLayerShellMargins`, `reservationLayerShellExclusiveEdge`, and
+  `reservationLayerShellExclusiveZone` expose the separate transparent,
+  inputless surface that publishes the occupied edge footprint.
   `localGeometry`, `effectsRect`, `appletsLayoutGeometry`, `maskRect`,
   `inputMask`, and `appliedInputMask` use dock-window-local coordinates.
   `normalThickness`, `maximumNormalThickness`, and `strutsThickness` use the

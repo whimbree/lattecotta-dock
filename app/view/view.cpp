@@ -13,6 +13,7 @@
 #include "positioner.h"
 #include "visibilitymanager.h"
 #include "viewactionpolicy.h"
+#include "helpers/screenspacereservation.h"
 #include "settings/primaryconfigview.h"
 #include "settings/secondaryconfigview.h"
 #include "settings/viewsettingsfactory.h"
@@ -407,6 +408,8 @@ void View::init(Plasma::Containment *plasma_containment)
     });
     connect(m_positioner, &ViewPart::Positioner::onHideWindowsForSlidingOut, this, &View::hideWindowsForSlidingOut);
     connect(m_positioner, &ViewPart::Positioner::screenGeometryChanged, this, &View::screenGeometryChanged);
+    connect(m_positioner, &ViewPart::Positioner::surfaceGeometryCalculated,
+            this, &View::applyPositionedLayerShellGeometry);
     connect(m_positioner, &ViewPart::Positioner::windowSizeChanged, this, [&]() {
         Q_EMIT availableScreenRectChangedFrom(this);
     });
@@ -522,18 +525,71 @@ void View::setupWaylandLayerShell()
     }
 
     namespace LS = Latte::WindowSystem::LayerShell;
-    LS::configureView(this, screen(), location(), static_cast<Latte::Types::Alignment>(alignment()),
-                      windowSpansScreenLength(), layerShellEdgeMargin());
+    m_layerShellWindow = LS::configureView(
+        this,
+        screen(),
+        location(),
+        static_cast<Latte::Types::Alignment>(alignment()),
+        windowSpansScreenLength(),
+        layerShellEdgeMargin());
+    if (!m_layerShellWindow) {
+        qCritical() << "View could not create layer-shell state for containment"
+                    << containment()->id();
+        return;
+    }
     LS::applyLayer(this, m_visibility ? m_visibility->mode() : Latte::Types::None);
     LS::setFocusPolicy(this, !flags().testFlag(Qt::WindowDoesNotAcceptFocus));
+    LS::setExclusiveZone(this, -1);
 
     m_layerShellConfigured = true;
+
+    if (m_positioner && !m_positioner->inStartup()) {
+        const QRect geometry = m_positioner->surfaceGeometry();
+        if (geometry.isValid() && screenGeometry().contains(geometry)) {
+            applyPositionedLayerShellGeometry(geometry);
+        }
+    }
+}
+
+const LayerShellQt::Window *View::layerShellWindow() const
+{
+    return m_layerShellWindow;
+}
+
+void View::publishScreenSpaceReservation(
+    const QRect &strutGeometry,
+    Plasma::Types::Location reservationLocation)
+{
+    if (!m_screenSpaceReservation) {
+        m_screenSpaceReservation = std::make_unique<ViewPart::ScreenSpaceReservation>(this);
+    }
+    m_screenSpaceReservation->publish(strutGeometry, reservationLocation);
+}
+
+void View::clearScreenSpaceReservation()
+{
+    if (m_screenSpaceReservation) {
+        m_screenSpaceReservation->clear();
+    }
+}
+
+const ViewPart::ScreenSpaceReservation *View::screenSpaceReservation() const
+{
+    return m_screenSpaceReservation.get();
 }
 
 void View::reanchorLayerShell()
 {
     if (!m_layerShellConfigured) {
         return;
+    }
+
+    if (m_positioner && !m_positioner->inStartup()) {
+        const QRect geometry = m_positioner->surfaceGeometry();
+        if (geometry.isValid() && screenGeometry().contains(geometry)) {
+            applyPositionedLayerShellGeometry(geometry);
+            return;
+        }
     }
 
     //! only the anchors, exclusive edge, screen, seeded size and floating-gap
@@ -546,15 +602,33 @@ void View::reanchorLayerShell()
                         windowSpansScreenLength(), layerShellEdgeMargin());
 }
 
+void View::applyPositionedLayerShellGeometry(const QRect &geometry)
+{
+    if (!m_layerShellConfigured || !m_positioner || m_positioner->inStartup()) {
+        return;
+    }
+
+    const QRect outputGeometry = screenGeometry();
+    if (!outputGeometry.isValid() || !geometry.isValid()
+            || !outputGeometry.contains(geometry)) {
+        qCritical() << "View refused layer-shell placement outside its assigned output"
+                    << "view=" << geometry << "output=" << outputGeometry
+                    << "containment=" << (containment() ? containment()->id() : 0);
+        return;
+    }
+
+    WindowSystem::LayerShell::applyViewPlacement(this, location(), geometry, outputGeometry);
+}
+
 bool View::windowSpansScreenLength() const
 {
     //! A horizontal masked dock is sized to the full screen width
     //! (PositionerGeometry::windowSize) and centres its contents through the
-    //! mask, so its surface spans both length edges. A behaveAsPlasmaPanel
-    //! window is a fraction of the screen and moves with its alignment; a
-    //! vertical masked dock is sized to the AVAILABLE region (reduced by top/
-    //! bottom docks), not the full screen, and the compositor's single-edge
-    //! centring is an identity for it - neither qualifies.
+    //! mask, so the startup/fallback surface spans both length edges. Settled
+    //! surfaces of every orientation use Positioner's exact solved rectangle
+    //! through applyPositionedLayerShellGeometry(). A behaveAsPlasmaPanel
+    //! startup window is a fraction of the screen and moves with its alignment;
+    //! a vertical masked startup window is sized to the available region.
     return !behaveAsPlasmaPanel() && formFactor() == Plasma::Types::Horizontal;
 }
 
