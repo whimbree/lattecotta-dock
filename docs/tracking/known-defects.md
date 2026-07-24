@@ -1519,7 +1519,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D140 - Zoomed side-dock chrome clipped at both ends
 - STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`1228ecf8c`,
-  `d19a1805c`, `921bf089b`, `a0ab006f8`).
+  `d19a1805c`, `921bf089b`, `a0ab006f8`), with its transient-span ownership
+  corrected by D150.
 - FOUND: 2026-07-22, live first-and-last-icon zoom acceptance on a side dock.
 - SYMPTOM: a centered 1240 px side surface expanded its solid effects rectangle
   to y=-34, height=1307 during parabolic zoom. Bounding only that solid
@@ -1530,16 +1531,19 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   a solid rectangle that filled the surface still requested an oversized
   complete visual.
 - FIX: let transient zoom borrow resting end padding without entering the
-  persistent icon-size solver. Fit the solid background into the configured
-  span after reserving its actual length-axis shadow margins, then constrain
-  centered movement using the complete background visual and its owning item.
-  The same primary-axis calculation handles horizontal and vertical docks.
+  persistent icon-size solver. Reserve the renderer's actual length-axis
+  shadow margins, then constrain centered movement using the complete
+  background visual and its owning output canvas. D150 corrects the initial
+  implementation's mistaken use of the configured resting span as that
+  transient boundary. The same primary-axis calculation handles horizontal
+  and vertical docks.
 - EVIDENCE: after the independent-review corrections, the rebuilt 1240 px side
   surface settles at 54 px with a 1126 px post-chrome applet budget and reports
   a y=25, height=1190 solid rectangle. Each end retains its complete 20 px drop
-  shadow plus 5 px slack. Compile-time assertions and C++/QML regressions pin
-  the 1230 px resting request, 1307 px zoom request, 40 px total shadow, and
-  centered-offset limit.
+  shadow plus 5 px slack. The D150 live acceptance additionally pins a
+  landscape row expanding from [152,2399] to [54,2499], with its complete
+  background expanding from [78,2481] to [20,2540] inside the [0,2560]
+  per-output canvas.
 
 ### D141 - Bounded background movement shifted the applet row
 - STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`d19a1805c`).
@@ -1688,6 +1692,68 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: no current Qt 6.6 floor remains under packaging, CI, prompts, tests,
   or README. All shell-form package recipes pass syntax checks; the final
   canonical gate supplies the repository-wide package-contract evidence.
+
+### D150 - Hovered applet row escaped its resting background
+- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`3219a1761`,
+  `45092dca8`).
+- FOUND: 2026-07-23, live landscape-dock acceptance after the side-dock shadow
+  corrections.
+- SYMPTOM: zooming the first or last item moved the clock and end applets
+  outside the rounded background even though the complete applet row remained
+  inside its output.
+- ROOT: the D140 correction reused `root.maxLength`, the stable resting-layout
+  budget, as the transient background clipping plane. The applet row correctly
+  kept hover presentation out of stable autosize, but the background could not
+  follow that presentation beyond the resting span.
+- FIX: keep `maximumLength` as the stable autosize and Justify contract. For a
+  content-driven dock, derive the transient background request from the live
+  row and bound its complete visual against the view's own primary-axis canvas
+  after reserving renderer-owned shadow margins. The calculation remains local
+  to each view and output, including unrelated portrait and landscape outputs.
+- EVIDENCE: the live landscape dock changes from row [152,2399] and background
+  [78,2481] at rest to row [54,2499] and background [20,2540] under hover,
+  all inside canvas [0,2560]. The presentation oracle rejects the captured bad
+  shape, row [54,2499] against background [225,2335], and accepts the corrected
+  shape. C++ and QML cases pin resting, expanded, capped, and vertical inputs.
+
+### D151 - Nested hover preview did not exercise parabolic expansion
+- STATUS: OPEN on `fix/vertical-autosize-animation-tracker`.
+- FOUND: 2026-07-23, deterministic presentation-coverage work for D150.
+- SYMPTOM: the nested `parabolic-hover-preview` recipe mapped the expected
+  layer-6 preview, but the measured applet span stayed 843 px before and during
+  the gesture despite an 80 percent configured zoom.
+- ROOT: the recipe treated preview mapping as proof that parabolic expansion
+  had rendered. Preview activation and row expansion are separate signals. A
+  temporary boundary trace showed the synthetic gesture reaching the task
+  `MouseArea.onEntered` with factor 1.59375, while neither
+  `parabolicEntered` nor `parabolicMove` arrived from the view bridge.
+- REQUIRED FIX: make the nested vehicle exercise observable parabolic
+  expansion through the production view-motion bridge, then require a larger
+  transient row before applying the background-coverage oracle. Preserve a
+  screenshot and geometry payload on failure.
+- EVIDENCE: repeated synthetic glides mapped the preview while reporting
+  `843 -> 843`. Instrumentation recorded `basic onEntered 3 1.59375 null` and
+  no corresponding parabolic entry or move. The D150 pure and live-state
+  oracles remain valid, but this nested recipe does not yet provide
+  deterministic rendered-zoom coverage.
+
+### D152 - Linked portrait dock overflowed with automatic sizing off
+- STATUS: OPEN on `fix/vertical-autosize-animation-tracker`.
+- FOUND: 2026-07-23, all-view live presentation watcher introduced for D150.
+- SYMPTOM: the linked dock on the 1440 px portrait output paints a stable
+  applet row beyond both ends of its canvas. The saved workspace image shows
+  the clock-side and trailing items cropped.
+- ROOT: the linked views correctly share a configured 106 px icon size, but
+  disabling automatic sizing also bypasses a per-view safety fit. The
+  landscape member can consume that size while the shorter portrait member
+  applies it unchanged as its effective size.
+- REQUIRED FIX: keep the linked configured size authoritative while deriving a
+  bounded effective size for each runtime view and output. Turning automatic
+  growth off must not permit an unrenderable stable layout.
+- EVIDENCE: `dockSystemData` and `viewAppletsData` report content
+  [-408,1839], background [20,1420], and canvas [0,1440] for persistent dock
+  12. `watch-dock-presentation.sh` rejected all four escaped boundaries and
+  preserved the D-Bus payloads plus the workspace screenshot.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).

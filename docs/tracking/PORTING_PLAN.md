@@ -4350,7 +4350,8 @@ prerequisites in the phases above are done.
 - [x] Fix D140 (zoomed side-dock chrome clipped at both ends). Keep stable icon
       sizing independent of hover, fit the solid background after reserving its
       length-axis shadow margins, and constrain centered parabolic movement by
-      the complete visual's owning span.
+      the complete visual's owning output canvas. D150 supersedes the initial
+      use of the configured resting span as the transient boundary.
       Commits: 1228ecf8c, d19a1805c, 921bf089b, a0ab006f8
 - [x] Fix D141 (bounded background movement shifted the applet row). Separate
       the stable centered content offset from bounded parabolic background
@@ -4390,6 +4391,23 @@ prerequisites in the phases above are done.
       through all five native package formats and every current installation or
       distro-gate reference.
       Commits: b8f492b01
+- [x] Fix D150 (hovered applet row escaped its resting background). Keep
+      maximum length authoritative for stable layout while allowing the
+      content-driven transient background to follow the live row within the
+      view's own output canvas. Add a D-Bus composition oracle with the exact
+      live failure as its negative control.
+      Commits: 3219a1761, 45092dca8
+- [ ] Fix D151 (nested hover preview did not exercise parabolic expansion).
+      Make synthetic input traverse the production view-motion bridge and
+      produce a measurably larger transient applet row before treating preview
+      mapping as rendered-zoom coverage. Preserve the geometry payload and
+      screenshot on failure.
+      Commits:
+- [ ] Fix D152 (linked portrait dock overflowed with automatic sizing off).
+      Preserve the shared configured icon size while applying a per-view
+      output safety fit to the effective size, including when automatic growth
+      is disabled.
+      Commits:
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
