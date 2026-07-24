@@ -94,8 +94,9 @@ rewrite their records or detach their members.
 
 Create Linked Dock… exposes the linked relationship independently of the
 screen-group selector. It can target any active output and edge, including an
-edge already occupied by another dock or panel. Occupied edges are valid input;
-physical stacking is a separate placement-coordinator responsibility.
+edge already occupied by another dock or panel. Occupied edges are valid input
+because separated partial-length views may share one edge. Their stable
+primary-axis spans must not overlap; Latte does not create inward stack lanes.
 
 The target implementation must satisfy these rules:
 

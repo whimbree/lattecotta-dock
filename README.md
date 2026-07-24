@@ -185,9 +185,9 @@ phases, one commit-traceable checklist item per task. The coarse picture:
 - [ ] Companion applets as sibling repos consumed by flake input: the
       Latte separator applet, then a full Qt 6 port of
       [applet-window-appmenu](https://github.com/psifidotos/applet-window-appmenu)
-- [ ] Further continuation features: same-edge physical stack coordination,
-      linked-dock detach and root-removal choices, background color picker,
-      scrollable group previews
+- [ ] Further continuation features: same-edge partial-span collision
+      validation, linked-dock detach and root-removal choices, background color
+      picker, scrollable group previews
 
 The high-priority slice of what remains, from the plan's own ordering
 (each item carries its full context in its phase section there):
