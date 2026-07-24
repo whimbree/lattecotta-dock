@@ -40,8 +40,6 @@ namespace Latte {
 //! a snapshot of the View properties the geometry math reads
 struct ViewFootprint {
     Plasma::Types::Location location{Plasma::Types::Floating};
-    Plasma::Types::FormFactor formFactor{Plasma::Types::Planar};
-    Latte::Types::Alignment alignment{Latte::Types::Center};
     Latte::Types::Visibility visibilityMode{Latte::Types::None};
 
     bool hasVisibility{true};  //!< view->visibility() is non-null
@@ -50,10 +48,10 @@ struct ViewFootprint {
 
     int normalThickness{0};
     int screenEdgeMargin{0};
-    float maxLength{1.0f};
-    float offset{0.0f};
 
-    QRect geometry; //!< the view window geometry
+    //! The stable dock or panel rectangle that actually occupies the edge.
+    //! This is intentionally not the larger masked QWindow canvas.
+    QRect occupiedGeometry;
 };
 
 namespace ScreenGeometryCalculator {
@@ -82,6 +80,7 @@ inline bool isReserving(const ViewFootprint &view,
     const bool inDesktopOffScreenStartup = desktopUse && view.isOffScreen;
 
     return !inDesktopOffScreenStartup
+            && view.occupiedGeometry.isValid()
             && (allEdges || !ignoreEdges.contains(view.location))
             && view.hasVisibility
             && !ignoreModes.contains(view.visibilityMode);
@@ -123,7 +122,7 @@ inline QRect availableRect(const QRect &startRect,
                 //! ignore any real window slide outs in all cases
                 available.setTop(qMax(available.top(), screenGeometry.top() + appliedThickness));
             } else {
-                available.setTop(qMax(available.top(), view.geometry.y() + appliedThickness));
+                available.setTop(qMax(available.top(), view.occupiedGeometry.y() + appliedThickness));
             }
             break;
 
@@ -131,7 +130,8 @@ inline QRect availableRect(const QRect &startRect,
             if (view.behaveAsPlasmaPanel && desktopUse) {
                 available.setBottom(qMin(available.bottom(), screenGeometry.bottom() - appliedThickness));
             } else {
-                available.setBottom(qMin(available.bottom(), view.geometry.y() + view.geometry.height() - appliedThickness));
+                available.setBottom(qMin(available.bottom(),
+                                         view.occupiedGeometry.bottom() - appliedThickness + 1));
             }
             break;
 
@@ -139,7 +139,8 @@ inline QRect availableRect(const QRect &startRect,
             if (view.behaveAsPlasmaPanel && desktopUse) {
                 available.setLeft(qMax(available.left(), screenGeometry.left() + appliedThickness));
             } else {
-                available.setLeft(qMax(available.left(), view.geometry.x() + appliedThickness));
+                available.setLeft(qMax(available.left(),
+                                       view.occupiedGeometry.x() + appliedThickness));
             }
             break;
 
@@ -147,7 +148,8 @@ inline QRect availableRect(const QRect &startRect,
             if (view.behaveAsPlasmaPanel && desktopUse) {
                 available.setRight(qMin(available.right(), screenGeometry.right() - appliedThickness));
             } else {
-                available.setRight(qMin(available.right(), view.geometry.x() + view.geometry.width() - appliedThickness));
+                available.setRight(qMin(available.right(),
+                                        view.occupiedGeometry.right() - appliedThickness + 1));
             }
             break;
 
@@ -185,74 +187,10 @@ inline QRegion availableRegion(const QRect &startRect,
 
         const int realThickness = view.normalThickness;
 
-        int x = 0;
-        int y = 0;
-        int w = 0;
-        int h = 0;
-
-        switch (view.formFactor) {
-        case Plasma::Types::Horizontal:
-            if (view.behaveAsPlasmaPanel) {
-                w = view.geometry.width();
-                x = view.geometry.x();
-            } else {
-                w = view.maxLength * view.geometry.width();
-                const int offsetW = view.offset * view.geometry.width();
-
-                switch (view.alignment) {
-                case Latte::Types::Left:
-                    x = view.geometry.x() + offsetW;
-                    break;
-
-                case Latte::Types::Center:
-                case Latte::Types::Justify:
-                    x = (view.geometry.center().x() - w / 2) + 1 + offsetW;
-                    break;
-
-                case Latte::Types::Right:
-                    x = view.geometry.right() + 1 - w - offsetW;
-                    break;
-
-                default:
-                    break;
-                }
-            }
-            break;
-        case Plasma::Types::Vertical:
-            if (view.behaveAsPlasmaPanel) {
-                h = view.geometry.height();
-                y = view.geometry.y();
-            } else {
-                h = view.maxLength * view.geometry.height();
-                const int offsetH = view.offset * view.geometry.height();
-
-                switch (view.alignment) {
-                case Latte::Types::Top:
-                    y = view.geometry.y() + offsetH;
-                    break;
-
-                case Latte::Types::Center:
-                case Latte::Types::Justify:
-                    y = (view.geometry.center().y() - h / 2) + 1 + offsetH;
-                    break;
-
-                case Latte::Types::Bottom:
-                    y = view.geometry.bottom() - h - offsetH;
-                    break;
-
-                default:
-                    break;
-                }
-            }
-            break;
-        default:
-            break;
-        }
-
         switch (view.location) {
         case Plasma::Types::TopEdge:
             if (view.behaveAsPlasmaPanel) {
-                QRect viewGeometry = view.geometry;
+                QRect viewGeometry = view.occupiedGeometry;
 
                 if (desktopUse) {
                     //! ignore any real window slide outs in all cases
@@ -261,14 +199,16 @@ inline QRegion availableRegion(const QRect &startRect,
 
                 available -= viewGeometry;
             } else {
-                y = view.geometry.y();
-                available -= QRect(x, y, w, realThickness);
+                available -= QRect(view.occupiedGeometry.x(),
+                                   view.occupiedGeometry.y(),
+                                   view.occupiedGeometry.width(),
+                                   realThickness);
             }
             break;
 
         case Plasma::Types::BottomEdge:
             if (view.behaveAsPlasmaPanel) {
-                QRect viewGeometry = view.geometry;
+                QRect viewGeometry = view.occupiedGeometry;
 
                 if (desktopUse) {
                     viewGeometry.moveTop(screenGeometry.bottom() - view.screenEdgeMargin - viewGeometry.height());
@@ -276,14 +216,16 @@ inline QRegion availableRegion(const QRect &startRect,
 
                 available -= viewGeometry;
             } else {
-                y = view.geometry.bottom() - realThickness + 1;
-                available -= QRect(x, y, w, realThickness);
+                available -= QRect(view.occupiedGeometry.x(),
+                                   view.occupiedGeometry.bottom() - realThickness + 1,
+                                   view.occupiedGeometry.width(),
+                                   realThickness);
             }
             break;
 
         case Plasma::Types::LeftEdge:
             if (view.behaveAsPlasmaPanel) {
-                QRect viewGeometry = view.geometry;
+                QRect viewGeometry = view.occupiedGeometry;
 
                 if (desktopUse) {
                     viewGeometry.moveLeft(screenGeometry.left() + view.screenEdgeMargin);
@@ -291,14 +233,16 @@ inline QRegion availableRegion(const QRect &startRect,
 
                 available -= viewGeometry;
             } else {
-                x = view.geometry.x();
-                available -= QRect(x, y, realThickness, h);
+                available -= QRect(view.occupiedGeometry.x(),
+                                   view.occupiedGeometry.y(),
+                                   realThickness,
+                                   view.occupiedGeometry.height());
             }
             break;
 
         case Plasma::Types::RightEdge:
             if (view.behaveAsPlasmaPanel) {
-                QRect viewGeometry = view.geometry;
+                QRect viewGeometry = view.occupiedGeometry;
 
                 if (desktopUse) {
                     viewGeometry.moveLeft(screenGeometry.right() - view.screenEdgeMargin - viewGeometry.width());
@@ -306,8 +250,10 @@ inline QRegion availableRegion(const QRect &startRect,
 
                 available -= viewGeometry;
             } else {
-                x = view.geometry.right() - realThickness + 1;
-                available -= QRect(x, y, realThickness, h);
+                available -= QRect(view.occupiedGeometry.right() - realThickness + 1,
+                                   view.occupiedGeometry.y(),
+                                   realThickness,
+                                   view.occupiedGeometry.height());
             }
             break;
 

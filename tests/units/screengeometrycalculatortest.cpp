@@ -14,7 +14,7 @@
 // before adoption, so their fixture arithmetic transfers. Two additions
 // are ours: the 1b932ed9 self-origin case (a view's own footprint
 // reserves like any other - the shell passes ALL views, no exclusion)
-// and a multi-dock same-edge case shaped like my real layout.
+// and a multi-dock same-edge case shaped like a real multi-dock layout.
 //
 // Fixtures trace the arithmetic against a 1920x1080 screen at the origin
 // (right=1919, bottom=1079).
@@ -41,17 +41,11 @@ private:
     {
         ViewFootprint fp;
         fp.location = loc;
-        fp.geometry = geom;
+        fp.occupiedGeometry = geom;
         fp.normalThickness = thickness;
         fp.visibilityMode = Latte::Types::AlwaysVisible;
         fp.hasVisibility = true;
         fp.behaveAsPlasmaPanel = false;
-        fp.formFactor = (loc == Plasma::Types::LeftEdge || loc == Plasma::Types::RightEdge)
-                ? Plasma::Types::Vertical
-                : Plasma::Types::Horizontal;
-        fp.alignment = Latte::Types::Center;
-        fp.maxLength = 1.0f;
-        fp.offset = 0.0f;
         return fp;
     }
 
@@ -67,6 +61,7 @@ private Q_SLOTS:
     void normalWindowAndNone_autoBlacklisted();
     void offScreenDesktopUse_skipped();
     void region_bottomNonPanel_subtractsFootprint();
+    void region_partialBottomDoesNotShortenSeparatedSideDock();
     void selfOriginFootprint_reservesLikeAnyOther();
     void multiDockSameEdge_deepestReservationWins();
 };
@@ -169,13 +164,27 @@ void ScreenGeometryCalculatorTest::offScreenDesktopUse_skipped()
 
 void ScreenGeometryCalculatorTest::region_bottomNonPanel_subtractsFootprint()
 {
-    //! horizontal centered, maxLength 1.0 -> full-width strip at the
-    //! bottom: w=1920, x = 959-960+1 = 0, y = 1079-40+1 = 1040
+    //! The occupied rectangle is subtracted directly. Alignment and maximum
+    //! length were already resolved by the owning View.
     QList<ViewFootprint> fps{visibleView(Plasma::Types::BottomEdge, QRect(0, 1040, 1920, 40), 40)};
 
     QRegion result = Calc::availableRegion(screen(), screen(), fps, {}, {}, false);
 
     QCOMPARE(result, QRegion(QRect(0, 0, 1920, 1040)));
+}
+
+void ScreenGeometryCalculatorTest::region_partialBottomDoesNotShortenSeparatedSideDock()
+{
+    const QRect nestedScreen(0, 0, 1600, 1000);
+    const ViewFootprint bottom = visibleView(
+        Plasma::Types::BottomEdge, QRect(378, 912, 844, 88), 88);
+
+    const QRegion result = Calc::availableRegion(
+        nestedScreen, nestedScreen, {bottom}, {}, {}, false);
+
+    //! The side dock occupies x=1512..1599. The masked bottom canvas spans
+    //! the output, but its stable occupied rectangle ends at x=1221.
+    QVERIFY(result.contains(QRect(1512, 0, 88, 1000)));
 }
 
 void ScreenGeometryCalculatorTest::selfOriginFootprint_reservesLikeAnyOther()

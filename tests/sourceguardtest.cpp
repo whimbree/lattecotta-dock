@@ -18,6 +18,8 @@
 //     window properties stay coalesced
 //   * VisibilityManager strut routing: discrete exclusive-zone thickness
 //     changes publish directly while geometry churn stays throttled
+//   * Occupied-geometry propagation: a changed stable dock rectangle notifies
+//     perpendicular peers before they solve their available region
 //   * Views reporting: global applet rearrangement is effective only for the
 //     dock that is locally in edit mode
 //   * Layout-length animation tracking: horizontal and vertical changes share
@@ -484,6 +486,7 @@ private Q_SLOTS:
     void windowsTrackerBinding_keepsRequesters();
     void waylandWindowSignals_keepDeliveryPolicy();
     void visibilityManager_strutThicknessBypassesGeometryThrottle();
+    void occupiedGeometryChange_notifiesPerpendicularPeers();
     void viewsDataConfigureMode_keepsPerViewContract();
     void viewsDataConfigureMode_sourceGuardRejectsGlobalLeak();
     void layoutLengthChanges_shareAnimationTrackerRegistration();
@@ -616,6 +619,34 @@ void SourceGuardTest::visibilityManager_strutThicknessBypassesGeometryThrottle()
     QCOMPARE(s.count(QStringLiteral("&ViewPart::Positioner::isOffScreenChanged")), 1);
     QVERIFY2(s.contains(QStringLiteral("connect(m_latteView->positioner(),&ViewPart::Positioner::isOffScreenChanged,this,&VisibilityManager::updateStrutsAfterTimer)")),
              "isOffScreenChanged must retain the floating-panel feedback throttle");
+}
+
+void SourceGuardTest::occupiedGeometryChange_notifiesPerpendicularPeers()
+{
+    const QString body = stripped(functionBody(
+        readFile(QStringLiteral("app/view/view.cpp")),
+        QStringLiteral("void View::updateAbsoluteGeometry")));
+    QVERIFY2(!body.isEmpty(), "View::updateAbsoluteGeometry not found");
+
+    const QString changedAssignment = QStringLiteral(
+        "constboolgeometryChanged=m_absoluteGeometry!=absGeometry;");
+    const int decision = body.indexOf(changedAssignment);
+    const int stateWrite = body.indexOf(QStringLiteral("m_absoluteGeometry=absGeometry;"));
+    const int peerNotification = body.indexOf(QStringLiteral(
+        "if(geometryChanged||bypassChecks){"));
+    const int rectNotification = body.indexOf(QStringLiteral(
+        "Q_EMITavailableScreenRectChangedFrom(this);"), peerNotification);
+    const int regionNotification = body.indexOf(QStringLiteral(
+        "Q_EMITavailableScreenRegionChangedFrom(this);"), rectNotification);
+
+    QVERIFY2(decision >= 0 && decision < stateWrite,
+             "the geometry transition must be captured before writing the new rectangle");
+    QVERIFY2(peerNotification > stateWrite
+             && rectNotification > peerNotification
+             && regionNotification > rectNotification,
+             "a changed occupied rectangle must notify perpendicular peer solvers");
+    QVERIFY2(!body.contains(QStringLiteral("if((m_absoluteGeometry!=absGeometry)||bypassChecks)")),
+             "comparing after assignment suppresses every ordinary peer notification");
 }
 
 void SourceGuardTest::viewsDataConfigureMode_keepsPerViewContract()

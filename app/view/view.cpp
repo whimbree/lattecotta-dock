@@ -959,16 +959,17 @@ void View::updateAbsoluteGeometry(bool bypassChecks)
         }
     }
 
-    if (m_absoluteGeometry == absGeometry && !bypassChecks) {
+    const bool geometryChanged = m_absoluteGeometry != absGeometry;
+    if (!geometryChanged && !bypassChecks) {
         return;
     }
 
-    if (m_absoluteGeometry != absGeometry) {
+    if (geometryChanged) {
         m_absoluteGeometry = absGeometry;
         Q_EMIT absoluteGeometryChanged(m_absoluteGeometry);
     }
 
-    if ((m_absoluteGeometry != absGeometry) || bypassChecks) {
+    if (geometryChanged || bypassChecks) {
         //! inform others such as neighbour vertical views that new geometries are applied
         //! main use of BYPASSCKECKS is from Positioner when the view changes screens
         Q_EMIT availableScreenRectChangedFrom(this);
