@@ -31,11 +31,16 @@ same-edge dock stacking. Multiple partial-length docks or panels may share one
 output edge when their stable primary-axis spans do not overlap. Reservation
 depth is the maximum required depth, not a sum. A future output-edge validator
 must prevent or deterministically recover stable overlap without creating
-ranks, cumulative insets, or inward lanes. This preserves ordinary Latte
-same-edge layouts while replacing inherited undefined overlap with an explicit
-invalid state. Commit `e99871822` records the contract in the public roadmap,
-identity model, replication design, D-Bus references, and the typed negative
-capability returned at runtime.
+ranks, cumulative insets, or inward lanes.
+
+This is a deliberate extension of OG Latte, not a claim that its ordinary UI
+supported the workflow. Upstream `GenericLayout::freeEdges()` removed an edge
+after the first view occupied it, while persisted or imported layouts could
+still contain same-edge records without stack semantics. Lattecotta promotes
+the separated-span case to supported behavior and replaces inherited undefined
+overlap with an explicit invalid state. Commit `e99871822` records the contract
+in the public roadmap, identity model, replication design, D-Bus references,
+and the typed negative capability returned at runtime.
 
 ## 2026-07-23: partial reservations no longer place Latte visuals
 
