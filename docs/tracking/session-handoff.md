@@ -38,8 +38,10 @@ regressions.
 Focused source, QML compile, QML lint, image-comparison helper, and complete
 scene-probe gates pass for D162 and D163. Filtered live logging after the
 one-way correction produced no binding-loop warning, and the endpoint
-coordinates remained stable. The full canonical gate and independent rereview
-of the correction are pending. Real-layout visual acceptance remains pending.
+coordinates remained stable. The full canonical gate passed at `6927e6033`
+with 105 of 105 CTest entries, QML compile and lint, scene probes, nested
+ASan/UBSan replay, and the output matrix. An independent rereview returned
+MERGE with no findings. Real-layout visual acceptance remains pending.
 
 ## 2026-07-24: small-size background and Layouts submenu roots fixed
 

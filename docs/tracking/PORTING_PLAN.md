@@ -4478,7 +4478,7 @@ prerequisites in the phases above are done.
       plain-English background-shadow description at first use.
       Commits: e8ca33c2f
 - [ ] Fix D168 (thin-dock tracking commit omitted explicit verification
-      evidence). Rewrite commit `5318aec02` during pre-PR history cleanup.
+      evidence). Rewrite commit `5318aec02` during pre-merge history cleanup.
       Commits:
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
