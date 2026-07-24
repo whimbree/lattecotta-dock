@@ -185,27 +185,21 @@ BackgroundProperties{
     }
 
     totals.visualThickness: {
-        var itemMargins = 2*metrics.margin.tailThickness;
-        var maximumItem = metrics.iconSize + itemMargins;
-
-        if (totals.minThickness < maximumItem) {
-            maximumItem = maximumItem - totals.minThickness;
-        }
-
-        var percentage = LatteCore.WindowSystem.compositingActive ? Plasmoid.configuration.panelSize/100 : 1;
-        return Math.max(totals.minThickness, totals.minThickness + (percentage*maximumItem));
+        const itemThickness = metrics.iconSize + 2 * metrics.margin.tailThickness;
+        const sizeFraction = LatteCore.WindowSystem.compositingActive
+                ? Plasmoid.configuration.panelSize / 100 : 1;
+        return backgroundStateResolver.visualThickness(totals.minThickness,
+                                                        itemThickness,
+                                                        sizeFraction);
     }
 
     totals.visualMaxThickness: {
-        var itemMargins = 2*metrics.margin.maxTailThickness;
-        var maximumItem = metrics.maxIconSize + itemMargins;
-
-        if (totals.minThickness < maximumItem) {
-            maximumItem = maximumItem - totals.minThickness;
-        }
-
-        var percentage = LatteCore.WindowSystem.compositingActive ? Plasmoid.configuration.panelSize/100 : 1;
-        return Math.max(totals.minThickness, totals.minThickness + (percentage*maximumItem));
+        const itemThickness = metrics.maxIconSize + 2 * metrics.margin.maxTailThickness;
+        const sizeFraction = LatteCore.WindowSystem.compositingActive
+                ? Plasmoid.configuration.panelSize / 100 : 1;
+        return backgroundStateResolver.visualThickness(totals.minThickness,
+                                                        itemThickness,
+                                                        sizeFraction);
     }
 
     totals.visualLength: {

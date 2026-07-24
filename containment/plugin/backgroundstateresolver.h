@@ -124,6 +124,13 @@ public Q_SLOTS:
                                           double visualLength,
                                           double viewPrimaryLength) const;
 
+    //! MultiLayered.qml totals.visualThickness / visualMaxThickness. The
+    //! QML boundary validates the live theme and configuration values before
+    //! the pure core interpolates from the theme minimum to the item row.
+    Q_INVOKABLE double visualThickness(double minimumThickness,
+                                       double itemThickness,
+                                       double sizeFraction) const;
+
     //! MultiLayered.qml paddings.top/bottom/left/right; the corner-margin
     //! factor arrives from third-party indicator packages and is refused
     //! loudly when malformed (negative or non-finite), falling back to

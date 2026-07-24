@@ -82,6 +82,14 @@ TestCase {
         compare(resolver.dockBackgroundLength(900, 1240, 40), 900);
     }
 
+    function test_smallItemsDoNotDoubleTheThemeMinimumThickness() {
+        compare(resolver.visualThickness(28, 24, 1), 28);
+        compare(resolver.visualThickness(28, 26, 1), 28);
+        compare(resolver.visualThickness(28, 28, 1), 28);
+        compare(resolver.visualThickness(28, 30, 1), 30);
+        compare(resolver.visualThickness(28, 30, 0.5), 29);
+    }
+
     function test_edgePaddingScalesRoundnessBeyondMargins() {
         //! (radius 12 - margin 2) * factor 0.5
         compare(resolver.edgePadding(true, true, true, 12.0, 0.0, 0.0, 2.0, 0.5), 5.0);

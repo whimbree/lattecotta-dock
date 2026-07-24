@@ -28,6 +28,8 @@
 //     feed back into the stable content offset
 //   * Dock background routing: Justify joins all dock alignments in the
 //     shadow-aware visual fit while panel mode retains its full-span path
+//   * Dock background thickness: current and maximum item metrics share the
+//     monotonic theme-minimum interpolation instead of duplicating its formula
 //   * Dock background rendering: custom shadows use one fixed-pixel effect
 //     footprint on both axes and publish that footprint to geometry owners
 //   * Dock resize animation: icon size is the only animation authority and
@@ -220,6 +222,27 @@ private:
                 "dockBackgroundLength(requestedLength,maximumLength,"))
             && offsetBinding.contains(QStringLiteral(
                 "if(myView.alignment===LatteCore.Types.Justify){return0;}"));
+    }
+
+    static bool matchesBackgroundVisualThicknessRouting(const QString &source)
+    {
+        const QString current = normalizedCode(functionBody(
+            source, QStringLiteral("totals.visualThickness:")));
+        const QString maximum = normalizedCode(functionBody(
+            source, QStringLiteral("totals.visualMaxThickness:")));
+
+        return current.contains(QStringLiteral(
+                   "constitemThickness=metrics.iconSize+2*metrics.margin.tailThickness;"))
+            && current.contains(QStringLiteral(
+                   "returnbackgroundStateResolver.visualThickness("
+                   "totals.minThickness,itemThickness,sizeFraction);"))
+            && maximum.contains(QStringLiteral(
+                   "constitemThickness=metrics.maxIconSize+2*metrics.margin.maxTailThickness;"))
+            && maximum.contains(QStringLiteral(
+                   "returnbackgroundStateResolver.visualThickness("
+                   "totals.minThickness,itemThickness,sizeFraction);"))
+            && !current.contains(QStringLiteral("if(totals.minThickness<"))
+            && !maximum.contains(QStringLiteral("if(totals.minThickness<"));
     }
 
     static bool matchesAspectIndependentBackgroundShadow(const QString &customBackground,
@@ -497,6 +520,8 @@ private Q_SLOTS:
     void centeredAppletOffset_sourceGuardRejectsVisualFeedback();
     void dockBackgroundFit_includesJustifyDockMode();
     void dockBackgroundFit_sourceGuardsRejectBypasses();
+    void backgroundVisualThickness_usesMonotonicCore();
+    void backgroundVisualThickness_sourceGuardRejectsDivergence();
     void dockBackgroundShadow_keepsFixedPixelFootprint();
     void dockBackgroundShadow_sourceGuardsRejectAspectScaledRenderer();
     void iconResizeAnimation_keepsSingleAuthority();
@@ -774,6 +799,40 @@ void SourceGuardTest::dockBackgroundFit_sourceGuardsRejectBypasses()
         "        }"));
     QVERIFY2(!matchesDockBackgroundFitRouting(offsetBypass),
              "restoring an unconstrained Justify offset must fail the routing guard");
+}
+
+void SourceGuardTest::backgroundVisualThickness_usesMonotonicCore()
+{
+    const QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/MultiLayered.qml"));
+    QVERIFY2(matchesBackgroundVisualThicknessRouting(source),
+             "current and maximum background thickness must share the monotonic core");
+}
+
+void SourceGuardTest::backgroundVisualThickness_sourceGuardRejectsDivergence()
+{
+    const QString original = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/MultiLayered.qml"));
+    QVERIFY(matchesBackgroundVisualThicknessRouting(original));
+
+    QString formulaRestored = original;
+    const QString coreCall = QStringLiteral(
+        "return backgroundStateResolver.visualThickness(totals.minThickness,");
+    QCOMPARE(formulaRestored.count(coreCall), 2);
+    formulaRestored.replace(coreCall,
+                            QStringLiteral("return totals.minThickness + sizeFraction * ("));
+    QVERIFY2(!matchesBackgroundVisualThicknessRouting(formulaRestored),
+             "duplicating the thickness formula in QML must fail the routing guard");
+
+    QString maximumUsesCurrentMetrics = original;
+    const QString maximumMetrics = QStringLiteral(
+        "metrics.maxIconSize + 2 * metrics.margin.maxTailThickness");
+    QCOMPARE(maximumUsesCurrentMetrics.count(maximumMetrics), 1);
+    maximumUsesCurrentMetrics.replace(
+        maximumMetrics,
+        QStringLiteral("metrics.iconSize + 2 * metrics.margin.tailThickness"));
+    QVERIFY2(!matchesBackgroundVisualThicknessRouting(maximumUsesCurrentMetrics),
+             "maximum thickness must not consume current item metrics");
 }
 
 void SourceGuardTest::dockBackgroundShadow_keepsFixedPixelFootprint()

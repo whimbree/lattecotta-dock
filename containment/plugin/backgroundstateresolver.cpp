@@ -248,6 +248,27 @@ double BackgroundStateResolver::centeredDockOffset(double requestedOffset,
                                                    viewPrimaryLength);
 }
 
+double BackgroundStateResolver::visualThickness(double minimumThickness,
+                                                double itemThickness,
+                                                double sizeFraction) const
+{
+    if (!std::isfinite(minimumThickness)
+            || !std::isfinite(itemThickness)
+            || !std::isfinite(sizeFraction)
+            || minimumThickness < 0.0
+            || itemThickness < 0.0
+            || sizeFraction < 0.0
+            || sizeFraction > 1.0) {
+        qCritical() << "BackgroundStateResolver.visualThickness: invalid thickness inputs"
+                    << minimumThickness << itemThickness << sizeFraction;
+        return 0.0;
+    }
+
+    return BackgroundState::resolveBackgroundVisualThickness(minimumThickness,
+                                                              itemThickness,
+                                                              sizeFraction);
+}
+
 double BackgroundStateResolver::edgePadding(bool borderIsPresent,
                                             bool paddingLiesOnLengthAxis,
                                             bool customRadiusIsEnabled,
