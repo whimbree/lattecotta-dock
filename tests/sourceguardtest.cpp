@@ -264,9 +264,17 @@ private:
                 "if(myView.alignment===LatteCore.Types.Justify)"
                 "{returnshadowCenterCompensation;}"))
             && offsetBinding.contains(QStringLiteral(
-                "backgroundStateResolver.centeredDockOffset("
+                "constrequestedVisualOffset="
+                "requestedOffset+shadowCenterCompensation;"))
+            && offsetBinding.contains(QStringLiteral(
+                "if(viewPrimaryLength<barLine.totals.visualLength)"
+                "{returnbackgroundStateResolver.centeredDockOffset("
                 "requestedOffset,barLine.length,viewPrimaryLength)"
-                "+shadowCenterCompensation"))
+                "+shadowCenterCompensation;}"))
+            && offsetBinding.contains(QStringLiteral(
+                "backgroundStateResolver.centeredDockOffset("
+                "requestedVisualOffset,barLine.totals.visualLength,"
+                "viewPrimaryLength)"))
             && source.count(QStringLiteral(
                 "anchors.horizontalCenterOffset: background.offset;"
                 " anchors.verticalCenterOffset: 0;")) == 4
@@ -910,7 +918,7 @@ void SourceGuardTest::dockBackgroundFit_sourceGuardsRejectBypasses()
     QCOMPARE(lengthBypass.count(fittedCall), 1);
     lengthBypass.replace(fittedCall, QStringLiteral("return requestedLength;"));
     QVERIFY2(!matchesDockBackgroundFitRouting(lengthBypass),
-             "bypassing the complete-visual fit must fail the routing guard");
+             "bypassing the solid-background fit must fail the routing guard");
 
     QString restingMaximumRestored = original;
     QCOMPARE(restingMaximumRestored.count(fittedCall), 1);
@@ -948,20 +956,22 @@ void SourceGuardTest::dockBackgroundFit_sourceGuardsRejectBypasses()
     QVERIFY2(!matchesDockBackgroundFitRouting(offsetBypass),
              "dropping asymmetric shadow compensation must fail the routing guard");
 
-    QString visualClampRestored = original;
-    const QString stableClamp = QStringLiteral(
-        "backgroundStateResolver.centeredDockOffset(requestedOffset,\n"
-        "                                                          barLine.length,\n"
-        "                                                          viewPrimaryLength)");
-    QCOMPARE(visualClampRestored.count(stableClamp), 1);
-    visualClampRestored.replace(
-        stableClamp,
+    QString paintClampBypassed = original;
+    const QString completeVisualClamp = QStringLiteral(
+        "backgroundStateResolver.centeredDockOffset(\n"
+        "                    requestedVisualOffset,\n"
+        "                    barLine.totals.visualLength,\n"
+        "                    viewPrimaryLength)");
+    QCOMPARE(paintClampBypassed.count(completeVisualClamp), 1);
+    paintClampBypassed.replace(
+        completeVisualClamp,
         QStringLiteral(
-            "backgroundStateResolver.centeredDockOffset(requestedOffset,\n"
-            "                                                          barLine.totals.visualLength,\n"
-            "                                                          viewPrimaryLength)"));
-    QVERIFY2(!matchesDockBackgroundFitRouting(visualClampRestored),
-             "letting shadow size constrain centered placement must fail");
+            "backgroundStateResolver.centeredDockOffset(\n"
+            "                    requestedOffset,\n"
+            "                    barLine.length,\n"
+            "                    viewPrimaryLength)"));
+    QVERIFY2(!matchesDockBackgroundFitRouting(paintClampBypassed),
+             "ignoring a fit-capable shadow visual must fail");
 }
 
 void SourceGuardTest::appletBudget_excludesInternalPaddingButNotShadows()
