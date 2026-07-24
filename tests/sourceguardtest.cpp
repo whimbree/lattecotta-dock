@@ -30,6 +30,8 @@
 //     shadow-aware visual fit while panel mode retains its full-span path
 //   * Dock background rendering: custom shadows use one fixed-pixel effect
 //     footprint on both axes and publish that footprint to geometry owners
+//   * Dock resize animation: icon size is the only animation authority and
+//     derived margins follow it without nested per-frame retargeting
 //   * Dock-system reporting: persistent-id ordering and original/clone
 //     relationship classification stay on their pure seams
 //   * SC-T3 (the D29 narrow middle-click dispatch readback): the production QML
@@ -497,6 +499,7 @@ private Q_SLOTS:
     void dockBackgroundFit_sourceGuardsRejectBypasses();
     void dockBackgroundShadow_keepsFixedPixelFootprint();
     void dockBackgroundShadow_sourceGuardsRejectAspectScaledRenderer();
+    void iconResizeAnimation_keepsSingleAuthority();
     void dockSystemCollection_keepsPureRouting();
     void dockSystemCollection_sourceGuardsRejectControlledMutations();
     void dockSystemIdentityRegistry_keepsLifetimeAndAffinityContract();
@@ -889,6 +892,38 @@ void SourceGuardTest::dockBackgroundShadow_sourceGuardsRejectAspectScaledRendere
                                                        originalMetrics,
                                                        divergentRenderer),
              "giving the renderer a private padding formula must fail the guard");
+}
+
+void SourceGuardTest::iconResizeAnimation_keepsSingleAuthority()
+{
+    const QString privateMetrics = readFile(QStringLiteral(
+        "containment/package/contents/ui/abilities/privates/MetricsPrivate.qml"));
+    const QString iconBehavior = functionBody(privateMetrics,
+                                              QStringLiteral("Behavior on iconSize"));
+    QVERIFY2(!iconBehavior.isEmpty(), "icon-size Behavior not found");
+    QVERIFY2(iconBehavior.contains(QStringLiteral("SmoothedAnimation")),
+             "icon resizing must preserve velocity when its target changes");
+    QVERIFY2(iconBehavior.contains(QStringLiteral(
+                 "velocity: 240 / Math.max(animations.speedFactor.current, 0.01)")),
+             "icon resizing must keep a distance-independent velocity tied to the animation speed");
+    QVERIFY2(!iconBehavior.contains(QStringLiteral("NumberAnimation")),
+             "fixed-duration NumberAnimation makes resize speed depend on distance");
+
+    const QString marginBehavior = functionBody(privateMetrics, QStringLiteral("margin {"));
+    QVERIFY2(!marginBehavior.contains(QStringLiteral("Behavior on length"))
+             && !marginBehavior.contains(QStringLiteral("Behavior on tailThickness"))
+             && !marginBehavior.contains(QStringLiteral("Behavior on headThickness")),
+             "derived margins must not start animations that chase iconSize on every frame");
+    QVERIFY2(!privateMetrics.contains(QStringLiteral("padding {\n        Behavior on length")),
+             "derived length padding must not animate an already-animated icon size");
+
+    const QString metrics = stripped(readFile(QStringLiteral(
+        "containment/package/contents/ui/abilities/Metrics.qml")));
+    QVERIFY2(metrics.contains(QStringLiteral(
+                 "margin.tailThickness:marginMinThickness+fraction.thicknessMargin*Math.max(0,iconSize-marginMinThickness)"))
+             && metrics.contains(QStringLiteral(
+                 "background.totals.visualThickness-iconSize-margin.tailThickness")),
+             "thickness margins must derive from the animated iconSize value");
 }
 
 void SourceGuardTest::dockSystemCollection_keepsPureRouting()
