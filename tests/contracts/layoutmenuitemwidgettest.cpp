@@ -14,8 +14,29 @@
 // Qt
 #include <QAction>
 #include <QMenu>
+#include <QProxyStyle>
 #include <QWidgetAction>
 #include <QtTest>
+
+namespace {
+
+class OddHeightMenuStyle final : public QProxyStyle
+{
+public:
+    QSize sizeFromContents(ContentsType type,
+                           const QStyleOption *option,
+                           const QSize &size,
+                           const QWidget *widget) const override
+    {
+        QSize result = QProxyStyle::sizeFromContents(type, option, size, widget);
+        if (type == QStyle::CT_MenuItem && result.height() % 2 == 0) {
+            result.rheight() += 1;
+        }
+        return result;
+    }
+};
+
+}
 
 class LayoutMenuItemWidgetTest : public QObject
 {
@@ -28,25 +49,36 @@ private Q_SLOTS:
 
 void LayoutMenuItemWidgetTest::sizeHintIncludesPaintedColumns()
 {
+    OddHeightMenuStyle oddHeightStyle;
     QMenu menu;
+    menu.setStyle(&oddHeightStyle);
     QAction action(QStringLiteral("&Daily Driver Layout"), &menu);
     action.setCheckable(true);
 
     LayoutMenuItemWidget widget(&action, &menu);
+    widget.setStyle(&oddHeightStyle);
     widget.ensurePolished();
+
+    const QSize hint = widget.sizeHint();
+    QCOMPARE(hint.height() % 2, 1);
 
     QString visibleText = action.text();
     visibleText.remove(QLatin1Char('&'));
     const int paintedTextWidth = widget.fontMetrics().horizontalAdvance(visibleText);
-    const int paintedRadioWidth = widget.sizeHint().height() - 4;
-    constexpr int paintedIconWidth{16 + 2};
+    constexpr int totalRadioMargin{4};
+    const int paintedRadioWidth = hint.height() - totalRadioMargin;
+    constexpr int minimumIconWidth{16};
+    constexpr int totalIconLengthMargin{2};
+    const int iconThicknessMargin = (hint.height() - minimumIconWidth) / 2;
+    const int paintedIconWidth = hint.height() - (2 * iconThicknessMargin)
+            + totalIconLengthMargin;
     const int completePaintedWidth = paintedTextWidth
             + paintedRadioWidth
             + paintedIconWidth;
 
-    QVERIFY2(widget.sizeHint().width() >= completePaintedWidth,
+    QVERIFY2(hint.width() >= completePaintedWidth,
              "the delegate width must include its painted text, radio, and icon columns");
-    QCOMPARE(widget.sizeHint(), widget.minimumSizeHint());
+    QCOMPARE(hint, widget.minimumSizeHint());
 }
 
 void LayoutMenuItemWidgetTest::menuUsesDelegateWidth()
