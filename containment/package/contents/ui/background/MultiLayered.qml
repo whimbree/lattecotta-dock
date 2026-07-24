@@ -145,24 +145,25 @@ BackgroundProperties{
             return 0;
         }
 
+        const alignment = myView.alignment;
         if (Plasmoid.formFactor === PlasmaCore.Types.Horizontal) {
-            if (myView.alignment === LatteCore.Types.Left) {
+            if (alignment === LatteCore.Types.Left) {
                 return root.offset - barLine.shadows.left;
-            } else if (myView.alignment === LatteCore.Types.Right) {
+            } else if (alignment === LatteCore.Types.Right) {
                 return root.offset - barLine.shadows.right;
             }
         }
 
         if (Plasmoid.formFactor === PlasmaCore.Types.Vertical) {
-            if (myView.alignment === LatteCore.Types.Top) {
+            if (alignment === LatteCore.Types.Top) {
                 return root.offset - barLine.shadows.top;
-            } else if (myView.alignment === LatteCore.Types.Bottom) {
+            } else if (alignment === LatteCore.Types.Bottom) {
                 return root.offset - barLine.shadows.bottom;
             }
         }
 
-        if (myView.alignment !== LatteCore.Types.Center
-                && myView.alignment !== LatteCore.Types.Justify) {
+        if (alignment !== LatteCore.Types.Center
+                && alignment !== LatteCore.Types.Justify) {
             return root.offset;
         }
 
@@ -171,7 +172,7 @@ BackgroundProperties{
         const headShadowLength = Plasmoid.formFactor === PlasmaCore.Types.Horizontal
                 ? barLine.shadows.right : barLine.shadows.bottom;
         const shadowCenterCompensation = (headShadowLength - tailShadowLength) / 2;
-        if (myView.alignment === LatteCore.Types.Justify) {
+        if (alignment === LatteCore.Types.Justify) {
             return shadowCenterCompensation;
         }
 
@@ -670,7 +671,7 @@ BackgroundProperties{
             PropertyChanges{
                 target: barLine
                 anchors.leftMargin: barLine.screenEdgeMargin;    anchors.rightMargin:0;     anchors.topMargin:0;    anchors.bottomMargin:0;
-                anchors.horizontalCenterOffset: 0; anchors.verticalCenterOffset: background.offset;
+                anchors.horizontalCenterOffset: 0; anchors.verticalCenterOffset: barLine.offset;
             }
         },
         State {
@@ -688,7 +689,7 @@ BackgroundProperties{
             PropertyChanges{
                 target: barLine
                 anchors.leftMargin: barLine.screenEdgeMargin;    anchors.rightMargin:0;     anchors.topMargin:0;    anchors.bottomMargin:0;
-                anchors.horizontalCenterOffset: 0; anchors.verticalCenterOffset: background.offset;
+                anchors.horizontalCenterOffset: 0; anchors.verticalCenterOffset: barLine.offset;
             }
         },
         ///Left
@@ -745,7 +746,7 @@ BackgroundProperties{
             PropertyChanges{
                 target: barLine
                 anchors.leftMargin: 0;    anchors.rightMargin: barLine.screenEdgeMargin;     anchors.topMargin:0;    anchors.bottomMargin:0;
-                anchors.horizontalCenterOffset: 0; anchors.verticalCenterOffset: background.offset;
+                anchors.horizontalCenterOffset: 0; anchors.verticalCenterOffset: barLine.offset;
             }
         },
         State {
@@ -763,7 +764,7 @@ BackgroundProperties{
             PropertyChanges{
                 target: barLine
                 anchors.leftMargin: 0;    anchors.rightMargin: barLine.screenEdgeMargin;     anchors.topMargin:0;    anchors.bottomMargin:0;
-                anchors.horizontalCenterOffset: 0; anchors.verticalCenterOffset: background.offset;
+                anchors.horizontalCenterOffset: 0; anchors.verticalCenterOffset: barLine.offset;
             }
         },
         State {
@@ -818,7 +819,7 @@ BackgroundProperties{
             PropertyChanges{
                 target: barLine
                 anchors.leftMargin: 0;    anchors.rightMargin:0;     anchors.topMargin:0;    anchors.bottomMargin: barLine.screenEdgeMargin;
-                anchors.horizontalCenterOffset: background.offset; anchors.verticalCenterOffset: 0;
+                anchors.horizontalCenterOffset: barLine.offset; anchors.verticalCenterOffset: 0;
             }
         },
         State {
@@ -836,7 +837,7 @@ BackgroundProperties{
             PropertyChanges{
                 target: barLine
                 anchors.leftMargin: 0;    anchors.rightMargin:0;     anchors.topMargin:0;    anchors.bottomMargin: barLine.screenEdgeMargin;
-                anchors.horizontalCenterOffset: background.offset; anchors.verticalCenterOffset: 0;
+                anchors.horizontalCenterOffset: barLine.offset; anchors.verticalCenterOffset: 0;
             }
         },
         State {
@@ -896,7 +897,7 @@ BackgroundProperties{
             PropertyChanges{
                 target: barLine
                 anchors.leftMargin: 0;    anchors.rightMargin:0;     anchors.topMargin: barLine.screenEdgeMargin;    anchors.bottomMargin:0;
-                anchors.horizontalCenterOffset: background.offset; anchors.verticalCenterOffset: 0;
+                anchors.horizontalCenterOffset: barLine.offset; anchors.verticalCenterOffset: 0;
             }
         },
         State {
@@ -914,7 +915,7 @@ BackgroundProperties{
             PropertyChanges{
                 target: barLine
                 anchors.leftMargin: 0;    anchors.rightMargin:0;     anchors.topMargin: barLine.screenEdgeMargin;    anchors.bottomMargin:0;
-                anchors.horizontalCenterOffset: background.offset; anchors.verticalCenterOffset: 0;
+                anchors.horizontalCenterOffset: barLine.offset; anchors.verticalCenterOffset: 0;
             }
         },
         State {
