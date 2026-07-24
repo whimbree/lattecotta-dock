@@ -93,7 +93,7 @@ Landed before or during the 2026-07-16 stabilization session:
     "globalConfigureAppletsMode": true,
     "stacking": {
       "available": false,
-      "reason": "Inward same-edge stacking is unsupported; stable dock spans must not overlap."
+      "reason": "Inward same-edge stacking is unsupported; stable-span overlap is not yet rejected."
     },
     "views": [{
       "runtimeViewId": "9",
@@ -246,10 +246,12 @@ Landed before or during the 2026-07-16 stabilization session:
   same logical-pixel unit.
 
   `stacking.available` is deliberately and permanently false. Multiple
-  partial-length views may share an output edge when their stable primary-axis
-  spans do not overlap. Latte does not assign ranks, accumulated insets, or
-  inward lanes. Canonical array order is serialization order only and must
-  never be treated as layer-shell stack order.
+  partial-length views are intended to share an output edge only when their
+  stable primary-axis spans do not overlap. Latte does not assign ranks,
+  accumulated insets, or inward lanes. The current runtime does not yet reject
+  an overlap or aggregate same-edge exclusive zones, so this object may
+  accompany overlapping view geometry. Canonical array order is serialization
+  order only and must never be treated as layer-shell stack order.
 - `viewAppletsData(u containmentId) -> s` (JSON array, in visual order).
   Per applet: id, plugin, index in layout, geometry within the view,
   expanded state, inScheduledDestruction, lockedZoom, colorizingBlocked,

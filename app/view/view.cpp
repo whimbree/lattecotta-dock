@@ -735,8 +735,8 @@ void View::createLinkedView(const int targetScreenId, const Plasma::Types::Locat
 
     //! Occupied edges are valid because separated partial spans may coexist.
     //! This path deliberately does not infer an inward order or inset from
-    //! creation order. Stable same-edge overlap is an invalid placement for
-    //! the placement validator to report.
+    //! creation order. Rejecting stable same-edge overlap remains separate
+    //! placement work; no validator exists at this boundary yet.
     const Data::View created = m_layout->newView(linked);
     if (!created.isValid()) {
         qWarning() << "View::createLinkedView failed to import the linked member";
