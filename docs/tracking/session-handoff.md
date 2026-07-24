@@ -40,7 +40,9 @@ still contain same-edge records without stack semantics. Lattecotta promotes
 the separated-span case to supported behavior and replaces inherited undefined
 overlap with an explicit invalid state. Commit `e99871822` records the contract
 in the public roadmap, identity model, replication design, D-Bus references,
-and the typed negative capability returned at runtime.
+and the typed negative capability returned at runtime. Commit `41e30e947`
+corrects D158 (same-edge placement notes overstated the OG Latte UI contract)
+after verifying the upstream `freeEdges()` history.
 
 ## 2026-07-23: partial reservations no longer place Latte visuals
 

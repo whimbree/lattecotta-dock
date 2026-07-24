@@ -4436,6 +4436,10 @@ prerequisites in the phases above are done.
       the D-Bus stack object as a typed negative capability, and replace the
       planned rank-and-inset coordinator with stable-span validation.
       Commits: e99871822
+- [x] Fix D158 (same-edge placement notes overstated the OG Latte UI
+      contract). Record upstream occupied-edge rejection and identify
+      first-class separated spans as a deliberate Lattecotta extension.
+      Commits: 41e30e947
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

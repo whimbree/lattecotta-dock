@@ -1850,6 +1850,23 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: the first gate reached 105 of 105 passing tests before reporting
   the one-entry inventory diff.
 
+### D158 - Same-edge placement notes overstated the OG Latte UI contract
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`41e30e947`).
+- FOUND: 2026-07-24, source-history verification of the no-stacking placement
+  decision.
+- SYMPTOM: the identity record described separated same-edge views as a normal
+  upstream workflow.
+- ROOT: the runtime's ability to load same-edge records was conflated with the
+  ordinary UI contract. Upstream `GenericLayout::freeEdges()` has removed an
+  edge after its first view since commit `bbddfd3d48`, so creation and movement
+  did not expose that composition as a first-class workflow.
+- FIX: describe separated same-edge spans as a deliberate Lattecotta extension.
+  OG Latte and Lattecotta both lack inward stack semantics, but only Lattecotta
+  intends to support non-overlapping same-edge spans explicitly.
+- EVIDENCE: blame and history trace both `freeEdges()` overloads and their
+  `edges.removeOne(view->location())` rule to upstream `bbddfd3d48`.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.
