@@ -4349,23 +4349,27 @@ prerequisites in the phases above are done.
       current adaptation copyright beside all preserved original authors.
       Commits: 2c4e99430
 - [x] Fix D140 (zoomed side-dock chrome clipped at both ends). Keep stable icon
-      sizing independent of hover, fit the solid background after reserving its
-      length-axis shadow margins, and constrain centered parabolic movement by
-      the complete visual's owning output canvas. D150 supersedes the initial
-      use of the configured resting span as the transient boundary.
-      Commits: 1228ecf8c, d19a1805c, 921bf089b, a0ab006f8
+      sizing independent of hover and fit the transient solid against its own
+      output canvas. D169 (panel shadows consumed the stable panel and applet
+      span) keeps shadow paint out of stable length. D170 (the first D169
+      correction weakened end-hover shadow bounds) constrains the complete
+      visual when it fits and the solid when it does not.
+      Commits: 1228ecf8c, d19a1805c, 921bf089b, a0ab006f8, 0ef65f9a8,
+      ab9aa64b1
 - [x] Fix D141 (bounded background movement shifted the applet row). Separate
       the stable centered content offset from bounded parabolic background
       presentation and reject restoration of the feedback expression.
       Commits: d19a1805c
-- [x] Fix D142 (stable autosize omitted background shadow margins). Define the
-      layouter-owned applet budget after both primary-axis padding and shadow
-      margins, and refit when either stable inset changes.
-      Commits: 921bf089b
-- [x] Fix D143 (dock-mode Justify bypassed the complete chrome fit). Preserve
-      the Plasma-panel path while routing every dock alignment through the
-      shadow-aware visual fit with explicit Justify offset ownership.
-      Commits: a0ab006f8
+- [x] Fix D142 (stable autosize charged shadow paint against the applet
+      budget). The first correction incorrectly subtracted shadows. D169
+      restores the stable applet span to solid background length after internal
+      padding only.
+      Commits: 921bf089b, 0ef65f9a8
+- [x] Fix D143 (dock-mode Justify charged shadow paint against configured
+      length). The first correction incorrectly shortened the configured solid.
+      D169 routes every alignment through the output-bounded solid fit and
+      handles asymmetric shadows only in presentation placement.
+      Commits: a0ab006f8, 0ef65f9a8
 - [x] Fix D144 (aspect-scaled background shadow clipped side docks). Replace
       the aspect-dependent Kirigami render node with one fixed-pixel effect,
       share its padding metric with placement, and pin both end-hover geometry
@@ -4456,8 +4460,10 @@ prerequisites in the phases above are done.
       Commits: 81fbf1ed3, bebe0a9f4
 - [x] Fix D162 (Justify applets occupied shadow-only margins). Make the fitted
       solid background span authoritative for the physical applet container
-      instead of laying endpoint applets under length-axis shadows.
-      Commits: cf50d7845, 4edcd203d, 6cd8ff860, 3feb54939
+      instead of laying endpoint applets under length-axis shadows. D169
+      corrects that solid to the complete configured span rather than a
+      shadow-reduced derivative.
+      Commits: cf50d7845, 4edcd203d, 6cd8ff860, 3feb54939, 0ef65f9a8
 - [x] Fix D163 (native background shadows retained Kirigami alpha
       compensation). Feed the theme shadow color directly to the Qt native
       effect and reject restoration of the obsolete renderer workaround.
@@ -4467,9 +4473,9 @@ prerequisites in the phases above are done.
       of the applet container that consumes its fitted span.
       Commits: 4edcd203d
 - [x] Fix D165 (the first D162 correction assumed equal end shadows). Center
-      the complete visual and derive the solid span from independent tail and
-      head margins.
-      Commits: 6cd8ff860
+      the stable solid and compensate the outer visual by half the independent
+      head-minus-tail margin difference.
+      Commits: 6cd8ff860, 0ef65f9a8
 - [x] Fix D166 (the first D162 origin mutation produced invalid QML). Mutate
       the authoritative property with viable old-origin and equal-shadow
       regressions.
@@ -4480,6 +4486,15 @@ prerequisites in the phases above are done.
 - [ ] Fix D168 (thin-dock tracking commit omitted explicit verification
       evidence). Rewrite commit `5318aec02` during pre-merge history cleanup.
       Commits:
+- [x] Fix D169 (panel shadows consumed the stable panel and applet span).
+      Treat the configured solid and its internal padding as stable geometry.
+      Keep shadow paint out of panel length, applet placement, and autosize,
+      with asymmetric compensation confined to outer presentation placement.
+      Commits: 0ef65f9a8, ab9aa64b1
+- [x] Fix D170 (the first D169 correction weakened end-hover shadow bounds).
+      Preserve stable solid sizing while constraining complete outer paint when
+      it fits, with a solid-only fallback when the outer visual cannot fit.
+      Commits: ab9aa64b1
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

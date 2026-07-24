@@ -74,14 +74,17 @@ derive from that value without starting nested animations whose speed changes
 with slider distance.
 The automatic-size solver uses every fitting integer icon size, sizes the
 persistent dock from its settled row, leaves a two-pixel rounding margin, and
-uses the background's real post-chrome content span before painting task
+uses the solid background's post-padding content span before painting task
 artwork into the complete fitted slot. Temporary hover zoom does not resize the
-resting dock; it may borrow resting end padding while the complete background
-and its drop shadows stay inside that view's output-owned canvas. Custom
-background shadows use Qt's dedicated fixed-pixel rounded-shadow renderer on
-horizontal and vertical docks, remain independent of background opacity, and
-reserve no space at zero size. A side dock therefore does not scale its blur
-by the background aspect ratio. Settings
+resting dock; it may borrow resting end padding while the solid background
+stays inside that view's output-owned canvas. Drop shadows remain external
+presentation paint and never shrink the configured panel or its automatic icon
+size. Centered hover placement keeps the complete visual bounded whenever it
+fits; a full-canvas solid may clip outward shadow paint instead of silently
+shrinking its content. Custom background shadows use Qt's dedicated
+fixed-pixel rounded-shadow renderer on horizontal and vertical docks, remain
+independent of background opacity, and reserve no space at zero size. A side
+dock therefore does not scale its blur by the background aspect ratio. Settings
 sliders accept wheel input after being clicked without stealing ordinary page
 scrolling,
 and screen-height sizing shows its resolved pixel ceiling and explicit Off mode.
