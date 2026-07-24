@@ -113,10 +113,11 @@ Item{
         visible: main.shadowEnabled && main.shadowSize > 0
         blur: main.shadowSize
         radius: painter.radius
-        color: Qt.rgba(main.shadowColor.r,
-                       main.shadowColor.g,
-                       main.shadowColor.b,
-                       Math.min(1, 0.336 + main.shadowColor.a))
+        //! The former +0.336 alpha compensation matched Kirigami's old
+        //! ShadowedRectangle renderer. RectangularShadow consumes the theme
+        //! color directly, so carrying that renderer-specific boost forward
+        //! makes thin dock shadows look like a second dark background.
+        color: main.shadowColor
     }
 
     Rectangle{

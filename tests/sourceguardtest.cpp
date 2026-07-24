@@ -294,7 +294,9 @@ private:
                 "visible:main.shadowEnabled&&main.shadowSize>0"))
             && backgroundShadowBlock.contains(QStringLiteral("blur:main.shadowSize"))
             && backgroundShadowBlock.contains(QStringLiteral("z:painter.z-1"))
+            && backgroundShadowBlock.contains(QStringLiteral("color:main.shadowColor"))
             && !backgroundShadowBlock.contains(QStringLiteral("opacity:"))
+            && !backgroundShadowBlock.contains(QStringLiteral("0.336"))
             && custom.contains(QStringLiteral("opacity:backgroundOpacity"))
             && custom.contains(QStringLiteral(
                 "readonlypropertyaliasshadowPaintMargin:"
@@ -965,6 +967,23 @@ void SourceGuardTest::dockBackgroundShadow_sourceGuardsRejectAspectScaledRendere
                                                        originalMetrics,
                                                        originalShadowed),
              "placing the shadow over its painter must fail the guard");
+
+    QString kirigamiAlphaCompensation = originalCustom;
+    const QString directThemeColor = QStringLiteral("color: main.shadowColor");
+    QCOMPARE(kirigamiAlphaCompensation.count(directThemeColor), 1);
+    kirigamiAlphaCompensation.replace(
+        directThemeColor,
+        QStringLiteral(
+            "color: Qt.rgba(main.shadowColor.r,\n"
+            "                       main.shadowColor.g,\n"
+            "                       main.shadowColor.b,\n"
+            "                       Math.min(1, 0.336 + main.shadowColor.a))"));
+    QVERIFY2(!matchesAspectIndependentBackgroundShadow(kirigamiAlphaCompensation,
+                                                       originalEffect,
+                                                       originalLayered,
+                                                       originalMetrics,
+                                                       originalShadowed),
+             "restoring Kirigami-specific alpha compensation must fail the guard");
 
     QString disconnectedAlias = originalCustom;
     const QString liveMargin = QStringLiteral(
