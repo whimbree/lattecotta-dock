@@ -4432,9 +4432,10 @@ prerequisites in the phases above are done.
       inventory.
       Commits: 72df9e2a5
 - [x] Define same-edge occupancy without inward dock stacking. Permit
-      separated partial-length spans, retain maximum-depth reservation, keep
-      the D-Bus stack object as a typed negative capability, and replace the
-      planned rank-and-inset coordinator with stable-span validation.
+      separated partial-length spans as the intended model, keep the D-Bus
+      stack object as a typed negative capability, and replace the planned
+      rank-and-inset coordinator with stable-span validation plus maximum-depth
+      exclusive-zone aggregation.
       Commits: e99871822
 - [x] Fix D158 (same-edge placement notes overstated the OG Latte UI
       contract). Record upstream occupied-edge rejection and identify
