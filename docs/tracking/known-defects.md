@@ -1997,7 +1997,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   regressions fail it.
 
 ### D167 - Thin-dock tracking used a bare D145 codeword
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`.
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`e8ca33c2f`).
 - FOUND: 2026-07-24, mandatory cold review of the thin-dock correction.
 - SYMPTOM: the handoff and D163 root used `D145` without its plain-English
   description.
