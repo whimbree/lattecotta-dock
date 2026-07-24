@@ -28,10 +28,13 @@ the new target. Commit `72df9e2a5` registers its exact identity.
 
 The placement direction was also clarified. Lattecotta does not provide inward
 same-edge dock stacking. Multiple partial-length docks or panels may share one
-output edge when their stable primary-axis spans do not overlap. Reservation
-depth is the maximum required depth, not a sum. A future output-edge validator
-must prevent or deterministically recover stable overlap without creating
-ranks, cumulative insets, or inward lanes.
+output edge when their stable primary-axis spans do not overlap. The intended
+reservation depth is the maximum required depth, not a sum. Neither invariant
+is enforced yet: stable overlap is not rejected, and each Always Visible view
+currently publishes an independent positive exclusive zone that KWin may
+accumulate. A future output-edge validator and reservation aggregator must
+close both gaps without creating ranks, cumulative visual insets, or inward
+lanes.
 
 This is a deliberate extension of OG Latte, not a claim that its ordinary UI
 supported the workflow. Upstream `GenericLayout::freeEdges()` removed an edge

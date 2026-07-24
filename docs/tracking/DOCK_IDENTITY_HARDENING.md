@@ -79,7 +79,7 @@ that is the boundary with deferred work.
 | Geometry controller | Unique `Positioner` per runtime view | Runtime `View` QObject parent | Derived, not persisted | Constructed fresh | Consumes that view's output and owns monotonic relocation generations | Edit thickness may change local placement | QObject parent destruction cancels timers and callbacks |
 | Applet sizing | Unique `AutoSize`, effective icon state, and applet `length` per containment | Containment QML tree | Configured dock values plus per-applet local `length` | Independent Duplicate copies the snapshot; linked creation clears local `length`; effective values recompute | Consumes the same view's solved primary length and orientation | Recomputes only for local edit geometry | QML tree destruction |
 | Edit-mode controller | One reusable chrome ensemble, one current owner, one requested generation | `ViewSettingsFactory` under Corona | Not persisted | Never copied | Retarget is one cancelable generation | Exactly one effective owner; clone requests resolve explicitly | Cancels deferred work and clears the old containment before rebinding |
-| Same-edge span validator | Missing in the current tree | Required owner: layout or Corona placement domain | Required key: output and edge | Duplicate remains independent; no rank or lane is copied | Revalidates exact stable spans atomically without assuming adjacent outputs | Prevents committing overlap while permitting separated partial spans | Removes membership before view destruction |
+| Same-edge span validator and reservation aggregator | Missing in the current tree | Required owner: layout or Corona placement domain | Required key: output and edge | Duplicate remains independent; no rank or lane is copied | Revalidates exact stable spans and recomputes maximum depth atomically without assuming adjacent outputs | Prevents committing overlap while permitting separated partial spans | Removes membership before view destruction |
 | Configuration object | Unique mutable map per containment; an explicit policy selects linked applet keys | Containment owns storage; relationship root owns shared mutation routing; each view owns applet geometry keys | Containment configuration group | Deep-copied into fresh groups for Duplicate Dock; linked import removes per-view keys | Explicit members keep containment placement, appearance, and applet length local | Menu and edit relationship are read from runtime identity | Destroyed with containment; Undo and reconnect restore shared values without overwriting local keys; signal contexts are the receiving view |
 
 ## Confirmed causes
@@ -313,9 +313,9 @@ session first.
 
 Multiple partial-length containments may share an output edge when their stable
 primary-axis spans do not overlap. Alignment, maximum length, and offset place
-each view along the edge, while the deepest member determines the edge's
-reservation depth. Lattecotta does not assign stable ranks, cumulative insets,
-or automatic inward lanes.
+each view along the edge. The intended reservation policy uses the deepest
+member rather than adding member depths. Lattecotta does not assign stable
+ranks, cumulative insets, or automatic inward lanes.
 
 This is a deliberate extension of the upstream UI contract. OG Latte's
 `GenericLayout::freeEdges()` removed an edge after the first view occupied it,
@@ -327,9 +327,16 @@ makes stable overlap invalid.
 
 The inherited runtime can also persist overlapping same-edge spans, but their
 composition and ordering are undefined. The missing authority is therefore an
-output-edge span validator, not a stack coordinator. It must reject or repair a
-stable overlap deterministically, keep separated spans independent, and preserve
-the maximum-depth reservation rule.
+output-edge span validator and reservation aggregator, not a stack coordinator.
+It must reject or repair a stable overlap deterministically, keep separated
+spans independent, and enforce the maximum-depth reservation rule.
+
+That policy is not implemented yet. Each Always Visible view currently
+publishes its own positive layer-shell exclusive zone. KWin processes those
+surfaces independently, so same-edge zones can accumulate even when the visual
+spans are separated. The D-Bus `stacking` object reports this missing authority;
+it does not certify that the current view list is non-overlapping or
+maximum-depth-reserved.
 
 Validation is keyed by Latte output identity and edge, not by monitor adjacency.
 Portrait, landscape, overlapping-coordinate, fully touching, partially
@@ -463,16 +470,18 @@ yet.
    rebind.
 5. Route every placement mutation through one normalization transaction for
    output, edge, semantic alignment, minimum and maximum length, and offset.
-6. Add one output-edge span validator. It permits separated partial-length
-   members, rejects a stable overlap before placement commits, recovers
-   malformed persisted layouts deterministically, and never creates an inward
-   lane or persisted rank.
+6. Add one output-edge span validator and reservation aggregator. It permits
+   separated partial-length members, rejects a stable overlap before placement
+   commits, recovers malformed persisted layouts deterministically, publishes
+   only the maximum required exclusive depth, and never creates an inward lane
+   or persisted rank.
 7. Keep compositor work-area reservation separate from Latte's partial
    dock-to-dock avoidance footprint. This split is implemented: autosizing and
    peer placement consume final per-view geometry, visual layer surfaces opt
    out of scalar work-area placement, and a separate inputless surface
-   publishes each reservation. Same-edge views retain independent visual
-   geometry and contribute the maximum required depth.
+   publishes each reservation. The missing same-edge aggregator must replace
+   independent positive zones with one maximum required depth while the views
+   retain independent visual geometry.
 8. Replace blanket replica configuration mirroring with explicit shared-content
    and per-view geometry projections. Applet `length` is local across both
    explicit and screen-group-derived members. Independent duplicates share no
@@ -490,7 +499,8 @@ yet.
 2. [ ] Placement normalization and bounded visible geometry across all edges and
    semantic alignments.
 3. [ ] Same-edge stable-span validation, deterministic persistence recovery,
-   maximum-depth reservation, and exact activation-region routing.
+   maximum-depth exclusive-zone aggregation, and exact activation-region
+   routing.
 4. [x] Multi-view nested-KWin fixtures and deterministic operation replay across
    duplication, movement, orientation, alignment, editing, destruction, and
    reload.
@@ -609,8 +619,9 @@ merge.
 ## Current release severity
 
 - **Beta blocker:** same-edge stable overlaps are not rejected or recovered
-  deterministically. Separated partial-length views are supported, but a
-  malformed overlap can still compose unpredictably.
+  deterministically, and positive exclusive zones are not aggregated to the
+  maximum depth. Separated partial-length views are the intended model, but
+  current overlap and work-area reservation can still compose unpredictably.
 - **Release blocker:** Start and End alignment can leave the rendered rectangle
   outside its selected output because alignment bypasses placement
   normalization.
