@@ -1914,6 +1914,40 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   style and passes offscreen under Qt 6.11. The containing menu still adopts
   the resulting hint.
 
+### D162 - Justify applets occupied shadow-only margins
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`cf50d7845`); real-layout visual acceptance is pending.
+- FOUND: 2026-07-24, live top-dock rendering at 22 px icon size.
+- SYMPTOM: the first and last applets extended past the solid rounded
+  background, so the ends looked clipped and the shadow resembled a second
+  plate.
+- ROOT: the solid Justify background was fitted inside the configured complete
+  visual span, including its two length-axis shadows. `LayoutsContainer`
+  continued to use the outer `root.maxLength` for its physical origin and
+  length, placing endpoint wrappers in the two shadow-only margins.
+- FIX: make the fitted solid background length and centered origin authoritative
+  for the physical Justify applet container.
+- EVIDENCE: the live solid background remained `[126,18,1189,26]`. The first
+  wrapper moved from x=121 to x=131, and the last wrapper moved from
+  x=1286..1319 to x=1276..1309. Controlled source mutations that restore the
+  outer length or origin fail.
+
+### D163 - Native background shadows retained Kirigami alpha compensation
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`92fab9745`); real-layout visual acceptance is pending.
+- FOUND: 2026-07-24, live comparison of the thin top-dock shadow.
+- SYMPTOM: the shadow was much darker than the theme color and appeared as a
+  detached background behind the dock.
+- ROOT: the former Kirigami `ShadowedRectangle` path added 0.336 to the theme
+  shadow alpha as an explicit renderer-matching workaround. The D145 native
+  `RectangularShadow` replacement retained that formula even though the new
+  effect consumes its supplied color directly.
+- FIX: pass the theme shadow color directly to `RectangularShadow`.
+- EVIDENCE: a controlled source mutation that restores the Kirigami formula
+  fails. Source, QML compile, QML lint, image-comparison helper, and complete
+  scene-probe gates pass. Live comparison retains a soft shadow without the
+  detached dark plate.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.
