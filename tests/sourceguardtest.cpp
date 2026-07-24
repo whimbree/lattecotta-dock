@@ -189,26 +189,38 @@ private:
                 "background.offset-parabolicOffsetting"));
     }
 
-    static bool matchesJustifyLayoutSolidSpanOwnership(const QString &source)
+    static bool matchesJustifyLayoutSolidSpanOwnership(const QString &layoutSource,
+                                                       const QString &mainSource)
     {
-        const QString code = normalizedCode(source);
+        const QString layout = normalizedCode(layoutSource);
+        const QString main = normalizedCode(mainSource);
 
-        return code.contains(QStringLiteral(
+        return layout.contains(QStringLiteral(
                    "readonlypropertyrealjustifyLayoutLength:"
                    "Math.max(0,background.length)"))
-            && code.contains(QStringLiteral(
+            && layout.contains(QStringLiteral(
                 "constviewPrimaryLength=root.isHorizontal"
                 "?latteView.width:latteView.height;"
                 "return(viewPrimaryLength-justifyLayoutLength)/2+background.offset;"))
-            && code.count(QStringLiteral("returnjustifyLayoutOrigin;")) == 2
-            && code.contains(QStringLiteral(
+            && layout.count(QStringLiteral("returnjustifyLayoutOrigin;")) == 2
+            && layout.contains(QStringLiteral(
                 "width:root.isHorizontal&&root.myView.alignment"
                 "===LatteCore.Types.Justify"
                 "?justifyLayoutLength:parent.width"))
-            && code.contains(QStringLiteral(
+            && layout.contains(QStringLiteral(
                 "height:root.isVertical&&root.myView.alignment"
                 "===LatteCore.Types.Justify"
-                "?justifyLayoutLength:parent.height"));
+                "?justifyLayoutLength:parent.height"))
+            && main.contains(QStringLiteral("id:backgroundCanvas"))
+            && main.contains(QStringLiteral(
+                "x:root.isHorizontal?0:layoutsContainer.x"))
+            && main.contains(QStringLiteral(
+                "y:root.isVertical?0:layoutsContainer.y"))
+            && main.contains(QStringLiteral(
+                "width:root.isHorizontal?parent.width:layoutsContainer.width"))
+            && main.contains(QStringLiteral(
+                "height:root.isVertical?parent.height:layoutsContainer.height"))
+            && !main.contains(QStringLiteral("anchors.fill:layoutsContainer"));
     }
 
     static bool matchesDockBackgroundFitRouting(const QString &source)
@@ -782,35 +794,44 @@ void SourceGuardTest::centeredAppletOffset_sourceGuardRejectsVisualFeedback()
 
 void SourceGuardTest::justifyAppletSpan_followsSolidBackground()
 {
-    const QString source = readFile(QStringLiteral(
+    const QString layoutSource = readFile(QStringLiteral(
         "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
-    QVERIFY2(matchesJustifyLayoutSolidSpanOwnership(source),
+    const QString mainSource = readFile(QStringLiteral(
+        "containment/package/contents/ui/main.qml"));
+    QVERIFY2(matchesJustifyLayoutSolidSpanOwnership(layoutSource, mainSource),
              "Justify applets must occupy the fitted solid background span");
 }
 
 void SourceGuardTest::justifyAppletSpan_sourceGuardRejectsShadowOverlap()
 {
-    const QString original = readFile(QStringLiteral(
+    const QString originalLayout = readFile(QStringLiteral(
         "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
-    QVERIFY(matchesJustifyLayoutSolidSpanOwnership(original));
+    const QString originalMain = readFile(QStringLiteral(
+        "containment/package/contents/ui/main.qml"));
+    QVERIFY(matchesJustifyLayoutSolidSpanOwnership(originalLayout, originalMain));
 
-    QString outerVisualLengthRestored = original;
+    QString outerVisualLengthRestored = originalLayout;
     const QString solidWidth = QStringLiteral(
         "? justifyLayoutLength : parent.width");
     QCOMPARE(outerVisualLengthRestored.count(solidWidth), 1);
     outerVisualLengthRestored.replace(solidWidth,
                                       QStringLiteral("? root.maxLength : parent.width"));
-    QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(outerVisualLengthRestored),
+    QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(outerVisualLengthRestored,
+                                                     originalMain),
              "restoring the outer visual width must fail the Justify ownership guard");
 
-    QString outerVisualOriginRestored = original;
-    const QString solidOrigin = QStringLiteral("return justifyLayoutOrigin;");
-    QCOMPARE(outerVisualOriginRestored.count(solidOrigin), 2);
-    outerVisualOriginRestored.replace(
-        solidOrigin,
-        QStringLiteral("return (viewPrimaryLength - root.maxLength) / 2;"));
-    QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(outerVisualOriginRestored),
-             "placing applets from the outer visual origin must fail the guard");
+    QString layoutOwnedCanvas = originalMain;
+    const QString independentCanvas = QStringLiteral(
+        "            x: root.isHorizontal ? 0 : layoutsContainer.x\n"
+        "            y: root.isVertical ? 0 : layoutsContainer.y\n"
+        "            width: root.isHorizontal ? parent.width : layoutsContainer.width\n"
+        "            height: root.isVertical ? parent.height : layoutsContainer.height");
+    QCOMPARE(layoutOwnedCanvas.count(independentCanvas), 1);
+    layoutOwnedCanvas.replace(independentCanvas,
+                              QStringLiteral("            anchors.fill: layoutsContainer"));
+    QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(originalLayout,
+                                                     layoutOwnedCanvas),
+             "making the background canvas depend on the applet span must fail the guard");
 }
 
 void SourceGuardTest::dockBackgroundFit_includesJustifyDockMode()
