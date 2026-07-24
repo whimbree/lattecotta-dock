@@ -107,8 +107,9 @@
          without logs. Invalid clone lineage is logged and refused as an empty
          string, never returned as a plausible partial snapshot. The stacking
          object deliberately reports available=false: inward same-edge
-         stacking is not a supported placement model, so canonical array order
-         must never be interpreted as stack order. -->
+         stacking is not a supported placement model and stable overlap is not
+         yet rejected, so canonical array order must never be interpreted as
+         stack order. -->
     <method name="dockSystemData">
         <arg name="data" type="s" direction="out"/>
     </method>

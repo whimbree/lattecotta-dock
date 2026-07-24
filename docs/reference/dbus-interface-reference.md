@@ -152,9 +152,11 @@ Per dock:
   process. They are not memory addresses.
 
 `stacking.available` is permanently false because inward same-edge stacking is
-not a supported placement model. Multiple partial-length views may share an
-edge only when their stable primary-axis spans do not overlap. Do not interpret
-canonical `views` array order as physical stack order.
+not a supported placement model. Multiple partial-length views are intended to
+share an edge only when their stable primary-axis spans do not overlap. The
+current runtime does not yet reject overlap or aggregate same-edge exclusive
+zones, so consumers must not treat `available=false` as validation success. Do
+not interpret canonical `views` array order as physical stack order.
 
 An internal lineage-invariant failure logs every relationship input at critical
 severity and returns an empty D-Bus string. It never returns a smaller but

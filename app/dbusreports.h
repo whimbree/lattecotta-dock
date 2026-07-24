@@ -580,7 +580,7 @@ struct DockSystemViewRecord {
 struct DockStackModelRecord {
     bool available{false};
     QString reason{QStringLiteral(
-        "Inward same-edge stacking is unsupported; stable dock spans must not overlap.")};
+        "Inward same-edge stacking is unsupported; stable-span overlap is not yet rejected.")};
 };
 
 struct DockSystemSnapshot {
