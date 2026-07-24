@@ -4495,6 +4495,10 @@ prerequisites in the phases above are done.
       Preserve stable solid sizing while constraining complete outer paint when
       it fits, with a solid-only fallback when the outer visual cannot fit.
       Commits: ab9aa64b1
+- [x] Fix D171 (centered shadow offsets raised the QML warning ratchet). Cache
+      the injected alignment once, name the document-root offset explicitly,
+      and lower the touched-file baseline from 181 to 176 warnings.
+      Commits: c590d33f8
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

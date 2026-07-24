@@ -35,12 +35,21 @@ fits and constrains only the solid when the outer paint cannot fit. A
 full-canvas solid may therefore clip impossible outward paint rather than
 silently shrinking its content.
 
+The first canonical gate then caught D171 (centered shadow offsets raised the
+QML warning ratchet). All 104 other CTest entries passed, but the new branch
+raised `MultiLayered.qml` from 181 to 182 curated warnings. Commit `c590d33f8`
+caches the injected alignment once and names the document root directly in all
+center and Justify offset states. `sourceguardtest` and `qmllintgate` pass, and
+the touched-file baseline improves to 176 warnings.
+
 The shadow-off real layout and an isolated shadow-on clone now both settle at
 solid `[115,18,1209,26]`, applet span `[128,18,1183,26]`, and endpoint wrappers
 x=124 and x=1283..1316. Configured and effective icon sizes both remain 22 px.
 Focused C++ geometry and source-contract tests, all 130 QML compile probes, and
 all 245 QML interaction cases pass. The canonical gate, independent review,
-and final real-layout visual acceptance remain pending.
+and final real-layout visual acceptance remain pending. The first canonical
+gate reached 104 of 105 passing CTest entries before D171; the complete rerun
+after that correction remains pending.
 
 ## 2026-07-24: thin Justify docks keep applets and shadows in their own spans
 
