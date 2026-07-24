@@ -57,6 +57,12 @@ zones can accumulate in KWin. D161 (Layouts submenu sizing test omitted painted
 control columns) is fixed by `81fbf1ed3`, which requires the production size
 hint to contain the label, radio, and icon slots.
 
+The focused rereview found two remaining assertion gaps. Commit `313eedba0`
+pins the complete D159 public diagnostic instead of accepting any nonempty
+reason. Commit `bebe0a9f4` forces odd menu metrics and derives D161's icon
+column from the production integer arithmetic, where an odd height produces a
+17 px icon. Both focused tests pass under Qt 6.11.
+
 ## 2026-07-23: partial reservations no longer place Latte visuals
 
 Live comparison exposed D153 (partial bottom reservation moved a separated

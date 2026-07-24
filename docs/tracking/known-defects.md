@@ -1869,7 +1869,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D159 - Stacking diagnostics claimed an unenforced overlap invariant
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`707d1778a`).
+  (`707d1778a`, regression assertion `313eedba0`).
 - FOUND: 2026-07-24, cold review of the no-inward-stacking contract.
 - SYMPTOM: `dockSystemData` said stable spans must not overlap even though the
   same snapshot could contain overlapping views.
@@ -1881,7 +1881,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   is not validation success, and the creation path names validation as missing
   work.
 - EVIDENCE: the runtime snapshot reports the corrected reason; source history
-  contains no validator or overlap-refusal path at linked creation.
+  contains no validator or overlap-refusal path at linked creation. The
+  serializer test compares the complete public reason, so replacing it with a
+  different nonempty claim fails.
 
 ### D160 - Same-edge maximum reservation depth was described as implemented
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
@@ -1899,15 +1901,18 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D161 - Layouts submenu sizing test omitted painted control columns
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`81fbf1ed3`).
+  (`81fbf1ed3`, odd-height correction `bebe0a9f4`).
 - FOUND: 2026-07-24, cold review of the D156 production regression.
 - SYMPTOM: a size hint only one pixel wider than the label could satisfy the
   test while still clipping the manually painted radio and icon slots.
 - ROOT: the assertion compared the complete hint only with text width.
 - FIX: require room for the label, the height-derived radio column, and the
-  16 px icon plus both icon length margins.
-- EVIDENCE: the strengthened production delegate test passes offscreen under
-  Qt 6.11 and the containing menu still adopts the resulting hint.
+  icon plus both icon length margins. Derive the icon width through the same
+  integer arithmetic as production, since an odd style height produces a
+  17 px icon rather than a 16 px icon.
+- EVIDENCE: the strengthened production delegate test forces an odd-height
+  style and passes offscreen under Qt 6.11. The containing menu still adopts
+  the resulting hint.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).

@@ -4444,16 +4444,16 @@ prerequisites in the phases above are done.
 - [x] Fix D159 (stacking diagnostics claimed an unenforced overlap invariant).
       Report stable-span validation as missing and prevent consumers from
       treating the typed negative capability as validation success.
-      Commits: 707d1778a
+      Commits: 707d1778a, 313eedba0
 - [x] Fix D160 (same-edge maximum reservation depth was described as
       implemented). Assign the intended maximum-depth policy to a missing
       output-edge reservation aggregator and keep the current accumulating
       positive zones visible as a beta blocker.
       Commits: 9dcf27dd8
 - [x] Fix D161 (Layouts submenu sizing test omitted painted control columns).
-      Bound the exact production size hint against its label, radio, and icon
-      widths.
-      Commits: 81fbf1ed3
+      Bound the exact production size hint against its label, radio, and
+      height-derived icon widths, including odd style metrics.
+      Commits: 81fbf1ed3, bebe0a9f4
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
