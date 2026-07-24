@@ -1867,6 +1867,48 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: blame and history trace both `freeEdges()` overloads and their
   `edges.removeOne(view->location())` rule to upstream `bbddfd3d48`.
 
+### D159 - Stacking diagnostics claimed an unenforced overlap invariant
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`473e94016`).
+- FOUND: 2026-07-24, cold review of the no-inward-stacking contract.
+- SYMPTOM: `dockSystemData` said stable spans must not overlap even though the
+  same snapshot could contain overlapping views.
+- ROOT: `Create Linked Dock` deliberately accepts an occupied edge, while no
+  stable-span validator exists yet. The typed negative capability was written
+  as if the intended placement invariant were already enforced.
+- FIX: report that inward stacking is unsupported and stable-span overlap is
+  not yet rejected. Public D-Bus references now state that `available=false`
+  is not validation success, and the creation path names validation as missing
+  work.
+- EVIDENCE: the runtime snapshot reports the corrected reason; source history
+  contains no validator or overlap-refusal path at linked creation.
+
+### D160 - Same-edge maximum reservation depth was described as implemented
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`cf9b693d6`).
+- FOUND: 2026-07-24, cold review of the no-inward-stacking contract.
+- SYMPTOM: the placement record said separated same-edge members contribute
+  only their maximum depth.
+- ROOT: each Always Visible view currently publishes its own positive
+  layer-shell exclusive zone. KWin processes those surfaces independently, so
+  same-edge zones may accumulate. No maximum-depth aggregator exists.
+- FIX: retain maximum depth as the intended policy, assign it to the missing
+  output-edge reservation aggregator, and keep the gap as a beta blocker.
+- EVIDENCE: `VisibilityManager` publishes per-view struts and
+  `WaylandLayerShell` applies each view's independent positive zone.
+
+### D161 - Layouts submenu sizing test omitted painted control columns
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`4fbd7ae9a`).
+- FOUND: 2026-07-24, cold review of the D156 production regression.
+- SYMPTOM: a size hint only one pixel wider than the label could satisfy the
+  test while still clipping the manually painted radio and icon slots.
+- ROOT: the assertion compared the complete hint only with text width.
+- FIX: require room for the label, the height-derived radio column, and the
+  16 px icon plus both icon length margins.
+- EVIDENCE: the strengthened production delegate test passes offscreen under
+  Qt 6.11 and the containing menu still adopts the resulting hint.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.

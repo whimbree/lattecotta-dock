@@ -4441,6 +4441,19 @@ prerequisites in the phases above are done.
       contract). Record upstream occupied-edge rejection and identify
       first-class separated spans as a deliberate Lattecotta extension.
       Commits: 41e30e947
+- [x] Fix D159 (stacking diagnostics claimed an unenforced overlap invariant).
+      Report stable-span validation as missing and prevent consumers from
+      treating the typed negative capability as validation success.
+      Commits: 473e94016
+- [x] Fix D160 (same-edge maximum reservation depth was described as
+      implemented). Assign the intended maximum-depth policy to a missing
+      output-edge reservation aggregator and keep the current accumulating
+      positive zones visible as a beta blocker.
+      Commits: cf9b693d6
+- [x] Fix D161 (Layouts submenu sizing test omitted painted control columns).
+      Bound the exact production size hint against its label, radio, and icon
+      widths.
+      Commits: 4fbd7ae9a
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

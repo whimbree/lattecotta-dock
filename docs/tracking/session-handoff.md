@@ -47,6 +47,16 @@ and the typed negative capability returned at runtime. Commit `41e30e947`
 corrects D158 (same-edge placement notes overstated the OG Latte UI contract)
 after verifying the upstream `freeEdges()` history.
 
+The first cold review returned MERGE AFTER FIXES. D159 (stacking diagnostics
+claimed an unenforced overlap invariant) is fixed by `473e94016`: the runtime
+and public D-Bus references now state that stable overlap is not yet rejected.
+D160 (same-edge maximum reservation depth was described as implemented) is
+fixed by `cf9b693d6`: maximum depth remains the intended policy, but the record
+now assigns it to a missing reservation aggregator because current positive
+zones can accumulate in KWin. D161 (Layouts submenu sizing test omitted painted
+control columns) is fixed by `4fbd7ae9a`, which requires the production size
+hint to contain the label, radio, and icon slots.
+
 ## 2026-07-23: partial reservations no longer place Latte visuals
 
 Live comparison exposed D153 (partial bottom reservation moved a separated
