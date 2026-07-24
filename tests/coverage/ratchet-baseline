@@ -1,4 +1,4 @@
-104
+105
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -44,6 +44,7 @@ launcherlistopstest
 layershellmappingtest
 layoutmanagerparkingtest
 layoutmanagertest
+layoutmenuitemwidgettest
 lengthhandleraudittest
 lengthoffsetclamptest
 maskgeometrytest
