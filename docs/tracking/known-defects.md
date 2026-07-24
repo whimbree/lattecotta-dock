@@ -1801,6 +1801,41 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   interaction tests pass. Removing the redundant behaviors reduces
   `MetricsPrivate.qml` from 18 to 16 curated qmllint warnings.
 
+### D155 - Small icons doubled the theme background minimum
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`2322b0349`); real-layout visual acceptance is pending.
+- FOUND: 2026-07-24, live vertical dock sizing at 24, 26, and 28 px.
+- SYMPTOM: the dock background became extremely thick at 24 and 26 px, then
+  abruptly returned to normal at 28 px.
+- ROOT: the inherited `MultiLayered.qml` formula added the complete item row to
+  the theme minimum while that row stayed at or below the minimum. Once the row
+  crossed the threshold it began subtracting the minimum first, so increasing
+  icon size could make the background shrink by one complete theme-minimum
+  unit.
+- FIX: interpolate only the row's nonnegative excess above the theme minimum.
+  One constexpr pure core now owns the calculation for current and maximum
+  metrics, with validated QML boundary inputs.
+- EVIDENCE: the exact 24, 26, 28, and 30 px transition, every integer row size
+  from 0 through 64, five configured fractions, invalid boundary inputs, and
+  controlled production-QML mutations pass in `backgroundstatetest` and
+  `sourceguardtest`.
+
+### D156 - Layouts submenu collapsed to its radio-button column
+- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
+  (`16baf03c1`); real-menu visual acceptance is pending.
+- FOUND: 2026-07-24, live Latte context menu.
+- SYMPTOM: opening Layouts showed only the radio and color controls in a narrow
+  strip; layout names were not visible.
+- ROOT: `LayoutMenuItemWidget` paints its icon and label outside its child
+  layout. Qt 6 asks a `QWidgetAction` default widget for `sizeHint()`, but the
+  delegate overrode only `minimumSizeHint()`, so the menu measured the child
+  radio button instead of all painted content.
+- FIX: route both size-hint contracts through one const painted-content
+  calculation.
+- EVIDENCE: the production delegate test failed before the fix because its
+  width did not contain its painted label. It now verifies the complete
+  delegate width and the containing menu's adoption of that width.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.

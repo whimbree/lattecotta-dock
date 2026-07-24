@@ -1279,8 +1279,8 @@ multi-view, multi-monitor setup.
       ignores transient view fields), and the commit-message cleanup.
       GitHub rebased the validated source and test tree through `b6ba7ab15` and
       merged PR #109 at documentation-only tail `8f2c3073d`. Placement
-      normalization and same-edge stacking remain separate unchecked work in
-      `docs/tracking/DOCK_IDENTITY_HARDENING.md`.
+      normalization and same-edge stable-span validation remain separate
+      unchecked work in `docs/tracking/DOCK_IDENTITY_HARDENING.md`.
       Commits: 9d0a8a886, d9ca7bcfb, 0234aba66, 896f8e20b,
       a2a93b965, 2d5184665, bce41d191, 0f04cb7ef, 5585c708a,
       69125e11e, b99bbe4be, 2695d2355, 08fceb456, 3a7b01f25,
@@ -2897,10 +2897,11 @@ showed how much of the dock can only be driven by a pointer today.
       lifecycle, edit-mode, and QObject-authority identities in one
       schema-versioned response. Runtime tokens are process-local and retire
       with their QObject generation. Invalid lineage is refused loudly.
-      Same-edge stacking is an explicit unavailable capability until its
-      coordinator lands, so consumers cannot mistake serialization order for
-      physical stack order. D76 (global applet-configure readback marked
-      unrelated docks active) was split into its own root-cause commit.
+      Inward same-edge stacking is an explicit unsupported capability, so
+      consumers cannot mistake serialization order for physical stack order.
+      Separated partial-length views remain valid. D76 (global
+      applet-configure readback marked unrelated docks active) was split into
+      its own root-cause commit.
       The initial review and required cold follow-up both returned MERGE AFTER
       FIXES. No CRITICAL finding occurred. The second review found D90
       (malformed clone lineage yielded plausible partial snapshots), D85
@@ -2941,8 +2942,8 @@ showed how much of the dock can only be driven by a pointer today.
       Commits: c11c77ed2, 5591b66d7
 - [x] D88 (the initial C0 public contract omitted identity and geometry
       semantics): define current duplication behavior, coordinate spaces,
-      logical-pixel units, required versus optional authorities, and stacking
-      as an unavailable capability.
+      logical-pixel units, required versus optional authorities, and inward
+      stacking as an unsupported capability.
       Commits: 9767ea4fb
 - [x] D89 (dock-system enum mappings lacked exhaustive tests): cover every
       orientation, screen-group, and relationship enumerator.
@@ -4418,6 +4419,19 @@ prerequisites in the phases above are done.
       fixed-duration icon resize and nested derived animations with one
       velocity-preserving icon-size authority.
       Commits: ee405a940
+- [x] Fix D155 (small icons doubled the theme background minimum). Replace the
+      threshold-discontinuous QML formula with one constexpr interpolation from
+      the theme minimum through the item row's nonnegative excess.
+      Commits: 2322b0349
+- [x] Fix D156 (Layouts submenu collapsed to its radio-button column). Give the
+      custom-painted QWidgetAction delegate one authoritative content size for
+      both Qt size-hint contracts.
+      Commits: 16baf03c1
+- [x] Define same-edge occupancy without inward dock stacking. Permit
+      separated partial-length spans, retain maximum-depth reservation, keep
+      the D-Bus stack object as a typed negative capability, and replace the
+      planned rank-and-inset coordinator with stable-span validation.
+      Commits: e99871822
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

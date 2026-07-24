@@ -1,7 +1,38 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-23.
+Last updated 2026-07-24.
+
+## 2026-07-24: small-size background and Layouts submenu roots fixed
+
+Live vertical sizing exposed D155 (small icons doubled the theme background
+minimum). At 24 and 26 px the inherited background formula added the complete
+item row to the theme minimum. At 28 px it changed branches and began
+subtracting the minimum first, so increasing icon size could make the
+background abruptly shrink. Commit `2322b0349` moves the calculation into one
+constexpr pure core and interpolates only the item row's nonnegative excess
+above the theme baseline. The exact 24, 26, 28, and 30 px transition,
+monotonicity across rows 0 through 64, QML boundary validation, and controlled
+production-source mutations pass.
+
+The same live session exposed D156 (Layouts submenu collapsed to its
+radio-button column). `LayoutMenuItemWidget` painted the name and icon outside
+its child layout, while Qt 6 measured the `QWidgetAction` default widget through
+`sizeHint()`. The delegate overrode only `minimumSizeHint()`, so the menu width
+contained the radio button but not the painted name. Commit `16baf03c1` routes
+both contracts through one const painted-content calculation. The exact
+production delegate test failed before the fix and now passes.
+
+The placement direction was also clarified. Lattecotta does not provide inward
+same-edge dock stacking. Multiple partial-length docks or panels may share one
+output edge when their stable primary-axis spans do not overlap. Reservation
+depth is the maximum required depth, not a sum. A future output-edge validator
+must prevent or deterministically recover stable overlap without creating
+ranks, cumulative insets, or inward lanes. This preserves ordinary Latte
+same-edge layouts while replacing inherited undefined overlap with an explicit
+invalid state. Commit `e99871822` records the contract in the public roadmap,
+identity model, replication design, D-Bus references, and the typed negative
+capability returned at runtime.
 
 ## 2026-07-23: partial reservations no longer place Latte visuals
 
@@ -472,11 +503,12 @@ curated warning count from 94 to 91. The final `scripts/gate-all.sh` run exited
 probes, three nested ASan/UBSan recipes, and the complete output-matrix fixture
 passed.
 
-Same-edge physical stack order, accumulated offsets, reservation, and activation
-regions remain the next separate slice. Create Linked deliberately accepts an
-occupied edge and does not use free-edge rejection. Detach and a group-wide
-relationship removal transaction also remain continuation lifecycle work;
-linked roots stay protected until their explicit members are removed.
+Same-edge stable-span validation and exact activation regions remain a separate
+slice. Create Linked deliberately accepts an occupied edge so separated
+partial-length views can coexist; inward stacking is not supported. Detach and
+a group-wide relationship removal transaction also remain continuation
+lifecycle work; linked roots stay protected until their explicit members are
+removed.
 
 ## 2026-07-22: PR #110 observability merged
 
@@ -702,7 +734,7 @@ kept 1 -> 12 linked, propagated a visibility-mode change only inside 1 -> 12,
 and preserved all four identities across restart. The branch now sits on C0
 (the atomic dock-system observability snapshot), whose runtime tokens and
 fail-closed relationship graph remain the diagnostic authority. No live desktop
-run, placement normalization, or same-edge stack coordinator was added.
+run, placement normalization, or same-edge span validator was added.
 
 The first rebased canonical gate passed 103 of 104 CTest entries and stopped at
 D93 (Duplicate submenu change left a stale settings-inventory identity). The
