@@ -2226,7 +2226,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D180 - Reservation snapshot validation accepted divergent mirrored fields
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`acfea9cd9`, final residue correction `ae4e85d75`).
+  (`acfea9cd9`, residue corrections `ae4e85d75` and `6e6e1c199`).
 - FOUND: 2026-07-24, independent rereview of schema 4 reservation
   observability.
 - SYMPTOM: a group record and its contributing view could disagree in
@@ -2236,8 +2236,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - ROOT: the first consistency pass compared membership, logical geometry,
   generation, and publisher identity but did not exhaustively compare every
   mirrored publication field or every no-membership empty state.
-- FIX: compare the complete group projection against every member and reject
-  all reservation state on a view with no group.
+- FIX: compare the complete group projection against every member, require
+  each contributor's published strut depth to equal its own contribution, and
+  reject all reservation state on a view with no group. Canonical emptiness is
+  equality with `QRect()`, not the wider zero-area `isEmpty()` predicate.
 - EVIDENCE: controlled one-field mutations cover every mirrored scalar,
   contributor list, rectangle, layer-shell field, publisher token, and
   no-membership residue.

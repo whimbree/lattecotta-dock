@@ -4539,7 +4539,7 @@ prerequisites in the phases above are done.
 - [x] Fix D180 (reservation snapshot validation accepted divergent mirrored
       fields). Compare every group projection field with every contributor and
       reject all reservation residue on views without membership.
-      Commits: acfea9cd9, ae4e85d75
+      Commits: acfea9cd9, ae4e85d75, 6e6e1c199
 - [ ] Fix D172 (floating panel attachment moves the surface and reservation
       instead of presentation). Execute
       `docs/tracking/floating-panel-parity-plan.md`: one stable per-view canvas,
@@ -4555,7 +4555,7 @@ prerequisites in the phases above are done.
       per-view visual or activation geometry.
       Commits: 7df41d844, c02b49121, 286252a07, 2751c3a23, b8f2420f7,
       3b312e739, 6f89f7614, c6c98ba82, acfea9cd9, 00d611901, cacc21c07,
-      ae4e85d75
+      ae4e85d75, 6e6e1c199
 - [ ] Complete FP-2 (the stable canvas and transition controller).
       Commits:
 - [ ] Complete FP-3 (internal presentation, input, effects, and popup
