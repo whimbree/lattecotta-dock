@@ -2355,6 +2355,24 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   placement on top, bottom, left, and right edges and requires every complete
   surface to remain output-contained.
 
+### D188 - Stable-canvas acceptance staged a Dock for a Panel-only transition
+- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- FOUND: 2026-07-25, recipe 071's first schema-integrated nested-KWin run.
+- SYMPTOM: the recipe selected a horizontal Dock, then required the
+  Panel-only stable floating transition to become eligible. Setting a positive
+  screen-edge margin also retained the default client-side internal-gap
+  ownership, which correctly kept the effective view type in Dock mode.
+- ROOT: the fixture was inferred from whichever view happened to exist instead
+  of declaring the view type and floating-gap owner that the contract needed.
+- FIX: stage the matrix harness's deterministic
+  `panel-bottom-justify-1out` fixture and explicitly set
+  `floatingInternalGapIsForced=false`, matching the shipped panel templates.
+  Restore the complete pristine nested config on exit.
+- EVIDENCE: the uncorrected run failed with a configured but ineligible
+  controller. The corrected fixture realizes as `type=panel`, reports an
+  eligible controller with complete stable geometry, and reaches the first
+  in-flight progress assertion.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
   is merged. FP-2 (the stable canvas and transition controller) is implemented
