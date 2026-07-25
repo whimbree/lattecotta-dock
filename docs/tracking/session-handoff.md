@@ -73,10 +73,13 @@ recipe checks the legal 0 px boundary. D193 (extended floating-background
 files omitted adapting attribution) adds the required adapting author without
 removing the original lines. The third review found D194 (zero-gap endpoint
 proof split state across snapshots): the recipe now requires the complete
-zero-gap floated endpoint in one atomic snapshot. A fresh independent review,
-the canonical gate, and the pull request remain before merge. No real desktop
-process or surface was inspected, stopped, or restarted during this
-implementation.
+zero-gap floated endpoint in one atomic snapshot. The fourth review found D195
+(huge finite placement values reached undefined integer conversion):
+every floating placement product now crosses a checked integer boundary, and
+the integer start delta is added in `qint64`, with sanitizer-backed cases for
+both signs and all three alignments. A fresh independent review, the canonical
+gate, and the pull request remain before merge. No real desktop process or
+surface was inspected, stopped, or restarted during this implementation.
 
 ## 2026-07-24: FP-1 owns one maximum-depth reservation per output edge
 

@@ -12,6 +12,7 @@
 #include <QRectF>
 #include <QtGlobal>
 
+#include <limits>
 #include <optional>
 
 namespace Latte::ViewPart::FloatingPanelGeometry {
@@ -120,6 +121,23 @@ struct PlacementInputs {
 [[nodiscard]] constexpr bool isHorizontal(Edge edge)
 {
     return edge == Edge::Top || edge == Edge::Bottom;
+}
+
+[[nodiscard]] inline std::optional<int> truncateToRepresentableInt(qreal value)
+{
+    constexpr qreal lowest =
+        static_cast<qreal>(std::numeric_limits<int>::lowest());
+    constexpr qreal highest =
+        static_cast<qreal>(std::numeric_limits<int>::max());
+
+    // Floating-to-integer conversion is undefined outside the destination
+    // range. Check every floating product at this boundary so hand-edited
+    // finite config values are refused deterministically.
+    if (!qIsFinite(value) || value < lowest || value > highest) {
+        return std::nullopt;
+    }
+
+    return static_cast<int>(value);
 }
 
 [[nodiscard]] inline bool hasValidGeometry(const Inputs &in)
@@ -257,29 +275,52 @@ struct PlacementInputs {
         return std::nullopt;
     }
 
-    const int panelLength = static_cast<int>(availableLength * in.maxLength);
-    const int offset = static_cast<int>(availableLength * in.offset);
-    int panelStart = availableStart;
+    // Preserve the shipped float truncation order for ordinary placement.
+    // Each product remains floating-point until representability is proven.
+    const float availableLengthValue = static_cast<float>(availableLength);
+    const auto panelLength =
+        truncateToRepresentableInt(availableLengthValue * in.maxLength);
+    const auto offset =
+        truncateToRepresentableInt(availableLengthValue * in.offset);
+    if (!panelLength.has_value() || !offset.has_value()) {
+        return std::nullopt;
+    }
+
+    std::optional<int> panelStartDelta;
 
     switch (in.alignment) {
     case PrimaryAxisAlignment::Start:
-        panelStart += offset;
+        panelStartDelta = *offset;
         break;
     case PrimaryAxisAlignment::Center:
-        panelStart += static_cast<int>(
-            availableLength * ((1.0F - in.maxLength) / 2.0F)
-            + availableLength * in.offset);
+        panelStartDelta = truncateToRepresentableInt(
+            availableLengthValue * ((1.0F - in.maxLength) / 2.0F)
+            + availableLengthValue * in.offset);
         break;
     case PrimaryAxisAlignment::End:
-        panelStart += static_cast<int>(
-            availableLength - (availableLength * in.maxLength) - offset);
+        panelStartDelta = truncateToRepresentableInt(
+            availableLengthValue
+            - (availableLengthValue * in.maxLength)
+            - static_cast<float>(*offset));
         break;
     }
+
+    if (!panelStartDelta.has_value()) {
+        return std::nullopt;
+    }
+
+    const qint64 panelStartValue =
+        qint64(availableStart) + *panelStartDelta;
+    if (panelStartValue < std::numeric_limits<int>::lowest()
+        || panelStartValue > std::numeric_limits<int>::max()) {
+        return std::nullopt;
+    }
+    const int panelStart = static_cast<int>(panelStartValue);
 
     return solve({
         .outputGeometry = in.outputGeometry,
         .edge = in.edge,
-        .primaryAxisSpan = {panelStart, panelLength},
+        .primaryAxisSpan = {panelStart, *panelLength},
         .panelDepth = in.panelDepth,
         .floatingGap = in.floatingGap,
     });

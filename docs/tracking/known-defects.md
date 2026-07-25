@@ -2475,6 +2475,25 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: `sourceguardtest` pins the combined predicate and its dedicated
   waiter. Recipe 071 refuses every split or transitional observation.
 
+### D195 - Huge finite placement values reached undefined integer conversion
+- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- FOUND: 2026-07-24, fourth independent FP-2 review.
+- SYMPTOM: a hand-edited finite offset could invoke undefined behavior while
+  solving stable panel placement instead of being refused.
+- ROOT: `solvePlacement()` multiplied the available length by floating config
+  values and converted the result directly to `int`. Finiteness alone does not
+  make an out-of-range floating-to-integer conversion defined, and the later
+  output-containment check ran too late.
+- FIX: preserve the shipped float truncation order while checking every
+  floating product against the complete `int` range before conversion. Add
+  the resulting integer start delta in `qint64` and narrow only after the sum
+  is proven representable.
+- EVIDENCE: sanitizer-backed `floatingpanelgeometrytest` drives both signs of
+  the largest finite float offset through Start, Center, and End alignment and
+  requires deterministic refusal. It also pins a representable delta whose
+  addition would overflow `int` and a maximum available length whose float
+  representation rounds beyond `int`.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
   is merged. FP-2 (the stable canvas and transition controller) is complete on
