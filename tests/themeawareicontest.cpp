@@ -31,6 +31,9 @@
 #include <KIconLoader>
 #include <KIconTheme>
 
+// std
+#include <memory>
+
 namespace
 {
 constexpr auto RedTheme = "latte-theme-red";
@@ -85,6 +88,7 @@ private:
     void prepareView(QQuickView &view, const QIcon &icon,
                      const QSize &size = QSize{64, 64});
 
+    std::unique_ptr<QQmlEngine> m_engine;
     Latte::Environment *m_environment{nullptr};
 };
 
@@ -98,6 +102,7 @@ void ThemeAwareIconTest::initTestCase()
     m_environment = new Latte::Environment(this);
     qmlRegisterSingletonInstance("org.kde.latte.core", 0, 2,
                                  "Environment", m_environment);
+    m_engine = std::make_unique<QQmlEngine>();
 }
 
 void ThemeAwareIconTest::cleanupTestCase()
@@ -110,6 +115,8 @@ void ThemeAwareIconTest::cleanupTestCase()
 void ThemeAwareIconTest::prepareView(QQuickView &view, const QIcon &icon,
                                      const QSize &size)
 {
+    QCOMPARE(view.engine(), m_engine.get());
+
     const QStringList importPaths = QString::fromLocal8Bit(
         qgetenv("LATTE_QML_MODULE_PATH")).split(QLatin1Char(':'), Qt::SkipEmptyParts);
     for (auto it = importPaths.crbegin(); it != importPaths.crend(); ++it) {
@@ -150,7 +157,7 @@ void ThemeAwareIconTest::namedIconRefreshesWithoutSourceReassignment()
     QVERIFY(!icon.isNull());
     QCOMPARE(icon.name(), QString::fromLatin1(SharedIconName));
 
-    QQuickView view;
+    QQuickView view(m_engine.get(), nullptr);
     prepareView(view, icon);
     QObject *iconItem = view.rootObject();
     QVERIFY(iconItem);
@@ -183,7 +190,7 @@ void ThemeAwareIconTest::namelessPixmapIconRemainsUnchanged()
     const QIcon icon(pixmap);
     QVERIFY(icon.name().isEmpty());
 
-    QQuickView view;
+    QQuickView view(m_engine.get(), nullptr);
     prepareView(view, icon);
     QObject *iconItem = view.rootObject();
     QVERIFY(iconItem);
@@ -210,7 +217,7 @@ void ThemeAwareIconTest::nonStandardSlotPaintsAtComputedSize()
     const QIcon icon = KDE::icon(QString::fromLatin1(SharedIconName));
     QVERIFY(!icon.isNull());
 
-    QQuickView view;
+    QQuickView view(m_engine.get(), nullptr);
     constexpr QSize slotSize{63, 63};
     prepareView(view, icon, slotSize);
     QObject *const iconItem = view.rootObject();
@@ -241,6 +248,10 @@ int main(int argc, char **argv)
     qputenv("XDG_DATA_DIRS", dataDirs);
     qputenv("QT_QPA_PLATFORM", "offscreen");
     qputenv("QSG_RHI_BACKEND", "software");
+    // This render regression does not exercise scene-graph threading. Keeping
+    // rendering on the GUI thread avoids a software-renderer teardown
+    // rendezvous after the final QQuickView releases its resources.
+    qputenv("QSG_RENDER_LOOP", "basic");
 
     QGuiApplication app(argc, argv);
     ThemeAwareIconTest test;

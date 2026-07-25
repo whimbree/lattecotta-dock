@@ -209,7 +209,9 @@ target_include_directories(coretoolstest PRIVATE
 # is rendered against two fixture themes that share one icon name but supply
 # different solid pixels.
 # The test compiles Environment directly because it lives in the core QML
-# plugin, then registers that real signal owner with the component's engine.
+# plugin, then registers that real signal owner with the one engine shared by
+# every component view. The basic loop keeps offscreen software-renderer
+# teardown synchronous; this test does not exercise scene-graph threading.
 ecm_add_test(themeawareicontest.cpp
     ${CMAKE_SOURCE_DIR}/declarativeimports/core/environment.cpp
     TEST_NAME themeawareicontest
@@ -217,7 +219,7 @@ ecm_add_test(themeawareicontest.cpp
         KF6::CoreAddons KF6::IconThemes
 )
 set_tests_properties(themeawareicontest PROPERTIES
-    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QSG_RHI_BACKEND=software")
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QSG_RHI_BACKEND=software;QSG_RENDER_LOOP=basic")
 target_include_directories(themeawareicontest PRIVATE
     ${CMAKE_SOURCE_DIR}/declarativeimports/core
     ${CMAKE_BINARY_DIR}/declarativeimports/core)
