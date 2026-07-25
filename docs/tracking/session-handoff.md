@@ -1,9 +1,9 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-24.
+Last updated 2026-07-25.
 
-## 2026-07-24: FP-2 keeps floating attachment inside one stable canvas
+## 2026-07-25: FP-2 keeps floating attachment inside one stable canvas
 
 FP-2 (the stable canvas and transition controller) replaces the physical
 floating-gap transition with one output-contained geometry solution and one
@@ -49,10 +49,22 @@ the full exclusive length. Removing that unrelated increment keeps all four
 full-span End surfaces inside their output and leaves both reservation +1
 conventions unchanged.
 
-The schema 5 observability slice must be integrated before FP-2 opens as a pull
-request. Recipe 071's first nested-KWin run is pending that integrated schema
-and remains required acceptance evidence. No real desktop process or surface
-was inspected, stopped, or restarted during this implementation.
+Schema 5 now exposes every stable and current transition rectangle, the
+per-view controller identity and geometry generation, and the surface and
+layer-shell churn counters as one fail-closed snapshot. Recipe 071 passes in
+the nested compositor: qreal midpoints are observed in both directions, eight
+rapid reversals settle correctly, and the 88 px maximum-depth reservation,
+QWindow, applet measurements, partial span, controller generation, surface
+publication count, and layer-shell configure count remain stable.
+
+The first run found D188 (stable-canvas acceptance staged a Dock for a
+Panel-only transition): the recipe now uses the deterministic matrix Panel
+fixture and explicit panel-surface gap ownership. The next run found D189
+(KWin script collection delay consumed the transition under test): transition
+mutations now use a scoped 10 ms collection delay while the harness keeps its
+500 ms default. Independent review, the canonical gate, and the pull request
+remain before merge. No real desktop process or surface was inspected, stopped,
+or restarted during this implementation.
 
 ## 2026-07-24: FP-1 owns one maximum-depth reservation per output edge
 
