@@ -5,13 +5,12 @@ Last updated 2026-07-24.
 
 ## 2026-07-24: FP-1 owns one maximum-depth reservation per output edge
 
-FP-1 (the output-edge maximum reservation authority) is implemented on
-`feat/floating-reservation-coordinator-integration`. A Corona-owned
-coordinator groups eligible contributions by persistent Latte output identity
-and edge. Each group publishes one positive layer-shell exclusive zone at its
-maximum contribution, never a sum. Visual dock windows remain independent
-zone -1 surfaces. This is reservation aggregation, not inward stacking and not
-activation-region merging.
+FP-1 (the output-edge maximum reservation authority) landed through PR #118.
+A Corona-owned coordinator groups eligible contributions by persistent Latte
+output identity and edge. Each group publishes one positive layer-shell
+exclusive zone at its maximum contribution, never a sum. Visual dock windows
+remain independent zone -1 surfaces. This is reservation aggregation, not
+inward stacking and not activation-region merging.
 
 Membership updates use a copied ledger. Every old and new projection is staged
 before the committed ledger, publishers, and generation change. A failed
@@ -56,8 +55,11 @@ evidence). The coverage ratchet now reports 107 CTest entries and 37 paired
 unit headers, the header carries the adapting author line, and the rewritten
 commit bodies record the no-caller search and corrected nested replay.
 
-The correction rereview and canonical gate are the remaining FP-1 merge
-prerequisites.
+PR #118 merged after the final cold rereview returned `MERGE` and the canonical
+gate passed at the reviewed branch head. The production and sanitizer builds,
+107/107 tests, coverage inventory, QML checks, scene probes, and nested Wayland
+replays all passed. The post-merge commit ids are recorded in the plan and
+defect registry.
 
 ## 2026-07-24: stable-surface floating-panel parity approved
 
