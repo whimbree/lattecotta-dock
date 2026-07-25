@@ -4540,21 +4540,21 @@ prerequisites in the phases above are done.
 - [x] Fix D180 (reservation snapshot validation accepted divergent mirrored
       fields). Compare every group projection field with every contributor and
       reject all reservation residue on views without membership.
-      Commits: acfea9cd9, ae4e85d75, 6e6e1c199
+      Commits: acfea9cd9, ae4e85d75, 75fcc4245
 - [x] Fix D181 (immediate migration snapshots reused the lagging QWindow
       output). Collect the explicit layer-shell output and require the first
       complete snapshot after the committed per-view boundary to expose the
       new group without retrying an empty response.
-      Commits: f0a006c66, b3008f942
+      Commits: c98414f5d, 949e00780
 - [x] Fix D182 (coordinator rollback did not roll back member publication
       state). Return the transaction result through every publication layer,
       commit the member rectangle only on success, and make equal-valued
       output or edge migrations retryable.
-      Commits: ce7f1f0e2
+      Commits: e4458cdef
 - [x] Fix D183 (reservation contributor ordering was normalized after
       disagreement). Require canonical group order and exact equality for
       every per-view contributor mirror.
-      Commits: 7c03a564e
+      Commits: a7ea2b57d
 - [ ] Fix D172 (floating panel attachment moves the surface and reservation
       instead of presentation). Execute
       `docs/tracking/floating-panel-parity-plan.md`: one stable per-view canvas,
@@ -4570,7 +4570,7 @@ prerequisites in the phases above are done.
       per-view visual or activation geometry.
       Commits: 7df41d844, c02b49121, 286252a07, 2751c3a23, b8f2420f7,
       3b312e739, 6f89f7614, c6c98ba82, acfea9cd9, 00d611901, cacc21c07,
-      ae4e85d75, 6e6e1c199, f0a006c66, ce7f1f0e2, 7c03a564e, b3008f942
+      ae4e85d75, 75fcc4245, c98414f5d, e4458cdef, a7ea2b57d, 949e00780
 - [ ] Complete FP-2 (the stable canvas and transition controller).
       Commits:
 - [ ] Complete FP-3 (internal presentation, input, effects, and popup

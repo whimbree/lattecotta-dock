@@ -2227,7 +2227,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D180 - Reservation snapshot validation accepted divergent mirrored fields
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`acfea9cd9`, residue corrections `ae4e85d75` and `6e6e1c199`).
+  (`acfea9cd9`, residue corrections `ae4e85d75` and `75fcc4245`).
 - FOUND: 2026-07-24, independent rereview of schema 4 reservation
   observability.
 - SYMPTOM: a group record and its contributing view could disagree in
@@ -2247,7 +2247,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D181 - Immediate migration snapshots reused the lagging QWindow output
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`f0a006c66`, committed-boundary replay `b3008f942`).
+  (`c98414f5d`, committed-boundary replay `949e00780`).
 - FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
   maximum reservation authority) migration transaction.
 - SYMPTOM: the first `dockSystemData` read after a valid cross-output
@@ -2267,7 +2267,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D182 - Coordinator rollback did not roll back member publication state
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`ce7f1f0e2`).
+  (`e4458cdef`).
 - FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
   maximum reservation authority) failure transaction.
 - SYMPTOM: a rejected update or removal retained the coordinator's old group
@@ -2286,7 +2286,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D183 - Reservation contributor ordering was normalized after disagreement
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`7c03a564e`).
+  (`a7ea2b57d`).
 - FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
   maximum reservation authority) schema 4 consistency pass.
 - SYMPTOM: reordered group and per-view contributor lists could pass
