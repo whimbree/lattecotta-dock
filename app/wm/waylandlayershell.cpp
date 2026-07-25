@@ -243,11 +243,10 @@ void updateAnchoring(QWindow *window, QScreen *screen,
     ls->setAnchors(anchors);
     ls->setExclusiveEdge(edgeFor(location));
 
-    //! the floating gap is a real offset off the anchored edge, not surface
-    //! thickness: a behaveAsPlasmaPanel dock is lifted screenEdgeMargin px off
-    //! its edge here. Masked docks and chrome pass 0 and stay flush. Always
-    //! (re)setting this keeps a gap-disabling change (edgeMargin back to 0)
-    //! from leaving a stale margin welded on.
+    //! Dock views pass zero because their stable canvas stays flush with the
+    //! output edge and floating presentation moves inside it. The generic
+    //! mapper retains explicit margins for non-dock callers that need a fixed
+    //! anchored offset. Always resetting the value prevents stale margins.
     ls->setMargins(edgeMarginsFor(location, edgeMargin));
 }
 

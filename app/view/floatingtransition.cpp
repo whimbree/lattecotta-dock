@@ -176,6 +176,18 @@ bool FloatingTransition::configureGeometry(
     return true;
 }
 
+void FloatingTransition::clearGeometry()
+{
+    if (!hasGeometry()) {
+        return;
+    }
+
+    m_geometry.reset();
+    ++m_geometryRevision;
+    Q_EMIT stableGeometryChanged();
+    Q_EMIT currentGeometryChanged();
+}
+
 void FloatingTransition::requestAttached()
 {
     requestTarget(Target::Attached);

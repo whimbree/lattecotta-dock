@@ -55,7 +55,8 @@ private Q_SLOTS:
     void topEdgeNonPanel_reservesThickness();
     void leftEdgeNonPanel_reservesThickness();
     void topAndBottom_accumulate();
-    void panelDesktopUse_bottom_usesScreenEdgeMargin();
+    void panelDesktopUse_reservesStableNormalDepth_data();
+    void panelDesktopUse_reservesStableNormalDepth();
     void ignoredVisibilityMode_skipped();
     void ignoredEdge_skipped();
     void normalWindowAndNone_autoBlacklisted();
@@ -110,16 +111,36 @@ void ScreenGeometryCalculatorTest::topAndBottom_accumulate()
              QRect(0, 30, 1920, 1011));
 }
 
-void ScreenGeometryCalculatorTest::panelDesktopUse_bottom_usesScreenEdgeMargin()
+void ScreenGeometryCalculatorTest::panelDesktopUse_reservesStableNormalDepth_data()
 {
-    //! plasma panel + desktopUse: appliedThickness = margin(10) +
-    //! thickness(40) = 50; setBottom(qMin(1079, 1079-50 = 1029))
-    ViewFootprint fp = visibleView(Plasma::Types::BottomEdge, QRect(0, 1030, 1920, 50), 40);
-    fp.behaveAsPlasmaPanel = true;
-    fp.screenEdgeMargin = 10;
+    QTest::addColumn<Plasma::Types::Location>("edge");
+    QTest::addColumn<QRect>("footprint");
+    QTest::addColumn<QRect>("available");
 
-    QCOMPARE(Calc::availableRect(screen(), screen(), {fp}, {}, {}, true),
-             QRect(0, 0, 1920, 1030));
+    QTest::newRow("top") << Plasma::Types::TopEdge
+                         << QRect(0, 0, 1920, 40) << QRect(0, 40, 1920, 1040);
+    QTest::newRow("right") << Plasma::Types::RightEdge
+                           << QRect(1880, 0, 40, 1080) << QRect(0, 0, 1880, 1080);
+    QTest::newRow("bottom") << Plasma::Types::BottomEdge
+                            << QRect(0, 1040, 1920, 40) << QRect(0, 0, 1920, 1040);
+    QTest::newRow("left") << Plasma::Types::LeftEdge
+                          << QRect(0, 0, 40, 1080) << QRect(40, 0, 1880, 1080);
+}
+
+void ScreenGeometryCalculatorTest::panelDesktopUse_reservesStableNormalDepth()
+{
+    QFETCH(Plasma::Types::Location, edge);
+    QFETCH(QRect, footprint);
+    QFETCH(QRect, available);
+
+    //! A floating gap may enlarge the surface envelope, but the footprint
+    //! passed here is the attached normal-depth rectangle.
+    ViewFootprint fp = visibleView(edge, footprint, 40);
+    fp.behaveAsPlasmaPanel = true;
+
+    QCOMPARE(Calc::availableRect(screen(), screen(), {fp}, {}, {}, true), available);
+    QCOMPARE(Calc::availableRegion(screen(), screen(), {fp}, {}, {}, true),
+             QRegion(screen()).subtracted(footprint));
 }
 
 void ScreenGeometryCalculatorTest::ignoredVisibilityMode_skipped()

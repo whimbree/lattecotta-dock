@@ -168,6 +168,7 @@ private:
     void resizeWindow(QRect availableScreenRect = QRect());
     void updatePosition(QRect availableScreenRect = QRect());
     void updateCanvasGeometry(QRect availableScreenRect = QRect());
+    [[nodiscard]] bool configureStablePanelGeometry();
 
     void validateTopBottomBorders(QRect availableScreenRect, QRegion availableScreenRegion);
 

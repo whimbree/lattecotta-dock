@@ -9,6 +9,8 @@
 // local
 #include <coretypes.h>
 #include "effects.h"
+#include "floatingpanelgeometry.h"
+#include "floatingtransition.h"
 #include "positionergeometry.h"
 #include "originalview.h"
 #include "view.h"
@@ -647,6 +649,9 @@ void Positioner::immediateSyncGeometry()
         resizeWindow(availableScreenRect);
         updatePosition(availableScreenRect);
         updateCanvasGeometry(availableScreenRect);
+        if (!configureStablePanelGeometry()) {
+            return;
+        }
         //! Always publish the solved rectangle after the three geometry stages.
         //! The layer-shell adapter compares the resulting protocol state before
         //! sending requests, so repeated stable syncs stay cheap while a changed
@@ -745,15 +750,74 @@ PositionerGeometry::ViewGeometryInputs Positioner::geometryInputs() const
     in.normalThickness = m_view->normalThickness();
     in.maxThickness = m_view->maxThickness();
     in.maxNormalThickness = m_view->maxNormalThickness();
-    in.innerShadow = m_view->effects()->innerShadow();
-    in.screenEdgeMargin = m_view->screenEdgeMargin();
+    in.floatingGap =
+        m_view->isFloatingPanel() ? m_view->screenEdgeMargin() : 0;
     in.editThickness = m_view->editThickness();
     in.viewWidth = m_view->width();
     in.viewHeight = m_view->height();
     in.maxLength = m_view->maxLength();
     in.offset = m_view->offset();
-    in.slideOffset = m_slideOffset;
+    in.visibilitySlideOffset = m_slideOffset;
     return in;
+}
+
+bool Positioner::configureStablePanelGeometry()
+{
+    auto *const transition = m_view->floatingTransition();
+    Q_ASSERT(transition);
+
+    if (!m_view->behaveAsPlasmaPanel() || m_inStartup) {
+        transition->clearGeometry();
+        return true;
+    }
+
+    FloatingPanelGeometry::Edge edge;
+    switch (m_view->location()) {
+    case Plasma::Types::TopEdge:
+        edge = FloatingPanelGeometry::Edge::Top;
+        break;
+    case Plasma::Types::RightEdge:
+        edge = FloatingPanelGeometry::Edge::Right;
+        break;
+    case Plasma::Types::BottomEdge:
+        edge = FloatingPanelGeometry::Edge::Bottom;
+        break;
+    case Plasma::Types::LeftEdge:
+        edge = FloatingPanelGeometry::Edge::Left;
+        break;
+    default:
+        qCritical() << "Positioner refused stable panel geometry for a floating edge"
+                    << m_view->location();
+        return false;
+    }
+
+    const bool horizontal = m_view->formFactor() == Plasma::Types::Horizontal;
+    const FloatingPanelGeometry::Inputs inputs{
+        .outputGeometry = m_view->screenGeometry(),
+        .edge = edge,
+        .primaryAxisSpan = {
+            horizontal ? m_validGeometry.left() : m_validGeometry.top(),
+            horizontal ? m_validGeometry.width() : m_validGeometry.height(),
+        },
+        .panelDepth = m_view->normalThickness(),
+        .floatingGap = m_view->isFloatingPanel() ? m_view->screenEdgeMargin() : 0,
+    };
+
+    if (!transition->configureGeometry(inputs)) {
+        qCritical() << "Positioner could not configure stable panel geometry for"
+                    << m_view->validTitle();
+        return false;
+    }
+
+    if (transition->stableCanvasGeometry() != m_validGeometry) {
+        qCritical() << "Positioner stable panel authorities disagree"
+                    << "surface=" << m_validGeometry
+                    << "controller=" << transition->stableCanvasGeometry()
+                    << "view=" << m_view->validTitle();
+        return false;
+    }
+
+    return true;
 }
 
 void Positioner::updatePosition(QRect availableScreenRect)

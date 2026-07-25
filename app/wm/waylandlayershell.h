@@ -60,19 +60,10 @@ LayerShellQt::Window::Layer layerFor(Latte::Types::Visibility mode);
 //! the single edge the dock pins to, for setExclusiveEdge()
 LayerShellQt::Window::Anchor edgeFor(Plasma::Types::Location location);
 
-//! The layer-shell margins that push a floating panel off its anchored edge
-//! by @p edgeMargin px (the screenEdgeMargin floating gap). A layer-shell
-//! margin only takes effect on an anchored edge, and edgeFor(location) is
-//! always among the dock's anchors, so the offset lands on the pinning edge:
-//! a top panel gets a top margin, a right panel a right margin, and so on.
-//! This is the wayland realisation of the gap: KWin ignores setPosition(),
-//! so a behaveAsPlasmaPanel surface can only be lifted off the screen edge by
-//! this margin (a masked dock realises the gap through its mask instead and
-//! passes edgeMargin 0). The strut side is already handled: the
-//! visibility strutsThickness reserves gap+thickness, so the reserved band
-//! spans from the screen edge across the gap and the panel, matching Plasma's
-//! own floating-panel recipe. Returns no margins for a non-positive
-//! @p edgeMargin or a non-edge location.
+//! Map a fixed perpendicular anchored offset. Dock views pass zero because
+//! floating presentation moves inside their stable edge-flush canvas. A
+//! nonzero value remains available to other fixed-placement callers. Returns
+//! no margins for a non-positive @p edgeMargin or a non-edge location.
 QMargins edgeMarginsFor(Plasma::Types::Location location, int edgeMargin);
 
 //! perpendicular thickness (px) of the strut rect to reserve as the
@@ -90,9 +81,8 @@ QSize seededLayerSize(LayerShellQt::Window::Anchors anchors, Plasma::Types::Loca
 //! Turn @p window into a layer surface for @p location / @p alignment on
 //! @p screen. Must be called before the window is first shown.
 //! @p windowSpansScreenLength - see anchorsFor().
-//! @p edgeMargin - the floating-gap offset off the anchored edge, see
-//! edgeMarginsFor(); 0 for any non-floating surface (chrome windows, masked
-//! docks) so only a behaveAsPlasmaPanel dock is ever lifted off its edge.
+//! @p edgeMargin - a fixed anchored offset, see edgeMarginsFor(); dock views
+//! pass 0, including floating panels.
 [[nodiscard]] LayerShellQt::Window *configureView(
     QWindow *window,
     QScreen *screen,
@@ -108,10 +98,8 @@ QSize seededLayerSize(LayerShellQt::Window::Anchors anchors, Plasma::Types::Loca
 //! Deliberately narrower than configureView(): re-running the full
 //! configuration would reset the stacking layer (cover modes use LayerBottom)
 //! and the keyboard policy. @p windowSpansScreenLength - see anchorsFor().
-//! @p edgeMargin - the floating-gap offset off the anchored edge, applied as
-//! a layer-shell margin here because anchors and margins are what actually
-//! place a layer surface; a runtime gap change re-runs this path. See
-//! edgeMarginsFor(); 0 for any non-floating surface.
+//! @p edgeMargin - a fixed anchored offset, see edgeMarginsFor(); dock views
+//! pass 0 because a runtime floating-gap change resizes their stable canvas.
 void updateAnchoring(QWindow *window, QScreen *screen,
                      Plasma::Types::Location location, Latte::Types::Alignment alignment,
                      bool windowSpansScreenLength, int edgeMargin = 0);

@@ -73,6 +73,7 @@ namespace Latte {
 View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
     : PlasmaQuick::ContainmentView(corona),
       m_effects(new ViewPart::Effects(this)),
+      m_floatingTransition(new ViewPart::FloatingTransition(this)),
       m_interface(new ViewPart::ContainmentInterface(this)),
       m_parabolic(new ViewPart::Parabolic(this)),
       m_sink(new ViewPart::EventsSink(this))
@@ -350,11 +351,13 @@ void View::init(Plasma::Containment *plasma_containment)
     connect(this, &View::locationChanged, this, &View::reanchorLayerShell);
     connect(this, &View::alignmentChanged, this, &View::reanchorLayerShell);
     connect(this, &View::behaveAsPlasmaPanelChanged, this, &View::reanchorLayerShell);
-    //! the floating gap is realised as a layer-shell margin (layerShellEdgeMargin),
-    //! so a runtime gap resize or enable/disable must re-run the anchoring path
-    //! to push the panel off its edge or bring it back flush
-    connect(this, &View::screenEdgeMarginChanged, this, &View::reanchorLayerShell);
-    connect(this, &View::screenEdgeMarginEnabledChanged, this, &View::reanchorLayerShell);
+    //! Floating-gap changes resize Positioner's stable edge-anchored canvas.
+    //! Floatingness only moves content inside it and never reanchors the
+    //! layer surface.
+    connect(m_floatingTransition, &ViewPart::FloatingTransition::stableGeometryChanged,
+            this, [this]() {
+                updateAbsoluteGeometry();
+            });
 
     connect(this, &View::alignmentChanged, this, [&](){
         // inform neighbour vertical docks/panels to adjust their positioning
@@ -598,11 +601,11 @@ void View::reanchorLayerShell()
         }
     }
 
-    //! only the anchors, exclusive edge, screen, seeded size and floating-gap
+    //! only the anchors, exclusive edge, screen, seeded size and zero edge
     //! margin change here; the stacking layer (cover modes use LayerBottom) and
     //! keyboard policy that configureView() forced must survive an edge change.
-    //! screenEdgeMargin/screenEdgeMarginEnabled changes route here too so a
-    //! runtime gap toggle re-applies the surface offset.
+    //! Floating-gap changes route through Positioner's stable canvas instead
+    //! of this physical anchoring path.
     namespace LS = Latte::WindowSystem::LayerShell;
     LS::updateAnchoring(this, screen(), location(), static_cast<Latte::Types::Alignment>(alignment()),
                         windowSpansScreenLength(), layerShellEdgeMargin());
@@ -1027,18 +1030,11 @@ void View::updateAbsoluteGeometry(bool bypassChecks)
     absGeometry.moveLeft(x() + m_localGeometry.x());
     absGeometry.moveTop(y() + m_localGeometry.y());
 
-    if (behaveAsPlasmaPanel()) {
-        int currentScreenEdgeMargin = m_screenEdgeMarginEnabled ? qMax(0, m_screenEdgeMargin) : 0;
-
-        if (location() == Plasma::Types::BottomEdge) {
-            absGeometry.moveTop(screenGeometry().bottom() - currentScreenEdgeMargin - m_normalThickness);
-        } else if (location() == Plasma::Types::TopEdge) {
-            absGeometry.moveTop(screenGeometry().top() + currentScreenEdgeMargin);
-        } else if (location() == Plasma::Types::LeftEdge) {
-            absGeometry.moveLeft(screenGeometry().left() + currentScreenEdgeMargin);
-        } else if (location() == Plasma::Types::RightEdge) {
-            absGeometry.moveLeft(screenGeometry().right() - currentScreenEdgeMargin - m_normalThickness);
-        }
+    if (behaveAsPlasmaPanel() && m_floatingTransition->hasGeometry()) {
+        //! Availability and reservation consume the attached footprint, not
+        //! the moving presentation inside the stable surface envelope.
+        absGeometry = m_floatingTransition->attachedGeometry().translated(
+            m_floatingTransition->stableCanvasGeometry().topLeft());
     }
 
     const bool geometryChanged = m_absoluteGeometry != absGeometry;
@@ -1360,7 +1356,7 @@ bool View::isFloatingPanel() const
 
 int View::layerShellEdgeMargin() const
 {
-    return isFloatingPanel() ? m_screenEdgeMargin : 0;
+    return 0;
 }
 
 bool View::isPreferredForShortcuts() const
@@ -1862,6 +1858,11 @@ void View::setMetrics(QQuickItem *metrics)
 ViewPart::Effects *View::effects() const
 {
     return m_effects;
+}
+
+ViewPart::FloatingTransition *View::floatingTransition() const
+{
+    return m_floatingTransition;
 }
 
 ViewPart::Indicator *View::indicator() const
