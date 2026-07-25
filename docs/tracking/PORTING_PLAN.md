@@ -4612,6 +4612,11 @@ prerequisites in the phases above are done.
       one atomic `dockSystemData` record to carry the complete legal zero-gap
       floated endpoint contract.
       Commits: PENDING INTEGRATION REBASE
+- [x] Fix D195 (huge finite placement values reached undefined integer
+      conversion). Check every floating placement product before conversion,
+      add the integer start delta in a wide type, and narrow only after proving
+      the result is representable.
+      Commits: PENDING INTEGRATION REBASE
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing

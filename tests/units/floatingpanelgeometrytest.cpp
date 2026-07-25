@@ -285,6 +285,41 @@ void FloatingPanelGeometryTest::rejectsInvalidPlacement_data()
     PlacementInputs offsetOutside = valid;
     offsetOutside.offset = 1.2F;
     QTest::newRow("derived span outside output") << offsetOutside;
+
+    PlacementInputs startAdditionOverflow = valid;
+    startAdditionOverflow.alignment = PrimaryAxisAlignment::Start;
+    startAdditionOverflow.offset =
+        static_cast<float>(std::numeric_limits<int>::max() / 800);
+    QTest::newRow("representable delta overflows panel start")
+        << startAdditionOverflow;
+
+    PlacementInputs roundedMaximumLength = valid;
+    roundedMaximumLength.outputGeometry =
+        QRect(0, 0, std::numeric_limits<int>::max(), 100);
+    roundedMaximumLength.availablePrimaryGeometry =
+        roundedMaximumLength.outputGeometry;
+    roundedMaximumLength.maxLength = 1.0F;
+    QTest::newRow("maximum available length rounds beyond integer range")
+        << roundedMaximumLength;
+
+    for (const auto alignment : {
+             PrimaryAxisAlignment::Start,
+             PrimaryAxisAlignment::Center,
+             PrimaryAxisAlignment::End}) {
+        PlacementInputs hugePositiveOffset = valid;
+        hugePositiveOffset.alignment = alignment;
+        hugePositiveOffset.offset = std::numeric_limits<float>::max();
+        QTest::addRow("huge positive finite offset %d",
+                      static_cast<int>(alignment))
+            << hugePositiveOffset;
+
+        PlacementInputs hugeNegativeOffset = valid;
+        hugeNegativeOffset.alignment = alignment;
+        hugeNegativeOffset.offset = std::numeric_limits<float>::lowest();
+        QTest::addRow("huge negative finite offset %d",
+                      static_cast<int>(alignment))
+            << hugeNegativeOffset;
+    }
 }
 
 void FloatingPanelGeometryTest::rejectsInvalidPlacement()
