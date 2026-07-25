@@ -7,7 +7,6 @@
 #include "screenspacereservation.h"
 
 // local
-#include "../view.h"
 #include "../../wm/waylandlayershell.h"
 
 // Qt
@@ -18,13 +17,13 @@
 namespace Latte {
 namespace ViewPart {
 
-ScreenSpaceReservation::ScreenSpaceReservation(Latte::View *view)
-    : m_view(view)
+ScreenSpaceReservation::ScreenSpaceReservation(
+    const int outputId,
+    const Plasma::Types::Location location)
 {
-    Q_ASSERT(m_view);
-
-    setTitle(QStringLiteral("#screen-space-reservation#%1")
-                 .arg(m_view->containment() ? m_view->containment()->id() : 0));
+    setTitle(QStringLiteral("#screen-space-reservation#output=%1#edge=%2")
+                 .arg(outputId)
+                 .arg(static_cast<int>(location)));
     setColor(Qt::transparent);
     setDefaultAlphaBuffer(true);
     setFlags(Qt::FramelessWindowHint
@@ -44,29 +43,32 @@ ScreenSpaceReservation::~ScreenSpaceReservation()
     setVisible(false);
 }
 
-void ScreenSpaceReservation::publish(const QRect &strutGeometry,
-                                     Plasma::Types::Location location)
+bool ScreenSpaceReservation::publish(
+    QScreen *const screen,
+    const QRect &strutGeometry,
+    const Plasma::Types::Location location)
 {
-    if (!m_view->screen()) {
+    if (!screen) {
         qCritical() << "ScreenSpaceReservation refused a strut without an assigned screen"
-                    << "containment=" << (m_view->containment() ? m_view->containment()->id() : 0);
-        return;
+                    << "surface=" << title();
+        return false;
     }
 
-    const QRect screenGeometry = m_view->screenGeometry();
+    const QRect screenGeometry = screen->geometry();
     m_layerShellWindow = WindowSystem::LayerShell::applyReservationPlacement(
-        this, m_view->screen(), location, strutGeometry, screenGeometry);
+        this, screen, location, strutGeometry, screenGeometry);
     if (!m_layerShellWindow) {
         qCritical() << "ScreenSpaceReservation could not publish"
-                    << "containment=" << (m_view->containment() ? m_view->containment()->id() : 0)
+                    << "surface=" << title()
                     << "strut=" << strutGeometry;
-        return;
+        return false;
     }
 
     m_publishedGeometry = strutGeometry;
     if (!isVisible()) {
         show();
     }
+    return true;
 }
 
 void ScreenSpaceReservation::clear()

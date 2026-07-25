@@ -172,10 +172,11 @@ void WaylandInterface::setViewStruts(QWindow &view, const QRect &rect, Plasma::T
     }
 
     //! The visual window is a larger masked canvas. Putting the positive
-    //! exclusive zone on it makes KWin reserve that whole span and re-place
-    //! perpendicular docks inside the reduced edge-wide band. A dedicated
-    //! transparent surface publishes only the occupied footprint while the
-    //! visual surface stays at Positioner's exact rectangle.
+    //! exclusive zone on it makes KWin re-place perpendicular docks inside
+    //! the reduced edge-wide band. The coordinator projects all requests for
+    //! one persistent output identity and edge through one transparent
+    //! publisher at their maximum depth, while every visual surface stays at
+    //! Positioner's exact rectangle.
     latteView->publishScreenSpaceReservation(rect, location);
 }
 

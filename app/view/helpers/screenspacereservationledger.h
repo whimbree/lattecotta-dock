@@ -8,11 +8,14 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 #include <compare>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <map>
 #include <optional>
+#include <ranges>
 #include <vector>
 
 namespace Latte {
@@ -206,6 +209,10 @@ public:
             return std::nullopt;
         }
 
+        assert(!existing->second.empty());
+        if (existing->second.empty()) {
+            std::terminate();
+        }
         const auto deepest = std::max_element(
             existing->second.cbegin(),
             existing->second.cend(),
@@ -250,11 +257,16 @@ private:
         const ReservationGroupKey group)
     {
         const auto groupEntry = m_groups.find(group);
+        assert(groupEntry != m_groups.end());
         if (groupEntry == m_groups.end()) {
-            return;
+            std::terminate();
         }
 
-        groupEntry->second.erase(member);
+        const std::size_t removed = groupEntry->second.erase(member);
+        assert(removed == 1);
+        if (removed != 1) {
+            std::terminate();
+        }
         if (groupEntry->second.empty()) {
             m_groups.erase(groupEntry);
         }
