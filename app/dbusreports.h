@@ -1662,6 +1662,9 @@ inline bool dockReservationRecordsAgree(
                     > snapshot.reservationStateGeneration
                 || group.publishedDepth <= 0
                 || group.contributorDockIds.isEmpty()
+                || !std::is_sorted(
+                    group.contributorDockIds.cbegin(),
+                    group.contributorDockIds.cend())
                 || !group.geometry.isValid()
                 || !group.windowGeometry.isValid()
                 || !group.layerShellPresent
@@ -1721,16 +1724,6 @@ inline bool dockReservationRecordsAgree(
         }
 
         const auto *const group = membership.value();
-        QList<uint> expectedContributors =
-            group->contributorDockIds;
-        QList<uint> reportedGroupContributors =
-            view.reservationContributorDockIds;
-        std::sort(
-            expectedContributors.begin(),
-            expectedContributors.end());
-        std::sort(
-            reportedGroupContributors.begin(),
-            reportedGroupContributors.end());
         if (!view.reservationSurfacePresent
                 || view.screenId
                     != group->outputId
@@ -1756,8 +1749,8 @@ inline bool dockReservationRecordsAgree(
                 || view.reservationGroupGeneration
                     != std::optional{
                         group->generation}
-                || reportedGroupContributors
-                    != expectedContributors
+                || view.reservationContributorDockIds
+                    != group->contributorDockIds
                 || view.reservationGeometry
                     != group->geometry
                 || view.reservationWindowGeometry

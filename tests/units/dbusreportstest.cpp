@@ -1313,6 +1313,23 @@ void DbusReportsTest::dockSystemSnapshotRejectsReservationDisagreement()
         snapshot.views[0].reservationContributorDockIds.removeLast();
     });
     rejects([](auto &snapshot) {
+        std::swap(
+            snapshot.views[0].reservationContributorDockIds[0],
+            snapshot.views[0].reservationContributorDockIds[1]);
+    });
+    rejects([](auto &snapshot) {
+        std::swap(
+            snapshot.reservationGroups[0].contributorDockIds[0],
+            snapshot.reservationGroups[0].contributorDockIds[1]);
+        for (auto &view : snapshot.views) {
+            if (view.reservationContributorDockIds.size() == 2) {
+                std::swap(
+                    view.reservationContributorDockIds[0],
+                    view.reservationContributorDockIds[1]);
+            }
+        }
+    });
+    rejects([](auto &snapshot) {
         snapshot.views[0].reservationGeometry.translate(1, 0);
     });
     rejects([](auto &snapshot) {
