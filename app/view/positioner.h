@@ -9,6 +9,7 @@
 
 //local
 #include <coretypes.h>
+#include "floatingpanelgeometry.h"
 #include "positionergeometry.h"
 #include "../wm/abstractwindowinterface.h"
 #include "../wm/windowinfowrap.h"
@@ -18,6 +19,8 @@
 #include <QPointer>
 #include <QScreen>
 #include <QTimer>
+
+#include <optional>
 
 // Plasma
 #include <Plasma/Containment>
@@ -168,7 +171,10 @@ private:
     void resizeWindow(QRect availableScreenRect = QRect());
     void updatePosition(QRect availableScreenRect = QRect());
     void updateCanvasGeometry(QRect availableScreenRect = QRect());
-    [[nodiscard]] bool configureStablePanelGeometry();
+    [[nodiscard]] std::optional<FloatingPanelGeometry::Solution>
+    solveStablePanelGeometry(const QRect &availableScreenRect) const;
+    void applyStablePanelGeometry(
+        const FloatingPanelGeometry::Solution &solution);
 
     void validateTopBottomBorders(QRect availableScreenRect, QRegion availableScreenRegion);
 

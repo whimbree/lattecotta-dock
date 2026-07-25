@@ -156,24 +156,30 @@ bool FloatingTransition::configureGeometry(
         return false;
     }
 
+    configureGeometry(*solution);
+    return true;
+}
+
+void FloatingTransition::configureGeometry(
+    const FloatingPanelGeometry::Solution &solution)
+{
     const bool unchanged = hasGeometry()
-        && m_geometry->attached.value == solution->attached.value
-        && m_geometry->floated.value == solution->floated.value
-        && m_geometry->envelope.value == solution->envelope.value
-        && m_geometry->trigger.value == solution->trigger.value
+        && m_geometry->attached.value == solution.attached.value
+        && m_geometry->floated.value == solution.floated.value
+        && m_geometry->envelope.value == solution.envelope.value
+        && m_geometry->trigger.value == solution.trigger.value
         && m_geometry->appletMeasurementBounds.value
-            == solution->appletMeasurementBounds.value
-        && m_geometry->primaryAxisSpan == solution->primaryAxisSpan
-        && m_geometry->reservationDepth == solution->reservationDepth;
+            == solution.appletMeasurementBounds.value
+        && m_geometry->primaryAxisSpan == solution.primaryAxisSpan
+        && m_geometry->reservationDepth == solution.reservationDepth;
     if (unchanged) {
-        return true;
+        return;
     }
 
     m_geometry = solution;
     ++m_geometryRevision;
     Q_EMIT stableGeometryChanged();
     Q_EMIT currentGeometryChanged();
-    return true;
 }
 
 void FloatingTransition::clearGeometry()

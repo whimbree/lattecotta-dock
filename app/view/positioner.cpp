@@ -39,7 +39,67 @@
 using namespace std::chrono_literals;
 
 namespace {
+namespace FloatingPanelGeometry = Latte::ViewPart::FloatingPanelGeometry;
+
 constexpr auto RelocationApplyDelay = 100ms;
+
+[[nodiscard]] std::optional<FloatingPanelGeometry::Edge>
+floatingPanelEdge(Plasma::Types::Location location)
+{
+    switch (location) {
+    case Plasma::Types::TopEdge:
+        return FloatingPanelGeometry::Edge::Top;
+    case Plasma::Types::RightEdge:
+        return FloatingPanelGeometry::Edge::Right;
+    case Plasma::Types::BottomEdge:
+        return FloatingPanelGeometry::Edge::Bottom;
+    case Plasma::Types::LeftEdge:
+        return FloatingPanelGeometry::Edge::Left;
+    default:
+        return std::nullopt;
+    }
+}
+
+[[nodiscard]] FloatingPanelGeometry::PrimaryAxisAlignment
+floatingPanelAlignment(Latte::Types::Alignment alignment)
+{
+    switch (alignment) {
+    case Latte::Types::Left:
+    case Latte::Types::Top:
+        return FloatingPanelGeometry::PrimaryAxisAlignment::Start;
+    case Latte::Types::Right:
+    case Latte::Types::Bottom:
+        return FloatingPanelGeometry::PrimaryAxisAlignment::End;
+    default:
+        return FloatingPanelGeometry::PrimaryAxisAlignment::Center;
+    }
+}
+
+[[nodiscard]] QPoint visibilityDisplacedPanelPosition(
+    const QRect &stableCanvas,
+    FloatingPanelGeometry::Edge edge,
+    int slideOffset)
+{
+    QPoint position = stableCanvas.topLeft();
+    const int outwardOffset = qAbs(slideOffset);
+
+    switch (edge) {
+    case FloatingPanelGeometry::Edge::Top:
+        position.ry() -= outwardOffset;
+        break;
+    case FloatingPanelGeometry::Edge::Right:
+        position.rx() += outwardOffset;
+        break;
+    case FloatingPanelGeometry::Edge::Bottom:
+        position.ry() += outwardOffset;
+        break;
+    case FloatingPanelGeometry::Edge::Left:
+        position.rx() -= outwardOffset;
+        break;
+    }
+
+    return position;
+}
 }
 
 namespace Latte {
@@ -163,7 +223,11 @@ void Positioner::init()
     });
 
     connect(m_view, &Latte::View::offsetChanged, this, [&]() {
-        updatePosition(m_lastAvailableScreenRect);
+        if (m_view->behaveAsPlasmaPanel()) {
+            syncGeometry();
+        } else {
+            updatePosition(m_lastAvailableScreenRect);
+        }
     });
 
     connect(m_view, &Latte::View::locationChanged, this, [&]() {
@@ -646,13 +710,24 @@ void Positioner::immediateSyncGeometry()
 
         m_view->effects()->updateEnabledBorders();
 
-        resizeWindow(availableScreenRect);
-        updatePosition(availableScreenRect);
-        updateCanvasGeometry(availableScreenRect);
-        if (!configureStablePanelGeometry()) {
-            return;
+        if (m_view->behaveAsPlasmaPanel()) {
+            const auto stableGeometry = solveStablePanelGeometry(availableScreenRect);
+            if (!stableGeometry.has_value()) {
+                qCritical() << "Positioner refused to mutate a panel window after"
+                               " stable geometry solving failed for"
+                            << m_view->validTitle();
+                return;
+            }
+
+            m_view->floatingTransition()->configureGeometry(*stableGeometry);
+            applyStablePanelGeometry(*stableGeometry);
+        } else {
+            m_view->floatingTransition()->clearGeometry();
+            resizeWindow(availableScreenRect);
+            updatePosition(availableScreenRect);
         }
-        //! Always publish the solved rectangle after the three geometry stages.
+        updateCanvasGeometry(availableScreenRect);
+        //! Always publish the solved rectangle after the geometry stages.
         //! The layer-shell adapter compares the resulting protocol state before
         //! sending requests, so repeated stable syncs stay cheap while a changed
         //! edge or margin is applied atomically from one complete solution.
@@ -761,63 +836,63 @@ PositionerGeometry::ViewGeometryInputs Positioner::geometryInputs() const
     return in;
 }
 
-bool Positioner::configureStablePanelGeometry()
+std::optional<FloatingPanelGeometry::Solution>
+Positioner::solveStablePanelGeometry(const QRect &availableScreenRect) const
 {
-    auto *const transition = m_view->floatingTransition();
-    Q_ASSERT(transition);
+    Q_ASSERT(m_view->behaveAsPlasmaPanel());
 
-    if (!m_view->behaveAsPlasmaPanel() || m_inStartup) {
-        transition->clearGeometry();
-        return true;
-    }
-
-    FloatingPanelGeometry::Edge edge;
-    switch (m_view->location()) {
-    case Plasma::Types::TopEdge:
-        edge = FloatingPanelGeometry::Edge::Top;
-        break;
-    case Plasma::Types::RightEdge:
-        edge = FloatingPanelGeometry::Edge::Right;
-        break;
-    case Plasma::Types::BottomEdge:
-        edge = FloatingPanelGeometry::Edge::Bottom;
-        break;
-    case Plasma::Types::LeftEdge:
-        edge = FloatingPanelGeometry::Edge::Left;
-        break;
-    default:
+    const auto edge = floatingPanelEdge(m_view->location());
+    if (!edge.has_value()) {
         qCritical() << "Positioner refused stable panel geometry for a floating edge"
                     << m_view->location();
-        return false;
+        return std::nullopt;
     }
 
-    const bool horizontal = m_view->formFactor() == Plasma::Types::Horizontal;
-    const FloatingPanelGeometry::Inputs inputs{
-        .outputGeometry = m_view->screenGeometry(),
-        .edge = edge,
-        .primaryAxisSpan = {
-            horizontal ? m_validGeometry.left() : m_validGeometry.top(),
-            horizontal ? m_validGeometry.width() : m_validGeometry.height(),
-        },
+    const QRect outputGeometry =
+        m_inStartup
+        ? QRect(-9999, -9999, m_view->screen()->geometry().width(),
+                m_view->screen()->geometry().height())
+        : m_view->screenGeometry();
+    const FloatingPanelGeometry::PlacementInputs inputs{
+        .outputGeometry = outputGeometry,
+        .availablePrimaryGeometry = availableScreenRect,
+        .edge = *edge,
+        .alignment = floatingPanelAlignment(
+            static_cast<Latte::Types::Alignment>(m_view->alignment())),
+        .maxLength = m_view->maxLength(),
+        .offset = m_view->offset(),
         .panelDepth = m_view->normalThickness(),
         .floatingGap = m_view->isFloatingPanel() ? m_view->screenEdgeMargin() : 0,
     };
 
-    if (!transition->configureGeometry(inputs)) {
-        qCritical() << "Positioner could not configure stable panel geometry for"
-                    << m_view->validTitle();
-        return false;
+    const auto solution = FloatingPanelGeometry::solvePlacement(inputs);
+    if (!solution.has_value()) {
+        qCritical() << "Positioner could not solve stable panel geometry for"
+                    << m_view->validTitle() << "output=" << outputGeometry
+                    << "available=" << availableScreenRect
+                    << "depth=" << inputs.panelDepth
+                    << "gap=" << inputs.floatingGap
+                    << "maxLength=" << inputs.maxLength
+                    << "offset=" << inputs.offset;
     }
 
-    if (transition->stableCanvasGeometry() != m_validGeometry) {
-        qCritical() << "Positioner stable panel authorities disagree"
-                    << "surface=" << m_validGeometry
-                    << "controller=" << transition->stableCanvasGeometry()
-                    << "view=" << m_view->validTitle();
-        return false;
-    }
+    return solution;
+}
 
-    return true;
+void Positioner::applyStablePanelGeometry(
+    const FloatingPanelGeometry::Solution &solution)
+{
+    m_validGeometry = solution.envelope.value;
+    const QSize size = m_validGeometry.size();
+
+    m_view->setMinimumSize(size);
+    m_view->setMaximumSize(size);
+    m_view->resize(size);
+    m_view->setPosition(m_validGeometry.topLeft());
+
+    if (m_view->formFactor() == Plasma::Types::Horizontal) {
+        Q_EMIT windowSizeChanged();
+    }
 }
 
 void Positioner::updatePosition(QRect availableScreenRect)
@@ -827,9 +902,25 @@ void Positioner::updatePosition(QRect availableScreenRect)
                    << m_view->location();
     }
 
-    //! EX-09 (docs/tracking/QML_EXTRACTION_PLAN.md): the placement math lives in the
-    //! tested PositionerGeometry core; this adapter keeps the validGeometry
-    //! bookkeeping and the window application
+    if (m_view->behaveAsPlasmaPanel()) {
+        const auto edge = floatingPanelEdge(m_view->location());
+        if (!edge.has_value() || !m_validGeometry.isValid()) {
+            qCritical() << "Positioner refused panel visibility displacement"
+                        << "edge=" << m_view->location()
+                        << "stableCanvas=" << m_validGeometry;
+            return;
+        }
+
+        //! Ordinary visibility hiding may move the complete stable envelope.
+        //! Floating presentation never reaches this physical-window path.
+        m_view->setPosition(visibilityDisplacedPanelPosition(
+            m_validGeometry, *edge, m_slideOffset));
+        return;
+    }
+
+    //! EX-09 (docs/tracking/QML_EXTRACTION_PLAN.md): non-panel placement math
+    //! lives in the tested PositionerGeometry core; this adapter keeps the
+    //! validGeometry bookkeeping and window application.
     const QPoint position = PositionerGeometry::dockPosition(geometryInputs(), availableScreenRect);
 
     if (m_slideOffset == 0 || m_nextScreenEdge != Plasma::Types::Floating /*exactly after relocating and changing screen edge*/) {
@@ -871,7 +962,9 @@ void Positioner::setSlideOffset(int offset)
 
 void Positioner::resizeWindow(QRect availableScreenRect)
 {
-    //! EX-09: the sizing math lives in the PositionerGeometry core
+    Q_ASSERT(!m_view->behaveAsPlasmaPanel());
+
+    //! EX-09: non-panel sizing math lives in the PositionerGeometry core.
     const QSize size = PositionerGeometry::windowSize(geometryInputs(),
                                                       availableScreenRect,
                                                       m_view->screen()->size());
