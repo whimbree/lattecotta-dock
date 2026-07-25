@@ -30,6 +30,7 @@ class FloatingTransition final : public QObject
     Q_PROPERTY(Target target READ target NOTIFY targetChanged)
     Q_PROPERTY(Phase phase READ phase NOTIFY phaseChanged)
     Q_PROPERTY(bool running READ running NOTIFY runningChanged)
+    Q_PROPERTY(bool eligible READ eligible WRITE setEligible NOTIFY eligibleChanged)
     Q_PROPERTY(int animationDuration READ animationDuration WRITE setAnimationDuration
                    NOTIFY animationDurationChanged)
 
@@ -76,6 +77,8 @@ public:
     [[nodiscard]] Target target() const;
     [[nodiscard]] Phase phase() const;
     [[nodiscard]] bool running() const;
+    [[nodiscard]] bool eligible() const;
+    void setEligible(bool eligible);
 
     [[nodiscard]] int animationDuration() const;
     void setAnimationDuration(int duration);
@@ -108,6 +111,7 @@ Q_SIGNALS:
     void targetChanged();
     void phaseChanged();
     void runningChanged();
+    void eligibleChanged();
     void animationDurationChanged();
     void stableGeometryChanged();
     void currentGeometryChanged();
@@ -117,9 +121,10 @@ private:
     void setFloatingness(qreal floatingness);
     void setPhase(Phase phase);
 
-    qreal m_floatingness{0.0};
-    Target m_target{Target::Attached};
+    qreal m_floatingness{1.0};
+    Target m_target{Target::Floated};
     Phase m_phase{Phase::Resting};
+    bool m_eligible{false};
     int m_animationDuration{0};
     quint64 m_geometryRevision{0};
     std::optional<FloatingPanelGeometry::Solution> m_geometry;

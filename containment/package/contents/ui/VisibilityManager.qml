@@ -45,10 +45,9 @@ Item{
 
     property int slidingOutToPos: {
         if (root.behaveAsPlasmaPanel) {
-            var edgeMargin = screenEdgeMarginEnabled ? Plasmoid.configuration.screenEdgeMargin : 0
             var thickmarg = latteView.visibility.isSidebar ? 0 : 1;
 
-            return root.isHorizontal ? root.height + edgeMargin - thickmarg : root.width + edgeMargin - thickmarg;
+            return root.isHorizontal ? root.height - thickmarg : root.width - thickmarg;
         } else {
             var topOrLeftEdge = ((Plasmoid.location===PlasmaCore.Types.LeftEdge)||(Plasmoid.location===PlasmaCore.Types.TopEdge));
             return (topOrLeftEdge ? -metrics.mask.thickness.normal : metrics.mask.thickness.normal);
@@ -59,6 +58,22 @@ Item{
     property int thicknessAsPanel: metrics.totals.thickness
 
     property Item layouts: null
+
+    Binding {
+        target: root.latteView ? root.latteView.floatingTransition : null
+        property: "eligible"
+        when: root.latteView && root.latteView.floatingTransition
+        value: root.floatingTransitionEligible
+        restoreMode: Binding.RestoreNone
+    }
+
+    Binding {
+        target: root.latteView ? root.latteView.floatingTransition : null
+        property: "animationDuration"
+        when: root.latteView && root.latteView.floatingTransition
+        value: manager.animationSpeed
+        restoreMode: Binding.RestoreNone
+    }
 
     property bool updateIsEnabled: autosize.inCalculatedIconSize && !inSlidingIn && !inSlidingOut && !inRelocationHiding
 
@@ -518,76 +533,36 @@ Item{
         }
     }
 
-    //! Slides Animations for FLOATING+BEHAVEASPLASMAPANEL when
-    //! HIDETHICKSCREENCAP dynamically is enabled/disabled
-    SequentialAnimation{
-        id: slidingInRealFloating
-
-        PropertyAnimation {
-            target: latteView ? latteView.positioner : null
-            property: "slideOffset"
-            to: 0
-            duration: manager.animationSpeed
-            easing.type: Easing.OutQuad
+    Connections {
+        target: root
+        function onFloatingGapIsAttachedChanged() {
+            manager.updateFloatingTransition();
         }
 
-        ScriptAction{
-            script: {
-                latteView.positioner.inSlideAnimation = false;
-            }
-        }
-
-        onStopped: latteView.positioner.inSlideAnimation = false;
-
-    }
-
-    SequentialAnimation{
-        id: slidingOutRealFloating
-
-        ScriptAction{
-            script: {
-                latteView.positioner.inSlideAnimation = true;
-            }
-        }
-
-        PropertyAnimation {
-            target: latteView ? latteView.positioner : null
-            property: "slideOffset"
-            to: Plasmoid.configuration.screenEdgeMargin
-            duration: manager.animationSpeed
-            easing.type: Easing.InQuad
+        function onInStartupChanged() {
+            manager.updateFloatingTransition();
         }
     }
 
     Connections {
-        target: root
-        function onHideThickScreenGapChanged() {
-            if (!latteView || !root.viewIsAvailable) {
-                return;
-            }
+        target: latteView ? latteView.floatingTransition : null
+        function onEligibleChanged() {
+            //! Eligibility is written by a separate Binding. Retrying from
+            //! the controller signal makes target selection independent of
+            //! QML binding-evaluation order when both values change together.
+            manager.updateFloatingTransition();
+        }
+    }
 
-            if (root.behaveAsPlasmaPanel && !latteView.visibility.isHidden && !manager.inSlidingIn && !manager.inSlidingOut && !root.inStartup) {
-                slideInOutRealFloating();
-            }
+    function updateFloatingTransition() : void {
+        if (!latteView || !latteView.floatingTransition) {
+            return;
         }
 
-        function onInStartupChanged() {
-            //! used for positioning properly real floating panels when there is a maximized window
-            if (root.hideThickScreenGap && !root.inStartup && latteView.positioner.slideOffset===0) {
-                if (root.behaveAsPlasmaPanel && !latteView.visibility.isHidden) {
-                    slideInOutRealFloating();
-                }
-            }
-        }
-
-        function slideInOutRealFloating() : void {
-            if (root.hideThickScreenGap) {
-                slidingInRealFloating.stop();
-                slidingOutRealFloating.start();
-            } else {
-                slidingOutRealFloating.stop();
-                slidingInRealFloating.start();
-            }
+        if (root.floatingGapIsAttached) {
+            latteView.floatingTransition.requestAttached();
+        } else {
+            latteView.floatingTransition.requestFloated();
         }
     }
 

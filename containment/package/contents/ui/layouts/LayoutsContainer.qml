@@ -34,6 +34,11 @@ Item{
     readonly property alias mainLayout: _mainLayout
     readonly property alias endLayout: _endLayout
     readonly property alias contextMenuIsShown: contextMenuLayer.menuIsShown
+    readonly property QtObject floatingTransition: latteView
+                                                   ? latteView.floatingTransition : null
+    readonly property bool hasStablePanelGeometry: root.behaveAsPlasmaPanel
+                                                   && floatingTransition
+                                                   && floatingTransition.hasGeometry
 
     //! Justify's solid background and applets share one stable length. Shadows
     //! are presentation chrome and must not move or shrink that layout when
@@ -54,7 +59,8 @@ Item{
         restoreMode: Binding.RestoreNone
         value: {
             if (root.behaveAsPlasmaPanel) {
-                return 0;
+                return layoutsContainer.hasStablePanelGeometry
+                       ? floatingTransition.currentVisibleGeometry.x : 0;
             }
 
             if ( latteView && root.isHorizontal && root.myView.alignment === LatteCore.Types.Justify ){
@@ -88,7 +94,8 @@ Item{
         restoreMode: Binding.RestoreNone
         value: {
             if (root.behaveAsPlasmaPanel) {
-                return 0;
+                return layoutsContainer.hasStablePanelGeometry
+                       ? floatingTransition.currentVisibleGeometry.y : 0;
             }
 
             if ( latteView && root.isVertical && root.myView.alignment === LatteCore.Types.Justify ) {
@@ -115,10 +122,14 @@ Item{
         }
     }
 
-    width: root.isHorizontal && root.myView.alignment === LatteCore.Types.Justify
-           ? justifyLayoutLength : parent.width
-    height: root.isVertical && root.myView.alignment === LatteCore.Types.Justify
-            ? justifyLayoutLength : parent.height
+    width: hasStablePanelGeometry
+           ? floatingTransition.appletMeasurementBounds.width
+           : (root.isHorizontal && root.myView.alignment === LatteCore.Types.Justify
+              ? justifyLayoutLength : parent.width)
+    height: hasStablePanelGeometry
+            ? floatingTransition.appletMeasurementBounds.height
+            : (root.isVertical && root.myView.alignment === LatteCore.Types.Justify
+               ? justifyLayoutLength : parent.height)
     z:10
 
     property bool animationSent: false

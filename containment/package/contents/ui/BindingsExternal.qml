@@ -90,7 +90,9 @@ Item {
         target: latteView
         property: "maxLength"
         when: latteView
-        value: root.maxLengthPerCentage/100
+        value: (root.behaveAsPlasmaPanel
+                ? Plasmoid.configuration.maxLength
+                : root.maxLengthPerCentage) / 100
         restoreMode: Binding.RestoreNone
     }
 
@@ -114,7 +116,7 @@ Item {
         target: latteView
         property: "screenEdgeMarginEnabled"
         when: latteView
-        value: root.screenEdgeMarginEnabled && !root.hideThickScreenGap
+        value: root.screenEdgeMarginEnabled
         restoreMode: Binding.RestoreNone
     }
 
@@ -321,6 +323,10 @@ Item {
         property: "strutsThickness"
         when: latteView && latteView.visibility
         value: {
+            if (root.behaveAsPlasmaPanel) {
+                return visibilityManager.thicknessAsPanel;
+            }
+
             var isCapableToHideScreenGap = root.screenEdgeMarginEnabled && Plasmoid.configuration.hideFloatingGapForMaximized
             var mirrorGapFactor = root.mirrorScreenGap ? 2 : 1;
 
@@ -332,12 +338,6 @@ Item {
             //!     the view is hiding all of its screen edges. It is used mostly when the view is wanted
             //!     to act as a window titlebar.
             var thicknessForIsCapableToHideScreenGap = (root.hideThickScreenGap ? 0 : mirrorGapFactor * metrics.mask.screenEdge);
-
-            if (root.behaveAsPlasmaPanel) {
-                return isCapableToHideScreenGap ?
-                            (visibilityManager.thicknessAsPanel + thicknessForIsCapableToHideScreenGap) :
-                            (mirrorGapFactor*metrics.mask.screenEdge) + visibilityManager.thicknessAsPanel;
-            }
 
             var edgeThickness = isCapableToHideScreenGap ? thicknessForIsCapableToHideScreenGap : metrics.mask.screenEdge * mirrorGapFactor;
             return edgeThickness + metrics.mask.thickness.maxNormalForItemsWithoutScreenEdge;

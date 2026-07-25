@@ -53,15 +53,15 @@
 23	share/latte/indicators/org.kde.latte.plasma/package/ui/main.qml
 8	share/latte/indicators/org.kde.latte.plasmatabstyle/package/ui/BackLayer.qml
 6	share/latte/indicators/org.kde.latte.plasmatabstyle/package/ui/main.qml
-238	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/BindingsExternal.qml
+236	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/BindingsExternal.qml
 6	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/DragDropArea.qml
 32	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/Upgrader.qml
-159	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/VisibilityManager.qml
+158	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/VisibilityManager.qml
 3	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Indexer.qml
 4	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Indicators.qml
 31	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Launchers.qml
 11	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Layouter.qml
-17	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Metrics.qml
+16	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Metrics.qml
 17	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/MyView.qml
 3	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/ParabolicEffect.qml
 4	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/PositionShortcuts.qml
@@ -91,7 +91,7 @@
 13	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/applet/communicator/Actions.qml
 9	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/applet/communicator/Engine.qml
 52	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/applet/communicator/LatteBridge.qml
-176	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/MultiLayered.qml
+175	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/MultiLayered.qml
 2	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/types/Shadows.qml
 16	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/types/Totals.qml
 64	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/colorizer/CustomBackground.qml

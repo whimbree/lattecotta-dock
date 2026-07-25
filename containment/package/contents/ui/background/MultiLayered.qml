@@ -24,6 +24,7 @@ import "../colorizer" as Colorizer
 
 BackgroundProperties{
     id:barLine
+    stablePanelEnvelope: root.behaveAsPlasmaPanel
 
     //! stateless resolver for the per-edge padding math and the effects
     //! area rect (EX-13; units/backgroundstate.h)
@@ -101,7 +102,7 @@ BackgroundProperties{
                                                         indicators.info.backgroundCornerMargin)
 
     length: {
-        if (root.behaveAsPlasmaPanel && LatteCore.WindowSystem.compositingActive) {
+        if (barLine.stablePanelEnvelope && LatteCore.WindowSystem.compositingActive) {
             return root.isVertical ? root.height : root.width;
         }
 
@@ -134,7 +135,7 @@ BackgroundProperties{
     }
 
     thickness: {
-        if (root.behaveAsPlasmaPanel) {
+        if (barLine.stablePanelEnvelope) {
             return metrics.totals.thickness;
         } else {
             return Math.min(metrics.totals.thickness, barLine.totals.visualThickness);

@@ -10,6 +10,9 @@ import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
 
 Item{
+    id: backgroundProperties
+
+    property bool stablePanelEnvelope: false
     property bool isShown: false
 
     property bool hasAllBorders: false
@@ -33,5 +36,7 @@ Item{
 
     readonly property BackgroundTypes.Shadows shadows: BackgroundTypes.Shadows{}
     readonly property BackgroundTypes.Paddings paddings: BackgroundTypes.Paddings{}
-    readonly property BackgroundTypes.Totals totals: BackgroundTypes.Totals{}
+    readonly property BackgroundTypes.Totals totals: BackgroundTypes.Totals{
+        stablePanelEnvelope: backgroundProperties.stablePanelEnvelope
+    }
 }
