@@ -4,11 +4,10 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # e2e-mode: nested-only
 #
-# Drive the complete maximizeWhenMaximized and hideFloatingGapForMaximized path
-# with a real Wayland toplevel. A rapid restore/maximize cycle proves the changed
-# strut reaches layer-shell promptly; sourceguardtest separately pins that this
-# path bypasses the geometry throttle. The concrete KWin frame geometry then
-# verifies that KWin applied the new work area.
+# Drive the FP-2 stable-canvas maximize transition with a real Wayland
+# toplevel. The QWindow, stable applet measurements, layer-shell placement,
+# per-view reservation contribution, and maximum-depth group reservation must
+# stay fixed while only the internal qreal presentation progress changes.
 set -uo pipefail
 source "${E2E_REPO:?run through scripts/run-e2e.sh}/tests/e2e/lib.sh"
 
@@ -27,6 +26,8 @@ orig_maximize="$(kreadconfig6 "${group_args[@]}" --key maximizeWhenMaximized --d
 orig_length="$(kreadconfig6 "${group_args[@]}" --key maxLength --default __absent__)" || e2e_fail "could not read maxLength"
 orig_hide_gap="$(kreadconfig6 "${group_args[@]}" --key hideFloatingGapForMaximized --default __absent__)" || e2e_fail "could not read hideFloatingGapForMaximized"
 orig_edge_margin="$(kreadconfig6 "${group_args[@]}" --key screenEdgeMargin --default __absent__)" || e2e_fail "could not read screenEdgeMargin"
+orig_alignment="$(kreadconfig6 "${group_args[@]}" --key alignment --default __absent__)" || e2e_fail "could not read alignment"
+orig_alignment_upgraded="$(kreadconfig6 "${group_args[@]}" --key alignmentUpgraded --default __absent__)" || e2e_fail "could not read alignmentUpgraded"
 orig_visibility_mode="$(e2e_view_field "$view" 'v["visibilityMode"]')" || e2e_fail "could not read the original visibility mode"
 kpid=0
 configured=0
@@ -43,7 +44,7 @@ restore_key() {
 set_konsole_maximized() {
     local enabled="$1"
     e2e_kwin_js "for (const w of workspace.windowList()) {
-        if (w.resourceClass === 'org.kde.konsole' && w.caption.includes('LATTE D27 MAXIMIZE')) {
+        if (w.resourceClass === 'org.kde.konsole' && w.caption.includes('LATTE FP2 STABLE CANVAS')) {
             workspace.activeWindow = w;
             w.setMaximize($enabled, $enabled);
             print('@TAG@|' + w.internalId);
@@ -55,9 +56,156 @@ active_window_id() {
     e2e_kwin_js 'print("@TAG@|" + (workspace.activeWindow ? workspace.activeWindow.internalId : "none"));' | tail -1
 }
 
+dock_field() {
+    local expr="$1"
+    e2e_json dockSystemData | python3 -c "
+import json, sys
+snapshot = json.load(sys.stdin)
+match = [v for v in snapshot['views'] if v['persistentDockId'] == $view]
+if len(match) != 1:
+    sys.exit('expected exactly one dockSystemData record for containment $view')
+v = match[0]
+print($expr)
+"
+}
+
+stable_snapshot() {
+    dock_field 'json.dumps({
+        "stable": {key: v[key] for key in (
+            "windowGeometry",
+            "absoluteGeometry",
+            "surfaceGeometry",
+            "canvasGeometry",
+            "appletsLayoutGeometry",
+            "stableCanvasGeometry",
+            "attachedPresentationGeometry",
+            "floatedPresentationGeometry",
+            "stableTriggerGeometry",
+            "stableAppletMeasurementBounds",
+            "stablePrimaryAxisStart",
+            "stablePrimaryAxisLength",
+            "availablePrimaryLength",
+            "configuredIconSize",
+            "effectiveIconSize",
+            "maximumLengthRatio",
+            "alignment",
+            "geometrySettled",
+            "stableLayerShellMargin",
+            "requestedReservationDepth",
+            "reservationContributionDepth",
+            "reservationPublishedDepth",
+            "reservationOutputId",
+            "reservationEdge",
+            "reservationGroupGeneration",
+            "reservationContributorDockIds",
+            "reservationGeometry",
+            "layerShellMargins",
+            "layerShellAnchors",
+            "layerShellExclusiveEdge",
+            "layerShellExclusiveZone",
+            "publishedStruts",
+        )},
+        "objects": {
+            "transitionController": v["objects"]["transitionController"],
+            "reservationPublisher": v["objects"]["reservationPublisher"],
+        },
+    }, sort_keys=True, separators=(",", ":"))'
+}
+
+revision_snapshot() {
+    dock_field '"%s %s" % (v["surfaceGeometryPublicationRevision"], v["layerShellConfigureRequestRevision"])'
+}
+
+transition_probe() {
+    dock_field '"%s %s %s %.9f %s %s" % (
+        v["transitionTarget"],
+        v["transitionPhase"],
+        str(v["transitionRunning"]).lower(),
+        v["transitionProgress"],
+        v["surfaceGeometryPublicationRevision"],
+        v["layerShellConfigureRequestRevision"],
+    )'
+}
+
+assert_stable_contract() {
+    local phase="$1" current revisions
+    current="$(stable_snapshot)" || e2e_fail "$phase could not read the stable geometry snapshot"
+    [[ "$current" == "$base_stable_snapshot" ]] \
+        || e2e_fail "$phase changed the stable panel contract: base=$base_stable_snapshot current=$current"
+    revisions="$(revision_snapshot)" || e2e_fail "$phase could not read physical-geometry revisions"
+    [[ "$revisions" == "$base_revisions" ]] \
+        || e2e_fail "$phase published physical geometry during progress: base=$base_revisions current=$revisions"
+}
+
+wait_for_resting_target() {
+    local expected_target="$1" expected_progress="$2"
+    local target phase running progress surface_revision layer_revision
+    for _ in $(seq 1 80); do
+        read -r target phase running progress surface_revision layer_revision <<< "$(transition_probe)"
+        if [[ "$target" == "$expected_target" && "$phase" == resting && "$running" == false ]] \
+                && awk -v actual="$progress" -v expected="$expected_progress" \
+                    'BEGIN { difference = actual - expected; if (difference < 0) difference = -difference; exit !(difference < 0.000001) }'; then
+            return 0
+        fi
+        sleep 0.05
+    done
+    e2e_fail "transition did not settle at $expected_target/$expected_progress (target=$target phase=$phase running=$running progress=$progress)"
+}
+
+capture_progress_only_transition() {
+    local expected_target="$1" expected_phase="$2"
+    local target phase running progress surface_revision layer_revision
+    for _ in $(seq 1 100); do
+        read -r target phase running progress surface_revision layer_revision <<< "$(transition_probe)"
+        if [[ "$target" == "$expected_target" && "$phase" == "$expected_phase" && "$running" == true ]] \
+                && awk -v progress="$progress" 'BEGIN { exit !(progress > 0.0 && progress < 1.0) }'; then
+            [[ "$surface_revision $layer_revision" == "$base_revisions" ]] \
+                || e2e_fail "$expected_phase transition changed physical-geometry revisions at progress $progress"
+            assert_stable_contract "$expected_phase midpoint"
+            return 0
+        fi
+        sleep 0.01
+    done
+    e2e_fail "no qreal midpoint observed for $expected_phase transition (target=$target phase=$phase running=$running progress=$progress)"
+}
+
+wait_for_selected_target() {
+    local expected_target="$1" target phase running progress surface_revision layer_revision
+    for _ in $(seq 1 80); do
+        read -r target phase running progress surface_revision layer_revision <<< "$(transition_probe)"
+        [[ "$target" == "$expected_target" ]] && return 0
+        sleep 0.01
+    done
+    e2e_fail "rapid reversal never selected transition target $expected_target"
+}
+
+wait_for_tracker_and_target() {
+    local expected_maximized="$1" expected_target="$2" expected_progress="$3"
+    local active_maximized exists_maximized target phase running progress surface_revision layer_revision
+    for _ in $(seq 1 80); do
+        read -r active_maximized exists_maximized <<< "$(e2e_json trackerData u "$view" | python3 -c '
+import json, sys
+tracker = json.load(sys.stdin)
+print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMaximized"]).lower())
+')"
+        read -r target phase running progress surface_revision layer_revision <<< "$(transition_probe)"
+        if [[ "$active_maximized" == "$expected_maximized"
+              && "$exists_maximized" == "$expected_maximized"
+              && "$target" == "$expected_target"
+              && "$phase" == resting
+              && "$running" == false ]] \
+                && awk -v actual="$progress" -v expected="$expected_progress" \
+                    'BEGIN { difference = actual - expected; if (difference < 0) difference = -difference; exit !(difference < 0.000001) }'; then
+            return 0
+        fi
+        sleep 0.05
+    done
+    e2e_fail "tracker/controller did not settle together (active=$active_maximized exists=$exists_maximized target=$target phase=$phase progress=$progress)"
+}
+
 konsole_frame_geometry() {
     local window geometry x y width height output extra
-    window="$(e2e_dumpwins | grep '|org.kde.konsole|LATTE D27 MAXIMIZE' | tail -1)" || return 1
+    window="$(e2e_dumpwins | grep '|org.kde.konsole|LATTE FP2 STABLE CANVAS' | tail -1)" || return 1
     [[ -n "$window" ]] || return 1
     geometry="$(awk -F'|' '{ split($4, g, " "); split(g[1], p, ","); split(g[2], s, "x"); print p[1], p[2], s[1], s[2] }' <<<"$window")"
     read -r x y width height extra <<< "$geometry"
@@ -72,17 +220,17 @@ assert_konsole_work_area() {
     local phase="$1" geometry kx ky kw kh output expected_x expected_y expected_w expected_h
     geometry="$(konsole_frame_geometry)" || e2e_fail "$phase maximize has no valid Konsole frame geometry"
     read -r kx ky kw kh output <<< "$geometry"
-    [[ "$output" == "$screen" ]] || e2e_fail "$phase maximize placed the Konsole fixture on output '$output'; expected discovered output '$screen'"
+    [[ "$output" == "$screen" ]] || e2e_fail "$phase maximize placed the Konsole fixture on output '$output'; expected '$screen'"
     expected_x=$screen_x
     expected_w=$screen_w
-    expected_h=$((screen_h - max_strut))
+    expected_h=$((screen_h - stable_reservation_depth))
     if [[ "$edge" == top ]]; then
-        expected_y=$((screen_y + max_strut))
+        expected_y=$((screen_y + stable_reservation_depth))
     else
         expected_y=$screen_y
     fi
     (( kx == expected_x && ky == expected_y && kw == expected_w && kh == expected_h )) \
-        || e2e_fail "$phase maximize has frame $kx,$ky ${kw}x${kh}; expected exact $edge work area $expected_x,$expected_y ${expected_w}x${expected_h} on output '$screen' from the ${max_strut}px strut"
+        || e2e_fail "$phase maximize has frame $kx,$ky ${kw}x${kh}; expected exact $edge work area $expected_x,$expected_y ${expected_w}x${expected_h} from the stable ${stable_reservation_depth}px group reservation"
 }
 
 cleanup() {
@@ -100,6 +248,8 @@ cleanup() {
         restore_key maxLength "$orig_length" || cleanup_failed=1
         restore_key hideFloatingGapForMaximized "$orig_hide_gap" || cleanup_failed=1
         restore_key screenEdgeMargin "$orig_edge_margin" || cleanup_failed=1
+        restore_key alignment "$orig_alignment" || cleanup_failed=1
+        restore_key alignmentUpgraded "$orig_alignment_upgraded" || cleanup_failed=1
         dock_pid="$(e2e_dock_pid)"
         if [[ -n "$dock_pid" ]] && kill -0 "$dock_pid" 2>/dev/null; then
             cleanup_failed=1
@@ -119,7 +269,7 @@ cleanup() {
         fi
     fi
     if (( cleanup_failed != 0 )); then
-        echo "FAIL: D27 fixture cleanup did not restore the dock and its original configuration" >&2
+        echo "FAIL: FP-2 stable-canvas fixture cleanup did not restore the dock configuration" >&2
         (( body_status == 0 )) && body_status=1
     fi
     exit "$body_status"
@@ -128,117 +278,90 @@ trap cleanup EXIT
 
 e2e_dock_stop || e2e_fail "dock did not stop before fixture configuration"
 configured=1
-kwriteconfig6 "${group_args[@]}" --key maximizeWhenMaximized true || e2e_fail "could not configure maximizeWhenMaximized"
-kwriteconfig6 "${group_args[@]}" --key maxLength 60 || e2e_fail "could not configure maxLength"
-kwriteconfig6 "${group_args[@]}" --key hideFloatingGapForMaximized true || e2e_fail "could not configure hideFloatingGapForMaximized"
-kwriteconfig6 "${group_args[@]}" --key screenEdgeMargin 18 || e2e_fail "could not configure screenEdgeMargin"
-e2e_dock_start 90 || e2e_fail "dock did not restart with maximizeWhenMaximized enabled"
+kwriteconfig6 "${group_args[@]}" --key maximizeWhenMaximized false || e2e_fail "could not disable maximize-driven panel length"
+kwriteconfig6 "${group_args[@]}" --key maxLength 60 || e2e_fail "could not configure a partial panel length"
+kwriteconfig6 "${group_args[@]}" --key hideFloatingGapForMaximized true || e2e_fail "could not configure floating-gap attachment"
+kwriteconfig6 "${group_args[@]}" --key screenEdgeMargin 18 || e2e_fail "could not configure the floating gap"
+kwriteconfig6 "${group_args[@]}" --key alignment 10 || e2e_fail "could not configure Justify alignment"
+kwriteconfig6 "${group_args[@]}" --key alignmentUpgraded true || e2e_fail "could not mark the Justify alignment as upgraded"
+e2e_dock_start 90 || e2e_fail "dock did not restart with the stable-canvas fixture"
 e2e_call setViewVisibilityMode us "$view" alwaysVisible >/dev/null || e2e_fail "could not set the fixture view to alwaysVisible"
 for _ in $(seq 1 40); do
     [[ "$(e2e_view_field "$view" 'v["visibilityMode"]')" == alwaysVisible ]] && break
     sleep 0.25
 done
 [[ "$(e2e_view_field "$view" 'v["visibilityMode"]')" == alwaysVisible ]] || e2e_fail "view $view did not enter alwaysVisible mode"
-tracker_enabled="$(e2e_json trackerData u "$view" | python3 -c 'import json, sys; print(str(json.load(sys.stdin)["enabled"]).lower())')"
-[[ "$tracker_enabled" == true ]] || e2e_fail "Always Visible hide-gap fixture did not enable window tracking"
 
-read -r base_w base_strut base_published screen_x screen_y screen_w screen_h edge screen <<< "$(e2e_view_field "$view" '"%d %d %d %d %d %d %d %s %s" % (v["absoluteGeometry"][2], v["strutsThickness"], v["publishedStruts"][3], v["screenGeometry"][0], v["screenGeometry"][1], v["screenGeometry"][2], v["screenGeometry"][3], v["edge"], v["screen"])')"
+read -r configured_panel eligible_panel geometry_present alignment <<< "$(dock_field '"%s %s %s %s" % (
+    str(v["floatingPanelConfigured"]).lower(),
+    str(v["floatingPanelEligible"]).lower(),
+    str(v["transitionGeometryPresent"]).lower(),
+    v["alignment"],
+)')"
+[[ "$configured_panel" == true && "$eligible_panel" == true && "$geometry_present" == true ]] \
+    || e2e_fail "view $view did not expose an eligible configured floating-panel controller"
+[[ "$alignment" == justify ]] || e2e_fail "view $view did not retain Justify alignment"
+wait_for_resting_target floated 1
+
+read -r base_window_width screen_x screen_y screen_w screen_h edge screen stable_reservation_depth contribution_depth requested_depth <<< "$(dock_field '"%d %d %d %d %d %s %s %d %d %d" % (
+    v["windowGeometry"][2],
+    v["screenGeometry"][0],
+    v["screenGeometry"][1],
+    v["screenGeometry"][2],
+    v["screenGeometry"][3],
+    v["edge"],
+    v["screen"],
+    v["reservationPublishedDepth"],
+    v["reservationContributionDepth"],
+    v["requestedReservationDepth"],
+)')"
 (( screen_w > 0 && screen_h > 0 )) || e2e_fail "view $view reported invalid output dimensions ${screen_w}x${screen_h}"
 [[ -n "$screen" ]] || e2e_fail "view $view did not report its output name"
-(( base_w * 100 < screen_w * 90 )) || e2e_fail "fixture view $view did not start at a floating length ($base_w of ${screen_w}px)"
-(( base_strut == base_published )) || e2e_fail "base strut was not published (thickness=$base_strut published=$base_published)"
+(( base_window_width * 100 < screen_w * 90 )) || e2e_fail "fixture view $view is not partial ($base_window_width of ${screen_w}px)"
+(( requested_depth == contribution_depth )) || e2e_fail "requested depth $requested_depth differs from the view contribution $contribution_depth"
+(( stable_reservation_depth >= contribution_depth && contribution_depth > 0 )) \
+    || e2e_fail "maximum-depth reservation $stable_reservation_depth does not cover contribution $contribution_depth"
 
-setsid konsole -p 'LocalTabTitleFormat=LATTE D27 MAXIMIZE' >/dev/null 2>&1 &
+base_stable_snapshot="$(stable_snapshot)" || e2e_fail "could not capture the base stable geometry contract"
+base_revisions="$(revision_snapshot)" || e2e_fail "could not capture base physical-geometry revisions"
+
+setsid konsole -p 'LocalTabTitleFormat=LATTE FP2 STABLE CANVAS' >/dev/null 2>&1 &
 kpid=$!
 for _ in $(seq 1 30); do
-    konsole="$(e2e_dumpwins | grep '|org.kde.konsole|LATTE D27 MAXIMIZE' | tail -1)"
+    konsole="$(e2e_dumpwins | grep '|org.kde.konsole|LATTE FP2 STABLE CANVAS' | tail -1)"
     [[ -n "$konsole" ]] && break
     sleep 0.5
 done
-[[ -n "${konsole:-}" ]] || e2e_fail "Konsole maximize fixture never mapped"
+[[ -n "${konsole:-}" ]] || e2e_fail "Konsole stable-canvas fixture never mapped"
 
-#! Konsole can remember a maximized state from an earlier nested run. Normalize
-#! the fixture before generating the first maximize edge.
-fixture_id="$(set_konsole_maximized false)" || e2e_fail "KWin did not normalize the Konsole maximize fixture"
+fixture_id="$(set_konsole_maximized false)" || e2e_fail "KWin did not normalize the Konsole fixture"
 [[ -n "$fixture_id" && "$fixture_id" != *$'\n'* ]] || e2e_fail "KWin found multiple tagged Konsole fixtures"
-for _ in $(seq 1 40); do
-    read -r active_maximized exists_maximized normalized_published <<< "$(e2e_json trackerData u "$view" | python3 -c '
-import json, sys
-tracker = json.load(sys.stdin)
-print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMaximized"]).lower(), end=" ")
-'; e2e_view_field "$view" 'v["publishedStruts"][3]')"
-    [[ "$active_maximized" == false && "$exists_maximized" == false && "$normalized_published" == "$base_strut" ]] && break
-    sleep 0.25
-done
-[[ "$active_maximized" == false && "$exists_maximized" == false && "$normalized_published" == "$base_strut" ]] || e2e_fail "Konsole fixture did not normalize to restored state"
+wait_for_tracker_and_target false floated 1
+assert_stable_contract "normalized floated state"
 
 [[ "$(set_konsole_maximized true)" == "$fixture_id" ]] || e2e_fail "KWin did not maximize the tagged Konsole fixture"
-
-maximized=false
-for _ in $(seq 1 40); do
-    read -r active_maximized exists_maximized max_w max_strut max_published <<< "$(e2e_json trackerData u "$view" | python3 -c '
-import json, sys
-t = json.load(sys.stdin)
-print(str(t["activeWindowMaximized"]).lower(), str(t["existsWindowMaximized"]).lower(), end=" ")
-'; e2e_view_field "$view" '"%d %d %d" % (v["absoluteGeometry"][2], v["strutsThickness"], v["publishedStruts"][3])')"
-    if [[ "$active_maximized" == true && "$exists_maximized" == true && "$max_strut" == "$max_published" ]]; then
-        maximized=true
-        break
-    fi
-    sleep 0.25
-done
-if [[ "$maximized" != true ]]; then
-    tracker_payload="$(e2e_json trackerData u "$view" 2>/dev/null || true)"
-    frame_geometry="$(konsole_frame_geometry 2>/dev/null || true)"
-    e2e_fail "active tagged window did not reach tracker and the published strut (active=$active_maximized exists=$exists_maximized thickness=$max_strut published=$max_published frame='${frame_geometry:-unavailable}' tracker='${tracker_payload:-unavailable}')"
-fi
-(( max_strut < base_strut )) || e2e_fail "maximized floating gap did not shrink the strut ($base_strut -> $max_strut)"
-(( max_strut > 0 && max_strut < screen_h )) || e2e_fail "maximized strut $max_strut is invalid for ${screen_w}x${screen_h} output '$screen'"
-[[ "$(active_window_id)" == "$fixture_id" ]] || e2e_fail "tagged Konsole was not active when activeWindowMaximized became true"
-
-assert_konsole_work_area first
+capture_progress_only_transition attached attaching
+wait_for_tracker_and_target true attached 0
+assert_stable_contract "attached resting state"
+[[ "$(active_window_id)" == "$fixture_id" ]] || e2e_fail "tagged Konsole was not active after attachment"
+assert_konsole_work_area "attached"
 
 [[ "$(set_konsole_maximized false)" == "$fixture_id" ]] || e2e_fail "KWin did not restore the tagged Konsole fixture"
+capture_progress_only_transition floated floating
+wait_for_tracker_and_target false floated 1
+assert_stable_contract "floated resting state"
 
-restored=false
-for _ in $(seq 1 40); do
-    read -r active_maximized exists_maximized restored_w restored_published <<< "$(e2e_json trackerData u "$view" | python3 -c '
-import json, sys
-tracker = json.load(sys.stdin)
-print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMaximized"]).lower(), end=" ")
-'; e2e_view_field "$view" '"%d %d" % (v["absoluteGeometry"][2], v["publishedStruts"][3])')"
-    if [[ "$active_maximized" == false && "$exists_maximized" == false && "$restored_published" == "$base_strut" ]] && (( restored_w * 100 < screen_w * 90 )); then
-        restored=true
-        break
-    fi
-    sleep 0.25
+for maximized in true false true false true false true false; do
+    expected_target=attached
+    [[ "$maximized" == false ]] && expected_target=floated
+    [[ "$(set_konsole_maximized "$maximized")" == "$fixture_id" ]] \
+        || e2e_fail "KWin did not drive the $expected_target storm target"
+    wait_for_selected_target "$expected_target"
 done
-[[ "$restored" == true ]] || e2e_fail "restored window left active/exists maximize state or full-width geometry behind (active=$active_maximized exists=$exists_maximized width=$restored_w)"
 
-#! Keep the second maximize close to the restore and require the reservation to
-#! land well below the old one-second delay.
-sleep 0.1
-start_ns="$(date +%s%N)"
-set_konsole_maximized true >/dev/null &
-shortcut_pid=$!
-reservation_ms=-1
-for _ in $(seq 1 100); do
-    read -r active_maximized exists_maximized published <<< "$(e2e_json trackerData u "$view" | python3 -c '
-import json, sys
-tracker = json.load(sys.stdin)
-print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMaximized"]).lower(), end=" ")
-'; e2e_view_field "$view" 'v["publishedStruts"][3]')"
-    if [[ "$active_maximized" == true && "$exists_maximized" == true && "$published" == "$max_strut" ]]; then
-        reservation_ms=$(( ($(date +%s%N) - start_ns) / 1000000 ))
-        break
-    fi
-    sleep 0.01
-done
-wait "$shortcut_pid" || e2e_fail "KWin did not find the tagged Konsole fixture during the second maximize"
-(( reservation_ms >= 0 )) || e2e_fail "second maximize never published the $max_strut px strut"
-(( reservation_ms < 750 )) || e2e_fail "second maximize waited ${reservation_ms}ms behind the geometry throttle"
-[[ "$(active_window_id)" == "$fixture_id" ]] || e2e_fail "tagged Konsole was not active during the timed maximize transition"
+[[ "$(set_konsole_maximized true)" == "$fixture_id" ]] || e2e_fail "KWin did not settle the storm at attached"
+wait_for_tracker_and_target true attached 0
+assert_stable_contract "rapid reversal storm"
+assert_konsole_work_area "post-storm attached"
 
-assert_konsole_work_area second
-
-echo "real maximized window drove view $view to ${max_w}px; active-throttle strut published in ${reservation_ms}ms and KWin reapplied the ${max_strut}px work area"
+echo "FP-2 stable canvas held view $view and its ${stable_reservation_depth}px maximum-depth reservation across qreal progress and eight rapid reversals"
