@@ -1675,7 +1675,8 @@ inline bool dockReservationRecordsAgree(
             groupsByContributor.constFind(
                 view.persistentDockId);
         if (membership == groupsByContributor.constEnd()) {
-            if (view.reservationSurfacePresent
+            if (!view.publishedStruts.isEmpty()
+                    || view.reservationSurfacePresent
                     || view.reservationOutputId
                     || view.reservationEdge
                     || view.reservationContributionDepth
