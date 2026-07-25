@@ -2392,6 +2392,21 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   reversals before settlement, while all stable geometry and revision
   assertions remain unchanged.
 
+### D190 - Stable-canvas fixture cleanup started after destructive staging
+- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- FOUND: 2026-07-24, independent FP-2 review.
+- SYMPTOM: a failure while staging recipe 071's matrix fixture could leave the
+  nested compositor running the modified dock configuration.
+- ROOT: `matrix_stage` stops the dock, replaces its configuration, and restarts
+  it before the recipe installed its EXIT cleanup trap.
+- FIX: initialize cleanup state first, capture the pristine configuration,
+  mark restoration necessary, and install the EXIT trap before fixture
+  staging. Partial staging failures now take the same complete restoration
+  path as failures later in the recipe.
+- EVIDENCE: `sourceguardtest` requires the cleanup trap to precede
+  `matrix_stage` and requires restoration state to become active immediately
+  after the pristine snapshot.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
   is merged. FP-2 (the stable canvas and transition controller) is complete on

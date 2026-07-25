@@ -316,8 +316,18 @@ private:
     static bool matchesStableFloatingPanelE2eContract(const QString &source)
     {
         const QString code = normalizedCode(source);
+        const qsizetype cleanupTrap = code.indexOf(QStringLiteral("trapcleanupEXIT"));
+        const qsizetype fixtureStage = code.indexOf(QStringLiteral(
+            "matrix_stagepanel-bottom-justify-1out"));
 
-        return code.contains(QStringLiteral(
+        return cleanupTrap >= 0
+            && fixtureStage > cleanupTrap
+            && code.contains(QStringLiteral(
+                   "matrix_init||e2e_fail"
+                   "\"couldnotcapturethepristinenestedconfiguration\""
+                   "configured=1"
+                   "matrix_stagepanel-bottom-justify-1out"))
+            && code.contains(QStringLiteral(
                    "kwriteconfig6\"${group_args[@]}\"--key"
                    "maximizeWhenMaximizedfalse"))
             && code.contains(QStringLiteral(

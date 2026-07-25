@@ -4589,6 +4589,11 @@ prerequisites in the phases above are done.
       request a shorter delay, and sample recipe 071 while the controller is
       still active.
       Commits: PENDING INTEGRATION REBASE
+- [x] Fix D190 (stable-canvas fixture cleanup started after destructive
+      staging). Install cleanup after the pristine snapshot and before any
+      matrix mutation, with restoration state valid for partial setup
+      failures.
+      Commits: PENDING INTEGRATION REBASE
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
