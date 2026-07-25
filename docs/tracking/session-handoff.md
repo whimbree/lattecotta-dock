@@ -50,11 +50,12 @@ geometry or publication drift.
 The PR #124 commits are `f8396b5ed`, `d0d499d50`, `36e835fb9`,
 `508dcf630`, `b552508e3`, `fd445ee2f`, `f4232ae54`, and `5636966b5`.
 The fourth independent review returned `MERGE` after verifying the complete
-rewritten history and the PR description. FP-4B (multi-output and
-separated-span topology acceptance) and FP-4C (deterministic operation-storm
-acceptance) remain open, so FP-4 (the stable window-touch trigger and
-end-to-end acceptance) and D172 (floating panel attachment moves the surface
-and reservation instead of presentation) remain incomplete.
+rewritten history and the PR description. FP-4C (deterministic
+operation-storm acceptance) remains open, so FP-4 (the stable window-touch
+trigger and end-to-end acceptance) and D172 (floating panel attachment moves
+the surface and reservation instead of presentation) remain incomplete.
+
+## 2026-07-25: FP-4B proves multi-output and separated-span topology
 
 The FP-4B (multi-output and separated-span topology acceptance) preflight also
 found D209 (partial-reservation recipe lacks a reproducible schema-current
@@ -84,9 +85,14 @@ spanning window activates only the intersected views, the reservation
 coordinator publishes the maximum depth per output edge, and process restart
 reproduces the persistent projection. The expanded multi-output vehicle
 self-test also passes and restores every field in the canonical captured
-KScreen state. Commits `0333df72a`, `0c4b7ea31`, `0c90c3f14`,
-`0d8bde1e2`, `77ad3f599`, `77198eb70`, and `dc005831d` are provisional
-branch hashes until GitHub rebases the FP-4B PR.
+KScreen state. The first independent review found that restoration armed after
+the first destructive stage and that the postcondition projected too little
+captured state. The required follow-up review then found malformed valid JSON
+could reach priority normalization. Both review rounds produced root fixes and
+controlled negative coverage before the final 119-test canonical gate passed
+at `c58d4d9d8`. GitHub merged PR #126 as `4daa80121`, `8b187f159`,
+`dc0fda084`, `ad2a91c6f`, `65300b30d`, `649fb79b4`, `4ac5208b9`,
+`80e5d8fee`, `0f63a1cf`, `3f6794861`, and `6fa3c5703`.
 
 ## 2026-07-25: FP-3 owns internal presentation, exact input, effects, and popups
 
