@@ -1,4 +1,4 @@
-108
+109
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -30,6 +30,7 @@ effectshandleraudittest
 extraviewhintstest
 filldistributortest
 floatingpanelgeometrytest
+floatingtransitiontest
 generictoolstest
 iconsourceclassifiertest
 importerlogictest

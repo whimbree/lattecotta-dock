@@ -103,6 +103,14 @@ target_link_libraries(positionergeometrytest
 # the QRectF support; no live View or compositor reaches the core.
 latte_add_unit_test(floatingpanelgeometrytest)
 
+# FP-2 transition ownership: the QObject wrapper and its QPropertyAnimation
+# compile into the sanitizer-backed test. An injected animation clock makes
+# both reversal directions and rapid alternating targets deterministic.
+latte_add_unit_test(floatingtransitiontest
+    ${CMAKE_SOURCE_DIR}/app/view/floatingtransition.cpp)
+target_include_directories(floatingtransitiontest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app)
+
 # InputMaskFlush (app/view/inputmaskflush.h): the pure "what region to hand
 # QWindow::setMask" decision that keeps the window mask wide across a band
 # shrink so Qt6 wayland does not clip the vacated region's clearing damage.
