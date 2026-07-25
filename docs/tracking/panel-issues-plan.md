@@ -21,14 +21,21 @@ GROUNDING: the gap is `screenEdgeMargin` / `screenEdgeMarginEnabled`
 (containment/package/contents/ui/main.qml:263), routed through
 abilities/Metrics.qml (`margin.screenEdge`, `mask.screenEdge` at ~33/78/80)
 and BindingsExternal.qml (pushes `screenEdgeMargin` onto the window,
-~106/114). HYPOTHESIS: for a behaveAsPlasmaPanel surface a true gap must be
-realized as a layer-shell EDGE OFFSET (the compositor positions the surface
-away from the edge), not folded into surface thickness/mask; the margin is
-being absorbed into the panel geometry instead of translated into an offset.
-NEXT ACTION: trace screenEdgeMargin -> window / wlr-layer-shell geometry for
-behaveAsPlasmaPanel per edge; find where the gap becomes thickness; fix at
-origin. Guard: a state/geometry assertion (and a render scene) that a
-top/bottom/left/right panel with the gap leaves a REAL gap and does not grow.
+~106/114).
+
+CORRECTION 2026-07-24: the real layer-shell offset hypothesis was disproved by
+the Plasma 6.7.3 implementation and by Lattecotta's later maximize behavior.
+Plasma keeps one edge-anchored oversized surface, moves the visual background
+inside it, and keeps the reservation at attached thickness. Lattecotta
+currently animates a real `slideOffset`, layer-shell margin, and reservation
+depth. That physical motion is the architecture to remove, not the target.
+
+NEXT ACTION: execute
+[`floating-panel-parity-plan.md`](floating-panel-parity-plan.md). Guard the
+stable QWindow, layer-shell margin, trigger, resting applet measurements and
+primary-axis span, and reservation through top, bottom, left, and right
+transitions. Internal content may translate while the visual gap appears and
+disappears, but the transition must not refit or resize it.
 
 ## Issue 2 - system-tray applet popup opens on top of the panel, not under it
 APPEARS: on a TOP panel, clicking a systray icon (e.g. volume) slides the
@@ -40,13 +47,13 @@ CONFIRMED (Bree): seen on a top PANEL; a bottom DOCK was fine; bottom panel +
 sides unverified.
 GROUNDING: expanded applet popups are PlasmaCore.Dialog surfaces; the
 position/anchor relative to the panel edge/thickness is wrong. Likely coupled
-to Issue 1 (if effective panel thickness/gap is miscomputed the popup anchor
-inherits it) - investigate together.
-NEXT ACTION: find where the applet-popup dialog position is computed against
-the panel edge; anchor it OUTSIDE the panel band (below on top, above on
-bottom, beside on sides), leaving the icon uncovered and clickable. Guard: an
-e2e recipe that opens a systray popup and asserts the icon remains
-hittable/toggles closed, on each edge.
+to Issue 1 because an oversized stable surface needs a visible-mask anchor
+instead of the raw QWindow rectangle.
+NEXT ACTION: execute FP-3 (internal presentation, input, effects, and popup
+ownership) in the floating-panel parity plan. Anchor the popup from the visible
+mask, publish the supported floating-applet hint, and keep the icon uncovered
+and clickable. Guard: an e2e recipe that opens a systray popup and asserts the
+icon remains hittable and toggles closed on each edge.
 
 ## Issue 3 - edit-mode tooltip eats the click on "Rearrange..."
 APPEARS: in edit mode with little space, the tooltip over the "Rearrange..."
@@ -96,20 +103,25 @@ E2E (popup toggle, edit-mode click-through, autohide/struts per edge). Assert
 STATE via D-Bus/geometry where possible; pixels only where pixels are the thing.
 
 ## Farm-out plan
-- **Job A - panel geometry (issues 1 + 2), Opus worktree.** Coupled edge-
-  geometry domain: floating gap becomes a real offset; popup anchors outside
-  the band. Root-cause + fix at origin + targeted guards; verify nested vehicle
-  on all 4 edges (dock vs panel where it matters); record desk-checks owed.
+
+Direction corrected 2026-07-24. The orchestrator and dependency rules in
+`floating-panel-parity-plan.md` supersede Job A's old real-offset target.
+
+- **Job A - panel geometry (issues 1 + 2), isolated worktrees.** Land FP-1
+  (the output-edge maximum reservation authority), then FP-2 (the stable canvas
+  and transition controller), FP-3 (internal presentation, input, effects, and
+  popup ownership), and FP-4 (the stable window-touch trigger and end-to-end
+  acceptance). Verify the nested vehicle on all four edges and retain final
+  desk checks for feel.
 - **Job B - edit-mode click-through (issue 3), Opus worktree.** Independent
   (ConfigOverlay/CanvasConfiguration). Fix + click-through guard.
 - **Job C - panel test MATRIX (issue 4), Opus worktree, SEQUENCED AFTER A+B
-  land.** Runs against corrected master so its render goldens and regression
+  land.** Runs against corrected main so its render goldens and regression
   guards capture the RIGHT behavior (no golden churn, no xfail gymnastics).
   Separate/isolated per Bree. This is the deliberate ordering, not a delay for
   its own sake.
 
-Each job: branch off master, fix/build with recorded evidence, gate-all on the
+Each job: branch off main, fix/build with recorded evidence, gate-all on the
 branch head (these are CODE changes - real gate, not the docs-only shortcut),
 push branch, report back. Orchestrator runs the independent lean Opus review
-and lands each THROUGH GitHub as a Merged PR (rebase branch, push it, keep PR
-open, ff-merge, push master while open).
+and lands each through GitHub as a merged PR with linear history.

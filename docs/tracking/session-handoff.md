@@ -3,6 +3,36 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-24.
 
+## 2026-07-24: stable-surface floating-panel parity approved
+
+Option 1 is the accepted replacement for the physical floating-gap transition.
+The source-verified Plasma 6.7.3 model keeps a stable edge-anchored QWindow and
+fixed exclusive thickness while one qreal `floatingness` moves the visual
+background, mask, input bridge, shadows, corners, and popup spacing inside the
+surface. Lattecotta retains its separate reservation transport. FP-1 (the
+output-edge maximum reservation authority) will move ordinary ownership to one
+output-identity-and-edge maximum-depth coordinator; that coordinator is not
+implemented on this documentation branch.
+
+The invariant and four dependency-ordered slices are recorded in
+`docs/reference/plasma-floating-panel-parity.md` and
+`docs/tracking/floating-panel-parity-plan.md`. FP-1 is the output-edge maximum
+reservation authority. FP-2 is the stable canvas and transition controller.
+FP-3 is internal presentation, input, effects, and popup ownership. FP-4 is the
+stable window-touch trigger and end-to-end acceptance.
+
+Separated partial views retain independent visual and exact input regions.
+There is no inward stacking feature, no cumulative visual offset, and no
+continuous activation strip spanning gaps between views. Output grouping uses
+Latte output identity and edge, so portrait, landscape, disconnected, and
+touching monitor arrangements use the same model.
+
+PR #116 is merged as the required geometry baseline. D170 (the first
+correction for D169 (panel shadows consumed the stable panel and applet span)
+weakened end-hover shadow bounds) now preserves the stable solid through
+asymmetric shadow changes. The full canonical gate and independent review
+passed at the merged head before this architecture record was rebased.
+
 ## 2026-07-24: theme-aware icon render lifecycle is deterministic
 
 The PR #116 canonical fast gate exposed D173 (theme-aware icon render test
@@ -46,7 +76,7 @@ solid with a 10 px head shadow in a 100 px canvas moved five pixels when
 shadows became active. Justify preserved the same solid, so the two alignments
 disagreed.
 
-Commit `7b3d91b3d` makes the stable solid the only placement authority. One
+Commit `f0d8578f3` makes the stable solid the only placement authority. One
 axis-neutral constexpr core bounds its requested center, then applies only the
 head-minus-tail compensation to the visual parent. Paint that cannot fit around
 the preserved solid clips instead of moving content. Center and Justify enter
@@ -58,10 +88,11 @@ canvases, and shadow toggles. The source guard pins horizontal left/right and
 vertical top/bottom mapping while rejecting the faulty complete-visual clamp
 and bridge bypass. Focused CTest passes 2 of 2, QML compile passes 130 of 130
 files, the qmllint baseline matches, and QML interaction passes 245 of 245
-cases. A different independent rereview and the canonical gate remain pending.
+cases. A different independent rereview returned MERGE, and the final canonical
+gate passes at merged PR #116 head `6f6c33d9a`.
 
 D168 (thin-dock tracking commit omitted explicit verification evidence) is
-also fixed in the cleaned history. Rewritten commit `75862c266` names the
+also fixed in the cleaned history. Rewritten commit `c9ed2de4b` names the
 focused source, QML, image-comparison, scene-probe, and live-geometry evidence
 without changing its tree.
 
@@ -81,7 +112,7 @@ shadow paint as stable geometry. D162 (Justify applets occupied shadow-only
 margins) and D165 (the first D162 correction assumed equal end shadows) then
 aligned applets and asymmetric placement to that already-shrunken solid.
 
-Commit `8c2ed6e0d` makes the configured solid background authoritative.
+Commit `ae10800dc` makes the configured solid background authoritative.
 Internal end padding reduces the applet and autosize budget. Shadows do not.
 The pure fit API no longer accepts a shadow-margin argument, so this ownership
 error cannot be requested by a caller. Center and Justify placement keep the
@@ -91,16 +122,16 @@ outer visual.
 Review against D140 (zoomed side-dock chrome clipped at both ends) then caught
 D170 (the first D169 correction weakened end-hover shadow bounds). The first
 draft constrained every centered transition with solid length, which could
-clip shadows during end hover. Commit `1715670f0` first tried separate
+clip shadows during end hover. Commit `c7c13cf14` first tried separate
 complete-visual and solid presentation paths. Mandatory cold review rejected
 that rule because asymmetric shadows could still move an otherwise stable
-solid. Commit `7b3d91b3d` makes the solid authoritative in every case. A
+solid. Commit `f0d8578f3` makes the solid authoritative in every case. A
 full-canvas solid may clip impossible outward paint rather than silently
 shrinking or moving its content.
 
 The first canonical gate then caught D171 (centered shadow offsets raised the
 QML warning ratchet). All 104 other CTest entries passed, but the new branch
-raised `MultiLayered.qml` from 181 to 182 curated warnings. Commit `c590d33f8`
+raised `MultiLayered.qml` from 181 to 182 curated warnings. Commit `1221d8919`
 caches the injected alignment once and names the document root directly in all
 center and Justify offset states. `sourceguardtest` and `qmllintgate` pass, and
 the touched-file baseline improves to 176 warnings.
@@ -115,7 +146,8 @@ pre-D170-correction source head represented by `5461b643b`, with 105 of 105
 CTest entries, QML compile and lint, every scene probe, nested ASan/UBSan
 replay, geometry agreement, and the output matrix. Independent review found
 the asymmetric near-full-canvas case described above. The corrected full gate
-and final real-layout visual acceptance remain pending.
+passes at merged PR #116 head `6f6c33d9a`; only final real-layout visual
+acceptance remains pending.
 
 ## 2026-07-24: thin Justify docks keep applets and shadows in their own spans
 
@@ -378,7 +410,7 @@ D142 (stable autosize charged shadow paint against the applet budget) was first
 addressed in `921bf089b`, which incorrectly subtracted both padding and shadows.
 D143 (dock-mode Justify charged shadow paint against configured length) was
 first addressed in `a0ab006f8`, which incorrectly shortened the configured
-solid. D169 corrects both assumptions in `8c2ed6e0d`: only internal padding
+solid. D169 corrects both assumptions in `ae10800dc`: only internal padding
 reduces the stable applet budget, and all alignments share the
 shadow-independent solid fit. The live shadow-on and shadow-off panel spans are
 now identical.
