@@ -2520,7 +2520,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
   is merged. FP-2 (the stable canvas and transition controller) is complete on
   its integration branch, including schema 5 and nested recipe 071 acceptance;
-  independent review and merge remain pending. FP-3 and FP-4 remain open.
+  independent review returned MERGE, while the canonical gate and merge remain
+  pending. FP-3 and FP-4 remain open.
   Execution is tracked in `floating-panel-parity-plan.md`.
 - FOUND: 2026-07-24, Plasma 6.7.3 parity investigation after live floating
   panel maximize, radius, shadow, and animation regressions.
