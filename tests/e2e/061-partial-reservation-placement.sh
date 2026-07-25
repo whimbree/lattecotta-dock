@@ -419,6 +419,91 @@ e2e_call setViewPlacement uiii "$full_bottom" \
     "$target_screen_id" 3 "$full_alignment" >/dev/null \
     || e2e_fail "could not migrate the reservation to the secondary output"
 
+# setViewPlacement schedules an animated relocation and returns before the
+# output change commits. Poll the older per-view surface only until its
+# publishedStruts lies on the target output; a merely nonempty rectangle can
+# still be the committed source-output contribution while the relocation is
+# between its compositor-screen and reservation transactions. The rectangle
+# changes only after the coordinator transaction succeeds. The first
+# dockSystemData read after this observable boundary must therefore expose
+# schema 4 and the new membership. It is deliberately not retried: an empty
+# snapshot here was the stale-QWindow-screen collector race.
+member_move_committed=""
+for _ in $(seq 1 150); do
+    current="$(e2e_json viewsData)"
+    if python3 -c '
+import json, sys
+views = {
+    view["containmentId"]: view
+    for view in json.load(sys.stdin)
+}
+moved = views[int(sys.argv[1])]
+sx, sy, sw, sh = moved["screenGeometry"]
+px, py, pw, ph = moved["publishedStruts"]
+struts_on_target = (
+    pw > 0 and ph > 0
+    and sx <= px and sy <= py
+    and px + pw <= sx + sw
+    and py + ph <= sy + sh
+    and py == sy
+)
+ok = (
+    moved["screen"] == sys.argv[2]
+    and moved["edge"] == "top"
+    and struts_on_target
+    and not moved["inStartup"]
+    and not moved["isOffScreen"]
+)
+raise SystemExit(0 if ok else 1)
+' "$full_bottom" "$target_screen_name" <<<"$current"; then
+        member_move_committed="$current"
+        break
+    fi
+    sleep 0.2
+done
+[[ -n "$member_move_committed" ]] \
+    || e2e_fail "output migration never reached the member publication boundary"
+
+immediate_output_move="$(e2e_json dockSystemData)" \
+    || e2e_fail "first coordinator snapshot after output migration failed"
+[[ -n "$immediate_output_move" ]] \
+    || e2e_fail "first coordinator snapshot after output migration was empty"
+python3 -c '
+import json, sys
+state = json.load(sys.stdin)
+views = {v["persistentDockId"]: v for v in state["views"]}
+moved, source_output, target_output = (
+    int(value) for value in sys.argv[1:4]
+)
+m = views[moved]
+groups = [
+    group for group in state["reservationGroups"]
+    if moved in group["contributorDockIds"]
+]
+group = groups[0] if len(groups) == 1 else None
+ok = (
+    state["schemaVersion"] == 4
+    and m["screenId"] == target_output
+    and m["reservationOutputId"] == target_output
+    and m["edge"] == m["reservationEdge"] == "top"
+    and m["reservationSurfacePresent"]
+    and m["publishedStruts"] != [0, 0, 0, 0]
+    and group is not None
+    and group["outputId"] == target_output
+    and group["edge"] == "top"
+    and group["publisher"] == m["objects"]["reservationPublisher"]
+    and group["generation"] == m["reservationGroupGeneration"]
+    and not any(
+        moved in candidate["contributorDockIds"]
+        and candidate["outputId"] == source_output
+        for candidate in state["reservationGroups"]
+    )
+)
+raise SystemExit(0 if ok else 1)
+' "$full_bottom" "$screen_id" "$target_screen_id" \
+    <<<"$immediate_output_move" \
+    || e2e_fail "first coordinator snapshot did not atomically expose the new output membership"
+
 output_moved=""
 last=""
 for _ in $(seq 1 150); do
