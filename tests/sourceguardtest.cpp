@@ -563,6 +563,13 @@ private:
             && trackerImplementation.contains(QStringLiteral(
                    "QByteArrayLiteral(\"Geometry\")"))
             && trackerImplementation.contains(QStringLiteral(
+                   "constautoisWindow=exactBool("
+                   "model->data(index,roles.isWindow),"
+                   "QByteArrayLiteral(\"IsWindow\"),row);"
+                   "if(!isWindow){returnstd::nullopt;}"
+                   "if(!*isWindow){continue;}"
+                   "constautoisHidden=exactBool("))
+            && trackerImplementation.contains(QStringLiteral(
                    "if(!m_evaluationTimer.isActive())"
                    "{m_evaluationTimer.start();}"))
             && !trackerImplementation.contains(QStringLiteral(
@@ -1989,6 +1996,29 @@ void SourceGuardTest::windowTouchAuthority_rejectsControlledMutations()
         trackerHeader, trackerImplementation,
         transitionHeader, transitionImplementation,
         viewHeader, viewImplementation, behaviorConfig));
+
+    trackerImplementation = readFile(QStringLiteral(
+        "app/view/windowtouchtracker.cpp"));
+    const QString nonWindowClassification = QStringLiteral(
+        "        if (!*isWindow) {\n"
+        "            continue;\n"
+        "        }\n");
+    QCOMPARE(
+        trackerImplementation.count(
+            nonWindowClassification),
+        1);
+    trackerImplementation.remove(
+        nonWindowClassification);
+    QVERIFY2(!matchesWindowTouchAuthorityContract(
+                 mainQml,
+                 readFile(QStringLiteral(
+                     "containment/package/contents/ui/"
+                     "WindowTouchTracker.qml")),
+                 trackerHeader, trackerImplementation,
+                 transitionHeader, transitionImplementation,
+                 viewHeader, viewImplementation, behaviorConfig),
+             "window-only roles must not be decoded before a heterogeneous"
+             " task row is classified");
 }
 
 void SourceGuardTest::windowTouchE2e_drivesOneStableTriggerClient()

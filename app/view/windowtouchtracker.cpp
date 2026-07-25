@@ -137,6 +137,13 @@ collectWindowTouchCandidates(
         const auto isWindow = exactBool(
             model->data(index, roles.isWindow),
             QByteArrayLiteral("IsWindow"), row);
+        if (!isWindow) {
+            return std::nullopt;
+        }
+        if (!*isWindow) {
+            continue;
+        }
+
         const auto isHidden = exactBool(
             model->data(index, roles.isHidden),
             QByteArrayLiteral("IsHidden"), row);
@@ -145,12 +152,11 @@ collectWindowTouchCandidates(
             QByteArrayLiteral("IsMinimized"), row);
         const auto geometry = exactRect(
             model->data(index, roles.geometry), row);
-        if (!isWindow || !isHidden || !isMinimized || !geometry) {
+        if (!isHidden || !isMinimized || !geometry) {
             return std::nullopt;
         }
 
-        if (*isWindow && !*isHidden && !*isMinimized
-                && !geometry->isValid()) {
+        if (!*isHidden && !*isMinimized && !geometry->isValid()) {
             qCritical() << "WindowTouchTracker refused invalid visible-window"
                            " Geometry at row"
                         << row << *geometry;
@@ -159,7 +165,7 @@ collectWindowTouchCandidates(
 
         candidates.push_back(WindowTouchCandidate{
             *geometry,
-            *isWindow,
+            true,
             *isHidden,
             *isMinimized,
         });
