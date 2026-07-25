@@ -274,46 +274,6 @@ public:
         QObject::disconnect(runtime.mapped().destroyedConnection);
     }
 
-    [[nodiscard]] std::optional<ScreenSpaceReservationMembership>
-    findMembership(const View &view) const
-    {
-        const auto runtime = findRuntimeMember(view);
-        if (runtime == members.end()) {
-            return std::nullopt;
-        }
-
-        const auto group =
-            ledger.findGroup(runtime->first);
-        const auto depth =
-            ledger.findContributionDepth(runtime->first);
-        if (!group || !depth) {
-            qCritical() << "reservation coordinator found runtime membership without ledger state";
-            return std::nullopt;
-        }
-
-        const auto state = ledger.describeGroup(*group);
-        const auto publisher = publishers.find(*group);
-        QScreen *const screen =
-            findScreenForGroup(ledger, *group);
-        if (!state || publisher == publishers.end()
-                || !projectionMatches(
-                    publisher->second,
-                    *group,
-                    *state,
-                    screen)) {
-            qCritical() << "reservation coordinator found membership without a valid projection";
-            return std::nullopt;
-        }
-
-        return ScreenSpaceReservationMembership{
-            group->output.value(),
-            toPlasmaLocation(group->edge),
-            depth->pixels(),
-            state->maximumDepth.pixels(),
-            state->memberCount,
-            publisher->second.surface.get()};
-    }
-
     [[nodiscard]] std::optional<ScreenSpaceReservationSnapshot>
     snapshot() const
     {
@@ -400,16 +360,6 @@ private:
     }
 
     [[nodiscard]] Members::iterator findRuntimeMember(const View &view)
-    {
-        return std::ranges::find_if(
-            members,
-            [&view](const auto &entry) {
-                return entry.second.view.data() == &view;
-            });
-    }
-
-    [[nodiscard]] Members::const_iterator findRuntimeMember(
-        const View &view) const
     {
         return std::ranges::find_if(
             members,
@@ -789,13 +739,6 @@ void ScreenSpaceReservationCoordinator::updateReservation(
 void ScreenSpaceReservationCoordinator::removeReservation(View &view)
 {
     d->removeReservation(view);
-}
-
-std::optional<ScreenSpaceReservationMembership>
-ScreenSpaceReservationCoordinator::findMembership(
-    const View &view) const
-{
-    return d->findMembership(view);
 }
 
 std::optional<ScreenSpaceReservationSnapshot>

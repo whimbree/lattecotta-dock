@@ -12,7 +12,6 @@
 
 #include <Plasma/Plasma>
 
-#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -31,18 +30,6 @@ struct ScreenSpaceReservationContribution
 {
     std::uint64_t persistentDockId;
     int contributionDepth;
-};
-
-//! Direct membership lookup retained for non-aggregate callers. Atomic graph
-//! consumers use snapshot(), which observes every group in one generation.
-struct ScreenSpaceReservationMembership
-{
-    int outputId;
-    Plasma::Types::Location edge;
-    int contributionDepth;
-    int publishedDepth;
-    std::size_t memberCount;
-    const ScreenSpaceReservation *publisher;
 };
 
 //! One committed output-edge publisher and every dock contributing to it.
@@ -84,9 +71,6 @@ public:
         const QRect &strutGeometry,
         Plasma::Types::Location location);
     void removeReservation(View &view);
-
-    [[nodiscard]] std::optional<ScreenSpaceReservationMembership>
-    findMembership(const View &view) const;
 
     [[nodiscard]] std::optional<ScreenSpaceReservationSnapshot>
     snapshot() const;

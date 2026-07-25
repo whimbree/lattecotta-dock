@@ -166,8 +166,8 @@ struct ViewPlacement {
 void applyViewPlacement(QWindow *window, Plasma::Types::Location location,
                         const QRect &viewGeometry, const QRect &screenGeometry);
 
-//! Layer-shell state for a transparent surface that publishes one dock's
-//! occupied edge footprint independently from its larger visual canvas.
+//! Layer-shell state for a transparent surface that publishes one output-edge
+//! group's maximum reservation independently from every visual canvas.
 struct ReservationPlacement {
     LayerShellQt::Window::Anchors anchors;
     LayerShellQt::Window::Anchor exclusiveEdge;
