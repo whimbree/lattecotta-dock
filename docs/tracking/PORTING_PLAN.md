@@ -4352,10 +4352,10 @@ prerequisites in the phases above are done.
       sizing independent of hover and fit the transient solid against its own
       output canvas. D169 (panel shadows consumed the stable panel and applet
       span) keeps shadow paint out of stable length. D170 (the first D169
-      correction weakened end-hover shadow bounds) constrains the complete
-      visual when it fits and the solid when it does not.
-      Commits: 1228ecf8c, d19a1805c, 921bf089b, a0ab006f8, 0ef65f9a8,
-      ab9aa64b1
+      correction weakened end-hover shadow bounds) preserves the stable solid
+      and clips external paint that cannot fit around it.
+      Commits: 1228ecf8c, d19a1805c, 921bf089b, a0ab006f8, 8c2ed6e0d,
+      1715670f0, 7b3d91b3d
 - [x] Fix D141 (bounded background movement shifted the applet row). Separate
       the stable centered content offset from bounded parabolic background
       presentation and reject restoration of the feedback expression.
@@ -4364,12 +4364,12 @@ prerequisites in the phases above are done.
       budget). The first correction incorrectly subtracted shadows. D169
       restores the stable applet span to solid background length after internal
       padding only.
-      Commits: 921bf089b, 0ef65f9a8
+      Commits: 921bf089b, 8c2ed6e0d
 - [x] Fix D143 (dock-mode Justify charged shadow paint against configured
       length). The first correction incorrectly shortened the configured solid.
       D169 routes every alignment through the output-bounded solid fit and
       handles asymmetric shadows only in presentation placement.
-      Commits: a0ab006f8, 0ef65f9a8
+      Commits: a0ab006f8, 8c2ed6e0d
 - [x] Fix D144 (aspect-scaled background shadow clipped side docks). Replace
       the aspect-dependent Kirigami render node with one fixed-pixel effect,
       share its padding metric with placement, and pin both end-hover geometry
@@ -4463,7 +4463,7 @@ prerequisites in the phases above are done.
       instead of laying endpoint applets under length-axis shadows. D169
       corrects that solid to the complete configured span rather than a
       shadow-reduced derivative.
-      Commits: cf50d7845, 4edcd203d, 6cd8ff860, 3feb54939, 0ef65f9a8
+      Commits: cf50d7845, 4edcd203d, 6cd8ff860, 3feb54939, 8c2ed6e0d
 - [x] Fix D163 (native background shadows retained Kirigami alpha
       compensation). Feed the theme shadow color directly to the Qt native
       effect and reject restoration of the obsolete renderer workaround.
@@ -4475,7 +4475,7 @@ prerequisites in the phases above are done.
 - [x] Fix D165 (the first D162 correction assumed equal end shadows). Center
       the stable solid and compensate the outer visual by half the independent
       head-minus-tail margin difference.
-      Commits: 6cd8ff860, 0ef65f9a8
+      Commits: 6cd8ff860, 8c2ed6e0d
 - [x] Fix D166 (the first D162 origin mutation produced invalid QML). Mutate
       the authoritative property with viable old-origin and equal-shadow
       regressions.
@@ -4483,18 +4483,23 @@ prerequisites in the phases above are done.
 - [x] Fix D167 (thin-dock tracking used a bare D145 codeword). Add the
       plain-English background-shadow description at first use.
       Commits: e8ca33c2f
-- [ ] Fix D168 (thin-dock tracking commit omitted explicit verification
-      evidence). Rewrite commit `5318aec02` during pre-merge history cleanup.
-      Commits:
+- [x] Fix D168 (thin-dock tracking commit omitted explicit verification
+      evidence). Rewrite the commit during pre-merge history cleanup to name
+      its focused source, QML, image-comparison, scene-probe, and live-geometry
+      evidence.
+      Commits: 75862c266
 - [x] Fix D169 (panel shadows consumed the stable panel and applet span).
       Treat the configured solid and its internal padding as stable geometry.
       Keep shadow paint out of panel length, applet placement, and autosize,
       with asymmetric compensation confined to outer presentation placement.
-      Commits: 0ef65f9a8, ab9aa64b1
+      Commits: 8c2ed6e0d, 1715670f0, 7b3d91b3d
 - [x] Fix D170 (the first D169 correction weakened end-hover shadow bounds).
-      Preserve stable solid sizing while constraining complete outer paint when
-      it fits, with a solid-only fallback when the outer visual cannot fit.
-      Commits: ab9aa64b1
+      Make the stable solid the only placement authority for Center and
+      Justify. Clip external paint that cannot fit around it, and pin shadow
+      toggles, asymmetric margins, end clamps, and full canvases in the
+      behavioral placement core. Pin the horizontal left/right and vertical
+      top/bottom mapping at the production QML boundary.
+      Commits: 1715670f0, 7b3d91b3d
 - [x] Fix D171 (centered shadow offsets raised the QML warning ratchet). Cache
       the injected alignment once, name the document-root offset explicitly,
       and lower the touched-file baseline from 181 to 176 warnings.

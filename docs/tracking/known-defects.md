@@ -1535,14 +1535,15 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FIX: let transient zoom borrow resting end padding without entering the
   persistent icon-size solver. D150 makes the output canvas the transient
   boundary. D169 keeps shadow paint from shrinking the solid, while D170
-  constrains the complete visual whenever it fits and falls back to the solid
-  boundary only when outward paint cannot fit. The same primary-axis
-  calculation handles horizontal and vertical docks.
+  keeps the stable solid as the placement authority and clips external paint
+  that cannot fit around it. The same primary-axis calculation handles
+  horizontal and vertical docks.
 - EVIDENCE: D150 live acceptance pins a landscape row expanding from
   [152,2399] to [54,2499], with its solid background expanding from
   [78,2481] to [20,2540] inside the [0,2560] per-output canvas. D170's
-  production source guard rejects a solid-only clamp while the complete visual
-  fits. All 245 QML interaction cases pass.
+  behavioral core pins the stable solid under shadow changes, and its
+  production source guard rejects complete-visual clamping. All 245 QML
+  interaction cases pass.
 
 ### D141 - Bounded background movement shifted the applet row
 - STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`d19a1805c`).
@@ -1561,7 +1562,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 ### D142 - Stable autosize charged shadow paint against the applet budget
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
   (`921bf089b`, corrected by D169 (panel shadows consumed the stable panel and
-  applet span) at `0ef65f9a8`).
+  applet span) at `8c2ed6e0d`).
 - FOUND: 2026-07-22, independent review of PR #116 after the D140 chrome fit.
 - SYMPTOM: enabling a background shadow could select smaller resting icons even
   though the solid panel and its available applet span had not changed.
@@ -1575,7 +1576,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D143 - Dock-mode Justify charged shadow paint against configured length
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`a0ab006f8`, corrected by D169 at `0ef65f9a8`).
+  (`a0ab006f8`, corrected by D169 at `8c2ed6e0d`).
 - FOUND: 2026-07-22, independent review of PR #116 after the D140 chrome fit.
 - SYMPTOM: enabling 42 px end shadows shortened an 84 percent Justify panel by
   84 px, even though its configured length did not change.
@@ -1707,10 +1708,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FIX: keep `maximumLength` as the stable autosize and Justify contract. For a
   content-driven dock, derive the transient solid request from the live row and
   bound it against the view's own primary-axis canvas. D169 keeps external
-  shadow paint out of that solid length. D170 bounds the complete visual when
-  it fits and preserves the bounded solid when it does not. The calculation
-  remains local to each view and output, including unrelated portrait and
-  landscape outputs.
+  shadow paint out of that solid length. D170 preserves the bounded solid for
+  every alignment and clips external paint that cannot fit around it. The
+  calculation remains local to each view and output, including unrelated
+  portrait and landscape outputs.
 - EVIDENCE: the live landscape dock changes from row [152,2399] and background
   [78,2481] at rest to row [54,2499] and background [20,2540] under hover,
   all inside canvas [0,2560]. The presentation oracle rejects the captured bad
@@ -1919,7 +1920,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
   (`cf50d7845`, cycle correction `4edcd203d`, asymmetric-margin correction
   `6cd8ff860`, mutation correction `3feb54939`, shadow-ownership correction
-  `0ef65f9a8`).
+  `8c2ed6e0d`).
 - FOUND: 2026-07-24, live top-dock rendering at 22 px icon size.
 - SYMPTOM: the first and last applets extended past the solid rounded
   background, so the ends looked clipped and the shadow resembled a second
@@ -1970,7 +1971,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D165 - The first D162 correction assumed equal end shadows
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`6cd8ff860`, corrected by D169 at `0ef65f9a8`).
+  (`6cd8ff860`, corrected by D169 at `8c2ed6e0d`).
 - FOUND: 2026-07-24, mandatory cold review of the thin-dock correction.
 - SYMPTOM: themes with unequal tail and head shadow margins could displace the
   applet row relative to the solid rounded background.
@@ -2011,22 +2012,23 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   together.
 
 ### D168 - Thin-dock tracking commit omitted explicit verification evidence
-- STATUS: OPEN on `fix/vertical-autosize-animation-tracker`; correct during
-  pre-merge history cleanup.
+- STATUS: FIXED locally during PR #116 history cleanup (`75862c266`; final
+  post-merge hash pending).
 - FOUND: 2026-07-24, mandatory cold review of commit `5318aec02`.
 - SYMPTOM: the commit body described what the records contained but did not
   state the focused checks that had passed.
 - ROOT: documentation content evidence was mistaken for commit verification
   evidence.
-- REQUIRED: preserve the current commit sequence while development continues,
-  then rewrite that body before final PR landing to name the source, QML, and
-  scene-probe results.
-- EVIDENCE: `git show --format=fuller 5318aec02` contains no explicit
-  verification paragraph.
+- FIX: preserve the commit sequence and rewrite the body to name the focused
+  source guard, QML compile and lint gates, image-comparison helper,
+  scene-probe gate, and stable live coordinates.
+- EVIDENCE: `git show --format=fuller 75862c266` carries the explicit
+  verification paragraph while retaining the original tree.
 
 ### D169 - Panel shadows consumed the stable panel and applet span
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`0ef65f9a8`, end-hover correction `ab9aa64b1`); real-layout visual
+  (`8c2ed6e0d`, end-hover corrections `1715670f0` and `7b3d91b3d`);
+  real-layout visual
   acceptance is pending.
 - FOUND: 2026-07-24, live top-panel shadow toggle after the thin-background
   correction.
@@ -2040,20 +2042,22 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   layout authority. Shadows are external presentation paint. Remove them from
   the fit and autosize APIs, keep applets on the solid span, and compensate
   asymmetric paint only in the outer visual's placement. D170 (the first D169
-  correction weakened end-hover shadow bounds) retains complete-visual
-  clipping whenever the outer paint can fit.
+  correction weakened end-hover shadow bounds) preserves that solid placement
+  when shadows change and clips paint outside the canvas.
 - EVIDENCE: before the fix, 42 px shadows changed the live panel from
   `[125,18,1189,26]` without custom shadows to `[157,18,1125,26]` with them.
   After the fix, isolated shadow-on and real shadow-off runs both settle at
   `[115,18,1209,26]`, with applets `[128,18,1183,26]` and endpoint wrappers at
   x=124 and x=1283..1316. Focused C++ geometry and source-contract tests, all
   130 QML compile probes, and all 245 QML interaction cases pass. The canonical
-  gate passes all 105 CTest entries, scene probes, nested ASan/UBSan replay, and
-  the output matrix.
+  gate passed all 105 CTest entries, scene probes, nested ASan/UBSan replay, and
+  the output matrix before the D170 stable-solid correction. Its corrected
+  full-gate rerun remains pending.
 
 ### D170 - The first D169 correction weakened end-hover shadow bounds
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`ab9aa64b1`); real-layout visual acceptance is pending.
+  (`1715670f0`, stable-solid correction `7b3d91b3d`); real-layout visual
+  acceptance is pending.
 - FOUND: 2026-07-24, correction review against D140 (zoomed side-dock chrome
   clipped at both ends).
 - SYMPTOM: the first shadow-independent solid fix used solid length for every
@@ -2061,12 +2065,21 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   boundary even when the complete visual had enough room to remain inside.
 - ROOT: stable sizing and transient presentation clipping were treated as one
   decision. Shadows must not reduce the former, but can constrain the latter.
-- FIX: use two presentation paths. When solid plus shadows fits, constrain the
-  complete visual. When only the solid fits, constrain the solid and accept
-  unavoidable external-paint clipping without shrinking content.
-- EVIDENCE: the production source guard pins both paths and rejects a
-  fit-capable solid-only mutation. Focused geometry and source-contract tests,
-  all 130 QML compile probes, and all 245 QML interaction cases pass.
+- ROOT CORRECTION: mandatory cold review found that "the complete visual can
+  fit somewhere" did not mean it could fit around the requested stable solid.
+  A 90 px solid with a 10 px head shadow in a 100 px canvas moved five pixels
+  when shadows became active, while Justify preserved the same solid.
+- FIX: make the stable solid the only placement authority for Center and
+  Justify. Bound its requested center against its own length, then apply only
+  the head-minus-tail compensation to the visual parent. External paint clips
+  when it cannot fit around the preserved solid.
+- EVIDENCE: the sanitizer-backed behavioral core covers the exact asymmetric
+  failure, reversed ends, fit-capable and clipped bounds, both end clamps, full
+  and near-full canvases, and shadow toggles. The production source guard pins
+  horizontal left/right and vertical top/bottom mapping while rejecting
+  complete-visual clamping and bridge bypass. Focused CTest passes 2 of 2, QML
+  compilation passes 130 of 130 files, the qmllint baseline matches, and QML
+  interaction passes 245 of 245 cases.
 
 ### D171 - Centered shadow offsets raised the QML warning ratchet
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
