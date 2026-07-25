@@ -2494,6 +2494,28 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   addition would overflow `int` and a maximum available length whose float
   representation rounds beyond `int`.
 
+### D196 - Placement solver trusted enum and QRect arithmetic boundaries
+- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- FOUND: 2026-07-24, fifth independent FP-2 review.
+- SYMPTOM: malformed enum values could return an empty present solution in
+  release builds, while endpoint rectangles with valid coordinates could
+  abort inside Qt or overflow intermediate edge arithmetic before the solver
+  refused them.
+- ROOT: the stable geometry boundary treated every non-horizontal edge as
+  vertical and relied on `QRect::isValid()`, `width()`, `height()`, and
+  `contains()` before proving the closed enum set and inclusive coordinate
+  spans. A valid endpoint pair can span more than `int`, and ordinary signed
+  arithmetic can overflow even when its final result is representable.
+- FIX: validate both enums explicitly, derive rectangle spans from endpoints
+  in `qint64`, range-check every edge coordinate before narrowing, construct
+  extreme envelopes from checked endpoints, and assert containment through
+  the validated endpoint metrics.
+- EVIDENCE: sanitizer-backed `floatingpanelgeometrytest` passes 52 cases.
+  Invalid edges and alignments fail closed, endpoint spans wider than `int`
+  are refused without calling width-based Qt paths, all four extreme output
+  origins solve without intermediate overflow, and Center and End each reject
+  a branch-local out-of-range expression after a representable offset product.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
   is merged. FP-2 (the stable canvas and transition controller) is complete on

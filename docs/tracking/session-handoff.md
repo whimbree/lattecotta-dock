@@ -33,14 +33,16 @@ publication. `layerShellConfigureRequestRevision` advances by the number of
 guarded layer-shell setters actually issued. The placement adapter returns
 zero for an identical replay.
 
-The pure geometry test passes 32 cases, including overflow and the mandatory
-trigger pixel. The transition test passes 8 cases, including twenty rapid
-target reversals. Legacy placement passes 40 cases. The layer-shell mapping,
-screen geometry, and source guards pass; the application links; all 130 QML
-files compile; and the touched qmllint baseline strictly decreases. Recipe 071
-now configures a partial Justify panel with maximize-driven length disabled,
-samples progress in both directions, and drives eight rapid reversals while
-requiring byte-identical stable geometry and zero revision deltas.
+The pure geometry test passes 52 cases, including invalid enum values,
+unrepresentable rectangle spans, extreme output origins, branch-local
+placement overflow, and the mandatory trigger pixel. The transition test
+passes 8 cases, including twenty rapid target reversals. Legacy placement
+passes 40 cases. The layer-shell mapping, screen geometry, and source guards
+pass; the application links; all 130 QML files compile; and the touched
+qmllint baseline strictly decreases. Recipe 071 now configures a partial
+Justify panel with maximize-driven length disabled, samples progress in both
+directions, and drives eight rapid reversals while requiring byte-identical
+stable geometry and zero revision deltas.
 
 D187 (full-span End floating panels extended one pixel beyond their output)
 was found when the fail-closed solver rejected a complete Right or Bottom
@@ -77,9 +79,14 @@ zero-gap floated endpoint in one atomic snapshot. The fourth review found D195
 (huge finite placement values reached undefined integer conversion):
 every floating placement product now crosses a checked integer boundary, and
 the integer start delta is added in `qint64`, with sanitizer-backed cases for
-both signs and all three alignments. A fresh independent review, the canonical
-gate, and the pull request remain before merge. No real desktop process or
-surface was inspected, stopped, or restarted during this implementation.
+both signs and all three alignments. The fifth review found D196 (placement
+solver trusted enum and QRect arithmetic boundaries): closed enum sets and
+inclusive coordinate spans are now proven before axis selection or Qt
+width-based operations, every edge coordinate is narrowed from `qint64`, and
+Center and End have non-vacuous branch-local overflow cases. A fresh
+independent review, the canonical gate, and the pull request remain before
+merge. No real desktop process or surface was inspected, stopped, or restarted
+during this implementation.
 
 ## 2026-07-24: FP-1 owns one maximum-depth reservation per output edge
 

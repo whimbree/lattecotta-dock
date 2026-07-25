@@ -118,9 +118,89 @@ struct PlacementInputs {
     int floatingGap{0};
 };
 
+struct RectangleMetrics {
+    int left{0};
+    int top{0};
+    int right{0};
+    int bottom{0};
+    int width{0};
+    int height{0};
+};
+
+[[nodiscard]] constexpr bool containsRectangle(
+    const RectangleMetrics &outer,
+    const RectangleMetrics &inner)
+{
+    return inner.left >= outer.left && inner.top >= outer.top
+        && inner.right <= outer.right && inner.bottom <= outer.bottom;
+}
+
+[[nodiscard]] constexpr bool isSupportedEdge(Edge edge)
+{
+    switch (edge) {
+    case Edge::Top:
+    case Edge::Right:
+    case Edge::Bottom:
+    case Edge::Left:
+        return true;
+    }
+
+    return false;
+}
+
+[[nodiscard]] constexpr bool isSupportedAlignment(PrimaryAxisAlignment alignment)
+{
+    switch (alignment) {
+    case PrimaryAxisAlignment::Start:
+    case PrimaryAxisAlignment::Center:
+    case PrimaryAxisAlignment::End:
+        return true;
+    }
+
+    return false;
+}
+
 [[nodiscard]] constexpr bool isHorizontal(Edge edge)
 {
     return edge == Edge::Top || edge == Edge::Bottom;
+}
+
+[[nodiscard]] inline std::optional<RectangleMetrics> validateRectangle(
+    const QRect &rectangle)
+{
+    const int left = rectangle.left();
+    const int top = rectangle.top();
+    const int right = rectangle.right();
+    const int bottom = rectangle.bottom();
+    const qint64 width = qint64(right) - left + 1;
+    const qint64 height = qint64(bottom) - top + 1;
+
+    // QRect can store endpoint pairs whose inclusive span exceeds int even
+    // though isValid() is true. Prove the span before width() or height()
+    // reaches Qt's checked integer arithmetic.
+    if (width <= 0 || width > std::numeric_limits<int>::max()
+        || height <= 0 || height > std::numeric_limits<int>::max()) {
+        return std::nullopt;
+    }
+
+    return RectangleMetrics{
+        .left = left,
+        .top = top,
+        .right = right,
+        .bottom = bottom,
+        .width = static_cast<int>(width),
+        .height = static_cast<int>(height),
+    };
+}
+
+[[nodiscard]] constexpr std::optional<int> narrowToRepresentableInt(qint64 value)
+{
+    if (value < std::numeric_limits<int>::lowest()
+        || value > std::numeric_limits<int>::max()) {
+        return std::nullopt;
+    }
+
+    return static_cast<int>(value);
 }
 
 [[nodiscard]] inline std::optional<int> truncateToRepresentableInt(qreal value)
@@ -142,22 +222,22 @@ struct PlacementInputs {
 
 [[nodiscard]] inline bool hasValidGeometry(const Inputs &in)
 {
-    if (!in.outputGeometry.isValid() || in.panelDepth <= 0 || in.floatingGap < 0
-        || in.primaryAxisSpan.length <= 0) {
+    const auto output = validateRectangle(in.outputGeometry);
+    if (!output.has_value() || !isSupportedEdge(in.edge) || in.panelDepth <= 0
+        || in.floatingGap < 0 || in.primaryAxisSpan.length <= 0) {
         return false;
     }
 
     const int outputStart =
-        isHorizontal(in.edge) ? in.outputGeometry.left() : in.outputGeometry.top();
+        isHorizontal(in.edge) ? output->left : output->top;
     const int outputLength =
-        isHorizontal(in.edge) ? in.outputGeometry.width() : in.outputGeometry.height();
+        isHorizontal(in.edge) ? output->width : output->height;
     const qint64 spanEnd = qint64(in.primaryAxisSpan.start) + in.primaryAxisSpan.length;
     const qint64 outputEnd = qint64(outputStart) + outputLength;
     const qint64 envelopeDepth = qint64(in.panelDepth) + in.floatingGap;
     const qint64 triggerDepth = qint64(in.panelDepth) + 1;
     const int outputDepth =
-        isHorizontal(in.edge) ? in.outputGeometry.height()
-                              : in.outputGeometry.width();
+        isHorizontal(in.edge) ? output->height : output->width;
 
     return in.primaryAxisSpan.start >= outputStart && spanEnd <= outputEnd
         && envelopeDepth <= outputDepth && triggerDepth <= outputDepth;
@@ -169,44 +249,75 @@ struct PlacementInputs {
         return std::nullopt;
     }
 
+    const RectangleMetrics output = *validateRectangle(in.outputGeometry);
     const int envelopeDepth = in.panelDepth + in.floatingGap;
+    const auto primaryAxisEnd = narrowToRepresentableInt(
+        qint64(in.primaryAxisSpan.start) + in.primaryAxisSpan.length - 1);
+    if (!primaryAxisEnd.has_value()) {
+        return std::nullopt;
+    }
+
     QRect envelope;
     QRect attached;
     QRect floated;
 
     switch (in.edge) {
-    case Edge::Top:
-        envelope = {in.primaryAxisSpan.start,
-                    in.outputGeometry.top(),
-                    in.primaryAxisSpan.length,
-                    envelopeDepth};
+    case Edge::Top: {
+        const auto envelopeBottom = narrowToRepresentableInt(
+            qint64(output.top) + envelopeDepth - 1);
+        if (!envelopeBottom.has_value()) {
+            return std::nullopt;
+        }
+        envelope.setCoords(in.primaryAxisSpan.start,
+                           output.top,
+                           *primaryAxisEnd,
+                           *envelopeBottom);
         attached = {0, 0, in.primaryAxisSpan.length, in.panelDepth};
         floated = {0, in.floatingGap, in.primaryAxisSpan.length, in.panelDepth};
         break;
-    case Edge::Right:
-        envelope = {in.outputGeometry.right() - envelopeDepth + 1,
-                    in.primaryAxisSpan.start,
-                    envelopeDepth,
-                    in.primaryAxisSpan.length};
+    }
+    case Edge::Right: {
+        const auto envelopeLeft = narrowToRepresentableInt(
+            qint64(output.right) - envelopeDepth + 1);
+        if (!envelopeLeft.has_value()) {
+            return std::nullopt;
+        }
+        envelope.setCoords(*envelopeLeft,
+                           in.primaryAxisSpan.start,
+                           output.right,
+                           *primaryAxisEnd);
         attached = {in.floatingGap, 0, in.panelDepth, in.primaryAxisSpan.length};
         floated = {0, 0, in.panelDepth, in.primaryAxisSpan.length};
         break;
-    case Edge::Bottom:
-        envelope = {in.primaryAxisSpan.start,
-                    in.outputGeometry.bottom() - envelopeDepth + 1,
-                    in.primaryAxisSpan.length,
-                    envelopeDepth};
+    }
+    case Edge::Bottom: {
+        const auto envelopeTop = narrowToRepresentableInt(
+            qint64(output.bottom) - envelopeDepth + 1);
+        if (!envelopeTop.has_value()) {
+            return std::nullopt;
+        }
+        envelope.setCoords(in.primaryAxisSpan.start,
+                           *envelopeTop,
+                           *primaryAxisEnd,
+                           output.bottom);
         attached = {0, in.floatingGap, in.primaryAxisSpan.length, in.panelDepth};
         floated = {0, 0, in.primaryAxisSpan.length, in.panelDepth};
         break;
-    case Edge::Left:
-        envelope = {in.outputGeometry.left(),
-                    in.primaryAxisSpan.start,
-                    envelopeDepth,
-                    in.primaryAxisSpan.length};
+    }
+    case Edge::Left: {
+        const auto envelopeRight = narrowToRepresentableInt(
+            qint64(output.left) + envelopeDepth - 1);
+        if (!envelopeRight.has_value()) {
+            return std::nullopt;
+        }
+        envelope.setCoords(output.left,
+                           in.primaryAxisSpan.start,
+                           *envelopeRight,
+                           *primaryAxisEnd);
         attached = {0, 0, in.panelDepth, in.primaryAxisSpan.length};
         floated = {in.floatingGap, 0, in.panelDepth, in.primaryAxisSpan.length};
         break;
+    }
     }
 
     QRect trigger = attached.translated(envelope.topLeft());
@@ -241,34 +352,45 @@ struct PlacementInputs {
         .reservationDepth = in.panelDepth,
     };
 
-    Q_ASSERT(in.outputGeometry.contains(solution.envelope.value));
-    Q_ASSERT(solution.envelope.value.contains(
-        solution.attached.value.translated(solution.envelope.value.topLeft())));
-    Q_ASSERT(solution.envelope.value.contains(
-        solution.floated.value.translated(solution.envelope.value.topLeft())));
-    Q_ASSERT(in.outputGeometry.contains(solution.trigger.value));
+    const auto envelopeMetrics = validateRectangle(solution.envelope.value);
+    const auto attachedMetrics = validateRectangle(solution.attached.value);
+    const auto floatedMetrics = validateRectangle(solution.floated.value);
+    const auto triggerMetrics = validateRectangle(solution.trigger.value);
+    Q_ASSERT(envelopeMetrics.has_value());
+    Q_ASSERT(attachedMetrics.has_value());
+    Q_ASSERT(floatedMetrics.has_value());
+    Q_ASSERT(triggerMetrics.has_value());
+    Q_ASSERT(containsRectangle(output, *envelopeMetrics));
+    Q_ASSERT(attachedMetrics->left >= 0 && attachedMetrics->top >= 0
+             && attachedMetrics->right < envelopeMetrics->width
+             && attachedMetrics->bottom < envelopeMetrics->height);
+    Q_ASSERT(floatedMetrics->left >= 0 && floatedMetrics->top >= 0
+             && floatedMetrics->right < envelopeMetrics->width
+             && floatedMetrics->bottom < envelopeMetrics->height);
+    Q_ASSERT(containsRectangle(output, *triggerMetrics));
 
     return solution;
 }
 
 [[nodiscard]] inline std::optional<Solution> solvePlacement(const PlacementInputs &in)
 {
-    if (!in.outputGeometry.isValid() || !in.availablePrimaryGeometry.isValid()
-        || !qIsFinite(in.maxLength) || in.maxLength <= 0.0F || in.maxLength > 1.0F
-        || !qIsFinite(in.offset)) {
+    const auto output = validateRectangle(in.outputGeometry);
+    const auto available = validateRectangle(in.availablePrimaryGeometry);
+    if (!output.has_value() || !available.has_value()
+        || !isSupportedEdge(in.edge) || !isSupportedAlignment(in.alignment)
+        || !qIsFinite(in.maxLength) || in.maxLength <= 0.0F
+        || in.maxLength > 1.0F || !qIsFinite(in.offset)) {
         return std::nullopt;
     }
 
     const int outputStart =
-        isHorizontal(in.edge) ? in.outputGeometry.left() : in.outputGeometry.top();
+        isHorizontal(in.edge) ? output->left : output->top;
     const int outputLength =
-        isHorizontal(in.edge) ? in.outputGeometry.width() : in.outputGeometry.height();
+        isHorizontal(in.edge) ? output->width : output->height;
     const int availableStart =
-        isHorizontal(in.edge) ? in.availablePrimaryGeometry.left()
-                              : in.availablePrimaryGeometry.top();
+        isHorizontal(in.edge) ? available->left : available->top;
     const int availableLength =
-        isHorizontal(in.edge) ? in.availablePrimaryGeometry.width()
-                              : in.availablePrimaryGeometry.height();
+        isHorizontal(in.edge) ? available->width : available->height;
     const qint64 availableEnd = qint64(availableStart) + availableLength;
     const qint64 outputEnd = qint64(outputStart) + outputLength;
     if (availableStart < outputStart || availableEnd > outputEnd) {
@@ -309,18 +431,16 @@ struct PlacementInputs {
         return std::nullopt;
     }
 
-    const qint64 panelStartValue =
-        qint64(availableStart) + *panelStartDelta;
-    if (panelStartValue < std::numeric_limits<int>::lowest()
-        || panelStartValue > std::numeric_limits<int>::max()) {
+    const auto panelStart =
+        narrowToRepresentableInt(qint64(availableStart) + *panelStartDelta);
+    if (!panelStart.has_value()) {
         return std::nullopt;
     }
-    const int panelStart = static_cast<int>(panelStartValue);
 
     return solve({
         .outputGeometry = in.outputGeometry,
         .edge = in.edge,
-        .primaryAxisSpan = {panelStart, *panelLength},
+        .primaryAxisSpan = {*panelStart, *panelLength},
         .panelDepth = in.panelDepth,
         .floatingGap = in.floatingGap,
     });
