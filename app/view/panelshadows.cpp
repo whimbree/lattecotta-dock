@@ -13,7 +13,6 @@
 // f7ee03d065b4e293746248f749a7965c4321b1cb).
 
 #include "panelshadows_p.h"
-#include "panelshadowstate.h"
 
 #include <QDebug>
 #include <KWindowShadow>
@@ -93,14 +92,18 @@ void PanelShadows::addWindow(
     }
 
     d->updateShadow(window, state);
+    Q_EMIT shadowStateChanged(window);
     if (update
         == Latte::ViewPart::PanelShadowState::Update::Changed) {
         return;
     }
 
     connect(window, &QObject::destroyed, this, [this, window]() {
-        (void)d->m_windows.remove(window);
+        if (!d->m_windows.remove(window)) {
+            return;
+        }
         d->clearShadow(window);
+        Q_EMIT shadowStateChanged(window);
         if (d->m_windows.isEmpty()) {
             d->clearTiles();
         }
@@ -115,6 +118,7 @@ void PanelShadows::removeWindow(QWindow *window)
 
     disconnect(window, nullptr, this, nullptr);
     d->clearShadow(window);
+    Q_EMIT shadowStateChanged(window);
 
     if (d->m_windows.isEmpty()) {
         d->clearTiles();
@@ -136,6 +140,7 @@ void PanelShadows::setEnabledBorders(QWindow *window, KSvg::FrameSvg::EnabledBor
     state->enabledBorders = enabledBorders;
     (void)d->m_windows.update(window, *state);
     d->updateShadow(window, *state);
+    Q_EMIT shadowStateChanged(window);
 }
 
 void PanelShadows::setExtraPadding(QWindow *window,
@@ -154,6 +159,17 @@ void PanelShadows::setExtraPadding(QWindow *window,
     state->extraPadding = extraPadding;
     (void)d->m_windows.update(window, *state);
     d->updateShadow(window, *state);
+    Q_EMIT shadowStateChanged(window);
+}
+
+std::optional<Latte::ViewPart::PanelShadowState::State>
+PanelShadows::shadowStateFor(const QWindow *window) const
+{
+    // The registry key predates this read surface and retains mutable pointers
+    // for KWindowShadow::setWindow. This lookup compares pointer identity only;
+    // it does not mutate the observed window.
+    return d->m_windows.stateFor(
+        const_cast<QWindow *>(window));
 }
 
 void PanelShadows::Private::updateShadows()

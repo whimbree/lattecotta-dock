@@ -21,6 +21,7 @@
 #include "view/helpers/screenspacereservationcoordinator.h"
 #include "view/indicator/indicator.h"
 #include "view/positioner.h"
+#include "view/panelshadows_p.h"
 #include "view/view.h"
 #include "view/visibilitymanager.h"
 #include "view/windowstracker/currentscreentracker.h"
@@ -1089,9 +1090,15 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.enabledBorders =
             enabledBorderNames(
                 view->effects()->enabledBorders());
-        record.shadowPaddingOffsets =
-            view->effects()
-                ->floatingShadowPaddingOffsets();
+        if (const auto shadowState =
+                PanelShadows::self()
+                    ->shadowStateFor(view)) {
+            record.shadowEnabledBorders =
+                enabledBorderNames(
+                    shadowState->enabledBorders);
+            record.shadowPaddingOffsets =
+                shadowState->extraPadding;
+        }
         record.floatingAnchorRevision =
             view->effects()->floatingAnchorRevision();
         record.strutsThickness = view->visibility()->strutsThickness();

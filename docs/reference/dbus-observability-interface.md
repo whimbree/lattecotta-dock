@@ -80,7 +80,7 @@ Landed before or during the 2026-07-16 stabilization session:
   `editMode && universalSettings.inConfigureAppletsMode`, not the raw global
   toggle. A global rearrange session therefore does not report unrelated docks
   as configuring applets.
-- `dockSystemData() -> s` (compact JSON object, schema version 5; added by C0
+- `dockSystemData() -> s` (compact JSON object, schema version 6; added by C0
   (the atomic dock-system observability snapshot)). This is the relational
   all-docks read. One synchronous call captures the global configuration mode,
   every current dock, and every active output-edge reservation group. Docks
@@ -152,6 +152,7 @@ Landed before or during the 2026-07-16 stabilization session:
       "floatingDamageMaskPending": false,
       "floatingDamageMaskGeneration": "31",
       "enabledBorders": ["top", "right", "bottom", "left"],
+      "shadowEnabledBorders": ["top", "right", "bottom", "left"],
       "shadowPaddingOffsets": [0, -4, 0, -2],
       "floatingAppletPopupsPreferred": true,
       "floatingAnchorRevision": "29",
@@ -315,8 +316,11 @@ Landed before or during the 2026-07-16 stabilization session:
   handshake generation serialized as a decimal string. Exact qreal event
   classification consumes old-only pixels, so `inputMask` remains the logical
   activation authority. `enabledBorders` reports the live Effects border set
-  in canonical edge order, while `shadowPaddingOffsets` reports the applied
-  stable-window inset as `[left, top, right, bottom]`.
+  in canonical edge order. `shadowEnabledBorders` and
+  `shadowPaddingOffsets` report the registered per-window KWindowShadow border
+  set and stable-window inset as `[left, top, right, bottom]`. Both are null
+  when no shadow is registered; a four-zero padding array is a registered zero
+  inset rather than absence.
   `floatingAppletPopupsPreferred` reads Plasma's applied containment hint, so
   it proves the QML hint write as well as the configured/target decision.
   `floatingAnchorRevision` is the process-local monotonic visible-anchor

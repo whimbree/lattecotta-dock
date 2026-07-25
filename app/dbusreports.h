@@ -573,7 +573,8 @@ struct DockSystemViewRecord {
     bool floatingDamageMaskPending{false};
     quint64 floatingDamageMaskGeneration{0};
     QStringList enabledBorders;
-    QMargins shadowPaddingOffsets;
+    std::optional<QStringList> shadowEnabledBorders;
+    std::optional<QMargins> shadowPaddingOffsets;
     bool floatingAppletPopupsPreferred{false};
     quint64 floatingAnchorRevision{0};
     int strutsThickness{0};
@@ -1660,8 +1661,18 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
         QString::number(record.floatingDamageMaskGeneration);
     json[QStringLiteral("enabledBorders")] =
         QJsonArray::fromStringList(record.enabledBorders);
+    json[QStringLiteral("shadowEnabledBorders")] =
+        record.shadowEnabledBorders
+        ? QJsonValue(
+              QJsonArray::fromStringList(
+                  *record.shadowEnabledBorders))
+        : QJsonValue(QJsonValue::Null);
     json[QStringLiteral("shadowPaddingOffsets")] =
-        serializeMargins(record.shadowPaddingOffsets);
+        record.shadowPaddingOffsets
+        ? QJsonValue(
+              serializeMargins(
+                  *record.shadowPaddingOffsets))
+        : QJsonValue(QJsonValue::Null);
     json[QStringLiteral("floatingAppletPopupsPreferred")] =
         record.floatingAppletPopupsPreferred;
     json[QStringLiteral("floatingAnchorRevision")] =
@@ -1868,6 +1879,14 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                 normalizedBorders.append(border);
             }
         }
+        QStringList normalizedShadowBorders;
+        if (view.shadowEnabledBorders) {
+            for (const QString &border : canonicalBorders) {
+                if (view.shadowEnabledBorders->contains(border)) {
+                    normalizedShadowBorders.append(border);
+                }
+            }
+        }
         if (view.floatingDamageMaskPending
             && (view.floatingDamageMaskGeneration == 0
                 || view.type != Types::PanelView
@@ -1880,6 +1899,13 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
             return false;
         }
         if (view.enabledBorders != normalizedBorders
+                || view.shadowEnabledBorders.has_value()
+                    != view.shadowPaddingOffsets.has_value()
+                || (view.shadowEnabledBorders
+                    && (*view.shadowEnabledBorders
+                            != normalizedShadowBorders
+                        || *view.shadowEnabledBorders
+                            != view.enabledBorders))
                 || view.floatingAppletPopupsPreferred
                     != (view.floatingPanelConfigured
                         && view.transitionTarget
@@ -2184,8 +2210,9 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                     != expectedBridge
                 || *view.contentTranslation
                     != expectedTranslation
-                || view.shadowPaddingOffsets
-                    != expectedShadowPadding
+                || (view.shadowPaddingOffsets
+                    && *view.shadowPaddingOffsets
+                        != expectedShadowPadding)
                 || (view.floatingPanelConfigured
                     && view.transitionProgress > 0.0
                     && view.enabledBorders
