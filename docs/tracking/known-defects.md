@@ -2697,7 +2697,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   061 by name.
 
 ### D210 - Floating panel attachment changed primary-axis layout clearance
-- STATUS: OPEN.
+- STATUS: FIXED IN THIS BRANCH (`a9be9bb1b`, provisional branch hash).
 - FOUND: 2026-07-25, FP-4B (multi-output and separated-span topology
   acceptance) nested-KWin preflight.
 - SYMPTOM: attaching a partial Start-aligned floating Panel increased
@@ -2709,16 +2709,17 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   painted-border bit as the authority for primary-axis layout padding and
   popup roundness clearance. The six-pixel visual border change therefore
   leaked into two measurements that FP-2 requires to remain stable.
-- REQUIRED: keep visual border presentation unchanged, but preserve reactive
-  primary-axis layout clearance for configured floating Panels across attached
-  and floated endpoints. Docks and zero-gap Panels must retain their existing
-  behavior. Theme, radius, margin, and indicator changes must still recompute
-  the clearance rather than reading a cached pixel value.
-- EVIDENCE: recipe 073 holds the original topology baseline while driving one
-  real window onto the Start-aligned Panel trigger and stops on the first
-  stable-fingerprint difference. The exact persistent difference is
-  `availablePrimaryLength: 436 -> 442`,
-  `popupAnchorPrimarySpan: [6,436] -> [0,442]`.
+- FIX: separate painted-border presence from layout-clearance ownership with a
+  constexpr policy. Configured positive-gap floating Panels retain missing
+  primary-axis clearance while thickness edges and non-floating views still
+  follow paint. Theme, radius, margin, and indicator inputs remain reactive.
+- EVIDENCE: recipe 073 first stopped on
+  `availablePrimaryLength: 436 -> 442` and
+  `popupAnchorPrimarySpan: [6,436] -> [0,442]`. With the corrected authority,
+  all three panels retain their original applet and popup spans while the
+  nested client drives attached and floated endpoints across full-touching,
+  partial-touching, and disconnected output arrangements. The pure decision
+  matrix, QML interaction, compile, lint, and source-mutation checks pass.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
@@ -2730,9 +2731,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   follow-up review returned MERGE and its canonical gate passed at branch head
   `a7c941db1`. FP-4A (the direct window-touch runtime and single-client nested
   acceptance) is merged through PR #124 at `f8396b5ed` through `5636966b5`.
-  FP-4B (multi-output and separated-span topology acceptance) and FP-4C
-  (deterministic operation-storm acceptance) remain open, so the FP-4 (stable
-  window-touch trigger and end-to-end acceptance) umbrella remains open.
+  FP-4B (multi-output and separated-span topology acceptance) is complete in
+  the current branch. FP-4C (deterministic operation-storm acceptance) remains
+  open, so the FP-4 (stable window-touch trigger and end-to-end acceptance)
+  umbrella remains open.
   Execution is tracked in `floating-panel-parity-plan.md`.
 - FOUND: 2026-07-24, Plasma 6.7.3 parity investigation after live floating
   panel maximize, radius, shadow, and animation regressions.
