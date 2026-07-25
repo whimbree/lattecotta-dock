@@ -27,7 +27,6 @@
 
 // C++
 #include <array>
-#include <memory>
 
 // Qt
 #include <QQuickView>
@@ -144,7 +143,6 @@ public:
         const QRect &strutGeometry,
         Plasma::Types::Location location);
     void clearScreenSpaceReservation();
-    [[nodiscard]] const ViewPart::ScreenSpaceReservation *screenSpaceReservation() const;
 
     Types::ViewType type() const;
     void setType(Types::ViewType type);
@@ -494,7 +492,6 @@ private:
     bool m_layerShellConfigured{false};
     //! Non-owning. LayerShellQt parents the attached state to this QWindow.
     LayerShellQt::Window *m_layerShellWindow{nullptr};
-    std::unique_ptr<ViewPart::ScreenSpaceReservation> m_screenSpaceReservation;
 
     int m_fontPixelSize{ -1};
     int m_maxThickness{256};

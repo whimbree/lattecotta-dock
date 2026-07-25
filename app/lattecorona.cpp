@@ -45,6 +45,7 @@
 #include "view/view.h"
 #include "view/viewactionpolicy.h"
 #include "view/visibilitymanager.h"
+#include "view/helpers/screenspacereservationcoordinator.h"
 #include "view/settings/primaryconfigview.h"
 #include "view/settings/viewsettingsfactory.h"
 #include "view/windowstracker/windowstracker.h"
@@ -104,6 +105,8 @@ Corona::Corona(bool defaultLayoutOnStartup, QString layoutNameOnStartUp, QString
       m_layoutNameOnStartUp(layoutNameOnStartUp),
       m_activitiesConsumer(new KActivities::Consumer(this)),
       m_screenPool(new ScreenPool(KSharedConfig::openConfig(), this)),
+      m_screenSpaceReservationCoordinator(
+          new ViewPart::ScreenSpaceReservationCoordinator(this)),
       m_settingsControlRegistry(new SettingsControlRegistry(this)),
       m_dbusObjectIdentities(new DbusReports::RuntimeObjectIdentityRegistry(this)),
       m_indicatorFactory(new Indicator::Factory(this)),
@@ -201,6 +204,10 @@ Corona::~Corona()
     //! calls into the wm/theme/indicator services below)
     delete m_layoutsManager;
     delete m_templatesManager;
+
+    //! layouts have retired every contribution, so no publisher can outlive
+    //! the Views whose work-area requests it represented
+    delete m_screenSpaceReservationCoordinator;
 
     //! every view and its controllers are gone, so their opaque process-local
     //! identity retirement callbacks have completed
@@ -554,6 +561,12 @@ GlobalShortcuts *Corona::globalShortcuts() const
 ScreenPool *Corona::screenPool() const
 {
     return m_screenPool;
+}
+
+ViewPart::ScreenSpaceReservationCoordinator *
+Corona::screenSpaceReservationCoordinator() const
+{
+    return m_screenSpaceReservationCoordinator;
 }
 
 SettingsControlRegistry *Corona::settingsControlRegistry() const

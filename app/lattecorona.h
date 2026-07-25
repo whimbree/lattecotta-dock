@@ -57,6 +57,9 @@ class SettingsControlRegistry;
 class UniversalSettings;
 class View;
 class ViewSettingsFactory;
+namespace ViewPart {
+class ScreenSpaceReservationCoordinator;
+}
 namespace DbusReports {
 class RuntimeObjectIdentityRegistry;
 }
@@ -159,6 +162,8 @@ public:
     KActivities::Consumer *activitiesConsumer() const;
     GlobalShortcuts *globalShortcuts() const;
     ScreenPool *screenPool() const;
+    ViewPart::ScreenSpaceReservationCoordinator *
+    screenSpaceReservationCoordinator() const;
     //! Internal registration surface for settings components as their own
     //! SC-O1 (the read-only settings-control D-Bus registry) follow-up units
     //! land. SC-O1 itself registers fixture controls only.
@@ -465,6 +470,10 @@ private:
     QPointer<KAboutApplicationDialog> aboutDialog;
 
     ScreenPool *m_screenPool{nullptr};
+    //! Outlives layouts and their Views so removing one member can republish
+    //! the surviving maximum before the output service is destroyed.
+    ViewPart::ScreenSpaceReservationCoordinator
+        *m_screenSpaceReservationCoordinator{nullptr};
     //! Outlives settings factories and layouts so their QObject destruction
     //! synchronously retires every generation before the registry is deleted.
     SettingsControlRegistry *m_settingsControlRegistry{nullptr};

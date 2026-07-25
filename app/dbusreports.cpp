@@ -7,6 +7,7 @@
 #include "dbusreports.h"
 
 // local
+#include "lattecorona.h"
 #include "layout/centrallayout.h"
 #include "layout/genericlayout.h"
 #include "layouts/manager.h"
@@ -16,6 +17,7 @@
 #include "view/containmentinterface.h"
 #include "view/effects.h"
 #include "view/helpers/screenspacereservation.h"
+#include "view/helpers/screenspacereservationcoordinator.h"
 #include "view/indicator/indicator.h"
 #include "view/positioner.h"
 #include "view/view.h"
@@ -908,8 +910,25 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
                        << "has no layer-shell placement state";
         }
 
-        if (const auto *const reservation = view->screenSpaceReservation()) {
+        auto *const corona =
+            qobject_cast<Latte::Corona *>(view->corona());
+        if (!corona || !corona->screenSpaceReservationCoordinator()) {
+            qCritical() << "dbusreports: refusing dock-system snapshot without a reservation coordinator";
+            return std::nullopt;
+        }
+        const auto reservationMembership =
+            corona->screenSpaceReservationCoordinator()->findMembership(*view);
+        if (reservationMembership) {
+            const auto *const reservation =
+                reservationMembership->publisher;
             record.reservationSurfacePresent = true;
+            record.reservationOutputId = reservationMembership->outputId;
+            record.reservationContributionDepth =
+                reservationMembership->contributionDepth;
+            record.reservationPublishedDepth =
+                reservationMembership->publishedDepth;
+            record.reservationGroupMemberCount =
+                static_cast<int>(reservationMembership->memberCount);
             record.reservationGeometry = reservation->publishedGeometry();
             record.reservationWindowGeometry = reservation->geometry();
             if (const auto *const layerShell = reservation->layerShellWindow()) {
@@ -953,6 +972,11 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.objects.geometryController = identities->tokenFor(view->positioner());
         record.objects.editController = identities->tokenFor(editController);
         record.objects.configWindow = identities->tokenFor(view->configView());
+        record.objects.reservationPublisher =
+            identities->tokenFor(
+                reservationMembership
+                    ? reservationMembership->publisher
+                    : nullptr);
 
         snapshot.views.append(record);
     }

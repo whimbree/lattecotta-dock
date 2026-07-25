@@ -498,6 +498,7 @@ struct DockObjectIdentities {
     QString geometryController;
     QString editController;
     QString configWindow;
+    QString reservationPublisher;
 };
 
 //! One dock in the atomic dockSystemData() snapshot. persistentDockId is the
@@ -551,6 +552,10 @@ struct DockSystemViewRecord {
     QString layerShellExclusiveEdge;
     std::optional<int> layerShellExclusiveZone;
     bool reservationSurfacePresent{false};
+    std::optional<int> reservationOutputId;
+    std::optional<int> reservationContributionDepth;
+    std::optional<int> reservationPublishedDepth;
+    std::optional<int> reservationGroupMemberCount;
     QRect reservationGeometry;
     QRect reservationWindowGeometry;
     QStringList reservationLayerShellAnchors;
@@ -584,7 +589,7 @@ struct DockStackModelRecord {
 };
 
 struct DockSystemSnapshot {
-    static constexpr int SchemaVersion = 3;
+    static constexpr int SchemaVersion = 4;
 
     quint64 snapshotSequence{0};
     bool globalConfigureAppletsMode{false};
@@ -1373,6 +1378,8 @@ inline QJsonObject serializeDockObjectIdentities(const DockObjectIdentities &obj
     json[QStringLiteral("geometryController")] = serializeOptionalObjectToken(objects.geometryController);
     json[QStringLiteral("editController")] = serializeOptionalObjectToken(objects.editController);
     json[QStringLiteral("configWindow")] = serializeOptionalObjectToken(objects.configWindow);
+    json[QStringLiteral("reservationPublisher")] =
+        serializeOptionalObjectToken(objects.reservationPublisher);
     return json;
 }
 
@@ -1469,6 +1476,14 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
         serializeOptionalInt(record.layerShellExclusiveZone);
     json[QStringLiteral("reservationSurfacePresent")] =
         record.reservationSurfacePresent;
+    json[QStringLiteral("reservationOutputId")] =
+        serializeOptionalInt(record.reservationOutputId);
+    json[QStringLiteral("reservationContributionDepth")] =
+        serializeOptionalInt(record.reservationContributionDepth);
+    json[QStringLiteral("reservationPublishedDepth")] =
+        serializeOptionalInt(record.reservationPublishedDepth);
+    json[QStringLiteral("reservationGroupMemberCount")] =
+        serializeOptionalInt(record.reservationGroupMemberCount);
     json[QStringLiteral("reservationGeometry")] =
         serializeRect(record.reservationGeometry);
     json[QStringLiteral("reservationWindowGeometry")] =

@@ -13,7 +13,7 @@
 #include "positioner.h"
 #include "visibilitymanager.h"
 #include "viewactionpolicy.h"
-#include "helpers/screenspacereservation.h"
+#include "helpers/screenspacereservationcoordinator.h"
 #include "settings/primaryconfigview.h"
 #include "settings/secondaryconfigview.h"
 #include "settings/viewsettingsfactory.h"
@@ -239,6 +239,7 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
 View::~View()
 {
     m_inDelete = true;
+    clearScreenSpaceReservation();
 
     //! clear Layout connections
     m_visibleHackTimer1.stop();
@@ -560,22 +561,19 @@ void View::publishScreenSpaceReservation(
     const QRect &strutGeometry,
     Plasma::Types::Location reservationLocation)
 {
-    if (!m_screenSpaceReservation) {
-        m_screenSpaceReservation = std::make_unique<ViewPart::ScreenSpaceReservation>(this);
-    }
-    m_screenSpaceReservation->publish(strutGeometry, reservationLocation);
+    Q_ASSERT(m_corona);
+    Q_ASSERT(m_corona->screenSpaceReservationCoordinator());
+    m_corona->screenSpaceReservationCoordinator()->updateReservation(
+        *this,
+        strutGeometry,
+        reservationLocation);
 }
 
 void View::clearScreenSpaceReservation()
 {
-    if (m_screenSpaceReservation) {
-        m_screenSpaceReservation->clear();
+    if (m_corona && m_corona->screenSpaceReservationCoordinator()) {
+        m_corona->screenSpaceReservationCoordinator()->removeReservation(*this);
     }
-}
-
-const ViewPart::ScreenSpaceReservation *View::screenSpaceReservation() const
-{
-    return m_screenSpaceReservation.get();
 }
 
 void View::reanchorLayerShell()
