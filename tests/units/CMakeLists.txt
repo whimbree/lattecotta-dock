@@ -152,6 +152,18 @@ latte_add_unit_test(floatingtransitiontest
 target_include_directories(floatingtransitiontest PRIVATE
     ${CMAKE_SOURCE_DIR}/app)
 
+# FP-4A stable-window-touch state: a valid stable trigger counts exact visible
+# window intersections without output filtering.
+latte_add_unit_test(windowtouchstatetest)
+
+# FP-4A per-view model adapter: exact role resolution, model lifecycle, trigger
+# changes, and the non-restarting 10 ms evaluation deadline.
+latte_add_unit_test(windowtouchtrackertest
+    ${CMAKE_SOURCE_DIR}/app/view/floatingtransition.cpp
+    ${CMAKE_SOURCE_DIR}/app/view/windowtouchtracker.cpp)
+target_include_directories(windowtouchtrackertest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app)
+
 # InputMaskFlush (app/view/inputmaskflush.h): the pure "what region to hand
 # QWindow::setMask" decision that keeps the window mask wide across a band
 # shrink so Qt6 wayland does not clip the vacated region's clearing damage.

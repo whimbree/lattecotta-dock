@@ -61,11 +61,13 @@
     </entry>   
     <entry name="hideFloatingGapForMaximized" type="Bool">
         <default>false</default>
-        <label>floating gap is disabled when there are maximized windows</label>
+        <!-- The key keeps its dock behavior. Panel views interpret the same
+             stored preference as stable-window-touch attachment. -->
+        <label>attach an Always Visible panel on window touch or hide a dock's floating gap for maximized windows</label>
     </entry>
     <entry name="floatingGapHidingWaitsMouse" type="Bool">
         <default>false</default>
-        <label>delay floating gap hiding until mouse leaves</label>
+        <label>defer panel attachment or dock floating-gap hiding while the pointer remains inside the view</label>
     </entry>
     <entry name="floatingGapIsMirrored" type="Bool">
       <default>false</default>

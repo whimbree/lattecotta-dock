@@ -56,7 +56,7 @@
 236	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/BindingsExternal.qml
 6	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/DragDropArea.qml
 32	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/Upgrader.qml
-158	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/VisibilityManager.qml
+145	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/VisibilityManager.qml
 3	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Indexer.qml
 4	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Indicators.qml
 31	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Launchers.qml
@@ -144,7 +144,7 @@
 12	share/plasma/shells/org.kde.latte.shell/contents/configuration/canvas/maxlength/RulerMouseArea.qml
 1	share/plasma/shells/org.kde.latte.shell/contents/configuration/config.qml
 243	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/AppearanceConfig.qml
-250	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/BehaviorConfig.qml
+246	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/BehaviorConfig.qml
 63	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/EffectsConfig.qml
 238	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/TasksConfig.qml
 31	share/plasma/shells/org.kde.latte.shell/contents/controls/CustomIndicatorButton.qml

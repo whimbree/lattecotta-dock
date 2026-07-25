@@ -145,12 +145,33 @@ ContainmentItem {
     property bool hideThickScreenGap: false /*set through binding*/
     property bool hideLengthScreenGaps: false /*set through binding*/
     readonly property bool floatingTransitionEligible: latteView
+                                                       && root.behaveAsPlasmaPanel
                                                        && latteView.floatingPanelConfigured
-                                                       && Plasmoid.configuration.hideFloatingGapForMaximized
                                                        && latteView.visibility
                                                        && latteView.visibility.mode === LatteCore.Types.AlwaysVisible
-    readonly property bool floatingGapIsAttached: floatingTransitionEligible
-                                                  && hideThickScreenGap
+    readonly property bool attachOnWindowTouchConfigured:
+        Plasmoid.configuration.hideFloatingGapForMaximized
+    readonly property bool attachmentWaitsForPointerExitConfigured:
+        Plasmoid.configuration.floatingGapHidingWaitsMouse
+    readonly property bool pointerInsideView:
+        !!(latteView
+           && latteView.visibility
+           && latteView.visibility.containsMouse)
+    readonly property bool dockGapHideRequested:
+        latteView
+        && root.behaveAsDockWithMask
+        && latteView.floatingGapConfigured
+        && !latteView.floatingPanelConfigured
+        && attachOnWindowTouchConfigured
+        && latteView.visibility
+        && latteView.visibility.mode === LatteCore.Types.AlwaysVisible
+        && hideThickScreenGap
+    //! Compatibility readback for layout/background consumers. Target
+    //! selection belongs exclusively to FloatingTransition.
+    readonly property bool floatingGapIsAttached:
+        !!(latteView
+           && latteView.floatingTransition
+           && latteView.floatingTransition.attachmentTargeted)
 
     property bool mirrorScreenGap: screenEdgeMarginEnabled
                                    && Plasmoid.configuration.floatingGapIsMirrored
@@ -460,6 +481,7 @@ ContainmentItem {
 
     onLatteViewChanged: {
         updateFloatingAppletPopupHint();
+        reconcileFloatingTargetPolicy();
 
         if (latteView) {
             if (latteView.positioner) {
@@ -511,15 +533,53 @@ ContainmentItem {
         }
     }
 
+    Connections {
+        target: latteView ? latteView.windowTouchTracker : null
+        function onTouchingWindowCountChanged() {
+            root.reconcileFloatingTargetPolicy();
+        }
+    }
+
+    onFloatingTransitionEligibleChanged:
+        reconcileFloatingTargetPolicy()
+    onAttachOnWindowTouchConfiguredChanged:
+        reconcileFloatingTargetPolicy()
+    onAttachmentWaitsForPointerExitConfiguredChanged:
+        reconcileFloatingTargetPolicy()
+    onPointerInsideViewChanged:
+        reconcileFloatingTargetPolicy()
+    onDockGapHideRequestedChanged:
+        reconcileFloatingTargetPolicy()
+
+    function reconcileFloatingTargetPolicy() {
+        if (!latteView
+                || !latteView.floatingTransition
+                || !latteView.windowTouchTracker) {
+            return;
+        }
+
+        latteView.floatingTransition.reconcileTargetPolicy(
+            floatingTransitionEligible,
+            attachOnWindowTouchConfigured,
+            attachmentWaitsForPointerExitConfigured,
+            pointerInsideView,
+            latteView.windowTouchTracker.touchingWindowCount,
+            dockGapHideRequested);
+        //! Reconciliation may preserve the current target and therefore emit
+        //! no targetChanged signal. Refresh the derived display hint after
+        //! the complete policy has been committed.
+        updateFloatingAppletPopupHint();
+    }
+
     function updateFloatingAppletPopupHint() {
         if (!Plasmoid) {
             return;
         }
 
-        var floatingBit =
+        const floatingBit =
                 PlasmaCore.Types.ContainmentPrefersFloatingApplets;
-        var previousHints = Plasmoid.containmentDisplayHints;
-        var nextHints = latteView && latteView.floatingTransition
+        const previousHints = Plasmoid.containmentDisplayHints;
+        const nextHints = latteView && latteView.floatingTransition
                 ? latteView.floatingTransition.displayHintsWithFloatingPreference(
                     previousHints,
                     floatingBit,
@@ -557,6 +617,7 @@ ContainmentItem {
 
     Component.onCompleted: {
         updateFloatingAppletPopupHint();
+        reconcileFloatingTargetPolicy();
         upgrader_v010_alignment();
 
         fastLayoutManager.restore();
@@ -836,6 +897,10 @@ ContainmentItem {
     BindingsExternal {
         id: bindingsExternal
         containmentItem: root
+    }
+
+    WindowTouchTracker {
+        dockView: root.latteView
     }
 
     VisibilityManager{

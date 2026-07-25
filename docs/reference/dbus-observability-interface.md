@@ -80,7 +80,7 @@ Landed before or during the 2026-07-16 stabilization session:
   `editMode && universalSettings.inConfigureAppletsMode`, not the raw global
   toggle. A global rearrange session therefore does not report unrelated docks
   as configuring applets.
-- `dockSystemData() -> s` (compact JSON object, schema version 6; added by C0
+- `dockSystemData() -> s` (compact JSON object, schema version 7; added by C0
   (the atomic dock-system observability snapshot)). This is the relational
   all-docks read. One synchronous call captures the global configuration mode,
   every current dock, and every active output-edge reservation group. Docks
@@ -90,7 +90,7 @@ Landed before or during the 2026-07-16 stabilization session:
   only after a complete coordinator projection transaction.
   ```json
   {
-    "schemaVersion": 6,
+    "schemaVersion": 7,
     "snapshotSequence": "14",
     "globalConfigureAppletsMode": true,
     "stacking": {
@@ -177,8 +177,16 @@ Landed before or during the 2026-07-16 stabilization session:
       "reservationLayerShellMargins": [left, top, right, bottom],
       "reservationLayerShellExclusiveEdge": "left",
       "reservationLayerShellExclusiveZone": 48,
+      "floatingGapConfigured": true,
       "floatingPanelConfigured": true,
       "floatingPanelEligible": true,
+      "attachOnWindowTouchConfigured": true,
+      "attachmentWaitsForPointerExitConfigured": true,
+      "pointerInsideView": false,
+      "attachmentDeferredByPointer": false,
+      "dockGapHideRequested": false,
+      "touchingWindowCount": 1,
+      "windowTouchGeometryRoleType": "QRect",
       "transitionTarget": "attached",
       "transitionProgress": 0.375,
       "transitionPhase": "attaching",
@@ -223,6 +231,7 @@ Landed before or during the 2026-07-16 stabilization session:
         "layoutController": "object-13",
         "geometryController": "object-14",
         "transitionController": "object-15",
+        "windowTouchTracker": "object-18",
         "editController": "object-16",
         "configWindow": "object-17",
         "reservationPublisher": "object-27"
@@ -277,16 +286,20 @@ Landed before or during the 2026-07-16 stabilization session:
   not an inference from a momentarily unchanged rectangle.
 
   Schema 5 adds FP-2 (the stable floating-panel canvas and transition
-  controller) as one validated per-view record. `floatingPanelConfigured` is
-  exactly `View::isFloatingPanel()`, the configured floating presentation.
+  controller) as one validated per-view record.
+  `floatingPanelConfigured` is exactly `View::isFloatingPanel()`, the
+  configured floating presentation.
   It does not claim that the later window-touch policy is configured.
-  `floatingPanelEligible` comes from `FloatingTransition::eligible`.
+  `floatingPanelEligible` comes from
+  `FloatingTransition::floatingPanelEligible`.
   Eligibility implies a configured floating Always Visible panel. An
-  ineligible controller cannot target `attached` and converges to `floated`;
-  disabling eligibility may animate outward before settling.
-  Touching-window count and configured attach-on-window-touch policy are
-  deferred to FP-4 (the stable window-touch trigger and end-to-end acceptance
-  slice), where their authoritative C++ owners will land.
+  ineligible Panel cannot attach through the window-touch arm. Schema 7 adds
+  `floatingGapConfigured`, which is exactly
+  `View::floatingGapConfigured()`: screen-edge margins are enabled and the
+  configured margin is positive, independent of Dock or Panel identity.
+  Schema 7 also adds the dedicated window-touch inputs and count plus the
+  separate legacy Dock maximized-gap request. A Dock reports that request while
+  its Panel transition target remains `floated`.
 
   `transitionTarget`, `transitionProgress`, `transitionPhase`,
   `transitionDirection`, and `transitionRunning` report the controller's
@@ -346,12 +359,32 @@ Landed before or during the 2026-07-16 stabilization session:
 
   The object identities name, respectively, the View window, Plasma
   containment, live KConfig property map, GenericLayout, QML layout manager,
-  Positioner, FloatingTransition, containment root that owns edit state, shared
-  configuration window, and coordinator-owned reservation publisher. Equal
-  tokens prove shared ownership or accidental cross-dock reuse.
+  Positioner, FloatingTransition, WindowTouchTracker, containment root that
+  owns edit state, shared configuration window, and coordinator-owned
+  reservation publisher. Equal tokens prove shared ownership or accidental
+  cross-dock reuse.
   `transitionController` is required, distinct from every other reported
-  authority, and unique per view. Every contributor in one output-edge group
-  reports the same reservation publisher token.
+  authority, and unique per view. `windowTouchTracker` has the same required
+  per-view uniqueness contract and must also differ from every transition
+  controller. Every contributor in one output-edge group reports the same
+  reservation publisher token.
+  `attachOnWindowTouchConfigured` and
+  `attachmentWaitsForPointerExitConfigured` are raw persistent preferences;
+  `pointerInsideView` is the raw per-view pointer state.
+  `attachmentDeferredByPointer` is the controller-owned latch for a new Panel
+  attachment request. Entering an already attached Panel does not detach it.
+  `dockGapHideRequested` is the separate legacy Dock maximized-gap request.
+  It requires `floatingGapConfigured` and rejects
+  `floatingPanelConfigured`.
+  `touchingWindowCount` is the current count from the dedicated stable-trigger
+  model. `windowTouchGeometryRoleType` is empty until a live task row has been
+  validated, then reports `QRect`; a positive touch count without that exact
+  observed type is rejected. A record is accepted only when its transition
+  target satisfies this exact fail-closed equation:
+  `attached == floatingPanelEligible && attachOnWindowTouchConfigured &&
+  !attachmentDeferredByPointer && touchingWindowCount > 0`.
+  `dockGapHideRequested` remains independent because Docks consume the legacy
+  gap path directly and have no stable Panel transition geometry.
   `effectiveConfigureAppletsMode` is derived from the same per-view expression
   as QML. The raw global bit appears only once at the snapshot root.
 

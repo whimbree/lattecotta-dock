@@ -997,8 +997,10 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
                  && view->extendedInterface());
         const auto *const transition =
             view->floatingTransition();
-        if (!transition) {
-            qCritical() << "dbusreports: refusing dock-system snapshot without a per-view transition controller"
+        const auto *const windowTouchTracker =
+            view->windowTouchTracker();
+        if (!transition || !windowTouchTracker) {
+            qCritical() << "dbusreports: refusing dock-system snapshot without per-view transition and window-touch authorities"
                         << view->containment()->id();
             return std::nullopt;
         }
@@ -1196,10 +1198,26 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
             return std::nullopt;
         }
 
+        record.floatingGapConfigured =
+            view->floatingGapConfigured();
         record.floatingPanelConfigured =
             view->isFloatingPanel();
         record.floatingPanelEligible =
-            transition->eligible();
+            transition->floatingPanelEligible();
+        record.attachOnWindowTouchConfigured =
+            transition->attachOnWindowTouchConfigured();
+        record.attachmentWaitsForPointerExitConfigured =
+            transition->attachmentWaitsForPointerExitConfigured();
+        record.pointerInsideView =
+            transition->pointerInsideView();
+        record.attachmentDeferredByPointer =
+            transition->attachmentDeferredByPointer();
+        record.dockGapHideRequested =
+            transition->dockGapHideRequested();
+        record.touchingWindowCount =
+            transition->touchingWindowCount();
+        record.windowTouchGeometryRoleType =
+            windowTouchTracker->geometryRoleTypeName();
         record.transitionTarget =
             transitionTargetForSnapshot(
                 transition->target());
@@ -1292,6 +1310,8 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
                     : nullptr);
         record.objects.transitionController =
             identities->tokenFor(transition);
+        record.objects.windowTouchTracker =
+            identities->tokenFor(windowTouchTracker);
 
         snapshot.views.append(record);
     }
@@ -1367,7 +1387,41 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         return std::nullopt;
     }
     if (!dockTransitionRecordsAgree(snapshot)) {
-        qCritical() << "dbusreports: refusing dock-system snapshot whose transition records disagree";
+        for (const auto &view : snapshot.views) {
+            qCritical()
+                << "dbusreports: transition disagreement for dock"
+                << view.persistentDockId
+                << "eligible" << view.floatingPanelEligible
+                << "floatingGapConfigured"
+                << view.floatingGapConfigured
+                << "attachOnWindowTouchConfigured"
+                << view.attachOnWindowTouchConfigured
+                << "waitsForPointerExit"
+                << view.attachmentWaitsForPointerExitConfigured
+                << "pointerInside"
+                << view.pointerInsideView
+                << "deferred"
+                << view.attachmentDeferredByPointer
+                << "dockGapHideRequested"
+                << view.dockGapHideRequested
+                << "touching" << view.touchingWindowCount
+                << "geometryRole"
+                << view.windowTouchGeometryRoleType
+                << "target"
+                << static_cast<int>(view.transitionTarget)
+                << "phase"
+                << static_cast<int>(view.transitionPhase)
+                << "running" << view.transitionRunning
+                << "progress" << view.transitionProgress
+                << "transitionController"
+                << view.objects.transitionController
+                << "windowTouchTracker"
+                << view.objects.windowTouchTracker
+                << "record"
+                << serializeDockSystemViewRecord(
+                       view,
+                       globalConfigureAppletsMode);
+        }
         return std::nullopt;
     }
 
