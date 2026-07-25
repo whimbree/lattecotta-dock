@@ -44,12 +44,17 @@ import json, sys
 state = json.load(sys.stdin)
 views = {v["persistentDockId"]: v for v in state["views"]}
 partial, full, right = (int(value) for value in sys.argv[1:4])
+selected = {partial, full}
 ok = (
     views[partial]["visibilityMode"] == "dodgeActive"
     and views[partial]["publishedStruts"] == [0, 0, 0, 0]
     and views[full]["visibilityMode"] == "dodgeActive"
     and views[full]["publishedStruts"] == [0, 0, 0, 0]
     and views[right]["geometrySettled"]
+    and not any(
+        selected.intersection(group["contributorDockIds"])
+        for group in state["reservationGroups"]
+    )
 )
 raise SystemExit(0 if ok else 1)
 ' "$partial_bottom" "$full_bottom" "$right_view" <<<"$current"; then
@@ -61,13 +66,15 @@ done
 [[ -n "$baseline" ]] \
     || e2e_fail "non-reserving partial-dock baseline did not settle"
 
-baseline_right="$(python3 -c '
+read -r baseline_generation baseline_right <<< "$(python3 -c '
 import json, sys
 state = json.load(sys.stdin)
 view = next(v for v in state["views"]
             if v["persistentDockId"] == int(sys.argv[1]))
-print(" ".join(str(value) for value in view["surfaceGeometry"]))
+print(state["reservationStateGeneration"],
+      ",".join(str(value) for value in view["surfaceGeometry"]))
 ' "$right_view" <<<"$baseline")"
+baseline_right="${baseline_right//,/ }"
 
 e2e_call setViewVisibilityMode us "$partial_bottom" alwaysVisible >/dev/null \
     || e2e_fail "could not publish the partial-width bottom reservation"
@@ -84,6 +91,11 @@ views = {v["persistentDockId"]: v for v in state["views"]}
 partial, full, right = (int(value) for value in sys.argv[1:4])
 surface = views[right]["surfaceGeometry"]
 screen = views[right]["screenGeometry"]
+groups = [
+    group for group in state["reservationGroups"]
+    if partial in group["contributorDockIds"]
+]
+group = groups[0] if len(groups) == 1 else None
 expected_margins = [
     surface[0] - screen[0],
     surface[1] - screen[1],
@@ -95,11 +107,25 @@ ok = (
     and views[partial]["publishedStruts"][3] > 0
     and views[partial]["reservationSurfacePresent"]
     and views[partial]["reservationOutputId"] == views[partial]["screenId"]
+    and views[partial]["reservationEdge"] == "bottom"
     and views[partial]["reservationContributionDepth"]
         == views[partial]["strutsThickness"]
     and views[partial]["reservationPublishedDepth"]
         == views[partial]["strutsThickness"]
     and views[partial]["reservationGroupMemberCount"] == 1
+    and views[partial]["reservationContributorDockIds"] == [partial]
+    and group is not None
+    and group["outputId"] == views[partial]["screenId"]
+    and group["edge"] == "bottom"
+    and group["contributorDockIds"] == [partial]
+    and group["memberCount"] == 1
+    and group["publishedDepth"] == views[partial]["strutsThickness"]
+    and group["publisher"] == views[partial]["objects"]["reservationPublisher"]
+    and group["layerShellPresent"]
+    and group["geometry"] == views[partial]["reservationGeometry"]
+    and group["generation"] == views[partial]["reservationGroupGeneration"]
+    and int(group["generation"]) > int(sys.argv[4])
+    and int(state["reservationStateGeneration"]) >= int(group["generation"])
     and views[partial]["reservationGeometry"] == [
         views[partial]["screenGeometry"][0],
         views[partial]["screenGeometry"][1]
@@ -125,7 +151,8 @@ ok = (
     and views[right]["layerShellExclusiveZone"] == -1
 )
 raise SystemExit(0 if ok else 1)
-' "$partial_bottom" "$full_bottom" "$right_view" <<<"$current"; then
+' "$partial_bottom" "$full_bottom" "$right_view" \
+        "$baseline_generation" <<<"$current"; then
         settled="$current"
         break
     fi
@@ -136,14 +163,15 @@ if [[ -z "$settled" ]]; then
     e2e_fail "partial reservation did not converge to the exact layer-shell placement"
 fi
 
-read -r rx ry rw rh bottom_end right_start <<< "$(python3 -c '
+read -r partial_generation rx ry rw rh bottom_end right_start <<< "$(python3 -c '
 import json, sys
 state = json.load(sys.stdin)
 views = {v["persistentDockId"]: v for v in state["views"]}
 partial, right = (int(value) for value in sys.argv[1:3])
 r = views[right]
 p = views[partial]
-print(*r["surfaceGeometry"],
+print(p["reservationGroupGeneration"],
+      *r["surfaceGeometry"],
       p["absoluteGeometry"][0] + p["absoluteGeometry"][2],
       r["absoluteGeometry"][0])
 ' "$partial_bottom" "$right_view" <<<"$settled")"
@@ -187,11 +215,21 @@ depth = max(p["reservationContributionDepth"],
             f["reservationContributionDepth"])
 screen = p["screenGeometry"]
 expected = [screen[0], screen[1] + screen[3] - depth, screen[2], depth]
+groups = [
+    group for group in state["reservationGroups"]
+    if partial in group["contributorDockIds"]
+    or full in group["contributorDockIds"]
+]
+group = groups[0] if len(groups) == 1 else None
 ok = (
     p["visibilityMode"] == "alwaysVisible"
     and f["visibilityMode"] == "alwaysVisible"
     and p["reservationOutputId"] == f["reservationOutputId"] == p["screenId"]
     and p["reservationGroupMemberCount"] == f["reservationGroupMemberCount"] == 2
+    and p["reservationEdge"] == f["reservationEdge"] == "bottom"
+    and p["reservationGroupGeneration"] == f["reservationGroupGeneration"]
+    and p["reservationContributorDockIds"]
+        == f["reservationContributorDockIds"] == sorted([partial, full])
     and p["reservationPublishedDepth"] == f["reservationPublishedDepth"] == depth
     and depth != (
         p["reservationContributionDepth"] + f["reservationContributionDepth"])
@@ -201,11 +239,22 @@ ok = (
     and p["objects"]["reservationPublisher"]
         == f["objects"]["reservationPublisher"]
     and p["objects"]["reservationPublisher"] is not None
+    and group is not None
+    and group["outputId"] == p["screenId"]
+    and group["edge"] == "bottom"
+    and group["contributorDockIds"] == sorted([partial, full])
+    and group["memberCount"] == 2
+    and group["publishedDepth"] == depth
+    and group["publisher"] == p["objects"]["reservationPublisher"]
+    and group["generation"] == p["reservationGroupGeneration"]
+    and group["layerShellPresent"]
+    and int(group["generation"]) > int(sys.argv[8])
+    and int(state["reservationStateGeneration"]) >= int(group["generation"])
     and r["surfaceGeometry"] == [int(value) for value in sys.argv[4:8]]
 )
 raise SystemExit(0 if ok else 1)
 ' "$partial_bottom" "$full_bottom" "$right_view" \
-        "$rx" "$ry" "$rw" "$rh" <<<"$current"; then
+        "$rx" "$ry" "$rw" "$rh" "$partial_generation" <<<"$current"; then
         shared="$current"
         break
     fi
@@ -216,7 +265,7 @@ if [[ -z "$shared" ]]; then
     e2e_fail "same-edge reservations did not converge on one maximum-depth publisher"
 fi
 
-read -r screen_id shared_depth shared_members full_alignment <<< "$(python3 -c '
+read -r screen_id shared_depth shared_members full_alignment shared_generation <<< "$(python3 -c '
 import json, sys
 state = json.load(sys.stdin)
 views = {v["persistentDockId"]: v for v in state["views"]}
@@ -231,7 +280,8 @@ print(p["screenId"], p["reservationPublishedDepth"],
           "top": 3,
           "bottom": 4,
           "justify": 10,
-      }[f["alignment"]])
+      }[f["alignment"]],
+      p["reservationGroupGeneration"])
 ' "$partial_bottom" "$full_bottom" <<<"$shared")"
 
 [[ "$shared_members" == 2 ]] \
@@ -265,6 +315,16 @@ top_depth = max(
     view["reservationContributionDepth"] for view in top_members
 )
 top_publisher = m["objects"]["reservationPublisher"]
+p_groups = [
+    group for group in state["reservationGroups"]
+    if partial in group["contributorDockIds"]
+]
+m_groups = [
+    group for group in state["reservationGroups"]
+    if moved in group["contributorDockIds"]
+]
+p_group = p_groups[0] if len(p_groups) == 1 else None
+m_group = m_groups[0] if len(m_groups) == 1 else None
 p_expected = [
     screen[0],
     screen[1] + screen[3] - p["reservationContributionDepth"],
@@ -280,6 +340,8 @@ m_expected = [
 ok = (
     p["edge"] == "bottom"
     and m["edge"] == "top"
+    and p["reservationEdge"] == "bottom"
+    and m["reservationEdge"] == "top"
     and p["geometrySettled"] and m["geometrySettled"]
     and p["reservationGroupMemberCount"] == 1
     and m["reservationGroupMemberCount"] == len(top_members)
@@ -297,9 +359,24 @@ ok = (
     )
     and p["objects"]["reservationPublisher"]
         != top_publisher
+    and p_group is not None
+    and m_group is not None
+    and p_group["edge"] == "bottom"
+    and m_group["edge"] == "top"
+    and p_group["publisher"] == p["objects"]["reservationPublisher"]
+    and m_group["publisher"] == top_publisher
+    and p_group["contributorDockIds"] == [partial]
+    and m_group["contributorDockIds"]
+        == sorted(view["persistentDockId"] for view in top_members)
+    and p_group["generation"] == p["reservationGroupGeneration"]
+    and m_group["generation"] == m["reservationGroupGeneration"]
+    and int(p_group["generation"]) == int(m_group["generation"])
+    and int(p_group["generation"]) > int(sys.argv[3])
+    and int(state["reservationStateGeneration"])
+        == int(p_group["generation"])
 )
 raise SystemExit(0 if ok else 1)
-' "$partial_bottom" "$full_bottom" <<<"$current"; then
+' "$partial_bottom" "$full_bottom" "$shared_generation" <<<"$current"; then
         migrated="$current"
         break
     fi
@@ -310,15 +387,196 @@ if [[ -z "$migrated" ]]; then
     e2e_fail "edge migration left stale or incompatible reservation membership"
 fi
 
-fallback_depth="$(python3 -c '
+read -r fallback_depth migration_generation <<< "$(python3 -c '
 import json, sys
 state = json.load(sys.stdin)
 view = next(v for v in state["views"]
             if v["persistentDockId"] == int(sys.argv[1]))
-print(view["reservationPublishedDepth"])
+print(view["reservationPublishedDepth"],
+      state["reservationStateGeneration"])
 ' "$partial_bottom" <<<"$migrated")"
 [[ "$fallback_depth" -le "$shared_depth" ]] \
     || e2e_fail "removing a same-edge member increased the surviving depth"
+
+target_screen_id="$screen_id"
+target_screen_name="$(python3 -c '
+import json, sys
+screen_id = int(sys.argv[1])
+screen = next(
+    screen for screen in json.load(sys.stdin)
+    if screen["id"] == screen_id
+)
+print(screen["name"])
+' "$screen_id" <<<"$(e2e_json screensData)")"
+output_moved="$migrated"
+
+if (( ${E2E_OUTPUT_COUNT:-1} >= 2 )); then
+    read -r target_screen_id target_screen_name <<< "$(python3 -c '
+import json, sys
+secondary = [
+    screen for screen in json.load(sys.stdin)
+    if screen["isActive"] and not screen["isPrimary"]
+]
+if len(secondary) != 1:
+    raise SystemExit(
+        "fixture needs exactly one active secondary output"
+    )
+print(secondary[0]["id"], secondary[0]["name"])
+' <<<"$(e2e_json screensData)")" \
+        || e2e_fail "could not discover the secondary output"
+
+    e2e_call setViewPlacement uiii "$full_bottom" \
+        "$target_screen_id" 3 "$full_alignment" >/dev/null \
+        || e2e_fail "could not migrate the reservation to the secondary output"
+
+    output_moved=""
+    last=""
+    for _ in $(seq 1 150); do
+        current="$(e2e_json dockSystemData)"
+        last="$current"
+        if [[ -n "$current" ]] && python3 -c '
+import json, sys
+state = json.load(sys.stdin)
+views = {v["persistentDockId"]: v for v in state["views"]}
+partial, moved, source_output, target_output = (
+    int(value) for value in sys.argv[1:5]
+)
+target_name = sys.argv[5]
+previous_generation = int(sys.argv[6])
+p, m = views[partial], views[moved]
+p_groups = [
+    group for group in state["reservationGroups"]
+    if partial in group["contributorDockIds"]
+]
+m_groups = [
+    group for group in state["reservationGroups"]
+    if moved in group["contributorDockIds"]
+]
+p_group = p_groups[0] if len(p_groups) == 1 else None
+m_group = m_groups[0] if len(m_groups) == 1 else None
+ok = (
+    p["screenId"] == source_output
+    and p["edge"] == p["reservationEdge"] == "bottom"
+    and m["screenId"] == target_output
+    and m["screen"] == target_name
+    and m["edge"] == m["reservationEdge"] == "top"
+    and p["geometrySettled"] and m["geometrySettled"]
+    and p_group is not None
+    and m_group is not None
+    and p_group["outputId"] == source_output
+    and p_group["edge"] == "bottom"
+    and m_group["outputId"] == target_output
+    and m_group["edge"] == "top"
+    and p_group["publisher"] == p["objects"]["reservationPublisher"]
+    and m_group["publisher"] == m["objects"]["reservationPublisher"]
+    and p_group["generation"] == p["reservationGroupGeneration"]
+    and m_group["generation"] == m["reservationGroupGeneration"]
+    and p_group["layerShellPresent"]
+    and m_group["layerShellPresent"]
+    and not any(
+        moved in group["contributorDockIds"]
+        and group["outputId"] == source_output
+        for group in state["reservationGroups"]
+    )
+    and int(state["reservationStateGeneration"]) > previous_generation
+    and int(m_group["generation"]) == int(state["reservationStateGeneration"])
+)
+raise SystemExit(0 if ok else 1)
+' "$partial_bottom" "$full_bottom" "$screen_id" \
+                "$target_screen_id" "$target_screen_name" \
+                "$migration_generation" <<<"$current"; then
+            output_moved="$current"
+            break
+        fi
+        sleep 0.2
+    done
+    if [[ -z "$output_moved" ]]; then
+        python3 -m json.tool <<<"$last" >&2
+        e2e_fail "output migration left stale or incompatible reservation ownership"
+    fi
+fi
+
+e2e_dock_stop \
+    || e2e_fail "could not stop the dock for reservation persistence replay"
+e2e_dock_start 120 \
+    || e2e_fail "dock did not restart for reservation persistence replay"
+
+restarted=""
+last=""
+for _ in $(seq 1 150); do
+    current="$(e2e_json dockSystemData)"
+    last="$current"
+    if [[ -n "$current" ]] && python3 -c '
+import json, sys
+state = json.load(sys.stdin)
+views = {v["persistentDockId"]: v for v in state["views"]}
+partial, moved, source_output, target_output, right = (
+    int(value) for value in sys.argv[1:6]
+)
+target_name = sys.argv[6]
+right_geometry = [int(value) for value in sys.argv[7:11]]
+p, m, r = views[partial], views[moved], views[right]
+p_groups = [
+    group for group in state["reservationGroups"]
+    if partial in group["contributorDockIds"]
+]
+m_groups = [
+    group for group in state["reservationGroups"]
+    if moved in group["contributorDockIds"]
+]
+p_group = p_groups[0] if len(p_groups) == 1 else None
+m_group = m_groups[0] if len(m_groups) == 1 else None
+selected_occurrences = sum(
+    int(partial in group["contributorDockIds"])
+    + int(moved in group["contributorDockIds"])
+    for group in state["reservationGroups"]
+)
+ok = (
+    p["screenId"] == source_output
+    and p["edge"] == p["reservationEdge"] == "bottom"
+    and p["visibilityMode"] == "alwaysVisible"
+    and m["screenId"] == target_output
+    and m["screen"] == target_name
+    and m["edge"] == m["reservationEdge"] == "top"
+    and m["visibilityMode"] == "alwaysVisible"
+    and p["geometrySettled"] and m["geometrySettled"]
+    and p_group is not None
+    and m_group is not None
+    and p_group["outputId"] == source_output
+    and p_group["edge"] == "bottom"
+    and m_group["outputId"] == target_output
+    and m_group["edge"] == "top"
+    and p_group["publisher"] == p["objects"]["reservationPublisher"]
+    and m_group["publisher"] == m["objects"]["reservationPublisher"]
+    and p_group["generation"] == p["reservationGroupGeneration"]
+    and m_group["generation"] == m["reservationGroupGeneration"]
+    and int(p_group["generation"]) > 0
+    and int(m_group["generation"]) > 0
+    and p_group["layerShellPresent"]
+    and m_group["layerShellPresent"]
+    and selected_occurrences == 2
+    and int(state["reservationStateGeneration"])
+        >= max(int(p_group["generation"]), int(m_group["generation"]))
+    and r["surfaceGeometry"] == right_geometry
+)
+raise SystemExit(0 if ok else 1)
+' "$partial_bottom" "$full_bottom" "$screen_id" \
+            "$target_screen_id" "$right_view" "$target_screen_name" \
+            "$rx" "$ry" "$rw" "$rh" <<<"$current"; then
+        restarted="$current"
+        break
+    fi
+    sleep 0.2
+done
+if [[ -z "$restarted" ]]; then
+    python3 -m json.tool <<<"$last" >&2
+    e2e_fail "reservation output and edge ownership did not survive restart"
+fi
+
+restart_generation="$(python3 -c '
+import json, sys
+print(json.load(sys.stdin)["reservationStateGeneration"])
+' <<<"$restarted")"
 
 e2e_call setViewVisibilityMode us "$full_bottom" dodgeActive >/dev/null \
     || e2e_fail "could not release the migrated top reservation"
@@ -329,11 +587,16 @@ e2e_call setViewVisibilityMode us "$partial_bottom" dodgeActive >/dev/null \
 
 for _ in $(seq 1 150); do
     current="$(e2e_json dockSystemData)"
-    if python3 -c '
+    if [[ -n "$current" ]] && python3 -c '
 import json, sys
-views = {v["persistentDockId"]: v
-         for v in json.load(sys.stdin)["views"]}
-ids = [int(value) for value in sys.argv[1:]]
+state = json.load(sys.stdin)
+views = {v["persistentDockId"]: v for v in state["views"]}
+partial, full, source_output, target_output, previous_generation = (
+    int(value) for value in sys.argv[1:6]
+)
+ids = [partial, full]
+selected = set(ids)
+groups = state["reservationGroups"]
 ok = all(
     views[view_id]["edge"] == "bottom"
     and views[view_id]["visibilityMode"] == "dodgeActive"
@@ -341,9 +604,44 @@ ok = all(
     and views[view_id]["objects"]["reservationPublisher"] is None
     for view_id in ids
 )
+ok = (
+    ok
+    and int(state["reservationStateGeneration"]) > previous_generation
+    and not any(
+        selected.intersection(group["contributorDockIds"])
+        for group in groups
+    )
+    and not any(
+        group["outputId"] == source_output
+        and group["edge"] == "bottom"
+        for group in groups
+    )
+    and (
+        target_output == source_output
+        or not any(
+            group["outputId"] == target_output
+            and group["edge"] == "top"
+            for group in groups
+        )
+    )
+    and all(
+        group["publisher"] is not None
+        and group["layerShellPresent"]
+        and group["memberCount"] == len(group["contributorDockIds"])
+        and group["memberCount"] > 0
+        and all(
+            contributor in views
+            and views[contributor]["objects"]["reservationPublisher"]
+                == group["publisher"]
+            for contributor in group["contributorDockIds"]
+        )
+        for group in groups
+    )
+)
 raise SystemExit(0 if ok else 1)
-' "$partial_bottom" "$full_bottom" <<<"$current"; then
-        echo "PASS: one bottom publisher used max depth $shared_depth, migration fell back to $fallback_depth, and right dock stayed at $rx,$ry ${rw}x${rh}"
+' "$partial_bottom" "$full_bottom" "$screen_id" \
+        "$target_screen_id" "$restart_generation" <<<"$current"; then
+        echo "PASS: one bottom publisher used max depth $shared_depth, migration fell back to $fallback_depth, output $target_screen_id and restart persisted, teardown left no orphan, and right dock stayed at $rx,$ry ${rw}x${rh}"
         exit 0
     fi
     sleep 0.2
