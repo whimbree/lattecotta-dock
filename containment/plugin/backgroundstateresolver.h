@@ -123,6 +123,15 @@ public Q_SLOTS:
                                           double visualLength,
                                           double viewPrimaryLength) const;
 
+    //! MultiLayered.qml shadow-bearing visual placement. The solid background
+    //! remains the stable geometry authority; unequal tail/head shadows affect
+    //! only the center of the visual parent and may be clipped by the canvas.
+    Q_INVOKABLE double dockVisualCenterOffset(double requestedSolidCenterOffset,
+                                              double solidLength,
+                                              double tailShadowLength,
+                                              double headShadowLength,
+                                              double owningCanvasLength) const;
+
     //! MultiLayered.qml totals.visualThickness / visualMaxThickness. The
     //! QML boundary validates the live theme and configuration values before
     //! the pure core interpolates from the theme minimum to the item row.

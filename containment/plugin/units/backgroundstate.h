@@ -351,6 +351,34 @@ inline constexpr qreal fitCenteredDockOffset(qreal requestedOffset,
     return std::clamp(requestedOffset, -maximumOffset, maximumOffset);
 }
 
+//! Place a shadow-bearing visual around one stable solid background. The
+//! configured/parabolic offset belongs to the solid. Tail and head shadows
+//! are external paint, so their asymmetry changes only the visual parent's
+//! center. If the paint cannot fit around the already-bounded solid, the
+//! owning canvas clips that paint instead of moving or shrinking content.
+//!
+//! This function is deliberately primary-axis-only. Horizontal top/bottom
+//! views map left/right to tail/head, and vertical left/right views map
+//! top/bottom to tail/head before entering this core.
+inline constexpr qreal resolveDockVisualCenterOffset(qreal requestedSolidCenterOffset,
+                                                     qreal solidLength,
+                                                     qreal tailShadowLength,
+                                                     qreal headShadowLength,
+                                                     qreal owningCanvasLength)
+{
+    Q_ASSERT(solidLength >= 0.0);
+    Q_ASSERT(tailShadowLength >= 0.0);
+    Q_ASSERT(headShadowLength >= 0.0);
+    Q_ASSERT(owningCanvasLength >= solidLength);
+
+    const qreal stableSolidCenterOffset = fitCenteredDockOffset(
+        requestedSolidCenterOffset,
+        solidLength,
+        owningCanvasLength);
+    const qreal shadowCenterCompensation = (headShadowLength - tailShadowLength) / 2.0;
+    return stableSolidCenterOffset + shadowCenterCompensation;
+}
+
 //! MultiLayered.qml totals.visualThickness / visualMaxThickness. The theme
 //! minimum is the baseline, not an additional margin around the item row.
 //! Interpolate only the item's excess above that baseline. This keeps the
