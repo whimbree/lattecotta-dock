@@ -12,15 +12,11 @@ set -uo pipefail
 source "${E2E_REPO:?run through scripts/run-e2e.sh}/tests/e2e/lib.sh"
 source "$E2E_REPO/tests/e2e/matrix/matrix-lib.sh"
 
-matrix_init || e2e_fail "could not capture the pristine nested configuration"
-matrix_stage panel-bottom-justify-1out \
-    || e2e_fail "could not realize the floating-panel fixture"
-view="$(matrix_view_id)" || e2e_fail "could not resolve the floating-panel fixture"
-
-layout="$E2E_LAYOUT"
-group_args=(--file "$layout" --group Containments --group "$view" --group General)
+view=""
+layout=""
+group_args=()
 kpid=0
-configured=1
+configured=0
 
 set_konsole_maximized() {
     local enabled="$1"
@@ -246,6 +242,14 @@ cleanup() {
     exit "$body_status"
 }
 trap cleanup EXIT
+
+matrix_init || e2e_fail "could not capture the pristine nested configuration"
+configured=1
+matrix_stage panel-bottom-justify-1out \
+    || e2e_fail "could not realize the floating-panel fixture"
+view="$(matrix_view_id)" || e2e_fail "could not resolve the floating-panel fixture"
+layout="$E2E_LAYOUT"
+group_args=(--file "$layout" --group Containments --group "$view" --group General)
 
 e2e_dock_stop || e2e_fail "dock did not stop before fixture configuration"
 kwriteconfig6 "${group_args[@]}" --key maximizeWhenMaximized false || e2e_fail "could not disable maximize-driven panel length"
