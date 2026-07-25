@@ -210,23 +210,104 @@ private:
                 "(justifyOwningCanvasLength-justifyLayoutLength)/2"))
             && layout.count(QStringLiteral("returnjustifyLayoutOrigin;")) == 2
             && layout.contains(QStringLiteral(
-                "width:root.isHorizontal&&root.myView.alignment"
+                "width:hasStablePanelGeometry"
+                "?floatingTransition.appletMeasurementBounds.width"
+                ":(root.isHorizontal&&root.myView.alignment"
                 "===LatteCore.Types.Justify"
-                "?justifyLayoutLength:parent.width"))
+                "?justifyLayoutLength:parent.width)"))
             && layout.contains(QStringLiteral(
-                "height:root.isVertical&&root.myView.alignment"
+                "height:hasStablePanelGeometry"
+                "?floatingTransition.appletMeasurementBounds.height"
+                ":(root.isVertical&&root.myView.alignment"
                 "===LatteCore.Types.Justify"
-                "?justifyLayoutLength:parent.height"))
+                "?justifyLayoutLength:parent.height)"))
             && main.contains(QStringLiteral("id:backgroundCanvas"))
             && main.contains(QStringLiteral(
-                "x:root.isHorizontal?0:layoutsContainer.x"))
+                "x:root.behaveAsPlasmaPanel?layoutsContainer.x"
+                ":(root.isHorizontal?0:layoutsContainer.x)"))
             && main.contains(QStringLiteral(
-                "y:root.isVertical?0:layoutsContainer.y"))
+                "y:root.behaveAsPlasmaPanel?layoutsContainer.y"
+                ":(root.isVertical?0:layoutsContainer.y)"))
             && main.contains(QStringLiteral(
-                "width:root.isHorizontal?parent.width:layoutsContainer.width"))
+                "width:root.behaveAsPlasmaPanel?layoutsContainer.width"
+                ":(root.isHorizontal?parent.width:layoutsContainer.width)"))
             && main.contains(QStringLiteral(
-                "height:root.isVertical?parent.height:layoutsContainer.height"))
+                "height:root.behaveAsPlasmaPanel?layoutsContainer.height"
+                ":(root.isVertical?parent.height:layoutsContainer.height)"))
             && !main.contains(QStringLiteral("anchors.fill:layoutsContainer"));
+    }
+
+    static bool matchesStableFloatingPanelQmlContract(
+        const QString &mainSource,
+        const QString &bindingsSource,
+        const QString &visibilitySource,
+        const QString &layoutsSource,
+        const QString &metricsSource,
+        const QString &backgroundTotalsSource)
+    {
+        const QString main = normalizedCode(mainSource);
+        const QString bindings = normalizedCode(bindingsSource);
+        const QString visibility = normalizedCode(visibilitySource);
+        const QString layouts = normalizedCode(layoutsSource);
+        const QString metrics = normalizedCode(metricsSource);
+        const QString backgroundTotals = normalizedCode(backgroundTotalsSource);
+
+        return main.contains(QStringLiteral(
+                   "readonlypropertyboolfloatingTransitionEligible:"
+                   "behaveAsPlasmaPanel&&screenEdgeMarginEnabled"
+                   "&&Plasmoid.configuration.hideFloatingGapForMaximized"
+                   "&&latteView&&latteView.visibility"
+                   "&&latteView.visibility.mode===LatteCore.Types.AlwaysVisible"))
+            && !main.contains(QStringLiteral(
+                   "floatingTransitionEligible:behaveAsPlasmaPanel"
+                   "&&latteView.visibility.mode===LatteCore.Types.WindowsGoBelow"))
+            && main.contains(QStringLiteral(
+                   "propertyrealmaxLengthPerCentage:behaveAsPlasmaPanel"
+                   "?Plasmoid.configuration.maxLength"))
+            && bindings.contains(QStringLiteral(
+                   "property:\"screenEdgeMarginEnabled\""
+                   "when:latteViewvalue:root.screenEdgeMarginEnabled"))
+            && visibility.contains(QStringLiteral(
+                   "property:\"eligible\""
+                   "when:root.latteView&&root.latteView.floatingTransition"
+                   "value:root.floatingTransitionEligible"))
+            && visibility.contains(QStringLiteral(
+                   "property:\"animationDuration\""
+                   "when:root.latteView&&root.latteView.floatingTransition"
+                   "value:manager.animationSpeed"))
+            && bindings.contains(QStringLiteral(
+                   "property:\"strutsThickness\""
+                   "when:latteView&&latteView.visibility"
+                   "value:{if(root.behaveAsPlasmaPanel)"
+                   "{returnvisibilityManager.thicknessAsPanel;}"))
+            && visibility.contains(QStringLiteral(
+                   "functionupdateFloatingTransition():void"
+                   "{if(!latteView||!latteView.floatingTransition){return;}"))
+            && visibility.contains(QStringLiteral(
+                   "if(root.floatingGapIsAttached)"
+                   "{latteView.floatingTransition.requestAttached();}"
+                   "else{latteView.floatingTransition.requestFloated();}"))
+            && visibility.contains(QStringLiteral(
+                   "functiononEligibleChanged()"
+                   "{manager.updateFloatingTransition();}"))
+            && !visibility.contains(QStringLiteral("slidingInRealFloating"))
+            && !visibility.contains(QStringLiteral("slidingOutRealFloating"))
+            && layouts.contains(QStringLiteral(
+                   "floatingTransition.currentVisibleGeometry.x"))
+            && layouts.contains(QStringLiteral(
+                   "floatingTransition.currentVisibleGeometry.y"))
+            && layouts.contains(QStringLiteral(
+                   "floatingTransition.appletMeasurementBounds.width"))
+            && layouts.contains(QStringLiteral(
+                   "floatingTransition.appletMeasurementBounds.height"))
+            && metrics.contains(QStringLiteral(
+                   "mask.screenEdge:(!root.screenEdgeMarginEnabled"
+                   "||(!metrics.stablePanelEnvelope&&root.hideThickScreenGap))"
+                   "?0:Plasmoid.configuration.screenEdgeMargin"))
+            && backgroundTotals.contains(QStringLiteral(
+                   "property:\"minThickness\""
+                   "when:totalsItem.stablePanelEnvelope"
+                   "||!(hideThickScreenGap||hideLengthScreenGaps)"));
     }
 
     static bool matchesDockBackgroundFitRouting(const QString &source)
@@ -243,7 +324,8 @@ private:
             source.mid(offsetStart), QStringLiteral("offset:")));
 
         const int panelPath = lengthBinding.indexOf(QStringLiteral(
-            "if(root.behaveAsPlasmaPanel&&LatteCore.WindowSystem.compositingActive)"));
+            "if(barLine.stablePanelEnvelope"
+            "&&LatteCore.WindowSystem.compositingActive)"));
         const int requestedLength = lengthBinding.indexOf(QStringLiteral(
             "constrequestedLength=myView.alignment===LatteCore.Types.Justify"
             "?maximumLength:Math.max("));
@@ -766,6 +848,7 @@ private Q_SLOTS:
     void centeredAppletOffset_sourceGuardRejectsVisualFeedback();
     void justifyAppletSpan_followsSolidBackground();
     void justifyAppletSpan_sourceGuardRejectsShadowOverlap();
+    void stableFloatingPanelQml_keepsOneTransitionAuthority();
     void dockBackgroundFit_includesJustifyDockMode();
     void dockBackgroundFit_sourceGuardsRejectBypasses();
     void appletBudget_excludesInternalPaddingButNotShadows();
@@ -1065,16 +1148,43 @@ void SourceGuardTest::justifyAppletSpan_sourceGuardRejectsShadowOverlap()
 
     QString layoutOwnedCanvas = originalMain;
     const QString independentCanvas = QStringLiteral(
-        "            x: root.isHorizontal ? 0 : layoutsContainer.x\n"
-        "            y: root.isVertical ? 0 : layoutsContainer.y\n"
-        "            width: root.isHorizontal ? parent.width : layoutsContainer.width\n"
-        "            height: root.isVertical ? parent.height : layoutsContainer.height");
+        "            x: root.behaveAsPlasmaPanel\n"
+        "               ? layoutsContainer.x : (root.isHorizontal ? 0 : layoutsContainer.x)\n"
+        "            y: root.behaveAsPlasmaPanel\n"
+        "               ? layoutsContainer.y : (root.isVertical ? 0 : layoutsContainer.y)\n"
+        "            width: root.behaveAsPlasmaPanel\n"
+        "                   ? layoutsContainer.width\n"
+        "                   : (root.isHorizontal ? parent.width : layoutsContainer.width)\n"
+        "            height: root.behaveAsPlasmaPanel\n"
+        "                    ? layoutsContainer.height\n"
+        "                    : (root.isVertical ? parent.height : layoutsContainer.height)");
     QCOMPARE(layoutOwnedCanvas.count(independentCanvas), 1);
     layoutOwnedCanvas.replace(independentCanvas,
                               QStringLiteral("            anchors.fill: layoutsContainer"));
     QVERIFY2(!matchesJustifyLayoutSolidSpanOwnership(originalLayout,
                                                      layoutOwnedCanvas),
              "making the background canvas depend on the applet span must fail the guard");
+}
+
+void SourceGuardTest::stableFloatingPanelQml_keepsOneTransitionAuthority()
+{
+    const QString main = readFile(QStringLiteral(
+        "containment/package/contents/ui/main.qml"));
+    const QString bindings = readFile(QStringLiteral(
+        "containment/package/contents/ui/BindingsExternal.qml"));
+    const QString visibility = readFile(QStringLiteral(
+        "containment/package/contents/ui/VisibilityManager.qml"));
+    const QString layouts = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    const QString metrics = readFile(QStringLiteral(
+        "containment/package/contents/ui/abilities/Metrics.qml"));
+    const QString backgroundTotals = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/types/Totals.qml"));
+
+    QVERIFY2(matchesStableFloatingPanelQmlContract(
+                 main, bindings, visibility, layouts, metrics, backgroundTotals),
+             "floating panels must animate only controller progress inside one"
+             " stable window, reservation, and applet-measurement envelope");
 }
 
 void SourceGuardTest::dockBackgroundFit_includesJustifyDockMode()

@@ -33,6 +33,8 @@ private:
     {
         animation = new QPropertyAnimation;
         auto *controller = new FloatingTransition(nullptr, animation);
+        controller->setEligible(true);
+        controller->requestAttached();
         controller->setAnimationDuration(400);
         return controller;
     }
@@ -42,6 +44,7 @@ private Q_SLOTS:
     void reversesFromCurrentQrealValueAtFullDuration();
     void survivesRapidAlternatingTargetsWithoutGeometryReconfigure();
     void zeroDurationSettlesSynchronously();
+    void ineligibleControllerRemainsFloated();
     void rejectsInvalidConfigurationWithoutReplacingStableState();
 };
 
@@ -138,7 +141,10 @@ void FloatingTransitionTest::zeroDurationSettlesSynchronously()
 {
     FloatingTransition controller;
     controller.setAnimationDuration(0);
+    controller.setEligible(true);
 
+    controller.requestAttached();
+    QCOMPARE(controller.floatingness(), 0.0);
     controller.requestFloated();
     QCOMPARE(controller.floatingness(), 1.0);
     QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
@@ -150,6 +156,27 @@ void FloatingTransitionTest::zeroDurationSettlesSynchronously()
     QCOMPARE(controller.target(), FloatingTransition::Target::Attached);
     QCOMPARE(controller.phase(), FloatingTransition::Phase::Resting);
     QVERIFY(!controller.running());
+}
+
+void FloatingTransitionTest::ineligibleControllerRemainsFloated()
+{
+    FloatingTransition controller;
+    controller.setAnimationDuration(0);
+
+    QCOMPARE(controller.floatingness(), 1.0);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
+    controller.requestAttached();
+    QCOMPARE(controller.floatingness(), 1.0);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
+
+    controller.setEligible(true);
+    controller.requestAttached();
+    QCOMPARE(controller.floatingness(), 0.0);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Attached);
+
+    controller.setEligible(false);
+    QCOMPARE(controller.floatingness(), 1.0);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
 }
 
 void FloatingTransitionTest::rejectsInvalidConfigurationWithoutReplacingStableState()

@@ -144,6 +144,13 @@ ContainmentItem {
     property bool appletIsDragged: root.dragOverlay && root.dragOverlay.pressed
     property bool hideThickScreenGap: false /*set through binding*/
     property bool hideLengthScreenGaps: false /*set through binding*/
+    readonly property bool floatingTransitionEligible: behaveAsPlasmaPanel
+                                                       && screenEdgeMarginEnabled
+                                                       && Plasmoid.configuration.hideFloatingGapForMaximized
+                                                       && latteView && latteView.visibility
+                                                       && latteView.visibility.mode === LatteCore.Types.AlwaysVisible
+    readonly property bool floatingGapIsAttached: floatingTransitionEligible
+                                                  && hideThickScreenGap
 
     property bool mirrorScreenGap: screenEdgeMarginEnabled
                                    && Plasmoid.configuration.floatingGapIsMirrored
@@ -193,7 +200,10 @@ ContainmentItem {
 
     property bool maximizeWhenMaximized: Plasmoid.configuration.maximizeWhenMaximized;
     property real minLengthPerCentage: Plasmoid.configuration.minLength
-    property real maxLengthPerCentage: hideLengthScreenGaps ? 100 : Plasmoid.configuration.maxLength
+    property real maxLengthPerCentage: behaveAsPlasmaPanel
+                                      ? Plasmoid.configuration.maxLength
+                                      : (hideLengthScreenGaps
+                                         ? 100 : Plasmoid.configuration.maxLength)
 
     property int minLength: {
         if (myView.alignment === LatteCore.Types.Justify) {
@@ -373,9 +383,11 @@ ContainmentItem {
               && ((root.behaveAsPlasmaPanel && latteView.positioner.slideOffset === 0)
                   || root.behaveAsDockWithMask)
               && !(Plasmoid.configuration.floatingGapHidingWaitsMouse && dockContainsMouse)
-        value: (hideThickScreenGap
+        value: ((root.behaveAsPlasmaPanel
+                 ? root.floatingGapIsAttached : root.hideThickScreenGap)
                 && (latteView.visibility.mode === LatteCore.Types.AlwaysVisible
-                    || latteView.visibility.mode === LatteCore.Types.WindowsGoBelow)
+                    || (!root.behaveAsPlasmaPanel
+                        && latteView.visibility.mode === LatteCore.Types.WindowsGoBelow))
                 && (Plasmoid.configuration.alignment === LatteCore.Types.Justify)
                 && Plasmoid.configuration.maxLength>85)
         restoreMode: Binding.RestoreNone
@@ -878,10 +890,16 @@ ContainmentItem {
             //! applet container prevents Justify's solid span from feeding
             //! back into the background that computes it. The perpendicular
             //! axis still follows the applet container's hide animation.
-            x: root.isHorizontal ? 0 : layoutsContainer.x
-            y: root.isVertical ? 0 : layoutsContainer.y
-            width: root.isHorizontal ? parent.width : layoutsContainer.width
-            height: root.isVertical ? parent.height : layoutsContainer.height
+            x: root.behaveAsPlasmaPanel
+               ? layoutsContainer.x : (root.isHorizontal ? 0 : layoutsContainer.x)
+            y: root.behaveAsPlasmaPanel
+               ? layoutsContainer.y : (root.isVertical ? 0 : layoutsContainer.y)
+            width: root.behaveAsPlasmaPanel
+                   ? layoutsContainer.width
+                   : (root.isHorizontal ? parent.width : layoutsContainer.width)
+            height: root.behaveAsPlasmaPanel
+                    ? layoutsContainer.height
+                    : (root.isVertical ? parent.height : layoutsContainer.height)
 
             Background.MultiLayered{
                 id: _background
@@ -1086,6 +1104,7 @@ ContainmentItem {
 
     Ability.Metrics {
         id: _metrics
+        stablePanelEnvelope: root.behaveAsPlasmaPanel
         availablePrimaryLength: _layouter.contentsMaxLength
         animations: _animations
         autosize: _autosize

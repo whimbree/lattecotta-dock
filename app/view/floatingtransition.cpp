@@ -58,6 +58,25 @@ bool FloatingTransition::running() const
     return m_animation->state() == QAbstractAnimation::Running;
 }
 
+bool FloatingTransition::eligible() const
+{
+    return m_eligible;
+}
+
+void FloatingTransition::setEligible(bool eligible)
+{
+    if (m_eligible == eligible) {
+        return;
+    }
+
+    m_eligible = eligible;
+    Q_EMIT eligibleChanged();
+
+    if (!m_eligible) {
+        requestTarget(Target::Floated);
+    }
+}
+
 int FloatingTransition::animationDuration() const
 {
     return m_animationDuration;
@@ -196,6 +215,11 @@ void FloatingTransition::clearGeometry()
 
 void FloatingTransition::requestAttached()
 {
+    if (!m_eligible) {
+        requestTarget(Target::Floated);
+        return;
+    }
+
     requestTarget(Target::Attached);
 }
 

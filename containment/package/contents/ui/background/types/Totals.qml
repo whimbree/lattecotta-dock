@@ -10,6 +10,7 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 
 Item{
     id: totalsItem
+    property bool stablePanelEnvelope: false
     property int visualThickness: 0
     property int visualLength: 0
     property int visualMaxThickness: 0
@@ -44,7 +45,11 @@ Item{
     Binding {
         target: totalsItem
         property: "minThickness"
-        when: !(hideThickScreenGap || hideLengthScreenGaps)
+        //! Stable panels retain their T-depth measurement while the content
+        //! translates inside the T+G envelope. The legacy freeze remains for
+        //! masked docks whose presentation path still owns those gap booleans.
+        when: totalsItem.stablePanelEnvelope
+              || !(hideThickScreenGap || hideLengthScreenGaps)
         value: (paddings.headThickness + paddings.tailThickness)
         restoreMode: Binding.RestoreNone
     }

@@ -15,6 +15,7 @@ import "./privates" as Ability
 
 Ability.MetricsPrivate {
     id: metrics
+    property bool stablePanelEnvelope: false
     //! Signals
     signal iconSizeAnimationEnded();
 
@@ -31,7 +32,7 @@ Ability.MetricsPrivate {
     margin.maxHeadThickness: (background.isGreaterThanItemThickness ? (background.totals.visualMaxThickness - _maxIconSize - margin.maxTailThickness) : margin.maxTailThickness)
     //margin.thickness: fraction.thicknessMargin * iconSize
    // margin.maxThickness: fraction.thicknessMargin * maxIconSize
-    margin.screenEdge: (root.screenEdgeMarginEnabled && root.behaveAsPlasmaPanel)
+    margin.screenEdge: (root.screenEdgeMarginEnabled && metrics.stablePanelEnvelope)
                        || !root.screenEdgeMarginEnabled
                        || root.hideThickScreenGap ?
                            0 : Plasmoid.configuration.screenEdgeMargin
@@ -78,7 +79,12 @@ Ability.MetricsPrivate {
     //! Mask
     mask.maxScreenEdge : root.behaveAsDockWithMask ? Math.max(0, Plasmoid.configuration.screenEdgeMargin) : 0
       // window geometry is updated after the local screen margin animation was zeroed*/
-    mask.screenEdge: (!root.screenEdgeMarginEnabled || root.hideThickScreenGap) ? 0 : Plasmoid.configuration.screenEdgeMargin
+    //! A panel's stable envelope always owns the configured gap. Attaching is
+    //! an internal translation, so this measurement must not jump at target
+    //! changes and feed a different local/applet/effects geometry downstream.
+    mask.screenEdge: (!root.screenEdgeMarginEnabled
+                      || (!metrics.stablePanelEnvelope && root.hideThickScreenGap))
+                     ? 0 : Plasmoid.configuration.screenEdgeMargin
 
     mask.thickness.hidden: LatteCore.WindowSystem.compositingActive ?  2 : 1
     mask.thickness.normal: mask.screenEdge + Math.max(totals.thickness + extraThicknessForNormal, background.thickness + background.shadows.headThickness)
