@@ -2156,6 +2156,14 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         auto &dock = dockSnapshot.views[0];
         QVERIFY(dockTransitionRecordsAgree(dockSnapshot));
 
+        dock.visibilityMode =
+            Types::WindowsGoBelow;
+        QVERIFY(dockTransitionRecordsAgree(dockSnapshot));
+        dock.visibilityMode =
+            Types::DodgeActive;
+        QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
+        dock.visibilityMode =
+            Types::AlwaysVisible;
         dock.floatingPanelConfigured = true;
         QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
         dock.floatingPanelConfigured = false;

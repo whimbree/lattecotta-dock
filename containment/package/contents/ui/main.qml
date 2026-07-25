@@ -164,7 +164,8 @@ ContainmentItem {
         && !latteView.floatingPanelConfigured
         && attachOnWindowTouchConfigured
         && latteView.visibility
-        && latteView.visibility.mode === LatteCore.Types.AlwaysVisible
+        && (latteView.visibility.mode === LatteCore.Types.AlwaysVisible
+            || latteView.visibility.mode === LatteCore.Types.WindowsGoBelow)
         && hideThickScreenGap
     //! Compatibility readback for layout/background consumers. Target
     //! selection belongs exclusively to FloatingTransition.
