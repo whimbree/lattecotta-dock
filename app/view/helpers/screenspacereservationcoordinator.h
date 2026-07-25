@@ -13,8 +13,10 @@
 #include <Plasma/Plasma>
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
+#include <vector>
 
 namespace Latte {
 
@@ -25,7 +27,14 @@ namespace ViewPart {
 
 class ScreenSpaceReservation;
 
-//! One view's projection into the shared output-edge publisher.
+struct ScreenSpaceReservationContribution
+{
+    std::uint64_t persistentDockId;
+    int contributionDepth;
+};
+
+//! Direct membership lookup retained for non-aggregate callers. Atomic graph
+//! consumers use snapshot(), which observes every group in one generation.
 struct ScreenSpaceReservationMembership
 {
     int outputId;
@@ -34,6 +43,29 @@ struct ScreenSpaceReservationMembership
     int publishedDepth;
     std::size_t memberCount;
     const ScreenSpaceReservation *publisher;
+};
+
+//! One committed output-edge publisher and every dock contributing to it.
+//! The generation is assigned only after the whole projection transaction
+//! succeeds, so it never names a partially published state.
+struct ScreenSpaceReservationGroupSnapshot
+{
+    int outputId;
+    Plasma::Types::Location edge;
+    std::uint64_t generation;
+    int publishedDepth;
+    std::vector<ScreenSpaceReservationContribution> contributions;
+    const ScreenSpaceReservation *publisher;
+};
+
+//! One atomic coordinator read. stateGeneration advances after every
+//! successful membership, depth, output, edge, geometry or teardown change.
+//! An empty groups vector at a newer generation makes last-member teardown
+//! observable without retaining a dead publisher record.
+struct ScreenSpaceReservationSnapshot
+{
+    std::uint64_t stateGeneration;
+    std::vector<ScreenSpaceReservationGroupSnapshot> groups;
 };
 
 //! Owns the single positive-exclusive publisher for each persistent Latte
@@ -55,6 +87,9 @@ public:
 
     [[nodiscard]] std::optional<ScreenSpaceReservationMembership>
     findMembership(const View &view) const;
+
+    [[nodiscard]] std::optional<ScreenSpaceReservationSnapshot>
+    snapshot() const;
 
 private:
     class Private;

@@ -13,9 +13,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <exception>
+#include <iterator>
 #include <map>
 #include <optional>
 #include <ranges>
+#include <utility>
 #include <vector>
 
 namespace Latte {
@@ -118,10 +120,17 @@ struct ReservationGroupKey
     auto operator<=>(const ReservationGroupKey &) const = default;
 };
 
+struct ReservationContributionState
+{
+    ReservationMemberId member;
+    ReservationDepth depth;
+};
+
 struct ReservationGroupState
 {
     ReservationDepth maximumDepth;
     std::size_t memberCount;
+    std::vector<ReservationContributionState> contributions;
 };
 
 struct ReservationLedgerChange
@@ -220,7 +229,34 @@ public:
                 return left.second < right.second;
             });
 
-        return ReservationGroupState{deepest->second, existing->second.size()};
+        std::vector<ReservationContributionState> contributions;
+        contributions.reserve(existing->second.size());
+        std::ranges::transform(
+            existing->second,
+            std::back_inserter(contributions),
+            [](const auto &entry) {
+                return ReservationContributionState{
+                    entry.first,
+                    entry.second};
+            });
+
+        return ReservationGroupState{
+            deepest->second,
+            existing->second.size(),
+            std::move(contributions)};
+    }
+
+    [[nodiscard]] std::vector<ReservationGroupKey> groups() const
+    {
+        std::vector<ReservationGroupKey> groups;
+        groups.reserve(m_groups.size());
+        std::ranges::transform(
+            m_groups,
+            std::back_inserter(groups),
+            [](const auto &entry) {
+                return entry.first;
+            });
+        return groups;
     }
 
     [[nodiscard]] std::size_t memberCount() const noexcept

@@ -20,9 +20,16 @@
 #include <QPointer>
 #include <QScreen>
 
+#include <LayerShellQt/window.h>
+
+#include <algorithm>
+#include <exception>
+#include <iterator>
+#include <limits>
 #include <map>
 #include <ranges>
 #include <utility>
+#include <vector>
 
 namespace Latte {
 namespace ViewPart {
@@ -152,7 +159,6 @@ public:
                         << (view.containment() ? view.containment()->id() : 0)
                         << "location=" << static_cast<int>(location)
                         << "screen=" << screen;
-            removeReservation(view);
             return;
         }
 
@@ -175,11 +181,10 @@ public:
                         << "location=" << static_cast<int>(location)
                         << "strut=" << strutGeometry
                         << "output=" << outputGeometry;
-            removeReservation(view);
             return;
         }
 
-        const auto existingRuntime = members.find(*member);
+        auto existingRuntime = members.find(*member);
         if (existingRuntime != members.end()
                 && existingRuntime->second.view.data() != &view) {
             qCritical() << "reservation coordinator refused duplicate persistent dock identity"
@@ -187,6 +192,7 @@ public:
             return;
         }
 
+        bool insertedRuntime = false;
         if (existingRuntime == members.end()) {
             MemberRuntime runtime;
             runtime.view = &view;
@@ -197,21 +203,35 @@ public:
                 [this, member = *member, address = &view]() {
                     removeDestroyedReservation(member, address);
                 });
-            members.emplace(*member, std::move(runtime));
+            existingRuntime =
+                members.emplace(*member, std::move(runtime)).first;
+            insertedRuntime = true;
         }
 
         const ReservationGroupKey group{*output, *edge};
-        const ReservationLedgerChange change =
-            ledger.updateContribution(*member, group, *depth);
-        if (change.changed) {
-            for (const ReservationGroupKey affected : change.affectedGroups) {
-                reconcileGroup(affected);
-            }
-        } else {
+        ScreenSpaceReservationLedger candidate = ledger;
+        ReservationLedgerChange change =
+            candidate.updateContribution(*member, group, *depth);
+        if (!change.changed) {
             //! A compositor output can change geometry without changing this
             //! member's identity or depth. Re-project unchanged policy state
             //! so the publisher follows the new QScreen rectangle.
-            reconcileGroup(group);
+            change.affectedGroups.push_back(group);
+        }
+
+        if (!commitProjectionTransaction(
+                std::move(candidate),
+                change,
+                change.changed)) {
+            qCritical() << "reservation coordinator retained the previous committed projection"
+                        << "containment=" << member->value()
+                        << "outputId=" << outputId
+                        << "location=" << static_cast<int>(location);
+            if (insertedRuntime) {
+                QObject::disconnect(
+                    existingRuntime->second.destroyedConnection);
+                members.erase(existingRuntime);
+            }
         }
     }
 
@@ -219,29 +239,53 @@ public:
     {
         const auto memberEntry = findRuntimeMember(view);
         if (memberEntry == members.end()) {
+            //! Removal is intentionally idempotent. Visibility retirement and
+            //! View destruction can both release the same contribution, but
+            //! an absent runtime must agree with the ledger.
+            const auto member = memberFor(view);
+            if (member && ledger.findGroup(*member)) {
+                qCritical() << "reservation coordinator found ledger state without runtime ownership"
+                            << member->value();
+                std::terminate();
+            }
             return;
         }
 
         const ReservationMemberId member = memberEntry->first;
-        QObject::disconnect(memberEntry->second.destroyedConnection);
-        members.erase(memberEntry);
-
-        const ReservationLedgerChange change = ledger.removeContribution(member);
-        for (const ReservationGroupKey affected : change.affectedGroups) {
-            reconcileGroup(affected);
+        ScreenSpaceReservationLedger candidate = ledger;
+        const ReservationLedgerChange change =
+            candidate.removeContribution(member);
+        if (!change.changed) {
+            qCritical() << "reservation coordinator found runtime ownership without ledger state"
+                        << member.value();
+            std::terminate();
         }
+
+        auto runtime = members.extract(memberEntry);
+        if (!commitProjectionTransaction(
+                std::move(candidate),
+                change,
+                true)) {
+            members.insert(std::move(runtime));
+            qCritical() << "reservation coordinator retained a contribution after teardown projection failed"
+                        << member.value();
+            return;
+        }
+        QObject::disconnect(runtime.mapped().destroyedConnection);
     }
 
     [[nodiscard]] std::optional<ScreenSpaceReservationMembership>
     findMembership(const View &view) const
     {
-        const auto memberEntry = findRuntimeMember(view);
-        if (memberEntry == members.end()) {
+        const auto runtime = findRuntimeMember(view);
+        if (runtime == members.end()) {
             return std::nullopt;
         }
 
-        const auto group = ledger.findGroup(memberEntry->first);
-        const auto depth = ledger.findContributionDepth(memberEntry->first);
+        const auto group =
+            ledger.findGroup(runtime->first);
+        const auto depth =
+            ledger.findContributionDepth(runtime->first);
         if (!group || !depth) {
             qCritical() << "reservation coordinator found runtime membership without ledger state";
             return std::nullopt;
@@ -249,9 +293,15 @@ public:
 
         const auto state = ledger.describeGroup(*group);
         const auto publisher = publishers.find(*group);
+        QScreen *const screen =
+            findScreenForGroup(ledger, *group);
         if (!state || publisher == publishers.end()
-                || !publisher->second.surface) {
-            qCritical() << "reservation coordinator found ledger membership without a publisher";
+                || !projectionMatches(
+                    publisher->second,
+                    *group,
+                    *state,
+                    screen)) {
+            qCritical() << "reservation coordinator found membership without a valid projection";
             return std::nullopt;
         }
 
@@ -264,6 +314,59 @@ public:
             publisher->second.surface.get()};
     }
 
+    [[nodiscard]] std::optional<ScreenSpaceReservationSnapshot>
+    snapshot() const
+    {
+        if (!ownershipIsConsistent(ledger)) {
+            qCritical() << "reservation coordinator refused an inconsistent ownership snapshot";
+            return std::nullopt;
+        }
+
+        ScreenSpaceReservationSnapshot result;
+        result.stateGeneration = stateGeneration;
+        result.groups.reserve(ledger.groupCount());
+
+        for (const ReservationGroupKey group : ledger.groups()) {
+            const auto state = ledger.describeGroup(group);
+            const auto publisher = publishers.find(group);
+            const auto generation = groupGenerations.find(group);
+            QScreen *const screen = findScreenForGroup(ledger, group);
+            if (!state || publisher == publishers.end()
+                    || generation == groupGenerations.end()
+                    || !projectionMatches(
+                        publisher->second,
+                        group,
+                        *state,
+                        screen)) {
+                qCritical() << "reservation coordinator refused an unprojected group snapshot"
+                            << group.output.value()
+                            << static_cast<int>(group.edge);
+                return std::nullopt;
+            }
+
+            ScreenSpaceReservationGroupSnapshot groupSnapshot{
+                group.output.value(),
+                toPlasmaLocation(group.edge),
+                generation->second,
+                state->maximumDepth.pixels(),
+                {},
+                publisher->second.surface.get()};
+            groupSnapshot.contributions.reserve(
+                state->contributions.size());
+            std::ranges::transform(
+                state->contributions,
+                std::back_inserter(groupSnapshot.contributions),
+                [](const ReservationContributionState &contribution) {
+                    return ScreenSpaceReservationContribution{
+                        contribution.member.value(),
+                        contribution.depth.pixels()};
+                });
+            result.groups.push_back(std::move(groupSnapshot));
+        }
+
+        return result;
+    }
+
 private:
     struct MemberRuntime
     {
@@ -274,6 +377,15 @@ private:
     struct Publisher
     {
         std::unique_ptr<ScreenSpaceReservation> surface;
+        QPointer<QScreen> screen;
+    };
+
+    struct PreparedProjection
+    {
+        ReservationGroupKey group;
+        bool active;
+        QPointer<QScreen> screen;
+        std::unique_ptr<ScreenSpaceReservation> replacement;
     };
 
     using Members = std::map<ReservationMemberId, MemberRuntime>;
@@ -323,69 +435,326 @@ private:
             return;
         }
 
-        members.erase(runtime);
+        ScreenSpaceReservationLedger candidate = ledger;
         const ReservationLedgerChange change =
-            ledger.removeContribution(member);
-        for (const ReservationGroupKey affected : change.affectedGroups) {
-            reconcileGroup(affected);
+            candidate.removeContribution(member);
+        if (!change.changed) {
+            qCritical() << "reservation coordinator received destruction without ledger state"
+                        << member.value();
+            std::terminate();
         }
+
+        auto retiredRuntime = members.extract(runtime);
+        if (!commitProjectionTransaction(
+                std::move(candidate),
+                change,
+                true)) {
+            qCritical() << "reservation coordinator could not retire a destroyed member transactionally"
+                        << member.value();
+            std::terminate();
+        }
+        QObject::disconnect(
+            retiredRuntime.mapped().destroyedConnection);
     }
 
     [[nodiscard]] QScreen *findScreenForGroup(
+        const ScreenSpaceReservationLedger &candidate,
         const ReservationGroupKey group) const
     {
+        const auto state = candidate.describeGroup(group);
+        if (!state) {
+            return nullptr;
+        }
+
+        QScreen *resolvedScreen = nullptr;
+        for (const ReservationContributionState &contribution
+                : state->contributions) {
+            const auto runtime = members.find(contribution.member);
+            if (runtime == members.end() || !runtime->second.view) {
+                qCritical() << "reservation coordinator could not resolve contributor runtime"
+                            << contribution.member.value();
+                return nullptr;
+            }
+
+            QScreen *const screen = runtime->second.view->screen();
+            if (!screen
+                    || corona->screenPool()->id(screen->name())
+                        != group.output.value()) {
+                qCritical() << "reservation coordinator found contributor on the wrong output"
+                            << contribution.member.value()
+                            << group.output.value()
+                            << screen;
+                return nullptr;
+            }
+
+            if (resolvedScreen && resolvedScreen != screen) {
+                qCritical() << "reservation coordinator found one output identity backed by multiple QScreens"
+                            << group.output.value()
+                            << resolvedScreen
+                            << screen;
+                return nullptr;
+            }
+            resolvedScreen = screen;
+        }
+
+        return resolvedScreen;
+    }
+
+    [[nodiscard]] bool memberOwnershipIsConsistent(
+        const ScreenSpaceReservationLedger &candidate) const
+    {
+        if (members.size() != candidate.memberCount()) {
+            return false;
+        }
+
         for (const auto &[member, runtime] : members) {
-            const auto memberGroup = ledger.findGroup(member);
-            if (memberGroup && *memberGroup == group && runtime.view) {
-                QScreen *const screen = runtime.view->screen();
-                if (screen
-                        && corona->screenPool()->id(screen->name())
-                            == group.output.value()) {
-                    return screen;
-                }
+            if (!runtime.view
+                    || !candidate.findGroup(member)
+                    || !candidate.findContributionDepth(member)) {
+                return false;
+            }
+            const auto runtimeMember = memberFor(*runtime.view);
+            if (!runtimeMember || *runtimeMember != member) {
+                return false;
             }
         }
 
-        return nullptr;
+        return true;
     }
 
-    void reconcileGroup(const ReservationGroupKey group)
+    [[nodiscard]] bool ownershipIsConsistent(
+        const ScreenSpaceReservationLedger &candidate) const
     {
-        const auto state = ledger.describeGroup(group);
-        if (!state) {
-            publishers.erase(group);
-            return;
+        if (!memberOwnershipIsConsistent(candidate)
+                || publishers.size() != candidate.groupCount()
+                || groupGenerations.size() != candidate.groupCount()) {
+            return false;
         }
 
-        QScreen *const screen = findScreenForGroup(group);
-        if (!screen) {
-            qCritical() << "reservation coordinator could not resolve group output"
+        return std::ranges::all_of(
+            candidate.groups(),
+            [this](const ReservationGroupKey group) {
+                return publishers.contains(group)
+                    && groupGenerations.contains(group);
+            });
+    }
+
+    [[nodiscard]] static bool projectionMatches(
+        const Publisher &publisher,
+        const ReservationGroupKey group,
+        const ReservationGroupState &state,
+        QScreen *const screen)
+    {
+        if (!screen
+                || !publisher.surface
+                || publisher.screen.data() != screen
+                || publisher.surface->screen() != screen) {
+            return false;
+        }
+
+        const QRect geometry = reservationGeometry(
+            screen->geometry(),
+            group.edge,
+            state.maximumDepth);
+        if (!geometry.isValid()
+                || publisher.surface->publishedGeometry() != geometry) {
+            return false;
+        }
+
+        const auto *const layerShell =
+            publisher.surface->layerShellWindow();
+        if (!layerShell) {
+            return false;
+        }
+
+        const Plasma::Types::Location location =
+            toPlasmaLocation(group.edge);
+        const auto expected =
+            WindowSystem::LayerShell::reservationPlacement(
+                location,
+                geometry,
+                screen->geometry());
+        return layerShell->anchors() == expected.anchors
+            && layerShell->exclusiveEdge() == expected.exclusiveEdge
+            && layerShell->margins() == expected.margins
+            && layerShell->exclusionZone() == expected.exclusiveZone
+            && publisher.surface->size() == expected.surfaceSize;
+    }
+
+    [[nodiscard]] bool prepareProjection(
+        const ScreenSpaceReservationLedger &candidate,
+        const ReservationGroupKey group,
+        PreparedProjection &projection) const
+    {
+        const auto state = candidate.describeGroup(group);
+        if (!state) {
+            projection.active = false;
+            return true;
+        }
+
+        QScreen *const screen =
+            findScreenForGroup(candidate, group);
+        if (!screen || !screen->geometry().isValid()) {
+            qCritical() << "reservation coordinator could not resolve candidate group output"
                         << group.output.value()
                         << static_cast<int>(group.edge);
-            return;
+            return false;
         }
 
-        const QRect outputGeometry = screen->geometry();
-        const QRect geometry =
-            reservationGeometry(outputGeometry, group.edge, state->maximumDepth);
-        auto publisher = publishers.find(group);
-        if (publisher == publishers.end()) {
-            Publisher next;
-            next.surface = std::make_unique<ScreenSpaceReservation>(
+        projection.active = true;
+        projection.screen = screen;
+        const auto existing = publishers.find(group);
+        if (existing != publishers.end()
+                && projectionMatches(
+                    existing->second,
+                    group,
+                    *state,
+                    screen)) {
+            return true;
+        }
+
+        const QRect geometry = reservationGeometry(
+            screen->geometry(),
+            group.edge,
+            state->maximumDepth);
+        auto replacement =
+            std::make_unique<ScreenSpaceReservation>(
                 group.output.value(),
                 toPlasmaLocation(group.edge));
-            publisher = publishers.emplace(group, std::move(next)).first;
-        }
-
-        if (!publisher->second.surface->publish(
+        if (!replacement->publish(
                 screen,
                 geometry,
                 toPlasmaLocation(group.edge))) {
-            qCritical() << "reservation coordinator failed to project group"
+            qCritical() << "reservation coordinator failed to prepare group projection"
                         << group.output.value()
                         << static_cast<int>(group.edge)
                         << geometry;
+            return false;
         }
+
+        Publisher staged{
+            std::move(replacement),
+            screen};
+        if (!projectionMatches(
+                staged,
+                group,
+                *state,
+                screen)) {
+            qCritical() << "reservation coordinator prepared invalid layer-shell state"
+                        << group.output.value()
+                        << static_cast<int>(group.edge)
+                        << geometry;
+            return false;
+        }
+
+        projection.replacement =
+            std::move(staged.surface);
+        return true;
+    }
+
+    [[nodiscard]] bool commitProjectionTransaction(
+        ScreenSpaceReservationLedger candidate,
+        const ReservationLedgerChange &change,
+        const bool policyChanged)
+    {
+        if (!memberOwnershipIsConsistent(candidate)) {
+            qCritical() << "reservation coordinator refused a candidate with inconsistent runtime ownership";
+            return false;
+        }
+
+        std::vector<PreparedProjection> projections;
+        projections.reserve(change.affectedGroups.size());
+        for (const ReservationGroupKey group : change.affectedGroups) {
+            PreparedProjection projection{group, false, nullptr, nullptr};
+            if (!prepareProjection(
+                    candidate,
+                    group,
+                    projection)) {
+                return false;
+            }
+            projections.push_back(std::move(projection));
+        }
+
+        const bool projectionChanged =
+            std::ranges::any_of(
+                projections,
+                [this](const PreparedProjection &projection) {
+                    return projection.replacement
+                        || (!projection.active
+                            && publishers.contains(projection.group));
+                });
+        if (!policyChanged && !projectionChanged) {
+            return true;
+        }
+
+        if (stateGeneration
+                == std::numeric_limits<std::uint64_t>::max()) {
+            qCritical() << "reservation coordinator exhausted its state generation";
+            std::terminate();
+        }
+        const std::uint64_t nextGeneration =
+            stateGeneration + 1;
+
+        ledger = std::move(candidate);
+        for (PreparedProjection &projection : projections) {
+            if (!projection.active) {
+                publishers.erase(projection.group);
+                groupGenerations.erase(projection.group);
+                continue;
+            }
+
+            auto publisher = publishers.find(projection.group);
+            if (publisher == publishers.end()) {
+                if (!projection.replacement) {
+                    qCritical() << "reservation coordinator committed a group without a prepared publisher";
+                    std::terminate();
+                }
+                Publisher next{
+                    std::move(projection.replacement),
+                    projection.screen};
+                publishers.emplace(
+                    projection.group,
+                    std::move(next));
+            } else if (projection.replacement) {
+                publisher->second.surface =
+                    std::move(projection.replacement);
+                publisher->second.screen =
+                    projection.screen;
+            }
+            groupGenerations.insert_or_assign(
+                projection.group,
+                nextGeneration);
+        }
+        stateGeneration = nextGeneration;
+
+        if (!ownershipIsConsistent(ledger)) {
+            qCritical() << "reservation coordinator committed inconsistent ownership";
+            std::terminate();
+        }
+        for (const PreparedProjection &projection : projections) {
+            if (!projection.active) {
+                continue;
+            }
+            const auto state =
+                ledger.describeGroup(projection.group);
+            const auto publisher =
+                publishers.find(projection.group);
+            QScreen *const screen =
+                findScreenForGroup(ledger, projection.group);
+            if (!state || publisher == publishers.end()
+                    || !projectionMatches(
+                        publisher->second,
+                        projection.group,
+                        *state,
+                        screen)) {
+                qCritical() << "reservation coordinator committed an invalid projection"
+                            << projection.group.output.value()
+                            << static_cast<int>(projection.group.edge);
+                std::terminate();
+            }
+        }
+
+        return true;
     }
 
     ScreenSpaceReservationCoordinator *const q;
@@ -393,6 +762,8 @@ private:
     ScreenSpaceReservationLedger ledger;
     Members members;
     std::map<ReservationGroupKey, Publisher> publishers;
+    std::map<ReservationGroupKey, std::uint64_t> groupGenerations;
+    std::uint64_t stateGeneration{0};
 };
 
 ScreenSpaceReservationCoordinator::ScreenSpaceReservationCoordinator(
@@ -419,9 +790,16 @@ void ScreenSpaceReservationCoordinator::removeReservation(View &view)
 }
 
 std::optional<ScreenSpaceReservationMembership>
-ScreenSpaceReservationCoordinator::findMembership(const View &view) const
+ScreenSpaceReservationCoordinator::findMembership(
+    const View &view) const
 {
     return d->findMembership(view);
+}
+
+std::optional<ScreenSpaceReservationSnapshot>
+ScreenSpaceReservationCoordinator::snapshot() const
+{
+    return d->snapshot();
 }
 
 } // namespace ViewPart

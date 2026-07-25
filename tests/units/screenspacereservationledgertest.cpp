@@ -54,6 +54,8 @@ private Q_SLOTS:
     void tearsDownTheLastMember();
     void migratesBetweenEdgesAndOutputs();
     void keepsOutputsIndependent();
+    void reportsCanonicalContributorsAndGroups();
+    void keepsCommittedStateWhenCandidateIsDiscarded();
 };
 
 void ScreenSpaceReservationLedgerTest::rejectsInvalidStrongValues()
@@ -165,6 +167,62 @@ void ScreenSpaceReservationLedgerTest::keepsOutputsIndependent()
     QCOMPARE(firstState->maximumDepth.pixels(), 80);
     QCOMPARE(secondState->maximumDepth.pixels(), 32);
     QCOMPARE(ledger.groupCount(), std::size_t{2});
+}
+
+void ScreenSpaceReservationLedgerTest::reportsCanonicalContributorsAndGroups()
+{
+    ScreenSpaceReservationLedger ledger;
+    const auto bottom = group(10, ReservationEdge::Bottom);
+    const auto right = group(11, ReservationEdge::Right);
+    static_cast<void>(
+        ledger.updateContribution(member(9), bottom, depth(64)));
+    static_cast<void>(
+        ledger.updateContribution(member(3), bottom, depth(40)));
+    static_cast<void>(
+        ledger.updateContribution(member(7), right, depth(52)));
+
+    QCOMPARE(ledger.groups(), (std::vector{bottom, right}));
+    const auto state = ledger.describeGroup(bottom);
+    QVERIFY(state);
+    QCOMPARE(state->contributions.size(), std::size_t{2});
+    QCOMPARE(state->contributions.at(0).member, member(3));
+    QCOMPARE(state->contributions.at(0).depth, depth(40));
+    QCOMPARE(state->contributions.at(1).member, member(9));
+    QCOMPARE(state->contributions.at(1).depth, depth(64));
+}
+
+void ScreenSpaceReservationLedgerTest::keepsCommittedStateWhenCandidateIsDiscarded()
+{
+    ScreenSpaceReservationLedger committed;
+    const auto bottom = group(10, ReservationEdge::Bottom);
+    const auto secondaryTop = group(11, ReservationEdge::Top);
+    static_cast<void>(
+        committed.updateContribution(
+            member(4),
+            bottom,
+            depth(48)));
+
+    ScreenSpaceReservationLedger candidate = committed;
+    static_cast<void>(
+        candidate.updateContribution(
+            member(4),
+            secondaryTop,
+            depth(72)));
+
+    QCOMPARE(
+        committed.findGroup(member(4)),
+        std::optional{bottom});
+    QCOMPARE(
+        committed.findContributionDepth(member(4)),
+        std::optional{depth(48)});
+    QVERIFY(committed.describeGroup(bottom));
+    QVERIFY(!committed.describeGroup(secondaryTop));
+
+    QCOMPARE(
+        candidate.findGroup(member(4)),
+        std::optional{secondaryTop});
+    QVERIFY(!candidate.describeGroup(bottom));
+    QVERIFY(candidate.describeGroup(secondaryTop));
 }
 
 QTEST_GUILESS_MAIN(ScreenSpaceReservationLedgerTest)
