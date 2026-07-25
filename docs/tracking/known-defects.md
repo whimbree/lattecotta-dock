@@ -2373,6 +2373,25 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   eligible controller with complete stable geometry, and reaches the first
   in-flight progress assertion.
 
+### D189 - KWin script collection delay consumed the transition under test
+- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- FOUND: 2026-07-25, recipe 071's first eligible nested-KWin transition.
+- SYMPTOM: maximizing the fixture reached the correct attached endpoint, but
+  the recipe never observed a qreal midpoint. The claimed eight rapid
+  reversals also waited for a settled endpoint between every target.
+- ROOT: `e2e_kwin_js` slept for 500 ms before returning. The floating
+  transition is shorter than that fixed log-collection delay, so the driver
+  could not observe its in-flight state.
+- FIX: retain the 500 ms default for existing KWin scripts, accept an explicit
+  collection delay, and use 10 ms for recipe 071's immediate maximize
+  mutations. Progress sampling and target-reversal checks then run while the
+  controller is active.
+- EVIDENCE: the fixed-delay run ended at
+  `target=attached phase=resting progress=0`. With the scoped 10 ms delay, the
+  nested recipe observes qreal midpoints in both directions and eight target
+  reversals before settlement, while all stable geometry and revision
+  assertions remain unchanged.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
   is merged. FP-2 (the stable canvas and transition controller) is implemented

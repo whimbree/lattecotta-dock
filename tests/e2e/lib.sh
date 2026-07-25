@@ -108,16 +108,19 @@ e2e_dock_stop() {
     return 1
 }
 
-# e2e_kwin_js <script-body>: run a transient KWin script on the session's
-# compositor and print what it print()ed. Use the literal token @TAG@ as the
-# line prefix in the script; it is replaced with a unique run tag so
-# concurrent/previous runs cannot bleed into the result.
+# e2e_kwin_js <script-body> [collection-delay]: run a transient KWin script on
+# the session's compositor and print what it print()ed. The default 0.5-second
+# delay lets ordinary scripts flush their tagged log output. A transition
+# driver may request a shorter delay after an immediate KWin mutation so the
+# caller can observe the resulting animation in flight. Use the literal token
+# @TAG@ as the line prefix in the script; it is replaced with a unique run tag
+# so concurrent/previous runs cannot bleed into the result.
 # Nested: reads the vehicle kwin's captured log (the vehicle sets
 # QT_FORCE_STDERR_LOGGING=1 - NixOS Qt otherwise logs straight to journald
 # when stderr is not a tty and the file stays empty). Live: reads the
 # session kwin's journal, like scripts/tools/dumpwins.sh.
 e2e_kwin_js() {
-    local body="$1" tag js num mark
+    local body="$1" collection_delay="${2:-0.5}" tag js num mark
     tag="E2EJS-$$-$(date +%s%N)"
     js="$(mktemp --suffix=.js)"
     printf '%s\n' "${body//@TAG@/$tag}" > "$js"
@@ -129,7 +132,7 @@ e2e_kwin_js() {
         return 1
     fi
     busctl --user call "org.kde.KWin" "/Scripting/Script$num" org.kde.kwin.Script run >/dev/null
-    sleep 0.5
+    sleep "$collection_delay"
     busctl --user call "org.kde.KWin" "/Scripting/Script$num" org.kde.kwin.Script stop >/dev/null 2>&1 || true
     busctl --user call org.kde.KWin /Scripting org.kde.kwin.Scripting unloadScript s "$tag" >/dev/null 2>&1 || true
     rm -f "$js"
