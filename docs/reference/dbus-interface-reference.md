@@ -165,7 +165,13 @@ Per dock:
   region; it may retain old union pixels for one submitted clearing frame.
   `floatingDamageMaskPending` says whether that one-frame union is currently
   armed, and `floatingDamageMaskGeneration` is its process-local monotonic
-  generation serialized as a decimal string.
+  generation serialized as a decimal string. `enabledBorders` is the live
+  Effects border-name array in canonical `top`, `right`, `bottom`, `left`
+  order. `shadowPaddingOffsets` is the applied stable-window shadow inset as
+  `[left, top, right, bottom]`. `floatingAppletPopupsPreferred` reads the
+  applied Plasma containment hint rather than reconstructing it from inputs.
+  `floatingAnchorRevision` is the process-local monotonic revision of the
+  visible popup-anchor geometry.
   `View::event` still rejects those old-only pixels against the exact qreal
   bridge, so `inputMask` is the activation authority. `stableLayerShellMargin`
   is the perpendicular
@@ -190,6 +196,8 @@ Per dock:
   `screenGeometry`, `surfaceGeometry`, `canvasGeometry`, `effectsRect`,
   `appletsLayoutGeometry`, `maskRect`, `inputMask`, `appliedInputMask`,
   `floatingDamageMaskPending`, `floatingDamageMaskGeneration`,
+  `enabledBorders`, `shadowPaddingOffsets`,
+  `floatingAppletPopupsPreferred`, `floatingAnchorRevision`,
   `strutsThickness`, `publishedStruts`, `layerShellPresent`,
   `layerShellAnchors`, `layerShellMargins`, `layerShellExclusiveEdge`, and
   `layerShellExclusiveZone`, plus `reservationSurfacePresent`,
