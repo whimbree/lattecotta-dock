@@ -594,6 +594,60 @@ private:
                 "reservation->screen()"));
     }
 
+    static bool matchesTransitionSnapshotRoute(
+        const QString &body)
+    {
+        const QString code =
+            normalizedCode(body);
+        return code.contains(QStringLiteral(
+                   "constauto*consttransition="
+                   "view->floatingTransition();"))
+            && code.contains(QStringLiteral(
+                "record.floatingPanelConfigured="
+                "view->isFloatingPanel();"))
+            && code.contains(QStringLiteral(
+                "record.floatingPanelEligible="
+                "transition->eligible();"))
+            && code.contains(QStringLiteral(
+                "record.transitionProgress="
+                "transition->floatingness();"))
+            && code.contains(QStringLiteral(
+                "record.transitionGeometryRevision="
+                "transition->geometryRevision();"))
+            && code.contains(QStringLiteral(
+                "record.currentVisibleGeometry="
+                "transition->currentVisibleGeometry();"))
+            && code.contains(QStringLiteral(
+                "record.computedPaintMaskGeometry="
+                "transition->currentVisibleGeometry();"))
+            && code.contains(QStringLiteral(
+                "record.computedInputBridgeGeometry="
+                "transition->fittsBridgeGeometry();"))
+            && code.contains(QStringLiteral(
+                "record.stableLayerShellMargin="
+                "physicalLayerShellMarginAtEdge("
+                "record.layerShellMargins,record.edge);"))
+            && code.contains(QStringLiteral(
+                "record.surfaceGeometryPublicationRevision="
+                "view->positioner()->"
+                "surfaceGeometryPublicationRevision();"))
+            && code.contains(QStringLiteral(
+                "record.layerShellConfigureRequestRevision="
+                "view->layerShellConfigureRequestRevision();"))
+            && code.contains(QStringLiteral(
+                "record.objects.transitionController="
+                "identities->tokenFor(transition);"))
+            && code.contains(QStringLiteral(
+                "if(!dockTransitionRecordsAgree(snapshot)){"
+                "qCritical()<<\"dbusreports:refusingdock-system"
+                "snapshotwhosetransitionrecordsdisagree\";"
+                "returnstd::nullopt;}"))
+            && !code.contains(QStringLiteral(
+                "currentVisibleGeometry().toRect()"))
+            && !code.contains(QStringLiteral(
+                "fittsBridgeGeometry().toRect()"));
+    }
+
     static bool matchesReservationPublicationCommitRoute(
         const QString &visibilityHeader,
         const QString &visibilitySource)
@@ -920,6 +974,8 @@ private Q_SLOTS:
     void themeAwareIconRenderTest_sourceGuardRejectsControlledMutations();
     void dockSystemCollection_keepsPureRouting();
     void dockSystemCollection_sourceGuardsRejectControlledMutations();
+    void dockSystemTransitionCollection_keepsAuthoritativeRouting();
+    void dockSystemTransitionCollection_rejectsControlledMutations();
     void reservationPublication_keepsFailureAtomicRoute();
     void reservationPublication_usesLayerShellOutputIdentity();
     void dockSystemIdentityRegistry_keepsLifetimeAndAffinityContract();
@@ -1691,6 +1747,158 @@ void SourceGuardTest::dockSystemCollection_sourceGuardsRejectControlledMutations
     QVERIFY2(dataCollector.contains(QStringLiteral(
                  "returnsnapshot?serializeDockSystemSnapshot(*snapshot):QString();")),
              "malformed lineage must refuse the complete query instead of serializing partial JSON");
+}
+
+void SourceGuardTest::dockSystemTransitionCollection_keepsAuthoritativeRouting()
+{
+    const QString collector =
+        functionBody(
+            readFile(
+                QStringLiteral(
+                    "app/dbusreports.cpp")),
+            QStringLiteral(
+                "collectDockSystemSnapshot("));
+    QVERIFY2(
+        !collector.isEmpty(),
+        "collectDockSystemSnapshot not found");
+    QVERIFY2(
+        matchesTransitionSnapshotRoute(
+            collector),
+        "schema 5 transition fields must read the per-view controller without rounding and fail closed");
+}
+
+void SourceGuardTest::dockSystemTransitionCollection_rejectsControlledMutations()
+{
+    const QString collector =
+        functionBody(
+            readFile(
+                QStringLiteral(
+                    "app/dbusreports.cpp")),
+            QStringLiteral(
+                "collectDockSystemSnapshot("));
+    QVERIFY(
+        matchesTransitionSnapshotRoute(
+            collector));
+
+    QString inferredEligibility =
+        normalizedCode(collector);
+    QCOMPARE(
+        inferredEligibility.count(
+            QStringLiteral(
+                "transition->eligible()")),
+        1);
+    inferredEligibility.replace(
+        QStringLiteral(
+            "transition->eligible()"),
+        QStringLiteral(
+            "view->isFloatingPanel()"));
+    QVERIFY2(
+        !matchesTransitionSnapshotRoute(
+            inferredEligibility),
+        "inferring eligibility outside FloatingTransition must fail the collector guard");
+
+    QString inferredGeometryRevision =
+        normalizedCode(collector);
+    QCOMPARE(
+        inferredGeometryRevision.count(
+            QStringLiteral(
+                "transition->geometryRevision()")),
+        1);
+    inferredGeometryRevision.replace(
+        QStringLiteral(
+            "transition->geometryRevision()"),
+        QStringLiteral("0"));
+    QVERIFY2(
+        !matchesTransitionSnapshotRoute(
+            inferredGeometryRevision),
+        "inventing a stable-geometry revision must fail the collector guard");
+
+    QString roundedGeometry =
+        normalizedCode(collector);
+    QCOMPARE(
+        roundedGeometry.count(
+            QStringLiteral(
+                "transition->currentVisibleGeometry()")),
+        2);
+    roundedGeometry.replace(
+        QStringLiteral(
+            "transition->currentVisibleGeometry()"),
+        QStringLiteral(
+            "transition->currentVisibleGeometry().toRect()"));
+    QVERIFY2(
+        !matchesTransitionSnapshotRoute(
+            roundedGeometry),
+        "rounding qreal transition geometry must fail the collector guard");
+
+    QString positionerIdentity =
+        normalizedCode(collector);
+    QCOMPARE(
+        positionerIdentity.count(
+            QStringLiteral(
+                "identities->tokenFor(transition)")),
+        1);
+    positionerIdentity.replace(
+        QStringLiteral(
+            "identities->tokenFor(transition)"),
+        QStringLiteral(
+            "identities->tokenFor(view->positioner())"));
+    QVERIFY2(
+        !matchesTransitionSnapshotRoute(
+            positionerIdentity),
+        "reusing the Positioner token must fail the collector guard");
+
+    QString inferredStableMargin =
+        normalizedCode(collector);
+    QCOMPARE(
+        inferredStableMargin.count(
+            QStringLiteral(
+                "physicalLayerShellMarginAtEdge("
+                "record.layerShellMargins,record.edge)")),
+        1);
+    inferredStableMargin.replace(
+        QStringLiteral(
+            "physicalLayerShellMarginAtEdge("
+            "record.layerShellMargins,record.edge)"),
+        QStringLiteral("0"));
+    QVERIFY2(
+        !matchesTransitionSnapshotRoute(
+            inferredStableMargin),
+        "inventing a stable margin instead of reading layer-shell state must fail the collector guard");
+
+    QString swappedRevisionAuthorities =
+        normalizedCode(collector);
+    QCOMPARE(
+        swappedRevisionAuthorities.count(
+            QStringLiteral(
+                "view->positioner()->"
+                "surfaceGeometryPublicationRevision()")),
+        1);
+    swappedRevisionAuthorities.replace(
+        QStringLiteral(
+            "view->positioner()->"
+            "surfaceGeometryPublicationRevision()"),
+        QStringLiteral(
+            "view->layerShellConfigureRequestRevision()"));
+    QVERIFY2(
+        !matchesTransitionSnapshotRoute(
+            swappedRevisionAuthorities),
+        "reading both churn counters from the View must fail the collector guard");
+
+    QString validationBypass =
+        normalizedCode(collector);
+    QCOMPARE(
+        validationBypass.count(
+            QStringLiteral(
+                "dockTransitionRecordsAgree(snapshot)")),
+        1);
+    validationBypass.replace(
+        QStringLiteral(
+            "dockTransitionRecordsAgree(snapshot)"),
+        QStringLiteral("true"));
+    QVERIFY2(
+        !matchesTransitionSnapshotRoute(
+            validationBypass),
+        "bypassing transition consistency validation must fail the collector guard");
 }
 
 void SourceGuardTest::reservationPublication_keepsFailureAtomicRoute()

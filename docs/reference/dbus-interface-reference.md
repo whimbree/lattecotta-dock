@@ -70,7 +70,7 @@ true with `isOffScreen`), what the compositor was told to reserve.
 call dockSystemData                    # s: compact schema-versioned JSON object
 ```
 
-Top level: `schemaVersion` (currently 4), `snapshotSequence` (decimal string,
+Top level: `schemaVersion` (currently 5), `snapshotSequence` (decimal string,
 process-local monotonic call identity), `globalConfigureAppletsMode`,
 `stacking`, `reservationStateGeneration` (decimal string),
 `reservationGroups`, and `views`. The complete view and reservation graph is
@@ -128,6 +128,59 @@ Per dock:
   available to applets after internal primary-axis background end padding is
   removed. External shadow paint does not reduce it. It is not the raw
   containment `maxLength` or the configured ratio.
+- Stable floating-panel transition: `floatingPanelConfigured`,
+  `floatingPanelEligible`, `transitionTarget` (`attached|floated`),
+  `transitionProgress` (qreal 0 through 1), `transitionPhase`
+  (`resting|attaching|floating`), `transitionDirection`
+  (`none|towardAttached|towardFloated`), `transitionRunning`,
+  `transitionGeometryPresent`, `transitionGeometryRevision`,
+  `stableCanvasGeometry`,
+  `attachedPresentationGeometry`, `floatedPresentationGeometry`,
+  `currentVisibleGeometry`, `computedPaintMaskGeometry`,
+  `computedInputBridgeGeometry`, `contentTranslation`,
+  `stableTriggerGeometry`, `stableAppletMeasurementBounds`,
+  `stablePrimaryAxisStart`, `stablePrimaryAxisLength`,
+  `stableLayerShellMargin`, `requestedReservationDepth`,
+  `surfaceGeometryPublicationRevision`, and
+  `layerShellConfigureRequestRevision`.
+  `floatingPanelConfigured` is exactly `View::isFloatingPanel()`: the
+  configured floating presentation, not the later window-touch policy.
+  `floatingPanelEligible` is the transition controller's current admission
+  decision. Ineligible views cannot target `attached` and converge to
+  `floated`; disabling eligibility may animate outward before settling.
+  Touching-window count and a configured attach-on-window-touch policy are not
+  reported yet. FP-4 (the stable window-touch trigger and end-to-end
+  acceptance slice) will add their authoritative C++ owners.
+  Each geometry field is null when the controller has no stable geometry.
+  The stable canvas and trigger use virtual-desktop coordinates. Attached,
+  floated, current visible, computed mask and bridge, and applet measurement
+  rectangles use stable-canvas-local coordinates. `contentTranslation` is a
+  two-number local `[x,y]` vector. QRectF-backed current, mask, bridge, and
+  translation values retain fractional logical pixels.
+
+  `computedPaintMaskGeometry` and `computedInputBridgeGeometry` are the
+  controller-computed intended shapes in FP-2 (the stable canvas and
+  transition controller). FP-3 (internal presentation, input, effects, and
+  popup ownership) will connect them to Effects and input consumption.
+  `maskRect`, `inputMask`, and `appliedInputMask` remain the live applied
+  values until that cutover. `stableLayerShellMargin` is the perpendicular
+  physical offset and must remain zero for the stable-canvas design. The
+  stable canvas must also touch its selected `screenGeometry` edge.
+  Primary-axis layer-shell margins remain separate placement coordinates and
+  may still position a partial panel.
+  `requestedReservationDepth` is the stable attached panel depth.
+  `reservationContributionDepth` remains the effective current contribution
+  and the existing reservation output, edge, generation, contributor, and
+  publisher fields identify its output-edge group.
+
+  All three revision fields are mandatory process-local monotonic decimal
+  strings. `transitionGeometryRevision` advances when the controller's stable
+  geometry is configured, changed, or cleared.
+  `surfaceGeometryPublicationRevision` advances for every Positioner
+  `surfaceGeometryCalculated` publication.
+  `layerShellConfigureRequestRevision`
+  advances for an actual guarded layer-shell setter request. Transition
+  progress and reversal must leave all three unchanged.
 - Geometry: `windowGeometry`, `absoluteGeometry`, `localGeometry`,
   `screenGeometry`, `surfaceGeometry`, `canvasGeometry`, `effectsRect`,
   `appletsLayoutGeometry`, `maskRect`, `inputMask`, `appliedInputMask`,
@@ -173,9 +226,12 @@ Per dock:
   while the top-level global toggle is true.
 - `objects`: opaque `object-N` identities for `view`, `containment`,
   `configuration`, `layout`, `layoutController`, `geometryController`,
-  `editController`, `configWindow`, and `reservationPublisher`. Every
+  `transitionController`, `editController`, `configWindow`, and
+  `reservationPublisher`. Every
   contributing member of one output-edge group reports the same reservation
   publisher token. Null means that authority is not live.
+  `transitionController` is required, distinct from every other authority,
+  and unique per view, including linked per-output views.
   The configuration authority is required and its absence is logged as a
   defect; the configuration window is legitimately absent while closed, and
   QML controllers may be absent during startup or teardown. Tokens remain
@@ -191,9 +247,13 @@ independent of primary-axis span validation. Consumers must not treat
 `available=false` as validation success or interpret canonical `views` array
 order as physical stack order.
 
-An internal lineage-invariant failure logs every relationship input at critical
-severity and returns an empty D-Bus string. It never returns a smaller but
-otherwise plausible `views` array.
+An internal lineage, transition, or reservation invariant failure logs at
+critical severity and returns an empty D-Bus string. It never returns a smaller
+but otherwise plausible `views` array. Transition validation rejects shared or
+aliased controller tokens, rounded fractional geometry, mismatched
+phase/direction/running state, a canvas detached from its selected screen
+edge, and disagreement between stable placement and its mirrored controller
+geometry.
 
 Example relationship checks:
 
@@ -202,6 +262,14 @@ state=$(call dockSystemData)
 # jq examples after extracting the D-Bus string payload:
 jq '.views | map({persistentDockId,logicalDockId,relationship,linkPlacement,linkedDockIds})' <<<"$state"
 jq '[.views[] | select(.effectiveConfigureAppletsMode)] | length' <<<"$state"
+jq '.views | map({persistentDockId,floatingPanelConfigured,floatingPanelEligible,
+                  transitionTarget,transitionProgress,transitionPhase,
+                  transitionGeometryRevision,
+                  stableCanvasGeometry,currentVisibleGeometry,
+                  requestedReservationDepth,reservationContributionDepth,
+                  surfaceGeometryPublicationRevision,
+                  layerShellConfigureRequestRevision,
+                  transitionController:.objects.transitionController})' <<<"$state"
 ```
 
 ### Per-view reads (all take the containment id)

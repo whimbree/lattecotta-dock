@@ -21,6 +21,7 @@
 
 // C++
 #include <cstddef>
+#include <limits>
 #include <memory>
 
 using namespace Latte;
@@ -45,6 +46,7 @@ private Q_SLOTS:
     void dockRelationshipNames();
     void linkPlacementNames_data();
     void linkPlacementNames();
+    void transitionNames();
     void visibilityModeNames_data();
     void visibilityModeNames();
     void rectSerialization();
@@ -61,6 +63,8 @@ private Q_SLOTS:
     void dockRelationshipGraphAcceptsOnlyDirectLiveRoots();
     void dockSystemSnapshotSerializesTypedRuntimeState();
     void dockSystemSnapshotPinsNullableWireStates();
+    void dockSystemSnapshotPreservesFractionalTransitionGeometry();
+    void dockSystemSnapshotRejectsTransitionDisagreement();
     void dockSystemSnapshotRejectsReservationDisagreement();
     void dockSystemSnapshotCanonicalizesShuffledViewsAndLinkedIds();
     void dockSystemSnapshotKeepsConfigureModeIsolatedToEditedView();
@@ -157,6 +161,65 @@ static QVariantMap middleClickDispatchMap(const QString &rowIdentity,
         {QStringLiteral("configuredAction"), static_cast<int>(configuredAction)},
         {QStringLiteral("dispatchedOperation"), static_cast<int>(operation)},
         {QStringLiteral("sequence"), QVariant::fromValue(sequence)}};
+}
+
+static DockSystemViewRecord stableBottomTransitionRecord()
+{
+    DockSystemViewRecord record;
+    record.runtimeViewId = 7;
+    record.persistentDockId = 7;
+    record.logicalDockId = 7;
+    record.type = Types::PanelView;
+    record.edge = Plasma::Types::BottomEdge;
+    record.normalThickness = 40;
+    record.windowGeometry = QRect(100, 953, 300, 47);
+    record.absoluteGeometry = QRect(100, 960, 300, 40);
+    record.screenGeometry = QRect(0, 0, 1920, 1000);
+    record.surfaceGeometry = QRect(100, 953, 300, 47);
+    record.layerShellPresent = true;
+    record.layerShellMargins = QMargins{};
+    record.floatingPanelConfigured = true;
+    record.floatingPanelEligible = true;
+    record.visibilityMode = Types::AlwaysVisible;
+    record.transitionTarget =
+        DockTransitionTarget::Floated;
+    record.transitionProgress = 0.375;
+    record.transitionPhase =
+        DockTransitionPhase::Floating;
+    record.transitionDirection =
+        DockTransitionDirection::TowardFloated;
+    record.transitionRunning = true;
+    record.transitionGeometryPresent = true;
+    record.transitionGeometryRevision = 11;
+    record.stableCanvasGeometry =
+        QRect(100, 953, 300, 47);
+    record.attachedPresentationGeometry =
+        QRect(0, 7, 300, 40);
+    record.floatedPresentationGeometry =
+        QRect(0, 0, 300, 40);
+    record.currentVisibleGeometry =
+        QRectF(0.0, 4.375, 300.0, 40.0);
+    record.computedPaintMaskGeometry =
+        record.currentVisibleGeometry;
+    record.computedInputBridgeGeometry =
+        QRectF(0.0, 4.375, 300.0, 42.625);
+    record.contentTranslation =
+        QPointF(0.0, 4.375);
+    record.stableTriggerGeometry =
+        QRect(100, 959, 300, 41);
+    record.stableAppletMeasurementBounds =
+        QRect(0, 0, 300, 40);
+    record.stablePrimaryAxisStart = 100;
+    record.stablePrimaryAxisLength = 300;
+    record.stableLayerShellMargin = 0;
+    record.surfaceGeometryPublicationRevision = 17;
+    record.layerShellConfigureRequestRevision = 23;
+    record.requestedReservationDepth = 40;
+    record.objects.geometryController =
+        QStringLiteral("object-1");
+    record.objects.transitionController =
+        QStringLiteral("object-2");
+    return record;
 }
 
 //! Every enum-name mapping is pinned with one data row per enum value, so
@@ -307,6 +370,44 @@ void DbusReportsTest::linkPlacementNames()
     QFETCH(QString, name);
 
     QCOMPARE(linkPlacementName(static_cast<Data::View::LinkPlacement>(placement)), name);
+}
+
+void DbusReportsTest::transitionNames()
+{
+    QCOMPARE(
+        transitionTargetName(
+            DockTransitionTarget::Attached),
+        QStringLiteral("attached"));
+    QCOMPARE(
+        transitionTargetName(
+            DockTransitionTarget::Floated),
+        QStringLiteral("floated"));
+
+    QCOMPARE(
+        transitionPhaseName(
+            DockTransitionPhase::Resting),
+        QStringLiteral("resting"));
+    QCOMPARE(
+        transitionPhaseName(
+            DockTransitionPhase::Attaching),
+        QStringLiteral("attaching"));
+    QCOMPARE(
+        transitionPhaseName(
+            DockTransitionPhase::Floating),
+        QStringLiteral("floating"));
+
+    QCOMPARE(
+        transitionDirectionName(
+            DockTransitionDirection::None),
+        QStringLiteral("none"));
+    QCOMPARE(
+        transitionDirectionName(
+            DockTransitionDirection::TowardAttached),
+        QStringLiteral("towardAttached"));
+    QCOMPARE(
+        transitionDirectionName(
+            DockTransitionDirection::TowardFloated),
+        QStringLiteral("towardFloated"));
 }
 
 void DbusReportsTest::visibilityModeNames_data()
@@ -797,6 +898,45 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     record.reservationLayerShellMargins = QMargins(0, 40, 0, -40);
     record.reservationLayerShellExclusiveEdge = QStringLiteral("left");
     record.reservationLayerShellExclusiveZone = 48;
+    record.floatingPanelConfigured = true;
+    record.floatingPanelEligible = true;
+    record.transitionTarget =
+        DockTransitionTarget::Floated;
+    record.transitionProgress = 0.375;
+    record.transitionPhase =
+        DockTransitionPhase::Floating;
+    record.transitionDirection =
+        DockTransitionDirection::TowardFloated;
+    record.transitionRunning = true;
+    record.transitionGeometryPresent = true;
+    record.transitionGeometryRevision =
+        std::numeric_limits<quint64>::max() - 2;
+    record.stableCanvasGeometry =
+        QRect(1, 2, 72, 300);
+    record.attachedPresentationGeometry =
+        QRect(8, 0, 64, 300);
+    record.floatedPresentationGeometry =
+        QRect(0, 0, 64, 300);
+    record.currentVisibleGeometry =
+        QRectF(5.0, 0.0, 64.0, 300.0);
+    record.computedPaintMaskGeometry =
+        QRectF(5.0, 0.0, 64.0, 300.0);
+    record.computedInputBridgeGeometry =
+        QRectF(5.0, 0.0, 67.0, 300.0);
+    record.contentTranslation =
+        QPointF(5.0, 0.0);
+    record.stableTriggerGeometry =
+        QRect(1, 2, 65, 300);
+    record.stableAppletMeasurementBounds =
+        QRect(0, 0, 64, 300);
+    record.stablePrimaryAxisStart = 2;
+    record.stablePrimaryAxisLength = 300;
+    record.stableLayerShellMargin = 0;
+    record.surfaceGeometryPublicationRevision =
+        std::numeric_limits<quint64>::max();
+    record.layerShellConfigureRequestRevision =
+        std::numeric_limits<quint64>::max() - 1;
+    record.requestedReservationDepth = 64;
     record.visibilityMode = Types::DodgeActive;
     record.isHidden = true;
     record.inStartup = true;
@@ -819,6 +959,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     record.objects.editController = QStringLiteral("object-25");
     record.objects.configWindow = QStringLiteral("object-26");
     record.objects.reservationPublisher = QStringLiteral("object-27");
+    record.objects.transitionController =
+        QStringLiteral("object-28");
 
     DockSystemSnapshot snapshot;
     snapshot.snapshotSequence = 41;
@@ -859,8 +1001,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("snapshotSequence"),
         QStringLiteral("stacking"),
         QStringLiteral("views")}));
-    QCOMPARE(DockSystemSnapshot::SchemaVersion, 4);
-    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 4);
+    QCOMPARE(DockSystemSnapshot::SchemaVersion, 5);
+    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 5);
     QCOMPARE(root.value(QStringLiteral("snapshotSequence")).toString(), QStringLiteral("41"));
     QCOMPARE(
         root.value(
@@ -934,17 +1076,26 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("absoluteGeometry"), QStringLiteral("alignment"),
         QStringLiteral("appletsLayoutGeometry"),
         QStringLiteral("appliedInputMask"), QStringLiteral("appliedRelocationGeneration"),
+        QStringLiteral("attachedPresentationGeometry"),
         QStringLiteral("availablePrimaryLength"),
         QStringLiteral("canvasGeometry"),
-        QStringLiteral("configuredIconSize"), QStringLiteral("edge"),
+        QStringLiteral("computedInputBridgeGeometry"),
+        QStringLiteral("computedPaintMaskGeometry"),
+        QStringLiteral("configuredIconSize"), QStringLiteral("contentTranslation"),
+        QStringLiteral("currentVisibleGeometry"), QStringLiteral("edge"),
         QStringLiteral("editMode"), QStringLiteral("effectiveConfigureAppletsMode"),
         QStringLiteral("effectiveIconSize"), QStringLiteral("effectsRect"),
+        QStringLiteral("floatedPresentationGeometry"),
+        QStringLiteral("floatingPanelConfigured"),
+        QStringLiteral("floatingPanelEligible"),
         QStringLiteral("geometrySettled"), QStringLiteral("inDelete"),
         QStringLiteral("inReadyState"), QStringLiteral("inRelocationAnimation"),
         QStringLiteral("inRelocationShowing"), QStringLiteral("inStartup"),
         QStringLiteral("inputMask"), QStringLiteral("isHidden"),
         QStringLiteral("isOffScreen"),
-        QStringLiteral("layerShellAnchors"), QStringLiteral("layerShellExclusiveEdge"),
+        QStringLiteral("layerShellAnchors"),
+        QStringLiteral("layerShellConfigureRequestRevision"),
+        QStringLiteral("layerShellExclusiveEdge"),
         QStringLiteral("layerShellExclusiveZone"), QStringLiteral("layerShellMargins"),
         QStringLiteral("layerShellPresent"), QStringLiteral("layout"),
         QStringLiteral("linkPlacement"), QStringLiteral("linkedDockIds"),
@@ -956,6 +1107,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("originalDockId"), QStringLiteral("persistentDockId"),
         QStringLiteral("publishedStruts"), QStringLiteral("relationship"),
         QStringLiteral("relocationGeneration"),
+        QStringLiteral("requestedReservationDepth"),
         QStringLiteral("reservationContributionDepth"),
         QStringLiteral("reservationContributorDockIds"),
         QStringLiteral("reservationEdge"),
@@ -974,7 +1126,21 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("screen"),
         QStringLiteral("screenGeometry"), QStringLiteral("screenId"),
         QStringLiteral("screensGroup"), QStringLiteral("settingsWindowShown"),
+        QStringLiteral("stableAppletMeasurementBounds"),
+        QStringLiteral("stableCanvasGeometry"),
+        QStringLiteral("stableLayerShellMargin"),
+        QStringLiteral("stablePrimaryAxisLength"),
+        QStringLiteral("stablePrimaryAxisStart"),
+        QStringLiteral("stableTriggerGeometry"),
         QStringLiteral("strutsThickness"), QStringLiteral("surfaceGeometry"),
+        QStringLiteral("surfaceGeometryPublicationRevision"),
+        QStringLiteral("transitionDirection"),
+        QStringLiteral("transitionGeometryPresent"),
+        QStringLiteral("transitionGeometryRevision"),
+        QStringLiteral("transitionPhase"),
+        QStringLiteral("transitionProgress"),
+        QStringLiteral("transitionRunning"),
+        QStringLiteral("transitionTarget"),
         QStringLiteral("type"),
         QStringLiteral("visibilityMode"), QStringLiteral("windowGeometry")}));
     QCOMPARE(view.value(QStringLiteral("runtimeViewId")).toString(), QStringLiteral("19"));
@@ -1023,6 +1189,83 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(view.value(QStringLiteral("reservationLayerShellExclusiveEdge")).toString(),
              QStringLiteral("left"));
     QCOMPARE(view.value(QStringLiteral("reservationLayerShellExclusiveZone")).toInt(), 48);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("floatingPanelConfigured")).toBool(),
+        true);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("floatingPanelEligible")).toBool(),
+        true);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("transitionTarget")).toString(),
+        QStringLiteral("floated"));
+    QCOMPARE(
+        view.value(
+            QStringLiteral("transitionProgress")).toDouble(),
+        0.375);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("transitionPhase")).toString(),
+        QStringLiteral("floating"));
+    QCOMPARE(
+        view.value(
+            QStringLiteral("transitionDirection")).toString(),
+        QStringLiteral("towardFloated"));
+    QCOMPARE(
+        view.value(
+            QStringLiteral("transitionRunning")).toBool(),
+        true);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("transitionGeometryPresent")).toBool(),
+        true);
+    QCOMPARE(
+        view.value(
+            QStringLiteral(
+                "transitionGeometryRevision"))
+            .toString(),
+        QString::number(
+            std::numeric_limits<quint64>::max() - 2));
+    QCOMPARE(
+        view.value(
+            QStringLiteral("currentVisibleGeometry")).toArray(),
+        serializeRectF(
+            *record.currentVisibleGeometry));
+    QCOMPARE(
+        view.value(
+            QStringLiteral("computedPaintMaskGeometry")).toArray(),
+        serializeRectF(
+            *record.computedPaintMaskGeometry));
+    QCOMPARE(
+        view.value(
+            QStringLiteral("computedInputBridgeGeometry")).toArray(),
+        serializeRectF(
+            *record.computedInputBridgeGeometry));
+    QCOMPARE(
+        view.value(
+            QStringLiteral("contentTranslation")).toArray(),
+        serializePointF(
+            *record.contentTranslation));
+    QCOMPARE(
+        view.value(
+            QStringLiteral("requestedReservationDepth")).toInt(),
+        64);
+    QCOMPARE(
+        view.value(
+            QStringLiteral(
+                "surfaceGeometryPublicationRevision"))
+            .toString(),
+        QString::number(
+            std::numeric_limits<quint64>::max()));
+    QCOMPARE(
+        view.value(
+            QStringLiteral(
+                "layerShellConfigureRequestRevision"))
+            .toString(),
+        QString::number(
+            std::numeric_limits<quint64>::max() - 1));
     QCOMPARE(view.value(QStringLiteral("effectsRect")).toArray(), serializeRect(record.effectsRect));
     QCOMPARE(view.value(QStringLiteral("appletsLayoutGeometry")).toArray(), serializeRect(record.appletsLayoutGeometry));
     QCOMPARE(view.value(QStringLiteral("visibilityMode")).toString(), QStringLiteral("dodgeActive"));
@@ -1040,11 +1283,14 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("containment"), QStringLiteral("editController"),
         QStringLiteral("geometryController"), QStringLiteral("layout"),
         QStringLiteral("layoutController"), QStringLiteral("reservationPublisher"),
+        QStringLiteral("transitionController"),
         QStringLiteral("view")}));
     QCOMPARE(objects.value(QStringLiteral("layoutController")).toString(),
              QStringLiteral("object-23"));
     QCOMPARE(objects.value(QStringLiteral("reservationPublisher")).toString(),
              QStringLiteral("object-27"));
+    QCOMPARE(objects.value(QStringLiteral("transitionController")).toString(),
+             QStringLiteral("object-28"));
 
     const QStringList stringFields{
         QStringLiteral("runtimeViewId"), QStringLiteral("relocationGeneration"),
@@ -1056,7 +1302,13 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("layerShellExclusiveEdge"),
         QStringLiteral("reservationEdge"),
         QStringLiteral("reservationGroupGeneration"),
-        QStringLiteral("reservationLayerShellExclusiveEdge")};
+        QStringLiteral("reservationLayerShellExclusiveEdge"),
+        QStringLiteral("surfaceGeometryPublicationRevision"),
+        QStringLiteral("layerShellConfigureRequestRevision"),
+        QStringLiteral("transitionDirection"),
+        QStringLiteral("transitionGeometryRevision"),
+        QStringLiteral("transitionPhase"),
+        QStringLiteral("transitionTarget")};
     const QStringList numberFields{
         QStringLiteral("persistentDockId"), QStringLiteral("logicalDockId"),
         QStringLiteral("originalDockId"), QStringLiteral("screenId"),
@@ -1069,14 +1321,23 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("reservationGroupMemberCount"),
         QStringLiteral("reservationOutputId"),
         QStringLiteral("reservationPublishedDepth"),
-        QStringLiteral("reservationLayerShellExclusiveZone")};
+        QStringLiteral("reservationLayerShellExclusiveZone"),
+        QStringLiteral("requestedReservationDepth"),
+        QStringLiteral("stableLayerShellMargin"),
+        QStringLiteral("stablePrimaryAxisLength"),
+        QStringLiteral("stablePrimaryAxisStart"),
+        QStringLiteral("transitionProgress")};
     const QStringList booleanFields{
         QStringLiteral("onPrimary"), QStringLiteral("isHidden"), QStringLiteral("inStartup"),
         QStringLiteral("isOffScreen"), QStringLiteral("inRelocationAnimation"),
         QStringLiteral("inRelocationShowing"), QStringLiteral("geometrySettled"),
         QStringLiteral("inDelete"), QStringLiteral("inReadyState"), QStringLiteral("editMode"),
         QStringLiteral("effectiveConfigureAppletsMode"), QStringLiteral("settingsWindowShown"),
-        QStringLiteral("layerShellPresent"), QStringLiteral("reservationSurfacePresent")};
+        QStringLiteral("layerShellPresent"), QStringLiteral("reservationSurfacePresent"),
+        QStringLiteral("floatingPanelConfigured"),
+        QStringLiteral("floatingPanelEligible"),
+        QStringLiteral("transitionGeometryPresent"),
+        QStringLiteral("transitionRunning")};
     const QStringList arrayFields{
         QStringLiteral("linkedDockIds"), QStringLiteral("windowGeometry"),
         QStringLiteral("absoluteGeometry"), QStringLiteral("localGeometry"),
@@ -1090,7 +1351,16 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("reservationGeometry"),
         QStringLiteral("reservationWindowGeometry"),
         QStringLiteral("reservationLayerShellAnchors"),
-        QStringLiteral("reservationLayerShellMargins")};
+        QStringLiteral("reservationLayerShellMargins"),
+        QStringLiteral("stableCanvasGeometry"),
+        QStringLiteral("attachedPresentationGeometry"),
+        QStringLiteral("floatedPresentationGeometry"),
+        QStringLiteral("currentVisibleGeometry"),
+        QStringLiteral("computedPaintMaskGeometry"),
+        QStringLiteral("computedInputBridgeGeometry"),
+        QStringLiteral("contentTranslation"),
+        QStringLiteral("stableTriggerGeometry"),
+        QStringLiteral("stableAppletMeasurementBounds")};
     for (const auto &key : stringFields) {
         requireJsonType(view, key, QJsonValue::String);
     }
@@ -1174,11 +1444,394 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     QCOMPARE(view.value(QStringLiteral("reservationSurfacePresent")).toBool(), false);
     requireJsonType(view, QStringLiteral("screensGroup"), QJsonValue::String);
     QCOMPARE(view.value(QStringLiteral("screensGroup")).toString(), QStringLiteral("single"));
+    requireJsonType(view, QStringLiteral("floatingPanelConfigured"), QJsonValue::Bool);
+    requireJsonType(view, QStringLiteral("floatingPanelEligible"), QJsonValue::Bool);
+    requireJsonType(view, QStringLiteral("transitionTarget"), QJsonValue::String);
+    requireJsonType(view, QStringLiteral("transitionProgress"), QJsonValue::Double);
+    requireJsonType(view, QStringLiteral("transitionPhase"), QJsonValue::String);
+    requireJsonType(view, QStringLiteral("transitionDirection"), QJsonValue::String);
+    requireJsonType(view, QStringLiteral("transitionRunning"), QJsonValue::Bool);
+    requireJsonType(view, QStringLiteral("transitionGeometryPresent"), QJsonValue::Bool);
+    requireJsonType(view, QStringLiteral("transitionGeometryRevision"), QJsonValue::String);
+    requireJsonType(view, QStringLiteral("stableLayerShellMargin"), QJsonValue::Double);
+    QCOMPARE(view.value(QStringLiteral("floatingPanelConfigured")).toBool(), false);
+    QCOMPARE(view.value(QStringLiteral("floatingPanelEligible")).toBool(), false);
+    QCOMPARE(view.value(QStringLiteral("transitionTarget")).toString(), QStringLiteral("floated"));
+    QCOMPARE(view.value(QStringLiteral("transitionProgress")).toDouble(), 1.0);
+    QCOMPARE(view.value(QStringLiteral("transitionPhase")).toString(), QStringLiteral("resting"));
+    QCOMPARE(view.value(QStringLiteral("transitionDirection")).toString(), QStringLiteral("none"));
+    QCOMPARE(view.value(QStringLiteral("transitionRunning")).toBool(), false);
+    QCOMPARE(view.value(QStringLiteral("transitionGeometryPresent")).toBool(), false);
+    QCOMPARE(view.value(QStringLiteral("transitionGeometryRevision")).toString(),
+             QStringLiteral("0"));
+    QCOMPARE(view.value(QStringLiteral("stableLayerShellMargin")).toInt(), 0);
+    const QStringList absentTransitionFields{
+        QStringLiteral("attachedPresentationGeometry"),
+        QStringLiteral("contentTranslation"),
+        QStringLiteral("currentVisibleGeometry"),
+        QStringLiteral("floatedPresentationGeometry"),
+        QStringLiteral("computedInputBridgeGeometry"),
+        QStringLiteral("computedPaintMaskGeometry"),
+        QStringLiteral("requestedReservationDepth"),
+        QStringLiteral("stableAppletMeasurementBounds"),
+        QStringLiteral("stableCanvasGeometry"),
+        QStringLiteral("stablePrimaryAxisLength"),
+        QStringLiteral("stablePrimaryAxisStart"),
+        QStringLiteral("stableTriggerGeometry")};
+    for (const auto &key : absentTransitionFields) {
+        requireJsonType(view, key, QJsonValue::Null);
+    }
+    requireJsonType(
+        view,
+        QStringLiteral(
+            "surfaceGeometryPublicationRevision"),
+        QJsonValue::String);
+    requireJsonType(
+        view,
+        QStringLiteral(
+            "layerShellConfigureRequestRevision"),
+        QJsonValue::String);
+    QCOMPARE(
+        view.value(
+            QStringLiteral(
+                "surfaceGeometryPublicationRevision"))
+            .toString(),
+        QStringLiteral("0"));
+    QCOMPARE(
+        view.value(
+            QStringLiteral(
+                "layerShellConfigureRequestRevision"))
+            .toString(),
+        QStringLiteral("0"));
 
     const QJsonObject objects = view.value(QStringLiteral("objects")).toObject();
     for (const auto &key : objects.keys()) {
         requireJsonType(objects, key, QJsonValue::Null);
     }
+}
+
+void DbusReportsTest::dockSystemSnapshotPreservesFractionalTransitionGeometry()
+{
+    DockSystemSnapshot snapshot;
+    snapshot.views = {
+        stableBottomTransitionRecord()};
+
+    const QJsonObject view =
+        QJsonDocument::fromJson(
+            serializeDockSystemSnapshot(
+                snapshot).toUtf8())
+            .object()
+            .value(
+                QStringLiteral("views"))
+            .toArray()
+            .at(0)
+            .toObject();
+
+    const QJsonArray visible =
+        view.value(
+            QStringLiteral(
+                "currentVisibleGeometry"))
+            .toArray();
+    const QJsonArray paint =
+        view.value(
+            QStringLiteral(
+                "computedPaintMaskGeometry"))
+            .toArray();
+    const QJsonArray bridge =
+        view.value(
+            QStringLiteral(
+                "computedInputBridgeGeometry"))
+            .toArray();
+    const QJsonArray translation =
+        view.value(
+            QStringLiteral(
+                "contentTranslation"))
+            .toArray();
+
+    QCOMPARE(visible.at(1).toDouble(), 4.375);
+    QCOMPARE(paint.at(1).toDouble(), 4.375);
+    QCOMPARE(bridge.at(1).toDouble(), 4.375);
+    QCOMPARE(bridge.at(3).toDouble(), 42.625);
+    QCOMPARE(translation.at(1).toDouble(), 4.375);
+    QVERIFY(
+        visible.at(1).toDouble()
+        != static_cast<int>(
+            visible.at(1).toDouble()));
+}
+
+void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
+{
+    DockSystemSnapshot valid;
+    valid.views = {
+        stableBottomTransitionRecord()};
+    QVERIFY(dockTransitionRecordsAgree(valid));
+
+    const auto rejects =
+        [&valid](const auto &mutate) {
+            DockSystemSnapshot invalid = valid;
+            mutate(invalid);
+            QVERIFY(
+                !dockTransitionRecordsAgree(
+                    invalid));
+        };
+
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .objects.transitionController.clear();
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .objects.transitionController =
+            snapshot.views[0]
+                .objects.geometryController;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .objects.view =
+            snapshot.views[0]
+                .objects.transitionController;
+    });
+    rejects([](auto &snapshot) {
+        auto second =
+            snapshot.views[0];
+        second.persistentDockId = 8;
+        second.logicalDockId = 8;
+        second.objects.geometryController =
+            QStringLiteral("object-3");
+        snapshot.views.append(second);
+    });
+    rejects([](auto &snapshot) {
+        auto second =
+            snapshot.views[0];
+        second.persistentDockId = 8;
+        second.logicalDockId = 8;
+        second.objects.geometryController =
+            QStringLiteral("object-3");
+        second.objects.transitionController =
+            QStringLiteral("object-4");
+        second.objects.view =
+            snapshot.views[0]
+                .objects.transitionController;
+        snapshot.views.append(second);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .floatingPanelEligible = false;
+        snapshot.views[0]
+            .transitionTarget =
+            DockTransitionTarget::Attached;
+        snapshot.views[0]
+            .transitionProgress = 0.0;
+        snapshot.views[0]
+            .transitionPhase =
+            DockTransitionPhase::Resting;
+        snapshot.views[0]
+            .transitionDirection =
+            DockTransitionDirection::None;
+        snapshot.views[0]
+            .transitionRunning = false;
+        snapshot.views[0]
+            .currentVisibleGeometry =
+            QRectF(
+                *snapshot.views[0]
+                    .attachedPresentationGeometry);
+        snapshot.views[0]
+            .computedPaintMaskGeometry =
+            snapshot.views[0]
+                .currentVisibleGeometry;
+        snapshot.views[0]
+            .computedInputBridgeGeometry =
+            snapshot.views[0]
+                .currentVisibleGeometry;
+        snapshot.views[0]
+            .contentTranslation =
+            QPointF(0.0, 7.0);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .floatingPanelConfigured = false;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .visibilityMode = Types::DodgeActive;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .transitionTarget =
+            DockTransitionTarget::Attached;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .transitionDirection =
+            DockTransitionDirection::TowardAttached;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .transitionRunning = false;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .transitionProgress =
+            std::numeric_limits<qreal>::quiet_NaN();
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .transitionProgress = 1.5;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .currentVisibleGeometry =
+            QRectF(
+                snapshot.views[0]
+                    .currentVisibleGeometry
+                    ->toRect());
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .computedPaintMaskGeometry
+            ->translate(0.25, 0.0);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .computedInputBridgeGeometry
+            ->translate(0.25, 0.0);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .contentTranslation =
+            QPointF(0.0, 4.0);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .stableCanvasGeometry
+            ->translate(1, 0);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .stableCanvasGeometry
+            ->translate(0, -1);
+        snapshot.views[0]
+            .surfaceGeometry
+            .translate(0, -1);
+        snapshot.views[0]
+            .absoluteGeometry
+            .translate(0, -1);
+        snapshot.views[0]
+            .stableTriggerGeometry
+            ->translate(0, -1);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .screenGeometry =
+            QRect(0, 0, 200, 1000);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .surfaceGeometry
+            .translate(1, 0);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .absoluteGeometry
+            .translate(1, 0);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .stableTriggerGeometry
+            ->translate(1, 0);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .stableTriggerGeometry =
+            QRect(100, 959, 300, 42);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .attachedPresentationGeometry
+            ->translate(-1, 0);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .floatedPresentationGeometry
+            ->translate(1, -1);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .currentVisibleGeometry
+            ->translate(0, 3.0);
+        snapshot.views[0]
+            .computedPaintMaskGeometry =
+            snapshot.views[0]
+                .currentVisibleGeometry;
+        snapshot.views[0]
+            .computedInputBridgeGeometry =
+            snapshot.views[0]
+                .currentVisibleGeometry;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .computedInputBridgeGeometry =
+            QRectF(0.0, -0.25, 300.0, 47.25);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .stableAppletMeasurementBounds
+            ->translate(1, 0);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .stablePrimaryAxisLength = 299;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .stablePrimaryAxisStart = 101;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .stableLayerShellMargin = 1;
+        snapshot.views[0]
+            .layerShellMargins.setBottom(1);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .requestedReservationDepth = 39;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .transitionGeometryPresent = false;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .currentVisibleGeometry.reset();
+    });
+
+    DockSystemSnapshot ineligible;
+    auto ineligibleView =
+        stableBottomTransitionRecord();
+    ineligibleView.floatingPanelEligible = false;
+    ineligibleView.transitionTarget =
+        DockTransitionTarget::Floated;
+    ineligibleView.transitionProgress = 1.0;
+    ineligibleView.transitionPhase =
+        DockTransitionPhase::Resting;
+    ineligibleView.transitionDirection =
+        DockTransitionDirection::None;
+    ineligibleView.transitionRunning = false;
+    ineligibleView.currentVisibleGeometry =
+        QRectF(
+            *ineligibleView
+                .floatedPresentationGeometry);
+    ineligibleView.computedPaintMaskGeometry =
+        ineligibleView.currentVisibleGeometry;
+    ineligibleView.computedInputBridgeGeometry =
+        QRectF(0.0, 0.0, 300.0, 47.0);
+    ineligibleView.contentTranslation =
+        QPointF{};
+    ineligible.views = {
+        ineligibleView};
+    QVERIFY(
+        dockTransitionRecordsAgree(
+            ineligible));
 }
 
 void DbusReportsTest::dockSystemSnapshotRejectsReservationDisagreement()
