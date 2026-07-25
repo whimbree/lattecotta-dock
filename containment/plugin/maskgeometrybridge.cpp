@@ -112,10 +112,15 @@ QRect MaskGeometryBridge::inputMaskFor(int location,
         return kAcceptInputEverywhere;
     }
 
+    if (behaveAsPlasmaPanel && !isHidden && !isSidebar) {
+        qCritical() << "MaskGeometryBridge.inputMaskFor: visible panel input "
+                       "belongs to FloatingTransition; refusing legacy write";
+        return kAcceptInputNowhere;
+    }
+
     MaskGeometry::InputMaskInputs in;
     in.location = *loc;
     in.compositingActive = compositingActive;
-    in.behaveAsPlasmaPanel = behaveAsPlasmaPanel;
     in.isHidden = isHidden;
     in.isSidebar = isSidebar;
     in.parabolicAnimating = parabolicAnimating;

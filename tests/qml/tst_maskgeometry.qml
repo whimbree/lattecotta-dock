@@ -74,24 +74,6 @@ TestCase {
         compareRect(rect, 200, 72, 800, 68);
     }
 
-    function test_plasmaPanelExposesFullWindowSoPopupsAnchorOutside() {
-        //! a behaveAsPlasmaPanel window exposes its WHOLE window as the input
-        //! mask (not the clear sentinel): libplasma's PopupPlasmaWindow anchors
-        //! an applet popup to parentWindow->mask().boundingRect(), and a
-        //! cleared mask collapsed that to a 1px strip at the window top so the
-        //! popup opened OVER the panel (Issue 2). The full-window band anchors
-        //! it at the real panel edge instead.
-        var rect = maskGeometry.inputMaskFor(bottomEdge,
-                                             true,
-                                             true,  //! behaveAsPlasmaPanel
-                                             false, false, false, false,
-                                             2, 102, 12, 56, 12,
-                                             Qt.rect(200, 72, 800, 56),
-                                             1200, 140,
-                                             1200, 140);
-        compareRect(rect, 0, 0, 1200, 140);
-    }
-
     function test_hiddenSidebarMapsToBlockAllSentinel() {
         var rect = maskGeometry.inputMaskFor(bottomEdge,
                                              true, false,
