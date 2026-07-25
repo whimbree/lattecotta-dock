@@ -1,4 +1,4 @@
-109
+110
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -29,6 +29,7 @@ editmodehandleactiontest
 effectshandleraudittest
 extraviewhintstest
 filldistributortest
+floatinginputeventtest
 floatingpanelgeometrytest
 floatingtransitiontest
 generictoolstest

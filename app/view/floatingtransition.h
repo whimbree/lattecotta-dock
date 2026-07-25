@@ -11,6 +11,7 @@
 
 #include <QAbstractAnimation>
 #include <QEasingCurve>
+#include <QMargins>
 #include <QObject>
 #include <QPointF>
 #include <QPropertyAnimation>
@@ -54,6 +55,10 @@ class FloatingTransition final : public QObject
                    NOTIFY currentGeometryChanged)
     Q_PROPERTY(QPointF contentTranslation READ contentTranslation
                    NOTIFY currentGeometryChanged)
+    Q_PROPERTY(QRect currentPaintMaskGeometry READ currentPaintMaskGeometry
+                   NOTIFY currentGeometryChanged)
+    Q_PROPERTY(QRect currentInputBridgeGeometry READ currentInputBridgeGeometry
+                   NOTIFY currentGeometryChanged)
 
 public:
     enum class Target {
@@ -96,6 +101,15 @@ public:
     [[nodiscard]] QRectF currentVisibleGeometry() const;
     [[nodiscard]] QRectF fittsBridgeGeometry() const;
     [[nodiscard]] QPointF contentTranslation() const;
+    [[nodiscard]] QRect currentPaintMaskGeometry() const;
+    [[nodiscard]] QRect currentInputBridgeGeometry() const;
+    [[nodiscard]] QMargins currentShadowPaddingOffsets() const;
+    [[nodiscard]] bool screenEdgeBorderVisible() const;
+    [[nodiscard]] bool floatingCornersVisible() const;
+    [[nodiscard]] FloatingPanelGeometry::InputDisposition classifyInput(
+        const QPointF &position) const;
+    [[nodiscard]] QPointF positionAdjustedForVisibleMask(
+        const QPointF &position) const;
 
     [[nodiscard]] quint64 geometryRevision() const;
     [[nodiscard]] bool configureGeometry(

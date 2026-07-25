@@ -158,6 +158,48 @@ QPointF FloatingTransition::contentTranslation() const
     return hasGeometry() ? m_geometry->contentTranslation(m_floatingness) : QPointF{};
 }
 
+QRect FloatingTransition::currentPaintMaskGeometry() const
+{
+    return hasGeometry() ? m_geometry->paintMask(m_floatingness).value : QRect{};
+}
+
+QRect FloatingTransition::currentInputBridgeGeometry() const
+{
+    return hasGeometry() ? m_geometry->inputBridge(m_floatingness).value : QRect{};
+}
+
+QMargins FloatingTransition::currentShadowPaddingOffsets() const
+{
+    return hasGeometry() ? m_geometry->shadowPaddingOffsets(m_floatingness)
+                         : QMargins{};
+}
+
+bool FloatingTransition::screenEdgeBorderVisible() const
+{
+    return hasGeometry() && m_geometry->screenEdgeBorderVisible(m_floatingness);
+}
+
+bool FloatingTransition::floatingCornersVisible() const
+{
+    return hasGeometry() && m_geometry->floatingCornersVisible(m_floatingness);
+}
+
+FloatingPanelGeometry::InputDisposition FloatingTransition::classifyInput(
+    const QPointF &position) const
+{
+    return hasGeometry()
+        ? m_geometry->classifyInput(m_floatingness, position)
+        : FloatingPanelGeometry::InputDisposition::ConsumeWithoutForwarding;
+}
+
+QPointF FloatingTransition::positionAdjustedForVisibleMask(
+    const QPointF &position) const
+{
+    return hasGeometry()
+        ? m_geometry->positionAdjustedForVisibleMask(m_floatingness, position)
+        : position;
+}
+
 quint64 FloatingTransition::geometryRevision() const
 {
     return m_geometryRevision;
@@ -232,7 +274,7 @@ void FloatingTransition::requestTarget(Target target)
 {
     const qreal endpoint = target == Target::Floated ? 1.0 : 0.0;
     if (m_target == target
-        && (running() || qFuzzyIsNull(m_floatingness - endpoint))) {
+        && (running() || m_floatingness == endpoint)) {
         return;
     }
 
@@ -241,7 +283,7 @@ void FloatingTransition::requestTarget(Target target)
         Q_EMIT targetChanged();
     }
 
-    if (qFuzzyIsNull(m_floatingness - endpoint)) {
+    if (m_floatingness == endpoint) {
         m_animation->stop();
         setFloatingness(endpoint);
         setPhase(Phase::Resting);
@@ -273,7 +315,9 @@ void FloatingTransition::setFloatingness(qreal floatingness)
         return;
     }
 
-    if (qFuzzyIsNull(m_floatingness - floatingness)) {
+    const bool endpoint = floatingness == 0.0 || floatingness == 1.0;
+    if (m_floatingness == floatingness
+        || (!endpoint && qFuzzyIsNull(m_floatingness - floatingness))) {
         return;
     }
 

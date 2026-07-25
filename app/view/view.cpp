@@ -10,6 +10,7 @@
 
 // local
 #include "effects.h"
+#include "floatinginputevent.h"
 #include "positioner.h"
 #include "visibilitymanager.h"
 #include "viewactionpolicy.h"
@@ -47,6 +48,7 @@
 #include <QQmlEngine>
 #include <QQmlProperty>
 #include <QQuickItem>
+#include <QScopedValueRollback>
 #include <QMenu>
 
 // KDe
@@ -1948,6 +1950,77 @@ void View::setInterfacesGraphicObj(Latte::Interfaces *ifaces)
 
 bool View::event(QEvent *e)
 {   
+    if (!m_floatingEventProjectionPending
+        && behaveAsPlasmaPanel()
+        && (!m_visibility
+            || (!m_visibility->isHidden()
+                && !m_visibility->isSidebar()))
+        && m_floatingTransition
+        && m_floatingTransition->hasGeometry()) {
+        const auto routePosition =
+            [this](const QPointF &position) {
+                return m_floatingTransition->classifyInput(position);
+            };
+
+        switch (e->type()) {
+        case QEvent::MouseMove:
+        case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonRelease:
+        case QEvent::MouseButtonDblClick: {
+            auto *mouseEvent = static_cast<QMouseEvent *>(e);
+            const auto disposition =
+                routePosition(mouseEvent->position());
+            const QPointF adjusted =
+                m_floatingTransition
+                    ->positionAdjustedForVisibleMask(
+                        mouseEvent->position());
+            auto route =
+                ViewPart::FloatingInputEvent::routeMouseEvent(
+                    disposition,
+                    *mouseEvent,
+                    adjusted,
+                    mapToGlobal(adjusted));
+            if (route.consumed) {
+                e->accept();
+                return true;
+            }
+            if (route.projected) {
+                const QScopedValueRollback<bool> projectionGuard{
+                    m_floatingEventProjectionPending, true};
+                return event(route.projected.get());
+            }
+            break;
+        }
+        case QEvent::Wheel: {
+            auto *wheelEvent = static_cast<QWheelEvent *>(e);
+            const auto disposition =
+                routePosition(wheelEvent->position());
+            const QPointF adjusted =
+                m_floatingTransition
+                    ->positionAdjustedForVisibleMask(
+                        wheelEvent->position());
+            auto route =
+                ViewPart::FloatingInputEvent::routeWheelEvent(
+                    disposition,
+                    *wheelEvent,
+                    adjusted,
+                    mapToGlobal(adjusted));
+            if (route.consumed) {
+                e->accept();
+                return true;
+            }
+            if (route.projected) {
+                const QScopedValueRollback<bool> projectionGuard{
+                    m_floatingEventProjectionPending, true};
+                return event(route.projected.get());
+            }
+            break;
+        }
+        default:
+            break;
+        }
+    }
+
     QEvent *sunkevent = e;
 
     if (!m_inDelete) {
