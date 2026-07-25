@@ -99,14 +99,17 @@ nonintersecting perpendicular dock is not shortened by another dock's masked
 canvas. Separated partial views keep independent visual and input regions;
 reservation grouping does not create inward dock stacks or a continuous
 activation strip.
-Floating Always Visible panels configured to close their screen gap for
-maximized windows keep the same QWindow, partial primary span, resting applet
-measurements, layer-shell placement, and maximum-depth reservation. One
-per-view qreal controller translates the visible presentation inside that
-stable edge canvas and reverses from its current fractional position without
-republishing physical geometry. The visible mask, blur and contrast regions,
-borders, corners, shadow padding, exact partial-span edge input, and popup
-anchor all follow that same internal presentation.
+Floating Always Visible Panels configured to close their screen gap attach
+when any eligible visible window intersects that view's stable edge trigger.
+The QWindow, partial primary span, resting applet measurements, layer-shell
+placement, and maximum-depth reservation remain unchanged. One per-view qreal
+controller translates the visible presentation inside that stable edge canvas
+and reverses from its current fractional position without republishing physical
+geometry. The visible mask, blur and contrast regions, borders, corners, shadow
+padding, exact partial-span edge input, and popup anchor all follow that same
+internal presentation. Legacy Docks keep their maximized-window gap request in
+both Always Visible and Windows Go Below without gaining Panel transition
+geometry.
 
 Legacy On All Screens members retain their derived-output behavior. A linked
 source stays protected from removal until its explicit members are removed, so

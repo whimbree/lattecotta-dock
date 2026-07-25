@@ -4653,6 +4653,39 @@ prerequisites in the phases above are done.
 - [x] Fix D204 (the D-Bus design document retained schema version 5).
       Align the prose with the schema 6 implementation and example.
       Commits: 19f3effd7
+- [x] Fix D205 (Panel popup anchors froze during task-removal layout motion).
+      Let Panels publish the current stable-canvas paint mask during unrelated
+      layout animation while Docks retain the legacy normal-state gate.
+      Evidence: nested recipes 071 and 072 keep the popup anchor's primary span
+      stable and its secondary axis equal to the current paint mask through
+      transitions and client teardown.
+      Commits: 0f6290f31 (PR #124 branch; final post-rebase commit hash pending
+      immediate post-merge traceability resolution)
+- [x] Fix D206 (heterogeneous task rows suppressed touching-window state).
+      Classify `IsWindow` before decoding window-only roles, skip false rows,
+      and retain exact role validation for rows that claim window identity.
+      Evidence: the mixed-row unit case and source mutation pin discriminator
+      ordering; the follow-up data rows reject malformed hidden, minimized, and
+      geometry roles after window classification.
+      Commits: 3d9330887, 637b02738 (PR #124 branch; final post-rebase commit
+      hashes pending immediate post-merge traceability resolution)
+- [x] Fix D207 (D-Bus accepted divergent touching-window authorities).
+      Compare the `FloatingTransition` policy copy with the per-view tracker,
+      fail the whole snapshot on disagreement, and serialize only tracker-owned
+      state.
+      Evidence: the constexpr divergence case and collector mutation guard
+      reject unequal authorities.
+      Commits: fac383297 (PR #124 branch; final post-rebase commit hash pending
+      immediate post-merge traceability resolution)
+- [x] Fix D208 (legacy Dock gap readback omitted Windows Go Below).
+      Admit the Dock gap-hide request in exactly the Always Visible and Windows
+      Go Below modes that consume it while keeping Panel attachment restricted
+      to eligible Always Visible views.
+      Evidence: unit and source mutations reject unrelated modes; recipe 071
+      drives maximize and restore in both consuming modes with no Panel
+      transition geometry.
+      Commits: 38c6ef1df (PR #124 branch; final post-rebase commit hash pending
+      immediate post-merge traceability resolution)
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
@@ -4684,6 +4717,22 @@ prerequisites in the phases above are done.
       returned `MERGE` before GitHub merged PR #122.
       Commits: 3bd2ce525, 44e6d5907, 48e1f9b39, 228252623, ca388f82e,
       ab880f653, 15d7dda7e, 19f3effd7, 19cb727e0
+- [x] Complete FP-4A (the direct window-touch runtime and single-client nested
+      acceptance).
+      One exact per-view tracker filters the current desktop and activity,
+      excludes non-window, hidden, and minimized rows, intersects visible
+      window frames with the stable trigger, and evaluates on a bounded 10 ms
+      deadline. Schema 7 exposes and cross-checks the tracker and transition
+      policy state. Recipes 071 and 072 cover the legacy Dock request and the
+      direct Panel transition without changing stable physical geometry.
+      Commits: 0f6290f31, 7b1fbf8fd, 3d9330887, fac383297, 38c6ef1df,
+      637b02738, 8a9c97964 (PR #124 branch; final post-rebase commit hashes
+      pending immediate post-merge traceability resolution)
+- [ ] Complete FP-4B (the multi-output and separated-span topology
+      acceptance).
+      Commits:
+- [ ] Complete FP-4C (the deterministic operation-storm acceptance).
+      Commits:
 - [ ] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
       Commits:

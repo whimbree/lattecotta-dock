@@ -139,22 +139,35 @@ FP-3 means internal presentation, input, effects, and popup ownership.
 
 FP-4 means the stable window-touch trigger and end-to-end acceptance.
 
-- [ ] Use current-desktop/current-activity window state, exclude hidden and
+FP-4A means the direct window-touch runtime and single-client nested
+acceptance. FP-4B means multi-output and separated-span topology acceptance.
+FP-4C means deterministic operation-storm acceptance. PR #124 completes FP-4A
+on its branch; final post-rebase commit hashes remain pending immediate
+post-merge traceability resolution.
+
+- [x] Use current-desktop/current-activity window state, exclude hidden and
       minimized windows, and allow a spanning window to affect more than one
       output.
-      Commits:
-- [ ] Intersect against the stable per-view trigger with one logical pixel of
+      Commits: 7b1fbf8fd, 3d9330887, 637b02738 (PR #124 branch; final
+      post-rebase commit hashes pending immediate post-merge traceability
+      resolution)
+- [x] Intersect against the stable per-view trigger with one logical pixel of
       inward overlap. Do not use the moving visible rectangle.
-      Commits:
-- [ ] Deliver the direct interaction path with a bounded 10 ms debounce
+      Commits: 7b1fbf8fd (PR #124 branch; final post-rebase commit hash pending
+      immediate post-merge traceability resolution)
+- [x] Deliver the direct interaction path with a bounded 10 ms debounce
       instead of the generic 150 ms window-change coalescer.
-      Commits:
-- [ ] Initially enable attachment only for eligible floating Always Visible
+      Commits: 7b1fbf8fd (PR #124 branch; final post-rebase commit hash pending
+      immediate post-merge traceability resolution)
+- [x] Initially enable attachment only for eligible floating Always Visible
       panels. Preserve distinct visibility-mode semantics.
-      Commits:
-- [ ] Drive drag-in, drag-out, mid-flight reverse, Escape cancel, and committed
+      Commits: 7b1fbf8fd, 38c6ef1df, 8a9c97964 (PR #124 branch; final
+      post-rebase commit hashes pending immediate post-merge traceability
+      resolution)
+- [x] Drive drag-in, drag-out, mid-flight reverse, Escape cancel, and committed
       maximize against real nested-KWin client frames.
-      Commits:
+      Commits: 0f6290f31, 7b1fbf8fd (PR #124 branch; final post-rebase commit
+      hashes pending immediate post-merge traceability resolution)
 - [ ] Drive portrait, landscape, disconnected, partially touching, fully
       touching, spanning-window, and same-edge separated-span fixtures.
       Commits:
