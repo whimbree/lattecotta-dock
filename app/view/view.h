@@ -532,6 +532,7 @@ private:
     QTimer m_releaseGrabTimer;
     int m_releaseGrab_x;
     int m_releaseGrab_y;
+    bool m_floatingEventProjectionPending{false};
 
     Layout::GenericLayout *m_layout{nullptr};
 

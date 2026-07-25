@@ -103,6 +103,12 @@ target_link_libraries(positionergeometrytest
 # the QRectF support; no live View or compositor reaches the core.
 latte_add_unit_test(floatingpanelgeometrytest)
 
+# FP-3 input event routing: the exact bridge disposition and projected
+# QMouseEvent/QWheelEvent metadata are executed without a live compositor.
+latte_add_unit_test(floatinginputeventtest)
+target_link_libraries(floatinginputeventtest
+    Qt6::Gui)
+
 # FP-2 transition ownership: the QObject wrapper and its QPropertyAnimation
 # compile into the sanitizer-backed test. An injected animation clock makes
 # both reversal directions and rapid alternating targets deterministic.
