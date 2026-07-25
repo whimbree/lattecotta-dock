@@ -2010,8 +2010,10 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                     && (view.type != Types::DockView
                         || !view.floatingGapConfigured
                         || view.floatingPanelConfigured
-                        || view.visibilityMode
-                            != Types::AlwaysVisible
+                        || (view.visibilityMode
+                                != Types::AlwaysVisible
+                            && view.visibilityMode
+                                != Types::WindowsGoBelow)
                         || !view
                             .attachOnWindowTouchConfigured))
                 || (view.floatingPanelEligible

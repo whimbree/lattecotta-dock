@@ -250,12 +250,16 @@ wait_for_zero_gap_floated_snapshot() {
 }
 
 wait_for_dock_gap_policy() {
-    local expected_maximized="$1" expected_request="$2"
-    local expected_target="$3" expected_progress="$4"
+    local expected_visibility="$1" expected_maximized="$2"
+    local expected_request="$3" expected_target="$4"
+    local expected_progress="$5"
     local active_maximized=unread exists_maximized=unread
-    local view_type=unread floating_gap_configured=unread
+    local view_type=unread visibility_mode=unread
+    local floating_gap_configured=unread
     local configured_panel=unread eligible_panel=unread
     local configured_hide=unread dock_request=unread
+    local transition_geometry=unread panel_geometry_absent=unread
+    local floating_popups=unread
     local target=unread phase=unread running=unread progress=-1
     for _ in $(seq 1 80); do
         read -r active_maximized exists_maximized \
@@ -264,11 +268,13 @@ import json, sys
 tracker = json.load(sys.stdin)
 print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMaximized"]).lower())
 ')"
-        read -r view_type floating_gap_configured configured_panel \
-            eligible_panel configured_hide \
+        read -r view_type visibility_mode floating_gap_configured \
+            configured_panel eligible_panel configured_hide \
             dock_request target phase running progress \
-            <<< "$(dock_field '"%s %s %s %s %s %s %s %s %s %.9f" % (
+            transition_geometry panel_geometry_absent floating_popups \
+            <<< "$(dock_field '"%s %s %s %s %s %s %s %s %s %s %.9f %s %s %s" % (
                 v["type"],
+                v["visibilityMode"],
                 str(v["floatingGapConfigured"]).lower(),
                 str(v["floatingPanelConfigured"]).lower(),
                 str(v["floatingPanelEligible"]).lower(),
@@ -278,10 +284,21 @@ print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMa
                 v["transitionPhase"],
                 str(v["transitionRunning"]).lower(),
                 v["transitionProgress"],
+                str(v["transitionGeometryPresent"]).lower(),
+                str(all(v[key] is None for key in (
+                    "stableCanvasGeometry",
+                    "attachedPresentationGeometry",
+                    "floatedPresentationGeometry",
+                    "currentVisibleGeometry",
+                    "computedPaintMaskGeometry",
+                    "computedInputBridgeGeometry",
+                ))).lower(),
+                str(v["floatingAppletPopupsPreferred"]).lower(),
             )')"
         if [[ "$active_maximized" == "$expected_maximized"
               && "$exists_maximized" == "$expected_maximized"
               && "$view_type" == dock
+              && "$visibility_mode" == "$expected_visibility"
               && "$floating_gap_configured" == true
               && "$configured_panel" == false
               && "$eligible_panel" == false
@@ -289,14 +306,17 @@ print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMa
               && "$dock_request" == "$expected_request"
               && "$target" == "$expected_target"
               && "$phase" == resting
-              && "$running" == false ]] \
+              && "$running" == false
+              && "$transition_geometry" == false
+              && "$panel_geometry_absent" == true
+              && "$floating_popups" == false ]] \
                 && awk -v actual="$progress" -v expected="$expected_progress" \
                     'BEGIN { difference = actual - expected; if (difference < 0) difference = -difference; exit !(difference < 0.000001) }'; then
             return 0
         fi
         sleep 0.05
     done
-    e2e_fail "Dock maximized-gap policy did not settle (active=$active_maximized exists=$exists_maximized type=$view_type floatingGapConfigured=$floating_gap_configured configuredPanel=$configured_panel panelEligible=$eligible_panel configuredHide=$configured_hide dockRequest=$dock_request target=$target phase=$phase running=$running progress=$progress)"
+    e2e_fail "Dock maximized-gap policy did not settle (active=$active_maximized exists=$exists_maximized type=$view_type visibility=$visibility_mode floatingGapConfigured=$floating_gap_configured configuredPanel=$configured_panel panelEligible=$eligible_panel configuredHide=$configured_hide dockRequest=$dock_request target=$target phase=$phase running=$running progress=$progress transitionGeometry=$transition_geometry panelGeometryAbsent=$panel_geometry_absent floatingPopups=$floating_popups)"
 }
 
 konsole_frame_geometry() {
@@ -487,12 +507,22 @@ e2e_call setViewVisibilityMode us "$view" alwaysVisible >/dev/null \
 
 [[ "$(set_konsole_maximized false)" == "$fixture_id" ]] \
     || e2e_fail "KWin did not normalize the client for the legacy Dock check"
-wait_for_dock_gap_policy false false floated 1
+wait_for_dock_gap_policy alwaysVisible false false floated 1
 [[ "$(set_konsole_maximized true)" == "$fixture_id" ]] \
     || e2e_fail "KWin did not maximize the client for the legacy Dock check"
-wait_for_dock_gap_policy true true floated 1
+wait_for_dock_gap_policy alwaysVisible true true floated 1
 [[ "$(set_konsole_maximized false)" == "$fixture_id" ]] \
     || e2e_fail "KWin did not restore the client for the legacy Dock check"
-wait_for_dock_gap_policy false false floated 1
+wait_for_dock_gap_policy alwaysVisible false false floated 1
 
-echo "FP-2/FP-4A stable canvas held its maximum-depth reservation across qreal reversals and preserved the separate legacy Dock maximized-gap arm"
+e2e_call setViewVisibilityMode us "$view" windowsGoBelow >/dev/null \
+    || e2e_fail "could not set the legacy Dock fixture to windowsGoBelow"
+wait_for_dock_gap_policy windowsGoBelow false false floated 1
+[[ "$(set_konsole_maximized true)" == "$fixture_id" ]] \
+    || e2e_fail "KWin did not maximize the client for the WindowsGoBelow Dock check"
+wait_for_dock_gap_policy windowsGoBelow true true floated 1
+[[ "$(set_konsole_maximized false)" == "$fixture_id" ]] \
+    || e2e_fail "KWin did not restore the client for the WindowsGoBelow Dock check"
+wait_for_dock_gap_policy windowsGoBelow false false floated 1
+
+echo "FP-2/FP-4A stable canvas held its maximum-depth reservation across qreal reversals and preserved the separate Always Visible and Windows Go Below Dock maximized-gap arm"

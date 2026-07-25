@@ -289,7 +289,10 @@ private:
                    "&&!latteView.floatingPanelConfigured"
                    "&&attachOnWindowTouchConfigured"
                    "&&latteView.visibility"
-                   "&&latteView.visibility.mode===LatteCore.Types.AlwaysVisible"
+                   "&&(latteView.visibility.mode"
+                   "===LatteCore.Types.AlwaysVisible"
+                   "||latteView.visibility.mode"
+                   "===LatteCore.Types.WindowsGoBelow)"
                    "&&hideThickScreenGap"))
             && !main.contains(QStringLiteral(
                    "floatingTransitionEligible:behaveAsPlasmaPanel"
@@ -486,15 +489,24 @@ private:
                    "if[[\"$active_maximized\"==\"$expected_maximized\""
                    "&&\"$exists_maximized\"==\"$expected_maximized\""
                    "&&\"$view_type\"==dock"
+                   "&&\"$visibility_mode\"==\"$expected_visibility\""
                    "&&\"$floating_gap_configured\"==true"
                    "&&\"$configured_panel\"==false"
                    "&&\"$eligible_panel\"==false"
                    "&&\"$configured_hide\"==true"
                    "&&\"$dock_request\"==\"$expected_request\""))
             && code.contains(QStringLiteral(
-                   "wait_for_dock_gap_policyfalsefalsefloated1"))
+                   "&&\"$transition_geometry\"==false"
+                   "&&\"$panel_geometry_absent\"==true"
+                   "&&\"$floating_popups\"==false"))
             && code.contains(QStringLiteral(
-                   "wait_for_dock_gap_policytruetruefloated1"))
+                   "wait_for_dock_gap_policy"
+                   "alwaysVisibletruetruefloated1"))
+            && code.contains(QStringLiteral(
+                   "setViewVisibilityModeus\"$view\"windowsGoBelow"))
+            && code.contains(QStringLiteral(
+                   "wait_for_dock_gap_policy"
+                   "windowsGoBelowtruetruefloated1"))
             && code.contains(QStringLiteral(
                    "expected_h=$((screen_h-stable_reservation_depth))"))
             && !code.contains(QStringLiteral("max_strut<base_strut"))
@@ -1862,6 +1874,28 @@ void SourceGuardTest::stableFloatingPanelQml_rejectsDivergentZeroGapEligibility(
                  backgroundTotals, viewHeader, viewImplementation),
              "Dock gap hiding must use the view's presentation-independent"
              " positive-gap authority, never Panel identity");
+
+    QString dockVisibilityMain = readFile(QStringLiteral(
+        "containment/package/contents/ui/main.qml"));
+    const QString dockVisibilityModes = QStringLiteral(
+        "        && (latteView.visibility.mode === "
+        "LatteCore.Types.AlwaysVisible\n"
+        "            || latteView.visibility.mode === "
+        "LatteCore.Types.WindowsGoBelow)");
+    QCOMPARE(
+        dockVisibilityMain.count(
+            dockVisibilityModes),
+        1);
+    dockVisibilityMain.replace(
+        dockVisibilityModes,
+        QStringLiteral(
+            "        && latteView.visibility.mode === "
+            "LatteCore.Types.AlwaysVisible"));
+    QVERIFY2(!matchesStableFloatingPanelQmlContract(
+                 dockVisibilityMain, bindings, visibility, layouts, metrics,
+                 backgroundTotals, viewHeader, viewImplementation),
+             "the legacy Dock request must cover both visibility modes that"
+             " consume hideThickScreenGap");
 
     QString gapImplementation = viewImplementation;
     const QString positiveGapDefinition = QStringLiteral(
