@@ -48,6 +48,24 @@ FloatingTransition::Target FloatingTransition::target() const
     return m_target;
 }
 
+bool FloatingTransition::floatingAppletPopupsPreferred() const
+{
+    return m_target == Target::Floated;
+}
+
+int FloatingTransition::displayHintsWithFloatingPreference(
+    int currentHints,
+    int floatingHint,
+    bool floatingPanelConfigured) const
+{
+    return FloatingPopupPresentation::
+        displayHintsWithFloatingPreference(
+            currentHints,
+            floatingHint,
+            floatingPanelConfigured
+                && floatingAppletPopupsPreferred());
+}
+
 FloatingTransition::Phase FloatingTransition::phase() const
 {
     return m_phase;

@@ -8,6 +8,7 @@
 #define FLOATINGTRANSITION_H
 
 #include "floatingpanelgeometry.h"
+#include "floatingpopuppresentation.h"
 
 #include <QAbstractAnimation>
 #include <QEasingCurve>
@@ -29,6 +30,8 @@ class FloatingTransition final : public QObject
     Q_PROPERTY(qreal floatingness READ floatingness WRITE setFloatingness
                    NOTIFY floatingnessChanged)
     Q_PROPERTY(Target target READ target NOTIFY targetChanged)
+    Q_PROPERTY(bool floatingAppletPopupsPreferred
+                   READ floatingAppletPopupsPreferred NOTIFY targetChanged)
     Q_PROPERTY(Phase phase READ phase NOTIFY phaseChanged)
     Q_PROPERTY(bool running READ running NOTIFY runningChanged)
     Q_PROPERTY(bool eligible READ eligible WRITE setEligible NOTIFY eligibleChanged)
@@ -80,6 +83,7 @@ public:
 
     [[nodiscard]] qreal floatingness() const;
     [[nodiscard]] Target target() const;
+    [[nodiscard]] bool floatingAppletPopupsPreferred() const;
     [[nodiscard]] Phase phase() const;
     [[nodiscard]] bool running() const;
     [[nodiscard]] bool eligible() const;
@@ -119,6 +123,10 @@ public:
 
     Q_INVOKABLE void requestAttached();
     Q_INVOKABLE void requestFloated();
+    Q_INVOKABLE int displayHintsWithFloatingPreference(
+        int currentHints,
+        int floatingHint,
+        bool floatingPanelConfigured) const;
 
 Q_SIGNALS:
     void floatingnessChanged();

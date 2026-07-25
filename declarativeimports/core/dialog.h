@@ -1,10 +1,13 @@
 /*
     SPDX-FileCopyrightText: 2020 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
 #ifndef LATTEDIALOG_H
 #define LATTEDIALOG_H
+
+#include "../../app/view/floatinganchorwindowfilter.h"
 
 // Qt
 #include <QEvent>
@@ -12,6 +15,7 @@
 #include <QPointer>
 #include <QSize>
 #include <QTimer>
+#include <QWindow>
 
 #include <QMetaObject>
 
@@ -96,12 +100,14 @@ private Q_SLOTS:
     void updatePopUpEnabledBorders();
 
     void onVisualParentChanged();
+    void refreshAnchorWindow();
     void onMainItemChanged();
     void updateGeometry();
 
 private:
     bool isRespectingAppletsLayoutGeometry() const;
     QRect appletsLayoutGeometryFromContainment() const;
+    QRectF floatingVisibleGeometryFromContainment() const;
 
     int appletsPopUpMargin() const;
 
@@ -133,6 +139,8 @@ private:
     QSize m_resizeStartContentSize;
     bool m_inSystemResize{false};
     QTimer m_resizeSettleTimer;
+    ViewPart::FloatingPopupPresentation::AnchorWindowEventFilter
+        m_anchorWindowFilter;
 };
 
 }
