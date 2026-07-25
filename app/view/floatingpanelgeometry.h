@@ -135,11 +135,14 @@ struct PlacementInputs {
         isHorizontal(in.edge) ? in.outputGeometry.width() : in.outputGeometry.height();
     const qint64 spanEnd = qint64(in.primaryAxisSpan.start) + in.primaryAxisSpan.length;
     const qint64 outputEnd = qint64(outputStart) + outputLength;
+    const qint64 envelopeDepth = qint64(in.panelDepth) + in.floatingGap;
+    const qint64 triggerDepth = qint64(in.panelDepth) + 1;
+    const int outputDepth =
+        isHorizontal(in.edge) ? in.outputGeometry.height()
+                              : in.outputGeometry.width();
 
     return in.primaryAxisSpan.start >= outputStart && spanEnd <= outputEnd
-        && in.panelDepth + in.floatingGap
-            <= (isHorizontal(in.edge) ? in.outputGeometry.height()
-                                      : in.outputGeometry.width());
+        && envelopeDepth <= outputDepth && triggerDepth <= outputDepth;
 }
 
 [[nodiscard]] inline std::optional<Solution> solve(const Inputs &in)

@@ -9,6 +9,8 @@
 #include <QRect>
 #include <QtTest>
 
+#include <limits>
+
 using namespace Latte::ViewPart::FloatingPanelGeometry;
 
 Q_DECLARE_METATYPE(Inputs)
@@ -229,6 +231,18 @@ void FloatingPanelGeometryTest::rejectsInvalidBoundaryGeometry_data()
     envelopeTooDeep.panelDepth = 1590;
     envelopeTooDeep.floatingGap = 11;
     QTest::newRow("envelope too deep") << envelopeTooDeep;
+
+    Inputs triggerOutsideOutput = inputs(Edge::Top);
+    triggerOutsideOutput.panelDepth =
+        triggerOutsideOutput.outputGeometry.height();
+    triggerOutsideOutput.floatingGap = 0;
+    QTest::newRow("mandatory trigger pixel outside output")
+        << triggerOutsideOutput;
+
+    Inputs overflowingEnvelope = inputs(Edge::Bottom);
+    overflowingEnvelope.panelDepth = std::numeric_limits<int>::max();
+    overflowingEnvelope.floatingGap = 1;
+    QTest::newRow("envelope depth integer overflow") << overflowingEnvelope;
 }
 
 void FloatingPanelGeometryTest::rejectsInvalidBoundaryGeometry()
