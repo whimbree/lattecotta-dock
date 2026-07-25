@@ -5,11 +5,12 @@ Last updated 2026-07-25.
 
 ## 2026-07-25: FP-2 keeps floating attachment inside one stable canvas
 
-FP-2 (the stable canvas and transition controller) replaces the physical
-floating-gap transition with one output-contained geometry solution and one
-qreal controller per view. The old maximize path moved the QWindow, changed
-its layer-shell margin and reservation, expanded a Justify panel, and refit
-applets while presentation was still moving. Those values now remain stable.
+FP-2 (the stable canvas and transition controller) landed through PR #120. It
+replaces the physical floating-gap transition with one output-contained
+geometry solution and one qreal controller per view. The old maximize path
+moved the QWindow, changed its layer-shell margin and reservation, expanded a
+Justify panel, and refit applets while presentation was still moving. Those
+values now remain stable.
 
 `FloatingPanelGeometry` owns the attached and floated presentations, their
 union envelope, the stable one-pixel-overlap trigger, current visible mask,
@@ -87,9 +88,10 @@ Center and End have non-vacuous branch-local overflow cases. The required
 fresh review after D196 returned MERGE with no findings after checking the
 complete FP-2 diff. The canonical gate passed at `902bba7f8`: all 109 CTest
 entries, QML compile and lint, scene probes, the clean ASan and UBSan build,
-all four nested sanitizer recipes, and matrix fixture refusals passed. The pull
-request remains before merge. No real desktop process or surface was inspected,
-stopped, or restarted during this implementation.
+all four nested sanitizer recipes, and matrix fixture refusals passed. GitHub
+rebased that gate record as `c10e1756c` while merging PR #120. No real desktop
+process or surface was inspected, stopped, or restarted during this
+implementation.
 
 ## 2026-07-24: FP-1 owns one maximum-depth reservation per output edge
 

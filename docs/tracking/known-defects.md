@@ -2337,7 +2337,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   orphan-free teardown, and the right dock fixed at `1216,0 384x1000`.
 
 ### D187 - Full-span End floating panels extended one pixel beyond their output
-- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- STATUS: FIXED in PR #120 (`853e6e359`).
 - FOUND: 2026-07-24, while routing panel placement through the fail-closed
   stable-canvas solver.
 - SYMPTOM: a Right-aligned horizontal panel or Bottom-aligned vertical panel
@@ -2356,7 +2356,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   surface to remain output-contained.
 
 ### D188 - Stable-canvas acceptance staged a Dock for a Panel-only transition
-- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- STATUS: FIXED in PR #120 (`0dabbb516`).
 - FOUND: 2026-07-25, recipe 071's first schema-integrated nested-KWin run.
 - SYMPTOM: the recipe selected a horizontal Dock, then required the
   Panel-only stable floating transition to become eligible. Setting a positive
@@ -2374,7 +2374,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   in-flight progress assertion.
 
 ### D189 - KWin script collection delay consumed the transition under test
-- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- STATUS: FIXED in PR #120 (`b122ef88c`).
 - FOUND: 2026-07-25, recipe 071's first eligible nested-KWin transition.
 - SYMPTOM: maximizing the fixture reached the correct attached endpoint, but
   the recipe never observed a qreal midpoint. The claimed eight rapid
@@ -2393,7 +2393,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   assertions remain unchanged.
 
 ### D190 - Stable-canvas fixture cleanup started after destructive staging
-- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- STATUS: FIXED in PR #120 (`34af636d7`).
 - FOUND: 2026-07-24, independent FP-2 review.
 - SYMPTOM: a failure while staging recipe 071's matrix fixture could leave the
   nested compositor running the modified dock configuration.
@@ -2408,7 +2408,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   after the pristine snapshot.
 
 ### D191 - Stable-canvas reversal storm accepted settled transitions
-- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- STATUS: FIXED in PR #120 (`29f992ef0`).
 - FOUND: 2026-07-24, independent FP-2 review.
 - SYMPTOM: recipe 071 claimed eight rapid in-flight reversals after observing
   only the requested target. A transition that had already settled could pass
@@ -2428,7 +2428,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   every stable geometry and revision assertion unchanged.
 
 ### D192 - Zero-gap panels exposed conflicting floating eligibility
-- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- STATUS: FIXED in PR #120 (`73ad81186`).
 - FOUND: 2026-07-24, second independent FP-2 review.
 - SYMPTOM: a Panel with the legal `screenEdgeMargin=0` setting could make
   `dockSystemData()` return an empty string.
@@ -2445,7 +2445,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   with both configured and eligible false at the floated resting endpoint.
 
 ### D193 - Extended floating-background files omitted adapting attribution
-- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- STATUS: FIXED in PR #120 (`86576fc52`).
 - FOUND: 2026-07-24, second independent FP-2 review.
 - SYMPTOM: two QML files materially extended for stable floating geometry
   retained the original copyright line but omitted the adapting author's
@@ -2459,7 +2459,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   license check.
 
 ### D194 - Zero-gap endpoint proof split state across snapshots
-- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- STATUS: FIXED in PR #120 (`e1504a097`).
 - FOUND: 2026-07-24, third independent FP-2 review.
 - SYMPTOM: recipe 071 established the zero-gap Panel, visibility, configured,
   and eligible values in one snapshot, then established floated resting
@@ -2476,7 +2476,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   waiter. Recipe 071 refuses every split or transitional observation.
 
 ### D195 - Huge finite placement values reached undefined integer conversion
-- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- STATUS: FIXED in PR #120 (`8ef41a45d`).
 - FOUND: 2026-07-24, fourth independent FP-2 review.
 - SYMPTOM: a hand-edited finite offset could invoke undefined behavior while
   solving stable panel placement instead of being refused.
@@ -2495,7 +2495,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   representation rounds beyond `int`.
 
 ### D196 - Placement solver trusted enum and QRect arithmetic boundaries
-- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- STATUS: FIXED in PR #120 (`44a5ea89d`).
 - FOUND: 2026-07-24, fifth independent FP-2 review.
 - SYMPTOM: malformed enum values could return an empty present solution in
   release builds, while endpoint rectangles with valid coordinates could
@@ -2518,10 +2518,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
-  is merged. FP-2 (the stable canvas and transition controller) is complete on
-  its integration branch, including schema 5 and nested recipe 071 acceptance;
-  independent review returned MERGE and the canonical gate passed at
-  `902bba7f8`. Pull-request merge remains pending. FP-3 and FP-4 remain open.
+  is merged. FP-2 (the stable canvas and transition controller) is merged
+  through PR #120, including schema 5 and nested recipe 071 acceptance. The
+  independent review returned MERGE and the canonical gate passed at branch
+  head `902bba7f8`, rebased as `c10e1756c`. FP-3 and FP-4 remain open.
   Execution is tracked in `floating-panel-parity-plan.md`.
 - FOUND: 2026-07-24, Plasma 6.7.3 parity investigation after live floating
   panel maximize, radius, shadow, and animation regressions.

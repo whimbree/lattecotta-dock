@@ -56,26 +56,26 @@ FP-2 means the stable canvas and transition controller.
 - [x] Add pure geometry types for the attached rectangle, floated rectangle,
       stable envelope, trigger, visible mask, and edge-reaching input bridge.
       Assert valid output-contained geometry at the boundary.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: 1f4f6206b, 853e6e359, d5057d091, 8ef41a45d, 44a5ea89d
       Evidence: sanitizer-backed `floatingpanelgeometrytest` covers all four
       edges, offset outputs, partial spans, fractional progress, integer
       overflow, and the mandatory inward trigger pixel.
 - [x] Add one per-view C++ transition controller with qreal progress, explicit
       target and phase enums, current-value reversal, and one animation owner.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: 0231c91ba, 2a225df16
       Evidence: `floatingtransitiontest` covers both directions, current-value
       reversal, twenty alternating targets, full-duration consistency, cubic
       easing, eligibility, and one animation owner.
 - [x] Make Positioner solve one stable QWindow envelope on every edge. Remove
       floatingness from physical QWindow placement and layer-shell margins.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: 149d2ea38, 65ab2eab1
       Evidence: the panel path fails before QWindow mutation, applies one
       solved envelope once, retains zero layer-shell edge margin, and keeps
       ordinary hiding as displacement of that envelope.
 - [x] Keep resting applet and automatic-size geometry independent of
       transition progress. Internal content may translate with the visible
       background, but it must not refit or resize.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: e0abc3d51, 73ad81186
       Evidence: `sourceguardtest` pins fixed applet measurement bounds,
       configured partial span, target-independent background thickness, and
       removal of the physical floating-gap slide animations. The QML compile
@@ -83,14 +83,15 @@ FP-2 means the stable canvas and transition controller.
       strictly decreases.
 - [x] Expose all stable and current transition geometry through the atomic
       D-Bus snapshot.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: e25ee1f0c, 054e4826e, 0436dd90c
       Evidence: schema 5 reports fraction-preserving stable and current
       geometry, controller identity and generation, and both physical-churn
       counters. Exact serializer and mutation tests fail closed on incomplete,
       inconsistent, off-output, wrong-edge, rounded, or aliased state.
 - [x] Pin both reversal directions, rapid alternating targets, duration
       consistency, and no geometry/configure storm.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: 03861cdc3, 0dabbb516, b122ef88c, 34af636d7, 29f992ef0,
+      e1504a097
       Evidence: `floatingtransitiontest`, `layershellmappingtest`, and
       `sourceguardtest` pass. Recipe 071 configures a partial Justify panel,
       samples both qreal directions, then drives eight rapid reversals while
