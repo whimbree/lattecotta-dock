@@ -668,8 +668,12 @@ private:
                 "record.enabledBorders=enabledBorderNames("
                 "view->effects()->enabledBorders());"))
             && code.contains(QStringLiteral(
+                "if(constautoshadowState=PanelShadows::self()->"
+                "shadowStateFor(view)){"
+                "record.shadowEnabledBorders=enabledBorderNames("
+                "shadowState->enabledBorders);"
                 "record.shadowPaddingOffsets="
-                "view->effects()->floatingShadowPaddingOffsets();"))
+                "shadowState->extraPadding;}"))
             && code.contains(QStringLiteral(
                 "record.floatingAnchorRevision="
                 "view->effects()->floatingAnchorRevision();"))
@@ -1457,6 +1461,10 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         QStringLiteral("declarativeimports/core/dialog.cpp")));
     const QString positionerCore = normalizedCode(readFile(
         QStringLiteral("app/view/positionergeometry.h")));
+    const QString panelShadowsHeader = normalizedCode(readFile(
+        QStringLiteral("app/view/panelshadows_p.h")));
+    const QString panelShadowsSource = normalizedCode(readFile(
+        QStringLiteral("app/view/panelshadows.cpp")));
 
     const qsizetype eventStart = view.indexOf(
         QStringLiteral("boolView::event(QEvent*e)"));
@@ -1535,6 +1543,12 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         "m_anchorWindowFilter.observes(watched)")));
     QVERIFY(visibility.contains(QStringLiteral(
         "functiononIsSidebarChanged(){manager.updateInputGeometry();}")));
+    QVERIFY(panelShadowsHeader.contains(QStringLiteral(
+        "shadowStateFor(constQWindow*window)const")));
+    QVERIFY(panelShadowsHeader.contains(QStringLiteral(
+        "voidshadowStateChanged(QWindow*window)")));
+    QCOMPARE(panelShadowsSource.count(QStringLiteral(
+        "Q_EMITshadowStateChanged(window);")), 5);
 
     QVERIFY(!positionerCore.contains(
         QStringLiteral("behaveAsPlasmaPanel")));

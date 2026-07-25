@@ -604,11 +604,6 @@ quint64 Effects::floatingDamageMaskGeneration() const
     return m_floatingMaskHandshake.generation();
 }
 
-QMargins Effects::floatingShadowPaddingOffsets() const
-{
-    return m_shadowPaddingOffsets;
-}
-
 quint64 Effects::floatingAnchorRevision() const
 {
     return m_floatingAnchorRevision;

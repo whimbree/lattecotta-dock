@@ -110,7 +110,6 @@ public:
     QRect appliedInputMask() const;
     bool floatingDamageMaskPending() const;
     quint64 floatingDamageMaskGeneration() const;
-    QMargins floatingShadowPaddingOffsets() const;
     quint64 floatingAnchorRevision() const;
 
     QRect rect() const;

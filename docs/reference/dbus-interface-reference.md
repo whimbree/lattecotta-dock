@@ -167,8 +167,11 @@ Per dock:
   armed, and `floatingDamageMaskGeneration` is its process-local monotonic
   generation serialized as a decimal string. `enabledBorders` is the live
   Effects border-name array in canonical `top`, `right`, `bottom`, `left`
-  order. `shadowPaddingOffsets` is the applied stable-window shadow inset as
-  `[left, top, right, bottom]`. `floatingAppletPopupsPreferred` reads the
+  order. `shadowEnabledBorders` and `shadowPaddingOffsets` are the registered
+  per-window KWindowShadow border set and stable-window inset as
+  `[left, top, right, bottom]`. Both fields are null when the view has no
+  registered shadow; a four-zero padding array is a registered zero inset,
+  not absence. `floatingAppletPopupsPreferred` reads the
   applied Plasma containment hint rather than reconstructing it from inputs.
   `floatingAnchorRevision` is the process-local monotonic revision of the
   visible popup-anchor geometry.
@@ -196,7 +199,7 @@ Per dock:
   `screenGeometry`, `surfaceGeometry`, `canvasGeometry`, `effectsRect`,
   `appletsLayoutGeometry`, `maskRect`, `inputMask`, `appliedInputMask`,
   `floatingDamageMaskPending`, `floatingDamageMaskGeneration`,
-  `enabledBorders`, `shadowPaddingOffsets`,
+  `enabledBorders`, `shadowEnabledBorders`, `shadowPaddingOffsets`,
   `floatingAppletPopupsPreferred`, `floatingAnchorRevision`,
   `strutsThickness`, `publishedStruts`, `layerShellPresent`,
   `layerShellAnchors`, `layerShellMargins`, `layerShellExclusiveEdge`, and

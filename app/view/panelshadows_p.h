@@ -14,11 +14,15 @@
 
 #pragma once
 
+#include "panelshadowstate.h"
+
 #include <QMargins>
 #include <QSet>
 
 #include <KSvg/FrameSvg>
 #include <KSvg/Svg>
+
+#include <optional>
 
 class PanelShadows : public KSvg::Svg
 {
@@ -39,6 +43,13 @@ public:
 
     void setEnabledBorders(QWindow *window, KSvg::FrameSvg::EnabledBorders enabledBorders = KSvg::FrameSvg::AllBorders);
     void setExtraPadding(QWindow *window, const QMargins &extraPadding);
+
+    [[nodiscard]] std::optional<
+        Latte::ViewPart::PanelShadowState::State>
+    shadowStateFor(const QWindow *window) const;
+
+Q_SIGNALS:
+    void shadowStateChanged(QWindow *window);
 
 private:
     class Private;

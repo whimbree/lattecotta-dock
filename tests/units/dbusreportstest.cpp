@@ -214,6 +214,8 @@ static DockSystemViewRecord stableBottomTransitionRecord()
         QStringLiteral("bottom"),
         QStringLiteral("left"),
     };
+    record.shadowEnabledBorders =
+        record.enabledBorders;
     record.shadowPaddingOffsets =
         QMargins(0, -4, 0, -2);
     record.floatingAppletPopupsPreferred = true;
@@ -889,6 +891,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("top"),
         QStringLiteral("left"),
     };
+    record.shadowEnabledBorders =
+        record.enabledBorders;
     record.shadowPaddingOffsets =
         QMargins(-5, -6, -7, -8);
     record.floatingAppletPopupsPreferred = true;
@@ -1155,6 +1159,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("screen"),
         QStringLiteral("screenGeometry"), QStringLiteral("screenId"),
         QStringLiteral("screensGroup"), QStringLiteral("settingsWindowShown"),
+        QStringLiteral("shadowEnabledBorders"),
         QStringLiteral("shadowPaddingOffsets"),
         QStringLiteral("stableAppletMeasurementBounds"),
         QStringLiteral("stableCanvasGeometry"),
@@ -1311,7 +1316,11 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QJsonArray::fromStringList(record.enabledBorders));
     QCOMPARE(
         view.value(QStringLiteral("shadowPaddingOffsets")).toArray(),
-        serializeMargins(record.shadowPaddingOffsets));
+        serializeMargins(*record.shadowPaddingOffsets));
+    QCOMPARE(
+        view.value(QStringLiteral("shadowEnabledBorders")).toArray(),
+        QJsonArray::fromStringList(
+            *record.shadowEnabledBorders));
     QCOMPARE(
         view.value(
             QStringLiteral("floatingAppletPopupsPreferred")).toBool(),
@@ -1405,6 +1414,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("appliedInputMask"), QStringLiteral("publishedStruts"),
         QStringLiteral("enabledBorders"),
         QStringLiteral("layerShellAnchors"), QStringLiteral("layerShellMargins"),
+        QStringLiteral("shadowEnabledBorders"),
         QStringLiteral("shadowPaddingOffsets"),
         QStringLiteral("reservationContributorDockIds"),
         QStringLiteral("reservationGeometry"),
@@ -1507,7 +1517,8 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     requireJsonType(view, QStringLiteral("floatingDamageMaskPending"), QJsonValue::Bool);
     requireJsonType(view, QStringLiteral("floatingDamageMaskGeneration"), QJsonValue::String);
     requireJsonType(view, QStringLiteral("enabledBorders"), QJsonValue::Array);
-    requireJsonType(view, QStringLiteral("shadowPaddingOffsets"), QJsonValue::Array);
+    requireJsonType(view, QStringLiteral("shadowEnabledBorders"), QJsonValue::Null);
+    requireJsonType(view, QStringLiteral("shadowPaddingOffsets"), QJsonValue::Null);
     requireJsonType(view, QStringLiteral("floatingAppletPopupsPreferred"), QJsonValue::Bool);
     requireJsonType(view, QStringLiteral("floatingAnchorRevision"), QJsonValue::String);
     requireJsonType(view, QStringLiteral("floatingPanelEligible"), QJsonValue::Bool);
@@ -1524,8 +1535,8 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     QCOMPARE(view.value(QStringLiteral("floatingDamageMaskGeneration")).toString(),
              QStringLiteral("0"));
     QVERIFY(view.value(QStringLiteral("enabledBorders")).toArray().isEmpty());
-    QCOMPARE(view.value(QStringLiteral("shadowPaddingOffsets")).toArray(),
-             serializeMargins(QMargins{}));
+    QVERIFY(view.value(QStringLiteral("shadowEnabledBorders")).isNull());
+    QVERIFY(view.value(QStringLiteral("shadowPaddingOffsets")).isNull());
     QCOMPARE(view.value(QStringLiteral("floatingAppletPopupsPreferred")).toBool(),
              false);
     QCOMPARE(view.value(QStringLiteral("floatingAnchorRevision")).toString(),
@@ -1908,13 +1919,27 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         snapshot.views[0].enabledBorders.removeLast();
     });
     rejects([](auto &snapshot) {
-        snapshot.views[0].shadowPaddingOffsets.setBottom(-3);
+        snapshot.views[0].shadowPaddingOffsets->setBottom(-3);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .shadowEnabledBorders
+            ->removeLast();
     });
     rejects([](auto &snapshot) {
         snapshot.views[0].floatingAppletPopupsPreferred = false;
     });
     rejects([](auto &snapshot) {
         snapshot.views[0].floatingAnchorRevision = 0;
+    });
+    {
+        auto noShadow = valid;
+        noShadow.views[0].shadowEnabledBorders.reset();
+        noShadow.views[0].shadowPaddingOffsets.reset();
+        QVERIFY(dockTransitionRecordsAgree(noShadow));
+    }
+    rejects([](auto &snapshot) {
+        snapshot.views[0].shadowEnabledBorders.reset();
     });
     rejects([](auto &snapshot) {
         snapshot.views[0].visibilityMode =
@@ -2005,10 +2030,14 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
     setBottomProgress(attachedView, 0.0);
     attachedView.enabledBorders.removeAll(
         QStringLiteral("bottom"));
+    attachedView.shadowEnabledBorders =
+        attachedView.enabledBorders;
     QVERIFY(dockTransitionRecordsAgree(attachedPanel));
 
     attachedView.enabledBorders.insert(
         2, QStringLiteral("bottom"));
+    attachedView.shadowEnabledBorders =
+        attachedView.enabledBorders;
     QVERIFY(!dockTransitionRecordsAgree(attachedPanel));
 
     DockSystemSnapshot flushPanel;
@@ -2044,7 +2073,8 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
     flushView.maskRect = flushView.effectsRect;
     flushView.inputMask = flushView.effectsRect;
     flushView.appliedInputMask = flushView.inputMask;
-    flushView.shadowPaddingOffsets = {};
+    flushView.shadowPaddingOffsets =
+        QMargins{};
     flushView.contentTranslation = QPointF{};
     flushPanel.views = {flushView};
     QVERIFY(dockTransitionRecordsAgree(flushPanel));

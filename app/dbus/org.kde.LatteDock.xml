@@ -111,8 +111,10 @@
          clearing frame while event routing enforces the exact logical bridge.
          floatingDamageMaskPending names that exact interval and
          floatingDamageMaskGeneration is its process-local monotonic decimal
-         string. enabledBorders and shadowPaddingOffsets report the live
-         Effects/KWindowShadow presentation. floatingAppletPopupsPreferred
+         string. enabledBorders reports the live Effects presentation.
+         shadowEnabledBorders and shadowPaddingOffsets report the registered
+         per-window KWindowShadow state; both are JSON null when no shadow is
+         registered. floatingAppletPopupsPreferred
          reads Plasma's applied containment hint, and floatingAnchorRevision
          reports the live popup-anchor publication as a process-local
          monotonic decimal string. The dockSystemData schema version is 6.

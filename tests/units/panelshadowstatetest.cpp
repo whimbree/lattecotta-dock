@@ -21,6 +21,8 @@ private Q_SLOTS:
 void PanelShadowStateTest::isolatesPaddingAndBordersPerWindow()
 {
     Registry<int> states;
+    QVERIFY(!states.stateFor(303));
+
     const State first{
         KSvg::FrameSvg::TopBorder
             | KSvg::FrameSvg::LeftBorder,
