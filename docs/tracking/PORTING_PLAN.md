@@ -4690,6 +4690,12 @@ prerequisites in the phases above are done.
       schema contract without folding the repair invisibly into FP-4B (the
       multi-output and separated-span topology acceptance).
       Commits:
+- [ ] Fix D210 (floating panel attachment changed primary-axis layout
+      clearance). Keep the painted-border transition visual-only. Configured
+      floating Panels must retain their reactive primary-axis layout and popup
+      clearance across attached and floated endpoints, while Docks and
+      zero-gap Panels retain their existing behavior.
+      Commits:
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
