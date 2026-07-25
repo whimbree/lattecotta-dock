@@ -2620,8 +2620,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   tests now name the same version and contract.
 
 ### D205 - Panel popup anchors froze during task-removal layout motion
-- STATUS: FIXED ON PR #124 (`0f6290f31` branch commit; final post-rebase commit
-  hash pending immediate post-merge traceability resolution).
+- STATUS: FIXED IN PR #124 (`f8396b5ed`).
 - FOUND: 2026-07-25, FP-4A (the direct window-touch runtime) popup-motion
   preflight.
 - SYMPTOM: task removal or other applet layout motion could leave a Panel popup
@@ -2637,8 +2636,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   transitions and client teardown.
 
 ### D206 - Heterogeneous task rows suppressed touching-window state
-- STATUS: FIXED ON PR #124 (`3d9330887` branch commit; final post-rebase commit
-  hash pending immediate post-merge traceability resolution).
+- STATUS: FIXED IN PR #124 (`36e835fb9`).
 - FOUND: 2026-07-25, independent cold review of PR #124.
 - SYMPTOM: one legal non-window `TasksModel` row with invalid window-only roles
   could fail the complete evaluation and suppress every real touching window.
@@ -2649,13 +2647,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: `windowtouchtrackertest` covers a mixed non-window and touching
   window model, malformed true-window hidden, minimized, and geometry roles,
   and fail-closed recovery. `sourceguardtest` removes the discriminator ordering
-  and rejects the mutation. The follow-up role cases are in branch commit
-  `637b02738`; its final post-rebase hash is pending immediate post-merge
-  traceability resolution.
+  and rejects the mutation. The follow-up role cases are in `fd445ee2f`.
 
 ### D207 - D-Bus accepted divergent touching-window authorities
-- STATUS: FIXED ON PR #124 (`fac383297` branch commit; final post-rebase commit
-  hash pending immediate post-merge traceability resolution).
+- STATUS: FIXED IN PR #124 (`508dcf630`).
 - FOUND: 2026-07-25, independent cold review of PR #124.
 - SYMPTOM: `dockSystemData` could serialize a stale
   `FloatingTransition::touchingWindowCount` copy without proving equality with
@@ -2669,8 +2664,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   mutation.
 
 ### D208 - Legacy Dock gap readback omitted Windows Go Below
-- STATUS: FIXED ON PR #124 (`38c6ef1df` branch commit; final post-rebase commit
-  hash pending immediate post-merge traceability resolution).
+- STATUS: FIXED IN PR #124 (`b552508e3`).
 - FOUND: 2026-07-25, independent cold review of PR #124.
 - SYMPTOM: a Windows Go Below Dock could consume `hideThickScreenGap` while
   schema 7 reported `dockGapHideRequested` false.
@@ -2692,12 +2686,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   input, effects, and popup ownership) is merged through PR #122. Its required
   follow-up review returned MERGE and its canonical gate passed at branch head
   `a7c941db1`. FP-4A (the direct window-touch runtime and single-client nested
-  acceptance) is complete on the PR #124 branch; final post-rebase hashes are
-  pending immediate post-merge traceability resolution. FP-4B (multi-output
-  and separated-span topology acceptance) and FP-4C (deterministic
-  operation-storm acceptance) remain open, so the FP-4 (stable window-touch
-  trigger and end-to-end acceptance) umbrella remains open. Execution is
-  tracked in `floating-panel-parity-plan.md`.
+  acceptance) is merged through PR #124 at `f8396b5ed` through `5636966b5`.
+  FP-4B (multi-output and separated-span topology acceptance) and FP-4C
+  (deterministic operation-storm acceptance) remain open, so the FP-4 (stable
+  window-touch trigger and end-to-end acceptance) umbrella remains open.
+  Execution is tracked in `floating-panel-parity-plan.md`.
 - FOUND: 2026-07-24, Plasma 6.7.3 parity investigation after live floating
   panel maximize, radius, shadow, and animation regressions.
 - SYMPTOM: a floating Always Visible panel physically moves toward the screen

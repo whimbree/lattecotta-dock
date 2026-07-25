@@ -141,33 +141,24 @@ FP-4 means the stable window-touch trigger and end-to-end acceptance.
 
 FP-4A means the direct window-touch runtime and single-client nested
 acceptance. FP-4B means multi-output and separated-span topology acceptance.
-FP-4C means deterministic operation-storm acceptance. PR #124 completes FP-4A
-on its branch; final post-rebase commit hashes remain pending immediate
-post-merge traceability resolution.
+FP-4C means deterministic operation-storm acceptance. PR #124 landed FP-4A.
 
 - [x] Use current-desktop/current-activity window state, exclude hidden and
       minimized windows, and allow a spanning window to affect more than one
       output.
-      Commits: 7b1fbf8fd, 3d9330887, 637b02738 (PR #124 branch; final
-      post-rebase commit hashes pending immediate post-merge traceability
-      resolution)
+      Commits: d0d499d50, 36e835fb9, fd445ee2f (PR #124)
 - [x] Intersect against the stable per-view trigger with one logical pixel of
       inward overlap. Do not use the moving visible rectangle.
-      Commits: 7b1fbf8fd (PR #124 branch; final post-rebase commit hash pending
-      immediate post-merge traceability resolution)
+      Commits: d0d499d50 (PR #124)
 - [x] Deliver the direct interaction path with a bounded 10 ms debounce
       instead of the generic 150 ms window-change coalescer.
-      Commits: 7b1fbf8fd (PR #124 branch; final post-rebase commit hash pending
-      immediate post-merge traceability resolution)
+      Commits: d0d499d50 (PR #124)
 - [x] Initially enable attachment only for eligible floating Always Visible
       panels. Preserve distinct visibility-mode semantics.
-      Commits: 7b1fbf8fd, 38c6ef1df, 8a9c97964 (PR #124 branch; final
-      post-rebase commit hashes pending immediate post-merge traceability
-      resolution)
+      Commits: d0d499d50, b552508e3, f4232ae54 (PR #124)
 - [x] Drive drag-in, drag-out, mid-flight reverse, Escape cancel, and committed
       maximize against real nested-KWin client frames.
-      Commits: 0f6290f31, 7b1fbf8fd (PR #124 branch; final post-rebase commit
-      hashes pending immediate post-merge traceability resolution)
+      Commits: f8396b5ed, d0d499d50 (PR #124)
 - [ ] Drive portrait, landscape, disconnected, partially touching, fully
       touching, spanning-window, and same-edge separated-span fixtures.
       Commits:
