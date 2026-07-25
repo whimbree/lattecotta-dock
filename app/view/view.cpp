@@ -626,7 +626,17 @@ void View::applyPositionedLayerShellGeometry(const QRect &geometry)
         return;
     }
 
-    WindowSystem::LayerShell::applyViewPlacement(this, location(), geometry, outputGeometry);
+    const int configureRequests = WindowSystem::LayerShell::applyViewPlacement(
+        this, location(), geometry, outputGeometry);
+    if (configureRequests > 0) {
+        m_layerShellConfigureRequestRevision += static_cast<quint64>(configureRequests);
+        Q_EMIT layerShellConfigureRequestRevisionChanged();
+    }
+}
+
+quint64 View::layerShellConfigureRequestRevision() const
+{
+    return m_layerShellConfigureRequestRevision;
 }
 
 bool View::windowSpansScreenLength() const

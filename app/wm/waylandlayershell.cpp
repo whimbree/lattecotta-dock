@@ -313,50 +313,57 @@ ViewPlacement viewPlacement(Plasma::Types::Location location,
     return placement;
 }
 
-void applyViewPlacement(QWindow *window, Plasma::Types::Location location,
-                        const QRect &viewGeometry, const QRect &screenGeometry)
+int applyViewPlacement(QWindow *window, Plasma::Types::Location location,
+                       const QRect &viewGeometry, const QRect &screenGeometry)
 {
     if (!window) {
         qCritical() << "LayerShell::applyViewPlacement refused a null window";
-        return;
+        return 0;
     }
 
     if (!screenGeometry.isValid() || !viewGeometry.isValid()
             || !screenGeometry.contains(viewGeometry)) {
         qCritical() << "LayerShell::applyViewPlacement refused geometry outside its output"
                     << "view=" << viewGeometry << "screen=" << screenGeometry;
-        return;
+        return 0;
     }
 
     if (!isScreenEdge(location)) {
         qCritical() << "LayerShell::applyViewPlacement refused non-edge location"
                     << static_cast<int>(location);
-        return;
+        return 0;
     }
 
     LSW *const ls = LSW::get(window);
     if (!ls) {
         qCritical() << "LayerShell::applyViewPlacement found no attached layer-shell state";
-        return;
+        return 0;
     }
 
     const ViewPlacement placement = viewPlacement(location, viewGeometry, screenGeometry);
+    int configureRequests = 0;
 
     //! Geometry synchronization can run repeatedly with an unchanged
     //! solution. Avoiding redundant layer-shell setters prevents needless
     //! compositor configure events from feeding another geometry pass.
     if (ls->exclusionZone() != -1) {
         ls->setExclusiveZone(-1);
+        ++configureRequests;
     }
     if (ls->exclusiveEdge() != LSW::AnchorNone) {
         ls->setExclusiveEdge(LSW::AnchorNone);
+        ++configureRequests;
     }
     if (ls->anchors() != placement.anchors) {
         ls->setAnchors(placement.anchors);
+        ++configureRequests;
     }
     if (ls->margins() != placement.margins) {
         ls->setMargins(placement.margins);
+        ++configureRequests;
     }
+
+    return configureRequests;
 }
 
 ReservationPlacement reservationPlacement(Plasma::Types::Location location,

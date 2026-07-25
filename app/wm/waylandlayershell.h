@@ -150,9 +150,11 @@ struct ViewPlacement {
 
 //! Apply viewPlacement() to an already configured dock surface without
 //! changing its layer, keyboard policy, or output. The visual surface never
-//! reserves space itself.
-void applyViewPlacement(QWindow *window, Plasma::Types::Location location,
-                        const QRect &viewGeometry, const QRect &screenGeometry);
+//! reserves space itself. The return value counts layer-shell setters issued,
+//! so callers can distinguish a stable replay from compositor-facing churn.
+[[nodiscard]] int applyViewPlacement(
+    QWindow *window, Plasma::Types::Location location,
+    const QRect &viewGeometry, const QRect &screenGeometry);
 
 //! Layer-shell state for a transparent surface that publishes one output-edge
 //! group's maximum reservation independently from every visual canvas.

@@ -52,6 +52,9 @@ class Positioner: public QObject
     Q_PROPERTY(int currentScreenId READ currentScreenId NOTIFY currentScreenChanged)
 
     Q_PROPERTY(QRect canvasGeometry READ canvasGeometry NOTIFY canvasGeometryChanged)
+    Q_PROPERTY(quint64 surfaceGeometryPublicationRevision
+                   READ surfaceGeometryPublicationRevision
+                   NOTIFY surfaceGeometryPublicationRevisionChanged)
 
     //! animating window slide
     Q_PROPERTY(int slideOffset READ slideOffset WRITE setSlideOffset NOTIFY slideOffsetChanged)
@@ -100,6 +103,7 @@ public:
 
     QRect canvasGeometry();
     [[nodiscard]] QRect surfaceGeometry() const;
+    [[nodiscard]] quint64 surfaceGeometryPublicationRevision() const;
 
     void setScreenToFollow(QScreen *scr, bool updateScreenId = true);
     void setWindowOnActivities(const Latte::WindowSystem::WindowId &wid, const QStringList &activities);
@@ -130,6 +134,7 @@ Q_SIGNALS:
     void screenGeometryChanged();
     void slideOffsetChanged();
     void surfaceGeometryCalculated(const QRect &geometry);
+    void surfaceGeometryPublicationRevisionChanged();
     void windowSizeChanged();
     void winIdChanged();
 
@@ -205,6 +210,7 @@ private:
     QRect m_canvasGeometry;
     //! it is used in order to enforce X11 to never miss window geometry
     QRect m_validGeometry;
+    quint64 m_surfaceGeometryPublicationRevision{0};
     //! it is used to update geometry calculations without requesting no needed Corona calculations
     QRect m_lastAvailableScreenRect;
     QRegion m_lastAvailableScreenRegion;
