@@ -34,6 +34,8 @@
 //     fitted solid background instead of extending into its shadow margins
 //   * Dock background thickness: current and maximum item metrics share the
 //     monotonic theme-minimum interpolation instead of duplicating its formula
+//   * Floating Panel applet clearance: attached visual-border changes cannot
+//     resize the stable primary-axis applet or popup span
 //   * Dock background rendering: custom shadows use one fixed-pixel effect
 //     footprint on both axes and publish that footprint to geometry owners
 //   * Dock resize animation: icon size is the only animation authority and
@@ -849,6 +851,129 @@ private:
                 " anchors.verticalCenterOffset: barLine.offset;")) == 4;
     }
 
+    static bool matchesStableFloatingPanelLayoutClearance(
+        const QString &backgroundSource,
+        const QString &bindingsSource)
+    {
+        const QString background = normalizedCode(backgroundSource);
+        const QString bindings = normalizedCode(bindingsSource);
+        const QString tailRoundness = normalizedCode(functionBody(
+            backgroundSource,
+            QStringLiteral("readonly property int tailRoundness:")));
+        const QString headRoundness = normalizedCode(functionBody(
+            backgroundSource,
+            QStringLiteral("readonly property int headRoundness:")));
+
+        const QString stableAuthority = QStringLiteral(
+            "readonlypropertyboolstablePrimaryAxisLayoutClearance:"
+            "!!(barLine.dockView&&barLine.dockView.floatingPanelConfigured)");
+        const QString topClearance = QStringLiteral(
+            "readonlypropertybooltopLayoutClearanceIsRequired:"
+            "backgroundStateResolver.layoutClearanceIsRequired("
+            "barLine.hasTopBorder,barLine.containmentRoot.isVertical,"
+            "barLine.stablePrimaryAxisLayoutClearance)");
+        const QString bottomClearance = QStringLiteral(
+            "readonlypropertyboolbottomLayoutClearanceIsRequired:"
+            "backgroundStateResolver.layoutClearanceIsRequired("
+            "barLine.hasBottomBorder,barLine.containmentRoot.isVertical,"
+            "barLine.stablePrimaryAxisLayoutClearance)");
+        const QString leftClearance = QStringLiteral(
+            "readonlypropertyboolleftLayoutClearanceIsRequired:"
+            "backgroundStateResolver.layoutClearanceIsRequired("
+            "barLine.hasLeftBorder,barLine.containmentRoot.isHorizontal,"
+            "barLine.stablePrimaryAxisLayoutClearance)");
+        const QString rightClearance = QStringLiteral(
+            "readonlypropertyboolrightLayoutClearanceIsRequired:"
+            "backgroundStateResolver.layoutClearanceIsRequired("
+            "barLine.hasRightBorder,barLine.containmentRoot.isHorizontal,"
+            "barLine.stablePrimaryAxisLayoutClearance)");
+
+        const QString commonLivePaddingInputs = QStringLiteral(
+            "barLine.customRadiusIsEnabled,barLine.customRadius,");
+        const QString commonLivePaddingTail = QStringLiteral(
+            "metrics.margin.length,indicators.info.backgroundCornerMargin)");
+        const QString topPadding = QStringLiteral(
+            "paddings.top:backgroundStateResolver.edgePadding("
+            "barLine.topLayoutClearanceIsRequired,root.isVertical,")
+            + commonLivePaddingInputs
+            + QStringLiteral(
+                "barLine.themeExtendedBackground?"
+                "barLine.themeExtendedBackground.paddingTop:0,"
+                "solidBackground.margins.top,")
+            + commonLivePaddingTail;
+        const QString bottomPadding = QStringLiteral(
+            "paddings.bottom:backgroundStateResolver.edgePadding("
+            "barLine.bottomLayoutClearanceIsRequired,root.isVertical,")
+            + commonLivePaddingInputs
+            + QStringLiteral(
+                "barLine.themeExtendedBackground?"
+                "barLine.themeExtendedBackground.paddingBottom:0,"
+                "solidBackground.margins.bottom,")
+            + commonLivePaddingTail;
+        const QString leftPadding = QStringLiteral(
+            "paddings.left:backgroundStateResolver.edgePadding("
+            "barLine.leftLayoutClearanceIsRequired,root.isHorizontal,")
+            + commonLivePaddingInputs
+            + QStringLiteral(
+                "barLine.themeExtendedBackground?"
+                "barLine.themeExtendedBackground.paddingLeft:0,"
+                "solidBackground.margins.left,")
+            + commonLivePaddingTail;
+        const QString rightPadding = QStringLiteral(
+            "paddings.right:backgroundStateResolver.edgePadding("
+            "barLine.rightLayoutClearanceIsRequired,root.isHorizontal,")
+            + commonLivePaddingInputs
+            + QStringLiteral(
+                "barLine.themeExtendedBackground?"
+                "barLine.themeExtendedBackground.paddingRight:0,"
+                "solidBackground.margins.right,")
+            + commonLivePaddingTail;
+
+        return background.count(stableAuthority) == 1
+            && background.count(QStringLiteral(
+                   "backgroundStateResolver.layoutClearanceIsRequired(")) == 4
+            && background.contains(topClearance)
+            && background.contains(bottomClearance)
+            && background.contains(leftClearance)
+            && background.contains(rightClearance)
+            && background.contains(topPadding)
+            && background.contains(bottomPadding)
+            && background.contains(leftPadding)
+            && background.contains(rightPadding)
+            && tailRoundness.contains(QStringLiteral(
+                   "constlayoutClearanceIsRequired=root.isHorizontal"
+                   "?leftLayoutClearanceIsRequired"
+                   ":topLayoutClearanceIsRequired;"
+                   "if(layoutClearanceIsRequired)"))
+            && headRoundness.contains(QStringLiteral(
+                   "constlayoutClearanceIsRequired=root.isHorizontal"
+                   "?rightLayoutClearanceIsRequired"
+                   ":bottomLayoutClearanceIsRequired;"
+                   "if(layoutClearanceIsRequired)"))
+            && tailRoundness.contains(QStringLiteral(
+                   "constexpected=customRadiusIsEnabled?customAppliedRadius"
+                   ":Math.max(themePadding,solidBackgroundPadding);"))
+            && headRoundness.contains(QStringLiteral(
+                   "constexpected=customRadiusIsEnabled?customAppliedRadius"
+                   ":Math.max(themePadding,solidBackgroundPadding);"))
+            && !tailRoundness.contains(QStringLiteral("hasLeftBorder"))
+            && !tailRoundness.contains(QStringLiteral("hasTopBorder"))
+            && !headRoundness.contains(QStringLiteral("hasRightBorder"))
+            && !headRoundness.contains(QStringLiteral("hasBottomBorder"))
+            && background.contains(QStringLiteral(
+                   "hasLeftBorder:hasAllBorders||"
+                   "((solidBackground.enabledBorders"
+                   "&KSvg.FrameSvg.LeftBorder)>0)"))
+            && background.contains(QStringLiteral(
+                   "shadows.left:hasLeftBorder&&root.behaveAsDockWithMask"))
+            && bindings.contains(QStringLiteral(
+                   "varpanelTail=externalBindings.dockBackground.tailRoundness"
+                   "+externalBindings.dockBackground.tailRoundnessMargin;"))
+            && bindings.contains(QStringLiteral(
+                   "varpanelHead=externalBindings.dockBackground.headRoundness"
+                   "+externalBindings.dockBackground.headRoundnessMargin;"));
+    }
+
     static bool matchesBackgroundVisualThicknessRouting(const QString &source)
     {
         const QString current = normalizedCode(functionBody(
@@ -1476,6 +1601,8 @@ private Q_SLOTS:
     void dockBackgroundFit_sourceGuardsRejectBypasses();
     void appletBudget_excludesInternalPaddingButNotShadows();
     void appletBudget_sourceGuardRejectsShadowSubtraction();
+    void floatingPanelLayoutClearance_keepsStablePrimarySpan();
+    void floatingPanelLayoutClearance_sourceGuardsRejectDivergence();
     void backgroundVisualThickness_usesMonotonicCore();
     void backgroundVisualThickness_sourceGuardRejectsDivergence();
     void dockBackgroundShadow_keepsFixedPixelFootprint();
@@ -2369,6 +2496,107 @@ void SourceGuardTest::appletBudget_sourceGuardRejectsShadowSubtraction()
 
     QVERIFY2(!matchesShadowIndependentAppletBudget(source),
              "restoring shadow subtraction must fail the applet-budget guard");
+}
+
+void SourceGuardTest::floatingPanelLayoutClearance_keepsStablePrimarySpan()
+{
+    const QString background = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/MultiLayered.qml"));
+    const QString bindings = readFile(QStringLiteral(
+        "containment/package/contents/ui/BindingsExternal.qml"));
+
+    QVERIFY2(matchesStableFloatingPanelLayoutClearance(background, bindings),
+             "configured positive-gap floating Panels must keep one"
+             " primary-axis applet and popup clearance budget while visual"
+             " borders change");
+}
+
+void SourceGuardTest::floatingPanelLayoutClearance_sourceGuardsRejectDivergence()
+{
+    const QString originalBackground = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/MultiLayered.qml"));
+    const QString originalBindings = readFile(QStringLiteral(
+        "containment/package/contents/ui/BindingsExternal.qml"));
+    QVERIFY(matchesStableFloatingPanelLayoutClearance(
+        originalBackground, originalBindings));
+
+    QString broadPanelAuthority = originalBackground;
+    const QString exactAuthority = QStringLiteral(
+        "readonly property bool stablePrimaryAxisLayoutClearance: "
+        "!!(barLine.dockView\n"
+        "                                                                 "
+        "&& barLine.dockView.floatingPanelConfigured)");
+    QCOMPARE(broadPanelAuthority.count(exactAuthority), 1);
+    broadPanelAuthority.replace(
+        exactAuthority,
+        QStringLiteral(
+            "readonly property bool stablePrimaryAxisLayoutClearance: "
+            "barLine.stablePanelEnvelope"));
+    QVERIFY2(!matchesStableFloatingPanelLayoutClearance(
+                 broadPanelAuthority, originalBindings),
+             "zero-gap Panels must not gain floating layout clearance");
+
+    QString paddingFollowsPaint = originalBackground;
+    const QString stableLeftPadding = QStringLiteral(
+        "paddings.left: "
+        "backgroundStateResolver.edgePadding("
+        "barLine.leftLayoutClearanceIsRequired,");
+    QCOMPARE(paddingFollowsPaint.count(stableLeftPadding), 1);
+    paddingFollowsPaint.replace(
+        stableLeftPadding,
+        QStringLiteral(
+            "paddings.left: "
+            "backgroundStateResolver.edgePadding(barLine.hasLeftBorder,"));
+    QVERIFY2(!matchesStableFloatingPanelLayoutClearance(
+                 paddingFollowsPaint, originalBindings),
+             "primary-axis padding must not return to the changing visual"
+             " border set");
+
+    QString popupRoundnessFollowsPaint = originalBackground;
+    const QString stableTailRoundness = QStringLiteral(
+        "const layoutClearanceIsRequired = root.isHorizontal\n"
+        "                ? leftLayoutClearanceIsRequired "
+        ": topLayoutClearanceIsRequired;");
+    QCOMPARE(popupRoundnessFollowsPaint.count(stableTailRoundness), 1);
+    popupRoundnessFollowsPaint.replace(
+        stableTailRoundness,
+        QStringLiteral(
+            "const layoutClearanceIsRequired = root.isHorizontal\n"
+            "                ? hasLeftBorder : hasTopBorder;"));
+    QVERIFY2(!matchesStableFloatingPanelLayoutClearance(
+                 popupRoundnessFollowsPaint, originalBindings),
+             "popup roundness must use the same stable clearance predicate"
+             " as applet padding");
+
+    QString visualBorderFollowsLayout = originalBackground;
+    const QString visualLeftBorder = QStringLiteral(
+        "hasLeftBorder: hasAllBorders || "
+        "((solidBackground.enabledBorders "
+        "& KSvg.FrameSvg.LeftBorder) > 0)");
+    QCOMPARE(visualBorderFollowsLayout.count(visualLeftBorder), 1);
+    visualBorderFollowsLayout.replace(
+        visualLeftBorder,
+        QStringLiteral(
+            "hasLeftBorder: leftLayoutClearanceIsRequired"));
+    QVERIFY2(!matchesStableFloatingPanelLayoutClearance(
+                 visualBorderFollowsLayout, originalBindings),
+             "the stable layout predicate must not feed back into painted"
+             " borders or shadows");
+
+    QString popupBypassesRoundness = originalBindings;
+    const QString popupTail = QStringLiteral(
+        "var panelTail = "
+        "externalBindings.dockBackground.tailRoundness\n"
+        "                        + "
+        "externalBindings.dockBackground.tailRoundnessMargin;");
+    QCOMPARE(popupBypassesRoundness.count(popupTail), 1);
+    popupBypassesRoundness.replace(
+        popupTail,
+        QStringLiteral("var panelTail = 0;"));
+    QVERIFY2(!matchesStableFloatingPanelLayoutClearance(
+                 originalBackground, popupBypassesRoundness),
+             "stable Panel popup bounds must consume the same live"
+             " roundness clearance as applet sizing");
 }
 
 void SourceGuardTest::backgroundVisualThickness_usesMonotonicCore()

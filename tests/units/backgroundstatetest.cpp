@@ -46,6 +46,12 @@ static_assert(resolveDockVisualCenterOffset(0.0, 90.0, 0.0, 10.0, 100.0) == 5.0,
               "asymmetric paint must move only the visual parent");
 static_assert(resolveDockVisualCenterOffset(0.0, 90.0, 10.0, 0.0, 100.0) == -5.0,
               "swapped asymmetric paint must preserve the same solid center");
+static_assert(isBackgroundEdgeClearanceRequired(false, true, true),
+              "a floating Panel keeps missing primary-axis edge clearance");
+static_assert(!isBackgroundEdgeClearanceRequired(false, false, true),
+              "a floating Panel does not invent thickness-axis clearance");
+static_assert(!isBackgroundEdgeClearanceRequired(false, true, false),
+              "a non-floating view follows a missing visual border");
 
 // the env structs ride through QTest data tables by value
 Q_DECLARE_METATYPE(SolidPanelEnv)
@@ -105,6 +111,10 @@ private Q_SLOTS:
     void visualThickness_boundaryTable_data();
     void visualThickness_boundaryTable();
     void visualThickness_isMonotonicAcrossThemeMinimum();
+
+    // MultiLayered.qml's visual-border/layout-clearance split
+    void layoutClearance_decisionTable_data();
+    void layoutClearance_decisionTable();
 
     // MultiLayered.qml:56-125
     void edgePadding_decisionTable_data();
@@ -807,6 +817,53 @@ void BackgroundStateTest::visualThickness_isMonotonicAcrossThemeMinimum()
                      minimumThickness, static_cast<qreal>(itemThickness), 1.0),
                  std::max(minimumThickness, static_cast<qreal>(itemThickness)));
     }
+}
+
+void BackgroundStateTest::layoutClearance_decisionTable_data()
+{
+    QTest::addColumn<bool>("visualBorderIsPresent");
+    QTest::addColumn<bool>("edgeLiesOnPrimaryAxis");
+    QTest::addColumn<bool>("floatingPanelIsConfigured");
+    QTest::addColumn<bool>("expected");
+
+    QTest::newRow("horizontal Start keeps omitted left clearance")
+        << false << true << true << true;
+    QTest::newRow("horizontal End keeps omitted right clearance")
+        << false << true << true << true;
+    QTest::newRow("horizontal Justify keeps omitted left clearance")
+        << false << true << true << true;
+    QTest::newRow("horizontal Justify keeps omitted right clearance")
+        << false << true << true << true;
+    QTest::newRow("vertical Start keeps omitted top clearance")
+        << false << true << true << true;
+    QTest::newRow("vertical End keeps omitted bottom clearance")
+        << false << true << true << true;
+    QTest::newRow("vertical Justify keeps omitted top clearance")
+        << false << true << true << true;
+    QTest::newRow("vertical Justify keeps omitted bottom clearance")
+        << false << true << true << true;
+    QTest::newRow("floating Panel thickness edge follows missing border")
+        << false << false << true << false;
+    QTest::newRow("ordinary Dock primary edge follows missing border")
+        << false << true << false << false;
+    QTest::newRow("zero-gap Panel primary edge follows missing border")
+        << false << true << false << false;
+    QTest::newRow("painted border always requires its own clearance")
+        << true << false << false << true;
+}
+
+void BackgroundStateTest::layoutClearance_decisionTable()
+{
+    QFETCH(bool, visualBorderIsPresent);
+    QFETCH(bool, edgeLiesOnPrimaryAxis);
+    QFETCH(bool, floatingPanelIsConfigured);
+    QFETCH(bool, expected);
+
+    QCOMPARE(isBackgroundEdgeClearanceRequired(
+                 visualBorderIsPresent,
+                 edgeLiesOnPrimaryAxis,
+                 floatingPanelIsConfigured),
+             expected);
 }
 
 void BackgroundStateTest::edgePadding_decisionTable_data()

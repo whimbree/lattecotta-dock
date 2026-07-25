@@ -295,6 +295,17 @@ double BackgroundStateResolver::visualThickness(double minimumThickness,
                                                               sizeFraction);
 }
 
+bool BackgroundStateResolver::layoutClearanceIsRequired(
+    bool visualBorderIsPresent,
+    bool edgeLiesOnPrimaryAxis,
+    bool floatingPanelIsConfigured) const
+{
+    return BackgroundState::isBackgroundEdgeClearanceRequired(
+        visualBorderIsPresent,
+        edgeLiesOnPrimaryAxis,
+        floatingPanelIsConfigured);
+}
+
 double BackgroundStateResolver::edgePadding(bool borderIsPresent,
                                             bool paddingLiesOnLengthAxis,
                                             bool customRadiusIsEnabled,

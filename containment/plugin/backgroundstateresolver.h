@@ -139,6 +139,14 @@ public Q_SLOTS:
                                        double itemThickness,
                                        double sizeFraction) const;
 
+    //! MultiLayered.qml's split between painted borders and applet-layout
+    //! clearance. Configured positive-gap floating Panels retain clearance
+    //! at both primary-axis ends while their attached presentation omits
+    //! rounded borders. Other edges follow the painted border.
+    Q_INVOKABLE bool layoutClearanceIsRequired(bool visualBorderIsPresent,
+                                               bool edgeLiesOnPrimaryAxis,
+                                               bool floatingPanelIsConfigured) const;
+
     //! MultiLayered.qml paddings.top/bottom/left/right; the corner-margin
     //! factor arrives from third-party indicator packages and is refused
     //! loudly when malformed (negative or non-finite), falling back to
