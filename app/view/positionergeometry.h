@@ -19,9 +19,9 @@
 //! Architecture note (the spec's mandatory divergence check): on Wayland
 //! the dock SURFACE position is owned by layer-shell anchors
 //! (app/wm/waylandlayershell.cpp configureView/updateAnchoring); the
-//! positions computed here feed masks, X11, m_validGeometry, the canvas
-//! overlay and availability math. Every function below has a live
-//! consumer in our Positioner - nothing of Goree's shape was dropped.
+//! positions computed here feed non-panel masks, m_validGeometry, the canvas
+//! overlay and availability math. Stable panel geometry has a separate
+//! FloatingPanelGeometry authority.
 
 // local
 #include <coretypes.h>
@@ -45,18 +45,11 @@ namespace PositionerGeometry {
 struct ViewGeometryInputs {
     Plasma::Types::Location location{Plasma::Types::BottomEdge};
     Plasma::Types::FormFactor formFactor{Plasma::Types::Horizontal};
-    Latte::Types::Alignment alignment{Latte::Types::Center};
-    bool behaveAsPlasmaPanel{false};
-    int normalThickness{0};
     int maxThickness{0};
     int maxNormalThickness{0};
-    int floatingGap{0};
     int editThickness{0};
     int viewWidth{0};
     int viewHeight{0};
-    float maxLength{1.0f};
-    float offset{0.0f};
-    int visibilitySlideOffset{0};
 };
 
 // The top/bottom border flags set by validateTopBottomBorders.
@@ -80,7 +73,7 @@ enum class SlideEdge {
 };
 
 // -------------------------------------------------------------------------
-// Pure geometry functions — ported verbatim from positioner.cpp
+// Pure geometry functions, ported verbatim from positioner.cpp
 // -------------------------------------------------------------------------
 
 // From Positioner::updatePosition(): the window's top-left position for the
@@ -88,96 +81,22 @@ enum class SlideEdge {
 // m_view->setPosition(); those stay in the adapter.
 inline QPoint dockPosition(const ViewGeometryInputs &in, const QRect &availableScreenRect)
 {
-    QRect screenGeometry{availableScreenRect};
-    QPoint position{0, 0};
-
-    const auto gap = [&](int scr_length) -> int {
-        return static_cast<int>(scr_length * in.offset);
-    };
-    const auto gapCentered = [&](int scr_length) -> int {
-        return static_cast<int>(scr_length * ((1 - in.maxLength) / 2) + scr_length * in.offset);
-    };
-    const auto gapReversed = [&](int scr_length) -> int {
-        return static_cast<int>(scr_length - (scr_length * in.maxLength) - gap(scr_length));
-    };
-
-    const int visibilitySlideOffset =
-        in.behaveAsPlasmaPanel ? qAbs(in.visibilitySlideOffset) : 0;
-    const int stablePanelDepth =
-        in.normalThickness + (in.behaveAsPlasmaPanel ? in.floatingGap : 0);
-
     switch (in.location) {
     case Plasma::Types::TopEdge:
-        if (in.behaveAsPlasmaPanel) {
-            const int y = screenGeometry.y() - visibilitySlideOffset;
-
-            if (in.alignment == Latte::Types::Left) {
-                position = {screenGeometry.x() + gap(screenGeometry.width()), y};
-            } else if (in.alignment == Latte::Types::Right) {
-                position = {screenGeometry.x() + gapReversed(screenGeometry.width()), y};
-            } else {
-                position = {screenGeometry.x() + gapCentered(screenGeometry.width()), y};
-            }
-        } else {
-            position = {screenGeometry.x(), screenGeometry.y()};
-        }
-        break;
-
+        return availableScreenRect.topLeft();
     case Plasma::Types::BottomEdge:
-        if (in.behaveAsPlasmaPanel) {
-            const int y = screenGeometry.bottom() - stablePanelDepth + 1
-                + visibilitySlideOffset;
-
-            if (in.alignment == Latte::Types::Left) {
-                position = {screenGeometry.x() + gap(screenGeometry.width()), y};
-            } else if (in.alignment == Latte::Types::Right) {
-                position = {screenGeometry.x() + gapReversed(screenGeometry.width()), y};
-            } else {
-                position = {screenGeometry.x() + gapCentered(screenGeometry.width()), y};
-            }
-        } else {
-            position = {screenGeometry.x(), screenGeometry.y() + screenGeometry.height() - in.viewHeight};
-        }
-        break;
-
+        return {availableScreenRect.x(),
+                availableScreenRect.bottom() - in.viewHeight + 1};
     case Plasma::Types::RightEdge:
-        if (in.behaveAsPlasmaPanel) {
-            const int x = availableScreenRect.right() - stablePanelDepth + 1
-                + visibilitySlideOffset;
-
-            if (in.alignment == Latte::Types::Top) {
-                position = {x, availableScreenRect.y() + gap(availableScreenRect.height())};
-            } else if (in.alignment == Latte::Types::Bottom) {
-                position = {x, availableScreenRect.y() + gapReversed(availableScreenRect.height())};
-            } else {
-                position = {x, availableScreenRect.y() + gapCentered(availableScreenRect.height())};
-            }
-        } else {
-            position = {availableScreenRect.right() - in.viewWidth + 1, availableScreenRect.y()};
-        }
-        break;
-
+        return {availableScreenRect.right() - in.viewWidth + 1,
+                availableScreenRect.y()};
     case Plasma::Types::LeftEdge:
-        if (in.behaveAsPlasmaPanel) {
-            const int x = availableScreenRect.x() - visibilitySlideOffset;
-
-            if (in.alignment == Latte::Types::Top) {
-                position = {x, availableScreenRect.y() + gap(availableScreenRect.height())};
-            } else if (in.alignment == Latte::Types::Bottom) {
-                position = {x, availableScreenRect.y() + gapReversed(availableScreenRect.height())};
-            } else {
-                position = {x, availableScreenRect.y() + gapCentered(availableScreenRect.height())};
-            }
-        } else {
-            position = {availableScreenRect.x(), availableScreenRect.y()};
-        }
-        break;
-
+        return availableScreenRect.topLeft();
     default:
         break;
     }
 
-    return position;
+    return {};
 }
 
 // From Positioner::resizeWindow(): the window size for the given available
@@ -189,18 +108,6 @@ inline QSize windowSize(const ViewGeometryInputs &in,
     QSize size = (in.formFactor == Plasma::Types::Vertical)
                      ? QSize(in.maxThickness, availableScreenRect.height())
                      : QSize(screenSize.width(), in.maxThickness);
-
-    if (in.formFactor == Plasma::Types::Vertical) {
-        if (in.behaveAsPlasmaPanel) {
-            size.setWidth(in.normalThickness + in.floatingGap);
-            size.setHeight(static_cast<int>(in.maxLength * availableScreenRect.height()));
-        }
-    } else {
-        if (in.behaveAsPlasmaPanel) {
-            size.setWidth(static_cast<int>(in.maxLength * screenSize.width()));
-            size.setHeight(in.normalThickness + in.floatingGap);
-        }
-    }
 
     // Protect from invalid window sizes under Wayland.
     size.setWidth(qMax(1, size.width()));
@@ -287,7 +194,7 @@ inline QRect canvasGeometry(Plasma::Types::Location location,
     return canvas;
 }
 
-// From Positioner::slideLocation() — the switch body only, without the
+// From Positioner::slideLocation(), the switch body only, without the
 // Floating-resolution that belongs to the live caller. Returns SlideEdge::None
 // for any location not one of the four edges (including Floating).
 // The Positioner adapter casts the result to AbstractWindowInterface::Slide via

@@ -38,45 +38,24 @@ private:
         ViewGeometryInputs in;
         in.location = Plasma::Types::BottomEdge;
         in.formFactor = Plasma::Types::Horizontal;
-        in.alignment = Latte::Types::Center;
-        in.behaveAsPlasmaPanel = false;
-        in.normalThickness = 56;
         in.maxThickness = 96;
         in.maxNormalThickness = 96;
-        in.floatingGap = 0;
         in.editThickness = 128;
         in.viewWidth = 1920;
         in.viewHeight = 56;
-        in.maxLength = 1.0f;
-        in.offset = 0.0f;
-        in.visibilitySlideOffset = 0;
         return in;
     }
 
 private Q_SLOTS:
-    // dockPosition — non-panel, all 4 edges
+    // dockPosition, non-panel, all 4 edges
     void dockPosition_bottomEdge_nonPanel();
     void dockPosition_topEdge_nonPanel();
     void dockPosition_leftEdge_nonPanel();
     void dockPosition_rightEdge_nonPanel();
 
-    // dockPosition — panel alignment
-    void dockPosition_bottomPanel_leftAlignment();
-    void dockPosition_bottomPanel_rightAlignment();
-    void dockPosition_bottomPanel_centerAlignment();
-    void dockPosition_fullSpanEndStaysInsideOutput_data();
-    void dockPosition_fullSpanEndStaysInsideOutput();
-
-    // dockPosition: stable floating envelope plus ordinary visibility slide
-    void dockPosition_panelStableEnvelope_data();
-    void dockPosition_panelStableEnvelope();
-    void dockPosition_bottomPanel_visibilitySlideOffset();
-
     // windowSize
     void windowSize_horizontalNonPanel();
-    void windowSize_horizontalPanel();
     void windowSize_verticalNonPanel();
-    void windowSize_verticalPanel();
     void windowSize_degenerateClamp();
 
     // maximumNormalGeometry
@@ -106,7 +85,7 @@ private Q_SLOTS:
 };
 
 // ---------------------------------------------------------------------------
-// dockPosition — non-panel
+// dockPosition, non-panel
 // ---------------------------------------------------------------------------
 
 void PositionerGeometryTest::dockPosition_bottomEdge_nonPanel()
@@ -157,151 +136,6 @@ void PositionerGeometryTest::dockPosition_rightEdge_nonPanel()
 }
 
 // ---------------------------------------------------------------------------
-// dockPosition — panel alignment cases (BottomEdge horizontal panel)
-// ---------------------------------------------------------------------------
-
-void PositionerGeometryTest::dockPosition_bottomPanel_leftAlignment()
-{
-    // Panel bottom, Left alignment, offset=0.1, maxLength=0.8
-    // gap(1920) = int(1920 * 0.1) = 192
-    // x = screenGeometry.x() + gap(width) = 0 + 192 = 192
-    // y = screenGeometry.bottom() - stablePanelDepth + 1
-    //   = 1079 - 56 + 1 = 1024
-    ViewGeometryInputs in = baseInputs();
-    in.location = Plasma::Types::BottomEdge;
-    in.behaveAsPlasmaPanel = true;
-    in.alignment = Latte::Types::Left;
-    in.offset = 0.1f;
-    in.maxLength = 0.8f;
-    in.normalThickness = 56;
-
-    QPoint pos = dockPosition(in, screen1080p());
-    QCOMPARE(pos, QPoint(192, 1024));
-}
-
-void PositionerGeometryTest::dockPosition_bottomPanel_rightAlignment()
-{
-    // Panel bottom, Right alignment, offset=0.1, maxLength=0.8
-    // gapReversed(1920) = int(1920 - 1920*0.8 - gap(1920)) = int(1920 - 1536 - 192) = 192
-    // x = screenGeometry.x() + gapReversed(width) = 0 + 192 = 192
-    // y = 0 + 1080 - 56 - 0 = 1024
-    ViewGeometryInputs in = baseInputs();
-    in.location = Plasma::Types::BottomEdge;
-    in.behaveAsPlasmaPanel = true;
-    in.alignment = Latte::Types::Right;
-    in.offset = 0.1f;
-    in.maxLength = 0.8f;
-    in.normalThickness = 56;
-
-    QPoint pos = dockPosition(in, screen1080p());
-    QCOMPARE(pos, QPoint(192, 1024));
-}
-
-void PositionerGeometryTest::dockPosition_bottomPanel_centerAlignment()
-{
-    // Panel bottom, Center alignment, offset=0.0, maxLength=0.8
-    // gapCentered(1920) = int(1920 * ((1-0.8f)/2) + 1920 * 0.0)
-    // Due to float32 precision, 1.0f - 0.8f is slightly less than 0.2f, so
-    // int(1920 * ~0.09999...) = 191 (not 192 as naive decimal arithmetic suggests).
-    // This matches the live positioner.cpp behaviour — no correction needed.
-    // x = 0 + 191 = 191, y = 0 + 1080 - 56 - 0 = 1024
-    ViewGeometryInputs in = baseInputs();
-    in.location = Plasma::Types::BottomEdge;
-    in.behaveAsPlasmaPanel = true;
-    in.alignment = Latte::Types::Center;
-    in.offset = 0.0f;
-    in.maxLength = 0.8f;
-    in.normalThickness = 56;
-
-    QPoint pos = dockPosition(in, screen1080p());
-    QCOMPARE(pos, QPoint(191, 1024));
-}
-
-void PositionerGeometryTest::dockPosition_fullSpanEndStaysInsideOutput_data()
-{
-    QTest::addColumn<Plasma::Types::Location>("edge");
-    QTest::addColumn<Plasma::Types::FormFactor>("formFactor");
-    QTest::addColumn<int>("alignment");
-
-    QTest::newRow("top") << Plasma::Types::TopEdge
-                         << Plasma::Types::Horizontal << int(Latte::Types::Right);
-    QTest::newRow("right") << Plasma::Types::RightEdge
-                           << Plasma::Types::Vertical << int(Latte::Types::Bottom);
-    QTest::newRow("bottom") << Plasma::Types::BottomEdge
-                            << Plasma::Types::Horizontal << int(Latte::Types::Right);
-    QTest::newRow("left") << Plasma::Types::LeftEdge
-                          << Plasma::Types::Vertical << int(Latte::Types::Bottom);
-}
-
-void PositionerGeometryTest::dockPosition_fullSpanEndStaysInsideOutput()
-{
-    QFETCH(Plasma::Types::Location, edge);
-    QFETCH(Plasma::Types::FormFactor, formFactor);
-    QFETCH(int, alignment);
-
-    ViewGeometryInputs in = baseInputs();
-    in.location = edge;
-    in.formFactor = formFactor;
-    in.alignment = static_cast<Latte::Types::Alignment>(alignment);
-    in.behaveAsPlasmaPanel = true;
-    in.maxLength = 1.0f;
-    in.offset = 0.0f;
-    in.floatingGap = 10;
-
-    const QSize size = windowSize(in, screen1080p(), screen1080p().size());
-    const QRect surface(dockPosition(in, screen1080p()), size);
-    QVERIFY(screen1080p().contains(surface));
-}
-
-void PositionerGeometryTest::dockPosition_panelStableEnvelope_data()
-{
-    QTest::addColumn<Plasma::Types::Location>("edge");
-    QTest::addColumn<Plasma::Types::FormFactor>("formFactor");
-    QTest::addColumn<QPoint>("position");
-
-    QTest::newRow("top") << Plasma::Types::TopEdge
-                         << Plasma::Types::Horizontal << QPoint(0, 0);
-    QTest::newRow("right") << Plasma::Types::RightEdge
-                           << Plasma::Types::Vertical << QPoint(1854, 0);
-    QTest::newRow("bottom") << Plasma::Types::BottomEdge
-                            << Plasma::Types::Horizontal << QPoint(0, 1014);
-    QTest::newRow("left") << Plasma::Types::LeftEdge
-                          << Plasma::Types::Vertical << QPoint(0, 0);
-}
-
-void PositionerGeometryTest::dockPosition_panelStableEnvelope()
-{
-    QFETCH(Plasma::Types::Location, edge);
-    QFETCH(Plasma::Types::FormFactor, formFactor);
-    QFETCH(QPoint, position);
-
-    ViewGeometryInputs in = baseInputs();
-    in.location = edge;
-    in.formFactor = formFactor;
-    in.behaveAsPlasmaPanel = true;
-    in.alignment = Latte::Types::Center;
-    in.floatingGap = 10;
-    in.normalThickness = 56;
-    in.offset = 0.0f;
-    in.maxLength = 1.0f;
-
-    QCOMPARE(dockPosition(in, screen1080p()), position);
-}
-
-void PositionerGeometryTest::dockPosition_bottomPanel_visibilitySlideOffset()
-{
-    ViewGeometryInputs in = baseInputs();
-    in.location = Plasma::Types::BottomEdge;
-    in.behaveAsPlasmaPanel = true;
-    in.floatingGap = 10;
-    in.visibilitySlideOffset = 5;
-
-    // The stable 66-pixel envelope rests at y=1014. Ordinary visibility
-    // hiding may still move that whole envelope out by five pixels.
-    QCOMPARE(dockPosition(in, screen1080p()), QPoint(0, 1019));
-}
-
-// ---------------------------------------------------------------------------
 // windowSize
 // ---------------------------------------------------------------------------
 
@@ -311,26 +145,10 @@ void PositionerGeometryTest::windowSize_horizontalNonPanel()
     // = {1920, 96}
     ViewGeometryInputs in = baseInputs();
     in.formFactor = Plasma::Types::Horizontal;
-    in.behaveAsPlasmaPanel = false;
     in.maxThickness = 96;
 
     QSize sz = windowSize(in, screen1080p(), screen1080p().size());
     QCOMPARE(sz, QSize(1920, 96));
-}
-
-void PositionerGeometryTest::windowSize_horizontalPanel()
-{
-    // Horizontal panel: the stable canvas contains the 56-pixel panel and
-    // its fixed 10-pixel floating envelope.
-    ViewGeometryInputs in = baseInputs();
-    in.formFactor = Plasma::Types::Horizontal;
-    in.behaveAsPlasmaPanel = true;
-    in.maxLength = 0.8f;
-    in.normalThickness = 56;
-    in.floatingGap = 10;
-
-    QSize sz = windowSize(in, screen1080p(), screen1080p().size());
-    QCOMPARE(sz, QSize(1536, 66));
 }
 
 void PositionerGeometryTest::windowSize_verticalNonPanel()
@@ -339,26 +157,10 @@ void PositionerGeometryTest::windowSize_verticalNonPanel()
     // = {96, 1080}
     ViewGeometryInputs in = baseInputs();
     in.formFactor = Plasma::Types::Vertical;
-    in.behaveAsPlasmaPanel = false;
     in.maxThickness = 96;
 
     QSize sz = windowSize(in, screen1080p(), screen1080p().size());
     QCOMPARE(sz, QSize(96, 1080));
-}
-
-void PositionerGeometryTest::windowSize_verticalPanel()
-{
-    // Vertical panel: the stable canvas contains the 56-pixel panel and
-    // its fixed 10-pixel floating envelope.
-    ViewGeometryInputs in = baseInputs();
-    in.formFactor = Plasma::Types::Vertical;
-    in.behaveAsPlasmaPanel = true;
-    in.normalThickness = 56;
-    in.floatingGap = 10;
-    in.maxLength = 0.8f;
-
-    QSize sz = windowSize(in, screen1080p(), screen1080p().size());
-    QCOMPARE(sz, QSize(66, 864));
 }
 
 void PositionerGeometryTest::windowSize_degenerateClamp()
@@ -366,7 +168,6 @@ void PositionerGeometryTest::windowSize_degenerateClamp()
     // maxThickness=0 for non-panel horizontal: size=(1920, 0) -> clamped to (1920, 1)
     ViewGeometryInputs in = baseInputs();
     in.formFactor = Plasma::Types::Horizontal;
-    in.behaveAsPlasmaPanel = false;
     in.maxThickness = 0;
 
     QSize sz = windowSize(in, screen1080p(), screen1080p().size());
@@ -547,7 +348,7 @@ void PositionerGeometryTest::forcedBorders_topNotForced_whenRegionOccupied()
     // A top dock at (0,0,1920,40) is already removed from the region
     QRegion region = QRegion(screen).subtracted(QRect(0, 0, 1920, 40));
     // edgeMargin=1, LeftEdge => x=0
-    // fitInRegion = QRect(0, 39, 1, 1) — inside the subtracted band => NOT in region
+    // fitInRegion = QRect(0, 39, 1, 1), inside the subtracted band => NOT in region
     // subtracted != isNull => top=false
     ForcedBorders fb = forcedBorders(Plasma::Types::LeftEdge, 1, screen, available, region);
     QVERIFY(!fb.top);

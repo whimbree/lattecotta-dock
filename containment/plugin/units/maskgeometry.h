@@ -125,7 +125,6 @@ inline QRectF computeLocalGeometry(const LocalGeometryInputs &in)
 struct InputMaskInputs {
     Plasma::Types::Location location{Plasma::Types::Floating};
     bool compositingActive{true};
-    bool behaveAsPlasmaPanel{false};
     bool isHidden{false};
     bool isSidebar{false};
     bool parabolicAnimating{false};       //!< animations.needBothAxis.count > 0
@@ -207,23 +206,6 @@ inline InputMaskDecision computeInputMask(const InputMaskInputs &in)
 
     if (!in.compositingActive) {
         return AcceptAllInput{};
-    }
-
-    if (in.behaveAsPlasmaPanel) {
-        //! A panel window IS its visible band and accepts pointer input across
-        //! all of it, so on Qt5/X11 it carried no window mask at all. Plasma 6
-        //! forces a mask here: libplasma's PopupPlasmaWindow anchors an applet
-        //! popup (systray volume, calendar, ...) to
-        //! parentWindow->mask().boundingRect() so it opens OUTSIDE the panel
-        //! band. A maskless panel collapses that bounding rect to a 1px strip
-        //! at the window top, and the popup opens OVER the panel, covering the
-        //! icon so a second click cannot toggle it closed. A masked dock
-        //! already exposes its band through the branch below, which is why only
-        //! panels broke. So expose the whole panel window as the mask: input is
-        //! unchanged (the entire band still takes events) and the popup anchors
-        //! to the real band edge. Platform-forced deviation from Qt5.
-        return AcceptInputWithin{clampIntoViewWindow(
-            QRectF(0, 0, in.rootSize.width(), in.rootSize.height()), in.viewSize)};
     }
 
     const qreal inputThickness = selectInputThickness(in);

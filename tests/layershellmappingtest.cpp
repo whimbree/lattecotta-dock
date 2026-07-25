@@ -36,8 +36,7 @@ private Q_SLOTS:
     void exclusiveEdgeIsAlwaysAnchored();
     void layerByVisibilityMode();
     void exclusiveZoneByLocation();
-    void floatingGapMapsToEdgeMargins();
-    void floatingPanelSurfaceIsLiftedOffItsEdge();
+    void fixedOffsetMapsToAnchoredEdgeMargins();
     void seededSizeForUnspannedAxes();
     void viewPlacementPinsSolvedRectangle();
     void appliedViewPlacementPreservesSurfacePolicy();
@@ -161,12 +160,10 @@ void LayerShellMappingTest::exclusiveZoneByLocation()
     QCOMPARE(LayerShell::exclusiveZoneFor(QRect(), Plasma::Types::BottomEdge), 0);
 }
 
-void LayerShellMappingTest::floatingGapMapsToEdgeMargins()
+void LayerShellMappingTest::fixedOffsetMapsToAnchoredEdgeMargins()
 {
-    //! the floating gap (screenEdgeMargin) is a real offset off the anchored
-    //! edge, realised as a layer-shell margin on THAT edge - not folded into
-    //! surface thickness. Before this the panel sat flush and grew instead of
-    //! floating. A top panel is pushed down, a bottom panel up, sides inward.
+    //! edgeMarginsFor is a generic fixed-placement helper. Dock views pass
+    //! zero because floating presentation moves inside a flush stable canvas.
     QCOMPARE(LayerShell::edgeMarginsFor(Plasma::Types::TopEdge, 12), QMargins(0, 12, 0, 0));
     QCOMPARE(LayerShell::edgeMarginsFor(Plasma::Types::BottomEdge, 12), QMargins(0, 0, 0, 12));
     QCOMPARE(LayerShell::edgeMarginsFor(Plasma::Types::LeftEdge, 12), QMargins(12, 0, 0, 0));
@@ -187,41 +184,10 @@ void LayerShellMappingTest::floatingGapMapsToEdgeMargins()
         QCOMPARE(onExclusive, 20);
     }
 
-    //! no gap and a disabled gap both mean flush: no margin, so the panel is
-    //! never lifted. A non-edge location carries no offset either.
+    //! Zero, disabled, and non-edge fixed offsets produce no margin.
     QCOMPARE(LayerShell::edgeMarginsFor(Plasma::Types::TopEdge, 0), QMargins());
     QCOMPARE(LayerShell::edgeMarginsFor(Plasma::Types::TopEdge, -1), QMargins());
     QCOMPARE(LayerShell::edgeMarginsFor(Plasma::Types::Floating, 12), QMargins());
-}
-
-void LayerShellMappingTest::floatingPanelSurfaceIsLiftedOffItsEdge()
-{
-    //! end to end on a live layer surface: a floating top panel (edgeMargin>0)
-    //! gets a real top margin so the compositor places it OFF the screen edge,
-    //! leaving the gap. This is the fix for "the gap grows the panel instead of
-    //! offsetting it" - the surface was anchored flush with no margin.
-    QScreen *screen = QGuiApplication::screens().at(0);
-
-    QWindow window;
-    LSW *ls = LSW::get(&window);
-    QVERIFY(ls);
-
-    QVERIFY(LayerShell::configureView(&window, screen, Plasma::Types::TopEdge,
-                                      Latte::Types::Center, false, 16));
-    QCOMPARE(ls->exclusiveEdge(), LSW::AnchorTop);
-    QCOMPARE(ls->margins(), QMargins(0, 16, 0, 0));
-
-    //! disabling the gap at runtime (edgeMargin back to 0) must bring the panel
-    //! flush again, not leave a stale margin welded on - updateAnchoring runs
-    //! on every gap change and always (re)sets the margin
-    LayerShell::updateAnchoring(&window, screen, Plasma::Types::TopEdge, Latte::Types::Center, false, 0);
-    QCOMPARE(ls->margins(), QMargins(0, 0, 0, 0));
-
-    //! a masked dock (windowSpansScreenLength=true) realises the gap through
-    //! its mask, so its surface stays flush even though a gap is configured:
-    //! the caller passes edgeMargin 0 for it, and the surface must not move
-    LayerShell::updateAnchoring(&window, screen, Plasma::Types::TopEdge, Latte::Types::Center, true, 0);
-    QCOMPARE(ls->margins(), QMargins(0, 0, 0, 0));
 }
 
 void LayerShellMappingTest::seededSizeForUnspannedAxes()

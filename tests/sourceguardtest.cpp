@@ -994,6 +994,17 @@ private:
             && !code.contains(QStringLiteral("inScheduledDestruction"));
     }
 
+    static bool matchesPanelToDockInputHandoff(
+        const QString &visibilityManager)
+    {
+        const QString source =
+            normalizedCode(visibilityManager);
+        return source.contains(QStringLiteral(
+            "functiononBehaveAsPlasmaPanelChanged(){"
+            "manager.updateMaskArea();"
+            "manager.updateInputGeometry();}"));
+    }
+
 private Q_SLOTS:
     void visibilityManager_updateSidebarState_assignsState();
     void layoutsController_modeIsChanged_delegatesToModel();
@@ -1012,6 +1023,9 @@ private Q_SLOTS:
     void stableFloatingPanelQml_keepsOneTransitionAuthority();
     void stableFloatingPanelQml_rejectsDivergentZeroGapEligibility();
     void stableFloatingPanelE2e_keepsCanvasAndRevisionsFixed();
+    void floatingPresentationConsumers_keepSingleAuthority();
+    void panelToDockInputHandoff_bypassesOrdinaryAnimationGate();
+    void panelToDockInputHandoff_rejectsMissingDirectWrite();
     void dockBackgroundFit_includesJustifyDockMode();
     void dockBackgroundFit_sourceGuardsRejectBypasses();
     void appletBudget_excludesInternalPaddingButNotShadows();
@@ -1376,9 +1390,17 @@ void SourceGuardTest::stableFloatingPanelQml_rejectsDivergentZeroGapEligibility(
     const QString viewImplementation = readFile(QStringLiteral(
         "app/view/view.cpp"));
 
-    QCOMPARE(main.count(QStringLiteral("latteView.floatingPanelConfigured")), 1);
-    main.replace(QStringLiteral("latteView.floatingPanelConfigured"),
-                 QStringLiteral("screenEdgeMarginEnabled"));
+    const QString eligibility = QStringLiteral(
+        "readonly property bool floatingTransitionEligible: latteView\n"
+        "                                                       "
+        "&& latteView.floatingPanelConfigured");
+    QCOMPARE(main.count(eligibility), 1);
+    main.replace(eligibility,
+                 QStringLiteral(
+                     "readonly property bool floatingTransitionEligible: "
+                     "latteView\n"
+                     "                                                       "
+                     "&& screenEdgeMarginEnabled"));
 
     QVERIFY2(!matchesStableFloatingPanelQmlContract(
                  main, bindings, visibility, layouts, metrics, backgroundTotals,
@@ -1395,6 +1417,151 @@ void SourceGuardTest::stableFloatingPanelE2e_keepsCanvasAndRevisionsFixed()
              "recipe 071 must keep the partial QWindow, applet measurements,"
              " maximum-depth reservation, and physical-publication revisions"
              " stable through qreal progress and rapid reversals");
+}
+
+void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
+{
+    const QString effects = normalizedCode(readFile(
+        QStringLiteral("app/view/effects.cpp")));
+    const QString view = normalizedCode(readFile(
+        QStringLiteral("app/view/view.cpp")));
+    const QString inputHelper = normalizedCode(readFile(
+        QStringLiteral("app/view/floatinginputevent.h")));
+    const QString popupHelper = normalizedCode(readFile(
+        QStringLiteral("app/view/floatingpopuppresentation.h")));
+    const QString bindings = normalizedCode(readFile(
+        QStringLiteral(
+            "containment/package/contents/ui/BindingsExternal.qml")));
+    const QString main = normalizedCode(readFile(
+        QStringLiteral("containment/package/contents/ui/main.qml")));
+    const QString background = normalizedCode(readFile(
+        QStringLiteral(
+            "containment/package/contents/ui/background/MultiLayered.qml")));
+    const QString visibility = normalizedCode(readFile(
+        QStringLiteral(
+            "containment/package/contents/ui/VisibilityManager.qml")));
+    const QString dialog = normalizedCode(readFile(
+        QStringLiteral("declarativeimports/core/dialog.cpp")));
+    const QString positionerCore = normalizedCode(readFile(
+        QStringLiteral("app/view/positionergeometry.h")));
+
+    const qsizetype eventStart = view.indexOf(
+        QStringLiteral("boolView::event(QEvent*e)"));
+    const qsizetype projection = view.indexOf(
+        QStringLiteral("FloatingInputEvent::routeMouseEvent("),
+        eventStart);
+    const qsizetype observer = view.indexOf(
+        QStringLiteral("Q_EMITeventTriggered(e)"), eventStart);
+    QVERIFY(eventStart >= 0 && projection > eventStart
+            && observer > projection);
+    QVERIFY(view.contains(QStringLiteral("QEvent::MouseButtonDblClick")));
+    QVERIFY(view.contains(QStringLiteral("mapToGlobal(adjusted)")));
+    QVERIFY(view.contains(QStringLiteral(
+        "QScopedValueRollback<bool>projectionGuard")));
+    QVERIFY(inputHelper.contains(QStringLiteral("source.pixelDelta()")));
+    QVERIFY(inputHelper.contains(QStringLiteral("source.angleDelta()")));
+    QVERIFY(inputHelper.contains(QStringLiteral("source.phase()")));
+    QVERIFY(inputHelper.contains(QStringLiteral("source.pointingDevice()")));
+
+    QVERIFY(effects.contains(QStringLiteral(
+        "EffectRegion::rasterizedTranslatedShape(visibleShape,localShape)")));
+    QVERIFY(effects.contains(QStringLiteral(
+        "PanelBorderDecision::enabledBorders(")));
+    QVERIFY(!effects.contains(QStringLiteral(
+        "enableBlurBehind(m_view,true);")));
+    QVERIFY(!effects.contains(QStringLiteral(
+        "enableBackgroundContrast(m_view,m_theme.backgroundContrastEnabled(),"
+        "m_backEffectContrast,m_backEffectIntesity,m_backEffectSaturation);")));
+    QVERIFY(effects.contains(QStringLiteral(
+        "if(!m_view->behaveAsPlasmaPanel()){"
+        "publishFloatingMaskGeneration("
+        "m_floatingMaskHandshake.transferToLegacy());")));
+    QVERIFY(effects.contains(QStringLiteral(
+        "m_view->setProperty(\"_floating_visible_geometry\",QVariant{});")));
+    QVERIFY(effects.contains(QStringLiteral(
+        "m_view->setProperty(\"_floating_anchor_revision\","
+        "QVariant::fromValue(++m_floatingAnchorRevision));")));
+
+    QVERIFY(background.contains(QStringLiteral(
+        "if(!latteView||barLine.containmentRoot.behaveAsPlasmaPanel)"
+        "return;")));
+    QVERIFY(background.contains(QStringLiteral(
+        "requiredpropertyItemcontainmentRoot")));
+    QVERIFY(background.contains(QStringLiteral(
+        "requiredpropertyvardockView")));
+    QVERIFY(bindings.contains(QStringLiteral(
+        "if(!externalBindings.dockView"
+        "||!externalBindings.dockBackground){console.error(")));
+    QVERIFY(visibility.contains(QStringLiteral(
+        "if(manager.window.behaveAsPlasmaPanel"
+        "&&!manager.window.visibility.isHidden"
+        "&&!manager.window.visibility.isSidebar){return;}")));
+    QVERIFY(main.contains(QStringLiteral(
+        "VisibilityManager{id:visibilityManager"
+        "layouts:layoutsContainerwindow:latteView}")));
+    QVERIFY(main.contains(QStringLiteral(
+        "Background.MultiLayered{id:_background"
+        "containmentRoot:rootdockView:latteView}")));
+    QVERIFY(main.contains(QStringLiteral(
+        "floatingTransition.displayHintsWithFloatingPreference(")));
+    QVERIFY(popupHelper.contains(QStringLiteral(
+        "currentHints|floatingHint")));
+    QVERIFY(popupHelper.contains(QStringLiteral(
+        "currentHints&~floatingHint")));
+    QVERIFY(dialog.contains(QStringLiteral(
+        "isAnchorRevisionProperty(")));
+    QVERIFY(dialog.contains(QStringLiteral(
+        "FloatingPopupPresentation::perpendicularAnchor(")));
+    QVERIFY(dialog.contains(QStringLiteral(
+        "updateGeometry();")));
+    QVERIFY(dialog.contains(QStringLiteral(
+        "&QQuickItem::windowChanged")));
+    QVERIFY(dialog.contains(QStringLiteral(
+        "m_anchorWindowFilter.followWindow(window)")));
+    QVERIFY(dialog.contains(QStringLiteral(
+        "m_anchorWindowFilter.observes(watched)")));
+    QVERIFY(visibility.contains(QStringLiteral(
+        "functiononIsSidebarChanged(){manager.updateInputGeometry();}")));
+
+    QVERIFY(!positionerCore.contains(
+        QStringLiteral("behaveAsPlasmaPanel")));
+    QVERIFY(!positionerCore.contains(
+        QStringLiteral("floatingGap")));
+    QVERIFY(!positionerCore.contains(
+        QStringLiteral("visibilitySlideOffset")));
+}
+
+void SourceGuardTest::
+    panelToDockInputHandoff_bypassesOrdinaryAnimationGate()
+{
+    const QString visibility = readFile(QStringLiteral(
+        "containment/package/contents/ui/VisibilityManager.qml"));
+    QVERIFY(matchesPanelToDockInputHandoff(visibility));
+    QVERIFY(normalizedCode(visibility).contains(QStringLiteral(
+        "if(manager.updateIsEnabled){manager.updateInputGeometry();}")));
+}
+
+void SourceGuardTest::
+    panelToDockInputHandoff_rejectsMissingDirectWrite()
+{
+    const QString original = readFile(QStringLiteral(
+        "containment/package/contents/ui/VisibilityManager.qml"));
+    QVERIFY(matchesPanelToDockInputHandoff(original));
+
+    QString missingDirectWrite = original;
+    const QString directSequence =
+        QStringLiteral("            manager.updateMaskArea();\n"
+                       "            // updateMaskArea intentionally gates ordinary animation writes on\n"
+                       "            // updateIsEnabled. This ownership handoff is not an animation:\n"
+                       "            // the old native panel bridge must be replaced even during\n"
+                       "            // autosize, relocation, or a slide.\n"
+                       "            manager.updateInputGeometry();");
+    QVERIFY(missingDirectWrite.contains(directSequence));
+    missingDirectWrite.replace(
+        directSequence,
+        QStringLiteral("            manager.updateMaskArea();"));
+    QVERIFY(!matchesPanelToDockInputHandoff(
+        missingDirectWrite));
 }
 
 void SourceGuardTest::dockBackgroundFit_includesJustifyDockMode()

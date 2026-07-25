@@ -827,19 +827,11 @@ PositionerGeometry::ViewGeometryInputs Positioner::geometryInputs() const
     PositionerGeometry::ViewGeometryInputs in;
     in.location = m_view->location();
     in.formFactor = m_view->formFactor();
-    in.alignment = static_cast<Latte::Types::Alignment>(m_view->alignment());
-    in.behaveAsPlasmaPanel = m_view->behaveAsPlasmaPanel();
-    in.normalThickness = m_view->normalThickness();
     in.maxThickness = m_view->maxThickness();
     in.maxNormalThickness = m_view->maxNormalThickness();
-    in.floatingGap =
-        m_view->isFloatingPanel() ? m_view->screenEdgeMargin() : 0;
     in.editThickness = m_view->editThickness();
     in.viewWidth = m_view->width();
     in.viewHeight = m_view->height();
-    in.maxLength = m_view->maxLength();
-    in.offset = m_view->offset();
-    in.visibilitySlideOffset = m_slideOffset;
     return in;
 }
 
