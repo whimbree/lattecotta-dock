@@ -2017,7 +2017,7 @@ void SourceGuardTest::dockSystemTransitionCollection_keepsAuthoritativeRouting()
     QVERIFY2(
         matchesTransitionSnapshotRoute(
             collector),
-        "schema 5 transition fields must read the per-view controller without rounding and fail closed");
+        "schema 6 transition fields must read the per-view controller without rounding and fail closed");
 }
 
 void SourceGuardTest::dockSystemTransitionCollection_rejectsControlledMutations()
