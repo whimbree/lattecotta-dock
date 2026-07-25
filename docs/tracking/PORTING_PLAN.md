@@ -4452,7 +4452,8 @@ prerequisites in the phases above are done.
 - [x] Fix D160 (same-edge maximum reservation depth was described as
       implemented). First expose the missing output-edge reservation
       aggregator and accumulating positive zones as a beta blocker, then use
-      FP-1 to replace the independent publishers with that coordinator.
+      FP-1 (the output-edge maximum reservation authority) to replace the
+      independent publishers with that coordinator.
       Commits: 9dcf27dd8, 7df41d844, c02b49121, 2751c3a23
 - [x] Fix D161 (Layouts submenu sizing test omitted painted control columns).
       Bound the exact production size hint against its label, radio, and
@@ -4540,6 +4541,20 @@ prerequisites in the phases above are done.
       fields). Compare every group projection field with every contributor and
       reject all reservation residue on views without membership.
       Commits: acfea9cd9, ae4e85d75, 6e6e1c199
+- [x] Fix D181 (immediate migration snapshots reused the lagging QWindow
+      output). Collect the explicit layer-shell output and require the first
+      complete snapshot after the committed per-view boundary to expose the
+      new group without retrying an empty response.
+      Commits: f0a006c66, b3008f942
+- [x] Fix D182 (coordinator rollback did not roll back member publication
+      state). Return the transaction result through every publication layer,
+      commit the member rectangle only on success, and make equal-valued
+      output or edge migrations retryable.
+      Commits: ce7f1f0e2
+- [x] Fix D183 (reservation contributor ordering was normalized after
+      disagreement). Require canonical group order and exact equality for
+      every per-view contributor mirror.
+      Commits: 7c03a564e
 - [ ] Fix D172 (floating panel attachment moves the surface and reservation
       instead of presentation). Execute
       `docs/tracking/floating-panel-parity-plan.md`: one stable per-view canvas,
@@ -4555,7 +4570,7 @@ prerequisites in the phases above are done.
       per-view visual or activation geometry.
       Commits: 7df41d844, c02b49121, 286252a07, 2751c3a23, b8f2420f7,
       3b312e739, 6f89f7614, c6c98ba82, acfea9cd9, 00d611901, cacc21c07,
-      ae4e85d75, 6e6e1c199
+      ae4e85d75, 6e6e1c199, f0a006c66, ce7f1f0e2, 7c03a564e, b3008f942
 - [ ] Complete FP-2 (the stable canvas and transition controller).
       Commits:
 - [ ] Complete FP-3 (internal presentation, input, effects, and popup

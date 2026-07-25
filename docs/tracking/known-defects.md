@@ -1894,9 +1894,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FOUND: 2026-07-24, cold review of the no-inward-stacking contract.
 - SYMPTOM: the placement record said separated same-edge members contribute
   only their maximum depth.
-- ROOT: before FP-1, each Always Visible view published its own positive
-  layer-shell exclusive zone. KWin processed those surfaces independently, so
-  same-edge zones could accumulate. No maximum-depth aggregator existed.
+- ROOT: before FP-1 (the output-edge maximum reservation authority), each
+  Always Visible view published its own positive layer-shell exclusive zone.
+  KWin processed those surfaces independently, so same-edge zones could
+  accumulate. No maximum-depth aggregator existed.
 - FIX: one Corona-owned coordinator groups contributions by persistent Latte
   output identity and edge, then publishes exactly one positive zone at the
   maximum requested depth. Visual views keep independent zone -1 surfaces.
@@ -2243,6 +2244,61 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: controlled one-field mutations cover every mirrored scalar,
   contributor list, rectangle, layer-shell field, publisher token, and
   no-membership residue.
+
+### D181 - Immediate migration snapshots reused the lagging QWindow output
+- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
+  (`f0a006c66`, committed-boundary replay `b3008f942`).
+- FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
+  maximum reservation authority) migration transaction.
+- SYMPTOM: the first `dockSystemData` read after a valid cross-output
+  reservation commit could return an empty complete query until the
+  compositor configured the publisher window.
+- ROOT: the coordinator staged against LayerShellQt's synchronous explicit
+  output, but the D-Bus collector subsequently validated the same publisher
+  against lagging `QWindow::screen()`. Recipe 061 retried empty snapshots and
+  hid the disagreement.
+- FIX: collect the publisher output from the applied layer-shell assignment.
+  Poll only the older per-view readback until its published rectangle belongs
+  to the target output, then require the next complete snapshot to expose the
+  matching schema 4 membership without a retry.
+- EVIDENCE: the dual-output nested replay observes the first complete
+  coordinator snapshot at the committed boundary, persists output 14 through
+  restart, removes both contributions, and leaves no orphan group.
+
+### D182 - Coordinator rollback did not roll back member publication state
+- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
+  (`ce7f1f0e2`).
+- FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
+  maximum reservation authority) failure transaction.
+- SYMPTOM: a rejected update or removal retained the coordinator's old group
+  while `VisibilityManager` already exposed the new or empty
+  `publishedStruts`. An equal-valued retry could then be suppressed.
+- ROOT: the publication API returned `void`, and the member assigned its
+  acknowledged rectangle before the coordinator transaction completed.
+- FIX: propagate `[[nodiscard]] bool` through the window-system, view, and
+  coordinator boundary. Commit member state only on success, preserve a dirty
+  retry after failure, and key equality by rectangle, persistent output
+  identity, and edge using LayerShellQt's explicit output.
+- EVIDENCE: focused tests cover success, failed update, failed removal,
+  equal-valued retry, and same-geometry migration between different outputs.
+  Source mutations reject discarded results, old-candidate publication,
+  missing visibility-mode gating, and lagging QWindow output lookup.
+
+### D183 - Reservation contributor ordering was normalized after disagreement
+- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
+  (`7c03a564e`).
+- FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
+  maximum reservation authority) schema 4 consistency pass.
+- SYMPTOM: reordered group and per-view contributor lists could pass
+  validation and serialize different wire orderings.
+- ROOT: the verifier sorted temporary copies before comparing them even though
+  group serialization canonicalized its list and per-view serialization
+  preserved the supplied list.
+- FIX: require every group contributor list to arrive in canonical sorted
+  order and compare every per-view mirror exactly with it.
+- EVIDENCE: the valid two-member graph passes. Independent mutations reorder
+  one view, then identically reorder a group and all of its mirrors; both are
+  rejected.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: OPEN. Option 1, the stable per-view surface with internal visual

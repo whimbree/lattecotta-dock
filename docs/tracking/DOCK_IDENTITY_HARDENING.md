@@ -332,11 +332,12 @@ composition and ordering are undefined. The remaining missing authority is an
 output-edge span validator, not a stack coordinator. It must reject or repair a
 stable overlap deterministically and keep separated spans independent.
 
-FP-1 implements the reservation half of this policy. One coordinator per
-persistent Latte output identity and edge publishes the maximum contribution,
-so same-edge positive zones no longer accumulate. The D-Bus `stacking` object
-still reports that inward stacking is unsupported and stable overlap is not yet
-rejected. It does not certify that the current view list is non-overlapping.
+FP-1 (the output-edge maximum reservation authority) implements the
+reservation half of this policy. One coordinator per persistent Latte output
+identity and edge publishes the maximum contribution, so same-edge positive
+zones no longer accumulate. The D-Bus `stacking` object still reports that
+inward stacking is unsupported and stable overlap is not yet rejected. It does
+not certify that the current view list is non-overlapping.
 
 Validation is keyed by Latte output identity and edge, not by monitor adjacency.
 Portrait, landscape, overlapping-coordinate, fully touching, partially
