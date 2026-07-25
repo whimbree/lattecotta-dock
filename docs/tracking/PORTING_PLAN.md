@@ -4584,6 +4584,11 @@ prerequisites in the phases above are done.
       assign panel-surface floating-gap ownership explicitly, and restore the
       complete pristine nested config after the recipe.
       Commits: PENDING INTEGRATION REBASE
+- [x] Fix D189 (KWin script collection delay consumed the transition under
+      test). Preserve the ordinary collection delay, let transition drivers
+      request a shorter delay, and sample recipe 071 while the controller is
+      still active.
+      Commits: PENDING INTEGRATION REBASE
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing

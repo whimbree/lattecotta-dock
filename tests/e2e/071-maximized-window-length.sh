@@ -30,7 +30,7 @@ set_konsole_maximized() {
             w.setMaximize($enabled, $enabled);
             print('@TAG@|' + w.internalId);
         }
-    }"
+    }" 0.01
 }
 
 active_window_id() {
