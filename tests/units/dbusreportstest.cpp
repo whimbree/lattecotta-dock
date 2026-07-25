@@ -1280,8 +1280,35 @@ void DbusReportsTest::dockSystemSnapshotRejectsReservationDisagreement()
         snapshot.reservationGroups[0].contributorDockIds.removeLast();
     });
     rejects([](auto &snapshot) {
+        snapshot.views[0].reservationSurfacePresent = false;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].screenId = 11;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].edge = Plasma::Types::TopEdge;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].reservationOutputId = 11;
+    });
+    rejects([](auto &snapshot) {
         snapshot.views[0].reservationEdge =
             Plasma::Types::TopEdge;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].reservationPublishedDepth = 47;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].reservationGroupMemberCount = 1;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].reservationGroupGeneration = 3;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].reservationContributorDockIds.removeLast();
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].reservationGeometry.translate(1, 0);
     });
     rejects([](auto &snapshot) {
         snapshot.views[0].objects.reservationPublisher =
@@ -1308,15 +1335,88 @@ void DbusReportsTest::dockSystemSnapshotRejectsReservationDisagreement()
         snapshot.views[1].reservationContributionDepth = 47;
     });
     rejects([](auto &snapshot) {
-        snapshot.views[2].reservationGeometry =
-            snapshot.reservationGroups[0].geometry;
-    });
-    rejects([](auto &snapshot) {
         snapshot.views.clear();
     });
     rejects([](auto &snapshot) {
         snapshot.reservationGroups.clear();
     });
+
+    const auto rejectsIndependentResidue =
+        [&valid](const auto &mutate) {
+            DockSystemSnapshot invalid = valid;
+            mutate(invalid.views[2]);
+            QVERIFY(!dockReservationRecordsAgree(invalid));
+        };
+    rejectsIndependentResidue(
+        [&group](auto &view) {
+            view.publishedStruts = group.geometry;
+        });
+    rejectsIndependentResidue(
+        [](auto &view) {
+            view.reservationSurfacePresent = true;
+        });
+    rejectsIndependentResidue(
+        [](auto &view) {
+            view.reservationOutputId = 10;
+        });
+    rejectsIndependentResidue(
+        [](auto &view) {
+            view.reservationEdge =
+                Plasma::Types::BottomEdge;
+        });
+    rejectsIndependentResidue(
+        [](auto &view) {
+            view.reservationContributionDepth = 1;
+        });
+    rejectsIndependentResidue(
+        [](auto &view) {
+            view.reservationPublishedDepth = 1;
+        });
+    rejectsIndependentResidue(
+        [](auto &view) {
+            view.reservationGroupMemberCount = 1;
+        });
+    rejectsIndependentResidue(
+        [](auto &view) {
+            view.reservationGroupGeneration = 1;
+        });
+    rejectsIndependentResidue(
+        [](auto &view) {
+            view.reservationContributorDockIds = {3};
+        });
+    rejectsIndependentResidue(
+        [&group](auto &view) {
+            view.reservationGeometry = group.geometry;
+        });
+    rejectsIndependentResidue(
+        [&group](auto &view) {
+            view.reservationWindowGeometry =
+                group.windowGeometry;
+        });
+    rejectsIndependentResidue(
+        [&group](auto &view) {
+            view.reservationLayerShellAnchors =
+                group.layerShellAnchors;
+        });
+    rejectsIndependentResidue(
+        [](auto &view) {
+            view.reservationLayerShellMargins =
+                QMargins(1, 0, 0, 0);
+        });
+    rejectsIndependentResidue(
+        [](auto &view) {
+            view.reservationLayerShellExclusiveEdge =
+                QStringLiteral("bottom");
+        });
+    rejectsIndependentResidue(
+        [](auto &view) {
+            view.reservationLayerShellExclusiveZone = 1;
+        });
+    rejectsIndependentResidue(
+        [](auto &view) {
+            view.objects.reservationPublisher =
+                QStringLiteral("object-10");
+        });
 }
 
 void DbusReportsTest::dockSystemSnapshotCanonicalizesShuffledViewsAndLinkedIds()
