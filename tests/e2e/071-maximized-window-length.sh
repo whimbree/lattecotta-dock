@@ -191,6 +191,42 @@ print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMa
     e2e_fail "tracker/controller did not settle together (active=$active_maximized exists=$exists_maximized target=$target phase=$phase progress=$progress)"
 }
 
+wait_for_zero_gap_floated_snapshot() {
+    local snapshot=""
+    local configured_panel=unread eligible_panel=unread view_type=unread visibility_mode=unread
+    local target=unread phase=unread running=unread progress=unread
+    for _ in $(seq 1 80); do
+        snapshot="$(dock_field '"%s %s %s %s %s %s %s %.9f" % (
+            str(v["floatingPanelConfigured"]).lower(),
+            str(v["floatingPanelEligible"]).lower(),
+            v["type"],
+            v["visibilityMode"],
+            v["transitionTarget"],
+            v["transitionPhase"],
+            str(v["transitionRunning"]).lower(),
+            v["transitionProgress"],
+        )' 2>/dev/null)" || {
+            sleep 0.05
+            continue
+        }
+        read -r configured_panel eligible_panel view_type visibility_mode \
+            target phase running progress <<< "$snapshot"
+        if [[ "$view_type" == panel
+              && "$visibility_mode" == alwaysVisible
+              && "$configured_panel" == false
+              && "$eligible_panel" == false
+              && "$target" == floated
+              && "$phase" == resting
+              && "$running" == false ]] \
+                && awk -v actual="$progress" \
+                    'BEGIN { difference = actual - 1.0; if (difference < 0) difference = -difference; exit !(difference < 0.000001) }'; then
+            return 0
+        fi
+        sleep 0.05
+    done
+    e2e_fail "zero-gap panel never exposed one consistent floated endpoint snapshot (type=$view_type visibility=$visibility_mode configured=$configured_panel eligible=$eligible_panel target=$target phase=$phase running=$running progress=$progress)"
+}
+
 konsole_frame_geometry() {
     local window geometry x y width height output extra
     window="$(e2e_dumpwins | grep '|org.kde.konsole|LATTE FP2 STABLE CANVAS' | tail -1)" || return 1
@@ -353,17 +389,6 @@ e2e_dock_stop || e2e_fail "dock did not stop before the zero-gap boundary check"
 kwriteconfig6 "${group_args[@]}" --key screenEdgeMargin 0 \
     || e2e_fail "could not configure the legal zero-pixel floating gap"
 e2e_dock_start 90 || e2e_fail "dock did not restart for the zero-gap boundary check"
-
-read -r configured_panel eligible_panel view_type visibility_mode <<< "$(dock_field '"%s %s %s %s" % (
-    str(v["floatingPanelConfigured"]).lower(),
-    str(v["floatingPanelEligible"]).lower(),
-    v["type"],
-    v["visibilityMode"],
-)')"
-[[ "$view_type" == panel && "$visibility_mode" == alwaysVisible ]] \
-    || e2e_fail "zero-gap boundary changed the Panel/Always Visible fixture contract"
-[[ "$configured_panel" == false && "$eligible_panel" == false ]] \
-    || e2e_fail "zero-gap panel exposed divergent configured/eligible state ($configured_panel/$eligible_panel)"
-wait_for_resting_target floated 1
+wait_for_zero_gap_floated_snapshot
 
 echo "FP-2 stable canvas held view $view and its ${stable_reservation_depth}px maximum-depth reservation across qreal progress and eight rapid reversals"
