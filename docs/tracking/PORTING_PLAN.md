@@ -4454,7 +4454,7 @@ prerequisites in the phases above are done.
       aggregator and accumulating positive zones as a beta blocker, then use
       FP-1 (the output-edge maximum reservation authority) to replace the
       independent publishers with that coordinator.
-      Commits: 9dcf27dd8, 7df41d844, c02b49121, 2751c3a23
+      Commits: 9dcf27dd8, 0a4407f30, e8adfb96e, 63497b3ac
 - [x] Fix D161 (Layouts submenu sizing test omitted painted control columns).
       Bound the exact production size hint against its label, radio, and
       height-derived icon widths, including odd style metrics.
@@ -4518,54 +4518,54 @@ prerequisites in the phases above are done.
 - [x] Fix D175 (reservation moves committed policy before publication
       succeeded). Stage every affected output-edge projection against a copied
       ledger and commit membership, publishers, and generation together.
-      Commits: 2751c3a23
+      Commits: 63497b3ac
 - [x] Fix D176 (dock-system observability omitted reservation group ownership).
       Raise `dockSystemData` to schema 4 with canonical coordinator groups,
       contributor ids, maximum depth, publisher state, and transaction
       generation.
-      Commits: b8f2420f7
+      Commits: 7d452e789
 - [x] Fix D177 (reservation replay could skip output migration and orphan
       cleanup). Require exactly two nested outputs, move the contribution
       unconditionally, restart, remove both members, and reject stale groups.
-      Commits: c6c98ba82, 00d611901
+      Commits: cb353022f, 3f70b7224
 - [x] Fix D178 (reservation validation assumed the compositor kept requested
       window size). Validate requested geometry and applied layer-shell policy
       without requiring KWin's mapped publisher to keep the requested
       primary-axis size.
-      Commits: 3b312e739
+      Commits: e11081694
 - [x] Fix D179 (cross-output staging validated a lagging QWindow screen).
       Validate LayerShellQt's explicit output assignment during synchronous
       staging.
-      Commits: 6f89f7614
+      Commits: 1f82307da
 - [x] Fix D180 (reservation snapshot validation accepted divergent mirrored
       fields). Compare every group projection field with every contributor and
       reject all reservation residue on views without membership.
-      Commits: acfea9cd9, d843a752b, df46ad30e
+      Commits: 27519ddb5, 9e8907870, ae529c166
 - [x] Fix D181 (immediate migration snapshots reused the lagging QWindow
       output). Collect the explicit layer-shell output and require the first
       complete snapshot after the committed per-view boundary to expose the
       new group without retrying an empty response.
-      Commits: 38855f33e, a0e04b357
+      Commits: 266f11d0f, cdb9c6d20
 - [x] Fix D182 (coordinator rollback did not roll back member publication
       state). Return the transaction result through every publication layer,
       commit the member rectangle only on success, and make equal-valued
       output or edge migrations retryable.
-      Commits: 5492725fc
+      Commits: 21ea8c61e
 - [x] Fix D183 (reservation contributor ordering was normalized after
       disagreement). Require canonical group order and exact equality for
       every per-view contributor mirror.
-      Commits: f94efa88a
+      Commits: a1035aabf
 - [x] Fix D184 (reservation publication core bypassed the coverage inventory).
       Register the pure-core header and its sanitizer-backed test, then raise
       the committed CTest inventory to the observed count.
-      Commits: 5492725fc
+      Commits: 21ea8c61e
 - [x] Fix D185 (visibility header extension omitted adapting copyright).
       Add the adapting author line while preserving both upstream lines.
-      Commits: 5492725fc
+      Commits: 21ea8c61e
 - [x] Fix D186 (reservation commits recorded insufficient verification
       evidence). Record the tree-wide removed-API search and corrected
       exact-boundary dual-output replay in the commits that make those claims.
-      Commits: b43d25fc6, a0e04b357
+      Commits: 59146fd4e, cdb9c6d20
 - [ ] Fix D172 (floating panel attachment moves the surface and reservation
       instead of presentation). Execute
       `docs/tracking/floating-panel-parity-plan.md`: one stable per-view canvas,
@@ -4579,9 +4579,9 @@ prerequisites in the phases above are done.
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
       per-view visual or activation geometry.
-      Commits: 7df41d844, c02b49121, 286252a07, 2751c3a23, b8f2420f7,
-      3b312e739, 6f89f7614, c6c98ba82, acfea9cd9, 00d611901, b43d25fc6,
-      d843a752b, df46ad30e, 38855f33e, 5492725fc, f94efa88a, a0e04b357
+      Commits: 0a4407f30, e8adfb96e, 21b7c604c, 63497b3ac, 7d452e789,
+      e11081694, 1f82307da, cb353022f, 27519ddb5, 3f70b7224, 59146fd4e,
+      9e8907870, ae529c166, 266f11d0f, 21ea8c61e, a1035aabf, cdb9c6d20
 - [ ] Complete FP-2 (the stable canvas and transition controller).
       Commits:
 - [ ] Complete FP-3 (internal presentation, input, effects, and popup

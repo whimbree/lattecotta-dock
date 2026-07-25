@@ -1888,8 +1888,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   different nonempty claim fails.
 
 ### D160 - Same-edge maximum reservation depth was described as implemented
-- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`7df41d844`, `c02b49121`, atomic correction `2751c3a23`). The earlier
+- STATUS: FIXED in PR #118 (`0a4407f30`, `e8adfb96e`, atomic correction
+  `63497b3ac`). The earlier
   tracking correction is `9dcf27dd8`.
 - FOUND: 2026-07-24, cold review of the no-inward-stacking contract.
 - SYMPTOM: the placement record said separated same-edge members contribute
@@ -2147,8 +2147,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   CTest setting to another target; all three fail the corrected matcher.
 
 ### D175 - Reservation moves committed policy before publication succeeded
-- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`2751c3a23`).
+- STATUS: FIXED in PR #118 (`63497b3ac`).
 - FOUND: 2026-07-24, cold review of FP-1 (the output-edge maximum reservation
   authority).
 - SYMPTOM: a failed edge or output migration could leave the ownership ledger
@@ -2164,8 +2163,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   affected groups.
 
 ### D176 - Dock-system observability omitted reservation group ownership
-- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`b8f2420f7`).
+- STATUS: FIXED in PR #118 (`7d452e789`).
 - FOUND: 2026-07-24, cold review of FP-1 (the output-edge maximum reservation
   authority).
 - SYMPTOM: per-view publisher fields could not prove which contributors,
@@ -2181,8 +2179,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   canonical order, publisher identity, and empty last-member teardown.
 
 ### D177 - Reservation replay could skip output migration and orphan cleanup
-- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`c6c98ba82`, mandatory dual-output correction `00d611901`).
+- STATUS: FIXED in PR #118 (`cb353022f`, mandatory dual-output correction
+  `3f70b7224`).
 - FOUND: 2026-07-24, two cold reviews of FP-1 (the output-edge maximum
   reservation authority).
 - SYMPTOM: recipe 061 initially stopped after a same-output edge move. Its
@@ -2198,8 +2196,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   generation.
 
 ### D178 - Reservation validation assumed the compositor kept requested window size
-- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`3b312e739`).
+- STATUS: FIXED in PR #118 (`e11081694`).
 - FOUND: 2026-07-24, nested FP-1 replay with perpendicular reservations.
 - SYMPTOM: the atomic snapshot rejected a valid side reservation after KWin
   shortened its mapped QWindow inside another exclusive band.
@@ -2212,8 +2209,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   bottom maximum-depth group while the separated right dock remains fixed.
 
 ### D179 - Cross-output staging validated a lagging QWindow screen
-- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`6f89f7614`).
+- STATUS: FIXED in PR #118 (`1f82307da`).
 - FOUND: 2026-07-24, mandatory two-output FP-1 migration replay.
 - SYMPTOM: a correct output 13 to output 14 move was rejected synchronously,
   leaving the previous group committed.
@@ -2226,8 +2222,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   finds no output 13 residue.
 
 ### D180 - Reservation snapshot validation accepted divergent mirrored fields
-- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`acfea9cd9`, residue corrections `d843a752b` and `df46ad30e`).
+- STATUS: FIXED in PR #118 (`27519ddb5`, residue corrections `9e8907870` and
+  `ae529c166`).
 - FOUND: 2026-07-24, independent rereview of schema 4 reservation
   observability.
 - SYMPTOM: a group record and its contributing view could disagree in
@@ -2246,8 +2242,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   no-membership residue.
 
 ### D181 - Immediate migration snapshots reused the lagging QWindow output
-- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`38855f33e`, committed-boundary replay `a0e04b357`).
+- STATUS: FIXED in PR #118 (`266f11d0f`, committed-boundary replay
+  `cdb9c6d20`).
 - FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
   maximum reservation authority) migration transaction.
 - SYMPTOM: the first `dockSystemData` read after a valid cross-output
@@ -2266,8 +2262,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   restart, removes both contributions, and leaves no orphan group.
 
 ### D182 - Coordinator rollback did not roll back member publication state
-- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`5492725fc`).
+- STATUS: FIXED in PR #118 (`21ea8c61e`).
 - FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
   maximum reservation authority) failure transaction.
 - SYMPTOM: a rejected update or removal retained the coordinator's old group
@@ -2285,8 +2280,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   missing visibility-mode gating, and lagging QWindow output lookup.
 
 ### D183 - Reservation contributor ordering was normalized after disagreement
-- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`f94efa88a`).
+- STATUS: FIXED in PR #118 (`a1035aabf`).
 - FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
   maximum reservation authority) schema 4 consistency pass.
 - SYMPTOM: reordered group and per-view contributor lists could pass
@@ -2301,8 +2295,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   rejected.
 
 ### D184 - Reservation publication core bypassed the coverage inventory
-- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`5492725fc`).
+- STATUS: FIXED in PR #118 (`21ea8c61e`).
 - FOUND: 2026-07-24, final cold review of FP-1 (the output-edge maximum
   reservation authority).
 - SYMPTOM: the sanitizer-backed publication-state test was registered in
@@ -2316,8 +2309,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   headers.
 
 ### D185 - Visibility header extension omitted adapting copyright
-- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`5492725fc`).
+- STATUS: FIXED in PR #118 (`21ea8c61e`).
 - FOUND: 2026-07-24, final cold review of FP-1 (the output-edge maximum
   reservation authority).
 - SYMPTOM: `visibilitymanager.h` gained the member publication-state
@@ -2328,8 +2320,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: the final header carries all three lines in its SPDX block.
 
 ### D186 - Reservation commits recorded insufficient verification evidence
-- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`b43d25fc6`, `a0e04b357`).
+- STATUS: FIXED in PR #118 (`59146fd4e`, `cdb9c6d20`).
 - FOUND: 2026-07-24, final cold review of FP-1 (the output-edge maximum
   reservation authority) commit claims.
 - SYMPTOM: the dead-lookup removal recorded only a rebuild, while the

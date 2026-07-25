@@ -31,23 +31,23 @@ FP-1 means the output-edge maximum reservation authority.
 
 - [x] Replace one positive reservation surface per view with one coordinator
       per Latte output identity and edge.
-      Commits: 7df41d844, c02b49121
+      Commits: 0a4407f30, e8adfb96e
 - [x] Make contribution add, update, migration, and removal atomic. A view
       cannot remain under an old output or edge.
-      Commits: 2751c3a23, 6f89f7614
+      Commits: 63497b3ac, 1f82307da
 - [x] Publish the deepest eligible attached thickness. Never add depths.
-      Commits: 7df41d844, c02b49121
+      Commits: 0a4407f30, e8adfb96e
 - [x] Preserve visual surfaces at zone -1 and preserve the exact per-view
       occupied geometry used by Latte's own placement solver.
-      Commits: c02b49121
+      Commits: e8adfb96e
 - [x] Extend the atomic D-Bus snapshot with group membership, contributors,
       selected depth, publisher state, and generation.
-      Commits: b8f2420f7, acfea9cd9, d843a752b, df46ad30e, 38855f33e,
-      f94efa88a
+      Commits: 7d452e789, 27519ddb5, 9e8907870, ae529c166, 266f11d0f,
+      a1035aabf
 - [x] Pin order independence, deepest-member removal, last-member teardown,
       cross-output isolation, visibility changes, output moves, and restart.
-      Commits: 7df41d844, 286252a07, c6c98ba82, 00d611901, d843a752b,
-      df46ad30e, 5492725fc, a0e04b357
+      Commits: 0a4407f30, 21b7c604c, cb353022f, 3f70b7224, 9e8907870,
+      ae529c166, 21ea8c61e, cdb9c6d20
 
 ## FP-2: stable canvas and transition controller
 
