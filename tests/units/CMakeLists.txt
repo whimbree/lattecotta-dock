@@ -115,6 +115,12 @@ latte_add_unit_test(floatingpopuppresentationtest)
 target_link_libraries(floatingpopuppresentationtest
     Qt6::Gui)
 
+# FP-3 popup-host observation: moving between QWindows detaches the old event
+# filter before following the new host.
+latte_add_unit_test(floatinganchorwindowfiltertest)
+target_link_libraries(floatinganchorwindowfiltertest
+    Qt6::Gui)
+
 # FP-3 blur/contrast region ownership: a rounded local shape is clipped and
 # translated into the controller's outward paint raster.
 latte_add_unit_test(effectregiontest)

@@ -1,4 +1,4 @@
-115
+116
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -30,6 +30,7 @@ effectregiontest
 effectshandleraudittest
 extraviewhintstest
 filldistributortest
+floatinganchorwindowfiltertest
 floatinginputeventtest
 floatingmaskhandshaketest
 floatingpanelgeometrytest
