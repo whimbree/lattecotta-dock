@@ -43,11 +43,11 @@ FP-1 means the output-edge maximum reservation authority.
 - [x] Extend the atomic D-Bus snapshot with group membership, contributors,
       selected depth, publisher state, and generation.
       Commits: b8f2420f7, acfea9cd9, d843a752b, df46ad30e, 38855f33e,
-      999e6de2c
+      f94efa88a
 - [x] Pin order independence, deepest-member removal, last-member teardown,
       cross-output isolation, visibility changes, output moves, and restart.
       Commits: 7df41d844, 286252a07, c6c98ba82, 00d611901, d843a752b,
-      df46ad30e, 795e588c7, 4f3f37d50, 430a58aa7
+      df46ad30e, 5492725fc, a0e04b357
 
 ## FP-2: stable canvas and transition controller
 

@@ -2247,7 +2247,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D181 - Immediate migration snapshots reused the lagging QWindow output
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`38855f33e`, committed-boundary replay `4f3f37d50`).
+  (`38855f33e`, committed-boundary replay `a0e04b357`).
 - FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
   maximum reservation authority) migration transaction.
 - SYMPTOM: the first `dockSystemData` read after a valid cross-output
@@ -2267,7 +2267,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D182 - Coordinator rollback did not roll back member publication state
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`795e588c7`).
+  (`5492725fc`).
 - FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
   maximum reservation authority) failure transaction.
 - SYMPTOM: a rejected update or removal retained the coordinator's old group
@@ -2286,7 +2286,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D183 - Reservation contributor ordering was normalized after disagreement
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`999e6de2c`).
+  (`f94efa88a`).
 - FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
   maximum reservation authority) schema 4 consistency pass.
 - SYMPTOM: reordered group and per-view contributor lists could pass
@@ -2302,7 +2302,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D184 - Reservation publication core bypassed the coverage inventory
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`430a58aa7`).
+  (`5492725fc`).
 - FOUND: 2026-07-24, final cold review of FP-1 (the output-edge maximum
   reservation authority).
 - SYMPTOM: the sanitizer-backed publication-state test was registered in
@@ -2317,7 +2317,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D185 - Visibility header extension omitted adapting copyright
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`a267da99a`).
+  (`5492725fc`).
 - FOUND: 2026-07-24, final cold review of FP-1 (the output-edge maximum
   reservation authority).
 - SYMPTOM: `visibilitymanager.h` gained the member publication-state
@@ -2329,7 +2329,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D186 - Reservation commits recorded insufficient verification evidence
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`b43d25fc6`, `4f3f37d50`).
+  (`b43d25fc6`, `a0e04b357`).
 - FOUND: 2026-07-24, final cold review of FP-1 (the output-edge maximum
   reservation authority) commit claims.
 - SYMPTOM: the dead-lookup removal recorded only a rebuild, while the
