@@ -71,13 +71,13 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
 - [QML extraction](QML_EXTRACTION_PLAN.md) - COMPLETE. All 25 pure-core
   extraction units executed and merged; the doc is kept as the ledger of record.
 - [Floating-panel parity](floating-panel-parity-plan.md) - the approved
-  stable-surface migration. A per-view `floatingness` transition will move
+  stable-surface migration. FP-1, the output-edge maximum reservation
+  authority, is implemented. A per-view `floatingness` transition will move
   presentation inside fixed QWindow, trigger, resting applet measurements and
   primary-axis span, and reservation geometry. Internal content may translate
-  with the visible background but must not refit or resize. The output-edge
-  reservation coordinator lands first; internal rendering, Fitts input, popup
-  anchoring, and direct window-touch acceptance follow as dependency-ordered
-  PRs.
+  with the visible background but must not refit or resize. Stable canvas,
+  internal rendering, Fitts input, popup anchoring, and direct window-touch
+  acceptance follow as dependency-ordered PRs.
 - [Panel issues](panel-issues-plan.md) - panel-mode (behaveAsPlasmaPanel)
   defects: the floating-gap geometry and systray popup anchor now route through
   the floating-panel parity plan; the edit-mode tooltip click-through fix

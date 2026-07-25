@@ -107,12 +107,12 @@ STATE via D-Bus/geometry where possible; pixels only where pixels are the thing.
 Direction corrected 2026-07-24. The orchestrator and dependency rules in
 `floating-panel-parity-plan.md` supersede Job A's old real-offset target.
 
-- **Job A - panel geometry (issues 1 + 2), isolated worktrees.** Land FP-1
-  (the output-edge maximum reservation authority), then FP-2 (the stable canvas
-  and transition controller), FP-3 (internal presentation, input, effects, and
-  popup ownership), and FP-4 (the stable window-touch trigger and end-to-end
-  acceptance). Verify the nested vehicle on all four edges and retain final
-  desk checks for feel.
+- **Job A - panel geometry (issues 1 + 2), isolated worktrees.** FP-1
+  (the output-edge maximum reservation authority) is implemented. Land FP-2
+  (the stable canvas and transition controller), FP-3 (internal presentation,
+  input, effects, and popup ownership), and FP-4 (the stable window-touch
+  trigger and end-to-end acceptance). Verify the nested vehicle on all four
+  edges and retain final desk checks for feel.
 - **Job B - edit-mode click-through (issue 3), Opus worktree.** Independent
   (ConfigOverlay/CanvasConfiguration). Fix + click-through guard.
 - **Job C - panel test MATRIX (issue 4), Opus worktree, SEQUENCED AFTER A+B

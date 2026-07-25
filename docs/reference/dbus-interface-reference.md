@@ -70,11 +70,30 @@ true with `isOffScreen`), what the compositor was told to reserve.
 call dockSystemData                    # s: compact schema-versioned JSON object
 ```
 
-Top level: `schemaVersion` (currently 3), `snapshotSequence` (decimal string,
+Top level: `schemaVersion` (currently 4), `snapshotSequence` (decimal string,
 process-local monotonic call identity), `globalConfigureAppletsMode`,
-`stacking`, and `views`. The complete view list is captured synchronously and
-serialized in ascending `persistentDockId` order, so repeated snapshots do not
-inherit `QHash` traversal order.
+`stacking`, `reservationStateGeneration` (decimal string),
+`reservationGroups`, and `views`. The complete view and reservation graph is
+captured synchronously. Views are serialized in ascending `persistentDockId`
+order and reservation groups in output-id/edge order, so repeated snapshots
+do not inherit container traversal order.
+
+Each `reservationGroups` record is one active output-edge authority:
+`outputId`, `edge`, `generation` (decimal string), `publishedDepth`,
+`contributorDockIds`, `memberCount`, `geometry`, `windowGeometry`,
+`layerShellPresent`, `layerShellAnchors`, `layerShellMargins`,
+`layerShellExclusiveEdge`, `layerShellExclusiveZone`, and `publisher`.
+Contributors are persistent dock ids in ascending order. `publishedDepth` is
+their maximum contribution, never their sum. `geometry` is the requested
+full-edge reservation rectangle; `windowGeometry` is the compositor-sized
+transparent publisher. The publisher accepts no input or focus and is not a
+visual or activation surface.
+
+`reservationStateGeneration` advances only after the coordinator has staged
+and committed every output-edge projection affected by one update. Each
+changed group's `generation` receives that value. A failed move retains the
+previous complete graph. An empty `reservationGroups` array at a newer
+generation is the observable last-member teardown state.
 
 Per dock:
 
@@ -115,7 +134,11 @@ Per dock:
   `strutsThickness`, `publishedStruts`, `layerShellPresent`,
   `layerShellAnchors`, `layerShellMargins`, `layerShellExclusiveEdge`, and
   `layerShellExclusiveZone`, plus `reservationSurfacePresent`,
-  `reservationGeometry`, `reservationWindowGeometry`,
+  `reservationOutputId`, `reservationEdge`,
+  `reservationContributionDepth`, `reservationPublishedDepth`,
+  `reservationGroupMemberCount`, `reservationGroupGeneration`,
+  `reservationContributorDockIds`, `reservationGeometry`,
+  `reservationWindowGeometry`,
   `reservationLayerShellAnchors`, `reservationLayerShellMargins`,
   `reservationLayerShellExclusiveEdge`, and
   `reservationLayerShellExclusiveZone`. Every rectangle is `[x,y,w,h]` in
@@ -128,8 +151,14 @@ Per dock:
   Positioner's solved layer-surface rectangle. The layer-shell fields report
   the request actually attached to the visual QWindow: anchor names, margins
   in left/top/right/bottom order, no exclusive edge, and zone -1. The
-  reservation fields report the separate transparent surface that publishes
-  the occupied edge span and positive scalar zone.
+  reservation fields report membership in the coordinator-owned transparent
+  output-edge publisher. They repeat the group identity, this dock's requested
+  depth, the selected maximum, canonical contributors, publisher geometry,
+  generation, and applied layer-shell state so the atomic snapshot can reject
+  any disagreement. A view with no active contribution reports
+  `reservationSurfacePresent: false`, null scalar reservation fields, empty
+  contributor and layer-anchor arrays, empty `publishedStruts` and reservation
+  rectangles, and a null `objects.reservationPublisher`.
   Missing attached state reports `layerShellPresent: false` with null edge and
   zone, rather than a plausible placement.
 - Runtime state: `visibilityMode`, `isHidden`, `inStartup`, `isOffScreen`,
@@ -144,7 +173,9 @@ Per dock:
   while the top-level global toggle is true.
 - `objects`: opaque `object-N` identities for `view`, `containment`,
   `configuration`, `layout`, `layoutController`, `geometryController`,
-  `editController`, and `configWindow`. Null means that authority is not live.
+  `editController`, `configWindow`, and `reservationPublisher`. Every
+  contributing member of one output-edge group reports the same reservation
+  publisher token. Null means that authority is not live.
   The configuration authority is required and its absence is logged as a
   defect; the configuration window is legitimately absent while closed, and
   QML controllers may be absent during startup or teardown. Tokens remain
@@ -154,9 +185,11 @@ Per dock:
 `stacking.available` is permanently false because inward same-edge stacking is
 not a supported placement model. Multiple partial-length views are intended to
 share an edge only when their stable primary-axis spans do not overlap. The
-current runtime does not yet reject overlap or aggregate same-edge exclusive
-zones, so consumers must not treat `available=false` as validation success. Do
-not interpret canonical `views` array order as physical stack order.
+current runtime does not yet reject overlap. The reservation coordinator does
+aggregate same-edge exclusive zones at their maximum depth, but that is
+independent of primary-axis span validation. Consumers must not treat
+`available=false` as validation success or interpret canonical `views` array
+order as physical stack order.
 
 An internal lineage-invariant failure logs every relationship input at critical
 severity and returns an empty D-Bus string. It never returns a smaller but

@@ -80,21 +80,40 @@ Landed before or during the 2026-07-16 stabilization session:
   `editMode && universalSettings.inConfigureAppletsMode`, not the raw global
   toggle. A global rearrange session therefore does not report unrelated docks
   as configuring applets.
-- `dockSystemData() -> s` (compact JSON object, schema version 3; added by C0
+- `dockSystemData() -> s` (compact JSON object, schema version 4; added by C0
   (the atomic dock-system observability snapshot)). This is the relational
-  all-docks read. One synchronous call captures the global configuration mode
-  and every current dock, then serializes docks in ascending
-  `persistentDockId` order. `snapshotSequence` is a process-local monotonic
-  decimal string; it identifies calls, not state changes.
+  all-docks read. One synchronous call captures the global configuration mode,
+  every current dock, and every active output-edge reservation group. Docks
+  serialize in ascending `persistentDockId` order and groups in output-id/edge
+  order. `snapshotSequence` is a process-local monotonic decimal string; it
+  identifies calls, not state changes. `reservationStateGeneration` advances
+  only after a complete coordinator projection transaction.
   ```json
   {
-    "schemaVersion": 3,
+    "schemaVersion": 4,
     "snapshotSequence": "14",
     "globalConfigureAppletsMode": true,
     "stacking": {
       "available": false,
       "reason": "Inward same-edge stacking is unsupported; stable-span overlap is not yet rejected."
     },
+    "reservationStateGeneration": "53",
+    "reservationGroups": [{
+      "outputId": 2,
+      "edge": "left",
+      "generation": "53",
+      "publishedDepth": 48,
+      "contributorDockIds": [17, 21],
+      "memberCount": 2,
+      "geometry": [x, y, w, h],
+      "windowGeometry": [x, y, w, h],
+      "layerShellPresent": true,
+      "layerShellAnchors": ["top", "bottom", "left"],
+      "layerShellMargins": [left, top, right, bottom],
+      "layerShellExclusiveEdge": "left",
+      "layerShellExclusiveZone": 48,
+      "publisher": "object-27"
+    }],
     "views": [{
       "runtimeViewId": "9",
       "persistentDockId": 17,
@@ -138,6 +157,13 @@ Landed before or during the 2026-07-16 stabilization session:
       "layerShellExclusiveEdge": "none",
       "layerShellExclusiveZone": -1,
       "reservationSurfacePresent": true,
+      "reservationOutputId": 2,
+      "reservationEdge": "left",
+      "reservationContributionDepth": 40,
+      "reservationPublishedDepth": 48,
+      "reservationGroupMemberCount": 2,
+      "reservationGroupGeneration": "53",
+      "reservationContributorDockIds": [17, 21],
       "reservationGeometry": [x, y, w, h],
       "reservationWindowGeometry": [x, y, w, h],
       "reservationLayerShellAnchors": ["top", "bottom", "left"],
@@ -166,7 +192,8 @@ Landed before or during the 2026-07-16 stabilization session:
         "layoutController": "object-13",
         "geometryController": "object-14",
         "editController": "object-15",
-        "configWindow": "object-16"
+        "configWindow": "object-16",
+        "reservationPublisher": "object-27"
       }
     }]
   }
@@ -220,7 +247,9 @@ Landed before or during the 2026-07-16 stabilization session:
   The object identities name, respectively, the View window, Plasma
   containment, live KConfig property map, GenericLayout, QML layout manager,
   Positioner, containment root that owns edit state, and shared configuration
-  window. Equal tokens prove shared ownership or accidental cross-dock reuse.
+  window, and coordinator-owned reservation publisher. Equal tokens prove
+  shared ownership or accidental cross-dock reuse. Every contributor in one
+  output-edge group reports the same reservation publisher token.
   `effectiveConfigureAppletsMode` is derived from the same per-view expression
   as QML. The raw global bit appears only once at the snapshot root.
 
@@ -228,18 +257,25 @@ Landed before or during the 2026-07-16 stabilization session:
   device-pixel scaling. `windowGeometry`, `absoluteGeometry`, `screenGeometry`,
   `surfaceGeometry`, `canvasGeometry`, and `publishedStruts` use
   virtual-desktop coordinates. `surfaceGeometry` is Positioner's solved
-  layer-surface rectangle, not the masked background rectangle. Schema 3 also
+  layer-surface rectangle, not the masked background rectangle. Schema 4 also
   reports the exact visual layer-shell request state: `layerShellPresent`,
   `layerShellAnchors`, `layerShellMargins` in left/top/right/bottom order,
   `layerShellExclusiveEdge`, and `layerShellExclusiveZone`. The edge and zone
   are null only when attached layer-shell state is absent. These fields expose
   the exact visual surface, which carries zone -1 and no exclusive edge so
   KWin cannot place it inside another dock's scalar reservation band.
-  `reservationSurfacePresent`, `reservationGeometry`,
+  `reservationSurfacePresent`, `reservationOutputId`, `reservationEdge`,
+  `reservationContributionDepth`, `reservationPublishedDepth`,
+  `reservationGroupMemberCount`, `reservationGroupGeneration`,
+  `reservationContributorDockIds`, `reservationGeometry`,
   `reservationWindowGeometry`, `reservationLayerShellAnchors`,
   `reservationLayerShellMargins`, `reservationLayerShellExclusiveEdge`, and
-  `reservationLayerShellExclusiveZone` expose the separate transparent,
-  inputless surface that publishes the occupied edge footprint.
+  `reservationLayerShellExclusiveZone` expose this view's membership in the
+  separate transparent, inputless output-edge publisher. The root
+  `reservationGroups` records are authoritative. Per-view fields deliberately
+  repeat their state so collection and serialization can refuse stale
+  membership, geometry, generation, or layer-shell projection instead of
+  returning plausible partial JSON.
   `localGeometry`, `effectsRect`, `appletsLayoutGeometry`, `maskRect`,
   `inputMask`, and `appliedInputMask` use dock-window-local coordinates.
   `normalThickness`, `maximumNormalThickness`, and `strutsThickness` use the
@@ -249,9 +285,17 @@ Landed before or during the 2026-07-16 stabilization session:
   partial-length views are intended to share an output edge only when their
   stable primary-axis spans do not overlap. Latte does not assign ranks,
   accumulated insets, or inward lanes. The current runtime does not yet reject
-  an overlap or aggregate same-edge exclusive zones, so this object may
-  accompany overlapping view geometry. Canonical array order is serialization
-  order only and must never be treated as layer-shell stack order.
+  an overlap. Same-edge positive zones are aggregated independently of
+  primary-axis placement: the coordinator publishes one maximum depth for the
+  output edge, never a sum. Canonical array order is serialization order only
+  and must never be treated as layer-shell stack order.
+
+  Every reservation contributor belongs to exactly one group keyed by
+  persistent Latte output identity and edge. Moving a dock stages the old and
+  new projections before committing either. Invalid publication state makes
+  `dockSystemData()` return an empty string after logging the mismatch. An
+  empty `reservationGroups` array at a newer `reservationStateGeneration`
+  proves last-member teardown without retaining an orphan record.
 - `viewAppletsData(u containmentId) -> s` (JSON array, in visual order).
   Per applet: id, plugin, index in layout, geometry within the view,
   expanded state, inScheduledDestruction, lockedZoom, colorizingBlocked,

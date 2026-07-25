@@ -4450,10 +4450,10 @@ prerequisites in the phases above are done.
       treating the typed negative capability as validation success.
       Commits: 707d1778a, 313eedba0
 - [x] Fix D160 (same-edge maximum reservation depth was described as
-      implemented). Assign the intended maximum-depth policy to a missing
-      output-edge reservation aggregator and keep the current accumulating
-      positive zones visible as a beta blocker.
-      Commits: 9dcf27dd8
+      implemented). First expose the missing output-edge reservation
+      aggregator and accumulating positive zones as a beta blocker, then use
+      FP-1 to replace the independent publishers with that coordinator.
+      Commits: 9dcf27dd8, 7df41d844, c02b49121, 2751c3a23
 - [x] Fix D161 (Layouts submenu sizing test omitted painted control columns).
       Bound the exact production size hint against its label, radio, and
       height-derived icon widths, including odd style metrics.
@@ -4514,6 +4514,32 @@ prerequisites in the phases above are done.
       loop selection before `QGuiApplication`, and recognize view
       constructions independently of local variable names.
       Commits: 6f6c33d9a
+- [x] Fix D175 (reservation moves committed policy before publication
+      succeeded). Stage every affected output-edge projection against a copied
+      ledger and commit membership, publishers, and generation together.
+      Commits: 2751c3a23
+- [x] Fix D176 (dock-system observability omitted reservation group ownership).
+      Raise `dockSystemData` to schema 4 with canonical coordinator groups,
+      contributor ids, maximum depth, publisher state, and transaction
+      generation.
+      Commits: b8f2420f7
+- [x] Fix D177 (reservation replay could skip output migration and orphan
+      cleanup). Require exactly two nested outputs, move the contribution
+      unconditionally, restart, remove both members, and reject stale groups.
+      Commits: c6c98ba82, 00d611901
+- [x] Fix D178 (reservation validation assumed the compositor kept requested
+      window size). Validate requested geometry and applied layer-shell policy
+      without requiring KWin's mapped publisher to keep the requested
+      primary-axis size.
+      Commits: 3b312e739
+- [x] Fix D179 (cross-output staging validated a lagging QWindow screen).
+      Validate LayerShellQt's explicit output assignment during synchronous
+      staging.
+      Commits: 6f89f7614
+- [x] Fix D180 (reservation snapshot validation accepted divergent mirrored
+      fields). Compare every group projection field with every contributor and
+      reject all reservation residue on views without membership.
+      Commits: acfea9cd9, ae4e85d75
 - [ ] Fix D172 (floating panel attachment moves the surface and reservation
       instead of presentation). Execute
       `docs/tracking/floating-panel-parity-plan.md`: one stable per-view canvas,
@@ -4523,11 +4549,13 @@ prerequisites in the phases above are done.
       drag/cancel/maximize coverage. Internal content may translate with the
       visual background but must not refit or resize.
       Commits:
-- [ ] Complete FP-1 (the output-edge maximum reservation authority). Replace
+- [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
       per-view visual or activation geometry.
-      Commits:
+      Commits: 7df41d844, c02b49121, 286252a07, 2751c3a23, b8f2420f7,
+      3b312e739, 6f89f7614, c6c98ba82, acfea9cd9, 00d611901, cacc21c07,
+      ae4e85d75
 - [ ] Complete FP-2 (the stable canvas and transition controller).
       Commits:
 - [ ] Complete FP-3 (internal presentation, input, effects, and popup

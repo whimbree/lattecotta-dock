@@ -3,6 +3,37 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-24.
 
+## 2026-07-24: FP-1 owns one maximum-depth reservation per output edge
+
+FP-1 (the output-edge maximum reservation authority) is implemented on
+`feat/floating-reservation-coordinator-integration`. A Corona-owned
+coordinator groups eligible contributions by persistent Latte output identity
+and edge. Each group publishes one positive layer-shell exclusive zone at its
+maximum contribution, never a sum. Visual dock windows remain independent
+zone -1 surfaces. This is reservation aggregation, not inward stacking and not
+activation-region merging.
+
+Membership updates use a copied ledger. Every old and new projection is staged
+before the committed ledger, publishers, and generation change. A failed
+projection retains the previous complete graph. Destruction removes ownership
+synchronously, and last-member teardown produces an empty group list at a
+newer generation.
+
+`dockSystemData` schema 4 exposes the coordinator state generation, canonical
+groups, contributors, maximum depth, publisher geometry, applied layer-shell
+state, and shared publisher identity. Per-view membership repeats the same
+authority for fail-closed whole-graph validation. The mandatory two-output
+nested replay observes one shared same-edge publisher, migrates a member from
+output 13 to output 14, restarts, removes both selected contributions, and
+returns to an orphan-free empty group state.
+
+Cold review found and drove D175 through D180: non-atomic migration,
+group-level observability missing from schema 3, optional cross-output
+coverage, compositor-sized publisher rejection, lagging QWindow output
+validation, and incomplete mirrored-field validation. The transaction model
+itself passed review. The corrected code/test rereview and canonical gate are
+the remaining FP-1 merge prerequisites.
+
 ## 2026-07-24: stable-surface floating-panel parity approved
 
 Option 1 is the accepted replacement for the physical floating-gap transition.
@@ -10,9 +41,8 @@ The source-verified Plasma 6.7.3 model keeps a stable edge-anchored QWindow and
 fixed exclusive thickness while one qreal `floatingness` moves the visual
 background, mask, input bridge, shadows, corners, and popup spacing inside the
 surface. Lattecotta retains its separate reservation transport. FP-1 (the
-output-edge maximum reservation authority) will move ordinary ownership to one
-output-identity-and-edge maximum-depth coordinator; that coordinator is not
-implemented on this documentation branch.
+output-edge maximum reservation authority) moves ordinary ownership to one
+output-identity-and-edge maximum-depth coordinator as described above.
 
 The invariant and four dependency-ordered slices are recorded in
 `docs/reference/plasma-floating-panel-parity.md` and
@@ -217,11 +247,11 @@ The placement direction was also clarified. Lattecotta does not provide inward
 same-edge dock stacking. Multiple partial-length docks or panels may share one
 output edge when their stable primary-axis spans do not overlap. The intended
 reservation depth is the maximum required depth, not a sum. Neither invariant
-is enforced yet: stable overlap is not rejected, and each Always Visible view
-currently publishes an independent positive exclusive zone that KWin may
-accumulate. A future output-edge validator and reservation aggregator must
-close both gaps without creating ranks, cumulative visual insets, or inward
-lanes.
+was enforced in that branch: stable overlap was not rejected, and each Always
+Visible view published an independent positive exclusive zone that KWin could
+accumulate. FP-1 now closes the reservation gap. A future output-edge span
+validator must close the overlap gap without creating ranks, cumulative visual
+insets, or inward lanes.
 
 This is a deliberate extension of OG Latte, not a claim that its ordinary UI
 supported the workflow. Upstream `GenericLayout::freeEdges()` removed an edge
@@ -239,10 +269,11 @@ claimed an unenforced overlap invariant) is fixed by `707d1778a`: the runtime
 and public D-Bus references now state that stable overlap is not yet rejected.
 D160 (same-edge maximum reservation depth was described as implemented) is
 fixed by `9dcf27dd8`: maximum depth remains the intended policy, but the record
-now assigns it to a missing reservation aggregator because current positive
-zones can accumulate in KWin. D161 (Layouts submenu sizing test omitted painted
-control columns) is fixed by `81fbf1ed3`, which requires the production size
-hint to contain the label, radio, and icon slots.
+assigned it to the then-missing reservation aggregator because positive zones
+could accumulate in KWin. FP-1 now implements that aggregator. D161 (Layouts
+submenu sizing test omitted painted control columns) is fixed by `81fbf1ed3`,
+which requires the production size hint to contain the label, radio, and icon
+slots.
 
 The focused rereview found two remaining assertion gaps. Commit `313eedba0`
 pins the complete D159 public diagnostic instead of accepting any nonempty
