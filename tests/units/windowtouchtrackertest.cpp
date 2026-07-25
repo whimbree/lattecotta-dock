@@ -12,6 +12,7 @@
 #include <QRegularExpression>
 #include <QSignalSpy>
 #include <QTimer>
+#include <QVariant>
 #include <QtTest>
 
 #include <utility>
@@ -34,10 +35,10 @@ public:
     };
 
     struct Row {
-        bool isWindow{true};
-        bool hidden{false};
-        bool minimized{false};
-        QRect geometry;
+        QVariant isWindow{true};
+        QVariant hidden{false};
+        QVariant minimized{false};
+        QVariant geometry{QRect{}};
     };
 
     explicit WindowModel(QObject *parent = nullptr)
@@ -177,6 +178,7 @@ class WindowTouchTrackerTest : public QObject
 
 private Q_SLOTS:
     void followsRowsResetRemovalAndModelDestruction();
+    void skipsNonWindowRowsBeforeWindowRoleValidation();
     void followsStableTriggerGeometry();
     void refusesRoleNameDrift();
     void fixedDeadlineCannotStarveUnderSustainedChanges();
@@ -222,6 +224,44 @@ void WindowTouchTrackerTest::followsRowsResetRemovalAndModelDestruction()
     QCOMPARE(tracker.geometryRoleTypeName(), QString{});
     QCOMPARE(transition.touchingWindowCount(), 0);
     QCOMPARE(transition.target(), FloatingTransition::Target::Floated);
+}
+
+void WindowTouchTrackerTest::
+    skipsNonWindowRowsBeforeWindowRoleValidation()
+{
+    FloatingTransition transition;
+    transition.setAnimationDuration(0);
+    QVERIFY(transition.configureGeometry(geometry()));
+
+    WindowTouchTracker tracker(&transition);
+    WindowModel model;
+    model.append(WindowModel::Row{
+        .isWindow = false,
+        .hidden = QStringLiteral("not a window role"),
+        .minimized = 19,
+        .geometry = QStringLiteral("not a QRect"),
+    });
+    model.append(touchingRow(transition));
+    tracker.setModel(&model);
+
+    QTRY_COMPARE_WITH_TIMEOUT(tracker.touchingWindowCount(), 1, 100);
+    QCOMPARE(tracker.geometryRoleTypeName(), QStringLiteral("QRect"));
+
+    QTest::ignoreMessage(
+        QtCriticalMsg,
+        QRegularExpression(
+            "WindowTouchTracker requires bool role \"IsWindow\" at row 0.*"));
+    model.resetRows({
+        WindowModel::Row{
+            .isWindow = QStringLiteral("not a bool"),
+            .hidden = false,
+            .minimized = false,
+            .geometry = transition.stableTriggerGeometry(),
+        },
+        touchingRow(transition),
+    });
+    QTRY_COMPARE_WITH_TIMEOUT(tracker.touchingWindowCount(), 0, 100);
+    QCOMPARE(tracker.geometryRoleTypeName(), QString{});
 }
 
 void WindowTouchTrackerTest::followsStableTriggerGeometry()
