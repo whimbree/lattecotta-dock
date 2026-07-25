@@ -4354,8 +4354,8 @@ prerequisites in the phases above are done.
       span) keeps shadow paint out of stable length. D170 (the first D169
       correction weakened end-hover shadow bounds) preserves the stable solid
       and clips external paint that cannot fit around it.
-      Commits: 1228ecf8c, d19a1805c, 921bf089b, a0ab006f8, 8c2ed6e0d,
-      1715670f0, 7b3d91b3d
+      Commits: 1228ecf8c, d19a1805c, 921bf089b, a0ab006f8, ae10800dc,
+      c7c13cf14, f0d8578f3
 - [x] Fix D141 (bounded background movement shifted the applet row). Separate
       the stable centered content offset from bounded parabolic background
       presentation and reject restoration of the feedback expression.
@@ -4364,12 +4364,12 @@ prerequisites in the phases above are done.
       budget). The first correction incorrectly subtracted shadows. D169
       restores the stable applet span to solid background length after internal
       padding only.
-      Commits: 921bf089b, 8c2ed6e0d
+      Commits: 921bf089b, ae10800dc
 - [x] Fix D143 (dock-mode Justify charged shadow paint against configured
       length). The first correction incorrectly shortened the configured solid.
       D169 routes every alignment through the output-bounded solid fit and
       handles asymmetric shadows only in presentation placement.
-      Commits: a0ab006f8, 8c2ed6e0d
+      Commits: a0ab006f8, ae10800dc
 - [x] Fix D144 (aspect-scaled background shadow clipped side docks). Replace
       the aspect-dependent Kirigami render node with one fixed-pixel effect,
       share its padding metric with placement, and pin both end-hover geometry
@@ -4463,7 +4463,7 @@ prerequisites in the phases above are done.
       instead of laying endpoint applets under length-axis shadows. D169
       corrects that solid to the complete configured span rather than a
       shadow-reduced derivative.
-      Commits: cf50d7845, 4edcd203d, 6cd8ff860, 3feb54939, 8c2ed6e0d
+      Commits: cf50d7845, 4edcd203d, 6cd8ff860, 3feb54939, ae10800dc
 - [x] Fix D163 (native background shadows retained Kirigami alpha
       compensation). Feed the theme shadow color directly to the Qt native
       effect and reject restoration of the obsolete renderer workaround.
@@ -4475,7 +4475,7 @@ prerequisites in the phases above are done.
 - [x] Fix D165 (the first D162 correction assumed equal end shadows). Center
       the stable solid and compensate the outer visual by half the independent
       head-minus-tail margin difference.
-      Commits: 6cd8ff860, 8c2ed6e0d
+      Commits: 6cd8ff860, ae10800dc
 - [x] Fix D166 (the first D162 origin mutation produced invalid QML). Mutate
       the authoritative property with viable old-origin and equal-shadow
       regressions.
@@ -4487,33 +4487,55 @@ prerequisites in the phases above are done.
       evidence). Rewrite the commit during pre-merge history cleanup to name
       its focused source, QML, image-comparison, scene-probe, and live-geometry
       evidence.
-      Commits: 75862c266
+      Commits: c9ed2de4b
 - [x] Fix D169 (panel shadows consumed the stable panel and applet span).
       Treat the configured solid and its internal padding as stable geometry.
       Keep shadow paint out of panel length, applet placement, and autosize,
       with asymmetric compensation confined to outer presentation placement.
-      Commits: 8c2ed6e0d, 1715670f0, 7b3d91b3d
+      Commits: ae10800dc, c7c13cf14, f0d8578f3
 - [x] Fix D170 (the first D169 correction weakened end-hover shadow bounds).
       Make the stable solid the only placement authority for Center and
       Justify. Clip external paint that cannot fit around it, and pin shadow
       toggles, asymmetric margins, end clamps, and full canvases in the
       behavioral placement core. Pin the horizontal left/right and vertical
       top/bottom mapping at the production QML boundary.
-      Commits: 1715670f0, 7b3d91b3d
+      Commits: c7c13cf14, f0d8578f3
 - [x] Fix D171 (centered shadow offsets raised the QML warning ratchet). Cache
       the injected alignment once, name the document-root offset explicitly,
       and lower the touched-file baseline from 181 to 176 warnings.
-      Commits: c590d33f8
+      Commits: 1221d8919
 - [x] Fix D173 (theme-aware icon render test deadlocked during final view
       teardown). Share one QML engine across every render case and use the
       synchronous basic render loop for the offscreen software test. Pin both
       lifecycle rules with controlled source mutations.
-      Commits: 2d6d1059c (pre-merge; post-merge hash pending)
+      Commits: 879eb35c8
 - [x] Fix D174 (theme-aware icon lifecycle guard ignored ordering and target
       scope). Parse `main()` and the exact CTest target block, require render
       loop selection before `QGuiApplication`, and recognize view
       constructions independently of local variable names.
-      Commits: current commit (post-merge hash pending)
+      Commits: 6f6c33d9a
+- [ ] Fix D172 (floating panel attachment moves the surface and reservation
+      instead of presentation). Execute
+      `docs/tracking/floating-panel-parity-plan.md`: one stable per-view canvas,
+      qreal internal `floatingness`, stable trigger, resting applet measurements
+      and primary-axis span, fixed normal reservation depth, exact Fitts input
+      bridge, visible-mask popup anchor, and direct nested-KWin
+      drag/cancel/maximize coverage. Internal content may translate with the
+      visual background but must not refit or resize.
+      Commits:
+- [ ] Complete FP-1 (the output-edge maximum reservation authority). Replace
+      independent positive same-edge zones with one output-identity-and-edge
+      coordinator that publishes the maximum eligible depth without changing
+      per-view visual or activation geometry.
+      Commits:
+- [ ] Complete FP-2 (the stable canvas and transition controller).
+      Commits:
+- [ ] Complete FP-3 (internal presentation, input, effects, and popup
+      ownership).
+      Commits:
+- [ ] Complete FP-4 (the stable window-touch trigger and end-to-end
+      acceptance).
+      Commits:
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

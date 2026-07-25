@@ -70,10 +70,19 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   dead-code removals landed; the sign-off-gated proposal sequence is pending.
 - [QML extraction](QML_EXTRACTION_PLAN.md) - COMPLETE. All 25 pure-core
   extraction units executed and merged; the doc is kept as the ledger of record.
+- [Floating-panel parity](floating-panel-parity-plan.md) - the approved
+  stable-surface migration. A per-view `floatingness` transition will move
+  presentation inside fixed QWindow, trigger, resting applet measurements and
+  primary-axis span, and reservation geometry. Internal content may translate
+  with the visible background but must not refit or resize. The output-edge
+  reservation coordinator lands first; internal rendering, Fitts input, popup
+  anchoring, and direct window-touch acceptance follow as dependency-ordered
+  PRs.
 - [Panel issues](panel-issues-plan.md) - panel-mode (behaveAsPlasmaPanel)
-  defects: the floating-gap geometry, the systray popup anchor, the edit-mode
-  tooltip that eats the click, and four-edge test coverage. Catalogued with
-  root-cause groundings; fixes pending.
+  defects: the floating-gap geometry and systray popup anchor now route through
+  the floating-panel parity plan; the edit-mode tooltip click-through fix
+  landed with one sibling ruler hint still owed; four-edge coverage remains
+  part of the parity acceptance matrix.
 
 ## Registries and state
 

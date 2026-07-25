@@ -1562,7 +1562,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 ### D142 - Stable autosize charged shadow paint against the applet budget
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
   (`921bf089b`, corrected by D169 (panel shadows consumed the stable panel and
-  applet span) at `8c2ed6e0d`).
+  applet span) at `ae10800dc`).
 - FOUND: 2026-07-22, independent review of PR #116 after the D140 chrome fit.
 - SYMPTOM: enabling a background shadow could select smaller resting icons even
   though the solid panel and its available applet span had not changed.
@@ -1576,7 +1576,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D143 - Dock-mode Justify charged shadow paint against configured length
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`a0ab006f8`, corrected by D169 at `8c2ed6e0d`).
+  (`a0ab006f8`, corrected by D169 at `ae10800dc`).
 - FOUND: 2026-07-22, independent review of PR #116 after the D140 chrome fit.
 - SYMPTOM: enabling 42 px end shadows shortened an 84 percent Justify panel by
   84 px, even though its configured length did not change.
@@ -1920,7 +1920,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
   (`cf50d7845`, cycle correction `4edcd203d`, asymmetric-margin correction
   `6cd8ff860`, mutation correction `3feb54939`, shadow-ownership correction
-  `8c2ed6e0d`).
+  `ae10800dc`).
 - FOUND: 2026-07-24, live top-dock rendering at 22 px icon size.
 - SYMPTOM: the first and last applets extended past the solid rounded
   background, so the ends looked clipped and the shadow resembled a second
@@ -1971,7 +1971,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D165 - The first D162 correction assumed equal end shadows
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`6cd8ff860`, corrected by D169 at `8c2ed6e0d`).
+  (`6cd8ff860`, corrected by D169 at `ae10800dc`).
 - FOUND: 2026-07-24, mandatory cold review of the thin-dock correction.
 - SYMPTOM: themes with unequal tail and head shadow margins could displace the
   applet row relative to the solid rounded background.
@@ -2012,8 +2012,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   together.
 
 ### D168 - Thin-dock tracking commit omitted explicit verification evidence
-- STATUS: FIXED locally during PR #116 history cleanup (`75862c266`; final
-  post-merge hash pending).
+- STATUS: FIXED IN PR #116 (`c9ed2de4b`).
 - FOUND: 2026-07-24, mandatory cold review of commit `5318aec02`.
 - SYMPTOM: the commit body described what the records contained but did not
   state the focused checks that had passed.
@@ -2022,13 +2021,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FIX: preserve the commit sequence and rewrite the body to name the focused
   source guard, QML compile and lint gates, image-comparison helper,
   scene-probe gate, and stable live coordinates.
-- EVIDENCE: `git show --format=fuller 75862c266` carries the explicit
+- EVIDENCE: `git show --format=fuller c9ed2de4b` carries the explicit
   verification paragraph while retaining the original tree.
 
 ### D169 - Panel shadows consumed the stable panel and applet span
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`8c2ed6e0d`, end-hover corrections `1715670f0` and `7b3d91b3d`);
-  real-layout visual
+- STATUS: FIXED IN PR #116 (`ae10800dc`, end-hover corrections `c7c13cf14`
+  and `f0d8578f3`); real-layout visual
   acceptance is pending.
 - FOUND: 2026-07-24, live top-panel shadow toggle after the thin-background
   correction.
@@ -2051,13 +2049,13 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   x=124 and x=1283..1316. Focused C++ geometry and source-contract tests, all
   130 QML compile probes, and all 245 QML interaction cases pass. The canonical
   gate passed all 105 CTest entries, scene probes, nested ASan/UBSan replay, and
-  the output matrix before the D170 stable-solid correction. Its corrected
-  full-gate rerun remains pending.
+  the output matrix before the D170 stable-solid correction. The final
+  corrected gate passes the same complete set at merged PR #116 head
+  `6f6c33d9a`.
 
 ### D170 - The first D169 correction weakened end-hover shadow bounds
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`1715670f0`, stable-solid correction `7b3d91b3d`); real-layout visual
-  acceptance is pending.
+- STATUS: FIXED IN PR #116 (`c7c13cf14`, stable-solid correction
+  `f0d8578f3`); real-layout visual acceptance is pending.
 - FOUND: 2026-07-24, correction review against D140 (zoomed side-dock chrome
   clipped at both ends).
 - SYMPTOM: the first shadow-independent solid fix used solid length for every
@@ -2082,8 +2080,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   interaction passes 245 of 245 cases.
 
 ### D171 - Centered shadow offsets raised the QML warning ratchet
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`c590d33f8`).
+- STATUS: FIXED IN PR #116 (`1221d8919`).
 - FOUND: 2026-07-24, canonical gate after the D169 shadow-ownership correction.
 - SYMPTOM: all 104 other CTest entries passed, but `qmllintgate` reported that
   `MultiLayered.qml` increased from 181 to 182 curated warnings.
@@ -2098,8 +2095,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   The canonical gate passes all 105 CTest entries.
 
 ### D173 - Theme-aware icon render test deadlocked during final view teardown
-- STATUS: FIXED locally in PR #116 (`2d6d1059c`; final post-merge hash
-  pending).
+- STATUS: FIXED IN PR #116 (`879eb35c8`).
 - FOUND: 2026-07-24, PR #116 canonical fast gate.
 - SYMPTOM: `themeawareicontest` reached the end of
   `nonStandardSlotPaintsAtComputedSize()` after its size and pixel assertions,
@@ -2126,7 +2122,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   scene probes, native package checks, and the fixture matrix.
 
 ### D174 - Theme-aware icon lifecycle guard ignored ordering and target scope
-- STATUS: FIXED locally in PR #116 (final post-merge hash pending).
+- STATUS: FIXED IN PR #116 (`6f6c33d9a`).
 - FOUND: 2026-07-24, independent review of the D173 (theme-aware icon render
   test deadlocked during final view teardown) correction.
 - SYMPTOM: moving `QSG_RENDER_LOOP=basic` after `QGuiApplication`, assigning
@@ -2144,6 +2140,35 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   replace one shared-engine view with a differently named default-engine view,
   move direct render-loop selection after `QGuiApplication`, and move the
   CTest setting to another target; all three fail the corrected matcher.
+
+### D172 - Floating panel attachment moves the surface and reservation instead of presentation
+- STATUS: OPEN. Option 1, the stable per-view surface with internal visual
+  transition, was approved 2026-07-24. Execution is tracked in
+  `floating-panel-parity-plan.md`.
+- FOUND: 2026-07-24, Plasma 6.7.3 parity investigation after live floating
+  panel maximize, radius, shadow, and animation regressions.
+- SYMPTOM: a floating Always Visible panel physically moves toward the screen
+  edge and changes its reserved thickness when a tracked window maximizes.
+  The result can resize or reposition clients twice, retain presentation
+  corners at the wrong state, and reverse with geometry-dependent jitter.
+- ROOT: presentation, layer-surface placement, trigger geometry, and
+  reservation share mutable state. `VisibilityManager.qml` animates
+  `Positioner.slideOffset`; `PositionerGeometry` subtracts it from the real edge
+  margin; the layer-shell path applies that margin; and
+  `BindingsExternal.qml` changes `strutsThickness`. The existing window tracker
+  intersects a view rectangle that can move during the transition, while the
+  generic window-change path is coalesced for 150 ms.
+- REQUIRED: keep one per-view QWindow envelope, layer-shell margin, resting
+  applet measurements and primary-axis span, trigger, and normal reservation
+  depth fixed. Animate one qreal `floatingness` inside the surface. Internal
+  content may translate with the visible background, but it must not refit or
+  resize. Derive the visible mask, Fitts input bridge, shadow, corners, and
+  popup anchor from the internal presentation. Route ordinary reservation
+  through one maximum-depth coordinator per Latte output identity and edge.
+- EVIDENCE: Plasma 6.7.3 `PanelView` keeps a stable padded surface and fixed
+  exclusive zone while its QML background follows `floatingness`. The source
+  comparison and exact Lattecotta mismatch are recorded in
+  `../reference/plasma-floating-panel-parity.md`.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
