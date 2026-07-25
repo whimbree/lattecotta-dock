@@ -2125,6 +2125,26 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   corrected-head canonical fast gate passes all 105 CTest entries, QML lint,
   scene probes, native package checks, and the fixture matrix.
 
+### D174 - Theme-aware icon lifecycle guard ignored ordering and target scope
+- STATUS: FIXED locally in PR #116 (final post-merge hash pending).
+- FOUND: 2026-07-24, independent review of the D173 (theme-aware icon render
+  test deadlocked during final view teardown) correction.
+- SYMPTOM: moving `QSG_RENDER_LOOP=basic` after `QGuiApplication`, assigning
+  the CTest environment to another target, or changing a view's local variable
+  name did not test the lifecycle rule the source guard claimed to enforce.
+- ROOT: the matcher normalized both complete files and searched for fixed token
+  strings. It did not model the `main()` ordering, the
+  `themeawareicontest` CMake block, or view construction as syntax independent
+  of one local name.
+- FIX: extract and inspect `main()`, require the direct render-loop selection
+  before application construction, isolate the target's CMake section before
+  checking its environment, and match every local `QQuickView` construction
+  with variable-name-independent regular expressions.
+- EVIDENCE: `sourceguardtest` passes in 0.04 seconds. Controlled mutations
+  replace one shared-engine view with a differently named default-engine view,
+  move direct render-loop selection after `QGuiApplication`, and move the
+  CTest setting to another target; all three fail the corrected matcher.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.

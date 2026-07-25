@@ -25,6 +25,16 @@ removal of either direct or CTest basic-loop selection. The corrected-head
 canonical fast gate passes all 105 CTest entries, QML lint, scene probes,
 native package checks, and the fixture matrix.
 
+Independent review then exposed D174 (theme-aware icon lifecycle guard ignored
+ordering and target scope). The first guard searched both complete files for
+fixed tokens, so it would accept render-loop selection after
+`QGuiApplication`, a CMake setting on another test, and only the original
+`view` local name. The corrected matcher parses `main()` ordering and the exact
+CTest target block, and recognizes every local `QQuickView` construction
+independently of its variable name. `sourceguardtest` passes in 0.04 seconds;
+late direct selection, wrong-target CMake selection, and a differently named
+default-engine view all fail as controlled mutations.
+
 ## 2026-07-24: asymmetric shadows no longer move stable dock content
 
 The mandatory cold review of the six-commit PR #116 tail returned MERGE AFTER
