@@ -4599,6 +4599,11 @@ prerequisites in the phases above are done.
       at fractional progress with unchanged geometry and publication
       revisions.
       Commits: PENDING INTEGRATION REBASE
+- [x] Fix D192 (zero-gap panels exposed conflicting floating eligibility).
+      Expose the C++ positive-gap classification as the notified QML
+      configuration authority and pin the legal zero-gap boundary in nested
+      KWin.
+      Commits: PENDING INTEGRATION REBASE
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing

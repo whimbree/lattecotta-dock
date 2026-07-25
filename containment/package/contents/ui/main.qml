@@ -144,10 +144,10 @@ ContainmentItem {
     property bool appletIsDragged: root.dragOverlay && root.dragOverlay.pressed
     property bool hideThickScreenGap: false /*set through binding*/
     property bool hideLengthScreenGaps: false /*set through binding*/
-    readonly property bool floatingTransitionEligible: behaveAsPlasmaPanel
-                                                       && screenEdgeMarginEnabled
+    readonly property bool floatingTransitionEligible: latteView
+                                                       && latteView.floatingPanelConfigured
                                                        && Plasmoid.configuration.hideFloatingGapForMaximized
-                                                       && latteView && latteView.visibility
+                                                       && latteView.visibility
                                                        && latteView.visibility.mode === LatteCore.Types.AlwaysVisible
     readonly property bool floatingGapIsAttached: floatingTransitionEligible
                                                   && hideThickScreenGap

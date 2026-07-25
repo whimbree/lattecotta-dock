@@ -66,7 +66,10 @@ mutations now use a scoped 10 ms collection delay while the harness keeps its
 cleanup started after destructive staging) and D191 (stable-canvas reversal
 storm accepted settled transitions). Cleanup now owns every mutation after the
 pristine snapshot, and every alternating storm target must be observed in its
-matching active phase at fractional progress. A fresh independent review, the
+matching active phase at fractional progress. The second review found D192
+(zero-gap panels exposed conflicting floating eligibility): the notified C++
+positive-gap classification now supplies QML eligibility, and the nested
+recipe checks the legal 0 px boundary. A fresh independent review, the
 canonical gate, and the pull request remain before merge. No real desktop
 process or surface was inspected, stopped, or restarted during this
 implementation.

@@ -349,4 +349,21 @@ wait_for_tracker_and_target true attached 0
 assert_stable_contract "rapid reversal storm"
 assert_konsole_work_area "post-storm attached"
 
+e2e_dock_stop || e2e_fail "dock did not stop before the zero-gap boundary check"
+kwriteconfig6 "${group_args[@]}" --key screenEdgeMargin 0 \
+    || e2e_fail "could not configure the legal zero-pixel floating gap"
+e2e_dock_start 90 || e2e_fail "dock did not restart for the zero-gap boundary check"
+
+read -r configured_panel eligible_panel view_type visibility_mode <<< "$(dock_field '"%s %s %s %s" % (
+    str(v["floatingPanelConfigured"]).lower(),
+    str(v["floatingPanelEligible"]).lower(),
+    v["type"],
+    v["visibilityMode"],
+)')"
+[[ "$view_type" == panel && "$visibility_mode" == alwaysVisible ]] \
+    || e2e_fail "zero-gap boundary changed the Panel/Always Visible fixture contract"
+[[ "$configured_panel" == false && "$eligible_panel" == false ]] \
+    || e2e_fail "zero-gap panel exposed divergent configured/eligible state ($configured_panel/$eligible_panel)"
+wait_for_resting_target floated 1
+
 echo "FP-2 stable canvas held view $view and its ${stable_reservation_depth}px maximum-depth reservation across qreal progress and eight rapid reversals"

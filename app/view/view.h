@@ -73,6 +73,7 @@ class View : public PlasmaQuick::ContainmentView
 
     Q_PROPERTY(bool alternativesIsShown READ alternativesIsShown NOTIFY alternativesIsShownChanged)
     Q_PROPERTY(bool behaveAsPlasmaPanel READ behaveAsPlasmaPanel WRITE setBehaveAsPlasmaPanel NOTIFY behaveAsPlasmaPanelChanged)
+    Q_PROPERTY(bool floatingPanelConfigured READ isFloatingPanel NOTIFY floatingPanelConfiguredChanged)
     Q_PROPERTY(bool byPassWM READ byPassWM WRITE setByPassWM NOTIFY byPassWMChanged)
     Q_PROPERTY(bool canRemove READ canRemove NOTIFY canRemoveChanged)
     Q_PROPERTY(bool containsDrag READ containsDrag NOTIFY containsDragChanged)
@@ -372,6 +373,7 @@ Q_SIGNALS:
     void effectsChanged();
     void extendedInterfaceChanged();
     void fontPixelSizeChanged();
+    void floatingPanelConfiguredChanged();
     void forcedShown(); //[workaround] forced shown to avoid a KWin issue that hides windows when closing activities
     void geometryChanged();
     void groupIdChanged();
