@@ -139,9 +139,10 @@ print("%s\t%s\t%d,%d %dx%d" % (primary["name"], secondary["name"], g[0], g[1], g
 
 # _mo_project_output_state <kscreen-json>: validate the two discovered outputs
 # and print the fields this helper can restore as tab-separated
-# name/enabled/rotation/scale/x/y rows. This projection builds only documented
-# kscreen-doctor setters. Full-state verification is a separate semantic
-# comparison so fields without a documented setter cannot drift silently.
+# name/enabled/rotation/scale/x/y/priority rows. This projection builds only
+# documented kscreen-doctor setters. Full-state verification is a separate
+# semantic comparison so fields without a documented setter cannot drift
+# silently.
 _mo_project_output_state() {
     local -r state="$1"
     KSCREEN_STATE="$state" python3 - "$E2E_MO_PRIMARY" "$E2E_MO_SECONDARY" <<'PY'
@@ -164,9 +165,13 @@ payload = json.loads(os.environ["KSCREEN_STATE"])
 raw_outputs = payload.get("outputs")
 if not isinstance(raw_outputs, list) or len(raw_outputs) != 2:
     raise SystemExit("expected exactly two KScreen outputs")
+if not all(isinstance(output, dict) for output in raw_outputs):
+    raise SystemExit("every KScreen output must be an object")
 outputs = {output.get("name"): output for output in raw_outputs}
 if len(outputs) != len(raw_outputs):
     raise SystemExit("KScreen output names are not unique")
+rows = []
+priorities = []
 for name in names:
     output = outputs.get(name)
     if output is None:
@@ -177,6 +182,7 @@ for name in names:
     scale = output.get("scale")
     enabled = output.get("enabled")
     pos = output.get("pos")
+    priority = output.get("priority")
     if (
         isinstance(scale, bool)
         or not isinstance(scale, (int, float))
@@ -189,10 +195,65 @@ for name in names:
         type(pos.get(axis)) is int for axis in ("x", "y")
     ):
         raise SystemExit(f"output {name!r} has invalid position")
+    if type(priority) is not int or not 1 <= priority <= 100:
+        raise SystemExit(f"output {name!r} has invalid priority {priority!r}")
     if any(character.isspace() for character in name):
         raise SystemExit(f"whitespace in output name {name!r} is unsupported")
     state = "enable" if enabled else "disable"
-    print(f"{name}\t{state}\t{rotation}\t{scale:.15g}\t{pos['x']}\t{pos['y']}")
+    priorities.append(priority)
+    rows.append(
+        f"{name}\t{state}\t{rotation}\t{scale:.15g}\t"
+        f"{pos['x']}\t{pos['y']}\t{priority}"
+    )
+if sorted(priorities) != [1, 2]:
+    raise SystemExit(
+        f"the two active outputs need continuous unique priorities, got {priorities!r}"
+    )
+print("\n".join(rows))
+PY
+}
+
+# _mo_classify_output_priorities <kscreen-json>: return 0 when the two active
+# discovered outputs already have KScreen's canonical unique priorities 1 and
+# 2, return 1 when the private vehicle needs baseline normalization, and return
+# 2 for malformed state. KScreen::Config::adjustPriorities defines enabled
+# priorities as continuous from 1; priority 0 is unassigned/disabled state.
+_mo_classify_output_priorities() {
+    local -r state="$1"
+    KSCREEN_STATE="$state" python3 - "$E2E_MO_PRIMARY" "$E2E_MO_SECONDARY" <<'PY'
+import json
+import os
+import sys
+
+try:
+    payload = json.loads(os.environ["KSCREEN_STATE"])
+    raw_outputs = payload.get("outputs")
+    if not isinstance(raw_outputs, list) or len(raw_outputs) != 2:
+        raise ValueError("expected exactly two KScreen outputs")
+    if not all(isinstance(output, dict) for output in raw_outputs):
+        raise ValueError("every KScreen output must be an object")
+    outputs = {output.get("name"): output for output in raw_outputs}
+    if len(outputs) != len(raw_outputs):
+        raise ValueError("KScreen output names are not unique")
+
+    priorities = []
+    for name in sys.argv[1:3]:
+        output = outputs.get(name)
+        if output is None:
+            raise ValueError(f"ScreenPool output {name!r} is absent from KScreen")
+        if output.get("enabled") is not True:
+            raise ValueError(
+                f"ScreenPool output {name!r} is not enabled before capture"
+            )
+        priority = output.get("priority")
+        if type(priority) is not int or not 0 <= priority <= 100:
+            raise ValueError(f"output {name!r} has invalid priority {priority!r}")
+        priorities.append(priority)
+except (KeyError, json.JSONDecodeError, ValueError) as error:
+    print(f"_mo_classify_output_priorities: {error}", file=sys.stderr)
+    raise SystemExit(2)
+
+raise SystemExit(0 if sorted(priorities) == [1, 2] else 1)
 PY
 }
 
@@ -334,9 +395,12 @@ if difference is not None:
 PY
 }
 
-# mo_capture_output_topology: print complete current kscreen-doctor JSON after
-# validating every field this helper can restore. Callers preserve the whole
-# payload so cleanup can also prove every unhandled field remained unchanged.
+# mo_capture_output_topology: establish a valid priority baseline, then print
+# complete current kscreen-doctor JSON after validating every field this helper
+# can restore. The nested backend can begin with priority 0 on active virtual
+# outputs, but the first topology write canonicalizes that state. Normalize
+# before capture so priority belongs to the reversible transaction instead of
+# becoming an impossible post-mutation restoration target.
 mo_capture_output_topology() {
     _mo_require_topology_mutation mo_capture_output_topology || return 2
     if [[ -z "${E2E_MO_PRIMARY:-}" || -z "${E2E_MO_SECONDARY:-}" ]]; then
@@ -347,6 +411,32 @@ mo_capture_output_topology() {
     if ! snapshot="$(kscreen-doctor -j)"; then
         echo "mo_capture_output_topology: kscreen-doctor could not read the nested topology" >&2
         return 1
+    fi
+
+    local priority_status=0
+    if _mo_classify_output_priorities "$snapshot"; then
+        priority_status=0
+    else
+        priority_status=$?
+    fi
+    if (( priority_status == 2 )); then
+        echo "mo_capture_output_topology: KScreen returned malformed priority state" >&2
+        return 1
+    fi
+    if (( priority_status == 1 )); then
+        # kscreen-doctor 6.7.3 parses output.<name>.priority.<uint32>.
+        # Setting primary then secondary yields the requested 1,2 ordering
+        # after Config::adjustPriorities canonicalizes each parsed setter.
+        if ! kscreen-doctor \
+            "output.${E2E_MO_PRIMARY}.priority.1" \
+            "output.${E2E_MO_SECONDARY}.priority.2" >/dev/null; then
+            echo "mo_capture_output_topology: could not normalize output priorities" >&2
+            return 1
+        fi
+        if ! snapshot="$(kscreen-doctor -j)"; then
+            echo "mo_capture_output_topology: could not read normalized priorities" >&2
+            return 1
+        fi
     fi
     if ! _mo_project_output_state "$snapshot" >/dev/null; then
         echo "mo_capture_output_topology: KScreen returned an invalid restorable state" >&2
@@ -396,8 +486,9 @@ _mo_wait_for_captured_output_topology() {
 }
 
 # mo_restore_output_topology <captured-json>: atomically restore both outputs'
-# captured enabled state, rotation, scale, and position. These are every field
-# this harness can mutate. Then prove the complete captured KScreen state is
+# captured enabled state, rotation, scale, position, and priority. These are
+# every field this harness can mutate directly or through KScreen
+# canonicalization. Then prove the complete captured KScreen state is
 # semantically unchanged, including every field without a restore setter.
 mo_restore_output_topology() {
     local -r captured="$1"
@@ -411,11 +502,11 @@ mo_restore_output_topology() {
     parsed="$(_mo_project_output_state "$captured")" || return 1
 
     local -a restore_args=()
-    local name enabled rotation scale x y
+    local name enabled rotation scale x y priority
     local restored_count=0
-    while IFS=$'\t' read -r name enabled rotation scale x y; do
+    while IFS=$'\t' read -r name enabled rotation scale x y priority; do
         if [[ -z "$name" || -z "$enabled" || -z "$rotation" || -z "$scale" \
-              || -z "$x" || -z "$y" ]]; then
+              || -z "$x" || -z "$y" || -z "$priority" ]]; then
             echo "mo_restore_output_topology: incomplete parsed output state" >&2
             return 1
         fi
@@ -424,6 +515,7 @@ mo_restore_output_topology() {
             "output.${name}.rotation.${rotation}"
             "output.${name}.scale.${scale}"
             "output.${name}.position.${x},${y}"
+            "output.${name}.priority.${priority}"
         )
         restored_count=$((restored_count + 1))
     done <<<"$parsed"
