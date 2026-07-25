@@ -1214,6 +1214,8 @@ void DbusReportsTest::dockSystemSnapshotRejectsReservationDisagreement()
             view.reservationEdge = group.edge;
             view.reservationContributionDepth =
                 depth;
+            view.publishedStruts =
+                QRect(0, 1000 - depth, 1600, depth);
             view.reservationPublishedDepth =
                 group.publishedDepth;
             view.reservationGroupMemberCount =
@@ -1296,6 +1298,9 @@ void DbusReportsTest::dockSystemSnapshotRejectsReservationDisagreement()
             Plasma::Types::TopEdge;
     });
     rejects([](auto &snapshot) {
+        snapshot.views[0].publishedStruts.setHeight(39);
+    });
+    rejects([](auto &snapshot) {
         snapshot.views[0].reservationPublishedDepth = 47;
     });
     rejects([](auto &snapshot) {
@@ -1350,6 +1355,10 @@ void DbusReportsTest::dockSystemSnapshotRejectsReservationDisagreement()
     rejectsIndependentResidue(
         [&group](auto &view) {
             view.publishedStruts = group.geometry;
+        });
+    rejectsIndependentResidue(
+        [](auto &view) {
+            view.publishedStruts = QRect(1, 2, 0, 0);
         });
     rejectsIndependentResidue(
         [](auto &view) {
