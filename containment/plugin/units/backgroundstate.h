@@ -397,6 +397,21 @@ inline constexpr qreal resolveBackgroundVisualThickness(qreal minimumThickness,
     return minimumThickness + sizeFraction * itemExcess;
 }
 
+//! A configured floating Panel keeps one stable applet layout while its
+//! presentation moves between the floated and attached endpoints. The
+//! presentation may omit a border at a primary-axis end, but that visual
+//! choice must not release the roundness clearance already budgeted around
+//! the applets. Thickness-axis edges and every non-floating view continue to
+//! follow the painted border exactly.
+[[nodiscard]] inline constexpr bool isBackgroundEdgeClearanceRequired(
+    bool visualBorderIsPresent,
+    bool edgeLiesOnPrimaryAxis,
+    bool floatingPanelIsConfigured)
+{
+    return visualBorderIsPresent
+        || (edgeLiesOnPrimaryAxis && floatingPanelIsConfigured);
+}
+
 //! inputs of one edge's background padding (MultiLayered.qml:56-125; one
 //! formula, four call sites differing only in which border/margins they
 //! read and which axis the edge lies on)

@@ -54,6 +54,35 @@ BackgroundProperties{
     hasTopBorder: hasAllBorders || ((solidBackground.enabledBorders & KSvg.FrameSvg.TopBorder) > 0)
     hasBottomBorder: hasAllBorders || ((solidBackground.enabledBorders & KSvg.FrameSvg.BottomBorder) > 0)
 
+    //! Attached floating Panels deliberately drop rounded primary-axis
+    //! borders when their alignment meets an output end. Keep those visual
+    //! borders independent from the stable clearance used by applet sizing
+    //! and popup bounds. floatingPanelConfigured is the view-owned
+    //! positive-gap Panel predicate and remains true at both presentation
+    //! endpoints.
+    readonly property bool stablePrimaryAxisLayoutClearance: !!(barLine.dockView
+                                                                 && barLine.dockView.floatingPanelConfigured)
+    readonly property bool topLayoutClearanceIsRequired:
+        backgroundStateResolver.layoutClearanceIsRequired(
+            barLine.hasTopBorder,
+            barLine.containmentRoot.isVertical,
+            barLine.stablePrimaryAxisLayoutClearance)
+    readonly property bool bottomLayoutClearanceIsRequired:
+        backgroundStateResolver.layoutClearanceIsRequired(
+            barLine.hasBottomBorder,
+            barLine.containmentRoot.isVertical,
+            barLine.stablePrimaryAxisLayoutClearance)
+    readonly property bool leftLayoutClearanceIsRequired:
+        backgroundStateResolver.layoutClearanceIsRequired(
+            barLine.hasLeftBorder,
+            barLine.containmentRoot.isHorizontal,
+            barLine.stablePrimaryAxisLayoutClearance)
+    readonly property bool rightLayoutClearanceIsRequired:
+        backgroundStateResolver.layoutClearanceIsRequired(
+            barLine.hasRightBorder,
+            barLine.containmentRoot.isHorizontal,
+            barLine.stablePrimaryAxisLayoutClearance)
+
     shadows.left: hasLeftBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? barLine.customShadowPaintMargin : shadowsSvgItem.margins.left) : 0
     shadows.right: hasRightBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? barLine.customShadowPaintMargin : shadowsSvgItem.margins.right) : 0
     shadows.top: hasTopBorder && root.behaveAsDockWithMask ? (customShadowIsEnabled ? barLine.customShadowPaintMargin : shadowsSvgItem.margins.top) : 0
@@ -71,7 +100,7 @@ BackgroundProperties{
     //! edges at the ends of the length axis (top/bottom of a vertical view,
     //! left/right of a horizontal one) carry the roundness treatment, the
     //! others take the theme padding as-is
-    paddings.top: backgroundStateResolver.edgePadding(barLine.hasTopBorder,
+    paddings.top: backgroundStateResolver.edgePadding(barLine.topLayoutClearanceIsRequired,
                                                       root.isVertical,
                                                       barLine.customRadiusIsEnabled,
                                                       barLine.customRadius,
@@ -79,7 +108,7 @@ BackgroundProperties{
                                                       solidBackground.margins.top,
                                                       metrics.margin.length,
                                                       indicators.info.backgroundCornerMargin)
-    paddings.bottom: backgroundStateResolver.edgePadding(barLine.hasBottomBorder,
+    paddings.bottom: backgroundStateResolver.edgePadding(barLine.bottomLayoutClearanceIsRequired,
                                                          root.isVertical,
                                                          barLine.customRadiusIsEnabled,
                                                          barLine.customRadius,
@@ -87,7 +116,7 @@ BackgroundProperties{
                                                          solidBackground.margins.bottom,
                                                          metrics.margin.length,
                                                          indicators.info.backgroundCornerMargin)
-    paddings.left: backgroundStateResolver.edgePadding(barLine.hasLeftBorder,
+    paddings.left: backgroundStateResolver.edgePadding(barLine.leftLayoutClearanceIsRequired,
                                                        root.isHorizontal,
                                                        barLine.customRadiusIsEnabled,
                                                        barLine.customRadius,
@@ -95,7 +124,7 @@ BackgroundProperties{
                                                        solidBackground.margins.left,
                                                        metrics.margin.length,
                                                        indicators.info.backgroundCornerMargin)
-    paddings.right: backgroundStateResolver.edgePadding(barLine.hasRightBorder,
+    paddings.right: backgroundStateResolver.edgePadding(barLine.rightLayoutClearanceIsRequired,
                                                         root.isHorizontal,
                                                         barLine.customRadiusIsEnabled,
                                                         barLine.customRadius,
@@ -225,11 +254,13 @@ BackgroundProperties{
     }
 
     readonly property int tailRoundness: {
-        if ((root.isHorizontal && hasLeftBorder) || (!root.isHorizontal && hasTopBorder)) {
-            var customAppliedRadius = customRadiusIsEnabled ? customRadius : 0;
-            var themePadding = themeExtendedBackground ? (root.isHorizontal ? themeExtendedBackground.paddingLeft : themeExtendedBackground.paddingTop) : 0;
-            var solidBackgroundPadding = root.isHorizontal ? solidBackground.margins.left : solidBackground.margins.top;
-            var expected = customRadiusIsEnabled ? customAppliedRadius : Math.max(themePadding, solidBackgroundPadding);
+        const layoutClearanceIsRequired = root.isHorizontal
+                ? leftLayoutClearanceIsRequired : topLayoutClearanceIsRequired;
+        if (layoutClearanceIsRequired) {
+            const customAppliedRadius = customRadiusIsEnabled ? customRadius : 0;
+            const themePadding = themeExtendedBackground ? (root.isHorizontal ? themeExtendedBackground.paddingLeft : themeExtendedBackground.paddingTop) : 0;
+            const solidBackgroundPadding = root.isHorizontal ? solidBackground.margins.left : solidBackground.margins.top;
+            const expected = customRadiusIsEnabled ? customAppliedRadius : Math.max(themePadding, solidBackgroundPadding);
             return Math.max(0, expected - metrics.margin.length);
         }
 
@@ -237,11 +268,13 @@ BackgroundProperties{
     }
 
     readonly property int headRoundness: {
-        if ((root.isHorizontal && hasRightBorder) || (!root.isHorizontal && hasBottomBorder)) {
-            var customAppliedRadius = customRadiusIsEnabled ? customRadius : 0;
-            var themePadding = themeExtendedBackground ? (root.isHorizontal ? themeExtendedBackground.paddingRight : themeExtendedBackground.paddingBottom) : 0;
-            var solidBackgroundPadding = root.isHorizontal ? solidBackground.margins.right : solidBackground.margins.bottom;
-            var expected = customRadiusIsEnabled ? customAppliedRadius : Math.max(themePadding, solidBackgroundPadding);
+        const layoutClearanceIsRequired = root.isHorizontal
+                ? rightLayoutClearanceIsRequired : bottomLayoutClearanceIsRequired;
+        if (layoutClearanceIsRequired) {
+            const customAppliedRadius = customRadiusIsEnabled ? customRadius : 0;
+            const themePadding = themeExtendedBackground ? (root.isHorizontal ? themeExtendedBackground.paddingRight : themeExtendedBackground.paddingBottom) : 0;
+            const solidBackgroundPadding = root.isHorizontal ? solidBackground.margins.right : solidBackground.margins.bottom;
+            const expected = customRadiusIsEnabled ? customAppliedRadius : Math.max(themePadding, solidBackgroundPadding);
             return Math.max(0, expected - metrics.margin.length);
         }
 

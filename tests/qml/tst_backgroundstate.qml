@@ -103,4 +103,30 @@ TestCase {
         //! no border, no padding
         compare(resolver.edgePadding(false, true, true, 12.0, 8.0, 6.0, 2.0, 0.5), 0.0);
     }
+
+    function test_floatingPanelLayoutClearanceStaysIndependentOfPaint() {
+        //! Horizontal Start/End and Justify map their primary ends to
+        //! left/right; vertical variants map them to top/bottom. A missing
+        //! painted primary border therefore retains layout clearance only
+        //! for a configured positive-gap floating Panel.
+        verify(resolver.layoutClearanceIsRequired(false, true, true));
+        verify(!resolver.layoutClearanceIsRequired(false, true, false));
+        verify(!resolver.layoutClearanceIsRequired(false, false, true));
+        verify(resolver.layoutClearanceIsRequired(true, false, false));
+
+        const stablePrimaryClearance =
+            resolver.layoutClearanceIsRequired(false, true, true);
+
+        //! Theme, custom-radius, item-margin, and indicator values remain live
+        //! inputs to the existing padding calculation. The new predicate
+        //! carries no cached pixel value.
+        compare(resolver.edgePadding(stablePrimaryClearance,
+                                     true, false, 0, 8, 6, 2, 1), 6);
+        compare(resolver.edgePadding(stablePrimaryClearance,
+                                     true, false, 0, 12, 6, 2, 1), 10);
+        compare(resolver.edgePadding(stablePrimaryClearance,
+                                     true, true, 16, 12, 6, 2, 1), 14);
+        compare(resolver.edgePadding(stablePrimaryClearance,
+                                     true, true, 16, 12, 6, 2, 0.5), 7);
+    }
 }

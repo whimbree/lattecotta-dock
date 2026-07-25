@@ -91,7 +91,7 @@
 13	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/applet/communicator/Actions.qml
 9	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/applet/communicator/Engine.qml
 52	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/applet/communicator/LatteBridge.qml
-175	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/MultiLayered.qml
+173	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/MultiLayered.qml
 2	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/types/Shadows.qml
 16	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/background/types/Totals.qml
 64	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/colorizer/CustomBackground.qml
