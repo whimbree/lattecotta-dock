@@ -8,10 +8,12 @@
 #define FLOATINGPANELGEOMETRY_H
 
 #include <QPointF>
+#include <QMargins>
 #include <QRect>
 #include <QRectF>
 #include <QtGlobal>
 
+#include <algorithm>
 #include <limits>
 #include <optional>
 
@@ -28,6 +30,12 @@ enum class PrimaryAxisAlignment {
     Start,
     Center,
     End,
+};
+
+enum class InputDisposition {
+    ConsumeWithoutForwarding,
+    Forward,
+    ProjectToVisibleMask,
 };
 
 struct StablePrimaryAxisSpan {
@@ -62,6 +70,14 @@ struct FittsBridgeRectangle {
     QRectF value;
 };
 
+struct PaintMaskRectangle {
+    QRect value;
+};
+
+struct InputBridgeRectangle {
+    QRect value;
+};
+
 struct AppletMeasurementBounds {
     QRect value;
 };
@@ -93,9 +109,107 @@ struct Solution {
         return {visible.united(QRectF(attached.value))};
     }
 
+    [[nodiscard]] PaintMaskRectangle paintMask(qreal floatingness) const
+    {
+        // QRectF is the geometric truth. Effects consume integer pixels, so
+        // rasterize outward to cover every pixel touched by a subpixel shape.
+        // QRectF::toRect() rounds and can drop an animated outer row or column.
+        return {visibleMask(floatingness).value.toAlignedRect()};
+    }
+
+    [[nodiscard]] InputBridgeRectangle inputBridge(qreal floatingness) const
+    {
+        // Input follows the same outward policy as paint. The primary span
+        // stays exact because floating motion is perpendicular to that axis.
+        return {fittsBridge(floatingness).value.toAlignedRect()};
+    }
+
     [[nodiscard]] QPointF contentTranslation(qreal floatingness) const
     {
         return visibleMask(floatingness).value.topLeft() - floated.value.topLeft();
+    }
+
+    [[nodiscard]] QMargins shadowPaddingOffsets(qreal floatingness) const
+    {
+        const QRect paint = paintMask(floatingness).value;
+        const int rightInset =
+            envelope.value.width() - (paint.x() + paint.width());
+        const int bottomInset =
+            envelope.value.height() - (paint.y() + paint.height());
+
+        // KWindowShadow attaches to the stable QWindow. Negative extra
+        // padding moves each tile inward to the outward-rasterized paint
+        // mask, keeping the shadow and effects on one pixel authority.
+        return {
+            -paint.x(),
+            -paint.y(),
+            -rightInset,
+            -bottomInset,
+        };
+    }
+
+    [[nodiscard]] bool visibleMaskContains(qreal floatingness,
+                                           const QPointF &position) const
+    {
+        const QRectF visible = visibleMask(floatingness).value;
+        // Input item bounds are half-open. QRectF::contains includes its
+        // right and bottom edges, which belong to the next logical pixel.
+        return position.x() >= visible.x()
+            && position.x() < visible.x() + visible.width()
+            && position.y() >= visible.y()
+            && position.y() < visible.y() + visible.height();
+    }
+
+    [[nodiscard]] bool fittsBridgeContains(qreal floatingness,
+                                           const QPointF &position) const
+    {
+        const QRectF bridge = fittsBridge(floatingness).value;
+        // The bridge follows the same half-open item bounds as the visible
+        // mask. An inclusive primary-axis endpoint would leak input into the
+        // neighboring logical pixel outside a partial panel span.
+        return position.x() >= bridge.x()
+            && position.x() < bridge.x() + bridge.width()
+            && position.y() >= bridge.y()
+            && position.y() < bridge.y() + bridge.height();
+    }
+
+    [[nodiscard]] QPointF positionAdjustedForVisibleMask(
+        qreal floatingness,
+        const QPointF &position) const
+    {
+        const QRectF visible = visibleMask(floatingness).value;
+        return {
+            std::clamp(position.x(),
+                       visible.x(),
+                       visible.x() + visible.width() - 1.0),
+            std::clamp(position.y(),
+                       visible.y(),
+                       visible.y() + visible.height() - 1.0),
+        };
+    }
+
+    [[nodiscard]] InputDisposition classifyInput(
+        qreal floatingness,
+        const QPointF &position) const
+    {
+        if (!fittsBridgeContains(floatingness, position)) {
+            return InputDisposition::ConsumeWithoutForwarding;
+        }
+
+        return visibleMaskContains(floatingness, position)
+            ? InputDisposition::Forward
+            : InputDisposition::ProjectToVisibleMask;
+    }
+
+    [[nodiscard]] bool screenEdgeBorderVisible(qreal floatingness) const
+    {
+        Q_ASSERT(floatingness >= 0.0 && floatingness <= 1.0);
+        return attached.value != floated.value && floatingness != 0.0;
+    }
+
+    [[nodiscard]] bool floatingCornersVisible(qreal floatingness) const
+    {
+        return screenEdgeBorderVisible(floatingness);
     }
 };
 
