@@ -101,12 +101,18 @@
         <arg name="data" type="s" direction="out"/>
     </method>
     <!-- Atomic schema-versioned all-docks topology/runtime snapshot. Schema 5
-         reports each visual view plus the coordinator-owned output-edge
+         added each visual view plus the coordinator-owned output-edge
          reservation groups and per-view stable floating-panel transition
-         state. Transition rectangles retain QRectF precision. The computed
-         paint mask and input bridge are controller intentions until FP-3 (the
-         internal presentation, input, effects, and popup ownership slice)
-         connects their consumers. The mandatory per-view transition geometry,
+         state. Transition rectangles retain QRectF precision. Schema 6 adds
+         FP-3 (internal presentation, input, effects, and popup ownership),
+         which outward-rasterizes the computed paint and input shapes into the
+         live Effects values.
+         appliedInputMask may temporarily retain the old union for one submitted
+         clearing frame while event routing enforces the exact logical bridge.
+         floatingDamageMaskPending names that exact interval and
+         floatingDamageMaskGeneration is its process-local monotonic decimal
+         string. The dockSystemData schema version is 6.
+         The mandatory per-view transition geometry,
          surface publication, and layer-shell configure revisions are
          process-local monotonic decimal strings.
          reservationStateGeneration advances only after a complete projection

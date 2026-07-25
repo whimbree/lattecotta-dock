@@ -70,7 +70,7 @@ true with `isOffScreen`), what the compositor was told to reserve.
 call dockSystemData                    # s: compact schema-versioned JSON object
 ```
 
-Top level: `schemaVersion` (currently 5), `snapshotSequence` (decimal string,
+Top level: `schemaVersion` (currently 6), `snapshotSequence` (decimal string,
 process-local monotonic call identity), `globalConfigureAppletsMode`,
 `stacking`, `reservationStateGeneration` (decimal string),
 `reservationGroups`, and `views`. The complete view and reservation graph is
@@ -159,11 +159,16 @@ Per dock:
   translation values retain fractional logical pixels.
 
   `computedPaintMaskGeometry` and `computedInputBridgeGeometry` are the
-  controller-computed intended shapes in FP-2 (the stable canvas and
-  transition controller). FP-3 (internal presentation, input, effects, and
-  popup ownership) will connect them to Effects and input consumption.
-  `maskRect`, `inputMask`, and `appliedInputMask` remain the live applied
-  values until that cutover. `stableLayerShellMargin` is the perpendicular
+  qreal controller shapes. FP-3 (internal presentation, input, effects, and
+  popup ownership) outward-rasterizes them into `maskRect`/`effectsRect` and
+  `inputMask`. `appliedInputMask` is the physical QWindow damage and input
+  region; it may retain old union pixels for one submitted clearing frame.
+  `floatingDamageMaskPending` says whether that one-frame union is currently
+  armed, and `floatingDamageMaskGeneration` is its process-local monotonic
+  generation serialized as a decimal string.
+  `View::event` still rejects those old-only pixels against the exact qreal
+  bridge, so `inputMask` is the activation authority. `stableLayerShellMargin`
+  is the perpendicular
   physical offset and must remain zero for the stable-canvas design. The
   stable canvas must also touch its selected `screenGeometry` edge.
   Primary-axis layer-shell margins remain separate placement coordinates and
@@ -184,6 +189,7 @@ Per dock:
 - Geometry: `windowGeometry`, `absoluteGeometry`, `localGeometry`,
   `screenGeometry`, `surfaceGeometry`, `canvasGeometry`, `effectsRect`,
   `appletsLayoutGeometry`, `maskRect`, `inputMask`, `appliedInputMask`,
+  `floatingDamageMaskPending`, `floatingDamageMaskGeneration`,
   `strutsThickness`, `publishedStruts`, `layerShellPresent`,
   `layerShellAnchors`, `layerShellMargins`, `layerShellExclusiveEdge`, and
   `layerShellExclusiveZone`, plus `reservationSurfacePresent`,

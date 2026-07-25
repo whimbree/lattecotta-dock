@@ -1064,6 +1064,10 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.maskRect = view->effects()->mask();
         record.inputMask = view->effects()->inputMask();
         record.appliedInputMask = view->effects()->appliedInputMask();
+        record.floatingDamageMaskPending =
+            view->effects()->floatingDamageMaskPending();
+        record.floatingDamageMaskGeneration =
+            view->effects()->floatingDamageMaskGeneration();
         record.strutsThickness = view->visibility()->strutsThickness();
         record.publishedStruts = view->visibility()->publishedStruts();
 
@@ -1199,10 +1203,9 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
             record.currentVisibleGeometry =
                 transition->currentVisibleGeometry();
             //! FP-3 (internal presentation, input, effects, and popup
-            //! ownership) will route these controller-computed intended shapes
-            //! into Effects and input consumption. Schema 5 reports the
-            //! controller authority without claiming that the live masks
-            //! already match.
+            //! ownership) routes these qreal controller shapes into outward
+            //! integer Effects masks. appliedInputMask may retain one old
+            //! clearing frame while View::event enforces this exact bridge.
             record.computedPaintMaskGeometry =
                 transition->currentVisibleGeometry();
             record.computedInputBridgeGeometry =

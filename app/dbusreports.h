@@ -570,6 +570,8 @@ struct DockSystemViewRecord {
     QRect maskRect;
     QRect inputMask;
     QRect appliedInputMask;
+    bool floatingDamageMaskPending{false};
+    quint64 floatingDamageMaskGeneration{0};
     int strutsThickness{0};
     QRect publishedStruts;
     bool layerShellPresent{false};
@@ -663,7 +665,7 @@ struct DockReservationGroupRecord
 };
 
 struct DockSystemSnapshot {
-    static constexpr int SchemaVersion = 5;
+    static constexpr int SchemaVersion = 6;
 
     quint64 snapshotSequence{0};
     bool globalConfigureAppletsMode{false};
@@ -1648,6 +1650,10 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
     json[QStringLiteral("maskRect")] = serializeRect(record.maskRect);
     json[QStringLiteral("inputMask")] = serializeRect(record.inputMask);
     json[QStringLiteral("appliedInputMask")] = serializeRect(record.appliedInputMask);
+    json[QStringLiteral("floatingDamageMaskPending")] =
+        record.floatingDamageMaskPending;
+    json[QStringLiteral("floatingDamageMaskGeneration")] =
+        QString::number(record.floatingDamageMaskGeneration);
     json[QStringLiteral("strutsThickness")] = record.strutsThickness;
     json[QStringLiteral("publishedStruts")] = serializeRect(record.publishedStruts);
     json[QStringLiteral("layerShellPresent")] = record.layerShellPresent;
@@ -1838,6 +1844,18 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
     }
 
     for (const auto &view : snapshot.views) {
+        if (view.floatingDamageMaskPending
+            && (view.floatingDamageMaskGeneration == 0
+                || view.type != Types::PanelView
+                || !view.transitionGeometryPresent
+                || view.isHidden
+                || view.visibilityMode
+                    == Types::SidebarOnDemand
+                || view.visibilityMode
+                    == Types::SidebarAutoHide)) {
+            return false;
+        }
+
         const QString &transitionController =
             view.objects.transitionController;
         if (view.objects.transitionController.isEmpty()
@@ -1900,8 +1918,7 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                     == DockTransitionTarget::Floated
                 ? 1.0
                 : 0.0;
-            if (!qFuzzyIsNull(
-                    view.transitionProgress - endpoint)) {
+            if (view.transitionProgress != endpoint) {
                 return false;
             }
         }
@@ -2090,9 +2107,23 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
         const QRectF expectedBridge =
             expectedVisible.united(
                 QRectF(attached));
+        const QRect expectedPaint =
+            expectedVisible.toAlignedRect();
+        const QRect expectedInput =
+            expectedBridge.toAlignedRect();
         const QPointF expectedTranslation =
             expectedVisible.topLeft()
             - floatedTopLeft;
+        const bool presentationOwnsPaint =
+            view.type == Types::PanelView
+            && view.transitionGeometryPresent;
+        const bool presentationOwnsInput =
+            presentationOwnsPaint
+            && !view.isHidden
+            && view.visibilityMode
+                != Types::SidebarOnDemand
+            && view.visibilityMode
+                != Types::SidebarAutoHide;
         if (*view.currentVisibleGeometry
                     != expectedVisible
                 || *view.computedPaintMaskGeometry
@@ -2100,7 +2131,22 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                 || *view.computedInputBridgeGeometry
                     != expectedBridge
                 || *view.contentTranslation
-                    != expectedTranslation) {
+                    != expectedTranslation
+                || (presentationOwnsPaint
+                    && (view.effectsRect != expectedPaint
+                        || view.maskRect != expectedPaint))
+                || (presentationOwnsInput
+                    && (view.inputMask != expectedInput
+                        || (view.floatingDamageMaskPending
+                            && (!view.appliedInputMask.contains(
+                                    expectedInput)
+                                || !localCanvasBounds.contains(
+                                    view.appliedInputMask)))
+                        || (!view.floatingDamageMaskPending
+                            && view.appliedInputMask
+                                != expectedInput)))
+                || (!presentationOwnsInput
+                    && view.floatingDamageMaskPending)) {
             return false;
         }
     }

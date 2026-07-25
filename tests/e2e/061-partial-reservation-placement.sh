@@ -426,7 +426,7 @@ e2e_call setViewPlacement uiii "$full_bottom" \
 # between its compositor-screen and reservation transactions. The rectangle
 # changes only after the coordinator transaction succeeds. The first
 # dockSystemData read after this observable boundary must therefore expose
-# schema 5 and the new membership. It is deliberately not retried: an empty
+# schema 6 and the new membership. It is deliberately not retried: an empty
 # snapshot here was the stale-QWindow-screen collector race.
 member_move_committed=""
 for _ in $(seq 1 150); do
@@ -482,7 +482,7 @@ groups = [
 ]
 group = groups[0] if len(groups) == 1 else None
 ok = (
-    state["schemaVersion"] == 5
+    state["schemaVersion"] == 6
     and m["screenId"] == target_output
     and m["reservationOutputId"] == target_output
     and m["edge"] == m["reservationEdge"] == "top"

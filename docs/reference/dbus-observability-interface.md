@@ -90,7 +90,7 @@ Landed before or during the 2026-07-16 stabilization session:
   only after a complete coordinator projection transaction.
   ```json
   {
-    "schemaVersion": 5,
+    "schemaVersion": 6,
     "snapshotSequence": "14",
     "globalConfigureAppletsMode": true,
     "stacking": {
@@ -149,6 +149,8 @@ Landed before or during the 2026-07-16 stabilization session:
       "maskRect": [x, y, w, h],
       "inputMask": [x, y, w, h],
       "appliedInputMask": [x, y, w, h],
+      "floatingDamageMaskPending": false,
+      "floatingDamageMaskGeneration": "31",
       "strutsThickness": 48,
       "publishedStruts": [x, y, w, h],
       "layerShellPresent": true,
@@ -300,11 +302,15 @@ Landed before or during the 2026-07-16 stabilization session:
   logical pixels. The primary-axis start is a virtual-desktop coordinate and
   its length is a logical-pixel span.
 
-  The computed mask and bridge are controller intentions in FP-2 only.
-  FP-3 (internal presentation, input, effects, and popup ownership) connects
-  them to the Effects and input consumers. Until then, `maskRect`, `inputMask`,
-  and `appliedInputMask` remain the live applied values and are not claimed to
-  mirror the computed records. `stableLayerShellMargin` is the perpendicular
+  FP-3 (internal presentation, input, effects, and popup ownership)
+  outward-rasterizes the qreal computed mask and bridge into the live
+  `maskRect`/`effectsRect` and `inputMask`. `appliedInputMask` reports the
+  physical QWindow damage and input region. `floatingDamageMaskPending`
+  identifies the one submitted clearing frame for which it may retain the old
+  union, and `floatingDamageMaskGeneration` is the process-local monotonic
+  handshake generation serialized as a decimal string. Exact qreal event
+  classification consumes old-only pixels, so `inputMask` remains the logical
+  activation authority. `stableLayerShellMargin` is the perpendicular
   physical edge offset and must stay zero for the stable-canvas design.
   The stable canvas must also touch its selected `screenGeometry` edge.
   Primary-axis margins remain valid partial-panel placement coordinates.
