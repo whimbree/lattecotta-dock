@@ -38,6 +38,9 @@
 //     footprint on both axes and publish that footprint to geometry owners
 //   * Dock resize animation: icon size is the only animation authority and
 //     derived margins follow it without nested per-frame retargeting
+//   * Floating-panel acceptance: recipe 071 keeps a partial Justify QWindow,
+//     reservation, applet span, and physical-publication revisions stable
+//     through both directions and a rapid reversal storm
 //   * Theme-aware icon rendering: every view shares the registered singleton's
 //     QML engine and offscreen software teardown stays on the basic render loop
 //   * Dock-system reporting: persistent-id ordering and original/clone
@@ -308,6 +311,60 @@ private:
                    "property:\"minThickness\""
                    "when:totalsItem.stablePanelEnvelope"
                    "||!(hideThickScreenGap||hideLengthScreenGaps)"));
+    }
+
+    static bool matchesStableFloatingPanelE2eContract(const QString &source)
+    {
+        const QString code = normalizedCode(source);
+
+        return code.contains(QStringLiteral(
+                   "kwriteconfig6\"${group_args[@]}\"--key"
+                   "maximizeWhenMaximizedfalse"))
+            && code.contains(QStringLiteral(
+                   "kwriteconfig6\"${group_args[@]}\"--keymaxLength60"))
+            && code.contains(QStringLiteral(
+                   "kwriteconfig6\"${group_args[@]}\"--keyalignment10"))
+            && code.contains(QStringLiteral(
+                   "snapshot=json.load(sys.stdin)"
+                   "match=[vforvinsnapshot['views']"
+                   "ifv['persistentDockId']==$view]"))
+            && code.contains(QStringLiteral(
+                   "\"windowGeometry\",\"absoluteGeometry\","
+                   "\"surfaceGeometry\",\"canvasGeometry\","
+                   "\"appletsLayoutGeometry\","
+                   "\"stableCanvasGeometry\","))
+            && code.contains(QStringLiteral(
+                   "\"stableAppletMeasurementBounds\","
+                   "\"stablePrimaryAxisStart\","
+                   "\"stablePrimaryAxisLength\","
+                   "\"availablePrimaryLength\","
+                   "\"configuredIconSize\",\"effectiveIconSize\","))
+            && code.contains(QStringLiteral(
+                   "\"reservationGroupGeneration\","
+                   "\"reservationContributorDockIds\","
+                   "\"reservationGeometry\",\"layerShellMargins\","
+                   "\"layerShellAnchors\",\"layerShellExclusiveEdge\","))
+            && code.contains(QStringLiteral(
+                   "\"transitionController\":v[\"objects\"]"
+                   "[\"transitionController\"]"))
+            && code.contains(QStringLiteral(
+                   "\"reservationPublisher\":v[\"objects\"]"
+                   "[\"reservationPublisher\"]"))
+            && code.contains(QStringLiteral(
+                   "v[\"surfaceGeometryPublicationRevision\"],"
+                   "v[\"layerShellConfigureRequestRevision\"]"))
+            && code.contains(QStringLiteral(
+                   "capture_progress_only_transitionattachedattaching"))
+            && code.contains(QStringLiteral(
+                   "capture_progress_only_transitionfloatedfloating"))
+            && code.contains(QStringLiteral(
+                   "formaximizedintruefalsetruefalsetruefalsetruefalse;do"))
+            && code.contains(QStringLiteral(
+                   "assert_stable_contract\"rapidreversalstorm\""))
+            && code.contains(QStringLiteral(
+                   "expected_h=$((screen_h-stable_reservation_depth))"))
+            && !code.contains(QStringLiteral("max_strut<base_strut"))
+            && !code.contains(QStringLiteral("reservation_ms"));
     }
 
     static bool matchesDockBackgroundFitRouting(const QString &source)
@@ -849,6 +906,7 @@ private Q_SLOTS:
     void justifyAppletSpan_followsSolidBackground();
     void justifyAppletSpan_sourceGuardRejectsShadowOverlap();
     void stableFloatingPanelQml_keepsOneTransitionAuthority();
+    void stableFloatingPanelE2e_keepsCanvasAndRevisionsFixed();
     void dockBackgroundFit_includesJustifyDockMode();
     void dockBackgroundFit_sourceGuardsRejectBypasses();
     void appletBudget_excludesInternalPaddingButNotShadows();
@@ -1185,6 +1243,16 @@ void SourceGuardTest::stableFloatingPanelQml_keepsOneTransitionAuthority()
                  main, bindings, visibility, layouts, metrics, backgroundTotals),
              "floating panels must animate only controller progress inside one"
              " stable window, reservation, and applet-measurement envelope");
+}
+
+void SourceGuardTest::stableFloatingPanelE2e_keepsCanvasAndRevisionsFixed()
+{
+    const QString source = readFile(QStringLiteral(
+        "tests/e2e/071-maximized-window-length.sh"));
+    QVERIFY2(matchesStableFloatingPanelE2eContract(source),
+             "recipe 071 must keep the partial QWindow, applet measurements,"
+             " maximum-depth reservation, and physical-publication revisions"
+             " stable through qreal progress and rapid reversals");
 }
 
 void SourceGuardTest::dockBackgroundFit_includesJustifyDockMode()
