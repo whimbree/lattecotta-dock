@@ -16,6 +16,7 @@
 #include "data/screendata.h"
 #include "view/containmentinterface.h"
 #include "view/effects.h"
+#include "view/floatingtransition.h"
 #include "view/helpers/screenspacereservation.h"
 #include "view/helpers/screenspacereservationcoordinator.h"
 #include "view/indicator/indicator.h"
@@ -88,6 +89,71 @@ QStringList layerShellAnchorNames(LayerShellQt::Window::Anchors anchors)
         }
     }
     return names;
+}
+
+DockTransitionTarget transitionTargetForSnapshot(
+    ViewPart::FloatingTransition::Target target)
+{
+    switch (target) {
+    case ViewPart::FloatingTransition::Target::Attached:
+        return DockTransitionTarget::Attached;
+    case ViewPart::FloatingTransition::Target::Floated:
+        return DockTransitionTarget::Floated;
+    }
+
+    Q_UNREACHABLE();
+}
+
+DockTransitionPhase transitionPhaseForSnapshot(
+    ViewPart::FloatingTransition::Phase phase)
+{
+    switch (phase) {
+    case ViewPart::FloatingTransition::Phase::Resting:
+        return DockTransitionPhase::Resting;
+    case ViewPart::FloatingTransition::Phase::Attaching:
+        return DockTransitionPhase::Attaching;
+    case ViewPart::FloatingTransition::Phase::Floating:
+        return DockTransitionPhase::Floating;
+    }
+
+    Q_UNREACHABLE();
+}
+
+DockTransitionDirection transitionDirectionForSnapshot(
+    ViewPart::FloatingTransition::Phase phase)
+{
+    switch (phase) {
+    case ViewPart::FloatingTransition::Phase::Resting:
+        return DockTransitionDirection::None;
+    case ViewPart::FloatingTransition::Phase::Attaching:
+        return DockTransitionDirection::TowardAttached;
+    case ViewPart::FloatingTransition::Phase::Floating:
+        return DockTransitionDirection::TowardFloated;
+    }
+
+    Q_UNREACHABLE();
+}
+
+int physicalLayerShellMarginAtEdge(
+    const QMargins &margins,
+    Plasma::Types::Location edge)
+{
+    switch (edge) {
+    case Plasma::Types::TopEdge:
+        return margins.top();
+    case Plasma::Types::RightEdge:
+        return margins.right();
+    case Plasma::Types::BottomEdge:
+        return margins.bottom();
+    case Plasma::Types::LeftEdge:
+        return margins.left();
+    case Plasma::Types::Floating:
+    case Plasma::Types::Desktop:
+    case Plasma::Types::FullScreen:
+        return 0;
+    }
+
+    Q_UNREACHABLE();
 }
 }
 
@@ -910,6 +976,13 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         const auto *view = views.at(sourceIndex);
         Q_ASSERT(view->positioner() && view->effects() && view->visibility()
                  && view->extendedInterface());
+        const auto *const transition =
+            view->floatingTransition();
+        if (!transition) {
+            qCritical() << "dbusreports: refusing dock-system snapshot without a per-view transition controller"
+                        << view->containment()->id();
+            return std::nullopt;
+        }
 
         DockSystemViewRecord record;
         record.persistentDockId = view->containment()->id();
@@ -1086,6 +1159,68 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
             return std::nullopt;
         }
 
+        record.floatingPanelConfigured =
+            view->isFloatingPanel();
+        record.floatingPanelEligible =
+            transition->eligible();
+        record.transitionTarget =
+            transitionTargetForSnapshot(
+                transition->target());
+        record.transitionProgress =
+            transition->floatingness();
+        record.transitionPhase =
+            transitionPhaseForSnapshot(
+                transition->phase());
+        record.transitionDirection =
+            transitionDirectionForSnapshot(
+                transition->phase());
+        record.transitionRunning =
+            transition->running();
+        record.transitionGeometryPresent =
+            transition->hasGeometry();
+        record.transitionGeometryRevision =
+            transition->geometryRevision();
+        record.stableLayerShellMargin =
+            physicalLayerShellMarginAtEdge(
+                record.layerShellMargins,
+                record.edge);
+        record.surfaceGeometryPublicationRevision =
+            view->positioner()
+                ->surfaceGeometryPublicationRevision();
+        record.layerShellConfigureRequestRevision =
+            view->layerShellConfigureRequestRevision();
+        if (record.transitionGeometryPresent) {
+            record.stableCanvasGeometry =
+                transition->stableCanvasGeometry();
+            record.attachedPresentationGeometry =
+                transition->attachedGeometry();
+            record.floatedPresentationGeometry =
+                transition->floatedGeometry();
+            record.currentVisibleGeometry =
+                transition->currentVisibleGeometry();
+            //! FP-3 (internal presentation, input, effects, and popup
+            //! ownership) will route these controller-computed intended shapes
+            //! into Effects and input consumption. Schema 5 reports the
+            //! controller authority without claiming that the live masks
+            //! already match.
+            record.computedPaintMaskGeometry =
+                transition->currentVisibleGeometry();
+            record.computedInputBridgeGeometry =
+                transition->fittsBridgeGeometry();
+            record.contentTranslation =
+                transition->contentTranslation();
+            record.stableTriggerGeometry =
+                transition->stableTriggerGeometry();
+            record.stableAppletMeasurementBounds =
+                transition->appletMeasurementBounds();
+            record.stablePrimaryAxisStart =
+                transition->primaryAxisStart();
+            record.stablePrimaryAxisLength =
+                transition->primaryAxisLength();
+            record.requestedReservationDepth =
+                transition->stableReservationDepth();
+        }
+
         record.visibilityMode = view->visibility()->mode();
         record.isHidden = view->visibility()->isHidden();
         record.inStartup = view->positioner()->inStartup();
@@ -1113,6 +1248,8 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
                 reservationGroup
                     ? reservationGroup->publisher
                     : nullptr);
+        record.objects.transitionController =
+            identities->tokenFor(transition);
 
         snapshot.views.append(record);
     }
@@ -1185,6 +1322,10 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
 
     if (!dockReservationRecordsAgree(snapshot)) {
         qCritical() << "dbusreports: refusing dock-system snapshot whose reservation records disagree";
+        return std::nullopt;
+    }
+    if (!dockTransitionRecordsAgree(snapshot)) {
+        qCritical() << "dbusreports: refusing dock-system snapshot whose transition records disagree";
         return std::nullopt;
     }
 

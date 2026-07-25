@@ -80,7 +80,7 @@ Landed before or during the 2026-07-16 stabilization session:
   `editMode && universalSettings.inConfigureAppletsMode`, not the raw global
   toggle. A global rearrange session therefore does not report unrelated docks
   as configuring applets.
-- `dockSystemData() -> s` (compact JSON object, schema version 4; added by C0
+- `dockSystemData() -> s` (compact JSON object, schema version 5; added by C0
   (the atomic dock-system observability snapshot)). This is the relational
   all-docks read. One synchronous call captures the global configuration mode,
   every current dock, and every active output-edge reservation group. Docks
@@ -90,7 +90,7 @@ Landed before or during the 2026-07-16 stabilization session:
   only after a complete coordinator projection transaction.
   ```json
   {
-    "schemaVersion": 4,
+    "schemaVersion": 5,
     "snapshotSequence": "14",
     "globalConfigureAppletsMode": true,
     "stacking": {
@@ -127,7 +127,7 @@ Landed before or during the 2026-07-16 stabilization session:
       "screenId": 2,
       "screen": "DP-2",
       "onPrimary": false,
-      "type": "dock",
+      "type": "panel",
       "edge": "left",
       "orientation": "vertical",
       "alignment": "top",
@@ -170,7 +170,31 @@ Landed before or during the 2026-07-16 stabilization session:
       "reservationLayerShellMargins": [left, top, right, bottom],
       "reservationLayerShellExclusiveEdge": "left",
       "reservationLayerShellExclusiveZone": 48,
-      "visibilityMode": "dodgeActive",
+      "floatingPanelConfigured": true,
+      "floatingPanelEligible": true,
+      "transitionTarget": "attached",
+      "transitionProgress": 0.375,
+      "transitionPhase": "attaching",
+      "transitionDirection": "towardAttached",
+      "transitionRunning": true,
+      "transitionGeometryPresent": true,
+      "transitionGeometryRevision": "9",
+      "stableCanvasGeometry": [x, y, w, h],
+      "attachedPresentationGeometry": [x, y, w, h],
+      "floatedPresentationGeometry": [x, y, w, h],
+      "currentVisibleGeometry": [x, y, w, h],
+      "computedPaintMaskGeometry": [x, y, w, h],
+      "computedInputBridgeGeometry": [x, y, w, h],
+      "contentTranslation": [x, y],
+      "stableTriggerGeometry": [x, y, w, h],
+      "stableAppletMeasurementBounds": [x, y, w, h],
+      "stablePrimaryAxisStart": 40,
+      "stablePrimaryAxisLength": 1360,
+      "stableLayerShellMargin": 0,
+      "requestedReservationDepth": 40,
+      "surfaceGeometryPublicationRevision": "31",
+      "layerShellConfigureRequestRevision": "12",
+      "visibilityMode": "alwaysVisible",
       "isHidden": false,
       "inStartup": false,
       "isOffScreen": false,
@@ -191,8 +215,9 @@ Landed before or during the 2026-07-16 stabilization session:
         "layout": "object-12",
         "layoutController": "object-13",
         "geometryController": "object-14",
-        "editController": "object-15",
-        "configWindow": "object-16",
+        "transitionController": "object-15",
+        "editController": "object-16",
+        "configWindow": "object-17",
         "reservationPublisher": "object-27"
       }
     }]
@@ -244,12 +269,68 @@ Landed before or during the 2026-07-16 stabilization session:
   geometry, and validation timers. This is the convergence authority for tests,
   not an inference from a momentarily unchanged rectangle.
 
+  Schema 5 adds FP-2 (the stable floating-panel canvas and transition
+  controller) as one validated per-view record. `floatingPanelConfigured` is
+  exactly `View::isFloatingPanel()`, the configured floating presentation.
+  It does not claim that the later window-touch policy is configured.
+  `floatingPanelEligible` comes from `FloatingTransition::eligible`.
+  Eligibility implies a configured floating Always Visible panel. An
+  ineligible controller cannot target `attached` and converges to `floated`;
+  disabling eligibility may animate outward before settling.
+  Touching-window count and configured attach-on-window-touch policy are
+  deferred to FP-4 (the stable window-touch trigger and end-to-end acceptance
+  slice), where their authoritative C++ owners will land.
+
+  `transitionTarget`, `transitionProgress`, `transitionPhase`,
+  `transitionDirection`, and `transitionRunning` report the controller's
+  complete qreal state. The direction is `none`, `towardAttached`, or
+  `towardFloated`; it deliberately mirrors the phase so a torn observation
+  fails closed. A resting controller is exactly at the endpoint named by its
+  target. `transitionGeometryPresent` distinguishes a complete stable geometry
+  record from the legitimate non-panel or startup absence. Every dependent
+  geometry and `requestedReservationDepth` is null when it is false.
+
+  `stableCanvasGeometry` and `stableTriggerGeometry` use virtual-desktop
+  coordinates. `attachedPresentationGeometry`,
+  `floatedPresentationGeometry`, `currentVisibleGeometry`,
+  `computedPaintMaskGeometry`, `computedInputBridgeGeometry`, and
+  `stableAppletMeasurementBounds` use stable-canvas-local coordinates.
+  `contentTranslation` is a local `[x,y]` vector. Current visible, computed
+  mask, computed bridge, and translation values preserve QRectF fractional
+  logical pixels. The primary-axis start is a virtual-desktop coordinate and
+  its length is a logical-pixel span.
+
+  The computed mask and bridge are controller intentions in FP-2 only.
+  FP-3 (internal presentation, input, effects, and popup ownership) connects
+  them to the Effects and input consumers. Until then, `maskRect`, `inputMask`,
+  and `appliedInputMask` remain the live applied values and are not claimed to
+  mirror the computed records. `stableLayerShellMargin` is the perpendicular
+  physical edge offset and must stay zero for the stable-canvas design.
+  The stable canvas must also touch its selected `screenGeometry` edge.
+  Primary-axis margins remain valid partial-panel placement coordinates.
+  `requestedReservationDepth` is the controller's
+  stable attached depth. The existing `reservationContributionDepth` is the
+  effective current contribution, while the existing reservation output,
+  edge, generation, contributor, and publisher fields identify its group.
+
+  `transitionGeometryRevision`, `surfaceGeometryPublicationRevision`, and
+  `layerShellConfigureRequestRevision` are process-local monotonic quint64
+  values serialized as mandatory decimal strings. The first advances when the
+  controller's stable geometry is configured, changed, or cleared. The second
+  advances for every Positioner `surfaceGeometryCalculated` publication. The
+  third advances on an actual guarded layer-shell setter request. Internal
+  transition progress and reversal must leave all three unchanged, which makes
+  geometry stability and configure-storm absence directly assertable without
+  log scraping.
+
   The object identities name, respectively, the View window, Plasma
   containment, live KConfig property map, GenericLayout, QML layout manager,
-  Positioner, containment root that owns edit state, and shared configuration
-  window, and coordinator-owned reservation publisher. Equal tokens prove
-  shared ownership or accidental cross-dock reuse. Every contributor in one
-  output-edge group reports the same reservation publisher token.
+  Positioner, FloatingTransition, containment root that owns edit state, shared
+  configuration window, and coordinator-owned reservation publisher. Equal
+  tokens prove shared ownership or accidental cross-dock reuse.
+  `transitionController` is required, distinct from every other reported
+  authority, and unique per view. Every contributor in one output-edge group
+  reports the same reservation publisher token.
   `effectiveConfigureAppletsMode` is derived from the same per-view expression
   as QML. The raw global bit appears only once at the snapshot root.
 
@@ -257,7 +338,7 @@ Landed before or during the 2026-07-16 stabilization session:
   device-pixel scaling. `windowGeometry`, `absoluteGeometry`, `screenGeometry`,
   `surfaceGeometry`, `canvasGeometry`, and `publishedStruts` use
   virtual-desktop coordinates. `surfaceGeometry` is Positioner's solved
-  layer-surface rectangle, not the masked background rectangle. Schema 4 also
+  layer-surface rectangle, not the masked background rectangle. Schema 5 also
   reports the exact visual layer-shell request state: `layerShellPresent`,
   `layerShellAnchors`, `layerShellMargins` in left/top/right/bottom order,
   `layerShellExclusiveEdge`, and `layerShellExclusiveZone`. The edge and zone
@@ -296,6 +377,13 @@ Landed before or during the 2026-07-16 stabilization session:
   `dockSystemData()` return an empty string after logging the mismatch. An
   empty `reservationGroups` array at a newer `reservationStateGeneration`
   proves last-member teardown without retaining an orphan record.
+  Transition validation independently refuses the whole snapshot for a shared
+  or aliased controller token, rounded qreal geometry, incomplete geometry,
+  inconsistent target/phase/direction/running state, a nonzero perpendicular
+  layer-shell margin, a canvas detached from its selected screen edge,
+  off-screen canvas/trigger geometry, local geometry outside the canvas, or
+  disagreement between the controller's stable canvas and Positioner's solved
+  surface. No valid looking subset crosses D-Bus.
 - `viewAppletsData(u containmentId) -> s` (JSON array, in visual order).
   Per applet: id, plugin, index in layout, geometry within the view,
   expanded state, inScheduledDestruction, lockedZoom, colorizingBlocked,

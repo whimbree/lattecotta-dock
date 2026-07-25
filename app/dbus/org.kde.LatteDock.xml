@@ -100,23 +100,31 @@
     <method name="viewsData">
         <arg name="data" type="s" direction="out"/>
     </method>
-    <!-- Atomic schema-versioned all-docks topology/runtime snapshot. Schema 4
+    <!-- Atomic schema-versioned all-docks topology/runtime snapshot. Schema 5
          reports each visual view plus the coordinator-owned output-edge
-         reservation groups. reservationStateGeneration advances only after a
-         complete projection transaction; each reservationGroups record names
-         its actual output, edge, generation, contributorDockIds, maximum
-         published depth, publisher identity, geometry and applied layer-shell
-         state. Per-view reservationEdge and reservationGroupGeneration refer
-         to that actual group, independently of snapshotSequence.
+         reservation groups and per-view stable floating-panel transition
+         state. Transition rectangles retain QRectF precision. The computed
+         paint mask and input bridge are controller intentions until FP-3 (the
+         internal presentation, input, effects, and popup ownership slice)
+         connects their consumers. The mandatory per-view transition geometry,
+         surface publication, and layer-shell configure revisions are
+         process-local monotonic decimal strings.
+         reservationStateGeneration advances only after a complete projection
+         transaction; each reservationGroups record names its actual output,
+         edge, generation, contributorDockIds, maximum published depth,
+         publisher identity, geometry and applied layer-shell state. Per-view
+         reservationEdge and reservationGroupGeneration refer to that actual
+         group, independently of snapshotSequence.
 
-         Invalid clone lineage, reservation publication state, geometry, or
-         view/group membership is logged and refused as an empty string, never
-         returned as plausible partial JSON. An empty reservationGroups array
-         at a newer reservationStateGeneration is the observable last-member
-         teardown state. The stacking object deliberately reports
-         available=false: inward same-edge stacking is not a supported
-         placement model and stable overlap is not yet rejected, so canonical
-         array order must never be interpreted as stack order. -->
+         Invalid clone lineage, transition ownership/state/geometry,
+         reservation publication state, geometry, or view/group membership is
+         logged and refused as an empty string, never returned as plausible
+         partial JSON. An empty reservationGroups array at a newer
+         reservationStateGeneration is the observable last-member teardown
+         state. The stacking object deliberately reports available=false:
+         inward same-edge stacking is not a supported placement model and
+         stable overlap is not yet rejected, so canonical array order must
+         never be interpreted as stack order. -->
     <method name="dockSystemData">
         <arg name="data" type="s" direction="out"/>
     </method>

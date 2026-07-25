@@ -29,8 +29,10 @@
 #include <QList>
 #include <QMargins>
 #include <QObject>
+#include <QPointF>
 #include <QPointer>
 #include <QRect>
+#include <QRectF>
 #include <QSet>
 #include <QString>
 #include <QThread>
@@ -40,6 +42,7 @@
 // C++
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <optional>
 
 // Plasma
@@ -491,7 +494,9 @@ classifyDockRelationshipGraph(const QList<DockLineageInput> &lineages)
 
 //! The live QObject graph behind one dock. Tokens are opaque, process-local,
 //! and comparable within and across dockSystemData() snapshots. An empty token
-//! means that optional controller does not currently exist.
+//! means that an optional authority does not currently exist. Required
+//! authorities, including each transition controller, are validated before
+//! serialization.
 struct DockObjectIdentities {
     QString view;
     QString containment;
@@ -502,6 +507,24 @@ struct DockObjectIdentities {
     QString editController;
     QString configWindow;
     QString reservationPublisher;
+    QString transitionController;
+};
+
+enum class DockTransitionTarget {
+    Attached,
+    Floated,
+};
+
+enum class DockTransitionPhase {
+    Resting,
+    Attaching,
+    Floating,
+};
+
+enum class DockTransitionDirection {
+    None,
+    TowardAttached,
+    TowardFloated,
 };
 
 //! One dock in the atomic dockSystemData() snapshot. persistentDockId is the
@@ -569,6 +592,31 @@ struct DockSystemViewRecord {
     QString reservationLayerShellExclusiveEdge;
     std::optional<int> reservationLayerShellExclusiveZone;
 
+    bool floatingPanelConfigured{false};
+    bool floatingPanelEligible{false};
+    DockTransitionTarget transitionTarget{DockTransitionTarget::Floated};
+    qreal transitionProgress{1.0};
+    DockTransitionPhase transitionPhase{DockTransitionPhase::Resting};
+    DockTransitionDirection transitionDirection{DockTransitionDirection::None};
+    bool transitionRunning{false};
+    bool transitionGeometryPresent{false};
+    quint64 transitionGeometryRevision{0};
+    std::optional<QRect> stableCanvasGeometry;
+    std::optional<QRect> attachedPresentationGeometry;
+    std::optional<QRect> floatedPresentationGeometry;
+    std::optional<QRectF> currentVisibleGeometry;
+    std::optional<QRectF> computedPaintMaskGeometry;
+    std::optional<QRectF> computedInputBridgeGeometry;
+    std::optional<QPointF> contentTranslation;
+    std::optional<QRect> stableTriggerGeometry;
+    std::optional<QRect> stableAppletMeasurementBounds;
+    std::optional<int> stablePrimaryAxisStart;
+    std::optional<int> stablePrimaryAxisLength;
+    int stableLayerShellMargin{0};
+    quint64 surfaceGeometryPublicationRevision{0};
+    quint64 layerShellConfigureRequestRevision{0};
+    std::optional<int> requestedReservationDepth;
+
     Types::Visibility visibilityMode{Types::None};
     bool isHidden{false};
     bool inStartup{false};
@@ -615,7 +663,7 @@ struct DockReservationGroupRecord
 };
 
 struct DockSystemSnapshot {
-    static constexpr int SchemaVersion = 4;
+    static constexpr int SchemaVersion = 5;
 
     quint64 snapshotSequence{0};
     bool globalConfigureAppletsMode{false};
@@ -781,6 +829,46 @@ inline QString linkPlacementName(Data::View::LinkPlacement placement)
         return QStringLiteral("screenGroupDerived");
     case Data::View::LinkPlacement::ExplicitTarget:
         return QStringLiteral("explicitTarget");
+    }
+
+    Q_UNREACHABLE();
+}
+
+inline QString transitionTargetName(DockTransitionTarget target)
+{
+    switch (target) {
+    case DockTransitionTarget::Attached:
+        return QStringLiteral("attached");
+    case DockTransitionTarget::Floated:
+        return QStringLiteral("floated");
+    }
+
+    Q_UNREACHABLE();
+}
+
+inline QString transitionPhaseName(DockTransitionPhase phase)
+{
+    switch (phase) {
+    case DockTransitionPhase::Resting:
+        return QStringLiteral("resting");
+    case DockTransitionPhase::Attaching:
+        return QStringLiteral("attaching");
+    case DockTransitionPhase::Floating:
+        return QStringLiteral("floating");
+    }
+
+    Q_UNREACHABLE();
+}
+
+inline QString transitionDirectionName(DockTransitionDirection direction)
+{
+    switch (direction) {
+    case DockTransitionDirection::None:
+        return QStringLiteral("none");
+    case DockTransitionDirection::TowardAttached:
+        return QStringLiteral("towardAttached");
+    case DockTransitionDirection::TowardFloated:
+        return QStringLiteral("towardFloated");
     }
 
     Q_UNREACHABLE();
@@ -1126,6 +1214,16 @@ inline QJsonArray serializeRect(const QRect &rect)
     return QJsonArray{rect.x(), rect.y(), rect.width(), rect.height()};
 }
 
+inline QJsonArray serializeRectF(const QRectF &rect)
+{
+    return QJsonArray{rect.x(), rect.y(), rect.width(), rect.height()};
+}
+
+inline QJsonArray serializePointF(const QPointF &point)
+{
+    return QJsonArray{point.x(), point.y()};
+}
+
 inline QJsonArray serializeMargins(const QMargins &margins)
 {
     return QJsonArray{
@@ -1435,6 +1533,24 @@ inline QJsonValue serializeOptionalObjectToken(const QString &token)
     return token.isEmpty() ? QJsonValue(QJsonValue::Null) : QJsonValue(token);
 }
 
+inline QJsonValue serializeOptionalRect(const std::optional<QRect> &rect)
+{
+    return rect ? QJsonValue(serializeRect(*rect))
+                : QJsonValue(QJsonValue::Null);
+}
+
+inline QJsonValue serializeOptionalRectF(const std::optional<QRectF> &rect)
+{
+    return rect ? QJsonValue(serializeRectF(*rect))
+                : QJsonValue(QJsonValue::Null);
+}
+
+inline QJsonValue serializeOptionalPointF(const std::optional<QPointF> &point)
+{
+    return point ? QJsonValue(serializePointF(*point))
+                 : QJsonValue(QJsonValue::Null);
+}
+
 inline QJsonObject serializeDockObjectIdentities(const DockObjectIdentities &objects)
 {
     QJsonObject json;
@@ -1448,6 +1564,8 @@ inline QJsonObject serializeDockObjectIdentities(const DockObjectIdentities &obj
     json[QStringLiteral("configWindow")] = serializeOptionalObjectToken(objects.configWindow);
     json[QStringLiteral("reservationPublisher")] =
         serializeOptionalObjectToken(objects.reservationPublisher);
+    json[QStringLiteral("transitionController")] =
+        serializeOptionalObjectToken(objects.transitionController);
     return json;
 }
 
@@ -1578,6 +1696,58 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
     json[QStringLiteral("reservationLayerShellExclusiveZone")] =
         serializeOptionalInt(record.reservationLayerShellExclusiveZone);
 
+    json[QStringLiteral("floatingPanelConfigured")] =
+        record.floatingPanelConfigured;
+    json[QStringLiteral("floatingPanelEligible")] =
+        record.floatingPanelEligible;
+    json[QStringLiteral("transitionTarget")] =
+        transitionTargetName(record.transitionTarget);
+    json[QStringLiteral("transitionProgress")] =
+        record.transitionProgress;
+    json[QStringLiteral("transitionPhase")] =
+        transitionPhaseName(record.transitionPhase);
+    json[QStringLiteral("transitionDirection")] =
+        transitionDirectionName(record.transitionDirection);
+    json[QStringLiteral("transitionRunning")] =
+        record.transitionRunning;
+    json[QStringLiteral("transitionGeometryPresent")] =
+        record.transitionGeometryPresent;
+    json[QStringLiteral("transitionGeometryRevision")] =
+        QString::number(
+            record.transitionGeometryRevision);
+    json[QStringLiteral("stableCanvasGeometry")] =
+        serializeOptionalRect(record.stableCanvasGeometry);
+    json[QStringLiteral("attachedPresentationGeometry")] =
+        serializeOptionalRect(record.attachedPresentationGeometry);
+    json[QStringLiteral("floatedPresentationGeometry")] =
+        serializeOptionalRect(record.floatedPresentationGeometry);
+    json[QStringLiteral("currentVisibleGeometry")] =
+        serializeOptionalRectF(record.currentVisibleGeometry);
+    json[QStringLiteral("computedPaintMaskGeometry")] =
+        serializeOptionalRectF(record.computedPaintMaskGeometry);
+    json[QStringLiteral("computedInputBridgeGeometry")] =
+        serializeOptionalRectF(record.computedInputBridgeGeometry);
+    json[QStringLiteral("contentTranslation")] =
+        serializeOptionalPointF(record.contentTranslation);
+    json[QStringLiteral("stableTriggerGeometry")] =
+        serializeOptionalRect(record.stableTriggerGeometry);
+    json[QStringLiteral("stableAppletMeasurementBounds")] =
+        serializeOptionalRect(record.stableAppletMeasurementBounds);
+    json[QStringLiteral("stablePrimaryAxisStart")] =
+        serializeOptionalInt(record.stablePrimaryAxisStart);
+    json[QStringLiteral("stablePrimaryAxisLength")] =
+        serializeOptionalInt(record.stablePrimaryAxisLength);
+    json[QStringLiteral("stableLayerShellMargin")] =
+        record.stableLayerShellMargin;
+    json[QStringLiteral("surfaceGeometryPublicationRevision")] =
+        QString::number(
+            record.surfaceGeometryPublicationRevision);
+    json[QStringLiteral("layerShellConfigureRequestRevision")] =
+        QString::number(
+            record.layerShellConfigureRequestRevision);
+    json[QStringLiteral("requestedReservationDepth")] =
+        serializeOptionalInt(record.requestedReservationDepth);
+
     json[QStringLiteral("visibilityMode")] = visibilityModeName(record.visibilityMode);
     json[QStringLiteral("isHidden")] = record.isHidden;
     json[QStringLiteral("inStartup")] = record.inStartup;
@@ -1638,6 +1808,304 @@ inline QJsonObject serializeDockReservationGroupRecord(
     json[QStringLiteral("publisher")] =
         serializeOptionalObjectToken(record.publisher);
     return json;
+}
+
+//! Verify that every per-view transition record is one self-consistent
+//! observation of its controller and stable placement. The controller owns
+//! geometry that is deliberately mirrored by existing placement fields. A
+//! mismatch refuses the complete dock-system snapshot instead of publishing
+//! one plausible half of a torn observation.
+inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
+{
+    QSet<QString> transitionControllers;
+    QSet<QString> otherAuthorities;
+
+    for (const auto &view : snapshot.views) {
+        for (const auto &authority : {
+                 view.objects.view,
+                 view.objects.containment,
+                 view.objects.configuration,
+                 view.objects.layout,
+                 view.objects.layoutController,
+                 view.objects.geometryController,
+                 view.objects.editController,
+                 view.objects.configWindow,
+                 view.objects.reservationPublisher}) {
+            if (!authority.isEmpty()) {
+                otherAuthorities.insert(authority);
+            }
+        }
+    }
+
+    for (const auto &view : snapshot.views) {
+        const QString &transitionController =
+            view.objects.transitionController;
+        if (view.objects.transitionController.isEmpty()
+                || otherAuthorities.contains(
+                    transitionController)
+                || transitionControllers.contains(
+                    view.objects.transitionController)
+                || !std::isfinite(
+                    static_cast<double>(
+                        view.transitionProgress))
+                || view.transitionProgress < 0.0
+                || view.transitionProgress > 1.0
+                || (view.floatingPanelEligible
+                    && (!view.floatingPanelConfigured
+                        || view.type != Types::PanelView
+                        || view.visibilityMode
+                            != Types::AlwaysVisible))
+                || (!view.floatingPanelEligible
+                    && view.transitionTarget
+                        != DockTransitionTarget::Floated)) {
+            return false;
+        }
+        transitionControllers.insert(
+            view.objects.transitionController);
+
+        DockTransitionDirection expectedDirection{
+            DockTransitionDirection::None};
+        switch (view.transitionPhase) {
+        case DockTransitionPhase::Resting:
+            break;
+        case DockTransitionPhase::Attaching:
+            expectedDirection =
+                DockTransitionDirection::TowardAttached;
+            break;
+        case DockTransitionPhase::Floating:
+            expectedDirection =
+                DockTransitionDirection::TowardFloated;
+            break;
+        }
+        if (view.transitionDirection
+                    != expectedDirection
+                || view.transitionRunning
+                    != (view.transitionPhase
+                        != DockTransitionPhase::Resting)
+                || (view.transitionPhase
+                        == DockTransitionPhase::Attaching
+                    && view.transitionTarget
+                        != DockTransitionTarget::Attached)
+                || (view.transitionPhase
+                        == DockTransitionPhase::Floating
+                    && view.transitionTarget
+                        != DockTransitionTarget::Floated)) {
+            return false;
+        }
+
+        if (view.transitionPhase
+                == DockTransitionPhase::Resting) {
+            const qreal endpoint =
+                view.transitionTarget
+                    == DockTransitionTarget::Floated
+                ? 1.0
+                : 0.0;
+            if (!qFuzzyIsNull(
+                    view.transitionProgress - endpoint)) {
+                return false;
+            }
+        }
+
+        const bool anyGeometry =
+            view.stableCanvasGeometry
+            || view.attachedPresentationGeometry
+            || view.floatedPresentationGeometry
+            || view.currentVisibleGeometry
+            || view.computedPaintMaskGeometry
+            || view.computedInputBridgeGeometry
+            || view.contentTranslation
+            || view.stableTriggerGeometry
+            || view.stableAppletMeasurementBounds
+            || view.stablePrimaryAxisStart
+            || view.stablePrimaryAxisLength
+            || view.requestedReservationDepth;
+        if (view.stableLayerShellMargin != 0
+                || view.transitionGeometryPresent
+                != anyGeometry) {
+            return false;
+        }
+        if (!view.transitionGeometryPresent) {
+            continue;
+        }
+
+        const bool completeGeometry =
+            view.stableCanvasGeometry
+            && view.attachedPresentationGeometry
+            && view.floatedPresentationGeometry
+            && view.currentVisibleGeometry
+            && view.computedPaintMaskGeometry
+            && view.computedInputBridgeGeometry
+            && view.contentTranslation
+            && view.stableTriggerGeometry
+            && view.stableAppletMeasurementBounds
+            && view.stablePrimaryAxisStart
+            && view.stablePrimaryAxisLength
+            && view.requestedReservationDepth;
+        if (!completeGeometry
+                || view.type != Types::PanelView
+                || !view.stableCanvasGeometry->isValid()
+                || !view.attachedPresentationGeometry->isValid()
+                || !view.floatedPresentationGeometry->isValid()
+                || !view.currentVisibleGeometry->isValid()
+                || !view.computedPaintMaskGeometry->isValid()
+                || !view.computedInputBridgeGeometry->isValid()
+                || !view.stableTriggerGeometry->isValid()
+                || !view.stableAppletMeasurementBounds->isValid()
+                || *view.stablePrimaryAxisLength <= 0
+                || *view.requestedReservationDepth <= 0) {
+            return false;
+        }
+
+        const QRect &canvas =
+            *view.stableCanvasGeometry;
+        const QRect &attached =
+            *view.attachedPresentationGeometry;
+        const QRect &floated =
+            *view.floatedPresentationGeometry;
+        const QRect attachedOnOutput =
+            attached.translated(canvas.topLeft());
+        const QRect floatedOnOutput =
+            floated.translated(canvas.topLeft());
+        const QRect localCanvasBounds{
+            QPoint{},
+            canvas.size()};
+        const QRectF localCanvasBoundsF{
+            localCanvasBounds};
+        if (canvas != view.surfaceGeometry
+                || canvas.size()
+                    != view.windowGeometry.size()
+                || !view.screenGeometry.contains(canvas)
+                || view.absoluteGeometry
+                    != attachedOnOutput
+                || !canvas.contains(attachedOnOutput)
+                || !canvas.contains(floatedOnOutput)
+                || !localCanvasBounds.contains(attached)
+                || !localCanvasBounds.contains(floated)
+                || !localCanvasBoundsF.contains(
+                    *view.currentVisibleGeometry)
+                || !localCanvasBoundsF.contains(
+                    *view.computedInputBridgeGeometry)
+                || !view.screenGeometry.contains(
+                    *view.stableTriggerGeometry)
+                || attached.size() != floated.size()
+                || *view.stableAppletMeasurementBounds
+                    != QRect(
+                        QPoint{},
+                        attached.size())
+                || *view.requestedReservationDepth
+                    != view.normalThickness) {
+            return false;
+        }
+
+        int expectedPrimaryStart{0};
+        int expectedPrimaryLength{0};
+        int expectedDepth{0};
+        int appliedLayerShellMargin{0};
+        QRect expectedTrigger = attachedOnOutput;
+        switch (view.edge) {
+        case Plasma::Types::TopEdge:
+            if (canvas.top()
+                    != view.screenGeometry.top()) {
+                return false;
+            }
+            expectedPrimaryStart = canvas.left();
+            expectedPrimaryLength = canvas.width();
+            expectedDepth = attached.height();
+            appliedLayerShellMargin =
+                view.layerShellMargins.top();
+            expectedTrigger.setBottom(
+                expectedTrigger.bottom() + 1);
+            break;
+        case Plasma::Types::RightEdge:
+            if (canvas.right()
+                    != view.screenGeometry.right()) {
+                return false;
+            }
+            expectedPrimaryStart = canvas.top();
+            expectedPrimaryLength = canvas.height();
+            expectedDepth = attached.width();
+            appliedLayerShellMargin =
+                view.layerShellMargins.right();
+            expectedTrigger.setLeft(
+                expectedTrigger.left() - 1);
+            break;
+        case Plasma::Types::BottomEdge:
+            if (canvas.bottom()
+                    != view.screenGeometry.bottom()) {
+                return false;
+            }
+            expectedPrimaryStart = canvas.left();
+            expectedPrimaryLength = canvas.width();
+            expectedDepth = attached.height();
+            appliedLayerShellMargin =
+                view.layerShellMargins.bottom();
+            expectedTrigger.setTop(
+                expectedTrigger.top() - 1);
+            break;
+        case Plasma::Types::LeftEdge:
+            if (canvas.left()
+                    != view.screenGeometry.left()) {
+                return false;
+            }
+            expectedPrimaryStart = canvas.top();
+            expectedPrimaryLength = canvas.height();
+            expectedDepth = attached.width();
+            appliedLayerShellMargin =
+                view.layerShellMargins.left();
+            expectedTrigger.setRight(
+                expectedTrigger.right() + 1);
+            break;
+        case Plasma::Types::Floating:
+        case Plasma::Types::Desktop:
+        case Plasma::Types::FullScreen:
+            return false;
+        }
+        if (*view.stablePrimaryAxisStart
+                    != expectedPrimaryStart
+                || *view.stablePrimaryAxisLength
+                    != expectedPrimaryLength
+                || *view.requestedReservationDepth
+                    != expectedDepth
+                || *view.stableTriggerGeometry
+                    != expectedTrigger
+                || (view.layerShellPresent
+                    && view.stableLayerShellMargin
+                        != appliedLayerShellMargin)
+                || (!view.floatingPanelConfigured
+                    && attached != floated)) {
+            return false;
+        }
+
+        const QPointF attachedTopLeft{
+            attached.topLeft()};
+        const QPointF floatedTopLeft{
+            floated.topLeft()};
+        const QPointF visibleTopLeft =
+            attachedTopLeft
+            + ((floatedTopLeft - attachedTopLeft)
+               * view.transitionProgress);
+        const QRectF expectedVisible{
+            visibleTopLeft,
+            QSizeF(attached.size())};
+        const QRectF expectedBridge =
+            expectedVisible.united(
+                QRectF(attached));
+        const QPointF expectedTranslation =
+            expectedVisible.topLeft()
+            - floatedTopLeft;
+        if (*view.currentVisibleGeometry
+                    != expectedVisible
+                || *view.computedPaintMaskGeometry
+                    != expectedVisible
+                || *view.computedInputBridgeGeometry
+                    != expectedBridge
+                || *view.contentTranslation
+                    != expectedTranslation) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 //! Verify the value snapshot's reservation graph before it crosses D-Bus.
