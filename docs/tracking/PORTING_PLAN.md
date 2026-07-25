@@ -4504,6 +4504,11 @@ prerequisites in the phases above are done.
       the injected alignment once, name the document-root offset explicitly,
       and lower the touched-file baseline from 181 to 176 warnings.
       Commits: c590d33f8
+- [x] Fix D173 (theme-aware icon render test deadlocked during final view
+      teardown). Share one QML engine across every render case and use the
+      synchronous basic render loop for the offscreen software test. Pin both
+      lifecycle rules with controlled source mutations.
+      Commits: 2d6d1059c (pre-merge; post-merge hash pending)
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
