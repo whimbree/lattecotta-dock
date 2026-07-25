@@ -577,8 +577,7 @@ private:
         return layerShell->anchors() == expected.anchors
             && layerShell->exclusiveEdge() == expected.exclusiveEdge
             && layerShell->margins() == expected.margins
-            && layerShell->exclusionZone() == expected.exclusiveZone
-            && publisher.surface->size() == expected.surfaceSize;
+            && layerShell->exclusionZone() == expected.exclusiveZone;
     }
 
     [[nodiscard]] bool prepareProjection(
