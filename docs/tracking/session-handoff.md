@@ -27,12 +27,30 @@ nested replay observes one shared same-edge publisher, migrates a member from
 output 13 to output 14, restarts, removes both selected contributions, and
 returns to an orphan-free empty group state.
 
-Cold review found and drove D175 through D180: non-atomic migration,
-group-level observability missing from schema 3, optional cross-output
-coverage, compositor-sized publisher rejection, lagging QWindow output
-validation, and incomplete mirrored-field validation. The transaction model
-itself passed review. The corrected code/test rereview and canonical gate are
-the remaining FP-1 merge prerequisites.
+Cold review found and drove D175 (reservation moves committed policy before
+publication succeeded), D176 (dock-system observability omitted reservation
+group ownership), D177 (reservation replay could skip output migration and
+orphan cleanup), D178 (reservation validation assumed the compositor kept the
+requested window size), D179 (cross-output staging validated a lagging QWindow
+screen), and D180 (reservation snapshot validation accepted divergent mirrored
+fields). Rereview then found D181 (immediate migration snapshots reused the
+lagging QWindow output), D182 (coordinator rollback did not roll back member
+publication state), and D183 (reservation contributor ordering was normalized
+after disagreement).
+
+The final correction propagates a `[[nodiscard]] bool` transaction result from
+the coordinator through the view and window-system boundary. Member
+`publishedStruts` now commits only after success. Failed updates and removals
+remain dirty for an equal-valued retry, and the equality key includes the
+rectangle, persistent output identity, and edge. The D-Bus collector and
+member key both use LayerShellQt's synchronous explicit output. Canonical
+contributor ordering is required before serialization.
+
+Five focused targets pass. The corrected two-output recipe reads
+`dockSystemData` exactly once after the committed per-view migration boundary,
+then completes output 14 persistence, restart, teardown, and orphan checks.
+The final independent rereview and canonical gate are the remaining FP-1 merge
+prerequisites.
 
 ## 2026-07-24: stable-surface floating-panel parity approved
 
