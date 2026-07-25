@@ -10,36 +10,17 @@
 # stay fixed while only the internal qreal presentation progress changes.
 set -uo pipefail
 source "${E2E_REPO:?run through scripts/run-e2e.sh}/tests/e2e/lib.sh"
+source "$E2E_REPO/tests/e2e/matrix/matrix-lib.sh"
 
-view="$(e2e_json viewsData | python3 -c '
-import json, sys
-views = [v for v in json.load(sys.stdin)
-         if v["edge"] in ("top", "bottom") and v["type"] == "dock" and not v["isCloned"]]
-views.sort(key=lambda v: v["absoluteGeometry"][2] / v["screenGeometry"][2])
-print(views[0]["containmentId"] if views else "")
-')"
-[[ -n "$view" ]] || e2e_fail "no horizontal non-clone view to exercise"
+matrix_init || e2e_fail "could not capture the pristine nested configuration"
+matrix_stage panel-bottom-justify-1out \
+    || e2e_fail "could not realize the floating-panel fixture"
+view="$(matrix_view_id)" || e2e_fail "could not resolve the floating-panel fixture"
 
 layout="$E2E_LAYOUT"
 group_args=(--file "$layout" --group Containments --group "$view" --group General)
-orig_maximize="$(kreadconfig6 "${group_args[@]}" --key maximizeWhenMaximized --default __absent__)" || e2e_fail "could not read maximizeWhenMaximized"
-orig_length="$(kreadconfig6 "${group_args[@]}" --key maxLength --default __absent__)" || e2e_fail "could not read maxLength"
-orig_hide_gap="$(kreadconfig6 "${group_args[@]}" --key hideFloatingGapForMaximized --default __absent__)" || e2e_fail "could not read hideFloatingGapForMaximized"
-orig_edge_margin="$(kreadconfig6 "${group_args[@]}" --key screenEdgeMargin --default __absent__)" || e2e_fail "could not read screenEdgeMargin"
-orig_alignment="$(kreadconfig6 "${group_args[@]}" --key alignment --default __absent__)" || e2e_fail "could not read alignment"
-orig_alignment_upgraded="$(kreadconfig6 "${group_args[@]}" --key alignmentUpgraded --default __absent__)" || e2e_fail "could not read alignmentUpgraded"
-orig_visibility_mode="$(e2e_view_field "$view" 'v["visibilityMode"]')" || e2e_fail "could not read the original visibility mode"
 kpid=0
-configured=0
-
-restore_key() {
-    local key="$1" value="$2"
-    if [[ "$value" == __absent__ ]]; then
-        kwriteconfig6 "${group_args[@]}" --key "$key" --delete
-    else
-        kwriteconfig6 "${group_args[@]}" --key "$key" -- "$value"
-    fi
-}
+configured=1
 
 set_konsole_maximized() {
     local enabled="$1"
@@ -239,7 +220,7 @@ assert_konsole_work_area() {
 }
 
 cleanup() {
-    local body_status=$? cleanup_failed=0 dock_pid restored_visibility=false
+    local body_status=$? cleanup_failed=0 dock_pid
     trap - EXIT
     if (( kpid != 0 )); then
         kill "$kpid" 2>/dev/null || true
@@ -249,28 +230,13 @@ cleanup() {
         if ! e2e_dock_stop >/dev/null 2>&1; then
             cleanup_failed=1
         fi
-        restore_key maximizeWhenMaximized "$orig_maximize" || cleanup_failed=1
-        restore_key maxLength "$orig_length" || cleanup_failed=1
-        restore_key hideFloatingGapForMaximized "$orig_hide_gap" || cleanup_failed=1
-        restore_key screenEdgeMargin "$orig_edge_margin" || cleanup_failed=1
-        restore_key alignment "$orig_alignment" || cleanup_failed=1
-        restore_key alignmentUpgraded "$orig_alignment_upgraded" || cleanup_failed=1
+        rm -rf "${E2E_CONFIG_HOME:?}"
+        cp -r "$MATRIX_PRISTINE" "$E2E_CONFIG_HOME" || cleanup_failed=1
         dock_pid="$(e2e_dock_pid)"
         if [[ -n "$dock_pid" ]] && kill -0 "$dock_pid" 2>/dev/null; then
             cleanup_failed=1
         elif ! e2e_dock_start 90 >/dev/null 2>&1; then
             cleanup_failed=1
-        elif ! e2e_call setViewVisibilityMode us "$view" "$orig_visibility_mode" >/dev/null 2>&1; then
-            cleanup_failed=1
-        else
-            for _ in $(seq 1 40); do
-                if [[ "$(e2e_view_field "$view" 'v["visibilityMode"]')" == "$orig_visibility_mode" ]]; then
-                    restored_visibility=true
-                    break
-                fi
-                sleep 0.25
-            done
-            [[ "$restored_visibility" == true ]] || cleanup_failed=1
         fi
     fi
     if (( cleanup_failed != 0 )); then
@@ -282,11 +248,11 @@ cleanup() {
 trap cleanup EXIT
 
 e2e_dock_stop || e2e_fail "dock did not stop before fixture configuration"
-configured=1
 kwriteconfig6 "${group_args[@]}" --key maximizeWhenMaximized false || e2e_fail "could not disable maximize-driven panel length"
 kwriteconfig6 "${group_args[@]}" --key maxLength 60 || e2e_fail "could not configure a partial panel length"
 kwriteconfig6 "${group_args[@]}" --key hideFloatingGapForMaximized true || e2e_fail "could not configure floating-gap attachment"
 kwriteconfig6 "${group_args[@]}" --key screenEdgeMargin 18 || e2e_fail "could not configure the floating gap"
+kwriteconfig6 "${group_args[@]}" --key floatingInternalGapIsForced false || e2e_fail "could not keep the floating gap under panel-surface ownership"
 kwriteconfig6 "${group_args[@]}" --key alignment 10 || e2e_fail "could not configure Justify alignment"
 kwriteconfig6 "${group_args[@]}" --key alignmentUpgraded true || e2e_fail "could not mark the Justify alignment as upgraded"
 e2e_dock_start 90 || e2e_fail "dock did not restart with the stable-canvas fixture"

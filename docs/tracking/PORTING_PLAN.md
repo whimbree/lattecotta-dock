@@ -4579,6 +4579,11 @@ prerequisites in the phases above are done.
       output). Remove the unrelated reversed-alignment primary-axis increment
       while preserving both reservation +1 gap-prevention conventions.
       Commits: PENDING INTEGRATION REBASE
+- [x] Fix D188 (stable-canvas acceptance staged a Dock for a Panel-only
+      transition). Use the matrix harness's deterministic panel fixture,
+      assign panel-surface floating-gap ownership explicitly, and restore the
+      complete pristine nested config after the recipe.
+      Commits: PENDING INTEGRATION REBASE
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
