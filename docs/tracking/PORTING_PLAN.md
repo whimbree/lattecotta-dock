@@ -4604,6 +4604,10 @@ prerequisites in the phases above are done.
       configuration authority and pin the legal zero-gap boundary in nested
       KWin.
       Commits: PENDING INTEGRATION REBASE
+- [x] Fix D193 (extended floating-background files omitted adapting
+      attribution). Preserve both original copyright lines and add the
+      adapting author to each materially changed QML file.
+      Commits: PENDING INTEGRATION REBASE
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
