@@ -4682,6 +4682,14 @@ prerequisites in the phases above are done.
       drives maximize and restore in both consuming modes with no Panel
       transition geometry.
       Commits: b552508e3 (PR #124)
+- [ ] Fix D209 (partial-reservation recipe lacks a reproducible schema-current
+      front door).
+      Recipe 061 hard-codes schema version 6 after schema 7 landed and assumes
+      an externally prepared three-view fixture. Give the recipe a
+      deterministic fixture and registered invocation, then pin the current
+      schema contract without folding the repair invisibly into FP-4B (the
+      multi-output and separated-span topology acceptance).
+      Commits:
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
