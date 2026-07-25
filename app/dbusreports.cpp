@@ -1214,8 +1214,26 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
             transition->attachmentDeferredByPointer();
         record.dockGapHideRequested =
             transition->dockGapHideRequested();
-        record.touchingWindowCount =
-            transition->touchingWindowCount();
+        const WindowTouchAuthorityCounts windowTouchCounts{
+            transition->touchingWindowCount(),
+            windowTouchTracker->touchingWindowCount(),
+        };
+        const auto touchingWindowCount =
+            validateWindowTouchAuthorityCounts(
+                windowTouchCounts);
+        if (!touchingWindowCount) {
+            qCritical()
+                << "dbusreports: refusing dock-system snapshot with divergent"
+                   " window-touch authorities for persistent dock"
+                << record.persistentDockId
+                << "runtime view" << record.runtimeViewId
+                << "transition copy"
+                << windowTouchCounts.transitionCopy
+                << "tracker authority"
+                << windowTouchCounts.trackerAuthority;
+            return std::nullopt;
+        }
+        record.touchingWindowCount = *touchingWindowCount;
         record.windowTouchGeometryRoleType =
             windowTouchTracker->geometryRoleTypeName();
         record.transitionTarget =

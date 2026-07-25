@@ -528,6 +528,26 @@ enum class DockTransitionDirection {
     TowardFloated,
 };
 
+struct WindowTouchAuthorityCounts
+{
+    int transitionCopy{0};
+    int trackerAuthority{0};
+};
+
+//! The tracker owns the live count. FloatingTransition keeps a synchronous
+//! policy copy, and collection accepts that copy only while both authorities
+//! describe the same event-loop state.
+[[nodiscard]] constexpr std::optional<int>
+validateWindowTouchAuthorityCounts(
+    const WindowTouchAuthorityCounts &counts)
+{
+    if (counts.transitionCopy != counts.trackerAuthority) {
+        return std::nullopt;
+    }
+
+    return counts.trackerAuthority;
+}
+
 //! One dock in the atomic dockSystemData() snapshot. persistentDockId is the
 //! Plasma containment id. logicalDockId is the relationship root containment
 //! for a linked member and otherwise equals persistentDockId. Independent

@@ -157,7 +157,9 @@ Per dock:
   window-touch admission decision. An ineligible Panel cannot attach through
   the window-touch arm. The separate `dockGapHideRequested` fact requires
   `floatingGapConfigured` and rejects `floatingPanelConfigured`, but it does
-  not target a Panel transition for a Dock.
+  not target a Panel transition for a Dock. It is valid for the legacy
+  `alwaysVisible` and `windowsGoBelow` Dock modes that consume
+  `hideThickScreenGap`.
   Each geometry field is null when the controller has no stable geometry.
   The stable canvas and trigger use virtual-desktop coordinates. Attached,
   floated, current visible, computed mask and bridge, and applet measurement
@@ -288,12 +290,16 @@ screen-edge margin predicate. `dockGapHideRequested` is the separate legacy
 Dock maximized-gap arm; it requires that predicate and cannot coexist with
 `floatingPanelConfigured` or Panel eligibility. The role-type field is empty
 until a live task row is validated and is then exactly `QRect`; a positive
-touch count requires that validated type. `transitionTarget` must be
+touch count requires that validated type. The dedicated tracker owns
+`touchingWindowCount`; the transition controller holds a policy copy, and
+snapshot collection fails closed unless both counts agree. The serialized
+value is the tracker-owned count. `transitionTarget` must be
 `attached` exactly when `floatingPanelEligible &&
 attachOnWindowTouchConfigured && !attachmentDeferredByPointer &&
 touchingWindowCount > 0`; every other state must target `floated`.
 `dockGapHideRequested` remains independent because Docks consume the legacy
-gap path directly and have no stable Panel transition geometry.
+gap path directly in `alwaysVisible` and `windowsGoBelow` and have no stable
+Panel transition geometry.
 
 An internal lineage, transition, or reservation invariant failure logs at
 critical severity and returns an empty D-Bus string. It never returns a smaller

@@ -1040,6 +1040,28 @@ private:
                 "record.dockGapHideRequested="
                 "transition->dockGapHideRequested();"))
             && code.contains(QStringLiteral(
+                "constWindowTouchAuthorityCountswindowTouchCounts{"
+                "transition->touchingWindowCount(),"
+                "windowTouchTracker->touchingWindowCount(),};"))
+            && code.contains(QStringLiteral(
+                "constautotouchingWindowCount="
+                "validateWindowTouchAuthorityCounts("
+                "windowTouchCounts);"
+                "if(!touchingWindowCount){qCritical()"
+                "<<\"dbusreports:refusingdock-systemsnapshotwithdivergent"
+                "\"\"window-touchauthoritiesforpersistentdock\""
+                "<<record.persistentDockId"
+                "<<\"runtimeview\"<<record.runtimeViewId"))
+            && code.contains(QStringLiteral(
+                "<<\"transitioncopy\""
+                "<<windowTouchCounts.transitionCopy"
+                "<<\"trackerauthority\""
+                "<<windowTouchCounts.trackerAuthority;"
+                "returnstd::nullopt;}"))
+            && code.contains(QStringLiteral(
+                "record.touchingWindowCount="
+                "*touchingWindowCount;"))
+            && !code.contains(QStringLiteral(
                 "record.touchingWindowCount="
                 "transition->touchingWindowCount();"))
             && code.contains(QStringLiteral(
@@ -2691,6 +2713,26 @@ void SourceGuardTest::dockSystemTransitionCollection_rejectsControlledMutations(
         !matchesTransitionSnapshotRoute(
             inferredEligibility),
         "inferring eligibility outside FloatingTransition must fail the collector guard");
+
+    QString controllerOwnedTouchCount =
+        normalizedCode(collector);
+    QCOMPARE(
+        controllerOwnedTouchCount.count(
+            QStringLiteral(
+                "record.touchingWindowCount="
+                "*touchingWindowCount;")),
+        1);
+    controllerOwnedTouchCount.replace(
+        QStringLiteral(
+            "record.touchingWindowCount="
+            "*touchingWindowCount;"),
+        QStringLiteral(
+            "record.touchingWindowCount="
+            "transition->touchingWindowCount();"));
+    QVERIFY2(
+        !matchesTransitionSnapshotRoute(
+            controllerOwnedTouchCount),
+        "bypassing tracker-authority agreement must fail the collector guard");
 
     QString inferredGeometryRevision =
         normalizedCode(collector);

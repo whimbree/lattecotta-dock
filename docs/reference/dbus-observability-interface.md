@@ -375,12 +375,16 @@ Landed before or during the 2026-07-16 stabilization session:
   attachment request. Entering an already attached Panel does not detach it.
   `dockGapHideRequested` is the separate legacy Dock maximized-gap request.
   It requires `floatingGapConfigured` and rejects
-  `floatingPanelConfigured`.
+  `floatingPanelConfigured`. It is valid in the `alwaysVisible` and
+  `windowsGoBelow` Dock modes that consume `hideThickScreenGap`.
   `touchingWindowCount` is the current count from the dedicated stable-trigger
-  model. `windowTouchGeometryRoleType` is empty until a live task row has been
-  validated, then reports `QRect`; a positive touch count without that exact
-  observed type is rejected. A record is accepted only when its transition
-  target satisfies this exact fail-closed equation:
+  model and the tracker is authoritative for the serialized value. The
+  transition controller retains a policy copy; collection refuses the entire
+  snapshot if the two counts differ. `windowTouchGeometryRoleType` is empty
+  until a live task row has been validated, then reports `QRect`; a positive
+  touch count without that exact observed type is rejected. A record is
+  accepted only when its transition target satisfies this exact fail-closed
+  equation:
   `attached == floatingPanelEligible && attachOnWindowTouchConfigured &&
   !attachmentDeferredByPointer && touchingWindowCount > 0`.
   `dockGapHideRequested` remains independent because Docks consume the legacy

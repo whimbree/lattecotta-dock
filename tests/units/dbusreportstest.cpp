@@ -64,6 +64,7 @@ private Q_SLOTS:
     void dockSystemSnapshotSerializesTypedRuntimeState();
     void dockSystemSnapshotPinsNullableWireStates();
     void dockSystemSnapshotPreservesFractionalTransitionGeometry();
+    void windowTouchAuthorityCountsRejectDivergence();
     void dockSystemSnapshotRejectsTransitionDisagreement();
     void dockSystemSnapshotRejectsReservationDisagreement();
     void dockSystemSnapshotCanonicalizesShuffledViewsAndLinkedIds();
@@ -1734,6 +1735,36 @@ void DbusReportsTest::dockSystemSnapshotPreservesFractionalTransitionGeometry()
         visible.at(1).toDouble()
         != static_cast<int>(
             visible.at(1).toDouble()));
+}
+
+void DbusReportsTest::windowTouchAuthorityCountsRejectDivergence()
+{
+    constexpr WindowTouchAuthorityCounts synchronized{
+        .transitionCopy = 2,
+        .trackerAuthority = 2,
+    };
+    constexpr WindowTouchAuthorityCounts divergent{
+        .transitionCopy = 1,
+        .trackerAuthority = 2,
+    };
+
+    static_assert(
+        validateWindowTouchAuthorityCounts(
+            synchronized)
+            == std::optional<int>{2});
+    static_assert(
+        !validateWindowTouchAuthorityCounts(
+             divergent)
+             .has_value());
+
+    QCOMPARE(
+        validateWindowTouchAuthorityCounts(
+            synchronized),
+        std::optional<int>{2});
+    QVERIFY(
+        !validateWindowTouchAuthorityCounts(
+             divergent)
+             .has_value());
 }
 
 void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
