@@ -4748,7 +4748,7 @@ prerequisites in the phases above are done.
       full-touching, partial-touching, and disconnected landscape/portrait
       arrangements, client minimization and destruction, and process restart.
       Commits: 0333df72a, 0c4b7ea31, 0c90c3f14, 0d8bde1e2,
-      77ad3f599, 77198eb70 (provisional branch hashes)
+      77ad3f599, 77198eb70, dc005831d (provisional branch hashes)
 - [ ] Complete FP-4C (the deterministic operation-storm acceptance).
       Commits:
 - [ ] Complete FP-4 (the stable window-touch trigger and end-to-end
