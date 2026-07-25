@@ -1625,6 +1625,7 @@ inline bool dockReservationRecordsAgree(
 {
     QHash<uint, const DockReservationGroupRecord *>
         groupsByContributor;
+    QHash<QPair<int, int>, int> maximumContributions;
     QSet<QPair<int, int>> groupKeys;
 
     for (const auto &group : snapshot.reservationGroups) {
@@ -1638,7 +1639,9 @@ inline bool dockReservationRecordsAgree(
                 || group.publishedDepth <= 0
                 || group.contributorDockIds.isEmpty()
                 || !group.geometry.isValid()
+                || !group.windowGeometry.isValid()
                 || !group.layerShellPresent
+                || group.layerShellAnchors.isEmpty()
                 || group.layerShellExclusiveEdge
                     != edgeName(group.edge)
                 || group.layerShellExclusiveZone
@@ -1680,6 +1683,12 @@ inline bool dockReservationRecordsAgree(
                     || view.reservationGroupMemberCount
                     || view.reservationGroupGeneration
                     || !view.reservationContributorDockIds.isEmpty()
+                    || view.reservationGeometry != QRect()
+                    || view.reservationWindowGeometry != QRect()
+                    || !view.reservationLayerShellAnchors.isEmpty()
+                    || view.reservationLayerShellMargins != QMargins()
+                    || !view.reservationLayerShellExclusiveEdge.isEmpty()
+                    || view.reservationLayerShellExclusiveZone
                     || !view.objects.reservationPublisher.isEmpty()) {
                 return false;
             }
@@ -1722,6 +1731,16 @@ inline bool dockReservationRecordsAgree(
                     != expectedContributors
                 || view.reservationGeometry
                     != group->geometry
+                || view.reservationWindowGeometry
+                    != group->windowGeometry
+                || view.reservationLayerShellAnchors
+                    != group->layerShellAnchors
+                || view.reservationLayerShellMargins
+                    != group->layerShellMargins
+                || view.reservationLayerShellExclusiveEdge
+                    != group->layerShellExclusiveEdge
+                || view.reservationLayerShellExclusiveZone
+                    != group->layerShellExclusiveZone
                 || view.objects.reservationPublisher
                     != group->publisher
                 || reportedContributors.contains(
@@ -1730,10 +1749,29 @@ inline bool dockReservationRecordsAgree(
         }
         reportedContributors.insert(
             view.persistentDockId);
+        const QPair<int, int> groupKey{
+            group->outputId,
+            static_cast<int>(group->edge)};
+        maximumContributions[groupKey] =
+            qMax(maximumContributions.value(groupKey),
+                 *view.reservationContributionDepth);
     }
 
-    return reportedContributors.size()
-        == groupsByContributor.size();
+    if (reportedContributors.size()
+            != groupsByContributor.size()) {
+        return false;
+    }
+
+    return std::ranges::all_of(
+        snapshot.reservationGroups,
+        [&maximumContributions](
+            const DockReservationGroupRecord &group) {
+            const QPair<int, int> key{
+                group.outputId,
+                static_cast<int>(group.edge)};
+            return maximumContributions.value(key)
+                == group.publishedDepth;
+        });
 }
 
 inline QString serializeDockSystemSnapshot(const DockSystemSnapshot &snapshot)

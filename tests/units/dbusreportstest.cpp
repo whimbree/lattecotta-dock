@@ -1192,6 +1192,10 @@ void DbusReportsTest::dockSystemSnapshotRejectsReservationDisagreement()
     group.geometry = QRect(0, 952, 1600, 48);
     group.windowGeometry = QRect(0, 0, 1600, 1);
     group.layerShellPresent = true;
+    group.layerShellAnchors = {
+        QStringLiteral("bottom"),
+        QStringLiteral("left"),
+        QStringLiteral("right")};
     group.layerShellExclusiveEdge =
         QStringLiteral("bottom");
     group.layerShellExclusiveZone = 48;
@@ -1221,6 +1225,16 @@ void DbusReportsTest::dockSystemSnapshotRejectsReservationDisagreement()
                 group.contributorDockIds;
             view.reservationGeometry =
                 group.geometry;
+            view.reservationWindowGeometry =
+                group.windowGeometry;
+            view.reservationLayerShellAnchors =
+                group.layerShellAnchors;
+            view.reservationLayerShellMargins =
+                group.layerShellMargins;
+            view.reservationLayerShellExclusiveEdge =
+                group.layerShellExclusiveEdge;
+            view.reservationLayerShellExclusiveZone =
+                group.layerShellExclusiveZone;
             view.objects.reservationPublisher =
                 group.publisher;
             return view;
@@ -1229,9 +1243,13 @@ void DbusReportsTest::dockSystemSnapshotRejectsReservationDisagreement()
     DockSystemSnapshot valid;
     valid.reservationStateGeneration = 4;
     valid.reservationGroups = {group};
+    DockSystemViewRecord independent;
+    independent.persistentDockId = 3;
+    independent.logicalDockId = 3;
     valid.views = {
         contributor(1, 40),
-        contributor(2, 48)};
+        contributor(2, 48),
+        independent};
     QVERIFY(dockReservationRecordsAgree(valid));
 
     const auto rejects =
@@ -1247,7 +1265,13 @@ void DbusReportsTest::dockSystemSnapshotRejectsReservationDisagreement()
         snapshot.reservationGroups[0].geometry = QRect();
     });
     rejects([](auto &snapshot) {
+        snapshot.reservationGroups[0].windowGeometry = QRect();
+    });
+    rejects([](auto &snapshot) {
         snapshot.reservationGroups[0].layerShellPresent = false;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.reservationGroups[0].layerShellAnchors.clear();
     });
     rejects([](auto &snapshot) {
         snapshot.reservationGroups[0].generation = 5;
@@ -1262,6 +1286,30 @@ void DbusReportsTest::dockSystemSnapshotRejectsReservationDisagreement()
     rejects([](auto &snapshot) {
         snapshot.views[0].objects.reservationPublisher =
             QStringLiteral("object-10");
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].reservationWindowGeometry.translate(1, 0);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].reservationLayerShellAnchors.removeLast();
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].reservationLayerShellMargins =
+            QMargins(1, 0, 0, 0);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].reservationLayerShellExclusiveEdge =
+            QStringLiteral("top");
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].reservationLayerShellExclusiveZone = 47;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[1].reservationContributionDepth = 47;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[2].reservationGeometry =
+            snapshot.reservationGroups[0].geometry;
     });
     rejects([](auto &snapshot) {
         snapshot.views.clear();
