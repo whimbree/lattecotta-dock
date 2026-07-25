@@ -2458,6 +2458,23 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   attribution. The canonical REUSE gate remains the final repository-wide
   license check.
 
+### D194 - Zero-gap endpoint proof split state across snapshots
+- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- FOUND: 2026-07-24, third independent FP-2 review.
+- SYMPTOM: recipe 071 established the zero-gap Panel, visibility, configured,
+  and eligible values in one snapshot, then established floated resting
+  progress in later snapshots. The evidence did not prove the complete
+  endpoint state atomically.
+- ROOT: the boundary check reused the generic endpoint waiter after a separate
+  configuration read instead of defining the exact combined state required by
+  the D192 (zero-gap panels exposed conflicting floating eligibility)
+  regression.
+- FIX: poll one `dockSystemData` record until the same snapshot reports Panel,
+  Always Visible, configured false, eligible false, floated, resting, not
+  running, and progress 1.
+- EVIDENCE: `sourceguardtest` pins the combined predicate and its dedicated
+  waiter. Recipe 071 refuses every split or transitional observation.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
   is merged. FP-2 (the stable canvas and transition controller) is complete on

@@ -71,9 +71,12 @@ matching active phase at fractional progress. The second review found D192
 positive-gap classification now supplies QML eligibility, and the nested
 recipe checks the legal 0 px boundary. D193 (extended floating-background
 files omitted adapting attribution) adds the required adapting author without
-removing the original lines. A fresh independent review, the canonical gate,
-and the pull request remain before merge. No real desktop process or surface
-was inspected, stopped, or restarted during this implementation.
+removing the original lines. The third review found D194 (zero-gap endpoint
+proof split state across snapshots): the recipe now requires the complete
+zero-gap floated endpoint in one atomic snapshot. A fresh independent review,
+the canonical gate, and the pull request remain before merge. No real desktop
+process or surface was inspected, stopped, or restarted during this
+implementation.
 
 ## 2026-07-24: FP-1 owns one maximum-depth reservation per output edge
 

@@ -401,11 +401,16 @@ private:
                    "kwriteconfig6\"${group_args[@]}\""
                    "--keyscreenEdgeMargin0"))
             && code.contains(QStringLiteral(
-                   "[[\"$view_type\"==panel"
-                   "&&\"$visibility_mode\"==alwaysVisible]]"))
+                   "if[[\"$view_type\"==panel"
+                   "&&\"$visibility_mode\"==alwaysVisible"
+                   "&&\"$configured_panel\"==false"
+                   "&&\"$eligible_panel\"==false"
+                   "&&\"$target\"==floated"
+                   "&&\"$phase\"==resting"
+                   "&&\"$running\"==false]]"
+                   "\\&&awk-vactual=\"$progress\""))
             && code.contains(QStringLiteral(
-                   "[[\"$configured_panel\"==false"
-                   "&&\"$eligible_panel\"==false]]"))
+                   "wait_for_zero_gap_floated_snapshot"))
             && code.contains(QStringLiteral(
                    "expected_h=$((screen_h-stable_reservation_depth))"))
             && !code.contains(QStringLiteral("max_strut<base_strut"))
