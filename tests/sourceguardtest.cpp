@@ -18,6 +18,8 @@
 //     window properties stay coalesced
 //   * VisibilityManager strut routing: discrete exclusive-zone thickness
 //     changes publish directly while geometry churn stays throttled
+//   * Reservation publication: member state commits only after coordinator
+//     success and keys same-geometry moves by the layer-shell output
 //   * Occupied-geometry propagation: a changed stable dock rectangle notifies
 //     perpendicular peers before they solve their available region
 //   * Views reporting: global applet rearrangement is effective only for the
@@ -453,6 +455,96 @@ private:
                 "reservation->screen()"));
     }
 
+    static bool matchesReservationPublicationCommitRoute(
+        const QString &visibilityHeader,
+        const QString &visibilitySource)
+    {
+        const QString header = normalizedCode(
+            visibilityHeader);
+        const QString update = normalizedCode(
+            functionBody(
+                visibilitySource,
+                QStringLiteral(
+                    "void VisibilityManager::updateStrutsBasedOnLayoutsAndActivities")));
+        const QString setMode = normalizedCode(
+            functionBody(
+                visibilitySource,
+                QStringLiteral(
+                    "void VisibilityManager::setMode")));
+        const int modeCommit = setMode.indexOf(
+            QStringLiteral("m_mode=mode;"));
+        const int retirement = setMode.indexOf(
+            QStringLiteral(
+                "m_reservationPublication.remove("),
+            modeCommit);
+
+        return header.contains(QStringLiteral(
+                   "ScreenSpaceReservationPublicationState"
+                   "m_reservationPublication;"))
+            && !visibilitySource.contains(QStringLiteral(
+                "m_publishedStruts"))
+            && update.contains(QStringLiteral(
+                "if(m_mode==Types::AlwaysVisible"
+                "&&m_strutsThickness>0"))
+            && update.contains(QStringLiteral(
+                "constScreenSpaceReservationPublicationTarget"
+                "candidate{*computedStruts,outputId,"
+                "m_latteView->location()};"))
+            && update.contains(QStringLiteral(
+                "m_reservationPublication.update("
+                "candidate,forceUpdate,"
+                "[this](constScreenSpaceReservationPublicationTarget"
+                "&target){"
+                "returnm_wm->setViewStruts("
+                "*m_latteView,target.struts,"
+                "target.edge);})"))
+            && update.count(QStringLiteral(
+                "m_timerBlockStrutsUpdate.start();")) == 2
+            && modeCommit != -1
+            && retirement > modeCommit
+            && setMode.contains(QStringLiteral(
+                "if(mustRetireReservation"
+                "&&!m_reservationPublication.remove("))
+            && setMode.count(QStringLiteral(
+                "m_timerBlockStrutsUpdate.start();")) == 1;
+    }
+
+    static bool matchesReservationMemberOutputAuthorityRoute(
+        const QString &coordinatorSource,
+        const QString &visibilitySource)
+    {
+        const QString coordinator = normalizedCode(
+            coordinatorSource);
+        const QString visibilityUpdate = normalizedCode(
+            functionBody(
+                visibilitySource,
+                QStringLiteral(
+                    "void VisibilityManager::updateStrutsBasedOnLayoutsAndActivities")));
+        const QString outputResolver = normalizedCode(
+            functionBody(
+                coordinatorSource,
+                QStringLiteral(
+                    "QScreen *reservationOutputForView")));
+
+        return outputResolver.contains(QStringLiteral(
+                   "constauto*constlayerShell="
+                   "view.layerShellWindow();"
+                   "returnlayerShell?layerShell->screen():nullptr;"))
+            && coordinator.count(QStringLiteral(
+                "reservationOutputForView(")) == 3
+            && !coordinator.contains(QStringLiteral(
+                "view.screen()"))
+            && !coordinator.contains(QStringLiteral(
+                "runtime->second.view->screen()"))
+            && visibilityUpdate.contains(QStringLiteral(
+                "constauto*constlayerShell="
+                "m_latteView->layerShellWindow();"
+                "QScreen*constscreen="
+                "layerShell?layerShell->screen():nullptr;"))
+            && !visibilityUpdate.contains(QStringLiteral(
+                "m_latteView->screen()"));
+    }
+
     static bool matchesRuntimeIdentityRegistryContract(const QString &body)
     {
         const QString code = normalizedCode(body);
@@ -687,6 +779,8 @@ private Q_SLOTS:
     void themeAwareIconRenderTest_sourceGuardRejectsControlledMutations();
     void dockSystemCollection_keepsPureRouting();
     void dockSystemCollection_sourceGuardsRejectControlledMutations();
+    void reservationPublication_keepsFailureAtomicRoute();
+    void reservationPublication_usesLayerShellOutputIdentity();
     void dockSystemIdentityRegistry_keepsLifetimeAndAffinityContract();
     void dockSystemIdentityRegistry_sourceGuardsRejectControlledMutations();
     void middleClickDispatch_keepsProductionRecordingContract();
@@ -1419,6 +1513,93 @@ void SourceGuardTest::dockSystemCollection_sourceGuardsRejectControlledMutations
     QVERIFY2(dataCollector.contains(QStringLiteral(
                  "returnsnapshot?serializeDockSystemSnapshot(*snapshot):QString();")),
              "malformed lineage must refuse the complete query instead of serializing partial JSON");
+}
+
+void SourceGuardTest::reservationPublication_keepsFailureAtomicRoute()
+{
+    const QString header = readFile(
+        QStringLiteral("app/view/visibilitymanager.h"));
+    const QString source = readFile(
+        QStringLiteral("app/view/visibilitymanager.cpp"));
+    QVERIFY2(
+        matchesReservationPublicationCommitRoute(
+            header,
+            source),
+        "VisibilityManager must commit member struts only after the coordinator accepts publication or removal");
+
+    QString earlyCommit = source;
+    earlyCommit.replace(
+        QStringLiteral(
+            "return m_wm->setViewStruts("),
+        QStringLiteral(
+            "m_wm->setViewStruts("));
+    QVERIFY2(
+        !matchesReservationPublicationCommitRoute(
+            header,
+            earlyCommit),
+        "discarding the publication result must fail the reservation commit guard");
+
+    QString staleCandidate = source;
+    staleCandidate.replace(
+        QStringLiteral(
+            "target.struts,"),
+        QStringLiteral(
+            "m_reservationPublication.publishedStruts(),"));
+    QVERIFY2(
+        !matchesReservationPublicationCommitRoute(
+            header,
+            staleCandidate),
+        "publishing the old acknowledged rectangle must fail the reservation commit guard");
+
+    QString ungatedMode = source;
+    ungatedMode.replace(
+        QStringLiteral(
+            "if (m_mode == Types::AlwaysVisible\n"
+            "            && m_strutsThickness > 0"),
+        QStringLiteral(
+            "if (m_strutsThickness > 0"));
+    QVERIFY2(
+        !matchesReservationPublicationCommitRoute(
+            header,
+            ungatedMode),
+        "removing the AlwaysVisible gate must fail the reservation commit guard");
+}
+
+void SourceGuardTest::reservationPublication_usesLayerShellOutputIdentity()
+{
+    const QString coordinator = readFile(QStringLiteral(
+        "app/view/helpers/screenspacereservationcoordinator.cpp"));
+    const QString visibility = readFile(QStringLiteral(
+        "app/view/visibilitymanager.cpp"));
+    QVERIFY2(
+        matchesReservationMemberOutputAuthorityRoute(
+            coordinator,
+            visibility),
+        "same-geometry output migration must use LayerShellQt's committed output identity at both publication boundaries");
+
+    QString staleCoordinator = coordinator;
+    staleCoordinator.replace(
+        QStringLiteral(
+            "reservationOutputForView(view)"),
+        QStringLiteral(
+            "view.screen()"));
+    QVERIFY2(
+        !matchesReservationMemberOutputAuthorityRoute(
+            staleCoordinator,
+            visibility),
+        "restoring the coordinator QWindow output must fail the member-output guard");
+
+    QString staleVisibility = visibility;
+    staleVisibility.replace(
+        QStringLiteral(
+            "layerShell->screen()"),
+        QStringLiteral(
+            "m_latteView->screen()"));
+    QVERIFY2(
+        !matchesReservationMemberOutputAuthorityRoute(
+            coordinator,
+            staleVisibility),
+        "restoring the VisibilityManager QWindow output must fail the member-output guard");
 }
 
 void SourceGuardTest::dockSystemIdentityRegistry_keepsLifetimeAndAffinityContract()

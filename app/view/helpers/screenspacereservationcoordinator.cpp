@@ -36,6 +36,16 @@ namespace ViewPart {
 
 namespace {
 
+[[nodiscard]] QScreen *reservationOutputForView(
+    const View &view)
+{
+    const auto *const layerShell =
+        view.layerShellWindow();
+    return layerShell
+        ? layerShell->screen()
+        : nullptr;
+}
+
 [[nodiscard]] constexpr std::optional<ReservationEdge> toReservationEdge(
     const Plasma::Types::Location location) noexcept
 {
@@ -145,21 +155,22 @@ public:
         publishers.clear();
     }
 
-    void updateReservation(
+    [[nodiscard]] bool updateReservation(
         View &view,
         const QRect &strutGeometry,
         const Plasma::Types::Location location)
     {
         const auto member = memberFor(view);
         const auto edge = toReservationEdge(location);
-        QScreen *const screen = view.screen();
+        QScreen *const screen =
+            reservationOutputForView(view);
         if (!member || !edge || !screen) {
             qCritical() << "reservation coordinator refused incomplete view identity"
                         << "containment="
                         << (view.containment() ? view.containment()->id() : 0)
                         << "location=" << static_cast<int>(location)
                         << "screen=" << screen;
-            return;
+            return false;
         }
 
         const int outputId = corona->screenPool()->id(screen->name());
@@ -181,7 +192,7 @@ public:
                         << "location=" << static_cast<int>(location)
                         << "strut=" << strutGeometry
                         << "output=" << outputGeometry;
-            return;
+            return false;
         }
 
         auto existingRuntime = members.find(*member);
@@ -189,7 +200,7 @@ public:
                 && existingRuntime->second.view.data() != &view) {
             qCritical() << "reservation coordinator refused duplicate persistent dock identity"
                         << member->value();
-            return;
+            return false;
         }
 
         bool insertedRuntime = false;
@@ -232,10 +243,13 @@ public:
                     existingRuntime->second.destroyedConnection);
                 members.erase(existingRuntime);
             }
+            return false;
         }
+
+        return true;
     }
 
-    void removeReservation(View &view)
+    [[nodiscard]] bool removeReservation(View &view)
     {
         const auto memberEntry = findRuntimeMember(view);
         if (memberEntry == members.end()) {
@@ -248,7 +262,7 @@ public:
                             << member->value();
                 std::terminate();
             }
-            return;
+            return true;
         }
 
         const ReservationMemberId member = memberEntry->first;
@@ -269,9 +283,10 @@ public:
             members.insert(std::move(runtime));
             qCritical() << "reservation coordinator retained a contribution after teardown projection failed"
                         << member.value();
-            return;
+            return false;
         }
         QObject::disconnect(runtime.mapped().destroyedConnection);
+        return true;
     }
 
     [[nodiscard]] std::optional<ScreenSpaceReservationSnapshot>
@@ -426,7 +441,9 @@ private:
                 return nullptr;
             }
 
-            QScreen *const screen = runtime->second.view->screen();
+            QScreen *const screen =
+                reservationOutputForView(
+                    *runtime->second.view);
             if (!screen
                     || corona->screenPool()->id(screen->name())
                         != group.output.value()) {
@@ -728,17 +745,20 @@ ScreenSpaceReservationCoordinator::ScreenSpaceReservationCoordinator(
 ScreenSpaceReservationCoordinator::~ScreenSpaceReservationCoordinator() =
     default;
 
-void ScreenSpaceReservationCoordinator::updateReservation(
+bool ScreenSpaceReservationCoordinator::updateReservation(
     View &view,
     const QRect &strutGeometry,
     const Plasma::Types::Location location)
 {
-    d->updateReservation(view, strutGeometry, location);
+    return d->updateReservation(
+        view,
+        strutGeometry,
+        location);
 }
 
-void ScreenSpaceReservationCoordinator::removeReservation(View &view)
+bool ScreenSpaceReservationCoordinator::removeReservation(View &view)
 {
-    d->removeReservation(view);
+    return d->removeReservation(view);
 }
 
 std::optional<ScreenSpaceReservationSnapshot>

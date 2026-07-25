@@ -108,6 +108,13 @@ latte_add_unit_test(inputmaskflushtest)
 # maximum depth per persistent output identity and edge.
 latte_add_unit_test(screenspacereservationledgertest)
 
+# VisibilityManager's member-side reservation state follows the coordinator
+# transaction result. Failed updates and removals retain the committed value
+# and force a later equal-valued request through the publication boundary.
+latte_add_unit_test(screenspacereservationpublicationtest)
+target_link_libraries(screenspacereservationpublicationtest
+    Plasma::Plasma)
+
 # Independent-dock action policy: screen-group clones can create an independent
 # duplicate, but cannot export, move, or remove outside the original's lifecycle.
 latte_add_unit_test(viewactionpolicytest)

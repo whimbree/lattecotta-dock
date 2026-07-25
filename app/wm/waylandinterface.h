@@ -43,11 +43,11 @@ public:
     ~WaylandInterface() override;
 
     void setViewExtraFlags(QObject *view, bool isPanelWindow = true, Latte::Types::Visibility mode = Latte::Types::WindowsGoBelow) override;
-    void setViewStruts(QWindow &view, const QRect &rect
-                       , Plasma::Types::Location location) override;
+    [[nodiscard]] bool setViewStruts(QWindow &view, const QRect &rect
+                                     , Plasma::Types::Location location) override;
     void setWindowOnActivities(const WindowId &wid, const QStringList &nextactivities) override;
 
-    void removeViewStruts(QWindow &view) override;
+    [[nodiscard]] bool removeViewStruts(QWindow &view) override;
 
     WindowId activeWindow() override;
     WindowInfoWrap requestInfo(WindowId wid) override;
