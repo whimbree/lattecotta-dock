@@ -2697,7 +2697,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   061 by name.
 
 ### D210 - Floating panel attachment changed primary-axis layout clearance
-- STATUS: FIXED IN THIS BRANCH (`a9be9bb1b`, provisional branch hash).
+- STATUS: FIXED IN THIS BRANCH (`0c4b7ea31`, provisional branch hash).
 - FOUND: 2026-07-25, FP-4B (multi-output and separated-span topology
   acceptance) nested-KWin preflight.
 - SYMPTOM: attaching a partial Start-aligned floating Panel increased

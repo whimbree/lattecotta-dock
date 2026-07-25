@@ -83,9 +83,10 @@ arrangements. Exact per-view triggers and input regions stay separated, a
 spanning window activates only the intersected views, the reservation
 coordinator publishes the maximum depth per output edge, and process restart
 reproduces the persistent projection. The expanded multi-output vehicle
-self-test also passes and restores every captured KScreen field. Commits
-`116bc3495`, `a9be9bb1b`, and `a988d9c89` are provisional branch hashes until
-GitHub rebases the FP-4B PR.
+self-test also passes and restores every field in the canonical captured
+KScreen state. Commits `0333df72a`, `0c4b7ea31`, `0c90c3f14`,
+`0d8bde1e2`, `77ad3f599`, and `77198eb70` are provisional branch hashes
+until GitHub rebases the FP-4B PR.
 
 ## 2026-07-25: FP-3 owns internal presentation, exact input, effects, and popups
 
