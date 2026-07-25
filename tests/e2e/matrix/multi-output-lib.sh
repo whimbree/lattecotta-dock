@@ -138,10 +138,10 @@ print("%s\t%s\t%d,%d %dx%d" % (primary["name"], secondary["name"], g[0], g[1], g
 }
 
 # _mo_project_output_state <kscreen-json>: validate the two discovered outputs
-# and print their restorable state as tab-separated
-# name/enabled/rotation/scale/x/y rows. The same projection validates capture,
-# builds restore arguments, and verifies cleanup, so those contracts cannot
-# drift.
+# and print the fields this helper can restore as tab-separated
+# name/enabled/rotation/scale/x/y rows. This projection builds only documented
+# kscreen-doctor setters. Full-state verification is a separate semantic
+# comparison so fields without a documented setter cannot drift silently.
 _mo_project_output_state() {
     local -r state="$1"
     KSCREEN_STATE="$state" python3 - "$E2E_MO_PRIMARY" "$E2E_MO_SECONDARY" <<'PY'
@@ -196,9 +196,147 @@ for name in names:
 PY
 }
 
+# _mo_compare_output_state_semantically <captured-json> <current-json>:
+# compare the complete KScreen payload without relying on JSON byte order.
+# Outputs are an identity-keyed collection, and each output's modes are an
+# identity-keyed collection. No value or field is excluded. Fields the helper
+# cannot restore, including mode, priority, capability, and future fields, must
+# remain unchanged or cleanup fails loudly.
+_mo_compare_output_state_semantically() {
+    local -r captured="$1"
+    local -r current="$2"
+    KSCREEN_CAPTURED_STATE="$captured" KSCREEN_CURRENT_STATE="$current" \
+        python3 - <<'PY'
+import json
+import os
+import sys
+
+
+def parse_state(variable, label):
+    try:
+        payload = json.loads(os.environ[variable])
+    except (KeyError, json.JSONDecodeError) as error:
+        raise ValueError(f"{label} KScreen state is not valid JSON: {error}") from error
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} KScreen state must be a JSON object")
+    return payload
+
+
+def sort_identity_collection(records, identity, path):
+    if not isinstance(records, list):
+        raise ValueError(f"{path} must be a JSON array")
+    identities = []
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            raise ValueError(f"{path}[{index}] must be a JSON object")
+        value = record.get(identity)
+        if isinstance(value, bool) or not isinstance(value, (str, int)):
+            raise ValueError(
+                f"{path}[{index}].{identity} must be a string or integer"
+            )
+        identities.append(value)
+    if len(set((type(value).__name__, value) for value in identities)) != len(
+        identities
+    ):
+        raise ValueError(f"{path} has duplicate {identity} values")
+    return [
+        record
+        for _, record in sorted(
+            zip(identities, records),
+            key=lambda item: (type(item[0]).__name__, str(item[0])),
+        )
+    ]
+
+
+def canonicalize(payload, label):
+    outputs = sort_identity_collection(
+        payload.get("outputs"), "name", f"{label}.outputs"
+    )
+    canonical = dict(payload)
+    canonical_outputs = []
+    for output in outputs:
+        canonical_output = dict(output)
+        if "modes" in canonical_output:
+            canonical_output["modes"] = sort_identity_collection(
+                canonical_output["modes"],
+                "id",
+                f"{label}.outputs[{output['name']!r}].modes",
+            )
+        canonical_outputs.append(canonical_output)
+    canonical["outputs"] = canonical_outputs
+    return canonical
+
+
+def numbers_equal(left, right):
+    return (
+        not isinstance(left, bool)
+        and not isinstance(right, bool)
+        and isinstance(left, (int, float))
+        and isinstance(right, (int, float))
+        and left == right
+    )
+
+
+def first_difference(left, right, path="$"):
+    if numbers_equal(left, right):
+        return None
+    if type(left) is not type(right):
+        return (
+            f"{path}: type changed from {type(left).__name__} "
+            f"to {type(right).__name__}"
+        )
+    if isinstance(left, dict):
+        left_keys = set(left)
+        right_keys = set(right)
+        if left_keys != right_keys:
+            removed = sorted(left_keys - right_keys)
+            added = sorted(right_keys - left_keys)
+            return f"{path}: fields removed={removed!r} added={added!r}"
+        for key in sorted(left):
+            difference = first_difference(left[key], right[key], f"{path}.{key}")
+            if difference is not None:
+                return difference
+        return None
+    if isinstance(left, list):
+        if len(left) != len(right):
+            return f"{path}: list length changed from {len(left)} to {len(right)}"
+        for index, (captured_value, current_value) in enumerate(zip(left, right)):
+            difference = first_difference(
+                captured_value, current_value, f"{path}[{index}]"
+            )
+            if difference is not None:
+                return difference
+        return None
+    if left != right:
+        return f"{path}: changed from {left!r} to {right!r}"
+    return None
+
+
+try:
+    captured = canonicalize(
+        parse_state("KSCREEN_CAPTURED_STATE", "captured"), "captured"
+    )
+    current = canonicalize(
+        parse_state("KSCREEN_CURRENT_STATE", "current"), "current"
+    )
+except ValueError as error:
+    print(f"_mo_compare_output_state_semantically: {error}", file=sys.stderr)
+    raise SystemExit(2)
+
+difference = first_difference(captured, current)
+if difference is not None:
+    print(
+        "_mo_compare_output_state_semantically: "
+        f"complete KScreen state drifted at {difference}",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+PY
+}
+
 # mo_capture_output_topology: print complete current kscreen-doctor JSON after
-# validating the dynamically discovered output state. Callers preserve this
-# payload and pass it to mo_restore_output_topology from cleanup.
+# validating every field this helper can restore. Callers preserve the whole
+# payload so cleanup can also prove every unhandled field remained unchanged.
 mo_capture_output_topology() {
     _mo_require_topology_mutation mo_capture_output_topology || return 2
     if [[ -z "${E2E_MO_PRIMARY:-}" || -z "${E2E_MO_SECONDARY:-}" ]]; then
@@ -218,10 +356,13 @@ mo_capture_output_topology() {
 }
 
 # _mo_wait_for_captured_output_topology <captured-json>: verify cleanup by
-# polling the same canonical projection until every restorable field matches.
+# polling until every restorable field matches and the complete KScreen payload
+# is semantically equal. Unhandled state may settle asynchronously, but it is
+# never excluded from the final verdict.
 _mo_wait_for_captured_output_topology() {
     local -r captured="$1"
-    local expected current current_projection
+    local expected current current_projection semantic_drift=""
+    local comparison_status=0
     expected="$(_mo_project_output_state "$captured")" || return 1
     local i
     for ((i = 0; i < 120; ++i)); do
@@ -230,16 +371,34 @@ _mo_wait_for_captured_output_topology() {
             return 1
         fi
         current_projection="$(_mo_project_output_state "$current")" || return 1
-        [[ "$current_projection" == "$expected" ]] && return 0
+        if [[ "$current_projection" == "$expected" ]]; then
+            if semantic_drift="$(
+                _mo_compare_output_state_semantically "$captured" "$current" 2>&1
+            )"; then
+                return 0
+            else
+                comparison_status=$?
+            fi
+            if (( comparison_status == 2 )); then
+                printf '%s\n' "$semantic_drift" >&2
+                return 1
+            fi
+        else
+            semantic_drift="restorable output fields have not settled"
+        fi
         sleep 0.25
     done
-    printf '%s\n' "_mo_wait_for_captured_output_topology: KScreen did not restore the captured state; last state:" >&2
+    printf '%s\n' \
+        "_mo_wait_for_captured_output_topology: KScreen did not restore the complete captured state: $semantic_drift" >&2
+    printf '%s\n' "_mo_wait_for_captured_output_topology: last state:" >&2
     printf '%s\n' "$current" >&2
     return 1
 }
 
 # mo_restore_output_topology <captured-json>: atomically restore both outputs'
-# captured enabled state, rotation, scale, and position, then verify every field.
+# captured enabled state, rotation, scale, and position. These are every field
+# this harness can mutate. Then prove the complete captured KScreen state is
+# semantically unchanged, including every field without a restore setter.
 mo_restore_output_topology() {
     local -r captured="$1"
     _mo_require_topology_mutation mo_restore_output_topology || return 2

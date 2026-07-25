@@ -582,6 +582,14 @@ set_tests_properties(sourceguardtest PROPERTIES
 target_compile_definitions(sourceguardtest PRIVATE
     REPO_ROOT="${CMAKE_SOURCE_DIR}")
 
+# Pure transaction-contract proof for the FP-4B multi-output helper. It accepts
+# semantic JSON reordering and rejects controlled drift in writable, mode,
+# priority, capability, unknown output, and top-level KScreen state.
+add_test(NAME multioutputstatecontracttest
+    COMMAND bash ${CMAKE_SOURCE_DIR}/tests/multioutputstatecontracttest.sh)
+set_tests_properties(multioutputstatecontracttest PROPERTIES
+    ENVIRONMENT "REPO_ROOT=${CMAKE_SOURCE_DIR}")
+
 # Dock identity and edit-session boundary wiring. The value-only action policy
 # and retarget generations have sanitized unit tests; this pins their use by
 # the runtime objects that need a complete Plasma shell to construct.
