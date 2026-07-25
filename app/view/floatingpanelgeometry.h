@@ -23,6 +23,12 @@ enum class Edge {
     Left,
 };
 
+enum class PrimaryAxisAlignment {
+    Start,
+    Center,
+    End,
+};
+
 struct StablePrimaryAxisSpan {
     int start{0};
     int length{0};
@@ -96,6 +102,17 @@ struct Inputs {
     QRect outputGeometry;
     Edge edge{Edge::Bottom};
     StablePrimaryAxisSpan primaryAxisSpan;
+    int panelDepth{0};
+    int floatingGap{0};
+};
+
+struct PlacementInputs {
+    QRect outputGeometry;
+    QRect availablePrimaryGeometry;
+    Edge edge{Edge::Bottom};
+    PrimaryAxisAlignment alignment{PrimaryAxisAlignment::Center};
+    float maxLength{1.0F};
+    float offset{0.0F};
     int panelDepth{0};
     int floatingGap{0};
 };
@@ -211,6 +228,58 @@ struct Inputs {
     Q_ASSERT(in.outputGeometry.contains(solution.trigger.value));
 
     return solution;
+}
+
+[[nodiscard]] inline std::optional<Solution> solvePlacement(const PlacementInputs &in)
+{
+    if (!in.outputGeometry.isValid() || !in.availablePrimaryGeometry.isValid()
+        || !qIsFinite(in.maxLength) || in.maxLength <= 0.0F || in.maxLength > 1.0F
+        || !qIsFinite(in.offset)) {
+        return std::nullopt;
+    }
+
+    const int outputStart =
+        isHorizontal(in.edge) ? in.outputGeometry.left() : in.outputGeometry.top();
+    const int outputLength =
+        isHorizontal(in.edge) ? in.outputGeometry.width() : in.outputGeometry.height();
+    const int availableStart =
+        isHorizontal(in.edge) ? in.availablePrimaryGeometry.left()
+                              : in.availablePrimaryGeometry.top();
+    const int availableLength =
+        isHorizontal(in.edge) ? in.availablePrimaryGeometry.width()
+                              : in.availablePrimaryGeometry.height();
+    const qint64 availableEnd = qint64(availableStart) + availableLength;
+    const qint64 outputEnd = qint64(outputStart) + outputLength;
+    if (availableStart < outputStart || availableEnd > outputEnd) {
+        return std::nullopt;
+    }
+
+    const int panelLength = static_cast<int>(availableLength * in.maxLength);
+    const int offset = static_cast<int>(availableLength * in.offset);
+    int panelStart = availableStart;
+
+    switch (in.alignment) {
+    case PrimaryAxisAlignment::Start:
+        panelStart += offset;
+        break;
+    case PrimaryAxisAlignment::Center:
+        panelStart += static_cast<int>(
+            availableLength * ((1.0F - in.maxLength) / 2.0F)
+            + availableLength * in.offset);
+        break;
+    case PrimaryAxisAlignment::End:
+        panelStart += static_cast<int>(
+            availableLength - (availableLength * in.maxLength) - offset);
+        break;
+    }
+
+    return solve({
+        .outputGeometry = in.outputGeometry,
+        .edge = in.edge,
+        .primaryAxisSpan = {panelStart, panelLength},
+        .panelDepth = in.panelDepth,
+        .floatingGap = in.floatingGap,
+    });
 }
 
 } // namespace Latte::ViewPart::FloatingPanelGeometry

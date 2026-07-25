@@ -12,7 +12,9 @@
 using namespace Latte::ViewPart::FloatingPanelGeometry;
 
 Q_DECLARE_METATYPE(Inputs)
+Q_DECLARE_METATYPE(PlacementInputs)
 Q_DECLARE_METATYPE(Edge)
+Q_DECLARE_METATYPE(PrimaryAxisAlignment)
 
 class FloatingPanelGeometryTest : public QObject
 {
@@ -38,8 +40,14 @@ private Q_SLOTS:
     void bridgesOnlyTheExactPartialSpan();
     void triggerOverlapsOneLogicalPixelInward_data();
     void triggerOverlapsOneLogicalPixelInward();
+    void solvesAlignedPartialPlacement_data();
+    void solvesAlignedPartialPlacement();
+    void fullSpanEndPlacementStaysInsideEveryOutputEdge_data();
+    void fullSpanEndPlacementStaysInsideEveryOutputEdge();
     void rejectsInvalidBoundaryGeometry_data();
     void rejectsInvalidBoundaryGeometry();
+    void rejectsInvalidPlacement_data();
+    void rejectsInvalidPlacement();
 };
 
 void FloatingPanelGeometryTest::solvesStableEnvelopeForEveryEdge_data()
@@ -128,6 +136,71 @@ void FloatingPanelGeometryTest::triggerOverlapsOneLogicalPixelInward()
     QCOMPARE(solution->trigger.value, trigger);
 }
 
+void FloatingPanelGeometryTest::solvesAlignedPartialPlacement_data()
+{
+    QTest::addColumn<PrimaryAxisAlignment>("alignment");
+    QTest::addColumn<float>("offset");
+    QTest::addColumn<int>("expectedStart");
+
+    QTest::newRow("start") << PrimaryAxisAlignment::Start << 0.1F << 2080;
+    QTest::newRow("center") << PrimaryAxisAlignment::Center << 0.0F << 2079;
+    QTest::newRow("end") << PrimaryAxisAlignment::End << 0.1F << 2080;
+}
+
+void FloatingPanelGeometryTest::solvesAlignedPartialPlacement()
+{
+    QFETCH(PrimaryAxisAlignment, alignment);
+    QFETCH(float, offset);
+    QFETCH(int, expectedStart);
+
+    const auto solution = solvePlacement({
+        .outputGeometry = QRect(1920, -200, 1600, 900),
+        .availablePrimaryGeometry = QRect(2000, -100, 800, 500),
+        .edge = Edge::Bottom,
+        .alignment = alignment,
+        .maxLength = 0.8F,
+        .offset = offset,
+        .panelDepth = 48,
+        .floatingGap = 12,
+    });
+
+    QVERIFY(solution.has_value());
+    QCOMPARE(solution->primaryAxisSpan,
+             (StablePrimaryAxisSpan{expectedStart, 640}));
+    QCOMPARE(solution->envelope.value,
+             QRect(expectedStart, 640, 640, 60));
+}
+
+void FloatingPanelGeometryTest::fullSpanEndPlacementStaysInsideEveryOutputEdge_data()
+{
+    QTest::addColumn<Edge>("edge");
+
+    QTest::newRow("top") << Edge::Top;
+    QTest::newRow("right") << Edge::Right;
+    QTest::newRow("bottom") << Edge::Bottom;
+    QTest::newRow("left") << Edge::Left;
+}
+
+void FloatingPanelGeometryTest::fullSpanEndPlacementStaysInsideEveryOutputEdge()
+{
+    QFETCH(Edge, edge);
+
+    const QRect output(1920, -200, 1600, 900);
+    const auto solution = solvePlacement({
+        .outputGeometry = output,
+        .availablePrimaryGeometry = output,
+        .edge = edge,
+        .alignment = PrimaryAxisAlignment::End,
+        .maxLength = 1.0F,
+        .offset = 0.0F,
+        .panelDepth = 48,
+        .floatingGap = 12,
+    });
+
+    QVERIFY(solution.has_value());
+    QVERIFY(output.contains(solution->envelope.value));
+}
+
 void FloatingPanelGeometryTest::rejectsInvalidBoundaryGeometry_data()
 {
     QTest::addColumn<Inputs>("input");
@@ -162,6 +235,48 @@ void FloatingPanelGeometryTest::rejectsInvalidBoundaryGeometry()
 {
     QFETCH(Inputs, input);
     QVERIFY(!solve(input).has_value());
+}
+
+void FloatingPanelGeometryTest::rejectsInvalidPlacement_data()
+{
+    QTest::addColumn<PlacementInputs>("input");
+
+    const PlacementInputs valid{
+        .outputGeometry = QRect(1920, -200, 1600, 900),
+        .availablePrimaryGeometry = QRect(2000, -100, 800, 500),
+        .edge = Edge::Bottom,
+        .alignment = PrimaryAxisAlignment::Center,
+        .maxLength = 0.8F,
+        .offset = 0.0F,
+        .panelDepth = 48,
+        .floatingGap = 12,
+    };
+
+    PlacementInputs unavailable = valid;
+    unavailable.availablePrimaryGeometry = {};
+    QTest::newRow("invalid available primary geometry") << unavailable;
+
+    PlacementInputs outsideOutput = valid;
+    outsideOutput.availablePrimaryGeometry.moveLeft(1900);
+    QTest::newRow("available primary span outside output") << outsideOutput;
+
+    PlacementInputs zeroLength = valid;
+    zeroLength.maxLength = 0.0F;
+    QTest::newRow("zero maximum length") << zeroLength;
+
+    PlacementInputs oversize = valid;
+    oversize.maxLength = 1.1F;
+    QTest::newRow("oversize maximum length") << oversize;
+
+    PlacementInputs offsetOutside = valid;
+    offsetOutside.offset = 1.2F;
+    QTest::newRow("derived span outside output") << offsetOutside;
+}
+
+void FloatingPanelGeometryTest::rejectsInvalidPlacement()
+{
+    QFETCH(PlacementInputs, input);
+    QVERIFY(!solvePlacement(input).has_value());
 }
 
 QTEST_MAIN(FloatingPanelGeometryTest)
