@@ -790,6 +790,67 @@ private:
                    "\"$transition_token\"!=\"$tracker_token\""));
     }
 
+    static bool matchesWindowTouchTopologyE2eContract(
+        const QString &recipeSource,
+        const QString &oracleSource)
+    {
+        const QString recipe = normalizedCode(recipeSource);
+        const QString oracle = normalizedCode(oracleSource);
+        const qsizetype cleanupTrap =
+            recipe.indexOf(QStringLiteral("trapcleanupEXIT"));
+        const qsizetype fixtureStage =
+            recipe.indexOf(QStringLiteral(
+                "matrix_stagepanel-bottom-justify-1out"));
+
+        return cleanupTrap >= 0
+            && fixtureStage > cleanupTrap
+            && recipe.count(QStringLiteral("duplicate_independently")) >= 3
+            && recipe.contains(QStringLiteral(
+                   "setViewPlacementuiii\"$view_a\"\"$primary_id\"41"))
+            && recipe.contains(QStringLiteral(
+                   "setViewPlacementuiii\"$view_b\"\"$primary_id\"42"))
+            && recipe.contains(QStringLiteral(
+                   "setViewPlacementuiii\"$view_c\"\"$secondary_id\"50"))
+            && recipe.count(QStringLiteral(
+                   "mo_place_secondary_for_topology")) == 3
+            && recipe.contains(QStringLiteral(
+                   "drive_client_casegap-onlynone"))
+            && recipe.contains(QStringLiteral(
+                   "drive_client_casefull-primary\"$view_a,$view_b\""))
+            && recipe.contains(QStringLiteral(
+                   "drive_client_casespanning\"$view_b,$view_c\""))
+            && recipe.contains(QStringLiteral(
+                   "drive_client_caseminimized\"$view_b,$view_c\"true"))
+            && recipe.contains(QStringLiteral(
+                   "[[\"$after_restart\"==\"$before_restart\"]]"))
+            && oracle.contains(QStringLiteral(
+                   "ifsnapshot.get(\"schemaVersion\")!=7:"))
+            && oracle.contains(QStringLiteral(
+                   "view[\"relationship\"]!=\"independent\""))
+            && oracle.contains(QStringLiteral(
+                   "iflen(set(tokens))!=len(tokens):"))
+            && oracle.contains(QStringLiteral(
+                   "group[\"publishedDepth\"]!=max(depths)"))
+            && oracle.contains(QStringLiteral(
+                   "group[\"publishedDepth\"]==sum(depths)"))
+            && oracle.contains(QStringLiteral(
+                   "ifrect_counts.get(expected,0)!=1:"))
+            && oracle.contains(QStringLiteral(
+                   "\"availablePrimaryLength\","))
+            && oracle.contains(QStringLiteral(
+                   "\"transitionGeometryRevision\","))
+            && oracle.contains(QStringLiteral(
+                   "\"popupAnchorPrimarySpan\":"))
+            && oracle.contains(QStringLiteral(
+                   "assert_popup_primary_geometry("))
+            && oracle.contains(QStringLiteral(
+                   "\"continuousA-Bactivationstrip\""))
+            && oracle.contains(QStringLiteral(
+                   "\"wrongpopupprimaryspan\""))
+            && oracle.contains(QStringLiteral(
+                   "\"popupprimaryoriginoutsidestablepaint\""));
+    }
+
     static bool matchesDockBackgroundFitRouting(const QString &source)
     {
         const int lengthStart = source.indexOf(QStringLiteral("\n    length: {"));
@@ -1594,6 +1655,7 @@ private Q_SLOTS:
     void windowTouchAuthority_keepsDedicatedStableModel();
     void windowTouchAuthority_rejectsControlledMutations();
     void windowTouchE2e_drivesOneStableTriggerClient();
+    void windowTouchTopologyE2e_keepsIndependentRegionsAndOutputs();
     void floatingPresentationConsumers_keepSingleAuthority();
     void panelToDockInputHandoff_bypassesOrdinaryAnimationGate();
     void panelToDockInputHandoff_rejectsMissingDirectWrite();
@@ -2213,6 +2275,20 @@ void SourceGuardTest::windowTouchE2e_drivesOneStableTriggerClient()
         " stable trigger through interactive reversals, Escape restoration,"
         " committed maximize, pointer deferral, and destruction while"
         " physical geometry and per-view authorities remain fixed");
+}
+
+void SourceGuardTest::windowTouchTopologyE2e_keepsIndependentRegionsAndOutputs()
+{
+    QVERIFY2(
+        matchesWindowTouchTopologyE2eContract(
+            readFile(QStringLiteral(
+                "tests/e2e/073-window-touch-topology.sh")),
+            readFile(QStringLiteral(
+                "tests/e2e/fixtures/fp4b/oracle.py"))),
+        "recipe 073 must preserve independent partial-panel authorities,"
+        " exact disjoint activation, maximum-depth reservations, and restart"
+        " state across full-touching, partial-touching, and disconnected"
+        " landscape/portrait outputs");
 }
 
 void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
