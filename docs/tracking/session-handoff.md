@@ -3,6 +3,28 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-24.
 
+## 2026-07-24: theme-aware icon render lifecycle is deterministic
+
+The PR #116 canonical fast gate exposed D173 (theme-aware icon render test
+deadlocked during final view teardown). The other 104 CTest entries passed,
+including the complete shadow-placement regression. `themeawareicontest`
+finished its non-standard-size assertions, then the 300-second watchdog found
+the GUI thread waiting for software scene-graph resource release while the
+render thread slept.
+
+The test registered one process-wide `Environment` singleton but created a new
+QML engine with each default-constructed view. Qt rejected the singleton in the
+second and third engines. Every render case now uses one owned `QQmlEngine`, and
+the offscreen software test selects Qt Quick's basic render loop before
+`QGuiApplication`; scene-graph threading is not part of this pixel regression.
+
+Focused `themeawareicontest` and `sourceguardtest` pass in 0.31 seconds.
+All six render cases complete without the former multi-engine warning or null
+singleton critical. Controlled mutations reject a default-engine view and
+removal of either direct or CTest basic-loop selection. The corrected-head
+canonical fast gate passes all 105 CTest entries, QML lint, scene probes,
+native package checks, and the fixture matrix.
+
 ## 2026-07-24: asymmetric shadows no longer move stable dock content
 
 The mandatory cold review of the six-commit PR #116 tail returned MERGE AFTER

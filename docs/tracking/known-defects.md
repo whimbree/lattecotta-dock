@@ -2097,6 +2097,34 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   from 181 to 176 curated warnings, and the ratchet records the lower count.
   The canonical gate passes all 105 CTest entries.
 
+### D173 - Theme-aware icon render test deadlocked during final view teardown
+- STATUS: FIXED locally in PR #116 (`2d6d1059c`; final post-merge hash
+  pending).
+- FOUND: 2026-07-24, PR #116 canonical fast gate.
+- SYMPTOM: `themeawareicontest` reached the end of
+  `nonStandardSlotPaintsAtComputedSize()` after its size and pixel assertions,
+  then the QtTest watchdog terminated it at 300 seconds. The other 104 CTest
+  entries passed.
+- ROOT: the process registered one `Environment` instance with
+  `qmlRegisterSingletonInstance`, but each test case default-constructed a
+  `QQuickView` with a separate `QQmlEngine`. Qt permits a registered singleton
+  instance in only one engine, so the second and third views logged that
+  `Environment` was unavailable. During final-window destruction, the GUI
+  thread then waited in `QSGSoftwareThreadedRenderLoop::handleResourceRelease`
+  while the software render thread remained asleep in
+  `processEventsAndWaitForMore`.
+- FIX: own one `QQmlEngine` for the complete test object and construct every
+  view against it. Select the basic Qt Quick render loop before
+  `QGuiApplication` so this offscreen software-render regression releases
+  resources synchronously; scene-graph threading is outside its contract.
+- EVIDENCE: focused `themeawareicontest` completes all six cases in 236 ms with
+  no multi-engine singleton warning or null-`Environment` critical.
+  `sourceguardtest` requires every view construction to use the shared engine
+  and requires the basic loop in both direct and CTest execution. Controlled
+  default-engine and threaded-loop mutations fail that source contract. The
+  corrected-head canonical fast gate passes all 105 CTest entries, QML lint,
+  scene probes, native package checks, and the fixture matrix.
+
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
 - FOUND: 2026-07-22, canonical gate on the rebased identity branch.
