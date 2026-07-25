@@ -227,14 +227,23 @@ import sys
 
 try:
     payload = json.loads(os.environ["KSCREEN_STATE"])
+    if not isinstance(payload, dict):
+        raise ValueError("KScreen state must be a JSON object")
     raw_outputs = payload.get("outputs")
     if not isinstance(raw_outputs, list) or len(raw_outputs) != 2:
         raise ValueError("expected exactly two KScreen outputs")
     if not all(isinstance(output, dict) for output in raw_outputs):
         raise ValueError("every KScreen output must be an object")
-    outputs = {output.get("name"): output for output in raw_outputs}
-    if len(outputs) != len(raw_outputs):
-        raise ValueError("KScreen output names are not unique")
+    outputs = {}
+    for index, output in enumerate(raw_outputs):
+        output_name = output.get("name")
+        if not isinstance(output_name, str) or not output_name:
+            raise ValueError(
+                f"KScreen output {index} must have a nonempty string name"
+            )
+        if output_name in outputs:
+            raise ValueError("KScreen output names are not unique")
+        outputs[output_name] = output
 
     priorities = []
     for name in sys.argv[1:3]:
