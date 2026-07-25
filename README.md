@@ -79,9 +79,9 @@ artwork into the complete fitted slot. Temporary hover zoom does not resize the
 resting dock; it may borrow resting end padding while the solid background
 stays inside that view's output-owned canvas. Drop shadows remain external
 presentation paint and never shrink the configured panel or its automatic icon
-size. Centered hover placement keeps the complete visual bounded whenever it
-fits; a full-canvas solid may clip outward shadow paint instead of silently
-shrinking its content. Custom background shadows use Qt's dedicated
+size. Centered hover placement keeps the solid background stable when shadows
+change; outward paint clips at a full canvas instead of silently shrinking or
+moving its content. Custom background shadows use Qt's dedicated
 fixed-pixel rounded-shadow renderer on horizontal and vertical docks, remain
 independent of background opacity, and reserve no space at zero size. A side
 dock therefore does not scale its blur by the background aspect ratio. Settings
