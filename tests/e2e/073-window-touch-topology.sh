@@ -24,7 +24,7 @@ view_b=""
 view_c=""
 view_ids_csv=""
 client_pid=0
-configured=0
+fixture_transaction_active=0
 topology_captured=0
 original_topology=""
 baseline_stable=""
@@ -425,7 +425,7 @@ cleanup() {
             cleanup_failed=1
         fi
     fi
-    if (( configured == 1 )); then
+    if (( fixture_transaction_active == 1 )); then
         if ! e2e_dock_stop; then
             echo "FP-4B cleanup could not stop the fixture dock" >&2
             cleanup_failed=1
@@ -457,6 +457,7 @@ python3 "$ORACLE" negative-probes >/dev/null \
 
 matrix_init \
     || e2e_fail "could not capture the pristine nested configuration"
+fixture_transaction_active=1
 mo_discover_outputs \
     || e2e_fail "could not discover the two nested output identities"
 original_topology="$(mo_capture_output_topology)" \
@@ -465,7 +466,6 @@ topology_captured=1
 
 matrix_stage panel-bottom-justify-1out \
     || e2e_fail "could not stage the FP-4B panel seed"
-configured=1
 view_a="$(matrix_view_id)" \
     || e2e_fail "could not resolve the FP-4B seed panel"
 view_b="$(duplicate_independently "$view_a" "first independent duplicate")"

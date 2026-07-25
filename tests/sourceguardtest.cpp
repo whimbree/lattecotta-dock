@@ -60,9 +60,11 @@
 // (docs/archive/captsilver-testability-adoption.md, the not-adopting list).
 
 #include <QFile>
+#include <QProcess>
 #include <QRegularExpression>
 #include <QString>
 #include <QStringList>
+#include <QTemporaryDir>
 #include <QtTest>
 
 class SourceGuardTest : public QObject
@@ -795,15 +797,50 @@ private:
         const QString &oracleSource)
     {
         const QString recipe = normalizedCode(recipeSource);
+        const QString cleanup = normalizedCode(functionBody(
+            recipeSource, QStringLiteral("cleanup()")));
         const QString oracle = normalizedCode(oracleSource);
+        const qsizetype pristineCapture =
+            recipe.indexOf(QStringLiteral("matrix_init"));
+        const qsizetype transactionActivation =
+            recipe.indexOf(QStringLiteral("fixture_transaction_active=1"));
         const qsizetype cleanupTrap =
             recipe.indexOf(QStringLiteral("trapcleanupEXIT"));
         const qsizetype fixtureStage =
             recipe.indexOf(QStringLiteral(
                 "matrix_stagepanel-bottom-justify-1out"));
+        const qsizetype topologyRestore =
+            cleanup.indexOf(QStringLiteral(
+                "mo_restore_output_topology\"$original_topology\""));
+        const qsizetype transactionGuard =
+            cleanup.indexOf(QStringLiteral(
+                "if((fixture_transaction_active==1));then"));
+        const qsizetype pristineRemoval =
+            cleanup.indexOf(QStringLiteral(
+                "rm-rf\"${E2E_CONFIG_HOME:?}\""), transactionGuard);
+        const qsizetype pristineRestore =
+            cleanup.indexOf(QStringLiteral(
+                "cp-r\"$MATRIX_PRISTINE\"\"$E2E_CONFIG_HOME\""),
+                pristineRemoval);
+        const qsizetype dockRestart =
+            cleanup.indexOf(QStringLiteral(
+                "elif!e2e_dock_start90;then"), pristineRestore);
 
-        return cleanupTrap >= 0
+        return recipe.contains(QStringLiteral(
+                   "fixture_transaction_active=0"))
+            && pristineCapture >= 0
+            && transactionActivation > pristineCapture
+            && cleanupTrap >= 0
             && fixtureStage > cleanupTrap
+            && fixtureStage > transactionActivation
+            && topologyRestore >= 0
+            && transactionGuard > topologyRestore
+            && pristineRemoval > transactionGuard
+            && pristineRestore > pristineRemoval
+            && dockRestart > pristineRestore
+            && cleanup.contains(QStringLiteral(
+                   "((body_status==0))&&body_status=1"))
+            && cleanup.contains(QStringLiteral("exit\"$body_status\""))
             && recipe.count(QStringLiteral("duplicate_independently")) >= 3
             && recipe.contains(QStringLiteral(
                    "setViewPlacementuiii\"$view_a\"\"$primary_id\"41"))
@@ -1656,6 +1693,7 @@ private Q_SLOTS:
     void windowTouchAuthority_rejectsControlledMutations();
     void windowTouchE2e_drivesOneStableTriggerClient();
     void windowTouchTopologyE2e_keepsIndependentRegionsAndOutputs();
+    void windowTouchTopologyE2e_cleanupGuardRejectsControlledMutations();
     void floatingPresentationConsumers_keepSingleAuthority();
     void panelToDockInputHandoff_bypassesOrdinaryAnimationGate();
     void panelToDockInputHandoff_rejectsMissingDirectWrite();
@@ -2289,6 +2327,125 @@ void SourceGuardTest::windowTouchTopologyE2e_keepsIndependentRegionsAndOutputs()
         " exact disjoint activation, maximum-depth reservations, and restart"
         " state across full-touching, partial-touching, and disconnected"
         " landscape/portrait outputs");
+}
+
+void SourceGuardTest::windowTouchTopologyE2e_cleanupGuardRejectsControlledMutations()
+{
+    const QString recipeSource = readFile(QStringLiteral(
+        "tests/e2e/073-window-touch-topology.sh"));
+    const QString recipe = normalizedCode(recipeSource);
+    const QString oracle = readFile(QStringLiteral(
+        "tests/e2e/fixtures/fp4b/oracle.py"));
+    QVERIFY(matchesWindowTouchTopologyE2eContract(recipe, oracle));
+
+    QString lateActivation = recipe;
+    const QString activation =
+        QStringLiteral("fixture_transaction_active=1");
+    QCOMPARE(lateActivation.count(activation), 1);
+    lateActivation.remove(activation);
+    const QString stageFailure = QStringLiteral(
+        "matrix_stagepanel-bottom-justify-1out"
+        "\\"
+        "||e2e_fail\"couldnotstagetheFP-4Bpanelseed\"");
+    QCOMPARE(lateActivation.count(stageFailure), 1);
+    lateActivation.replace(stageFailure, stageFailure + activation);
+    QVERIFY2(!matchesWindowTouchTopologyE2eContract(
+                 lateActivation, oracle),
+             "arming restoration after matrix_stage must fail the lifecycle guard");
+
+    QString missingRestore = recipe;
+    const QString restore = QStringLiteral(
+        "cp-r\"$MATRIX_PRISTINE\"\"$E2E_CONFIG_HOME\""
+        "\\"
+        "||cleanup_failed=1");
+    QCOMPARE(missingRestore.count(restore), 1);
+    missingRestore.remove(restore);
+    QVERIFY2(!matchesWindowTouchTopologyE2eContract(
+                 missingRestore, oracle),
+             "removing pristine-config restoration must fail the lifecycle guard");
+
+    QString missingRestart = recipe;
+    const QString restart =
+        QStringLiteral("elif!e2e_dock_start90;then");
+    QCOMPARE(missingRestart.count(restart), 1);
+    missingRestart.replace(restart, QStringLiteral("eliftrue;then"));
+    QVERIFY2(!matchesWindowTouchTopologyE2eContract(
+                 missingRestart, oracle),
+             "removing the pristine nested-dock restart must fail the lifecycle guard");
+
+    const QString cleanupBody = functionBody(
+        recipeSource, QStringLiteral("cleanup()"));
+    QVERIFY2(!cleanupBody.isEmpty(), "production cleanup function not found");
+
+    QTemporaryDir temporary;
+    QVERIFY(temporary.isValid());
+    const QString harness = QStringLiteral(R"SH(
+cleanup_body=$1
+test_root=$2
+MATRIX_PRISTINE=$test_root/pristine
+E2E_CONFIG_HOME=$test_root/config
+CALL_LOG=$test_root/calls.log
+mkdir -p "$MATRIX_PRISTINE"
+printf 'pristine\n' > "$MATRIX_PRISTINE/state"
+
+run_cleanup_case() {
+    body_status=$1
+    DOCK_START_STATUS=$2
+    expected_status=$3
+    rm -rf "$E2E_CONFIG_HOME"
+    mkdir -p "$E2E_CONFIG_HOME"
+    printf 'staged\n' > "$E2E_CONFIG_HOME/state"
+    : > "$CALL_LOG"
+    (
+        eval "cleanup() $cleanup_body"
+        client_pid=0
+        fixture_transaction_active=1
+        topology_captured=1
+        original_topology=captured-topology
+        mo_restore_output_topology() {
+            printf 'topology:%s\n' "$1" >> "$CALL_LOG"
+        }
+        e2e_dock_stop() {
+            printf 'stop\n' >> "$CALL_LOG"
+        }
+        e2e_dock_pid() {
+            printf 'pid\n' >> "$CALL_LOG"
+        }
+        e2e_dock_start() {
+            printf 'start:%s\n' "$1" >> "$CALL_LOG"
+            return "$DOCK_START_STATUS"
+        }
+        return_status() {
+            return "$1"
+        }
+        return_status "$body_status"
+        cleanup
+    )
+    actual_status=$?
+    [[ "$actual_status" -eq "$expected_status" ]] || return 1
+    [[ "$(cat "$E2E_CONFIG_HOME/state")" == pristine ]] || return 1
+}
+
+run_cleanup_case 37 0 37 || exit 1
+[[ "$(cat "$CALL_LOG")" == $'topology:captured-topology\nstop\npid\nstart:90' ]] \
+    || exit 1
+run_cleanup_case 0 1 1 || exit 1
+)SH");
+    QProcess process;
+    process.start(
+        QStringLiteral("bash"),
+        {QStringLiteral("-c"),
+         harness,
+         QStringLiteral("fp4b-cleanup-test"),
+         cleanupBody,
+         temporary.path()});
+    QVERIFY(process.waitForStarted());
+    QVERIFY(process.waitForFinished());
+    const QByteArray processError = process.readAllStandardError();
+    QVERIFY2(
+        process.exitStatus() == QProcess::NormalExit
+            && process.exitCode() == 0,
+        processError.constData());
 }
 
 void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
