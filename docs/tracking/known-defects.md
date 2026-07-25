@@ -2394,10 +2394,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
-  is merged. FP-2 (the stable canvas and transition controller) is implemented
-  on its integration branch, with schema integration and nested recipe 071
-  acceptance still pending. FP-3 and FP-4 remain open. Execution is tracked in
-  `floating-panel-parity-plan.md`.
+  is merged. FP-2 (the stable canvas and transition controller) is complete on
+  its integration branch, including schema 5 and nested recipe 071 acceptance;
+  independent review and merge remain pending. FP-3 and FP-4 remain open.
+  Execution is tracked in `floating-panel-parity-plan.md`.
 - FOUND: 2026-07-24, Plasma 6.7.3 parity investigation after live floating
   panel maximize, radius, shadow, and animation regressions.
 - SYMPTOM: a floating Always Visible panel physically moves toward the screen
@@ -2423,8 +2423,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   comparison and exact Lattecotta mismatch are recorded in
   `../reference/plasma-floating-panel-parity.md`. FP-2's pure geometry,
   transition, legacy placement, screen-geometry, layer-shell idempotence, and
-  source-contract tests pass. Recipe 071 is written and statically pinned;
-  its first schema-integrated nested execution is pending.
+  source-contract tests pass. Recipe 071 observes qreal progress in both
+  directions and eight rapid reversals while the QWindow, applet measurements,
+  partial span, reservation, controller geometry generation, surface
+  publications, and layer-shell configure count remain stable.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).

@@ -4596,12 +4596,13 @@ prerequisites in the phases above are done.
       Commits: 0a4407f30, e8adfb96e, 21b7c604c, 63497b3ac, 7d452e789,
       e11081694, 1f82307da, cb353022f, 27519ddb5, 3f70b7224, 59146fd4e,
       9e8907870, ae529c166, 266f11d0f, 21ea8c61e, a1035aabf, cdb9c6d20
-- [ ] Complete FP-2 (the stable canvas and transition controller).
+- [x] Complete FP-2 (the stable canvas and transition controller).
       The pure geometry core, per-view qreal controller, single solved QWindow
       envelope, stable reservation and applet sizing, internal QML
-      translation, churn counters, and recipe 071 static contract are
-      complete. Schema 5 integration and recipe 071's first nested-KWin
-      execution remain required before this item is checked.
+      translation, schema 5 observability, and churn counters are complete.
+      Recipe 071 observes both transition midpoints and eight rapid reversals
+      in nested KWin with stable geometry, sizing, reservation, controller
+      generation, surface publications, and layer-shell configure requests.
       Commits: PENDING INTEGRATION REBASE
 - [ ] Complete FP-3 (internal presentation, input, effects, and popup
       ownership).

@@ -81,12 +81,13 @@ FP-2 means the stable canvas and transition controller.
       removal of the physical floating-gap slide animations. The QML compile
       gate passes 130 of 130 package files and the touched qmllint baseline
       strictly decreases.
-- [ ] Expose all stable and current transition geometry through the atomic
+- [x] Expose all stable and current transition geometry through the atomic
       D-Bus snapshot.
-      Commits: PENDING SCHEMA INTEGRATION
-      Evidence: schema 5 implementation and exact serializer tests are owned
-      by the parallel observability slice and must be integrated before the
-      FP-2 pull request.
+      Commits: PENDING INTEGRATION REBASE
+      Evidence: schema 5 reports fraction-preserving stable and current
+      geometry, controller identity and generation, and both physical-churn
+      counters. Exact serializer and mutation tests fail closed on incomplete,
+      inconsistent, off-output, wrong-edge, rounded, or aliased state.
 - [x] Pin both reversal directions, rapid alternating targets, duration
       consistency, and no geometry/configure storm.
       Commits: PENDING INTEGRATION REBASE
@@ -94,10 +95,11 @@ FP-2 means the stable canvas and transition controller.
       `sourceguardtest` pass. Recipe 071 configures a partial Justify panel,
       samples both qreal directions, then drives eight rapid reversals while
       requiring byte-identical stable geometry and zero deltas from
+      `transitionGeometryRevision`,
       `surfaceGeometryPublicationRevision` and
-      `layerShellConfigureRequestRevision`. Its first schema-integrated
-      nested-KWin execution is pending and remains required before the FP-2
-      pull request.
+      `layerShellConfigureRequestRevision`. The schema-integrated nested-KWin
+      run passes with an 88 px maximum-depth reservation and both qreal
+      midpoints observed.
 
 ## FP-3: internal presentation, input, effects, and popups
 
