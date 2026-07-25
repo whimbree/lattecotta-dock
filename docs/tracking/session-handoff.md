@@ -5,8 +5,8 @@ Last updated 2026-07-25.
 
 ## 2026-07-25: FP-4A owns direct window-touch attachment
 
-FP-4A (the direct window-touch runtime and single-client nested acceptance) is
-complete on PR #124 and awaits GitHub rebase merge. One exact per-view
+FP-4A (the direct window-touch runtime and single-client nested acceptance)
+landed through PR #124. One exact per-view
 `WindowTouchTracker` consumes the current-desktop and current-activity
 `TasksModel`, classifies `IsWindow` before window-only roles, excludes hidden
 and minimized windows, and counts visible frames intersecting that view's
@@ -37,8 +37,8 @@ accepted divergent touching-window authorities), and D208 (legacy Dock gap
 readback omitted Windows Go Below); subsequent commits fixed all three. The
 second independent review required exact wrong-type coverage for every
 true-window role, the missing adaptation copyright line in
-`BehaviorConfig.qml`, and the landing traceability recorded in this branch.
-Commits `637b02738` and `8a9c97964` satisfy the first two requirements.
+`BehaviorConfig.qml`, and the landing traceability recorded in PR #124.
+Commits `fd445ee2f` and `f4232ae54` satisfy the first two requirements.
 
 Recipe 071 preserves the stable canvas and maximum-depth reservation, checks
 popup-anchor agreement, and drives the legacy Dock gap request through maximize
@@ -47,14 +47,14 @@ nested-KWin client through drag-in, drag-out, both fractional reversals, Escape
 cancel, committed maximize, pointer deferral, destruction, and zero physical
 geometry or publication drift.
 
-The PR #124 branch source commits are `0f6290f31`, `7b1fbf8fd`, `3d9330887`,
-`fac383297`, `38c6ef1df`, `637b02738`, and `8a9c97964`. Final post-rebase
-commit hashes are pending immediate post-merge traceability resolution. FP-4B
-(multi-output and separated-span topology acceptance) and FP-4C
-(deterministic operation-storm acceptance) remain open, so FP-4 (the stable
-window-touch trigger and end-to-end acceptance) and D172 (floating panel
-attachment moves the surface and reservation instead of presentation) remain
-incomplete.
+The PR #124 commits are `f8396b5ed`, `d0d499d50`, `36e835fb9`,
+`508dcf630`, `b552508e3`, `fd445ee2f`, `f4232ae54`, and `5636966b5`.
+The fourth independent review returned `MERGE` after verifying the complete
+rewritten history and the PR description. FP-4B (multi-output and
+separated-span topology acceptance) and FP-4C (deterministic operation-storm
+acceptance) remain open, so FP-4 (the stable window-touch trigger and
+end-to-end acceptance) and D172 (floating panel attachment moves the surface
+and reservation instead of presentation) remain incomplete.
 
 ## 2026-07-25: FP-3 owns internal presentation, exact input, effects, and popups
 
