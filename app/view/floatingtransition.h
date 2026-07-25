@@ -97,6 +97,7 @@ public:
     [[nodiscard]] quint64 geometryRevision() const;
     [[nodiscard]] bool configureGeometry(
         const FloatingPanelGeometry::Inputs &inputs);
+    void clearGeometry();
 
     Q_INVOKABLE void requestAttached();
     Q_INVOKABLE void requestFloated();

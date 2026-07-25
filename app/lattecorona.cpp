@@ -688,7 +688,6 @@ Latte::ViewFootprint viewFootprintOf(const Latte::View *view)
     footprint.isOffScreen = view->positioner() && view->positioner()->isOffScreen();
     footprint.behaveAsPlasmaPanel = view->behaveAsPlasmaPanel();
     footprint.normalThickness = view->normalThickness();
-    footprint.screenEdgeMargin = view->screenEdgeMargin();
     footprint.occupiedGeometry = view->absoluteGeometry();
     if (footprint.hasVisibility && !footprint.occupiedGeometry.isValid()) {
         qWarning() << "Ignoring a reserving view without valid occupied geometry"

@@ -12,6 +12,7 @@
 #include <coretypes.h>
 #include "containmentinterface.h"
 #include "effects.h"
+#include "floatingtransition.h"
 #include "parabolic.h"
 #include "positioner.h"
 #include "eventssink.h"
@@ -113,6 +114,8 @@ class View : public PlasmaQuick::ContainmentView
     Q_PROPERTY(Latte::Layout::GenericLayout *layout READ layout WRITE setLayout NOTIFY layoutChanged)
     Q_PROPERTY(Latte::ViewPart::Effects *effects READ effects NOTIFY effectsChanged)
     Q_PROPERTY(Latte::ViewPart::ContainmentInterface *extendedInterface READ extendedInterface NOTIFY extendedInterfaceChanged)
+    Q_PROPERTY(Latte::ViewPart::FloatingTransition *floatingTransition
+                   READ floatingTransition CONSTANT)
     Q_PROPERTY(Latte::ViewPart::Indicator *indicator READ indicator NOTIFY indicatorChanged)
     Q_PROPERTY(Latte::ViewPart::Parabolic *parabolic READ parabolic NOTIFY parabolicChanged)
     Q_PROPERTY(Latte::ViewPart::Positioner *positioner READ positioner NOTIFY positionerChanged)
@@ -288,6 +291,7 @@ public:
     virtual Latte::Data::View data() const;
 
     ViewPart::Effects *effects() const;   
+    ViewPart::FloatingTransition *floatingTransition() const;
     ViewPart::ContainmentInterface *extendedInterface() const;
     virtual ViewPart::Indicator *indicator() const;
     ViewPart::Parabolic *parabolic() const;
@@ -455,10 +459,8 @@ private:
     //! LayerShell::anchorsFor). Vertical masked docks are sized to the available
     //! region, not the screen, so they do not qualify.
     bool windowSpansScreenLength() const;
-    //! the floating-gap offset the layer surface must be lifted off its
-    //! anchored edge: the screenEdgeMargin for a floating panel, 0 otherwise
-    //! (a masked dock realises the gap through its mask, not a surface offset).
-    //! Fed to LayerShell::configureView/updateAnchoring as edgeMargin.
+    //! The stable canvas remains anchored flush with its output edge.
+    //! Floating presentation is internal, so this is always zero.
     int layerShellEdgeMargin() const;
     void updateAppletContainsMethod();
 
@@ -532,6 +534,7 @@ private:
     QPointer<ViewPart::PrimaryConfigView> m_primaryConfigView;
 
     QPointer<ViewPart::Effects> m_effects;
+    QPointer<ViewPart::FloatingTransition> m_floatingTransition;
     QPointer<ViewPart::Indicator> m_indicator;
     QPointer<ViewPart::ContainmentInterface> m_interface;
     QPointer<ViewPart::Parabolic> m_parabolic;

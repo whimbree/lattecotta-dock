@@ -50,14 +50,13 @@ struct ViewGeometryInputs {
     int normalThickness{0};
     int maxThickness{0};
     int maxNormalThickness{0};
-    int innerShadow{0};
-    int screenEdgeMargin{0};
+    int floatingGap{0};
     int editThickness{0};
     int viewWidth{0};
     int viewHeight{0};
     float maxLength{1.0f};
     float offset{0.0f};
-    int slideOffset{0};
+    int visibilitySlideOffset{0};
 };
 
 // The top/bottom border flags set by validateTopBottomBorders.
@@ -102,13 +101,15 @@ inline QPoint dockPosition(const ViewGeometryInputs &in, const QRect &availableS
         return static_cast<int>(scr_length - (scr_length * in.maxLength) - gap(scr_length));
     };
 
-    int cleanThickness = in.normalThickness - in.innerShadow;
-    int screenEdgeMargin = in.behaveAsPlasmaPanel ? in.screenEdgeMargin - qAbs(in.slideOffset) : 0;
+    const int visibilitySlideOffset =
+        in.behaveAsPlasmaPanel ? qAbs(in.visibilitySlideOffset) : 0;
+    const int stablePanelDepth =
+        in.normalThickness + (in.behaveAsPlasmaPanel ? in.floatingGap : 0);
 
     switch (in.location) {
     case Plasma::Types::TopEdge:
         if (in.behaveAsPlasmaPanel) {
-            int y = screenGeometry.y() + screenEdgeMargin;
+            const int y = screenGeometry.y() - visibilitySlideOffset;
 
             if (in.alignment == Latte::Types::Left) {
                 position = {screenGeometry.x() + gap(screenGeometry.width()), y};
@@ -124,7 +125,8 @@ inline QPoint dockPosition(const ViewGeometryInputs &in, const QRect &availableS
 
     case Plasma::Types::BottomEdge:
         if (in.behaveAsPlasmaPanel) {
-            int y = screenGeometry.y() + screenGeometry.height() - cleanThickness - screenEdgeMargin;
+            const int y = screenGeometry.bottom() - stablePanelDepth + 1
+                + visibilitySlideOffset;
 
             if (in.alignment == Latte::Types::Left) {
                 position = {screenGeometry.x() + gap(screenGeometry.width()), y};
@@ -140,7 +142,8 @@ inline QPoint dockPosition(const ViewGeometryInputs &in, const QRect &availableS
 
     case Plasma::Types::RightEdge:
         if (in.behaveAsPlasmaPanel) {
-            int x = availableScreenRect.right() - cleanThickness + 1 - screenEdgeMargin;
+            const int x = availableScreenRect.right() - stablePanelDepth + 1
+                + visibilitySlideOffset;
 
             if (in.alignment == Latte::Types::Top) {
                 position = {x, availableScreenRect.y() + gap(availableScreenRect.height())};
@@ -156,7 +159,7 @@ inline QPoint dockPosition(const ViewGeometryInputs &in, const QRect &availableS
 
     case Plasma::Types::LeftEdge:
         if (in.behaveAsPlasmaPanel) {
-            int x = availableScreenRect.x() + screenEdgeMargin;
+            const int x = availableScreenRect.x() - visibilitySlideOffset;
 
             if (in.alignment == Latte::Types::Top) {
                 position = {x, availableScreenRect.y() + gap(availableScreenRect.height())};
@@ -189,13 +192,13 @@ inline QSize windowSize(const ViewGeometryInputs &in,
 
     if (in.formFactor == Plasma::Types::Vertical) {
         if (in.behaveAsPlasmaPanel) {
-            size.setWidth(in.normalThickness);
+            size.setWidth(in.normalThickness + in.floatingGap);
             size.setHeight(static_cast<int>(in.maxLength * availableScreenRect.height()));
         }
     } else {
         if (in.behaveAsPlasmaPanel) {
             size.setWidth(static_cast<int>(in.maxLength * screenSize.width()));
-            size.setHeight(in.normalThickness);
+            size.setHeight(in.normalThickness + in.floatingGap);
         }
     }
 
