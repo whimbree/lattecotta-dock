@@ -4578,50 +4578,50 @@ prerequisites in the phases above are done.
 - [x] Fix D187 (full-span End floating panels extended one pixel beyond their
       output). Remove the unrelated reversed-alignment primary-axis increment
       while preserving both reservation +1 gap-prevention conventions.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: 853e6e359
 - [x] Fix D188 (stable-canvas acceptance staged a Dock for a Panel-only
       transition). Use the matrix harness's deterministic panel fixture,
       assign panel-surface floating-gap ownership explicitly, and restore the
       complete pristine nested config after the recipe.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: 0dabbb516
 - [x] Fix D189 (KWin script collection delay consumed the transition under
       test). Preserve the ordinary collection delay, let transition drivers
       request a shorter delay, and sample recipe 071 while the controller is
       still active.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: b122ef88c
 - [x] Fix D190 (stable-canvas fixture cleanup started after destructive
       staging). Install cleanup after the pristine snapshot and before any
       matrix mutation, with restoration state valid for partial setup
       failures.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: 34af636d7
 - [x] Fix D191 (stable-canvas reversal storm accepted settled transitions).
       Require every alternating target to appear in its matching active phase
       at fractional progress with unchanged geometry and publication
       revisions.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: 29f992ef0
 - [x] Fix D192 (zero-gap panels exposed conflicting floating eligibility).
       Expose the C++ positive-gap classification as the notified QML
       configuration authority and pin the legal zero-gap boundary in nested
       KWin.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: 73ad81186
 - [x] Fix D193 (extended floating-background files omitted adapting
       attribution). Preserve both original copyright lines and add the
       adapting author to each materially changed QML file.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: 86576fc52
 - [x] Fix D194 (zero-gap endpoint proof split state across snapshots). Require
       one atomic `dockSystemData` record to carry the complete legal zero-gap
       floated endpoint contract.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: e1504a097
 - [x] Fix D195 (huge finite placement values reached undefined integer
       conversion). Check every floating placement product before conversion,
       add the integer start delta in a wide type, and narrow only after proving
       the result is representable.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: 8ef41a45d
 - [x] Fix D196 (placement solver trusted enum and QRect arithmetic boundaries).
       Validate the closed enum sets and inclusive rectangle spans before axis
       selection, perform edge-coordinate arithmetic in `qint64`, and pin
       branch-local Center and End conversion failures.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: 44a5ea89d
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
@@ -4636,7 +4636,11 @@ prerequisites in the phases above are done.
       Recipe 071 observes both transition midpoints and eight rapid reversals
       in nested KWin with stable geometry, sizing, reservation, controller
       generation, surface publications, and layer-shell configure requests.
-      Commits: PENDING INTEGRATION REBASE
+      Commits: 1f4f6206b, 0231c91ba, 149d2ea38, 853e6e359, 2a225df16,
+      65ab2eab1, d5057d091, e0abc3d51, e25ee1f0c, 03861cdc3, 10c7880b8,
+      054e4826e, 0436dd90c, 0dabbb516, b122ef88c, 2eb6881e1, 34af636d7,
+      29f992ef0, fa093a7fd, 73ad81186, 86576fc52, e1504a097, 8ef41a45d,
+      44a5ea89d, c10e1756c, 0cb9e06f3
 - [ ] Complete FP-3 (internal presentation, input, effects, and popup
       ownership).
       Commits:
