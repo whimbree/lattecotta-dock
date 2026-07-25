@@ -56,9 +56,6 @@ namespace Latte {
 class Corona;
 class Interfaces;
 class GenericLayout;
-namespace ViewPart {
-class ScreenSpaceReservation;
-}
 namespace ViewActionPolicy {
 enum class Role;
 }
