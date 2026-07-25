@@ -68,8 +68,8 @@ void FloatingTransitionTest::ownsOneAnimationAndKeepsStableGeometry()
     controller->requestFloated();
     animation->setCurrentTime(200);
 
-    QCOMPARE(controller->currentVisibleGeometry(), QRectF(0, 3, 1440, 48));
-    QCOMPARE(controller->fittsBridgeGeometry(), QRectF(0, 3, 1440, 57));
+    QCOMPARE(controller->currentVisibleGeometry(), QRectF(0, 1.5, 1440, 48));
+    QCOMPARE(controller->fittsBridgeGeometry(), QRectF(0, 1.5, 1440, 58.5));
     QCOMPARE(controller->stableCanvasGeometry(), QRect(240, 1020, 1440, 60));
     QCOMPARE(controller->appletMeasurementBounds(), QRect(0, 0, 1440, 48));
     QCOMPARE(stableGeometryChanged.count(), 0);
@@ -84,11 +84,11 @@ void FloatingTransitionTest::reversesFromCurrentQrealValueAtFullDuration()
     QCOMPARE(controller->target(), FloatingTransition::Target::Floated);
     QCOMPARE(controller->phase(), FloatingTransition::Phase::Floating);
     QCOMPARE(animation->duration(), 400);
-    QCOMPARE(animation->easingCurve().type(), QEasingCurve::OutQuad);
+    QCOMPARE(animation->easingCurve().type(), QEasingCurve::OutCubic);
 
     animation->setCurrentTime(160);
     const qreal outwardValue = controller->floatingness();
-    QVERIFY(qAbs(outwardValue - 0.64) < 0.0001);
+    QVERIFY(qAbs(outwardValue - 0.784) < 0.0001);
 
     controller->requestAttached();
     QCOMPARE(controller->target(), FloatingTransition::Target::Attached);
@@ -96,11 +96,11 @@ void FloatingTransitionTest::reversesFromCurrentQrealValueAtFullDuration()
     QCOMPARE(animation->startValue().toReal(), outwardValue);
     QCOMPARE(animation->endValue().toReal(), 0.0);
     QCOMPARE(animation->duration(), 400);
-    QCOMPARE(animation->easingCurve().type(), QEasingCurve::InQuad);
+    QCOMPARE(animation->easingCurve().type(), QEasingCurve::InCubic);
 
     animation->setCurrentTime(200);
     const qreal inwardValue = controller->floatingness();
-    QVERIFY(qAbs(inwardValue - 0.48) < 0.0001);
+    QVERIFY(qAbs(inwardValue - 0.686) < 0.0001);
 
     controller->requestFloated();
     QCOMPARE(animation->startValue().toReal(), inwardValue);
