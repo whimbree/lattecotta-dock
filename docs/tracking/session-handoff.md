@@ -3,6 +3,59 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-25.
 
+## 2026-07-25: FP-4A owns direct window-touch attachment
+
+FP-4A (the direct window-touch runtime and single-client nested acceptance) is
+complete on PR #124 and awaits GitHub rebase merge. One exact per-view
+`WindowTouchTracker` consumes the current-desktop and current-activity
+`TasksModel`, classifies `IsWindow` before window-only roles, excludes hidden
+and minimized windows, and counts visible frames intersecting that view's
+stable one-pixel-overlap trigger. Model changes evaluate on one non-restarting
+10 ms deadline.
+
+QML assembles the complete attachment policy once per change.
+`FloatingTransition` commits every input before selecting its target and keeps
+a synchronous touching-window copy for that policy decision. The per-view
+tracker remains the live count authority. Schema 7 exposes both authority
+identities, configuration, pointer deferral, role type, touching count, target,
+and legacy Dock request; collection refuses unequal tracker and transition
+counts before serializing tracker-owned state.
+
+Eligible floating Always Visible Panels attach when at least one visible
+window intersects their stable trigger. Pointer presence defers only a new
+attachment when configured, not an attachment already targeted. Legacy Docks
+retain a separate maximized-window gap request in Always Visible and Windows Go
+Below without acquiring Panel transition geometry. The stable QWindow,
+layer-shell placement, applet measurements, partial span, and maximum-depth
+reservation remain unchanged.
+
+D205 (Panel popup anchors froze during task-removal layout motion) was fixed in
+preflight by letting Panels publish the current paint-mask anchor through
+unrelated layout animation. The first independent review found D206
+(heterogeneous task rows suppressed touching-window state), D207 (D-Bus
+accepted divergent touching-window authorities), and D208 (legacy Dock gap
+readback omitted Windows Go Below); subsequent commits fixed all three. The
+second independent review required exact wrong-type coverage for every
+true-window role, the missing adaptation copyright line in
+`BehaviorConfig.qml`, and the landing traceability recorded in this branch.
+Commits `637b02738` and `8a9c97964` satisfy the first two requirements.
+
+Recipe 071 preserves the stable canvas and maximum-depth reservation, checks
+popup-anchor agreement, and drives the legacy Dock gap request through maximize
+and restore in Always Visible and Windows Go Below. Recipe 072 drives one real
+nested-KWin client through drag-in, drag-out, both fractional reversals, Escape
+cancel, committed maximize, pointer deferral, destruction, and zero physical
+geometry or publication drift.
+
+The PR #124 branch source commits are `0f6290f31`, `7b1fbf8fd`, `3d9330887`,
+`fac383297`, `38c6ef1df`, `637b02738`, and `8a9c97964`. Final post-rebase
+commit hashes are pending immediate post-merge traceability resolution. FP-4B
+(multi-output and separated-span topology acceptance) and FP-4C
+(deterministic operation-storm acceptance) remain open, so FP-4 (the stable
+window-touch trigger and end-to-end acceptance) and D172 (floating panel
+attachment moves the surface and reservation instead of presentation) remain
+incomplete.
+
 ## 2026-07-25: FP-3 owns internal presentation, exact input, effects, and popups
 
 FP-3 (internal presentation, input, effects, and popup ownership) landed

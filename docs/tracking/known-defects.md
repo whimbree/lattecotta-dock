@@ -2619,6 +2619,70 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: both D-Bus references, adaptor XML, serializer, and exact schema
   tests now name the same version and contract.
 
+### D205 - Panel popup anchors froze during task-removal layout motion
+- STATUS: FIXED ON PR #124 (`0f6290f31` branch commit; final post-rebase commit
+  hash pending immediate post-merge traceability resolution).
+- FOUND: 2026-07-25, FP-4A (the direct window-touch runtime) popup-motion
+  preflight.
+- SYMPTOM: task removal or other applet layout motion could leave a Panel popup
+  anchored to the former presentation while the visible paint mask moved.
+- ROOT: the `appletsLayoutGeometry` binding required
+  `visibilityManager.inNormalState` for Docks and Panels even though Panel
+  presentation geometry remains authoritative during unrelated layout
+  animation.
+- FIX: let Panels publish the current stable-canvas paint mask throughout
+  layout motion. Retain the legacy normal-state gate for Docks.
+- EVIDENCE: nested recipes 071 and 072 keep the popup anchor's primary span
+  stable and require its secondary axis to match the current paint mask through
+  transitions and client teardown.
+
+### D206 - Heterogeneous task rows suppressed touching-window state
+- STATUS: FIXED ON PR #124 (`3d9330887` branch commit; final post-rebase commit
+  hash pending immediate post-merge traceability resolution).
+- FOUND: 2026-07-25, independent cold review of PR #124.
+- SYMPTOM: one legal non-window `TasksModel` row with invalid window-only roles
+  could fail the complete evaluation and suppress every real touching window.
+- ROOT: candidate collection decoded `IsHidden`, `IsMinimized`, and `Geometry`
+  before applying the `IsWindow` discriminator.
+- FIX: validate `IsWindow` first, skip false rows immediately, and require exact
+  window-only role types only after a row claims window identity.
+- EVIDENCE: `windowtouchtrackertest` covers a mixed non-window and touching
+  window model, malformed true-window hidden, minimized, and geometry roles,
+  and fail-closed recovery. `sourceguardtest` removes the discriminator ordering
+  and rejects the mutation. The follow-up role cases are in branch commit
+  `637b02738`; its final post-rebase hash is pending immediate post-merge
+  traceability resolution.
+
+### D207 - D-Bus accepted divergent touching-window authorities
+- STATUS: FIXED ON PR #124 (`fac383297` branch commit; final post-rebase commit
+  hash pending immediate post-merge traceability resolution).
+- FOUND: 2026-07-25, independent cold review of PR #124.
+- SYMPTOM: `dockSystemData` could serialize a stale
+  `FloatingTransition::touchingWindowCount` copy without proving equality with
+  the per-view tracker authority.
+- ROOT: collection read only the transition copy even though the tracker owns
+  the live count and the transition stores a synchronous policy input.
+- FIX: compare both counts, log both dock identities and values, fail the whole
+  snapshot on disagreement, and serialize only the tracker-owned value.
+- EVIDENCE: `dbusreportstest` has a constexpr equal/divergent authority case,
+  while `sourceguardtest` replaces the tracker read and rejects the collector
+  mutation.
+
+### D208 - Legacy Dock gap readback omitted Windows Go Below
+- STATUS: FIXED ON PR #124 (`38c6ef1df` branch commit; final post-rebase commit
+  hash pending immediate post-merge traceability resolution).
+- FOUND: 2026-07-25, independent cold review of PR #124.
+- SYMPTOM: a Windows Go Below Dock could consume `hideThickScreenGap` while
+  schema 7 reported `dockGapHideRequested` false.
+- ROOT: the QML request admitted only Always Visible even though the legacy Dock
+  presentation consumes the same setting in both modes.
+- FIX: admit exactly Always Visible and Windows Go Below for the legacy Dock
+  request while keeping Panel attachment restricted to eligible Always Visible
+  views.
+- EVIDENCE: unit and source mutation coverage reject unrelated visibility
+  modes. Recipe 071 drives maximize and restore in both consuming modes and
+  requires a Floated target with no Panel transition geometry.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
   is merged. FP-2 (the stable canvas and transition controller) is merged
@@ -2627,8 +2691,13 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   head `902bba7f8`, rebased as `c10e1756c`. FP-3 (internal presentation,
   input, effects, and popup ownership) is merged through PR #122. Its required
   follow-up review returned MERGE and its canonical gate passed at branch head
-  `a7c941db1`. FP-4 remains open. Execution is tracked in
-  `floating-panel-parity-plan.md`.
+  `a7c941db1`. FP-4A (the direct window-touch runtime and single-client nested
+  acceptance) is complete on the PR #124 branch; final post-rebase hashes are
+  pending immediate post-merge traceability resolution. FP-4B (multi-output
+  and separated-span topology acceptance) and FP-4C (deterministic
+  operation-storm acceptance) remain open, so the FP-4 (stable window-touch
+  trigger and end-to-end acceptance) umbrella remains open. Execution is
+  tracked in `floating-panel-parity-plan.md`.
 - FOUND: 2026-07-24, Plasma 6.7.3 parity investigation after live floating
   panel maximize, radius, shadow, and animation regressions.
 - SYMPTOM: a floating Always Visible panel physically moves toward the screen
@@ -2658,7 +2727,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   shadow, popup, and applied-state coverage. Recipe 071 observes qreal progress
   in both directions and eight rapid reversals while the QWindow, applet
   measurements, partial span, reservation, controller geometry generation,
-  surface publications, and layer-shell configure count remain stable.
+  surface publications, and layer-shell configure count remain stable. FP-4A
+  adds exact current-desktop and current-activity window tracking, schema 7
+  policy ownership, and recipe 072 single-client interaction while retaining
+  those physical invariants.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
