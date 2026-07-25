@@ -49,7 +49,14 @@ contributor ordering is required before serialization.
 Five focused targets pass. The corrected two-output recipe reads
 `dockSystemData` exactly once after the committed per-view migration boundary,
 then completes output 14 persistence, restart, teardown, and orphan checks.
-The final independent rereview and canonical gate are the remaining FP-1 merge
+Final cold review found D184 (reservation publication core bypassed the
+coverage inventory), D185 (visibility header extension omitted adapting
+copyright), and D186 (reservation commits recorded insufficient verification
+evidence). The coverage ratchet now reports 107 CTest entries and 37 paired
+unit headers, the header carries the adapting author line, and the rewritten
+commit bodies record the no-caller search and corrected nested replay.
+
+The correction rereview and canonical gate are the remaining FP-1 merge
 prerequisites.
 
 ## 2026-07-24: stable-surface floating-panel parity approved
