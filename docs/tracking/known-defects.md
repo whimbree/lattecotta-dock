@@ -2336,9 +2336,30 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   corrected dual-output replay passes with depth 88, output 14 persistence,
   orphan-free teardown, and the right dock fixed at `1216,0 384x1000`.
 
+### D187 - Full-span End floating panels extended one pixel beyond their output
+- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- FOUND: 2026-07-24, while routing panel placement through the fail-closed
+  stable-canvas solver.
+- SYMPTOM: a Right-aligned horizontal panel or Bottom-aligned vertical panel
+  at `maxLength=1` and `offset=0` begins one pixel after the output origin and
+  ends one pixel outside the output. The stable geometry boundary refuses the
+  resulting surface instead of mutating its QWindow.
+- ROOT: reversed primary-axis placement adds one to the output origin even
+  though QRect width and height already express the complete exclusive
+  length. The increment is unrelated to both screen-edge reservation +1
+  conventions.
+- FIX: remove the reversed-alignment primary-axis increment for all four edges.
+  Full-span End placement now equals the output span exactly. Both reservation
+  +1 gap-prevention conventions remain unchanged.
+- EVIDENCE: sanitizer-backed `positionergeometrytest` drives full-span End
+  placement on top, bottom, left, and right edges and requires every complete
+  surface to remain output-contained.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: OPEN. Option 1, the stable per-view surface with internal visual
-  transition, was approved 2026-07-24. Execution is tracked in
+- STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
+  is merged. FP-2 (the stable canvas and transition controller) is implemented
+  on its integration branch, with schema integration and nested recipe 071
+  acceptance still pending. FP-3 and FP-4 remain open. Execution is tracked in
   `floating-panel-parity-plan.md`.
 - FOUND: 2026-07-24, Plasma 6.7.3 parity investigation after live floating
   panel maximize, radius, shadow, and animation regressions.
@@ -2363,7 +2384,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: Plasma 6.7.3 `PanelView` keeps a stable padded surface and fixed
   exclusive zone while its QML background follows `floatingness`. The source
   comparison and exact Lattecotta mismatch are recorded in
-  `../reference/plasma-floating-panel-parity.md`.
+  `../reference/plasma-floating-panel-parity.md`. FP-2's pure geometry,
+  transition, legacy placement, screen-geometry, layer-shell idempotence, and
+  source-contract tests pass. Recipe 071 is written and statically pinned;
+  its first schema-integrated nested execution is pending.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).

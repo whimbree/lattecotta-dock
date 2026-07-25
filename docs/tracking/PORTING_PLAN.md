@@ -4575,6 +4575,10 @@ prerequisites in the phases above are done.
       drag/cancel/maximize coverage. Internal content may translate with the
       visual background but must not refit or resize.
       Commits:
+- [x] Fix D187 (full-span End floating panels extended one pixel beyond their
+      output). Remove the unrelated reversed-alignment primary-axis increment
+      while preserving both reservation +1 gap-prevention conventions.
+      Commits: PENDING INTEGRATION REBASE
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
@@ -4583,7 +4587,12 @@ prerequisites in the phases above are done.
       e11081694, 1f82307da, cb353022f, 27519ddb5, 3f70b7224, 59146fd4e,
       9e8907870, ae529c166, 266f11d0f, 21ea8c61e, a1035aabf, cdb9c6d20
 - [ ] Complete FP-2 (the stable canvas and transition controller).
-      Commits:
+      The pure geometry core, per-view qreal controller, single solved QWindow
+      envelope, stable reservation and applet sizing, internal QML
+      translation, churn counters, and recipe 071 static contract are
+      complete. Schema 5 integration and recipe 071's first nested-KWin
+      execution remain required before this item is checked.
+      Commits: PENDING INTEGRATION REBASE
 - [ ] Complete FP-3 (internal presentation, input, effects, and popup
       ownership).
       Commits:

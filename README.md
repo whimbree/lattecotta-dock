@@ -52,7 +52,7 @@ after icon-theme changes, parabolic zoom, edit mode with drag rearranging,
 per-applet context menus and settings, the three bundled indicator styles,
 layer-shell placement with struts and auto-hide/dodge visibility modes,
 layout management with templates and import/export, applet colorization,
-immediate work-area updates when maximize state changes a floating gap,
+stable floating-panel attachment inside a fixed partial surface and work area,
 and the full settings UI. Beyond upstream parity, the port has grown
 continuation features of its own, the first being resizable applet popups
 with per-applet size persistence.
@@ -99,6 +99,12 @@ nonintersecting perpendicular dock is not shortened by another dock's masked
 canvas. Separated partial views keep independent visual and input regions;
 reservation grouping does not create inward dock stacks or a continuous
 activation strip.
+Floating Always Visible panels configured to close their screen gap for
+maximized windows keep the same QWindow, partial primary span, resting applet
+measurements, layer-shell placement, and maximum-depth reservation. One
+per-view qreal controller translates the visible presentation inside that
+stable edge canvas and reverses from its current fractional position without
+republishing physical geometry.
 Legacy On All Screens members retain their derived-output behavior. A linked
 source stays protected from removal until its explicit members are removed, so
 one-containment Undo cannot leave a partial relationship.
