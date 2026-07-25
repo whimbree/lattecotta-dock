@@ -143,11 +143,14 @@ _mo_require_topology_mutation() {
     return 0
 }
 declare -a recorded_doctor_args=()
+doctor_state="$captured"
+doctor_mutation_calls=0
 kscreen-doctor() {
     if (( $# == 1 )) && [[ "$1" == -j ]]; then
-        printf '%s\n' "$captured"
+        printf '%s\n' "$doctor_state"
         return 0
     fi
+    doctor_mutation_calls=$((doctor_mutation_calls + 1))
     recorded_doctor_args=("$@")
 }
 if ! mo_restore_output_topology "$captured"; then
@@ -167,6 +170,31 @@ done
 if (( priority_setters != 2 )); then
     fail "restore emitted $priority_setters captured priority setters instead of 2"
 fi
+
+# Malformed priority state is a refusal, never a request to normalize. Drive
+# the production capture boundary and prove no mutating Doctor call escapes.
+malformed_states=(
+    '[]'
+    '{"outputs":[{"name":[],"enabled":true,"priority":1},{"name":"Virtual-2","enabled":true,"priority":2}]}'
+)
+for malformed_state in "${malformed_states[@]}"; do
+    doctor_state="$malformed_state"
+    doctor_mutation_calls=0
+    recorded_doctor_args=()
+    capture_status=0
+    if mo_capture_output_topology >/dev/null 2>&1; then
+        capture_status=0
+    else
+        capture_status=$?
+    fi
+    if (( capture_status != 1 )); then
+        fail "malformed priority state returned $capture_status instead of refusal 1"
+    fi
+    if (( doctor_mutation_calls != 0 )); then
+        fail "malformed priority state emitted a mutating Doctor call"
+    fi
+done
+doctor_state="$captured"
 
 expect_rejected() {
     local -r mutation="$1"
@@ -191,8 +219,9 @@ expect_rejected() {
     echo "  rejected $mutation at $expected_fragment"
 }
 
-# currentModeId and priority are deliberately not assigned through guessed
-# kscreen-doctor syntax. They and all other unhandled state must remain equal.
+# currentModeId is deliberately not assigned through guessed kscreen-doctor
+# syntax. Priority is restored explicitly, and the complete comparison still
+# rejects any incorrect post-restore priority.
 expect_rejected current-mode currentModeId
 expect_rejected priority priority
 expect_rejected mode-refresh refreshRate

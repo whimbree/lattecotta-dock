@@ -917,6 +917,10 @@ private:
             && code.contains(QStringLiteral(
                    "sorted(priorities)==[1,2]"))
             && code.contains(QStringLiteral(
+                   "ifnotisinstance(payload,dict):"))
+            && code.contains(QStringLiteral(
+                   "ifnotisinstance(output_name,str)ornotoutput_name:"))
+            && code.contains(QStringLiteral(
                    "\"output.${E2E_MO_PRIMARY}.priority.1\""))
             && code.contains(QStringLiteral(
                    "\"output.${E2E_MO_SECONDARY}.priority.2\""))
