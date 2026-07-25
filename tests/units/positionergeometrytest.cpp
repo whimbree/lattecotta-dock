@@ -64,6 +64,8 @@ private Q_SLOTS:
     void dockPosition_bottomPanel_leftAlignment();
     void dockPosition_bottomPanel_rightAlignment();
     void dockPosition_bottomPanel_centerAlignment();
+    void dockPosition_fullSpanEndStaysInsideOutput_data();
+    void dockPosition_fullSpanEndStaysInsideOutput();
 
     // dockPosition — stable floating envelope + ordinary visibility slide
     void dockPosition_panelStableEnvelope_data();
@@ -181,7 +183,7 @@ void PositionerGeometryTest::dockPosition_bottomPanel_rightAlignment()
 {
     // Panel bottom, Right alignment, offset=0.1, maxLength=0.8
     // gapReversed(1920) = int(1920 - 1920*0.8 - gap(1920)) = int(1920 - 1536 - 192) = 192
-    // x = screenGeometry.x() + gapReversed(width) + 1 = 0 + 192 + 1 = 193
+    // x = screenGeometry.x() + gapReversed(width) = 0 + 192 = 192
     // y = 0 + 1080 - 56 - 0 = 1024
     ViewGeometryInputs in = baseInputs();
     in.location = Plasma::Types::BottomEdge;
@@ -192,7 +194,7 @@ void PositionerGeometryTest::dockPosition_bottomPanel_rightAlignment()
     in.normalThickness = 56;
 
     QPoint pos = dockPosition(in, screen1080p());
-    QCOMPARE(pos, QPoint(193, 1024));
+    QCOMPARE(pos, QPoint(192, 1024));
 }
 
 void PositionerGeometryTest::dockPosition_bottomPanel_centerAlignment()
@@ -213,6 +215,42 @@ void PositionerGeometryTest::dockPosition_bottomPanel_centerAlignment()
 
     QPoint pos = dockPosition(in, screen1080p());
     QCOMPARE(pos, QPoint(191, 1024));
+}
+
+void PositionerGeometryTest::dockPosition_fullSpanEndStaysInsideOutput_data()
+{
+    QTest::addColumn<Plasma::Types::Location>("edge");
+    QTest::addColumn<Plasma::Types::FormFactor>("formFactor");
+    QTest::addColumn<int>("alignment");
+
+    QTest::newRow("top") << Plasma::Types::TopEdge
+                         << Plasma::Types::Horizontal << int(Latte::Types::Right);
+    QTest::newRow("right") << Plasma::Types::RightEdge
+                           << Plasma::Types::Vertical << int(Latte::Types::Bottom);
+    QTest::newRow("bottom") << Plasma::Types::BottomEdge
+                            << Plasma::Types::Horizontal << int(Latte::Types::Right);
+    QTest::newRow("left") << Plasma::Types::LeftEdge
+                          << Plasma::Types::Vertical << int(Latte::Types::Bottom);
+}
+
+void PositionerGeometryTest::dockPosition_fullSpanEndStaysInsideOutput()
+{
+    QFETCH(Plasma::Types::Location, edge);
+    QFETCH(Plasma::Types::FormFactor, formFactor);
+    QFETCH(int, alignment);
+
+    ViewGeometryInputs in = baseInputs();
+    in.location = edge;
+    in.formFactor = formFactor;
+    in.alignment = static_cast<Latte::Types::Alignment>(alignment);
+    in.behaveAsPlasmaPanel = true;
+    in.maxLength = 1.0f;
+    in.offset = 0.0f;
+    in.floatingGap = 10;
+
+    const QSize size = windowSize(in, screen1080p(), screen1080p().size());
+    const QRect surface(dockPosition(in, screen1080p()), size);
+    QVERIFY(screen1080p().contains(surface));
 }
 
 void PositionerGeometryTest::dockPosition_panelStableEnvelope_data()
