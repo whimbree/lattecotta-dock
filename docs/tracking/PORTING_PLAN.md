@@ -4622,6 +4622,37 @@ prerequisites in the phases above are done.
       selection, perform edge-coordinate arithmetic in `qint64`, and pin
       branch-local Center and End conversion failures.
       Commits: 44a5ea89d
+- [x] Fix D197 (render callbacks could outlive floating presentation state).
+      Close the shared render bridge, disconnect every direct callback, and
+      wait for an in-flight post before Effects storage is destroyed.
+      Commits: 48e1f9b39
+- [x] Fix D198 (floating popup anchors retained their former host window).
+      Follow `QQuickItem::windowChanged`, detach the old event filter, and
+      ignore revisions from the former host.
+      Commits: 228252623
+- [x] Fix D199 (panel-to-dock conversion could retain a panel input mask).
+      Transfer the native input authority directly when the view type changes,
+      independently of the ordinary animation update gate.
+      Commits: ca388f82e
+- [x] Fix D200 (floating shadow readback reported requested state as applied).
+      Query the per-window PanelShadows registry and serialize absent shadows
+      explicitly instead of echoing the Effects request.
+      Commits: 19f3effd7
+- [x] Fix D201 (floating presentation cores escaped the pairing ratchet).
+      Register every new app/view core and add the missing host-filter test.
+      Commits: 19cb727e0
+- [x] Fix D202 (floating presentation observability omitted applied details).
+      Add live borders, shadow state, popup hint, and visible-anchor revision
+      to schema 6 and validate them against their production authorities.
+      Commits: 15d7dda7e, 19f3effd7
+- [x] Fix D203 (the floating-input commit used a bare FP-3 (internal
+      presentation, input, effects, and popup ownership) codeword).
+      Rewrite the first use with the plain-English internal-presentation
+      description.
+      Commits: 44e6d5907
+- [x] Fix D204 (the D-Bus design document retained schema version 5).
+      Align the prose with the schema 6 implementation and example.
+      Commits: 19f3effd7
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
@@ -4641,9 +4672,18 @@ prerequisites in the phases above are done.
       054e4826e, 0436dd90c, 0dabbb516, b122ef88c, 2eb6881e1, 34af636d7,
       29f992ef0, fa093a7fd, 73ad81186, 86576fc52, e1504a097, 8ef41a45d,
       44a5ea89d, c10e1756c, 0cb9e06f3
-- [ ] Complete FP-3 (internal presentation, input, effects, and popup
+- [x] Complete FP-3 (internal presentation, input, effects, and popup
       ownership).
-      Commits:
+      The visible background, paint/effect shape, exact partial-span Fitts
+      bridge, pointer and wheel projection, borders, corners, per-window
+      shadows, popup anchor and display hint now share one internal
+      presentation authority. Physical legacy panel geometry paths are
+      removed. Schema 6 reports the logical and applied state, including
+      explicit absent-shadow semantics. The canonical gate passed at reviewed
+      branch head `a7c941db1`, and the required independent follow-up review
+      returned `MERGE` before GitHub merged PR #122.
+      Commits: 3bd2ce525, 44e6d5907, 48e1f9b39, 228252623, ca388f82e,
+      ab880f653, 15d7dda7e, 19f3effd7, 19cb727e0
 - [ ] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
       Commits:
