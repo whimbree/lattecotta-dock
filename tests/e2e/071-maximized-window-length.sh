@@ -151,14 +151,20 @@ capture_progress_only_transition() {
     e2e_fail "no qreal midpoint observed for $expected_phase transition (target=$target phase=$phase running=$running progress=$progress)"
 }
 
-wait_for_selected_target() {
-    local expected_target="$1" target phase running progress geometry_revision surface_revision layer_revision
+wait_for_in_flight_target() {
+    local expected_target="$1" expected_phase="$2"
+    local target phase running progress geometry_revision surface_revision layer_revision
     for _ in $(seq 1 80); do
         read -r target phase running progress geometry_revision surface_revision layer_revision <<< "$(transition_probe)"
-        [[ "$target" == "$expected_target" ]] && return 0
+        if [[ "$target" == "$expected_target" && "$phase" == "$expected_phase" && "$running" == true ]] \
+                && awk -v progress="$progress" 'BEGIN { exit !(progress > 0.0 && progress < 1.0) }'; then
+            [[ "$geometry_revision $surface_revision $layer_revision" == "$base_revisions" ]] \
+                || e2e_fail "rapid reversal to $expected_target changed stable-controller or physical-geometry revisions at progress $progress"
+            return 0
+        fi
         sleep 0.01
     done
-    e2e_fail "rapid reversal never selected transition target $expected_target"
+    e2e_fail "rapid reversal never entered $expected_phase for target $expected_target (target=$target phase=$phase running=$running progress=$progress)"
 }
 
 wait_for_tracker_and_target() {
@@ -328,10 +334,14 @@ assert_stable_contract "floated resting state"
 
 for maximized in true false true false true false true false; do
     expected_target=attached
-    [[ "$maximized" == false ]] && expected_target=floated
+    expected_phase=attaching
+    if [[ "$maximized" == false ]]; then
+        expected_target=floated
+        expected_phase=floating
+    fi
     [[ "$(set_konsole_maximized "$maximized")" == "$fixture_id" ]] \
         || e2e_fail "KWin did not drive the $expected_target storm target"
-    wait_for_selected_target "$expected_target"
+    wait_for_in_flight_target "$expected_target" "$expected_phase"
 done
 
 [[ "$(set_konsole_maximized true)" == "$fixture_id" ]] || e2e_fail "KWin did not settle the storm at attached"

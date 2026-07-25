@@ -4594,6 +4594,11 @@ prerequisites in the phases above are done.
       matrix mutation, with restoration state valid for partial setup
       failures.
       Commits: PENDING INTEGRATION REBASE
+- [x] Fix D191 (stable-canvas reversal storm accepted settled transitions).
+      Require every alternating target to appear in its matching active phase
+      at fractional progress with unchanged geometry and publication
+      revisions.
+      Commits: PENDING INTEGRATION REBASE
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
