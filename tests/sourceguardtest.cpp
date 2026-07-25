@@ -914,6 +914,12 @@ private:
                    "difference=first_difference(captured,current)"))
             && code.contains(QStringLiteral(
                    "completeKScreenstatedriftedat{difference}"))
+            && code.contains(QStringLiteral(
+                   "sorted(priorities)==[1,2]"))
+            && code.contains(QStringLiteral(
+                   "\"output.${E2E_MO_PRIMARY}.priority.1\""))
+            && code.contains(QStringLiteral(
+                   "\"output.${E2E_MO_SECONDARY}.priority.2\""))
             && waitBody.contains(QStringLiteral(
                    "_mo_compare_output_state_semantically"
                    "\"$captured\"\"$current\"2>&1"))
@@ -930,8 +936,11 @@ private:
                    "\"output.${name}.scale.${scale}\"")) == 1
             && restoreBody.count(QStringLiteral(
                    "\"output.${name}.position.${x},${y}\"")) == 1
+            && restoreBody.count(QStringLiteral(
+                   "\"output.${name}.priority.${priority}\"")) == 1
             && !restoreBody.contains(QStringLiteral(".mode."))
-            && !restoreBody.contains(QStringLiteral(".priority."));
+            && restoreBody.contains(QStringLiteral(
+                   "localnameenabledrotationscalexypriority"));
     }
 
     static bool matchesDockBackgroundFitRouting(const QString &source)
@@ -1742,6 +1751,7 @@ private Q_SLOTS:
     void windowTouchTopologyE2e_cleanupGuardRejectsControlledMutations();
     void multiOutputRestore_keepsCompleteSemanticStateContract();
     void multiOutputRestore_sourceGuardRejectsProjectionOnlyVerification();
+    void multiOutputRestore_sourceGuardRejectsMissingPrioritySetter();
     void floatingPresentationConsumers_keepSingleAuthority();
     void panelToDockInputHandoff_bypassesOrdinaryAnimationGate();
     void panelToDockInputHandoff_rejectsMissingDirectWrite();
@@ -2520,6 +2530,22 @@ void SourceGuardTest::multiOutputRestore_sourceGuardRejectsProjectionOnlyVerific
     QVERIFY2(
         !matchesCompleteKScreenRestoreContract(source),
         "restoring projection-only verification must fail the source guard");
+}
+
+void SourceGuardTest::multiOutputRestore_sourceGuardRejectsMissingPrioritySetter()
+{
+    QString source = readFile(QStringLiteral(
+        "tests/e2e/matrix/multi-output-lib.sh"));
+    QVERIFY(matchesCompleteKScreenRestoreContract(source));
+
+    const QString prioritySetter = QStringLiteral(
+        "\"output.${name}.priority.${priority}\"");
+    QCOMPARE(source.count(prioritySetter), 1);
+    source.replace(prioritySetter, QStringLiteral(
+        "\"output.${name}.position.${x},${y}\""));
+    QVERIFY2(
+        !matchesCompleteKScreenRestoreContract(source),
+        "omitting the captured priority setter must fail the source guard");
 }
 
 void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
