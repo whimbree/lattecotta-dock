@@ -91,6 +91,24 @@ QStringList layerShellAnchorNames(LayerShellQt::Window::Anchors anchors)
     return names;
 }
 
+QStringList enabledBorderNames(
+    KSvg::FrameSvg::EnabledBorders enabledBorders)
+{
+    using Border = KSvg::FrameSvg;
+    QStringList names;
+    for (const auto [border, name] : {
+             std::pair{Border::TopBorder, QStringLiteral("top")},
+             std::pair{Border::RightBorder, QStringLiteral("right")},
+             std::pair{Border::BottomBorder, QStringLiteral("bottom")},
+             std::pair{Border::LeftBorder, QStringLiteral("left")},
+         }) {
+        if (enabledBorders.testFlag(border)) {
+            names.append(name);
+        }
+    }
+    return names;
+}
+
 DockTransitionTarget transitionTargetForSnapshot(
     ViewPart::FloatingTransition::Target target)
 {
@@ -1068,6 +1086,14 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
             view->effects()->floatingDamageMaskPending();
         record.floatingDamageMaskGeneration =
             view->effects()->floatingDamageMaskGeneration();
+        record.enabledBorders =
+            enabledBorderNames(
+                view->effects()->enabledBorders());
+        record.shadowPaddingOffsets =
+            view->effects()
+                ->floatingShadowPaddingOffsets();
+        record.floatingAnchorRevision =
+            view->effects()->floatingAnchorRevision();
         record.strutsThickness = view->visibility()->strutsThickness();
         record.publishedStruts = view->visibility()->publishedStruts();
 
@@ -1170,6 +1196,12 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.transitionTarget =
             transitionTargetForSnapshot(
                 transition->target());
+        record.floatingAppletPopupsPreferred =
+            view->containment()
+                ->containmentDisplayHints()
+                .testFlag(
+                    Plasma::Types::
+                        ContainmentPrefersFloatingApplets);
         record.transitionProgress =
             transition->floatingness();
         record.transitionPhase =

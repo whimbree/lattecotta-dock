@@ -665,6 +665,19 @@ private:
                 "record.transitionGeometryRevision="
                 "transition->geometryRevision();"))
             && code.contains(QStringLiteral(
+                "record.enabledBorders=enabledBorderNames("
+                "view->effects()->enabledBorders());"))
+            && code.contains(QStringLiteral(
+                "record.shadowPaddingOffsets="
+                "view->effects()->floatingShadowPaddingOffsets();"))
+            && code.contains(QStringLiteral(
+                "record.floatingAnchorRevision="
+                "view->effects()->floatingAnchorRevision();"))
+            && code.contains(QStringLiteral(
+                "record.floatingAppletPopupsPreferred="
+                "view->containment()->containmentDisplayHints().testFlag("
+                "Plasma::Types::ContainmentPrefersFloatingApplets);"))
+            && code.contains(QStringLiteral(
                 "record.currentVisibleGeometry="
                 "transition->currentVisibleGeometry();"))
             && code.contains(QStringLiteral(
@@ -2032,6 +2045,25 @@ void SourceGuardTest::dockSystemTransitionCollection_rejectsControlledMutations(
     QVERIFY(
         matchesTransitionSnapshotRoute(
             collector));
+
+    QString inferredPopupPreference =
+        normalizedCode(collector);
+    QCOMPARE(
+        inferredPopupPreference.count(
+            QStringLiteral(
+                "view->containment()->containmentDisplayHints().testFlag("
+                "Plasma::Types::ContainmentPrefersFloatingApplets)")),
+        1);
+    inferredPopupPreference.replace(
+        QStringLiteral(
+            "view->containment()->containmentDisplayHints().testFlag("
+            "Plasma::Types::ContainmentPrefersFloatingApplets)"),
+        QStringLiteral(
+            "transition->floatingAppletPopupsPreferred()"));
+    QVERIFY2(
+        !matchesTransitionSnapshotRoute(
+            inferredPopupPreference),
+        "inferring the popup hint from its target must fail the live readback guard");
 
     QString inferredEligibility =
         normalizedCode(collector);

@@ -208,6 +208,16 @@ static DockSystemViewRecord stableBottomTransitionRecord()
     record.inputMask = QRect(0, 4, 300, 43);
     record.appliedInputMask = record.inputMask;
     record.floatingDamageMaskGeneration = 31;
+    record.enabledBorders = {
+        QStringLiteral("top"),
+        QStringLiteral("right"),
+        QStringLiteral("bottom"),
+        QStringLiteral("left"),
+    };
+    record.shadowPaddingOffsets =
+        QMargins(0, -4, 0, -2);
+    record.floatingAppletPopupsPreferred = true;
+    record.floatingAnchorRevision = 29;
     record.contentTranslation =
         QPointF(0.0, 4.375);
     record.stableTriggerGeometry =
@@ -875,6 +885,15 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     record.maskRect = QRect(25, 26, 27, 28);
     record.inputMask = QRect(29, 30, 31, 32);
     record.appliedInputMask = QRect(33, 34, 35, 36);
+    record.enabledBorders = {
+        QStringLiteral("top"),
+        QStringLiteral("left"),
+    };
+    record.shadowPaddingOffsets =
+        QMargins(-5, -6, -7, -8);
+    record.floatingAppletPopupsPreferred = true;
+    record.floatingAnchorRevision =
+        std::numeric_limits<quint64>::max() - 3;
     record.strutsThickness = 48;
     record.publishedStruts = QRect(0, 0, 48, 1440);
     record.layerShellPresent = true;
@@ -1090,7 +1109,10 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("currentVisibleGeometry"), QStringLiteral("edge"),
         QStringLiteral("editMode"), QStringLiteral("effectiveConfigureAppletsMode"),
         QStringLiteral("effectiveIconSize"), QStringLiteral("effectsRect"),
+        QStringLiteral("enabledBorders"),
         QStringLiteral("floatedPresentationGeometry"),
+        QStringLiteral("floatingAnchorRevision"),
+        QStringLiteral("floatingAppletPopupsPreferred"),
         QStringLiteral("floatingDamageMaskGeneration"),
         QStringLiteral("floatingDamageMaskPending"),
         QStringLiteral("floatingPanelConfigured"),
@@ -1133,6 +1155,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("screen"),
         QStringLiteral("screenGeometry"), QStringLiteral("screenId"),
         QStringLiteral("screensGroup"), QStringLiteral("settingsWindowShown"),
+        QStringLiteral("shadowPaddingOffsets"),
         QStringLiteral("stableAppletMeasurementBounds"),
         QStringLiteral("stableCanvasGeometry"),
         QStringLiteral("stableLayerShellMargin"),
@@ -1283,6 +1306,20 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
             QStringLiteral("floatingDamageMaskGeneration")).toString(),
         QString::number(
             record.floatingDamageMaskGeneration));
+    QCOMPARE(
+        view.value(QStringLiteral("enabledBorders")).toArray(),
+        QJsonArray::fromStringList(record.enabledBorders));
+    QCOMPARE(
+        view.value(QStringLiteral("shadowPaddingOffsets")).toArray(),
+        serializeMargins(record.shadowPaddingOffsets));
+    QCOMPARE(
+        view.value(
+            QStringLiteral("floatingAppletPopupsPreferred")).toBool(),
+        true);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("floatingAnchorRevision")).toString(),
+        QString::number(record.floatingAnchorRevision));
     QCOMPARE(view.value(QStringLiteral("appletsLayoutGeometry")).toArray(), serializeRect(record.appletsLayoutGeometry));
     QCOMPARE(view.value(QStringLiteral("visibilityMode")).toString(), QStringLiteral("dodgeActive"));
     QCOMPARE(view.value(QStringLiteral("isHidden")).toBool(), true);
@@ -1322,6 +1359,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("surfaceGeometryPublicationRevision"),
         QStringLiteral("layerShellConfigureRequestRevision"),
         QStringLiteral("floatingDamageMaskGeneration"),
+        QStringLiteral("floatingAnchorRevision"),
         QStringLiteral("transitionDirection"),
         QStringLiteral("transitionGeometryRevision"),
         QStringLiteral("transitionPhase"),
@@ -1352,6 +1390,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("effectiveConfigureAppletsMode"), QStringLiteral("settingsWindowShown"),
         QStringLiteral("layerShellPresent"), QStringLiteral("reservationSurfacePresent"),
         QStringLiteral("floatingDamageMaskPending"),
+        QStringLiteral("floatingAppletPopupsPreferred"),
         QStringLiteral("floatingPanelConfigured"),
         QStringLiteral("floatingPanelEligible"),
         QStringLiteral("transitionGeometryPresent"),
@@ -1364,7 +1403,9 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("effectsRect"), QStringLiteral("appletsLayoutGeometry"),
         QStringLiteral("maskRect"), QStringLiteral("inputMask"),
         QStringLiteral("appliedInputMask"), QStringLiteral("publishedStruts"),
+        QStringLiteral("enabledBorders"),
         QStringLiteral("layerShellAnchors"), QStringLiteral("layerShellMargins"),
+        QStringLiteral("shadowPaddingOffsets"),
         QStringLiteral("reservationContributorDockIds"),
         QStringLiteral("reservationGeometry"),
         QStringLiteral("reservationWindowGeometry"),
@@ -1465,6 +1506,10 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     requireJsonType(view, QStringLiteral("floatingPanelConfigured"), QJsonValue::Bool);
     requireJsonType(view, QStringLiteral("floatingDamageMaskPending"), QJsonValue::Bool);
     requireJsonType(view, QStringLiteral("floatingDamageMaskGeneration"), QJsonValue::String);
+    requireJsonType(view, QStringLiteral("enabledBorders"), QJsonValue::Array);
+    requireJsonType(view, QStringLiteral("shadowPaddingOffsets"), QJsonValue::Array);
+    requireJsonType(view, QStringLiteral("floatingAppletPopupsPreferred"), QJsonValue::Bool);
+    requireJsonType(view, QStringLiteral("floatingAnchorRevision"), QJsonValue::String);
     requireJsonType(view, QStringLiteral("floatingPanelEligible"), QJsonValue::Bool);
     requireJsonType(view, QStringLiteral("transitionTarget"), QJsonValue::String);
     requireJsonType(view, QStringLiteral("transitionProgress"), QJsonValue::Double);
@@ -1477,6 +1522,13 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     QCOMPARE(view.value(QStringLiteral("floatingPanelConfigured")).toBool(), false);
     QCOMPARE(view.value(QStringLiteral("floatingDamageMaskPending")).toBool(), false);
     QCOMPARE(view.value(QStringLiteral("floatingDamageMaskGeneration")).toString(),
+             QStringLiteral("0"));
+    QVERIFY(view.value(QStringLiteral("enabledBorders")).toArray().isEmpty());
+    QCOMPARE(view.value(QStringLiteral("shadowPaddingOffsets")).toArray(),
+             serializeMargins(QMargins{}));
+    QCOMPARE(view.value(QStringLiteral("floatingAppletPopupsPreferred")).toBool(),
+             false);
+    QCOMPARE(view.value(QStringLiteral("floatingAnchorRevision")).toString(),
              QStringLiteral("0"));
     QCOMPARE(view.value(QStringLiteral("floatingPanelEligible")).toBool(), false);
     QCOMPARE(view.value(QStringLiteral("transitionTarget")).toString(), QStringLiteral("floated"));
@@ -1853,6 +1905,18 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         snapshot.views[0].floatingDamageMaskGeneration = 0;
     });
     rejects([](auto &snapshot) {
+        snapshot.views[0].enabledBorders.removeLast();
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].shadowPaddingOffsets.setBottom(-3);
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].floatingAppletPopupsPreferred = false;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].floatingAnchorRevision = 0;
+    });
+    rejects([](auto &snapshot) {
         snapshot.views[0].visibilityMode =
             Types::SidebarOnDemand;
         snapshot.views[0].floatingDamageMaskPending = true;
@@ -1886,6 +1950,8 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         QRect(0, 0, 300, 47);
     ineligibleView.appliedInputMask =
         ineligibleView.inputMask;
+    ineligibleView.shadowPaddingOffsets =
+        QMargins(0, 0, 0, -7);
     ineligibleView.contentTranslation =
         QPointF{};
     ineligible.views = {
@@ -1911,13 +1977,45 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
             record.inputMask =
                 record.computedInputBridgeGeometry->toAlignedRect();
             record.appliedInputMask = record.inputMask;
+            const QRect paint =
+                record.effectsRect;
+            const QSize canvasSize =
+                record.stableCanvasGeometry->size();
+            record.shadowPaddingOffsets = {
+                -paint.x(),
+                -paint.y(),
+                -(canvasSize.width()
+                  - (paint.x() + paint.width())),
+                -(canvasSize.height()
+                  - (paint.y() + paint.height())),
+            };
             record.contentTranslation = QPointF(0.0, visibleY);
         };
+
+    DockSystemSnapshot attachedPanel = valid;
+    auto &attachedView = attachedPanel.views[0];
+    attachedView.transitionTarget =
+        DockTransitionTarget::Attached;
+    attachedView.transitionPhase =
+        DockTransitionPhase::Resting;
+    attachedView.transitionDirection =
+        DockTransitionDirection::None;
+    attachedView.transitionRunning = false;
+    attachedView.floatingAppletPopupsPreferred = false;
+    setBottomProgress(attachedView, 0.0);
+    attachedView.enabledBorders.removeAll(
+        QStringLiteral("bottom"));
+    QVERIFY(dockTransitionRecordsAgree(attachedPanel));
+
+    attachedView.enabledBorders.insert(
+        2, QStringLiteral("bottom"));
+    QVERIFY(!dockTransitionRecordsAgree(attachedPanel));
 
     DockSystemSnapshot flushPanel;
     auto flushView = stableBottomTransitionRecord();
     flushView.floatingPanelConfigured = false;
     flushView.floatingPanelEligible = false;
+    flushView.floatingAppletPopupsPreferred = false;
     flushView.transitionTarget =
         DockTransitionTarget::Floated;
     flushView.transitionProgress = 1.0;
@@ -1946,6 +2044,7 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
     flushView.maskRect = flushView.effectsRect;
     flushView.inputMask = flushView.effectsRect;
     flushView.appliedInputMask = flushView.inputMask;
+    flushView.shadowPaddingOffsets = {};
     flushView.contentTranslation = QPointF{};
     flushPanel.views = {flushView};
     QVERIFY(dockTransitionRecordsAgree(flushPanel));
@@ -1968,6 +2067,8 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
     nearAttached.views[0].floatingPanelEligible = true;
     nearAttached.views[0].transitionTarget =
         DockTransitionTarget::Attached;
+    nearAttached.views[0].floatingAppletPopupsPreferred =
+        false;
     setBottomProgress(nearAttached.views[0], 1e-13);
     QVERIFY(!dockTransitionRecordsAgree(nearAttached));
 }

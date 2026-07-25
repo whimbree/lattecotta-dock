@@ -111,7 +111,11 @@
          clearing frame while event routing enforces the exact logical bridge.
          floatingDamageMaskPending names that exact interval and
          floatingDamageMaskGeneration is its process-local monotonic decimal
-         string. The dockSystemData schema version is 6.
+         string. enabledBorders and shadowPaddingOffsets report the live
+         Effects/KWindowShadow presentation. floatingAppletPopupsPreferred
+         reads Plasma's applied containment hint, and floatingAnchorRevision
+         reports the live popup-anchor publication as a process-local
+         monotonic decimal string. The dockSystemData schema version is 6.
          The mandatory per-view transition geometry,
          surface publication, and layer-shell configure revisions are
          process-local monotonic decimal strings.

@@ -151,6 +151,10 @@ Landed before or during the 2026-07-16 stabilization session:
       "appliedInputMask": [x, y, w, h],
       "floatingDamageMaskPending": false,
       "floatingDamageMaskGeneration": "31",
+      "enabledBorders": ["top", "right", "bottom", "left"],
+      "shadowPaddingOffsets": [0, -4, 0, -2],
+      "floatingAppletPopupsPreferred": true,
+      "floatingAnchorRevision": "29",
       "strutsThickness": 48,
       "publishedStruts": [x, y, w, h],
       "layerShellPresent": true,
@@ -310,8 +314,15 @@ Landed before or during the 2026-07-16 stabilization session:
   union, and `floatingDamageMaskGeneration` is the process-local monotonic
   handshake generation serialized as a decimal string. Exact qreal event
   classification consumes old-only pixels, so `inputMask` remains the logical
-  activation authority. `stableLayerShellMargin` is the perpendicular
-  physical edge offset and must stay zero for the stable-canvas design.
+  activation authority. `enabledBorders` reports the live Effects border set
+  in canonical edge order, while `shadowPaddingOffsets` reports the applied
+  stable-window inset as `[left, top, right, bottom]`.
+  `floatingAppletPopupsPreferred` reads Plasma's applied containment hint, so
+  it proves the QML hint write as well as the configured/target decision.
+  `floatingAnchorRevision` is the process-local monotonic visible-anchor
+  publication consumed by popup placement. `stableLayerShellMargin` is the
+  perpendicular physical edge offset and must stay zero for the stable-canvas
+  design.
   The stable canvas must also touch its selected `screenGeometry` edge.
   Primary-axis margins remain valid partial-panel placement coordinates.
   `requestedReservationDepth` is the controller's

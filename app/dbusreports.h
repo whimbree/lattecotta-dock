@@ -572,6 +572,10 @@ struct DockSystemViewRecord {
     QRect appliedInputMask;
     bool floatingDamageMaskPending{false};
     quint64 floatingDamageMaskGeneration{0};
+    QStringList enabledBorders;
+    QMargins shadowPaddingOffsets;
+    bool floatingAppletPopupsPreferred{false};
+    quint64 floatingAnchorRevision{0};
     int strutsThickness{0};
     QRect publishedStruts;
     bool layerShellPresent{false};
@@ -1654,6 +1658,14 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
         record.floatingDamageMaskPending;
     json[QStringLiteral("floatingDamageMaskGeneration")] =
         QString::number(record.floatingDamageMaskGeneration);
+    json[QStringLiteral("enabledBorders")] =
+        QJsonArray::fromStringList(record.enabledBorders);
+    json[QStringLiteral("shadowPaddingOffsets")] =
+        serializeMargins(record.shadowPaddingOffsets);
+    json[QStringLiteral("floatingAppletPopupsPreferred")] =
+        record.floatingAppletPopupsPreferred;
+    json[QStringLiteral("floatingAnchorRevision")] =
+        QString::number(record.floatingAnchorRevision);
     json[QStringLiteral("strutsThickness")] = record.strutsThickness;
     json[QStringLiteral("publishedStruts")] = serializeRect(record.publishedStruts);
     json[QStringLiteral("layerShellPresent")] = record.layerShellPresent;
@@ -1844,6 +1856,18 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
     }
 
     for (const auto &view : snapshot.views) {
+        const QStringList canonicalBorders{
+            QStringLiteral("top"),
+            QStringLiteral("right"),
+            QStringLiteral("bottom"),
+            QStringLiteral("left"),
+        };
+        QStringList normalizedBorders;
+        for (const QString &border : canonicalBorders) {
+            if (view.enabledBorders.contains(border)) {
+                normalizedBorders.append(border);
+            }
+        }
         if (view.floatingDamageMaskPending
             && (view.floatingDamageMaskGeneration == 0
                 || view.type != Types::PanelView
@@ -1853,6 +1877,15 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                     == Types::SidebarOnDemand
                 || view.visibilityMode
                     == Types::SidebarAutoHide)) {
+            return false;
+        }
+        if (view.enabledBorders != normalizedBorders
+                || view.floatingAppletPopupsPreferred
+                    != (view.floatingPanelConfigured
+                        && view.transitionTarget
+                            == DockTransitionTarget::Floated)
+                || (view.transitionGeometryPresent
+                    && view.floatingAnchorRevision == 0)) {
             return false;
         }
 
@@ -2019,6 +2052,7 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
         int expectedDepth{0};
         int appliedLayerShellMargin{0};
         QRect expectedTrigger = attachedOnOutput;
+        QString physicalEdgeBorder;
         switch (view.edge) {
         case Plasma::Types::TopEdge:
             if (canvas.top()
@@ -2030,6 +2064,8 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
             expectedDepth = attached.height();
             appliedLayerShellMargin =
                 view.layerShellMargins.top();
+            physicalEdgeBorder =
+                QStringLiteral("top");
             expectedTrigger.setBottom(
                 expectedTrigger.bottom() + 1);
             break;
@@ -2043,6 +2079,8 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
             expectedDepth = attached.width();
             appliedLayerShellMargin =
                 view.layerShellMargins.right();
+            physicalEdgeBorder =
+                QStringLiteral("right");
             expectedTrigger.setLeft(
                 expectedTrigger.left() - 1);
             break;
@@ -2056,6 +2094,8 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
             expectedDepth = attached.height();
             appliedLayerShellMargin =
                 view.layerShellMargins.bottom();
+            physicalEdgeBorder =
+                QStringLiteral("bottom");
             expectedTrigger.setTop(
                 expectedTrigger.top() - 1);
             break;
@@ -2069,6 +2109,8 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
             expectedDepth = attached.width();
             appliedLayerShellMargin =
                 view.layerShellMargins.left();
+            physicalEdgeBorder =
+                QStringLiteral("left");
             expectedTrigger.setRight(
                 expectedTrigger.right() + 1);
             break;
@@ -2114,6 +2156,16 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
         const QPointF expectedTranslation =
             expectedVisible.topLeft()
             - floatedTopLeft;
+        const QMargins expectedShadowPadding{
+            -expectedPaint.x(),
+            -expectedPaint.y(),
+            -(localCanvasBounds.width()
+              - (expectedPaint.x()
+                 + expectedPaint.width())),
+            -(localCanvasBounds.height()
+              - (expectedPaint.y()
+                 + expectedPaint.height())),
+        };
         const bool presentationOwnsPaint =
             view.type == Types::PanelView
             && view.transitionGeometryPresent;
@@ -2132,6 +2184,16 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                     != expectedBridge
                 || *view.contentTranslation
                     != expectedTranslation
+                || view.shadowPaddingOffsets
+                    != expectedShadowPadding
+                || (view.floatingPanelConfigured
+                    && view.transitionProgress > 0.0
+                    && view.enabledBorders
+                        != canonicalBorders)
+                || (view.floatingPanelConfigured
+                    && view.transitionProgress == 0.0
+                    && view.enabledBorders.contains(
+                        physicalEdgeBorder))
                 || (presentationOwnsPaint
                     && (view.effectsRect != expectedPaint
                         || view.maskRect != expectedPaint))
