@@ -2444,6 +2444,20 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   Panel/Always Visible fixture at a 0 px gap and requires a nonempty snapshot
   with both configured and eligible false at the floated resting endpoint.
 
+### D193 - Extended floating-background files omitted adapting attribution
+- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- FOUND: 2026-07-24, second independent FP-2 review.
+- SYMPTOM: two QML files materially extended for stable floating geometry
+  retained the original copyright line but omitted the adapting author's
+  required SPDX line.
+- ROOT: the implementation changed each file's runtime contract without
+  applying the repository's preserve-and-add attribution rule.
+- FIX: preserve Michail Vourlakos's existing lines and add Bree Spektor's 2026
+  SPDX copyright line to `BackgroundProperties.qml` and `Totals.qml`.
+- EVIDENCE: the two changed headers now carry both original and adapting
+  attribution. The canonical REUSE gate remains the final repository-wide
+  license check.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
   is merged. FP-2 (the stable canvas and transition controller) is complete on
