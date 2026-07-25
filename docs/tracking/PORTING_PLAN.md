@@ -4698,7 +4698,7 @@ prerequisites in the phases above are done.
       Evidence: the constexpr policy matrix, QML routing tests, source
       mutations, and recipe 073 keep the Start, End, and vertical Panel applet
       and popup spans fixed through real attached and floated endpoints.
-      Commits: 0c4b7ea31 (provisional branch hash)
+      Commits: dc0fda084 (PR #126)
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
@@ -4747,8 +4747,8 @@ prerequisites in the phases above are done.
       Exact per-view activation and maximum-depth reservation ownership survive
       full-touching, partial-touching, and disconnected landscape/portrait
       arrangements, client minimization and destruction, and process restart.
-      Commits: 0333df72a, 0c4b7ea31, 0c90c3f14, 0d8bde1e2,
-      77ad3f599, 77198eb70, dc005831d (provisional branch hashes)
+      Commits: 4daa80121, dc0fda084, ad2a91c6f, 649fb79b4,
+      4ac5208b9, 80e5d8fee, 3f6794861 (PR #126)
 - [ ] Complete FP-4C (the deterministic operation-storm acceptance).
       Commits:
 - [ ] Complete FP-4 (the stable window-touch trigger and end-to-end

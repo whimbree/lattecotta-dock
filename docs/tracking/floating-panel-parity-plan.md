@@ -141,7 +141,8 @@ FP-4 means the stable window-touch trigger and end-to-end acceptance.
 
 FP-4A means the direct window-touch runtime and single-client nested
 acceptance. FP-4B means multi-output and separated-span topology acceptance.
-FP-4C means deterministic operation-storm acceptance. PR #124 landed FP-4A.
+FP-4C means deterministic operation-storm acceptance. PR #124 landed FP-4A,
+and PR #126 landed FP-4B.
 
 - [x] Use current-desktop/current-activity window state, exclude hidden and
       minimized windows, and allow a spanning window to affect more than one
@@ -161,8 +162,8 @@ FP-4C means deterministic operation-storm acceptance. PR #124 landed FP-4A.
       Commits: f8396b5ed, d0d499d50 (PR #124)
 - [x] Drive portrait, landscape, disconnected, partially touching, fully
       touching, spanning-window, and same-edge separated-span fixtures.
-      Commits: 0333df72a, 0c90c3f14, 0d8bde1e2, 77ad3f599,
-      77198eb70, dc005831d (provisional branch hashes)
+      Commits: 4daa80121, ad2a91c6f, 649fb79b4, 4ac5208b9,
+      80e5d8fee, 3f6794861 (PR #126)
 - [ ] Preserve replay logs for a deterministic operation storm covering
       duplicate, linked view, output move, edge, orientation, alignment, edit
       mode, destruction, recreation, and reload.

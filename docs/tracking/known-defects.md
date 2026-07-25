@@ -2697,7 +2697,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   061 by name.
 
 ### D210 - Floating panel attachment changed primary-axis layout clearance
-- STATUS: FIXED IN THIS BRANCH (`0c4b7ea31`, provisional branch hash).
+- STATUS: FIXED IN PR #126 (`dc0fda084`).
 - FOUND: 2026-07-25, FP-4B (multi-output and separated-span topology
   acceptance) nested-KWin preflight.
 - SYMPTOM: attaching a partial Start-aligned floating Panel increased
@@ -2731,10 +2731,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   follow-up review returned MERGE and its canonical gate passed at branch head
   `a7c941db1`. FP-4A (the direct window-touch runtime and single-client nested
   acceptance) is merged through PR #124 at `f8396b5ed` through `5636966b5`.
-  FP-4B (multi-output and separated-span topology acceptance) is complete in
-  the current branch. FP-4C (deterministic operation-storm acceptance) remains
-  open, so the FP-4 (stable window-touch trigger and end-to-end acceptance)
-  umbrella remains open.
+  FP-4B (multi-output and separated-span topology acceptance) is merged through
+  PR #126 at `4daa80121` through `6fa3c5703`. FP-4C (deterministic
+  operation-storm acceptance) remains open, so the FP-4 (stable window-touch
+  trigger and end-to-end acceptance) umbrella remains open.
   Execution is tracked in `floating-panel-parity-plan.md`.
 - FOUND: 2026-07-24, Plasma 6.7.3 parity investigation after live floating
   panel maximize, radius, shadow, and animation regressions.
