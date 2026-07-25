@@ -4540,21 +4540,32 @@ prerequisites in the phases above are done.
 - [x] Fix D180 (reservation snapshot validation accepted divergent mirrored
       fields). Compare every group projection field with every contributor and
       reject all reservation residue on views without membership.
-      Commits: acfea9cd9, ae4e85d75, 75fcc4245
+      Commits: acfea9cd9, d843a752b, df46ad30e
 - [x] Fix D181 (immediate migration snapshots reused the lagging QWindow
       output). Collect the explicit layer-shell output and require the first
       complete snapshot after the committed per-view boundary to expose the
       new group without retrying an empty response.
-      Commits: c98414f5d, 949e00780
+      Commits: 38855f33e, 4f3f37d50
 - [x] Fix D182 (coordinator rollback did not roll back member publication
       state). Return the transaction result through every publication layer,
       commit the member rectangle only on success, and make equal-valued
       output or edge migrations retryable.
-      Commits: e4458cdef
+      Commits: 795e588c7
 - [x] Fix D183 (reservation contributor ordering was normalized after
       disagreement). Require canonical group order and exact equality for
       every per-view contributor mirror.
-      Commits: a7ea2b57d
+      Commits: 999e6de2c
+- [x] Fix D184 (reservation publication core bypassed the coverage inventory).
+      Register the pure-core header and its sanitizer-backed test, then raise
+      the committed CTest inventory to the observed count.
+      Commits: 430a58aa7
+- [x] Fix D185 (visibility header extension omitted adapting copyright).
+      Add the adapting author line while preserving both upstream lines.
+      Commits: a267da99a
+- [x] Fix D186 (reservation commits recorded insufficient verification
+      evidence). Record the tree-wide removed-API search and corrected
+      exact-boundary dual-output replay in the commits that make those claims.
+      Commits: b43d25fc6, 4f3f37d50
 - [ ] Fix D172 (floating panel attachment moves the surface and reservation
       instead of presentation). Execute
       `docs/tracking/floating-panel-parity-plan.md`: one stable per-view canvas,
@@ -4569,8 +4580,9 @@ prerequisites in the phases above are done.
       coordinator that publishes the maximum eligible depth without changing
       per-view visual or activation geometry.
       Commits: 7df41d844, c02b49121, 286252a07, 2751c3a23, b8f2420f7,
-      3b312e739, 6f89f7614, c6c98ba82, acfea9cd9, 00d611901, cacc21c07,
-      ae4e85d75, 75fcc4245, c98414f5d, e4458cdef, a7ea2b57d, 949e00780
+      3b312e739, 6f89f7614, c6c98ba82, acfea9cd9, 00d611901, b43d25fc6,
+      d843a752b, df46ad30e, 38855f33e, 795e588c7, 999e6de2c, 4f3f37d50,
+      430a58aa7, a267da99a
 - [ ] Complete FP-2 (the stable canvas and transition controller).
       Commits:
 - [ ] Complete FP-3 (internal presentation, input, effects, and popup

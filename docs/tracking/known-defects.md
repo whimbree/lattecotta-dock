@@ -2227,7 +2227,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D180 - Reservation snapshot validation accepted divergent mirrored fields
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`acfea9cd9`, residue corrections `ae4e85d75` and `75fcc4245`).
+  (`acfea9cd9`, residue corrections `d843a752b` and `df46ad30e`).
 - FOUND: 2026-07-24, independent rereview of schema 4 reservation
   observability.
 - SYMPTOM: a group record and its contributing view could disagree in
@@ -2247,7 +2247,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D181 - Immediate migration snapshots reused the lagging QWindow output
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`c98414f5d`, committed-boundary replay `949e00780`).
+  (`38855f33e`, committed-boundary replay `4f3f37d50`).
 - FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
   maximum reservation authority) migration transaction.
 - SYMPTOM: the first `dockSystemData` read after a valid cross-output
@@ -2267,7 +2267,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D182 - Coordinator rollback did not roll back member publication state
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`e4458cdef`).
+  (`795e588c7`).
 - FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
   maximum reservation authority) failure transaction.
 - SYMPTOM: a rejected update or removal retained the coordinator's old group
@@ -2286,7 +2286,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D183 - Reservation contributor ordering was normalized after disagreement
 - STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
-  (`a7ea2b57d`).
+  (`999e6de2c`).
 - FOUND: 2026-07-24, independent rereview of the FP-1 (the output-edge
   maximum reservation authority) schema 4 consistency pass.
 - SYMPTOM: reordered group and per-view contributor lists could pass
@@ -2299,6 +2299,51 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: the valid two-member graph passes. Independent mutations reorder
   one view, then identically reorder a group and all of its mirrors; both are
   rejected.
+
+### D184 - Reservation publication core bypassed the coverage inventory
+- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
+  (`430a58aa7`).
+- FOUND: 2026-07-24, final cold review of FP-1 (the output-edge maximum
+  reservation authority).
+- SYMPTOM: the sanitizer-backed publication-state test was registered in
+  CMake, but the committed CTest count remained 106 and the app-subtree
+  pure-core list omitted its header.
+- ROOT: the helper and test landed without the two independent coverage
+  inventory updates required for app-subtree pure cores.
+- FIX: add the header-to-test pairing and raise the committed CTest inventory
+  to 107.
+- EVIDENCE: the coverage ratchet reports 107 CTest entries and 37 paired unit
+  headers.
+
+### D185 - Visibility header extension omitted adapting copyright
+- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
+  (`a267da99a`).
+- FOUND: 2026-07-24, final cold review of FP-1 (the output-edge maximum
+  reservation authority).
+- SYMPTOM: `visibilitymanager.h` gained the member publication-state
+  authority without the adapting author copyright line.
+- ROOT: the source file received the line, but the materially extended header
+  retained only its two upstream copyright lines.
+- FIX: add the adapting author line without replacing either existing line.
+- EVIDENCE: the final header carries all three lines in its SPDX block.
+
+### D186 - Reservation commits recorded insufficient verification evidence
+- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
+  (`b43d25fc6`, `4f3f37d50`).
+- FOUND: 2026-07-24, final cold review of FP-1 (the output-edge maximum
+  reservation authority) commit claims.
+- SYMPTOM: the dead-lookup removal recorded only a rebuild, while the
+  committed-boundary replay recorded syntax and diff checks plus a literal
+  escaped paragraph break. Neither body recorded the evidence required by its
+  behavior claim.
+- ROOT: intermediate commit messages were written before the independent
+  caller sweep and corrected nested replay completed.
+- FIX: record the tree-wide no-caller result in the removal commit and the
+  observed maximum-depth migration, restart, teardown, and fixed perpendicular
+  dock geometry in the replay commit.
+- EVIDENCE: the caller search returns no `findMembership` occurrence. The
+  corrected dual-output replay passes with depth 88, output 14 persistence,
+  orphan-free teardown, and the right dock fixed at `1216,0 384x1000`.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: OPEN. Option 1, the stable per-view surface with internal visual
