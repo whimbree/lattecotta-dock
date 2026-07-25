@@ -162,7 +162,7 @@ FP-4C means deterministic operation-storm acceptance. PR #124 landed FP-4A.
 - [x] Drive portrait, landscape, disconnected, partially touching, fully
       touching, spanning-window, and same-edge separated-span fixtures.
       Commits: 0333df72a, 0c90c3f14, 0d8bde1e2, 77ad3f599,
-      77198eb70 (provisional branch hashes)
+      77198eb70, dc005831d (provisional branch hashes)
 - [ ] Preserve replay logs for a deterministic operation storm covering
       duplicate, linked view, output move, edge, orientation, alignment, edit
       mode, destruction, recreation, and reload.

@@ -85,8 +85,8 @@ coordinator publishes the maximum depth per output edge, and process restart
 reproduces the persistent projection. The expanded multi-output vehicle
 self-test also passes and restores every field in the canonical captured
 KScreen state. Commits `0333df72a`, `0c4b7ea31`, `0c90c3f14`,
-`0d8bde1e2`, `77ad3f599`, and `77198eb70` are provisional branch hashes
-until GitHub rebases the FP-4B PR.
+`0d8bde1e2`, `77ad3f599`, `77198eb70`, and `dc005831d` are provisional
+branch hashes until GitHub rebases the FP-4B PR.
 
 ## 2026-07-25: FP-3 owns internal presentation, exact input, effects, and popups
 
