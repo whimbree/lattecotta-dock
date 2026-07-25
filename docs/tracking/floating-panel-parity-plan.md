@@ -29,23 +29,23 @@ read-only review, and passes the canonical gate before merge.
 
 FP-1 means the output-edge maximum reservation authority.
 
-- [ ] Replace one positive reservation surface per view with one coordinator
+- [x] Replace one positive reservation surface per view with one coordinator
       per Latte output identity and edge.
-      Commits:
-- [ ] Make contribution add, update, migration, and removal atomic. A view
+      Commits: 7df41d844, c02b49121
+- [x] Make contribution add, update, migration, and removal atomic. A view
       cannot remain under an old output or edge.
-      Commits:
-- [ ] Publish the deepest eligible attached thickness. Never add depths.
-      Commits:
-- [ ] Preserve visual surfaces at zone -1 and preserve the exact per-view
+      Commits: 2751c3a23, 6f89f7614
+- [x] Publish the deepest eligible attached thickness. Never add depths.
+      Commits: 7df41d844, c02b49121
+- [x] Preserve visual surfaces at zone -1 and preserve the exact per-view
       occupied geometry used by Latte's own placement solver.
-      Commits:
-- [ ] Extend the atomic D-Bus snapshot with group membership, contributors,
+      Commits: c02b49121
+- [x] Extend the atomic D-Bus snapshot with group membership, contributors,
       selected depth, publisher state, and generation.
-      Commits:
-- [ ] Pin order independence, deepest-member removal, last-member teardown,
+      Commits: b8f2420f7, acfea9cd9, ae4e85d75
+- [x] Pin order independence, deepest-member removal, last-member teardown,
       cross-output isolation, visibility changes, output moves, and restart.
-      Commits:
+      Commits: 7df41d844, 286252a07, c6c98ba82, 00d611901, ae4e85d75
 
 ## FP-2: stable canvas and transition controller
 
@@ -137,7 +137,7 @@ FP-4 means the stable window-touch trigger and end-to-end acceptance.
 
 - [x] PR #116, the geometry and reservation baseline, is merged first.
       Commits: 6f6c33d9a
-- [ ] D160 (same-edge maximum reservation depth was described as implemented)
+- [x] D160 (same-edge maximum reservation depth was described as implemented)
       exposed the missing authority; FP-1 implements it.
 - [ ] D172 (floating panel attachment moves the surface and reservation instead
       of presentation) is fixed by FP-1 through FP-4.
@@ -147,7 +147,7 @@ FP-4 means the stable window-touch trigger and end-to-end acceptance.
 - [ ] Every asserted state is available through D-Bus. Update the adaptor XML,
       atomic serializer and exact schema test, D-Bus design document, and D-Bus
       usage reference in the same source commit.
-- [ ] The README describes the stable floating-panel behavior in timeless
+- [x] The README describes the stable floating-panel behavior in timeless
       terms.
 - [ ] The full canonical gate passes after the final source commit.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,

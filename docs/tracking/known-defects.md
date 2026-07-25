@@ -1888,18 +1888,22 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   different nonempty claim fails.
 
 ### D160 - Same-edge maximum reservation depth was described as implemented
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`9dcf27dd8`).
+- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
+  (`7df41d844`, `c02b49121`, atomic correction `2751c3a23`). The earlier
+  tracking correction is `9dcf27dd8`.
 - FOUND: 2026-07-24, cold review of the no-inward-stacking contract.
 - SYMPTOM: the placement record said separated same-edge members contribute
   only their maximum depth.
-- ROOT: each Always Visible view currently publishes its own positive
-  layer-shell exclusive zone. KWin processes those surfaces independently, so
-  same-edge zones may accumulate. No maximum-depth aggregator exists.
-- FIX: retain maximum depth as the intended policy, assign it to the missing
-  output-edge reservation aggregator, and keep the gap as a beta blocker.
-- EVIDENCE: `VisibilityManager` publishes per-view struts and
-  `WaylandLayerShell` applies each view's independent positive zone.
+- ROOT: before FP-1, each Always Visible view published its own positive
+  layer-shell exclusive zone. KWin processed those surfaces independently, so
+  same-edge zones could accumulate. No maximum-depth aggregator existed.
+- FIX: one Corona-owned coordinator groups contributions by persistent Latte
+  output identity and edge, then publishes exactly one positive zone at the
+  maximum requested depth. Visual views keep independent zone -1 surfaces.
+- EVIDENCE: the pure ledger matrix covers order, maximum selection, fallback,
+  migration, output isolation, and teardown. Nested recipe 061 observes one
+  shared publisher, moves a member from output 13 to output 14, restarts, and
+  returns to a publisher-free state without an orphan.
 
 ### D161 - Layouts submenu sizing test omitted painted control columns
 - STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
@@ -2140,6 +2144,103 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   replace one shared-engine view with a differently named default-engine view,
   move direct render-loop selection after `QGuiApplication`, and move the
   CTest setting to another target; all three fail the corrected matcher.
+
+### D175 - Reservation moves committed policy before publication succeeded
+- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
+  (`2751c3a23`).
+- FOUND: 2026-07-24, cold review of FP-1 (the output-edge maximum reservation
+  authority).
+- SYMPTOM: a failed edge or output migration could leave the ownership ledger
+  naming the new group after only part of its publisher state had changed.
+- ROOT: the first coordinator draft mutated committed membership before every
+  affected output-edge projection was known to be publishable.
+- FIX: build a copied candidate ledger, stage every old and new group
+  projection, and replace the committed ledger, publishers, and generation
+  only after all staging succeeds. Failed staging destroys only replacements
+  and retains the previous complete graph.
+- EVIDENCE: the ledger tests discard a failed candidate without changing the
+  committed state. Nested migration verifies one generation across both
+  affected groups.
+
+### D176 - Dock-system observability omitted reservation group ownership
+- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
+  (`b8f2420f7`).
+- FOUND: 2026-07-24, cold review of FP-1 (the output-edge maximum reservation
+  authority).
+- SYMPTOM: per-view publisher fields could not prove which contributors,
+  maximum depth, output edge, or transaction generation formed one shared
+  reservation.
+- ROOT: schema 3 described the former one-publisher-per-view transport and had
+  no authoritative group graph.
+- FIX: schema 4 adds one coordinator state generation and canonical
+  output-edge group records. Collection refuses missing publishers, duplicate
+  contributors, invalid group geometry, stale membership, and projection
+  disagreement as an empty complete query.
+- EVIDENCE: the exact serializer test pins root and per-view wire types,
+  canonical order, publisher identity, and empty last-member teardown.
+
+### D177 - Reservation replay could skip output migration and orphan cleanup
+- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
+  (`c6c98ba82`, mandatory dual-output correction `00d611901`).
+- FOUND: 2026-07-24, two cold reviews of FP-1 (the output-edge maximum
+  reservation authority).
+- SYMPTOM: recipe 061 initially stopped after a same-output edge move. Its
+  first extension made the secondary-output leg conditional, so a one-output
+  fixture could still pass without testing the claim.
+- ROOT: the fixture treated output migration as optional environment coverage
+  instead of a required contract.
+- FIX: require exactly two nested outputs, move the contribution
+  unconditionally, restart the dock, remove both selected contributions, and
+  reject every stale contributor or orphan group.
+- EVIDENCE: the mandatory replay moves output 13 to 14, observes the persisted
+  group after restart, and converges to an empty group array at a newer
+  generation.
+
+### D178 - Reservation validation assumed the compositor kept requested window size
+- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
+  (`3b312e739`).
+- FOUND: 2026-07-24, nested FP-1 replay with perpendicular reservations.
+- SYMPTOM: the atomic snapshot rejected a valid side reservation after KWin
+  shortened its mapped QWindow inside another exclusive band.
+- ROOT: validation required the compositor-sized window geometry to equal the
+  full-edge requested reservation rectangle.
+- FIX: validate the requested reservation geometry and applied layer-shell
+  anchors, margins, edge, and zone. The mapped publisher remains observable
+  but is not required to retain its requested primary-axis size.
+- EVIDENCE: nested recipe 061 retains the perpendicular publishers and one
+  bottom maximum-depth group while the separated right dock remains fixed.
+
+### D179 - Cross-output staging validated a lagging QWindow screen
+- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
+  (`6f89f7614`).
+- FOUND: 2026-07-24, mandatory two-output FP-1 migration replay.
+- SYMPTOM: a correct output 13 to output 14 move was rejected synchronously,
+  leaving the previous group committed.
+- ROOT: `QWindow::screen()` can retain the old output until the first
+  configure event. LayerShellQt's explicit screen already names the output
+  that controls compositor placement.
+- FIX: validate `LayerShellQt::Window::screen()` together with coordinator
+  membership and the applied layer-shell policy.
+- EVIDENCE: nested recipe 061 observes output 14 before and after restart and
+  finds no output 13 residue.
+
+### D180 - Reservation snapshot validation accepted divergent mirrored fields
+- STATUS: FIXED locally on `feat/floating-reservation-coordinator-integration`
+  (`acfea9cd9`, final residue correction `ae4e85d75`).
+- FOUND: 2026-07-24, independent rereview of schema 4 reservation
+  observability.
+- SYMPTOM: a group record and its contributing view could disagree in
+  publisher-window geometry or applied layer-shell fields while the
+  value-level consistency pass still accepted the snapshot. A noncontributing
+  view could also retain reservation residue.
+- ROOT: the first consistency pass compared membership, logical geometry,
+  generation, and publisher identity but did not exhaustively compare every
+  mirrored publication field or every no-membership empty state.
+- FIX: compare the complete group projection against every member and reject
+  all reservation state on a view with no group.
+- EVIDENCE: controlled one-field mutations cover every mirrored scalar,
+  contributor list, rectangle, layer-shell field, publisher token, and
+  no-membership residue.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: OPEN. Option 1, the stable per-view surface with internal visual

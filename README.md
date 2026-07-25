@@ -93,9 +93,12 @@ mask when retargeting, including between separate docks that legitimately
 occupy the same output edge and canvas rectangle.
 Partial dock occupancy is solved from each stable background rectangle.
 Latte's visual layer surfaces follow those exact per-output results while
-separate transparent surfaces publish KWin's scalar work-area reservations, so
-a nonintersecting perpendicular dock is not shortened by another dock's masked
-canvas.
+a coordinator publishes one transparent maximum-depth reservation for each
+persistent output identity and edge. Same-edge depths never accumulate, and a
+nonintersecting perpendicular dock is not shortened by another dock's masked
+canvas. Separated partial views keep independent visual and input regions;
+reservation grouping does not create inward dock stacks or a continuous
+activation strip.
 Legacy On All Screens members retain their derived-output behavior. A linked
 source stays protected from removal until its explicit members are removed, so
 one-containment Undo cannot leave a partial relationship.
