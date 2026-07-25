@@ -36,6 +36,8 @@
 //     footprint on both axes and publish that footprint to geometry owners
 //   * Dock resize animation: icon size is the only animation authority and
 //     derived margins follow it without nested per-frame retargeting
+//   * Theme-aware icon rendering: every view shares the registered singleton's
+//     QML engine and offscreen software teardown stays on the basic render loop
 //   * Dock-system reporting: persistent-id ordering and original/clone
 //     relationship classification stay on their pure seams
 //   * SC-T3 (the D29 narrow middle-click dispatch readback): the production QML
@@ -452,6 +454,31 @@ private:
                 "&&QThread::currentThread()==thread()&&object&&object->thread()==thread();"));
     }
 
+    static bool matchesThemeAwareIconTestLifecycle(const QString &testSource,
+                                                   const QString &cmakeSource)
+    {
+        const QString testCode = normalizedCode(testSource);
+        const QString cmakeCode = normalizedCode(cmakeSource);
+        const QString sharedView = QStringLiteral(
+            "QQuickViewview(m_engine.get(),nullptr);");
+        const int viewConstructions = testCode.count(QStringLiteral("QQuickViewview("));
+
+        return testCode.contains(QStringLiteral(
+                   "std::unique_ptr<QQmlEngine>m_engine;"))
+            && testCode.contains(QStringLiteral(
+                "m_engine=std::make_unique<QQmlEngine>();"))
+            && testCode.contains(QStringLiteral(
+                "QCOMPARE(view.engine(),m_engine.get());"))
+            && viewConstructions >= 3
+            && testCode.count(sharedView) == viewConstructions
+            && !testCode.contains(QStringLiteral("QQuickViewview;"))
+            && testCode.contains(QStringLiteral(
+                "qputenv(\"QSG_RENDER_LOOP\",\"basic\");"))
+            && cmakeCode.contains(QStringLiteral(
+                "ENVIRONMENT\"QT_QPA_PLATFORM=offscreen;"
+                "QSG_RHI_BACKEND=software;QSG_RENDER_LOOP=basic\""));
+    }
+
     static bool matchesMiddleClickCollectorBridge(const QString &body)
     {
         const QString code = normalizedCode(body);
@@ -601,6 +628,8 @@ private Q_SLOTS:
     void dockBackgroundShadow_keepsFixedPixelFootprint();
     void dockBackgroundShadow_sourceGuardsRejectAspectScaledRenderer();
     void iconResizeAnimation_keepsSingleAuthority();
+    void themeAwareIconRenderTest_keepsLifecycleContract();
+    void themeAwareIconRenderTest_sourceGuardRejectsControlledMutations();
     void dockSystemCollection_keepsPureRouting();
     void dockSystemCollection_sourceGuardsRejectControlledMutations();
     void dockSystemIdentityRegistry_keepsLifetimeAndAffinityContract();
@@ -1226,6 +1255,51 @@ void SourceGuardTest::iconResizeAnimation_keepsSingleAuthority()
              && metrics.contains(QStringLiteral(
                  "background.totals.visualThickness-iconSize-margin.tailThickness")),
              "thickness margins must derive from the animated iconSize value");
+}
+
+void SourceGuardTest::themeAwareIconRenderTest_keepsLifecycleContract()
+{
+    const QString testSource = readFile(QStringLiteral("tests/themeawareicontest.cpp"));
+    const QString cmakeSource = readFile(QStringLiteral("tests/CMakeLists.txt"));
+
+    QVERIFY2(matchesThemeAwareIconTestLifecycle(testSource, cmakeSource),
+             "ThemeAwareIcon rendering must keep one QML engine and synchronous "
+             "offscreen software teardown");
+}
+
+void SourceGuardTest::themeAwareIconRenderTest_sourceGuardRejectsControlledMutations()
+{
+    const QString testSource = readFile(QStringLiteral("tests/themeawareicontest.cpp"));
+    const QString cmakeSource = readFile(QStringLiteral("tests/CMakeLists.txt"));
+    QVERIFY(matchesThemeAwareIconTestLifecycle(testSource, cmakeSource));
+
+    QString defaultEngine = testSource;
+    const QString sharedView = QStringLiteral(
+        "QQuickView view(m_engine.get(), nullptr);");
+    const int firstSharedView = defaultEngine.indexOf(sharedView);
+    QVERIFY(firstSharedView >= 0);
+    defaultEngine.replace(firstSharedView,
+                          sharedView.size(),
+                          QStringLiteral("QQuickView view;"));
+    QVERIFY2(!matchesThemeAwareIconTestLifecycle(defaultEngine, cmakeSource),
+             "default-constructed views must fail the one-engine lifecycle guard");
+
+    QString missingBasicLoop = testSource;
+    QCOMPARE(missingBasicLoop.count(QStringLiteral(
+                 "qputenv(\"QSG_RENDER_LOOP\", \"basic\");")),
+             1);
+    missingBasicLoop.remove(QStringLiteral(
+        "qputenv(\"QSG_RENDER_LOOP\", \"basic\");"));
+    QVERIFY2(!matchesThemeAwareIconTestLifecycle(missingBasicLoop, cmakeSource),
+             "removing the in-process basic render loop must fail the lifecycle guard");
+
+    QString threadedCTest = cmakeSource;
+    QCOMPARE(threadedCTest.count(QStringLiteral(
+                 ";QSG_RENDER_LOOP=basic")),
+             1);
+    threadedCTest.remove(QStringLiteral(";QSG_RENDER_LOOP=basic"));
+    QVERIFY2(!matchesThemeAwareIconTestLifecycle(testSource, threadedCTest),
+             "removing the CTest basic render-loop contract must fail the lifecycle guard");
 }
 
 void SourceGuardTest::dockSystemCollection_keepsPureRouting()
