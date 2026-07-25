@@ -243,6 +243,37 @@ double BackgroundStateResolver::centeredDockOffset(double requestedOffset,
                                                    viewPrimaryLength);
 }
 
+double BackgroundStateResolver::dockVisualCenterOffset(double requestedSolidCenterOffset,
+                                                       double solidLength,
+                                                       double tailShadowLength,
+                                                       double headShadowLength,
+                                                       double owningCanvasLength) const
+{
+    if (!std::isfinite(requestedSolidCenterOffset)
+            || !std::isfinite(solidLength)
+            || !std::isfinite(tailShadowLength)
+            || !std::isfinite(headShadowLength)
+            || !std::isfinite(owningCanvasLength)
+            || solidLength < 0.0
+            || tailShadowLength < 0.0
+            || headShadowLength < 0.0
+            || owningCanvasLength < solidLength) {
+        qCritical() << "BackgroundStateResolver.dockVisualCenterOffset: invalid geometry"
+                    << requestedSolidCenterOffset
+                    << solidLength
+                    << tailShadowLength
+                    << headShadowLength
+                    << owningCanvasLength;
+        return 0.0;
+    }
+
+    return BackgroundState::resolveDockVisualCenterOffset(requestedSolidCenterOffset,
+                                                           solidLength,
+                                                           tailShadowLength,
+                                                           headShadowLength,
+                                                           owningCanvasLength);
+}
+
 double BackgroundStateResolver::visualThickness(double minimumThickness,
                                                 double itemThickness,
                                                 double sizeFraction) const

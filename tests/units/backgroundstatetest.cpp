@@ -42,6 +42,10 @@ static_assert(resolveBackgroundVisualThickness(28.0, 30.0, 1.0) == 30.0,
               "full background size must reach an item above the minimum");
 static_assert(resolveBackgroundVisualThickness(28.0, 30.0, 0.5) == 29.0,
               "partial background size interpolates only the excess");
+static_assert(resolveDockVisualCenterOffset(0.0, 90.0, 0.0, 10.0, 100.0) == 5.0,
+              "asymmetric paint must move only the visual parent");
+static_assert(resolveDockVisualCenterOffset(0.0, 90.0, 10.0, 0.0, 100.0) == -5.0,
+              "swapped asymmetric paint must preserve the same solid center");
 
 // the env structs ride through QTest data tables by value
 Q_DECLARE_METATYPE(SolidPanelEnv)
@@ -94,6 +98,8 @@ private Q_SLOTS:
     // MultiLayered.qml dock background length and centered placement
     void dockBackground_keepsSolidSpanIndependentOfShadows();
     void centeredDockOffset_staysInsideView();
+    void dockVisualCenterOffset_preservesSolidPosition_data();
+    void dockVisualCenterOffset_preservesSolidPosition();
 
     // MultiLayered.qml totals.visualThickness / visualMaxThickness
     void visualThickness_boundaryTable_data();
@@ -112,6 +118,7 @@ private Q_SLOTS:
     void wrapper_effectsAreaMatchesCore();
     void wrapper_visualThicknessMatchesCore();
     void wrapper_refusesMalformedVisualThickness();
+    void wrapper_refusesMalformedDockVisualGeometry();
 };
 
 // a panel-worthy environment: every clause of the Panel branch satisfied,
@@ -680,6 +687,70 @@ void BackgroundStateTest::centeredDockOffset_staysInsideView()
     QCOMPARE(resolver.centeredDockOffset(-34.0, 1240.0, 1240.0), 0.0);
 }
 
+void BackgroundStateTest::dockVisualCenterOffset_preservesSolidPosition_data()
+{
+    QTest::addColumn<double>("requestedSolidOffset");
+    QTest::addColumn<double>("solidLength");
+    QTest::addColumn<double>("tailShadowLength");
+    QTest::addColumn<double>("headShadowLength");
+    QTest::addColumn<double>("canvasLength");
+    QTest::addColumn<double>("expectedSolidOffset");
+    QTest::addColumn<double>("expectedVisualOffset");
+    QTest::addColumn<bool>("completePaintFits");
+
+    QTest::newRow("exact blocker head shadow at full visual length")
+        << 0.0 << 90.0 << 0.0 << 10.0 << 100.0 << 0.0 << 5.0 << false;
+    QTest::newRow("exact blocker with swapped asymmetry")
+        << 0.0 << 90.0 << 10.0 << 0.0 << 100.0 << 0.0 << -5.0 << false;
+    QTest::newRow("shadow toggle leaves the exact blocker solid unchanged")
+        << 0.0 << 90.0 << 0.0 << 0.0 << 100.0 << 0.0 << 0.0 << true;
+    QTest::newRow("all paint fits around the requested stable solid")
+        << 0.0 << 90.0 << 5.0 << 9.0 << 120.0 << 0.0 << 2.0 << true;
+    QTest::newRow("tail request clamps only the stable solid")
+        << -100.0 << 90.0 << 3.0 << 11.0 << 120.0 << -15.0 << -11.0 << false;
+    QTest::newRow("head request clamps only the stable solid")
+        << 100.0 << 90.0 << 3.0 << 11.0 << 120.0 << 15.0 << 19.0 << false;
+    QTest::newRow("near-full solid clips asymmetric paint")
+        << 0.0 << 98.0 << 7.0 << 3.0 << 100.0 << 0.0 << -2.0 << false;
+    QTest::newRow("full-canvas solid cannot move to save paint")
+        << 25.0 << 100.0 << 0.0 << 10.0 << 100.0 << 0.0 << 5.0 << false;
+    QTest::newRow("in-range parabolic offset remains stable")
+        << 8.0 << 90.0 << 3.0 << 5.0 << 120.0 << 8.0 << 9.0 << true;
+}
+
+void BackgroundStateTest::dockVisualCenterOffset_preservesSolidPosition()
+{
+    QFETCH(double, requestedSolidOffset);
+    QFETCH(double, solidLength);
+    QFETCH(double, tailShadowLength);
+    QFETCH(double, headShadowLength);
+    QFETCH(double, canvasLength);
+    QFETCH(double, expectedSolidOffset);
+    QFETCH(double, expectedVisualOffset);
+    QFETCH(bool, completePaintFits);
+
+    const qreal visualOffset = resolveDockVisualCenterOffset(requestedSolidOffset,
+                                                             solidLength,
+                                                             tailShadowLength,
+                                                             headShadowLength,
+                                                             canvasLength);
+    const qreal shadowCenterCompensation = (headShadowLength - tailShadowLength) / 2.0;
+    const qreal solidOffset = visualOffset - shadowCenterCompensation;
+    const qreal halfCanvasLength = canvasLength / 2.0;
+    const qreal halfVisualLength = (solidLength + tailShadowLength + headShadowLength) / 2.0;
+
+    QCOMPARE(visualOffset, expectedVisualOffset);
+    QCOMPARE(solidOffset, expectedSolidOffset);
+    QCOMPARE(solidOffset,
+             fitCenteredDockOffset(requestedSolidOffset, solidLength, canvasLength));
+    QVERIFY(solidOffset - solidLength / 2.0 >= -halfCanvasLength);
+    QVERIFY(solidOffset + solidLength / 2.0 <= halfCanvasLength);
+
+    const bool paintFits = visualOffset - halfVisualLength >= -halfCanvasLength
+        && visualOffset + halfVisualLength <= halfCanvasLength;
+    QCOMPARE(paintFits, completePaintFits);
+}
+
 void BackgroundStateTest::visualThickness_boundaryTable_data()
 {
     QTest::addColumn<double>("itemThickness");
@@ -917,6 +988,25 @@ void BackgroundStateTest::wrapper_refusesMalformedVisualThickness()
                          QRegularExpression(QStringLiteral("invalid thickness inputs")));
     QCOMPARE(resolver.visualThickness(
                  28.0, std::numeric_limits<double>::quiet_NaN(), 1.0),
+             0.0);
+}
+
+void BackgroundStateTest::wrapper_refusesMalformedDockVisualGeometry()
+{
+    Latte::Containment::BackgroundStateResolver resolver;
+
+    QTest::ignoreMessage(QtCriticalMsg,
+                         QRegularExpression(QStringLiteral("dockVisualCenterOffset: invalid geometry")));
+    QCOMPARE(resolver.dockVisualCenterOffset(0.0, 101.0, 0.0, 10.0, 100.0), 0.0);
+
+    QTest::ignoreMessage(QtCriticalMsg,
+                         QRegularExpression(QStringLiteral("dockVisualCenterOffset: invalid geometry")));
+    QCOMPARE(resolver.dockVisualCenterOffset(0.0, 90.0, -1.0, 10.0, 100.0), 0.0);
+
+    QTest::ignoreMessage(QtCriticalMsg,
+                         QRegularExpression(QStringLiteral("dockVisualCenterOffset: invalid geometry")));
+    QCOMPARE(resolver.dockVisualCenterOffset(
+                 std::numeric_limits<double>::quiet_NaN(), 90.0, 0.0, 10.0, 100.0),
              0.0);
 }
 

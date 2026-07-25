@@ -74,6 +74,13 @@ TestCase {
         compare(resolver.dockBackgroundLength(2600, 2560), 2560);
         compare(resolver.dockBackgroundLength(900, 1240), 900);
         compare(resolver.centeredDockOffset(80, 940, 1240), 80);
+
+        //! External paint changes the visual-parent center but never the
+        //! stable solid center. The exact asymmetric full-visual case clips
+        //! five pixels of head paint instead of moving content by five.
+        compare(resolver.dockVisualCenterOffset(0, 90, 0, 10, 100), 5);
+        compare(resolver.dockVisualCenterOffset(0, 90, 10, 0, 100), -5);
+        compare(resolver.dockVisualCenterOffset(0, 90, 0, 0, 100), 0);
     }
 
     function test_dockAlignmentsShareTheShadowIndependentSolidFit() {

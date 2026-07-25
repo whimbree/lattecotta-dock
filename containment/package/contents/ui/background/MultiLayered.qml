@@ -2,6 +2,7 @@
     SPDX-FileCopyrightText: 2016 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2016 Michail Vourlakos <mvourlakos@gmail.com>
     SPDX-FileCopyrightText: 2026 Bree Spektor
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -171,36 +172,25 @@ BackgroundProperties{
                 ? barLine.shadows.left : barLine.shadows.top;
         const headShadowLength = Plasmoid.formFactor === PlasmaCore.Types.Horizontal
                 ? barLine.shadows.right : barLine.shadows.bottom;
-        const shadowCenterCompensation = (headShadowLength - tailShadowLength) / 2;
-        if (alignment === LatteCore.Types.Justify) {
-            return shadowCenterCompensation;
-        }
-
-        const requestedOffset = root.offset
-                + layoutsContainerItem.mainLayout.parabolicOffsetting;
-        const requestedVisualOffset = requestedOffset + shadowCenterCompensation;
+        const requestedSolidOffset = alignment === LatteCore.Types.Justify
+                ? 0
+                : root.offset + layoutsContainerItem.mainLayout.parabolicOffsetting;
         const viewPrimaryLength = Plasmoid.formFactor === PlasmaCore.Types.Horizontal
                 ? barLine.parent.width : barLine.parent.height;
         if (viewPrimaryLength < barLine.length) {
             //! Same explicit startup state as the length binding above.
-            return requestedVisualOffset;
+            const shadowCenterCompensation = (headShadowLength - tailShadowLength) / 2;
+            return requestedSolidOffset + shadowCenterCompensation;
         }
 
-        if (viewPrimaryLength < barLine.totals.visualLength) {
-            //! The solid fits but its external paint cannot. Keep the solid
-            //! bounded without shrinking it and accept unavoidable paint
-            //! clipping at the output boundary.
-            return backgroundStateResolver.centeredDockOffset(requestedOffset,
-                                                              barLine.length,
-                                                              viewPrimaryLength)
-                    + shadowCenterCompensation;
-        }
-
-        //! When the complete visual fits, constrain the paint as well as the
-        //! solid so end-hover shadows remain visible.
-        return backgroundStateResolver.centeredDockOffset(
-                    requestedVisualOffset,
-                    barLine.totals.visualLength,
+        //! Center and Justify share one placement authority. The stable solid
+        //! is fitted first; asymmetric shadows then move only the visual
+        //! parent. Paint that cannot fit around that solid is clipped.
+        return backgroundStateResolver.dockVisualCenterOffset(
+                    requestedSolidOffset,
+                    barLine.length,
+                    tailShadowLength,
+                    headShadowLength,
                     viewPrimaryLength);
     }
 
