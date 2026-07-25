@@ -104,6 +104,10 @@ target_link_libraries(positionergeometrytest
 # Header-only, QRect-only; Qt6::Test brings QtCore.
 latte_add_unit_test(inputmaskflushtest)
 
+# Output-edge reservation ownership: member updates and migrations project one
+# maximum depth per persistent output identity and edge.
+latte_add_unit_test(screenspacereservationledgertest)
+
 # Independent-dock action policy: screen-group clones can create an independent
 # duplicate, but cannot export, move, or remove outside the original's lifecycle.
 latte_add_unit_test(viewactionpolicytest)
