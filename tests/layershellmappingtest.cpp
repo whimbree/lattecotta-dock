@@ -295,15 +295,20 @@ void LayerShellMappingTest::appliedViewPlacementPreservesSurfacePolicy()
     ls->setLayer(LSW::LayerBottom);
     ls->setKeyboardInteractivity(LSW::KeyboardInteractivityOnDemand);
 
-    LayerShell::applyViewPlacement(&window, Plasma::Types::RightEdge,
-                                   viewGeometry, screenGeometry);
+    const int initialConfigureRequests = LayerShell::applyViewPlacement(
+        &window, Plasma::Types::RightEdge, viewGeometry, screenGeometry);
 
+    QVERIFY(initialConfigureRequests > 0);
     QCOMPARE(ls->anchors(), LSW::Anchors(LSW::AnchorTop | LSW::AnchorLeft));
     QCOMPARE(ls->margins(), QMargins(1872, 40, 0, 0));
     QCOMPARE(ls->exclusiveEdge(), LSW::AnchorNone);
     QCOMPARE(ls->exclusionZone(), -1);
     QCOMPARE(ls->layer(), LSW::LayerBottom);
     QCOMPARE(ls->keyboardInteractivity(), LSW::KeyboardInteractivityOnDemand);
+
+    const int stableConfigureRequests = LayerShell::applyViewPlacement(
+        &window, Plasma::Types::RightEdge, viewGeometry, screenGeometry);
+    QCOMPARE(stableConfigureRequests, 0);
 }
 
 void LayerShellMappingTest::reservationPlacementTracksOccupiedSpan()

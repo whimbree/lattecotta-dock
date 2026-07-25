@@ -128,6 +128,9 @@ class View : public PlasmaQuick::ContainmentView
     Q_PROPERTY(QRect absoluteGeometry READ absoluteGeometry NOTIFY absoluteGeometryChanged)
     Q_PROPERTY(QRect localGeometry READ localGeometry WRITE setLocalGeometry NOTIFY localGeometryChanged)
     Q_PROPERTY(QRect screenGeometry READ screenGeometry NOTIFY screenGeometryChanged)
+    Q_PROPERTY(quint64 layerShellConfigureRequestRevision
+                   READ layerShellConfigureRequestRevision
+                   NOTIFY layerShellConfigureRequestRevisionChanged)
 
 public:
     View(Plasma::Corona *corona, QScreen *targetScreen = nullptr, bool byPassX11WM = false);
@@ -232,6 +235,7 @@ public:
 
     QRect localGeometry() const;
     void setLocalGeometry(const QRect &geometry);
+    [[nodiscard]] quint64 layerShellConfigureRequestRevision() const;
 
     QString validTitle() const;
 
@@ -406,6 +410,7 @@ Q_SIGNALS:
     void yChanged();
 
     void absoluteGeometryChanged(const QRect &geometry);
+    void layerShellConfigureRequestRevisionChanged();
 
     void indicatorPluginChanged(const QString &indicatorId);
     void indicatorPluginRemoved(const QString &indicatorId);
@@ -482,6 +487,7 @@ private:
     bool m_inDelete{false};
     bool m_isPreferredForShortcuts{false};
     bool m_keyboardNavigationIsActive{false};
+    quint64 m_layerShellConfigureRequestRevision{0};
     bool m_onPrimary{true};
     bool m_screenEdgeMarginEnabled{false};
 

@@ -731,6 +731,8 @@ void Positioner::immediateSyncGeometry()
         //! The layer-shell adapter compares the resulting protocol state before
         //! sending requests, so repeated stable syncs stay cheap while a changed
         //! edge or margin is applied atomically from one complete solution.
+        ++m_surfaceGeometryPublicationRevision;
+        Q_EMIT surfaceGeometryPublicationRevisionChanged();
         Q_EMIT surfaceGeometryCalculated(m_validGeometry);
 
         qDebug() << "syncGeometry() calculations for screen: " << m_view->screen()->name() << " _ " << m_view->screen()->geometry();
@@ -757,6 +759,11 @@ QRect Positioner::canvasGeometry()
 QRect Positioner::surfaceGeometry() const
 {
     return m_validGeometry;
+}
+
+quint64 Positioner::surfaceGeometryPublicationRevision() const
+{
+    return m_surfaceGeometryPublicationRevision;
 }
 
 void Positioner::setCanvasGeometry(const QRect &geometry)
