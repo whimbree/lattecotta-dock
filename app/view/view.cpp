@@ -239,7 +239,10 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
 View::~View()
 {
     m_inDelete = true;
-    clearScreenSpaceReservation();
+    if (!clearScreenSpaceReservation()) {
+        qCritical() << "view destruction could not clear its screen-space reservation"
+                    << (containment() ? containment()->id() : 0);
+    }
 
     //! clear Layout connections
     m_visibleHackTimer1.stop();
@@ -557,23 +560,28 @@ const LayerShellQt::Window *View::layerShellWindow() const
     return m_layerShellWindow;
 }
 
-void View::publishScreenSpaceReservation(
+bool View::publishScreenSpaceReservation(
     const QRect &strutGeometry,
     Plasma::Types::Location reservationLocation)
 {
     Q_ASSERT(m_corona);
     Q_ASSERT(m_corona->screenSpaceReservationCoordinator());
-    m_corona->screenSpaceReservationCoordinator()->updateReservation(
+    return m_corona->screenSpaceReservationCoordinator()->updateReservation(
         *this,
         strutGeometry,
         reservationLocation);
 }
 
-void View::clearScreenSpaceReservation()
+bool View::clearScreenSpaceReservation()
 {
     if (m_corona && m_corona->screenSpaceReservationCoordinator()) {
-        m_corona->screenSpaceReservationCoordinator()->removeReservation(*this);
+        return m_corona->screenSpaceReservationCoordinator()
+            ->removeReservation(*this);
     }
+
+    qCritical() << "view could not clear its screen-space reservation without a coordinator"
+                << (containment() ? containment()->id() : 0);
+    return false;
 }
 
 void View::reanchorLayerShell()

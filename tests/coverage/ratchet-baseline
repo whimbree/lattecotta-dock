@@ -1,4 +1,4 @@
-106
+107
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -71,6 +71,7 @@ schemesmodeltest
 screengeometrycalculatortest
 screenpooltest
 screenspacereservationledgertest
+screenspacereservationpublicationtest
 scrollmathtest
 settingsinventorytest
 settingscontrolrecordstest

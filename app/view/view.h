@@ -136,10 +136,10 @@ public:
     //! only turn a not-yet-created surface into a layer surface
     void setupWaylandLayerShell();
     [[nodiscard]] const LayerShellQt::Window *layerShellWindow() const;
-    void publishScreenSpaceReservation(
+    [[nodiscard]] bool publishScreenSpaceReservation(
         const QRect &strutGeometry,
         Plasma::Types::Location location);
-    void clearScreenSpaceReservation();
+    [[nodiscard]] bool clearScreenSpaceReservation();
 
     Types::ViewType type() const;
     void setType(Types::ViewType type);

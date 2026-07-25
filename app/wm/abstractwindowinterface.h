@@ -71,11 +71,11 @@ public:
     virtual ~AbstractWindowInterface();
 
     virtual void setViewExtraFlags(QObject *view,bool isPanelWindow = true, Latte::Types::Visibility mode = Latte::Types::WindowsGoBelow) = 0;
-    virtual void setViewStruts(QWindow &view, const QRect &rect
-                               , Plasma::Types::Location location) = 0;
+    [[nodiscard]] virtual bool setViewStruts(QWindow &view, const QRect &rect
+                                             , Plasma::Types::Location location) = 0;
     virtual void setWindowOnActivities(const WindowId &wid, const QStringList &activities) = 0;
 
-    virtual void removeViewStruts(QWindow &view) = 0;
+    [[nodiscard]] virtual bool removeViewStruts(QWindow &view) = 0;
 
     virtual WindowId activeWindow() = 0;
     virtual WindowInfoWrap requestInfo(WindowId wid) = 0;

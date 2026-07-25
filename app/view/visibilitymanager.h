@@ -1,6 +1,8 @@
 /*
     SPDX-FileCopyrightText: 2016 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2016 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
+
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -13,6 +15,7 @@
 // local
 #include <coretypes.h>
 #include "../plasma/quick/containmentview.h"
+#include "helpers/screenspacereservationpublication.h"
 
 // Qt
 #include <QObject>
@@ -268,7 +271,7 @@ private:
 
     QStringList m_blockHidingEvents;
 
-    QRect m_publishedStruts;
+    ScreenSpaceReservationPublicationState m_reservationPublication;
     QRect m_lastMask;
 
     //! KWin Edges

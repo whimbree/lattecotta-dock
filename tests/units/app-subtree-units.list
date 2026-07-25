@@ -13,6 +13,7 @@ app/screengeometrycalculator.h
 app/view/inputmaskflush.h
 app/view/positionergeometry.h
 app/view/helpers/screenspacereservationledger.h
+app/view/helpers/screenspacereservationpublication.h
 app/view/settings/retargetrequeststate.h
 app/view/viewactionpolicy.h
 app/wm/ignoredwindowregistry.h

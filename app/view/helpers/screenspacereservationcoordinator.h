@@ -66,11 +66,11 @@ public:
     explicit ScreenSpaceReservationCoordinator(Corona *corona);
     ~ScreenSpaceReservationCoordinator() override;
 
-    void updateReservation(
+    [[nodiscard]] bool updateReservation(
         View &view,
         const QRect &strutGeometry,
         Plasma::Types::Location location);
-    void removeReservation(View &view);
+    [[nodiscard]] bool removeReservation(View &view);
 
     [[nodiscard]] std::optional<ScreenSpaceReservationSnapshot>
     snapshot() const;

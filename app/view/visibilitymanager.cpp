@@ -25,6 +25,9 @@
 
 // Qt
 #include <QDebug>
+#include <QScreen>
+
+#include <LayerShellQt/window.h>
 
 // KDE
 #include <KWindowSystem>
@@ -161,7 +164,13 @@ VisibilityManager::VisibilityManager(PlasmaQuick::ContainmentView *view)
 VisibilityManager::~VisibilityManager()
 {
     qDebug() << "VisibilityManager deleting...";
-    m_wm->removeViewStruts(*m_latteView);
+    if (!m_reservationPublication.remove(
+            [this]() {
+                return m_wm->removeViewStruts(
+                    *m_latteView);
+            })) {
+        qCritical() << "visibility teardown could not clear its screen-space reservation";
+    }
 
     if (m_edgeGhostWindow) {
         m_edgeGhostWindow->deleteLater();
@@ -190,7 +199,7 @@ void VisibilityManager::setStrutsThickness(int thickness)
 
 QRect VisibilityManager::publishedStruts() const
 {
-    return m_publishedStruts;
+    return m_reservationPublication.publishedStruts();
 }
 
 Types::Visibility VisibilityManager::mode() const
@@ -235,17 +244,27 @@ void VisibilityManager::setMode(Latte::Types::Visibility mode)
     }
 
     int base{0};
-
-    m_publishedStruts = QRect();
-
-    if (m_mode == Types::AlwaysVisible) {
-        //! remove struts for old always visible mode
-        m_wm->removeViewStruts(*m_latteView);
-    }
+    const bool mustRetireReservation =
+        mode != Types::AlwaysVisible
+        && (m_mode == Types::AlwaysVisible
+            || m_reservationPublication.publishedStruts()
+                != QRect()
+            || m_reservationPublication.retryRequired());
 
     m_timerShow.stop();
     m_timerHide.stop();
     m_mode = mode;
+
+    if (mustRetireReservation
+            && !m_reservationPublication.remove(
+                [this]() {
+                    return m_wm->removeViewStruts(
+                        *m_latteView);
+                })) {
+        qCritical() << "visibility mode transition retained its previous screen-space reservation"
+                    << static_cast<int>(mode);
+        m_timerBlockStrutsUpdate.start();
+    }
 
     initViewFlags();
 
@@ -433,20 +452,46 @@ void VisibilityManager::updateStrutsBasedOnLayoutsAndActivities(bool forceUpdate
                                         && m_latteView->layout() && !m_latteView->positioner()->inRelocationAnimation()
                                         && m_latteView->layout()->isCurrent());
 
-    if (m_strutsThickness>0 && canSetStrut() && (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::SingleLayout || inMultipleLayoutsAndCurrent)) {
+    if (m_mode == Types::AlwaysVisible
+            && m_strutsThickness > 0
+            && canSetStrut()
+            && (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::SingleLayout
+                || inMultipleLayoutsAndCurrent)) {
         const std::optional<QRect> computedStruts = acceptableStruts();
         if (!computedStruts) {
             return;
         }
+        const auto *const layerShell =
+            m_latteView->layerShellWindow();
+        QScreen *const screen = layerShell
+            ? layerShell->screen()
+            : nullptr;
+        const int outputId = screen
+            ? m_corona->screenPool()->id(screen->name())
+            : ScreenPool::NOSCREENID;
+        const ScreenSpaceReservationPublicationTarget
+            candidate{
+                *computedStruts,
+                outputId,
+                m_latteView->location()};
 
-        if (m_publishedStruts != *computedStruts || forceUpdate) {
-            //! Force update is needed when very important events happen in DE and there is a chance
-            //! that previously even though struts where sent the DE did not accept them.
-            //! Such a case is when STOPPING an Activity and windows faulty become invisible even
-            //! though they should not. In such case setting struts when the windows are hidden
-            //! the struts do not take any effect
-            m_publishedStruts = *computedStruts;
-            m_wm->setViewStruts(*m_latteView, m_publishedStruts, m_latteView->location());
+        //! Force update re-enters the client-side projection transaction. A
+        //! failed equal-valued projection also remains dirty and bypasses the
+        //! ordinary equality fast path on the next timer attempt.
+        if (!m_reservationPublication.update(
+                candidate,
+                forceUpdate,
+                [this](
+                    const ScreenSpaceReservationPublicationTarget
+                        &target) {
+                    return m_wm->setViewStruts(
+                        *m_latteView,
+                        target.struts,
+                        target.edge);
+                })) {
+            qCritical() << "visibility retained its previous screen-space reservation after publication failed"
+                        << *computedStruts;
+            m_timerBlockStrutsUpdate.start();
         }
     } else {
         //! name the reason when reservations get pulled: a wrongly-removed
@@ -456,8 +501,14 @@ void VisibilityManager::updateStrutsBasedOnLayoutsAndActivities(bool forceUpdate
         qDebug() << "struts removed: thickness=" << m_strutsThickness
                  << "offScreen=" << m_latteView->positioner()->isOffScreen()
                  << "layoutCurrent=" << (m_latteView->layout() ? m_latteView->layout()->isCurrent() : false);
-        m_publishedStruts = QRect();
-        m_wm->removeViewStruts(*m_latteView);
+        if (!m_reservationPublication.remove(
+                [this]() {
+                    return m_wm->removeViewStruts(
+                        *m_latteView);
+                })) {
+            qCritical() << "visibility retained its previous screen-space reservation after removal failed";
+            m_timerBlockStrutsUpdate.start();
+        }
     }
 }
 

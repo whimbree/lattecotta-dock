@@ -162,13 +162,13 @@ void WaylandInterface::setViewExtraFlags(QObject *view, bool isPanelWindow, Latt
     LayerShell::applyLayer(window, mode);
 }
 
-void WaylandInterface::setViewStruts(QWindow &view, const QRect &rect, Plasma::Types::Location location)
+bool WaylandInterface::setViewStruts(QWindow &view, const QRect &rect, Plasma::Types::Location location)
 {
     auto *const latteView = qobject_cast<Latte::View *>(&view);
     if (!latteView) {
         qCritical() << "WaylandInterface refused struts for a non-Latte view"
                     << view.title() << rect;
-        return;
+        return false;
     }
 
     //! The visual window is a larger masked canvas. Putting the positive
@@ -177,7 +177,7 @@ void WaylandInterface::setViewStruts(QWindow &view, const QRect &rect, Plasma::T
     //! one persistent output identity and edge through one transparent
     //! publisher at their maximum depth, while every visual surface stays at
     //! Positioner's exact rectangle.
-    latteView->publishScreenSpaceReservation(rect, location);
+    return latteView->publishScreenSpaceReservation(rect, location);
 }
 
 void WaylandInterface::switchToNextVirtualDesktop()
@@ -272,15 +272,15 @@ void WaylandInterface::setWindowOnActivities(const WindowId &wid, const QStringL
     }
 }
 
-void WaylandInterface::removeViewStruts(QWindow &view)
+bool WaylandInterface::removeViewStruts(QWindow &view)
 {
     auto *const latteView = qobject_cast<Latte::View *>(&view);
     if (!latteView) {
         qCritical() << "WaylandInterface refused to clear struts for a non-Latte view"
                     << view.title();
-        return;
+        return false;
     }
-    latteView->clearScreenSpaceReservation();
+    return latteView->clearScreenSpaceReservation();
 }
 
 WindowId WaylandInterface::activeWindow()

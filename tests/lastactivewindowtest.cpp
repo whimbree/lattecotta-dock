@@ -48,9 +48,9 @@ public:
         : AbstractWindowInterface(parent) {}
 
     void setViewExtraFlags(QObject *, bool, Latte::Types::Visibility) override {}
-    void setViewStruts(QWindow &, const QRect &, Plasma::Types::Location) override {}
+    bool setViewStruts(QWindow &, const QRect &, Plasma::Types::Location) override { return true; }
     void setWindowOnActivities(const WindowId &, const QStringList &) override {}
-    void removeViewStruts(QWindow &) override {}
+    bool removeViewStruts(QWindow &) override { return true; }
 
     WindowId activeWindow() override { return WindowId(); }
     WindowInfoWrap requestInfo(WindowId wid) override { return registry.value(wid, WindowInfoWrap()); }
