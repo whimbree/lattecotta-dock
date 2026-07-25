@@ -50,6 +50,17 @@ private Q_SLOTS:
     void solvesStableEnvelopeForEveryEdge();
     void interpolatesVisibleMaskWithoutChangingStableGeometry();
     void bridgesOnlyTheExactPartialSpan();
+    void rasterizesFractionalPresentationOutwardForEveryEdge_data();
+    void rasterizesFractionalPresentationOutwardForEveryEdge();
+    void derivesAsymmetricShadowOffsetsFromVisibleShape_data();
+    void derivesAsymmetricShadowOffsetsFromVisibleShape();
+    void fittsBridgeUsesHalfOpenPrimarySpan_data();
+    void fittsBridgeUsesHalfOpenPrimarySpan();
+    void rejectsOutwardRasterFringeAtFractionalProgress_data();
+    void rejectsOutwardRasterFringeAtFractionalProgress();
+    void projectsEdgeInputIntoVisibleShape_data();
+    void projectsEdgeInputIntoVisibleShape();
+    void keepsFloatingBordersAndCornersForEveryNonzeroProgress();
     void triggerOverlapsOneLogicalPixelInward_data();
     void triggerOverlapsOneLogicalPixelInward();
     void solvesExtremeOriginGeometryWithoutIntermediateOverflow_data();
@@ -127,6 +138,289 @@ void FloatingPanelGeometryTest::bridgesOnlyTheExactPartialSpan()
 
     QCOMPARE(solution->envelope.value.left(), 2120);
     QCOMPARE(solution->envelope.value.width(), 800);
+}
+
+void FloatingPanelGeometryTest::rasterizesFractionalPresentationOutwardForEveryEdge_data()
+{
+    QTest::addColumn<Edge>("edge");
+    QTest::addColumn<qreal>("progress");
+    QTest::addColumn<QRectF>("visible");
+    QTest::addColumn<QRect>("paint");
+    QTest::addColumn<QRect>("input");
+
+    QTest::newRow("top-quarter")
+        << Edge::Top << 0.25 << QRectF(0, 2.75, 800, 48)
+        << QRect(0, 2, 800, 49) << QRect(0, 0, 800, 51);
+    QTest::newRow("top-half")
+        << Edge::Top << 0.5 << QRectF(0, 5.5, 800, 48)
+        << QRect(0, 5, 800, 49) << QRect(0, 0, 800, 54);
+    QTest::newRow("top-three-quarters")
+        << Edge::Top << 0.75 << QRectF(0, 8.25, 800, 48)
+        << QRect(0, 8, 800, 49) << QRect(0, 0, 800, 57);
+
+    QTest::newRow("right-quarter")
+        << Edge::Right << 0.25 << QRectF(8.25, 0, 48, 500)
+        << QRect(8, 0, 49, 500) << QRect(8, 0, 51, 500);
+    QTest::newRow("right-half")
+        << Edge::Right << 0.5 << QRectF(5.5, 0, 48, 500)
+        << QRect(5, 0, 49, 500) << QRect(5, 0, 54, 500);
+    QTest::newRow("right-three-quarters")
+        << Edge::Right << 0.75 << QRectF(2.75, 0, 48, 500)
+        << QRect(2, 0, 49, 500) << QRect(2, 0, 57, 500);
+
+    QTest::newRow("bottom-quarter")
+        << Edge::Bottom << 0.25 << QRectF(0, 8.25, 800, 48)
+        << QRect(0, 8, 800, 49) << QRect(0, 8, 800, 51);
+    QTest::newRow("bottom-half")
+        << Edge::Bottom << 0.5 << QRectF(0, 5.5, 800, 48)
+        << QRect(0, 5, 800, 49) << QRect(0, 5, 800, 54);
+    QTest::newRow("bottom-three-quarters")
+        << Edge::Bottom << 0.75 << QRectF(0, 2.75, 800, 48)
+        << QRect(0, 2, 800, 49) << QRect(0, 2, 800, 57);
+
+    QTest::newRow("left-quarter")
+        << Edge::Left << 0.25 << QRectF(2.75, 0, 48, 500)
+        << QRect(2, 0, 49, 500) << QRect(0, 0, 51, 500);
+    QTest::newRow("left-half")
+        << Edge::Left << 0.5 << QRectF(5.5, 0, 48, 500)
+        << QRect(5, 0, 49, 500) << QRect(0, 0, 54, 500);
+    QTest::newRow("left-three-quarters")
+        << Edge::Left << 0.75 << QRectF(8.25, 0, 48, 500)
+        << QRect(8, 0, 49, 500) << QRect(0, 0, 57, 500);
+}
+
+void FloatingPanelGeometryTest::rasterizesFractionalPresentationOutwardForEveryEdge()
+{
+    QFETCH(Edge, edge);
+    QFETCH(qreal, progress);
+    QFETCH(QRectF, visible);
+    QFETCH(QRect, paint);
+    QFETCH(QRect, input);
+
+    Inputs in = inputs(edge);
+    in.floatingGap = 11;
+    const auto solution = solve(in);
+    QVERIFY(solution.has_value());
+
+    QCOMPARE(solution->visibleMask(progress).value, visible);
+    QCOMPARE(solution->paintMask(progress).value, paint);
+    QCOMPARE(solution->inputBridge(progress).value, input);
+
+    const QRect stableCanvas{QPoint(0, 0), solution->envelope.value.size()};
+    const QMargins baseTilePadding{3, 5, 7, 11};
+    const QMargins appliedTilePadding =
+        baseTilePadding + solution->shadowPaddingOffsets(progress);
+    const QMargins recoveredOffsets = appliedTilePadding - baseTilePadding;
+    QCOMPARE(stableCanvas.adjusted(-recoveredOffsets.left(),
+                                   -recoveredOffsets.top(),
+                                   recoveredOffsets.right(),
+                                   recoveredOffsets.bottom()),
+             paint);
+}
+
+void FloatingPanelGeometryTest::derivesAsymmetricShadowOffsetsFromVisibleShape_data()
+{
+    QTest::addColumn<Edge>("edge");
+    QTest::addColumn<qreal>("progress");
+    QTest::addColumn<QMargins>("offsets");
+
+    QTest::newRow("top-quarter") << Edge::Top << 0.25
+                                  << QMargins(0, -2, 0, -8);
+    QTest::newRow("right-quarter") << Edge::Right << 0.25
+                                    << QMargins(-8, 0, -2, 0);
+    QTest::newRow("bottom-quarter") << Edge::Bottom << 0.25
+                                     << QMargins(0, -8, 0, -2);
+    QTest::newRow("left-quarter") << Edge::Left << 0.25
+                                   << QMargins(-2, 0, -8, 0);
+    QTest::newRow("top-half") << Edge::Top << 0.5
+                               << QMargins(0, -5, 0, -5);
+    QTest::newRow("right-three-quarters") << Edge::Right << 0.75
+                                           << QMargins(-2, 0, -8, 0);
+}
+
+void FloatingPanelGeometryTest::derivesAsymmetricShadowOffsetsFromVisibleShape()
+{
+    QFETCH(Edge, edge);
+    QFETCH(qreal, progress);
+    QFETCH(QMargins, offsets);
+
+    Inputs in = inputs(edge);
+    in.floatingGap = 11;
+    const auto solution = solve(in);
+    QVERIFY(solution.has_value());
+
+    QCOMPARE(solution->shadowPaddingOffsets(progress), offsets);
+}
+
+void FloatingPanelGeometryTest::fittsBridgeUsesHalfOpenPrimarySpan_data()
+{
+    QTest::addColumn<Edge>("edge");
+    QTest::addColumn<QPointF>("beforeStart");
+    QTest::addColumn<QPointF>("atStart");
+    QTest::addColumn<QPointF>("beforeEnd");
+    QTest::addColumn<QPointF>("atEnd");
+
+    constexpr qreal epsilon = 0.01;
+    QTest::newRow("top")
+        << Edge::Top << QPointF(-epsilon, 20) << QPointF(0, 20)
+        << QPointF(800 - epsilon, 20) << QPointF(800, 20);
+    QTest::newRow("right")
+        << Edge::Right << QPointF(20, -epsilon) << QPointF(20, 0)
+        << QPointF(20, 500 - epsilon) << QPointF(20, 500);
+    QTest::newRow("bottom")
+        << Edge::Bottom << QPointF(-epsilon, 20) << QPointF(0, 20)
+        << QPointF(800 - epsilon, 20) << QPointF(800, 20);
+    QTest::newRow("left")
+        << Edge::Left << QPointF(20, -epsilon) << QPointF(20, 0)
+        << QPointF(20, 500 - epsilon) << QPointF(20, 500);
+}
+
+void FloatingPanelGeometryTest::fittsBridgeUsesHalfOpenPrimarySpan()
+{
+    QFETCH(Edge, edge);
+    QFETCH(QPointF, beforeStart);
+    QFETCH(QPointF, atStart);
+    QFETCH(QPointF, beforeEnd);
+    QFETCH(QPointF, atEnd);
+
+    const auto solution = solve(inputs(edge));
+    QVERIFY(solution.has_value());
+
+    QVERIFY(!solution->fittsBridgeContains(0.5, beforeStart));
+    QVERIFY(solution->fittsBridgeContains(0.5, atStart));
+    QVERIFY(solution->fittsBridgeContains(0.5, beforeEnd));
+    QVERIFY(!solution->fittsBridgeContains(0.5, atEnd));
+}
+
+void FloatingPanelGeometryTest::
+    rejectsOutwardRasterFringeAtFractionalProgress_data()
+{
+    QTest::addColumn<Edge>("edge");
+    QTest::newRow("top") << Edge::Top;
+    QTest::newRow("right") << Edge::Right;
+    QTest::newRow("bottom") << Edge::Bottom;
+    QTest::newRow("left") << Edge::Left;
+}
+
+void FloatingPanelGeometryTest::rejectsOutwardRasterFringeAtFractionalProgress()
+{
+    QFETCH(Edge, edge);
+
+    Inputs in = inputs(edge);
+    in.floatingGap = 11;
+    const auto solution = solve(in);
+    QVERIFY(solution.has_value());
+
+    constexpr qreal progress{0.25};
+    constexpr qreal epsilon{0.01};
+    const QRectF visible =
+        solution->visibleMask(progress).value;
+    const QRectF bridge =
+        solution->fittsBridge(progress).value;
+    QPointF insideBridge = visible.center();
+    QPointF atBridgeEnd = bridge.center();
+    QPointF insideRasterFringe = visible.center();
+    if (edge == Edge::Top || edge == Edge::Left) {
+        if (isHorizontal(edge)) {
+            insideBridge.setY(visible.bottom() - epsilon);
+            insideRasterFringe.setY(
+                solution->paintMask(progress).value.bottom()
+                + 1.0 - epsilon);
+            atBridgeEnd.setY(bridge.bottom());
+        } else {
+            insideBridge.setX(visible.right() - epsilon);
+            insideRasterFringe.setX(
+                solution->paintMask(progress).value.right()
+                + 1.0 - epsilon);
+            atBridgeEnd.setX(bridge.right());
+        }
+    } else if (isHorizontal(edge)) {
+        insideBridge.setY(visible.top() + epsilon);
+        insideRasterFringe.setY(
+            solution->paintMask(progress).value.top()
+            + epsilon);
+        atBridgeEnd.setY(bridge.bottom());
+    } else {
+        insideBridge.setX(visible.left() + epsilon);
+        insideRasterFringe.setX(
+            solution->paintMask(progress).value.left()
+            + epsilon);
+        atBridgeEnd.setX(bridge.right());
+    }
+
+    QCOMPARE(solution->classifyInput(0.25, insideBridge),
+             InputDisposition::Forward);
+    QCOMPARE(solution->classifyInput(0.25, atBridgeEnd),
+             InputDisposition::ConsumeWithoutForwarding);
+    QCOMPARE(solution->classifyInput(0.25, insideRasterFringe),
+             InputDisposition::ConsumeWithoutForwarding);
+    QVERIFY(QRectF(solution->inputBridge(progress).value).contains(
+        insideRasterFringe));
+}
+
+void FloatingPanelGeometryTest::projectsEdgeInputIntoVisibleShape_data()
+{
+    QTest::addColumn<Edge>("edge");
+    QTest::addColumn<QPointF>("edgePoint");
+    QTest::addColumn<QPointF>("adjustedPoint");
+
+    QTest::newRow("top")
+        << Edge::Top << QPointF(127.25, 0) << QPointF(127.25, 5.5);
+    QTest::newRow("right")
+        << Edge::Right << QPointF(58.5, 127.25) << QPointF(52.5, 127.25);
+    QTest::newRow("bottom")
+        << Edge::Bottom << QPointF(127.25, 58.5) << QPointF(127.25, 52.5);
+    QTest::newRow("left")
+        << Edge::Left << QPointF(0, 127.25) << QPointF(5.5, 127.25);
+}
+
+void FloatingPanelGeometryTest::projectsEdgeInputIntoVisibleShape()
+{
+    QFETCH(Edge, edge);
+    QFETCH(QPointF, edgePoint);
+    QFETCH(QPointF, adjustedPoint);
+
+    Inputs in = inputs(edge);
+    in.floatingGap = 11;
+    const auto solution = solve(in);
+    QVERIFY(solution.has_value());
+
+    QVERIFY(solution->fittsBridgeContains(0.5, edgePoint));
+    QVERIFY(!solution->visibleMaskContains(0.5, edgePoint));
+    QCOMPARE(solution->classifyInput(0.5, edgePoint),
+             InputDisposition::ProjectToVisibleMask);
+    QCOMPARE(solution->positionAdjustedForVisibleMask(0.5, edgePoint),
+             adjustedPoint);
+    QVERIFY(solution->visibleMaskContains(0.5, adjustedPoint));
+
+    const QPointF alreadyVisible = solution->visibleMask(0.5).value.center();
+    QCOMPARE(solution->positionAdjustedForVisibleMask(0.5, alreadyVisible),
+             alreadyVisible);
+}
+
+void FloatingPanelGeometryTest::keepsFloatingBordersAndCornersForEveryNonzeroProgress()
+{
+    const auto solution = solve(inputs(Edge::Bottom));
+    QVERIFY(solution.has_value());
+
+    QVERIFY(!solution->screenEdgeBorderVisible(0.0));
+    QVERIFY(!solution->floatingCornersVisible(0.0));
+    QVERIFY(solution->screenEdgeBorderVisible(
+        std::numeric_limits<qreal>::denorm_min()));
+    QVERIFY(solution->floatingCornersVisible(
+        std::numeric_limits<qreal>::denorm_min()));
+    QVERIFY(solution->screenEdgeBorderVisible(0.25));
+    QVERIFY(solution->floatingCornersVisible(0.25));
+    QVERIFY(solution->screenEdgeBorderVisible(1.0));
+    QVERIFY(solution->floatingCornersVisible(1.0));
+
+    Inputs flushInputs = inputs(Edge::Bottom);
+    flushInputs.floatingGap = 0;
+    const auto flushSolution = solve(flushInputs);
+    QVERIFY(flushSolution.has_value());
+    QCOMPARE(flushSolution->attached.value, flushSolution->floated.value);
+    QVERIFY(!flushSolution->screenEdgeBorderVisible(1.0));
+    QVERIFY(!flushSolution->floatingCornersVisible(1.0));
 }
 
 void FloatingPanelGeometryTest::triggerOverlapsOneLogicalPixelInward_data()
