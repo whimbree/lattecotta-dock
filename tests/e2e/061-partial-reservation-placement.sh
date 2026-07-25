@@ -9,7 +9,10 @@
 # e2e-mode: nested-only
 set -u
 
-source "${E2E_REPO:?run through scripts/run-e2e.sh}/tests/e2e/lib.sh"
+source "${E2E_REPO:?run through scripts/run-multi-output-e2e.sh}/tests/e2e/lib.sh"
+
+[[ "${E2E_OUTPUT_COUNT:-1}" -eq 2 ]] \
+    || e2e_fail "061 partial-reservation placement needs the dual-output vehicle"
 
 e2e_wait_settled 45 || e2e_fail "vehicle dock never settled"
 
@@ -398,20 +401,7 @@ print(view["reservationPublishedDepth"],
 [[ "$fallback_depth" -le "$shared_depth" ]] \
     || e2e_fail "removing a same-edge member increased the surviving depth"
 
-target_screen_id="$screen_id"
-target_screen_name="$(python3 -c '
-import json, sys
-screen_id = int(sys.argv[1])
-screen = next(
-    screen for screen in json.load(sys.stdin)
-    if screen["id"] == screen_id
-)
-print(screen["name"])
-' "$screen_id" <<<"$(e2e_json screensData)")"
-output_moved="$migrated"
-
-if (( ${E2E_OUTPUT_COUNT:-1} >= 2 )); then
-    read -r target_screen_id target_screen_name <<< "$(python3 -c '
+read -r target_screen_id target_screen_name <<< "$(python3 -c '
 import json, sys
 secondary = [
     screen for screen in json.load(sys.stdin)
@@ -423,18 +413,18 @@ if len(secondary) != 1:
     )
 print(secondary[0]["id"], secondary[0]["name"])
 ' <<<"$(e2e_json screensData)")" \
-        || e2e_fail "could not discover the secondary output"
+    || e2e_fail "could not discover the secondary output"
 
-    e2e_call setViewPlacement uiii "$full_bottom" \
-        "$target_screen_id" 3 "$full_alignment" >/dev/null \
-        || e2e_fail "could not migrate the reservation to the secondary output"
+e2e_call setViewPlacement uiii "$full_bottom" \
+    "$target_screen_id" 3 "$full_alignment" >/dev/null \
+    || e2e_fail "could not migrate the reservation to the secondary output"
 
-    output_moved=""
-    last=""
-    for _ in $(seq 1 150); do
-        current="$(e2e_json dockSystemData)"
-        last="$current"
-        if [[ -n "$current" ]] && python3 -c '
+output_moved=""
+last=""
+for _ in $(seq 1 150); do
+    current="$(e2e_json dockSystemData)"
+    last="$current"
+    if [[ -n "$current" ]] && python3 -c '
 import json, sys
 state = json.load(sys.stdin)
 views = {v["persistentDockId"]: v for v in state["views"]}
@@ -483,17 +473,16 @@ ok = (
 )
 raise SystemExit(0 if ok else 1)
 ' "$partial_bottom" "$full_bottom" "$screen_id" \
-                "$target_screen_id" "$target_screen_name" \
-                "$migration_generation" <<<"$current"; then
-            output_moved="$current"
-            break
-        fi
-        sleep 0.2
-    done
-    if [[ -z "$output_moved" ]]; then
-        python3 -m json.tool <<<"$last" >&2
-        e2e_fail "output migration left stale or incompatible reservation ownership"
+            "$target_screen_id" "$target_screen_name" \
+            "$migration_generation" <<<"$current"; then
+        output_moved="$current"
+        break
     fi
+    sleep 0.2
+done
+if [[ -z "$output_moved" ]]; then
+    python3 -m json.tool <<<"$last" >&2
+    e2e_fail "output migration left stale or incompatible reservation ownership"
 fi
 
 e2e_dock_stop \
