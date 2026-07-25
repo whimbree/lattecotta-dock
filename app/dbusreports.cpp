@@ -786,6 +786,11 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         const auto *const reservation = group.publisher;
         const auto *const layerShell =
             reservation ? reservation->layerShellWindow() : nullptr;
+        //! LayerShellQt's explicit screen is the output committed by the
+        //! reservation transaction. QWindow::screen() may retain the previous
+        //! output until the compositor sends the first configure event.
+        const auto *const reservationOutput =
+            layerShell ? layerShell->screen() : nullptr;
         const QRect geometry =
             reservation ? reservation->publishedGeometry() : QRect();
         const auto location = group.edge;
@@ -801,10 +806,9 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
                 || group.publishedDepth <= 0
                 || group.contributions.empty()
                 || !reservation
-                || !reservation->screen()
+                || !reservationOutput
                 || !geometry.isValid()
-                || !reservation->screen()->geometry().contains(geometry)
-                || !layerShell
+                || !reservationOutput->geometry().contains(geometry)
                 || expectedDepth != group.publishedDepth
                 || layerShell->exclusiveEdge()
                     != WindowSystem::LayerShell::edgeFor(location)

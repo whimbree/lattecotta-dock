@@ -438,6 +438,21 @@ private:
                 "record.logicalDockId=view->isCloned()?"));
     }
 
+    static bool matchesReservationOutputAuthorityRoute(
+        const QString &body)
+    {
+        const QString code = normalizedCode(body);
+        return code.count(QStringLiteral(
+                   "constauto*constreservationOutput="
+                   "layerShell?layerShell->screen():nullptr;")) == 1
+            && code.contains(QStringLiteral(
+                "||!reservationOutput"
+                "||!geometry.isValid()"
+                "||!reservationOutput->geometry().contains(geometry)"))
+            && !code.contains(QStringLiteral(
+                "reservation->screen()"));
+    }
+
     static bool matchesRuntimeIdentityRegistryContract(const QString &body)
     {
         const QString code = normalizedCode(body);
@@ -1362,6 +1377,8 @@ void SourceGuardTest::dockSystemCollection_keepsPureRouting()
              "dock-system collection must order persistent ids before every identity lookup");
     QVERIFY2(matchesDockRelationshipClassifierRoute(systemCollector),
              "dock-system collection must route lineage through the tested classifier");
+    QVERIFY2(matchesReservationOutputAuthorityRoute(systemCollector),
+             "reservation validation must use the synchronously committed layer-shell output");
 }
 
 void SourceGuardTest::dockSystemCollection_sourceGuardsRejectControlledMutations()
@@ -1386,6 +1403,16 @@ void SourceGuardTest::dockSystemCollection_sourceGuardsRejectControlledMutations
                                QStringLiteral("legacyDockRelationshipGraph("));
     QVERIFY2(!matchesDockRelationshipClassifierRoute(directRelationship),
              "bypassing whole-graph relationship validation must fail the collector guard");
+
+    QVERIFY(matchesReservationOutputAuthorityRoute(systemCollector));
+    QString staleOutput = normalizedCode(systemCollector);
+    QCOMPARE(staleOutput.count(QStringLiteral(
+        "layerShell->screen()")), 1);
+    staleOutput.replace(
+        QStringLiteral("layerShell->screen()"),
+        QStringLiteral("reservation->screen()"));
+    QVERIFY2(!matchesReservationOutputAuthorityRoute(staleOutput),
+             "restoring the stale QWindow output must fail the collector guard");
 
     const QString dataCollector = normalizedCode(functionBody(
         source, QStringLiteral("QString collectDockSystemData(")));
