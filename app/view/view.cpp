@@ -1349,9 +1349,13 @@ void View::setBehaveAsPlasmaPanel(bool behavior)
         return;
     }
 
+    const bool wasFloatingPanel = isFloatingPanel();
     m_behaveAsPlasmaPanel = behavior;
 
     Q_EMIT behaveAsPlasmaPanelChanged();
+    if (wasFloatingPanel != isFloatingPanel()) {
+        Q_EMIT floatingPanelConfiguredChanged();
+    }
 }
 
 bool View::inEditMode() const
@@ -1361,7 +1365,9 @@ bool View::inEditMode() const
 
 bool View::isFloatingPanel() const
 {
-    return m_behaveAsPlasmaPanel && m_screenEdgeMarginEnabled && (m_screenEdgeMargin>0);
+    return m_behaveAsPlasmaPanel
+        && m_screenEdgeMarginEnabled
+        && m_screenEdgeMargin > 0;
 }
 
 int View::layerShellEdgeMargin() const
@@ -1554,8 +1560,12 @@ void View::setScreenEdgeMarginEnabled(bool enabled)
         return;
     }
 
+    const bool wasFloatingPanel = isFloatingPanel();
     m_screenEdgeMarginEnabled = enabled;
     Q_EMIT screenEdgeMarginEnabledChanged();
+    if (wasFloatingPanel != isFloatingPanel()) {
+        Q_EMIT floatingPanelConfiguredChanged();
+    }
 }
 
 int View::screenEdgeMargin() const
@@ -1569,10 +1579,12 @@ void View::setScreenEdgeMargin(int margin)
         return;
     }
 
-
-
+    const bool wasFloatingPanel = isFloatingPanel();
     m_screenEdgeMargin = margin;
     Q_EMIT screenEdgeMarginChanged();
+    if (wasFloatingPanel != isFloatingPanel()) {
+        Q_EMIT floatingPanelConfiguredChanged();
+    }
 }
 
 int View::fontPixelSize() const

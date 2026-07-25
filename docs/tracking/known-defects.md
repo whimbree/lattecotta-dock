@@ -2427,6 +2427,23 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   targets in flight and passed with the 88 px maximum-depth reservation and
   every stable geometry and revision assertion unchanged.
 
+### D192 - Zero-gap panels exposed conflicting floating eligibility
+- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- FOUND: 2026-07-24, second independent FP-2 review.
+- SYMPTOM: a Panel with the legal `screenEdgeMargin=0` setting could make
+  `dockSystemData()` return an empty string.
+- ROOT: QML treated every enabled margin, including zero, as transition
+  eligible. C++ `View::isFloatingPanel()` requires a positive gap, so schema 5
+  correctly refused the contradictory eligible-but-unconfigured record.
+- FIX: expose `View::isFloatingPanel()` as the notified
+  `floatingPanelConfigured` property and derive QML eligibility from that same
+  authority. Changes to panel mode, margin enablement, and margin size notify
+  the derived property only when its value changes.
+- EVIDENCE: `sourceguardtest` pins the one-authority route and rejects the old
+  enabled-margin QML predicate. Recipe 071 restarts its deterministic
+  Panel/Always Visible fixture at a 0 px gap and requires a nonempty snapshot
+  with both configured and eligible false at the floated resting endpoint.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
   is merged. FP-2 (the stable canvas and transition controller) is complete on

@@ -246,7 +246,9 @@ private:
         const QString &visibilitySource,
         const QString &layoutsSource,
         const QString &metricsSource,
-        const QString &backgroundTotalsSource)
+        const QString &backgroundTotalsSource,
+        const QString &viewHeaderSource,
+        const QString &viewImplementationSource)
     {
         const QString main = normalizedCode(mainSource);
         const QString bindings = normalizedCode(bindingsSource);
@@ -254,12 +256,15 @@ private:
         const QString layouts = normalizedCode(layoutsSource);
         const QString metrics = normalizedCode(metricsSource);
         const QString backgroundTotals = normalizedCode(backgroundTotalsSource);
+        const QString viewHeader = normalizedCode(viewHeaderSource);
+        const QString viewImplementation =
+            normalizedCode(viewImplementationSource);
 
         return main.contains(QStringLiteral(
                    "readonlypropertyboolfloatingTransitionEligible:"
-                   "behaveAsPlasmaPanel&&screenEdgeMarginEnabled"
+                   "latteView&&latteView.floatingPanelConfigured"
                    "&&Plasmoid.configuration.hideFloatingGapForMaximized"
-                   "&&latteView&&latteView.visibility"
+                   "&&latteView.visibility"
                    "&&latteView.visibility.mode===LatteCore.Types.AlwaysVisible"))
             && !main.contains(QStringLiteral(
                    "floatingTransitionEligible:behaveAsPlasmaPanel"
@@ -310,7 +315,16 @@ private:
             && backgroundTotals.contains(QStringLiteral(
                    "property:\"minThickness\""
                    "when:totalsItem.stablePanelEnvelope"
-                   "||!(hideThickScreenGap||hideLengthScreenGaps)"));
+                   "||!(hideThickScreenGap||hideLengthScreenGaps)"))
+            && viewHeader.contains(QStringLiteral(
+                   "Q_PROPERTY(boolfloatingPanelConfigured"
+                   "READisFloatingPanel"
+                   "NOTIFYfloatingPanelConfiguredChanged)"))
+            && viewImplementation.count(QStringLiteral(
+                   "constboolwasFloatingPanel=isFloatingPanel();")) == 3
+            && viewImplementation.count(QStringLiteral(
+                   "if(wasFloatingPanel!=isFloatingPanel())"
+                   "{Q_EMITfloatingPanelConfiguredChanged();}")) == 3;
     }
 
     static bool matchesStableFloatingPanelE2eContract(const QString &source)
@@ -383,6 +397,15 @@ private:
                    "\"$expected_target\"\"$expected_phase\""))
             && code.contains(QStringLiteral(
                    "assert_stable_contract\"rapidreversalstorm\""))
+            && code.contains(QStringLiteral(
+                   "kwriteconfig6\"${group_args[@]}\""
+                   "--keyscreenEdgeMargin0"))
+            && code.contains(QStringLiteral(
+                   "[[\"$view_type\"==panel"
+                   "&&\"$visibility_mode\"==alwaysVisible]]"))
+            && code.contains(QStringLiteral(
+                   "[[\"$configured_panel\"==false"
+                   "&&\"$eligible_panel\"==false]]"))
             && code.contains(QStringLiteral(
                    "expected_h=$((screen_h-stable_reservation_depth))"))
             && !code.contains(QStringLiteral("max_strut<base_strut"))
@@ -982,6 +1005,7 @@ private Q_SLOTS:
     void justifyAppletSpan_followsSolidBackground();
     void justifyAppletSpan_sourceGuardRejectsShadowOverlap();
     void stableFloatingPanelQml_keepsOneTransitionAuthority();
+    void stableFloatingPanelQml_rejectsDivergentZeroGapEligibility();
     void stableFloatingPanelE2e_keepsCanvasAndRevisionsFixed();
     void dockBackgroundFit_includesJustifyDockMode();
     void dockBackgroundFit_sourceGuardsRejectBypasses();
@@ -1316,11 +1340,46 @@ void SourceGuardTest::stableFloatingPanelQml_keepsOneTransitionAuthority()
         "containment/package/contents/ui/abilities/Metrics.qml"));
     const QString backgroundTotals = readFile(QStringLiteral(
         "containment/package/contents/ui/background/types/Totals.qml"));
+    const QString viewHeader = readFile(QStringLiteral(
+        "app/view/view.h"));
+    const QString viewImplementation = readFile(QStringLiteral(
+        "app/view/view.cpp"));
 
     QVERIFY2(matchesStableFloatingPanelQmlContract(
-                 main, bindings, visibility, layouts, metrics, backgroundTotals),
+                 main, bindings, visibility, layouts, metrics, backgroundTotals,
+                 viewHeader, viewImplementation),
              "floating panels must animate only controller progress inside one"
              " stable window, reservation, and applet-measurement envelope");
+}
+
+void SourceGuardTest::stableFloatingPanelQml_rejectsDivergentZeroGapEligibility()
+{
+    QString main = readFile(QStringLiteral(
+        "containment/package/contents/ui/main.qml"));
+    const QString bindings = readFile(QStringLiteral(
+        "containment/package/contents/ui/BindingsExternal.qml"));
+    const QString visibility = readFile(QStringLiteral(
+        "containment/package/contents/ui/VisibilityManager.qml"));
+    const QString layouts = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    const QString metrics = readFile(QStringLiteral(
+        "containment/package/contents/ui/abilities/Metrics.qml"));
+    const QString backgroundTotals = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/types/Totals.qml"));
+    const QString viewHeader = readFile(QStringLiteral(
+        "app/view/view.h"));
+    const QString viewImplementation = readFile(QStringLiteral(
+        "app/view/view.cpp"));
+
+    QCOMPARE(main.count(QStringLiteral("latteView.floatingPanelConfigured")), 1);
+    main.replace(QStringLiteral("latteView.floatingPanelConfigured"),
+                 QStringLiteral("screenEdgeMarginEnabled"));
+
+    QVERIFY2(!matchesStableFloatingPanelQmlContract(
+                 main, bindings, visibility, layouts, metrics, backgroundTotals,
+                 viewHeader, viewImplementation),
+             "QML eligibility must not diverge from the C++ positive-gap "
+             "configuration authority");
 }
 
 void SourceGuardTest::stableFloatingPanelE2e_keepsCanvasAndRevisionsFixed()
