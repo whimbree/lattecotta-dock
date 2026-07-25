@@ -808,6 +808,7 @@ ContainmentItem {
     VisibilityManager{
         id: visibilityManager
         layouts: layoutsContainer
+        window: latteView
     }
 
     DragDropArea {
@@ -903,6 +904,8 @@ ContainmentItem {
 
             Background.MultiLayered{
                 id: _background
+                containmentRoot: root
+                dockView: latteView
             }
         }
 

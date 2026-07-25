@@ -119,6 +119,26 @@ Item{
         function onHeightChanged() {
             manager.updateMaskArea();
         }
+        function onBehaveAsPlasmaPanelChanged() {
+            // Effects releases stable-panel ownership synchronously before
+            // this handler. Reinstall every legacy geometry value immediately.
+            manager.updateMaskArea();
+            // updateMaskArea intentionally gates ordinary animation writes on
+            // updateIsEnabled. This ownership handoff is not an animation:
+            // the old native panel bridge must be replaced even during
+            // autosize, relocation, or a slide.
+            manager.updateInputGeometry();
+        }
+    }
+
+    Connections {
+        target: manager.window ? manager.window.visibility : null
+        function onIsSidebarChanged() {
+            // Sidebar reveal policy owns input in both directions. Entering
+            // installs its legacy strip after Effects releases the exact
+            // bridge; leaving lets Effects reclaim the bridge first.
+            manager.updateInputGeometry();
+        }
     }
 
     Connections{
@@ -334,6 +354,15 @@ Item{
         //! latteView is still null when this runs during startup, before the
         //! C++ View wrapper is injected
         if (!latteView) {
+            return;
+        }
+
+        //! A visible stable panel's exact bridge is synchronized by the
+        //! FloatingTransition -> Effects path. Hidden/sidebar reveal strips
+        //! retain this legacy policy.
+        if (manager.window.behaveAsPlasmaPanel
+                && !manager.window.visibility.isHidden
+                && !manager.window.visibility.isSidebar) {
             return;
         }
 

@@ -9,9 +9,13 @@
 // local
 #include <config-latte.h>
 #include <coretypes.h>
+#include "effectregion.h"
+#include "floatingtransition.h"
 #include "inputmaskflush.h"
+#include "panelborderdecision.h"
 #include "panelshadows_p.h"
 #include "view.h"
+#include "visibilitymanager.h"
 #include "../lattecorona.h"
 #include "../wm/abstractwindowinterface.h"
 
@@ -21,6 +25,8 @@
 // Qt
 #include <QRegion>
 
+#include <optional>
+
 // KDE
 #include <KWindowEffects>
 #include <KWindowSystem>
@@ -29,8 +35,58 @@
 namespace Latte {
 namespace ViewPart {
 
+namespace {
+
+std::optional<FloatingPanelGeometry::Edge> presentationEdge(
+    Plasma::Types::Location location)
+{
+    switch (location) {
+    case Plasma::Types::TopEdge:
+        return FloatingPanelGeometry::Edge::Top;
+    case Plasma::Types::RightEdge:
+        return FloatingPanelGeometry::Edge::Right;
+    case Plasma::Types::BottomEdge:
+        return FloatingPanelGeometry::Edge::Bottom;
+    case Plasma::Types::LeftEdge:
+        return FloatingPanelGeometry::Edge::Left;
+    case Plasma::Types::Floating:
+    case Plasma::Types::Desktop:
+    case Plasma::Types::FullScreen:
+        qCritical() << "Effects received a non-edge panel location:" << location;
+        return std::nullopt;
+    }
+
+    Q_UNREACHABLE();
+}
+
+std::optional<PanelBorderDecision::Alignment> presentationAlignment(
+    int alignment)
+{
+    switch (alignment) {
+    case Latte::Types::Left:
+    case Latte::Types::Top:
+        return PanelBorderDecision::Alignment::Start;
+    case Latte::Types::Right:
+    case Latte::Types::Bottom:
+        return PanelBorderDecision::Alignment::End;
+    case Latte::Types::Justify:
+        return PanelBorderDecision::Alignment::Justify;
+    case Latte::Types::Center:
+    case Latte::Types::NoneAlignment:
+        return PanelBorderDecision::Alignment::Center;
+    }
+
+    qCritical() << "Effects received an unknown panel alignment:" << alignment;
+    return std::nullopt;
+}
+
+} // namespace
+
 Effects::Effects(Latte::View *parent)
     : QObject(parent),
+      m_floatingMaskRenderBridge(
+          std::make_shared<
+              FloatingMaskHandshake::RenderBridge>()),
       m_view(parent)
 {
     m_corona = qobject_cast<Latte::Corona *>(m_view->corona());
@@ -40,6 +96,15 @@ Effects::Effects(Latte::View *parent)
 
 Effects::~Effects()
 {
+    for (const auto &connection : m_renderConnections) {
+        disconnect(connection);
+    }
+
+    // QQuickWindow render signals are direct across the render thread.
+    // Closing waits for an in-flight callback to finish posting; callbacks
+    // already dispatched but not entered retain the shared bridge, observe
+    // the closed state, and never dereference this destroyed Effects object.
+    m_floatingMaskRenderBridge->close();
 }
 
 void Effects::init()
@@ -50,6 +115,8 @@ void Effects::init()
     connect(this, &Effects::backgroundRadiusEnabledChanged, this, &Effects::updateEffects);
     connect(this, &Effects::drawEffectsChanged, this, &Effects::updateEffects);
     connect(this, &Effects::enabledBordersChanged, this, &Effects::updateEffects);
+    connect(this, &Effects::panelBackgroundSvgChanged,
+            this, &Effects::updateEffects);
     connect(this, &Effects::rectChanged, this, &Effects::updateEffects);
 
 
@@ -94,6 +161,36 @@ void Effects::init()
         m_appliedInputMask = m_inputMask;
         m_view->setMask(m_appliedInputMask);
     });
+
+    // QWindow::setMask also clips submitted Wayland damage. Keep the old
+    // floating bridge for one rendered clearing frame, then collapse to the
+    // exact logical bridge. View::event rejects the old-only input meanwhile.
+    const auto renderBridge = m_floatingMaskRenderBridge;
+    m_renderConnections[0] = connect(
+        m_view,
+        &QQuickWindow::beforeSynchronizing,
+        this,
+        [renderBridge]() {
+            (void)renderBridge->synchronizeForFrame();
+        },
+        Qt::DirectConnection);
+    m_renderConnections[1] = connect(
+        m_view,
+        &QQuickWindow::afterFrameEnd,
+        this,
+        [this, renderBridge]() {
+            (void)renderBridge->afterFrame(
+                [this](quint64 submittedGeneration) {
+                    QMetaObject::invokeMethod(
+                        this,
+                        [this, submittedGeneration]() {
+                            collapseFloatingDamageMask(
+                                submittedGeneration);
+                        },
+                        Qt::QueuedConnection);
+                });
+        },
+        Qt::DirectConnection);
 }
 
 bool Effects::animationsBlocked() const
@@ -267,6 +364,12 @@ QRect Effects::rect() const
 
 void Effects::setRect(QRect area)
 {
+    if (floatingPresentationOwnsPaint()) {
+        qCritical() << "Effects refused a legacy rect write while the stable "
+                       "panel controller owns paint";
+        return;
+    }
+
     if (m_rect == area) {
         return;
     }
@@ -283,6 +386,12 @@ QRect Effects::mask() const
 
 void Effects::setMask(QRect area)
 {
+    if (floatingPresentationOwnsPaint()) {
+        qCritical() << "Effects refused a legacy mask write while the stable "
+                       "panel controller owns paint";
+        return;
+    }
+
     if (m_mask == area)
         return;
 
@@ -302,6 +411,15 @@ QRect Effects::inputMask() const
 
 void Effects::setInputMask(QRect area)
 {
+    if (floatingPresentationOwnsInput()) {
+        qCritical() << "Effects refused a legacy input-mask write while the "
+                       "visible stable panel controller owns input";
+        return;
+    }
+
+    publishFloatingMaskGeneration(
+        m_floatingMaskHandshake.transferToLegacy());
+
     if (m_inputMask == area) {
         return;
     }
@@ -312,9 +430,178 @@ void Effects::setInputMask(QRect area)
     Q_EMIT inputMaskChanged();
 }
 
+bool Effects::floatingPresentationOwnsPaint() const
+{
+    return m_view
+        && m_view->behaveAsPlasmaPanel()
+        && m_view->floatingTransition()
+        && m_view->floatingTransition()->hasGeometry();
+}
+
+bool Effects::floatingPresentationOwnsInput() const
+{
+    return floatingPresentationOwnsPaint()
+        && (!m_view->visibility()
+            || (!m_view->visibility()->isHidden()
+                && !m_view->visibility()->isSidebar()));
+}
+
+void Effects::applyFloatingPanelPresentation()
+{
+    if (!m_view) {
+        return;
+    }
+
+    if (!m_view->behaveAsPlasmaPanel()) {
+        publishFloatingMaskGeneration(
+            m_floatingMaskHandshake.transferToLegacy());
+        const bool rectWasChanged = !m_rect.isNull();
+        const bool maskWasChanged = !m_mask.isNull();
+        m_rect = {};
+        m_mask = {};
+        m_view->setProperty("_floating_visible_geometry",
+                            QVariant{});
+        m_view->setProperty("_floating_anchor_revision",
+                            QVariant::fromValue(
+                                ++m_floatingAnchorRevision));
+        if (!m_shadowPaddingOffsets.isNull()) {
+            m_shadowPaddingOffsets = {};
+            PanelShadows::self()->setExtraPadding(m_view, {});
+        }
+        updateEnabledBorders();
+        updateEffects();
+        updateShadows();
+        if (rectWasChanged) {
+            Q_EMIT rectChanged();
+        }
+        if (maskWasChanged) {
+            Q_EMIT maskChanged();
+        }
+        return;
+    }
+
+    FloatingTransition *transition = m_view->floatingTransition();
+    if (!transition || !transition->hasGeometry()) {
+        // Positioner publishes the first stable solution after the panel type
+        // property becomes visible. currentGeometryChanged retries this
+        // synchronization as soon as that expected startup absence ends.
+        return;
+    }
+
+    const QRect paintBounds = transition->currentPaintMaskGeometry();
+    const QRect inputBridge = transition->currentInputBridgeGeometry();
+    if (!paintBounds.isValid() || paintBounds.isEmpty()
+        || !inputBridge.isValid() || inputBridge.isEmpty()) {
+        qCritical() << "Effects refused degenerate floating panel presentation"
+                    << paintBounds << inputBridge;
+        return;
+    }
+
+    const bool rectWasChanged = m_rect != paintBounds;
+    const bool maskWasChanged = m_mask != paintBounds;
+    m_rect = paintBounds;
+    m_mask = paintBounds;
+    m_shadowPaddingOffsets =
+        transition->currentShadowPaddingOffsets();
+
+    // Hidden and sidebar panels keep VisibilityManager's reveal-strip mask.
+    // A visible stable panel bypasses InputMaskFlush: its exact partial span
+    // may never retain a stale old union during a shrink.
+    const bool legacyRevealMaskOwnsInput =
+        m_view->visibility()
+        && (m_view->visibility()->isHidden()
+            || m_view->visibility()->isSidebar());
+    bool inputWasChanged{false};
+    if (legacyRevealMaskOwnsInput) {
+        publishFloatingMaskGeneration(
+            m_floatingMaskHandshake.transferToLegacy());
+    } else {
+        inputWasChanged = m_inputMask != inputBridge;
+        m_inputMask = inputBridge;
+        m_inputMaskSettleTimer.stop();
+        const QRect clearingMask =
+            m_appliedInputMask.isValid()
+            && !inputBridge.contains(m_appliedInputMask)
+            ? m_appliedInputMask.united(inputBridge)
+            : inputBridge;
+        if (m_appliedInputMask != clearingMask) {
+            m_appliedInputMask = clearingMask;
+            m_view->setMask(QRegion(m_appliedInputMask));
+        }
+        if (m_appliedInputMask != m_inputMask) {
+            publishFloatingMaskGeneration(
+                m_floatingMaskHandshake.arm(m_inputMask));
+            m_view->update();
+        } else {
+            publishFloatingMaskGeneration(
+                m_floatingMaskHandshake.adoptExact(
+                    m_inputMask));
+        }
+    }
+
+    m_view->setProperty("_floating_visible_geometry",
+                        QVariant(transition->currentVisibleGeometry()));
+    m_view->setProperty("_floating_anchor_revision",
+                        QVariant::fromValue(++m_floatingAnchorRevision));
+    PanelShadows::self()->setExtraPadding(m_view,
+                                          m_shadowPaddingOffsets);
+
+    updateEnabledBorders();
+    updateEffects();
+
+    // Backing values and native state are installed before observers can pull
+    // any property, so D-Bus never sees a mixed presentation frame.
+    if (rectWasChanged) {
+        Q_EMIT rectChanged();
+    }
+    if (maskWasChanged) {
+        Q_EMIT maskChanged();
+    }
+    if (inputWasChanged) {
+        Q_EMIT inputMaskChanged();
+    }
+}
+
+void Effects::collapseFloatingDamageMask(quint64 submittedGeneration)
+{
+    const bool presentationStillOwnsInput =
+        m_view
+        && m_view->behaveAsPlasmaPanel()
+        && (!m_view->visibility()
+            || (!m_view->visibility()->isHidden()
+                && !m_view->visibility()->isSidebar()));
+    if (!presentationStillOwnsInput
+        || !m_floatingMaskHandshake.canCollapse(
+            submittedGeneration, m_inputMask)) {
+        return;
+    }
+
+    m_floatingMaskHandshake.complete();
+    if (m_appliedInputMask == m_inputMask) {
+        return;
+    }
+    m_appliedInputMask = m_inputMask;
+    m_view->setMask(QRegion(m_appliedInputMask));
+}
+
+void Effects::publishFloatingMaskGeneration(quint64 generation)
+{
+    m_floatingMaskRenderBridge->publish(generation);
+}
+
 QRect Effects::appliedInputMask() const
 {
     return m_appliedInputMask;
+}
+
+bool Effects::floatingDamageMaskPending() const
+{
+    return m_floatingMaskHandshake.pending();
+}
+
+quint64 Effects::floatingDamageMaskGeneration() const
+{
+    return m_floatingMaskHandshake.generation();
 }
 
 Qt::Orientation Effects::lengthAxis() const
@@ -456,7 +743,9 @@ void Effects::clearShadows()
 void Effects::updateShadows()
 {
     if (m_view->behaveAsPlasmaPanel() && drawShadows()) {
-        PanelShadows::self()->addWindow(m_view, enabledBorders());
+        PanelShadows::self()->addWindow(m_view,
+                                        enabledBorders(),
+                                        m_shadowPaddingOffsets);
     } else {
         PanelShadows::self()->removeWindow(m_view);
     }
@@ -474,69 +763,49 @@ void Effects::updateEffects()
 
     bool clearEffects{true};
 
-    if (m_drawEffects) {
-        if (!m_view->behaveAsPlasmaPanel()) {
-            if (!m_rect.isNull() && !m_rect.isEmpty() && m_rect != VisibilityManager::ISHIDDENMASK) {
-                QRegion backMask;
+    if (m_drawEffects && !m_rect.isNull() && !m_rect.isEmpty()
+        && m_rect != VisibilityManager::ISHIDDENMASK) {
+        const QRectF visibleShape =
+            m_view->isFloatingPanel()
+                && m_view->floatingTransition()
+                && m_view->floatingTransition()->hasGeometry()
+            ? m_view->floatingTransition()->currentVisibleGeometry()
+            : QRectF(m_rect);
+        const QRect localVisibleBounds{
+            QPoint{},
+            visibleShape.size().toSize()};
 
-                if (m_backgroundRadiusEnabled) {
-                    //! CustomBackground way
-                    backMask = customMask(QRect(0,0,m_rect.width(), m_rect.height()));
-                } else {
-                    //! Plasma::Theme way
-                    //! this is used when compositing is disabled and provides
-                    //! the correct way for the mask to be painted in order for
-                    //! rounded corners to be shown correctly
-                    if (!m_panelBackgroundSvg) {
-                        return;
-                    }
-
-                    if (m_rect == VisibilityManager::ISHIDDENMASK) {
-                        clearEffects = true;
-                    } else {
-                        const QVariant maskProperty = m_panelBackgroundSvg->property("mask");
-                        if (static_cast<QMetaType::Type>(maskProperty.type()) == QMetaType::QRegion) {
-                            backMask = maskProperty.value<QRegion>();
-                        }
-                    }
-                }
-
-                //! adjust mask coordinates based on local coordinates
-                int fX = m_rect.x(); int fY = m_rect.y();
-
-                //! There are cases that mask is NULL even though it should not
-                //! Example: SidebarOnDemand from v0.10 that BEHAVEASPLASMAPANEL in EditMode
-                //! switching multiple times between inConfigureAppletsMode and LiveEditMode
-                //! is such a case
-                QRegion fixedMask;
-
-                if (!backMask.isNull()) {
-                    fixedMask = backMask;
-                    fixedMask.translate(fX, fY);
-                } else {
-                    fixedMask = QRect(fX, fY, m_rect.width(), m_rect.height());
-                }
-
-                if (!fixedMask.isEmpty()) {
-                    clearEffects = false;
-                    KWindowEffects::enableBlurBehind(m_view, true, fixedMask);
-                    KWindowEffects::enableBackgroundContrast(m_view,
-                                                             m_theme.backgroundContrastEnabled(),
-                                                             m_backEffectContrast,
-                                                             m_backEffectIntesity,
-                                                             m_backEffectSaturation,
-                                                             fixedMask);
-                }
+        QRegion localShape;
+        if (m_backgroundRadiusEnabled) {
+            localShape = customMask(localVisibleBounds);
+        } else if (m_panelBackgroundSvg) {
+            const QVariant maskProperty =
+                m_panelBackgroundSvg->property("mask");
+            if (static_cast<QMetaType::Type>(maskProperty.type())
+                == QMetaType::QRegion) {
+                localShape = maskProperty.value<QRegion>();
             }
-        } else {
-            //!  BEHAVEASPLASMAPANEL case
+        }
+
+        // The rectangle fallback is deliberate for themes that publish no
+        // mask. When a rounded mask exists, fractional translation is
+        // outward-rasterized per source rectangle so the ceil-side row stays
+        // covered without filling transparent corners.
+        const QRegion effectRegion =
+            EffectRegion::rasterizedTranslatedShape(
+                visibleShape,
+                localShape);
+        if (!effectRegion.isEmpty()) {
             clearEffects = false;
-            KWindowEffects::enableBlurBehind(m_view, true);
-            KWindowEffects::enableBackgroundContrast(m_view,
-                                                     m_theme.backgroundContrastEnabled(),
-                                                     m_backEffectContrast,
-                                                     m_backEffectIntesity,
-                                                     m_backEffectSaturation);
+            KWindowEffects::enableBlurBehind(
+                m_view, true, effectRegion);
+            KWindowEffects::enableBackgroundContrast(
+                m_view,
+                m_theme.backgroundContrastEnabled(),
+                m_backEffectContrast,
+                m_backEffectIntesity,
+                m_backEffectSaturation,
+                effectRegion);
         }
     }
 
@@ -598,67 +867,38 @@ void Effects::updateEnabledBorders()
         return;
     }
 
-    KSvg::FrameSvg::EnabledBorders borders = KSvg::FrameSvg::AllBorders;
-
-    if (!m_view->screenEdgeMarginEnabled() && !m_backgroundAllCorners) {
-        switch (m_view->location()) {
-        case Plasma::Types::TopEdge:
-            borders &= ~KSvg::FrameSvg::TopBorder;
-            break;
-
-        case Plasma::Types::LeftEdge:
-            borders &= ~KSvg::FrameSvg::LeftBorder;
-            break;
-
-        case Plasma::Types::RightEdge:
-            borders &= ~KSvg::FrameSvg::RightBorder;
-            break;
-
-        case Plasma::Types::BottomEdge:
-            borders &= ~KSvg::FrameSvg::BottomBorder;
-            break;
-
-        default:
-            break;
-        }
+    const auto edge = presentationEdge(m_view->location());
+    const auto alignment =
+        presentationAlignment(m_view->alignment());
+    if (!edge || !alignment) {
+        return;
     }
 
-    if (!m_backgroundAllCorners) {
-        if ((m_view->location() == Plasma::Types::LeftEdge || m_view->location() == Plasma::Types::RightEdge)) {
-            if (m_view->maxLength() == 1 && m_view->alignment() == Latte::Types::Justify) {
-                if (!m_forceTopBorder) {
-                    borders &= ~KSvg::FrameSvg::TopBorder;
-                }
-
-                if (!m_forceBottomBorder) {
-                    borders &= ~KSvg::FrameSvg::BottomBorder;
-                }
-            }
-
-            if (m_view->alignment() == Latte::Types::Top && !m_forceTopBorder && m_view->offset() == 0) {
-                borders &= ~KSvg::FrameSvg::TopBorder;
-            }
-
-            if (m_view->alignment() == Latte::Types::Bottom && !m_forceBottomBorder && m_view->offset() == 0) {
-                borders &= ~KSvg::FrameSvg::BottomBorder;
-            }
-        }
-
-        if (m_view->location() == Plasma::Types::TopEdge || m_view->location() == Plasma::Types::BottomEdge) {
-            if (m_view->maxLength() == 1 && m_view->alignment() == Latte::Types::Justify) {
-                borders &= ~KSvg::FrameSvg::LeftBorder;
-                borders &= ~KSvg::FrameSvg::RightBorder;
-            }
-
-            if (m_view->alignment() == Latte::Types::Left && m_view->offset() == 0) {
-                borders &= ~KSvg::FrameSvg::LeftBorder;
-            }
-
-            if (m_view->alignment() == Latte::Types::Right  && m_view->offset() == 0) {
-                borders &= ~KSvg::FrameSvg::RightBorder;
-            }
-        }
-    }
+    const FloatingTransition *transition =
+        m_view->floatingTransition();
+    const bool configuredFloatingPanel =
+        m_view->isFloatingPanel()
+        && transition
+        && transition->hasGeometry();
+    const KSvg::FrameSvg::EnabledBorders borders =
+        PanelBorderDecision::enabledBorders({
+            .edge = *edge,
+            .alignment = *alignment,
+            .configuredFloatingPanel = configuredFloatingPanel,
+            .screenEdgeBorderVisible =
+                configuredFloatingPanel
+                && transition->screenEdgeBorderVisible(),
+            .floatingCornersVisible =
+                configuredFloatingPanel
+                && transition->floatingCornersVisible(),
+            .screenEdgeMarginEnabled =
+                m_view->screenEdgeMarginEnabled(),
+            .backgroundAllCorners = m_backgroundAllCorners,
+            .forcePrimaryStartBorder = m_forceTopBorder,
+            .forcePrimaryEndBorder = m_forceBottomBorder,
+            .maxLength = m_view->maxLength(),
+            .offset = m_view->offset(),
+        });
 
     m_hasTopLeftCorner =  (borders == KSvg::FrameSvg::AllBorders) || ((borders & KSvg::FrameSvg::TopBorder) && (borders & KSvg::FrameSvg::LeftBorder));
     m_hasTopRightCorner =  (borders == KSvg::FrameSvg::AllBorders) || ((borders & KSvg::FrameSvg::TopBorder) && (borders & KSvg::FrameSvg::RightBorder));

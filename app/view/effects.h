@@ -9,13 +9,18 @@
 
 // local
 #include "../plasma/extended/theme.h"
+#include "floatingmaskhandshake.h"
 
 // Qt
 #include <QObject>
+#include <QMargins>
 #include <QPointer>
 #include <QQuickView>
 #include <QRect>
 #include <QTimer>
+
+#include <array>
+#include <memory>
 
 // Plasma
 #include <KSvg/FrameSvg>
@@ -57,8 +62,8 @@ class Effects: public QObject
     Q_PROPERTY(QQuickItem *panelBackgroundSvg READ panelBackgroundSvg WRITE setPanelBackgroundSvg NOTIFY panelBackgroundSvgChanged)
 
 public:
-    Effects(Latte::View *parent);
-    virtual ~Effects();
+    explicit Effects(Latte::View *parent);
+    ~Effects() override;
 
     bool animationsBlocked() const;
     void setAnimationsBlocked(bool blocked);
@@ -98,12 +103,13 @@ public:
     QRect inputMask() const;
     void setInputMask(QRect area);
 
-    //! the region actually handed to QWindow::setMask (the union kept across a
-    //! LENGTH-axis shrink, collapsing back to inputMask() once the band settles);
-    //! differs from inputMask() only mid length-shrink. Read back over D-Bus
-    //! (viewsData's appliedInputRegionRects) so the settle can be asserted
-    //! without pixels.
+    //! The region actually handed to QWindow::setMask. Docks can retain a
+    //! length-shrink union until settle; stable panels retain an old union for
+    //! one submitted clearing frame. View::event still enforces inputMask()
+    //! exactly during that damage-only extension. Read back over D-Bus.
     QRect appliedInputMask() const;
+    bool floatingDamageMaskPending() const;
+    quint64 floatingDamageMaskGeneration() const;
 
     QRect rect() const;
     void setRect(QRect area);
@@ -117,6 +123,7 @@ public:
     void setPanelBackgroundSvg(QQuickItem *quickitem);
 
 public Q_SLOTS:
+    void applyFloatingPanelPresentation();
     void clearShadows();
     void updateShadows();
     void updateEffects();
@@ -152,6 +159,8 @@ private Q_SLOTS:
 
 private:
     bool backgroundRadiusIsEnabled() const;
+    bool floatingPresentationOwnsPaint() const;
+    bool floatingPresentationOwnsInput() const;
     qreal currentMidValue(const qreal &max, const qreal &factor, const qreal &min) const;
     QRegion customMask(const QRect &rect);
 
@@ -159,6 +168,8 @@ private:
     //! LENGTH-axis shrink so the vacated region's clearing damage is not clipped
     //! (Qt6 wayland couples mask() to submitted damage; see inputmaskflush.h)
     void applyInputMaskToWindow();
+    void collapseFloatingDamageMask(quint64 submittedGeneration);
+    void publishFloatingMaskGeneration(quint64 generation);
 
     //! the dock's length axis: horizontal for Top/Bottom docks, vertical for
     //! Left/Right - the axis whose shrink InputMaskFlush holds the union across
@@ -196,10 +207,16 @@ private:
     //! clips the vacated region's clearing damage (inputmaskflush.h)
     QRect m_appliedInputMask;
     QRect m_appletsLayoutGeometry;
+    QMargins m_shadowPaddingOffsets;
+    quint64 m_floatingAnchorRevision{0};
 
     //! collapses m_appliedInputMask back to the exact band once the band stops
     //! changing (restarted on every band change, so it only fires when quiet)
     QTimer m_inputMaskSettleTimer;
+    FloatingMaskHandshake::State m_floatingMaskHandshake;
+    std::shared_ptr<FloatingMaskHandshake::RenderBridge>
+        m_floatingMaskRenderBridge;
+    std::array<QMetaObject::Connection, 2> m_renderConnections;
 
     QPointer<Latte::View> m_view;
     QPointer<Latte::Corona> m_corona;

@@ -1,4 +1,4 @@
-110
+114
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -26,10 +26,12 @@ destroyedtypedemotiontest
 dockidentitycontracttest
 dropclassifiertest
 editmodehandleactiontest
+effectregiontest
 effectshandleraudittest
 extraviewhintstest
 filldistributortest
 floatinginputeventtest
+floatingmaskhandshaketest
 floatingpanelgeometrytest
 floatingtransitiontest
 generictoolstest
@@ -53,6 +55,8 @@ lengthoffsetclamptest
 maskgeometrytest
 panelbackgroundscantest
 panelbackgroundtest
+panelborderdecisiontest
+panelshadowstatetest
 parabolicmathtest
 parabolicroutertest
 popupplacementcontracttest

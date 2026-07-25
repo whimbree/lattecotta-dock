@@ -89,6 +89,21 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
     //! and avoid a crash from View::winId() at the same time
     m_positioner = new ViewPart::Positioner(this);
 
+    // Effects is constructed before FloatingTransition, so presentation
+    // wiring belongs here after both objects exist.
+    connect(m_floatingTransition,
+            &ViewPart::FloatingTransition::currentGeometryChanged,
+            m_effects,
+            &ViewPart::Effects::applyFloatingPanelPresentation);
+    connect(this,
+            &View::floatingPanelConfiguredChanged,
+            m_effects,
+            &ViewPart::Effects::applyFloatingPanelPresentation);
+    connect(this,
+            &View::behaveAsPlasmaPanelChanged,
+            m_effects,
+            &ViewPart::Effects::applyFloatingPanelPresentation);
+
     // setTitle(corona->kPackage().metadata().name());
     setIcon(qGuiApp->windowIcon());
     setResizeMode(QuickViewSharedEngine::SizeRootObjectToView);
@@ -164,7 +179,12 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
                 if (m_visibility->isHidden()) {
                     m_interface->deactivateApplets();
                 }
+                m_effects->applyFloatingPanelPresentation();
             });
+            connect(m_visibility,
+                    &ViewPart::VisibilityManager::isSidebarChanged,
+                    m_effects,
+                    &ViewPart::Effects::applyFloatingPanelPresentation);
 
             connect(m_visibility, &ViewPart::VisibilityManager::containsMouseChanged,
                     this, &View::updateTransientWindowsTracking);

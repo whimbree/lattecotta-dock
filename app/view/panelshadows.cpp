@@ -1,10 +1,19 @@
 /*
     SPDX-FileCopyrightText: 2011 Aaron Seigo <aseigo@kde.org>
+    SPDX-FileCopyrightText: 2013 Marco Martin <mart@kde.org>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
 
     SPDX-License-Identifier: LGPL-2.0-or-later
 */
 
+// Extra shadow padding derived from plasma-workspace
+// (shell/panelshadows.cpp at 4c3ace3dfc7b06b3107b52b6e09508be14e73e8a,
+// invent.kde.org/plasma/plasma-workspace; floating-panel refactor
+// f7ee03d065b4e293746248f749a7965c4321b1cb).
+
 #include "panelshadows_p.h"
+#include "panelshadowstate.h"
 
 #include <QDebug>
 #include <KWindowShadow>
@@ -17,21 +26,21 @@ public:
     {
     }
 
-    ~Private()
-    {
-    }
+    ~Private() = default;
 
     void clearTiles();
     void setupTiles();
     void initTile(const QString &element);
-    void updateShadow(QWindow *window, KSvg::FrameSvg::EnabledBorders);
+    void updateShadow(
+        QWindow *window,
+        const Latte::ViewPart::PanelShadowState::State &state);
     void clearShadow(QWindow *window);
     void updateShadows();
     bool hasShadows() const;
 
-    PanelShadows *q;
+    PanelShadows *const q;
 
-    QHash<QWindow *, KSvg::FrameSvg::EnabledBorders> m_windows;
+    Latte::ViewPart::PanelShadowState::Registry<QWindow *> m_windows;
     QHash<QWindow *, KWindowShadow *> m_shadows;
     QVector<KWindowShadowTile::Ptr> m_tiles;
 };
@@ -39,9 +48,7 @@ public:
 class PanelShadowsSingleton
 {
 public:
-    PanelShadowsSingleton()
-    {
-    }
+    PanelShadowsSingleton() = default;
 
     PanelShadows self;
 };
@@ -68,16 +75,31 @@ PanelShadows *PanelShadows::self()
     return &privatePanelShadowsSelf->self;
 }
 
-void PanelShadows::addWindow(QWindow *window, KSvg::FrameSvg::EnabledBorders enabledBorders)
+void PanelShadows::addWindow(
+    QWindow *window,
+    KSvg::FrameSvg::EnabledBorders enabledBorders,
+    const QMargins &extraPadding)
 {
     if (!window) {
         return;
     }
 
-    d->m_windows[window] = enabledBorders;
-    d->updateShadow(window, enabledBorders);
+    const Latte::ViewPart::PanelShadowState::State state{
+        enabledBorders, extraPadding};
+    const auto update = d->m_windows.update(window, state);
+    if (update
+        == Latte::ViewPart::PanelShadowState::Update::Unchanged) {
+        return;
+    }
+
+    d->updateShadow(window, state);
+    if (update
+        == Latte::ViewPart::PanelShadowState::Update::Changed) {
+        return;
+    }
+
     connect(window, &QObject::destroyed, this, [this, window]() {
-        d->m_windows.remove(window);
+        (void)d->m_windows.remove(window);
         d->clearShadow(window);
         if (d->m_windows.isEmpty()) {
             d->clearTiles();
@@ -87,11 +109,10 @@ void PanelShadows::addWindow(QWindow *window, KSvg::FrameSvg::EnabledBorders ena
 
 void PanelShadows::removeWindow(QWindow *window)
 {
-    if (!d->m_windows.contains(window)) {
+    if (!d->m_windows.remove(window)) {
         return;
     }
 
-    d->m_windows.remove(window);
     disconnect(window, nullptr, this, nullptr);
     d->clearShadow(window);
 
@@ -102,12 +123,37 @@ void PanelShadows::removeWindow(QWindow *window)
 
 void PanelShadows::setEnabledBorders(QWindow *window, KSvg::FrameSvg::EnabledBorders enabledBorders)
 {
-    if (!window || !d->m_windows.contains(window)) {
+    if (!window) {
         return;
     }
 
-    d->m_windows[window] = enabledBorders;
-    d->updateShadow(window, enabledBorders);
+    auto state = d->m_windows.stateFor(window);
+    if (!state
+        || state->enabledBorders == enabledBorders) {
+        return;
+    }
+
+    state->enabledBorders = enabledBorders;
+    (void)d->m_windows.update(window, *state);
+    d->updateShadow(window, *state);
+}
+
+void PanelShadows::setExtraPadding(QWindow *window,
+                                   const QMargins &extraPadding)
+{
+    if (!window) {
+        return;
+    }
+
+    auto state = d->m_windows.stateFor(window);
+    if (!state
+        || state->extraPadding == extraPadding) {
+        return;
+    }
+
+    state->extraPadding = extraPadding;
+    (void)d->m_windows.update(window, *state);
+    d->updateShadow(window, *state);
 }
 
 void PanelShadows::Private::updateShadows()
@@ -119,12 +165,14 @@ void PanelShadows::Private::updateShadows()
         if (hadShadowsBefore) {
             clearTiles();
         }
-        for (auto i = m_windows.constBegin(); i != m_windows.constEnd(); ++i) {
+        for (auto i = m_windows.states().constBegin();
+             i != m_windows.states().constEnd(); ++i) {
             updateShadow(i.key(), i.value());
         }
     } else {
         if (hadShadowsBefore) {
-            for (auto i = m_windows.constBegin(); i != m_windows.constEnd(); ++i) {
+            for (auto i = m_windows.states().constBegin();
+                 i != m_windows.states().constEnd(); ++i) {
                 clearShadow(i.key());
             }
             clearTiles();
@@ -161,7 +209,8 @@ void PanelShadows::Private::clearTiles()
     m_tiles.clear();
 }
 
-void PanelShadows::Private::updateShadow(QWindow *window, KSvg::FrameSvg::EnabledBorders enabledBorders)
+void PanelShadows::Private::updateShadow(QWindow *window,
+    const Latte::ViewPart::PanelShadowState::State &state)
 {
     if (!hasShadows()) {
         return;
@@ -180,6 +229,8 @@ void PanelShadows::Private::updateShadow(QWindow *window, KSvg::FrameSvg::Enable
     if (shadow->isCreated()) {
         shadow->destroy();
     }
+
+    const auto enabledBorders = state.enabledBorders;
 
     if (enabledBorders & KSvg::FrameSvg::TopBorder) {
         shadow->setTopTile(m_tiles.at(0));
@@ -267,7 +318,7 @@ void PanelShadows::Private::updateShadow(QWindow *window, KSvg::FrameSvg::Enable
         }
     }
 
-    shadow->setPadding(padding);
+    shadow->setPadding(padding + state.extraPadding);
     shadow->setWindow(window);
 
     if (!shadow->create()) {
