@@ -1,10 +1,12 @@
 /*
     SPDX-FileCopyrightText: 2020 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
 #include "dialog.h"
 #include "windowresizehandler.h"
+#include "../../app/view/floatingpopuppresentation.h"
 
 // Qt
 #include <QDebug>
@@ -29,8 +31,34 @@
 namespace Latte {
 namespace Quick {
 
+namespace {
+
+std::optional<ViewPart::FloatingPanelGeometry::Edge>
+floatingPresentationEdge(Plasma::Types::Location location)
+{
+    switch (location) {
+    case Plasma::Types::TopEdge:
+        return ViewPart::FloatingPanelGeometry::Edge::Top;
+    case Plasma::Types::RightEdge:
+        return ViewPart::FloatingPanelGeometry::Edge::Right;
+    case Plasma::Types::BottomEdge:
+        return ViewPart::FloatingPanelGeometry::Edge::Bottom;
+    case Plasma::Types::LeftEdge:
+        return ViewPart::FloatingPanelGeometry::Edge::Left;
+    case Plasma::Types::Floating:
+    case Plasma::Types::Desktop:
+    case Plasma::Types::FullScreen:
+        return std::nullopt;
+    }
+
+    Q_UNREACHABLE();
+}
+
+}
+
 Dialog::Dialog(QQuickItem *parent)
-    : PlasmaQuick::Dialog(parent)
+    : PlasmaQuick::Dialog(parent),
+      m_anchorWindowFilter(*this)
 {
     connect(this, &PlasmaQuick::Dialog::visualParentChanged, this, &Dialog::onVisualParentChanged);
 
@@ -194,6 +222,17 @@ bool Dialog::eventFilter(QObject *watched, QEvent *e)
         //! popup to its live hint size in place.
         if (pe->propertyName() == QByteArrayLiteral("_latte_popupSizeReset") && !m_inSystemResize) {
             loadPersistedPopupSize();
+        }
+    }
+
+    if (m_anchorWindowFilter.observes(watched)
+        && e->type() == QEvent::DynamicPropertyChange) {
+        auto *propertyEvent =
+            static_cast<QDynamicPropertyChangeEvent *>(e);
+        if (ViewPart::FloatingPopupPresentation::
+                isAnchorRevisionProperty(
+                    propertyEvent->propertyName())) {
+            updateGeometry();
         }
     }
 
@@ -366,6 +405,16 @@ QRect Dialog::appletsLayoutGeometryFromContainment() const
     return geom.isValid() ? geom.toRect() : QRect();
 }
 
+QRectF Dialog::floatingVisibleGeometryFromContainment() const
+{
+    const QVariant geometry =
+        visualParent() && visualParent()->window()
+        ? visualParent()->window()->property(
+              "_floating_visible_geometry")
+        : QVariant{};
+    return geometry.isValid() ? geometry.toRectF() : QRectF{};
+}
+
 int Dialog::appletsPopUpMargin() const
 {
     QVariant margin = visualParent() && visualParent()->window() ? visualParent()->window()->property("_applets_popup_margin") : QVariant();
@@ -379,20 +428,48 @@ void Dialog::onVisualParentChanged()
         disconnect(c);
     }
 
-    if (!visualParent() || !flags().testFlag(Qt::ToolTip) || !visualParent()->metaObject())  {
+    (void)m_anchorWindowFilter.followWindow(nullptr);
+
+    if (!visualParent() || !visualParent()->metaObject())  {
         return;
     }
 
-    bool hassignal = (visualParent()->metaObject()->indexOfSignal(QMetaObject::normalizedSignature("anchoredTooltipPositionChanged()")) != -1);
+    // A live QQuickItem can migrate between host windows without changing
+    // visualParent. Follow that windowChanged edge so old containment
+    // revisions stop moving this popup and the new host takes over.
+    m_visualParentConnections[1] =
+        connect(visualParent(),
+                &QQuickItem::windowChanged,
+                this,
+                &Dialog::refreshAnchorWindow);
+    refreshAnchorWindow();
 
-    if (hassignal) {
-        m_visualParentConnections[0] = connect(visualParent(), SIGNAL(anchoredTooltipPositionChanged()) , this, SLOT(updateGeometry()));
+    if (flags().testFlag(Qt::ToolTip)) {
+        const bool hasSignal =
+            visualParent()->metaObject()->indexOfSignal(
+                QMetaObject::normalizedSignature(
+                    "anchoredTooltipPositionChanged()")) != -1;
+        if (hasSignal) {
+            m_visualParentConnections[0] =
+                connect(visualParent(),
+                        SIGNAL(anchoredTooltipPositionChanged()),
+                        this,
+                        SLOT(updateGeometry()));
+        }
     }
 
-    //! one placement per anchor change. Anchors without the follow signal
-    //! (the previews' resting anchor) would otherwise only be honored on the
-    //! next resize, so switching between two same-sized contents would leave
-    //! the window sitting over the previous anchor.
+}
+
+void Dialog::refreshAnchorWindow()
+{
+    QWindow *window =
+        visualParent() ? visualParent()->window() : nullptr;
+    (void)m_anchorWindowFilter.followWindow(window);
+
+    //! one placement per anchor or host change. Anchors without the follow
+    //! signal (the previews' resting anchor) would otherwise only be honored
+    //! on the next resize, so switching between same-sized contents or
+    //! migrating a live anchor would leave the popup at the previous host.
     if (isVisible()) {
         updateGeometry();
     }
@@ -578,6 +655,16 @@ QPoint Dialog::popupPosition(QQuickItem *item, const QSize &size)
         int y = 0;
 
         int popupmargin = qMax(0, appletsPopUpMargin());
+        const QRectF floatingVisibleLocal =
+            floatingVisibleGeometryFromContainment();
+        QRectF floatingVisibleGlobal;
+        if (floatingVisibleLocal.isValid()
+            && !floatingVisibleLocal.isEmpty()) {
+            floatingVisibleGlobal = floatingVisibleLocal;
+            floatingVisibleGlobal.moveTopLeft(
+                visualparent->window()->mapToGlobal(
+                    floatingVisibleLocal.topLeft()));
+        }
 
         if (m_edge == Plasma::Types::LeftEdge || m_edge == Plasma::Types::RightEdge) {
             //! vertical scenario
@@ -589,14 +676,33 @@ QPoint Dialog::popupPosition(QQuickItem *item, const QSize &size)
             x = parenttopleft.x() + (visualparent->width()/2) - (size.width()/2);
         }
 
+        const auto floatingEdge =
+            floatingPresentationEdge(m_edge);
+        const auto floatingAnchor =
+            floatingEdge
+            ? ViewPart::FloatingPopupPresentation::
+                perpendicularAnchor(
+                    *floatingEdge,
+                    floatingVisibleGlobal,
+                    size,
+                    popupmargin)
+            : std::nullopt;
         if (m_edge == Plasma::Types::LeftEdge) {
-            x = parenttopleft.x() + visualparent->width() + popupmargin;
+            x = floatingAnchor.value_or(
+                parenttopleft.x()
+                + visualparent->width() + popupmargin);
         } else if (m_edge == Plasma::Types::RightEdge) {
-            x = parenttopleft.x() - size.width() - popupmargin;
+            x = floatingAnchor.value_or(
+                parenttopleft.x()
+                - size.width() - popupmargin);
         } else if (m_edge == Plasma::Types::TopEdge) {
-            y = parenttopleft.y() + visualparent->height() + popupmargin;
+            y = floatingAnchor.value_or(
+                parenttopleft.y()
+                + visualparent->height() + popupmargin);
         } else { // bottom case
-            y = parenttopleft.y() - size.height() - popupmargin;
+            y = floatingAnchor.value_or(
+                parenttopleft.y()
+                - size.height() - popupmargin);
         }
 
         x = qBound(screengeometry.x(), x, screengeometry.right() - size.width() + 1);

@@ -1,4 +1,4 @@
-114
+115
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -33,6 +33,7 @@ filldistributortest
 floatinginputeventtest
 floatingmaskhandshaketest
 floatingpanelgeometrytest
+floatingpopuppresentationtest
 floatingtransitiontest
 generictoolstest
 iconsourceclassifiertest

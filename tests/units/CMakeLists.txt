@@ -109,6 +109,12 @@ latte_add_unit_test(floatinginputeventtest)
 target_link_libraries(floatinginputeventtest
     Qt6::Gui)
 
+# FP-3 popup presentation: visible-shape anchoring and containment display-hint
+# updates remain independent of QML signal timing.
+latte_add_unit_test(floatingpopuppresentationtest)
+target_link_libraries(floatingpopuppresentationtest
+    Qt6::Gui)
+
 # FP-3 blur/contrast region ownership: a rounded local shape is clipped and
 # translated into the controller's outward paint raster.
 latte_add_unit_test(effectregiontest)

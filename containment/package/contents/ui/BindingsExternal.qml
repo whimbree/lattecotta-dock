@@ -14,7 +14,15 @@ import org.kde.latte.core 0.2 as LatteCore
 import org.kde.latte.private.containment 0.1 as LatteContainment
 
 Item {
+    id: externalBindings
+
     property Item containmentItem
+    readonly property var dockView: externalBindings.containmentItem
+                                    ? externalBindings.containmentItem.latteView : null
+    readonly property var dockBackground: externalBindings.containmentItem
+                                          ? externalBindings.containmentItem.background : null
+    readonly property bool panelIsHorizontal: externalBindings.containmentItem
+                                              && externalBindings.containmentItem.isHorizontal
 
     property bool updateIsEnabled: autosize.inCalculatedIconSize
                                    && !visibilityManager.inSlidingIn
@@ -269,8 +277,45 @@ Item {
         restoreMode: Binding.RestoreNone
         when: latteView && latteView.effects && visibilityManager.inNormalState
         value: {
-            if (root.behaveAsPlasmaPanel
-                    || !LatteCore.WindowSystem.compositingActive
+            if (root.behaveAsPlasmaPanel) {
+                if (!externalBindings.dockView
+                        || !externalBindings.dockBackground) {
+                    console.error("Stable panel popup bounds lack their view or background authority");
+                    return Qt.rect(-1, -1, 0, 0);
+                }
+
+                var transition = externalBindings.dockView.floatingTransition;
+                if (!transition || !transition.hasGeometry) {
+                    return Qt.rect(-1, -1, 0, 0);
+                }
+
+                var panelBounds = transition.currentPaintMaskGeometry;
+                var panelTail = externalBindings.dockBackground.tailRoundness
+                        + externalBindings.dockBackground.tailRoundnessMargin;
+                var panelHead = externalBindings.dockBackground.headRoundness
+                        + externalBindings.dockBackground.headRoundnessMargin;
+                var primaryLength = externalBindings.panelIsHorizontal
+                        ? panelBounds.width : panelBounds.height;
+                if (panelTail + panelHead >= primaryLength) {
+                    console.warn("Refusing degenerate panel applet popup bounds:",
+                                 panelTail, panelHead, primaryLength);
+                    return Qt.rect(-1, -1, 0, 0);
+                }
+
+                if (externalBindings.panelIsHorizontal) {
+                    return Qt.rect(panelBounds.x + panelTail,
+                                   panelBounds.y,
+                                   panelBounds.width - panelTail - panelHead,
+                                   panelBounds.height);
+                }
+
+                return Qt.rect(panelBounds.x,
+                               panelBounds.y + panelTail,
+                               panelBounds.width,
+                               panelBounds.height - panelTail - panelHead);
+            }
+
+            if (!LatteCore.WindowSystem.compositingActive
                     || (!parabolic.isEnabled && root.userShowPanelBackground && Plasmoid.configuration.panelSize===100)) {
                 var paddingtail = background.tailRoundness + background.tailRoundnessMargin;
                 var paddinghead = background.headRoundness + background.headRoundnessMargin;

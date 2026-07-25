@@ -459,6 +459,8 @@ ContainmentItem {
     }
 
     onLatteViewChanged: {
+        updateFloatingAppletPopupHint();
+
         if (latteView) {
             if (latteView.positioner) {
                 latteView.positioner.hidingForRelocationStarted.connect(visibilityManager.slotHideDockDuringLocationChange);
@@ -482,6 +484,10 @@ ContainmentItem {
 
     Connections {
         target: latteView
+        function onFloatingPanelConfiguredChanged() {
+            root.updateFloatingAppletPopupHint();
+        }
+
         onPositionerChanged: {
             if (latteView.positioner) {
                 latteView.positioner.hidingForRelocationStarted.connect(visibilityManager.slotHideDockDuringLocationChange);
@@ -495,6 +501,32 @@ ContainmentItem {
                 latteView.visibility.onMustBeHide.connect(visibilityManager.slotMustBeHide);
                 latteView.visibility.onMustBeShown.connect(visibilityManager.slotMustBeShown);
             }
+        }
+    }
+
+    Connections {
+        target: latteView ? latteView.floatingTransition : null
+        function onTargetChanged() {
+            root.updateFloatingAppletPopupHint();
+        }
+    }
+
+    function updateFloatingAppletPopupHint() {
+        if (!Plasmoid) {
+            return;
+        }
+
+        var floatingBit =
+                PlasmaCore.Types.ContainmentPrefersFloatingApplets;
+        var previousHints = Plasmoid.containmentDisplayHints;
+        var nextHints = latteView && latteView.floatingTransition
+                ? latteView.floatingTransition.displayHintsWithFloatingPreference(
+                    previousHints,
+                    floatingBit,
+                    latteView.floatingPanelConfigured)
+                : (previousHints & ~floatingBit);
+        if (nextHints !== previousHints) {
+            Plasmoid.containmentDisplayHints = nextHints;
         }
     }
 
@@ -524,6 +556,7 @@ ContainmentItem {
     }
 
     Component.onCompleted: {
+        updateFloatingAppletPopupHint();
         upgrader_v010_alignment();
 
         fastLayoutManager.restore();

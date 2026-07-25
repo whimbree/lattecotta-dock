@@ -44,6 +44,8 @@ private Q_SLOTS:
     void reversesFromCurrentQrealValueAtFullDuration();
     void survivesRapidAlternatingTargetsWithoutGeometryReconfigure();
     void zeroDurationSettlesSynchronously();
+    void canonicalizesNearEndpointsExactly();
+    void togglesPopupHintFromTargetAndPreservesUnknownBits();
     void ineligibleControllerRemainsFloated();
     void rejectsInvalidConfigurationWithoutReplacingStableState();
 };
@@ -156,6 +158,68 @@ void FloatingTransitionTest::zeroDurationSettlesSynchronously()
     QCOMPARE(controller.target(), FloatingTransition::Target::Attached);
     QCOMPARE(controller.phase(), FloatingTransition::Phase::Resting);
     QVERIFY(!controller.running());
+}
+
+void FloatingTransitionTest::canonicalizesNearEndpointsExactly()
+{
+    FloatingTransition controller;
+    controller.setAnimationDuration(0);
+    controller.setEligible(true);
+
+    QVERIFY(controller.setProperty("floatingness", 1e-13));
+    QSignalSpy attachedGeometryChanged(
+        &controller, &FloatingTransition::currentGeometryChanged);
+    controller.requestAttached();
+    QCOMPARE(controller.floatingness(), 0.0);
+    QCOMPARE(attachedGeometryChanged.count(), 1);
+
+    QVERIFY(controller.setProperty("floatingness", 1.0 - 1e-13));
+    QSignalSpy floatedGeometryChanged(
+        &controller, &FloatingTransition::currentGeometryChanged);
+    controller.requestFloated();
+    QCOMPARE(controller.floatingness(), 1.0);
+    QCOMPARE(floatedGeometryChanged.count(), 1);
+}
+
+void FloatingTransitionTest::
+    togglesPopupHintFromTargetAndPreservesUnknownBits()
+{
+    QPropertyAnimation *animation{nullptr};
+    QScopedPointer<FloatingTransition> controller(
+        makeController(animation));
+    constexpr int unknownBits{0b1010'0000};
+    constexpr int floatingBit{0b0000'0100};
+
+    // makeController targets Attached while floatingness is still at 1.
+    // The hint follows the target immediately, not the current progress.
+    QCOMPARE(
+        controller->displayHintsWithFloatingPreference(
+            unknownBits | floatingBit,
+            floatingBit,
+            true),
+        unknownBits);
+
+    controller->requestFloated();
+    QCOMPARE(
+        controller->displayHintsWithFloatingPreference(
+            unknownBits,
+            floatingBit,
+            true),
+        unknownBits | floatingBit);
+
+    controller->requestAttached();
+    QCOMPARE(
+        controller->displayHintsWithFloatingPreference(
+            unknownBits | floatingBit,
+            floatingBit,
+            true),
+        unknownBits);
+    QCOMPARE(
+        controller->displayHintsWithFloatingPreference(
+            unknownBits | floatingBit,
+            floatingBit,
+            false),
+        unknownBits);
 }
 
 void FloatingTransitionTest::ineligibleControllerRemainsFloated()
