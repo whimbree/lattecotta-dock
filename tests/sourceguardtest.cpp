@@ -370,6 +370,18 @@ private:
             && code.contains(QStringLiteral(
                    "formaximizedintruefalsetruefalsetruefalsetruefalse;do"))
             && code.contains(QStringLiteral(
+                   "if[[\"$target\"==\"$expected_target\""
+                   "&&\"$phase\"==\"$expected_phase\""
+                   "&&\"$running\"==true]]"
+                   "\\&&awk-vprogress=\"$progress\""
+                   "'BEGIN{exit!(progress>0.0&&progress<1.0)}'"))
+            && code.contains(QStringLiteral(
+                   "[[\"$geometry_revision$surface_revision$layer_revision\""
+                   "==\"$base_revisions\"]]"))
+            && code.contains(QStringLiteral(
+                   "wait_for_in_flight_target"
+                   "\"$expected_target\"\"$expected_phase\""))
+            && code.contains(QStringLiteral(
                    "assert_stable_contract\"rapidreversalstorm\""))
             && code.contains(QStringLiteral(
                    "expected_h=$((screen_h-stable_reservation_depth))"))

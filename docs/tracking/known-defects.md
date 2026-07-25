@@ -2407,6 +2407,26 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `matrix_stage` and requires restoration state to become active immediately
   after the pristine snapshot.
 
+### D191 - Stable-canvas reversal storm accepted settled transitions
+- STATUS: FIXED ON THE FP-2 BRANCH. Integration rebase and merge are pending.
+- FOUND: 2026-07-24, independent FP-2 review.
+- SYMPTOM: recipe 071 claimed eight rapid in-flight reversals after observing
+  only the requested target. A transition that had already settled could pass
+  every storm iteration.
+- ROOT: the storm helper did not require the matching active phase,
+  `transitionRunning=true`, or fractional qreal progress before requesting the
+  opposite target.
+- FIX: require every alternating target to be observed in its matching
+  attaching or floating phase with `0 < progress < 1`. Require the
+  transition-geometry, surface-publication, and layer-shell-configure
+  revisions to remain equal to their pre-storm values at every observation.
+- EVIDENCE: recipe 071 now refuses a selected or settled target unless the
+  transition is actively in flight. `sourceguardtest` pins the phase,
+  running-state, fractional-progress, revision, and alternating-call
+  requirements. The corrected nested-KWin run observed all eight alternating
+  targets in flight and passed with the 88 px maximum-depth reservation and
+  every stable geometry and revision assertion unchanged.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
   is merged. FP-2 (the stable canvas and transition controller) is complete on

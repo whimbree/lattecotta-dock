@@ -62,9 +62,14 @@ Panel-only transition): the recipe now uses the deterministic matrix Panel
 fixture and explicit panel-surface gap ownership. The next run found D189
 (KWin script collection delay consumed the transition under test): transition
 mutations now use a scoped 10 ms collection delay while the harness keeps its
-500 ms default. Independent review, the canonical gate, and the pull request
-remain before merge. No real desktop process or surface was inspected, stopped,
-or restarted during this implementation.
+500 ms default. Independent review then found D190 (stable-canvas fixture
+cleanup started after destructive staging) and D191 (stable-canvas reversal
+storm accepted settled transitions). Cleanup now owns every mutation after the
+pristine snapshot, and every alternating storm target must be observed in its
+matching active phase at fractional progress. A fresh independent review, the
+canonical gate, and the pull request remain before merge. No real desktop
+process or surface was inspected, stopped, or restarted during this
+implementation.
 
 ## 2026-07-24: FP-1 owns one maximum-depth reservation per output edge
 
