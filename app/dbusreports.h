@@ -689,6 +689,30 @@ inline QString edgeName(Plasma::Types::Location location)
     Q_UNREACHABLE();
 }
 
+constexpr int reservationDepthForStruts(
+    const QRect &struts,
+    Plasma::Types::Location edge)
+{
+    if (struts.isEmpty()) {
+        return 0;
+    }
+
+    switch (edge) {
+    case Plasma::Types::TopEdge:
+    case Plasma::Types::BottomEdge:
+        return struts.height();
+    case Plasma::Types::LeftEdge:
+    case Plasma::Types::RightEdge:
+        return struts.width();
+    case Plasma::Types::Floating:
+    case Plasma::Types::Desktop:
+    case Plasma::Types::FullScreen:
+        return 0;
+    }
+
+    Q_UNREACHABLE();
+}
+
 inline QString alignmentName(Types::Alignment alignment)
 {
     switch (alignment) {
@@ -1675,7 +1699,7 @@ inline bool dockReservationRecordsAgree(
             groupsByContributor.constFind(
                 view.persistentDockId);
         if (membership == groupsByContributor.constEnd()) {
-            if (!view.publishedStruts.isEmpty()
+            if (view.publishedStruts != QRect()
                     || view.reservationSurfacePresent
                     || view.reservationOutputId
                     || view.reservationEdge
@@ -1718,6 +1742,10 @@ inline bool dockReservationRecordsAgree(
                     != std::optional{group->edge}
                 || !view.reservationContributionDepth
                 || *view.reservationContributionDepth <= 0
+                || reservationDepthForStruts(
+                    view.publishedStruts,
+                    group->edge)
+                    != *view.reservationContributionDepth
                 || view.reservationPublishedDepth
                     != std::optional{
                         group->publishedDepth}
