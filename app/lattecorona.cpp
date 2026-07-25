@@ -1644,7 +1644,8 @@ QString Corona::dockSystemData()
         m_layoutsManager->synchronizer()->currentViews(),
         m_universalSettings->inConfigureAppletsMode(),
         ++m_dockSystemSnapshotSequence,
-        m_dbusObjectIdentities);
+        m_dbusObjectIdentities,
+        m_screenSpaceReservationCoordinator);
 }
 
 QStringList Corona::viewTemplatesData()

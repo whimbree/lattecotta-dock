@@ -61,6 +61,7 @@ private Q_SLOTS:
     void dockRelationshipGraphAcceptsOnlyDirectLiveRoots();
     void dockSystemSnapshotSerializesTypedRuntimeState();
     void dockSystemSnapshotPinsNullableWireStates();
+    void dockSystemSnapshotRejectsReservationDisagreement();
     void dockSystemSnapshotCanonicalizesShuffledViewsAndLinkedIds();
     void dockSystemSnapshotKeepsConfigureModeIsolatedToEditedView();
 
@@ -780,9 +781,13 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     record.layerShellExclusiveZone = 48;
     record.reservationSurfacePresent = true;
     record.reservationOutputId = 10;
+    record.reservationEdge =
+        Plasma::Types::LeftEdge;
     record.reservationContributionDepth = 40;
     record.reservationPublishedDepth = 48;
     record.reservationGroupMemberCount = 2;
+    record.reservationGroupGeneration = 53;
+    record.reservationContributorDockIds = {7, 9};
     record.reservationGeometry = QRect(0, 40, 48, 1360);
     record.reservationWindowGeometry = QRect(0, 40, 1, 1360);
     record.reservationLayerShellAnchors = {
@@ -818,6 +823,28 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     DockSystemSnapshot snapshot;
     snapshot.snapshotSequence = 41;
     snapshot.globalConfigureAppletsMode = true;
+    snapshot.reservationStateGeneration = 53;
+    DockReservationGroupRecord reservationGroup;
+    reservationGroup.outputId = 10;
+    reservationGroup.edge = Plasma::Types::LeftEdge;
+    reservationGroup.generation = 53;
+    reservationGroup.publishedDepth = 48;
+    reservationGroup.contributorDockIds = {9, 7};
+    reservationGroup.geometry = record.reservationGeometry;
+    reservationGroup.windowGeometry =
+        record.reservationWindowGeometry;
+    reservationGroup.layerShellPresent = true;
+    reservationGroup.layerShellAnchors =
+        record.reservationLayerShellAnchors;
+    reservationGroup.layerShellMargins =
+        record.reservationLayerShellMargins;
+    reservationGroup.layerShellExclusiveEdge =
+        record.reservationLayerShellExclusiveEdge;
+    reservationGroup.layerShellExclusiveZone =
+        record.reservationLayerShellExclusiveZone;
+    reservationGroup.publisher =
+        record.objects.reservationPublisher;
+    snapshot.reservationGroups = {reservationGroup};
     snapshot.views = {record};
 
     const QString data = serializeDockSystemSnapshot(snapshot);
@@ -825,11 +852,20 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     const QJsonObject root = QJsonDocument::fromJson(data.toUtf8()).object();
 
     QCOMPARE(sortedKeys(root), (QStringList{
-        QStringLiteral("globalConfigureAppletsMode"), QStringLiteral("schemaVersion"),
-        QStringLiteral("snapshotSequence"), QStringLiteral("stacking"), QStringLiteral("views")}));
+        QStringLiteral("globalConfigureAppletsMode"),
+        QStringLiteral("reservationGroups"),
+        QStringLiteral("reservationStateGeneration"),
+        QStringLiteral("schemaVersion"),
+        QStringLiteral("snapshotSequence"),
+        QStringLiteral("stacking"),
+        QStringLiteral("views")}));
     QCOMPARE(DockSystemSnapshot::SchemaVersion, 4);
     QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 4);
     QCOMPARE(root.value(QStringLiteral("snapshotSequence")).toString(), QStringLiteral("41"));
+    QCOMPARE(
+        root.value(
+            QStringLiteral("reservationStateGeneration")).toString(),
+        QStringLiteral("53"));
     QCOMPARE(root.value(QStringLiteral("globalConfigureAppletsMode")).toBool(), true);
     const QJsonValue stackingValue = root.value(QStringLiteral("stacking"));
     QCOMPARE(stackingValue.type(), QJsonValue::Object);
@@ -846,8 +882,52 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     requireJsonType(root, QStringLiteral("schemaVersion"), QJsonValue::Double);
     requireJsonType(root, QStringLiteral("snapshotSequence"), QJsonValue::String);
     requireJsonType(root, QStringLiteral("globalConfigureAppletsMode"), QJsonValue::Bool);
+    requireJsonType(root, QStringLiteral("reservationGroups"), QJsonValue::Array);
+    requireJsonType(root, QStringLiteral("reservationStateGeneration"), QJsonValue::String);
     requireJsonType(root, QStringLiteral("stacking"), QJsonValue::Object);
     requireJsonType(root, QStringLiteral("views"), QJsonValue::Array);
+
+    const QJsonObject group =
+        root.value(
+            QStringLiteral("reservationGroups"))
+            .toArray().at(0).toObject();
+    QCOMPARE(sortedKeys(group), (QStringList{
+        QStringLiteral("contributorDockIds"),
+        QStringLiteral("edge"),
+        QStringLiteral("generation"),
+        QStringLiteral("geometry"),
+        QStringLiteral("layerShellAnchors"),
+        QStringLiteral("layerShellExclusiveEdge"),
+        QStringLiteral("layerShellExclusiveZone"),
+        QStringLiteral("layerShellMargins"),
+        QStringLiteral("layerShellPresent"),
+        QStringLiteral("memberCount"),
+        QStringLiteral("outputId"),
+        QStringLiteral("publishedDepth"),
+        QStringLiteral("publisher"),
+        QStringLiteral("windowGeometry")}));
+    QCOMPARE(
+        group.value(QStringLiteral("outputId")).toInt(),
+        10);
+    QCOMPARE(
+        group.value(QStringLiteral("edge")).toString(),
+        QStringLiteral("left"));
+    QCOMPARE(
+        group.value(QStringLiteral("generation")).toString(),
+        QStringLiteral("53"));
+    QCOMPARE(
+        group.value(QStringLiteral("publishedDepth")).toInt(),
+        48);
+    QCOMPARE(
+        group.value(
+            QStringLiteral("contributorDockIds")).toArray(),
+        (QJsonArray{7, 9}));
+    QCOMPARE(
+        group.value(QStringLiteral("memberCount")).toInt(),
+        2);
+    QCOMPARE(
+        group.value(QStringLiteral("publisher")).toString(),
+        QStringLiteral("object-27"));
 
     const QJsonObject view = root.value(QStringLiteral("views")).toArray().at(0).toObject();
     QCOMPARE(sortedKeys(view), (QStringList{
@@ -877,7 +957,10 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("publishedStruts"), QStringLiteral("relationship"),
         QStringLiteral("relocationGeneration"),
         QStringLiteral("reservationContributionDepth"),
+        QStringLiteral("reservationContributorDockIds"),
+        QStringLiteral("reservationEdge"),
         QStringLiteral("reservationGeometry"),
+        QStringLiteral("reservationGroupGeneration"),
         QStringLiteral("reservationGroupMemberCount"),
         QStringLiteral("reservationLayerShellAnchors"),
         QStringLiteral("reservationLayerShellExclusiveEdge"),
@@ -917,9 +1000,20 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(view.value(QStringLiteral("reservationGeometry")).toArray(),
              serializeRect(record.reservationGeometry));
     QCOMPARE(view.value(QStringLiteral("reservationOutputId")).toInt(), 10);
+    QCOMPARE(
+        view.value(QStringLiteral("reservationEdge")).toString(),
+        QStringLiteral("left"));
     QCOMPARE(view.value(QStringLiteral("reservationContributionDepth")).toInt(), 40);
     QCOMPARE(view.value(QStringLiteral("reservationPublishedDepth")).toInt(), 48);
     QCOMPARE(view.value(QStringLiteral("reservationGroupMemberCount")).toInt(), 2);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("reservationGroupGeneration")).toString(),
+        QStringLiteral("53"));
+    QCOMPARE(
+        view.value(
+            QStringLiteral("reservationContributorDockIds")).toArray(),
+        (QJsonArray{7, 9}));
     QCOMPARE(view.value(QStringLiteral("reservationWindowGeometry")).toArray(),
              serializeRect(record.reservationWindowGeometry));
     QCOMPARE(view.value(QStringLiteral("reservationLayerShellAnchors")).toArray(),
@@ -960,6 +1054,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("type"), QStringLiteral("edge"), QStringLiteral("orientation"),
         QStringLiteral("alignment"), QStringLiteral("visibilityMode"),
         QStringLiteral("layerShellExclusiveEdge"),
+        QStringLiteral("reservationEdge"),
+        QStringLiteral("reservationGroupGeneration"),
         QStringLiteral("reservationLayerShellExclusiveEdge")};
     const QStringList numberFields{
         QStringLiteral("persistentDockId"), QStringLiteral("logicalDockId"),
@@ -990,6 +1086,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("maskRect"), QStringLiteral("inputMask"),
         QStringLiteral("appliedInputMask"), QStringLiteral("publishedStruts"),
         QStringLiteral("layerShellAnchors"), QStringLiteral("layerShellMargins"),
+        QStringLiteral("reservationContributorDockIds"),
         QStringLiteral("reservationGeometry"),
         QStringLiteral("reservationWindowGeometry"),
         QStringLiteral("reservationLayerShellAnchors"),
@@ -1025,9 +1122,27 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     snapshot.snapshotSequence = 1;
     snapshot.views = {record};
 
-    const QJsonObject view = QJsonDocument::fromJson(
-        serializeDockSystemSnapshot(snapshot).toUtf8())
-                                 .object().value(QStringLiteral("views")).toArray().at(0).toObject();
+    const QJsonObject root = QJsonDocument::fromJson(
+        serializeDockSystemSnapshot(snapshot).toUtf8()).object();
+    requireJsonType(
+        root,
+        QStringLiteral("reservationStateGeneration"),
+        QJsonValue::String);
+    QCOMPARE(
+        root.value(
+            QStringLiteral("reservationStateGeneration")).toString(),
+        QStringLiteral("0"));
+    requireJsonType(
+        root,
+        QStringLiteral("reservationGroups"),
+        QJsonValue::Array);
+    QVERIFY(
+        root.value(
+            QStringLiteral("reservationGroups")).toArray().isEmpty());
+
+    const QJsonObject view =
+        root.value(
+            QStringLiteral("views")).toArray().at(0).toObject();
     requireJsonType(view, QStringLiteral("originalDockId"), QJsonValue::Null);
     requireJsonType(view, QStringLiteral("linkPlacement"), QJsonValue::Null);
     requireJsonType(view, QStringLiteral("configuredIconSize"), QJsonValue::Null);
@@ -1042,9 +1157,15 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     requireJsonType(view, QStringLiteral("reservationLayerShellExclusiveEdge"), QJsonValue::Null);
     requireJsonType(view, QStringLiteral("reservationLayerShellExclusiveZone"), QJsonValue::Null);
     requireJsonType(view, QStringLiteral("reservationOutputId"), QJsonValue::Null);
+    requireJsonType(view, QStringLiteral("reservationEdge"), QJsonValue::Null);
     requireJsonType(view, QStringLiteral("reservationContributionDepth"), QJsonValue::Null);
     requireJsonType(view, QStringLiteral("reservationPublishedDepth"), QJsonValue::Null);
     requireJsonType(view, QStringLiteral("reservationGroupMemberCount"), QJsonValue::Null);
+    requireJsonType(view, QStringLiteral("reservationGroupGeneration"), QJsonValue::Null);
+    requireJsonType(view, QStringLiteral("reservationContributorDockIds"), QJsonValue::Array);
+    QVERIFY(
+        view.value(
+            QStringLiteral("reservationContributorDockIds")).toArray().isEmpty());
     requireJsonType(view, QStringLiteral("reservationSurfacePresent"), QJsonValue::Bool);
     requireJsonType(view, QStringLiteral("reservationGeometry"), QJsonValue::Array);
     requireJsonType(view, QStringLiteral("reservationWindowGeometry"), QJsonValue::Array);
@@ -1058,6 +1179,96 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     for (const auto &key : objects.keys()) {
         requireJsonType(objects, key, QJsonValue::Null);
     }
+}
+
+void DbusReportsTest::dockSystemSnapshotRejectsReservationDisagreement()
+{
+    DockReservationGroupRecord group;
+    group.outputId = 10;
+    group.edge = Plasma::Types::BottomEdge;
+    group.generation = 4;
+    group.publishedDepth = 48;
+    group.contributorDockIds = {1, 2};
+    group.geometry = QRect(0, 952, 1600, 48);
+    group.windowGeometry = QRect(0, 0, 1600, 1);
+    group.layerShellPresent = true;
+    group.layerShellExclusiveEdge =
+        QStringLiteral("bottom");
+    group.layerShellExclusiveZone = 48;
+    group.publisher = QStringLiteral("object-9");
+
+    const auto contributor =
+        [&group](const uint id, const int depth) {
+            DockSystemViewRecord view;
+            view.persistentDockId = id;
+            view.logicalDockId = id;
+            view.screenId = group.outputId;
+            view.edge = group.edge;
+            view.reservationSurfacePresent = true;
+            view.reservationOutputId =
+                group.outputId;
+            view.reservationEdge = group.edge;
+            view.reservationContributionDepth =
+                depth;
+            view.reservationPublishedDepth =
+                group.publishedDepth;
+            view.reservationGroupMemberCount =
+                static_cast<int>(
+                    group.contributorDockIds.size());
+            view.reservationGroupGeneration =
+                group.generation;
+            view.reservationContributorDockIds =
+                group.contributorDockIds;
+            view.reservationGeometry =
+                group.geometry;
+            view.objects.reservationPublisher =
+                group.publisher;
+            return view;
+        };
+
+    DockSystemSnapshot valid;
+    valid.reservationStateGeneration = 4;
+    valid.reservationGroups = {group};
+    valid.views = {
+        contributor(1, 40),
+        contributor(2, 48)};
+    QVERIFY(dockReservationRecordsAgree(valid));
+
+    const auto rejects =
+        [&valid](const auto &mutate) {
+            DockSystemSnapshot invalid = valid;
+            mutate(invalid);
+            QVERIFY(!dockReservationRecordsAgree(invalid));
+        };
+    rejects([](auto &snapshot) {
+        snapshot.reservationGroups[0].publisher.clear();
+    });
+    rejects([](auto &snapshot) {
+        snapshot.reservationGroups[0].geometry = QRect();
+    });
+    rejects([](auto &snapshot) {
+        snapshot.reservationGroups[0].layerShellPresent = false;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.reservationGroups[0].generation = 5;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.reservationGroups[0].contributorDockIds.removeLast();
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].reservationEdge =
+            Plasma::Types::TopEdge;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].objects.reservationPublisher =
+            QStringLiteral("object-10");
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views.clear();
+    });
+    rejects([](auto &snapshot) {
+        snapshot.reservationGroups.clear();
+    });
 }
 
 void DbusReportsTest::dockSystemSnapshotCanonicalizesShuffledViewsAndLinkedIds()
@@ -1090,19 +1301,51 @@ void DbusReportsTest::dockSystemSnapshotCanonicalizesShuffledViewsAndLinkedIds()
     DockSystemSnapshot first;
     first.snapshotSequence = 9;
     first.views = {highClone, original, independent, lowClone};
+    DockReservationGroupRecord secondaryBottom;
+    secondaryBottom.outputId = 11;
+    secondaryBottom.edge = Plasma::Types::BottomEdge;
+    secondaryBottom.generation = 8;
+    secondaryBottom.contributorDockIds = {51, 41};
+    DockReservationGroupRecord primaryLeft;
+    primaryLeft.outputId = 10;
+    primaryLeft.edge = Plasma::Types::LeftEdge;
+    primaryLeft.generation = 7;
+    primaryLeft.contributorDockIds = {30, 7};
+    first.reservationGroups = {
+        secondaryBottom,
+        primaryLeft};
     DockSystemSnapshot shuffled = first;
     shuffled.views = {lowClone, independent, highClone, original};
+    shuffled.reservationGroups = {
+        primaryLeft,
+        secondaryBottom};
+    shuffled.reservationGroups[0].contributorDockIds =
+        {7, 30};
 
     QCOMPARE(serializeDockSystemSnapshot(first), serializeDockSystemSnapshot(shuffled));
 
-    const QJsonArray views = QJsonDocument::fromJson(serializeDockSystemSnapshot(first).toUtf8())
-                                 .object().value(QStringLiteral("views")).toArray();
+    const QJsonObject root =
+        QJsonDocument::fromJson(
+            serializeDockSystemSnapshot(first).toUtf8()).object();
+    const QJsonArray views =
+        root.value(QStringLiteral("views")).toArray();
     QCOMPARE(views.at(0).toObject().value(QStringLiteral("persistentDockId")).toInt(), 7);
     QCOMPARE(views.at(1).toObject().value(QStringLiteral("persistentDockId")).toInt(), 30);
     QCOMPARE(views.at(2).toObject().value(QStringLiteral("persistentDockId")).toInt(), 41);
     QCOMPARE(views.at(3).toObject().value(QStringLiteral("persistentDockId")).toInt(), 51);
     QCOMPARE(views.at(1).toObject().value(QStringLiteral("linkedDockIds")).toArray(),
              (QJsonArray{41, 51}));
+    const QJsonArray groups =
+        root.value(
+            QStringLiteral("reservationGroups")).toArray();
+    QCOMPARE(
+        groups.at(0).toObject()
+            .value(QStringLiteral("outputId")).toInt(),
+        10);
+    QCOMPARE(
+        groups.at(1).toObject()
+            .value(QStringLiteral("outputId")).toInt(),
+        11);
 }
 
 void DbusReportsTest::dockSystemSnapshotKeepsConfigureModeIsolatedToEditedView()

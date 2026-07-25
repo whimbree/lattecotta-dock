@@ -51,6 +51,9 @@ class ScreenPool;
 namespace Layouts {
 class Manager;
 }
+namespace ViewPart {
+class ScreenSpaceReservationCoordinator;
+}
 }
 
 namespace Latte {
@@ -553,9 +556,12 @@ struct DockSystemViewRecord {
     std::optional<int> layerShellExclusiveZone;
     bool reservationSurfacePresent{false};
     std::optional<int> reservationOutputId;
+    std::optional<Plasma::Types::Location> reservationEdge;
     std::optional<int> reservationContributionDepth;
     std::optional<int> reservationPublishedDepth;
     std::optional<int> reservationGroupMemberCount;
+    std::optional<quint64> reservationGroupGeneration;
+    QList<uint> reservationContributorDockIds;
     QRect reservationGeometry;
     QRect reservationWindowGeometry;
     QStringList reservationLayerShellAnchors;
@@ -588,12 +594,34 @@ struct DockStackModelRecord {
         "Inward same-edge stacking is unsupported; stable-span overlap is not yet rejected.")};
 };
 
+//! One active output-edge reservation group. A record exists if and only if
+//! the coordinator owns one successfully projected publisher. Contributor ids
+//! are persistent dock ids, sorted so independent snapshots compare directly.
+struct DockReservationGroupRecord
+{
+    int outputId{-1};
+    Plasma::Types::Location edge{Plasma::Types::Floating};
+    quint64 generation{0};
+    int publishedDepth{0};
+    QList<uint> contributorDockIds;
+    QRect geometry;
+    QRect windowGeometry;
+    bool layerShellPresent{false};
+    QStringList layerShellAnchors;
+    QMargins layerShellMargins;
+    QString layerShellExclusiveEdge;
+    std::optional<int> layerShellExclusiveZone;
+    QString publisher;
+};
+
 struct DockSystemSnapshot {
     static constexpr int SchemaVersion = 4;
 
     quint64 snapshotSequence{0};
     bool globalConfigureAppletsMode{false};
     DockStackModelRecord stacking;
+    quint64 reservationStateGeneration{0};
+    QList<DockReservationGroupRecord> reservationGroups;
     QList<DockSystemViewRecord> views;
 };
 
@@ -1355,6 +1383,22 @@ inline QJsonValue serializeOptionalInt(const std::optional<int> &value)
     return value ? QJsonValue(*value) : QJsonValue(QJsonValue::Null);
 }
 
+inline QJsonValue serializeOptionalUInt64(
+    const std::optional<quint64> &value)
+{
+    return value
+        ? QJsonValue(QString::number(*value))
+        : QJsonValue(QJsonValue::Null);
+}
+
+inline QJsonValue serializeOptionalEdge(
+    const std::optional<Plasma::Types::Location> &edge)
+{
+    return edge
+        ? QJsonValue(edgeName(*edge))
+        : QJsonValue(QJsonValue::Null);
+}
+
 inline QJsonValue serializeOptionalLinkPlacement(
     const std::optional<Data::View::LinkPlacement> &placement)
 {
@@ -1478,12 +1522,23 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
         record.reservationSurfacePresent;
     json[QStringLiteral("reservationOutputId")] =
         serializeOptionalInt(record.reservationOutputId);
+    json[QStringLiteral("reservationEdge")] =
+        serializeOptionalEdge(record.reservationEdge);
     json[QStringLiteral("reservationContributionDepth")] =
         serializeOptionalInt(record.reservationContributionDepth);
     json[QStringLiteral("reservationPublishedDepth")] =
         serializeOptionalInt(record.reservationPublishedDepth);
     json[QStringLiteral("reservationGroupMemberCount")] =
         serializeOptionalInt(record.reservationGroupMemberCount);
+    json[QStringLiteral("reservationGroupGeneration")] =
+        serializeOptionalUInt64(record.reservationGroupGeneration);
+    QJsonArray reservationContributorDockIds;
+    for (const uint id : record.reservationContributorDockIds) {
+        reservationContributorDockIds.append(
+            static_cast<qint64>(id));
+    }
+    json[QStringLiteral("reservationContributorDockIds")] =
+        reservationContributorDockIds;
     json[QStringLiteral("reservationGeometry")] =
         serializeRect(record.reservationGeometry);
     json[QStringLiteral("reservationWindowGeometry")] =
@@ -1518,6 +1573,169 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
     return json;
 }
 
+inline QJsonObject serializeDockReservationGroupRecord(
+    DockReservationGroupRecord record)
+{
+    QJsonObject json;
+    json[QStringLiteral("outputId")] = record.outputId;
+    json[QStringLiteral("edge")] = edgeName(record.edge);
+    json[QStringLiteral("generation")] =
+        QString::number(record.generation);
+    json[QStringLiteral("publishedDepth")] =
+        record.publishedDepth;
+
+    std::sort(
+        record.contributorDockIds.begin(),
+        record.contributorDockIds.end());
+    QJsonArray contributorDockIds;
+    for (const uint id : record.contributorDockIds) {
+        contributorDockIds.append(static_cast<qint64>(id));
+    }
+    json[QStringLiteral("contributorDockIds")] =
+        contributorDockIds;
+    json[QStringLiteral("memberCount")] =
+        record.contributorDockIds.size();
+    json[QStringLiteral("geometry")] =
+        serializeRect(record.geometry);
+    json[QStringLiteral("windowGeometry")] =
+        serializeRect(record.windowGeometry);
+    json[QStringLiteral("layerShellPresent")] =
+        record.layerShellPresent;
+    json[QStringLiteral("layerShellAnchors")] =
+        QJsonArray::fromStringList(record.layerShellAnchors);
+    json[QStringLiteral("layerShellMargins")] =
+        serializeMargins(record.layerShellMargins);
+    json[QStringLiteral("layerShellExclusiveEdge")] =
+        record.layerShellExclusiveEdge.isEmpty()
+            ? QJsonValue(QJsonValue::Null)
+            : QJsonValue(record.layerShellExclusiveEdge);
+    json[QStringLiteral("layerShellExclusiveZone")] =
+        serializeOptionalInt(record.layerShellExclusiveZone);
+    json[QStringLiteral("publisher")] =
+        serializeOptionalObjectToken(record.publisher);
+    return json;
+}
+
+//! Verify the value snapshot's reservation graph before it crosses D-Bus.
+//! Live layer-shell pointers are checked during collection; this second
+//! value-only pass prevents a complete-looking JSON object with an orphan
+//! publisher, missing contributor, mismatched group generation or stale edge.
+inline bool dockReservationRecordsAgree(
+    const DockSystemSnapshot &snapshot)
+{
+    QHash<uint, const DockReservationGroupRecord *>
+        groupsByContributor;
+    QSet<QPair<int, int>> groupKeys;
+
+    for (const auto &group : snapshot.reservationGroups) {
+        const QPair<int, int> key{
+            group.outputId,
+            static_cast<int>(group.edge)};
+        if (group.outputId < 0
+                || group.generation == 0
+                || group.generation
+                    > snapshot.reservationStateGeneration
+                || group.publishedDepth <= 0
+                || group.contributorDockIds.isEmpty()
+                || !group.geometry.isValid()
+                || !group.layerShellPresent
+                || group.layerShellExclusiveEdge
+                    != edgeName(group.edge)
+                || group.layerShellExclusiveZone
+                    != std::optional{group.publishedDepth}
+                || group.publisher.isEmpty()
+                || groupKeys.contains(key)) {
+            return false;
+        }
+        groupKeys.insert(key);
+
+        QSet<uint> localContributors;
+        for (const uint contributor
+                : group.contributorDockIds) {
+            if (contributor == 0
+                    || localContributors.contains(
+                        contributor)
+                    || groupsByContributor.contains(
+                        contributor)) {
+                return false;
+            }
+            localContributors.insert(contributor);
+            groupsByContributor.insert(
+                contributor,
+                &group);
+        }
+    }
+
+    QSet<uint> reportedContributors;
+    for (const auto &view : snapshot.views) {
+        const auto membership =
+            groupsByContributor.constFind(
+                view.persistentDockId);
+        if (membership == groupsByContributor.constEnd()) {
+            if (view.reservationSurfacePresent
+                    || view.reservationOutputId
+                    || view.reservationEdge
+                    || view.reservationContributionDepth
+                    || view.reservationPublishedDepth
+                    || view.reservationGroupMemberCount
+                    || view.reservationGroupGeneration
+                    || !view.reservationContributorDockIds.isEmpty()
+                    || !view.objects.reservationPublisher.isEmpty()) {
+                return false;
+            }
+            continue;
+        }
+
+        const auto *const group = membership.value();
+        QList<uint> expectedContributors =
+            group->contributorDockIds;
+        QList<uint> reportedGroupContributors =
+            view.reservationContributorDockIds;
+        std::sort(
+            expectedContributors.begin(),
+            expectedContributors.end());
+        std::sort(
+            reportedGroupContributors.begin(),
+            reportedGroupContributors.end());
+        if (!view.reservationSurfacePresent
+                || view.screenId
+                    != group->outputId
+                || view.edge
+                    != group->edge
+                || view.reservationOutputId
+                    != std::optional{group->outputId}
+                || view.reservationEdge
+                    != std::optional{group->edge}
+                || !view.reservationContributionDepth
+                || *view.reservationContributionDepth <= 0
+                || view.reservationPublishedDepth
+                    != std::optional{
+                        group->publishedDepth}
+                || view.reservationGroupMemberCount
+                    != std::optional{
+                        static_cast<int>(
+                            group->contributorDockIds.size())}
+                || view.reservationGroupGeneration
+                    != std::optional{
+                        group->generation}
+                || reportedGroupContributors
+                    != expectedContributors
+                || view.reservationGeometry
+                    != group->geometry
+                || view.objects.reservationPublisher
+                    != group->publisher
+                || reportedContributors.contains(
+                    view.persistentDockId)) {
+            return false;
+        }
+        reportedContributors.insert(
+            view.persistentDockId);
+    }
+
+    return reportedContributors.size()
+        == groupsByContributor.size();
+}
+
 inline QString serializeDockSystemSnapshot(const DockSystemSnapshot &snapshot)
 {
     QJsonObject json;
@@ -1529,6 +1747,28 @@ inline QString serializeDockSystemSnapshot(const DockSystemSnapshot &snapshot)
     stacking[QStringLiteral("available")] = snapshot.stacking.available;
     stacking[QStringLiteral("reason")] = snapshot.stacking.reason;
     json[QStringLiteral("stacking")] = stacking;
+
+    json[QStringLiteral("reservationStateGeneration")] =
+        QString::number(snapshot.reservationStateGeneration);
+    QList<DockReservationGroupRecord> canonicalGroups =
+        snapshot.reservationGroups;
+    std::sort(
+        canonicalGroups.begin(),
+        canonicalGroups.end(),
+        [](const auto &left, const auto &right) {
+            if (left.outputId != right.outputId) {
+                return left.outputId < right.outputId;
+            }
+            return static_cast<int>(left.edge)
+                < static_cast<int>(right.edge);
+        });
+    QJsonArray reservationGroups;
+    for (const auto &record : canonicalGroups) {
+        reservationGroups.append(
+            serializeDockReservationGroupRecord(record));
+    }
+    json[QStringLiteral("reservationGroups")] =
+        reservationGroups;
 
     QJsonArray views;
     const auto canonicalViews = canonicalizeDockSystemViews(snapshot.views);
@@ -1647,13 +1887,17 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
     const QList<Latte::View *> &views,
     bool globalConfigureAppletsMode,
     quint64 snapshotSequence,
-    RuntimeObjectIdentityRegistry *identities);
+    RuntimeObjectIdentityRegistry *identities,
+    const ViewPart::ScreenSpaceReservationCoordinator
+        *reservationCoordinator);
 
 //! Collect and compact-serialize dockSystemData() in one synchronous call.
 QString collectDockSystemData(const QList<Latte::View *> &views,
                               bool globalConfigureAppletsMode,
                               quint64 snapshotSequence,
-                              RuntimeObjectIdentityRegistry *identities);
+                              RuntimeObjectIdentityRegistry *identities,
+                              const ViewPart::ScreenSpaceReservationCoordinator
+                                  *reservationCoordinator);
 
 //! serialize one live view's applets for the viewAppletsData() D-Bus read
 QString collectAppletsData(const Latte::View *view);
