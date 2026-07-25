@@ -262,10 +262,35 @@ private:
 
         return main.contains(QStringLiteral(
                    "readonlypropertyboolfloatingTransitionEligible:"
-                   "latteView&&latteView.floatingPanelConfigured"
-                   "&&Plasmoid.configuration.hideFloatingGapForMaximized"
+                   "latteView&&root.behaveAsPlasmaPanel"
+                   "&&latteView.floatingPanelConfigured"
                    "&&latteView.visibility"
                    "&&latteView.visibility.mode===LatteCore.Types.AlwaysVisible"))
+            && main.contains(QStringLiteral(
+                   "readonlypropertyboolattachOnWindowTouchConfigured:"
+                   "Plasmoid.configuration.hideFloatingGapForMaximized"))
+            && main.contains(QStringLiteral(
+                   "readonlypropertybool"
+                   "attachmentWaitsForPointerExitConfigured:"
+                   "Plasmoid.configuration.floatingGapHidingWaitsMouse"))
+            && main.contains(QStringLiteral(
+                   "readonlypropertyboolpointerInsideView:"
+                   "!!(latteView"
+                   "&&latteView.visibility"
+                   "&&latteView.visibility.containsMouse)"))
+            && main.contains(QStringLiteral(
+                   "readonlypropertyboolbehaveAsDockWithMask:"
+                   "!behaveAsPlasmaPanel"))
+            && main.contains(QStringLiteral(
+                   "readonlypropertybooldockGapHideRequested:"
+                   "latteView"
+                   "&&root.behaveAsDockWithMask"
+                   "&&latteView.floatingGapConfigured"
+                   "&&!latteView.floatingPanelConfigured"
+                   "&&attachOnWindowTouchConfigured"
+                   "&&latteView.visibility"
+                   "&&latteView.visibility.mode===LatteCore.Types.AlwaysVisible"
+                   "&&hideThickScreenGap"))
             && !main.contains(QStringLiteral(
                    "floatingTransitionEligible:behaveAsPlasmaPanel"
                    "&&latteView.visibility.mode===LatteCore.Types.WindowsGoBelow"))
@@ -275,29 +300,40 @@ private:
             && bindings.contains(QStringLiteral(
                    "property:\"screenEdgeMarginEnabled\""
                    "when:latteViewvalue:root.screenEdgeMarginEnabled"))
-            && visibility.contains(QStringLiteral(
-                   "property:\"eligible\""
-                   "when:root.latteView&&root.latteView.floatingTransition"
-                   "value:root.floatingTransitionEligible"))
+            && bindings.contains(QStringLiteral(
+                   "property:\"appletsLayoutGeometry\""
+                   "restoreMode:Binding.RestoreNone"
+                   "when:latteView&&latteView.effects"
+                   "&&(externalBindings.containmentItem.behaveAsPlasmaPanel"
+                   "||visibilityManager.inNormalState)"))
             && visibility.contains(QStringLiteral(
                    "property:\"animationDuration\""
                    "when:root.latteView&&root.latteView.floatingTransition"
                    "value:manager.animationSpeed"))
+            && !visibility.contains(QStringLiteral(
+                   "property:\"eligible\""))
             && bindings.contains(QStringLiteral(
                    "property:\"strutsThickness\""
                    "when:latteView&&latteView.visibility"
                    "value:{if(root.behaveAsPlasmaPanel)"
                    "{returnvisibilityManager.thicknessAsPanel;}"))
-            && visibility.contains(QStringLiteral(
-                   "functionupdateFloatingTransition():void"
-                   "{if(!latteView||!latteView.floatingTransition){return;}"))
-            && visibility.contains(QStringLiteral(
-                   "if(root.floatingGapIsAttached)"
-                   "{latteView.floatingTransition.requestAttached();}"
-                   "else{latteView.floatingTransition.requestFloated();}"))
-            && visibility.contains(QStringLiteral(
-                   "functiononEligibleChanged()"
-                   "{manager.updateFloatingTransition();}"))
+            && main.contains(QStringLiteral(
+                   "latteView.floatingTransition.reconcileTargetPolicy("
+                   "floatingTransitionEligible,"
+                   "attachOnWindowTouchConfigured,"
+                   "attachmentWaitsForPointerExitConfigured,"
+                   "pointerInsideView,"
+                   "latteView.windowTouchTracker.touchingWindowCount,"
+                   "dockGapHideRequested);"))
+            && main.contains(QStringLiteral(
+                   "onDockGapHideRequestedChanged:"
+                   "reconcileFloatingTargetPolicy()"))
+            && !visibility.contains(QStringLiteral(
+                   "updateFloatingTransition"))
+            && !visibility.contains(QStringLiteral(
+                   "requestAttached"))
+            && !visibility.contains(QStringLiteral(
+                   "requestFloated"))
             && !visibility.contains(QStringLiteral("slidingInRealFloating"))
             && !visibility.contains(QStringLiteral("slidingOutRealFloating"))
             && layouts.contains(QStringLiteral(
@@ -317,9 +353,28 @@ private:
                    "when:totalsItem.stablePanelEnvelope"
                    "||!(hideThickScreenGap||hideLengthScreenGaps)"))
             && viewHeader.contains(QStringLiteral(
+                   "Q_PROPERTY(boolfloatingGapConfigured"
+                   "READfloatingGapConfigured"
+                   "NOTIFYfloatingGapConfiguredChanged)"))
+            && viewHeader.contains(QStringLiteral(
                    "Q_PROPERTY(boolfloatingPanelConfigured"
                    "READisFloatingPanel"
                    "NOTIFYfloatingPanelConfiguredChanged)"))
+            && viewImplementation.contains(QStringLiteral(
+                   "boolView::floatingGapConfigured()const"
+                   "{returnm_screenEdgeMarginEnabled"
+                   "&&m_screenEdgeMargin>0;}"))
+            && viewImplementation.contains(QStringLiteral(
+                   "boolView::isFloatingPanel()const"
+                   "{returnm_behaveAsPlasmaPanel"
+                   "&&floatingGapConfigured();}"))
+            && viewImplementation.count(QStringLiteral(
+                   "constboolwasFloatingGapConfigured="
+                   "floatingGapConfigured();")) == 2
+            && viewImplementation.count(QStringLiteral(
+                   "if(wasFloatingGapConfigured"
+                   "!=floatingGapConfigured())"
+                   "{Q_EMITfloatingGapConfiguredChanged();}")) == 2
             && viewImplementation.count(QStringLiteral(
                    "constboolwasFloatingPanel=isFloatingPanel();")) == 3
             && viewImplementation.count(QStringLiteral(
@@ -355,7 +410,6 @@ private:
             && code.contains(QStringLiteral(
                    "\"windowGeometry\",\"absoluteGeometry\","
                    "\"surfaceGeometry\",\"canvasGeometry\","
-                   "\"appletsLayoutGeometry\","
                    "\"stableCanvasGeometry\","))
             && code.contains(QStringLiteral(
                    "\"stableAppletMeasurementBounds\","
@@ -377,6 +431,17 @@ private:
             && code.contains(QStringLiteral(
                    "v[\"surfaceGeometryPublicationRevision\"],"
                    "v[\"layerShellConfigureRequestRevision\"]"))
+            && code.contains(QStringLiteral(
+                   "*v[\"appletsLayoutGeometry\"],"
+                   "math.floor(v[\"computedPaintMaskGeometry\"][1]),"
+                   "math.ceil(v[\"computedPaintMaskGeometry\"][1]"
+                   "+v[\"computedPaintMaskGeometry\"][3])"
+                   "-math.floor(v[\"computedPaintMaskGeometry\"][1])"))
+            && code.contains(QStringLiteral(
+                   "[[\"$x$width\"=="
+                   "\"$base_popup_primary_x$base_popup_primary_width\"]]"))
+            && code.contains(QStringLiteral(
+                   "[[\"$y$height\"==\"$paint_y$paint_height\"]]"))
             && code.contains(QStringLiteral(
                    "capture_progress_only_transitionattachedattaching"))
             && code.contains(QStringLiteral(
@@ -412,9 +477,296 @@ private:
             && code.contains(QStringLiteral(
                    "wait_for_zero_gap_floated_snapshot"))
             && code.contains(QStringLiteral(
+                   "matrix_stagedock-bottom-center-1out"))
+            && code.contains(QStringLiteral(
+                   "str(v[\"dockGapHideRequested\"]).lower()"))
+            && code.contains(QStringLiteral(
+                   "str(v[\"floatingGapConfigured\"]).lower()"))
+            && code.contains(QStringLiteral(
+                   "if[[\"$active_maximized\"==\"$expected_maximized\""
+                   "&&\"$exists_maximized\"==\"$expected_maximized\""
+                   "&&\"$view_type\"==dock"
+                   "&&\"$floating_gap_configured\"==true"
+                   "&&\"$configured_panel\"==false"
+                   "&&\"$eligible_panel\"==false"
+                   "&&\"$configured_hide\"==true"
+                   "&&\"$dock_request\"==\"$expected_request\""))
+            && code.contains(QStringLiteral(
+                   "wait_for_dock_gap_policyfalsefalsefloated1"))
+            && code.contains(QStringLiteral(
+                   "wait_for_dock_gap_policytruetruefloated1"))
+            && code.contains(QStringLiteral(
                    "expected_h=$((screen_h-stable_reservation_depth))"))
             && !code.contains(QStringLiteral("max_strut<base_strut"))
             && !code.contains(QStringLiteral("reservation_ms"));
+    }
+
+    static bool matchesWindowTouchAuthorityContract(
+        const QString &mainQmlSource,
+        const QString &modelQmlSource,
+        const QString &trackerHeaderSource,
+        const QString &trackerImplementationSource,
+        const QString &transitionHeaderSource,
+        const QString &transitionImplementationSource,
+        const QString &viewHeaderSource,
+        const QString &viewImplementationSource,
+        const QString &behaviorConfigSource)
+    {
+        const QString mainQml =
+            normalizedCode(mainQmlSource);
+        const QString modelQml =
+            normalizedCode(modelQmlSource);
+        const QString trackerHeader =
+            normalizedCode(trackerHeaderSource);
+        const QString trackerImplementation =
+            normalizedCode(trackerImplementationSource);
+        const QString transitionHeader =
+            normalizedCode(transitionHeaderSource);
+        const QString transitionImplementation =
+            normalizedCode(transitionImplementationSource);
+        const QString viewHeader =
+            normalizedCode(viewHeaderSource);
+        const QString viewImplementation =
+            normalizedCode(viewImplementationSource);
+        const QString behaviorConfig =
+            normalizedCode(behaviorConfigSource);
+
+        return modelQml.contains(QStringLiteral(
+                   "TaskManager.TasksModel{id:tasksModel"))
+            && mainQml.contains(QStringLiteral(
+                   "readonlypropertyboolfloatingTransitionEligible:"
+                   "latteView&&root.behaveAsPlasmaPanel"
+                   "&&latteView.floatingPanelConfigured"
+                   "&&latteView.visibility"
+                   "&&latteView.visibility.mode"
+                   "===LatteCore.Types.AlwaysVisible"))
+            && modelQml.contains(QStringLiteral(
+                   "filterByVirtualDesktop:true"))
+            && modelQml.contains(QStringLiteral(
+                   "filterByActivity:true"))
+            && modelQml.contains(QStringLiteral(
+                   "filterByScreen:false"))
+            && modelQml.contains(QStringLiteral(
+                   "groupMode:TaskManager.TasksModel.GroupDisabled"))
+            && modelQml.contains(QStringLiteral(
+                   "sortMode:TaskManager.TasksModel.SortDisabled"))
+            && !modelQml.contains(QStringLiteral(
+                   "filterByScreen:true"))
+            && trackerHeader.contains(QStringLiteral(
+                   "staticconstexprintEvaluationDelayMs=10;"))
+            && trackerImplementation.contains(QStringLiteral(
+                   "QByteArrayLiteral(\"IsWindow\")"))
+            && trackerImplementation.contains(QStringLiteral(
+                   "QByteArrayLiteral(\"IsHidden\")"))
+            && trackerImplementation.contains(QStringLiteral(
+                   "QByteArrayLiteral(\"IsMinimized\")"))
+            && trackerImplementation.contains(QStringLiteral(
+                   "QByteArrayLiteral(\"Geometry\")"))
+            && trackerImplementation.contains(QStringLiteral(
+                   "if(!m_evaluationTimer.isActive())"
+                   "{m_evaluationTimer.start();}"))
+            && !trackerImplementation.contains(QStringLiteral(
+                   "m_evaluationTimer.start(EvaluationDelayMs)"))
+            && transitionHeader.contains(QStringLiteral(
+                   "Q_INVOKABLEvoidreconcileTargetPolicy("
+                   "boolfloatingPanelEligible,"
+                   "boolattachOnWindowTouchConfigured,"
+                   "boolattachmentWaitsForPointerExitConfigured,"
+                   "boolpointerInsideView,"
+                   "inttouchingWindowCount,"
+                   "booldockGapHideRequested);"))
+            && mainQml.contains(QStringLiteral(
+                   "latteView.floatingTransition."
+                   "reconcileTargetPolicy("
+                   "floatingTransitionEligible,"
+                   "attachOnWindowTouchConfigured,"
+                   "attachmentWaitsForPointerExitConfigured,"
+                   "pointerInsideView,"
+                   "latteView.windowTouchTracker."
+                   "touchingWindowCount,"
+                   "dockGapHideRequested);"
+                   "updateFloatingAppletPopupHint();"))
+            && mainQml.contains(QStringLiteral(
+                   "functiononFloatingPanelConfiguredChanged(){"
+                   "root.updateFloatingAppletPopupHint();}"))
+            && mainQml.contains(QStringLiteral(
+                   "functiononTargetChanged(){"
+                   "root.updateFloatingAppletPopupHint();}"))
+            && mainQml.contains(QStringLiteral(
+                   "if(nextHints!==previousHints){"
+                   "Plasmoid.containmentDisplayHints=nextHints;}"))
+            && transitionImplementation.contains(QStringLiteral(
+                   "constboolattachmentAlreadyTargeted="
+                   "m_target==Target::Attached;"))
+            && transitionImplementation.contains(QStringLiteral(
+                   "m_attachmentDeferredByPointer="
+                   "panelAttachmentRequested"
+                   "&&m_attachmentWaitsForPointerExitConfigured"
+                   "&&m_pointerInsideView"
+                   "&&!attachmentAlreadyTargeted;"))
+            && transitionImplementation.contains(QStringLiteral(
+                   "constboolshouldAttach="
+                   "panelAttachmentRequested"
+                   "&&!m_attachmentDeferredByPointer;"))
+            && transitionImplementation.contains(QStringLiteral(
+                   "if(dockGapHideRequested"
+                   "&&(floatingPanelEligible"
+                   "||!attachOnWindowTouchConfigured))"))
+            && !transitionHeader.contains(QStringLiteral(
+                   "requestAttached"))
+            && !transitionHeader.contains(QStringLiteral(
+                   "requestFloated"))
+            && viewHeader.contains(QStringLiteral(
+                   "Q_PROPERTY(Latte::ViewPart::WindowTouchTracker"
+                   "*windowTouchTrackerREADwindowTouchTrackerCONSTANT)"))
+            && viewImplementation.contains(QStringLiteral(
+                   "newViewPart::WindowTouchTracker("
+                   "m_floatingTransition,this)"))
+            && !viewImplementation.contains(QStringLiteral(
+                   "&ViewPart::WindowTouchTracker::"
+                   "touchingWindowCountChanged"))
+            && mainQml.contains(QStringLiteral(
+                   "functiononTouchingWindowCountChanged()"
+                   "{root.reconcileFloatingTargetPolicy();}"))
+            && behaviorConfig.contains(QStringLiteral(
+                   "text:latteView.type===LatteCore.Types.PanelView"
+                   "?i18n(\"Attachpanelwhenawindowtouchesit\")"
+                   ":i18n(\"Hidefloatinggapformaximizedwindows\")"))
+            && behaviorConfig.contains(QStringLiteral(
+                   "text:latteView.type===LatteCore.Types.PanelView"
+                   "?i18n(\"Waituntilthepointerleavesbeforeattaching\")"
+                   ":i18n(\"Delayfloatinggaphidinguntilmouseleaves\")"));
+    }
+
+    static bool matchesWindowTouchE2eContract(
+        const QString &source)
+    {
+        const QString code = normalizedCode(source);
+        const qsizetype cleanupTrap =
+            code.indexOf(QStringLiteral("trapcleanupEXIT"));
+        const qsizetype fixtureStage =
+            code.indexOf(QStringLiteral(
+                "matrix_stagepanel-bottom-justify-1out"));
+
+        return cleanupTrap >= 0
+            && fixtureStage > cleanupTrap
+            && code.contains(QStringLiteral(
+                   "--keyfloatingInternalGapIsForcedfalse"))
+            && code.contains(QStringLiteral(
+                   "snapshot['schemaVersion']!=7"))
+            && code.contains(QStringLiteral(
+                   "v[\"attachOnWindowTouchConfigured\"]"))
+            && code.contains(QStringLiteral(
+                   "v[\"attachmentWaitsForPointerExitConfigured\"]"))
+            && code.contains(QStringLiteral(
+                   "v[\"pointerInsideView\"]"))
+            && code.contains(QStringLiteral(
+                   "v[\"attachmentDeferredByPointer\"]"))
+            && code.contains(QStringLiteral(
+                   "v[\"floatingGapConfigured\"]"))
+            && code.contains(QStringLiteral(
+                   "v[\"touchingWindowCount\"]"))
+            && code.contains(QStringLiteral(
+                   "v[\"windowTouchGeometryRoleType\"]"))
+            && code.contains(QStringLiteral(
+                   "*v[\"appletsLayoutGeometry\"],"
+                   "math.floor(v[\"computedPaintMaskGeometry\"][1]),"
+                   "math.ceil(v[\"computedPaintMaskGeometry\"][1]"
+                   "+v[\"computedPaintMaskGeometry\"][3])"
+                   "-math.floor(v[\"computedPaintMaskGeometry\"][1])"))
+            && code.contains(QStringLiteral(
+                   "[[\"$x$width\"=="
+                   "\"$base_popup_primary_x$base_popup_primary_width\"]]"))
+            && code.contains(QStringLiteral(
+                   "[[\"$y$height\"==\"$paint_y$paint_height\"]]"))
+            && code.contains(QStringLiteral(
+                   "\"windowTouchTracker\":v[\"objects\"]"
+                   "[\"windowTouchTracker\"]"))
+            && !code.contains(QStringLiteral(
+                   "Qt.rect("))
+            && code.contains(QStringLiteral(
+                   "constgeometry=Object.assign({},w.frameGeometry);"
+                   "geometry.x=$x;"
+                   "geometry.y=$y;"
+                   "geometry.width=$width;"
+                   "geometry.height=$height;"
+                   "w.frameGeometry=geometry;"))
+            && code.contains(QStringLiteral(
+                   "org.kde.kglobalaccel.Component"
+                   "invokeShortcuts\"WindowMove\""))
+            && code.contains(QStringLiteral(
+                   "nudge_verticalDown\"$touch_nudges\""))
+            && code.contains(QStringLiteral(
+                   "nudge_verticalUp\"$touch_nudges\""))
+            && code.count(QStringLiteral(
+                   "capture_fractional_policyfalsefalse1attachedattaching"))
+                   >= 3
+            && code.count(QStringLiteral(
+                   "capture_fractional_policyfalsefalse0floatedfloating"))
+                   >= 3
+            && code.contains(QStringLiteral(
+                   "\"fractionalfloating-to-attachingreversal\""))
+            && code.contains(QStringLiteral(
+                   "\"fractionalattaching-to-floatingreversal\""))
+            && code.contains(QStringLiteral(
+                   "\"interactivedragbackout\""))
+            && code.contains(QStringLiteral(
+                   "\"interactivedragintostabletrigger\""))
+            && code.contains(QStringLiteral(
+                   "fpkeyEscape"))
+            && code.contains(QStringLiteral(
+                   "wait_for_konsole_geometry"))
+            && code.contains(QStringLiteral(
+                   "\"$baseline_x\""))
+            && code.contains(QStringLiteral(
+                   "\"$baseline_y\""))
+            && code.contains(QStringLiteral(
+                   "\"$client_width\""))
+            && code.contains(QStringLiteral(
+                   "\"$client_height\""))
+            && code.contains(QStringLiteral(
+                   "set_konsole_maximizedfalse"))
+            && code.contains(QStringLiteral(
+                   "wait_for_maximize_mode0"))
+            && code.contains(QStringLiteral(
+                   "set_konsole_maximizedtrue"))
+            && code.contains(QStringLiteral(
+                   "wait_for_maximize_mode3"))
+            && code.contains(QStringLiteral(
+                   "[[\"$geometry_role_type\"==QRect]]"))
+            && code.contains(QStringLiteral(
+                   "wait_for_policytruefalse1attached0"))
+            && code.contains(QStringLiteral(
+                   "capture_fractional_policytruefalse0floatedfloating"))
+            && code.contains(QStringLiteral(
+                   "wait_for_policytruefalse0floated1"))
+            && code.contains(QStringLiteral(
+                   "wait_for_policytruetrue1floated1"))
+            && code.contains(QStringLiteral(
+                   "capture_fractional_policyfalsefalse1attachedattaching"))
+            && code.contains(QStringLiteral(
+                   "fpglide2020\"$pointer_x\"\"$pointer_y\""))
+            && code.contains(QStringLiteral(
+                   "fpglide\"$pointer_x\"\"$pointer_y\"2020"))
+            && code.contains(QStringLiteral(
+                   "\"pointer-presentattachmentdeferral\""))
+            && code.count(QStringLiteral(
+                   "wait_for_policyfalsefalse0floated1")) >= 2
+            && code.contains(QStringLiteral(
+                   "kill\"$kpid\""))
+            && code.contains(QStringLiteral(
+                   "\"couldnotdestroythesinglewindow-touchclient\""))
+            && code.count(QStringLiteral(
+                   "assert_stable_contract")) >= 4
+            && code.contains(QStringLiteral(
+                   "\"reservationStateGeneration\":"
+                   "snapshot[\"reservationStateGeneration\"]"))
+            && code.contains(QStringLiteral(
+                   "v[\"transitionGeometryRevision\"],"
+                   "v[\"surfaceGeometryPublicationRevision\"],"
+                   "v[\"layerShellConfigureRequestRevision\"]"))
+            && code.contains(QStringLiteral(
+                   "\"$transition_token\"!=\"$tracker_token\""));
     }
 
     static bool matchesDockBackgroundFitRouting(const QString &source)
@@ -653,11 +1005,36 @@ private:
                    "constauto*consttransition="
                    "view->floatingTransition();"))
             && code.contains(QStringLiteral(
+                   "constauto*constwindowTouchTracker="
+                   "view->windowTouchTracker();"))
+            && code.contains(QStringLiteral(
+                "record.floatingGapConfigured="
+                "view->floatingGapConfigured();"))
+            && code.contains(QStringLiteral(
                 "record.floatingPanelConfigured="
                 "view->isFloatingPanel();"))
             && code.contains(QStringLiteral(
                 "record.floatingPanelEligible="
-                "transition->eligible();"))
+                "transition->floatingPanelEligible();"))
+            && code.contains(QStringLiteral(
+                "record.attachOnWindowTouchConfigured="
+                "transition->attachOnWindowTouchConfigured();"))
+            && code.contains(QStringLiteral(
+                "record.attachmentWaitsForPointerExitConfigured="
+                "transition->"
+                "attachmentWaitsForPointerExitConfigured();"))
+            && code.contains(QStringLiteral(
+                "record.pointerInsideView="
+                "transition->pointerInsideView();"))
+            && code.contains(QStringLiteral(
+                "record.attachmentDeferredByPointer="
+                "transition->attachmentDeferredByPointer();"))
+            && code.contains(QStringLiteral(
+                "record.dockGapHideRequested="
+                "transition->dockGapHideRequested();"))
+            && code.contains(QStringLiteral(
+                "record.touchingWindowCount="
+                "transition->touchingWindowCount();"))
             && code.contains(QStringLiteral(
                 "record.transitionProgress="
                 "transition->floatingness();"))
@@ -705,9 +1082,16 @@ private:
                 "record.objects.transitionController="
                 "identities->tokenFor(transition);"))
             && code.contains(QStringLiteral(
+                "record.objects.windowTouchTracker="
+                "identities->tokenFor(windowTouchTracker);"))
+            && code.contains(QStringLiteral(
                 "if(!dockTransitionRecordsAgree(snapshot)){"
-                "qCritical()<<\"dbusreports:refusingdock-system"
-                "snapshotwhosetransitionrecordsdisagree\";"
+                "for(constauto&view:snapshot.views){"
+                "qCritical()<<\"dbusreports:transitiondisagreement"
+                "fordock\""))
+            && code.contains(QStringLiteral(
+                "<<\"record\"<<serializeDockSystemViewRecord("
+                "view,globalConfigureAppletsMode);}"
                 "returnstd::nullopt;}"))
             && !code.contains(QStringLiteral(
                 "currentVisibleGeometry().toRect()"))
@@ -1039,7 +1423,11 @@ private Q_SLOTS:
     void justifyAppletSpan_sourceGuardRejectsShadowOverlap();
     void stableFloatingPanelQml_keepsOneTransitionAuthority();
     void stableFloatingPanelQml_rejectsDivergentZeroGapEligibility();
+    void stablePanelPopupAnchor_rejectsLegacyAnimationFreeze();
     void stableFloatingPanelE2e_keepsCanvasAndRevisionsFixed();
+    void windowTouchAuthority_keepsDedicatedStableModel();
+    void windowTouchAuthority_rejectsControlledMutations();
+    void windowTouchE2e_drivesOneStableTriggerClient();
     void floatingPresentationConsumers_keepSingleAuthority();
     void panelToDockInputHandoff_bypassesOrdinaryAnimationGate();
     void panelToDockInputHandoff_rejectsMissingDirectWrite();
@@ -1410,6 +1798,8 @@ void SourceGuardTest::stableFloatingPanelQml_rejectsDivergentZeroGapEligibility(
     const QString eligibility = QStringLiteral(
         "readonly property bool floatingTransitionEligible: latteView\n"
         "                                                       "
+        "&& root.behaveAsPlasmaPanel\n"
+        "                                                       "
         "&& latteView.floatingPanelConfigured");
     QCOMPARE(main.count(eligibility), 1);
     main.replace(eligibility,
@@ -1417,13 +1807,103 @@ void SourceGuardTest::stableFloatingPanelQml_rejectsDivergentZeroGapEligibility(
                      "readonly property bool floatingTransitionEligible: "
                      "latteView\n"
                      "                                                       "
-                     "&& screenEdgeMarginEnabled"));
+                     "&& screenEdgeMarginEnabled\n"
+                     "                                                       "
+                     "&& latteView.floatingPanelConfigured"));
 
     QVERIFY2(!matchesStableFloatingPanelQmlContract(
                  main, bindings, visibility, layouts, metrics, backgroundTotals,
                  viewHeader, viewImplementation),
              "QML eligibility must not diverge from the C++ positive-gap "
              "configuration authority");
+
+    QString dockMain = readFile(QStringLiteral(
+        "containment/package/contents/ui/main.qml"));
+    const QString dockGapAuthority = QStringLiteral(
+        "        && latteView.floatingGapConfigured\n"
+        "        && !latteView.floatingPanelConfigured");
+    QCOMPARE(dockMain.count(dockGapAuthority), 1);
+    dockMain.replace(
+        dockGapAuthority,
+        QStringLiteral(
+            "        && latteView.floatingPanelConfigured\n"
+            "        && !latteView.floatingPanelConfigured"));
+    QVERIFY2(!matchesStableFloatingPanelQmlContract(
+                 dockMain, bindings, visibility, layouts, metrics,
+                 backgroundTotals, viewHeader, viewImplementation),
+             "Dock gap hiding must use the view's presentation-independent"
+             " positive-gap authority, never Panel identity");
+
+    QString gapImplementation = viewImplementation;
+    const QString positiveGapDefinition = QStringLiteral(
+        "    return m_screenEdgeMarginEnabled\n"
+        "        && m_screenEdgeMargin > 0;");
+    QCOMPARE(gapImplementation.count(positiveGapDefinition), 1);
+    gapImplementation.replace(
+        positiveGapDefinition,
+        QStringLiteral("    return false;"));
+    QVERIFY2(!matchesStableFloatingPanelQmlContract(
+                 readFile(QStringLiteral(
+                     "containment/package/contents/ui/main.qml")),
+                 bindings, visibility, layouts, metrics, backgroundTotals,
+                 viewHeader, gapImplementation),
+             "the shared floating-gap predicate must retain its exact"
+             " positive-margin semantics");
+
+    QString panelImplementation = viewImplementation;
+    const QString panelIdentity = QStringLiteral(
+        "    return m_behaveAsPlasmaPanel\n"
+        "        && floatingGapConfigured();");
+    QCOMPARE(panelImplementation.count(panelIdentity), 1);
+    panelImplementation.replace(
+        panelIdentity,
+        QStringLiteral("    return floatingGapConfigured();"));
+    QVERIFY2(!matchesStableFloatingPanelQmlContract(
+                 readFile(QStringLiteral(
+                     "containment/package/contents/ui/main.qml")),
+                 bindings, visibility, layouts, metrics, backgroundTotals,
+                 viewHeader, panelImplementation),
+             "floating Panel identity must remain the conjunction of Panel"
+             " behavior and the shared positive-gap predicate");
+}
+
+void SourceGuardTest::stablePanelPopupAnchor_rejectsLegacyAnimationFreeze()
+{
+    const QString main = readFile(QStringLiteral(
+        "containment/package/contents/ui/main.qml"));
+    QString bindings = readFile(QStringLiteral(
+        "containment/package/contents/ui/BindingsExternal.qml"));
+    const QString visibility = readFile(QStringLiteral(
+        "containment/package/contents/ui/VisibilityManager.qml"));
+    const QString layouts = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    const QString metrics = readFile(QStringLiteral(
+        "containment/package/contents/ui/abilities/Metrics.qml"));
+    const QString backgroundTotals = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/types/Totals.qml"));
+    const QString viewHeader = readFile(QStringLiteral(
+        "app/view/view.h"));
+    const QString viewImplementation = readFile(QStringLiteral(
+        "app/view/view.cpp"));
+
+    const QString panelAwareGate = QStringLiteral(
+        "        when: latteView\n"
+        "              && latteView.effects\n"
+        "              && (externalBindings.containmentItem.behaveAsPlasmaPanel\n"
+        "                  || visibilityManager.inNormalState)");
+    QCOMPARE(bindings.count(panelAwareGate), 1);
+    bindings.replace(
+        panelAwareGate,
+        QStringLiteral(
+            "        when: latteView\n"
+            "              && latteView.effects\n"
+            "              && visibilityManager.inNormalState"));
+
+    QVERIFY2(!matchesStableFloatingPanelQmlContract(
+                 main, bindings, visibility, layouts, metrics, backgroundTotals,
+                 viewHeader, viewImplementation),
+             "stable Panel popup anchors must not freeze during task-removal"
+             " animations; the legacy normal-state gate remains Dock-only");
 }
 
 void SourceGuardTest::stableFloatingPanelE2e_keepsCanvasAndRevisionsFixed()
@@ -1434,6 +1914,92 @@ void SourceGuardTest::stableFloatingPanelE2e_keepsCanvasAndRevisionsFixed()
              "recipe 071 must keep the partial QWindow, applet measurements,"
              " maximum-depth reservation, and physical-publication revisions"
              " stable through qreal progress and rapid reversals");
+}
+
+void SourceGuardTest::windowTouchAuthority_keepsDedicatedStableModel()
+{
+    QVERIFY2(
+        matchesWindowTouchAuthorityContract(
+            readFile(QStringLiteral(
+                "containment/package/contents/ui/main.qml")),
+            readFile(QStringLiteral(
+                "containment/package/contents/ui/WindowTouchTracker.qml")),
+            readFile(QStringLiteral(
+                "app/view/windowtouchtracker.h")),
+            readFile(QStringLiteral(
+                "app/view/windowtouchtracker.cpp")),
+            readFile(QStringLiteral(
+                "app/view/floatingtransition.h")),
+            readFile(QStringLiteral(
+                "app/view/floatingtransition.cpp")),
+            readFile(QStringLiteral(
+                "app/view/view.h")),
+            readFile(QStringLiteral(
+                "app/view/view.cpp")),
+            readFile(QStringLiteral(
+                "shell/package/contents/configuration/pages/"
+                "BehaviorConfig.qml"))),
+        "window touch must use one per-view ungrouped current-context model,"
+        " a non-restarting 10 ms deadline, and one atomic transition policy");
+}
+
+void SourceGuardTest::windowTouchAuthority_rejectsControlledMutations()
+{
+    const QString mainQml = readFile(QStringLiteral(
+        "containment/package/contents/ui/main.qml"));
+    QString model = readFile(QStringLiteral(
+        "containment/package/contents/ui/WindowTouchTracker.qml"));
+    const QString trackerHeader = readFile(QStringLiteral(
+        "app/view/windowtouchtracker.h"));
+    QString trackerImplementation = readFile(QStringLiteral(
+        "app/view/windowtouchtracker.cpp"));
+    const QString transitionHeader = readFile(QStringLiteral(
+        "app/view/floatingtransition.h"));
+    const QString transitionImplementation = readFile(QStringLiteral(
+        "app/view/floatingtransition.cpp"));
+    const QString viewHeader = readFile(QStringLiteral(
+        "app/view/view.h"));
+    const QString viewImplementation = readFile(QStringLiteral(
+        "app/view/view.cpp"));
+    const QString behaviorConfig = readFile(QStringLiteral(
+        "shell/package/contents/configuration/pages/BehaviorConfig.qml"));
+
+    QCOMPARE(model.count(QStringLiteral("filterByScreen: false")), 1);
+    model.replace(
+        QStringLiteral("filterByScreen: false"),
+        QStringLiteral("filterByScreen: true"));
+    QVERIFY(!matchesWindowTouchAuthorityContract(
+        mainQml, model, trackerHeader, trackerImplementation,
+        transitionHeader, transitionImplementation,
+        viewHeader, viewImplementation, behaviorConfig));
+
+    trackerImplementation = readFile(QStringLiteral(
+        "app/view/windowtouchtracker.cpp"));
+    QCOMPARE(
+        trackerImplementation.count(
+            QStringLiteral("if (!m_evaluationTimer.isActive())")),
+        1);
+    trackerImplementation.replace(
+        QStringLiteral("if (!m_evaluationTimer.isActive())"),
+        QStringLiteral("if (true)"));
+    QVERIFY(!matchesWindowTouchAuthorityContract(
+        mainQml,
+        readFile(QStringLiteral(
+            "containment/package/contents/ui/WindowTouchTracker.qml")),
+        trackerHeader, trackerImplementation,
+        transitionHeader, transitionImplementation,
+        viewHeader, viewImplementation, behaviorConfig));
+}
+
+void SourceGuardTest::windowTouchE2e_drivesOneStableTriggerClient()
+{
+    QVERIFY2(
+        matchesWindowTouchE2eContract(readFile(QStringLiteral(
+            "tests/e2e/072-window-touch-transition.sh"))),
+        "recipe 072 must drive one real non-maximized client across the"
+        " stable trigger through interactive reversals, Escape restoration,"
+        " committed maximize, pointer deferral, and destruction while"
+        " physical geometry and per-view authorities remain fixed");
 }
 
 void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
@@ -2044,7 +2610,7 @@ void SourceGuardTest::dockSystemTransitionCollection_keepsAuthoritativeRouting()
     QVERIFY2(
         matchesTransitionSnapshotRoute(
             collector),
-        "schema 6 transition fields must read the per-view controller without rounding and fail closed");
+        "schema 7 transition fields must read the per-view controller without rounding and fail closed");
 }
 
 void SourceGuardTest::dockSystemTransitionCollection_rejectsControlledMutations()
@@ -2084,11 +2650,11 @@ void SourceGuardTest::dockSystemTransitionCollection_rejectsControlledMutations(
     QCOMPARE(
         inferredEligibility.count(
             QStringLiteral(
-                "transition->eligible()")),
+                "transition->floatingPanelEligible()")),
         1);
     inferredEligibility.replace(
         QStringLiteral(
-            "transition->eligible()"),
+            "transition->floatingPanelEligible()"),
         QStringLiteral(
             "view->isFloatingPanel()"));
     QVERIFY2(

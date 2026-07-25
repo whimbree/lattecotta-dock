@@ -20,6 +20,7 @@ app/view/inputmaskflush.h
 app/view/panelborderdecision.h
 app/view/panelshadowstate.h
 app/view/positionergeometry.h
+app/view/windowtouchstate.h
 app/view/helpers/screenspacereservationledger.h
 app/view/helpers/screenspacereservationpublication.h
 app/view/settings/retargetrequeststate.h

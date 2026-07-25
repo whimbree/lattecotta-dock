@@ -508,6 +508,7 @@ struct DockObjectIdentities {
     QString configWindow;
     QString reservationPublisher;
     QString transitionController;
+    QString windowTouchTracker;
 };
 
 enum class DockTransitionTarget {
@@ -599,8 +600,16 @@ struct DockSystemViewRecord {
     QString reservationLayerShellExclusiveEdge;
     std::optional<int> reservationLayerShellExclusiveZone;
 
+    bool floatingGapConfigured{false};
     bool floatingPanelConfigured{false};
     bool floatingPanelEligible{false};
+    bool attachOnWindowTouchConfigured{false};
+    bool attachmentWaitsForPointerExitConfigured{false};
+    bool pointerInsideView{false};
+    bool attachmentDeferredByPointer{false};
+    bool dockGapHideRequested{false};
+    int touchingWindowCount{0};
+    QString windowTouchGeometryRoleType;
     DockTransitionTarget transitionTarget{DockTransitionTarget::Floated};
     qreal transitionProgress{1.0};
     DockTransitionPhase transitionPhase{DockTransitionPhase::Resting};
@@ -670,7 +679,7 @@ struct DockReservationGroupRecord
 };
 
 struct DockSystemSnapshot {
-    static constexpr int SchemaVersion = 6;
+    static constexpr int SchemaVersion = 7;
 
     quint64 snapshotSequence{0};
     bool globalConfigureAppletsMode{false};
@@ -1573,6 +1582,8 @@ inline QJsonObject serializeDockObjectIdentities(const DockObjectIdentities &obj
         serializeOptionalObjectToken(objects.reservationPublisher);
     json[QStringLiteral("transitionController")] =
         serializeOptionalObjectToken(objects.transitionController);
+    json[QStringLiteral("windowTouchTracker")] =
+        serializeOptionalObjectToken(objects.windowTouchTracker);
     return json;
 }
 
@@ -1725,10 +1736,26 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
     json[QStringLiteral("reservationLayerShellExclusiveZone")] =
         serializeOptionalInt(record.reservationLayerShellExclusiveZone);
 
+    json[QStringLiteral("floatingGapConfigured")] =
+        record.floatingGapConfigured;
     json[QStringLiteral("floatingPanelConfigured")] =
         record.floatingPanelConfigured;
     json[QStringLiteral("floatingPanelEligible")] =
         record.floatingPanelEligible;
+    json[QStringLiteral("attachOnWindowTouchConfigured")] =
+        record.attachOnWindowTouchConfigured;
+    json[QStringLiteral("attachmentWaitsForPointerExitConfigured")] =
+        record.attachmentWaitsForPointerExitConfigured;
+    json[QStringLiteral("pointerInsideView")] =
+        record.pointerInsideView;
+    json[QStringLiteral("attachmentDeferredByPointer")] =
+        record.attachmentDeferredByPointer;
+    json[QStringLiteral("dockGapHideRequested")] =
+        record.dockGapHideRequested;
+    json[QStringLiteral("touchingWindowCount")] =
+        record.touchingWindowCount;
+    json[QStringLiteral("windowTouchGeometryRoleType")] =
+        record.windowTouchGeometryRoleType;
     json[QStringLiteral("transitionTarget")] =
         transitionTargetName(record.transitionTarget);
     json[QStringLiteral("transitionProgress")] =
@@ -1847,6 +1874,7 @@ inline QJsonObject serializeDockReservationGroupRecord(
 inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
 {
     QSet<QString> transitionControllers;
+    QSet<QString> windowTouchTrackers;
     QSet<QString> otherAuthorities;
 
     for (const auto &view : snapshot.views) {
@@ -1917,28 +1945,72 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
 
         const QString &transitionController =
             view.objects.transitionController;
+        const QString &windowTouchTracker =
+            view.objects.windowTouchTracker;
         if (view.objects.transitionController.isEmpty()
                 || otherAuthorities.contains(
                     transitionController)
                 || transitionControllers.contains(
-                    view.objects.transitionController)
+                    transitionController)
+                || windowTouchTrackers.contains(
+                    transitionController)
+                || windowTouchTracker.isEmpty()
+                || windowTouchTracker
+                    == transitionController
+                || otherAuthorities.contains(
+                    windowTouchTracker)
+                || transitionControllers.contains(
+                    windowTouchTracker)
+                || windowTouchTrackers.contains(
+                    windowTouchTracker)
                 || !std::isfinite(
                     static_cast<double>(
                         view.transitionProgress))
                 || view.transitionProgress < 0.0
                 || view.transitionProgress > 1.0
+                || view.touchingWindowCount < 0
+                || (!view.windowTouchGeometryRoleType.isEmpty()
+                    && view.windowTouchGeometryRoleType
+                        != QStringLiteral("QRect"))
+                || (view.touchingWindowCount > 0
+                    && view.windowTouchGeometryRoleType
+                        != QStringLiteral("QRect"))
+                || (view.attachmentDeferredByPointer
+                    && (!view.attachOnWindowTouchConfigured
+                        || !view.attachmentWaitsForPointerExitConfigured
+                        || !view.pointerInsideView
+                        || !view.floatingPanelEligible
+                        || view.touchingWindowCount <= 0))
+                || (view.floatingPanelConfigured
+                    != (view.type == Types::PanelView
+                        && view.floatingGapConfigured))
+                || (view.floatingPanelEligible
+                    && view.dockGapHideRequested)
+                || (view.dockGapHideRequested
+                    && (view.type != Types::DockView
+                        || !view.floatingGapConfigured
+                        || view.floatingPanelConfigured
+                        || view.visibilityMode
+                            != Types::AlwaysVisible
+                        || !view
+                            .attachOnWindowTouchConfigured))
                 || (view.floatingPanelEligible
                     && (!view.floatingPanelConfigured
                         || view.type != Types::PanelView
                         || view.visibilityMode
                             != Types::AlwaysVisible))
-                || (!view.floatingPanelEligible
-                    && view.transitionTarget
-                        != DockTransitionTarget::Floated)) {
+                || ((view.transitionTarget
+                        == DockTransitionTarget::Attached)
+                    != (view.floatingPanelEligible
+                        && view.attachOnWindowTouchConfigured
+                        && !view.attachmentDeferredByPointer
+                        && view.touchingWindowCount > 0))) {
             return false;
         }
         transitionControllers.insert(
-            view.objects.transitionController);
+            transitionController);
+        windowTouchTrackers.insert(
+            windowTouchTracker);
 
         DockTransitionDirection expectedDirection{
             DockTransitionDirection::None};

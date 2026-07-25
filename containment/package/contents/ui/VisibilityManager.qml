@@ -61,14 +61,6 @@ Item{
 
     Binding {
         target: root.latteView ? root.latteView.floatingTransition : null
-        property: "eligible"
-        when: root.latteView && root.latteView.floatingTransition
-        value: root.floatingTransitionEligible
-        restoreMode: Binding.RestoreNone
-    }
-
-    Binding {
-        target: root.latteView ? root.latteView.floatingTransition : null
         property: "animationDuration"
         when: root.latteView && root.latteView.floatingTransition
         value: manager.animationSpeed
@@ -561,39 +553,5 @@ Item{
             start();
         }
     }
-
-    Connections {
-        target: root
-        function onFloatingGapIsAttachedChanged() {
-            manager.updateFloatingTransition();
-        }
-
-        function onInStartupChanged() {
-            manager.updateFloatingTransition();
-        }
-    }
-
-    Connections {
-        target: latteView ? latteView.floatingTransition : null
-        function onEligibleChanged() {
-            //! Eligibility is written by a separate Binding. Retrying from
-            //! the controller signal makes target selection independent of
-            //! QML binding-evaluation order when both values change together.
-            manager.updateFloatingTransition();
-        }
-    }
-
-    function updateFloatingTransition() : void {
-        if (!latteView || !latteView.floatingTransition) {
-            return;
-        }
-
-        if (root.floatingGapIsAttached) {
-            latteView.floatingTransition.requestAttached();
-        } else {
-            latteView.floatingTransition.requestFloated();
-        }
-    }
-
 
 }

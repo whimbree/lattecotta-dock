@@ -17,6 +17,7 @@
 #include "positioner.h"
 #include "eventssink.h"
 #include "visibilitymanager.h"
+#include "windowtouchtracker.h"
 #include "indicator/indicator.h"
 #include "settings/primaryconfigview.h"
 #include "windowstracker/windowstracker.h"
@@ -73,6 +74,7 @@ class View : public PlasmaQuick::ContainmentView
 
     Q_PROPERTY(bool alternativesIsShown READ alternativesIsShown NOTIFY alternativesIsShownChanged)
     Q_PROPERTY(bool behaveAsPlasmaPanel READ behaveAsPlasmaPanel WRITE setBehaveAsPlasmaPanel NOTIFY behaveAsPlasmaPanelChanged)
+    Q_PROPERTY(bool floatingGapConfigured READ floatingGapConfigured NOTIFY floatingGapConfiguredChanged)
     Q_PROPERTY(bool floatingPanelConfigured READ isFloatingPanel NOTIFY floatingPanelConfiguredChanged)
     Q_PROPERTY(bool byPassWM READ byPassWM WRITE setByPassWM NOTIFY byPassWMChanged)
     Q_PROPERTY(bool canRemove READ canRemove NOTIFY canRemoveChanged)
@@ -122,6 +124,8 @@ class View : public PlasmaQuick::ContainmentView
     Q_PROPERTY(Latte::ViewPart::Positioner *positioner READ positioner NOTIFY positionerChanged)
     Q_PROPERTY(Latte::ViewPart::EventsSink *sink READ sink NOTIFY sinkChanged)
     Q_PROPERTY(Latte::ViewPart::VisibilityManager *visibility READ visibility NOTIFY visibilityChanged)
+    Q_PROPERTY(Latte::ViewPart::WindowTouchTracker *windowTouchTracker
+                   READ windowTouchTracker CONSTANT)
     Q_PROPERTY(Latte::ViewPart::WindowsTracker *windowsTracker READ windowsTracker NOTIFY windowsTrackerChanged)
 
     Q_PROPERTY(Latte::Interfaces *interfacesGraphicObj READ interfacesGraphicObj WRITE setInterfacesGraphicObj NOTIFY interfacesGraphicObjChanged)
@@ -174,7 +178,8 @@ public:
 
     bool inEditMode() const;
 
-    bool isFloatingPanel() const;
+    [[nodiscard]] bool floatingGapConfigured() const;
+    [[nodiscard]] bool isFloatingPanel() const;
 
     virtual bool isPreferredForShortcuts() const;
     void setIsPreferredForShortcuts(bool preferred);
@@ -303,6 +308,7 @@ public:
     ViewPart::Positioner *positioner() const;
     ViewPart::EventsSink *sink() const;
     ViewPart::VisibilityManager *visibility() const;
+    ViewPart::WindowTouchTracker *windowTouchTracker() const;
     ViewPart::WindowsTracker *windowsTracker() const;
 
     Latte::Interfaces *interfacesGraphicObj() const;
@@ -373,6 +379,7 @@ Q_SIGNALS:
     void effectsChanged();
     void extendedInterfaceChanged();
     void fontPixelSizeChanged();
+    void floatingGapConfiguredChanged();
     void floatingPanelConfiguredChanged();
     void forcedShown(); //[workaround] forced shown to avoid a KWin issue that hides windows when closing activities
     void geometryChanged();
@@ -544,6 +551,7 @@ private:
 
     QPointer<ViewPart::Effects> m_effects;
     QPointer<ViewPart::FloatingTransition> m_floatingTransition;
+    QPointer<ViewPart::WindowTouchTracker> m_windowTouchTracker;
     QPointer<ViewPart::Indicator> m_indicator;
     QPointer<ViewPart::ContainmentInterface> m_interface;
     QPointer<ViewPart::Parabolic> m_parabolic;

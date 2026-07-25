@@ -76,6 +76,8 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
     : PlasmaQuick::ContainmentView(corona),
       m_effects(new ViewPart::Effects(this)),
       m_floatingTransition(new ViewPart::FloatingTransition(this)),
+      m_windowTouchTracker(
+          new ViewPart::WindowTouchTracker(m_floatingTransition, this)),
       m_interface(new ViewPart::ContainmentInterface(this)),
       m_parabolic(new ViewPart::Parabolic(this)),
       m_sink(new ViewPart::EventsSink(this))
@@ -103,7 +105,6 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
             &View::behaveAsPlasmaPanelChanged,
             m_effects,
             &ViewPart::Effects::applyFloatingPanelPresentation);
-
     // setTitle(corona->kPackage().metadata().name());
     setIcon(qGuiApp->windowIcon());
     setResizeMode(QuickViewSharedEngine::SizeRootObjectToView);
@@ -298,6 +299,10 @@ View::~View()
 
     if (m_appletConfigView) {
         delete m_appletConfigView;
+    }
+
+    if (m_windowTouchTracker) {
+        delete m_windowTouchTracker;
     }
 
     //needs to be deleted before Effects because it catches some of its signals
@@ -1385,11 +1390,16 @@ bool View::inEditMode() const
     return containment() && containment()->isUserConfiguring();
 }
 
+bool View::floatingGapConfigured() const
+{
+    return m_screenEdgeMarginEnabled
+        && m_screenEdgeMargin > 0;
+}
+
 bool View::isFloatingPanel() const
 {
     return m_behaveAsPlasmaPanel
-        && m_screenEdgeMarginEnabled
-        && m_screenEdgeMargin > 0;
+        && floatingGapConfigured();
 }
 
 int View::layerShellEdgeMargin() const
@@ -1582,9 +1592,15 @@ void View::setScreenEdgeMarginEnabled(bool enabled)
         return;
     }
 
+    const bool wasFloatingGapConfigured =
+        floatingGapConfigured();
     const bool wasFloatingPanel = isFloatingPanel();
     m_screenEdgeMarginEnabled = enabled;
     Q_EMIT screenEdgeMarginEnabledChanged();
+    if (wasFloatingGapConfigured
+        != floatingGapConfigured()) {
+        Q_EMIT floatingGapConfiguredChanged();
+    }
     if (wasFloatingPanel != isFloatingPanel()) {
         Q_EMIT floatingPanelConfiguredChanged();
     }
@@ -1601,9 +1617,15 @@ void View::setScreenEdgeMargin(int margin)
         return;
     }
 
+    const bool wasFloatingGapConfigured =
+        floatingGapConfigured();
     const bool wasFloatingPanel = isFloatingPanel();
     m_screenEdgeMargin = margin;
     Q_EMIT screenEdgeMarginChanged();
+    if (wasFloatingGapConfigured
+        != floatingGapConfigured()) {
+        Q_EMIT floatingGapConfiguredChanged();
+    }
     if (wasFloatingPanel != isFloatingPanel()) {
         Q_EMIT floatingPanelConfiguredChanged();
     }
@@ -1909,6 +1931,11 @@ ViewPart::FloatingTransition *View::floatingTransition() const
     return m_floatingTransition;
 }
 
+ViewPart::WindowTouchTracker *View::windowTouchTracker() const
+{
+    return m_windowTouchTracker;
+}
+
 ViewPart::Indicator *View::indicator() const
 {
     return m_indicator;
@@ -1969,7 +1996,7 @@ void View::setInterfacesGraphicObj(Latte::Interfaces *ifaces)
 }
 
 bool View::event(QEvent *e)
-{   
+{
     if (!m_floatingEventProjectionPending
         && behaveAsPlasmaPanel()
         && (!m_visibility

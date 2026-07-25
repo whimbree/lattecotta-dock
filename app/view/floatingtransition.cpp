@@ -48,6 +48,11 @@ FloatingTransition::Target FloatingTransition::target() const
     return m_target;
 }
 
+bool FloatingTransition::attachmentTargeted() const
+{
+    return m_target == Target::Attached;
+}
+
 bool FloatingTransition::floatingAppletPopupsPreferred() const
 {
     return m_target == Target::Floated;
@@ -76,23 +81,39 @@ bool FloatingTransition::running() const
     return m_animation->state() == QAbstractAnimation::Running;
 }
 
-bool FloatingTransition::eligible() const
+bool FloatingTransition::floatingPanelEligible() const
 {
-    return m_eligible;
+    return m_floatingPanelEligible;
 }
 
-void FloatingTransition::setEligible(bool eligible)
+bool FloatingTransition::attachOnWindowTouchConfigured() const
 {
-    if (m_eligible == eligible) {
-        return;
-    }
+    return m_attachOnWindowTouchConfigured;
+}
 
-    m_eligible = eligible;
-    Q_EMIT eligibleChanged();
+bool FloatingTransition::attachmentWaitsForPointerExitConfigured() const
+{
+    return m_attachmentWaitsForPointerExitConfigured;
+}
 
-    if (!m_eligible) {
-        requestTarget(Target::Floated);
-    }
+bool FloatingTransition::pointerInsideView() const
+{
+    return m_pointerInsideView;
+}
+
+bool FloatingTransition::attachmentDeferredByPointer() const
+{
+    return m_attachmentDeferredByPointer;
+}
+
+bool FloatingTransition::dockGapHideRequested() const
+{
+    return m_dockGapHideRequested;
+}
+
+int FloatingTransition::touchingWindowCount() const
+{
+    return m_touchingWindowCount;
 }
 
 int FloatingTransition::animationDuration() const
@@ -273,19 +294,99 @@ void FloatingTransition::clearGeometry()
     Q_EMIT currentGeometryChanged();
 }
 
-void FloatingTransition::requestAttached()
+void FloatingTransition::reconcileTargetPolicy(
+    bool floatingPanelEligible,
+    bool attachOnWindowTouchConfigured,
+    bool attachmentWaitsForPointerExitConfigured,
+    bool pointerInsideView,
+    int touchingWindowCount,
+    bool dockGapHideRequested)
 {
-    if (!m_eligible) {
-        requestTarget(Target::Floated);
+    if (touchingWindowCount < 0) {
+        qCritical() << "FloatingTransition refused a negative touching-window"
+                       " count:"
+                    << touchingWindowCount;
+        return;
+    }
+    if (dockGapHideRequested
+        && (floatingPanelEligible
+            || !attachOnWindowTouchConfigured)) {
+        qCritical()
+            << "FloatingTransition refused an inconsistent Dock gap-hide"
+               " request";
         return;
     }
 
-    requestTarget(Target::Attached);
-}
+    const bool eligibilityDidChange =
+        m_floatingPanelEligible != floatingPanelEligible;
+    const bool configurationDidChange =
+        m_attachOnWindowTouchConfigured != attachOnWindowTouchConfigured;
+    const bool waitConfigurationDidChange =
+        m_attachmentWaitsForPointerExitConfigured
+        != attachmentWaitsForPointerExitConfigured;
+    const bool pointerInsideDidChange =
+        m_pointerInsideView != pointerInsideView;
+    const bool deferredBefore = m_attachmentDeferredByPointer;
+    const bool dockGapHideRequestDidChange =
+        m_dockGapHideRequested != dockGapHideRequested;
+    const bool countDidChange =
+        m_touchingWindowCount != touchingWindowCount;
 
-void FloatingTransition::requestFloated()
-{
-    requestTarget(Target::Floated);
+    //! Commit all policy inputs before target/phase signals are emitted.
+    //! Every observer therefore sees one complete equation, even when QML
+    //! eligibility and task-model rows change in the same event-loop turn.
+    m_floatingPanelEligible = floatingPanelEligible;
+    m_attachOnWindowTouchConfigured = attachOnWindowTouchConfigured;
+    m_attachmentWaitsForPointerExitConfigured =
+        attachmentWaitsForPointerExitConfigured;
+    m_pointerInsideView = pointerInsideView;
+    m_dockGapHideRequested = dockGapHideRequested;
+    m_touchingWindowCount = touchingWindowCount;
+
+    const bool panelAttachmentRequested =
+        m_floatingPanelEligible
+        && m_attachOnWindowTouchConfigured
+        && m_touchingWindowCount > 0;
+    //! Pointer entry is not a detach request. It defers only an attachment
+    //! that begins while the pointer is already inside this view.
+    const bool attachmentAlreadyTargeted =
+        m_target == Target::Attached;
+    m_attachmentDeferredByPointer =
+        panelAttachmentRequested
+        && m_attachmentWaitsForPointerExitConfigured
+        && m_pointerInsideView
+        && !attachmentAlreadyTargeted;
+    const bool deferralDidChange =
+        deferredBefore != m_attachmentDeferredByPointer;
+    //! Docks consume the legacy hideThickScreenGap path directly and do not
+    //! own stable transition geometry. Keep that request observable without
+    //! manufacturing an Attached target that no Dock presentation can render.
+    const bool shouldAttach =
+        panelAttachmentRequested
+        && !m_attachmentDeferredByPointer;
+    requestTarget(shouldAttach ? Target::Attached : Target::Floated);
+
+    if (eligibilityDidChange) {
+        Q_EMIT floatingPanelEligibleChanged();
+    }
+    if (configurationDidChange) {
+        Q_EMIT attachOnWindowTouchConfiguredChanged();
+    }
+    if (waitConfigurationDidChange) {
+        Q_EMIT attachmentWaitsForPointerExitConfiguredChanged();
+    }
+    if (pointerInsideDidChange) {
+        Q_EMIT pointerInsideViewChanged();
+    }
+    if (deferralDidChange) {
+        Q_EMIT attachmentDeferredByPointerChanged();
+    }
+    if (dockGapHideRequestDidChange) {
+        Q_EMIT dockGapHideRequestedChanged();
+    }
+    if (countDidChange) {
+        Q_EMIT touchingWindowCountChanged();
+    }
 }
 
 void FloatingTransition::requestTarget(Target target)

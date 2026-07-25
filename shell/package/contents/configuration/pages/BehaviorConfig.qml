@@ -829,8 +829,16 @@ PlasmaComponents.Page {
 
                     LatteComponents.CheckBox {
                         Layout.maximumWidth: dialog.optionsWidth
-                        text: i18n("Hide floating gap for maximized windows")
-                        tooltip: i18n("Floating gap is disabled when there are maximized windows")
+                        // latteView and i18n are supplied by the configuration
+                        // context, so neither has a local qualifier.
+                        // qmllint disable unqualified
+                        text: latteView.type === LatteCore.Types.PanelView
+                              ? i18n("Attach panel when a window touches it")
+                              : i18n("Hide floating gap for maximized windows")
+                        tooltip: latteView.type === LatteCore.Types.PanelView
+                                 ? i18n("An Always Visible floating panel moves to the screen edge while a visible window touches its resting edge")
+                                 : i18n("Floating gap is disabled when there are maximized windows")
+                        // qmllint enable unqualified
                         value: plasmoid.configuration.hideFloatingGapForMaximized
 
                         onClicked: {
@@ -841,8 +849,16 @@ PlasmaComponents.Page {
                     LatteComponents.CheckBox {
                         Layout.maximumWidth: dialog.optionsWidth
                         enabled: plasmoid.configuration.hideFloatingGapForMaximized
-                        text: i18n("Delay floating gap hiding until mouse leaves")
-                        tooltip: i18n("to avoid clicking on adjacent items accidentally in some cases")
+                        // latteView and i18n are supplied by the configuration
+                        // context, so neither has a local qualifier.
+                        // qmllint disable unqualified
+                        text: latteView.type === LatteCore.Types.PanelView
+                              ? i18n("Wait until the pointer leaves before attaching")
+                              : i18n("Delay floating gap hiding until mouse leaves")
+                        tooltip: latteView.type === LatteCore.Types.PanelView
+                                 ? i18n("Keeps the panel floating while the pointer is inside it, which avoids moving targets during interaction")
+                                 : i18n("Avoids adjacent items moving under the pointer while the dock is in use")
+                        // qmllint enable unqualified
                         value: plasmoid.configuration.floatingGapHidingWaitsMouse
 
                         onClicked: {

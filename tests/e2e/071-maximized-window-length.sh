@@ -36,7 +36,7 @@ active_window_id() {
 dock_field() {
     local expr="$1"
     e2e_json dockSystemData | python3 -c "
-import json, sys
+import json, math, sys
 snapshot = json.load(sys.stdin)
 match = [v for v in snapshot['views'] if v['persistentDockId'] == $view]
 if len(match) != 1:
@@ -53,7 +53,6 @@ stable_snapshot() {
             "absoluteGeometry",
             "surfaceGeometry",
             "canvasGeometry",
-            "appletsLayoutGeometry",
             "stableCanvasGeometry",
             "attachedPresentationGeometry",
             "floatedPresentationGeometry",
@@ -97,6 +96,28 @@ revision_snapshot() {
     )'
 }
 
+popup_anchor_probe() {
+    dock_field '"%d %d %d %d %d %d" % (
+        *v["appletsLayoutGeometry"],
+        math.floor(v["computedPaintMaskGeometry"][1]),
+        math.ceil(v["computedPaintMaskGeometry"][1]
+                  + v["computedPaintMaskGeometry"][3])
+            - math.floor(v["computedPaintMaskGeometry"][1]),
+    )'
+}
+
+assert_popup_anchor_contract() {
+    local phase="$1"
+    local x y width height paint_y paint_height
+    read -r x y width height paint_y paint_height \
+        <<< "$(popup_anchor_probe)" \
+        || e2e_fail "$phase could not read popup-anchor geometry"
+    [[ "$x $width" == "$base_popup_primary_x $base_popup_primary_width" ]] \
+        || e2e_fail "$phase changed the popup anchor primary span: base=$base_popup_primary_x/$base_popup_primary_width current=$x/$width"
+    [[ "$y $height" == "$paint_y $paint_height" ]] \
+        || e2e_fail "$phase popup anchor did not follow the outward-aligned visible mask: anchor=$y/$height paint=$paint_y/$paint_height"
+}
+
 transition_probe() {
     dock_field '"%s %s %s %.9f %s %s %s" % (
         v["transitionTarget"],
@@ -117,6 +138,7 @@ assert_stable_contract() {
     revisions="$(revision_snapshot)" || e2e_fail "$phase could not read stable-controller and physical-geometry revisions"
     [[ "$revisions" == "$base_revisions" ]] \
         || e2e_fail "$phase reconfigured stable geometry or published physical geometry during progress: base=$base_revisions current=$revisions"
+    assert_popup_anchor_contract "$phase"
 }
 
 wait_for_resting_target() {
@@ -225,6 +247,56 @@ wait_for_zero_gap_floated_snapshot() {
         sleep 0.05
     done
     e2e_fail "zero-gap panel never exposed one consistent floated endpoint snapshot (type=$view_type visibility=$visibility_mode configured=$configured_panel eligible=$eligible_panel target=$target phase=$phase running=$running progress=$progress)"
+}
+
+wait_for_dock_gap_policy() {
+    local expected_maximized="$1" expected_request="$2"
+    local expected_target="$3" expected_progress="$4"
+    local active_maximized=unread exists_maximized=unread
+    local view_type=unread floating_gap_configured=unread
+    local configured_panel=unread eligible_panel=unread
+    local configured_hide=unread dock_request=unread
+    local target=unread phase=unread running=unread progress=-1
+    for _ in $(seq 1 80); do
+        read -r active_maximized exists_maximized \
+            <<< "$(e2e_json trackerData u "$view" | python3 -c '
+import json, sys
+tracker = json.load(sys.stdin)
+print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMaximized"]).lower())
+')"
+        read -r view_type floating_gap_configured configured_panel \
+            eligible_panel configured_hide \
+            dock_request target phase running progress \
+            <<< "$(dock_field '"%s %s %s %s %s %s %s %s %s %.9f" % (
+                v["type"],
+                str(v["floatingGapConfigured"]).lower(),
+                str(v["floatingPanelConfigured"]).lower(),
+                str(v["floatingPanelEligible"]).lower(),
+                str(v["attachOnWindowTouchConfigured"]).lower(),
+                str(v["dockGapHideRequested"]).lower(),
+                v["transitionTarget"],
+                v["transitionPhase"],
+                str(v["transitionRunning"]).lower(),
+                v["transitionProgress"],
+            )')"
+        if [[ "$active_maximized" == "$expected_maximized"
+              && "$exists_maximized" == "$expected_maximized"
+              && "$view_type" == dock
+              && "$floating_gap_configured" == true
+              && "$configured_panel" == false
+              && "$eligible_panel" == false
+              && "$configured_hide" == true
+              && "$dock_request" == "$expected_request"
+              && "$target" == "$expected_target"
+              && "$phase" == resting
+              && "$running" == false ]] \
+                && awk -v actual="$progress" -v expected="$expected_progress" \
+                    'BEGIN { difference = actual - expected; if (difference < 0) difference = -difference; exit !(difference < 0.000001) }'; then
+            return 0
+        fi
+        sleep 0.05
+    done
+    e2e_fail "Dock maximized-gap policy did not settle (active=$active_maximized exists=$exists_maximized type=$view_type floatingGapConfigured=$floating_gap_configured configuredPanel=$configured_panel panelEligible=$eligible_panel configuredHide=$configured_hide dockRequest=$dock_request target=$target phase=$phase running=$running progress=$progress)"
 }
 
 konsole_frame_geometry() {
@@ -341,6 +413,9 @@ read -r base_window_width screen_x screen_y screen_w screen_h edge screen stable
 
 base_stable_snapshot="$(stable_snapshot)" || e2e_fail "could not capture the base stable geometry contract"
 base_revisions="$(revision_snapshot)" || e2e_fail "could not capture base stable-controller and physical-geometry revisions"
+read -r base_popup_primary_x _ base_popup_primary_width _ _ _ \
+    <<< "$(popup_anchor_probe)" \
+    || e2e_fail "could not capture the base popup-anchor primary span"
 
 setsid konsole -p 'LocalTabTitleFormat=LATTE FP2 STABLE CANVAS' >/dev/null 2>&1 &
 kpid=$!
@@ -391,4 +466,33 @@ kwriteconfig6 "${group_args[@]}" --key screenEdgeMargin 0 \
 e2e_dock_start 90 || e2e_fail "dock did not restart for the zero-gap boundary check"
 wait_for_zero_gap_floated_snapshot
 
-echo "FP-2 stable canvas held view $view and its ${stable_reservation_depth}px maximum-depth reservation across qreal progress and eight rapid reversals"
+matrix_stage dock-bottom-center-1out \
+    || e2e_fail "could not realize the legacy floating-Dock fixture"
+view="$(matrix_view_id)" \
+    || e2e_fail "could not resolve the legacy floating-Dock fixture"
+group_args=(--file "$layout" --group Containments --group "$view" --group General)
+
+e2e_dock_stop \
+    || e2e_fail "dock did not stop before legacy Dock policy configuration"
+kwriteconfig6 "${group_args[@]}" --key hideFloatingGapForMaximized true \
+    || e2e_fail "could not configure legacy Dock maximized-gap hiding"
+kwriteconfig6 "${group_args[@]}" --key screenEdgeMargin 18 \
+    || e2e_fail "could not configure the legacy Dock floating gap"
+kwriteconfig6 "${group_args[@]}" --key floatingInternalGapIsForced false \
+    || e2e_fail "could not keep the legacy Dock gap under transition ownership"
+e2e_dock_start 90 \
+    || e2e_fail "dock did not restart with the legacy floating-Dock fixture"
+e2e_call setViewVisibilityMode us "$view" alwaysVisible >/dev/null \
+    || e2e_fail "could not set the legacy Dock fixture to alwaysVisible"
+
+[[ "$(set_konsole_maximized false)" == "$fixture_id" ]] \
+    || e2e_fail "KWin did not normalize the client for the legacy Dock check"
+wait_for_dock_gap_policy false false floated 1
+[[ "$(set_konsole_maximized true)" == "$fixture_id" ]] \
+    || e2e_fail "KWin did not maximize the client for the legacy Dock check"
+wait_for_dock_gap_policy true true floated 1
+[[ "$(set_konsole_maximized false)" == "$fixture_id" ]] \
+    || e2e_fail "KWin did not restore the client for the legacy Dock check"
+wait_for_dock_gap_policy false false floated 1
+
+echo "FP-2/FP-4A stable canvas held its maximum-depth reservation across qreal reversals and preserved the separate legacy Dock maximized-gap arm"

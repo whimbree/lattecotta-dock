@@ -30,11 +30,30 @@ class FloatingTransition final : public QObject
     Q_PROPERTY(qreal floatingness READ floatingness WRITE setFloatingness
                    NOTIFY floatingnessChanged)
     Q_PROPERTY(Target target READ target NOTIFY targetChanged)
+    Q_PROPERTY(bool attachmentTargeted READ attachmentTargeted
+                   NOTIFY targetChanged)
     Q_PROPERTY(bool floatingAppletPopupsPreferred
                    READ floatingAppletPopupsPreferred NOTIFY targetChanged)
     Q_PROPERTY(Phase phase READ phase NOTIFY phaseChanged)
     Q_PROPERTY(bool running READ running NOTIFY runningChanged)
-    Q_PROPERTY(bool eligible READ eligible WRITE setEligible NOTIFY eligibleChanged)
+    Q_PROPERTY(bool floatingPanelEligible READ floatingPanelEligible
+                   NOTIFY floatingPanelEligibleChanged)
+    Q_PROPERTY(bool attachOnWindowTouchConfigured
+                   READ attachOnWindowTouchConfigured
+                   NOTIFY attachOnWindowTouchConfiguredChanged)
+    Q_PROPERTY(bool attachmentWaitsForPointerExitConfigured
+                   READ attachmentWaitsForPointerExitConfigured
+                   NOTIFY attachmentWaitsForPointerExitConfiguredChanged)
+    Q_PROPERTY(bool pointerInsideView
+                   READ pointerInsideView
+                   NOTIFY pointerInsideViewChanged)
+    Q_PROPERTY(bool attachmentDeferredByPointer
+                   READ attachmentDeferredByPointer
+                   NOTIFY attachmentDeferredByPointerChanged)
+    Q_PROPERTY(bool dockGapHideRequested READ dockGapHideRequested
+                   NOTIFY dockGapHideRequestedChanged)
+    Q_PROPERTY(int touchingWindowCount READ touchingWindowCount
+                   NOTIFY touchingWindowCountChanged)
     Q_PROPERTY(int animationDuration READ animationDuration WRITE setAnimationDuration
                    NOTIFY animationDurationChanged)
 
@@ -83,11 +102,17 @@ public:
 
     [[nodiscard]] qreal floatingness() const;
     [[nodiscard]] Target target() const;
+    [[nodiscard]] bool attachmentTargeted() const;
     [[nodiscard]] bool floatingAppletPopupsPreferred() const;
     [[nodiscard]] Phase phase() const;
     [[nodiscard]] bool running() const;
-    [[nodiscard]] bool eligible() const;
-    void setEligible(bool eligible);
+    [[nodiscard]] bool floatingPanelEligible() const;
+    [[nodiscard]] bool attachOnWindowTouchConfigured() const;
+    [[nodiscard]] bool attachmentWaitsForPointerExitConfigured() const;
+    [[nodiscard]] bool pointerInsideView() const;
+    [[nodiscard]] bool attachmentDeferredByPointer() const;
+    [[nodiscard]] bool dockGapHideRequested() const;
+    [[nodiscard]] int touchingWindowCount() const;
 
     [[nodiscard]] int animationDuration() const;
     void setAnimationDuration(int duration);
@@ -121,8 +146,13 @@ public:
     void configureGeometry(const FloatingPanelGeometry::Solution &solution);
     void clearGeometry();
 
-    Q_INVOKABLE void requestAttached();
-    Q_INVOKABLE void requestFloated();
+    Q_INVOKABLE void reconcileTargetPolicy(
+        bool floatingPanelEligible,
+        bool attachOnWindowTouchConfigured,
+        bool attachmentWaitsForPointerExitConfigured,
+        bool pointerInsideView,
+        int touchingWindowCount,
+        bool dockGapHideRequested);
     Q_INVOKABLE int displayHintsWithFloatingPreference(
         int currentHints,
         int floatingHint,
@@ -133,7 +163,13 @@ Q_SIGNALS:
     void targetChanged();
     void phaseChanged();
     void runningChanged();
-    void eligibleChanged();
+    void floatingPanelEligibleChanged();
+    void attachOnWindowTouchConfiguredChanged();
+    void attachmentWaitsForPointerExitConfiguredChanged();
+    void pointerInsideViewChanged();
+    void attachmentDeferredByPointerChanged();
+    void dockGapHideRequestedChanged();
+    void touchingWindowCountChanged();
     void animationDurationChanged();
     void stableGeometryChanged();
     void currentGeometryChanged();
@@ -146,7 +182,13 @@ private:
     qreal m_floatingness{1.0};
     Target m_target{Target::Floated};
     Phase m_phase{Phase::Resting};
-    bool m_eligible{false};
+    bool m_floatingPanelEligible{false};
+    bool m_attachOnWindowTouchConfigured{false};
+    bool m_attachmentWaitsForPointerExitConfigured{false};
+    bool m_pointerInsideView{false};
+    bool m_attachmentDeferredByPointer{false};
+    bool m_dockGapHideRequested{false};
+    int m_touchingWindowCount{0};
     int m_animationDuration{0};
     quint64 m_geometryRevision{0};
     std::optional<FloatingPanelGeometry::Solution> m_geometry;

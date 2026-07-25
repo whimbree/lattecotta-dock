@@ -178,8 +178,12 @@ static DockSystemViewRecord stableBottomTransitionRecord()
     record.surfaceGeometry = QRect(100, 953, 300, 47);
     record.layerShellPresent = true;
     record.layerShellMargins = QMargins{};
+    record.floatingGapConfigured = true;
     record.floatingPanelConfigured = true;
     record.floatingPanelEligible = true;
+    record.attachOnWindowTouchConfigured = false;
+    record.attachmentDeferredByPointer = false;
+    record.touchingWindowCount = 0;
     record.visibilityMode = Types::AlwaysVisible;
     record.transitionTarget =
         DockTransitionTarget::Floated;
@@ -236,6 +240,8 @@ static DockSystemViewRecord stableBottomTransitionRecord()
         QStringLiteral("object-1");
     record.objects.transitionController =
         QStringLiteral("object-2");
+    record.objects.windowTouchTracker =
+        QStringLiteral("object-3");
     return record;
 }
 
@@ -926,8 +932,16 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     record.reservationLayerShellMargins = QMargins(0, 40, 0, -40);
     record.reservationLayerShellExclusiveEdge = QStringLiteral("left");
     record.reservationLayerShellExclusiveZone = 48;
+    record.floatingGapConfigured = true;
     record.floatingPanelConfigured = true;
     record.floatingPanelEligible = true;
+    record.attachOnWindowTouchConfigured = true;
+    record.attachmentWaitsForPointerExitConfigured = true;
+    record.pointerInsideView = true;
+    record.attachmentDeferredByPointer = true;
+    record.touchingWindowCount = 2;
+    record.windowTouchGeometryRoleType =
+        QStringLiteral("QRect");
     record.transitionTarget =
         DockTransitionTarget::Floated;
     record.transitionProgress = 0.375;
@@ -989,6 +1003,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     record.objects.reservationPublisher = QStringLiteral("object-27");
     record.objects.transitionController =
         QStringLiteral("object-28");
+    record.objects.windowTouchTracker =
+        QStringLiteral("object-29");
 
     DockSystemSnapshot snapshot;
     snapshot.snapshotSequence = 41;
@@ -1029,8 +1045,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("snapshotSequence"),
         QStringLiteral("stacking"),
         QStringLiteral("views")}));
-    QCOMPARE(DockSystemSnapshot::SchemaVersion, 6);
-    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 6);
+    QCOMPARE(DockSystemSnapshot::SchemaVersion, 7);
+    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 7);
     QCOMPARE(root.value(QStringLiteral("snapshotSequence")).toString(), QStringLiteral("41"));
     QCOMPARE(
         root.value(
@@ -1104,13 +1120,17 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("absoluteGeometry"), QStringLiteral("alignment"),
         QStringLiteral("appletsLayoutGeometry"),
         QStringLiteral("appliedInputMask"), QStringLiteral("appliedRelocationGeneration"),
+        QStringLiteral("attachOnWindowTouchConfigured"),
         QStringLiteral("attachedPresentationGeometry"),
+        QStringLiteral("attachmentDeferredByPointer"),
+        QStringLiteral("attachmentWaitsForPointerExitConfigured"),
         QStringLiteral("availablePrimaryLength"),
         QStringLiteral("canvasGeometry"),
         QStringLiteral("computedInputBridgeGeometry"),
         QStringLiteral("computedPaintMaskGeometry"),
         QStringLiteral("configuredIconSize"), QStringLiteral("contentTranslation"),
-        QStringLiteral("currentVisibleGeometry"), QStringLiteral("edge"),
+        QStringLiteral("currentVisibleGeometry"),
+        QStringLiteral("dockGapHideRequested"), QStringLiteral("edge"),
         QStringLiteral("editMode"), QStringLiteral("effectiveConfigureAppletsMode"),
         QStringLiteral("effectiveIconSize"), QStringLiteral("effectsRect"),
         QStringLiteral("enabledBorders"),
@@ -1119,6 +1139,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("floatingAppletPopupsPreferred"),
         QStringLiteral("floatingDamageMaskGeneration"),
         QStringLiteral("floatingDamageMaskPending"),
+        QStringLiteral("floatingGapConfigured"),
         QStringLiteral("floatingPanelConfigured"),
         QStringLiteral("floatingPanelEligible"),
         QStringLiteral("geometrySettled"), QStringLiteral("inDelete"),
@@ -1138,6 +1159,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("objects"), QStringLiteral("offsetRatio"),
         QStringLiteral("onPrimary"), QStringLiteral("orientation"),
         QStringLiteral("originalDockId"), QStringLiteral("persistentDockId"),
+        QStringLiteral("pointerInsideView"),
         QStringLiteral("publishedStruts"), QStringLiteral("relationship"),
         QStringLiteral("relocationGeneration"),
         QStringLiteral("requestedReservationDepth"),
@@ -1169,6 +1191,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("stableTriggerGeometry"),
         QStringLiteral("strutsThickness"), QStringLiteral("surfaceGeometry"),
         QStringLiteral("surfaceGeometryPublicationRevision"),
+        QStringLiteral("touchingWindowCount"),
         QStringLiteral("transitionDirection"),
         QStringLiteral("transitionGeometryPresent"),
         QStringLiteral("transitionGeometryRevision"),
@@ -1177,7 +1200,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("transitionRunning"),
         QStringLiteral("transitionTarget"),
         QStringLiteral("type"),
-        QStringLiteral("visibilityMode"), QStringLiteral("windowGeometry")}));
+        QStringLiteral("visibilityMode"), QStringLiteral("windowGeometry"),
+        QStringLiteral("windowTouchGeometryRoleType")}));
     QCOMPARE(view.value(QStringLiteral("runtimeViewId")).toString(), QStringLiteral("19"));
     QCOMPARE(view.value(QStringLiteral("persistentDockId")).toInt(), 7);
     QCOMPARE(view.value(QStringLiteral("logicalDockId")).toInt(), 3);
@@ -1226,12 +1250,45 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(view.value(QStringLiteral("reservationLayerShellExclusiveZone")).toInt(), 48);
     QCOMPARE(
         view.value(
+            QStringLiteral("floatingGapConfigured")).toBool(),
+        true);
+    QCOMPARE(
+        view.value(
             QStringLiteral("floatingPanelConfigured")).toBool(),
         true);
     QCOMPARE(
         view.value(
             QStringLiteral("floatingPanelEligible")).toBool(),
         true);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("attachOnWindowTouchConfigured")).toBool(),
+        true);
+    QCOMPARE(
+        view.value(
+            QStringLiteral(
+                "attachmentWaitsForPointerExitConfigured")).toBool(),
+        true);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("pointerInsideView")).toBool(),
+        true);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("attachmentDeferredByPointer")).toBool(),
+        true);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("dockGapHideRequested")).toBool(),
+        false);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("touchingWindowCount")).toInt(),
+        2);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("windowTouchGeometryRoleType")).toString(),
+        QStringLiteral("QRect"));
     QCOMPARE(
         view.value(
             QStringLiteral("transitionTarget")).toString(),
@@ -1346,13 +1403,15 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("geometryController"), QStringLiteral("layout"),
         QStringLiteral("layoutController"), QStringLiteral("reservationPublisher"),
         QStringLiteral("transitionController"),
-        QStringLiteral("view")}));
+        QStringLiteral("view"), QStringLiteral("windowTouchTracker")}));
     QCOMPARE(objects.value(QStringLiteral("layoutController")).toString(),
              QStringLiteral("object-23"));
     QCOMPARE(objects.value(QStringLiteral("reservationPublisher")).toString(),
              QStringLiteral("object-27"));
     QCOMPARE(objects.value(QStringLiteral("transitionController")).toString(),
              QStringLiteral("object-28"));
+    QCOMPARE(objects.value(QStringLiteral("windowTouchTracker")).toString(),
+             QStringLiteral("object-29"));
 
     const QStringList stringFields{
         QStringLiteral("runtimeViewId"), QStringLiteral("relocationGeneration"),
@@ -1372,7 +1431,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("transitionDirection"),
         QStringLiteral("transitionGeometryRevision"),
         QStringLiteral("transitionPhase"),
-        QStringLiteral("transitionTarget")};
+        QStringLiteral("transitionTarget"),
+        QStringLiteral("windowTouchGeometryRoleType")};
     const QStringList numberFields{
         QStringLiteral("persistentDockId"), QStringLiteral("logicalDockId"),
         QStringLiteral("originalDockId"), QStringLiteral("screenId"),
@@ -1390,6 +1450,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("stableLayerShellMargin"),
         QStringLiteral("stablePrimaryAxisLength"),
         QStringLiteral("stablePrimaryAxisStart"),
+        QStringLiteral("touchingWindowCount"),
         QStringLiteral("transitionProgress")};
     const QStringList booleanFields{
         QStringLiteral("onPrimary"), QStringLiteral("isHidden"), QStringLiteral("inStartup"),
@@ -1400,8 +1461,14 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("layerShellPresent"), QStringLiteral("reservationSurfacePresent"),
         QStringLiteral("floatingDamageMaskPending"),
         QStringLiteral("floatingAppletPopupsPreferred"),
+        QStringLiteral("attachOnWindowTouchConfigured"),
+        QStringLiteral("attachmentDeferredByPointer"),
+        QStringLiteral("attachmentWaitsForPointerExitConfigured"),
+        QStringLiteral("dockGapHideRequested"),
+        QStringLiteral("floatingGapConfigured"),
         QStringLiteral("floatingPanelConfigured"),
         QStringLiteral("floatingPanelEligible"),
+        QStringLiteral("pointerInsideView"),
         QStringLiteral("transitionGeometryPresent"),
         QStringLiteral("transitionRunning")};
     const QStringList arrayFields{
@@ -1521,7 +1588,18 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     requireJsonType(view, QStringLiteral("shadowPaddingOffsets"), QJsonValue::Null);
     requireJsonType(view, QStringLiteral("floatingAppletPopupsPreferred"), QJsonValue::Bool);
     requireJsonType(view, QStringLiteral("floatingAnchorRevision"), QJsonValue::String);
+    requireJsonType(view, QStringLiteral("floatingGapConfigured"), QJsonValue::Bool);
     requireJsonType(view, QStringLiteral("floatingPanelEligible"), QJsonValue::Bool);
+    requireJsonType(view, QStringLiteral("attachOnWindowTouchConfigured"), QJsonValue::Bool);
+    requireJsonType(
+        view,
+        QStringLiteral("attachmentWaitsForPointerExitConfigured"),
+        QJsonValue::Bool);
+    requireJsonType(view, QStringLiteral("pointerInsideView"), QJsonValue::Bool);
+    requireJsonType(view, QStringLiteral("attachmentDeferredByPointer"), QJsonValue::Bool);
+    requireJsonType(view, QStringLiteral("dockGapHideRequested"), QJsonValue::Bool);
+    requireJsonType(view, QStringLiteral("touchingWindowCount"), QJsonValue::Double);
+    requireJsonType(view, QStringLiteral("windowTouchGeometryRoleType"), QJsonValue::String);
     requireJsonType(view, QStringLiteral("transitionTarget"), QJsonValue::String);
     requireJsonType(view, QStringLiteral("transitionProgress"), QJsonValue::Double);
     requireJsonType(view, QStringLiteral("transitionPhase"), QJsonValue::String);
@@ -1530,6 +1608,7 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     requireJsonType(view, QStringLiteral("transitionGeometryPresent"), QJsonValue::Bool);
     requireJsonType(view, QStringLiteral("transitionGeometryRevision"), QJsonValue::String);
     requireJsonType(view, QStringLiteral("stableLayerShellMargin"), QJsonValue::Double);
+    QCOMPARE(view.value(QStringLiteral("floatingGapConfigured")).toBool(), false);
     QCOMPARE(view.value(QStringLiteral("floatingPanelConfigured")).toBool(), false);
     QCOMPARE(view.value(QStringLiteral("floatingDamageMaskPending")).toBool(), false);
     QCOMPARE(view.value(QStringLiteral("floatingDamageMaskGeneration")).toString(),
@@ -1542,6 +1621,18 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     QCOMPARE(view.value(QStringLiteral("floatingAnchorRevision")).toString(),
              QStringLiteral("0"));
     QCOMPARE(view.value(QStringLiteral("floatingPanelEligible")).toBool(), false);
+    QCOMPARE(view.value(QStringLiteral("attachOnWindowTouchConfigured")).toBool(), false);
+    QCOMPARE(
+        view.value(
+            QStringLiteral(
+                "attachmentWaitsForPointerExitConfigured")).toBool(),
+        false);
+    QCOMPARE(view.value(QStringLiteral("pointerInsideView")).toBool(), false);
+    QCOMPARE(view.value(QStringLiteral("attachmentDeferredByPointer")).toBool(), false);
+    QCOMPARE(view.value(QStringLiteral("dockGapHideRequested")).toBool(), false);
+    QCOMPARE(view.value(QStringLiteral("touchingWindowCount")).toInt(), 0);
+    QCOMPARE(view.value(QStringLiteral("windowTouchGeometryRoleType")).toString(),
+             QString{});
     QCOMPARE(view.value(QStringLiteral("transitionTarget")).toString(), QStringLiteral("floated"));
     QCOMPARE(view.value(QStringLiteral("transitionProgress")).toDouble(), 1.0);
     QCOMPARE(view.value(QStringLiteral("transitionPhase")).toString(), QStringLiteral("resting"));
@@ -1673,6 +1764,16 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
     });
     rejects([](auto &snapshot) {
         snapshot.views[0]
+            .objects.windowTouchTracker.clear();
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .objects.windowTouchTracker =
+            snapshot.views[0]
+                .objects.transitionController;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
             .objects.view =
             snapshot.views[0]
                 .objects.transitionController;
@@ -1683,7 +1784,7 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         second.persistentDockId = 8;
         second.logicalDockId = 8;
         second.objects.geometryController =
-            QStringLiteral("object-3");
+            QStringLiteral("object-4");
         snapshot.views.append(second);
     });
     rejects([](auto &snapshot) {
@@ -1692,12 +1793,25 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         second.persistentDockId = 8;
         second.logicalDockId = 8;
         second.objects.geometryController =
-            QStringLiteral("object-3");
-        second.objects.transitionController =
             QStringLiteral("object-4");
+        second.objects.transitionController =
+            QStringLiteral("object-5");
+        second.objects.windowTouchTracker =
+            QStringLiteral("object-6");
         second.objects.view =
             snapshot.views[0]
                 .objects.transitionController;
+        snapshot.views.append(second);
+    });
+    rejects([](auto &snapshot) {
+        auto second =
+            snapshot.views[0];
+        second.persistentDockId = 8;
+        second.logicalDockId = 8;
+        second.objects.geometryController =
+            QStringLiteral("object-4");
+        second.objects.transitionController =
+            QStringLiteral("object-5");
         snapshot.views.append(second);
     });
     rejects([](auto &snapshot) {
@@ -1763,6 +1877,27 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
     rejects([](auto &snapshot) {
         snapshot.views[0]
             .transitionProgress = 1.5;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .touchingWindowCount = -1;
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .windowTouchGeometryRoleType =
+            QStringLiteral("QRectF");
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .attachmentDeferredByPointer = true;
+        snapshot.views[0]
+            .attachmentWaitsForPointerExitConfigured = true;
+        snapshot.views[0]
+            .pointerInsideView = true;
+        snapshot.views[0]
+            .touchingWindowCount = 1;
+        snapshot.views[0]
+            .windowTouchGeometryRoleType.clear();
     });
     rejects([](auto &snapshot) {
         snapshot.views[0]
@@ -1903,6 +2038,122 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
             snapshot.views[0].inputMask.adjusted(
                 0, 0, 1, 0);
     });
+
+    auto attached = stableBottomTransitionRecord();
+    attached.attachOnWindowTouchConfigured = true;
+    attached.attachmentDeferredByPointer = false;
+    attached.touchingWindowCount = 1;
+    attached.windowTouchGeometryRoleType =
+        QStringLiteral("QRect");
+    attached.transitionTarget =
+        DockTransitionTarget::Attached;
+    attached.transitionProgress = 0.0;
+    attached.transitionPhase =
+        DockTransitionPhase::Resting;
+    attached.transitionDirection =
+        DockTransitionDirection::None;
+    attached.transitionRunning = false;
+    attached.currentVisibleGeometry =
+        QRectF(*attached.attachedPresentationGeometry);
+    attached.computedPaintMaskGeometry =
+        attached.currentVisibleGeometry;
+    attached.computedInputBridgeGeometry =
+        attached.currentVisibleGeometry;
+    attached.contentTranslation =
+        QPointF(0.0, 7.0);
+    attached.effectsRect =
+        attached.currentVisibleGeometry->toAlignedRect();
+    attached.maskRect = attached.effectsRect;
+    attached.inputMask = attached.effectsRect;
+    attached.appliedInputMask = attached.inputMask;
+    attached.shadowPaddingOffsets =
+        QMargins(0, -7, 0, 0);
+    attached.enabledBorders = {
+        QStringLiteral("top"),
+        QStringLiteral("right"),
+        QStringLiteral("left"),
+    };
+    attached.shadowEnabledBorders =
+        attached.enabledBorders;
+    attached.floatingAppletPopupsPreferred = false;
+
+    DockSystemSnapshot attachedSnapshot;
+    attachedSnapshot.views = {attached};
+    QVERIFY(dockTransitionRecordsAgree(attachedSnapshot));
+
+    const auto rejectsBrokenAttachmentEquation =
+        [&attachedSnapshot](const auto &breakRequiredArm) {
+            DockSystemSnapshot invalid = attachedSnapshot;
+            breakRequiredArm(invalid.views[0]);
+            QVERIFY(!dockTransitionRecordsAgree(invalid));
+        };
+    rejectsBrokenAttachmentEquation([](auto &record) {
+        record.floatingPanelEligible = false;
+    });
+    rejectsBrokenAttachmentEquation([](auto &record) {
+        record.attachOnWindowTouchConfigured = false;
+    });
+    rejectsBrokenAttachmentEquation([](auto &record) {
+        record.attachmentDeferredByPointer = true;
+        record.attachmentWaitsForPointerExitConfigured = true;
+        record.pointerInsideView = true;
+    });
+    rejectsBrokenAttachmentEquation([](auto &record) {
+        record.touchingWindowCount = 0;
+    });
+
+    {
+        DockSystemSnapshot dockSnapshot;
+        DockSystemViewRecord dockRecord;
+        dockRecord.runtimeViewId = 8;
+        dockRecord.persistentDockId = 8;
+        dockRecord.logicalDockId = 8;
+        dockRecord.type = Types::DockView;
+        dockRecord.floatingGapConfigured = true;
+        dockRecord.floatingPanelConfigured = false;
+        dockRecord.attachOnWindowTouchConfigured = true;
+        dockRecord.dockGapHideRequested = true;
+        dockRecord.visibilityMode = Types::AlwaysVisible;
+        dockRecord.transitionTarget =
+            DockTransitionTarget::Floated;
+        dockRecord.transitionProgress = 1.0;
+        dockRecord.objects.transitionController =
+            QStringLiteral("dock-transition");
+        dockRecord.objects.windowTouchTracker =
+            QStringLiteral("dock-window-touch");
+        dockSnapshot.views = {dockRecord};
+        auto &dock = dockSnapshot.views[0];
+        QVERIFY(dockTransitionRecordsAgree(dockSnapshot));
+
+        dock.floatingPanelConfigured = true;
+        QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
+        dock.floatingPanelConfigured = false;
+        dock.floatingGapConfigured = false;
+        QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
+        dock.floatingGapConfigured = true;
+        dock.floatingPanelEligible = true;
+        QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
+    }
+
+    {
+        DockSystemSnapshot deferredSnapshot = valid;
+        auto &deferred = deferredSnapshot.views[0];
+        deferred.attachOnWindowTouchConfigured = true;
+        deferred.attachmentWaitsForPointerExitConfigured = true;
+        deferred.pointerInsideView = true;
+        deferred.attachmentDeferredByPointer = true;
+        deferred.touchingWindowCount = 1;
+        deferred.windowTouchGeometryRoleType =
+            QStringLiteral("QRect");
+        QVERIFY(dockTransitionRecordsAgree(deferredSnapshot));
+
+        deferred.attachmentWaitsForPointerExitConfigured = false;
+        QVERIFY(!dockTransitionRecordsAgree(deferredSnapshot));
+        deferred.attachmentWaitsForPointerExitConfigured = true;
+        deferred.pointerInsideView = false;
+        QVERIFY(!dockTransitionRecordsAgree(deferredSnapshot));
+    }
+
     {
         auto pending = valid;
         pending.views[0].floatingDamageMaskPending = true;
@@ -2019,6 +2270,10 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
 
     DockSystemSnapshot attachedPanel = valid;
     auto &attachedView = attachedPanel.views[0];
+    attachedView.attachOnWindowTouchConfigured = true;
+    attachedView.touchingWindowCount = 1;
+    attachedView.windowTouchGeometryRoleType =
+        QStringLiteral("QRect");
     attachedView.transitionTarget =
         DockTransitionTarget::Attached;
     attachedView.transitionPhase =
@@ -2042,6 +2297,7 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
 
     DockSystemSnapshot flushPanel;
     auto flushView = stableBottomTransitionRecord();
+    flushView.floatingGapConfigured = false;
     flushView.floatingPanelConfigured = false;
     flushView.floatingPanelEligible = false;
     flushView.floatingAppletPopupsPreferred = false;

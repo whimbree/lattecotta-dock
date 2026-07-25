@@ -12,5 +12,6 @@ set(lattedock-app_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/view.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/originalview.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/visibilitymanager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/windowtouchtracker.cpp
     PARENT_SCOPE
 )

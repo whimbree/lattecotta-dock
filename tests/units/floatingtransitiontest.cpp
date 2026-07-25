@@ -33,8 +33,8 @@ private:
     {
         animation = new QPropertyAnimation;
         auto *controller = new FloatingTransition(nullptr, animation);
-        controller->setEligible(true);
-        controller->requestAttached();
+        controller->reconcileTargetPolicy(
+            true, true, false, false, 1, false);
         controller->setAnimationDuration(400);
         return controller;
     }
@@ -47,6 +47,9 @@ private Q_SLOTS:
     void canonicalizesNearEndpointsExactly();
     void togglesPopupHintFromTargetAndPreservesUnknownBits();
     void ineligibleControllerRemainsFloated();
+    void preservesDockMaximizedGapPolicy();
+    void defersOnlyANewAttachmentUntilPointerExit();
+    void reconcilesEveryPolicyInputAtomically();
     void rejectsInvalidConfigurationWithoutReplacingStableState();
 };
 
@@ -70,7 +73,8 @@ void FloatingTransitionTest::ownsOneAnimationAndKeepsStableGeometry()
 
     QSignalSpy stableGeometryChanged(controller.data(),
                                      &FloatingTransition::stableGeometryChanged);
-    controller->requestFloated();
+    controller->reconcileTargetPolicy(
+        true, true, false, false, 0, false);
     animation->setCurrentTime(200);
 
     QCOMPARE(controller->currentVisibleGeometry(), QRectF(0, 1.5, 1440, 48));
@@ -85,7 +89,8 @@ void FloatingTransitionTest::reversesFromCurrentQrealValueAtFullDuration()
     QPropertyAnimation *animation{nullptr};
     QScopedPointer<FloatingTransition> controller(makeController(animation));
 
-    controller->requestFloated();
+    controller->reconcileTargetPolicy(
+        true, true, false, false, 0, false);
     QCOMPARE(controller->target(), FloatingTransition::Target::Floated);
     QCOMPARE(controller->phase(), FloatingTransition::Phase::Floating);
     QCOMPARE(animation->duration(), 400);
@@ -95,7 +100,8 @@ void FloatingTransitionTest::reversesFromCurrentQrealValueAtFullDuration()
     const qreal outwardValue = controller->floatingness();
     QVERIFY(qAbs(outwardValue - 0.784) < 0.0001);
 
-    controller->requestAttached();
+    controller->reconcileTargetPolicy(
+        true, true, false, false, 1, false);
     QCOMPARE(controller->target(), FloatingTransition::Target::Attached);
     QCOMPARE(controller->phase(), FloatingTransition::Phase::Attaching);
     QCOMPARE(animation->startValue().toReal(), outwardValue);
@@ -107,7 +113,8 @@ void FloatingTransitionTest::reversesFromCurrentQrealValueAtFullDuration()
     const qreal inwardValue = controller->floatingness();
     QVERIFY(qAbs(inwardValue - 0.686) < 0.0001);
 
-    controller->requestFloated();
+    controller->reconcileTargetPolicy(
+        true, true, false, false, 0, false);
     QCOMPARE(animation->startValue().toReal(), inwardValue);
     QCOMPARE(animation->endValue().toReal(), 1.0);
     QCOMPARE(animation->duration(), 400);
@@ -124,9 +131,11 @@ void FloatingTransitionTest::survivesRapidAlternatingTargetsWithoutGeometryRecon
 
     for (int iteration = 0; iteration < 20; ++iteration) {
         if ((iteration % 2) == 0) {
-            controller->requestFloated();
+            controller->reconcileTargetPolicy(
+                true, true, false, false, 0, false);
         } else {
-            controller->requestAttached();
+            controller->reconcileTargetPolicy(
+                true, true, false, false, 1, false);
         }
         animation->setCurrentTime(80 + (iteration % 3) * 40);
         QVERIFY(controller->floatingness() >= 0.0);
@@ -143,17 +152,21 @@ void FloatingTransitionTest::zeroDurationSettlesSynchronously()
 {
     FloatingTransition controller;
     controller.setAnimationDuration(0);
-    controller.setEligible(true);
+    controller.reconcileTargetPolicy(
+        true, true, false, false, 0, false);
 
-    controller.requestAttached();
+    controller.reconcileTargetPolicy(
+        true, true, false, false, 1, false);
     QCOMPARE(controller.floatingness(), 0.0);
-    controller.requestFloated();
+    controller.reconcileTargetPolicy(
+        true, true, false, false, 0, false);
     QCOMPARE(controller.floatingness(), 1.0);
     QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
     QCOMPARE(controller.phase(), FloatingTransition::Phase::Resting);
     QVERIFY(!controller.running());
 
-    controller.requestAttached();
+    controller.reconcileTargetPolicy(
+        true, true, false, false, 1, false);
     QCOMPARE(controller.floatingness(), 0.0);
     QCOMPARE(controller.target(), FloatingTransition::Target::Attached);
     QCOMPARE(controller.phase(), FloatingTransition::Phase::Resting);
@@ -164,19 +177,22 @@ void FloatingTransitionTest::canonicalizesNearEndpointsExactly()
 {
     FloatingTransition controller;
     controller.setAnimationDuration(0);
-    controller.setEligible(true);
+    controller.reconcileTargetPolicy(
+        true, true, false, false, 0, false);
 
     QVERIFY(controller.setProperty("floatingness", 1e-13));
     QSignalSpy attachedGeometryChanged(
         &controller, &FloatingTransition::currentGeometryChanged);
-    controller.requestAttached();
+    controller.reconcileTargetPolicy(
+        true, true, false, false, 1, false);
     QCOMPARE(controller.floatingness(), 0.0);
     QCOMPARE(attachedGeometryChanged.count(), 1);
 
     QVERIFY(controller.setProperty("floatingness", 1.0 - 1e-13));
     QSignalSpy floatedGeometryChanged(
         &controller, &FloatingTransition::currentGeometryChanged);
-    controller.requestFloated();
+    controller.reconcileTargetPolicy(
+        true, true, false, false, 0, false);
     QCOMPARE(controller.floatingness(), 1.0);
     QCOMPARE(floatedGeometryChanged.count(), 1);
 }
@@ -199,7 +215,8 @@ void FloatingTransitionTest::
             true),
         unknownBits);
 
-    controller->requestFloated();
+    controller->reconcileTargetPolicy(
+        true, true, false, false, 0, false);
     QCOMPARE(
         controller->displayHintsWithFloatingPreference(
             unknownBits,
@@ -207,7 +224,8 @@ void FloatingTransitionTest::
             true),
         unknownBits | floatingBit);
 
-    controller->requestAttached();
+    controller->reconcileTargetPolicy(
+        true, true, false, false, 1, false);
     QCOMPARE(
         controller->displayHintsWithFloatingPreference(
             unknownBits | floatingBit,
@@ -229,18 +247,184 @@ void FloatingTransitionTest::ineligibleControllerRemainsFloated()
 
     QCOMPARE(controller.floatingness(), 1.0);
     QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
-    controller.requestAttached();
+    controller.reconcileTargetPolicy(
+        false, true, false, false, 1, false);
     QCOMPARE(controller.floatingness(), 1.0);
     QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
 
-    controller.setEligible(true);
-    controller.requestAttached();
+    controller.reconcileTargetPolicy(
+        true, true, false, false, 1, false);
     QCOMPARE(controller.floatingness(), 0.0);
     QCOMPARE(controller.target(), FloatingTransition::Target::Attached);
 
-    controller.setEligible(false);
+    controller.reconcileTargetPolicy(
+        false, true, false, false, 1, false);
     QCOMPARE(controller.floatingness(), 1.0);
     QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
+}
+
+void FloatingTransitionTest::preservesDockMaximizedGapPolicy()
+{
+    FloatingTransition controller;
+    controller.setAnimationDuration(0);
+
+    controller.reconcileTargetPolicy(
+        false, true, true, true, 0, false);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
+    QVERIFY(!controller.dockGapHideRequested());
+    QVERIFY(!controller.attachmentDeferredByPointer());
+
+    controller.reconcileTargetPolicy(
+        false, true, true, true, 0, true);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
+    QVERIFY(controller.dockGapHideRequested());
+    QVERIFY(!controller.attachmentDeferredByPointer());
+
+    controller.reconcileTargetPolicy(
+        false, true, true, true, 0, false);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
+
+    QTest::ignoreMessage(
+        QtCriticalMsg,
+        "FloatingTransition refused an inconsistent Dock gap-hide request");
+    controller.reconcileTargetPolicy(
+        true, true, false, false, 1, true);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
+    QVERIFY(!controller.floatingPanelEligible());
+    QVERIFY(!controller.dockGapHideRequested());
+}
+
+void FloatingTransitionTest::defersOnlyANewAttachmentUntilPointerExit()
+{
+    FloatingTransition controller;
+    controller.setAnimationDuration(0);
+
+    controller.reconcileTargetPolicy(
+        true, true, true, false, 1, false);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Attached);
+    QVERIFY(!controller.attachmentDeferredByPointer());
+
+    controller.reconcileTargetPolicy(
+        true, true, true, true, 1, false);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Attached);
+    QVERIFY(controller.pointerInsideView());
+    QVERIFY(!controller.attachmentDeferredByPointer());
+
+    controller.reconcileTargetPolicy(
+        true, true, true, true, 0, false);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
+    QVERIFY(!controller.attachmentDeferredByPointer());
+
+    controller.reconcileTargetPolicy(
+        true, true, true, true, 1, false);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
+    QVERIFY(controller.attachmentDeferredByPointer());
+
+    controller.reconcileTargetPolicy(
+        true, true, true, false, 1, false);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Attached);
+    QVERIFY(!controller.pointerInsideView());
+    QVERIFY(!controller.attachmentDeferredByPointer());
+}
+
+void FloatingTransitionTest::reconcilesEveryPolicyInputAtomically()
+{
+    FloatingTransition controller;
+    controller.setAnimationDuration(0);
+
+    int observedSignals{0};
+    const auto verifyCompletePolicy = [&controller, &observedSignals]() {
+        ++observedSignals;
+        const bool shouldAttach =
+            controller.floatingPanelEligible()
+            && controller.attachOnWindowTouchConfigured()
+            && !controller.attachmentDeferredByPointer()
+            && controller.touchingWindowCount() > 0;
+        QVERIFY(!controller.attachmentDeferredByPointer()
+                || (controller.attachmentWaitsForPointerExitConfigured()
+                    && controller.pointerInsideView()));
+        QCOMPARE(
+            controller.target(),
+            shouldAttach ? FloatingTransition::Target::Attached
+                         : FloatingTransition::Target::Floated);
+    };
+    connect(&controller, &FloatingTransition::floatingPanelEligibleChanged,
+            &controller, verifyCompletePolicy);
+    connect(&controller,
+            &FloatingTransition::attachOnWindowTouchConfiguredChanged,
+            &controller, verifyCompletePolicy);
+    connect(
+        &controller,
+        &FloatingTransition::
+            attachmentWaitsForPointerExitConfiguredChanged,
+        &controller,
+        verifyCompletePolicy);
+    connect(&controller, &FloatingTransition::pointerInsideViewChanged,
+            &controller, verifyCompletePolicy);
+    connect(&controller,
+            &FloatingTransition::attachmentDeferredByPointerChanged,
+            &controller, verifyCompletePolicy);
+    connect(&controller, &FloatingTransition::dockGapHideRequestedChanged,
+            &controller, verifyCompletePolicy);
+    connect(&controller, &FloatingTransition::touchingWindowCountChanged,
+            &controller, verifyCompletePolicy);
+    connect(&controller, &FloatingTransition::targetChanged,
+            &controller, verifyCompletePolicy);
+
+    for (const bool eligible : {false, true}) {
+        for (const bool configured : {false, true}) {
+            for (const bool waitsForPointerExit : {false, true}) {
+                for (const bool pointerInside : {false, true}) {
+                    for (const int count : {0, 2}) {
+                        controller.reconcileTargetPolicy(
+                            eligible,
+                            configured,
+                            waitsForPointerExit,
+                            pointerInside,
+                            count, false);
+                        QCOMPARE(
+                            controller
+                                .attachmentWaitsForPointerExitConfigured(),
+                            waitsForPointerExit);
+                        QCOMPARE(
+                            controller.pointerInsideView(),
+                            pointerInside);
+                        verifyCompletePolicy();
+                    }
+                }
+            }
+        }
+    }
+
+    QVERIFY(observedSignals > 0);
+
+    const auto previousTarget = controller.target();
+    const bool previousEligible = controller.floatingPanelEligible();
+    const bool previousConfigured =
+        controller.attachOnWindowTouchConfigured();
+    const bool previousWaitConfigured =
+        controller.attachmentWaitsForPointerExitConfigured();
+    const bool previousPointerInside =
+        controller.pointerInsideView();
+    const bool previousDeferred =
+        controller.attachmentDeferredByPointer();
+    const int previousCount = controller.touchingWindowCount();
+    QTest::ignoreMessage(
+        QtCriticalMsg,
+        "FloatingTransition refused a negative touching-window count: -1");
+    controller.reconcileTargetPolicy(
+        true, true, false, false, -1, false);
+    QCOMPARE(controller.target(), previousTarget);
+    QCOMPARE(controller.floatingPanelEligible(), previousEligible);
+    QCOMPARE(
+        controller.attachOnWindowTouchConfigured(), previousConfigured);
+    QCOMPARE(
+        controller.attachmentWaitsForPointerExitConfigured(),
+        previousWaitConfigured);
+    QCOMPARE(controller.pointerInsideView(), previousPointerInside);
+    QCOMPARE(
+        controller.attachmentDeferredByPointer(), previousDeferred);
+    QCOMPARE(controller.touchingWindowCount(), previousCount);
 }
 
 void FloatingTransitionTest::rejectsInvalidConfigurationWithoutReplacingStableState()

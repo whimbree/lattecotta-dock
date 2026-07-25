@@ -70,7 +70,7 @@ true with `isOffScreen`), what the compositor was told to reserve.
 call dockSystemData                    # s: compact schema-versioned JSON object
 ```
 
-Top level: `schemaVersion` (currently 6), `snapshotSequence` (decimal string,
+Top level: `schemaVersion` (currently 7), `snapshotSequence` (decimal string,
 process-local monotonic call identity), `globalConfigureAppletsMode`,
 `stacking`, `reservationStateGeneration` (decimal string),
 `reservationGroups`, and `views`. The complete view and reservation graph is
@@ -128,8 +128,13 @@ Per dock:
   available to applets after internal primary-axis background end padding is
   removed. External shadow paint does not reduce it. It is not the raw
   containment `maxLength` or the configured ratio.
-- Stable floating-panel transition: `floatingPanelConfigured`,
-  `floatingPanelEligible`, `transitionTarget` (`attached|floated`),
+- Stable floating-panel transition: `floatingGapConfigured`,
+  `floatingPanelConfigured`,
+  `floatingPanelEligible`, `attachOnWindowTouchConfigured`,
+  `attachmentWaitsForPointerExitConfigured`, `pointerInsideView`,
+  `attachmentDeferredByPointer`, `dockGapHideRequested`,
+  `touchingWindowCount`, `windowTouchGeometryRoleType`,
+  `transitionTarget` (`attached|floated`),
   `transitionProgress` (qreal 0 through 1), `transitionPhase`
   (`resting|attaching|floating`), `transitionDirection`
   (`none|towardAttached|towardFloated`), `transitionRunning`,
@@ -143,14 +148,16 @@ Per dock:
   `stableLayerShellMargin`, `requestedReservationDepth`,
   `surfaceGeometryPublicationRevision`, and
   `layerShellConfigureRequestRevision`.
-  `floatingPanelConfigured` is exactly `View::isFloatingPanel()`: the
-  configured floating presentation, not the later window-touch policy.
-  `floatingPanelEligible` is the transition controller's current admission
-  decision. Ineligible views cannot target `attached` and converge to
-  `floated`; disabling eligibility may animate outward before settling.
-  Touching-window count and a configured attach-on-window-touch policy are not
-  reported yet. FP-4 (the stable window-touch trigger and end-to-end
-  acceptance slice) will add their authoritative C++ owners.
+  `floatingGapConfigured` is exactly `View::floatingGapConfigured()`: margins
+  are enabled and the configured screen-edge margin is positive, independent
+  of Dock or Panel identity. `floatingPanelConfigured` is exactly
+  `View::isFloatingPanel()`: Panel behavior conjoined with
+  `floatingGapConfigured`, not the later window-touch policy.
+  `floatingPanelEligible` is the transition controller's current Panel
+  window-touch admission decision. An ineligible Panel cannot attach through
+  the window-touch arm. The separate `dockGapHideRequested` fact requires
+  `floatingGapConfigured` and rejects `floatingPanelConfigured`, but it does
+  not target a Panel transition for a Dock.
   Each geometry field is null when the controller has no stable geometry.
   The stable canvas and trigger use virtual-desktop coordinates. Attached,
   floated, current visible, computed mask and bridge, and applet measurement
@@ -243,12 +250,14 @@ Per dock:
   while the top-level global toggle is true.
 - `objects`: opaque `object-N` identities for `view`, `containment`,
   `configuration`, `layout`, `layoutController`, `geometryController`,
-  `transitionController`, `editController`, `configWindow`, and
-  `reservationPublisher`. Every
+  `transitionController`, `windowTouchTracker`, `editController`,
+  `configWindow`, and `reservationPublisher`. Every
   contributing member of one output-edge group reports the same reservation
   publisher token. Null means that authority is not live.
   `transitionController` is required, distinct from every other authority,
   and unique per view, including linked per-output views.
+  `windowTouchTracker` is also required and unique per view. It must differ
+  from every transition controller and every other reported authority.
   The configuration authority is required and its absence is logged as a
   defect; the configuration window is legitimately absent while closed, and
   QML controllers may be absent during startup or teardown. Tokens remain
@@ -263,6 +272,28 @@ aggregate same-edge exclusive zones at their maximum depth, but that is
 independent of primary-axis span validation. Consumers must not treat
 `available=false` as validation success or interpret canonical `views` array
 order as physical stack order.
+
+The stable window-touch policy is reported by
+`attachOnWindowTouchConfigured`,
+`attachmentWaitsForPointerExitConfigured`, `pointerInsideView`,
+`attachmentDeferredByPointer`, `floatingGapConfigured`,
+`dockGapHideRequested`,
+`touchingWindowCount`, and `windowTouchGeometryRoleType`. The first two fields
+are raw persistent preferences and `pointerInsideView` is the raw per-view
+pointer state. `attachmentDeferredByPointer` is the controller-owned latch for
+a new Panel attachment request. Pointer entry does not detach an already
+attached Panel. The latch clears when the pointer leaves or the touch request
+disappears. `floatingGapConfigured` is the presentation-independent positive
+screen-edge margin predicate. `dockGapHideRequested` is the separate legacy
+Dock maximized-gap arm; it requires that predicate and cannot coexist with
+`floatingPanelConfigured` or Panel eligibility. The role-type field is empty
+until a live task row is validated and is then exactly `QRect`; a positive
+touch count requires that validated type. `transitionTarget` must be
+`attached` exactly when `floatingPanelEligible &&
+attachOnWindowTouchConfigured && !attachmentDeferredByPointer &&
+touchingWindowCount > 0`; every other state must target `floated`.
+`dockGapHideRequested` remains independent because Docks consume the legacy
+gap path directly and have no stable Panel transition geometry.
 
 An internal lineage, transition, or reservation invariant failure logs at
 critical severity and returns an empty D-Bus string. It never returns a smaller
@@ -279,14 +310,21 @@ state=$(call dockSystemData)
 # jq examples after extracting the D-Bus string payload:
 jq '.views | map({persistentDockId,logicalDockId,relationship,linkPlacement,linkedDockIds})' <<<"$state"
 jq '[.views[] | select(.effectiveConfigureAppletsMode)] | length' <<<"$state"
-jq '.views | map({persistentDockId,floatingPanelConfigured,floatingPanelEligible,
+jq '.views | map({persistentDockId,floatingGapConfigured,
+                  floatingPanelConfigured,floatingPanelEligible,
                   transitionTarget,transitionProgress,transitionPhase,
                   transitionGeometryRevision,
                   stableCanvasGeometry,currentVisibleGeometry,
                   requestedReservationDepth,reservationContributionDepth,
                   surfaceGeometryPublicationRevision,
                   layerShellConfigureRequestRevision,
-                  transitionController:.objects.transitionController})' <<<"$state"
+                  touchingWindowCount,attachOnWindowTouchConfigured,
+                  attachmentWaitsForPointerExitConfigured,pointerInsideView,
+                  attachmentDeferredByPointer,
+                  dockGapHideRequested,
+                  windowTouchGeometryRoleType,
+                  transitionController:.objects.transitionController,
+                  windowTouchTracker:.objects.windowTouchTracker})' <<<"$state"
 ```
 
 ### Per-view reads (all take the containment id)

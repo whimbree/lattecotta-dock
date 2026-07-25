@@ -117,7 +117,11 @@
          registered. floatingAppletPopupsPreferred
          reads Plasma's applied containment hint, and floatingAnchorRevision
          reports the live popup-anchor publication as a process-local
-         monotonic decimal string. The dockSystemData schema version is 6.
+         monotonic decimal string. Schema 7 adds the per-view stable
+         window-touch tracker, exact QRect role observation, raw pointer/wait
+         inputs, derived attachment-deferral latch, presentation-independent
+         positive floating-gap configuration, and separate legacy Dock
+         maximized-gap request. The dockSystemData schema version is 7.
          The mandatory per-view transition geometry,
          surface publication, and layer-shell configure revisions are
          process-local monotonic decimal strings.
