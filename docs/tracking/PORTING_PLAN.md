@@ -4509,6 +4509,11 @@ prerequisites in the phases above are done.
       synchronous basic render loop for the offscreen software test. Pin both
       lifecycle rules with controlled source mutations.
       Commits: 2d6d1059c (pre-merge; post-merge hash pending)
+- [x] Fix D174 (theme-aware icon lifecycle guard ignored ordering and target
+      scope). Parse `main()` and the exact CTest target block, require render
+      loop selection before `QGuiApplication`, and recognize view
+      constructions independently of local variable names.
+      Commits: current commit (post-merge hash pending)
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

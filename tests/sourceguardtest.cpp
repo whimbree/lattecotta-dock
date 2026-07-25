@@ -458,25 +458,65 @@ private:
                                                    const QString &cmakeSource)
     {
         const QString testCode = normalizedCode(testSource);
-        const QString cmakeCode = normalizedCode(cmakeSource);
-        const QString sharedView = QStringLiteral(
-            "QQuickViewview(m_engine.get(),nullptr);");
-        const int viewConstructions = testCode.count(QStringLiteral("QQuickViewview("));
+        const QString initCode = normalizedCode(functionBody(
+            testSource,
+            QStringLiteral("void ThemeAwareIconTest::initTestCase()")));
+        const QString prepareCode = normalizedCode(functionBody(
+            testSource,
+            QStringLiteral("void ThemeAwareIconTest::prepareView(")));
+        const QString mainCode = normalizedCode(functionBody(
+            testSource,
+            QStringLiteral("int main(")));
+
+        const QRegularExpression anyViewConstruction(QStringLiteral(
+            "QQuickView[A-Za-z_][A-Za-z0-9_]*(?:\\([^;{}]*\\))?;"));
+        const QRegularExpression sharedViewConstruction(QStringLiteral(
+            "QQuickView[A-Za-z_][A-Za-z0-9_]*"
+            "\\(m_engine\\.get\\(\\),nullptr\\);"));
+        const int viewConstructions =
+            testCode.count(anyViewConstruction);
+        const int sharedViewConstructions =
+            testCode.count(sharedViewConstruction);
+
+        const QString directRenderLoop = QStringLiteral(
+            "qputenv(\"QSG_RENDER_LOOP\",\"basic\");");
+        const int directRenderLoopPosition = mainCode.indexOf(directRenderLoop);
+        const int applicationPosition =
+            mainCode.indexOf(QStringLiteral("QGuiApplicationapp("));
+
+        const QString targetStart =
+            QStringLiteral("ecm_add_test(themeawareicontest.cpp");
+        const int targetStartPosition = cmakeSource.indexOf(targetStart);
+        const int nextTargetPosition = targetStartPosition == -1
+            ? -1
+            : cmakeSource.indexOf(
+                QStringLiteral("\necm_add_test("),
+                targetStartPosition + targetStart.size());
+        const QString targetBlock = targetStartPosition == -1
+            ? QString{}
+            : cmakeSource.mid(
+                targetStartPosition,
+                nextTargetPosition == -1
+                    ? -1
+                    : nextTargetPosition - targetStartPosition);
+        const QString targetCode = normalizedCode(targetBlock);
+        const QString ctestRenderLoop = QStringLiteral(
+            "set_tests_properties(themeawareicontestPROPERTIES"
+            "ENVIRONMENT\"QT_QPA_PLATFORM=offscreen;"
+            "QSG_RHI_BACKEND=software;QSG_RENDER_LOOP=basic\")");
 
         return testCode.contains(QStringLiteral(
                    "std::unique_ptr<QQmlEngine>m_engine;"))
-            && testCode.contains(QStringLiteral(
+            && initCode.contains(QStringLiteral(
                 "m_engine=std::make_unique<QQmlEngine>();"))
-            && testCode.contains(QStringLiteral(
+            && prepareCode.contains(QStringLiteral(
                 "QCOMPARE(view.engine(),m_engine.get());"))
             && viewConstructions >= 3
-            && testCode.count(sharedView) == viewConstructions
-            && !testCode.contains(QStringLiteral("QQuickViewview;"))
-            && testCode.contains(QStringLiteral(
-                "qputenv(\"QSG_RENDER_LOOP\",\"basic\");"))
-            && cmakeCode.contains(QStringLiteral(
-                "ENVIRONMENT\"QT_QPA_PLATFORM=offscreen;"
-                "QSG_RHI_BACKEND=software;QSG_RENDER_LOOP=basic\""));
+            && sharedViewConstructions == viewConstructions
+            && mainCode.count(directRenderLoop) == 1
+            && directRenderLoopPosition >= 0
+            && applicationPosition > directRenderLoopPosition
+            && targetCode.count(ctestRenderLoop) == 1;
     }
 
     static bool matchesMiddleClickCollectorBridge(const QString &body)
@@ -1274,32 +1314,42 @@ void SourceGuardTest::themeAwareIconRenderTest_sourceGuardRejectsControlledMutat
     QVERIFY(matchesThemeAwareIconTestLifecycle(testSource, cmakeSource));
 
     QString defaultEngine = testSource;
-    const QString sharedView = QStringLiteral(
-        "QQuickView view(m_engine.get(), nullptr);");
-    const int firstSharedView = defaultEngine.indexOf(sharedView);
-    QVERIFY(firstSharedView >= 0);
-    defaultEngine.replace(firstSharedView,
-                          sharedView.size(),
-                          QStringLiteral("QQuickView view;"));
+    const QRegularExpression sharedView(QStringLiteral(
+        "QQuickView\\s+([A-Za-z_][A-Za-z0-9_]*)"
+        "\\(m_engine\\.get\\(\\),\\s*nullptr\\);"));
+    const QRegularExpressionMatch sharedViewMatch =
+        sharedView.match(defaultEngine);
+    QVERIFY(sharedViewMatch.hasMatch());
+    defaultEngine.replace(
+        sharedViewMatch.capturedStart(),
+        sharedViewMatch.capturedLength(),
+        QStringLiteral("QQuickView differentlyNamedView;"));
     QVERIFY2(!matchesThemeAwareIconTestLifecycle(defaultEngine, cmakeSource),
              "default-constructed views must fail the one-engine lifecycle guard");
 
-    QString missingBasicLoop = testSource;
-    QCOMPARE(missingBasicLoop.count(QStringLiteral(
-                 "qputenv(\"QSG_RENDER_LOOP\", \"basic\");")),
-             1);
-    missingBasicLoop.remove(QStringLiteral(
-        "qputenv(\"QSG_RENDER_LOOP\", \"basic\");"));
-    QVERIFY2(!matchesThemeAwareIconTestLifecycle(missingBasicLoop, cmakeSource),
-             "removing the in-process basic render loop must fail the lifecycle guard");
+    QString lateBasicLoop = testSource;
+    const QString directLoopBeforeApplication = QStringLiteral(
+        "qputenv(\"QSG_RENDER_LOOP\", \"basic\");\n\n"
+        "    QGuiApplication app(argc, argv);");
+    QCOMPARE(lateBasicLoop.count(directLoopBeforeApplication), 1);
+    lateBasicLoop.replace(
+        directLoopBeforeApplication,
+        QStringLiteral(
+            "QGuiApplication app(argc, argv);\n\n"
+            "    qputenv(\"QSG_RENDER_LOOP\", \"basic\");"));
+    QVERIFY2(!matchesThemeAwareIconTestLifecycle(lateBasicLoop, cmakeSource),
+             "render-loop selection after QGuiApplication must fail the lifecycle guard");
 
-    QString threadedCTest = cmakeSource;
-    QCOMPARE(threadedCTest.count(QStringLiteral(
+    QString wrongCTestTarget = cmakeSource;
+    QCOMPARE(wrongCTestTarget.count(QStringLiteral(
                  ";QSG_RENDER_LOOP=basic")),
              1);
-    threadedCTest.remove(QStringLiteral(";QSG_RENDER_LOOP=basic"));
-    QVERIFY2(!matchesThemeAwareIconTestLifecycle(testSource, threadedCTest),
-             "removing the CTest basic render-loop contract must fail the lifecycle guard");
+    wrongCTestTarget.remove(QStringLiteral(";QSG_RENDER_LOOP=basic"));
+    wrongCTestTarget.append(QStringLiteral(
+        "\nset_tests_properties(sourceguardtest PROPERTIES "
+        "ENVIRONMENT \"QSG_RENDER_LOOP=basic\")\n"));
+    QVERIFY2(!matchesThemeAwareIconTestLifecycle(testSource, wrongCTestTarget),
+             "render-loop selection on another CTest target must fail the lifecycle guard");
 }
 
 void SourceGuardTest::dockSystemCollection_keepsPureRouting()
