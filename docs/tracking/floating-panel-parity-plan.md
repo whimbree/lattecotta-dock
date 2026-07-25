@@ -53,26 +53,51 @@ FP-1 means the output-edge maximum reservation authority.
 
 FP-2 means the stable canvas and transition controller.
 
-- [ ] Add pure geometry types for the attached rectangle, floated rectangle,
+- [x] Add pure geometry types for the attached rectangle, floated rectangle,
       stable envelope, trigger, visible mask, and edge-reaching input bridge.
       Assert valid output-contained geometry at the boundary.
-      Commits:
-- [ ] Add one per-view C++ transition controller with qreal progress, explicit
+      Commits: PENDING INTEGRATION REBASE
+      Evidence: sanitizer-backed `floatingpanelgeometrytest` covers all four
+      edges, offset outputs, partial spans, fractional progress, integer
+      overflow, and the mandatory inward trigger pixel.
+- [x] Add one per-view C++ transition controller with qreal progress, explicit
       target and phase enums, current-value reversal, and one animation owner.
-      Commits:
-- [ ] Make Positioner solve one stable QWindow envelope on every edge. Remove
+      Commits: PENDING INTEGRATION REBASE
+      Evidence: `floatingtransitiontest` covers both directions, current-value
+      reversal, twenty alternating targets, full-duration consistency, cubic
+      easing, eligibility, and one animation owner.
+- [x] Make Positioner solve one stable QWindow envelope on every edge. Remove
       floatingness from physical QWindow placement and layer-shell margins.
-      Commits:
-- [ ] Keep resting applet and automatic-size geometry independent of
+      Commits: PENDING INTEGRATION REBASE
+      Evidence: the panel path fails before QWindow mutation, applies one
+      solved envelope once, retains zero layer-shell edge margin, and keeps
+      ordinary hiding as displacement of that envelope.
+- [x] Keep resting applet and automatic-size geometry independent of
       transition progress. Internal content may translate with the visible
       background, but it must not refit or resize.
-      Commits:
+      Commits: PENDING INTEGRATION REBASE
+      Evidence: `sourceguardtest` pins fixed applet measurement bounds,
+      configured partial span, target-independent background thickness, and
+      removal of the physical floating-gap slide animations. The QML compile
+      gate passes 130 of 130 package files and the touched qmllint baseline
+      strictly decreases.
 - [ ] Expose all stable and current transition geometry through the atomic
       D-Bus snapshot.
-      Commits:
-- [ ] Pin both reversal directions, rapid alternating targets, duration
+      Commits: PENDING SCHEMA INTEGRATION
+      Evidence: schema 5 implementation and exact serializer tests are owned
+      by the parallel observability slice and must be integrated before the
+      FP-2 pull request.
+- [x] Pin both reversal directions, rapid alternating targets, duration
       consistency, and no geometry/configure storm.
-      Commits:
+      Commits: PENDING INTEGRATION REBASE
+      Evidence: `floatingtransitiontest`, `layershellmappingtest`, and
+      `sourceguardtest` pass. Recipe 071 configures a partial Justify panel,
+      samples both qreal directions, then drives eight rapid reversals while
+      requiring byte-identical stable geometry and zero deltas from
+      `surfaceGeometryPublicationRevision` and
+      `layerShellConfigureRequestRevision`. Its first schema-integrated
+      nested-KWin execution is pending and remains required before the FP-2
+      pull request.
 
 ## FP-3: internal presentation, input, effects, and popups
 

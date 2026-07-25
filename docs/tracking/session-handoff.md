@@ -3,6 +3,57 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-24.
 
+## 2026-07-24: FP-2 keeps floating attachment inside one stable canvas
+
+FP-2 (the stable canvas and transition controller) replaces the physical
+floating-gap transition with one output-contained geometry solution and one
+qreal controller per view. The old maximize path moved the QWindow, changed
+its layer-shell margin and reservation, expanded a Justify panel, and refit
+applets while presentation was still moving. Those values now remain stable.
+
+`FloatingPanelGeometry` owns the attached and floated presentations, their
+union envelope, the stable one-pixel-overlap trigger, current visible mask,
+Fitts bridge, resting applet measurement bounds, primary-axis span, and normal
+reservation depth. Positioner solves that value before any QWindow mutation,
+configures the controller from the same solution, and applies the envelope
+once. Invalid or overflowing geometry fails at that boundary. Arbitrary output
+origins, all four edges, and separated partial spans remain first-class.
+
+`FloatingTransition` owns one qreal `floatingness`, explicit attached and
+floated targets, resting, attaching, and floating phases, full-duration
+current-value reversal, and Plasma-matching cubic easing. Only floating Always
+Visible panels configured to hide the gap are eligible to attach. QML
+translates the layout and background inside the fixed envelope while applet
+measurement bounds, configured partial span, panel thickness, and normal
+reservation stay independent of the target.
+
+Two monotonic readbacks locate forbidden physical churn.
+`surfaceGeometryPublicationRevision` advances once per Positioner surface
+publication. `layerShellConfigureRequestRevision` advances by the number of
+guarded layer-shell setters actually issued. The placement adapter returns
+zero for an identical replay.
+
+The pure geometry test passes 32 cases, including overflow and the mandatory
+trigger pixel. The transition test passes 8 cases, including twenty rapid
+target reversals. Legacy placement passes 40 cases. The layer-shell mapping,
+screen geometry, and source guards pass; the application links; all 130 QML
+files compile; and the touched qmllint baseline strictly decreases. Recipe 071
+now configures a partial Justify panel with maximize-driven length disabled,
+samples progress in both directions, and drives eight rapid reversals while
+requiring byte-identical stable geometry and zero revision deltas.
+
+D187 (full-span End floating panels extended one pixel beyond their output)
+was found when the fail-closed solver rejected a complete Right or Bottom
+alignment. Reversed placement added one to a QRect span that already expressed
+the full exclusive length. Removing that unrelated increment keeps all four
+full-span End surfaces inside their output and leaves both reservation +1
+conventions unchanged.
+
+The schema 5 observability slice must be integrated before FP-2 opens as a pull
+request. Recipe 071's first nested-KWin run is pending that integrated schema
+and remains required acceptance evidence. No real desktop process or surface
+was inspected, stopped, or restarted during this implementation.
+
 ## 2026-07-24: FP-1 owns one maximum-depth reservation per output edge
 
 FP-1 (the output-edge maximum reservation authority) landed through PR #118.
