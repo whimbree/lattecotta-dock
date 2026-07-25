@@ -1,0 +1,218 @@
+/*
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-FileCopyrightText: 2026 Bree Spektor
+    SPDX-License-Identifier: GPL-2.0-or-later
+*/
+
+#ifndef FLOATINGPANELGEOMETRY_H
+#define FLOATINGPANELGEOMETRY_H
+
+#include <QPointF>
+#include <QRect>
+#include <QRectF>
+#include <QtGlobal>
+
+#include <optional>
+
+namespace Latte::ViewPart::FloatingPanelGeometry {
+
+enum class Edge {
+    Top,
+    Right,
+    Bottom,
+    Left,
+};
+
+struct StablePrimaryAxisSpan {
+    int start{0};
+    int length{0};
+
+    friend constexpr bool operator==(const StablePrimaryAxisSpan &,
+                                     const StablePrimaryAxisSpan &) = default;
+};
+
+struct AttachedRectangle {
+    QRect value;
+};
+
+struct FloatedRectangle {
+    QRect value;
+};
+
+struct StableEnvelope {
+    QRect value;
+};
+
+struct TriggerRectangle {
+    QRect value;
+};
+
+struct VisibleMaskRectangle {
+    QRectF value;
+};
+
+struct FittsBridgeRectangle {
+    QRectF value;
+};
+
+struct AppletMeasurementBounds {
+    QRect value;
+};
+
+struct Solution {
+    AttachedRectangle attached;
+    FloatedRectangle floated;
+    StableEnvelope envelope;
+    TriggerRectangle trigger;
+    AppletMeasurementBounds appletMeasurementBounds;
+    StablePrimaryAxisSpan primaryAxisSpan;
+    int reservationDepth{0};
+
+    [[nodiscard]] VisibleMaskRectangle visibleMask(qreal floatingness) const
+    {
+        Q_ASSERT(floatingness >= 0.0 && floatingness <= 1.0);
+
+        const QPointF attachedTopLeft{attached.value.topLeft()};
+        const QPointF floatedTopLeft{floated.value.topLeft()};
+        const QPointF topLeft =
+            attachedTopLeft + ((floatedTopLeft - attachedTopLeft) * floatingness);
+
+        return {QRectF(topLeft, QSizeF(attached.value.size()))};
+    }
+
+    [[nodiscard]] FittsBridgeRectangle fittsBridge(qreal floatingness) const
+    {
+        const QRectF visible = visibleMask(floatingness).value;
+        return {visible.united(QRectF(attached.value))};
+    }
+
+    [[nodiscard]] QPointF contentTranslation(qreal floatingness) const
+    {
+        return visibleMask(floatingness).value.topLeft() - floated.value.topLeft();
+    }
+};
+
+struct Inputs {
+    QRect outputGeometry;
+    Edge edge{Edge::Bottom};
+    StablePrimaryAxisSpan primaryAxisSpan;
+    int panelDepth{0};
+    int floatingGap{0};
+};
+
+[[nodiscard]] constexpr bool isHorizontal(Edge edge)
+{
+    return edge == Edge::Top || edge == Edge::Bottom;
+}
+
+[[nodiscard]] inline bool hasValidGeometry(const Inputs &in)
+{
+    if (!in.outputGeometry.isValid() || in.panelDepth <= 0 || in.floatingGap < 0
+        || in.primaryAxisSpan.length <= 0) {
+        return false;
+    }
+
+    const int outputStart =
+        isHorizontal(in.edge) ? in.outputGeometry.left() : in.outputGeometry.top();
+    const int outputLength =
+        isHorizontal(in.edge) ? in.outputGeometry.width() : in.outputGeometry.height();
+    const qint64 spanEnd = qint64(in.primaryAxisSpan.start) + in.primaryAxisSpan.length;
+    const qint64 outputEnd = qint64(outputStart) + outputLength;
+
+    return in.primaryAxisSpan.start >= outputStart && spanEnd <= outputEnd
+        && in.panelDepth + in.floatingGap
+            <= (isHorizontal(in.edge) ? in.outputGeometry.height()
+                                      : in.outputGeometry.width());
+}
+
+[[nodiscard]] inline std::optional<Solution> solve(const Inputs &in)
+{
+    if (!hasValidGeometry(in)) {
+        return std::nullopt;
+    }
+
+    const int envelopeDepth = in.panelDepth + in.floatingGap;
+    QRect envelope;
+    QRect attached;
+    QRect floated;
+
+    switch (in.edge) {
+    case Edge::Top:
+        envelope = {in.primaryAxisSpan.start,
+                    in.outputGeometry.top(),
+                    in.primaryAxisSpan.length,
+                    envelopeDepth};
+        attached = {0, 0, in.primaryAxisSpan.length, in.panelDepth};
+        floated = {0, in.floatingGap, in.primaryAxisSpan.length, in.panelDepth};
+        break;
+    case Edge::Right:
+        envelope = {in.outputGeometry.right() - envelopeDepth + 1,
+                    in.primaryAxisSpan.start,
+                    envelopeDepth,
+                    in.primaryAxisSpan.length};
+        attached = {in.floatingGap, 0, in.panelDepth, in.primaryAxisSpan.length};
+        floated = {0, 0, in.panelDepth, in.primaryAxisSpan.length};
+        break;
+    case Edge::Bottom:
+        envelope = {in.primaryAxisSpan.start,
+                    in.outputGeometry.bottom() - envelopeDepth + 1,
+                    in.primaryAxisSpan.length,
+                    envelopeDepth};
+        attached = {0, in.floatingGap, in.primaryAxisSpan.length, in.panelDepth};
+        floated = {0, 0, in.primaryAxisSpan.length, in.panelDepth};
+        break;
+    case Edge::Left:
+        envelope = {in.outputGeometry.left(),
+                    in.primaryAxisSpan.start,
+                    envelopeDepth,
+                    in.primaryAxisSpan.length};
+        attached = {0, 0, in.panelDepth, in.primaryAxisSpan.length};
+        floated = {in.floatingGap, 0, in.panelDepth, in.primaryAxisSpan.length};
+        break;
+    }
+
+    QRect trigger = attached.translated(envelope.topLeft());
+    switch (in.edge) {
+    case Edge::Top:
+        // The one logical pixel is for overlap detection at the inward edge.
+        trigger.setBottom(trigger.bottom() + 1);
+        break;
+    case Edge::Right:
+        // The one logical pixel is for overlap detection at the inward edge.
+        trigger.setLeft(trigger.left() - 1);
+        break;
+    case Edge::Bottom:
+        // The one logical pixel is for overlap detection at the inward edge.
+        trigger.setTop(trigger.top() - 1);
+        break;
+    case Edge::Left:
+        // The one logical pixel is for overlap detection at the inward edge.
+        trigger.setRight(trigger.right() + 1);
+        break;
+    }
+
+    const Solution solution{
+        .attached = {attached},
+        .floated = {floated},
+        .envelope = {envelope},
+        .trigger = {trigger},
+        .appletMeasurementBounds = {
+            QRect(QPoint(0, 0), attached.size()),
+        },
+        .primaryAxisSpan = in.primaryAxisSpan,
+        .reservationDepth = in.panelDepth,
+    };
+
+    Q_ASSERT(in.outputGeometry.contains(solution.envelope.value));
+    Q_ASSERT(solution.envelope.value.contains(
+        solution.attached.value.translated(solution.envelope.value.topLeft())));
+    Q_ASSERT(solution.envelope.value.contains(
+        solution.floated.value.translated(solution.envelope.value.topLeft())));
+    Q_ASSERT(in.outputGeometry.contains(solution.trigger.value));
+
+    return solution;
+}
+
+} // namespace Latte::ViewPart::FloatingPanelGeometry
+
+#endif

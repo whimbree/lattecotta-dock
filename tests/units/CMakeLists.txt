@@ -98,6 +98,11 @@ target_link_libraries(positionergeometrytest
     Qt6::Gui
     Plasma::Plasma)
 
+# FP-2 (the stable canvas and transition controller): header-only pure
+# attached/floated/envelope/trigger/mask/bridge geometry. Qt6::Test brings
+# the QRectF support; no live View or compositor reaches the core.
+latte_add_unit_test(floatingpanelgeometrytest)
+
 # InputMaskFlush (app/view/inputmaskflush.h): the pure "what region to hand
 # QWindow::setMask" decision that keeps the window mask wide across a band
 # shrink so Qt6 wayland does not clip the vacated region's clearing damage.
