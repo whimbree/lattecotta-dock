@@ -275,7 +275,10 @@ Item {
         target: latteView && latteView.effects ? latteView.effects : null
         property:"appletsLayoutGeometry"
         restoreMode: Binding.RestoreNone
-        when: latteView && latteView.effects && visibilityManager.inNormalState
+        when: latteView
+              && latteView.effects
+              && (externalBindings.containmentItem.behaveAsPlasmaPanel
+                  || visibilityManager.inNormalState)
         value: {
             if (root.behaveAsPlasmaPanel) {
                 if (!externalBindings.dockView
