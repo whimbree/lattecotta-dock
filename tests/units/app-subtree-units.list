@@ -10,8 +10,15 @@ app/layouts/storageidremapper.h
 app/plasma/extended/panelbackgroundscan.h
 app/settings/lengthoffsetclamp.h
 app/screengeometrycalculator.h
+app/view/effectregion.h
+app/view/floatinganchorwindowfilter.h
+app/view/floatinginputevent.h
+app/view/floatingmaskhandshake.h
 app/view/floatingpanelgeometry.h
+app/view/floatingpopuppresentation.h
 app/view/inputmaskflush.h
+app/view/panelborderdecision.h
+app/view/panelshadowstate.h
 app/view/positionergeometry.h
 app/view/helpers/screenspacereservationledger.h
 app/view/helpers/screenspacereservationpublication.h
