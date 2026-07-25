@@ -174,7 +174,10 @@ phases, one commit-traceable checklist item per task. The coarse picture:
       pointer injection, real client windows and KWin screenshots all
       isolated from the live session - asserting over the D-Bus surface
       first and over pixel goldens only where pixels are the thing under
-      test (hover previews, drag reorder, wheel routing, lifecycle)
+      test (hover previews, drag reorder, wheel routing, lifecycle). Its
+      dual-output vehicle drives landscape and portrait outputs through
+      fully touching, partially touching, and disconnected arrangements,
+      then restores the exact captured topology.
 - [x] Local native packaging beyond NixOS: all five recipe formats are
       available for Debian-family `.deb` packages, a shared Fedora/openSUSE
       `.rpm`, Arch `PKGBUILD`/`.SRCINFO`, a Gentoo ebuild overlay, and a Void
