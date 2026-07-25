@@ -85,9 +85,11 @@ inclusive coordinate spans are now proven before axis selection or Qt
 width-based operations, every edge coordinate is narrowed from `qint64`, and
 Center and End have non-vacuous branch-local overflow cases. The required
 fresh review after D196 returned MERGE with no findings after checking the
-complete FP-2 diff. The canonical gate and pull request remain before merge.
-No real desktop process or surface was inspected, stopped, or restarted during
-this implementation.
+complete FP-2 diff. The canonical gate passed at `902bba7f8`: all 109 CTest
+entries, QML compile and lint, scene probes, the clean ASan and UBSan build,
+all four nested sanitizer recipes, and matrix fixture refusals passed. The pull
+request remains before merge. No real desktop process or surface was inspected,
+stopped, or restarted during this implementation.
 
 ## 2026-07-24: FP-1 owns one maximum-depth reservation per output edge
 
