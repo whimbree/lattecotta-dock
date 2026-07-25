@@ -230,8 +230,8 @@ void FloatingTransition::requestTarget(Target target)
     m_animation->setStartValue(m_floatingness);
     m_animation->setEndValue(endpoint);
     m_animation->setDuration(m_animationDuration);
-    m_animation->setEasingCurve(target == Target::Floated ? QEasingCurve::OutQuad
-                                                          : QEasingCurve::InQuad);
+    m_animation->setEasingCurve(target == Target::Floated ? QEasingCurve::OutCubic
+                                                          : QEasingCurve::InCubic);
     m_animation->start();
 }
 
