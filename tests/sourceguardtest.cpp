@@ -36,6 +36,8 @@
 //     monotonic theme-minimum interpolation instead of duplicating its formula
 //   * Floating Panel applet clearance: attached visual-border changes cannot
 //     resize the stable primary-axis applet or popup span
+//   * Multi-output cleanup: documented writable fields settle before a complete
+//     semantic KScreen-state comparison rejects any unhandled drift
 //   * Dock background rendering: custom shadows use one fixed-pixel effect
 //     footprint on both axes and publish that footprint to geometry owners
 //   * Dock resize animation: icon size is the only animation authority and
@@ -888,6 +890,50 @@ private:
                    "\"popupprimaryoriginoutsidestablepaint\""));
     }
 
+    static bool matchesCompleteKScreenRestoreContract(const QString &source)
+    {
+        const QString code = normalizedCode(source);
+        const QString waitBody = normalizedCode(functionBody(
+            source,
+            QStringLiteral("_mo_wait_for_captured_output_topology()")));
+        const QString restoreBody = normalizedCode(functionBody(
+            source,
+            QStringLiteral("mo_restore_output_topology()")));
+
+        return code.contains(QStringLiteral(
+                   "defsort_identity_collection(records,identity,path):"))
+            && code.contains(QStringLiteral(
+                   "payload.get(\"outputs\"),\"name\","
+                   "f\"{label}.outputs\""))
+            && code.contains(QStringLiteral(
+                   "if\"modes\"incanonical_output:"))
+            && code.contains(QStringLiteral(
+                   "canonical_output[\"modes\"]="
+                   "sort_identity_collection("))
+            && code.contains(QStringLiteral(
+                   "difference=first_difference(captured,current)"))
+            && code.contains(QStringLiteral(
+                   "completeKScreenstatedriftedat{difference}"))
+            && waitBody.contains(QStringLiteral(
+                   "_mo_compare_output_state_semantically"
+                   "\"$captured\"\"$current\"2>&1"))
+            && waitBody.contains(QStringLiteral(
+                   "if((comparison_status==2));then"))
+            && !waitBody.contains(QStringLiteral(
+                   "[[\"$current_projection\"==\"$expected\"]]"
+                   "&&return0"))
+            && restoreBody.count(QStringLiteral(
+                   "\"output.${name}.${enabled}\"")) == 1
+            && restoreBody.count(QStringLiteral(
+                   "\"output.${name}.rotation.${rotation}\"")) == 1
+            && restoreBody.count(QStringLiteral(
+                   "\"output.${name}.scale.${scale}\"")) == 1
+            && restoreBody.count(QStringLiteral(
+                   "\"output.${name}.position.${x},${y}\"")) == 1
+            && !restoreBody.contains(QStringLiteral(".mode."))
+            && !restoreBody.contains(QStringLiteral(".priority."));
+    }
+
     static bool matchesDockBackgroundFitRouting(const QString &source)
     {
         const int lengthStart = source.indexOf(QStringLiteral("\n    length: {"));
@@ -1694,6 +1740,8 @@ private Q_SLOTS:
     void windowTouchE2e_drivesOneStableTriggerClient();
     void windowTouchTopologyE2e_keepsIndependentRegionsAndOutputs();
     void windowTouchTopologyE2e_cleanupGuardRejectsControlledMutations();
+    void multiOutputRestore_keepsCompleteSemanticStateContract();
+    void multiOutputRestore_sourceGuardRejectsProjectionOnlyVerification();
     void floatingPresentationConsumers_keepSingleAuthority();
     void panelToDockInputHandoff_bypassesOrdinaryAnimationGate();
     void panelToDockInputHandoff_rejectsMissingDirectWrite();
@@ -2446,6 +2494,32 @@ run_cleanup_case 0 1 1 || exit 1
         process.exitStatus() == QProcess::NormalExit
             && process.exitCode() == 0,
         processError.constData());
+}
+
+void SourceGuardTest::multiOutputRestore_keepsCompleteSemanticStateContract()
+{
+    QVERIFY2(
+        matchesCompleteKScreenRestoreContract(readFile(QStringLiteral(
+            "tests/e2e/matrix/multi-output-lib.sh"))),
+        "multi-output cleanup must restore every field this harness can"
+        " mutate and compare the complete captured KScreen payload without"
+        " guessed setters");
+}
+
+void SourceGuardTest::multiOutputRestore_sourceGuardRejectsProjectionOnlyVerification()
+{
+    QString source = readFile(QStringLiteral(
+        "tests/e2e/matrix/multi-output-lib.sh"));
+    QVERIFY(matchesCompleteKScreenRestoreContract(source));
+
+    const QString semanticComparison = QStringLiteral(
+        "_mo_compare_output_state_semantically \"$captured\" \"$current\" 2>&1");
+    QCOMPARE(source.count(semanticComparison), 1);
+    source.replace(semanticComparison, QStringLiteral(
+        "printf '%s\\n' \"$current_projection\""));
+    QVERIFY2(
+        !matchesCompleteKScreenRestoreContract(source),
+        "restoring projection-only verification must fail the source guard");
 }
 
 void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
