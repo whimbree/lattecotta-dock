@@ -2516,13 +2516,119 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   origins solve without intermediate overflow, and Center and End each reject
   a branch-local out-of-range expression after a representable offset product.
 
+### D197 - Render callbacks could outlive floating presentation state
+- STATUS: FIXED BY PR #122 (`48e1f9b39`).
+- FOUND: 2026-07-25, FP-3 (internal presentation, input, effects, and popup
+  ownership) render-lifecycle preflight.
+- SYMPTOM: a render-thread callback queued during view teardown could
+  dereference Effects storage after destruction began.
+- ROOT: direct render callbacks captured Effects without one shared lifetime
+  boundary covering disconnect, an in-flight post, and teardown.
+- FIX: route callbacks through a shared render bridge, close and disconnect
+  the bridge first, and wait for any in-flight post before Effects storage can
+  disappear.
+- EVIDENCE: `floatingmaskhandshaketest` includes a concurrent close/post
+  lifecycle case. The canonical gate passed all four nested sanitizer recipes.
+
+### D198 - Floating popup anchors retained their former host window
+- STATUS: FIXED BY PR #122 (`228252623`).
+- FOUND: 2026-07-25, FP-3 popup-lifecycle preflight.
+- SYMPTOM: moving the same visual anchor item to another QQuickWindow could
+  leave the dialog listening to revisions from the former window.
+- ROOT: the popup event filter followed anchor identity but did not follow
+  `QQuickItem::windowChanged`.
+- FIX: detach the former host filter, attach the new host, represent the
+  no-host state explicitly, and ignore stale former-window revisions.
+- EVIDENCE: `floatingpopuppresentationtest` and
+  `floatinganchorwindowfiltertest` cover migration, stale revisions, and the
+  no-host state.
+
+### D199 - Panel-to-dock conversion could retain a panel input mask
+- STATUS: FIXED BY PR #122 (`ca388f82e`).
+- FOUND: 2026-07-25, FP-3 geometry-authority removal.
+- SYMPTOM: changing a view from Panel to Dock could leave the native window
+  carrying the former stable-panel input bridge.
+- ROOT: ordinary dock input restoration was behind an animation-state update
+  gate even though the view-type change transferred mask ownership
+  immediately.
+- FIX: restore dock input directly at the ownership handoff while retaining
+  the ordinary gate for later dock animation updates.
+- EVIDENCE: `sourceguardtest` uses a controlled mutation that fails when the
+  direct handoff write is removed.
+
+### D200 - Floating shadow readback reported requested state as applied
+- STATUS: FIXED BY PR #122 (`19f3effd7`).
+- FOUND: 2026-07-25, independent cold review of PR #122.
+- SYMPTOM: schema 6 could report nonzero `shadowPaddingOffsets` even when no
+  `KWindowShadow` registry entry existed for the view.
+- ROOT: the collector serialized Effects' requested padding, while
+  `PanelShadows::setExtraPadding` correctly refuses an unregistered window.
+- FIX: query the per-window PanelShadows registry and serialize both borders
+  and padding as null when the shadow is absent.
+- EVIDENCE: `dbusreportstest`, `sourceguardtest`, and
+  `panelshadowstatetest` cover intended/applied disagreement, insertion,
+  update, explicit removal, destruction, and absent serialization.
+
+### D201 - Floating presentation cores escaped the pairing ratchet
+- STATUS: FIXED BY PR #122 (`19cb727e0`).
+- FOUND: 2026-07-25, independent cold review of PR #122.
+- SYMPTOM: the new app/view core headers were absent from the pairing
+  inventory, so the ratchet could not require one correspondingly named unit
+  target for each header.
+- ROOT: `app-subtree-units.list` still named only
+  `floatingpanelgeometry.h`.
+- FIX: register every FP-3 core and add the mechanically paired
+  `floatinganchorwindowfiltertest`.
+- EVIDENCE: the coverage ratchet reports 116 CTest entries and 45 paired
+  headers. The focused host-migration test passes.
+
+### D202 - Floating presentation observability omitted applied details
+- STATUS: FIXED BY PR #122 (`15d7dda7e`, corrected by `19f3effd7`).
+- FOUND: 2026-07-25, FP-3 transaction review before the first full gate.
+- SYMPTOM: the initial schema 6 snapshot exposed masks but omitted live border,
+  shadow, popup-hint, and visible-anchor state, so those assertions could only
+  be inferred from the controller.
+- ROOT: observability stopped at the geometry decision instead of querying the
+  production consumers.
+- FIX: expose the applied Effects borders, PanelShadows registry state,
+  containment display hint, and visible-anchor revision and validate each
+  against its authoritative owner.
+- EVIDENCE: exact serializer and mutation tests reject every field omission,
+  disagreement, invalid order, and inferred popup value.
+
+### D203 - Floating-input history used a bare FP-3 codeword
+- STATUS: FIXED BY PR #122 (`44e6d5907`).
+- FOUND: 2026-07-25, independent cold review of PR #122.
+- SYMPTOM: the input commit's verification paragraph first used `FP-3`
+  without its plain-English description.
+- ROOT: the focused-run sentence treated the traceability label as
+  self-explanatory.
+- FIX: rewrite the first use as FP-3 (floating internal presentation, input,
+  effects, and popup ownership).
+- EVIDENCE: the corrected commit body contains the description at first use.
+
+### D204 - The D-Bus design document retained schema version 5
+- STATUS: FIXED BY PR #122 (`19f3effd7`).
+- FOUND: 2026-07-25, independent cold review of PR #122.
+- SYMPTOM: the design prose called `dockSystemData` schema version 5 while its
+  example and implementation used version 6.
+- ROOT: the schema label was not advanced with the first schema 6 source
+  commit.
+- FIX: align the design prose with schema 6 while preserving the exact field
+  documentation.
+- EVIDENCE: both D-Bus references, adaptor XML, serializer, and exact schema
+  tests now name the same version and contract.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
   is merged. FP-2 (the stable canvas and transition controller) is merged
   through PR #120, including schema 5 and nested recipe 071 acceptance. The
   independent review returned MERGE and the canonical gate passed at branch
-  head `902bba7f8`, rebased as `c10e1756c`. FP-3 and FP-4 remain open.
-  Execution is tracked in `floating-panel-parity-plan.md`.
+  head `902bba7f8`, rebased as `c10e1756c`. FP-3 (internal presentation,
+  input, effects, and popup ownership) is merged through PR #122. Its required
+  follow-up review returned MERGE and its canonical gate passed at branch head
+  `a7c941db1`. FP-4 remains open. Execution is tracked in
+  `floating-panel-parity-plan.md`.
 - FOUND: 2026-07-24, Plasma 6.7.3 parity investigation after live floating
   panel maximize, radius, shadow, and animation regressions.
 - SYMPTOM: a floating Always Visible panel physically moves toward the screen
@@ -2548,10 +2654,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   comparison and exact Lattecotta mismatch are recorded in
   `../reference/plasma-floating-panel-parity.md`. FP-2's pure geometry,
   transition, legacy placement, screen-geometry, layer-shell idempotence, and
-  source-contract tests pass. Recipe 071 observes qreal progress in both
-  directions and eight rapid reversals while the QWindow, applet measurements,
-  partial span, reservation, controller geometry generation, surface
-  publications, and layer-shell configure count remain stable.
+  source-contract tests pass. FP-3 adds exact internal paint, input, effects,
+  shadow, popup, and applied-state coverage. Recipe 071 observes qreal progress
+  in both directions and eight rapid reversals while the QWindow, applet
+  measurements, partial span, reservation, controller geometry generation,
+  surface publications, and layer-shell configure count remain stable.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).

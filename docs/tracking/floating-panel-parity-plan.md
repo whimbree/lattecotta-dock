@@ -106,27 +106,34 @@ FP-2 means the stable canvas and transition controller.
 
 FP-3 means internal presentation, input, effects, and popup ownership.
 
-- [ ] Move the visible background between attached and floated rectangles
+- [x] Move the visible background between attached and floated rectangles
       inside the stable canvas.
-      Commits:
-- [ ] Derive blur, contrast, borders, corners, and shadow offsets from the
+      Commits: 3bd2ce525, 48e1f9b39
+- [x] Derive blur, contrast, borders, corners, and shadow offsets from the
       same visible shape.
-      Commits:
-- [ ] Keep the screen-edge border absent only at exact attached progress zero.
+      Commits: 3bd2ce525, 48e1f9b39, 19f3effd7
+- [x] Keep the screen-edge border absent only at exact attached progress zero.
       Keep floating corners for every nonzero progress.
-      Commits:
-- [ ] Extend the input mask from the exact visible span through the gap to the
+      Commits: 3bd2ce525, 48e1f9b39, 15d7dda7e
+- [x] Extend the input mask from the exact visible span through the gap to the
       screen edge and remap pointer and wheel events into the containment.
-      Commits:
-- [ ] Anchor popups from the visible mask and publish the supported
+      Commits: 3bd2ce525, 44e6d5907
+- [x] Anchor popups from the visible mask and publish the supported
       floating-applet hint.
-      Commits:
-- [ ] Remove the physical `slideOffset` floating-panel animation, dynamic
+      Commits: 228252623, 15d7dda7e
+- [x] Remove the physical `slideOffset` floating-panel animation, dynamic
       floating-gap strut depth, and stale real-offset comments and tests.
-      Commits:
-- [ ] Add render and interaction coverage for all four edges, fractional
+      Commits: ca388f82e
+- [x] Add render and interaction coverage for all four edges, fractional
       progress, asymmetric shadows, partial spans, and popup toggle behavior.
-      Commits:
+      Commits: 3bd2ce525, 44e6d5907, 48e1f9b39, 228252623, ca388f82e,
+      ab880f653, 15d7dda7e, 19f3effd7, 19cb727e0
+      Evidence: the pure presentation, input, damage-handshake, border,
+      shadow, popup, transition, D-Bus, source-route, and lifecycle tests pass.
+      The pairing ratchet reports 116 CTest entries and 45 paired headers.
+      The canonical gate passed at reviewed branch head `a7c941db1`, including
+      all four nested sanitizer recipes, and GitHub merged PR #122 after the
+      required independent follow-up review returned `MERGE`.
 
 ## FP-4: stable window-touch trigger and end-to-end acceptance
 

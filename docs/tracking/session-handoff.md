@@ -3,6 +3,53 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-25.
 
+## 2026-07-25: FP-3 owns internal presentation, exact input, effects, and popups
+
+FP-3 (internal presentation, input, effects, and popup ownership) landed
+through PR #122. One fractional visible shape now drives paint, blur,
+contrast, borders, corners, shadow padding, exact partial-span edge input, and
+popup placement inside the stable QWindow from FP-2 (the stable canvas and
+transition controller). The physical canvas,
+layer-shell margin, resting applet measurements, configured primary span,
+trigger, and reservation remain unchanged while `floatingness` moves.
+
+Pointer and wheel events in the exact Fitts bridge are projected into the
+visible containment before ordinary View observers. Raster-only clearing
+fringe is consumed rather than widened into input. A generation-tagged
+old-union-new native mask persists only for the frame that clears the former
+shape; logical event routing remains exact throughout. Separated partial views
+therefore retain separate bridges rather than one continuous activation strip.
+
+Effects derives its live regions from the same visible shape. The physical-edge
+border is absent only at exact attached progress zero; every nonzero progress
+keeps floating corners and all borders. Per-window shadows retain independent
+border and asymmetric padding state. Dialogs follow a visual anchor across
+QQuickWindow changes, use the visible mask instead of the oversized canvas,
+and read the actual Plasma containment floating-popup hint.
+
+Schema 6 reports the logical paint and input shapes, applied native clearing
+mask, damage generation, live Effects borders, actual PanelShadows registry
+state, floating-popup hint, and visible-anchor revision. An absent shadow is
+null, not an inferred zero or a cached request.
+
+Preflight and review found D197 (render callbacks could outlive floating
+presentation state), D198 (floating popup anchors retained their former host
+window), D199 (panel-to-dock conversion could retain a panel input mask), D200
+(floating shadow readback reported requested state as applied), D201 (floating
+presentation cores escaped the pairing ratchet), D202 (floating presentation
+observability omitted applied details), D203 (floating-input history used a
+bare FP-3 codeword), and D204 (the D-Bus design document retained schema
+version 5). All are fixed by PR #122 and recorded in the defect registry.
+
+The corrected branch passes 116/116 CTest entries with 45 paired headers,
+QML compilation and lint, scene probes, all four nested ASan and UBSan
+recipes, and the matrix gate. The canonical gate passed at `a7c941db1`. The
+initial cold review returned `MERGE AFTER FIXES` for the shadow truth and
+pairing defects. The required independent follow-up review returned `MERGE`
+with no findings, then GitHub rebased the source range as
+`3bd2ce525..19cb727e0`. The real desktop process and surfaces remained
+untouched.
+
 ## 2026-07-25: FP-2 keeps floating attachment inside one stable canvas
 
 FP-2 (the stable canvas and transition controller) landed through PR #120. It

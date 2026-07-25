@@ -104,7 +104,10 @@ maximized windows keep the same QWindow, partial primary span, resting applet
 measurements, layer-shell placement, and maximum-depth reservation. One
 per-view qreal controller translates the visible presentation inside that
 stable edge canvas and reverses from its current fractional position without
-republishing physical geometry.
+republishing physical geometry. The visible mask, blur and contrast regions,
+borders, corners, shadow padding, exact partial-span edge input, and popup
+anchor all follow that same internal presentation.
+
 Legacy On All Screens members retain their derived-output behavior. A linked
 source stays protected from removal until its explicit members are removed, so
 one-containment Undo cannot leave a partial relationship.
