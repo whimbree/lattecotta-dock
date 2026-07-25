@@ -2696,6 +2696,30 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `schemaVersion == 6`; no script, manifest, or tracking entry invokes recipe
   061 by name.
 
+### D210 - Floating panel attachment changed primary-axis layout clearance
+- STATUS: OPEN.
+- FOUND: 2026-07-25, FP-4B (multi-output and separated-span topology
+  acceptance) nested-KWin preflight.
+- SYMPTOM: attaching a partial Start-aligned floating Panel increased
+  `availablePrimaryLength` from 436 to 442 px and changed its popup primary
+  span from `[6,436]` to `[0,442]`. The QWindow, configured span, trigger,
+  reservation, and output assignment remained stable.
+- ROOT: `Effects` correctly removes the painted primary-start border when the
+  Panel reaches its attached endpoint. `MultiLayered.qml` also used that live
+  painted-border bit as the authority for primary-axis layout padding and
+  popup roundness clearance. The six-pixel visual border change therefore
+  leaked into two measurements that FP-2 requires to remain stable.
+- REQUIRED: keep visual border presentation unchanged, but preserve reactive
+  primary-axis layout clearance for configured floating Panels across attached
+  and floated endpoints. Docks and zero-gap Panels must retain their existing
+  behavior. Theme, radius, margin, and indicator changes must still recompute
+  the clearance rather than reading a cached pixel value.
+- EVIDENCE: recipe 073 holds the original topology baseline while driving one
+  real window onto the Start-aligned Panel trigger and stops on the first
+  stable-fingerprint difference. The exact persistent difference is
+  `availablePrimaryLength: 436 -> 442`,
+  `popupAnchorPrimarySpan: [6,436] -> [0,442]`.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
   is merged. FP-2 (the stable canvas and transition controller) is merged

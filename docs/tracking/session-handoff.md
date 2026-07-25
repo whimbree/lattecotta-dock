@@ -63,6 +63,16 @@ prepared three-view fixture, so it never participated in the schema 7 gate.
 That harness repair remains a separate open task and must not be hidden inside
 the topology recipe.
 
+The FP-4B nested preflight also found D210 (floating panel attachment changed
+primary-axis layout clearance). A partial Start-aligned Panel kept its stable
+QWindow, configured span, trigger, and reservation, but
+`availablePrimaryLength` changed from 436 to 442 px and its popup primary span
+changed from `[6,436]` to `[0,442]` at the attached endpoint. The painted
+primary-start border correctly disappears there, but `MultiLayered.qml` reused
+that presentation bit as layout-padding and popup-clearance authority. The
+topology recipe remains red until configured floating Panels preserve reactive
+primary-axis clearance independently of the visual border.
+
 ## 2026-07-25: FP-3 owns internal presentation, exact input, effects, and popups
 
 FP-3 (internal presentation, input, effects, and popup ownership) landed
