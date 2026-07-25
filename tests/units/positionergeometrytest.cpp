@@ -67,7 +67,7 @@ private Q_SLOTS:
     void dockPosition_fullSpanEndStaysInsideOutput_data();
     void dockPosition_fullSpanEndStaysInsideOutput();
 
-    // dockPosition — stable floating envelope + ordinary visibility slide
+    // dockPosition: stable floating envelope plus ordinary visibility slide
     void dockPosition_panelStableEnvelope_data();
     void dockPosition_panelStableEnvelope();
     void dockPosition_bottomPanel_visibilitySlideOffset();
