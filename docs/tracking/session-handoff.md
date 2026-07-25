@@ -56,6 +56,13 @@ acceptance) remain open, so FP-4 (the stable window-touch trigger and
 end-to-end acceptance) and D172 (floating panel attachment moves the surface
 and reservation instead of presentation) remain incomplete.
 
+The FP-4B (multi-output and separated-span topology acceptance) preflight also
+found D209 (partial-reservation recipe lacks a reproducible schema-current
+front door). Recipe 061 still requires schema version 6 and an externally
+prepared three-view fixture, so it never participated in the schema 7 gate.
+That harness repair remains a separate open task and must not be hidden inside
+the topology recipe.
+
 ## 2026-07-25: FP-3 owns internal presentation, exact input, effects, and popups
 
 FP-3 (internal presentation, input, effects, and popup ownership) landed

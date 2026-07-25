@@ -2677,6 +2677,25 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   modes. Recipe 071 drives maximize and restore in both consuming modes and
   requires a Floated target with no Panel transition geometry.
 
+### D209 - Partial-reservation recipe lacks a reproducible schema-current front door
+- STATUS: OPEN.
+- FOUND: 2026-07-25, FP-4B (multi-output and separated-span topology
+  acceptance) preflight.
+- SYMPTOM: `tests/e2e/061-partial-reservation-placement.sh` requires an
+  externally prepared three-view fixture and rejects the current
+  `dockSystemData` readback because it still requires schema version 6 after
+  schema version 7 landed.
+- ROOT: the specialized recipe was added without a deterministic fixture
+  constructor or registered runner entry, so its embedded schema contract did
+  not participate in the schema 7 gate.
+- REQUIRED: give recipe 061 a reproducible fixture and explicit runner entry,
+  update its schema assertion to the current contract, and prove its
+  maximum-depth reservation and non-intersecting side-view assertions remain
+  non-vacuous.
+- EVIDENCE: the recipe's final state assertion requires
+  `schemaVersion == 6`; no script, manifest, or tracking entry invokes recipe
+  061 by name.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
   is merged. FP-2 (the stable canvas and transition controller) is merged
