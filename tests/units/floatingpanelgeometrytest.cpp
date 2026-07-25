@@ -23,6 +23,16 @@ class FloatingPanelGeometryTest : public QObject
     Q_OBJECT
 
 private:
+    static QRect rectangleFromCoordinates(int left,
+                                          int top,
+                                          int right,
+                                          int bottom)
+    {
+        QRect rectangle;
+        rectangle.setCoords(left, top, right, bottom);
+        return rectangle;
+    }
+
     static Inputs inputs(Edge edge)
     {
         return {
@@ -42,6 +52,8 @@ private Q_SLOTS:
     void bridgesOnlyTheExactPartialSpan();
     void triggerOverlapsOneLogicalPixelInward_data();
     void triggerOverlapsOneLogicalPixelInward();
+    void solvesExtremeOriginGeometryWithoutIntermediateOverflow_data();
+    void solvesExtremeOriginGeometryWithoutIntermediateOverflow();
     void solvesAlignedPartialPlacement_data();
     void solvesAlignedPartialPlacement();
     void fullSpanEndPlacementStaysInsideEveryOutputEdge_data();
@@ -136,6 +148,68 @@ void FloatingPanelGeometryTest::triggerOverlapsOneLogicalPixelInward()
     const auto solution = solve(inputs(edge));
     QVERIFY(solution.has_value());
     QCOMPARE(solution->trigger.value, trigger);
+}
+
+void FloatingPanelGeometryTest::
+    solvesExtremeOriginGeometryWithoutIntermediateOverflow_data()
+{
+    QTest::addColumn<Inputs>("input");
+    QTest::addColumn<QRect>("envelope");
+
+    constexpr int lowest = std::numeric_limits<int>::lowest();
+    constexpr int highest = std::numeric_limits<int>::max();
+
+    QTest::newRow("right edge at the minimum x coordinate")
+        << Inputs{
+               .outputGeometry =
+                   rectangleFromCoordinates(lowest, 0, lowest + 1, 9),
+               .edge = Edge::Right,
+               .primaryAxisSpan = {0, 10},
+               .panelDepth = 1,
+               .floatingGap = 1,
+           }
+        << rectangleFromCoordinates(lowest, 0, lowest + 1, 9);
+    QTest::newRow("bottom edge at the minimum y coordinate")
+        << Inputs{
+               .outputGeometry =
+                   rectangleFromCoordinates(0, lowest, 9, lowest + 1),
+               .edge = Edge::Bottom,
+               .primaryAxisSpan = {0, 10},
+               .panelDepth = 1,
+               .floatingGap = 1,
+           }
+        << rectangleFromCoordinates(0, lowest, 9, lowest + 1);
+    QTest::newRow("top edge at the maximum y coordinate")
+        << Inputs{
+               .outputGeometry =
+                   rectangleFromCoordinates(0, highest - 1, 9, highest),
+               .edge = Edge::Top,
+               .primaryAxisSpan = {0, 10},
+               .panelDepth = 1,
+               .floatingGap = 1,
+           }
+        << rectangleFromCoordinates(0, highest - 1, 9, highest);
+    QTest::newRow("left edge at the maximum x coordinate")
+        << Inputs{
+               .outputGeometry =
+                   rectangleFromCoordinates(highest - 1, 0, highest, 9),
+               .edge = Edge::Left,
+               .primaryAxisSpan = {0, 10},
+               .panelDepth = 1,
+               .floatingGap = 1,
+           }
+        << rectangleFromCoordinates(highest - 1, 0, highest, 9);
+}
+
+void FloatingPanelGeometryTest::
+    solvesExtremeOriginGeometryWithoutIntermediateOverflow()
+{
+    QFETCH(Inputs, input);
+    QFETCH(QRect, envelope);
+
+    const auto solution = solve(input);
+    QVERIFY(solution.has_value());
+    QCOMPARE(solution->envelope.value, envelope);
 }
 
 void FloatingPanelGeometryTest::solvesAlignedPartialPlacement_data()
@@ -243,6 +317,19 @@ void FloatingPanelGeometryTest::rejectsInvalidBoundaryGeometry_data()
     overflowingEnvelope.panelDepth = std::numeric_limits<int>::max();
     overflowingEnvelope.floatingGap = 1;
     QTest::newRow("envelope depth integer overflow") << overflowingEnvelope;
+
+    Inputs unsupportedEdge = inputs(Edge::Bottom);
+    unsupportedEdge.edge = static_cast<Edge>(std::numeric_limits<int>::max());
+    QTest::newRow("unsupported edge") << unsupportedEdge;
+
+    Inputs unrepresentableOutputSpan = inputs(Edge::Bottom);
+    unrepresentableOutputSpan.outputGeometry = rectangleFromCoordinates(
+        std::numeric_limits<int>::lowest(),
+        0,
+        std::numeric_limits<int>::max(),
+        99);
+    QTest::newRow("output rectangle span exceeds integer range")
+        << unrepresentableOutputSpan;
 }
 
 void FloatingPanelGeometryTest::rejectsInvalidBoundaryGeometry()
@@ -286,6 +373,34 @@ void FloatingPanelGeometryTest::rejectsInvalidPlacement_data()
     offsetOutside.offset = 1.2F;
     QTest::newRow("derived span outside output") << offsetOutside;
 
+    PlacementInputs unsupportedEdge = valid;
+    unsupportedEdge.edge =
+        static_cast<Edge>(std::numeric_limits<int>::max());
+    QTest::newRow("unsupported edge") << unsupportedEdge;
+
+    PlacementInputs unsupportedAlignment = valid;
+    unsupportedAlignment.alignment =
+        static_cast<PrimaryAxisAlignment>(std::numeric_limits<int>::max());
+    QTest::newRow("unsupported alignment") << unsupportedAlignment;
+
+    PlacementInputs unrepresentableOutputSpan = valid;
+    unrepresentableOutputSpan.outputGeometry = rectangleFromCoordinates(
+        std::numeric_limits<int>::lowest(),
+        0,
+        std::numeric_limits<int>::max(),
+        99);
+    QTest::newRow("output rectangle span exceeds integer range")
+        << unrepresentableOutputSpan;
+
+    PlacementInputs unrepresentableAvailableSpan = valid;
+    unrepresentableAvailableSpan.availablePrimaryGeometry =
+        rectangleFromCoordinates(std::numeric_limits<int>::lowest(),
+                                 0,
+                                 std::numeric_limits<int>::max(),
+                                 99);
+    QTest::newRow("available rectangle span exceeds integer range")
+        << unrepresentableAvailableSpan;
+
     PlacementInputs startAdditionOverflow = valid;
     startAdditionOverflow.alignment = PrimaryAxisAlignment::Start;
     startAdditionOverflow.offset =
@@ -301,6 +416,22 @@ void FloatingPanelGeometryTest::rejectsInvalidPlacement_data()
     roundedMaximumLength.maxLength = 1.0F;
     QTest::newRow("maximum available length rounds beyond integer range")
         << roundedMaximumLength;
+
+    PlacementInputs centerExpressionOverflow = valid;
+    centerExpressionOverflow.outputGeometry = QRect(0, 0, 1024, 100);
+    centerExpressionOverflow.availablePrimaryGeometry =
+        centerExpressionOverflow.outputGeometry;
+    centerExpressionOverflow.alignment = PrimaryAxisAlignment::Center;
+    centerExpressionOverflow.maxLength = 0.5F;
+    centerExpressionOverflow.offset = 2097151.75F;
+    QTest::newRow("center expression exceeds integer range after valid offset")
+        << centerExpressionOverflow;
+
+    PlacementInputs endExpressionOverflow = centerExpressionOverflow;
+    endExpressionOverflow.alignment = PrimaryAxisAlignment::End;
+    endExpressionOverflow.offset = -2097151.75F;
+    QTest::newRow("end expression exceeds integer range after valid offset")
+        << endExpressionOverflow;
 
     for (const auto alignment : {
              PrimaryAxisAlignment::Start,
