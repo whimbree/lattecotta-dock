@@ -109,6 +109,29 @@ latte_add_unit_test(floatinginputeventtest)
 target_link_libraries(floatinginputeventtest
     Qt6::Gui)
 
+# FP-3 blur/contrast region ownership: a rounded local shape is clipped and
+# translated into the controller's outward paint raster.
+latte_add_unit_test(effectregiontest)
+target_link_libraries(effectregiontest
+    Qt6::Gui)
+
+# FP-3 mask/damage handshake: only the frame that synchronized the current
+# presentation generation may collapse its one-frame clearing union.
+latte_add_unit_test(floatingmaskhandshaketest)
+
+# FP-3 border ownership: the final KSvg border flags preserve every floating
+# corner across edge/alignment/span combinations while retaining attached
+# output-boundary clipping.
+latte_add_unit_test(panelborderdecisiontest)
+target_link_libraries(panelborderdecisiontest
+    KF6::Svg)
+
+# FP-3 shadow ownership: borders and asymmetric stable-window padding are
+# change-detected independently for every registered panel window.
+latte_add_unit_test(panelshadowstatetest)
+target_link_libraries(panelshadowstatetest
+    KF6::Svg)
+
 # FP-2 transition ownership: the QObject wrapper and its QPropertyAnimation
 # compile into the sanitizer-backed test. An injected animation clock makes
 # both reversal directions and rapid alternating targets deterministic.

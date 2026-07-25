@@ -24,6 +24,9 @@ import "../colorizer" as Colorizer
 
 BackgroundProperties{
     id:barLine
+    required property Item containmentRoot
+    required property var dockView
+
     stablePanelEnvelope: root.behaveAsPlasmaPanel
 
     //! stateless resolver for the per-edge padding math and the effects
@@ -464,6 +467,19 @@ BackgroundProperties{
             onIsHiddenChanged: solidBackground.updateEffectsArea();
         }
 
+        Connections {
+            target: barLine.dockView
+            function onBehaveAsPlasmaPanelChanged() {
+                if (!barLine.containmentRoot.behaveAsPlasmaPanel) {
+                    // Effects has already released controller ownership and
+                    // cleared the stale panel rect. Install the dock rect in
+                    // this same signal delivery instead of waiting for the
+                    // coalescing timer.
+                    solidBackground.invUpdateEffectsArea();
+                }
+            }
+        }
+
 
         Connections{
             target: Plasmoid
@@ -482,7 +498,10 @@ BackgroundProperties{
         //! core (EX-13); this shell keeps the latteView.effects.rect write
         //! and the coalescing timer below
         function invUpdateEffectsArea(){
-            if (!latteView)
+            //! Stable panels are synchronized atomically by
+            //! Effects::applyFloatingPanelPresentation. This timer remains
+            //! the dock background authority only.
+            if (!latteView || barLine.containmentRoot.behaveAsPlasmaPanel)
                 return;
 
             var rootGeometry = solidBackground.mapToItem(root, 0, 0);
