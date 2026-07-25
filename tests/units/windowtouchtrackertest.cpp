@@ -179,6 +179,8 @@ class WindowTouchTrackerTest : public QObject
 private Q_SLOTS:
     void followsRowsResetRemovalAndModelDestruction();
     void skipsNonWindowRowsBeforeWindowRoleValidation();
+    void rejectsMalformedTrueWindowRoles_data();
+    void rejectsMalformedTrueWindowRoles();
     void followsStableTriggerGeometry();
     void refusesRoleNameDrift();
     void fixedDeadlineCannotStarveUnderSustainedChanges();
@@ -260,6 +262,75 @@ void WindowTouchTrackerTest::
         },
         touchingRow(transition),
     });
+    QTRY_COMPARE_WITH_TIMEOUT(tracker.touchingWindowCount(), 0, 100);
+    QCOMPARE(tracker.geometryRoleTypeName(), QString{});
+}
+
+void WindowTouchTrackerTest::rejectsMalformedTrueWindowRoles_data()
+{
+    QTest::addColumn<int>("malformedRole");
+    QTest::addColumn<QVariant>("malformedValue");
+    QTest::addColumn<QString>("expectedCritical");
+
+    QTest::newRow("malformed IsHidden")
+        << static_cast<int>(WindowModel::IsHidden)
+        << QVariant{QStringLiteral("not a bool")}
+        << QStringLiteral(
+               "WindowTouchTracker requires bool role \"IsHidden\""
+               " at row 0 but received QString");
+    QTest::newRow("malformed IsMinimized")
+        << static_cast<int>(WindowModel::IsMinimized)
+        << QVariant{QStringLiteral("not a bool")}
+        << QStringLiteral(
+               "WindowTouchTracker requires bool role \"IsMinimized\""
+               " at row 0 but received QString");
+    QTest::newRow("non-QRect Geometry")
+        << static_cast<int>(WindowModel::Geometry)
+        << QVariant{QStringLiteral("not a QRect")}
+        << QStringLiteral(
+               "WindowTouchTracker requires QRect Geometry"
+               " at row 0 but received QString");
+}
+
+void WindowTouchTrackerTest::rejectsMalformedTrueWindowRoles()
+{
+    QFETCH(int, malformedRole);
+    QFETCH(QVariant, malformedValue);
+    QFETCH(QString, expectedCritical);
+
+    FloatingTransition transition;
+    transition.setAnimationDuration(0);
+    QVERIFY(transition.configureGeometry(geometry()));
+
+    WindowTouchTracker tracker(&transition);
+    WindowModel model;
+    model.append(touchingRow(transition));
+    tracker.setModel(&model);
+    QTRY_COMPARE_WITH_TIMEOUT(tracker.touchingWindowCount(), 1, 100);
+    QCOMPARE(tracker.geometryRoleTypeName(), QStringLiteral("QRect"));
+
+    WindowModel::Row malformed = touchingRow(transition);
+    switch (malformedRole) {
+    case WindowModel::IsHidden:
+        malformed.hidden = malformedValue;
+        break;
+    case WindowModel::IsMinimized:
+        malformed.minimized = malformedValue;
+        break;
+    case WindowModel::Geometry:
+        malformed.geometry = malformedValue;
+        break;
+    default:
+        QFAIL("test data named a role outside the true-window validation set");
+    }
+
+    const QByteArray expectedMessage =
+        expectedCritical.toUtf8();
+    QTest::ignoreMessage(
+        QtCriticalMsg,
+        expectedMessage.constData());
+    model.resetRows({std::move(malformed)});
+
     QTRY_COMPARE_WITH_TIMEOUT(tracker.touchingWindowCount(), 0, 100);
     QCOMPARE(tracker.geometryRoleTypeName(), QString{});
 }
