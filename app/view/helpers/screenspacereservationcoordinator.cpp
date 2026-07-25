@@ -547,8 +547,7 @@ private:
     {
         if (!screen
                 || !publisher.surface
-                || publisher.screen.data() != screen
-                || publisher.surface->screen() != screen) {
+                || publisher.screen.data() != screen) {
             return false;
         }
 
@@ -563,7 +562,11 @@ private:
 
         const auto *const layerShell =
             publisher.surface->layerShellWindow();
-        if (!layerShell) {
+        //! LayerShellQt's explicit screen controls the compositor output.
+        //! QWindow::screen() can retain the previous output until the first
+        //! configure arrives, so it is not a synchronous staging invariant.
+        if (!layerShell
+                || layerShell->screen() != screen) {
             return false;
         }
 
