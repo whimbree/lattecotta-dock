@@ -113,15 +113,20 @@ stable_snapshot() {
 }
 
 revision_snapshot() {
-    dock_field '"%s %s" % (v["surfaceGeometryPublicationRevision"], v["layerShellConfigureRequestRevision"])'
+    dock_field '"%s %s %s" % (
+        v["transitionGeometryRevision"],
+        v["surfaceGeometryPublicationRevision"],
+        v["layerShellConfigureRequestRevision"],
+    )'
 }
 
 transition_probe() {
-    dock_field '"%s %s %s %.9f %s %s" % (
+    dock_field '"%s %s %s %.9f %s %s %s" % (
         v["transitionTarget"],
         v["transitionPhase"],
         str(v["transitionRunning"]).lower(),
         v["transitionProgress"],
+        v["transitionGeometryRevision"],
         v["surfaceGeometryPublicationRevision"],
         v["layerShellConfigureRequestRevision"],
     )'
@@ -132,16 +137,16 @@ assert_stable_contract() {
     current="$(stable_snapshot)" || e2e_fail "$phase could not read the stable geometry snapshot"
     [[ "$current" == "$base_stable_snapshot" ]] \
         || e2e_fail "$phase changed the stable panel contract: base=$base_stable_snapshot current=$current"
-    revisions="$(revision_snapshot)" || e2e_fail "$phase could not read physical-geometry revisions"
+    revisions="$(revision_snapshot)" || e2e_fail "$phase could not read stable-controller and physical-geometry revisions"
     [[ "$revisions" == "$base_revisions" ]] \
-        || e2e_fail "$phase published physical geometry during progress: base=$base_revisions current=$revisions"
+        || e2e_fail "$phase reconfigured stable geometry or published physical geometry during progress: base=$base_revisions current=$revisions"
 }
 
 wait_for_resting_target() {
     local expected_target="$1" expected_progress="$2"
-    local target phase running progress surface_revision layer_revision
+    local target phase running progress geometry_revision surface_revision layer_revision
     for _ in $(seq 1 80); do
-        read -r target phase running progress surface_revision layer_revision <<< "$(transition_probe)"
+        read -r target phase running progress geometry_revision surface_revision layer_revision <<< "$(transition_probe)"
         if [[ "$target" == "$expected_target" && "$phase" == resting && "$running" == false ]] \
                 && awk -v actual="$progress" -v expected="$expected_progress" \
                     'BEGIN { difference = actual - expected; if (difference < 0) difference = -difference; exit !(difference < 0.000001) }'; then
@@ -154,13 +159,13 @@ wait_for_resting_target() {
 
 capture_progress_only_transition() {
     local expected_target="$1" expected_phase="$2"
-    local target phase running progress surface_revision layer_revision
+    local target phase running progress geometry_revision surface_revision layer_revision
     for _ in $(seq 1 100); do
-        read -r target phase running progress surface_revision layer_revision <<< "$(transition_probe)"
+        read -r target phase running progress geometry_revision surface_revision layer_revision <<< "$(transition_probe)"
         if [[ "$target" == "$expected_target" && "$phase" == "$expected_phase" && "$running" == true ]] \
                 && awk -v progress="$progress" 'BEGIN { exit !(progress > 0.0 && progress < 1.0) }'; then
-            [[ "$surface_revision $layer_revision" == "$base_revisions" ]] \
-                || e2e_fail "$expected_phase transition changed physical-geometry revisions at progress $progress"
+            [[ "$geometry_revision $surface_revision $layer_revision" == "$base_revisions" ]] \
+                || e2e_fail "$expected_phase transition changed stable-controller or physical-geometry revisions at progress $progress"
             assert_stable_contract "$expected_phase midpoint"
             return 0
         fi
@@ -170,9 +175,9 @@ capture_progress_only_transition() {
 }
 
 wait_for_selected_target() {
-    local expected_target="$1" target phase running progress surface_revision layer_revision
+    local expected_target="$1" target phase running progress geometry_revision surface_revision layer_revision
     for _ in $(seq 1 80); do
-        read -r target phase running progress surface_revision layer_revision <<< "$(transition_probe)"
+        read -r target phase running progress geometry_revision surface_revision layer_revision <<< "$(transition_probe)"
         [[ "$target" == "$expected_target" ]] && return 0
         sleep 0.01
     done
@@ -181,14 +186,14 @@ wait_for_selected_target() {
 
 wait_for_tracker_and_target() {
     local expected_maximized="$1" expected_target="$2" expected_progress="$3"
-    local active_maximized exists_maximized target phase running progress surface_revision layer_revision
+    local active_maximized exists_maximized target phase running progress geometry_revision surface_revision layer_revision
     for _ in $(seq 1 80); do
         read -r active_maximized exists_maximized <<< "$(e2e_json trackerData u "$view" | python3 -c '
 import json, sys
 tracker = json.load(sys.stdin)
 print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMaximized"]).lower())
 ')"
-        read -r target phase running progress surface_revision layer_revision <<< "$(transition_probe)"
+        read -r target phase running progress geometry_revision surface_revision layer_revision <<< "$(transition_probe)"
         if [[ "$active_maximized" == "$expected_maximized"
               && "$exists_maximized" == "$expected_maximized"
               && "$target" == "$expected_target"
@@ -323,7 +328,7 @@ read -r base_window_width screen_x screen_y screen_w screen_h edge screen stable
     || e2e_fail "maximum-depth reservation $stable_reservation_depth does not cover contribution $contribution_depth"
 
 base_stable_snapshot="$(stable_snapshot)" || e2e_fail "could not capture the base stable geometry contract"
-base_revisions="$(revision_snapshot)" || e2e_fail "could not capture base physical-geometry revisions"
+base_revisions="$(revision_snapshot)" || e2e_fail "could not capture base stable-controller and physical-geometry revisions"
 
 setsid konsole -p 'LocalTabTitleFormat=LATTE FP2 STABLE CANVAS' >/dev/null 2>&1 &
 kpid=$!
