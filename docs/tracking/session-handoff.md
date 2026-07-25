@@ -63,15 +63,29 @@ prepared three-view fixture, so it never participated in the schema 7 gate.
 That harness repair remains a separate open task and must not be hidden inside
 the topology recipe.
 
-The FP-4B nested preflight also found D210 (floating panel attachment changed
-primary-axis layout clearance). A partial Start-aligned Panel kept its stable
-QWindow, configured span, trigger, and reservation, but
+The FP-4B nested preflight also found and fixed D210 (floating panel attachment
+changed primary-axis layout clearance). A partial Start-aligned Panel kept its
+stable QWindow, configured span, trigger, and reservation, but
 `availablePrimaryLength` changed from 436 to 442 px and its popup primary span
 changed from `[6,436]` to `[0,442]` at the attached endpoint. The painted
 primary-start border correctly disappears there, but `MultiLayered.qml` reused
-that presentation bit as layout-padding and popup-clearance authority. The
-topology recipe remains red until configured floating Panels preserve reactive
-primary-axis clearance independently of the visual border.
+that presentation bit as layout-padding and popup-clearance authority.
+
+The corrected constexpr policy retains primary-axis clearance only for
+configured positive-gap floating Panels. Thickness edges, Docks, zero-gap
+Panels, and other non-floating views still follow painted borders. Theme,
+radius, margin, and indicator values remain live inputs instead of cached
+pixels.
+
+Recipe 073 now passes three independently duplicated partial Panels through
+full-touching, partial-touching, and disconnected landscape/portrait output
+arrangements. Exact per-view triggers and input regions stay separated, a
+spanning window activates only the intersected views, the reservation
+coordinator publishes the maximum depth per output edge, and process restart
+reproduces the persistent projection. The expanded multi-output vehicle
+self-test also passes and restores every captured KScreen field. Commits
+`116bc3495`, `a9be9bb1b`, and `a988d9c89` are provisional branch hashes until
+GitHub rebases the FP-4B PR.
 
 ## 2026-07-25: FP-3 owns internal presentation, exact input, effects, and popups
 

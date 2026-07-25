@@ -159,9 +159,9 @@ FP-4C means deterministic operation-storm acceptance. PR #124 landed FP-4A.
 - [x] Drive drag-in, drag-out, mid-flight reverse, Escape cancel, and committed
       maximize against real nested-KWin client frames.
       Commits: f8396b5ed, d0d499d50 (PR #124)
-- [ ] Drive portrait, landscape, disconnected, partially touching, fully
+- [x] Drive portrait, landscape, disconnected, partially touching, fully
       touching, spanning-window, and same-edge separated-span fixtures.
-      Commits:
+      Commits: 116bc3495, a988d9c89 (provisional branch hashes)
 - [ ] Preserve replay logs for a deterministic operation storm covering
       duplicate, linked view, output move, edge, orientation, alignment, edit
       mode, destruction, recreation, and reload.

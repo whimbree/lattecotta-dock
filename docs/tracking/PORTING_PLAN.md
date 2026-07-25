@@ -4690,12 +4690,15 @@ prerequisites in the phases above are done.
       schema contract without folding the repair invisibly into FP-4B (the
       multi-output and separated-span topology acceptance).
       Commits:
-- [ ] Fix D210 (floating panel attachment changed primary-axis layout
+- [x] Fix D210 (floating panel attachment changed primary-axis layout
       clearance). Keep the painted-border transition visual-only. Configured
       floating Panels must retain their reactive primary-axis layout and popup
       clearance across attached and floated endpoints, while Docks and
       zero-gap Panels retain their existing behavior.
-      Commits:
+      Evidence: the constexpr policy matrix, QML routing tests, source
+      mutations, and recipe 073 keep the Start, End, and vertical Panel applet
+      and popup spans fixed through real attached and floated endpoints.
+      Commits: a9be9bb1b (provisional branch hash)
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
@@ -4737,9 +4740,14 @@ prerequisites in the phases above are done.
       direct Panel transition without changing stable physical geometry.
       Commits: f8396b5ed, d0d499d50, 36e835fb9, 508dcf630, b552508e3,
       fd445ee2f, f4232ae54, 5636966b5 (PR #124)
-- [ ] Complete FP-4B (the multi-output and separated-span topology
+- [x] Complete FP-4B (the multi-output and separated-span topology
       acceptance).
-      Commits:
+      Three independent partial floating Panels retain distinct runtime,
+      configuration, geometry, transition, and window-touch authorities.
+      Exact per-view activation and maximum-depth reservation ownership survive
+      full-touching, partial-touching, and disconnected landscape/portrait
+      arrangements, client minimization and destruction, and process restart.
+      Commits: 116bc3495, a9be9bb1b, a988d9c89 (provisional branch hashes)
 - [ ] Complete FP-4C (the deterministic operation-storm acceptance).
       Commits:
 - [ ] Complete FP-4 (the stable window-touch trigger and end-to-end
