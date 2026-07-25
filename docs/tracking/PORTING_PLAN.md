@@ -4699,6 +4699,27 @@ prerequisites in the phases above are done.
       mutations, and recipe 073 keep the Start, End, and vertical Panel applet
       and popup spans fixed through real attached and floated endpoints.
       Commits: dc0fda084 (PR #126)
+- [ ] Fix D211 (operation-storm convergence projected a nonexistent geometry
+      field). Replace the optional `visibleGeometry` lookup with a schema-7
+      typed projection of `currentVisibleGeometry` and the complete stable
+      geometry, sizing, transition, reservation, and ownership state.
+      Commits:
+- [ ] Fix D212 (operation-storm teardown leaked its mutated dock fixture).
+      Arm restoration before the first destructive stage, restore the pristine
+      nested configuration after success and failure, preserve the body status,
+      and prove cleanup ordering with controlled failures.
+      Commits:
+- [ ] Fix D213 (operation-storm replay text was not a replayable typed plan).
+      Generate a versioned immutable operation document from the fixed seed,
+      validate every operation and reference before mutation, accept that
+      document as replay input, and retain a resolved execution log.
+      Commits:
+- [ ] Fix D214 (operation-storm acceptance did not require floating-panel
+      ownership). Stage a deterministic partial floating Panel fixture and
+      assert schema 7, stable transition geometry, exact edit participants,
+      maximum-depth reservation groups, independent runtime objects, immediate
+      removal tombstones, convergence, and durable restart equivalence.
+      Commits:
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
