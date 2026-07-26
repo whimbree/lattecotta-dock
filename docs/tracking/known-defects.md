@@ -2935,7 +2935,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D222 - Failed removal Undo left split runtime and persistent ownership
-- STATUS: OPEN on `test/fp4c-operation-storm`; PR #128 review blocker.
+- STATUS: FIXED on `test/fp4c-operation-storm` (`f58f70558`); PR #128
+  rereview pending.
 - FOUND: 2026-07-25, independent FP-4C (deterministic operation-storm
   acceptance) review.
 - SYMPTOM: if persistence restoration or runtime resume fails during Undo, the
@@ -2945,10 +2946,16 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   Plasma's destroyed state or otherwise finish removal. The commit timer
   destroys only containments whose destroyed flag is still true, so the split
   state can survive indefinitely.
-- REQUIRED: every failed Undo converges to one explicit state. Either the
-  original removal completes across persistence, runtime, and compositor
-  ownership, or the complete pre-removal state is restored. No suspended live
-  containment may remain outside both lifecycle maps.
+- FIX: one generation-tagged transaction owns suspension, next-turn Undo
+  resolution, runtime retirement, containment destruction, and the final
+  persistence tombstone. Viewless children defer to their root transaction,
+  expiry uses the same checked finalizer, and Storage propagates actual KConfig
+  failure while excluding complete runtime-derived ownership subtrees.
+- EVIDENCE: the constexpr pure core injects restore, resume, runtime
+  retirement, containment destruction, and persistence failures. StorageTest
+  drives a real unwritable KConfig authority, the integration contract pins
+  next-turn ordering and retirement proof, and all three focused tests pass.
+  The focused independent rereview returned MERGE.
 - SEVERITY: release blocker.
 
 ### D223 - Reservation oracle trusted mutually wrong runtime geometry
@@ -2969,7 +2976,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: FIXED ON `test/fp4c-operation-storm`; final FP-4C PR blocked by
-  D221 through D223. FP-1
+  D223. FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
   through PR #120, including schema 5 and nested recipe 071 acceptance. The

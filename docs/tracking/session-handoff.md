@@ -54,7 +54,17 @@ at `5ce307460`. One typed latest-intent value now owns layout, screen group,
 logical and resolved output, follow-primary policy, edge, and alignment.
 Callbacks carry the current token, hide ownership survives supersession, and a
 new real A-to-B-to-A probe requires two claimed generations before exact
-settlement. D222 and D223 remain PR #128 blockers.
+settlement.
+
+D222 (failed removal Undo left split runtime and persistent ownership) is fixed
+at `f58f70558`. A constexpr transaction now defers root Undo resolution until
+libplasma finishes child transient changes, then either restores persistence
+before runtime ownership or retires runtime and containment ownership before
+the final tombstone. Expiry uses the same checked finalizer, viewless children
+do not create competing root transactions, and checked Storage projection
+excludes complete runtime-derived subtrees. The pure core, real unwritable
+KConfig test, integration contract, and focused production build pass. The
+focused independent rereview returned MERGE. D223 remains the PR #128 blocker.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
