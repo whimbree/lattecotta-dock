@@ -2959,7 +2959,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D223 - Reservation oracle trusted mutually wrong runtime geometry
-- STATUS: OPEN on `test/fp4c-operation-storm`; PR #128 review blocker.
+- STATUS: FIXED on `test/fp4c-operation-storm` (`ff41d8eca`); PR #128
+  rereview pending.
 - FOUND: 2026-07-25, independent FP-4C (deterministic operation-storm
   acceptance) review.
 - SYMPTOM: a reservation publisher with wrong geometry can pass when schema
@@ -2968,15 +2969,42 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   against the snapshot's own `windowGeometry`. It does not independently
   derive the exact one-pixel publisher rectangle, anchors, or margins from
   output geometry, edge, and contributors.
-- REQUIRED: derive expected publisher geometry and LayerShell placement from
-  independent output and edge inputs for all four edges. Controlled mutations
-  of geometry, anchors, margins, depth, membership, output, and absent groups
-  must fail.
+- FIX: capture immutable output identity, connector, and geometry records
+  before mutation, then derive exact full-edge maximum-depth bands, one-pixel
+  publisher surfaces, LayerShell placement, per-view struts, and compositor
+  frames from those external records and live view placement.
+- EVIDENCE: 25 adversarial model cases reject coherent wrong runtime and
+  compositor state across all four edges, including output, connector,
+  geometry, membership, depth, anchors, margins, per-view struts, and
+  publisher frames. The source contracts pass, and the exact seed 127934575
+  replay completes in the private two-output nested compositor with pristine
+  cleanup.
 - SEVERITY: release blocker for FP-4C acceptance.
 
+### D224 - Applied placement waited circularly on its own relocation commit
+- STATUS: FIXED on `test/fp4c-operation-storm` (`0382044fe`); PR #128
+  rereview pending.
+- FOUND: 2026-07-25, FP-4C exact nested replay after the D223 reservation
+  oracle correction.
+- SYMPTOM: the first placement checkpoint remained in relocation forever.
+  Geometry and LayerShell placement were applied, but reservation publication
+  retried every 100 milliseconds and the applied generation never advanced.
+- ROOT: Positioner publishes reservation ownership before committing the
+  relocation generation. The explicit applied-placement publication boundary
+  rejected every active relocation, so publication waited for the commit that
+  itself waited for publication.
+- FIX: the explicit AppliedPlacement path accepts an active relocation after
+  its candidate surface and LayerShell placement are verified. Ordinary timer
+  and observer updates still defer on active or unapplied placement, and
+  off-screen publication remains refused.
+- EVIDENCE: the identity contract pins the non-circular boundary. The rebuilt
+  production binary completes all 76 operations in seed 127934575 and restores
+  the exact pristine nested projection.
+- SEVERITY: release blocker.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: FIXED ON `test/fp4c-operation-storm`; final FP-4C PR blocked by
-  D223. FP-1
+- STATUS: FIXED ON `test/fp4c-operation-storm`; final FP-4C PR awaits its
+  replacement canonical gate and cold independent rereview. FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
   through PR #120, including schema 5 and nested recipe 071 acceptance. The
@@ -2988,9 +3016,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   acceptance) is merged through PR #124 at `f8396b5ed` through `5636966b5`.
   FP-4B (multi-output and separated-span topology acceptance) is merged through
   PR #126 at `4daa80121` through `6fa3c5703`. FP-4C (deterministic
-  operation-storm acceptance) passes its immutable 76-operation nested replay,
-  but the independent review found missing latest-intent, failed-Undo
-  convergence, and independently derived reservation-geometry assertions.
+  operation-storm acceptance) passes its immutable 76-operation nested replay.
+  The independent review's latest-intent, failed-Undo convergence, and
+  independently derived reservation-geometry blockers are corrected.
   Execution is tracked in `floating-panel-parity-plan.md`.
 - FOUND: 2026-07-24, Plasma 6.7.3 parity investigation after live floating
   panel maximize, radius, shadow, and animation regressions.

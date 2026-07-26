@@ -6,13 +6,13 @@ Last updated 2026-07-25.
 ## 2026-07-25: FP-4C operation storm converges
 
 FP-4C (the deterministic operation-storm acceptance) now passes in the
-dual-output nested vehicle. The saved seed 127934575 plan contains 74 typed
+dual-output nested vehicle. The saved seed 127934575 plan contains 76 typed
 symbolic operations and is accepted as exact replay input. Its schema-7 oracle
 checks live identity and lineage, assigned output and edge, stable geometry and
 sizing, transition and edit ownership, maximum-depth reservation groups,
 compositor window ownership, immediate removal tombstones, convergence, and
 restart equivalence. The fixture transaction restores the pristine nested
-configuration after success and failure. All 21 adversarial pure-model tests
+configuration after success and failure. All 25 adversarial pure-model tests
 and the real notification dock-and-applet Undo recipe pass.
 
 The storm found four product boundaries beyond the D211 through D214 harness
@@ -36,18 +36,21 @@ Minimum handler through a nine-warning QML lint increase. Maximum now owns the
 single clamp-and-store operation, Minimum delegates through its persistent
 proxy, and the inherited AppearanceConfig.qml baseline shrinks from 243 to 242.
 
-The final canonical gate exited 0 at exact branch head `03155fe50`. All 120
+The first canonical gate exited 0 at exact branch head `03155fe50`. All 120
 CTest entries, the QML and coverage ratchets, visual probes, the complete
 ASan/UBSan build, nested-compositor integration, and matrix refusal checks
-passed.
+passed. D221 through D224 changed product and acceptance code afterward, so
+that stamp is invalidated and a replacement exact-head gate is required.
 
-Independent PR #128 review returned `DO NOT MERGE`. D221 records sparse pending
+Independent PR #128 review returned `DO NOT MERGE`. D221 recorded sparse pending
 placement fields that can survive an A-to-B-to-A request sequence. D222 records
 a failed Undo path that tombstones persistence while leaving a non-destroyed
 containment suspended outside the active map. D223 records circular reservation
 geometry validation that can accept matching wrong schema and compositor
-rectangles. These are release blockers for the FP-4C acceptance claim. The PR
-must receive root fixes, a new canonical gate, and a second independent review.
+rectangles. All three review blockers are corrected. The exact nested replay
+then found D224, a circular wait between applied placement publication and its
+relocation commit, which is also corrected. The PR still requires a new
+canonical gate and a cold independent rereview.
 
 D221 (rapid return-to-origin placement retained stale pending fields) is fixed
 at `5ce307460`. One typed latest-intent value now owns layout, screen group,
@@ -64,7 +67,22 @@ the final tombstone. Expiry uses the same checked finalizer, viewless children
 do not create competing root transactions, and checked Storage projection
 excludes complete runtime-derived subtrees. The pure core, real unwritable
 KConfig test, integration contract, and focused production build pass. The
-focused independent rereview returned MERGE. D223 remains the PR #128 blocker.
+focused independent rereview returned MERGE.
+
+D223 (reservation oracle trusted mutually wrong runtime geometry) is fixed at
+`ff41d8eca`. Output identity, connector, and geometry are captured independently
+before mutation. The oracle derives full-edge maximum-depth reservation bands,
+one-pixel publisher surfaces, LayerShell placement, per-view struts, and
+compositor frames from those records. Twenty-five adversarial cases reject
+coherent wrong state for all four edges, and the focused independent rereview
+returned MERGE.
+
+D224 (applied placement waited circularly on its own relocation commit) is
+fixed at `0382044fe`. The explicit AppliedPlacement boundary no longer refuses
+solely because the relocation is active after its candidate surface and
+LayerShell placement are verified. Ordinary reservation updates still defer.
+The rebuilt production binary completes the 76-operation seed 127934575 replay
+and exact cleanup in the private two-output nested compositor.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
