@@ -82,7 +82,7 @@ private Q_SLOTS:
     void runtimeRecreationRebindsWholeRelationship();
     void crossLayoutMovesRevalidateBeforeImport();
     void clipboardCopyBreaksLinkedLineage();
-    void refusedLayoutMoveCancelsRelocation();
+    void compoundPlacementPreflightsBeforeMutation();
     void outputEligibilityUsesPersistentPlacementAuthority();
     void linkedAppletGeometryRemainsPerView();
     void numericPlacementPinsStableOutputIdentity();
@@ -424,15 +424,24 @@ outputMigrationUsesLayerShellAuthority()
         positionerSource,
         QStringLiteral(
             "void Positioner::initSignalingForLocationChangeSliding")));
-    const int ownership =
-        transaction.indexOf(QStringLiteral(
-            "m_pendingOutputOwnershipChange"));
     const int retire = transaction.indexOf(
         QStringLiteral(
-            "beginPlacementTransaction("),
-        ownership);
-    QVERIFY2(ownership >= 0 && retire > ownership,
+            "beginPlacementTransaction("));
+    const int ownership =
+        transaction.indexOf(QStringLiteral(
+            "plan.changesReservationOwnership"),
+        retire);
+    QVERIFY2(retire >= 0 && ownership > retire,
              "reservation retirement must consume assigned and LayerShell output ownership");
+
+    const QString prepare = normalized(functionBody(
+        positionerSource,
+        QStringLiteral(
+            "Positioner::preparePlacementApplication")));
+    QVERIFY(prepare.contains(QStringLiteral(
+        "m_screenToFollow!=plan.outputScreen")));
+    QVERIFY(prepare.contains(QStringLiteral(
+        "layerShellNeedsOutput(plan.outputScreen)")));
 
     const QString layerShellSource =
         readFile(QStringLiteral(
@@ -916,40 +925,139 @@ void DockIdentityContractTest::clipboardCopyBreaksLinkedLineage()
     QVERIFY(snapshot.contains(QStringLiteral("snapshot.isMoveDestination=false")));
 }
 
-void DockIdentityContractTest::refusedLayoutMoveCancelsRelocation()
+void DockIdentityContractTest::
+compoundPlacementPreflightsBeforeMutation()
 {
     const QString managerHeader = readFile(QStringLiteral("app/layouts/manager.h"));
     QVERIFY(managerHeader.contains(QStringLiteral("[[nodiscard]] bool moveView")));
+    QVERIFY(managerHeader.contains(QStringLiteral("[[nodiscard]] bool canMoveView")));
 
     const QString managerSource = readFile(QStringLiteral("app/layouts/manager.cpp"));
     const QString move = normalized(functionBody(
         managerSource, QStringLiteral("bool Manager::moveView")));
-    const int relationshipGuard = move.indexOf(
-        QStringLiteral("participatesInLegacyLayoutMove"));
-    const int refuse = move.indexOf(QStringLiteral("returnfalse"), relationshipGuard);
-    const int unassign = move.indexOf(QStringLiteral("unassignFromLayout"), refuse);
+    const int validate = move.indexOf(
+        QStringLiteral("if(!validatesViewMove("));
+    const int unassign = move.indexOf(
+        QStringLiteral("unassignFromLayout"), validate);
+    const int assign = move.indexOf(
+        QStringLiteral("assignToLayout"), unassign);
+    const int postcondition = move.indexOf(
+        QStringLiteral("qFatal("), assign);
     const int accept = move.lastIndexOf(QStringLiteral("returntrue"));
-    QVERIFY2(relationshipGuard >= 0 && refuse > relationshipGuard
-                 && unassign > refuse && accept > unassign,
-             "the move transaction must report refusal before unassigning its source");
+    QVERIFY2(validate >= 0 && unassign > validate
+                 && assign > unassign
+                 && postcondition > assign
+                 && accept > postcondition,
+             "the layout move must validate before mutation and make every post-unassignment failure fatal");
+    QCOMPARE(
+        move.indexOf(
+            QStringLiteral("returnfalse"),
+            unassign),
+        -1);
+
+    const QString validateMove = normalized(functionBody(
+        managerSource,
+        QStringLiteral("bool Manager::validatesViewMove")));
+    QVERIFY(validateMove.contains(QStringLiteral(
+        "originView->layout()!=originLayout")));
+    QVERIFY(validateMove.contains(QStringLiteral(
+        "destinationLayout->contains(")));
+    QVERIFY(validateMove.contains(QStringLiteral(
+        "participatesInLegacyLayoutMove")));
 
     const QString positionerSource = readFile(QStringLiteral("app/view/positioner.cpp"));
     const QString relocation = normalized(functionBody(
         positionerSource, QStringLiteral("void Positioner::initSignalingForLocationChangeSliding")));
+    const int capturePrior = relocation.indexOf(
+        QStringLiteral("constPlacementIntentprior=currentPlacementIntent()"));
+    const int prepare = relocation.indexOf(
+        QStringLiteral("preparePlacementApplication("),
+        capturePrior);
+    const int immutablePlan = relocation.indexOf(
+        QStringLiteral("constPlacementApplicationPlanplan=*prepared"),
+        prepare);
+    const int animationMutation = relocation.indexOf(
+        QStringLiteral("setAnimationsBlocked(true)"),
+        immutablePlan);
+    const int reservationMutation = relocation.indexOf(
+        QStringLiteral("beginPlacementTransaction("),
+        animationMutation);
+    const int revalidate = relocation.indexOf(
+        QStringLiteral("validatesPlacementApplication(plan)"),
+        reservationMutation);
     const int checkedMove = relocation.indexOf(
         QStringLiteral("if(!m_corona->layoutsManager()->moveView"));
-    const int cancel = relocation.indexOf(
-        QStringLiteral("cancelFailedLayoutRelocation()"), checkedMove);
-    QVERIFY2(checkedMove >= 0 && cancel > checkedMove,
-             "a late move refusal must re-enter the normal reveal path");
+    const int outputMutation = relocation.indexOf(
+        QStringLiteral("applyOutputPlacement("),
+        checkedMove);
+    const int edgeMutation = relocation.indexOf(
+        QStringLiteral("m_view->setLocation("),
+        outputMutation);
+    const int alignmentMutation = relocation.indexOf(
+        QStringLiteral("m_view->setAlignment("),
+        edgeMutation);
+    const int groupMutation = relocation.indexOf(
+        QStringLiteral("originalView->setScreensGroup("),
+        alignmentMutation);
+    QVERIFY2(capturePrior >= 0 && prepare > capturePrior
+                 && immutablePlan > prepare
+                 && animationMutation > immutablePlan
+                 && reservationMutation > animationMutation
+                 && revalidate > reservationMutation
+                 && checkedMove > revalidate
+                 && outputMutation > checkedMove
+                 && edgeMutation > outputMutation
+                 && alignmentMutation > edgeMutation
+                 && groupMutation > alignmentMutation,
+             "the complete immutable placement plan must be preflighted before every model mutation");
+
+    const QString outputApplication = normalized(functionBody(
+        positionerSource,
+        QStringLiteral(
+            "void Positioner::applyOutputPlacement")));
+    QVERIFY(outputApplication.contains(QStringLiteral(
+        "qFatal(")));
+    QVERIFY(!outputApplication.contains(QStringLiteral(
+        "returnfalse")));
+
+    const QString prepareApplication = normalized(functionBody(
+        positionerSource,
+        QStringLiteral(
+            "Positioner::preparePlacementApplication")));
+    QVERIFY(prepareApplication.contains(QStringLiteral(
+        "qGuiApp->screens()")));
+    QVERIFY(prepareApplication.contains(QStringLiteral(
+        "validatesPlacementApplication(plan)")));
+
+    const QString validateApplication = normalized(functionBody(
+        positionerSource,
+        QStringLiteral(
+            "bool Positioner::validatesPlacementApplication")));
+    QVERIFY(validateApplication.contains(QStringLiteral(
+        "screens.contains(plan.outputScreen.data())")));
+    QVERIFY(validateApplication.contains(QStringLiteral(
+        "canMoveView(")));
+    QVERIFY(validateApplication.contains(QStringLiteral(
+        "qobject_cast<Latte::OriginalView*>(m_view)")));
 
     const QString cancellation = normalized(functionBody(
         positionerSource, QStringLiteral("void Positioner::cancelFailedLayoutRelocation")));
     QVERIFY(cancellation.contains(QStringLiteral(
-        "cancelToCommittedIfCurrent(")));
+        "cancelToCommittedIfCurrent(token,prior)")));
+    QVERIFY(!cancellation.contains(QStringLiteral(
+        "currentPlacementIntent()")));
+    QVERIFY(!cancellation.contains(QStringLiteral(
+        "m_relocationGeneration")));
     QVERIFY(cancellation.contains(QStringLiteral(
         "projectPendingPlacement(")));
     QVERIFY(cancellation.contains(QStringLiteral("scheduleLastRepositionApplyEvent()")));
+
+    const QString projection = normalized(functionBody(
+        positionerSource,
+        QStringLiteral(
+            "void Positioner::projectPendingPlacement")));
+    QVERIFY(projection.contains(QStringLiteral(
+        "||!resolvedScreen||assignedOutputNeedsChange")));
 }
 
 void DockIdentityContractTest::outputEligibilityUsesPersistentPlacementAuthority()

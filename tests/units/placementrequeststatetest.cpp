@@ -47,6 +47,7 @@ private Q_SLOTS:
     void followPrimaryPolicyCanReturnOnSamePhysicalOutput();
     void screenGroupAndDerivedOutputReturnAtomically();
     void staleCompletionCannotConsumeLatestIntent();
+    void cancellationRestoresCapturedCompleteIntent();
     void identicalTargetIsNoOp();
 };
 
@@ -196,6 +197,43 @@ staleCompletionCannotConsumeLatestIntent()
     QVERIFY(
         state.pending()->intent
         == second.request.intent);
+}
+
+void PlacementRequestStateTest::
+cancellationRestoresCapturedCompleteIntent()
+{
+    PlacementRequestState state;
+    const PlacementIntent capturedPrior =
+        appliedPlacement();
+
+    PlacementPatch target;
+    target.layoutName = "Layout B";
+    target.screensGroup = AllSecondaryScreens;
+    target.logicalOutputName = "HDMI-A-1";
+    target.resolvedOutputName = "HDMI-A-1";
+    target.followsPrimary = false;
+    target.edge = TopEdge;
+    target.alignment = EndAlignment;
+    const auto request =
+        state.submit(capturedPrior, target);
+    QVERIFY(request.accepted);
+
+    PlacementIntent partiallyApplied =
+        request.request.intent;
+    partiallyApplied.resolvedOutputName = "DP-1";
+    partiallyApplied.edge = BottomEdge;
+    QVERIFY(partiallyApplied != capturedPrior);
+
+    QVERIFY(state.cancelToCommittedIfCurrent(
+        request.request.token,
+        capturedPrior));
+    QVERIFY(state.pending().has_value());
+    QVERIFY(
+        state.pending()->intent
+        == capturedPrior);
+    QVERIFY(
+        state.pending()->intent
+        != partiallyApplied);
 }
 
 void PlacementRequestStateTest::

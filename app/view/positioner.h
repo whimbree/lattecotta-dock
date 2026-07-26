@@ -177,14 +177,38 @@ private Q_SLOTS:
     void updateContainmentScreen();
 
 private:
-    [[nodiscard]] bool applyOutputPlacement(
+    struct PlacementApplicationPlan
+    {
+        PlacementRequestState::Token token{0};
+        PlacementIntent prior;
+        PlacementIntent target;
+        QPointer<QScreen> outputScreen;
+        QString destinationLayoutName;
+        bool appliesOutput{false};
+        bool changesReservationOwnership{false};
+        bool movesLayout{false};
+        bool movesEdge{false};
+        bool movesAlignment{false};
+        bool movesScreensGroup{false};
+    };
+
+    void applyOutputPlacement(
         QScreen *destination,
         bool followsPrimary);
     [[nodiscard]] bool outputPlacementIsNeeded(
         const QScreen *destination) const;
     void applyUnanimatedPlacementGeneration();
-    void cancelFailedLayoutRelocation();
+    void cancelFailedLayoutRelocation(
+        PlacementRequestState::Token token,
+        const PlacementIntent &prior);
     [[nodiscard]] PlacementIntent currentPlacementIntent() const;
+    [[nodiscard]] std::optional<
+        PlacementApplicationPlan>
+    preparePlacementApplication(
+        const PlacementRequestState::Request &request,
+        const PlacementIntent &prior) const;
+    [[nodiscard]] bool validatesPlacementApplication(
+        const PlacementApplicationPlan &plan) const;
     void finishPendingScreenPlacementIfApplied();
     [[nodiscard]] bool hasPendingPlacementComponents() const;
     void init();
