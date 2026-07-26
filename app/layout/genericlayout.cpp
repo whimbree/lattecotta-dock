@@ -1941,8 +1941,12 @@ void GenericLayout::assignToLayout(Latte::View *latteView, QList<Plasma::Contain
     if (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::MultipleLayouts) {
         if (!Layouts::Storage::self()
                 ->syncToLayoutFile(this, false)) {
-            qCritical() << "layout:" << name()
-                        << "could not synchronize assigned containment ownership";
+            //! Manager preflights both files before the synchronous transfer.
+            //! Continuing here would report a successful runtime move whose
+            //! destination ownership disappears after restart.
+            qFatal(
+                "layout %s lost its validated persistence endpoint while assigning containment ownership",
+                qPrintable(name()));
         }
     }
 }
@@ -1983,8 +1987,12 @@ QList<Plasma::Containment *> GenericLayout::unassignFromLayout(Plasma::Containme
     if (m_corona && m_corona->layoutsManager()->memoryUsage() == MemoryUsage::MultipleLayouts) {
         if (!Layouts::Storage::self()
                 ->syncToLayoutFile(this, false)) {
-            qCritical() << "layout:" << name()
-                        << "could not synchronize unassigned containment ownership";
+            //! The caller cannot recover after runtime ownership has changed.
+            //! Manager's endpoint preflight makes this a violated invariant,
+            //! not a recoverable move result.
+            qFatal(
+                "layout %s lost its validated persistence endpoint while unassigning containment ownership",
+                qPrintable(name()));
         }
     }
 

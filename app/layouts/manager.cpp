@@ -363,6 +363,22 @@ bool Manager::validatesViewMove(
         return false;
     }
 
+    const bool originPersistenceIsWritable =
+        originLayout->isWritable();
+    const bool destinationPersistenceIsWritable =
+        destinationLayout->isWritable();
+    if (!originPersistenceIsWritable
+            || !destinationPersistenceIsWritable) {
+        qCritical()
+            << "layout manager refused a move with an unavailable persistence endpoint"
+            << originLayoutName
+            << "writable=" << originPersistenceIsWritable
+            << destinationLayoutName
+            << "writable="
+            << destinationPersistenceIsWritable;
+        return false;
+    }
+
     Plasma::Containment *const originViewContainment = originLayout->containmentForId(originViewId);
     Latte::View *const originView = originLayout->viewForContainment(originViewId);
 
