@@ -174,7 +174,7 @@ and PR #126 landed FP-4B.
       orphan group, edit participants are exact, and restart reproduces the
       settled state. Fail on any divergence; keep the replay log only as the
       reproduction artifact.
-      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, 64a1e44fa
+      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa
 
 ## Definition of done
 

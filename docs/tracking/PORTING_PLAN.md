@@ -4742,7 +4742,7 @@ prerequisites in the phases above are done.
       Separate config-to-handle synchronization from interaction and compare
       coupled length values through persistent configuration rather than
       sibling visual state.
-      Commits: c5f1e5d5a
+      Commits: c5f1e5d5a, a5583868c
 - [x] Fix D220 (stress oracle treated containment IDs as globally unique
       history). Retire a symbolic binding after exact removal and allow the
       numeric allocator to reuse that ID only for a later live record.
@@ -4804,10 +4804,10 @@ prerequisites in the phases above are done.
       validates exact schema-7 identity, geometry, presentation, reservation,
       edit, compositor-window, and convergence ownership. The same document
       replays exactly and the nested configuration is restored on every exit.
-      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, 64a1e44fa
+      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa
 - [x] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
-      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, 64a1e44fa
+      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
