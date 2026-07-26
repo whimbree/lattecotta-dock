@@ -28,8 +28,12 @@ contract retains the animated scheduling path. The production target builds,
 `placementrequeststatetest` passes 14/14, and `dockidentitycontracttest` passes
 27/27.
 
-D234's critical severity requires a new canonical gate and fresh independent
-rereview after both corrections.
+The replacement canonical gate exited 0 at exact branch head
+`84b4cf01ada214f2d48723de43566254f8d08839`. All 124 CTest entries, QML and
+coverage ratchets, visual probes, the complete ASan/UBSan build and four nested
+recipes, package provenance controls, and matrix refusals passed. D234's
+critical severity now requires only fresh independent rereview of the complete
+corrected diff.
 
 ## 2026-07-26: D229 durable cross-layout move transaction
 

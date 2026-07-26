@@ -3087,7 +3087,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   a newer scheduled token. The production-wiring contract requires exact-token
   invalidation before completion publication and retains the animated delayed
   path. The production target builds, `placementrequeststatetest` passes 14/14,
-  and `dockidentitycontracttest` passes 27/27.
+  and `dockidentitycontracttest` passes 27/27. The replacement canonical gate
+  passes at exact branch head
+  `84b4cf01ada214f2d48723de43566254f8d08839`.
 - SEVERITY: beta blocker.
 
 ### D234 - First transaction-root publication was not durable
@@ -3108,6 +3110,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: exact failure injection leaves the transaction root empty, reports
   no pending journal, preserves all origin, destination, and active-owner bytes,
   and leaves all lifecycle generations unchanged. `storagetest` passes 1/1.
+  The replacement canonical gate passes at exact branch head
+  `84b4cf01ada214f2d48723de43566254f8d08839`.
 - SEVERITY: critical release blocker.
 
 ### D233 - Nested seed cleanup waited forever on a crash-stopped dock
@@ -3256,7 +3260,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   entries, QML and coverage ratchets, visual probes, the complete ASan/UBSan
   build and four nested recipes, package provenance controls, and matrix
   refusals at exact corrected source head
-  `a7a523c80d9c7a67147810e5b91009308ff32243`.
+  `a7a523c80d9c7a67147810e5b91009308ff32243`. The next critical rereview
+  found D234 and D235. After their corrections, the replacement canonical gate
+  passed the same complete matrix at exact branch head
+  `84b4cf01ada214f2d48723de43566254f8d08839`.
 - REQUIRED ACCEPTANCE: obtain a fresh critical independent rereview of the
   complete corrected diff.
 - SEVERITY: release blocker.

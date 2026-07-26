@@ -196,7 +196,7 @@ and PR #126 landed FP-4B.
       terms.
 - [x] The full canonical gate passes after the final source commit.
       The replacement gate exited 0 at exact source head
-      `a7a523c80d9c7a67147810e5b91009308ff32243`, including all 124 CTest
+      `84b4cf01ada214f2d48723de43566254f8d08839`, including all 124 CTest
       entries, QML and coverage ratchets, visual probes, the complete
       ASan/UBSan build, four nested-compositor recipes, package provenance
       controls, and matrix refusals.
@@ -261,8 +261,10 @@ and PR #126 landed FP-4B.
       D234 (first transaction-root publication was not durable) and D235
       (unanimated layout moves retained a delayed relocation completion).
       Commits `8e6613904` and `c1ed12e82` correct both findings with exact
-      durability injection and generation-preserving callback coverage. A new
-      canonical gate and fresh critical rereview remain required.
+      durability injection and generation-preserving callback coverage. The new
+      canonical gate passes at
+      `84b4cf01ada214f2d48723de43566254f8d08839`. Fresh critical rereview remains
+      required.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent
