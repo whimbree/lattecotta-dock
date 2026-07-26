@@ -3002,6 +3002,21 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   the exact pristine nested projection.
 - SEVERITY: release blocker.
 
+### D225 - Placement handler rewrite left stale settings-inventory selectors
+- STATUS: FIXED on `test/fp4c-operation-storm` (`af063f83e`); PR #128
+  rereview pending.
+- FOUND: 2026-07-25, replacement FP-4C canonical gate.
+- SYMPTOM: SettingsInventoryTest rejected the screen-count connection and all
+  four alignment buttons after D221 changed their structural source hashes.
+- ROOT: the placement handler rewrite updated QML and behavior coverage but did
+  not update the bidirectional per-view settings source ledger.
+- FIX: replace only the five stale structural selectors with their current
+  scanner identities while retaining the same screen and alignment audit
+  ownership.
+- EVIDENCE: SettingsInventoryTest validates all 278 affordances and 25
+  exemptions with every source site resolving exactly once.
+- SEVERITY: beta blocker.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: FIXED ON `test/fp4c-operation-storm`; final FP-4C PR awaits its
   replacement canonical gate and cold independent rereview. FP-1
