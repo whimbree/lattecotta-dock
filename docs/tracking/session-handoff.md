@@ -69,7 +69,7 @@ surface requirement.
 ## 2026-07-26: D229 durable cross-layout move transaction
 
 D229 (cross-layout placement could report success after persistence failure)
-is corrected on `test/fp4c-operation-storm` by `3651b3a8b`, `1b0a88eeb`,
+is merged on `main` by `3651b3a8b`, `1b0a88eeb`,
 `7973f68cd`, `aa2744787`, `0e2ec0810`, `c68f4a974`, and `1c3b86a85`.
 Filesystem endpoint classification remains an early refusal, but it is no
 longer treated as a proof that later KConfig operations cannot fail.
