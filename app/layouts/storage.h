@@ -175,6 +175,16 @@ private:
         AfterCommitDecision,
     };
 
+    //! Deterministic test seam for failed durability boundaries. Production
+    //! cannot select these private values and always uses None.
+    enum class ViewMoveDirectoryFlushFailure
+    {
+        None,
+        Destination,
+        HiddenOwner,
+        Origin,
+    };
+
     //! Deterministic test seam for restart idempotence. Production always
     //! selects None; the other values stop recovery without deleting its
     //! journal after an already verified repository publication.
@@ -196,12 +206,20 @@ private:
         uint originViewId,
         const QString &snapshotFile,
         ViewMoveInterruption interruption =
-            ViewMoveInterruption::None);
+            ViewMoveInterruption::None,
+        ViewMoveDirectoryFlushFailure
+            directoryFlushFailure =
+                ViewMoveDirectoryFlushFailure::
+                    None);
     [[nodiscard]] bool recoverPendingViewMovesIn(
         const QString &transactionsRoot,
         const QString &expectedHiddenFile,
         ViewMoveRecoveryInterruption interruption =
-            ViewMoveRecoveryInterruption::None);
+            ViewMoveRecoveryInterruption::None,
+        ViewMoveDirectoryFlushFailure
+            directoryFlushFailure =
+                ViewMoveDirectoryFlushFailure::
+                    None);
 
     void clearExportedLayoutSettings(KConfigGroup &layoutSettingsGroup);
     void clearLinkedMemberLocalAppletConfiguration(const QString &layoutFile);

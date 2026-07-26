@@ -134,6 +134,8 @@ private Q_SLOTS:
     void refuseRecoveryForMixedSubtreeOwnership();
     void resumeRecoveryAfterEachRepositoryPublication_data();
     void resumeRecoveryAfterEachRepositoryPublication();
+    void recoverAfterEachDirectoryFlushFailure_data();
+    void recoverAfterEachDirectoryFlushFailure();
     void repeatCompletedRecoveryIsIdempotent();
     void refuseTraversalBearingRecoveryManifest();
     void recoverInterruptedDestinationStagingByRollingBack();
@@ -1145,6 +1147,212 @@ resumeRecoveryAfterEachRepositoryPublication()
         rollForward
             ? fixture.destinationLayout
             : fixture.originLayout);
+}
+
+void StorageTest::
+recoverAfterEachDirectoryFlushFailure_data()
+{
+    QTest::addColumn<int>(
+        "failureValue");
+    QTest::addColumn<int>(
+        "expectedStatusValue");
+    QTest::addColumn<QString>(
+        "expectedOwner");
+    QTest::addColumn<QString>(
+        "expectedAction");
+    QTest::addColumn<bool>(
+        "rollForward");
+
+    using FlushFailure =
+        Storage::
+            ViewMoveDirectoryFlushFailure;
+    using Status =
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status;
+    QTest::newRow(
+        "destination-publication")
+        << static_cast<int>(
+               FlushFailure::Destination)
+        << static_cast<int>(
+               Status::
+                   RejectedRecoveryRequired)
+        << QStringLiteral("origin")
+        << QStringLiteral("rollBack")
+        << false;
+    QTest::newRow(
+        "hidden-owner-publication")
+        << static_cast<int>(
+               FlushFailure::HiddenOwner)
+        << static_cast<int>(
+               Status::
+                   RejectedRecoveryRequired)
+        << QStringLiteral("destination")
+        << QStringLiteral("rollForward")
+        << true;
+    QTest::newRow(
+        "origin-retirement")
+        << static_cast<int>(
+               FlushFailure::Origin)
+        << static_cast<int>(
+               Status::
+                   CommittedRecoveryRequired)
+        << QStringLiteral("destination")
+        << QStringLiteral("rollForward")
+        << true;
+}
+
+void StorageTest::
+recoverAfterEachDirectoryFlushFailure()
+{
+    QFETCH(int, failureValue);
+    QFETCH(int, expectedStatusValue);
+    QFETCH(QString, expectedOwner);
+    QFETCH(QString, expectedAction);
+    QFETCH(bool, rollForward);
+
+    const auto failure =
+        static_cast<Storage::
+            ViewMoveDirectoryFlushFailure>(
+                failureValue);
+    const auto expectedStatus =
+        static_cast<Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status>(
+                    expectedStatusValue);
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral(
+                "directory-flush-%1")
+                .arg(failureValue));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile,
+                Storage::
+                    ViewMoveInterruption::
+                        None,
+                failure);
+    QCOMPARE(
+        result.status,
+        expectedStatus);
+    QVERIFY(!result.transactionPath.isEmpty());
+    const QString transactionRoot =
+        QFileInfo(result.transactionPath)
+            .absolutePath();
+    const auto cleanup =
+        qScopeGuard(
+            [&transactionRoot]() {
+                QDir(transactionRoot)
+                    .removeRecursively();
+            });
+    QCOMPARE(
+        Storage::self()
+            ->pendingViewMoveTransactions(),
+        QStringList{
+            result.transactionPath});
+
+    const QJsonObject readback =
+        QJsonDocument::fromJson(
+            Storage::self()
+                ->viewMoveTransactionsData()
+                .toUtf8())
+            .object();
+    const QJsonArray transactions =
+        readback.value(
+            QStringLiteral(
+                "transactions"))
+            .toArray();
+    QCOMPARE(transactions.size(), 1);
+    const QJsonObject transaction =
+        transactions.first()
+            .toObject();
+    QVERIFY(transaction.value(
+        QStringLiteral(
+            "journalValid"))
+        .toBool());
+    QCOMPARE(
+        transaction.value(
+            QStringLiteral(
+                "persistentOwner"))
+            .toString(),
+        expectedOwner);
+    QCOMPARE(
+        transaction.value(
+            QStringLiteral(
+                "recoveryAction"))
+            .toString(),
+        expectedAction);
+
+    //! Repeat the same durability fault during recovery. The endpoint's
+    //! semantic state may converge, but the journal must remain until every
+    //! containing-directory entry is durable.
+    QVERIFY(!Storage::self()
+        ->recoverPendingViewMovesIn(
+            transactionRoot,
+            fixture.hiddenFile,
+            Storage::
+                ViewMoveRecoveryInterruption::
+                    None,
+            failure));
+    QCOMPARE(
+        Storage::self()
+            ->pendingViewMoveTransactions(),
+        QStringList{
+            result.transactionPath});
+
+    QVERIFY(Storage::self()
+        ->recoverPendingViewMoves());
+    QVERIFY(Storage::self()
+        ->pendingViewMoveTransactions()
+        .isEmpty());
+
+    const KConfig origin(
+        fixture.originFile,
+        KConfig::SimpleConfig);
+    const KConfig destination(
+        fixture.destinationFile,
+        KConfig::SimpleConfig);
+    const KConfig hidden(
+        fixture.hiddenFile,
+        KConfig::SimpleConfig);
+    const KConfigGroup originContainments =
+        origin.group(
+            QStringLiteral("Containments"));
+    const KConfigGroup destinationContainments =
+        destination.group(
+            QStringLiteral("Containments"));
+    const KConfigGroup hiddenContainments =
+        hidden.group(
+            QStringLiteral("Containments"));
+    for (const QString &id :
+            {QStringLiteral("12"),
+             QStringLiteral("13")}) {
+        QCOMPARE(
+            originContainments.hasGroup(id),
+            !rollForward);
+        QCOMPARE(
+            destinationContainments
+                .hasGroup(id),
+            rollForward);
+        QCOMPARE(
+            hiddenContainments.group(id)
+                .readEntry(
+                    QStringLiteral(
+                        "layoutId"),
+                    QString()),
+            rollForward
+                ? fixture.destinationLayout
+                : fixture.originLayout);
+    }
 }
 
 void StorageTest::
