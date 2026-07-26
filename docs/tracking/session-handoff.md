@@ -67,9 +67,12 @@ package provenance controls, and matrix refusals passed. Fresh critical
 independent rereview then returned `DO NOT MERGE` for D230 through D232. Those
 three findings are corrected and invalidate that historical stamp.
 
-PR #128 remains blocked only until the replacement canonical gate passes and a
-fresh critical rereview of the complete corrected diff returns a mergeable
-verdict.
+The replacement canonical gate exited 0 at exact corrected source head
+`a7a523c80d9c7a67147810e5b91009308ff32243`. All 124 CTest entries, QML and
+coverage ratchets, visual probes, the complete ASan/UBSan build and four nested
+recipes, package provenance controls, and matrix refusals passed. PR #128
+remains blocked only until a fresh critical rereview of the complete corrected
+diff returns a mergeable verdict.
 
 The replacement gate then found D233 (nested seed cleanup waited forever on a
 crash-stopped dock). An old incremental production artifact stopped inside
@@ -80,7 +83,7 @@ returned its real status 2. Commit `3f504ee8e` routes seed teardown through the
 bounded live-member-aware process-group transaction. The exact stopped,
 TERM-ignoring setsid leader reaches SIGKILL cleanup and
 `e2eseedcleanupselftest` passes directly and through CTest. The clean rebuild
-and replacement gate remain.
+and replacement gate both pass.
 
 ## 2026-07-25: FP-4C operation storm converges
 

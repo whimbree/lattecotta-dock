@@ -3083,7 +3083,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: `e2eseedcleanupselftest` creates an exact stopped, TERM-ignoring
   setsid leader. The helper reaches bounded SIGKILL cleanup and the test passes
   directly under a 10-second outer timeout and as a CTest in 1.12 seconds. The
-  coverage ratchet records the new entry.
+  coverage ratchet records the new entry. The replacement canonical gate
+  passed all 124 CTest entries, the complete sanitizer build and nested
+  recipes, QML and coverage ratchets, visual probes, package provenance
+  controls, and matrix refusals at exact source head
+  `a7a523c80d9c7a67147810e5b91009308ff32243`.
 - SEVERITY: release blocker for acceptance infrastructure.
 
 ### D232 - Operation-storm journal assertion never moved a dock across layouts
@@ -3158,8 +3162,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: critical release blocker.
 
 ### D229 - Cross-layout placement could report success after persistence failure
-- STATUS: CORRECTED ON `test/fp4c-operation-storm`; replacement canonical gate
-  and fresh critical rereview remain required before acceptance.
+- STATUS: CORRECTED ON `test/fp4c-operation-storm`; the replacement canonical
+  gate passes and fresh critical rereview remains required before acceptance.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3206,9 +3210,13 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   visual probes, the sanitizer nested recipes, package provenance controls,
   and matrix refusals at exact source head
   `8ef520abe4478abcb94c9818ef942d8360857c37`; D230 through D232 invalidate
-  that historical stamp.
-- REQUIRED ACCEPTANCE: pass the replacement canonical gate and obtain a fresh
-  critical independent rereview of the complete corrected diff.
+  that historical stamp. The replacement canonical gate passed all 124 CTest
+  entries, QML and coverage ratchets, visual probes, the complete ASan/UBSan
+  build and four nested recipes, package provenance controls, and matrix
+  refusals at exact corrected source head
+  `a7a523c80d9c7a67147810e5b91009308ff32243`.
+- REQUIRED ACCEPTANCE: obtain a fresh critical independent rereview of the
+  complete corrected diff.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
@@ -3242,8 +3250,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: INCOMPLETE on `test/fp4c-operation-storm`; D229 (cross-layout
   placement could report success after persistence failure) has a durable
-  recovery transaction, but its final cold rereview found D230 through D232.
-  The earlier exact replay and canonical gate are partial historical evidence.
+  recovery transaction, D230 through D233 are corrected, and the replacement
+  canonical gate passes. Fresh critical rereview remains.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
@@ -3256,7 +3264,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   acceptance) is merged through PR #124 at `f8396b5ed` through `5636966b5`.
   FP-4B (multi-output and separated-span topology acceptance) is merged through
   PR #126 at `4daa80121` through `6fa3c5703`. FP-4C (deterministic
-  operation-storm acceptance) passes its immutable 76-operation nested replay.
+  operation-storm acceptance) passes its immutable 78-operation nested replay.
   The independent review's latest-intent, failed-Undo convergence, and
   independently derived reservation-geometry blockers are corrected.
   Execution is tracked in `floating-panel-parity-plan.md`.

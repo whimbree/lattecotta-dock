@@ -4904,12 +4904,17 @@ prerequisites in the phases above are done.
       drive the independent root to a second active layout and back. The
       replacement seed 127934575 replay passes all 78 operations with creation,
       commit, and retirement generations advancing exactly from 0 to 1 to 2.
-      The replacement canonical gate and fresh critical rereview remain.
+      Commit `3f504ee8e` also bounds cleanup of a crash-stopped nested seed.
+      The replacement canonical gate passed at exact corrected source head
+      `a7a523c80d9c7a67147810e5b91009308ff32243` with all 124 CTest entries,
+      QML and coverage ratchets, visual probes, the complete ASan/UBSan build
+      and four nested recipes, package provenance controls, and matrix
+      refusals. Fresh critical rereview remains.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
       7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566,
       39a455df1, 3c2d81ee8, 94d7dd446, 8ef520abe, 9b0d5891e,
-      ad6754038, a06e84af1, 6c85510a1
+      ad6754038, a06e84af1, 6c85510a1, 3f504ee8e, a7a523c80
 - [ ] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
