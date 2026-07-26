@@ -275,6 +275,8 @@ PlasmaComponents.Page {
                         stepSize: 1
 
                         readonly property int localMinValue: 1
+                        property bool handlerIsReady: false
+                        property bool syncingFromConfig: false
 
                         //! config drives the handle through a proxy property, NOT a
                         //! declarative `value: plasmoid.configuration.maxLength` binding
@@ -296,6 +298,10 @@ PlasmaComponents.Page {
                         //! by minLength, so maxLength < minLength cannot hold afterwards
                         //! (toValue_maxNeverEndsBelowMin pins the proof).
                         function updateMaxLength() {
+                            if (!handlerIsReady || syncingFromConfig) {
+                                return;
+                            }
+
                             if (!pressed && viewConfig.isReady) {
                                 var clamped = lengthClamp.clampMaxLengthToValue(value,
                                                                                 plasmoid.configuration.minLength,
@@ -328,7 +334,9 @@ PlasmaComponents.Page {
                         //! the value
                         function resyncMaxLengthHandle() {
                             if (!pressed) {
+                                syncingFromConfig = true;
                                 value = maxLengthValue;
+                                syncingFromConfig = false;
                             }
                         }
 
@@ -337,9 +345,10 @@ PlasmaComponents.Page {
                         }
 
                         Component.onCompleted: {
+                            resyncMaxLengthHandle();
                             valueChanged.connect(updateMaxLength);
                             maxLengthValueChanged.connect(resyncMaxLengthHandle);
-                            resyncMaxLengthHandle();
+                            handlerIsReady = true;
                         }
 
                         Component.onDestruction: {
@@ -408,13 +417,32 @@ PlasmaComponents.Page {
                         //! ruler / external re-sync (D16 - same pattern as maxLengthSlider
                         //! and the offset slider)
                         property real minLengthValue: plasmoid.configuration.minLength
+                        property bool handlerIsReady: false
+                        property bool syncingFromConfig: false
 
                         function updateMinLength() {
-                            if (!pressed  && viewConfig.isReady) {
+                            if (!handlerIsReady || syncingFromConfig) {
+                                return;
+                            }
+
+                            if (!pressed && viewConfig.isReady) {
                                 plasmoid.configuration.minLength = value; //Math.min(value, plasmoid.configuration.maxLength);
 
-                                if (plasmoid.configuration.minLength > maxLengthSlider.value) {
-                                    maxLengthSlider.updateMaxLength();
+                                //! Configuration is the authority across
+                                //! sibling controls. A visual handle may
+                                //! still carry its construction default while
+                                //! hidden chrome initializes.
+                                if (plasmoid.configuration.minLength > plasmoid.configuration.maxLength) {
+                                    var clamped = lengthClamp.clampMaxLengthToValue(
+                                                plasmoid.configuration.minLength,
+                                                plasmoid.configuration.minLength,
+                                                plasmoid.configuration.offset,
+                                                plasmoid.configuration.alignment);
+                                    plasmoid.configuration.maxLength = clamped.maxLength;
+
+                                    if (plasmoid.configuration.offset !== clamped.offset) {
+                                        plasmoid.configuration.offset = clamped.offset;
+                                    }
                                 }
                             } else {
                                 if (value > plasmoid.configuration.maxLength) {
@@ -428,7 +456,9 @@ PlasmaComponents.Page {
                         //! the value
                         function resyncMinLengthHandle() {
                             if (!pressed) {
+                                syncingFromConfig = true;
                                 value = minLengthValue;
+                                syncingFromConfig = false;
                             }
                         }
 
@@ -437,9 +467,10 @@ PlasmaComponents.Page {
                         }
 
                         Component.onCompleted: {
+                            resyncMinLengthHandle();
                             valueChanged.connect(updateMinLength);
                             minLengthValueChanged.connect(resyncMinLengthHandle);
-                            resyncMinLengthHandle();
+                            handlerIsReady = true;
                         }
 
                         Component.onDestruction: {

@@ -33,6 +33,7 @@
 #include <QQmlEngine>
 #include <QQmlPropertyMap>
 #include <QScopedPointer>
+#include <QSignalSpy>
 #include <QTest>
 #include <QVariant>
 
@@ -74,6 +75,7 @@ private Q_SLOTS:
     //! AU-1b D16: the slider-handle binding clobber and its proxy re-sync fix
     void plainValueBindingDesyncsAfterClobber();
     void proxyResyncReTracksAfterClobber();
+    void programmaticHandleSyncDoesNotWriteConfiguration();
 
     //! AU-1e: the offset slider (control 54) is the correct re-sync reference
     void offsetWritePathWritesOnlyOffsetWhenInRange();
@@ -315,6 +317,68 @@ void LengthHandlerAuditTest::proxyResyncReTracksAfterClobber()
     root->setProperty("pressed", false);
     config.insert(QStringLiteral("maxLength"), 63);
     QCOMPARE(root->property("value").toDouble(), 63.0);
+}
+
+//! Programmatic handle synchronization is presentation, not input. The live
+//! Maximum and Minimum sliders keep an explicit synchronization guard so their
+//! default value cannot overwrite KConfig while hidden edit chrome initializes.
+void LengthHandlerAuditTest::programmaticHandleSyncDoesNotWriteConfiguration()
+{
+    QQmlPropertyMap config;
+    seed(config, {{QStringLiteral("maxLength"), 45}});
+    QSignalSpy writes(&config, &QQmlPropertyMap::valueChanged);
+
+    QQmlEngine engine;
+    engine.rootContext()->setContextProperty(QStringLiteral("configuration"), &config);
+    QQmlComponent component(&engine);
+    component.setData(
+        "import QtQml\n"
+        "QtObject {\n"
+        "  property real value: 0\n"
+        "  property bool pressed: false\n"
+        "  property bool handlerIsReady: false\n"
+        "  property bool syncingFromConfig: false\n"
+        "  property real proxy: configuration.maxLength\n"
+        "  function commitInteraction() {\n"
+        "    if (!handlerIsReady || syncingFromConfig || pressed) return;\n"
+        "    configuration.maxLength = value;\n"
+        "  }\n"
+        "  function resync() {\n"
+        "    if (pressed) return;\n"
+        "    syncingFromConfig = true;\n"
+        "    value = proxy;\n"
+        "    syncingFromConfig = false;\n"
+        "  }\n"
+        "  function beginInteraction() { pressed = true; }\n"
+        "  function moveHandle(next) { value = next; commitInteraction(); }\n"
+        "  function endInteraction() {\n"
+        "    pressed = false;\n"
+        "    commitInteraction();\n"
+        "  }\n"
+        "  onValueChanged: commitInteraction()\n"
+        "  onProxyChanged: resync()\n"
+        "  Component.onCompleted: { resync(); handlerIsReady = true; }\n"
+        "}\n", QUrl());
+    QScopedPointer<QObject> root(component.create());
+    QVERIFY2(root, qPrintable(component.errorString()));
+
+    QCOMPARE(root->property("value").toDouble(), 45.0);
+    QCOMPARE(config.value(QStringLiteral("maxLength")).toDouble(), 45.0);
+    QCOMPARE(writes.count(), 0);
+
+    QMetaObject::invokeMethod(root.data(), "beginInteraction");
+    QMetaObject::invokeMethod(
+        root.data(), "moveHandle", Q_ARG(QVariant, QVariant(37.0)));
+    QCOMPARE(config.value(QStringLiteral("maxLength")).toDouble(), 45.0);
+    QCOMPARE(writes.count(), 0);
+
+    QMetaObject::invokeMethod(root.data(), "endInteraction");
+    QCOMPARE(config.value(QStringLiteral("maxLength")).toDouble(), 37.0);
+    QCOMPARE(writes.count(), 1);
+
+    config.insert(QStringLiteral("maxLength"), 62);
+    QCOMPARE(root->property("value").toDouble(), 62.0);
+    QCOMPARE(writes.count(), 1);
 }
 
 //! the offset slider's config-driven write path (offsetSlider.updateOffset,
