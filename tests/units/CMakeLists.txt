@@ -106,6 +106,13 @@ latte_add_unit_test(placementrequeststatetest)
 # child writes, and the final tombstone have one generation-checked order.
 latte_add_unit_test(removalundotransactiontest)
 
+# D229 (fallible cross-layout persistence): destination staging, the
+# active-owner commit decision, rollback, origin retirement, and recovery
+# refusal have one compile-time checked order.
+latte_add_unit_test(viewmovetransactiontest)
+target_include_directories(viewmovetransactiontest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app)
+
 # FP-2 (the stable canvas and transition controller): header-only pure
 # attached/floated/envelope/trigger/mask/bridge geometry. Qt6::Test brings
 # the QRectF support; no live View or compositor reaches the core.
