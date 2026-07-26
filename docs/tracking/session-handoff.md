@@ -200,6 +200,18 @@ blocker, and the canonical gate at
 `a1a154fd0843d64e4551d61fe559963532dee70a` is no longer final acceptance
 evidence.
 
+The complete existing-file correction is `30ac4d840`. Existing endpoints must
+now be regular, readable, and writable before mutation. The real-filesystem
+test drives KConfig under write-only permissions and observes the failed
+reparse, then confirms that preflight refuses the same endpoint. Missing and
+regular-file parent paths are covered alongside the prior write and search
+permission cases. Removing the file-read condition fails the write-only case.
+The production build and seven focused tests pass. Exact seed 127934575
+completes all 76 operations and exact cleanup in nested KWin; its evidence is
+saved in `linked-dock-operation-stress.seed-127934575.run-WZU6e7`.
+Replacement canonical gate and fresh critical independent rereview remain
+open.
+
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
 globally unique historical token. The oracle retires the removed symbolic
