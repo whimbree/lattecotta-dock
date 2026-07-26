@@ -3069,8 +3069,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D233 - Nested seed cleanup waited forever on a crash-stopped dock
-- STATUS: OPEN on `test/fp4c-operation-storm`; blocks the replacement canonical
-  gate.
+- STATUS: FIXED ON `test/fp4c-operation-storm` by `3f504ee8e`; PR pending.
 - FOUND: 2026-07-26, replacement canonical gate after D230 through D232.
 - SYMPTOM: a dock that enters the stopped process state during nested seed
   startup leaves `asan-e2e-gate.sh` waiting forever instead of returning its
@@ -3078,9 +3077,13 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - ROOT: `lib-e2e-seed.sh` sends SIGTERM to the `setsid` leader and immediately
   performs an unbounded `wait`. A stopped process cannot handle SIGTERM until
   it resumes. No bounded poll or SIGKILL escalation exists on this path.
-- REQUIRED FIX: stop the complete seed process group through a bounded
-  TERM-then-KILL transaction and test the exact stopped-leader case. The
-  canonical gate must invoke that regression before any nested vehicle.
+- FIX: seed teardown uses the existing live-member and zombie-aware bounded
+  process-group transaction. It polls after SIGTERM and escalates the complete
+  setsid group to SIGKILL before any final wait.
+- EVIDENCE: `e2eseedcleanupselftest` creates an exact stopped, TERM-ignoring
+  setsid leader. The helper reaches bounded SIGKILL cleanup and the test passes
+  directly under a 10-second outer timeout and as a CTest in 1.12 seconds. The
+  coverage ratchet records the new entry.
 - SEVERITY: release blocker for acceptance infrastructure.
 
 ### D232 - Operation-storm journal assertion never moved a dock across layouts

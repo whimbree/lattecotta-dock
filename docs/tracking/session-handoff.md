@@ -76,9 +76,11 @@ crash-stopped dock). An old incremental production artifact stopped inside
 KCrash before view creation. The seed helper sent SIGTERM and entered an
 unbounded `wait`; a stopped process cannot consume SIGTERM. Resuming the
 private nested PID allowed the pending termination to complete and the gate
-returned its real status 2. D233 requires bounded process-group escalation and
-an exact stopped-leader regression before the clean rebuild and replacement
-gate.
+returned its real status 2. Commit `3f504ee8e` routes seed teardown through the
+bounded live-member-aware process-group transaction. The exact stopped,
+TERM-ignoring setsid leader reaches SIGKILL cleanup and
+`e2eseedcleanupselftest` passes directly and through CTest. The clean rebuild
+and replacement gate remain.
 
 ## 2026-07-25: FP-4C operation storm converges
 
