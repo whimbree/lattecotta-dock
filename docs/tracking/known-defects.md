@@ -2722,7 +2722,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   matrix, QML interaction, compile, lint, and source-mutation checks pass.
 
 ### D211 - Operation-storm convergence projected a nonexistent geometry field
-- STATUS: FIXED ON `test/fp4c-operation-storm` (`64a1e44fa`); PR pending.
+- STATUS: FIXED on `main` (`0c5c33fa6`); merged through PR #128.
 - FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
   preflight.
 - SYMPTOM: the settled-state comparison could report unchanged visible
@@ -2739,7 +2739,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   therefore converted the misspelling into equal null values.
 
 ### D212 - Operation-storm teardown leaked its mutated dock fixture
-- STATUS: FIXED ON `test/fp4c-operation-storm` (`64a1e44fa`); PR pending.
+- STATUS: FIXED on `main` (`0c5c33fa6`); merged through PR #128.
 - FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
   preflight.
 - SYMPTOM: a successful run leaves five created dock records in the nested
@@ -2755,7 +2755,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   call; its final state intentionally contains the five stress views.
 
 ### D213 - Operation-storm replay text was not a replayable typed plan
-- STATUS: FIXED ON `test/fp4c-operation-storm` (`64a1e44fa`); PR pending.
+- STATUS: FIXED on `main` (`0c5c33fa6`); merged through PR #128.
 - FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
   preflight.
 - SYMPTOM: the artifact names a seed and resolved shell calls, but cannot be
@@ -2772,7 +2772,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   state or validate operation fields.
 
 ### D214 - Operation-storm acceptance did not require floating-panel ownership
-- STATUS: FIXED ON `test/fp4c-operation-storm` (`64a1e44fa`); PR pending.
+- STATUS: FIXED on `main` (`0c5c33fa6`); merged through PR #128.
 - FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
   preflight.
 - SYMPTOM: the operation storm can pass without exercising the stable
@@ -2791,7 +2791,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   never configures Panel or floating-gap state.
 
 ### D215 - Compound relocation exposed split placement authorities
-- STATUS: FIXED ON `test/fp4c-operation-storm` (`d7370bd6d`); PR pending.
+- STATUS: FIXED on `main` (`223ec413a`); merged through PR #128.
 - FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
   checkpoint 33.
 - SYMPTOM: an edge and output move could leave the QWindow geometry on one
@@ -2813,7 +2813,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   equal applied authorities.
 
 ### D216 - Reversible removal retained compositor-owned surfaces
-- STATUS: FIXED ON `test/fp4c-operation-storm` (`200a1f745`); PR pending.
+- STATUS: FIXED on `main` (`cef08bd1f`); merged through PR #128.
 - FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
   removal checkpoint.
 - SYMPTOM: a removed containment left its mapped dock surface, screen-edge
@@ -2831,7 +2831,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   reservation contributor for every removed handle.
 
 ### D217 - Removal tombstone committed before child transient writes
-- STATUS: FIXED ON `test/fp4c-operation-storm` (`200a1f745`); PR pending.
+- STATUS: FIXED on `main` (`cef08bd1f`); merged through PR #128.
 - FOUND: 2026-07-25, real notification Undo acceptance.
 - SYMPTOM: a root containment could be deleted from persistence and then
   partially recreated by later applet or subcontainment transient writes from
@@ -2847,7 +2847,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   linked dock with its exact root, applet, and subcontainment state.
 
 ### D218 - Single-layout removal used a stale KConfig repository
-- STATUS: FIXED ON `test/fp4c-operation-storm` (`200a1f745`); PR pending.
+- STATUS: FIXED on `main` (`cef08bd1f`); merged through PR #128.
 - FOUND: 2026-07-25, real notification Undo acceptance.
 - SYMPTOM: a tombstone call reported success while the removed containment
   remained on disk, or Undo restored a subtree that a later live sync could
@@ -2865,8 +2865,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   writes. The real Undo and restart recipe preserves the complete subtree.
 
 ### D219 - Hidden edit chrome initialization rewrote Maximum length
-- STATUS: FIXED ON `test/fp4c-operation-storm` (`c5f1e5d5a`,
-  `a5583868c`); PR pending.
+- STATUS: FIXED on `main` (`eab2e1f59`,
+  `1c8d9bf2d`); merged through PR #128.
 - FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
   checkpoint 43.
 - SYMPTOM: eight seconds after linked-dock creation, hidden settings chrome
@@ -2891,7 +2891,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   warning baseline shrinks from 243 to 242.
 
 ### D220 - Stress oracle treated containment IDs as globally unique history
-- STATUS: FIXED ON `test/fp4c-operation-storm` (`64a1e44fa`); PR pending.
+- STATUS: FIXED on `main` (`0c5c33fa6`); merged through PR #128.
 - FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
   step 42.
 - SYMPTOM: creating a dock after permanent removal failed replay validation
@@ -2909,8 +2909,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   after multiple destruction and creation cycles.
 
 ### D221 - Rapid return-to-origin placement retained stale pending fields
-- STATUS: FIXED on `test/fp4c-operation-storm` (`5ce307460`); PR #128
-  rereview pending.
+- STATUS: FIXED on `main` (`3967011eb`); merged through PR #128.
 - FOUND: 2026-07-25, independent FP-4C (deterministic operation-storm
   acceptance) review.
 - SYMPTOM: an applied Bottom/Center view can receive Top/Left and then
@@ -2935,8 +2934,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D222 - Failed removal Undo left split runtime and persistent ownership
-- STATUS: FIXED on `test/fp4c-operation-storm` (`f58f70558`); PR #128
-  rereview pending.
+- STATUS: FIXED on `main` (`c675458c6`); merged through PR #128.
 - FOUND: 2026-07-25, independent FP-4C (deterministic operation-storm
   acceptance) review.
 - SYMPTOM: if persistence restoration or runtime resume fails during Undo, the
@@ -2959,8 +2957,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D223 - Reservation oracle trusted mutually wrong runtime geometry
-- STATUS: FIXED on `test/fp4c-operation-storm` (`ff41d8eca`); PR #128
-  rereview pending.
+- STATUS: FIXED on `main` (`0f214f012`); merged through PR #128.
 - FOUND: 2026-07-25, independent FP-4C (deterministic operation-storm
   acceptance) review.
 - SYMPTOM: a reservation publisher with wrong geometry can pass when schema
@@ -2982,8 +2979,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker for FP-4C acceptance.
 
 ### D224 - Applied placement waited circularly on its own relocation commit
-- STATUS: FIXED on `test/fp4c-operation-storm` (`0382044fe`); PR #128
-  rereview pending.
+- STATUS: FIXED on `main` (`e712cbf63`); merged through PR #128.
 - FOUND: 2026-07-25, FP-4C exact nested replay after the D223 reservation
   oracle correction.
 - SYMPTOM: the first placement checkpoint remained in relocation forever.
@@ -3003,8 +2999,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D225 - Placement handler rewrite left stale settings-inventory selectors
-- STATUS: FIXED on `test/fp4c-operation-storm` (`af063f83e`); PR #128
-  rereview pending.
+- STATUS: FIXED on `main` (`22c6c17ef`); merged through PR #128.
 - FOUND: 2026-07-25, replacement FP-4C canonical gate.
 - SYMPTOM: SettingsInventoryTest rejected the screen-count connection and all
   four alignment buttons after D221 changed their structural source hashes.
@@ -3018,8 +3013,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D226 - LayerShell output migration bypassed reservation-gated remapping
-- STATUS: FIXED on `test/fp4c-operation-storm` (`c51b3ec5f`); PR #128
-  follow-up review pending.
+- STATUS: FIXED on `main` (`01d364d95`); merged through PR #128.
 - FOUND: 2026-07-25, final cold independent review of FP-4C (the deterministic
   operation-storm acceptance).
 - SYMPTOM: a primary-output change or spontaneous Qt screen reassignment can
@@ -3043,8 +3037,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D227 - Layout mutation preceded destination-output preflight
-- STATUS: FIXED on `test/fp4c-operation-storm` (`7578f1e4f`); PR #128
-  follow-up review pending.
+- STATUS: FIXED on `main` (`bd744dddc`); merged through PR #128.
 - FOUND: 2026-07-25, final cold independent review of FP-4C (the deterministic
   operation-storm acceptance).
 - SYMPTOM: if the destination output disappears during the relocation hide
@@ -3069,8 +3062,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D235 - Unanimated layout moves retained a delayed relocation completion
-- STATUS: FIXED ON `test/fp4c-operation-storm` by `c1ed12e82`; the final fresh
-  independent review returned `MERGE`; PR pending.
+- STATUS: FIXED on `main` by `7b4cc6e98`; the final fresh
+  independent review returned `MERGE`; merged through PR #128.
 - FOUND: 2026-07-26, fresh critical rereview of the complete corrected FP-4C
   diff.
 - SYMPTOM: a same-activity layout move can apply geometry and reservation
@@ -3090,12 +3083,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   path. The production target builds, `placementrequeststatetest` passes 14/14,
   and `dockidentitycontracttest` passes 27/27. The replacement canonical gate
   passes at exact branch head
-  `84b4cf01ada214f2d48723de43566254f8d08839`.
+  `15baaf03426c39e752e814de937681809c4c7e0c`.
 - SEVERITY: beta blocker.
 
 ### D234 - First transaction-root publication was not durable
-- STATUS: FIXED ON `test/fp4c-operation-storm` by `8e6613904`; the final fresh
-  independent review returned `MERGE`; PR pending.
+- STATUS: FIXED on `main` by `f4594042e`; the final fresh
+  independent review returned `MERGE`; merged through PR #128.
 - FOUND: 2026-07-26, fresh critical rereview of the complete corrected FP-4C
   diff.
 - SYMPTOM: the first cross-layout move after creating
@@ -3113,11 +3106,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   no pending journal, preserves all origin, destination, and active-owner bytes,
   and leaves all lifecycle generations unchanged. `storagetest` passes 1/1.
   The replacement canonical gate passes at exact branch head
-  `84b4cf01ada214f2d48723de43566254f8d08839`.
+  `15baaf03426c39e752e814de937681809c4c7e0c`.
 - SEVERITY: critical release blocker.
 
 ### D233 - Nested seed cleanup waited forever on a crash-stopped dock
-- STATUS: FIXED ON `test/fp4c-operation-storm` by `3f504ee8e`; PR pending.
+- STATUS: FIXED on `main` by `c2ef221ca`; merged through PR #128.
 - FOUND: 2026-07-26, replacement canonical gate after D230 through D232.
 - SYMPTOM: a dock that enters the stopped process state during nested seed
   startup leaves `asan-e2e-gate.sh` waiting forever instead of returning its
@@ -3135,12 +3128,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   passed all 124 CTest entries, the complete sanitizer build and nested
   recipes, QML and coverage ratchets, visual probes, package provenance
   controls, and matrix refusals at exact source head
-  `a7a523c80d9c7a67147810e5b91009308ff32243`.
+  `103c9e4a9f7bd7d87f7ba523a71ff735b30fddc1`.
 - SEVERITY: release blocker for acceptance infrastructure.
 
 ### D232 - Operation-storm journal assertion never moved a dock across layouts
-- STATUS: FIXED ON `test/fp4c-operation-storm` by `a06e84af1` and
-  `6c85510a1`; PR pending.
+- STATUS: FIXED on `main` by `c68f4a974` and
+  `1c3b86a85`; merged through PR #128.
 - FOUND: 2026-07-26, final cold independent review of FP-4C (the
   deterministic operation-storm acceptance).
 - SYMPTOM: every settled checkpoint reports an empty durable move transaction
@@ -3165,7 +3158,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker for D229 and FP-4C acceptance.
 
 ### D231 - Queued active-view moves could be recorded as committed
-- STATUS: FIXED ON `test/fp4c-operation-storm` by `ad6754038`; PR pending.
+- STATUS: FIXED on `main` by `0e2ec0810`; merged through PR #128.
 - FOUND: 2026-07-26, final cold independent review of FP-4C (the
   deterministic operation-storm acceptance).
 - SYMPTOM: layout settings can mark an active dock move as saved before the
@@ -3189,7 +3182,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D230 - Layout directory entries were not durable before journal retirement
-- STATUS: FIXED ON `test/fp4c-operation-storm` by `9b0d5891e`; PR pending.
+- STATUS: FIXED on `main` by `aa2744787`; merged through PR #128.
 - FOUND: 2026-07-26, final cold independent review of FP-4C (the
   deterministic operation-storm acceptance).
 - SYMPTOM: a host crash after journal retirement can restore an older
@@ -3210,8 +3203,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: critical release blocker.
 
 ### D229 - Cross-layout placement could report success after persistence failure
-- STATUS: FIXED ON `test/fp4c-operation-storm`; the replacement canonical gate
-  passes and the final fresh independent review returned `MERGE`; PR pending.
+- STATUS: FIXED on `main`; the replacement canonical gate
+  passes and the final fresh independent review returned `MERGE`; merged through PR #128.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3257,15 +3250,15 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   canonical gate passed all 123 CTest entries, QML and coverage ratchets,
   visual probes, the sanitizer nested recipes, package provenance controls,
   and matrix refusals at exact source head
-  `8ef520abe4478abcb94c9818ef942d8360857c37`; D230 through D232 invalidate
+  `311589122215a17c4a00ec1f1edf9dd117819eb9`; D230 through D232 invalidate
   that historical stamp. The replacement canonical gate passed all 124 CTest
   entries, QML and coverage ratchets, visual probes, the complete ASan/UBSan
   build and four nested recipes, package provenance controls, and matrix
   refusals at exact corrected source head
-  `a7a523c80d9c7a67147810e5b91009308ff32243`. The next critical rereview
+  `103c9e4a9f7bd7d87f7ba523a71ff735b30fddc1`. The next critical rereview
   found D234 and D235. After their corrections, the replacement canonical gate
   passed the same complete matrix at exact branch head
-  `84b4cf01ada214f2d48723de43566254f8d08839`.
+  `15baaf03426c39e752e814de937681809c4c7e0c`.
 - ACCEPTANCE: the final fresh critical rereview independently verified the
   first-root durability boundary, rollback and roll-forward authority, exact
   placement completion, surviving typed callers, operation-storm lifecycle
@@ -3273,8 +3266,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
-- STATUS: FIXED ON `test/fp4c-operation-storm` at `4ca4a33b0`; the canonical
-  gate passed at `0b2d069a3` before D229 invalidated that source head.
+- STATUS: FIXED on `main` at `992f9df1c`; the canonical
+  gate passed at `728285b39` before D229 invalidated that source head.
 - FOUND: 2026-07-25, exact seed 127934575 replay after the D226 and D227
   corrections.
 - SYMPTOM: operation 33 leaves independent dock 14 hidden on the right edge
@@ -3301,8 +3294,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: FIXED ON `test/fp4c-operation-storm`; the replacement canonical gate
-  passes and the final fresh independent review returned `MERGE`; PR pending.
+- STATUS: FIXED on `main`; the replacement canonical gate
+  passes and the final fresh independent review returned `MERGE`; merged through PR #128.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged

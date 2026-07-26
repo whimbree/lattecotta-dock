@@ -3,6 +3,23 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-26.
 
+## 2026-07-26: PR #128 merges Option 1 stable per-view surfaces
+
+PR #128 merged through GitHub's rebase flow at `4d52a1917` on `main`. The
+reviewed branch passed the canonical gate at tree-equivalent source head
+`15baaf034`, and the final fresh independent review returned `MERGE` with no
+findings. Post-rebase source commits `f4594042e` and `7b4cc6e98` close D234
+(first transaction-root publication was not durable) and D235 (unanimated
+layout moves retained a delayed relocation completion).
+
+Option 1 now keeps one stable surface per dock or panel, moves floating
+presentation inside it, coordinates only maximum reserved depth by persistent
+output identity and edge, and retains independent visual, input, edit, sizing,
+and activation ownership. Separated partial docks on one edge remain
+independent. No inward stacking feature was introduced. The 78-operation
+two-layout and two-output replay, 124-test gate, sanitizer recipes, and final
+review provide the merge evidence.
+
 ## 2026-07-26: FP-4C final rereview blocks first-root durability
 
 The fresh critical rereview of the complete corrected PR #128 diff returned
@@ -15,13 +32,13 @@ same-activity movement can commit while a signal-scheduled callback for the
 same generation remains queued, causing duplicate geometry and reservation
 application followed by a false critical error.
 
-Commit `8e6613904` fixes D234 by flushing the private transaction directory and
+Commit `f4594042e` fixes D234 by flushing the private transaction directory and
 its containing layout directory before lock acquisition, journal preparation,
 or endpoint mutation. Exact injection leaves the root empty, every endpoint
 byte and lifecycle generation unchanged, and no pending recovery. `storagetest`
 passes 1/1.
 
-Commit `c1ed12e82` fixes D235 by invalidating only the delayed callback owned by
+Commit `7b4cc6e98` fixes D235 by invalidating only the delayed callback owned by
 the synchronously committed token before publishing reentrant completion.
 Constexpr coverage preserves a newer scheduled token, and the production
 contract retains the animated scheduling path. The production target builds,
@@ -29,7 +46,7 @@ contract retains the animated scheduling path. The production target builds,
 27/27.
 
 The replacement canonical gate exited 0 at exact branch head
-`84b4cf01ada214f2d48723de43566254f8d08839`. All 124 CTest entries, QML and
+`15baaf03426c39e752e814de937681809c4c7e0c`. All 124 CTest entries, QML and
 coverage ratchets, visual probes, the complete ASan/UBSan build and four nested
 recipes, package provenance controls, and matrix refusals passed. D234's
 critical severity required one final fresh independent rereview of the complete
@@ -52,8 +69,8 @@ surface requirement.
 ## 2026-07-26: D229 durable cross-layout move transaction
 
 D229 (cross-layout placement could report success after persistence failure)
-is corrected on `test/fp4c-operation-storm` by `39a455df1`, `3c2d81ee8`,
-`94d7dd446`, `9b0d5891e`, `ad6754038`, `a06e84af1`, and `6c85510a1`.
+is corrected on `test/fp4c-operation-storm` by `3651b3a8b`, `1b0a88eeb`,
+`7973f68cd`, `aa2744787`, `0e2ec0810`, `c68f4a974`, and `1c3b86a85`.
 Filesystem endpoint classification remains an early refusal, but it is no
 longer treated as a proof that later KConfig operations cannot fail.
 
@@ -107,25 +124,25 @@ cleanup restores the pristine nested configuration. Evidence is stored in
 `linked-dock-operation-stress.seed-127934575.run-GFqh3X`.
 
 The previous canonical gate exited 0 at exact source head
-`8ef520abe4478abcb94c9818ef942d8360857c37`: all 123 CTest entries, QML and
+`311589122215a17c4a00ec1f1edf9dd117819eb9`: all 123 CTest entries, QML and
 coverage ratchets, visual probes, the complete ASan/UBSan nested recipes,
 package provenance controls, and matrix refusals passed. Fresh critical
 independent rereview then returned `DO NOT MERGE` for D230 through D232. Those
 three findings are corrected and invalidate that historical stamp.
 
 The replacement canonical gate exited 0 at exact corrected source head
-`a7a523c80d9c7a67147810e5b91009308ff32243`. All 124 CTest entries, QML and
+`103c9e4a9f7bd7d87f7ba523a71ff735b30fddc1`. All 124 CTest entries, QML and
 coverage ratchets, visual probes, the complete ASan/UBSan build and four nested
-recipes, package provenance controls, and matrix refusals passed. PR #128
-remains blocked only until a fresh critical rereview of the complete corrected
-diff returns a mergeable verdict.
+recipes, package provenance controls, and matrix refusals passed. At that point
+PR #128 remained blocked until a fresh critical rereview of the complete
+corrected diff returned a mergeable verdict.
 
 The replacement gate then found D233 (nested seed cleanup waited forever on a
 crash-stopped dock). An old incremental production artifact stopped inside
 KCrash before view creation. The seed helper sent SIGTERM and entered an
 unbounded `wait`; a stopped process cannot consume SIGTERM. Resuming the
 private nested PID allowed the pending termination to complete and the gate
-returned its real status 2. Commit `3f504ee8e` routes seed teardown through the
+returned its real status 2. Commit `c2ef221ca` routes seed teardown through the
 bounded live-member-aware process-group transaction. The exact stopped,
 TERM-ignoring setsid leader reaches SIGKILL cleanup and
 `e2eseedcleanupselftest` passes directly and through CTest. The clean rebuild
@@ -164,7 +181,7 @@ Minimum handler through a nine-warning QML lint increase. Maximum now owns the
 single clamp-and-store operation, Minimum delegates through its persistent
 proxy, and the inherited AppearanceConfig.qml baseline shrinks from 243 to 242.
 
-The first canonical gate exited 0 at exact branch head `03155fe50`. All 120
+The first canonical gate exited 0 at exact branch head `9699d7425`. All 120
 CTest entries, the QML and coverage ratchets, visual probes, the complete
 ASan/UBSan build, nested-compositor integration, and matrix refusal checks
 passed. D221 through D224 changed product and acceptance code afterward, so
@@ -181,14 +198,14 @@ relocation commit, which is also corrected. The PR then required a replacement
 canonical gate and a cold independent rereview.
 
 D221 (rapid return-to-origin placement retained stale pending fields) is fixed
-at `5ce307460`. One typed latest-intent value now owns layout, screen group,
+at `3967011eb`. One typed latest-intent value now owns layout, screen group,
 logical and resolved output, follow-primary policy, edge, and alignment.
 Callbacks carry the current token, hide ownership survives supersession, and a
 new real A-to-B-to-A probe requires two claimed generations before exact
 settlement.
 
 D222 (failed removal Undo left split runtime and persistent ownership) is fixed
-at `f58f70558`. A constexpr transaction now defers root Undo resolution until
+at `c675458c6`. A constexpr transaction now defers root Undo resolution until
 libplasma finishes child transient changes, then either restores persistence
 before runtime ownership or retires runtime and containment ownership before
 the final tombstone. Expiry uses the same checked finalizer, viewless children
@@ -198,7 +215,7 @@ KConfig test, integration contract, and focused production build pass. The
 focused independent rereview returned MERGE.
 
 D223 (reservation oracle trusted mutually wrong runtime geometry) is fixed at
-`ff41d8eca`. Output identity, connector, and geometry are captured independently
+`0f214f012`. Output identity, connector, and geometry are captured independently
 before mutation. The oracle derives full-edge maximum-depth reservation bands,
 one-pixel publisher surfaces, LayerShell placement, per-view struts, and
 compositor frames from those records. Twenty-five adversarial cases reject
@@ -206,7 +223,7 @@ coherent wrong state for all four edges, and the focused independent rereview
 returned MERGE.
 
 D224 (applied placement waited circularly on its own relocation commit) is
-fixed at `0382044fe`. The explicit AppliedPlacement boundary no longer refuses
+fixed at `e712cbf63`. The explicit AppliedPlacement boundary no longer refuses
 solely because the relocation is active after its candidate surface and
 LayerShell placement are verified. Ordinary reservation updates still defer.
 The rebuilt production binary completes the 76-operation seed 127934575 replay
@@ -215,11 +232,11 @@ and exact cleanup in the private two-output nested compositor.
 The replacement canonical gate then found D225 (placement handler rewrite left
 stale settings-inventory selectors). D221 changed the screen connection
 ancestry and four alignment button bodies without updating their bidirectional
-source-ledger hashes. Commit `af063f83e` maps the current scanner identities to
+source-ledger hashes. Commit `22c6c17ef` maps the current scanner identities to
 the same audit rows. SettingsInventoryTest validates all 278 affordances and 25
 exemptions again.
 
-The replacement canonical gate exited 0 at exact code head `2a370029c`. All
+The replacement canonical gate exited 0 at exact code head `b56e5c18d`. All
 122 CTest entries, QML and coverage ratchets, visual probes, the complete
 ASan/UBSan build, four nested sanitizer recipes, package provenance controls,
 and matrix refusals passed. The final cold independent diff review returned
@@ -228,7 +245,7 @@ corrected, so the replacement gate remains invalidated until the exact replay
 and canonical gate run against the new code head.
 
 D226 (LayerShell output migration bypassed reservation-gated remapping) is
-fixed at `c51b3ec5f`. Latte's assigned output and the LayerShell output now own
+fixed at `01d364d95`. Latte's assigned output and the LayerShell output now own
 migration decisions. QWindow screen state requests observation reconciliation
 only. Any ownership mismatch retires reservation ownership and hides the view,
 and visible LayerShell output application stays unmapped until the
@@ -236,7 +253,7 @@ post-publication relocation commit. The production binary, LayerShell mapping
 tests, dock identity contract, and focused negative control pass.
 
 D227 (layout mutation preceded destination-output preflight) is fixed at
-`7578f1e4f`. One immutable plan captures the complete prior and target intent,
+`bd744dddc`. One immutable plan captures the complete prior and target intent,
 resolves the live destination output, and validates layout ownership,
 relationship constraints, runtime participants, and generation before any
 placement mutation. The same checks run again after reservation retirement.
@@ -255,7 +272,7 @@ predicate and rejected the placement as an inconsistent new output
 requirement. Relocation generation 5 remained hidden and unapplied on the
 right edge instead of committing top/Justify.
 
-D228 is fixed at `4ca4a33b0`. Placement transaction preflight now distinguishes
+D228 is fixed at `992f9df1c`. Placement transaction preflight now distinguishes
 assigned and LayerShell output ownership from transient QWindow observation.
 The ordinary reconciliation path still observes QWindow drift, but a hide-time
 observation cannot create reservation ownership. Seven focused tests and the
@@ -267,7 +284,7 @@ canonical gate and required independent follow-up review were the remaining
 PR #128 acceptance steps.
 
 The replacement canonical gate exited 0 at exact corrected code head
-`0b2d069a36926e5190652db165a19bc2da9e031d`. All 122 CTest entries,
+`728285b394a76c913d0ef3ab36b9fcb9f73b94dc`. All 122 CTest entries,
 QML and coverage ratchets, visual probes, the complete ASan/UBSan build, four
 nested sanitizer recipes, package provenance controls, and matrix refusals
 passed.
@@ -281,7 +298,7 @@ therefore leave the origin removal durable, omit destination ownership, return
 success, and lose the dock after restart. D229 is the current PR #128 release
 blocker.
 
-D229 is fixed at `296666281`. Both layout persistence endpoints are classified
+D229 is fixed at `e57f8e929`. Both layout persistence endpoints are classified
 and validated before move ownership is resolved. A post-mutation sync failure
 is now a fatal invariant violation, never a recoverable success path. A real
 read-only file and directory endpoint are refused; separate negative controls
@@ -305,7 +322,7 @@ removal has persisted. The absent-path branch likewise omits parent search
 permission, and neither branch has complete filesystem coverage. D229 is
 reopened.
 
-The complete D229 correction is `2f85a8ac7`. Existing and absent endpoints now
+The complete D229 correction is `1dc18737f`. Existing and absent endpoints now
 share one containing-directory contract: the parent exists, is a directory,
 and is both writable and searchable. Existing targets must additionally be
 regular writable files. Real filesystem coverage exercises every accepted and
@@ -328,7 +345,7 @@ blocker, and the canonical gate at
 `a1a154fd0843d64e4551d61fe559963532dee70a` is no longer final acceptance
 evidence.
 
-The complete existing-file correction is `0d1ce131d`. Existing endpoints must
+The complete existing-file correction is `7d2db9f95`. Existing endpoints must
 now be regular, readable, and writable before mutation. The real-filesystem
 test drives KConfig under write-only permissions and observes the failed
 reparse, then confirms that preflight refuses the same endpoint. Missing and
@@ -338,7 +355,7 @@ The production build and seven focused tests pass. Exact seed 127934575
 completes all 76 operations and exact cleanup in nested KWin; its evidence is
 saved in `linked-dock-operation-stress.seed-127934575.run-WZU6e7`.
 The replacement canonical gate exited 0 at exact branch head
-`2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`. All 122 CTest entries, QML and
+`b5ef76d74e13bcc13b64e0df7dc18fb5295b4354`. All 122 CTest entries, QML and
 coverage ratchets, visual probes, the complete ASan/UBSan build, four nested
 sanitizer recipes, package provenance controls, and matrix refusals passed.
 Fresh critical independent rereview remains open.
@@ -350,10 +367,10 @@ lexical parent accepts an endpoint whose `QSaveFile` replacement cannot
 commit. KConfig also uses `QSaveFile` only for a file owned by the process;
 otherwise it takes a direct truncate-and-write branch whose individual device
 writes are not reported. D229 remains the PR #128 release blocker, and the
-canonical gate at `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2` is no longer
+canonical gate at `b5ef76d74e13bcc13b64e0df7dc18fb5295b4354` is no longer
 final acceptance evidence.
 
-The complete backend-path correction is `cb9380566`. Existing endpoints are
+The complete backend-path correction is `14c81dd18`. Existing endpoints are
 resolved to the same canonical file and containing directory KConfig uses, and
 only readable, writable, process-owned regular files qualify for atomic
 replacement. The ownership contract is `constexpr`; removing it fails a
@@ -365,7 +382,7 @@ layout file. The production build and seven focused tests pass. Exact seed
 evidence is saved in
 `linked-dock-operation-stress.seed-127934575.run-SMCdxd`. Replacement
 canonical gate exited 0 at exact branch head
-`dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`. All 122 CTest entries, QML and
+`73ffe196d1c3b9edf2a632d2d399a09aed46ef5a`. All 122 CTest entries, QML and
 coverage ratchets, visual probes, the complete ASan/UBSan build, four nested
 sanitizer recipes, package provenance controls, and matrix refusals passed.
 
@@ -379,7 +396,7 @@ into a post-mutation invariant. D229 (cross-layout placement could report
 success after persistence failure) is reopened. The next correction must put
 the move under an explicit recoverable persistence transaction and mutate
 runtime ownership only after durable ownership converges. The canonical gate
-at `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be` remains historical evidence, not
+at `73ffe196d1c3b9edf2a632d2d399a09aed46ef5a` remains historical evidence, not
 final acceptance.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
