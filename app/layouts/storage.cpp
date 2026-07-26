@@ -102,9 +102,9 @@ bool Storage::isWritable(const Layout::GenericLayout *layout) const
     const QFileInfo parentDirectory(
         layoutFileInfo.absolutePath());
 
-    //! KConfig persists through QSaveFile, which creates and renames a
-    //! replacement in the containing directory. File write permission alone
-    //! does not prove that the durable replacement can commit.
+    //! KConfig reparses an existing file before persisting through QSaveFile,
+    //! which creates and renames a replacement in the containing directory.
+    //! Write permission alone does not prove that either phase can complete.
     const bool parentSupportsReplacement =
         parentDirectory.exists()
         && parentDirectory.isDir()
@@ -116,6 +116,7 @@ bool Storage::isWritable(const Layout::GenericLayout *layout) const
 
     return !layoutFileInfo.exists()
         || (layoutFileInfo.isFile()
+            && layoutFileInfo.isReadable()
             && layoutFileInfo.isWritable());
 }
 
