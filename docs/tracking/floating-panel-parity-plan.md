@@ -209,7 +209,8 @@ and PR #126 landed FP-4B.
       nested KWin.
 - [ ] Obtain the required independent follow-up review after the D226, D227,
       and D228 corrections. The replacement canonical gate passed at
-      `0b2d069a3`.
+      `0b2d069a3`. That review found D229 (cross-layout placement could report
+      success after persistence failure), which remains a release blocker.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent
