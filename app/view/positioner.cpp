@@ -542,14 +542,20 @@ void Positioner::applyOutputPlacement(
     }
 }
 
-bool Positioner::outputPlacementIsNeeded(
+bool Positioner::outputOwnershipIsNeeded(
     const QScreen *const destination) const
 {
     Q_ASSERT(destination);
     return m_screenToFollow != destination
-        || m_view->screen() != destination
-        || m_view->layerShellNeedsOutput(
-            destination);
+        || m_view->layerShellNeedsOutput(destination);
+}
+
+bool Positioner::outputPlacementIsNeeded(
+    const QScreen *const destination) const
+{
+    Q_ASSERT(destination);
+    return outputOwnershipIsNeeded(destination)
+        || m_view->screen() != destination;
 }
 
 void Positioner::updateContainmentScreen()
@@ -1816,34 +1822,17 @@ Positioner::preparePlacementApplication(
             != plan.prior.resolvedOutputName;
     const bool outputStateNeedsApplication =
         !plan.outputScreen
-        || outputPlacementIsNeeded(
+        || outputOwnershipIsNeeded(
             plan.outputScreen);
     plan.appliesOutput =
-        outputPolicyChanges
+        m_pendingFollowsPrimary.has_value()
+        || outputPolicyChanges
         || outputStateNeedsApplication;
     plan.changesReservationOwnership =
         plan.movesEdge
         || (plan.outputScreen
-            && (m_screenToFollow
-                    != plan.outputScreen
-                || m_view
-                    ->layerShellNeedsOutput(
-                        plan.outputScreen)));
-
-    if (plan.appliesOutput
-            != m_pendingFollowsPrimary
-                .has_value()) {
-        qCritical() << "Positioner refused an inconsistent output-placement projection for generation"
-                    << plan.token
-                    << "target="
-                    << targetOutputName
-                    << "projected="
-                    << m_pendingFollowsPrimary
-                        .has_value()
-                    << "required="
-                    << plan.appliesOutput;
-        return std::nullopt;
-    }
+            && outputOwnershipIsNeeded(
+                plan.outputScreen));
 
     if (!validatesPlacementApplication(
             plan)) {
