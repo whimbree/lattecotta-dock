@@ -66,6 +66,7 @@ public:
 
     int currentScreenId() const;
     QString currentScreenName() const;
+    [[nodiscard]] QScreen *assignedScreen() const;
 
     int slideOffset() const;
     void setSlideOffset(int offset);
@@ -105,7 +106,7 @@ public:
     [[nodiscard]] QRect surfaceGeometry() const;
     [[nodiscard]] quint64 surfaceGeometryPublicationRevision() const;
 
-    void setScreenToFollow(QScreen *scr, bool updateScreenId = true);
+    bool setScreenToFollow(QScreen *scr, bool updateScreenId = true);
     void setWindowOnActivities(const Latte::WindowSystem::WindowId &wid, const QStringList &activities);
 
     void reconsiderScreen();
@@ -118,9 +119,10 @@ public Q_SLOTS:
 
     void syncGeometry();
 
-    //! direct geometry calculations without any protections or checks
-    //! that might prevent them. It must be called with care.
-    void immediateSyncGeometry();
+    //! Direct geometry calculations without the ordinary timer. The result is
+    //! true only when the solved rectangle reached the assigned LayerShell
+    //! output and passed its applied-state postconditions.
+    bool immediateSyncGeometry();
 
     void slideOutDuringExit(Plasma::Types::Location location = Plasma::Types::Floating);
 
@@ -133,6 +135,9 @@ Q_SIGNALS:
     void edgeChanged();
     void screenGeometryChanged();
     void slideOffsetChanged();
+    //! Surface placement and reservation ownership reached one authoritative
+    //! output, edge, and generation.
+    void placementTransactionCommitted();
     void surfaceGeometryCalculated(const QRect &geometry);
     void surfaceGeometryPublicationRevisionChanged();
     void windowSizeChanged();
@@ -167,21 +172,38 @@ private Q_SLOTS:
     void updateContainmentScreen();
 
 private:
+    [[nodiscard]] bool applyOutputPlacement(
+        QScreen *destination,
+        bool followsPrimary);
+    void applyUnanimatedPlacementGeneration();
     void cancelFailedLayoutRelocation();
+    void finishPendingScreenPlacementIfApplied();
     void init();
     void initSignalingForLocationChangeSliding();
     void scheduleLastRepositionApplyEvent();
+    void scheduleUnanimatedPlacementApplyEvent();
 
     void updateFormFactor();
-    void resizeWindow(QRect availableScreenRect = QRect());
+    void resizeWindow(
+        const QRect &availableScreenRect,
+        const QSize &assignedScreenSize);
     void updatePosition(QRect availableScreenRect = QRect());
-    void updateCanvasGeometry(QRect availableScreenRect = QRect());
+    void updateCanvasGeometry(
+        const QRect &availableScreenRect,
+        const QRect &assignedScreenGeometry = QRect());
+    [[nodiscard]] bool solveAndApplyGeometry(
+        bool completesRelocation = false);
     [[nodiscard]] std::optional<FloatingPanelGeometry::Solution>
-    solveStablePanelGeometry(const QRect &availableScreenRect) const;
+    solveStablePanelGeometry(
+        const QRect &availableScreenRect,
+        const QRect &assignedScreenGeometry) const;
     void applyStablePanelGeometry(
         const FloatingPanelGeometry::Solution &solution);
 
-    void validateTopBottomBorders(QRect availableScreenRect, QRegion availableScreenRegion);
+    void validateTopBottomBorders(
+        const QRect &availableScreenRect,
+        const QRegion &availableScreenRegion,
+        const QRect &assignedScreenGeometry);
 
     void setCanvasGeometry(const QRect &geometry);
 
@@ -201,6 +223,12 @@ private:
     bool m_inRelocationShowing{false};
     bool m_inSlideAnimation{false};
     bool m_inStartup{true};
+    //! Placement signals normally synchronize the layout immediately. Hold
+    //! that callback through policy, output, edge, alignment, geometry,
+    //! LayerShell application, and reservation publication so no observer
+    //! acts on a partial compound placement.
+    bool m_applyingPlacementTransaction{false};
+    bool m_layoutSyncDeferredByPlacementTransaction{false};
 
     bool m_isStickedOnTopEdge{false};
     bool m_isStickedOnBottomEdge{false};
@@ -233,6 +261,8 @@ private:
 
     QString m_nextLayoutName;
     Latte::Types::ScreensGroup m_nextScreensGroup{Latte::Types::SingleScreenGroup};
+    QPointer<QScreen> m_pendingOutputScreen;
+    std::optional<bool> m_pendingFollowsPrimary;
     QString m_nextScreenName;
     QScreen *m_nextScreen{nullptr};
     Plasma::Types::Location m_nextScreenEdge{Plasma::Types::Floating};

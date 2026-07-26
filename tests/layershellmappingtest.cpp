@@ -40,6 +40,8 @@ private Q_SLOTS:
     void seededSizeForUnspannedAxes();
     void viewPlacementPinsSolvedRectangle();
     void appliedViewPlacementPreservesSurfacePolicy();
+    void appliedViewPlacementDistinguishesRefusalFromStableSuccess();
+    void hiddenAppliedViewPlacementRetargetsBothOutputAuthorities();
     void reservationPlacementTracksOccupiedSpan();
     void canvasPlacementByEdge();
     void canvasInputRegionPlainEditMode();
@@ -261,10 +263,12 @@ void LayerShellMappingTest::appliedViewPlacementPreservesSurfacePolicy()
     ls->setLayer(LSW::LayerBottom);
     ls->setKeyboardInteractivity(LSW::KeyboardInteractivityOnDemand);
 
-    const int initialConfigureRequests = LayerShell::applyViewPlacement(
-        &window, Plasma::Types::RightEdge, viewGeometry, screenGeometry);
+    const auto initialConfigureRequests = LayerShell::applyViewPlacement(
+        &window, QGuiApplication::screens().at(0),
+        Plasma::Types::RightEdge, viewGeometry, screenGeometry);
 
-    QVERIFY(initialConfigureRequests > 0);
+    QVERIFY(initialConfigureRequests.has_value());
+    QVERIFY(*initialConfigureRequests > 0);
     QCOMPARE(ls->anchors(), LSW::Anchors(LSW::AnchorTop | LSW::AnchorLeft));
     QCOMPARE(ls->margins(), QMargins(1872, 40, 0, 0));
     QCOMPARE(ls->exclusiveEdge(), LSW::AnchorNone);
@@ -272,9 +276,100 @@ void LayerShellMappingTest::appliedViewPlacementPreservesSurfacePolicy()
     QCOMPARE(ls->layer(), LSW::LayerBottom);
     QCOMPARE(ls->keyboardInteractivity(), LSW::KeyboardInteractivityOnDemand);
 
-    const int stableConfigureRequests = LayerShell::applyViewPlacement(
-        &window, Plasma::Types::RightEdge, viewGeometry, screenGeometry);
-    QCOMPARE(stableConfigureRequests, 0);
+    const auto stableConfigureRequests = LayerShell::applyViewPlacement(
+        &window, QGuiApplication::screens().at(0),
+        Plasma::Types::RightEdge, viewGeometry, screenGeometry);
+    QVERIFY(stableConfigureRequests.has_value());
+    QCOMPARE(*stableConfigureRequests, 0);
+}
+
+void LayerShellMappingTest::appliedViewPlacementDistinguishesRefusalFromStableSuccess()
+{
+    QScreen *const screen = QGuiApplication::screens().at(0);
+    QWindow window;
+    QVERIFY(LayerShell::configureView(
+        &window,
+        screen,
+        Plasma::Types::BottomEdge,
+        Latte::Types::Center,
+        false));
+
+    const auto outsideOutput = LayerShell::applyViewPlacement(
+        &window,
+        screen,
+        Plasma::Types::BottomEdge,
+        QRect(screen->geometry().right() - 20,
+              screen->geometry().bottom() - 47,
+              48,
+              48),
+        screen->geometry());
+    QVERIFY(!outsideOutput.has_value());
+
+    const QRect validGeometry(
+        screen->geometry().right() - 47,
+        screen->geometry().bottom() - 47,
+        48,
+        48);
+    const auto firstApply = LayerShell::applyViewPlacement(
+        &window,
+        screen,
+        Plasma::Types::BottomEdge,
+        validGeometry,
+        screen->geometry());
+    QVERIFY(firstApply.has_value());
+
+    const auto stableApply = LayerShell::applyViewPlacement(
+        &window,
+        screen,
+        Plasma::Types::BottomEdge,
+        validGeometry,
+        screen->geometry());
+    QVERIFY(stableApply.has_value());
+    QCOMPARE(*stableApply, 0);
+}
+
+void LayerShellMappingTest::hiddenAppliedViewPlacementRetargetsBothOutputAuthorities()
+{
+    QScreen *const origin = QGuiApplication::screens().at(0);
+    QScreen *const target = QGuiApplication::screens().at(1);
+    const QRect targetGeometry = target->geometry();
+    const QRect viewGeometry(
+        targetGeometry.right() - 63,
+        targetGeometry.top() + 120,
+        64,
+        targetGeometry.height() - 240);
+
+    QWindow window;
+    QVERIFY(LayerShell::configureView(
+        &window,
+        origin,
+        Plasma::Types::LeftEdge,
+        Latte::Types::Center,
+        false));
+    LayerShellQt::Window *const layerShell = LSW::get(&window);
+    QVERIFY(layerShell);
+    QCOMPARE(window.screen(), origin);
+    QCOMPARE(layerShell->screen(), origin);
+    QVERIFY(!window.isVisible());
+
+    const auto applied = LayerShell::applyViewPlacement(
+        &window,
+        target,
+        Plasma::Types::RightEdge,
+        viewGeometry,
+        targetGeometry);
+
+    QVERIFY(applied.has_value());
+    QVERIFY(*applied > 0);
+    QCOMPARE(layerShell->screen(), target);
+    QCOMPARE(layerShell->anchors(),
+             LSW::Anchors(LSW::AnchorTop | LSW::AnchorLeft));
+    QCOMPARE(layerShell->margins(),
+             QMargins(viewGeometry.left() - targetGeometry.left(),
+                      viewGeometry.top() - targetGeometry.top(),
+                      0,
+                      0));
+    QVERIFY(!window.isVisible());
 }
 
 void LayerShellMappingTest::reservationPlacementTracksOccupiedSpan()
@@ -465,11 +560,17 @@ void LayerShellMappingTest::sameScreenPlacementDoesNotRemap()
     QScreen *screen = QGuiApplication::screens().at(0);
 
     QWindow window;
-    QVERIFY(LSW::get(&window));
+    LSW *const layerShell = LSW::get(&window);
+    QVERIFY(layerShell);
     window.setScreen(screen);
     window.resize(200, 100);
     window.show();
     QVERIFY(QTest::qWaitForWindowExposed(&window));
+    //! The offscreen plugin cannot create a real layer surface and clears the
+    //! desired LayerShellQt output while exposing the QWindow. Re-establish
+    //! both authorities so this test isolates unchanged-output behavior.
+    layerShell->setScreen(screen);
+    QCOMPARE(layerShell->screen(), screen);
 
     QSignalSpy visibleSpy(&window, &QWindow::visibleChanged);
     LayerShell::applyFixedGeometry(&window, screen, QRect(10, 10, 200, 100), screen->geometry());

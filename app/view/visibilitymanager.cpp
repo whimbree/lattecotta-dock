@@ -432,6 +432,128 @@ void VisibilityManager::updateStrutsAfterTimer()
     }
 }
 
+bool VisibilityManager::beginPlacementTransaction(
+    const bool changesReservationOwnership)
+{
+    if (m_suspendedForRemoval) {
+        m_reservationUpdateDirty = true;
+        return true;
+    }
+    if (!changesReservationOwnership
+            || m_mode != Types::AlwaysVisible) {
+        return true;
+    }
+
+    m_reservationUpdateDirty = true;
+    if (!m_reservationPublication.remove(
+            [this]() {
+                return m_wm->removeViewStruts(
+                    *m_latteView);
+            })) {
+        qCritical() << "visibility could not retire reservation before placement transaction for"
+                    << m_latteView->validTitle();
+        m_reservationForceUpdatePending = true;
+        m_timerBlockStrutsUpdate.start();
+        return false;
+    }
+
+    return true;
+}
+
+bool VisibilityManager::publishReservationAfterAppliedPlacement()
+{
+    const auto *const positioner = m_latteView->positioner();
+    if (m_suspendedForRemoval) {
+        m_reservationUpdateDirty = true;
+        m_reservationForceUpdatePending = true;
+        return true;
+    }
+    if (m_mode != Types::AlwaysVisible) {
+        return true;
+    }
+    if (positioner->inRelocationAnimation()
+            || positioner->isOffScreen()) {
+        m_reservationUpdateDirty = true;
+        return false;
+    }
+
+    //! Replay unconditionally through the publication state's equality fast
+    //! path. Output and edge are not the only mutable inputs: thickness,
+    //! activity eligibility, layout currency, and geometry may all have
+    //! changed while placement was pending.
+    const bool hadDeferredUpdate =
+        m_reservationUpdateDirty;
+    const bool forceUpdate =
+        m_reservationForceUpdatePending;
+    m_reservationUpdateDirty = false;
+    m_reservationForceUpdatePending = false;
+    if (hadDeferredUpdate) {
+        qDebug() << "replaying reservation inputs after applied placement for"
+                 << m_latteView->validTitle();
+    }
+    return updateStrutsBasedOnLayoutsAndActivities(
+        forceUpdate,
+        ReservationUpdateContext::AppliedPlacement);
+}
+
+bool VisibilityManager::suspendForReversibleRemoval()
+{
+    if (m_suspendedForRemoval) {
+        return true;
+    }
+
+    m_timerShow.stop();
+    m_timerHide.stop();
+    m_timerPublishFrameExtents.stop();
+    m_timerBlockStrutsUpdate.stop();
+
+    if (m_reservationPublication.committedTarget()
+            && !m_reservationPublication.remove(
+                [this]() {
+                    return m_wm->removeViewStruts(
+                        *m_latteView);
+                })) {
+        qCritical() << "visibility could not retire reservation for reversible removal"
+                    << m_latteView->validTitle();
+        m_reservationUpdateDirty = true;
+        m_reservationForceUpdatePending = true;
+        m_timerBlockStrutsUpdate.start();
+        return false;
+    }
+
+    m_reservationUpdateDirty = true;
+    m_reservationForceUpdatePending = true;
+    m_suspendedForRemoval = true;
+    deleteEdgeGhostWindow();
+    deleteFloatingGapWindow();
+    return true;
+}
+
+bool VisibilityManager::resumeFromReversibleRemoval()
+{
+    if (!m_suspendedForRemoval) {
+        return true;
+    }
+
+    m_suspendedForRemoval = false;
+    m_reservationUpdateDirty = true;
+    m_reservationForceUpdatePending = true;
+    if (!updateStrutsBasedOnLayoutsAndActivities(
+            true,
+            ReservationUpdateContext::AppliedPlacement)) {
+        qCritical() << "visibility could not republish reservation after removal Undo"
+                    << m_latteView->validTitle();
+        m_suspendedForRemoval = true;
+        deleteEdgeGhostWindow();
+        deleteFloatingGapWindow();
+        return false;
+    }
+
+    updateKWinEdgesSupport();
+    onIsFloatingGapWindowEnabledChanged();
+    return true;
+}
+
 void VisibilityManager::updateSidebarState()
 {
     bool cursidebarstate = ((m_mode == Types::SidebarOnDemand)
@@ -446,10 +568,39 @@ void VisibilityManager::updateSidebarState()
 
 }
 
-void VisibilityManager::updateStrutsBasedOnLayoutsAndActivities(bool forceUpdate)
+bool VisibilityManager::updateStrutsBasedOnLayoutsAndActivities(
+    const bool forceUpdate,
+    const ReservationUpdateContext context)
 {
+    if (m_suspendedForRemoval) {
+        m_reservationUpdateDirty = true;
+        m_reservationForceUpdatePending =
+            m_reservationForceUpdatePending
+            || forceUpdate;
+        return true;
+    }
+
+    const auto *const positioner = m_latteView->positioner();
+    const bool placementIsAuthoritative =
+        context == ReservationUpdateContext::AppliedPlacement;
+    if (!placementIsAuthoritative
+            && (positioner->inRelocationAnimation()
+            || positioner->relocationGeneration()
+                != positioner->appliedRelocationGeneration())) {
+        //! The old LayerShell placement and old reservation remain paired
+        //! until the complete transaction applies. Record every deferred
+        //! input so settlement cannot lose a thickness or eligibility change.
+        m_reservationUpdateDirty = true;
+        m_reservationForceUpdatePending =
+            m_reservationForceUpdatePending
+            || forceUpdate;
+        qDebug() << "reservation retained during placement transaction for"
+                 << m_latteView->validTitle();
+        return false;
+    }
+
     bool inMultipleLayoutsAndCurrent = (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::MultipleLayouts
-                                        && m_latteView->layout() && !m_latteView->positioner()->inRelocationAnimation()
+                                        && m_latteView->layout()
                                         && m_latteView->layout()->isCurrent());
 
     if (m_mode == Types::AlwaysVisible
@@ -459,7 +610,11 @@ void VisibilityManager::updateStrutsBasedOnLayoutsAndActivities(bool forceUpdate
                 || inMultipleLayoutsAndCurrent)) {
         const std::optional<QRect> computedStruts = acceptableStruts();
         if (!computedStruts) {
-            return;
+            m_reservationUpdateDirty = true;
+            m_reservationForceUpdatePending =
+                m_reservationForceUpdatePending
+                || forceUpdate;
+            return false;
         }
         const auto *const layerShell =
             m_latteView->layerShellWindow();
@@ -491,8 +646,14 @@ void VisibilityManager::updateStrutsBasedOnLayoutsAndActivities(bool forceUpdate
                 })) {
             qCritical() << "visibility retained its previous screen-space reservation after publication failed"
                         << *computedStruts;
+            m_reservationUpdateDirty = true;
+            m_reservationForceUpdatePending =
+                m_reservationForceUpdatePending
+                || forceUpdate;
             m_timerBlockStrutsUpdate.start();
+            return false;
         }
+        return true;
     } else {
         //! name the reason when reservations get pulled: a wrongly-removed
         //! strut is invisible in the UI (windows simply maximize under the
@@ -507,8 +668,14 @@ void VisibilityManager::updateStrutsBasedOnLayoutsAndActivities(bool forceUpdate
                         *m_latteView);
                 })) {
             qCritical() << "visibility retained its previous screen-space reservation after removal failed";
+            m_reservationUpdateDirty = true;
+            m_reservationForceUpdatePending =
+                m_reservationForceUpdatePending
+                || forceUpdate;
             m_timerBlockStrutsUpdate.start();
+            return false;
         }
+        return true;
     }
 }
 

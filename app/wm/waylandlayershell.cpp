@@ -313,35 +313,44 @@ ViewPlacement viewPlacement(Plasma::Types::Location location,
     return placement;
 }
 
-int applyViewPlacement(QWindow *window, Plasma::Types::Location location,
-                       const QRect &viewGeometry, const QRect &screenGeometry)
+std::optional<int> applyViewPlacement(
+    QWindow *window,
+    QScreen *screen,
+    Plasma::Types::Location location,
+    const QRect &viewGeometry,
+    const QRect &screenGeometry)
 {
-    if (!window) {
-        qCritical() << "LayerShell::applyViewPlacement refused a null window";
-        return 0;
+    if (!window || !screen) {
+        qCritical() << "LayerShell::applyViewPlacement refused a null window or screen";
+        return std::nullopt;
     }
 
     if (!screenGeometry.isValid() || !viewGeometry.isValid()
+            || screen->geometry() != screenGeometry
             || !screenGeometry.contains(viewGeometry)) {
         qCritical() << "LayerShell::applyViewPlacement refused geometry outside its output"
                     << "view=" << viewGeometry << "screen=" << screenGeometry;
-        return 0;
+        return std::nullopt;
     }
 
     if (!isScreenEdge(location)) {
         qCritical() << "LayerShell::applyViewPlacement refused non-edge location"
                     << static_cast<int>(location);
-        return 0;
+        return std::nullopt;
     }
 
     LSW *const ls = LSW::get(window);
     if (!ls) {
         qCritical() << "LayerShell::applyViewPlacement found no attached layer-shell state";
-        return 0;
+        return std::nullopt;
     }
 
     const ViewPlacement placement = viewPlacement(location, viewGeometry, screenGeometry);
-    int configureRequests = 0;
+    const bool outputChanged =
+        window->screen() != screen
+        || ls->screen() != screen;
+    const bool remap = retargetScreen(window, ls, screen);
+    int configureRequests = outputChanged ? 1 : 0;
 
     //! Geometry synchronization can run repeatedly with an unchanged
     //! solution. Avoiding redundant layer-shell setters prevents needless
@@ -361,6 +370,24 @@ int applyViewPlacement(QWindow *window, Plasma::Types::Location location,
     if (ls->margins() != placement.margins) {
         ls->setMargins(placement.margins);
         ++configureRequests;
+    }
+
+    if (remap) {
+        window->setVisible(true);
+    }
+
+    if (ls->screen() != screen
+            || ls->exclusionZone() != -1
+            || ls->exclusiveEdge() != LSW::AnchorNone
+            || ls->anchors() != placement.anchors
+            || ls->margins() != placement.margins) {
+        qCritical() << "LayerShell::applyViewPlacement failed its applied-state postcondition"
+                    << "windowScreen=" << window->screen()
+                    << "layerShellScreen=" << ls->screen()
+                    << "expectedScreen=" << screen
+                    << "location=" << static_cast<int>(location)
+                    << "view=" << viewGeometry;
+        return std::nullopt;
     }
 
     return configureRequests;
@@ -535,7 +562,10 @@ static bool retargetScreen(QWindow *window, LSW *ls, QScreen *screen)
         return false;
     }
 
-    const bool remap = window->isVisible() && window->screen() != screen;
+    const bool outputChanged =
+        window->screen() != screen
+        || ls->screen() != screen;
+    const bool remap = window->isVisible() && outputChanged;
 
     if (remap) {
         window->setVisible(false);
