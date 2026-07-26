@@ -341,6 +341,44 @@ struct ViewMoveJournalRecord final
     return flushed;
 }
 
+enum class EndpointPublicationResult
+{
+    Failed,
+    PublishedButDirectoryFlushFailed,
+    Durable,
+};
+
+[[nodiscard]] constexpr bool publicationIsDurable(
+    const EndpointPublicationResult result) noexcept
+{
+    return result
+        == EndpointPublicationResult::Durable;
+}
+
+[[nodiscard]] EndpointPublicationResult
+finishEndpointPublication(
+    const QString &endpointPath,
+    const bool failDirectoryFlushForTest)
+{
+    const QString directory =
+        QFileInfo(endpointPath)
+            .absoluteDir()
+            .absolutePath();
+    if (failDirectoryFlushForTest) {
+        qCritical() << "view move transaction injected an endpoint directory flush failure for"
+                    << endpointPath;
+        return EndpointPublicationResult::
+            PublishedButDirectoryFlushFailed;
+    }
+    if (!flushDirectory(directory)) {
+        qCritical() << "view move transaction could not make its endpoint directory durable for"
+                    << endpointPath;
+        return EndpointPublicationResult::
+            PublishedButDirectoryFlushFailed;
+    }
+    return EndpointPublicationResult::Durable;
+}
+
 [[nodiscard]] QByteArray fileSha256(
     const QString &path)
 {
@@ -848,19 +886,23 @@ readJournalManifest(
         });
 }
 
-[[nodiscard]] bool publishSnapshot(
+[[nodiscard]] EndpointPublicationResult
+publishSnapshot(
     const KSharedConfigPtr &target,
     const QString &snapshotFile,
     const QStringList &containmentIds,
     const QString &layoutId,
-    const bool replaceExisting)
+    const bool replaceExisting,
+    const bool failDirectoryFlushForTest)
 {
     if (configMatchesSnapshot(
             target->name(),
             snapshotFile,
             containmentIds,
             layoutId)) {
-        return true;
+        return finishEndpointPublication(
+            target->name(),
+            failDirectoryFlushForTest);
     }
     //! Re-read the standalone repository at the mutation boundary. A
     //! concurrent destination identity must be observed and refused rather
@@ -871,7 +913,8 @@ readJournalManifest(
             containmentIds)) {
         qCritical() << "view move transaction refused immutable or read-only snapshot destination"
                     << target->name();
-        return false;
+        return EndpointPublicationResult::
+            Failed;
     }
 
     KConfigGroup destinationContainments(
@@ -891,7 +934,8 @@ readJournalManifest(
                         .hasGroup(id))) {
             qCritical() << "view move transaction refused missing snapshot or destination collision for containment"
                         << id << "in" << target->name();
-            return false;
+            return EndpointPublicationResult::
+                Failed;
         }
     }
 
@@ -911,7 +955,8 @@ readJournalManifest(
         qCritical() << "view move transaction could not publish snapshot to"
                     << target->name();
         target->reparseConfiguration();
-        return false;
+        return EndpointPublicationResult::
+            Failed;
     }
     target->reparseConfiguration();
     const bool persisted =
@@ -924,14 +969,20 @@ readJournalManifest(
         qCritical() << "view move transaction detected a semantically ignored snapshot write to"
                     << target->name();
         target->reparseConfiguration();
+        return EndpointPublicationResult::
+            Failed;
     }
-    return persisted;
+    return finishEndpointPublication(
+        target->name(),
+        failDirectoryFlushForTest);
 }
 
-[[nodiscard]] bool publishLayoutOwner(
+[[nodiscard]] EndpointPublicationResult
+publishLayoutOwner(
     const KSharedConfigPtr &activeConfig,
     const QStringList &containmentIds,
-    const QString &layoutId)
+    const QString &layoutId,
+    const bool failDirectoryFlushForTest)
 {
     bool alreadyPublished{true};
     {
@@ -956,14 +1007,17 @@ readJournalManifest(
         }
     }
     if (alreadyPublished) {
-        return true;
+        return finishEndpointPublication(
+            activeConfig->name(),
+            failDirectoryFlushForTest);
     }
     if (!configAllowsLayoutOwnerMutation(
             activeConfig,
             containmentIds)) {
         qCritical() << "view move transaction refused immutable active layout ownership in"
                     << activeConfig->name();
-        return false;
+        return EndpointPublicationResult::
+            Failed;
     }
 
     KConfigGroup containments(
@@ -974,7 +1028,8 @@ readJournalManifest(
         if (!containments.hasGroup(id)) {
             qCritical() << "view move transaction could not resolve active containment"
                         << id << "in" << activeConfig->name();
-            return false;
+            return EndpointPublicationResult::
+                Failed;
         }
         containments.group(id)
             .writeEntry(
@@ -985,7 +1040,8 @@ readJournalManifest(
         qCritical() << "view move transaction could not publish active layout ownership to"
                     << activeConfig->name();
         activeConfig->reparseConfiguration();
-        return false;
+        return EndpointPublicationResult::
+            Failed;
     }
     activeConfig->reparseConfiguration();
 
@@ -1007,20 +1063,27 @@ readJournalManifest(
             qCritical() << "view move transaction detected a semantically ignored active-owner write for containment"
                         << id << "in" << activeConfig->name();
             activeConfig->reparseConfiguration();
-            return false;
+            return EndpointPublicationResult::
+                Failed;
         }
     }
-    return true;
+    return finishEndpointPublication(
+        activeConfig->name(),
+        failDirectoryFlushForTest);
 }
 
-[[nodiscard]] bool tombstoneSnapshot(
+[[nodiscard]] EndpointPublicationResult
+tombstoneSnapshot(
     const KSharedConfigPtr &target,
-    const QStringList &containmentIds)
+    const QStringList &containmentIds,
+    const bool failDirectoryFlushForTest)
 {
     if (configOmitsSnapshot(
             target->name(),
             containmentIds)) {
-        return true;
+        return finishEndpointPublication(
+            target->name(),
+            failDirectoryFlushForTest);
     }
     //! Recovery and forward commit both mutate standalone layout files. Use
     //! their current entry maps so an external immutability change is a loud
@@ -1031,7 +1094,8 @@ readJournalManifest(
             containmentIds)) {
         qCritical() << "view move transaction refused immutable snapshot retirement in"
                     << target->name();
-        return false;
+        return EndpointPublicationResult::
+            Failed;
     }
 
     KConfigGroup containments(
@@ -1046,7 +1110,8 @@ readJournalManifest(
         qCritical() << "view move transaction could not retire snapshot from"
                     << target->name();
         target->reparseConfiguration();
-        return false;
+        return EndpointPublicationResult::
+            Failed;
     }
     target->reparseConfiguration();
     const bool persisted =
@@ -1057,8 +1122,12 @@ readJournalManifest(
         qCritical() << "view move transaction detected a semantically ignored snapshot retirement in"
                     << target->name();
         target->reparseConfiguration();
+        return EndpointPublicationResult::
+            Failed;
     }
-    return persisted;
+    return finishEndpointPublication(
+        target->name(),
+        failDirectoryFlushForTest);
 }
 
 [[nodiscard]] Layout::ViewMoveTransaction::
@@ -3107,7 +3176,9 @@ ViewMovePersistenceResult Storage::persistViewMoveSnapshot(
     const KSharedConfigPtr &activeConfig,
     const uint originViewId,
     const QString &snapshotFile,
-    const ViewMoveInterruption interruption)
+    const ViewMoveInterruption interruption,
+    const ViewMoveDirectoryFlushFailure
+        directoryFlushFailure)
 {
     const QString originBackend =
         persistenceBackendPath(originFile);
@@ -3356,6 +3427,24 @@ ViewMovePersistenceResult Storage::persistViewMoveSnapshot(
                     ViewMovePreparedSuffix));
 
     Layout::ViewMoveTransaction transaction;
+    EndpointPublicationResult
+        commitDecisionPublication{
+            EndpointPublicationResult::
+                Failed};
+    bool endpointDirectoryFlushFailed{false};
+    const auto acceptDurablePublication =
+        [&endpointDirectoryFlushFailed](
+            const EndpointPublicationResult
+                publication) {
+            if (publication
+                    == EndpointPublicationResult::
+                        PublishedButDirectoryFlushFailed) {
+                endpointDirectoryFlushFailed =
+                    true;
+            }
+            return publicationIsDurable(
+                publication);
+        };
     const auto pureResult =
         transaction.commit(
             [&journal,
@@ -3406,33 +3495,54 @@ ViewMovePersistenceResult Storage::persistViewMoveSnapshot(
                             .snapshotSha256;
             },
             [destinationConfig,
-             &journal]() {
-                return publishSnapshot(
-                    destinationConfig,
-                    journal.snapshotPath(),
-                    journal.containmentIds,
-                    QString(),
-                    false);
+             &journal,
+             directoryFlushFailure,
+             &acceptDurablePublication]() {
+                return acceptDurablePublication(
+                    publishSnapshot(
+                        destinationConfig,
+                        journal.snapshotPath(),
+                        journal
+                            .containmentIds,
+                        QString(),
+                        false,
+                        directoryFlushFailure
+                            == ViewMoveDirectoryFlushFailure::
+                                Destination));
             },
             [activeConfig,
              &journal,
-             interruption]() {
+             interruption,
+             directoryFlushFailure,
+             &commitDecisionPublication,
+             &acceptDurablePublication]() {
                 if (interruption
                         == ViewMoveInterruption::
                             AfterDestinationPublish) {
                     return false;
                 }
-                return publishLayoutOwner(
-                    activeConfig,
-                    journal.containmentIds,
-                    journal
-                        .destinationLayoutName);
+                commitDecisionPublication =
+                    publishLayoutOwner(
+                        activeConfig,
+                        journal
+                            .containmentIds,
+                        journal
+                            .destinationLayoutName,
+                        directoryFlushFailure
+                            == ViewMoveDirectoryFlushFailure::
+                                HiddenOwner);
+                return acceptDurablePublication(
+                    commitDecisionPublication);
             },
             [&journal,
-             interruption]() {
+             interruption,
+             &commitDecisionPublication]() {
                 if (interruption
                         == ViewMoveInterruption::
-                            AfterDestinationPublish) {
+                            AfterDestinationPublish
+                        || commitDecisionPublication
+                            == EndpointPublicationResult::
+                                PublishedButDirectoryFlushFailed) {
                     return Layout::
                         ViewMoveTransaction::
                             PersistentOwner::Unknown;
@@ -3446,14 +3556,26 @@ ViewMovePersistenceResult Storage::persistViewMoveSnapshot(
                         .destinationLayoutName);
             },
             [destinationConfig,
-             &journal]() {
-                return tombstoneSnapshot(
-                    destinationConfig,
-                    journal
-                        .containmentIds);
+             &journal,
+             directoryFlushFailure,
+             &endpointDirectoryFlushFailed,
+             &acceptDurablePublication]() {
+                if (endpointDirectoryFlushFailed) {
+                    return false;
+                }
+                return acceptDurablePublication(
+                    tombstoneSnapshot(
+                        destinationConfig,
+                        journal
+                            .containmentIds,
+                        directoryFlushFailure
+                            == ViewMoveDirectoryFlushFailure::
+                                Destination));
             },
             [&journal,
-             interruption]() {
+             interruption,
+             directoryFlushFailure,
+             &acceptDurablePublication]() {
                 if (interruption
                         == ViewMoveInterruption::
                             AfterCommitDecision) {
@@ -3467,10 +3589,14 @@ ViewMovePersistenceResult Storage::persistViewMoveSnapshot(
                                     .originFile,
                                 KConfig::
                                     SimpleConfig);
-                return tombstoneSnapshot(
-                    originConfig,
-                    journal
-                        .containmentIds);
+                return acceptDurablePublication(
+                    tombstoneSnapshot(
+                        originConfig,
+                        journal
+                            .containmentIds,
+                        directoryFlushFailure
+                            == ViewMoveDirectoryFlushFailure::
+                                Origin));
             });
 
     ViewMovePersistenceResult result;
@@ -3760,7 +3886,9 @@ bool Storage::recoverPendingViewMovesIn(
     const QString &transactionsRoot,
     const QString &expectedHiddenFile,
     const ViewMoveRecoveryInterruption
-        interruption)
+        interruption,
+    const ViewMoveDirectoryFlushFailure
+        directoryFlushFailure)
 {
     QDir root(transactionsRoot);
     if (!root.exists()) {
@@ -3946,13 +4074,18 @@ bool Storage::recoverPendingViewMovesIn(
         case Layout::ViewMoveTransaction::
                 RecoveryAction::RollBack: {
             const bool firstRepositoryPublished =
-                publishSnapshot(
-                    originConfig,
-                    journal->snapshotPath(),
-                    journal
-                        ->containmentIds,
-                    QString(),
-                    true);
+                publicationIsDurable(
+                    publishSnapshot(
+                        originConfig,
+                        journal
+                            ->snapshotPath(),
+                        journal
+                            ->containmentIds,
+                        QString(),
+                        true,
+                        directoryFlushFailure
+                            == ViewMoveDirectoryFlushFailure::
+                                Origin));
             const bool firstInterruption =
                 interruption
                 == ViewMoveRecoveryInterruption::
@@ -3960,12 +4093,16 @@ bool Storage::recoverPendingViewMovesIn(
             const bool secondRepositoryPublished =
                 firstRepositoryPublished
                 && !firstInterruption
-                && publishLayoutOwner(
-                    hiddenConfig,
-                    journal
-                        ->containmentIds,
-                    journal
-                        ->originLayoutName);
+                && publicationIsDurable(
+                    publishLayoutOwner(
+                        hiddenConfig,
+                        journal
+                            ->containmentIds,
+                        journal
+                            ->originLayoutName,
+                        directoryFlushFailure
+                            == ViewMoveDirectoryFlushFailure::
+                                HiddenOwner));
             const bool secondInterruption =
                 interruption
                 == ViewMoveRecoveryInterruption::
@@ -3973,22 +4110,31 @@ bool Storage::recoverPendingViewMovesIn(
             recovered =
                 secondRepositoryPublished
                 && !secondInterruption
-                && tombstoneSnapshot(
-                    destinationConfig,
-                    journal
-                        ->containmentIds);
+                && publicationIsDurable(
+                    tombstoneSnapshot(
+                        destinationConfig,
+                        journal
+                            ->containmentIds,
+                        directoryFlushFailure
+                            == ViewMoveDirectoryFlushFailure::
+                                Destination));
             break;
         }
         case Layout::ViewMoveTransaction::
                 RecoveryAction::RollForward: {
             const bool firstRepositoryPublished =
-                publishSnapshot(
-                    destinationConfig,
-                    journal->snapshotPath(),
-                    journal
-                        ->containmentIds,
-                    QString(),
-                    true);
+                publicationIsDurable(
+                    publishSnapshot(
+                        destinationConfig,
+                        journal
+                            ->snapshotPath(),
+                        journal
+                            ->containmentIds,
+                        QString(),
+                        true,
+                        directoryFlushFailure
+                            == ViewMoveDirectoryFlushFailure::
+                                Destination));
             const bool firstInterruption =
                 interruption
                 == ViewMoveRecoveryInterruption::
@@ -3996,12 +4142,16 @@ bool Storage::recoverPendingViewMovesIn(
             const bool secondRepositoryPublished =
                 firstRepositoryPublished
                 && !firstInterruption
-                && publishLayoutOwner(
-                    hiddenConfig,
-                    journal
-                        ->containmentIds,
-                    journal
-                        ->destinationLayoutName);
+                && publicationIsDurable(
+                    publishLayoutOwner(
+                        hiddenConfig,
+                        journal
+                            ->containmentIds,
+                        journal
+                            ->destinationLayoutName,
+                        directoryFlushFailure
+                            == ViewMoveDirectoryFlushFailure::
+                                HiddenOwner));
             const bool secondInterruption =
                 interruption
                 == ViewMoveRecoveryInterruption::
@@ -4009,10 +4159,14 @@ bool Storage::recoverPendingViewMovesIn(
             recovered =
                 secondRepositoryPublished
                 && !secondInterruption
-                && tombstoneSnapshot(
-                    originConfig,
-                    journal
-                        ->containmentIds);
+                && publicationIsDurable(
+                    tombstoneSnapshot(
+                        originConfig,
+                        journal
+                            ->containmentIds,
+                        directoryFlushFailure
+                            == ViewMoveDirectoryFlushFailure::
+                                Origin));
             break;
         }
         case Layout::ViewMoveTransaction::
