@@ -3069,8 +3069,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D229 - Cross-layout placement could report success after persistence failure
-- STATUS: FIXED ON `test/fp4c-operation-storm` at `296666281`, `685ac6433`,
-  and `30ac4d840`; replacement canonical gate and fresh critical independent
+- STATUS: FIXED ON `test/fp4c-operation-storm` at `296666281`, `2f85a8ac7`,
+  and `0d1ce131d`; replacement canonical gate and fresh critical independent
   rereview remain open.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
@@ -3100,7 +3100,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   and exact cleanup in
   `linked-dock-operation-stress.seed-127934575.run-WZU6e7`.
 - REQUIRED ACCEPTANCE: rerun the canonical gate and obtain a fresh critical
-  independent rereview after `30ac4d840`.
+  independent rereview after `0d1ce131d`.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership

@@ -177,7 +177,7 @@ removal has persisted. The absent-path branch likewise omits parent search
 permission, and neither branch has complete filesystem coverage. D229 is
 reopened.
 
-The complete D229 correction is `685ac6433`. Existing and absent endpoints now
+The complete D229 correction is `2f85a8ac7`. Existing and absent endpoints now
 share one containing-directory contract: the parent exists, is a directory,
 and is both writable and searchable. Existing targets must additionally be
 regular writable files. Real filesystem coverage exercises every accepted and
@@ -200,7 +200,7 @@ blocker, and the canonical gate at
 `a1a154fd0843d64e4551d61fe559963532dee70a` is no longer final acceptance
 evidence.
 
-The complete existing-file correction is `30ac4d840`. Existing endpoints must
+The complete existing-file correction is `0d1ce131d`. Existing endpoints must
 now be regular, readable, and writable before mutation. The real-filesystem
 test drives KConfig under write-only permissions and observes the failed
 reparse, then confirms that preflight refuses the same endpoint. Missing and

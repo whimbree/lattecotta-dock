@@ -218,14 +218,14 @@ and PR #126 landed FP-4B.
       after restart is a CRITICAL persistence finding, so the rule's critical
       exception required one fresh independent rereview. That rereview returned
       `DO NOT MERGE`: existing files did not require a writable parent, and
-      absent paths did not require a searchable parent. Commit `685ac6433`
+      absent paths did not require a searchable parent. Commit `2f85a8ac7`
       completes both branches with real filesystem coverage. Its replacement
       canonical gate passed at exact branch head
       `a1a154fd0843d64e4551d61fe559963532dee70a`. The next critical rereview
       returned `DO NOT MERGE`: KConfig reparses an existing file before
       replacement, but the classifier accepts a write-only file. The
       missing-parent and regular-file-parent absent cases were also untested.
-      Commit `30ac4d840` requires readable existing targets and completes the
+      Commit `0d1ce131d` requires readable existing targets and completes the
       real-filesystem matrix. Its seven focused tests and exact 76-operation
       replay pass. Replacement canonical gate and fresh critical rereview
       remain open.
