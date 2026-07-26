@@ -236,7 +236,11 @@ layout file. The production build and seven focused tests pass. Exact seed
 127934575 completes all 76 operations and exact cleanup in nested KWin; its
 evidence is saved in
 `linked-dock-operation-stress.seed-127934575.run-SMCdxd`. Replacement
-canonical gate and fresh critical independent rereview remain open.
+canonical gate exited 0 at exact branch head
+`dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`. All 122 CTest entries, QML and
+coverage ratchets, visual probes, the complete ASan/UBSan build, four nested
+sanitizer recipes, package provenance controls, and matrix refusals passed.
+Fresh critical independent rereview remains open.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a

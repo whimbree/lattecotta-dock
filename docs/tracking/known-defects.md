@@ -3070,8 +3070,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D229 - Cross-layout placement could report success after persistence failure
 - STATUS: FIXED ON `test/fp4c-operation-storm` at `296666281`, `2f85a8ac7`,
-  `0d1ce131d`, and `cb9380566`; replacement canonical gate and fresh critical
-  independent rereview remain open.
+  `0d1ce131d`, and `cb9380566`; the replacement canonical gate passed at exact
+  branch head `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`. Fresh critical
+  independent rereview remains open.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3109,8 +3110,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   is non-writable; restoring lexical classification fails that case.
   `constexpr` controls accept the process owner and reject another owner at
   compile time; removing the ownership comparison fails the production build.
-- REQUIRED ACCEPTANCE: rerun the canonical gate and obtain a fresh critical
-  independent rereview after `cb9380566`.
+- REQUIRED ACCEPTANCE: obtain a fresh critical independent rereview after
+  `cb9380566`.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
@@ -3143,9 +3144,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: FIXED ON `test/fp4c-operation-storm`; the D229 canonical-path and
-  file-ownership correction passes its focused tests and exact replay.
-  Replacement canonical gate and fresh critical independent rereview remain
-  open.
+  file-ownership correction passes its focused tests, exact replay, and
+  replacement canonical gate at
+  `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`. Fresh critical independent
+  rereview remains open.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
