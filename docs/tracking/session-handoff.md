@@ -32,8 +32,22 @@ The replacement canonical gate exited 0 at exact branch head
 `84b4cf01ada214f2d48723de43566254f8d08839`. All 124 CTest entries, QML and
 coverage ratchets, visual probes, the complete ASan/UBSan build and four nested
 recipes, package provenance controls, and matrix refusals passed. D234's
-critical severity now requires only fresh independent rereview of the complete
-corrected diff.
+critical severity required one final fresh independent rereview of the complete
+corrected diff. That review returned `MERGE` with no findings. It independently
+verified the first-root and endpoint durability order, startup rollback and
+roll-forward authority, exact-generation completion, typed surviving callers,
+D229 through D233, and the complete Option 1 ownership model.
+
+The runtime complexity is bounded by operation type. Ordinary alignment,
+output, edge, sizing, visibility, and presentation changes use only in-memory
+generation tokens. Filesystem locks and the private temporary journal are used
+only when one dock moves between separate layout files because KConfig cannot
+atomically replace the origin, destination, and active-owner files together.
+The journal is retired after convergence. Most of the transaction change size
+is interruption and hostile-filesystem coverage rather than normal-path work.
+A future single authoritative layout store could remove this multi-file
+recovery mechanism, but that is a storage migration rather than an Option 1
+surface requirement.
 
 ## 2026-07-26: D229 durable cross-layout move transaction
 
