@@ -967,12 +967,51 @@ compoundPlacementPreflightsBeforeMutation()
     const QString validateMove = normalized(functionBody(
         managerSource,
         QStringLiteral("bool Manager::validatesViewMove")));
+    const int originPersistence =
+        validateMove.indexOf(QStringLiteral(
+            "constbooloriginPersistenceIsWritable=originLayout->isWritable()"));
+    const int destinationPersistence =
+        validateMove.indexOf(QStringLiteral(
+            "constbooldestinationPersistenceIsWritable=destinationLayout->isWritable()"));
+    const int persistenceRefusal =
+        validateMove.indexOf(QStringLiteral(
+            "if(!originPersistenceIsWritable||!destinationPersistenceIsWritable)"));
+    const int resolveContainment =
+        validateMove.indexOf(QStringLiteral(
+            "originLayout->containmentForId("));
+    QVERIFY2(originPersistence >= 0
+                 && destinationPersistence
+                    > originPersistence
+                 && persistenceRefusal
+                    > destinationPersistence
+                 && resolveContainment
+                    > persistenceRefusal,
+             "both durable layout endpoints must be writable before move ownership is resolved");
     QVERIFY(validateMove.contains(QStringLiteral(
         "originView->layout()!=originLayout")));
     QVERIFY(validateMove.contains(QStringLiteral(
         "destinationLayout->contains(")));
     QVERIFY(validateMove.contains(QStringLiteral(
         "participatesInLegacyLayoutMove")));
+
+    const QString genericLayoutSource =
+        readFile(
+            QStringLiteral(
+                "app/layout/genericlayout.cpp"));
+    const QString assignToLayout = normalized(
+        functionBody(
+            genericLayoutSource,
+            QStringLiteral(
+                "void GenericLayout::assignToLayout")));
+    const QString unassignFromLayout = normalized(
+        functionBody(
+            genericLayoutSource,
+            QStringLiteral(
+                "QList<Plasma::Containment *> GenericLayout::unassignFromLayout")));
+    QVERIFY(assignToLayout.contains(QStringLiteral(
+        "if(!Layouts::Storage::self()->syncToLayoutFile(this,false)){qFatal(")));
+    QVERIFY(unassignFromLayout.contains(QStringLiteral(
+        "if(!Layouts::Storage::self()->syncToLayoutFile(this,false)){qFatal(")));
 
     const QString positionerSource = readFile(QStringLiteral("app/view/positioner.cpp"));
     const QString relocation = normalized(functionBody(

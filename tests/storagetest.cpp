@@ -89,6 +89,7 @@ private Q_SLOTS:
     void tombstoneRemovalSnapshotRefreshesStaleSharedRepository();
     void restoreRemovalSnapshotReplacesPartialGroup();
     void removalPersistenceReportsWriteFailure();
+    void classifyLayoutPersistenceEndpoints();
 
     //! clones
     void detectClonedViewsOnlyForLatteContainments();
@@ -345,6 +346,41 @@ void StorageTest::removalPersistenceReportsWriteFailure()
     QVERIFY2(
         QFileInfo(unavailablePath).isDir(),
         qPrintable(unavailablePath));
+}
+
+void StorageTest::classifyLayoutPersistenceEndpoints()
+{
+    const QString writablePath =
+        writeLayoutFixture(
+            QStringLiteral(
+                "writable-endpoint"));
+    Latte::CentralLayout writableLayout(
+        nullptr,
+        writablePath,
+        QStringLiteral("writable"));
+    QVERIFY(writableLayout.isWritable());
+
+    QFile readOnlyFile(writablePath);
+    const QFileDevice::Permissions originalPermissions =
+        readOnlyFile.permissions();
+    QVERIFY(readOnlyFile.setPermissions(
+        QFileDevice::ReadUser
+        | QFileDevice::ReadGroup
+        | QFileDevice::ReadOther));
+    QVERIFY(!writableLayout.isWritable());
+    QVERIFY(readOnlyFile.setPermissions(
+        originalPermissions));
+
+    const QString directoryPath =
+        m_dir.filePath(
+            QStringLiteral(
+                "directory-endpoint.layout.latte"));
+    QVERIFY(QDir().mkpath(directoryPath));
+    Latte::CentralLayout directoryLayout(
+        nullptr,
+        directoryPath,
+        QStringLiteral("directory"));
+    QVERIFY(!directoryLayout.isWritable());
 }
 
 void StorageTest::tombstoneRemovalSnapshotRefreshesStaleSharedRepository()

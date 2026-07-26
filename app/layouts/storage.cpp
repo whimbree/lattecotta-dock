@@ -97,13 +97,19 @@ Storage *Storage::self()
 
 bool Storage::isWritable(const Layout::GenericLayout *layout) const
 {
-    QFileInfo layoutFileInfo(layout->file());
+    Q_ASSERT(layout);
+    const QFileInfo layoutFileInfo(layout->file());
 
-    if (layoutFileInfo.exists() && !layoutFileInfo.isWritable()) {
-        return false;
-    } else {
-        return true;
+    if (layoutFileInfo.exists()) {
+        return layoutFileInfo.isFile()
+            && layoutFileInfo.isWritable();
     }
+
+    const QFileInfo parentDirectory(
+        layoutFileInfo.absolutePath());
+    return parentDirectory.exists()
+        && parentDirectory.isDir()
+        && parentDirectory.isWritable();
 }
 
 bool Storage::isLatteContainment(const Plasma::Containment *containment) const
