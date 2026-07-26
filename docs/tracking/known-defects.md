@@ -3068,10 +3068,70 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   failed at the captured-prior contract, then passed after restoring the fix.
 - SEVERITY: release blocker.
 
+### D232 - Operation-storm journal assertion never moved a dock across layouts
+- STATUS: OPEN on `test/fp4c-operation-storm`; blocks D229 acceptance.
+- FOUND: 2026-07-26, final cold independent review of FP-4C (the
+  deterministic operation-storm acceptance).
+- SYMPTOM: every settled checkpoint reports an empty durable move transaction
+  set even if cross-layout transaction creation or retirement is broken.
+- ROOT: the immutable operation plan calls `setViewPlacement` for every move.
+  Those operations change output, edge, and alignment but never layout
+  ownership, so no durable cross-layout transaction can exist. The source
+  mutation proves only that the readback token remains in the script.
+- REQUIRED FIX: add deterministic cross-layout operations that invoke the real
+  durable move path, observe the intended transaction lifecycle, converge back
+  to an empty journal, reload, and preserve exact replay and fixture cleanup.
+  The negative control must fail when transaction creation or retirement is
+  bypassed.
+- SEVERITY: release blocker for D229 and FP-4C acceptance.
+
+### D231 - Queued active-view moves could be recorded as committed
+- STATUS: OPEN on `test/fp4c-operation-storm`; blocks D229 acceptance.
+- FOUND: 2026-07-26, final cold independent review of FP-4C (the
+  deterministic operation-storm acceptance).
+- SYMPTOM: layout settings can mark an active dock move as saved before the
+  Positioner reaches the durable cross-layout move. A later persistence or
+  placement refusal returns the dock to its prior placement but leaves the
+  settings model recorded as successful.
+- ROOT: `GenericLayout::updateView()` returns true immediately after calling
+  the void `Positioner::setNextLocation()`. The durable `Manager::moveView()`
+  decision occurs later inside the Positioner and has no completion result
+  path back to `Views::save()`. The source contract test incorrectly pins the
+  unconditional true return.
+- REQUIRED FIX: carry a generation-tagged committed or refused result from the
+  Positioner to the settings transaction. Finalize model-original state only
+  after durable commit. On refusal, retain dirty state and display the
+  persistent warning. Cover delayed KConfig refusal, Positioner preflight
+  refusal, supersession, and successful completion without a synchronous UI
+  wait.
+- SEVERITY: release blocker.
+
+### D230 - Layout directory entries were not durable before journal retirement
+- STATUS: OPEN on `test/fp4c-operation-storm`; blocks D229 acceptance.
+- FOUND: 2026-07-26, final cold independent review of FP-4C (the
+  deterministic operation-storm acceptance).
+- SYMPTOM: a host crash after journal retirement can restore an older
+  combination of destination, active-owner, and origin directory entries. If
+  origin retirement survives while destination publication does not, the
+  complete dock subtree is lost without a recovery journal.
+- ROOT: every KConfig publication calls `sync()` and performs fresh semantic
+  readback, but no publication flushes the containing layout directory. The
+  separate transaction directory is flushed before its journal is retired, so
+  the recovery record can become durable before the endpoint renames it proves.
+- REQUIRED FIX: durably flush every affected endpoint directory after
+  semantic convergence and before the transaction advances or retires its
+  journal. A controlled flush failure must retain a recoverable journal, and
+  interruption coverage must prove rollback or roll-forward from every
+  publication boundary.
+- SEVERITY: critical release blocker.
+
 ### D229 - Cross-layout placement could report success after persistence failure
-- STATUS: FIXED on `test/fp4c-operation-storm` (`39a455df1`,
-  `3c2d81ee8`, `94d7dd446`); the replacement canonical gate passed at
-  `8ef520abe`; fresh critical independent rereview pending.
+- STATUS: OPEN on `test/fp4c-operation-storm`; the durable transaction is
+  implemented by `39a455df1`, `3c2d81ee8`, and `94d7dd446`, but D230
+  (layout directory entries were not durable before journal retirement), D231
+  (queued active-view moves could be recorded as committed), and D232
+  (operation-storm journal assertion never moved a dock across layouts) block
+  acceptance.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3115,8 +3175,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   visual probes, the sanitizer nested recipes, package provenance controls,
   and matrix refusals at exact source head
   `8ef520abe4478abcb94c9818ef942d8360857c37`.
-- REQUIRED ACCEPTANCE: obtain a fresh critical independent rereview of the
-  complete durable transaction diff.
+- REQUIRED ACCEPTANCE: fix D230 through D232, pass the replacement exact
+  replay and canonical gate, and obtain a fresh critical independent rereview
+  of the complete corrected diff.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
@@ -3149,9 +3210,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: INCOMPLETE on `test/fp4c-operation-storm`; D229 (cross-layout
-  placement could report success after persistence failure) now has a durable
-  recovery transaction, a passing exact replay, and a passing replacement
-  canonical gate, but its fresh critical rereview remains pending.
+  placement could report success after persistence failure) has a durable
+  recovery transaction, but its final cold rereview found D230 through D232.
+  The earlier exact replay and canonical gate are partial historical evidence.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged

@@ -52,7 +52,22 @@ canonical gate exited 0 at exact source head
 `8ef520abe4478abcb94c9818ef942d8360857c37`: all 123 CTest entries, QML and
 coverage ratchets, visual probes, the complete ASan/UBSan nested recipes,
 package provenance controls, and matrix refusals passed. Fresh critical
-independent rereview remains before PR #128 can merge.
+independent rereview then returned `DO NOT MERGE`.
+
+D230 (layout directory entries were not durable before journal retirement) is
+critical. KConfig sync and semantic readback did not flush the shared layout
+directory before the separately flushed journal directory was retired. D231
+(queued active-view moves could be recorded as committed) found that
+`GenericLayout::updateView()` returned true when Positioner merely accepted a
+request, while its later durable refusal had no result path back to the
+settings model. D232 (operation-storm journal assertion never moved a dock
+across layouts) found that all replay moves changed only output, edge, and
+alignment, making the empty-journal assertion vacuous for D229.
+
+PR #128 remains blocked until endpoint publication is durably ordered, active
+settings moves finalize asynchronously from the exact Positioner generation,
+the real operation storm drives cross-layout movement, the replacement gate
+passes, and a fresh critical rereview returns a mergeable verdict.
 
 ## 2026-07-25: FP-4C operation storm converges
 
