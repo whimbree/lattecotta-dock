@@ -3069,9 +3069,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D229 - Cross-layout placement could report success after persistence failure
-- STATUS: OPEN ON `test/fp4c-operation-storm`; the fresh critical rereview
-  found that the classifier does not yet mirror KConfig's canonical-path and
-  file-ownership branches.
+- STATUS: FIXED ON `test/fp4c-operation-storm` at `296666281`, `2f85a8ac7`,
+  `0d1ce131d`, and `cb9380566`; replacement canonical gate and fresh critical
+  independent rereview remain open.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3104,10 +3104,13 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   matching cases. The production build and seven focused tests pass, and the
   exact seed 127934575 nested-KWin replay completes all 76 operations, reload,
   and exact cleanup in
-  `linked-dock-operation-stress.seed-127934575.run-WZU6e7`.
-- REQUIRED ACCEPTANCE: add real canonical-target symlink coverage and a
-  compile-time non-owner negative control; rerun exact replay and canonical
-  gate; obtain a fresh critical independent rereview.
+  `linked-dock-operation-stress.seed-127934575.run-SMCdxd`. A real symlink
+  fixture rejects a writable lexical parent when the canonical target parent
+  is non-writable; restoring lexical classification fails that case.
+  `constexpr` controls accept the process owner and reject another owner at
+  compile time; removing the ownership comparison fails the production build.
+- REQUIRED ACCEPTANCE: rerun the canonical gate and obtain a fresh critical
+  independent rereview after `cb9380566`.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
@@ -3139,9 +3142,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: INCOMPLETE ON `test/fp4c-operation-storm`; the D229 critical
-  rereview found unmodeled canonical-path and file-ownership persistence
-  branches after the replacement canonical gate.
+- STATUS: FIXED ON `test/fp4c-operation-storm`; the D229 canonical-path and
+  file-ownership correction passes its focused tests and exact replay.
+  Replacement canonical gate and fresh critical independent rereview remain
+  open.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
