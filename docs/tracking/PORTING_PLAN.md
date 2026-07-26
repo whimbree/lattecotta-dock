@@ -4783,11 +4783,11 @@ prerequisites in the phases above are done.
       derive placement and reservation ownership from assigned and LayerShell
       output state.
       Commits: 4ca4a33b0
-- [x] Fix D229 (cross-layout placement could report success after persistence
+- [ ] Fix D229 (cross-layout placement could report success after persistence
       failure). Preflight both layout files before mutation and make any
       post-mutation persistence failure an invariant failure or restore both
       runtime and durable ownership.
-      Commits: 296666281
+      Commits: 296666281 (partial)
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
@@ -4845,8 +4845,8 @@ prerequisites in the phases above are done.
       validates exact schema-7 identity, geometry, presentation, reservation,
       edit, compositor-window, and convergence ownership. The same document
       replays exactly and the nested configuration is restored on every exit.
-      The canonical gate passed at corrected code head `f66a404c0` after the
-      D229 persistence correction.
+      The canonical gate passed at code head `f66a404c0`, then the D229
+      critical rereview found an incomplete persistence endpoint classifier.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
       7578f1e4f, 4ca4a33b0, 296666281
