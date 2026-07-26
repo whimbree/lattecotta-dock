@@ -1,7 +1,55 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-25.
+Last updated 2026-07-26.
+
+## 2026-07-26: D229 durable cross-layout move transaction
+
+D229 (cross-layout placement could report success after persistence failure)
+is corrected on `test/fp4c-operation-storm` by `39a455df1`, `3c2d81ee8`, and
+`94d7dd446`. Filesystem endpoint classification remains an early refusal, but
+it is no longer treated as a proof that later KConfig operations cannot fail.
+
+One private checksummed journal now captures the complete root and
+subcontainment subtree before any target mutation. The destination layout is
+published first as staging. The active `.multiple-layouts_hidden` `layoutId`
+for the complete subtree is the commit decision. Origin ownership makes
+recovery restore the origin and remove staging; destination ownership makes it
+restore the destination and retire the origin. Runtime layout collections,
+signal registration, and the `View::layout()` backpointer change only after
+persistence converges. `Manager::init()` recovers before Synchronizer loads any
+layout file.
+
+The transaction refuses unsafe layout names and non-layout paths, non-private
+journal files, KConfig file, group, or entry immutability, destination identity
+collisions, held origin, destination, or active-owner locks, incomplete
+subtrees, and mixed persistent ownership. Every publication is checked through
+a fresh semantic readback. A startup retry is bounded by zero-time lock probes,
+and an interrupted recovery retains its evidence rather than loading
+ambiguous ownership.
+
+`GenericLayout::updateView()` now returns checked acceptance. A queued live
+Positioner request is accepted asynchronously, while a direct Manager refusal
+returns false. Every layouts-dialog caller displays a persistent warning and
+stops before model-original bookkeeping. `viewMoveTransactionsData()` exposes
+the schema-versioned transaction ID, layouts, complete containment set,
+persistent owner, and recovery action without endpoint paths.
+
+The real KConfig matrix covers normal commit and journal retirement, a
+legitimately stale standalone origin, file and entry immutability, all three
+held endpoint locks, unpublished `.prepare` residue, rollback and roll-forward
+interruption after each repository publication, mixed subtree ownership,
+repeated recovery, traversal-bearing manifests, and checksum corruption. The
+production build and focused `storagetest`, `dockidentitycontracttest`,
+`sourceguardtest`, and `viewmovetransactiontest` pass.
+
+The exact two-output nested-KWin replay passed all 76 operations for seed
+127934575. Every checkpoint and final quiescence reported an empty durable move
+transaction set, reload converged, and cleanup restored the pristine nested
+configuration. Evidence is stored in
+`linked-dock-operation-stress.seed-127934575.run-APzTUu`. The replacement
+canonical gate and fresh critical independent rereview remain before PR #128
+can merge.
 
 ## 2026-07-25: FP-4C operation storm converges
 

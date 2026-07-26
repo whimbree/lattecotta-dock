@@ -175,7 +175,7 @@ and PR #126 landed FP-4B.
       settled state. Fail on any divergence; keep the replay log only as the
       reproduction artifact.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
-      5ce307460, f58f70558, 0382044fe, ff41d8eca
+      5ce307460, f58f70558, 0382044fe, ff41d8eca, 94d7dd446
 
 ## Definition of done
 
@@ -188,9 +188,10 @@ and PR #126 landed FP-4B.
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
       independent unless a shared root is proved.
-- [ ] Every asserted state is available through D-Bus. Update the adaptor XML,
+- [x] Every asserted state is available through D-Bus. Update the adaptor XML,
       atomic serializer and exact schema test, D-Bus design document, and D-Bus
       usage reference in the same source commit.
+      Commits: 3c2d81ee8
 - [x] The README describes the stable floating-panel behavior in timeless
       terms.
 - [ ] The full canonical gate passes after the final source commit.
@@ -236,8 +237,14 @@ and PR #126 landed FP-4B.
       head `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`; the fresh critical
       rereview returned `DO NOT MERGE`. A file-wide KConfig `[$i]`
       immutability marker passes filesystem preflight and makes the later
-      sync refuse after mutation. D229 now requires a recoverable durable move
-      transaction; the recorded gate remains historical evidence only.
+      sync refuse after mutation. Commits `39a455df1` and `3c2d81ee8` now
+      provide a checksummed destination-first transaction, active-owner commit
+      decision, startup rollback or roll-forward, immutable and held-lock
+      refusal, semantic readback, and typed refusal propagation. Commit
+      `94d7dd446` requires no pending transaction at every operation-storm
+      checkpoint. The focused matrix and exact seed 127934575 replay pass in
+      `linked-dock-operation-stress.seed-127934575.run-APzTUu`; the
+      replacement canonical gate and fresh critical rereview remain.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent

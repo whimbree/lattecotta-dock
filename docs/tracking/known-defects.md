@@ -3069,9 +3069,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D229 - Cross-layout placement could report success after persistence failure
-- STATUS: OPEN on `test/fp4c-operation-storm`. The critical independent
-  rereview found a non-filesystem KConfig refusal after the replacement
-  canonical gate at `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`.
+- STATUS: FIXED on `test/fp4c-operation-storm` (`39a455df1`,
+  `3c2d81ee8`, `94d7dd446`); replacement canonical gate and fresh critical
+  independent rereview pending.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3085,34 +3085,34 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   quota or device failure. The post-mutation `qFatal()` therefore converts a
   normal persistence refusal into process termination after ownership may
   already be split.
-- REQUIRED: move cross-layout persistence under one explicit durable
-  transaction. Record enough intent and snapshot state to recover after every
-  write boundary, verify destination ownership before retiring origin
-  ownership, mutate runtime only after durable convergence, and recover any
-  incomplete transaction at startup. KConfig refusal must leave or restore one
-  complete owner without reporting success.
-- EVIDENCE: real filesystem cases cover existing writable, existing
-  read-only, existing write-only, directory masquerade, absent creatable,
-  missing parent, regular-file parent, non-writable parent, and non-searchable
-  parent endpoints. The write-only case drives KConfig and observes its failed
-  reparse before confirming preflight refusal. Separate negative controls
-  removing file read, parent write, and parent search checks fail their
-  matching cases. The production build and seven focused tests pass, and the
-  exact seed 127934575 nested-KWin replay completes all 76 operations, reload,
-  and exact cleanup in
-  `linked-dock-operation-stress.seed-127934575.run-SMCdxd`. A real symlink
-  fixture rejects a writable lexical parent when the canonical target parent
-  is non-writable; restoring lexical classification fails that case.
-  `constexpr` controls accept the process owner and reject another owner at
-  compile time; removing the ownership comparison fails the production build.
-  The next critical rereview supplied a valid immutable-file counterexample:
-  a file-wide `[$i]` marker passes every filesystem check and makes
-  `KConfig::sync()` refuse after mutation. This invalidates the preflight-only
-  architecture and its canonical gate as final acceptance evidence.
-- REQUIRED ACCEPTANCE: cover immutable configuration, held-lock and injected
-  write failures at every durable phase; prove crash recovery and exact
-  restart ownership; rerun seed 127934575; pass the replacement canonical gate;
-  obtain a fresh critical independent rereview.
+- FIX: one private checksummed journal captures the complete root and
+  subcontainment subtree before any target mutation. Destination persistence
+  is staging until the active hidden layout file records destination ownership.
+  Origin ownership rolls staging back; destination ownership rolls the move
+  forward and retires origin. Runtime layout maps and signal ownership change
+  only after persistent convergence. Startup recovers before any layout file
+  loads. Settings callers receive and display direct refusal instead of
+  committing false-success model state.
+- INVARIANTS: layout names and canonical endpoints must remain direct children
+  of the layout directory; journals and snapshots are privately owned regular
+  files; every affected KConfig group and key must be mutable; all three
+  endpoint locks must be immediately available; destination identities must
+  be absent before staging; the complete subtree must name one persistent
+  owner. Semantic fresh readback, not `sync()` alone, proves every publication.
+- EVIDENCE: the pure C++20 transaction test pins destination-first ordering,
+  observed-owner authority, rollback, roll-forward, and non-reuse. Real
+  KConfig coverage exercises normal commit and journal retirement, a
+  legitimately stale standalone origin, file and entry immutability, held
+  locks on origin, destination, and active-owner endpoints, unpublished
+  `.prepare` residue, rollback and roll-forward interruption after each
+  repository publication, mixed subtree ownership, repeated recovery,
+  traversal-bearing manifests, and checksum corruption. Production and four
+  focused test targets pass. Exact seed 127934575 completes all 76 operations,
+  requires an empty transaction readback at every checkpoint and final
+  quiescence, reloads, and restores exact nested state in
+  `linked-dock-operation-stress.seed-127934575.run-APzTUu`.
+- REQUIRED ACCEPTANCE: pass the replacement canonical gate and obtain a fresh
+  critical independent rereview of the complete durable transaction diff.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
@@ -3144,12 +3144,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: INCOMPLETE on `test/fp4c-operation-storm`; FP-4C remains blocked by
-  D229 (cross-layout placement could report success after persistence
-  failure). The preflight-only persistence correction passed its focused
-  tests, exact replay, and replacement canonical gate at
-  `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`, but a critical rereview proved
-  that KConfig can still refuse after runtime mutation.
+- STATUS: INCOMPLETE on `test/fp4c-operation-storm`; D229 (cross-layout
+  placement could report success after persistence failure) now has a durable
+  recovery transaction and a passing exact replay, but its replacement
+  canonical gate and fresh critical rereview remain pending.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
