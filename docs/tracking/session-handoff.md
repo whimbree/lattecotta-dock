@@ -3,6 +3,22 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-26.
 
+## 2026-07-26: FP-4C final rereview blocks first-root durability
+
+The fresh critical rereview of the complete corrected PR #128 diff returned
+`DO NOT MERGE`. D234 (first transaction-root publication was not durable) found
+that the first `.view-move-transactions` creation never flushes the parent
+layout directory before destination mutation. A crash can preserve staged
+destination state while losing the entire recovery root. D235 (unanimated
+layout moves retained a delayed relocation completion) found that synchronous
+same-activity movement can commit while a signal-scheduled callback for the
+same generation remains queued, causing duplicate geometry and reservation
+application followed by a false critical error.
+
+Both defects are recorded before correction. D234 requires exact
+transaction-root parent-flush injection, and its critical severity requires a
+new canonical gate and fresh independent rereview after both corrections.
+
 ## 2026-07-26: D229 durable cross-layout move transaction
 
 D229 (cross-layout placement could report success after persistence failure)
