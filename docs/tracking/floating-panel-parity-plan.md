@@ -193,14 +193,12 @@ and PR #126 landed FP-4B.
       usage reference in the same source commit.
 - [x] The README describes the stable floating-panel behavior in timeless
       terms.
-- [ ] The full canonical gate passes after the final source commit.
+- [x] The full canonical gate passes after the final source commit.
       The final replacement gate exited 0 at exact branch head
-      `a1a154fd0843d64e4551d61fe559963532dee70a`, including all 122 CTest
+      `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`, including all 122 CTest
       entries, QML and coverage ratchets, visual probes, the complete
       ASan/UBSan build, four nested-compositor recipes, package provenance
-      controls, and matrix refusals. The subsequent critical rereview found an
-      accepted write-only existing endpoint, so a corrected source head needs
-      a new canonical gate.
+      controls, and matrix refusals.
 - [x] Correct D226 (LayerShell output migration bypassed reservation-gated
       remapping) and D227 (layout mutation preceded destination-output
       preflight).
@@ -227,8 +225,9 @@ and PR #126 landed FP-4B.
       missing-parent and regular-file-parent absent cases were also untested.
       Commit `0d1ce131d` requires readable existing targets and completes the
       real-filesystem matrix. Its seven focused tests and exact 76-operation
-      replay pass. Replacement canonical gate and fresh critical rereview
-      remain open.
+      replay pass. The replacement canonical gate passed at exact branch head
+      `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`; fresh critical rereview
+      remains open.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent

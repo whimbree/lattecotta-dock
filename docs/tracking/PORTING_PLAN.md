@@ -4853,8 +4853,10 @@ prerequisites in the phases above are done.
       even though KConfig must reparse it before replacement. Commit
       `0d1ce131d` requires readable existing targets and covers every parent
       existence, type, write, search, and file read/write branch with real
-      filesystem cases. Its focused tests and exact replay pass; replacement
-      canonical gate and fresh critical rereview remain open.
+      filesystem cases. Its focused tests and exact replay pass. The
+      replacement canonical gate passed at exact branch head
+      `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`; fresh critical rereview
+      remains open.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
       7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d
