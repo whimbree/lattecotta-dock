@@ -84,6 +84,13 @@ LayerShell placement are verified. Ordinary reservation updates still defer.
 The rebuilt production binary completes the 76-operation seed 127934575 replay
 and exact cleanup in the private two-output nested compositor.
 
+The replacement canonical gate then found D225 (placement handler rewrite left
+stale settings-inventory selectors). D221 changed the screen connection
+ancestry and four alignment button bodies without updating their bidirectional
+source-ledger hashes. Commit `af063f83e` maps the current scanner identities to
+the same audit rows. SettingsInventoryTest validates all 278 affordances and 25
+exemptions again. The gate must restart at the new exact head.
+
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
 globally unique historical token. The oracle retires the removed symbolic

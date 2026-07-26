@@ -4764,6 +4764,10 @@ prerequisites in the phases above are done.
       verified surface and LayerShell placement while ordinary updates remain
       deferred until the relocation commits.
       Commits: 0382044fe
+- [x] Fix D225 (placement handler rewrite left stale settings-inventory
+      selectors). Keep the bidirectional screen and alignment source mapping
+      synchronized with D221's current QML structure.
+      Commits: af063f83e
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
