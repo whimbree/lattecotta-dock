@@ -174,6 +174,7 @@ Positioner::Positioner(Latte::View *parent)
 Positioner::~Positioner()
 {
     m_inDelete = true;
+    m_placementCompletions.abandonAll();
     slideOutDuringExit();
     m_corona->wm()->unregisterIgnoredWindow(m_trackedWindowId, this);
 
@@ -1259,6 +1260,8 @@ void Positioner::onLastRepositionApplyEvent()
     m_appliedRelocationGeneration =
         m_relocationGeneration;
     Q_EMIT placementTransactionCommitted();
+    completePlacementRequest(
+        m_relocationGeneration);
     m_view->showAppliedLayerShellPlacement();
 
     //! Reservation publication is a direct connection above this point. The
@@ -1318,6 +1321,8 @@ void Positioner::applyUnanimatedPlacementGeneration()
     m_appliedRelocationGeneration =
         m_relocationGeneration;
     Q_EMIT placementTransactionCommitted();
+    completePlacementRequest(
+        m_relocationGeneration);
     m_view->showAppliedLayerShellPlacement();
 
     if (m_layoutSyncDeferredByPlacementTransaction) {
@@ -1649,6 +1654,11 @@ void Positioner::cancelFailedLayoutRelocation(
                     << m_view->validTitle();
         return;
     }
+    m_refusedPlacementRequests.insert(token);
+    static_cast<void>(
+        m_placementCompletions.complete(
+            token,
+            PlacementRequestOutcome::Refused));
     projectPendingPlacement(
         *m_placementRequests.pending());
 
@@ -1657,6 +1667,22 @@ void Positioner::cancelFailedLayoutRelocation(
     //! component empty, so geometry settlement and edit-window restoration
     //! retain their ordinary ordering.
     scheduleLastRepositionApplyEvent();
+}
+
+void Positioner::completePlacementRequest(
+    const PlacementRequestState::Token token)
+{
+    const bool wasRefused =
+        m_refusedPlacementRequests.erase(token)
+        > 0;
+    if (wasRefused) {
+        return;
+    }
+
+    static_cast<void>(
+        m_placementCompletions.complete(
+            token,
+            PlacementRequestOutcome::Committed));
 }
 
 bool Positioner::inLayoutUnloading()
@@ -2057,6 +2083,24 @@ void Positioner::setNextLocation(
     const int edge,
     const int alignment)
 {
+    static_cast<void>(
+        requestNextLocation(
+            layoutName,
+            screensGroup,
+            std::move(screenName),
+            edge,
+            alignment));
+}
+
+PlacementSubmission Positioner::requestNextLocation(
+    const QString &layoutName,
+    const int screensGroup,
+    QString screenName,
+    const int edge,
+    const int alignment,
+    PlacementCompletionRegistry::Handler
+        completionHandler)
+{
     const PlacementIntent committed =
         currentPlacementIntent();
     const PlacementIntent base =
@@ -2075,7 +2119,10 @@ void Positioner::setNextLocation(
                         << layoutName
                         << "for"
                         << m_view->validTitle();
-            return;
+            return {
+                PlacementSubmissionStatus::Rejected,
+                0,
+            };
         }
         patch.layoutName = utf8(layoutName);
     }
@@ -2092,7 +2139,10 @@ void Positioner::setNextLocation(
                         << screensGroup
                         << "for"
                         << m_view->validTitle();
-            return;
+            return {
+                PlacementSubmissionStatus::Rejected,
+                0,
+            };
         }
 
         const auto nextScreensGroup =
@@ -2117,7 +2167,10 @@ void Positioner::setNextLocation(
                     == Latte::ScreenPool::NOSCREENID) {
                 qCritical() << "Positioner refused all-secondary placement without an active secondary output for"
                             << m_view->validTitle();
-                return;
+                return {
+                    PlacementSubmissionStatus::Rejected,
+                    0,
+                };
             }
             screenName =
                 m_corona->screenPool()
@@ -2153,7 +2206,10 @@ void Positioner::setNextLocation(
                         << resolvedOutput
                         << "for"
                         << m_view->validTitle();
-            return;
+            return {
+                PlacementSubmissionStatus::Rejected,
+                0,
+            };
         }
         patch.logicalOutputName =
             utf8(screenName);
@@ -2178,7 +2234,10 @@ void Positioner::setNextLocation(
                         << edge
                         << "for"
                         << m_view->validTitle();
-            return;
+            return {
+                PlacementSubmissionStatus::Rejected,
+                0,
+            };
         }
         patch.edge = edge;
     }
@@ -2202,18 +2261,76 @@ void Positioner::setNextLocation(
                         << "for edge"
                         << static_cast<int>(
                             targetEdge);
-            return;
+            return {
+                PlacementSubmissionStatus::Rejected,
+                0,
+            };
         }
         patch.alignment =
             static_cast<int>(normalized);
     }
 
+    const std::optional<
+        PlacementRequestState::Token>
+        supersededToken =
+            m_placementRequests.pending()
+            ? std::optional{
+                m_placementRequests
+                    .pending()
+                    ->token}
+            : std::nullopt;
     const auto submission =
         m_placementRequests.submit(
             committed,
             patch);
     if (!submission.accepted) {
-        return;
+        if (!m_placementRequests.pending()) {
+            return {
+                PlacementSubmissionStatus::Applied,
+                m_appliedRelocationGeneration,
+            };
+        }
+
+        const auto pendingToken =
+            m_placementRequests.pending()->token;
+        if (m_refusedPlacementRequests.contains(
+                pendingToken)) {
+            return {
+                PlacementSubmissionStatus::Rejected,
+                pendingToken,
+            };
+        }
+        if (completionHandler
+                && !m_placementCompletions.watch(
+                    pendingToken,
+                    std::move(completionHandler))) {
+            qFatal(
+                "Positioner failed to observe a valid pending placement generation");
+        }
+        return {
+            PlacementSubmissionStatus::
+                CompletionExpected,
+            pendingToken,
+        };
+    }
+
+    const auto requestToken =
+        submission.request.token;
+    if (completionHandler
+            && !m_placementCompletions.watch(
+                requestToken,
+                std::move(completionHandler))) {
+        qFatal(
+            "Positioner failed to observe a newly accepted placement generation");
+    }
+    if (supersededToken) {
+        m_refusedPlacementRequests.erase(
+            *supersededToken);
+        static_cast<void>(
+            m_placementCompletions.complete(
+                *supersededToken,
+                PlacementRequestOutcome::
+                    Superseded));
     }
 
     const bool hideAlreadyOwned =
@@ -2272,6 +2389,12 @@ void Positioner::setNextLocation(
         Q_EMIT hidingForRelocationFinished();
         applyUnanimatedPlacementGeneration();
     }
+
+    return {
+        PlacementSubmissionStatus::
+            CompletionExpected,
+        requestToken,
+    };
 }
 
 }

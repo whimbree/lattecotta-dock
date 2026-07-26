@@ -376,8 +376,10 @@ void DockIdentityContractTest::relocationCompletionRejectsSupersededGeneration()
     const QString source = readFile(QStringLiteral("app/view/positioner.cpp"));
     const QString schedule = normalized(functionBody(
         source, QStringLiteral("void Positioner::scheduleLastRepositionApplyEvent")));
-    const QString setNext = normalized(functionBody(
-        source, QStringLiteral("void Positioner::setNextLocation")));
+    const QString requestNext = normalized(functionBody(
+        source,
+        QStringLiteral(
+            "PlacementSubmission Positioner::requestNextLocation")));
 
     const int capture = schedule.indexOf(QStringLiteral("scheduledGeneration=m_relocationGeneration"));
     const int reject = schedule.indexOf(
@@ -386,11 +388,14 @@ void DockIdentityContractTest::relocationCompletionRejectsSupersededGeneration()
     QVERIFY2(capture >= 0 && reject > capture && apply > reject,
              "delayed relocation completion must reject an older placement generation");
 
-    const int submit = setNext.indexOf(QStringLiteral(
+    const int submit = requestNext.indexOf(QStringLiteral(
         "m_placementRequests.submit("));
-    const int claim = setNext.indexOf(QStringLiteral(
+    const int claim = requestNext.indexOf(QStringLiteral(
         "m_relocationGeneration=submission.request.token;"), submit);
-    const int beginHide = setNext.indexOf(QStringLiteral("Q_EMIThidingForRelocationStarted();"));
+    const int beginHide = requestNext.indexOf(
+        QStringLiteral(
+            "Q_EMIThidingForRelocationStarted();"),
+        claim);
     QVERIFY2(submit >= 0 && claim > submit && beginHide > claim,
              "a complete latest-intent generation must be claimed before asynchronous hiding begins");
 }
@@ -1070,48 +1075,186 @@ compoundPlacementPreflightsBeforeMutation()
         readFile(
             QStringLiteral(
                 "app/layout/genericlayout.h"));
-    QVERIFY(genericLayoutHeader.contains(QStringLiteral(
-        "[[nodiscard]] bool updateView")));
+    QVERIFY(normalized(genericLayoutHeader).contains(
+        QStringLiteral(
+            "[[nodiscard]]ViewPart::PlacementSubmissionupdateView("
+            "constLatte::Data::View&viewData,"
+            "ViewPart::PlacementCompletionRegistry::HandlercompletionHandler={})")));
 
     const QString updateView = normalized(
         functionBody(
             genericLayoutSource,
             QStringLiteral(
-                "bool GenericLayout::updateView")));
+                "ViewPart::PlacementSubmission GenericLayout::updateView")));
     const int queuedPositionerRequest = updateView.indexOf(
         QStringLiteral(
-            "view->positioner()->setNextLocation("));
-    const int acceptedPositionerRequest = updateView.indexOf(
+            "view->positioner()->requestNextLocation("));
+    const int forwardsCompletionObserver = updateView.indexOf(
         QStringLiteral(
-            "returntrue;"),
+            "std::move(completionHandler)"),
         queuedPositionerRequest);
+    const int returnsPositionerResult = updateView.indexOf(
+        QStringLiteral(
+            "returnsubmission;"),
+        forwardsCompletionObserver);
     const int checkedDirectMove = updateView.indexOf(
         QStringLiteral(
             "moveWasCommitted("),
-        acceptedPositionerRequest);
+        returnsPositionerResult);
     const int rejectedDirectMove = updateView.indexOf(
         QStringLiteral(
-            "returnfalse;"),
+            "PlacementSubmissionStatus::Rejected"),
         checkedDirectMove);
     const int synchronizeAcceptedUpdate = updateView.indexOf(
         QStringLiteral(
             "syncLatteViewsToScreens()"),
         rejectedDirectMove);
     QVERIFY2(queuedPositionerRequest >= 0
-                 && acceptedPositionerRequest
+                 && forwardsCompletionObserver
                     > queuedPositionerRequest
+                 && returnsPositionerResult
+                    > forwardsCompletionObserver
                  && checkedDirectMove
-                    > acceptedPositionerRequest
+                    > returnsPositionerResult
                  && rejectedDirectMove
                     > checkedDirectMove
                  && synchronizeAcceptedUpdate
                     > rejectedDirectMove,
-             "queued Positioner work is accepted asynchronously, while direct move rejection stops synchronization");
+             "GenericLayout must forward the exact asynchronous placement result and keep direct rejection explicit");
 
     const QString viewsControllerSource =
         readFile(
             QStringLiteral(
                 "app/settings/viewsdialog/viewscontroller.cpp"));
+    const QString viewsControllerHeader =
+        normalized(
+            readFile(
+                QStringLiteral(
+                    "app/settings/viewsdialog/viewscontroller.h")));
+    QVERIFY(viewsControllerHeader.contains(
+        QStringLiteral(
+            "structPendingSaveTransaction{"
+            "quint64generation{0};"
+            "intawaitingCompletions{0};")));
+    QVERIFY(viewsControllerHeader.contains(
+        QStringLiteral(
+            "std::optional<PendingSaveTransaction>m_pendingSave")));
+
+    const QString submitViewUpdate = normalized(
+        functionBody(
+            viewsControllerSource,
+            QStringLiteral(
+                "bool Views::submitViewUpdate")));
+    const int captureSaveGeneration =
+        submitViewUpdate.indexOf(
+            QStringLiteral(
+                "constquint64saveGeneration=m_pendingSave->generation"));
+    const int accountForCompletion =
+        submitViewUpdate.indexOf(
+            QStringLiteral(
+                "++m_pendingSave->awaitingCompletions"),
+            captureSaveGeneration);
+    const int forwardCompletion =
+        submitViewUpdate.indexOf(
+            QStringLiteral(
+                "layout->updateView("),
+            accountForCompletion);
+    const int finishExactSave =
+        submitViewUpdate.indexOf(
+            QStringLiteral(
+                "controller->finishViewUpdate(saveGeneration,refusalMessage,completion)"),
+            forwardCompletion);
+    const int retainAsynchronousSave =
+        submitViewUpdate.indexOf(
+            QStringLiteral(
+                "if(submission.expectsCompletion())"),
+            finishExactSave);
+    const int failImmediateRefusal =
+        submitViewUpdate.indexOf(
+            QStringLiteral(
+                "if(!submission.accepted())"),
+            retainAsynchronousSave);
+    QVERIFY2(captureSaveGeneration >= 0
+                 && accountForCompletion
+                    > captureSaveGeneration
+                 && forwardCompletion
+                    > accountForCompletion
+                 && finishExactSave
+                    > forwardCompletion
+                 && retainAsynchronousSave
+                    > finishExactSave
+                 && failImmediateRefusal
+                    > retainAsynchronousSave,
+             "the settings caller must observe the exact save generation before accepting asynchronous placement");
+
+    const QString finishViewUpdate = normalized(
+        functionBody(
+            viewsControllerSource,
+            QStringLiteral(
+                "void Views::finishViewUpdate")));
+    const int rejectStaleSave =
+        finishViewUpdate.indexOf(
+            QStringLiteral(
+                "m_pendingSave->generation!=saveGeneration"));
+    const int countCompletion =
+        finishViewUpdate.indexOf(
+            QStringLiteral(
+                "--m_pendingSave->awaitingCompletions"),
+            rejectStaleSave);
+    const int committedOutcome =
+        finishViewUpdate.indexOf(
+            QStringLiteral(
+                "PlacementRequestOutcome::Committed"),
+            countCompletion);
+    const int refusedOutcome =
+        finishViewUpdate.indexOf(
+            QStringLiteral(
+                "PlacementRequestOutcome::Refused"),
+            committedOutcome);
+    const int supersededOutcome =
+        finishViewUpdate.indexOf(
+            QStringLiteral(
+                "PlacementRequestOutcome::Superseded"),
+            refusedOutcome);
+    const int abandonedOutcome =
+        finishViewUpdate.indexOf(
+            QStringLiteral(
+                "PlacementRequestOutcome::Abandoned"),
+            supersededOutcome);
+    QVERIFY2(rejectStaleSave >= 0
+                 && countCompletion > rejectStaleSave
+                 && committedOutcome > countCompletion
+                 && refusedOutcome > committedOutcome
+                 && supersededOutcome > refusedOutcome
+                 && abandonedOutcome > supersededOutcome,
+             "every terminal placement outcome must be handled against the exact pending save");
+
+    const QString finalizePendingSave = normalized(
+        functionBody(
+            viewsControllerSource,
+            QStringLiteral(
+                "void Views::finalizePendingSaveIfReady")));
+    const int awaitAllPlacements =
+        finalizePendingSave.indexOf(
+            QStringLiteral(
+                "m_pendingSave->awaitingCompletions>0"));
+    const int rejectEditedSnapshot =
+        finalizePendingSave.indexOf(
+            QStringLiteral(
+                "m_model->currentViewsData()!=transaction.requestedViews"),
+            awaitAllPlacements);
+    const int recordOriginalData =
+        finalizePendingSave.indexOf(
+            QStringLiteral(
+                "m_model->setOriginalData(finalizedViews)"),
+            rejectEditedSnapshot);
+    QVERIFY2(awaitAllPlacements >= 0
+                 && rejectEditedSnapshot
+                    > awaitAllPlacements
+                 && recordOriginalData
+                    > rejectEditedSnapshot,
+             "the model may become clean only after every placement commits and the submitted snapshot is still current");
+
     const QString saveViews = normalized(
         functionBody(
             viewsControllerSource,
@@ -1120,107 +1263,126 @@ compoundPlacementPreflightsBeforeMutation()
     QCOMPARE(
         saveViews.count(
             QStringLiteral(
-                "if(!central->updateView(")),
-        2);
-    QCOMPARE(
-        saveViews.count(
+                "submitViewUpdate(")),
+        3);
+    QVERIFY(!saveViews.contains(
+        QStringLiteral(
+            "setOriginalData(")));
+    const int beginSaveTransaction =
+        saveViews.indexOf(
             QStringLiteral(
-                "if(!origin->updateView(")),
-        1);
-    const int alteredViewRefusal = saveViews.indexOf(
-        QStringLiteral(
-            "if(!central->updateView(alteredViews[i]))"));
-    const int alteredViewWarning = saveViews.indexOf(
-        QStringLiteral(
-            "showDefaultPersistentErrorWarningInlineMessage("),
-        alteredViewRefusal);
-    const int stopAlteredViewSave = saveViews.indexOf(
-        QStringLiteral(
-            "return;"),
-        alteredViewWarning);
-    const int removeDeprecatedViews = saveViews.indexOf(
-        QStringLiteral(
-            "Latte::Data::ViewsTableremovedViews="),
-        stopAlteredViewSave);
-    QVERIFY2(alteredViewRefusal >= 0
-                 && alteredViewWarning
-                    > alteredViewRefusal
-                 && stopAlteredViewSave
-                    > alteredViewWarning
-                 && removeDeprecatedViews
-                    > stopAlteredViewSave,
-             "an altered-view refusal must remain visible and stop later persistence");
+                "m_pendingSave.emplace("));
+    const int submitAlteredView =
+        saveViews.indexOf(
+            QStringLiteral(
+                "submitViewUpdate(central,alteredViews[i]"),
+            beginSaveTransaction);
+    const int checkedControllerDirectMove =
+        saveViews.indexOf(
+            QStringLiteral(
+                "moveWasCommitted(moveResult)"),
+            submitAlteredView);
+    const int failDirectMove =
+        saveViews.indexOf(
+            QStringLiteral(
+                "failPendingSave("),
+            checkedControllerDirectMove);
+    const int finishCollecting =
+        saveViews.indexOf(
+            QStringLiteral(
+                "m_pendingSave->collecting=false"),
+            failDirectMove);
+    const int requestFinalization =
+        saveViews.indexOf(
+            QStringLiteral(
+                "finalizePendingSaveIfReady()"),
+            finishCollecting);
+    QVERIFY2(beginSaveTransaction >= 0
+                 && submitAlteredView
+                    > beginSaveTransaction
+                 && checkedControllerDirectMove
+                    > submitAlteredView
+                 && failDirectMove
+                    > checkedControllerDirectMove
+                 && finishCollecting
+                    > failDirectMove
+                 && requestFinalization
+                    > finishCollecting,
+             "save must remain dirty across asynchronous placement and fail visibly on direct refusal");
 
-    const int queuedControllerMove = saveViews.indexOf(
+    const QString positionerHeader =
+        normalized(
+            readFile(
+                QStringLiteral(
+                    "app/view/positioner.h")));
+    QVERIFY(positionerHeader.contains(
         QStringLiteral(
-            "if(!origin->updateView(pastedactiveview))"));
-    const int queuedMoveWarning = saveViews.indexOf(
+            "[[nodiscard]]PlacementSubmissionrequestNextLocation(")));
+    QVERIFY(positionerHeader.contains(
         QStringLiteral(
-            "showDefaultPersistentErrorWarningInlineMessage("),
-        queuedControllerMove);
-    const int stopQueuedMoveSave = saveViews.indexOf(
-        QStringLiteral(
-            "return;"),
-        queuedMoveWarning);
-    const int directControllerMove = saveViews.indexOf(
-        QStringLiteral(
-            "constautomoveResult="),
-        stopQueuedMoveSave);
-    QVERIFY2(queuedControllerMove >= 0
-                 && queuedMoveWarning
-                    > queuedControllerMove
-                 && stopQueuedMoveSave
-                    > queuedMoveWarning
-                 && directControllerMove
-                    > stopQueuedMoveSave,
-             "a queued move refusal must remain visible and stop model success bookkeeping");
+            "PlacementCompletionRegistrym_placementCompletions")));
 
-    const int directControllerRefusal = saveViews.indexOf(
-        QStringLiteral(
-            "if(!Latte::Layouts::Manager::moveWasCommitted(moveResult))"),
-        directControllerMove);
-    const int refusalWarning = saveViews.indexOf(
-        QStringLiteral(
-            "showDefaultPersistentErrorWarningInlineMessage("),
-        directControllerRefusal);
-    const int stopRejectedSave = saveViews.indexOf(
-        QStringLiteral(
-            "return;"),
-        refusalWarning);
-    const int finalizeMovedView = saveViews.indexOf(
-        QStringLiteral(
-            "if(!central->updateView(pastedactiveview))"),
-        stopRejectedSave);
-    const int finalizationWarning = saveViews.indexOf(
-        QStringLiteral(
-            "showDefaultPersistentErrorWarningInlineMessage("),
-        finalizeMovedView);
-    const int stopFailedFinalization = saveViews.indexOf(
-        QStringLiteral(
-            "return;"),
-        finalizationWarning);
-    const int recordMoveAsOriginal = saveViews.indexOf(
-        QStringLiteral(
-            "newviewsresponses[tempviewid]=pastedactiveview"),
-        stopFailedFinalization);
-    QVERIFY2(directControllerMove >= 0
-                 && directControllerRefusal
-                    > directControllerMove
-                 && refusalWarning
-                    > directControllerRefusal
-                 && stopRejectedSave
-                    > refusalWarning
-                 && finalizeMovedView
-                    > stopRejectedSave
-                 && finalizationWarning
-                    > finalizeMovedView
-                 && stopFailedFinalization
-                    > finalizationWarning
-                 && recordMoveAsOriginal
-                    > stopFailedFinalization,
-             "direct move and destination-finalization refusals must remain visible and stop model success bookkeeping");
+    const QString positionerSource =
+        readFile(
+            QStringLiteral(
+                "app/view/positioner.cpp"));
+    const QString requestNextLocation = normalized(
+        functionBody(
+            positionerSource,
+            QStringLiteral(
+                "PlacementSubmission Positioner::requestNextLocation")));
+    const int observeNewGeneration =
+        requestNextLocation.indexOf(
+            QStringLiteral(
+                "m_placementCompletions.watch(requestToken"));
+    const int supersedeOldGeneration =
+        requestNextLocation.indexOf(
+            QStringLiteral(
+                "m_placementCompletions.complete(*supersededToken,"
+                "PlacementRequestOutcome::Superseded)"),
+            observeNewGeneration);
+    const int projectNewGeneration =
+        requestNextLocation.indexOf(
+            QStringLiteral(
+                "projectPendingPlacement(submission.request)"),
+            supersedeOldGeneration);
+    QVERIFY2(observeNewGeneration >= 0
+                 && supersedeOldGeneration
+                    > observeNewGeneration
+                 && projectNewGeneration
+                    > supersedeOldGeneration,
+             "completion observation must exist before a new generation supersedes or mutates placement");
 
-    const QString positionerSource = readFile(QStringLiteral("app/view/positioner.cpp"));
+    const QString cancelFailedRelocation =
+        normalized(
+            functionBody(
+                positionerSource,
+                QStringLiteral(
+                    "void Positioner::cancelFailedLayoutRelocation")));
+    const int refuseGeneration =
+        cancelFailedRelocation.indexOf(
+            QStringLiteral(
+                "m_placementCompletions.complete(token,"
+                "PlacementRequestOutcome::Refused)"));
+    const int restorePriorPlacement =
+        cancelFailedRelocation.indexOf(
+            QStringLiteral(
+                "projectPendingPlacement(*m_placementRequests.pending())"),
+            refuseGeneration);
+    QVERIFY2(refuseGeneration >= 0
+                 && restorePriorPlacement
+                    > refuseGeneration,
+             "late layout refusal must reach the caller before the same physical generation rolls back");
+
+    const QString destroyPositioner = normalized(
+        functionBody(
+            positionerSource,
+            QStringLiteral(
+                "Positioner::~Positioner")));
+    QVERIFY(destroyPositioner.contains(
+        QStringLiteral(
+            "m_placementCompletions.abandonAll()")));
+
     const QString relocation = normalized(functionBody(
         positionerSource, QStringLiteral("void Positioner::initSignalingForLocationChangeSliding")));
     const int capturePrior = relocation.indexOf(
@@ -1246,9 +1408,13 @@ compoundPlacementPreflightsBeforeMutation()
     const int committedMove = relocation.indexOf(
         QStringLiteral("moveWasCommitted("),
         checkedMove);
+    const int reportRejectedMove = relocation.indexOf(
+        QStringLiteral(
+            "cancelFailedLayoutRelocation(plan.token,plan.prior)"),
+        committedMove);
     const int outputMutation = relocation.indexOf(
         QStringLiteral("applyOutputPlacement("),
-        committedMove);
+        reportRejectedMove);
     const int edgeMutation = relocation.indexOf(
         QStringLiteral("m_view->setLocation("),
         outputMutation);
@@ -1265,7 +1431,8 @@ compoundPlacementPreflightsBeforeMutation()
                  && revalidate > reservationMutation
                  && checkedMove > revalidate
                  && committedMove > checkedMove
-                 && outputMutation > committedMove
+                 && reportRejectedMove > committedMove
+                 && outputMutation > reportRejectedMove
                  && edgeMutation > outputMutation
                  && alignmentMutation > edgeMutation
                  && groupMutation > alignmentMutation,

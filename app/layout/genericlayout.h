@@ -15,6 +15,7 @@
 #include "../data/errordata.h"
 #include "../data/viewdata.h"
 #include "../data/viewstable.h"
+#include "../view/placementrequeststate.h"
 
 // Qt
 #include <QObject>
@@ -137,7 +138,10 @@ public:
         Plasma::Containment *containment,
         RemovalCommitMode mode);
     void removeView(const Latte::Data::View &viewData);
-    [[nodiscard]] bool updateView(const Latte::Data::View &viewData);
+    [[nodiscard]] ViewPart::PlacementSubmission updateView(
+        const Latte::Data::View &viewData,
+        ViewPart::PlacementCompletionRegistry::Handler
+            completionHandler = {});
     QString storedView(const int &containmentId); //returns temp filepath containing all view data
     void removeOrphanedSubContainment(const int &containmentId);
 

@@ -22,6 +22,7 @@
 #include <QTimer>
 
 #include <optional>
+#include <set>
 
 // Plasma
 #include <Plasma/Containment>
@@ -114,6 +115,14 @@ public:
 
     Latte::WindowSystem::WindowId trackedWindowId();
 
+    [[nodiscard]] PlacementSubmission requestNextLocation(
+        const QString &layoutName,
+        int screensGroup,
+        QString screenName,
+        int edge,
+        int alignment,
+        PlacementCompletionRegistry::Handler completionHandler = {});
+
 public Q_SLOTS:
     Q_INVOKABLE void setNextLocation(const QString layoutName, const int screensGroup, QString screenName, int edge, int alignment);
     Q_INVOKABLE void setNextScreen(const int screensGroup, const QString &screenName);
@@ -203,6 +212,8 @@ private:
     void cancelFailedLayoutRelocation(
         PlacementRequestState::Token token,
         const PlacementIntent &prior);
+    void completePlacementRequest(
+        PlacementRequestState::Token token);
     [[nodiscard]] PlacementIntent currentPlacementIntent() const;
     [[nodiscard]] std::optional<
         PlacementApplicationPlan>
@@ -298,6 +309,10 @@ private:
     std::optional<quint64>
         m_scheduledPlacementCompletion;
     PlacementRequestState m_placementRequests;
+    PlacementCompletionRegistry
+        m_placementCompletions;
+    std::set<PlacementRequestState::Token>
+        m_refusedPlacementRequests;
 
     //! These fields are one current-generation projection of
     //! m_placementRequests. They drive existing Qt change acknowledgements;

@@ -2548,12 +2548,18 @@ Data::View GenericLayout::newView(const Latte::Data::View &nextViewData)
     return result;
 }
 
-bool GenericLayout::updateView(const Latte::Data::View &viewData)
+ViewPart::PlacementSubmission GenericLayout::updateView(
+    const Latte::Data::View &viewData,
+    ViewPart::PlacementCompletionRegistry::Handler
+        completionHandler)
 {
     //! storage -> storage [view scenario]
     if (!isActive()) {
         Layouts::Storage::self()->updateView(this, viewData);
-        return true;
+        return {
+            ViewPart::PlacementSubmissionStatus::Applied,
+            0,
+        };
     }
 
     //! active -> active [view scenario]
@@ -2574,9 +2580,20 @@ bool GenericLayout::updateView(const Latte::Data::View &viewData)
                 }
             }
 
-            view->setName(viewData.name);
-            view->positioner()->setNextLocation(nextactivelayoutname, viewData.screensGroup, scrName, viewData.edge, viewData.alignment);
-            return true;
+            const auto submission =
+                view->positioner()
+                    ->requestNextLocation(
+                        nextactivelayoutname,
+                        viewData.screensGroup,
+                        scrName,
+                        viewData.edge,
+                        viewData.alignment,
+                        std::move(
+                            completionHandler));
+            if (submission.accepted()) {
+                view->setName(viewData.name);
+            }
+            return submission;
         } else {
             //! viewMustBeDeleted
             m_latteViews.remove(view->containment());
@@ -2613,7 +2630,10 @@ bool GenericLayout::updateView(const Latte::Data::View &viewData)
                     moveResult)) {
             qCritical() << "GenericLayout: failed to commit move for containment"
                         << viewData.id << "to" << nextactivelayoutname;
-            return false;
+            return {
+                ViewPart::PlacementSubmissionStatus::Rejected,
+                0,
+            };
         }
     }
 
@@ -2624,7 +2644,10 @@ bool GenericLayout::updateView(const Latte::Data::View &viewData)
     }
 
     syncLatteViewsToScreens();
-    return true;
+    return {
+        ViewPart::PlacementSubmissionStatus::Applied,
+        0,
+    };
 }
 
 void GenericLayout::removeView(const Latte::Data::View &viewData)
