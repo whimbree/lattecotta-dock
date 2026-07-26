@@ -4783,13 +4783,22 @@ prerequisites in the phases above are done.
       derive placement and reservation ownership from assigned and LayerShell
       output state.
       Commits: 4ca4a33b0
-- [x] Fix D229 (cross-layout placement could report success after persistence
+- [ ] Fix D229 (cross-layout placement could report success after persistence
       failure). Replace mutation-before-sync with one recoverable durable move
       transaction. Filesystem preflight remains an early refusal only; KConfig
       immutability, locks, parse failures, and write failures must preserve or
       restore one complete durable owner before runtime ownership changes.
       Commits: 296666281, 2f85a8ac7, 0d1ce131d, cb9380566, 39a455df1,
       3c2d81ee8, 94d7dd446
+- [ ] Fix D230 (layout directory entries were not durable before journal
+      retirement). Flush each endpoint directory after semantic publication
+      and before advancing or retiring the recovery journal.
+- [ ] Fix D231 (queued active-view moves could be recorded as committed).
+      Propagate generation-tagged Positioner completion to the settings save
+      transaction and finalize model state only after durable commit.
+- [ ] Fix D232 (operation-storm journal assertion never moved a dock across
+      layouts). Add exact cross-layout operations and non-vacuous transaction
+      lifecycle acceptance to the immutable replay.
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
@@ -4875,7 +4884,11 @@ prerequisites in the phases above are done.
       canonical gate passed at exact source head
       `8ef520abe4478abcb94c9818ef942d8360857c37`, including all 123 CTest
       entries and the complete sanitizer nested recipes. The fresh critical
-      rereview remains.
+      rereview returned `DO NOT MERGE`: endpoint directory entries were not
+      flushed before journal retirement, queued active-view refusal could not
+      reach the settings model, and the operation storm never invoked a
+      cross-layout transaction. D230 through D232 track the required
+      corrections.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
       7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566,
