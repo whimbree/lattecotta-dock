@@ -135,8 +135,14 @@ production build pass, and restoring the old predicate fails the source
 contract. The corrected exact seed 127934575 replay completes all 76 operations
 and exact cleanup in nested KWin. Its replay and snapshots are saved in
 `linked-dock-operation-stress.seed-127934575.run-P26Fo2`. The replacement
-canonical gate and required independent follow-up review remain open for PR
-#128.
+canonical gate and required independent follow-up review were the remaining
+PR #128 acceptance steps.
+
+The replacement canonical gate exited 0 at exact corrected code head
+`0b2d069a36926e5190652db165a19bc2da9e031d`. All 122 CTest entries,
+QML and coverage ratchets, visual probes, the complete ASan/UBSan build, four
+nested sanitizer recipes, package provenance controls, and matrix refusals
+passed. Only the independent follow-up review and PR landing remain open.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
