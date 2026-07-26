@@ -4918,12 +4918,19 @@ prerequisites in the phases above are done.
       `a7a523c80d9c7a67147810e5b91009308ff32243` with all 124 CTest entries,
       QML and coverage ratchets, visual probes, the complete ASan/UBSan build
       and four nested recipes, package provenance controls, and matrix
-      refusals. Fresh critical rereview remains.
+      refusals. Fresh critical rereview found D234 (first transaction-root
+      publication was not durable) and D235 (unanimated layout moves retained
+      a delayed relocation completion). Commits `8e6613904` and `c1ed12e82`
+      correct both. The next replacement canonical gate passed the complete
+      124-test, QML, coverage, visual, sanitizer, nested-recipe, package, and
+      matrix suite at exact branch head
+      `84b4cf01ada214f2d48723de43566254f8d08839`. Fresh critical rereview remains.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
       7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566,
       39a455df1, 3c2d81ee8, 94d7dd446, 8ef520abe, 9b0d5891e,
-      ad6754038, a06e84af1, 6c85510a1, 3f504ee8e, a7a523c80
+      ad6754038, a06e84af1, 6c85510a1, 3f504ee8e, a7a523c80,
+      8e6613904, c1ed12e82, 84b4cf01
 - [ ] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
