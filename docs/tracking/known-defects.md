@@ -3069,10 +3069,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D229 - Cross-layout placement could report success after persistence failure
-- STATUS: OPEN ON `test/fp4c-operation-storm`; commits `296666281` and
-  `685ac6433` corrected write and replacement-directory classification, but
-  the critical independent rereview found an unreadable existing-file
-  endpoint that still passes preflight.
+- STATUS: FIXED ON `test/fp4c-operation-storm` at `296666281`, `685ac6433`,
+  and `30ac4d840`; replacement canonical gate and fresh critical independent
+  rereview remain open.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3091,14 +3090,17 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   KConfig reparses the file before writing through `QSaveFile`; the parent
   requirement permits that replacement to commit atomically.
 - EVIDENCE: real filesystem cases cover existing writable, existing
-  read-only, directory masquerade, absent creatable, non-writable parent, and
-  non-searchable parent endpoints. Separate negative controls removing parent
-  write and search checks fail their matching cases. The production build and
-  seven focused tests pass, and the exact seed 127934575 nested-KWin replay
-  completes all 76 operations, reload, and exact cleanup.
-- REQUIRED ACCEPTANCE: add existing write-only, absent missing-parent, and
-  absent regular-file-parent coverage; rerun exact replay and the canonical
-  gate; obtain a fresh critical independent rereview.
+  read-only, existing write-only, directory masquerade, absent creatable,
+  missing parent, regular-file parent, non-writable parent, and non-searchable
+  parent endpoints. The write-only case drives KConfig and observes its failed
+  reparse before confirming preflight refusal. Separate negative controls
+  removing file read, parent write, and parent search checks fail their
+  matching cases. The production build and seven focused tests pass, and the
+  exact seed 127934575 nested-KWin replay completes all 76 operations, reload,
+  and exact cleanup in
+  `linked-dock-operation-stress.seed-127934575.run-WZU6e7`.
+- REQUIRED ACCEPTANCE: rerun the canonical gate and obtain a fresh critical
+  independent rereview after `30ac4d840`.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
@@ -3130,9 +3132,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: INCOMPLETE ON `test/fp4c-operation-storm`; the D229 critical
-  rereview found an accepted write-only persistence endpoint after the
-  replacement canonical gate.
+- STATUS: FIXED ON `test/fp4c-operation-storm`; the D229 write-only endpoint
+  correction passes its focused tests and exact replay. Replacement canonical
+  gate and fresh critical independent rereview remain open.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
