@@ -35,6 +35,26 @@ _e2e_seed_has_layout() {
     return 1
 }
 
+# _e2e_seed_stop_dock_process_group <repo> <group> [term attempts/delay]
+# [kill attempts/delay]: bounded teardown for the setsid seed dock. KCrash can
+# leave the leader stopped, so a leader-only SIGTERM followed by wait can never
+# finish. Reuse the package gate's tested live-member and zombie-aware process
+# group transaction instead of maintaining a second cleanup implementation.
+_e2e_seed_stop_dock_process_group() {
+    local repo="$1" process_group="$2"
+    local term_attempts="${3:-25}" term_delay="${4:-0.2}"
+    local kill_attempts="${5:-25}" kill_delay="${6:-0.2}"
+
+    [[ "$process_group" =~ ^[1-9][0-9]*$ ]] || {
+        echo "e2e_seed_default_config: FAIL invalid seed dock process group '$process_group'" >&2
+        return 2
+    }
+    source "$repo/scripts/lib-installed-package-gate.sh" || return 2
+    latte_package_gate_stop_process_group \
+        "$process_group" "nested seed dock process group" \
+        "$term_attempts" "$term_delay" "$kill_attempts" "$kill_delay"
+}
+
 # e2e_seed_default_config <repo> <build> <seeddir>: seed a default-layout config
 # at <seeddir> by driving the staged dock from <build> once. Returns non-zero
 # (loudly) if the dock never self-initializes a layout - a real seeding failure,
@@ -86,8 +106,10 @@ e2e_seed_default_config() {
             kill -0 "$dockpid" 2>/dev/null || break
             sleep 1
         done
-        kill -TERM "$dockpid" 2>/dev/null || true
-        wait "$dockpid" 2>/dev/null || true
+        if ! _e2e_seed_stop_dock_process_group "$repo" "$dockpid"; then
+            echo "e2e_seed_default_config: FAIL could not stop the nested seed dock process group" >&2
+            exit 2
+        fi
         if [[ "$settled" != 1 ]]; then
             echo "e2e_seed_default_config: FAIL the dock never self-initialized a default layout while seeding (last state='${state:-none}'); seed dock log tail:" >&2
             tail -30 "$seedlog" >&2 || true
