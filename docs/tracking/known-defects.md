@@ -3070,8 +3070,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D229 - Cross-layout placement could report success after persistence failure
 - STATUS: FIXED on `test/fp4c-operation-storm` (`39a455df1`,
-  `3c2d81ee8`, `94d7dd446`); replacement canonical gate and fresh critical
-  independent rereview pending.
+  `3c2d81ee8`, `94d7dd446`); the replacement canonical gate passed at
+  `8ef520abe`; fresh critical independent rereview pending.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3110,9 +3110,13 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   focused test targets pass. Exact seed 127934575 completes all 76 operations,
   requires an empty transaction readback at every checkpoint and final
   quiescence, reloads, and restores exact nested state in
-  `linked-dock-operation-stress.seed-127934575.run-APzTUu`.
-- REQUIRED ACCEPTANCE: pass the replacement canonical gate and obtain a fresh
-  critical independent rereview of the complete durable transaction diff.
+  `linked-dock-operation-stress.seed-127934575.run-APzTUu`. The replacement
+  canonical gate passed all 123 CTest entries, QML and coverage ratchets,
+  visual probes, the sanitizer nested recipes, package provenance controls,
+  and matrix refusals at exact source head
+  `8ef520abe4478abcb94c9818ef942d8360857c37`.
+- REQUIRED ACCEPTANCE: obtain a fresh critical independent rereview of the
+  complete durable transaction diff.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
@@ -3146,8 +3150,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: INCOMPLETE on `test/fp4c-operation-storm`; D229 (cross-layout
   placement could report success after persistence failure) now has a durable
-  recovery transaction and a passing exact replay, but its replacement
-  canonical gate and fresh critical rereview remain pending.
+  recovery transaction, a passing exact replay, and a passing replacement
+  canonical gate, but its fresh critical rereview remains pending.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged

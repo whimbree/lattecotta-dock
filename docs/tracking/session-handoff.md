@@ -48,8 +48,11 @@ The exact two-output nested-KWin replay passed all 76 operations for seed
 transaction set, reload converged, and cleanup restored the pristine nested
 configuration. Evidence is stored in
 `linked-dock-operation-stress.seed-127934575.run-APzTUu`. The replacement
-canonical gate and fresh critical independent rereview remain before PR #128
-can merge.
+canonical gate exited 0 at exact source head
+`8ef520abe4478abcb94c9818ef942d8360857c37`: all 123 CTest entries, QML and
+coverage ratchets, visual probes, the complete ASan/UBSan nested recipes,
+package provenance controls, and matrix refusals passed. Fresh critical
+independent rereview remains before PR #128 can merge.
 
 ## 2026-07-25: FP-4C operation storm converges
 

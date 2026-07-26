@@ -194,9 +194,9 @@ and PR #126 landed FP-4B.
       Commits: 3c2d81ee8
 - [x] The README describes the stable floating-panel behavior in timeless
       terms.
-- [ ] The full canonical gate passes after the final source commit.
+- [x] The full canonical gate passes after the final source commit.
       The final replacement gate exited 0 at exact branch head
-      `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`, including all 122 CTest
+      `8ef520abe4478abcb94c9818ef942d8360857c37`, including all 123 CTest
       entries, QML and coverage ratchets, visual probes, the complete
       ASan/UBSan build, four nested-compositor recipes, package provenance
       controls, and matrix refusals.
@@ -244,7 +244,9 @@ and PR #126 landed FP-4B.
       `94d7dd446` requires no pending transaction at every operation-storm
       checkpoint. The focused matrix and exact seed 127934575 replay pass in
       `linked-dock-operation-stress.seed-127934575.run-APzTUu`; the
-      replacement canonical gate and fresh critical rereview remain.
+      replacement canonical gate passed at exact branch head
+      `8ef520abe4478abcb94c9818ef942d8360857c37`. The fresh critical rereview
+      remains.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent
