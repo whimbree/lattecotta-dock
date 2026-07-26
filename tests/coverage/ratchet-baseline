@@ -1,4 +1,4 @@
-119
+120
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -54,6 +54,7 @@ layoutmanagertest
 layoutmenuitemwidgettest
 lengthhandleraudittest
 lengthoffsetclamptest
+linkedoperationstormmodeltest
 maskgeometrytest
 multioutputstatecontracttest
 panelbackgroundscantest
