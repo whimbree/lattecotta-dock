@@ -342,6 +342,30 @@ struct ViewMoveJournalRecord final
     return flushed;
 }
 
+[[nodiscard]] bool durablyPublishTransactionRoot(
+    const QString &transactionsRoot,
+    const bool failForTest)
+{
+    if (failForTest) {
+        qCritical() << "view move transaction injected a transaction-root publication failure for"
+                    << transactionsRoot;
+        return false;
+    }
+
+    const QString layoutDirectory =
+        QFileInfo(transactionsRoot)
+            .absolutePath();
+    if (!flushDirectory(
+            transactionsRoot)
+            || !flushDirectory(
+                layoutDirectory)) {
+        qCritical() << "view move transaction could not durably publish its transaction root"
+                    << transactionsRoot;
+        return false;
+    }
+    return true;
+}
+
 void advanceViewMoveLifecycleGeneration(
     quint64 &generation,
     const char *const lifecycleBoundary)
@@ -3316,6 +3340,22 @@ ViewMovePersistenceResult Storage::persistViewMoveSnapshot(
             .error =
                 QStringLiteral(
                     "durable transaction storage is not private")};
+    }
+    if (!durablyPublishTransactionRoot(
+            transactionsRoot,
+            directoryFlushFailure
+                == ViewMoveDirectoryFlushFailure::
+                    TransactionRootPublication)) {
+        qCritical() << "Storage::persistViewMoveSnapshot refused an undurable transaction root"
+                    << transactionsRoot;
+        return {
+            .status =
+                ViewMovePersistenceResult::
+                    Status::Rejected,
+            .transactionPath = {},
+            .error =
+                QStringLiteral(
+                    "could not durably publish transaction storage")};
     }
 
     QLockFile transactionLock(

@@ -182,6 +182,7 @@ private:
     enum class ViewMoveDirectoryFlushFailure
     {
         None,
+        TransactionRootPublication,
         Destination,
         HiddenOwner,
         Origin,
