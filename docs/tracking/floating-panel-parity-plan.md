@@ -193,10 +193,11 @@ and PR #126 landed FP-4B.
       usage reference in the same source commit.
 - [x] The README describes the stable floating-panel behavior in timeless
       terms.
-- [ ] The full canonical gate passes after the final source commit.
-      The earlier gate exited 0 at `03155fe50`, but D221 through D224 changed
-      product and acceptance code after independent review. A replacement
-      exact-head gate is required.
+- [x] The full canonical gate passes after the final source commit.
+      The replacement gate exited 0 at exact code head `2a370029c`, including
+      all 122 CTest entries, QML and coverage ratchets, visual probes, the
+      complete ASan/UBSan build, nested-compositor integration, package
+      provenance controls, and matrix refusals.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent
