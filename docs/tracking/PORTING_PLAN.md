@@ -4783,12 +4783,13 @@ prerequisites in the phases above are done.
       derive placement and reservation ownership from assigned and LayerShell
       output state.
       Commits: 4ca4a33b0
-- [ ] Fix D229 (cross-layout placement could report success after persistence
+- [x] Fix D229 (cross-layout placement could report success after persistence
       failure). Replace mutation-before-sync with one recoverable durable move
       transaction. Filesystem preflight remains an early refusal only; KConfig
       immutability, locks, parse failures, and write failures must preserve or
       restore one complete durable owner before runtime ownership changes.
-      Commits: 296666281, 2f85a8ac7, 0d1ce131d, cb9380566
+      Commits: 296666281, 2f85a8ac7, 0d1ce131d, cb9380566, 39a455df1,
+      3c2d81ee8, 94d7dd446
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
@@ -4865,15 +4866,23 @@ prerequisites in the phases above are done.
       exact replay pass. The replacement canonical gate passed at exact branch
       head `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`; the fresh critical
       rereview found that KConfig immutability can still refuse after runtime
-      mutation. D229 now requires a recoverable durable move transaction.
+      mutation. Commits `39a455df1` and `3c2d81ee8` replace that fallible
+      boundary with a checksummed destination-first journal, one active-owner
+      commit decision, startup rollback or roll-forward, and persistence-free
+      runtime transfer. Commit `94d7dd446` makes every settled operation
+      checkpoint require an empty transaction readback. Focused failure tests
+      and the exact seed 127934575 nested replay pass; the replacement
+      canonical gate and fresh critical rereview remain.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
-      7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566
+      7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566,
+      39a455df1, 3c2d81ee8, 94d7dd446
 - [ ] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
-      7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566
+      7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566,
+      39a455df1, 3c2d81ee8, 94d7dd446
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

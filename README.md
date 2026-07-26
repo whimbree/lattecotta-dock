@@ -72,8 +72,12 @@ transaction. The old reservation is retired before mutation; the view then
 solves geometry against its assigned output, applies the exact layer-shell
 output and anchors, publishes the new maximum-depth reservation membership,
 commits its relocation generation, and only then remaps and reveals. A
-reversible dock removal similarly retires visual, activation-helper, and
-reservation ownership while Plasma retains the containment for Undo. Undo
+cross-layout move first journals the complete containment subtree, publishes
+destination persistence, records the active layout owner, and retires the
+origin before changing runtime membership. An interrupted move converges from
+that journal before layouts load again. A reversible dock removal similarly
+retires visual, activation-helper, and reservation ownership while Plasma
+retains the containment for Undo. Undo
 restores the exact persistent subtree and reservation before remapping it.
 Horizontal and vertical layout changes use the same per-view animation tracker,
 so automatic sizing waits for settled content on both axes.

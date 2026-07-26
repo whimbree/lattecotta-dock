@@ -4,7 +4,7 @@ Status: independent Duplicate Dock and explicit Create Linked Dock implemented;
 linked runtime lifecycle, sizing, compound placement, and reversible removal
 ownership hardened; bounded alignment normalization and same-edge span
 validation remain separate work
-(2026-07-25)
+(2026-07-26)
 
 This record defines the ownership model used to investigate dock duplication,
 screen-group cloning, edit mode, placement, and same-edge occupancy. It
@@ -73,6 +73,7 @@ that is the boundary with deferred work.
 |---|---|---|---|---|---|---|---|
 | Logical dock | One independent containment, or one original plus its linked members | Original persistent containment | Original containment ID | Duplicate Dock creates one new independent logical dock | Identity stays stable | Selects the intended edit target | Ends when the original and all linked members are removed |
 | Persistent dock record | Unique among live containments and stable for that record's lifetime; Plasma may reuse the numeric ID after permanent removal | Layout configuration | Containment ID | All containment and applet IDs are regenerated | Screen, edge, alignment, and length state update on the same record | Supplies menu and edit target identity | Removed with the containment configuration; only then may the allocator reuse its numeric ID |
+| Cross-layout move transaction | At most one pending transaction; its affected root and complete child identity set are immutable | `Layouts::Storage` and its private journal directory | Random transaction ID plus checksummed containment snapshot | Never copied into Duplicate or linked lineage | Destination persistence is staging until the active hidden file records destination ownership; runtime placement changes afterward | Independent of edit mode; settings receives typed refusal | Startup rolls origin-owned staging back or destination-owned work forward, then retires the journal |
 | Containment | Unique per visible original or clone | Plasma Corona and layout | Containment ID | Must be newly imported with remapped IDs | Persists placement and QML configuration | Own `userConfiguring` is the per-view edit presentation state | Destroyed by layout removal; no runtime view may retain it |
 | Runtime dock view | Unique QObject and QWindow per active containment | `GenericLayout` containment-to-view map | Not persisted | Constructed fresh | Remaps or recreates its layer surface | Holds only a non-owning pointer to shared edit chrome | Disconnects, unregisters, and deletes all child managers |
 | Per-output view | Every linked member is one separate containment and runtime view | `OriginalView` owns relationship membership; layout owns runtime registration | Member containment ID plus `isClonedFrom` and `linkPlacement` | Duplicate Dock clears this relationship | Derived members follow screen-group output policy; explicit members own output and edge | Derived members edit the root; explicit members edit themselves | Member unregisters from the root before destruction |
@@ -263,6 +264,30 @@ context menus, the layouts dialog, and `Layouts::Manager` all consult it. Save
 re-reads and revalidates the current origin graph before importing any
 destination, so a stale transaction cancels atomically with a visible warning.
 Derived-only groups keep their legacy coordinated move.
+
+### Cross-layout persistence mutated before destination commitment (fixed)
+
+The legacy cross-layout path unassigned the runtime containment and synchronized
+the origin file before destination persistence was known to succeed. Filesystem
+preflight reduced predictable refusals but could not prove KConfig mutability,
+lock availability, device writes, or semantic application. A later refusal
+could therefore leave no complete durable owner while runtime reported success.
+
+One private checksummed journal now captures the root and complete
+subcontainment subtree before any target mutation. Destination persistence is
+published first as staging. The complete subtree's `layoutId` in
+`.multiple-layouts_hidden` is the commit decision. Origin ownership restores
+the origin and removes staging; destination ownership restores the destination
+and retires origin. `GenericLayout` runtime membership operations no longer
+write persistence, and Manager invokes them only after the durable transaction
+converges. Startup recovery runs before Synchronizer loads layouts.
+
+Layout names, canonical direct-child endpoints, private journal files,
+KConfig immutability, destination collisions, all three endpoint locks,
+subtree identity, and one persistent owner are checked explicitly. Fresh
+semantic reads verify each publication. Settings callers stop on typed refusal,
+and D-Bus exposes the pending transaction ID, affected containment set,
+persistent owner, and recovery action.
 
 ### Persisted relationship graphs reached runtime partially validated (fixed)
 
