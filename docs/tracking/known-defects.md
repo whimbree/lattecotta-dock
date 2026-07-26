@@ -2909,20 +2909,29 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   after multiple destruction and creation cycles.
 
 ### D221 - Rapid return-to-origin placement retained stale pending fields
-- STATUS: OPEN on `test/fp4c-operation-storm`; PR #128 review blocker.
+- STATUS: FIXED on `test/fp4c-operation-storm` (`5ce307460`); PR #128
+  rereview pending.
 - FOUND: 2026-07-25, independent FP-4C (deterministic operation-storm
   acceptance) review.
 - SYMPTOM: an applied Bottom/Center view can receive Top/Left and then
   Bottom/Center again before the first relocation settles, yet still apply the
   stale Top/Left request.
-- ROOT: `Positioner::setNextLocation()` represents pending placement as sparse
+- ROOT: `Positioner::setNextLocation()` represented pending placement as sparse
   field deltas compared with currently applied state. The second request
-  matches applied state, so it neither replaces the stale pending fields nor
-  advances the relocation generation.
-- REQUIRED: every request atomically replaces the complete pending placement
-  intent. Generation and animation decisions must derive from that complete
-  intent, including return-to-origin and mixed output, edge, alignment,
-  screen-group, and follow-primary changes.
+  matched applied state, so it neither replaced the stale pending fields nor
+  advanced the relocation generation. Layout, screen-group-derived output,
+  follow-primary policy, and settings-window restoration had the same split
+  ownership.
+- FIX: `PlacementRequestState` owns one complete generation-tagged target.
+  Sparse UI boundaries overlay the newest target, Positioner projects it only
+  into Qt acknowledgement fields, and callbacks can complete only the current
+  token. Hide and settings ownership remain latched through supersession.
+- EVIDENCE: sanitizer-backed pure tests cover A-to-B-to-A, mixed patches,
+  follow-primary and screen-group reversal, stale completion, and identical
+  target coalescing. The immutable seed now includes a real two-request
+  return-to-origin burst that requires an exact two-generation advance and a
+  settled final origin. Focused CTest, the production build, coverage ratchet,
+  and QML lint gate passed.
 - SEVERITY: release blocker.
 
 ### D222 - Failed removal Undo left split runtime and persistent ownership
@@ -2972,7 +2981,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   acceptance) is merged through PR #124 at `f8396b5ed` through `5636966b5`.
   FP-4B (multi-output and separated-span topology acceptance) is merged through
   PR #126 at `4daa80121` through `6fa3c5703`. FP-4C (deterministic
-  operation-storm acceptance) passes its immutable 74-operation nested replay,
+  operation-storm acceptance) passes its immutable 76-operation nested replay,
   but the independent review found missing latest-intent, failed-Undo
   convergence, and independently derived reservation-geometry assertions.
   Execution is tracked in `floating-panel-parity-plan.md`.

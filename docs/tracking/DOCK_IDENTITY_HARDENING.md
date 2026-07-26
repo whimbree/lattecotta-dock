@@ -500,7 +500,7 @@ through the wrong authority:
 |---|---|---|
 | Duplicate an All Screens source | A fresh root immediately produced another linked ensemble | Exactly one independent containment with fresh applet IDs |
 | Duplicate from a linked member | Relationship lineage could be retained or the action was hidden | Exactly one independent containment; the source group remains unchanged |
-| Rapid output, edge, and alignment changes | An older reveal could clear a newer move, or QWindow geometry, LayerShell output, reservation membership, and applied generation could describe different placements | The immutable 74-operation plan for seed 127934575 completes with one applied transaction per settled placement; exact schema-7 projections converge and replay identically |
+| Rapid output, edge, and alignment changes | An older reveal could clear a newer move, or QWindow geometry, LayerShell output, reservation membership, and applied generation could describe different placements | The immutable 76-operation plan for seed 127934575 contains an exact A-to-B-to-A generation probe and completes with one applied transaction per settled placement; exact schema-7 projections converge and replay identically |
 | Disconnect and reconnect a member output after root changes | Runtime screen fallback kept the member mapped to primary; offline applet changes had no guaranteed replay | The member runtime parks, its persistent record remains, and reconnect restores exact shared applet content while preserving local `length` |
 | Recreate a linked root runtime | Only the root rotated, leaving member root pointers stale | Root and all live members receive fresh runtime IDs root-first; the unrelated Duplicate and every persistent containment ID stay unchanged |
 | Disconnect the root output while members target another output | Members could outlive the missing runtime coordinator or teardown could remove persistence | The complete linked runtime group parks; every containment record remains; reconnect rebuilds a fresh complete generation |
@@ -668,7 +668,7 @@ coverage and QML ratchets, all 13 scene probes, three sanitizer recipes, and the
 deterministic output matrix passing.
 
 FP-4C replaces the earlier procedural storm with an immutable schema-versioned
-plan and symbolic identity model. Seed 127934575 now drives 74 operations
+plan and symbolic identity model. Seed 127934575 now drives 76 operations
 through independent Duplicate Dock, explicit linked creation, cross-output
 placement, all edge orientations and semantic alignments, edit entry and exit,
 removal, creation after numeric ID reuse, runtime recreation, and persistence

@@ -4747,10 +4747,10 @@ prerequisites in the phases above are done.
       history). Retire a symbolic binding after exact removal and allow the
       numeric allocator to reuse that ID only for a later live record.
       Commits: 64a1e44fa
-- [ ] Fix D221 (rapid return-to-origin placement retained stale pending
+- [x] Fix D221 (rapid return-to-origin placement retained stale pending
       fields). Replace the complete pending placement intent on every request
       and prove A-to-B-to-A plus mixed placement supersession.
-      Commits:
+      Commits: 5ce307460
 - [ ] Fix D222 (failed removal Undo left split runtime and persistent
       ownership). Make every restoration and resume failure converge to a
       complete removal or complete restoration, with injected-failure tests.
