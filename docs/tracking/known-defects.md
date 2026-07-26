@@ -3018,7 +3018,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D226 - LayerShell output migration bypassed reservation-gated remapping
-- STATUS: OPEN on `test/fp4c-operation-storm`; PR #128 review blocker.
+- STATUS: FIXED on `test/fp4c-operation-storm` (`c51b3ec5f`); PR #128
+  follow-up review pending.
 - FOUND: 2026-07-25, final cold independent review of FP-4C (the deterministic
   operation-storm acceptance).
 - SYMPTOM: a primary-output change or spontaneous Qt screen reassignment can
@@ -3029,17 +3030,21 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   When Qt already reports the destination, the transaction skips the hide and
   retirement path. LayerShell then retargets and remaps immediately before
   destination reservation publication.
-- REQUIRED FIX: derive migration from Latte's assigned output and LayerShell
-  output. Treat QWindow state as an observation, hide on every authority
-  mismatch, and leave remapping to the post-publication relocation commit.
-- REQUIRED EVIDENCE: reject the old behavior when QWindow already names the
-  destination but assigned or LayerShell ownership does not. Prove that no
-  visible remap occurs before reservation publication and that ordinary
-  initial placement still maps.
+- FIX: derive migration from Latte's assigned output and LayerShell output.
+  An explicit output-move type distinguishes ownership transfer from QWindow
+  observation reconciliation. Any assigned or LayerShell authority mismatch
+  retires reservation ownership and keeps the view hidden. LayerShell output
+  application no longer remaps a previously visible surface; the
+  post-publication relocation commit owns that remap.
+- EVIDENCE: the production binary, LayerShell mapping tests, and dock identity
+  contracts pass. The focused negative control restored the immediate visible
+  remap and failed at the reservation-gated ownership contract, then passed
+  after restoring the fix.
 - SEVERITY: release blocker.
 
 ### D227 - Layout mutation preceded destination-output preflight
-- STATUS: OPEN on `test/fp4c-operation-storm`; PR #128 review blocker.
+- STATUS: FIXED on `test/fp4c-operation-storm` (`7578f1e4f`); PR #128
+  follow-up review pending.
 - FOUND: 2026-07-25, final cold independent review of FP-4C (the deterministic
   operation-storm acceptance).
 - SYMPTOM: if the destination output disappears during the relocation hide
@@ -3049,11 +3054,18 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   before checking whether the generation's `QPointer<QScreen>` survived.
   Failure cancellation then snapshots the already-mutated layout as the new
   committed intent.
-- REQUIRED FIX: validate every fallible destination prerequisite before the
-  first placement mutation, or restore the complete prior intent on failure.
-- REQUIRED EVIDENCE: a missing destination must perform zero layout, output,
-  edge, or alignment mutations and must preserve the previous committed
-  placement.
+- FIX: capture the complete prior intent and build one immutable application
+  plan. Resolve and validate output lifetime, layout endpoints, runtime view
+  ownership, linked-view requirements, and request generation before
+  reservation retirement, then revalidate immediately before synchronous
+  mutation. Layout moves share the same validation routine and have no
+  recoverable failure after unassignment. Cancellation restores the captured
+  prior intent by token instead of resampling runtime state.
+- EVIDENCE: the production binary and eight focused placement, identity,
+  layout-manager, LayerShell, and reservation tests pass. The pure state test
+  restores every prior placement field after simulated partial live-state
+  drift. A focused negative control restored the late live-state snapshot and
+  failed at the captured-prior contract, then passed after restoring the fix.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation

@@ -4768,16 +4768,16 @@ prerequisites in the phases above are done.
       selectors). Keep the bidirectional screen and alignment source mapping
       synchronized with D221's current QML structure.
       Commits: af063f83e
-- [ ] Fix D226 (LayerShell output migration bypassed reservation-gated
+- [x] Fix D226 (LayerShell output migration bypassed reservation-gated
       remapping). Derive migration from Latte's assigned output and the
       LayerShell output, hide on any authority mismatch, and remap only after
       destination reservation publication commits.
-      Commits:
-- [ ] Fix D227 (layout mutation preceded destination-output preflight).
+      Commits: c51b3ec5f
+- [x] Fix D227 (layout mutation preceded destination-output preflight).
       Validate the generation-tagged destination and every other fallible
       placement prerequisite before mutating layout, output, edge, or
       alignment ownership.
-      Commits:
+      Commits: 7578f1e4f
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing

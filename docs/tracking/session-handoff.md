@@ -94,27 +94,29 @@ exemptions again.
 The replacement canonical gate exited 0 at exact code head `2a370029c`. All
 122 CTest entries, QML and coverage ratchets, visual probes, the complete
 ASan/UBSan build, four nested sanitizer recipes, package provenance controls,
-and matrix refusals pass. The final cold independent diff review returned
-`DO NOT MERGE` with two additional output-transaction blockers. D226 records
-that `QWindow::screen()` was still treated as the output-migration authority,
-so a Qt-side screen update could bypass reservation retirement and
-reservation-gated LayerShell remapping. D227 records that compound placement
-mutated layout ownership before proving that its generation-tagged
-destination `QScreen` still existed after the hide interval. Both remain open
-on PR #128. The replacement gate is invalidated by their required source
-corrections.
+and matrix refusals passed. The final cold independent diff review returned
+`DO NOT MERGE` with two additional output-transaction blockers. Both are now
+corrected, so the replacement gate remains invalidated until the exact replay
+and canonical gate run against the new code head.
 
-D226 (LayerShell output migration bypassed reservation-gated remapping) remains
-open. Output migration must be derived from Latte's assigned output and the
-LayerShell output, with `QWindow::screen()` retained only as an observation.
-Any authority mismatch must keep the view hidden until destination placement
-and reservation publication commit the same relocation generation.
+D226 (LayerShell output migration bypassed reservation-gated remapping) is
+fixed at `c51b3ec5f`. Latte's assigned output and the LayerShell output now own
+migration decisions. QWindow screen state requests observation reconciliation
+only. Any ownership mismatch retires reservation ownership and hides the view,
+and visible LayerShell output application stays unmapped until the
+post-publication relocation commit. The production binary, LayerShell mapping
+tests, dock identity contract, and focused negative control pass.
 
-D227 (layout mutation preceded destination-output preflight) remains open.
-Every fallible destination prerequisite must be validated before the first
-layout, output, edge, or alignment mutation. Cancellation must preserve the
-complete previously committed intent when a hot-unplugged destination no
-longer exists.
+D227 (layout mutation preceded destination-output preflight) is fixed at
+`7578f1e4f`. One immutable plan captures the complete prior and target intent,
+resolves the live destination output, and validates layout ownership,
+relationship constraints, runtime participants, and generation before any
+placement mutation. The same checks run again after reservation retirement.
+Layout and output commits have no recoverable failure after mutation begins,
+and cancellation restores the captured prior intent by token. The production
+binary and eight focused placement, identity, layout-manager, LayerShell, and
+reservation tests pass. Reintroducing the late live-state cancellation
+snapshot fails the new captured-prior contract.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
