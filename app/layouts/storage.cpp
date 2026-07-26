@@ -45,6 +45,24 @@
 namespace Latte {
 namespace Layouts {
 
+namespace {
+
+[[nodiscard]] bool persistConfigurationOrReportFailure(
+    const KSharedConfigPtr &config,
+    const char *const operation)
+{
+    if (config->sync()) {
+        return true;
+    }
+
+    qCritical() << operation
+                << "could not write"
+                << config->name();
+    return false;
+}
+
+}
+
 const int Storage::IDNULL = -1;
 const int Storage::IDBASE = 0;
 
@@ -504,23 +522,35 @@ QString Storage::newUniqueIdsFile(QString originFile, const Layout::GenericLayou
     return tempFile;
 }
 
-void Storage::syncToLayoutFile(const Layout::GenericLayout *layout, bool removeLayoutId)
+bool Storage::syncToLayoutFile(
+    const Layout::GenericLayout *layout,
+    const bool removeLayoutId)
 {
     if (!layout->corona() || !isWritable(layout)) {
-        return;
+        qCritical() << "Storage::syncToLayoutFile refused an unavailable or read-only layout"
+                    << layout->name();
+        return false;
     }
 
+    const auto *const layoutContainments =
+        layout->containments();
     QList<Plasma::Containment *> retainedContainments;
-    retainedContainments.reserve(layout->containments()->size());
+    retainedContainments.reserve(
+        layoutContainments->size());
+    QHash<const Plasma::Containment *,
+          const Plasma::Containment *>
+        ownerByContainment;
+    QSet<const Plasma::Containment *>
+        screenGroupDerivedSubtree;
 
     //! Validate the complete projection before deleting the old group. A
     //! malformed ownership chain must leave the previous file intact rather
     //! than turning one bad pointer into a truncated layout.
-    for (auto *const containment : *layout->containments()) {
+    for (auto *const containment : *layoutContainments) {
         if (!containment) {
             qCritical() << "Storage::syncToLayoutFile refused a null containment in layout"
                         << layout->name();
-            return;
+            return false;
         }
 
         const auto *const parentApplet = qobject_cast<const Plasma::Applet *>(containment->parent());
@@ -529,15 +559,55 @@ void Storage::syncToLayoutFile(const Layout::GenericLayout *layout, bool removeL
             qCritical() << "Storage::syncToLayoutFile refused subcontainment"
                         << containment->id() << "with no owning containment in layout"
                         << layout->name();
-            return;
+            return false;
         }
 
+        ownerByContainment.insert(
+            containment,
+            owner);
+        if (isScreenGroupDerivedView(containment)) {
+            screenGroupDerivedSubtree.insert(
+                containment);
+        }
+    }
+
+    //! A derived screen-group View and every owned subcontainment are runtime
+    //! projections. Excluding only the root would persist its children as
+    //! orphan groups after the old file projection is replaced.
+    bool subtreeExpanded{true};
+    while (subtreeExpanded) {
+        subtreeExpanded = false;
+        for (auto *const containment :
+                *layoutContainments) {
+            const auto *const owner =
+                ownerByContainment.value(
+                    containment);
+            if (owner
+                    && screenGroupDerivedSubtree
+                        .contains(owner)
+                    && !screenGroupDerivedSubtree
+                        .contains(containment)) {
+                screenGroupDerivedSubtree.insert(
+                    containment);
+                subtreeExpanded = true;
+            }
+        }
+    }
+
+    for (auto *const containment : *layoutContainments) {
+        const auto *const owner =
+            ownerByContainment.value(containment);
+        const auto *const parentApplet =
+            qobject_cast<const Plasma::Applet *>(
+                containment->parent());
         //! Plasma keeps removed objects alive during its Undo window. The
         //! destroyed state is a persistence tombstone for the whole owned
         //! subtree; destroyedChanged(false) projects the live objects again.
         const bool scheduledForDestruction = containment->destroyed()
                 || (parentApplet && (parentApplet->destroyed() || owner->destroyed()));
-        if (!scheduledForDestruction) {
+        if (!scheduledForDestruction
+                && !screenGroupDerivedSubtree
+                    .contains(containment)) {
             retainedContainments.append(containment);
         }
     }
@@ -561,11 +631,15 @@ void Storage::syncToLayoutFile(const Layout::GenericLayout *layout, bool removeL
             newGroup.writeEntry("layoutId", "");
         }
 
-        newGroup.sync();
     }
 
+    if (!persistConfigurationOrReportFailure(
+            filePtr,
+            "Storage::syncToLayoutFile")) {
+        return false;
+    }
     filePtr->reparseConfiguration();
-    removeScreenGroupDerivedViews(layout->file());
+    return true;
 }
 
 void Storage::moveToLayoutFile(const QString &layoutName)
@@ -1795,9 +1869,9 @@ bool Storage::tombstoneViewFromSnapshot(const KSharedConfigPtr &activeConfig,
         destinationContainments.group(containmentId).deleteGroup();
     }
 
-    if (!activeConfig->sync()) {
-        qCritical() << "Storage::tombstoneViewFromSnapshot could not persist removal to"
-                    << activeConfig->name();
+    if (!persistConfigurationOrReportFailure(
+            activeConfig,
+            "Storage::tombstoneViewFromSnapshot")) {
         return false;
     }
 
@@ -1844,9 +1918,9 @@ bool Storage::restoreView(const KSharedConfigPtr &activeConfig,
         sourceContainments.group(containmentId).copyTo(&destination);
     }
 
-    if (!activeConfig->sync()) {
-        qCritical() << "Storage::restoreView could not persist removal Undo to"
-                    << activeConfig->name();
+    if (!persistConfigurationOrReportFailure(
+            activeConfig,
+            "Storage::restoreView")) {
         return false;
     }
 

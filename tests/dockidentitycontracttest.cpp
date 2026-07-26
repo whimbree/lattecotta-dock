@@ -440,16 +440,59 @@ void DockIdentityContractTest::containmentRemovalCommitsWithoutNotificationClose
         QStringLiteral("bool VisibilityManager::resumeFromReversibleRemoval")));
     const QString commitPersistence = normalized(functionBody(
         source, QStringLiteral("bool GenericLayout::commitPreparedViewRemoval")));
+    const QString undoResolution = normalized(functionBody(
+        source, QStringLiteral("void GenericLayout::scheduleRemovalUndoResolution")));
+    const QString removalFinalization = normalized(functionBody(
+        source, QStringLiteral("void GenericLayout::scheduleRemovalFinalization")));
+    const QString commitAfterDestruction = normalized(functionBody(
+        source, QStringLiteral(
+            "bool GenericLayout::\ncommitRemovalPersistenceAfterDestruction")));
     const QString permanentRemoval = normalized(functionBody(
         source, QStringLiteral("void GenericLayout::removeView")));
+    const QString viewLookup = normalized(functionBody(
+        source, QStringLiteral("Latte::View *GenericLayout::viewForContainment")));
+    const QString storageSource = readFile(
+        QStringLiteral("app/layouts/storage.cpp"));
+    const QString storageSync = normalized(functionBody(
+        storageSource,
+        QStringLiteral("bool Storage::syncToLayoutFile")));
+    const QString persistConfiguration = normalized(
+        functionBody(
+            storageSource,
+            QStringLiteral(
+                "bool persistConfigurationOrReportFailure")));
 
     QVERIFY(source.contains(QStringLiteral(
         "constexpr auto RemovalUndoWindow = std::chrono::seconds{60};")));
     QVERIFY(schedule.contains(QStringLiteral("cancelRemovalCommit(containment);")));
     QVERIFY(schedule.contains(QStringLiteral(
         "m_removalCommitTimers.value(containment)==timer")));
-    QVERIFY(schedule.contains(QStringLiteral("if(containment->destroyed())")));
-    QVERIFY(schedule.contains(QStringLiteral("containment->destroy();")));
+    const int expiryTransaction = schedule.indexOf(
+        QStringLiteral(
+            "m_removalTransactions.find(containment)"));
+    const int queueExpiryFinalization = schedule.indexOf(
+        QStringLiteral(
+            "queueRemovalFinalizationIfCurrent(token)"),
+        expiryTransaction);
+    const int deferExpiryFinalization = schedule.indexOf(
+        QStringLiteral("scheduleRemovalFinalization("),
+        queueExpiryFinalization);
+    QVERIFY2(expiryTransaction >= 0
+                 && queueExpiryFinalization
+                    > expiryTransaction
+                 && deferExpiryFinalization
+                    > queueExpiryFinalization,
+             "root removal expiry must use the checked transaction finalizer");
+    const int viewlessDestroy = schedule.indexOf(
+        QStringLiteral("containment->destroy();"),
+        deferExpiryFinalization);
+    const int viewlessProof = schedule.indexOf(
+        QStringLiteral(
+            "m_containments.contains(containment)"),
+        viewlessDestroy);
+    QVERIFY2(viewlessDestroy > deferExpiryFinalization
+                 && viewlessProof > viewlessDestroy,
+             "viewless expiry must prove that direct destruction released layout ownership");
     QVERIFY(cancel.contains(QStringLiteral("m_removalCommitTimers.take(containment)")));
 
     const int suspend = transition.indexOf(QStringLiteral(
@@ -458,25 +501,37 @@ void DockIdentityContractTest::containmentRemovalCommitsWithoutNotificationClose
         "m_waitingLatteViews[containment]=view;"));
     const int arm = transition.indexOf(QStringLiteral(
         "scheduleRemovalCommit(containment);"), park);
-    const int restorePersistence = transition.indexOf(QStringLiteral(
-        "restoreView(activeConfig,removalSnapshot)"));
-    const int resume = transition.indexOf(QStringLiteral(
-        "view->resumeFromReversibleRemoval()"), arm);
-    const int reactivate = transition.indexOf(QStringLiteral(
-        "m_latteViews[containment]=view;"), resume);
-    const int undo = transition.indexOf(QStringLiteral(
-        "cancelRemovalCommit(containment);"), arm);
-    QVERIFY2(restorePersistence >= 0 && resume > restorePersistence,
-             "Undo must restore persistent ownership before reservation and canvas ownership");
-    QVERIFY2(suspend >= 0 && park > suspend && arm > park
-                 && resume > arm && reactivate > resume
-                 && undo > reactivate,
-             "remove must suspend before parking, and Undo must restore before reactivation");
+    const int viewless = transition.indexOf(
+        QStringLiteral("if(!view){"));
+    const int viewlessReturn = transition.indexOf(
+        QStringLiteral("return;"), viewless);
+    const int rootTransaction = transition.indexOf(
+        QStringLiteral(
+            "m_removalTransactions[containment]"));
+    const int queueUndo = transition.indexOf(
+        QStringLiteral(
+            "queueUndoResolutionIfCurrent(token)"),
+        arm);
+    const int deferUndo = transition.indexOf(
+        QStringLiteral(
+            "scheduleRemovalUndoResolution("),
+        queueUndo);
+    QVERIFY2(suspend >= 0 && park > suspend && arm > park,
+             "remove must suspend before parking and arming its expiry");
+    QVERIFY2(viewless >= 0
+                 && viewlessReturn > viewless
+                 && rootTransaction > viewlessReturn,
+             "viewless subcontainments must not create root-view transactions");
+    QVERIFY2(queueUndo > arm && deferUndo > queueUndo,
+             "destroyedChanged(false) may only queue the root Undo transaction");
+    QVERIFY2(!transition.contains(QStringLiteral("restoreView("))
+                 && !transition.contains(QStringLiteral(
+                     "syncToLayoutFile("))
+                 && !transition.contains(QStringLiteral(
+                     "resumeFromReversibleRemoval(")),
+             "root Undo callbacks run before libplasma clears child transient state");
     QVERIFY2(!transition.contains(QStringLiteral("tombstoneViewFromSnapshot(")),
              "destroyedChanged fires before libplasma finishes transient subtree writes");
-    const int viewGuardEnd = transition.indexOf(QLatin1Char('}'), park);
-    QVERIFY2(arm > viewGuardEnd,
-             "viewless subcontainments must own the same removal commit fallback");
     QVERIFY(finalDestruction.contains(QStringLiteral("cancelRemovalCommit(containment);")));
 
     const int trigger = removeView.indexOf(QStringLiteral("removeAct->trigger();"));
@@ -486,12 +541,84 @@ void DockIdentityContractTest::containmentRemovalCommitsWithoutNotificationClose
              "the reversible persistence tombstone must commit after libplasma finishes askDestroy");
     QVERIFY(commitPersistence.contains(QStringLiteral(
         "tombstoneViewFromSnapshot(activeConfig,snapshot)")));
+    const int undoQueuedTurn = undoResolution.indexOf(
+        QStringLiteral("QTimer::singleShot(0,this,"));
+    const int restorePersistence = undoResolution.indexOf(
+        QStringLiteral("restoreView(activeConfig,snapshot)"),
+        undoQueuedTurn);
+    const int resume = undoResolution.indexOf(
+        QStringLiteral(
+            "waitingView->resumeFromReversibleRemoval()"),
+        restorePersistence);
+    const int reactivate = undoResolution.indexOf(
+        QStringLiteral(
+            "m_latteViews[containmentIdentity]=restoredView;"),
+        resume);
+    const int failedUndo = undoResolution.indexOf(
+        QStringLiteral("scheduleRemovalFinalization("),
+        resume);
+    QVERIFY2(undoQueuedTurn >= 0
+                 && restorePersistence > undoQueuedTurn
+                 && resume > restorePersistence
+                 && failedUndo > resume
+                 && reactivate > resume,
+             "queued Undo must restore persistence before runtime ownership and finalize every failed restore");
+
+    const int queuedTurn = removalFinalization.indexOf(
+        QStringLiteral("QTimer::singleShot(0,this,"));
+    const int acceptsToken = removalFinalization.indexOf(
+        QStringLiteral("liveTransaction->token()!=token"),
+        queuedTurn);
+    const int retireRuntime = removalFinalization.indexOf(
+        QStringLiteral(
+            "retireRuntimeViewForFailedRemoval(identity)"),
+        acceptsToken);
+    const int failedUndoDestroy = removalFinalization.indexOf(
+        QStringLiteral("guardedContainment->destroy();"),
+        retireRuntime);
+    const int destructionProof = removalFinalization.indexOf(
+        QStringLiteral(
+            "!m_containments.contains(identity)"),
+        failedUndoDestroy);
+    const int failedUndoCommit = removalFinalization.indexOf(
+        QStringLiteral("commitRemovalPersistenceAfterDestruction(memoryUsage,activeConfig,snapshot)"),
+        destructionProof);
+    QVERIFY2(queuedTurn >= 0 && acceptsToken > queuedTurn
+                 && retireRuntime > acceptsToken
+                 && failedUndoDestroy > retireRuntime
+                 && destructionProof > failedUndoDestroy
+                 && failedUndoCommit > destructionProof,
+             "failed Undo must reject stale generations, retire runtime ownership, prove containment destruction, then tombstone");
+    QVERIFY2(!viewLookup.contains(QStringLiteral("m_waitingLatteViews")),
+             "suspended removal Views must not remain runtime action targets");
+    QVERIFY(commitAfterDestruction.contains(QStringLiteral(
+        "tombstoneViewFromSnapshot(activeConfig,snapshot)")));
     const int permanentDestroy = permanentRemoval.indexOf(
         QStringLiteral("destroyContainment(viewcontainment)"));
     const int permanentCommit = permanentRemoval.indexOf(
-        QStringLiteral("commitPreparedViewRemoval("), permanentDestroy);
-    QVERIFY2(permanentDestroy >= 0 && permanentCommit > permanentDestroy,
-             "direct permanent removal must commit after recursive containment destruction");
+        QStringLiteral("commitRemovalPersistenceAfterDestruction("),
+        permanentDestroy);
+    const int permanentOwnershipProof = permanentRemoval.indexOf(
+        QStringLiteral(
+            "m_containments.contains(viewcontainment)"),
+        permanentDestroy);
+    QVERIFY2(permanentDestroy >= 0
+                 && permanentOwnershipProof > permanentDestroy
+                 && permanentCommit > permanentOwnershipProof,
+             "direct permanent removal must prove runtime retirement before persistence");
+    QVERIFY2(storageSync.contains(
+                 QStringLiteral(
+                     "persistConfigurationOrReportFailure(filePtr,"))
+                 && persistConfiguration.contains(
+                     QStringLiteral("if(config->sync())")),
+             "multiple-layout persistence failures must reach the removal transaction");
+    QVERIFY2(storageSync.contains(
+                 QStringLiteral(
+                     "screenGroupDerivedSubtree.contains(owner)"))
+                 && storageSync.contains(
+                     QStringLiteral(
+                         "!screenGroupDerivedSubtree.contains(containment)")),
+             "multiple-layout projection must exclude complete derived ownership subtrees");
 
     const int retireReservation = suspendVisibility.indexOf(
         QStringLiteral("m_reservationPublication.remove("));

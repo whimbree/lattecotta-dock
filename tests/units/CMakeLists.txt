@@ -102,6 +102,10 @@ target_link_libraries(positionergeometrytest
 # complete generation-tagged target, and stale callbacks cannot consume it.
 latte_add_unit_test(placementrequeststatetest)
 
+# D222 failed removal Undo convergence: restore, resume, queued destruction,
+# child writes, and the final tombstone have one generation-checked order.
+latte_add_unit_test(removalundotransactiontest)
+
 # FP-2 (the stable canvas and transition controller): header-only pure
 # attached/floated/envelope/trigger/mask/bridge geometry. Qt6::Test brings
 # the QRectF support; no live View or compositor reaches the core.

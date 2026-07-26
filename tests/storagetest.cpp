@@ -37,7 +37,9 @@
 #include <coretypes.h>
 
 // Qt
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QGuiApplication>
 #include <QObject>
 #include <QString>
@@ -86,6 +88,7 @@ private Q_SLOTS:
     void tombstoneRemovalSnapshotDeletesExactGroupsOnDisk();
     void tombstoneRemovalSnapshotRefreshesStaleSharedRepository();
     void restoreRemovalSnapshotReplacesPartialGroup();
+    void removalPersistenceReportsWriteFailure();
 
     //! clones
     void detectClonedViewsOnlyForLatteContainments();
@@ -295,6 +298,53 @@ void StorageTest::tombstoneRemovalSnapshotDeletesExactGroupsOnDisk()
              qPrintable(persisted));
     QVERIFY2(persisted.contains(QStringLiteral("[Containments][5]")),
              qPrintable(persisted));
+}
+
+void StorageTest::removalPersistenceReportsWriteFailure()
+{
+    const QString snapshotPath = m_dir.filePath(
+        QStringLiteral("write-failure-snapshot.layout.latte"));
+    {
+        const KSharedConfigPtr snapshot =
+            KSharedConfig::openConfig(
+                snapshotPath,
+                KConfig::SimpleConfig);
+        snapshot->group(QStringLiteral("Containments"))
+            .group(QStringLiteral("12"))
+            .writeEntry(
+                QStringLiteral("plugin"),
+                QStringLiteral(
+                    "org.kde.latte.containment"));
+        QVERIFY(snapshot->sync());
+    }
+
+    const QString unavailablePath =
+        m_dir.filePath(
+            QStringLiteral(
+                "unwritable.layout.latte"));
+    QVERIFY(QDir().mkpath(unavailablePath));
+    const KSharedConfigPtr unavailable =
+        KSharedConfig::openConfig(
+            unavailablePath,
+            KConfig::SimpleConfig);
+    unavailable->group(
+        QStringLiteral("Containments"))
+        .group(QStringLiteral("12"))
+        .writeEntry(
+            QStringLiteral("plugin"),
+            QStringLiteral(
+                "org.kde.latte.containment"));
+
+    QVERIFY(!Storage::self()->restoreView(
+        unavailable,
+        snapshotPath));
+    QVERIFY(!Storage::self()
+        ->tombstoneViewFromSnapshot(
+            unavailable,
+            snapshotPath));
+    QVERIFY2(
+        QFileInfo(unavailablePath).isDir(),
+        qPrintable(unavailablePath));
 }
 
 void StorageTest::tombstoneRemovalSnapshotRefreshesStaleSharedRepository()
