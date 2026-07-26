@@ -4783,11 +4783,11 @@ prerequisites in the phases above are done.
       derive placement and reservation ownership from assigned and LayerShell
       output state.
       Commits: 4ca4a33b0
-- [ ] Fix D229 (cross-layout placement could report success after persistence
+- [x] Fix D229 (cross-layout placement could report success after persistence
       failure). Preflight both layout files before mutation and make any
       post-mutation persistence failure an invariant failure or restore both
       runtime and durable ownership.
-      Commits: 296666281, 2f85a8ac7, 0d1ce131d
+      Commits: 296666281, 2f85a8ac7, 0d1ce131d, cb9380566
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
@@ -4858,15 +4858,19 @@ prerequisites in the phases above are done.
       `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`; fresh critical rereview
       then found that the classifier uses the lexical symlink parent while
       KConfig uses the canonical target, and accepts non-owned files that
-      KConfig writes through its non-atomic direct branch.
+      KConfig writes through its non-atomic direct branch. Commit `cb9380566`
+      mirrors both backend selections, pins ownership at compile time, and
+      supplies non-vacuous canonical-target coverage. Its focused tests and
+      exact replay pass; replacement canonical gate and fresh critical
+      rereview remain open.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
-      7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d
+      7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566
 - [x] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
-      7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d
+      7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

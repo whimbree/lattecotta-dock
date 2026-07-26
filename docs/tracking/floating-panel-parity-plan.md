@@ -229,8 +229,11 @@ and PR #126 landed FP-4B.
       `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`. The fresh critical rereview
       returned `DO NOT MERGE`: KConfig canonicalizes existing paths and uses
       `QSaveFile` only for process-owned targets, but the classifier models
-      neither branch. A corrected source head needs a new canonical gate and
-      critical rereview.
+      neither branch. Commit `cb9380566` classifies the canonical backend path
+      and requires the process owner. Its real symlink case and compile-time
+      ownership negative control are non-vacuous, and the focused tests and
+      exact replay pass. Replacement canonical gate and fresh critical
+      rereview remain open.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent

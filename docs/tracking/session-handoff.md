@@ -225,6 +225,19 @@ writes are not reported. D229 remains the PR #128 release blocker, and the
 canonical gate at `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2` is no longer
 final acceptance evidence.
 
+The complete backend-path correction is `cb9380566`. Existing endpoints are
+resolved to the same canonical file and containing directory KConfig uses, and
+only readable, writable, process-owned regular files qualify for atomic
+replacement. The ownership contract is `constexpr`; removing it fails a
+`static_assert`. A real symlink fixture proves that restoring lexical-parent
+classification accepts the wrong directory. The two absent-parent fixtures
+now retain and assert their exact paths instead of passing through an empty
+layout file. The production build and seven focused tests pass. Exact seed
+127934575 completes all 76 operations and exact cleanup in nested KWin; its
+evidence is saved in
+`linked-dock-operation-stress.seed-127934575.run-SMCdxd`. Replacement
+canonical gate and fresh critical independent rereview remain open.
+
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
 globally unique historical token. The oracle retires the removed symbolic
