@@ -4834,16 +4834,21 @@ prerequisites in the phases above are done.
       Commits: 4daa80121, dc0fda084, ad2a91c6f, 649fb79b4,
       4ac5208b9, 80e5d8fee, 3f6794861 (PR #126)
 - [x] Complete FP-4C (the deterministic operation-storm acceptance).
-      One immutable schema-versioned plan drives 74 symbolic operations through
+      One immutable schema-versioned plan drives 76 symbolic operations through
       Duplicate Dock, linked creation, output, edge, alignment, edit, removal,
       recreation, runtime rotation, and persistence reload. Every checkpoint
       validates exact schema-7 identity, geometry, presentation, reservation,
       edit, compositor-window, and convergence ownership. The same document
       replays exactly and the nested configuration is restored on every exit.
-      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa
+      The canonical gate passed at corrected code head `0b2d069a3`.
+      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
+      5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
+      7578f1e4f, 4ca4a33b0
 - [x] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
-      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa
+      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
+      5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
+      7578f1e4f, 4ca4a33b0
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

@@ -3070,7 +3070,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
 - STATUS: FIXED ON `test/fp4c-operation-storm` at `4ca4a33b0`; PR #128
-  canonical gate and independent follow-up review remain open.
+  canonical gate passed at `0b2d069a3`, and independent follow-up review
+  remains open.
 - FOUND: 2026-07-25, exact seed 127934575 replay after the D226 and D227
   corrections.
 - SYMPTOM: operation 33 leaves independent dock 14 hidden on the right edge
@@ -3098,7 +3099,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: FIXED ON `test/fp4c-operation-storm`; the replacement canonical gate
-  passed at `2a370029c`, and final FP-4C PR acceptance awaits its cold
+  passed at `0b2d069a3`, and final FP-4C PR acceptance awaits its cold
   independent rereview. FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
