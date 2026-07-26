@@ -3017,6 +3017,45 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   exemptions with every source site resolving exactly once.
 - SEVERITY: beta blocker.
 
+### D226 - LayerShell output migration bypassed reservation-gated remapping
+- STATUS: OPEN on `test/fp4c-operation-storm`; PR #128 review blocker.
+- FOUND: 2026-07-25, final cold independent review of FP-4C (the deterministic
+  operation-storm acceptance).
+- SYMPTOM: a primary-output change or spontaneous Qt screen reassignment can
+  expose a dock on the destination output while its assigned output,
+  LayerShell output, and reservation ownership still name the source.
+- ROOT: pending-output projection, reservation retirement, and
+  `View::moveToScreen()` use `QWindow::screen()` as the migration authority.
+  When Qt already reports the destination, the transaction skips the hide and
+  retirement path. LayerShell then retargets and remaps immediately before
+  destination reservation publication.
+- REQUIRED FIX: derive migration from Latte's assigned output and LayerShell
+  output. Treat QWindow state as an observation, hide on every authority
+  mismatch, and leave remapping to the post-publication relocation commit.
+- REQUIRED EVIDENCE: reject the old behavior when QWindow already names the
+  destination but assigned or LayerShell ownership does not. Prove that no
+  visible remap occurs before reservation publication and that ordinary
+  initial placement still maps.
+- SEVERITY: release blocker.
+
+### D227 - Layout mutation preceded destination-output preflight
+- STATUS: OPEN on `test/fp4c-operation-storm`; PR #128 review blocker.
+- FOUND: 2026-07-25, final cold independent review of FP-4C (the deterministic
+  operation-storm acceptance).
+- SYMPTOM: if the destination output disappears during the relocation hide
+  interval, compound placement can move the dock to the target layout but
+  retain the old output, edge, and alignment.
+- ROOT: `Positioner::hidingForRelocationFinished()` calls the layout mutation
+  before checking whether the generation's `QPointer<QScreen>` survived.
+  Failure cancellation then snapshots the already-mutated layout as the new
+  committed intent.
+- REQUIRED FIX: validate every fallible destination prerequisite before the
+  first placement mutation, or restore the complete prior intent on failure.
+- REQUIRED EVIDENCE: a missing destination must perform zero layout, output,
+  edge, or alignment mutations and must preserve the previous committed
+  placement.
+- SEVERITY: release blocker.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: FIXED ON `test/fp4c-operation-storm`; the replacement canonical gate
   passed at `2a370029c`, and final FP-4C PR acceptance awaits its cold

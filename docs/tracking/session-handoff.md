@@ -94,8 +94,27 @@ exemptions again.
 The replacement canonical gate exited 0 at exact code head `2a370029c`. All
 122 CTest entries, QML and coverage ratchets, visual probes, the complete
 ASan/UBSan build, four nested sanitizer recipes, package provenance controls,
-and matrix refusals pass. PR #128 now requires only the final cold independent
-diff review before merge preparation.
+and matrix refusals pass. The final cold independent diff review returned
+`DO NOT MERGE` with two additional output-transaction blockers. D226 records
+that `QWindow::screen()` was still treated as the output-migration authority,
+so a Qt-side screen update could bypass reservation retirement and
+reservation-gated LayerShell remapping. D227 records that compound placement
+mutated layout ownership before proving that its generation-tagged
+destination `QScreen` still existed after the hide interval. Both remain open
+on PR #128. The replacement gate is invalidated by their required source
+corrections.
+
+D226 (LayerShell output migration bypassed reservation-gated remapping) remains
+open. Output migration must be derived from Latte's assigned output and the
+LayerShell output, with `QWindow::screen()` retained only as an observation.
+Any authority mismatch must keep the view hidden until destination placement
+and reservation publication commit the same relocation generation.
+
+D227 (layout mutation preceded destination-output preflight) remains open.
+Every fallible destination prerequisite must be validated before the first
+layout, output, edge, or alignment mutation. Cancellation must preserve the
+complete previously committed intent when a hot-unplugged destination no
+longer exists.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
