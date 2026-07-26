@@ -94,6 +94,10 @@ public:
     [[nodiscard]] bool moveView(const QString &originLayoutName,
                                 uint originViewId,
                                 const QString &destinationLayoutName);
+    [[nodiscard]] bool canMoveView(
+        const QString &originLayoutName,
+        uint originViewId,
+        const QString &destinationLayoutName) const;
 
 public Q_SLOTS:
     void showAboutDialog();
@@ -115,6 +119,10 @@ Q_SIGNALS:
     void lastConfigViewChangedFrom(Latte::View *view);
 
 private:
+    [[nodiscard]] bool validatesViewMove(
+        const QString &originLayoutName,
+        uint originViewId,
+        const QString &destinationLayoutName) const;
     void cleanupOnStartup(QString path); //!remove deprecated or oldstyle config options
     void clearUnloadedContainmentsFromLinkedFile(QStringList containmentsIds, bool bypassChecks = false);
 

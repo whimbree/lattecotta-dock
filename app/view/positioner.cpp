@@ -515,24 +515,31 @@ void Positioner::syncLatteViews()
     }
 }
 
-bool Positioner::applyOutputPlacement(
+void Positioner::applyOutputPlacement(
     QScreen *const destination,
     const bool followsPrimary)
 {
     Q_ASSERT(destination);
     Q_ASSERT(m_applyingPlacementTransaction);
+    if (!destination
+            || !m_applyingPlacementTransaction) {
+        qFatal(
+            "Positioner entered output application without a validated placement transaction");
+    }
 
     m_view->setOnPrimary(followsPrimary);
 
     if (outputPlacementIsNeeded(destination)) {
-        return setScreenToFollow(destination);
+        if (!setScreenToFollow(destination)) {
+            qFatal(
+                "Positioner lost its validated output during synchronous placement application");
+        }
     } else {
         //! setScreenToFollow() deliberately returns for an unchanged
         //! physical output. The containment must still observe a changed
         //! follow-primary policy as part of this transaction.
         updateContainmentScreen();
     }
-    return true;
 }
 
 bool Positioner::outputPlacementIsNeeded(
@@ -1427,8 +1434,20 @@ void Positioner::initSignalingForLocationChangeSliding()
             return;
         }
         const auto generation = request->token;
-        const PlacementIntent target =
-            request->intent;
+        const PlacementIntent prior =
+            currentPlacementIntent();
+        const auto prepared =
+            preparePlacementApplication(
+                *request,
+                prior);
+        if (!prepared) {
+            cancelFailedLayoutRelocation(
+                generation,
+                prior);
+            return;
+        }
+        const PlacementApplicationPlan plan =
+            *prepared;
         const bool applyWithReveal =
             m_repositionIsAnimated;
         //! must be called only if relocation is animated
@@ -1437,15 +1456,22 @@ void Positioner::initSignalingForLocationChangeSliding()
             m_view->effects()->setAnimationsBlocked(true);
         }
 
-        const bool changesReservationOwnership =
-            m_pendingOutputOwnershipChange
-            || m_nextScreenEdge
-                != Plasma::Types::Floating;
         if (!m_view->visibility()->beginPlacementTransaction(
-                changesReservationOwnership)) {
+                plan.changesReservationOwnership)) {
             qCritical() << "Positioner cancelled placement after reservation retirement failed for"
                         << m_view->validTitle();
-            cancelFailedLayoutRelocation();
+            cancelFailedLayoutRelocation(
+                plan.token,
+                plan.prior);
+            return;
+        }
+        if (!validatesPlacementApplication(
+                plan)) {
+            qCritical() << "Positioner cancelled placement after a preflight participant changed during reservation retirement for"
+                        << m_view->validTitle();
+            cancelFailedLayoutRelocation(
+                plan.token,
+                plan.prior);
             return;
         }
 
@@ -1455,45 +1481,45 @@ void Positioner::initSignalingForLocationChangeSliding()
                 m_applyingPlacementTransaction, true};
 
             //! LAYOUT
-            if (m_placementRequests.isCurrent(generation)
-                    && !m_nextLayoutName.isEmpty()) {
-                const QString destinationLayoutName =
-                    qString(target.layoutName);
+            if (m_placementRequests.isCurrent(
+                    plan.token)
+                    && plan.movesLayout) {
                 if (!m_corona->layoutsManager()->moveView(
-                        m_view->layout()->name(),
+                        qString(plan.prior.layoutName),
                         m_view->containment()->id(),
-                        destinationLayoutName)) {
+                        plan.destinationLayoutName)) {
                     qCritical() << "Positioner: cancelling refused relocation of containment"
                                 << m_view->containment()->id()
                                 << "to"
-                                << destinationLayoutName;
-                    cancelFailedLayoutRelocation();
+                                << plan.destinationLayoutName;
+                    cancelFailedLayoutRelocation(
+                        plan.token,
+                        plan.prior);
                     return;
                 }
             }
 
             //! OUTPUT POLICY AND PHYSICAL OUTPUT
-            if (m_placementRequests.isCurrent(generation)
-                    && m_pendingFollowsPrimary.has_value()) {
-                if (!m_pendingOutputScreen) {
+            if (m_placementRequests.isCurrent(
+                    plan.token)
+                    && plan.appliesOutput) {
+                if (!plan.outputScreen) {
                     qCritical() << "Positioner: cancelling placement without a resolved output";
-                    cancelFailedLayoutRelocation();
+                    cancelFailedLayoutRelocation(
+                        plan.token,
+                        plan.prior);
                     return;
                 }
 
                 if (!m_nextScreenName.isEmpty()) {
-                    m_nextScreen = m_pendingOutputScreen;
+                    m_nextScreen =
+                        plan.outputScreen;
                 }
-                if (!applyOutputPlacement(
-                        m_pendingOutputScreen,
-                        *m_pendingFollowsPrimary)) {
-                    qCritical() << "Positioner cancelled placement after output staging failed for"
-                                << m_view->validTitle();
-                    cancelFailedLayoutRelocation();
-                    return;
-                }
+                applyOutputPlacement(
+                    plan.outputScreen,
+                    plan.target.followsPrimary);
                 if (m_placementRequests.isCurrent(
-                        generation)) {
+                        plan.token)) {
                     m_pendingOutputScreen.clear();
                     m_pendingFollowsPrimary.reset();
                     m_pendingOutputOwnershipChange =
@@ -1502,44 +1528,51 @@ void Positioner::initSignalingForLocationChangeSliding()
             }
 
             //! SCREEN_EDGE
-            if (m_placementRequests.isCurrent(generation)
-                    && m_nextScreenEdge
-                        != Plasma::Types::Floating) {
+            if (m_placementRequests.isCurrent(
+                    plan.token)
+                    && plan.movesEdge) {
                 m_view->setLocation(
                     static_cast<Plasma::Types::Location>(
-                        target.edge));
+                        plan.target.edge));
             }
 
             //! ALIGNMENT
-            if (m_placementRequests.isCurrent(generation)
-                    && m_nextAlignment
-                        != Latte::Types::NoneAlignment
+            if (m_placementRequests.isCurrent(
+                    plan.token)
+                    && plan.movesAlignment
                     && m_nextAlignment != m_view->alignment()) {
                 m_view->setAlignment(
                     static_cast<Latte::Types::Alignment>(
-                        target.alignment));
+                        plan.target.alignment));
                 if (m_placementRequests.isCurrent(
-                        generation)
+                        plan.token)
                         && m_view->alignment()
                             == static_cast<Latte::Types::Alignment>(
-                                target.alignment)) {
+                                plan.target.alignment)) {
                     m_nextAlignment =
                         Latte::Types::NoneAlignment;
                 }
             }
 
             //! SCREENSGROUP
-            if (m_placementRequests.isCurrent(generation)
-                    && m_view->isOriginal()) {
+            if (m_placementRequests.isCurrent(
+                    plan.token)
+                    && plan.movesScreensGroup) {
                 auto *const originalView =
                     qobject_cast<Latte::OriginalView *>(m_view);
+                Q_ASSERT(originalView);
+                if (!originalView) {
+                    qFatal(
+                        "Positioner lost the validated OriginalView before applying screen-group placement");
+                }
                 originalView->setScreensGroup(
                     static_cast<Latte::Types::ScreensGroup>(
-                        target.screensGroup));
+                        plan.target.screensGroup));
             }
         }
 
-        if (m_placementRequests.isCurrent(generation)
+        if (m_placementRequests.isCurrent(
+                plan.token)
                 && !hasPendingPlacementComponents()) {
             if (applyWithReveal) {
                 scheduleLastRepositionApplyEvent();
@@ -1579,14 +1612,16 @@ void Positioner::finishPendingScreenPlacementIfApplied()
     }
 }
 
-void Positioner::cancelFailedLayoutRelocation()
+void Positioner::cancelFailedLayoutRelocation(
+    const PlacementRequestState::Token token,
+    const PlacementIntent &prior)
 {
     if (!m_placementRequests
             .cancelToCommittedIfCurrent(
-                m_relocationGeneration,
-                currentPlacementIntent())) {
+                token,
+                prior)) {
         qCritical() << "Positioner refused to cancel stale relocation generation"
-                    << m_relocationGeneration
+                    << token
                     << "for"
                     << m_view->validTitle();
         return;
@@ -1728,6 +1763,169 @@ PlacementIntent Positioner::currentPlacementIntent() const
     };
 }
 
+std::optional<Positioner::PlacementApplicationPlan>
+Positioner::preparePlacementApplication(
+    const PlacementRequestState::Request &request,
+    const PlacementIntent &prior) const
+{
+    if (!m_placementRequests.isCurrent(
+            request.token)) {
+        qCritical() << "Positioner refused to prepare stale placement generation"
+                    << request.token
+                    << "for"
+                    << m_view->validTitle();
+        return std::nullopt;
+    }
+
+    PlacementApplicationPlan plan;
+    plan.token = request.token;
+    plan.prior = prior;
+    plan.target = request.intent;
+    plan.destinationLayoutName =
+        qString(plan.target.layoutName);
+    plan.movesLayout =
+        plan.target.layoutName
+        != plan.prior.layoutName;
+    plan.movesEdge =
+        plan.target.edge
+        != plan.prior.edge;
+    plan.movesAlignment =
+        plan.target.alignment
+        != plan.prior.alignment;
+    plan.movesScreensGroup =
+        plan.target.screensGroup
+        != plan.prior.screensGroup;
+
+    const QString targetOutputName =
+        qString(
+            plan.target.resolvedOutputName);
+    for (QScreen *const screen :
+            qGuiApp->screens()) {
+        if (screen
+                && screen->name()
+                    == targetOutputName) {
+            plan.outputScreen = screen;
+            break;
+        }
+    }
+
+    const bool outputPolicyChanges =
+        plan.target.followsPrimary
+            != plan.prior.followsPrimary
+        || plan.target.resolvedOutputName
+            != plan.prior.resolvedOutputName;
+    const bool outputStateNeedsApplication =
+        !plan.outputScreen
+        || outputPlacementIsNeeded(
+            plan.outputScreen);
+    plan.appliesOutput =
+        outputPolicyChanges
+        || outputStateNeedsApplication;
+    plan.changesReservationOwnership =
+        plan.movesEdge
+        || (plan.outputScreen
+            && (m_screenToFollow
+                    != plan.outputScreen
+                || m_view
+                    ->layerShellNeedsOutput(
+                        plan.outputScreen)));
+
+    if (plan.appliesOutput
+            != m_pendingFollowsPrimary
+                .has_value()) {
+        qCritical() << "Positioner refused an inconsistent output-placement projection for generation"
+                    << plan.token
+                    << "target="
+                    << targetOutputName
+                    << "projected="
+                    << m_pendingFollowsPrimary
+                        .has_value()
+                    << "required="
+                    << plan.appliesOutput;
+        return std::nullopt;
+    }
+
+    if (!validatesPlacementApplication(
+            plan)) {
+        return std::nullopt;
+    }
+
+    return plan;
+}
+
+bool Positioner::validatesPlacementApplication(
+    const PlacementApplicationPlan &plan) const
+{
+    if (!m_placementRequests.isCurrent(
+            plan.token)) {
+        qCritical() << "Positioner refused stale placement preflight generation"
+                    << plan.token
+                    << "for"
+                    << m_view->validTitle();
+        return false;
+    }
+    if (!m_view || !m_view->layout()
+            || !m_view->containment()) {
+        qCritical() << "Positioner refused placement without live view ownership for generation"
+                    << plan.token;
+        return false;
+    }
+    if (currentPlacementIntent()
+            != plan.prior) {
+        qCritical() << "Positioner refused placement after committed ownership changed during generation"
+                    << plan.token
+                    << "for"
+                    << m_view->validTitle();
+        return false;
+    }
+
+    if (plan.appliesOutput) {
+        const auto screens =
+            qGuiApp->screens();
+        if (!plan.outputScreen
+                || !screens.contains(
+                    plan.outputScreen.data())
+                || plan.outputScreen->name()
+                    != qString(
+                        plan.target
+                            .resolvedOutputName)) {
+            qCritical() << "Positioner refused placement after destination output disappeared for generation"
+                        << plan.token
+                        << "target="
+                        << qString(
+                            plan.target
+                                .resolvedOutputName);
+            return false;
+        }
+    }
+
+    if (plan.movesLayout
+            && !m_corona->layoutsManager()
+                ->canMoveView(
+                    qString(
+                        plan.prior.layoutName),
+                    m_view->containment()->id(),
+                    plan.destinationLayoutName)) {
+        qCritical() << "Positioner refused placement after layout-move preflight failed for generation"
+                    << plan.token
+                    << "destination="
+                    << plan.destinationLayoutName;
+        return false;
+    }
+
+    if (plan.movesScreensGroup
+            && (!m_view->isOriginal()
+                || !qobject_cast<
+                    Latte::OriginalView *>(
+                    m_view))) {
+        qCritical() << "Positioner refused screen-group placement without an OriginalView for generation"
+                    << plan.token;
+        return false;
+    }
+
+    return true;
+}
+
 void Positioner::projectPendingPlacement(
     const PlacementRequestState::Request &request)
 {
@@ -1774,6 +1972,7 @@ void Positioner::projectPendingPlacement(
             != current.followsPrimary
             || target.resolvedOutputName
                 != current.resolvedOutputName
+            || !resolvedScreen
             || assignedOutputNeedsChange
             || layerShellOutputNeedsChange
             || windowNeedsOutput) {

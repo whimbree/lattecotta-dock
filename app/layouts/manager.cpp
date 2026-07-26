@@ -21,6 +21,7 @@
 #include "../settings/universalsettings.h"
 #include "../templates/templatesmanager.h"
 #include "../tools/commontools.h"
+#include "../view/view.h"
 
 // Qt
 #include <QDir>
@@ -273,6 +274,76 @@ bool Manager::moveView(const QString &originLayoutName,
                        const uint originViewId,
                        const QString &destinationLayoutName)
 {
+    if (!validatesViewMove(
+            originLayoutName,
+            originViewId,
+            destinationLayoutName)) {
+        return false;
+    }
+
+    Layout::GenericLayout *const originLayout =
+        m_synchronizer->layout(
+            originLayoutName);
+    Layout::GenericLayout *const destinationLayout =
+        m_synchronizer->layout(
+            destinationLayoutName);
+    Q_ASSERT(originLayout);
+    Q_ASSERT(destinationLayout);
+
+    Plasma::Containment *const originViewContainment =
+        originLayout->containmentForId(
+            originViewId);
+    Latte::View *const originView =
+        originLayout->viewForContainment(
+            originViewId);
+    Q_ASSERT(originViewContainment);
+    Q_ASSERT(originView);
+
+    QList<Plasma::Containment *> originContainments =
+        originLayout->unassignFromLayout(
+            originViewContainment);
+    if (originContainments.isEmpty()) {
+        qFatal(
+            "layout manager lost validated containment %u before its synchronous move from %s to %s",
+            originViewId,
+            qPrintable(originLayoutName),
+            qPrintable(destinationLayoutName));
+    }
+
+    destinationLayout->assignToLayout(
+        originView,
+        std::move(originContainments));
+    if (originLayout->contains(
+            originViewContainment)
+            || !destinationLayout->contains(
+                originViewContainment)
+            || originView->layout()
+                != destinationLayout) {
+        qFatal(
+            "layout manager failed the postcondition for containment %u moved from %s to %s",
+            originViewId,
+            qPrintable(originLayoutName),
+            qPrintable(destinationLayoutName));
+    }
+    return true;
+}
+
+bool Manager::canMoveView(
+    const QString &originLayoutName,
+    const uint originViewId,
+    const QString &destinationLayoutName) const
+{
+    return validatesViewMove(
+        originLayoutName,
+        originViewId,
+        destinationLayoutName);
+}
+
+bool Manager::validatesViewMove(
+    const QString &originLayoutName,
+    const uint originViewId,
+    const QString &destinationLayoutName) const
+{
     if (memoryUsage() != Latte::MemoryUsage::MultipleLayouts
             || originLayoutName.isEmpty()
             || destinationLayoutName.isEmpty()
@@ -295,9 +366,19 @@ bool Manager::moveView(const QString &originLayoutName,
     Plasma::Containment *const originViewContainment = originLayout->containmentForId(originViewId);
     Latte::View *const originView = originLayout->viewForContainment(originViewId);
 
-    if (!originViewContainment) {
-        qCritical() << "layout manager could not find containment" << originViewId
+    if (!originViewContainment || !originView
+            || originView->layout() != originLayout) {
+        qCritical() << "layout manager could not resolve live view ownership for containment"
+                    << originViewId
                     << "in origin layout" << originLayoutName;
+        return false;
+    }
+    if (destinationLayout->contains(
+            originViewContainment)) {
+        qCritical() << "layout manager refused containment"
+                    << originViewId
+                    << "already owned by destination layout"
+                    << destinationLayoutName;
         return false;
     }
 
@@ -309,15 +390,6 @@ bool Manager::moveView(const QString &originLayoutName,
         return false;
     }
 
-    QList<Plasma::Containment *> originContainments =
-        originLayout->unassignFromLayout(originViewContainment);
-    if (originContainments.isEmpty()) {
-        qCritical() << "layout manager failed to unassign containment" << originViewId
-                    << "from" << originLayoutName;
-        return false;
-    }
-
-    destinationLayout->assignToLayout(originView, std::move(originContainments));
     return true;
 }
 
