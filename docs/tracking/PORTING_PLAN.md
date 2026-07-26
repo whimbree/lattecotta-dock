@@ -4847,7 +4847,9 @@ prerequisites in the phases above are done.
       replays exactly and the nested configuration is restored on every exit.
       The canonical gate passed at code head `f66a404c0`, then the D229
       critical rereview required the complete persistence endpoint classifier
-      at `685ac6433`. The replacement canonical gate remains open.
+      at `685ac6433`. The replacement canonical gate passed at exact branch
+      head `a1a154fd0843d64e4551d61fe559963532dee70a`; critical independent
+      rereview remains open.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
       7578f1e4f, 4ca4a33b0, 296666281, 685ac6433

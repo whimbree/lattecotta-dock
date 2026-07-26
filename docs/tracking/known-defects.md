@@ -3070,8 +3070,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D229 - Cross-layout placement could report success after persistence failure
 - STATUS: FIXED ON `test/fp4c-operation-storm` at `296666281` and
-  `685ac6433`; replacement canonical gate and critical independent rereview
-  remain open.
+  `685ac6433`; the replacement canonical gate passed at exact branch head
+  `a1a154fd0843d64e4551d61fe559963532dee70a`. Critical independent rereview
+  remains open.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3094,8 +3095,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   write and search checks fail their matching cases. The production build and
   seven focused tests pass, and the exact seed 127934575 nested-KWin replay
   completes all 76 operations, reload, and exact cleanup.
-- REQUIRED ACCEPTANCE: rerun the canonical gate and critical independent
-  rereview after `685ac6433`.
+- REQUIRED ACCEPTANCE: obtain a critical independent rereview after
+  `685ac6433`.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
@@ -3128,7 +3129,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: FIXED ON `test/fp4c-operation-storm`; the complete D229 correction
-  invalidated the prior canonical gate and awaits critical rereview.
+  passed the replacement canonical gate at
+  `a1a154fd0843d64e4551d61fe559963532dee70a` and awaits critical rereview.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
