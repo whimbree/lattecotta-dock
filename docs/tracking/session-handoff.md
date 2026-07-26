@@ -41,6 +41,14 @@ CTest entries, the QML and coverage ratchets, visual probes, the complete
 ASan/UBSan build, nested-compositor integration, and matrix refusal checks
 passed.
 
+Independent PR #128 review returned `DO NOT MERGE`. D221 records sparse pending
+placement fields that can survive an A-to-B-to-A request sequence. D222 records
+a failed Undo path that tombstones persistence while leaving a non-destroyed
+containment suspended outside the active map. D223 records circular reservation
+geometry validation that can accept matching wrong schema and compositor
+rectangles. These are release blockers for the FP-4C acceptance claim. The PR
+must receive root fixes, a new canonical gate, and a second independent review.
+
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
 globally unique historical token. The oracle retires the removed symbolic
