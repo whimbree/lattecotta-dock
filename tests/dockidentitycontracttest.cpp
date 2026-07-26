@@ -382,11 +382,27 @@ void DockIdentityContractTest::relocationCompletionRejectsSupersededGeneration()
             "PlacementSubmission Positioner::requestNextLocation")));
 
     const int capture = schedule.indexOf(QStringLiteral("scheduledGeneration=m_relocationGeneration"));
-    const int reject = schedule.indexOf(
-        QStringLiteral("scheduledGeneration!=m_relocationGeneration"), capture);
-    const int apply = schedule.indexOf(QStringLiteral("onLastRepositionApplyEvent();"), reject);
-    QVERIFY2(capture >= 0 && reject > capture && apply > reject,
-             "delayed relocation completion must reject an older placement generation");
+    const int rejectInvalidatedSchedule =
+        schedule.indexOf(
+            QStringLiteral(
+                "m_scheduledPlacementCompletion!=scheduledGeneration"),
+            capture);
+    const int rejectSupersededGeneration =
+        schedule.indexOf(
+            QStringLiteral(
+                "scheduledGeneration!=m_relocationGeneration"),
+            rejectInvalidatedSchedule);
+    const int apply =
+        schedule.indexOf(
+            QStringLiteral(
+                "onLastRepositionApplyEvent();"),
+            rejectSupersededGeneration);
+    QVERIFY2(capture >= 0
+                 && rejectInvalidatedSchedule > capture
+                 && rejectSupersededGeneration
+                    > rejectInvalidatedSchedule
+                 && apply > rejectSupersededGeneration,
+             "delayed relocation completion must reject invalidated and superseded placement generations");
 
     const int submit = requestNext.indexOf(QStringLiteral(
         "m_placementRequests.submit("));
@@ -398,6 +414,61 @@ void DockIdentityContractTest::relocationCompletionRejectsSupersededGeneration()
         claim);
     QVERIFY2(submit >= 0 && claim > submit && beginHide > claim,
              "a complete latest-intent generation must be claimed before asynchronous hiding begins");
+
+    const QString unanimatedCompletion =
+        normalized(
+            functionBody(
+                source,
+                QStringLiteral(
+                    "void Positioner::applyUnanimatedPlacementGeneration")));
+    const int captureCompletedGeneration =
+        unanimatedCompletion.indexOf(
+            QStringLiteral(
+                "completedGeneration=m_relocationGeneration"));
+    const int commitExactGeneration =
+        unanimatedCompletion.indexOf(
+            QStringLiteral(
+                "completeIfCurrent(completedGeneration)"),
+            captureCompletedGeneration);
+    const int invalidateExactSchedule =
+        unanimatedCompletion.indexOf(
+            QStringLiteral(
+                "invalidateScheduledPlacementCompletionForGeneration("
+                "m_scheduledPlacementCompletion,completedGeneration)"),
+            commitExactGeneration);
+    const int publishCompletion =
+        unanimatedCompletion.indexOf(
+            QStringLiteral(
+                "Q_EMITplacementTransactionCommitted()"),
+            invalidateExactSchedule);
+    QVERIFY2(captureCompletedGeneration >= 0
+                 && commitExactGeneration
+                    > captureCompletedGeneration
+                 && invalidateExactSchedule
+                    > commitExactGeneration
+                 && publishCompletion
+                    > invalidateExactSchedule,
+             "synchronous completion must invalidate its exact delayed callback before publishing reentrant completion");
+
+    const QString relocationSignals =
+        normalized(
+            functionBody(
+                source,
+                QStringLiteral(
+                    "void Positioner::initSignalingForLocationChangeSliding")));
+    const int animatedCompletionBranch =
+        relocationSignals.lastIndexOf(
+            QStringLiteral(
+                "if(applyWithReveal)"));
+    const int scheduleAnimatedCompletion =
+        relocationSignals.indexOf(
+            QStringLiteral(
+                "scheduleLastRepositionApplyEvent()"),
+            animatedCompletionBranch);
+    QVERIFY2(animatedCompletionBranch >= 0
+                 && scheduleAnimatedCompletion
+                    > animatedCompletionBranch,
+             "animated placement must retain its ordinary delayed completion path");
 }
 
 void DockIdentityContractTest::

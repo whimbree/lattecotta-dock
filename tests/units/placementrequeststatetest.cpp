@@ -21,6 +21,8 @@ using Latte::ViewPart::PlacementRequestOutcome;
 using Latte::ViewPart::PlacementRequestState;
 using Latte::ViewPart::PlacementSubmission;
 using Latte::ViewPart::PlacementSubmissionStatus;
+using Latte::ViewPart::
+    invalidateScheduledPlacementCompletionForGeneration;
 
 constexpr int SingleScreen{0};
 constexpr int AllScreens{1};
@@ -57,6 +59,7 @@ private Q_SLOTS:
     void cancellationRestoresCapturedCompleteIntent();
     void identicalTargetIsNoOp();
     void submissionStatusDistinguishesImmediateAndDeferredResults();
+    void synchronousCompletionInvalidatesOnlyItsExactSchedule();
     void completionObserversReceiveExactGenerationOnce();
     void supersessionDoesNotCompleteTheNewGeneration();
     void destructionAbandonsEveryObservedGeneration();
@@ -294,6 +297,25 @@ submissionStatusDistinguishesImmediateAndDeferredResults()
     static_assert(deferred.accepted());
     static_assert(deferred.expectsCompletion());
     QCOMPARE(deferred.token, 9);
+}
+
+void PlacementRequestStateTest::
+synchronousCompletionInvalidatesOnlyItsExactSchedule()
+{
+    std::optional<std::uint64_t> scheduled{31};
+
+    QVERIFY(
+        invalidateScheduledPlacementCompletionForGeneration(
+            scheduled,
+            31));
+    QVERIFY(!scheduled.has_value());
+
+    scheduled = 32;
+    QVERIFY(
+        !invalidateScheduledPlacementCompletionForGeneration(
+            scheduled,
+            31));
+    QCOMPARE(scheduled.value(), 32);
 }
 
 void PlacementRequestStateTest::
