@@ -4789,16 +4789,20 @@ prerequisites in the phases above are done.
       immutability, locks, parse failures, and write failures must preserve or
       restore one complete durable owner before runtime ownership changes.
       Commits: 296666281, 2f85a8ac7, 0d1ce131d, cb9380566, 39a455df1,
-      3c2d81ee8, 94d7dd446
-- [ ] Fix D230 (layout directory entries were not durable before journal
+      3c2d81ee8, 94d7dd446, 9b0d5891e, ad6754038, a06e84af1,
+      6c85510a1
+- [x] Fix D230 (layout directory entries were not durable before journal
       retirement). Flush each endpoint directory after semantic publication
       and before advancing or retiring the recovery journal.
-- [ ] Fix D231 (queued active-view moves could be recorded as committed).
+      Commits: 9b0d5891e
+- [x] Fix D231 (queued active-view moves could be recorded as committed).
       Propagate generation-tagged Positioner completion to the settings save
       transaction and finalize model state only after durable commit.
-- [ ] Fix D232 (operation-storm journal assertion never moved a dock across
+      Commits: ad6754038
+- [x] Fix D232 (operation-storm journal assertion never moved a dock across
       layouts). Add exact cross-layout operations and non-vacuous transaction
       lifecycle acceptance to the immutable replay.
+      Commits: a06e84af1, 6c85510a1
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
@@ -4850,12 +4854,13 @@ prerequisites in the phases above are done.
       Commits: 4daa80121, dc0fda084, ad2a91c6f, 649fb79b4,
       4ac5208b9, 80e5d8fee, 3f6794861 (PR #126)
 - [ ] Complete FP-4C (the deterministic operation-storm acceptance).
-      One immutable schema-versioned plan drives 76 symbolic operations through
-      Duplicate Dock, linked creation, output, edge, alignment, edit, removal,
-      recreation, runtime rotation, and persistence reload. Every checkpoint
-      validates exact schema-7 identity, geometry, presentation, reservation,
-      edit, compositor-window, and convergence ownership. The same document
-      replays exactly and the nested configuration is restored on every exit.
+      One immutable schema-versioned plan drives 78 symbolic operations through
+      Duplicate Dock, linked creation, cross-layout ownership, output, edge,
+      alignment, edit, removal, recreation, runtime rotation, and persistence
+      reload. Every checkpoint validates exact schema-7 identity, geometry,
+      presentation, reservation, edit, compositor-window, and convergence
+      ownership. The same document replays exactly and the nested configuration
+      is restored on every exit.
       The canonical gate passed at code head `f66a404c0`, then the D229
       critical rereview required the complete persistence endpoint classifier
       at `2f85a8ac7`. The replacement canonical gate passed at exact branch
@@ -4888,17 +4893,26 @@ prerequisites in the phases above are done.
       flushed before journal retirement, queued active-view refusal could not
       reach the settings model, and the operation storm never invoked a
       cross-layout transaction. D230 through D232 track the required
-      corrections.
+      corrections. Commit `9b0d5891e` flushes every endpoint directory before
+      journal retirement. Commit `ad6754038` gives each queued placement one
+      exact terminal generation result and keeps settings dirty until commit.
+      Commits `a06e84af1` and `6c85510a1` expose lifecycle generations and
+      drive the independent root to a second active layout and back. The
+      replacement seed 127934575 replay passes all 78 operations with creation,
+      commit, and retirement generations advancing exactly from 0 to 1 to 2.
+      The replacement canonical gate and fresh critical rereview remain.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
       7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566,
-      39a455df1, 3c2d81ee8, 94d7dd446, 8ef520abe
+      39a455df1, 3c2d81ee8, 94d7dd446, 8ef520abe, 9b0d5891e,
+      ad6754038, a06e84af1, 6c85510a1
 - [ ] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
       7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566,
-      39a455df1, 3c2d81ee8, 94d7dd446
+      39a455df1, 3c2d81ee8, 94d7dd446, 9b0d5891e, ad6754038,
+      a06e84af1, 6c85510a1
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

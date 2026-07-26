@@ -3069,7 +3069,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D232 - Operation-storm journal assertion never moved a dock across layouts
-- STATUS: OPEN on `test/fp4c-operation-storm`; blocks D229 acceptance.
+- STATUS: FIXED ON `test/fp4c-operation-storm` by `a06e84af1` and
+  `6c85510a1`; PR pending.
 - FOUND: 2026-07-26, final cold independent review of FP-4C (the
   deterministic operation-storm acceptance).
 - SYMPTOM: every settled checkpoint reports an empty durable move transaction
@@ -3078,15 +3079,23 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   Those operations change output, edge, and alignment but never layout
   ownership, so no durable cross-layout transaction can exist. The source
   mutation proves only that the readback token remains in the script.
-- REQUIRED FIX: add deterministic cross-layout operations that invoke the real
-  durable move path, observe the intended transaction lifecycle, converge back
-  to an empty journal, reload, and preserve exact replay and fixture cleanup.
-  The negative control must fail when transaction creation or retirement is
-  bypassed.
+- FIX: D-Bus schema 2 exposes process-local decimal-string generations for
+  journal creation, durable commit decision, and retirement without changing
+  the on-disk schema. The immutable plan activates two layouts and moves the
+  independent root to the destination and back through `moveViewToLayout`.
+  Each move must increment all three generations by exactly one. Ordinary
+  operations must not change them, restart must reset them, and every boundary
+  must expose an empty transaction set.
+- EVIDENCE: the pure FP-4C model passes all 31 cases and `sourceguardtest`
+  rejects removal of the real move or lifecycle assertion. Exact seed
+  127934575 completes all 78 operations in nested KWin. Operations 2 and 3
+  advance creation, commit, and retirement from 0 to 1 to 2, reload converges,
+  and exact cleanup passes in
+  `linked-dock-operation-stress.seed-127934575.run-GFqh3X`.
 - SEVERITY: release blocker for D229 and FP-4C acceptance.
 
 ### D231 - Queued active-view moves could be recorded as committed
-- STATUS: OPEN on `test/fp4c-operation-storm`; blocks D229 acceptance.
+- STATUS: FIXED ON `test/fp4c-operation-storm` by `ad6754038`; PR pending.
 - FOUND: 2026-07-26, final cold independent review of FP-4C (the
   deterministic operation-storm acceptance).
 - SYMPTOM: layout settings can mark an active dock move as saved before the
@@ -3098,16 +3107,19 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   decision occurs later inside the Positioner and has no completion result
   path back to `Views::save()`. The source contract test incorrectly pins the
   unconditional true return.
-- REQUIRED FIX: carry a generation-tagged committed or refused result from the
-  Positioner to the settings transaction. Finalize model-original state only
-  after durable commit. On refusal, retain dirty state and display the
-  persistent warning. Cover delayed KConfig refusal, Positioner preflight
-  refusal, supersession, and successful completion without a synchronous UI
-  wait.
+- FIX: every Positioner request now has one generation-tagged terminal outcome:
+  committed, refused, superseded, or abandoned. `GenericLayout` forwards that
+  exact result. The settings transaction remains dirty until every submitted
+  placement commits and retains its persistent warning on refusal. Stale
+  callbacks cannot finalize a newer save.
+- EVIDENCE: `placementrequeststatetest` passes all 13 cases for immediate and
+  delayed refusal, success, supersession, destruction, and stale callbacks.
+  `dockidentitycontracttest` passes all 27 cases, and the focused production
+  build passes.
 - SEVERITY: release blocker.
 
 ### D230 - Layout directory entries were not durable before journal retirement
-- STATUS: OPEN on `test/fp4c-operation-storm`; blocks D229 acceptance.
+- STATUS: FIXED ON `test/fp4c-operation-storm` by `9b0d5891e`; PR pending.
 - FOUND: 2026-07-26, final cold independent review of FP-4C (the
   deterministic operation-storm acceptance).
 - SYMPTOM: a host crash after journal retirement can restore an older
@@ -3118,20 +3130,18 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   readback, but no publication flushes the containing layout directory. The
   separate transaction directory is flushed before its journal is retired, so
   the recovery record can become durable before the endpoint renames it proves.
-- REQUIRED FIX: durably flush every affected endpoint directory after
-  semantic convergence and before the transaction advances or retires its
-  journal. A controlled flush failure must retain a recoverable journal, and
-  interruption coverage must prove rollback or roll-forward from every
-  publication boundary.
+- FIX: each destination, active-owner, and origin publication now flushes its
+  containing layout directory after fresh semantic convergence and before the
+  transaction advances or retires its journal. A directory-flush refusal
+  retains the recovery record.
+- EVIDENCE: focused `storagetest` coverage injects directory-flush failure and
+  verifies that the journal remains recoverable. The normal commit,
+  rollback, and roll-forward matrix passes.
 - SEVERITY: critical release blocker.
 
 ### D229 - Cross-layout placement could report success after persistence failure
-- STATUS: OPEN on `test/fp4c-operation-storm`; the durable transaction is
-  implemented by `39a455df1`, `3c2d81ee8`, and `94d7dd446`, but D230
-  (layout directory entries were not durable before journal retirement), D231
-  (queued active-view moves could be recorded as committed), and D232
-  (operation-storm journal assertion never moved a dock across layouts) block
-  acceptance.
+- STATUS: CORRECTED ON `test/fp4c-operation-storm`; replacement canonical gate
+  and fresh critical rereview remain required before acceptance.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3158,7 +3168,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   files; every affected KConfig group and key must be mutable; all three
   endpoint locks must be immediately available; destination identities must
   be absent before staging; the complete subtree must name one persistent
-  owner. Semantic fresh readback, not `sync()` alone, proves every publication.
+  owner. Semantic fresh readback followed by a containing-directory flush
+  proves every publication. Every queued settings request reaches one exact
+  generation-tagged terminal outcome before the model records success.
 - EVIDENCE: the pure C++20 transaction test pins destination-first ordering,
   observed-owner authority, rollback, roll-forward, and non-reuse. Real
   KConfig coverage exercises normal commit and journal retirement, a
@@ -3167,17 +3179,18 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `.prepare` residue, rollback and roll-forward interruption after each
   repository publication, mixed subtree ownership, repeated recovery,
   traversal-bearing manifests, and checksum corruption. Production and four
-  focused test targets pass. Exact seed 127934575 completes all 76 operations,
-  requires an empty transaction readback at every checkpoint and final
-  quiescence, reloads, and restores exact nested state in
-  `linked-dock-operation-stress.seed-127934575.run-APzTUu`. The replacement
+  focused test targets pass. The replacement exact seed 127934575 replay
+  completes all 78 operations, invokes the durable transaction twice, advances
+  all lifecycle generations exactly from 0 to 1 to 2, reloads, and restores
+  exact nested state in
+  `linked-dock-operation-stress.seed-127934575.run-GFqh3X`. The previous
   canonical gate passed all 123 CTest entries, QML and coverage ratchets,
   visual probes, the sanitizer nested recipes, package provenance controls,
   and matrix refusals at exact source head
-  `8ef520abe4478abcb94c9818ef942d8360857c37`.
-- REQUIRED ACCEPTANCE: fix D230 through D232, pass the replacement exact
-  replay and canonical gate, and obtain a fresh critical independent rereview
-  of the complete corrected diff.
+  `8ef520abe4478abcb94c9818ef942d8360857c37`; D230 through D232 invalidate
+  that historical stamp.
+- REQUIRED ACCEPTANCE: pass the replacement canonical gate and obtain a fresh
+  critical independent rereview of the complete corrected diff.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
