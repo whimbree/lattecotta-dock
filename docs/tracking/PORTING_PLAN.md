@@ -4778,11 +4778,11 @@ prerequisites in the phases above are done.
       placement prerequisite before mutating layout, output, edge, or
       alignment ownership.
       Commits: 7578f1e4f
-- [ ] Fix D228 (placement preflight promoted a hide-time QWindow observation
+- [x] Fix D228 (placement preflight promoted a hide-time QWindow observation
       to output ownership). Keep QWindow screen changes observational and
       derive placement and reservation ownership from assigned and LayerShell
       output state.
-      Commits:
+      Commits: 4ca4a33b0
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
