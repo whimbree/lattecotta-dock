@@ -260,7 +260,9 @@ and PR #126 landed FP-4B.
       `a7a523c80d9c7a67147810e5b91009308ff32243`. Fresh critical rereview found
       D234 (first transaction-root publication was not durable) and D235
       (unanimated layout moves retained a delayed relocation completion).
-      Both remain required before another gate and fresh critical rereview.
+      Commits `8e6613904` and `c1ed12e82` correct both findings with exact
+      durability injection and generation-preserving callback coverage. A new
+      canonical gate and fresh critical rereview remain required.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent
