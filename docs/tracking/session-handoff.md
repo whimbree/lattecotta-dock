@@ -209,8 +209,11 @@ permission cases. Removing the file-read condition fails the write-only case.
 The production build and seven focused tests pass. Exact seed 127934575
 completes all 76 operations and exact cleanup in nested KWin; its evidence is
 saved in `linked-dock-operation-stress.seed-127934575.run-WZU6e7`.
-Replacement canonical gate and fresh critical independent rereview remain
-open.
+The replacement canonical gate exited 0 at exact branch head
+`2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`. All 122 CTest entries, QML and
+coverage ratchets, visual probes, the complete ASan/UBSan build, four nested
+sanitizer recipes, package provenance controls, and matrix refusals passed.
+Fresh critical independent rereview remains open.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
