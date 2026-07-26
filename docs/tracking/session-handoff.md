@@ -153,6 +153,14 @@ therefore leave the origin removal durable, omit destination ownership, return
 success, and lose the dock after restart. D229 is the current PR #128 release
 blocker.
 
+D229 is fixed at `296666281`. Both layout persistence endpoints are classified
+and validated before move ownership is resolved. A post-mutation sync failure
+is now a fatal invariant violation, never a recoverable success path. A real
+read-only file and directory endpoint are refused; separate negative controls
+fail the filesystem classifier and production preflight contract. The
+production build, seven focused tests, and the exact 76-operation nested-KWin
+replay pass. The D229 source correction invalidates the prior canonical gate.
+
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
 globally unique historical token. The oracle retires the removed symbolic

@@ -4783,11 +4783,11 @@ prerequisites in the phases above are done.
       derive placement and reservation ownership from assigned and LayerShell
       output state.
       Commits: 4ca4a33b0
-- [ ] Fix D229 (cross-layout placement could report success after persistence
+- [x] Fix D229 (cross-layout placement could report success after persistence
       failure). Preflight both layout files before mutation and make any
       post-mutation persistence failure an invariant failure or restore both
       runtime and durable ownership.
-      Commits:
+      Commits: 296666281
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
@@ -4845,15 +4845,16 @@ prerequisites in the phases above are done.
       validates exact schema-7 identity, geometry, presentation, reservation,
       edit, compositor-window, and convergence ownership. The same document
       replays exactly and the nested configuration is restored on every exit.
-      The canonical gate passed at corrected code head `0b2d069a3`.
+      The canonical gate passed at corrected code head `0b2d069a3`, then D229
+      required another source correction and invalidated that gate.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
-      7578f1e4f, 4ca4a33b0
+      7578f1e4f, 4ca4a33b0, 296666281
 - [x] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
-      7578f1e4f, 4ca4a33b0
+      7578f1e4f, 4ca4a33b0, 296666281
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

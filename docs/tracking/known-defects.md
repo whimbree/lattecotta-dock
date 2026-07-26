@@ -3069,8 +3069,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D229 - Cross-layout placement could report success after persistence failure
-- STATUS: OPEN on `test/fp4c-operation-storm`; PR #128 independent-review
-  blocker.
+- STATUS: FIXED ON `test/fp4c-operation-storm` at `296666281`; the source
+  correction invalidates the prior canonical gate.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3081,19 +3081,23 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `GenericLayout::unassignFromLayout()` and `assignToLayout()` only log
   `syncToLayoutFile()` failure and continue, so `Manager::moveView()` can pass
   its runtime-only postcondition despite split durable ownership.
-- REQUIRED FIX: preflight both persistence endpoints before the first layout
+- FIX: preflight both persistence endpoints before the first layout
   mutation. Once mutation starts, persistence failure must be an invariant
-  failure or restore complete runtime and durable ownership; it cannot remain
-  a recoverable success path.
-- REQUIRED EVIDENCE: exercise a real read-only layout-file endpoint, prove the
-  move preflight refuses before unassignment, and reject any non-fatal
-  persistence failure after mutation.
+  failure; it cannot remain a recoverable success path. Only regular writable
+  layout files or files creatable in a writable parent directory qualify.
+- EVIDENCE: a real read-only file and a directory masquerading as a layout
+  file are refused. Negative controls made the filesystem classifier and
+  production preflight contract fail independently. The production build and
+  seven focused tests pass, and the exact seed 127934575 nested-KWin replay
+  completes all 76 operations, reload, and exact cleanup.
+- REQUIRED ACCEPTANCE: rerun the canonical gate after `296666281`. The
+  independent-review disposition must satisfy the repository's single
+  follow-up-review rule before merge.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
-- STATUS: FIXED ON `test/fp4c-operation-storm` at `4ca4a33b0`; PR #128
-  canonical gate passed at `0b2d069a3`, and independent follow-up review
-  remains open.
+- STATUS: FIXED ON `test/fp4c-operation-storm` at `4ca4a33b0`; the canonical
+  gate passed at `0b2d069a3` before D229 invalidated that source head.
 - FOUND: 2026-07-25, exact seed 127934575 replay after the D226 and D227
   corrections.
 - SYMPTOM: operation 33 leaves independent dock 14 hidden on the right edge
@@ -3120,9 +3124,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: FIXED ON `test/fp4c-operation-storm`; the replacement canonical gate
-  passed at `0b2d069a3`, and final FP-4C PR acceptance awaits its cold
-  independent rereview. FP-1
+- STATUS: FIXED ON `test/fp4c-operation-storm`; D229 invalidated the canonical
+  gate that passed at `0b2d069a3`, and final FP-4C PR acceptance remains open.
+  FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
   through PR #120, including schema 5 and nested recipe 071 acceptance. The
