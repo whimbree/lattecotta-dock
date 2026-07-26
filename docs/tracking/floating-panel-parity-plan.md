@@ -194,10 +194,11 @@ and PR #126 landed FP-4B.
 - [x] The README describes the stable floating-panel behavior in timeless
       terms.
 - [x] The full canonical gate passes after the final source commit.
-      The replacement gate exited 0 at exact code head `f66a404c0`, including
-      all 122 CTest entries, QML and coverage ratchets, visual probes, the
-      complete ASan/UBSan build, four nested-compositor recipes, package
-      provenance controls, and matrix refusals.
+      The final replacement gate exited 0 at exact branch head
+      `a1a154fd0843d64e4551d61fe559963532dee70a`, including all 122 CTest
+      entries, QML and coverage ratchets, visual probes, the complete
+      ASan/UBSan build, four nested-compositor recipes, package provenance
+      controls, and matrix refusals.
 - [x] Correct D226 (LayerShell output migration bypassed reservation-gated
       remapping) and D227 (layout mutation preceded destination-output
       preflight).
@@ -217,7 +218,9 @@ and PR #126 landed FP-4B.
       `DO NOT MERGE`: existing files did not require a writable parent, and
       absent paths did not require a searchable parent. Commit `685ac6433`
       completes both branches with real filesystem coverage. Its replacement
-      canonical gate and critical rereview remain open.
+      canonical gate passed at exact branch head
+      `a1a154fd0843d64e4551d61fe559963532dee70a`; critical rereview remains
+      open.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent

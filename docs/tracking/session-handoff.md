@@ -184,7 +184,11 @@ regular writable files. Real filesystem coverage exercises every accepted and
 refused branch, and independent negative controls remove parent write and
 search permission checks one at a time. The production build, seven focused
 tests, and exact seed 127934575 nested-KWin replay pass. The replacement
-canonical gate and critical independent rereview remain open.
+canonical gate exited 0 at exact branch head
+`a1a154fd0843d64e4551d61fe559963532dee70a`. All 122 CTest entries, QML and
+coverage ratchets, visual probes, the complete ASan/UBSan build, four nested
+sanitizer recipes, package provenance controls, and matrix refusals passed.
+Critical independent rereview remains open.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
