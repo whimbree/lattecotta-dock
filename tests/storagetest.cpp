@@ -231,6 +231,7 @@ private Q_SLOTS:
     void removalPersistenceReportsWriteFailure();
     void classifyLayoutPersistenceEndpoints();
     void exposeExactDurableMoveLifecycleSchema();
+    void refuseUndurableTransactionRootBeforeEndpointMutation();
     void refuseImmutableDurableMoveBeforeCommit();
     void refuseImmutableActiveOwnerBeforeStaging();
     void refuseLockedDurableMoveBeforeCommit();
@@ -503,6 +504,117 @@ exposeExactDurableMoveLifecycleSchema()
         lifecycle
             ->journalRetiredGeneration,
         quint64{0});
+}
+
+void StorageTest::
+refuseUndurableTransactionRootBeforeEndpointMutation()
+{
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral(
+                "undurable-transaction-root"));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    const auto readFile =
+        [](const QString &path) {
+            QFile file(path);
+            if (!file.open(
+                    QIODevice::ReadOnly)) {
+                return QByteArray{};
+            }
+            return file.readAll();
+        };
+    const QByteArray originBefore =
+        readFile(fixture.originFile);
+    const QByteArray destinationBefore =
+        readFile(
+            fixture.destinationFile);
+    const QByteArray hiddenBefore =
+        readFile(fixture.hiddenFile);
+    QVERIFY(!originBefore.isEmpty());
+    QVERIFY(!destinationBefore.isEmpty());
+    QVERIFY(!hiddenBefore.isEmpty());
+    const auto lifecycleBefore =
+        parseDurableMoveLifecycleReadback(
+            Storage::self()
+                ->viewMoveTransactionsData());
+    QVERIFY(lifecycleBefore);
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile,
+                Storage::
+                    ViewMoveInterruption::
+                        None,
+                Storage::
+                    ViewMoveDirectoryFlushFailure::
+                        TransactionRootPublication);
+    QCOMPARE(
+        result.status,
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status::Rejected);
+    QVERIFY(result.transactionPath.isEmpty());
+    QCOMPARE(
+        result.error,
+        QStringLiteral(
+            "could not durably publish transaction storage"));
+    QVERIFY(Storage::self()
+        ->pendingViewMoveTransactions()
+        .isEmpty());
+
+    const QString transactionRoot =
+        QDir(
+            Latte::Layouts::Importer::
+                layoutUserDir())
+            .filePath(
+                QStringLiteral(
+                    ".view-move-transactions"));
+    QVERIFY(QFileInfo(
+        transactionRoot)
+        .isDir());
+    QVERIFY(QDir(transactionRoot)
+        .entryList(
+            QDir::AllEntries
+                | QDir::NoDotAndDotDot)
+        .isEmpty());
+    QCOMPARE(
+        readFile(fixture.originFile),
+        originBefore);
+    QCOMPARE(
+        readFile(fixture.destinationFile),
+        destinationBefore);
+    QCOMPARE(
+        readFile(fixture.hiddenFile),
+        hiddenBefore);
+
+    const auto lifecycleAfter =
+        parseDurableMoveLifecycleReadback(
+            Storage::self()
+                ->viewMoveTransactionsData());
+    QVERIFY(lifecycleAfter);
+    QCOMPARE(
+        lifecycleAfter
+            ->journalCreatedGeneration,
+        lifecycleBefore
+            ->journalCreatedGeneration);
+    QCOMPARE(
+        lifecycleAfter
+            ->commitDecisionGeneration,
+        lifecycleBefore
+            ->commitDecisionGeneration);
+    QCOMPARE(
+        lifecycleAfter
+            ->journalRetiredGeneration,
+        lifecycleBefore
+            ->journalRetiredGeneration);
 }
 
 void StorageTest::
