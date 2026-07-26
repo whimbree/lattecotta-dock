@@ -297,21 +297,25 @@ PlasmaComponents.Page {
                         //! re-trigger that was dead since Qt5: the clamp floors maxLength
                         //! by minLength, so maxLength < minLength cannot hold afterwards
                         //! (toValue_maxNeverEndsBelowMin pins the proof).
+                        function clampAndStoreMaxLength(requestedValue) {
+                            var clamped = lengthClamp.clampMaxLengthToValue(requestedValue,
+                                                                          plasmoid.configuration.minLength,
+                                                                          plasmoid.configuration.offset,
+                                                                          plasmoid.configuration.alignment);
+                            plasmoid.configuration.maxLength = clamped.maxLength;
+
+                            if (plasmoid.configuration.offset !== clamped.offset) {
+                                plasmoid.configuration.offset = clamped.offset;
+                            }
+                        }
+
                         function updateMaxLength() {
-                            if (!handlerIsReady || syncingFromConfig) {
+                            if (!maxLengthSlider.handlerIsReady || maxLengthSlider.syncingFromConfig) {
                                 return;
                             }
 
                             if (!pressed && viewConfig.isReady) {
-                                var clamped = lengthClamp.clampMaxLengthToValue(value,
-                                                                                plasmoid.configuration.minLength,
-                                                                                plasmoid.configuration.offset,
-                                                                                plasmoid.configuration.alignment);
-                                plasmoid.configuration.maxLength = clamped.maxLength;
-
-                                if (plasmoid.configuration.offset !== clamped.offset) {
-                                    plasmoid.configuration.offset = clamped.offset;
-                                }
+                                clampAndStoreMaxLength(value);
                             } else {
                                 //! view-side snap while dragging; the config math lives in the core.
                                 //! Justify has no independent minimum (its Minimum slider is
@@ -334,9 +338,9 @@ PlasmaComponents.Page {
                         //! the value
                         function resyncMaxLengthHandle() {
                             if (!pressed) {
-                                syncingFromConfig = true;
+                                maxLengthSlider.syncingFromConfig = true;
                                 value = maxLengthValue;
-                                syncingFromConfig = false;
+                                maxLengthSlider.syncingFromConfig = false;
                             }
                         }
 
@@ -348,7 +352,7 @@ PlasmaComponents.Page {
                             resyncMaxLengthHandle();
                             valueChanged.connect(updateMaxLength);
                             maxLengthValueChanged.connect(resyncMaxLengthHandle);
-                            handlerIsReady = true;
+                            maxLengthSlider.handlerIsReady = true;
                         }
 
                         Component.onDestruction: {
@@ -421,7 +425,7 @@ PlasmaComponents.Page {
                         property bool syncingFromConfig: false
 
                         function updateMinLength() {
-                            if (!handlerIsReady || syncingFromConfig) {
+                            if (!minLengthSlider.handlerIsReady || minLengthSlider.syncingFromConfig) {
                                 return;
                             }
 
@@ -432,17 +436,8 @@ PlasmaComponents.Page {
                                 //! sibling controls. A visual handle may
                                 //! still carry its construction default while
                                 //! hidden chrome initializes.
-                                if (plasmoid.configuration.minLength > plasmoid.configuration.maxLength) {
-                                    var clamped = lengthClamp.clampMaxLengthToValue(
-                                                plasmoid.configuration.minLength,
-                                                plasmoid.configuration.minLength,
-                                                plasmoid.configuration.offset,
-                                                plasmoid.configuration.alignment);
-                                    plasmoid.configuration.maxLength = clamped.maxLength;
-
-                                    if (plasmoid.configuration.offset !== clamped.offset) {
-                                        plasmoid.configuration.offset = clamped.offset;
-                                    }
+                                if (value > maxLengthSlider.maxLengthValue) {
+                                    maxLengthSlider.clampAndStoreMaxLength(value);
                                 }
                             } else {
                                 if (value > plasmoid.configuration.maxLength) {
@@ -456,9 +451,9 @@ PlasmaComponents.Page {
                         //! the value
                         function resyncMinLengthHandle() {
                             if (!pressed) {
-                                syncingFromConfig = true;
+                                minLengthSlider.syncingFromConfig = true;
                                 value = minLengthValue;
-                                syncingFromConfig = false;
+                                minLengthSlider.syncingFromConfig = false;
                             }
                         }
 
@@ -470,7 +465,7 @@ PlasmaComponents.Page {
                             resyncMinLengthHandle();
                             valueChanged.connect(updateMinLength);
                             minLengthValueChanged.connect(resyncMinLengthHandle);
-                            handlerIsReady = true;
+                            minLengthSlider.handlerIsReady = true;
                         }
 
                         Component.onDestruction: {
