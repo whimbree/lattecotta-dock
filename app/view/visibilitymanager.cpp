@@ -473,8 +473,13 @@ bool VisibilityManager::publishReservationAfterAppliedPlacement()
     if (m_mode != Types::AlwaysVisible) {
         return true;
     }
-    if (positioner->inRelocationAnimation()
-            || positioner->isOffScreen()) {
+    //! Positioner calls this boundary after the candidate geometry and
+    //! LayerShell placement have both been applied, but before it commits the
+    //! relocation generation. Rejecting an active relocation here would make
+    //! the generation commit wait on a state that only that commit can clear.
+    //! Ordinary reservation updates still defer on active or unapplied
+    //! placement in updateStrutsBasedOnLayoutsAndActivities().
+    if (positioner->isOffScreen()) {
         m_reservationUpdateDirty = true;
         return false;
     }
