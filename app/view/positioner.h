@@ -180,6 +180,8 @@ private:
     [[nodiscard]] bool applyOutputPlacement(
         QScreen *destination,
         bool followsPrimary);
+    [[nodiscard]] bool outputPlacementIsNeeded(
+        const QScreen *destination) const;
     void applyUnanimatedPlacementGeneration();
     void cancelFailedLayoutRelocation();
     [[nodiscard]] PlacementIntent currentPlacementIntent() const;
@@ -278,6 +280,7 @@ private:
     Latte::Types::ScreensGroup m_nextScreensGroup{Latte::Types::SingleScreenGroup};
     QPointer<QScreen> m_pendingOutputScreen;
     std::optional<bool> m_pendingFollowsPrimary;
+    bool m_pendingOutputOwnershipChange{false};
     QString m_nextScreenName;
     QPointer<QScreen> m_nextScreen;
     Plasma::Types::Location m_nextScreenEdge{Plasma::Types::Floating};

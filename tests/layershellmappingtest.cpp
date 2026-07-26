@@ -42,6 +42,7 @@ private Q_SLOTS:
     void appliedViewPlacementPreservesSurfacePolicy();
     void appliedViewPlacementDistinguishesRefusalFromStableSuccess();
     void hiddenAppliedViewPlacementRetargetsBothOutputAuthorities();
+    void visibleAppliedViewPlacementDefersRemapAfterQWindowRetarget();
     void reservationPlacementTracksOccupiedSpan();
     void canvasPlacementByEdge();
     void canvasInputRegionPlainEditMode();
@@ -369,6 +370,55 @@ void LayerShellMappingTest::hiddenAppliedViewPlacementRetargetsBothOutputAuthori
                       viewGeometry.top() - targetGeometry.top(),
                       0,
                       0));
+    QVERIFY(!window.isVisible());
+}
+
+void LayerShellMappingTest::
+visibleAppliedViewPlacementDefersRemapAfterQWindowRetarget()
+{
+    QScreen *const origin =
+        QGuiApplication::screens().at(0);
+    QScreen *const target =
+        QGuiApplication::screens().at(1);
+    const QRect targetGeometry =
+        target->geometry();
+    const QRect viewGeometry(
+        targetGeometry.right() - 63,
+        targetGeometry.top() + 120,
+        64,
+        targetGeometry.height() - 240);
+
+    QWindow window;
+    QVERIFY(LayerShell::configureView(
+        &window,
+        origin,
+        Plasma::Types::LeftEdge,
+        Latte::Types::Center,
+        false));
+    LayerShellQt::Window *const layerShell =
+        LSW::get(&window);
+    QVERIFY(layerShell);
+
+    //! Reproduce Qt observing the target before LayerShell and Latte
+    //! ownership move. The lower placement boundary may retarget the hidden
+    //! surface, but it must not reveal before Positioner publishes the
+    //! destination reservation.
+    window.setScreen(target);
+    QCOMPARE(window.screen(), target);
+    QCOMPARE(layerShell->screen(), origin);
+    window.setVisible(true);
+    QVERIFY(window.isVisible());
+
+    const auto applied =
+        LayerShell::applyViewPlacement(
+            &window,
+            target,
+            Plasma::Types::RightEdge,
+            viewGeometry,
+            targetGeometry);
+
+    QVERIFY(applied.has_value());
+    QCOMPARE(layerShell->screen(), target);
     QVERIFY(!window.isVisible());
 }
 

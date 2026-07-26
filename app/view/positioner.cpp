@@ -524,8 +524,7 @@ bool Positioner::applyOutputPlacement(
 
     m_view->setOnPrimary(followsPrimary);
 
-    if (m_screenToFollow != destination
-            || m_view->screen() != destination) {
+    if (outputPlacementIsNeeded(destination)) {
         return setScreenToFollow(destination);
     } else {
         //! setScreenToFollow() deliberately returns for an unchanged
@@ -534,6 +533,16 @@ bool Positioner::applyOutputPlacement(
         updateContainmentScreen();
     }
     return true;
+}
+
+bool Positioner::outputPlacementIsNeeded(
+    const QScreen *const destination) const
+{
+    Q_ASSERT(destination);
+    return m_screenToFollow != destination
+        || m_view->screen() != destination
+        || m_view->layerShellNeedsOutput(
+            destination);
 }
 
 void Positioner::updateContainmentScreen()
@@ -553,13 +562,14 @@ void Positioner::updateContainmentScreen()
 //! place
 bool Positioner::setScreenToFollow(QScreen *scr, bool updateScreenId)
 {
-    if (!scr || (scr && (m_screenToFollow == scr) && (m_view->screen() == scr))) {
+    if (!scr || !outputPlacementIsNeeded(scr)) {
         return scr != nullptr;
     }
 
-    const bool changesPhysicalOutput =
-        m_screenToFollow != scr;
-    if (changesPhysicalOutput
+    const bool changesOutputOwnership =
+        m_screenToFollow != scr
+        || m_view->layerShellNeedsOutput(scr);
+    if (changesOutputOwnership
             && !m_applyingPlacementTransaction
             && m_view->visibility()
             && !m_view->visibility()
@@ -580,7 +590,11 @@ bool Positioner::setScreenToFollow(QScreen *scr, bool updateScreenId)
     }
 
     qDebug() << "adapting to screen...";
-    m_view->moveToScreen(scr);
+    m_view->moveToScreen(
+        scr,
+        changesOutputOwnership
+        ? View::OutputMove::OwnershipTransfer
+        : View::OutputMove::ObservationOnly);
     //! A hidden Wayland layer surface can complete setScreen() synchronously
     //! without delivering a later screenChanged edge. Confirm from the
     //! applied QWindow state here; the signal path below remains for
@@ -629,8 +643,7 @@ void Positioner::reconsiderScreen()
 
     //! 1.a primary dock must be always on the primary screen
     if (m_view->onPrimary() && (m_screenNameToFollow != primaryScreen->name()
-                                || m_screenToFollow != primaryScreen
-                                || m_view->screen() != primaryScreen)) {
+                                || outputPlacementIsNeeded(primaryScreen))) {
         //! case 1
         qDebug() << "reached case 1: of updating dock primary screen...";
         setScreenToFollow(primaryScreen);
@@ -1425,7 +1438,7 @@ void Positioner::initSignalingForLocationChangeSliding()
         }
 
         const bool changesReservationOwnership =
-            !m_nextScreenName.isEmpty()
+            m_pendingOutputOwnershipChange
             || m_nextScreenEdge
                 != Plasma::Types::Floating;
         if (!m_view->visibility()->beginPlacementTransaction(
@@ -1483,6 +1496,8 @@ void Positioner::initSignalingForLocationChangeSliding()
                         generation)) {
                     m_pendingOutputScreen.clear();
                     m_pendingFollowsPrimary.reset();
+                    m_pendingOutputOwnershipChange =
+                        false;
                 }
             }
 
@@ -1732,31 +1747,42 @@ void Positioner::projectPendingPlacement(
 
     m_pendingOutputScreen.clear();
     m_pendingFollowsPrimary.reset();
+    m_pendingOutputOwnershipChange = false;
     m_nextScreenName.clear();
     m_nextScreen.clear();
     const QString resolvedOutput =
         qString(target.resolvedOutputName);
+    QScreen *resolvedScreen{nullptr};
+    for (QScreen *const screen :
+            qGuiApp->screens()) {
+        if (screen
+                && screen->name()
+                    == resolvedOutput) {
+            resolvedScreen = screen;
+            break;
+        }
+    }
+    const bool assignedOutputNeedsChange =
+        m_screenToFollow != resolvedScreen;
+    const bool layerShellOutputNeedsChange =
+        resolvedScreen
+        && m_view->layerShellNeedsOutput(
+            resolvedScreen);
     const bool windowNeedsOutput =
-        !m_view->screen()
-        || m_view->screen()->name()
-            != resolvedOutput;
+        m_view->screen() != resolvedScreen;
     if (target.followsPrimary
             != current.followsPrimary
             || target.resolvedOutputName
                 != current.resolvedOutputName
+            || assignedOutputNeedsChange
+            || layerShellOutputNeedsChange
             || windowNeedsOutput) {
-        for (QScreen *const screen :
-                qGuiApp->screens()) {
-            if (screen
-                    && screen->name()
-                        == resolvedOutput) {
-                m_pendingOutputScreen = screen;
-                break;
-            }
-        }
-        Q_ASSERT(m_pendingOutputScreen);
+        m_pendingOutputScreen = resolvedScreen;
         m_pendingFollowsPrimary =
             target.followsPrimary;
+        m_pendingOutputOwnershipChange =
+            assignedOutputNeedsChange
+            || layerShellOutputNeedsChange;
         if (windowNeedsOutput) {
             m_nextScreenName =
                 resolvedOutput;
