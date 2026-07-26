@@ -361,16 +361,49 @@ void StorageTest::classifyLayoutPersistenceEndpoints()
         QStringLiteral("writable"));
     QVERIFY(writableLayout.isWritable());
 
-    QFile readOnlyFile(writablePath);
+    QFile existingFile(writablePath);
     const QFileDevice::Permissions originalPermissions =
-        readOnlyFile.permissions();
-    QVERIFY(readOnlyFile.setPermissions(
+        existingFile.permissions();
+    const auto restoreExistingPermissions =
+        qScopeGuard(
+            [&existingFile,
+             originalPermissions]() {
+                existingFile.setPermissions(
+                    originalPermissions);
+            });
+
+    QVERIFY(existingFile.setPermissions(
         QFileDevice::ReadUser
         | QFileDevice::ReadGroup
         | QFileDevice::ReadOther));
     QVERIFY(!writableLayout.isWritable());
-    QVERIFY(readOnlyFile.setPermissions(
+    QVERIFY(existingFile.setPermissions(
         originalPermissions));
+
+    const KSharedConfigPtr existingRepository =
+        KSharedConfig::openConfig(
+            writablePath,
+            KConfig::SimpleConfig);
+    QVERIFY(existingFile.setPermissions(
+        QFileDevice::WriteUser));
+    QVERIFY(
+        QFileInfo(writablePath)
+            .isWritable());
+    QVERIFY(
+        !QFileInfo(writablePath)
+            .isReadable());
+    QVERIFY(!writableLayout.isWritable());
+    existingRepository
+        ->group(QStringLiteral(
+            "LayoutSettings"))
+        .writeEntry(
+            QStringLiteral(
+                "writeOnlyProbe"),
+            true);
+    QVERIFY(!existingRepository->sync());
+    QVERIFY(existingFile.setPermissions(
+        originalPermissions));
+    QVERIFY(existingRepository->sync());
 
     const QString absentPath =
         writeLayoutFixture(
@@ -394,6 +427,40 @@ void StorageTest::classifyLayoutPersistenceEndpoints()
         directoryPath,
         QStringLiteral("directory"));
     QVERIFY(!directoryLayout.isWritable());
+
+    const QString missingParentPath =
+        m_dir.filePath(
+            QStringLiteral("missing-parent"));
+    QVERIFY(!QFileInfo::exists(
+        missingParentPath));
+    const QString missingParentEndpointPath =
+        QDir(missingParentPath)
+            .filePath(
+                QStringLiteral(
+                    "absent.layout.latte"));
+    Latte::CentralLayout missingParentLayout(
+        nullptr,
+        missingParentEndpointPath,
+        QStringLiteral("missing-parent"));
+    QVERIFY(!missingParentLayout.isWritable());
+
+    const QString regularFileParentPath =
+        writeLayoutFixture(
+            QStringLiteral(
+                "regular-file-parent"));
+    QVERIFY(
+        QFileInfo(regularFileParentPath)
+            .isFile());
+    const QString regularFileParentEndpointPath =
+        QDir(regularFileParentPath)
+            .filePath(
+                QStringLiteral(
+                    "absent.layout.latte"));
+    Latte::CentralLayout regularFileParentLayout(
+        nullptr,
+        regularFileParentEndpointPath,
+        QStringLiteral("regular-file-parent"));
+    QVERIFY(!regularFileParentLayout.isWritable());
 
     const QString restrictedParentPath =
         m_dir.filePath(
