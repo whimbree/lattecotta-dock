@@ -194,11 +194,10 @@ and PR #126 landed FP-4B.
 - [x] The README describes the stable floating-panel behavior in timeless
       terms.
 - [x] The full canonical gate passes after the final source commit.
-      The replacement gate exited 0 at exact code head `0b2d069a3`, including
+      The replacement gate exited 0 at exact code head `f66a404c0`, including
       all 122 CTest entries, QML and coverage ratchets, visual probes, the
       complete ASan/UBSan build, four nested-compositor recipes, package
-      provenance controls, and matrix refusals. D229 then required another
-      source correction and invalidated that gate.
+      provenance controls, and matrix refusals.
 - [x] Correct D226 (LayerShell output migration bypassed reservation-gated
       remapping) and D227 (layout mutation preceded destination-output
       preflight).
@@ -212,7 +211,9 @@ and PR #126 landed FP-4B.
       and D228 corrections. The replacement canonical gate passed at
       `0b2d069a3`. That review found D229 (cross-layout placement could report
       success after persistence failure). D229 is fixed at `296666281`; its
-      canonical gate and review disposition remain open.
+      canonical gate passed at `f66a404c0`. Silent dock loss after restart is a
+      CRITICAL persistence finding, so the rule's critical exception requires
+      one fresh independent rereview before merge.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent
