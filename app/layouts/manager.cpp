@@ -116,6 +116,15 @@ void Manager::init()
         m_corona->templatesManager()->newLayout("", Layout::MULTIPLELAYOUTSHIDDENNAME);
     }
 
+    //! A committed move journal must converge before the hidden Corona file
+    //! chooses which standalone layout files are imported. Loading first can
+    //! materialize both sides of an interrupted move under different runtime
+    //! identities.
+    if (!Layouts::Storage::self()
+            ->recoverPendingViewMoves()) {
+        qFatal("layout manager could not recover a durable cross-layout move before startup");
+    }
+
     qDebug() << "Latte is loading  its layouts...";
 
     m_synchronizer->initLayouts();
@@ -270,15 +279,16 @@ void Manager::loadLayoutOnStartup(QString layoutName)
     m_synchronizer->switchToLayout(layoutName);
 }
 
-bool Manager::moveView(const QString &originLayoutName,
-                       const uint originViewId,
-                       const QString &destinationLayoutName)
+Manager::MoveViewResult Manager::moveView(
+    const QString &originLayoutName,
+    const uint originViewId,
+    const QString &destinationLayoutName)
 {
     if (!validatesViewMove(
             originLayoutName,
             originViewId,
             destinationLayoutName)) {
-        return false;
+        return MoveViewResult::Rejected;
     }
 
     Layout::GenericLayout *const originLayout =
@@ -299,7 +309,26 @@ bool Manager::moveView(const QString &originLayoutName,
     Q_ASSERT(originViewContainment);
     Q_ASSERT(originView);
 
-    QList<Plasma::Containment *> originContainments =
+    const ViewMovePersistenceResult
+        persistence =
+            Layouts::Storage::self()
+                ->persistViewMove(
+                    originLayout,
+                    originViewId,
+                    destinationLayout,
+                    m_corona->config());
+    if (!persistence.committed()) {
+        qCritical()
+            << "layout manager refused a move whose durable transaction did not commit"
+            << originLayoutName
+            << originViewId
+            << destinationLayoutName
+            << persistence.error;
+        return MoveViewResult::Rejected;
+    }
+
+    const QList<Plasma::Containment *>
+        originContainments =
         originLayout->unassignFromLayout(
             originViewContainment);
     if (originContainments.isEmpty()) {
@@ -312,7 +341,7 @@ bool Manager::moveView(const QString &originLayoutName,
 
     destinationLayout->assignToLayout(
         originView,
-        std::move(originContainments));
+        originContainments);
     if (originLayout->contains(
             originViewContainment)
             || !destinationLayout->contains(
@@ -325,7 +354,25 @@ bool Manager::moveView(const QString &originLayoutName,
             qPrintable(originLayoutName),
             qPrintable(destinationLayoutName));
     }
-    return true;
+
+    bool recoveryRequired =
+        persistence.recoveryRequired();
+    if (!recoveryRequired
+            && !Layouts::Storage::self()
+                ->completeViewMovePersistence(
+                    persistence
+                        .transactionPath)) {
+        qCritical() << "layout manager committed containment"
+                    << originViewId
+                    << "but could not retire its completed move journal"
+                    << persistence
+                        .transactionPath;
+        recoveryRequired = true;
+    }
+    return recoveryRequired
+        ? MoveViewResult::
+            CommittedRecoveryRequired
+        : MoveViewResult::Committed;
 }
 
 bool Manager::canMoveView(

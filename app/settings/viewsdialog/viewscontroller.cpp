@@ -993,7 +993,13 @@ void Views::save()
     for (int i=0; i<alteredViews.rowCount(); ++i) {
         if (alteredViews[i].state() == Data::View::IsCreated && !alteredViews[i].isMoveOrigin) {
             qDebug() << "org.kde.latte ViewsDialog::save() updating altered view :: " << alteredViews[i];
-            central->updateView(alteredViews[i]);
+            if (!central->updateView(alteredViews[i])) {
+                showDefaultPersistentErrorWarningInlineMessage(
+                    i18n("Changes to dock \"%1\" could not be saved. Close and reopen the layout settings, then try again.",
+                         alteredViews[i].name),
+                    KMessageWidget::Warning);
+                return;
+            }
         }
     }
 
@@ -1049,18 +1055,42 @@ void Views::save()
             //! onscreen_view->onscreen_view
             //! onscreen_view->offscreen_view
             pastedactiveview.setState(pastedactiveview.state(), pastedactiveview.originFile(), destinationlayoutname, pastedactiveview.originView());
-            origin->updateView(pastedactiveview);
+            if (!origin->updateView(pastedactiveview)) {
+                showDefaultPersistentErrorWarningInlineMessage(
+                    i18n("The dock move to layout \"%1\" could not be saved. Close and reopen the layout settings, then try again.",
+                         destinationlayoutname),
+                    KMessageWidget::Warning);
+                return;
+            }
         } else {
             //! offscreen_view->onscreen_view
-            if (!m_handler->corona()->layoutsManager()->moveView(
-                    originlayoutname, originviewid, destinationlayoutname)) {
+            const auto moveResult =
+                m_handler->corona()
+                    ->layoutsManager()
+                    ->moveView(
+                        originlayoutname,
+                        originviewid,
+                        destinationlayoutname);
+            if (!Latte::Layouts::Manager::
+                    moveWasCommitted(
+                        moveResult)) {
                 qCritical() << "Views controller failed to commit the revalidated move of containment"
                             << originviewid << "to" << destinationlayoutname;
-                continue;
+                showDefaultPersistentErrorWarningInlineMessage(
+                    i18n("The dock move to layout \"%1\" could not be saved. Close and reopen the layout settings, then try again.",
+                         destinationlayoutname),
+                    KMessageWidget::Warning);
+                return;
             }
             //!is needed in order for layout to not trigger another move
             pastedactiveview.setState(Data::View::IsCreated, QString(), QString(), QString());
-            central->updateView(pastedactiveview);
+            if (!central->updateView(pastedactiveview)) {
+                showDefaultPersistentErrorWarningInlineMessage(
+                    i18n("The moved dock could not be finalized in layout \"%1\". Close and reopen the layout settings, then try again.",
+                         destinationlayoutname),
+                    KMessageWidget::Warning);
+                return;
+            }
         }
 
         pastedactiveview.setState(Data::View::IsCreated, QString(), QString(), QString());

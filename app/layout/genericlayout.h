@@ -137,7 +137,7 @@ public:
         Plasma::Containment *containment,
         RemovalCommitMode mode);
     void removeView(const Latte::Data::View &viewData);
-    void updateView(const Latte::Data::View &viewData);    
+    [[nodiscard]] bool updateView(const Latte::Data::View &viewData);
     QString storedView(const int &containmentId); //returns temp filepath containing all view data
     void removeOrphanedSubContainment(const int &containmentId);
 
@@ -149,7 +149,9 @@ public:
 
     //! Bind this latteView and its relevant containments(including subcontainments)
     //! to this layout. It is used for moving a Latte::View from layout to layout)
-    void assignToLayout(Latte::View *latteView, QList<Plasma::Containment *> containments);
+    void assignToLayout(
+        Latte::View *latteView,
+        const QList<Plasma::Containment *> &containments);
     //! Unassign that latteView from this layout (this is used for moving a latteView
     //! from layout to layout) and returns all the containments relevant to
     //! that latteView

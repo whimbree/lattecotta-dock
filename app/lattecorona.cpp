@@ -1647,6 +1647,12 @@ QString Corona::dockSystemData()
         m_screenSpaceReservationCoordinator);
 }
 
+QString Corona::viewMoveTransactionsData()
+{
+    return Layouts::Storage::self()
+        ->viewMoveTransactionsData();
+}
+
 QStringList Corona::viewTemplatesData()
 {
     QStringList data;

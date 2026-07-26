@@ -13,6 +13,7 @@
 #include "../data/genericdata.h"
 #include "../data/generictable.h"
 #include "../data/viewstable.h"
+#include "../layout/viewmovetransaction.h"
 
 // Qt
 #include <QTemporaryDir>
@@ -26,6 +27,7 @@
 #include <Plasma/Containment>
 
 class StorageIdRemapApplicationTest;
+class StorageTest;
 
 namespace Latte {
 class Corona;
@@ -41,6 +43,33 @@ struct SubContaimentIdentityData
 {
     QString cfgGroup;
     QString cfgProperty;
+};
+
+struct ViewMovePersistenceResult final
+{
+    enum class Status
+    {
+        Rejected,
+        RejectedRecoveryRequired,
+        Committed,
+        CommittedRecoveryRequired,
+    };
+
+    Status status{Status::Rejected};
+    QString transactionPath;
+    QString error;
+
+    [[nodiscard]] constexpr bool committed() const noexcept
+    {
+        return status == Status::Committed
+            || status == Status::CommittedRecoveryRequired;
+    }
+
+    [[nodiscard]] constexpr bool recoveryRequired() const noexcept
+    {
+        return status == Status::RejectedRecoveryRequired
+            || status == Status::CommittedRecoveryRequired;
+    }
 };
 
 class Storage
@@ -88,6 +117,16 @@ public:
                                                  const QString &snapshotFile);
     [[nodiscard]] bool restoreView(const KSharedConfigPtr &activeConfig,
                                    const QString &snapshotFile);
+    [[nodiscard]] ViewMovePersistenceResult persistViewMove(
+        const Layout::GenericLayout *originLayout,
+        uint originViewId,
+        const Layout::GenericLayout *destinationLayout,
+        const KSharedConfigPtr &activeConfig);
+    [[nodiscard]] bool recoverPendingViewMoves();
+    [[nodiscard]] bool completeViewMovePersistence(
+        const QString &transactionPath);
+    [[nodiscard]] QStringList pendingViewMoveTransactions() const;
+    [[nodiscard]] QString viewMoveTransactionsData() const;
 
     void moveToLayoutFile(const QString &layoutName);
     QStringList storedLayoutsInMultipleFile();
@@ -126,9 +165,43 @@ public:
     //! references, exhaustion refusal) lives in the private
     //! newUniqueIdsFile and has no public headless entry
     friend class ::StorageIdRemapApplicationTest;
+    friend class ::StorageTest;
 
 private:
+    enum class ViewMoveInterruption
+    {
+        None,
+        AfterDestinationPublish,
+        AfterCommitDecision,
+    };
+
+    //! Deterministic test seam for restart idempotence. Production always
+    //! selects None; the other values stop recovery without deleting its
+    //! journal after an already verified repository publication.
+    enum class ViewMoveRecoveryInterruption
+    {
+        None,
+        AfterFirstRepositoryPublication,
+        AfterSecondRepositoryPublication,
+    };
+
     Storage();
+
+    [[nodiscard]] ViewMovePersistenceResult persistViewMoveSnapshot(
+        const QString &originLayoutName,
+        const QString &originFile,
+        const QString &destinationLayoutName,
+        const QString &destinationFile,
+        const KSharedConfigPtr &activeConfig,
+        uint originViewId,
+        const QString &snapshotFile,
+        ViewMoveInterruption interruption =
+            ViewMoveInterruption::None);
+    [[nodiscard]] bool recoverPendingViewMovesIn(
+        const QString &transactionsRoot,
+        const QString &expectedHiddenFile,
+        ViewMoveRecoveryInterruption interruption =
+            ViewMoveRecoveryInterruption::None);
 
     void clearExportedLayoutSettings(KConfigGroup &layoutSettingsGroup);
     void clearLinkedMemberLocalAppletConfiguration(const QString &layoutFile);

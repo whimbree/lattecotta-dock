@@ -31,6 +31,7 @@
 #include "data/viewdata.h"
 #include "data/viewstable.h"
 #include "layout/centrallayout.h"
+#include "layouts/importer.h"
 #include "layouts/storage.h"
 #include "screenpool.h"
 
@@ -38,9 +39,15 @@
 
 // Qt
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
+#include <QLockFile>
 #include <QObject>
 #include <QScopeGuard>
 #include <QString>
@@ -53,6 +60,17 @@
 #include <KSharedConfig>
 
 using Latte::Layouts::Storage;
+
+struct DurableMoveFixture final
+{
+    QString originLayout;
+    QString originFile;
+    QString destinationLayout;
+    QString destinationFile;
+    QString hiddenFile;
+    QString snapshotFile;
+    KSharedConfigPtr hiddenConfig;
+};
 
 class PersistenceEndpointLayout final : public Latte::CentralLayout
 {
@@ -105,6 +123,22 @@ private Q_SLOTS:
     void restoreRemovalSnapshotReplacesPartialGroup();
     void removalPersistenceReportsWriteFailure();
     void classifyLayoutPersistenceEndpoints();
+    void refuseImmutableDurableMoveBeforeCommit();
+    void refuseImmutableActiveOwnerBeforeStaging();
+    void refuseLockedDurableMoveBeforeCommit();
+    void commitDurableMoveAndRetireJournal();
+    void commitFromSnapshotWhenStandaloneSourceIsStale();
+    void discardUnpublishedPreparedJournalDuringRecovery();
+    void refuseHeldRecoveryLockWithoutMutationThenRetry_data();
+    void refuseHeldRecoveryLockWithoutMutationThenRetry();
+    void refuseRecoveryForMixedSubtreeOwnership();
+    void resumeRecoveryAfterEachRepositoryPublication_data();
+    void resumeRecoveryAfterEachRepositoryPublication();
+    void repeatCompletedRecoveryIsIdempotent();
+    void refuseTraversalBearingRecoveryManifest();
+    void recoverInterruptedDestinationStagingByRollingBack();
+    void recoverCommittedMoveByRollingForward();
+    void refuseRecoveryFromCorruptedJournal();
 
     //! clones
     void detectClonedViewsOnlyForLatteContainments();
@@ -144,6 +178,8 @@ private:
     //! an own applet (id 6) and the subcontainment itself (id 99). Returns
     //! the file path.
     QString writeLayoutFixture(const QString &name);
+    DurableMoveFixture createDurableMoveFixture(
+        const QString &suffix);
 
     QTemporaryDir m_dir;
 };
@@ -152,6 +188,1503 @@ void StorageTest::initTestCase()
 {
     QVERIFY(m_dir.isValid());
     QVERIFY(Storage::self() != nullptr);
+}
+
+DurableMoveFixture StorageTest::
+createDurableMoveFixture(
+    const QString &suffix)
+{
+    const QString layoutsDirectory =
+        Latte::Layouts::Importer::
+            layoutUserDir();
+    if (!QDir().mkpath(layoutsDirectory)) {
+        return {};
+    }
+
+    const QString transactionRoot =
+        QDir(layoutsDirectory)
+            .filePath(
+                QStringLiteral(
+                    ".view-move-transactions"));
+    if (QFileInfo::exists(transactionRoot)
+            && !QDir(transactionRoot)
+                .removeRecursively()) {
+        return {};
+    }
+
+    DurableMoveFixture fixture;
+    fixture.originLayout =
+        QStringLiteral("move-origin-%1")
+            .arg(suffix);
+    fixture.destinationLayout =
+        QStringLiteral("move-destination-%1")
+            .arg(suffix);
+    fixture.originFile =
+        Latte::Layouts::Importer::
+            layoutUserFilePath(
+                fixture.originLayout);
+    fixture.destinationFile =
+        Latte::Layouts::Importer::
+            layoutUserFilePath(
+                fixture.destinationLayout);
+    fixture.hiddenFile =
+        Latte::Layouts::Importer::
+            layoutUserFilePath(
+                QString::fromLatin1(
+                    Latte::Layout::
+                        MULTIPLELAYOUTSHIDDENNAME));
+    fixture.snapshotFile =
+        m_dir.filePath(
+            QStringLiteral(
+                "move-snapshot-%1.latte")
+                .arg(suffix));
+    const QStringList fixtureFiles{
+        fixture.originFile,
+        fixture.destinationFile,
+        fixture.hiddenFile,
+        fixture.snapshotFile,
+    };
+    for (const QString &fixtureFile :
+            fixtureFiles) {
+        if (QFileInfo::exists(fixtureFile)
+                && !QFile::remove(fixtureFile)) {
+            return {};
+        }
+    }
+
+    const auto writeSubtree =
+        [](const KSharedConfigPtr &config,
+           const QString &layoutId) {
+            KConfigGroup containments(
+                config,
+                QStringLiteral(
+                    "Containments"));
+            KConfigGroup root =
+                containments.group(
+                    QStringLiteral("12"));
+            root.writeEntry(
+                QStringLiteral("plugin"),
+                QStringLiteral(
+                    "org.kde.latte.containment"));
+            root.writeEntry(
+                QStringLiteral("layoutId"),
+                layoutId);
+            root.group(
+                QStringLiteral("General"))
+                .writeEntry(
+                    QStringLiteral("name"),
+                    QStringLiteral(
+                        "transaction-root"));
+
+            KConfigGroup child =
+                containments.group(
+                    QStringLiteral("13"));
+            child.writeEntry(
+                QStringLiteral("plugin"),
+                QStringLiteral(
+                    "org.kde.plasma.private.systemtray"));
+            child.writeEntry(
+                QStringLiteral("layoutId"),
+                layoutId);
+            child.group(
+                QStringLiteral("General"))
+                .writeEntry(
+                    QStringLiteral("owner"),
+                    12);
+            return config->sync();
+        };
+
+    {
+        const KSharedConfigPtr origin =
+            KSharedConfig::openConfig(
+                fixture.originFile,
+                KConfig::SimpleConfig);
+        if (!writeSubtree(
+                origin,
+                QString())) {
+            return {};
+        }
+    }
+    {
+        const KSharedConfigPtr destination =
+            KSharedConfig::openConfig(
+                fixture.destinationFile,
+                KConfig::SimpleConfig);
+        destination
+            ->group(
+                QStringLiteral(
+                    "LayoutSettings"))
+            .writeEntry(
+                QStringLiteral("version"),
+                2);
+        if (!destination->sync()) {
+            return {};
+        }
+    }
+    fixture.hiddenConfig =
+        KSharedConfig::openConfig(
+            fixture.hiddenFile,
+            KConfig::SimpleConfig);
+    if (!writeSubtree(
+            fixture.hiddenConfig,
+            fixture.originLayout)) {
+        return {};
+    }
+    {
+        const KSharedConfigPtr snapshot =
+            KSharedConfig::openConfig(
+                fixture.snapshotFile,
+                KConfig::SimpleConfig);
+        if (!writeSubtree(
+                snapshot,
+                fixture.originLayout)) {
+            return {};
+        }
+    }
+    return fixture;
+}
+
+void StorageTest::
+refuseImmutableDurableMoveBeforeCommit()
+{
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral("immutable"));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    QFile immutableDestination(
+        fixture.destinationFile);
+    QVERIFY(immutableDestination.open(
+        QIODevice::WriteOnly
+            | QIODevice::Truncate));
+    const QByteArray immutableConfig(
+        "[$i]\n"
+        "[LayoutSettings]\n"
+        "version=2\n");
+    QCOMPARE(
+        immutableDestination.write(
+            immutableConfig),
+        immutableConfig.size());
+    immutableDestination.close();
+    const KConfig immutableReadback(
+        fixture.destinationFile,
+        KConfig::SimpleConfig);
+    QVERIFY(immutableReadback.isImmutable());
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile);
+    QCOMPARE(
+        result.status,
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status::Rejected);
+    QVERIFY(Storage::self()
+        ->pendingViewMoveTransactions()
+        .isEmpty());
+
+    const KConfig origin(
+        fixture.originFile,
+        KConfig::SimpleConfig);
+    const KConfig destination(
+        fixture.destinationFile,
+        KConfig::SimpleConfig);
+    const KConfig hidden(
+        fixture.hiddenFile,
+        KConfig::SimpleConfig);
+    QVERIFY(origin.group(
+        QStringLiteral("Containments"))
+        .hasGroup(QStringLiteral("12")));
+    QVERIFY(!destination.group(
+        QStringLiteral("Containments"))
+        .hasGroup(QStringLiteral("12")));
+    QCOMPARE(
+        hidden.group(
+            QStringLiteral("Containments"))
+            .group(QStringLiteral("12"))
+            .readEntry(
+                QStringLiteral("layoutId"),
+                QString()),
+        fixture.originLayout);
+}
+
+void StorageTest::
+refuseLockedDurableMoveBeforeCommit()
+{
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral("locked"));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    QLockFile destinationLock(
+        fixture.destinationFile
+        + QStringLiteral(".lock"));
+    destinationLock.setStaleLockTime(0);
+    QVERIFY(destinationLock.tryLock(0));
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile);
+    QCOMPARE(
+        result.status,
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status::Rejected);
+    QVERIFY(Storage::self()
+        ->pendingViewMoveTransactions()
+        .isEmpty());
+
+    const KConfig hidden(
+        fixture.hiddenFile,
+        KConfig::SimpleConfig);
+    QCOMPARE(
+        hidden.group(
+            QStringLiteral("Containments"))
+            .group(QStringLiteral("12"))
+            .readEntry(
+                QStringLiteral("layoutId"),
+                QString()),
+        fixture.originLayout);
+}
+
+void StorageTest::
+refuseImmutableActiveOwnerBeforeStaging()
+{
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral(
+                "immutable-owner"));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    QFile hiddenFile(fixture.hiddenFile);
+    QVERIFY(hiddenFile.open(
+        QIODevice::ReadOnly));
+    QByteArray payload = hiddenFile.readAll();
+    hiddenFile.close();
+    const QByteArray mutableOwner =
+        QByteArray("layoutId=")
+        + fixture.originLayout.toUtf8();
+    const QByteArray immutableOwner =
+        QByteArray("layoutId[$i]=")
+        + fixture.originLayout.toUtf8();
+    QVERIFY(payload.contains(mutableOwner));
+    payload.replace(
+        mutableOwner,
+        immutableOwner);
+    QVERIFY(hiddenFile.open(
+        QIODevice::WriteOnly
+            | QIODevice::Truncate));
+    QCOMPARE(
+        hiddenFile.write(payload),
+        payload.size());
+    hiddenFile.close();
+    fixture.hiddenConfig
+        ->reparseConfiguration();
+
+    const KConfigGroup hiddenContainments(
+        fixture.hiddenConfig,
+        QStringLiteral("Containments"));
+    QVERIFY(hiddenContainments
+        .group(QStringLiteral("12"))
+        .isEntryImmutable(
+            QStringLiteral("layoutId")));
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile);
+    QCOMPARE(
+        result.status,
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status::Rejected);
+    QVERIFY(Storage::self()
+        ->pendingViewMoveTransactions()
+        .isEmpty());
+
+    const KConfig destination(
+        fixture.destinationFile,
+        KConfig::SimpleConfig);
+    QVERIFY(!destination.group(
+        QStringLiteral("Containments"))
+        .hasGroup(QStringLiteral("12")));
+}
+
+void StorageTest::
+commitDurableMoveAndRetireJournal()
+{
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral(
+                "commit-and-retire"));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile);
+    QCOMPARE(
+        result.status,
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status::Committed);
+    QVERIFY(!result.transactionPath.isEmpty());
+    QCOMPARE(
+        Storage::self()
+            ->pendingViewMoveTransactions(),
+        QStringList{
+            result.transactionPath});
+
+    {
+        const KConfig origin(
+            fixture.originFile,
+            KConfig::SimpleConfig);
+        const KConfig destination(
+            fixture.destinationFile,
+            KConfig::SimpleConfig);
+        const KConfig hidden(
+            fixture.hiddenFile,
+            KConfig::SimpleConfig);
+        QVERIFY(!origin.group(
+            QStringLiteral("Containments"))
+            .hasGroup(
+                QStringLiteral("12")));
+        QVERIFY(!origin.group(
+            QStringLiteral("Containments"))
+            .hasGroup(
+                QStringLiteral("13")));
+        QVERIFY(destination.group(
+            QStringLiteral("Containments"))
+            .hasGroup(
+                QStringLiteral("12")));
+        QVERIFY(destination.group(
+            QStringLiteral("Containments"))
+            .hasGroup(
+                QStringLiteral("13")));
+        QCOMPARE(
+            hidden.group(
+                QStringLiteral("Containments"))
+                .group(QStringLiteral("12"))
+                .readEntry(
+                    QStringLiteral("layoutId"),
+                    QString()),
+            fixture.destinationLayout);
+        QCOMPARE(
+            hidden.group(
+                QStringLiteral("Containments"))
+                .group(QStringLiteral("13"))
+                .readEntry(
+                    QStringLiteral("layoutId"),
+                    QString()),
+            fixture.destinationLayout);
+    }
+
+    QVERIFY(Storage::self()
+        ->completeViewMovePersistence(
+            result.transactionPath));
+    QVERIFY(Storage::self()
+        ->pendingViewMoveTransactions()
+        .isEmpty());
+    QVERIFY(!QFileInfo::exists(
+        result.transactionPath));
+}
+
+void StorageTest::
+commitFromSnapshotWhenStandaloneSourceIsStale()
+{
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral(
+                "stale-standalone"));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    {
+        const KSharedConfigPtr origin =
+            KSharedConfig::openConfig(
+                fixture.originFile,
+                KConfig::SimpleConfig);
+        origin->group(
+            QStringLiteral("Containments"))
+            .group(QStringLiteral("12"))
+            .group(QStringLiteral("General"))
+            .writeEntry(
+                QStringLiteral("name"),
+                QStringLiteral(
+                    "stale-standalone-mirror"));
+        QVERIFY(origin->sync());
+    }
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile);
+    QCOMPARE(
+        result.status,
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status::Committed);
+    QVERIFY(!result.transactionPath.isEmpty());
+
+    const KConfig destination(
+        fixture.destinationFile,
+        KConfig::SimpleConfig);
+    QCOMPARE(
+        destination.group(
+            QStringLiteral("Containments"))
+            .group(QStringLiteral("12"))
+            .group(QStringLiteral("General"))
+            .readEntry(
+                QStringLiteral("name"),
+                QString()),
+        QStringLiteral(
+            "transaction-root"));
+    QVERIFY(Storage::self()
+        ->completeViewMovePersistence(
+            result.transactionPath));
+    QVERIFY(Storage::self()
+        ->pendingViewMoveTransactions()
+        .isEmpty());
+}
+
+void StorageTest::
+discardUnpublishedPreparedJournalDuringRecovery()
+{
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral(
+                "prepared-residue"));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    const auto readFile =
+        [](const QString &path) {
+            QFile file(path);
+            if (!file.open(
+                    QIODevice::ReadOnly)) {
+                return QByteArray{};
+            }
+            return file.readAll();
+        };
+    const QByteArray originBefore =
+        readFile(fixture.originFile);
+    const QByteArray destinationBefore =
+        readFile(fixture.destinationFile);
+    const QByteArray hiddenBefore =
+        readFile(fixture.hiddenFile);
+    QVERIFY(!originBefore.isEmpty());
+    QVERIFY(!destinationBefore.isEmpty());
+    QVERIFY(!hiddenBefore.isEmpty());
+
+    const QString transactionRoot =
+        QDir(
+            Latte::Layouts::Importer::
+                layoutUserDir())
+            .filePath(
+                QStringLiteral(
+                    ".view-move-transactions"));
+    const auto cleanup =
+        qScopeGuard(
+            [&transactionRoot]() {
+                QDir(transactionRoot)
+                    .removeRecursively();
+            });
+    const QString preparedPath =
+        QDir(transactionRoot)
+            .filePath(
+                QStringLiteral(
+                    "unpublished.prepare"));
+    QVERIFY(QDir().mkpath(
+        preparedPath));
+    QFile partialManifest(
+        QDir(preparedPath)
+            .filePath(
+                QStringLiteral(
+                    "manifest.json")));
+    QVERIFY(partialManifest.open(
+        QIODevice::WriteOnly));
+    const QByteArray incompletePayload{
+        "{\"schemaVersion\":1"};
+    QCOMPARE(
+        partialManifest.write(
+            incompletePayload),
+        incompletePayload.size());
+    partialManifest.close();
+
+    QVERIFY(Storage::self()
+        ->recoverPendingViewMoves());
+    QVERIFY(!QFileInfo::exists(
+        preparedPath));
+    QVERIFY(Storage::self()
+        ->pendingViewMoveTransactions()
+        .isEmpty());
+    QCOMPARE(
+        readFile(fixture.originFile),
+        originBefore);
+    QCOMPARE(
+        readFile(fixture.destinationFile),
+        destinationBefore);
+    QCOMPARE(
+        readFile(fixture.hiddenFile),
+        hiddenBefore);
+}
+
+void StorageTest::
+refuseHeldRecoveryLockWithoutMutationThenRetry_data()
+{
+    QTest::addColumn<QString>(
+        "lockedEndpoint");
+
+    QTest::newRow("origin")
+        << QStringLiteral("origin");
+    QTest::newRow("destination")
+        << QStringLiteral("destination");
+    QTest::newRow("active-owner")
+        << QStringLiteral("hidden");
+}
+
+void StorageTest::
+refuseHeldRecoveryLockWithoutMutationThenRetry()
+{
+    QFETCH(QString, lockedEndpoint);
+
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral("held-recovery-lock-%1")
+                .arg(lockedEndpoint));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile,
+                Storage::
+                    ViewMoveInterruption::
+                        AfterDestinationPublish);
+    QCOMPARE(
+        result.status,
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status::
+                    RejectedRecoveryRequired);
+    QVERIFY(!result.transactionPath.isEmpty());
+    const QString transactionRoot =
+        QFileInfo(result.transactionPath)
+            .absolutePath();
+    const auto cleanup =
+        qScopeGuard(
+            [&transactionRoot]() {
+                QDir(transactionRoot)
+                    .removeRecursively();
+            });
+
+    const auto readFile =
+        [](const QString &path) {
+            QFile file(path);
+            if (!file.open(
+                    QIODevice::ReadOnly)) {
+                return QByteArray{};
+            }
+            return file.readAll();
+        };
+    const QByteArray originBefore =
+        readFile(fixture.originFile);
+    const QByteArray destinationBefore =
+        readFile(fixture.destinationFile);
+    const QByteArray hiddenBefore =
+        readFile(fixture.hiddenFile);
+    QVERIFY(!originBefore.isEmpty());
+    QVERIFY(!destinationBefore.isEmpty());
+    QVERIFY(!hiddenBefore.isEmpty());
+
+    const QString lockedEndpointPath =
+        lockedEndpoint
+                == QStringLiteral("origin")
+            ? fixture.originFile
+            : lockedEndpoint
+                    == QStringLiteral("destination")
+                ? fixture.destinationFile
+                : fixture.hiddenFile;
+    QLockFile endpointLock(
+        lockedEndpointPath
+        + QStringLiteral(".lock"));
+    endpointLock.setStaleLockTime(0);
+    QVERIFY(endpointLock.tryLock(0));
+    QElapsedTimer recoveryTimer;
+    recoveryTimer.start();
+    QVERIFY(!Storage::self()
+        ->recoverPendingViewMoves());
+    QVERIFY2(
+        recoveryTimer.elapsed() < 1000,
+        "Recovery waited on a contended KConfig lock");
+    QCOMPARE(
+        Storage::self()
+            ->pendingViewMoveTransactions(),
+        QStringList{
+            result.transactionPath});
+    QCOMPARE(
+        readFile(fixture.originFile),
+        originBefore);
+    QCOMPARE(
+        readFile(fixture.destinationFile),
+        destinationBefore);
+    QCOMPARE(
+        readFile(fixture.hiddenFile),
+        hiddenBefore);
+
+    endpointLock.unlock();
+    QVERIFY(Storage::self()
+        ->recoverPendingViewMoves());
+    QVERIFY(Storage::self()
+        ->pendingViewMoveTransactions()
+        .isEmpty());
+    const KConfig destination(
+        fixture.destinationFile,
+        KConfig::SimpleConfig);
+    QVERIFY(!destination.group(
+        QStringLiteral("Containments"))
+        .hasGroup(
+            QStringLiteral("12")));
+}
+
+void StorageTest::
+refuseRecoveryForMixedSubtreeOwnership()
+{
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral(
+                "mixed-owner"));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile,
+                Storage::
+                    ViewMoveInterruption::
+                        AfterDestinationPublish);
+    QCOMPARE(
+        result.status,
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status::
+                    RejectedRecoveryRequired);
+    QVERIFY(!result.transactionPath.isEmpty());
+    const QString transactionRoot =
+        QFileInfo(result.transactionPath)
+            .absolutePath();
+    const auto cleanup =
+        qScopeGuard(
+            [&transactionRoot]() {
+                QDir(transactionRoot)
+                    .removeRecursively();
+            });
+
+    fixture.hiddenConfig
+        ->group(
+            QStringLiteral("Containments"))
+        .group(QStringLiteral("13"))
+        .writeEntry(
+            QStringLiteral("layoutId"),
+            fixture.destinationLayout);
+    QVERIFY(fixture.hiddenConfig->sync());
+
+    const auto readFile =
+        [](const QString &path) {
+            QFile file(path);
+            if (!file.open(
+                    QIODevice::ReadOnly)) {
+                return QByteArray{};
+            }
+            return file.readAll();
+        };
+    const QByteArray originBefore =
+        readFile(fixture.originFile);
+    const QByteArray destinationBefore =
+        readFile(fixture.destinationFile);
+    const QByteArray hiddenBefore =
+        readFile(fixture.hiddenFile);
+    QVERIFY(!originBefore.isEmpty());
+    QVERIFY(!destinationBefore.isEmpty());
+    QVERIFY(!hiddenBefore.isEmpty());
+
+    QVERIFY(!Storage::self()
+        ->recoverPendingViewMoves());
+    QCOMPARE(
+        Storage::self()
+            ->pendingViewMoveTransactions(),
+        QStringList{
+            result.transactionPath});
+    QCOMPARE(
+        readFile(fixture.originFile),
+        originBefore);
+    QCOMPARE(
+        readFile(fixture.destinationFile),
+        destinationBefore);
+    QCOMPARE(
+        readFile(fixture.hiddenFile),
+        hiddenBefore);
+}
+
+void StorageTest::
+resumeRecoveryAfterEachRepositoryPublication_data()
+{
+    QTest::addColumn<bool>(
+        "rollForward");
+    QTest::addColumn<int>(
+        "interruptionValue");
+
+    const int afterFirst =
+        static_cast<int>(
+            Storage::
+                ViewMoveRecoveryInterruption::
+                    AfterFirstRepositoryPublication);
+    const int afterSecond =
+        static_cast<int>(
+            Storage::
+                ViewMoveRecoveryInterruption::
+                    AfterSecondRepositoryPublication);
+    QTest::newRow("rollback-after-origin")
+        << false << afterFirst;
+    QTest::newRow("rollback-after-active-owner")
+        << false << afterSecond;
+    QTest::newRow("rollforward-after-destination")
+        << true << afterFirst;
+    QTest::newRow("rollforward-after-active-owner")
+        << true << afterSecond;
+}
+
+void StorageTest::
+resumeRecoveryAfterEachRepositoryPublication()
+{
+    QFETCH(bool, rollForward);
+    QFETCH(int, interruptionValue);
+
+    const auto interruption =
+        static_cast<Storage::
+            ViewMoveRecoveryInterruption>(
+                interruptionValue);
+    const QString suffix =
+        QStringLiteral("%1-%2")
+            .arg(
+                rollForward
+                    ? QStringLiteral("forward")
+                    : QStringLiteral("rollback"))
+            .arg(interruptionValue);
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            suffix);
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile,
+                rollForward
+                    ? Storage::
+                        ViewMoveInterruption::
+                            AfterCommitDecision
+                    : Storage::
+                        ViewMoveInterruption::
+                            AfterDestinationPublish);
+    QCOMPARE(
+        result.status,
+        rollForward
+            ? Latte::Layouts::
+                ViewMovePersistenceResult::
+                    Status::
+                        CommittedRecoveryRequired
+            : Latte::Layouts::
+                ViewMovePersistenceResult::
+                    Status::
+                        RejectedRecoveryRequired);
+    QVERIFY(!result.transactionPath.isEmpty());
+    const QString transactionRoot =
+        QFileInfo(result.transactionPath)
+            .absolutePath();
+    const auto cleanup =
+        qScopeGuard(
+            [&transactionRoot]() {
+                QDir(transactionRoot)
+                    .removeRecursively();
+            });
+
+    //! Make the first repository publication a real repair instead of an
+    //! already-satisfied no-op.
+    const QString firstRepository =
+        rollForward
+            ? fixture.destinationFile
+            : fixture.originFile;
+    {
+        const KSharedConfigPtr config =
+            KSharedConfig::openConfig(
+                firstRepository,
+                KConfig::SimpleConfig);
+        KConfigGroup containments(
+            config,
+            QStringLiteral("Containments"));
+        containments.group(
+            QStringLiteral("12"))
+            .deleteGroup();
+        containments.group(
+            QStringLiteral("13"))
+            .deleteGroup();
+        QVERIFY(config->sync());
+    }
+
+    QVERIFY(!Storage::self()
+        ->recoverPendingViewMovesIn(
+            transactionRoot,
+            fixture.hiddenFile,
+            interruption));
+    QCOMPARE(
+        Storage::self()
+            ->pendingViewMoveTransactions(),
+        QStringList{
+            result.transactionPath});
+    {
+        const KConfig firstRepositoryReadback(
+            firstRepository,
+            KConfig::SimpleConfig);
+        const KConfigGroup containments =
+            firstRepositoryReadback.group(
+                QStringLiteral(
+                    "Containments"));
+        QVERIFY(containments.hasGroup(
+            QStringLiteral("12")));
+        QVERIFY(containments.hasGroup(
+            QStringLiteral("13")));
+    }
+
+    QVERIFY(Storage::self()
+        ->recoverPendingViewMoves());
+    QVERIFY(Storage::self()
+        ->pendingViewMoveTransactions()
+        .isEmpty());
+
+    const KConfig origin(
+        fixture.originFile,
+        KConfig::SimpleConfig);
+    const KConfig destination(
+        fixture.destinationFile,
+        KConfig::SimpleConfig);
+    const KConfig hidden(
+        fixture.hiddenFile,
+        KConfig::SimpleConfig);
+    const KConfigGroup originContainments =
+        origin.group(
+            QStringLiteral("Containments"));
+    const KConfigGroup destinationContainments =
+        destination.group(
+            QStringLiteral("Containments"));
+    const KConfigGroup hiddenContainments =
+        hidden.group(
+            QStringLiteral("Containments"));
+    QCOMPARE(
+        originContainments.hasGroup(
+            QStringLiteral("12")),
+        !rollForward);
+    QCOMPARE(
+        destinationContainments.hasGroup(
+            QStringLiteral("12")),
+        rollForward);
+    QCOMPARE(
+        hiddenContainments
+            .group(QStringLiteral("12"))
+            .readEntry(
+                QStringLiteral("layoutId"),
+                QString()),
+        rollForward
+            ? fixture.destinationLayout
+            : fixture.originLayout);
+}
+
+void StorageTest::
+repeatCompletedRecoveryIsIdempotent()
+{
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral(
+                "idempotent-recovery"));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile,
+                Storage::
+                    ViewMoveInterruption::
+                        AfterCommitDecision);
+    QCOMPARE(
+        result.status,
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status::
+                    CommittedRecoveryRequired);
+    QVERIFY(Storage::self()
+        ->recoverPendingViewMoves());
+
+    const auto readFile =
+        [](const QString &path) {
+            QFile file(path);
+            if (!file.open(
+                    QIODevice::ReadOnly)) {
+                return QByteArray{};
+            }
+            return file.readAll();
+        };
+    const QByteArray originAfterRecovery =
+        readFile(fixture.originFile);
+    const QByteArray destinationAfterRecovery =
+        readFile(fixture.destinationFile);
+    const QByteArray hiddenAfterRecovery =
+        readFile(fixture.hiddenFile);
+    QVERIFY(QFileInfo::exists(
+        fixture.originFile));
+    QVERIFY(!destinationAfterRecovery.isEmpty());
+    QVERIFY(!hiddenAfterRecovery.isEmpty());
+
+    QVERIFY(Storage::self()
+        ->recoverPendingViewMoves());
+    QVERIFY(Storage::self()
+        ->pendingViewMoveTransactions()
+        .isEmpty());
+    QCOMPARE(
+        readFile(fixture.originFile),
+        originAfterRecovery);
+    QCOMPARE(
+        readFile(fixture.destinationFile),
+        destinationAfterRecovery);
+    QCOMPARE(
+        readFile(fixture.hiddenFile),
+        hiddenAfterRecovery);
+}
+
+void StorageTest::
+refuseTraversalBearingRecoveryManifest()
+{
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral(
+                "traversal-manifest"));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile,
+                Storage::
+                    ViewMoveInterruption::
+                        AfterDestinationPublish);
+    QCOMPARE(
+        result.status,
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status::
+                    RejectedRecoveryRequired);
+    QVERIFY(!result.transactionPath.isEmpty());
+    const QString transactionRoot =
+        QFileInfo(result.transactionPath)
+            .absolutePath();
+    const QString escapedFile =
+        QDir::cleanPath(
+            Latte::Layouts::Importer::
+                layoutUserFilePath(
+                    QStringLiteral(
+                        "../escape-control")));
+    const auto cleanup =
+        qScopeGuard(
+            [&transactionRoot,
+             &escapedFile]() {
+                QDir(transactionRoot)
+                    .removeRecursively();
+                QFile::remove(
+                    escapedFile);
+            });
+
+    const QByteArray sentinel{
+        "escape-control-sentinel\n"};
+    QFile escaped(escapedFile);
+    QVERIFY(escaped.open(
+        QIODevice::WriteOnly
+            | QIODevice::Truncate));
+    QCOMPARE(
+        escaped.write(sentinel),
+        sentinel.size());
+    escaped.close();
+
+    const auto readFile =
+        [](const QString &path) {
+            QFile file(path);
+            if (!file.open(
+                    QIODevice::ReadOnly)) {
+                return QByteArray{};
+            }
+            return file.readAll();
+        };
+    const QByteArray originBefore =
+        readFile(fixture.originFile);
+    const QByteArray destinationBefore =
+        readFile(fixture.destinationFile);
+    const QByteArray hiddenBefore =
+        readFile(fixture.hiddenFile);
+    QVERIFY(!originBefore.isEmpty());
+    QVERIFY(!destinationBefore.isEmpty());
+    QVERIFY(!hiddenBefore.isEmpty());
+
+    const QString manifestPath =
+        QDir(result.transactionPath)
+            .filePath(
+                QStringLiteral(
+                    "manifest.json"));
+    QFile manifest(manifestPath);
+    QVERIFY(manifest.open(
+        QIODevice::ReadOnly));
+    QJsonParseError parseError;
+    const QJsonDocument manifestDocument =
+        QJsonDocument::fromJson(
+            manifest.readAll(),
+            &parseError);
+    manifest.close();
+    QCOMPARE(
+        parseError.error,
+        QJsonParseError::NoError);
+    QVERIFY(manifestDocument.isObject());
+    QJsonObject manifestObject =
+        manifestDocument.object();
+    manifestObject[
+        QStringLiteral(
+            "originLayout")] =
+        QStringLiteral(
+            "../escape-control");
+    manifestObject[
+        QStringLiteral(
+            "originFile")] =
+        QFileInfo(escapedFile)
+            .canonicalFilePath();
+    const QByteArray traversalPayload =
+        QJsonDocument(manifestObject)
+            .toJson(
+                QJsonDocument::Compact);
+    QVERIFY(manifest.open(
+        QIODevice::WriteOnly
+            | QIODevice::Truncate));
+    QCOMPARE(
+        manifest.write(
+            traversalPayload),
+        traversalPayload.size());
+    manifest.close();
+
+    QVERIFY(!Storage::self()
+        ->recoverPendingViewMoves());
+    QCOMPARE(
+        Storage::self()
+            ->pendingViewMoveTransactions(),
+        QStringList{
+            result.transactionPath});
+    QCOMPARE(
+        readFile(fixture.originFile),
+        originBefore);
+    QCOMPARE(
+        readFile(fixture.destinationFile),
+        destinationBefore);
+    QCOMPARE(
+        readFile(fixture.hiddenFile),
+        hiddenBefore);
+    QCOMPARE(
+        readFile(escapedFile),
+        sentinel);
+}
+
+void StorageTest::
+recoverInterruptedDestinationStagingByRollingBack()
+{
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral("rollback"));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile,
+                Storage::
+                    ViewMoveInterruption::
+                        AfterDestinationPublish);
+    QCOMPARE(
+        result.status,
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status::
+                    RejectedRecoveryRequired);
+    QCOMPARE(
+        Storage::self()
+            ->pendingViewMoveTransactions()
+            .size(),
+        1);
+    {
+        const QJsonObject readback =
+            QJsonDocument::fromJson(
+                Storage::self()
+                    ->viewMoveTransactionsData()
+                    .toUtf8())
+                .object();
+        QCOMPARE(
+            readback.value(
+                QStringLiteral(
+                    "schemaVersion"))
+                .toInt(),
+            1);
+        const QJsonArray transactions =
+            readback.value(
+                QStringLiteral(
+                    "transactions"))
+                .toArray();
+        QCOMPARE(transactions.size(), 1);
+        const QJsonObject transaction =
+            transactions.first()
+                .toObject();
+        QVERIFY(transaction.value(
+            QStringLiteral(
+                "journalValid"))
+            .toBool());
+        QCOMPARE(
+            transaction.value(
+                QStringLiteral(
+                    "originLayout"))
+                .toString(),
+            fixture.originLayout);
+        QCOMPARE(
+            transaction.value(
+                QStringLiteral(
+                    "destinationLayout"))
+                .toString(),
+            fixture.destinationLayout);
+        QCOMPARE(
+            transaction.value(
+                QStringLiteral(
+                    "persistentOwner"))
+                .toString(),
+            QStringLiteral("origin"));
+        QCOMPARE(
+            transaction.value(
+                QStringLiteral(
+                    "recoveryAction"))
+                .toString(),
+            QStringLiteral("rollBack"));
+    }
+
+    {
+        const KConfig destination(
+            fixture.destinationFile,
+            KConfig::SimpleConfig);
+        QVERIFY(destination.group(
+            QStringLiteral("Containments"))
+            .hasGroup(
+                QStringLiteral("12")));
+    }
+
+    QVERIFY(Storage::self()
+        ->recoverPendingViewMoves());
+    QVERIFY(Storage::self()
+        ->pendingViewMoveTransactions()
+        .isEmpty());
+
+    const KConfig origin(
+        fixture.originFile,
+        KConfig::SimpleConfig);
+    const KConfig destination(
+        fixture.destinationFile,
+        KConfig::SimpleConfig);
+    const KConfig hidden(
+        fixture.hiddenFile,
+        KConfig::SimpleConfig);
+    QVERIFY(origin.group(
+        QStringLiteral("Containments"))
+        .hasGroup(QStringLiteral("12")));
+    QVERIFY(origin.group(
+        QStringLiteral("Containments"))
+        .hasGroup(QStringLiteral("13")));
+    QVERIFY(!destination.group(
+        QStringLiteral("Containments"))
+        .hasGroup(QStringLiteral("12")));
+    QVERIFY(!destination.group(
+        QStringLiteral("Containments"))
+        .hasGroup(QStringLiteral("13")));
+    QCOMPARE(
+        hidden.group(
+            QStringLiteral("Containments"))
+            .group(QStringLiteral("12"))
+            .readEntry(
+                QStringLiteral("layoutId"),
+                QString()),
+        fixture.originLayout);
+}
+
+void StorageTest::
+recoverCommittedMoveByRollingForward()
+{
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral("rollforward"));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile,
+                Storage::
+                    ViewMoveInterruption::
+                        AfterCommitDecision);
+    QCOMPARE(
+        result.status,
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status::
+                    CommittedRecoveryRequired);
+    QCOMPARE(
+        Storage::self()
+            ->pendingViewMoveTransactions()
+            .size(),
+        1);
+
+    {
+        const KConfig origin(
+            fixture.originFile,
+            KConfig::SimpleConfig);
+        const KConfig destination(
+            fixture.destinationFile,
+            KConfig::SimpleConfig);
+        const KConfig hidden(
+            fixture.hiddenFile,
+            KConfig::SimpleConfig);
+        QVERIFY(origin.group(
+            QStringLiteral("Containments"))
+            .hasGroup(
+                QStringLiteral("12")));
+        QVERIFY(destination.group(
+            QStringLiteral("Containments"))
+            .hasGroup(
+                QStringLiteral("12")));
+        QCOMPARE(
+            hidden.group(
+                QStringLiteral("Containments"))
+                .group(QStringLiteral("12"))
+                .readEntry(
+                    QStringLiteral("layoutId"),
+                    QString()),
+            fixture.destinationLayout);
+    }
+
+    QVERIFY(Storage::self()
+        ->recoverPendingViewMoves());
+    QVERIFY(Storage::self()
+        ->pendingViewMoveTransactions()
+        .isEmpty());
+
+    const KConfig origin(
+        fixture.originFile,
+        KConfig::SimpleConfig);
+    const KConfig destination(
+        fixture.destinationFile,
+        KConfig::SimpleConfig);
+    const KConfig hidden(
+        fixture.hiddenFile,
+        KConfig::SimpleConfig);
+    QVERIFY(!origin.group(
+        QStringLiteral("Containments"))
+        .hasGroup(QStringLiteral("12")));
+    QVERIFY(!origin.group(
+        QStringLiteral("Containments"))
+        .hasGroup(QStringLiteral("13")));
+    QVERIFY(destination.group(
+        QStringLiteral("Containments"))
+        .hasGroup(QStringLiteral("12")));
+    QVERIFY(destination.group(
+        QStringLiteral("Containments"))
+        .hasGroup(QStringLiteral("13")));
+    QCOMPARE(
+        hidden.group(
+            QStringLiteral("Containments"))
+            .group(QStringLiteral("12"))
+            .readEntry(
+                QStringLiteral("layoutId"),
+                QString()),
+        fixture.destinationLayout);
+    QCOMPARE(
+        hidden.group(
+            QStringLiteral("Containments"))
+            .group(QStringLiteral("13"))
+            .readEntry(
+                QStringLiteral("layoutId"),
+                QString()),
+        fixture.destinationLayout);
+}
+
+void StorageTest::
+refuseRecoveryFromCorruptedJournal()
+{
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral(
+                "corrupt-journal"));
+    QVERIFY(!fixture.originFile.isEmpty());
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile,
+                Storage::
+                    ViewMoveInterruption::
+                        AfterCommitDecision);
+    QCOMPARE(
+        result.status,
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status::
+                    CommittedRecoveryRequired);
+    QVERIFY(!result.transactionPath.isEmpty());
+    const QString transactionRoot =
+        QFileInfo(result.transactionPath)
+            .absolutePath();
+    const auto cleanup =
+        qScopeGuard(
+            [&transactionRoot]() {
+                QDir(transactionRoot)
+                    .removeRecursively();
+            });
+
+    QFile snapshot(
+        QDir(result.transactionPath)
+            .filePath(
+                QStringLiteral(
+                    "snapshot.latte")));
+    QVERIFY(snapshot.open(
+        QIODevice::WriteOnly
+            | QIODevice::Append));
+    QCOMPARE(
+        snapshot.write(
+            QByteArray(
+                "\n# corruption control\n")),
+        QByteArray(
+            "\n# corruption control\n")
+            .size());
+    snapshot.close();
+
+    const QJsonObject readback =
+        QJsonDocument::fromJson(
+            Storage::self()
+                ->viewMoveTransactionsData()
+                .toUtf8())
+            .object();
+    const QJsonObject transaction =
+        readback.value(
+            QStringLiteral(
+                "transactions"))
+            .toArray()
+            .first()
+            .toObject();
+    QVERIFY(!transaction.value(
+        QStringLiteral(
+            "journalValid"))
+        .toBool());
+    QCOMPARE(
+        transaction.value(
+            QStringLiteral(
+                "persistentOwner"))
+            .toString(),
+        QStringLiteral("unknown"));
+    QCOMPARE(
+        transaction.value(
+            QStringLiteral(
+                "recoveryAction"))
+            .toString(),
+        QStringLiteral("refuse"));
+    QVERIFY(!Storage::self()
+        ->recoverPendingViewMoves());
+    QCOMPARE(
+        Storage::self()
+            ->pendingViewMoveTransactions()
+            .size(),
+        1);
 }
 
 void StorageTest::validatePersistedRelationshipGraphs_data()

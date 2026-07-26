@@ -62,6 +62,13 @@ class Manager : public QObject
     Q_PROPERTY(SyncedLaunchers *syncedLaunchers READ syncedLaunchers NOTIFY syncedLaunchersChanged)
 
 public:
+    enum class MoveViewResult
+    {
+        Rejected,
+        Committed,
+        CommittedRecoveryRequired,
+    };
+
     Manager(QObject *parent = nullptr);
     ~Manager() override;
 
@@ -91,9 +98,15 @@ public:
     SyncedLaunchers *syncedLaunchers() const;
     Synchronizer *synchronizer() const;
 
-    [[nodiscard]] bool moveView(const QString &originLayoutName,
-                                uint originViewId,
-                                const QString &destinationLayoutName);
+    [[nodiscard]] MoveViewResult moveView(
+        const QString &originLayoutName,
+        uint originViewId,
+        const QString &destinationLayoutName);
+    [[nodiscard]] static constexpr bool moveWasCommitted(
+        const MoveViewResult result) noexcept
+    {
+        return result != MoveViewResult::Rejected;
+    }
     [[nodiscard]] bool canMoveView(
         const QString &originLayoutName,
         uint originViewId,

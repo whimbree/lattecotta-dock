@@ -1490,10 +1490,19 @@ void Positioner::initSignalingForLocationChangeSliding()
             if (m_placementRequests.isCurrent(
                     plan.token)
                     && plan.movesLayout) {
-                if (!m_corona->layoutsManager()->moveView(
-                        qString(plan.prior.layoutName),
-                        m_view->containment()->id(),
-                        plan.destinationLayoutName)) {
+                const auto moveResult =
+                    m_corona->layoutsManager()
+                        ->moveView(
+                            qString(
+                                plan.prior.layoutName),
+                            m_view
+                                ->containment()
+                                ->id(),
+                            plan
+                                .destinationLayoutName);
+                if (!Layouts::Manager::
+                        moveWasCommitted(
+                            moveResult)) {
                     qCritical() << "Positioner: cancelling refused relocation of containment"
                                 << m_view->containment()->id()
                                 << "to"
@@ -1502,6 +1511,14 @@ void Positioner::initSignalingForLocationChangeSliding()
                         plan.token,
                         plan.prior);
                     return;
+                }
+                if (moveResult
+                        == Layouts::Manager::
+                            MoveViewResult::
+                                CommittedRecoveryRequired) {
+                    qCritical() << "Positioner committed relocation of containment"
+                                << m_view->containment()->id()
+                                << "with durable cleanup pending";
                 }
             }
 

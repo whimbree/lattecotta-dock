@@ -148,6 +148,12 @@
     <method name="dockSystemData">
         <arg name="data" type="s" direction="out"/>
     </method>
+    <!-- Pending crash-recoverable cross-layout view moves. The schema-versioned
+         JSON identifies the two layouts, complete containment subtree,
+         persisted owner, and deterministic startup recovery action. -->
+    <method name="viewMoveTransactionsData">
+        <arg name="data" type="s" direction="out"/>
+    </method>
     <!-- D21: each applet's JSON payload adds colorizerActive (the colorizer
          scheme is EFFECTIVELY pushed into the applet's own colour group) and
          colorizerReason (applied / notEngaged / splitter / selfColored /
