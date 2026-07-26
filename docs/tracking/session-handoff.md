@@ -31,6 +31,15 @@ reservation ownership while Plasma retains the QObject, then restores
 persistence before remapping on Undo. Persistence uses Corona's path-validated
 live SimpleConfig authority at the post-action commit point. Maximum and Minimum
 controls perform config synchronization without invoking interaction writers.
+The first canonical gate caught a duplicated configuration-clamp path in the
+Minimum handler through a nine-warning QML lint increase. Maximum now owns the
+single clamp-and-store operation, Minimum delegates through its persistent
+proxy, and the inherited AppearanceConfig.qml baseline shrinks from 243 to 242.
+
+The final canonical gate exited 0 at exact branch head `03155fe50`. All 120
+CTest entries, the QML and coverage ratchets, visual probes, the complete
+ASan/UBSan build, nested-compositor integration, and matrix refusal checks
+passed.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
