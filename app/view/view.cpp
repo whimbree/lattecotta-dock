@@ -622,6 +622,52 @@ bool View::clearScreenSpaceReservation()
     return false;
 }
 
+bool View::suspendForReversibleRemoval()
+{
+    if (m_suspendedForRemoval) {
+        return true;
+    }
+    if (!m_visibility) {
+        qCritical() << "view could not suspend reversible removal without visibility ownership"
+                    << validTitle();
+        return false;
+    }
+    if (!m_visibility->suspendForReversibleRemoval()) {
+        return false;
+    }
+
+    hideWindowsForSlidingOut();
+    if (m_appletConfigView) {
+        m_appletConfigView->hide();
+    }
+    setVisible(false);
+    m_suspendedForRemoval = true;
+    return true;
+}
+
+bool View::resumeFromReversibleRemoval()
+{
+    if (!m_suspendedForRemoval) {
+        return true;
+    }
+    if (!m_visibility) {
+        qCritical() << "view could not resume removal Undo without visibility ownership"
+                    << validTitle();
+        return false;
+    }
+    if (!m_visibility->resumeFromReversibleRemoval()) {
+        return false;
+    }
+
+    m_suspendedForRemoval = false;
+    if (m_showAfterLayerShellPlacement) {
+        showAppliedLayerShellPlacement();
+    } else {
+        setVisible(true);
+    }
+    return true;
+}
+
 void View::reanchorLayerShell()
 {
     if (!m_layerShellConfigured) {
@@ -928,7 +974,17 @@ void View::removeView()
                 qCritical() << "View::removeView refused because the reversible removal snapshot failed";
                 return;
             }
+            Plasma::Containment *const removedContainment = containment();
             removeAct->trigger();
+            //! libplasma emits the root destroyedChanged(true) before it marks
+            //! child applets and subcontainments transient. The action is
+            //! synchronous, so only this post-trigger boundary can tombstone
+            //! the complete subtree without later transient writes recreating it.
+            if (!m_layout->commitPreparedViewRemoval(
+                    removedContainment,
+                    Layout::GenericLayout::RemovalCommitMode::Reversible)) {
+                qCritical() << "View::removeView could not commit the reversible removal tombstone";
+            }
         }
     }
 }

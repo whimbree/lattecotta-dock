@@ -194,7 +194,11 @@ void AbstractLayout::setFile(QString file)
 
     m_layoutFile = file;
 
-    KSharedConfigPtr filePtr = KSharedConfig::openConfig(m_layoutFile);
+    //! Layout files are standalone persistence authorities. Match Plasma's
+    //! Corona::config() flags so an active layout and its Corona share one
+    //! KSharedConfig repository instead of maintaining split entry maps.
+    KSharedConfigPtr filePtr =
+        KSharedConfig::openConfig(m_layoutFile, KConfig::SimpleConfig);
     m_layoutGroup = KConfigGroup(filePtr, "LayoutSettings");
 
     Q_EMIT fileChanged();

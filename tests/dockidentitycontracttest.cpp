@@ -85,6 +85,8 @@ private Q_SLOTS:
     void refusedLayoutMoveCancelsRelocation();
     void outputEligibilityUsesPersistentPlacementAuthority();
     void linkedAppletGeometryRemainsPerView();
+    void numericPlacementPinsStableOutputIdentity();
+    void relocationCompletionCommitsPlacementTransaction();
 };
 
 void DockIdentityContractTest::relationshipActionsGuardEveryProductionBoundary()
@@ -156,6 +158,112 @@ void DockIdentityContractTest::duplicateNormalizesRelationshipBeforeImport()
     QVERIFY(cloneActions.contains(QStringLiteral("EXPORTVIEWTEMPLATEACTION]->setVisible(false)")));
     QVERIFY(cloneActions.contains(QStringLiteral("MOVEVIEWACTION]->setVisible(false)")));
     QVERIFY(cloneActions.contains(QStringLiteral("REMOVEVIEWACTION]->setVisible(m_view.isExplicitlyLinked)")));
+}
+
+void DockIdentityContractTest::numericPlacementPinsStableOutputIdentity()
+{
+    const QString coronaSource = readFile(QStringLiteral("app/lattecorona.cpp"));
+    const QString placement = normalized(functionBody(
+        coronaSource, QStringLiteral("void Corona::setViewPlacement")));
+
+    const int resolveConnector = placement.indexOf(
+        QStringLiteral("m_screenPool->connector(screenId)"));
+    const int position = placement.indexOf(
+        QStringLiteral("setNextLocation(QString(),Types::SingleScreenGroup,"
+                       "connector"),
+        resolveConnector);
+
+    QVERIFY2(resolveConnector >= 0 && position > resolveConnector,
+             "numeric placement must pin the supplied stable output identity");
+    QVERIFY2(!placement.contains(QStringLiteral("ONPRIMARYNAME")),
+             "numeric placement must not silently become follow-primary policy");
+}
+
+void DockIdentityContractTest::relocationCompletionCommitsPlacementTransaction()
+{
+    const QString positionerSource = readFile(
+        QStringLiteral("app/view/positioner.cpp"));
+    const QString completion = normalized(functionBody(
+        positionerSource,
+        QStringLiteral("void Positioner::onLastRepositionApplyEvent")));
+    const int finalSolve = completion.indexOf(
+        QStringLiteral("solveAndApplyGeometry(true)"));
+    const int reservation = completion.indexOf(
+        QStringLiteral("publishReservationAfterAppliedPlacement()"),
+        finalSolve);
+    const int applied = completion.indexOf(
+        QStringLiteral("m_appliedRelocationGeneration=m_relocationGeneration"),
+        reservation);
+    const int committed = completion.indexOf(
+        QStringLiteral("Q_EMITplacementTransactionCommitted()"),
+        applied);
+    const int remap = completion.indexOf(
+        QStringLiteral("m_view->showAppliedLayerShellPlacement()"),
+        committed);
+    const int revealGuard = completion.indexOf(
+        QStringLiteral("setInRelocationShowing(true)"), remap);
+    const int reveal = completion.indexOf(
+        QStringLiteral("Q_EMITshowingAfterRelocationFinished()"),
+        revealGuard);
+
+    QVERIFY2(finalSolve >= 0 && reservation > finalSolve
+                 && applied > reservation && committed > applied
+                 && remap > committed && revealGuard > remap
+                 && reveal > revealGuard,
+             "relocation must apply surface and reservation ownership before generation commit, remap, and reveal");
+
+    const QString setScreen = normalized(functionBody(
+        positionerSource,
+        QStringLiteral("bool Positioner::setScreenToFollow")));
+    const int retire = setScreen.indexOf(
+        QStringLiteral("beginPlacementTransaction(true)"));
+    const int physicalMove = setScreen.indexOf(
+        QStringLiteral("m_view->moveToScreen(scr)"), retire);
+    const int screenCompletion = setScreen.indexOf(
+        QStringLiteral("finishPendingScreenPlacementIfApplied()"),
+        physicalMove);
+    QVERIFY2(retire >= 0 && physicalMove > retire
+                 && screenCompletion > physicalMove,
+             "direct output reassignment must retire reservation ownership before moving the surface");
+
+    const QString transaction = normalized(functionBody(
+        positionerSource,
+        QStringLiteral("void Positioner::initSignalingForLocationChangeSliding")));
+    const int begin = transaction.indexOf(
+        QStringLiteral("beginPlacementTransaction("));
+    const int guard = transaction.indexOf(
+        QStringLiteral("QScopedValueRollbackapplyingPlacement"),
+        begin);
+    const int output = transaction.indexOf(
+        QStringLiteral("applyOutputPlacement("), guard);
+    const int edge = transaction.indexOf(
+        QStringLiteral("m_view->setLocation(m_nextScreenEdge)"),
+        output);
+    const int alignment = transaction.indexOf(
+        QStringLiteral("m_view->setAlignment(m_nextAlignment)"),
+        edge);
+    QVERIFY2(begin >= 0 && guard > begin && output > guard
+                 && edge > output && alignment > edge,
+             "compound placement must retire ownership and stage output, edge, and alignment under one observer guard");
+
+    const QString visibilitySource = readFile(
+        QStringLiteral("app/view/visibilitymanager.cpp"));
+    const QString publish = normalized(functionBody(
+        visibilitySource,
+        QStringLiteral("bool VisibilityManager::publishReservationAfterAppliedPlacement")));
+    const QString update = normalized(functionBody(
+        visibilitySource,
+        QStringLiteral("bool VisibilityManager::updateStrutsBasedOnLayoutsAndActivities")));
+    QVERIFY2(publish.contains(QStringLiteral(
+                 "updateStrutsBasedOnLayoutsAndActivities(forceUpdate,ReservationUpdateContext::AppliedPlacement)")),
+             "the post-placement publication boundary must carry its authoritative context");
+    const int authoritativeContext = update.indexOf(QStringLiteral(
+        "context==ReservationUpdateContext::AppliedPlacement"));
+    const int ordinaryGenerationGuard = update.indexOf(QStringLiteral(
+        "if(!placementIsAuthoritative&&("), authoritativeContext);
+    QVERIFY2(authoritativeContext >= 0
+                 && ordinaryGenerationGuard > authoritativeContext,
+             "only ordinary reservation requests may defer on an unapplied placement generation");
 }
 
 void DockIdentityContractTest::retargetIsLatestRequestOnlyAndEndsOldSessionFirst()
@@ -234,7 +342,7 @@ void DockIdentityContractTest::cloneDestructionUnregistersMembership()
 void DockIdentityContractTest::outputRetargetReplacesGeometryConnection()
 {
     const QString source = readFile(QStringLiteral("app/view/positioner.cpp"));
-    const QString setScreen = normalized(functionBody(source, QStringLiteral("void Positioner::setScreenToFollow")));
+    const QString setScreen = normalized(functionBody(source, QStringLiteral("bool Positioner::setScreenToFollow")));
     const int disconnectOld = setScreen.indexOf(QStringLiteral("QObject::disconnect(m_screenGeometryConnection);"));
     const int replaceConnection = setScreen.indexOf(QStringLiteral("m_screenGeometryConnection=connect(scr,&QScreen::geometryChanged"));
 
@@ -312,6 +420,25 @@ void DockIdentityContractTest::containmentRemovalCommitsWithoutNotificationClose
         source, QStringLiteral("void GenericLayout::destroyedChanged")));
     const QString finalDestruction = normalized(functionBody(
         source, QStringLiteral("void GenericLayout::containmentDestroyed")));
+    const QString viewSource = readFile(QStringLiteral("app/view/view.cpp"));
+    const QString removeView = normalized(functionBody(
+        viewSource, QStringLiteral("void View::removeView")));
+    const QString suspendView = normalized(functionBody(
+        viewSource, QStringLiteral("bool View::suspendForReversibleRemoval")));
+    const QString resumeView = normalized(functionBody(
+        viewSource, QStringLiteral("bool View::resumeFromReversibleRemoval")));
+    const QString visibilitySource = readFile(
+        QStringLiteral("app/view/visibilitymanager.cpp"));
+    const QString suspendVisibility = normalized(functionBody(
+        visibilitySource,
+        QStringLiteral("bool VisibilityManager::suspendForReversibleRemoval")));
+    const QString resumeVisibility = normalized(functionBody(
+        visibilitySource,
+        QStringLiteral("bool VisibilityManager::resumeFromReversibleRemoval")));
+    const QString commitPersistence = normalized(functionBody(
+        source, QStringLiteral("bool GenericLayout::commitPreparedViewRemoval")));
+    const QString permanentRemoval = normalized(functionBody(
+        source, QStringLiteral("void GenericLayout::removeView")));
 
     QVERIFY(source.contains(QStringLiteral(
         "constexpr auto RemovalUndoWindow = std::chrono::seconds{60};")));
@@ -322,18 +449,72 @@ void DockIdentityContractTest::containmentRemovalCommitsWithoutNotificationClose
     QVERIFY(schedule.contains(QStringLiteral("containment->destroy();")));
     QVERIFY(cancel.contains(QStringLiteral("m_removalCommitTimers.take(containment)")));
 
+    const int suspend = transition.indexOf(QStringLiteral(
+        "view->suspendForReversibleRemoval()"));
     const int park = transition.indexOf(QStringLiteral(
         "m_waitingLatteViews[containment]=view;"));
     const int arm = transition.indexOf(QStringLiteral(
         "scheduleRemovalCommit(containment);"), park);
+    const int restorePersistence = transition.indexOf(QStringLiteral(
+        "restoreView(activeConfig,removalSnapshot)"));
+    const int resume = transition.indexOf(QStringLiteral(
+        "view->resumeFromReversibleRemoval()"), arm);
+    const int reactivate = transition.indexOf(QStringLiteral(
+        "m_latteViews[containment]=view;"), resume);
     const int undo = transition.indexOf(QStringLiteral(
         "cancelRemovalCommit(containment);"), arm);
-    QVERIFY2(park >= 0 && arm > park && undo > arm,
-             "remove must arm one commit timer and Undo must cancel it");
+    QVERIFY2(restorePersistence >= 0 && resume > restorePersistence,
+             "Undo must restore persistent ownership before reservation and canvas ownership");
+    QVERIFY2(suspend >= 0 && park > suspend && arm > park
+                 && resume > arm && reactivate > resume
+                 && undo > reactivate,
+             "remove must suspend before parking, and Undo must restore before reactivation");
+    QVERIFY2(!transition.contains(QStringLiteral("tombstoneViewFromSnapshot(")),
+             "destroyedChanged fires before libplasma finishes transient subtree writes");
     const int viewGuardEnd = transition.indexOf(QLatin1Char('}'), park);
     QVERIFY2(arm > viewGuardEnd,
              "viewless subcontainments must own the same removal commit fallback");
     QVERIFY(finalDestruction.contains(QStringLiteral("cancelRemovalCommit(containment);")));
+
+    const int trigger = removeView.indexOf(QStringLiteral("removeAct->trigger();"));
+    const int commit = removeView.indexOf(
+        QStringLiteral("commitPreparedViewRemoval("), trigger);
+    QVERIFY2(trigger >= 0 && commit > trigger,
+             "the reversible persistence tombstone must commit after libplasma finishes askDestroy");
+    QVERIFY(commitPersistence.contains(QStringLiteral(
+        "tombstoneViewFromSnapshot(activeConfig,snapshot)")));
+    const int permanentDestroy = permanentRemoval.indexOf(
+        QStringLiteral("destroyContainment(viewcontainment)"));
+    const int permanentCommit = permanentRemoval.indexOf(
+        QStringLiteral("commitPreparedViewRemoval("), permanentDestroy);
+    QVERIFY2(permanentDestroy >= 0 && permanentCommit > permanentDestroy,
+             "direct permanent removal must commit after recursive containment destruction");
+
+    const int retireReservation = suspendVisibility.indexOf(
+        QStringLiteral("m_reservationPublication.remove("));
+    const int retireHelpers = suspendVisibility.indexOf(
+        QStringLiteral("deleteEdgeGhostWindow();"), retireReservation);
+    QVERIFY2(retireReservation >= 0 && retireHelpers > retireReservation,
+             "reversible removal must retire reservation ownership before helper surfaces");
+    const int republish = resumeVisibility.indexOf(
+        QStringLiteral("updateStrutsBasedOnLayoutsAndActivities("));
+    const int restoreHelpers = resumeVisibility.indexOf(
+        QStringLiteral("updateKWinEdgesSupport();"), republish);
+    QVERIFY2(republish >= 0 && restoreHelpers > republish,
+             "Undo must republish reservation ownership before helper surfaces");
+
+    const int suspendVisibilityOwner = suspendView.indexOf(
+        QStringLiteral("m_visibility->suspendForReversibleRemoval()"));
+    const int unmap = suspendView.indexOf(
+        QStringLiteral("setVisible(false);"), suspendVisibilityOwner);
+    QVERIFY2(suspendVisibilityOwner >= 0 && unmap > suspendVisibilityOwner,
+             "the canvas must unmap only after reservation retirement");
+    const int resumeVisibilityOwner = resumeView.indexOf(
+        QStringLiteral("m_visibility->resumeFromReversibleRemoval()"));
+    const int remap = resumeView.indexOf(
+        QStringLiteral("setVisible(true);"), resumeVisibilityOwner);
+    QVERIFY2(resumeVisibilityOwner >= 0 && remap > resumeVisibilityOwner,
+             "the canvas must remap only after reservation publication");
 }
 
 void DockIdentityContractTest::ignoredWindowCleanupRetainsOtherOwners()
