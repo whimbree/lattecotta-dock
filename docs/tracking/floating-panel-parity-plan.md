@@ -167,15 +167,15 @@ and PR #126 landed FP-4B.
 - [x] Preserve replay logs for a deterministic operation storm covering
       duplicate, linked view, output move, edge, orientation, alignment, edit
       mode, destruction, recreation, and reload.
-      Commits: 64a1e44fa
+      Commits: 0c5c33fa6
 - [x] Run that operation storm with a fixed seed in nested KWin. Assert through
       D-Bus after convergence that identities are unique where required,
       transition geometry is stable, reservation membership has no stale or
       orphan group, edit participants are exact, and restart reproduces the
       settled state. Fail on any divergence; keep the replay log only as the
       reproduction artifact.
-      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
-      5ce307460, f58f70558, 0382044fe, ff41d8eca, 94d7dd446
+      Commits: 223ec413a, cef08bd1f, eab2e1f59, 1c8d9bf2d, 0c5c33fa6,
+      3967011eb, c675458c6, e712cbf63, 0f214f012, 7973f68cd
 
 ## Definition of done
 
@@ -191,84 +191,85 @@ and PR #126 landed FP-4B.
 - [x] Every asserted state is available through D-Bus. Update the adaptor XML,
       atomic serializer and exact schema test, D-Bus design document, and D-Bus
       usage reference in the same source commit.
-      Commits: 3c2d81ee8
+      Commits: 1b0a88eeb
 - [x] The README describes the stable floating-panel behavior in timeless
       terms.
 - [x] The full canonical gate passes after the final source commit.
       The replacement gate exited 0 at exact source head
-      `84b4cf01ada214f2d48723de43566254f8d08839`, including all 124 CTest
+      `15baaf03426c39e752e814de937681809c4c7e0c`, including all 124 CTest
       entries, QML and coverage ratchets, visual probes, the complete
       ASan/UBSan build, four nested-compositor recipes, package provenance
       controls, and matrix refusals.
 - [x] Correct D226 (LayerShell output migration bypassed reservation-gated
       remapping) and D227 (layout mutation preceded destination-output
       preflight).
-      Commits: c51b3ec5f, 7578f1e4f
+      Commits: 01d364d95, bd744dddc
 - [x] Fix D228 (placement preflight promoted a hide-time QWindow observation
       to output ownership) and rerun the exact operation storm.
-      Commit: 4ca4a33b0
+      Commit: 992f9df1c
       Evidence: all 76 operations and exact cleanup pass for seed 127934575 in
       nested KWin.
 - [x] Obtain the required independent follow-up review after the D226, D227,
       and D228 corrections. The replacement canonical gate passed at
-      `0b2d069a3`. That review found D229 (cross-layout placement could report
-      success after persistence failure). Commit `296666281` partially fixed
+      `728285b39`. That review found D229 (cross-layout placement could report
+      success after persistence failure). Commit `e57f8e929` partially fixed
       D229, and its canonical gate passed at `f66a404c0`. Silent dock loss
       after restart is a CRITICAL persistence finding, so the rule's critical
       exception required one fresh independent rereview. That rereview returned
       `DO NOT MERGE`: existing files did not require a writable parent, and
-      absent paths did not require a searchable parent. Commit `2f85a8ac7`
+      absent paths did not require a searchable parent. Commit `1dc18737f`
       completes both branches with real filesystem coverage. Its replacement
       canonical gate passed at exact branch head
       `a1a154fd0843d64e4551d61fe559963532dee70a`. The next critical rereview
       returned `DO NOT MERGE`: KConfig reparses an existing file before
       replacement, but the classifier accepts a write-only file. The
       missing-parent and regular-file-parent absent cases were also untested.
-      Commit `0d1ce131d` requires readable existing targets and completes the
+      Commit `7d2db9f95` requires readable existing targets and completes the
       real-filesystem matrix. Its seven focused tests and exact 76-operation
       replay pass. The replacement canonical gate passed at exact branch head
-      `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`. The fresh critical rereview
+      `b5ef76d74e13bcc13b64e0df7dc18fb5295b4354`. The fresh critical rereview
       returned `DO NOT MERGE`: KConfig canonicalizes existing paths and uses
       `QSaveFile` only for process-owned targets, but the classifier models
-      neither branch. Commit `cb9380566` classifies the canonical backend path
+      neither branch. Commit `14c81dd18` classifies the canonical backend path
       and requires the process owner. Its real symlink case and compile-time
       ownership negative control are non-vacuous, and the focused tests and
       exact replay pass. The replacement canonical gate passed at exact branch
-      head `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`; the fresh critical
+      head `73ffe196d1c3b9edf2a632d2d399a09aed46ef5a`; the fresh critical
       rereview returned `DO NOT MERGE`. A file-wide KConfig `[$i]`
       immutability marker passes filesystem preflight and makes the later
-      sync refuse after mutation. Commits `39a455df1` and `3c2d81ee8` now
+      sync refuse after mutation. Commits `3651b3a8b` and `1b0a88eeb` now
       provide a checksummed destination-first transaction, active-owner commit
       decision, startup rollback or roll-forward, immutable and held-lock
       refusal, semantic readback, and typed refusal propagation. Commit
-      `94d7dd446` requires no pending transaction at every operation-storm
+      `7973f68cd` requires no pending transaction at every operation-storm
       checkpoint. The focused matrix and exact seed 127934575 replay pass in
       `linked-dock-operation-stress.seed-127934575.run-APzTUu`; the
       replacement canonical gate passed at exact branch head
-      `8ef520abe4478abcb94c9818ef942d8360857c37`. The fresh critical rereview
+      `311589122215a17c4a00ec1f1edf9dd117819eb9`. The fresh critical rereview
       returned `DO NOT MERGE` for D230 (endpoint directory entries were not
       durable before journal retirement), D231 (queued active-view moves could
       be recorded as committed), and D232 (the operation storm never invoked
-      a cross-layout transaction). Commit `9b0d5891e` flushes the containing
-      directory after each endpoint publication. Commit `ad6754038` gives
+      a cross-layout transaction). Commit `aa2744787` flushes the containing
+      directory after each endpoint publication. Commit `0e2ec0810` gives
       every queued placement one exact terminal generation result. Commits
-      `a06e84af1` and `6c85510a1` expose transaction lifecycle generations and
+      `c68f4a974` and `1c3b86a85` expose transaction lifecycle generations and
       drive two real cross-layout moves. The replacement 78-operation replay
       passes with creation, commit, and retirement generations advancing
-      exactly from 0 to 1 to 2. Commit `3f504ee8e` bounds cleanup of a
+      exactly from 0 to 1 to 2. Commit `c2ef221ca` bounds cleanup of a
       crash-stopped nested seed. The replacement canonical gate passes at
-      `a7a523c80d9c7a67147810e5b91009308ff32243`. Fresh critical rereview found
+      `103c9e4a9f7bd7d87f7ba523a71ff735b30fddc1`. Fresh critical rereview found
       D234 (first transaction-root publication was not durable) and D235
       (unanimated layout moves retained a delayed relocation completion).
-      Commits `8e6613904` and `c1ed12e82` correct both findings with exact
+      Commits `f4594042e` and `7b4cc6e98` correct both findings with exact
       durability injection and generation-preserving callback coverage. The new
       canonical gate passes at
-      `84b4cf01ada214f2d48723de43566254f8d08839`. The final fresh critical
+      `15baaf03426c39e752e814de937681809c4c7e0c`. The final fresh critical
       rereview returned `MERGE` with no findings.
-- [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
+- [x] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent
-      mergeable verdict.
+      mergeable verdict. PR #128 merged FP-4C and completed Option 1 at
+      `4d52a1917` on `main`.
 - [x] Nested-KWin acceptance passes without touching the real desktop session.
 - [ ] Final real-layout acceptance checks visual feel, pointer-edge behavior,
       popup placement, and multi-output composition before release sign-off.

@@ -4703,119 +4703,119 @@ prerequisites in the phases above are done.
       field). Replace the optional `visibleGeometry` lookup with a schema-7
       typed projection of `currentVisibleGeometry` and the complete stable
       geometry, sizing, transition, reservation, and ownership state.
-      Commits: 64a1e44fa
+      Commits: 0c5c33fa6
 - [x] Fix D212 (operation-storm teardown leaked its mutated dock fixture).
       Arm restoration before the first destructive stage, restore the pristine
       nested configuration after success and failure, preserve the body status,
       and prove cleanup ordering with controlled failures.
-      Commits: 64a1e44fa
+      Commits: 0c5c33fa6
 - [x] Fix D213 (operation-storm replay text was not a replayable typed plan).
       Generate a versioned immutable operation document from the fixed seed,
       validate every operation and reference before mutation, accept that
       document as replay input, and retain a resolved execution log.
-      Commits: 64a1e44fa
+      Commits: 0c5c33fa6
 - [x] Fix D214 (operation-storm acceptance did not require floating-panel
       ownership). Stage a deterministic partial floating Panel fixture and
       assert schema 7, stable transition geometry, exact edit participants,
       maximum-depth reservation groups, independent runtime objects, immediate
       removal tombstones, convergence, and durable restart equivalence.
-      Commits: 64a1e44fa
+      Commits: 0c5c33fa6
 - [x] Fix D215 (compound relocation exposed split placement authorities).
       Commit output policy, physical LayerShell output, edge, alignment,
       assigned-output geometry, maximum-depth reservation membership, applied
       generation, remap, and reveal through one ordered transaction.
-      Commits: d7370bd6d
+      Commits: 223ec413a
 - [x] Fix D216 (reversible removal retained compositor-owned surfaces).
       Retire reservation and helper ownership before unmapping and parking a
       removed View; Undo republishes before helper recreation and remap.
-      Commits: 200a1f745
+      Commits: cef08bd1f
 - [x] Fix D217 (removal tombstone committed before child transient writes).
       Snapshot before removal and commit the exact subtree tombstone only after
       libplasma's synchronous root and child destruction action returns.
-      Commits: 200a1f745
+      Commits: cef08bd1f
 - [x] Fix D218 (single-layout removal used a stale KConfig repository).
       Use Corona's live `KConfig::SimpleConfig` authority for tombstone and
       Undo, validate its path, synchronize once, and verify the exact disk
       groups independently.
-      Commits: 200a1f745
+      Commits: cef08bd1f
 - [x] Fix D219 (hidden edit chrome initialization rewrote Maximum length).
       Separate config-to-handle synchronization from interaction and compare
       coupled length values through persistent configuration rather than
       sibling visual state.
-      Commits: c5f1e5d5a, a5583868c
+      Commits: eab2e1f59, 1c8d9bf2d
 - [x] Fix D220 (stress oracle treated containment IDs as globally unique
       history). Retire a symbolic binding after exact removal and allow the
       numeric allocator to reuse that ID only for a later live record.
-      Commits: 64a1e44fa
+      Commits: 0c5c33fa6
 - [x] Fix D221 (rapid return-to-origin placement retained stale pending
       fields). Replace the complete pending placement intent on every request
       and prove A-to-B-to-A plus mixed placement supersession.
-      Commits: 5ce307460
+      Commits: 3967011eb
 - [x] Fix D222 (failed removal Undo left split runtime and persistent
       ownership). Make every restoration and resume failure converge to a
       complete removal or complete restoration, with injected-failure tests.
-      Commits: f58f70558
+      Commits: c675458c6
 - [x] Fix D223 (reservation oracle trusted mutually wrong runtime geometry).
       Derive exact publisher geometry, anchors, margins, edge, and depth from
       independent output state and reject controlled mutations for all edges.
-      Commits: ff41d8eca
+      Commits: 0f214f012
 - [x] Fix D224 (applied placement waited circularly on its own relocation
       commit). Let the explicit applied-placement boundary publish after
       verified surface and LayerShell placement while ordinary updates remain
       deferred until the relocation commits.
-      Commits: 0382044fe
+      Commits: e712cbf63
 - [x] Fix D225 (placement handler rewrite left stale settings-inventory
       selectors). Keep the bidirectional screen and alignment source mapping
       synchronized with D221's current QML structure.
-      Commits: af063f83e
+      Commits: 22c6c17ef
 - [x] Fix D226 (LayerShell output migration bypassed reservation-gated
       remapping). Derive migration from Latte's assigned output and the
       LayerShell output, hide on any authority mismatch, and remap only after
       destination reservation publication commits.
-      Commits: c51b3ec5f
+      Commits: 01d364d95
 - [x] Fix D227 (layout mutation preceded destination-output preflight).
       Validate the generation-tagged destination and every other fallible
       placement prerequisite before mutating layout, output, edge, or
       alignment ownership.
-      Commits: 7578f1e4f
+      Commits: bd744dddc
 - [x] Fix D228 (placement preflight promoted a hide-time QWindow observation
       to output ownership). Keep QWindow screen changes observational and
       derive placement and reservation ownership from assigned and LayerShell
       output state.
-      Commits: 4ca4a33b0
+      Commits: 992f9df1c
 - [x] Fix D229 (cross-layout placement could report success after persistence
       failure). Replace mutation-before-sync with one recoverable durable move
       transaction. Filesystem preflight remains an early refusal only; KConfig
       immutability, locks, parse failures, and write failures must preserve or
       restore one complete durable owner before runtime ownership changes.
-      Commits: 296666281, 2f85a8ac7, 0d1ce131d, cb9380566, 39a455df1,
-      3c2d81ee8, 94d7dd446, 9b0d5891e, ad6754038, a06e84af1,
-      6c85510a1, 8e6613904, c1ed12e82
+      Commits: e57f8e929, 1dc18737f, 7d2db9f95, 14c81dd18, 3651b3a8b,
+      1b0a88eeb, 7973f68cd, aa2744787, 0e2ec0810, c68f4a974,
+      1c3b86a85, f4594042e, 7b4cc6e98
 - [x] Fix D230 (layout directory entries were not durable before journal
       retirement). Flush each endpoint directory after semantic publication
       and before advancing or retiring the recovery journal.
-      Commits: 9b0d5891e
+      Commits: aa2744787
 - [x] Fix D231 (queued active-view moves could be recorded as committed).
       Propagate generation-tagged Positioner completion to the settings save
       transaction and finalize model state only after durable commit.
-      Commits: ad6754038
+      Commits: 0e2ec0810
 - [x] Fix D232 (operation-storm journal assertion never moved a dock across
       layouts). Add exact cross-layout operations and non-vacuous transaction
       lifecycle acceptance to the immutable replay.
-      Commits: a06e84af1, 6c85510a1
+      Commits: c68f4a974, 1c3b86a85
 - [x] Fix D233 (nested seed cleanup waited forever on a crash-stopped dock).
       Replace unbounded leader-only wait with bounded process-group cleanup and
       gate the exact stopped-process case.
-      Commits: 3f504ee8e
+      Commits: c2ef221ca
 - [x] Fix D234 (first transaction-root publication was not durable). Flush the
       private transaction root and its containing layout directory before
       journal preparation or endpoint mutation, with an injected refusal at
       that exact boundary.
-      Commits: 8e6613904
+      Commits: f4594042e
 - [x] Fix D235 (unanimated layout moves retained a delayed relocation
       completion). Invalidate only the queued completion for the synchronously
       committed generation while preserving any reentrant newer generation.
-      Commits: c1ed12e82
+      Commits: 7b4cc6e98
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
@@ -4876,70 +4876,70 @@ prerequisites in the phases above are done.
       is restored on every exit.
       The canonical gate passed at code head `f66a404c0`, then the D229
       critical rereview required the complete persistence endpoint classifier
-      at `2f85a8ac7`. The replacement canonical gate passed at exact branch
+      at `1dc18737f`. The replacement canonical gate passed at exact branch
       head `a1a154fd0843d64e4551d61fe559963532dee70a`, but the next critical
       rereview found that a write-only existing file still passes preflight
       even though KConfig must reparse it before replacement. Commit
-      `0d1ce131d` requires readable existing targets and covers every parent
+      `7d2db9f95` requires readable existing targets and covers every parent
       existence, type, write, search, and file read/write branch with real
       filesystem cases. Its focused tests and exact replay pass. The
       replacement canonical gate passed at exact branch head
-      `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`; fresh critical rereview
+      `b5ef76d74e13bcc13b64e0df7dc18fb5295b4354`; fresh critical rereview
       then found that the classifier uses the lexical symlink parent while
       KConfig uses the canonical target, and accepts non-owned files that
-      KConfig writes through its non-atomic direct branch. Commit `cb9380566`
+      KConfig writes through its non-atomic direct branch. Commit `14c81dd18`
       mirrors both backend selections, pins ownership at compile time, and
       supplies non-vacuous canonical-target coverage. Its focused tests and
       exact replay pass. The replacement canonical gate passed at exact branch
-      head `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`; the fresh critical
+      head `73ffe196d1c3b9edf2a632d2d399a09aed46ef5a`; the fresh critical
       rereview found that KConfig immutability can still refuse after runtime
-      mutation. Commits `39a455df1` and `3c2d81ee8` replace that fallible
+      mutation. Commits `3651b3a8b` and `1b0a88eeb` replace that fallible
       boundary with a checksummed destination-first journal, one active-owner
       commit decision, startup rollback or roll-forward, and persistence-free
-      runtime transfer. Commit `94d7dd446` makes every settled operation
+      runtime transfer. Commit `7973f68cd` makes every settled operation
       checkpoint require an empty transaction readback. Focused failure tests
       and the exact seed 127934575 nested replay pass. The replacement
       canonical gate passed at exact source head
-      `8ef520abe4478abcb94c9818ef942d8360857c37`, including all 123 CTest
+      `311589122215a17c4a00ec1f1edf9dd117819eb9`, including all 123 CTest
       entries and the complete sanitizer nested recipes. The fresh critical
       rereview returned `DO NOT MERGE`: endpoint directory entries were not
       flushed before journal retirement, queued active-view refusal could not
       reach the settings model, and the operation storm never invoked a
       cross-layout transaction. D230 through D232 track the required
-      corrections. Commit `9b0d5891e` flushes every endpoint directory before
-      journal retirement. Commit `ad6754038` gives each queued placement one
+      corrections. Commit `aa2744787` flushes every endpoint directory before
+      journal retirement. Commit `0e2ec0810` gives each queued placement one
       exact terminal generation result and keeps settings dirty until commit.
-      Commits `a06e84af1` and `6c85510a1` expose lifecycle generations and
+      Commits `c68f4a974` and `1c3b86a85` expose lifecycle generations and
       drive the independent root to a second active layout and back. The
       replacement seed 127934575 replay passes all 78 operations with creation,
       commit, and retirement generations advancing exactly from 0 to 1 to 2.
-      Commit `3f504ee8e` also bounds cleanup of a crash-stopped nested seed.
+      Commit `c2ef221ca` also bounds cleanup of a crash-stopped nested seed.
       The replacement canonical gate passed at exact corrected source head
-      `a7a523c80d9c7a67147810e5b91009308ff32243` with all 124 CTest entries,
+      `103c9e4a9f7bd7d87f7ba523a71ff735b30fddc1` with all 124 CTest entries,
       QML and coverage ratchets, visual probes, the complete ASan/UBSan build
       and four nested recipes, package provenance controls, and matrix
       refusals. Fresh critical rereview found D234 (first transaction-root
       publication was not durable) and D235 (unanimated layout moves retained
-      a delayed relocation completion). Commits `8e6613904` and `c1ed12e82`
+      a delayed relocation completion). Commits `f4594042e` and `7b4cc6e98`
       correct both. The next replacement canonical gate passed the complete
       124-test, QML, coverage, visual, sanitizer, nested-recipe, package, and
       matrix suite at exact branch head
-      `84b4cf01ada214f2d48723de43566254f8d08839`. The final fresh critical
+      `15baaf03426c39e752e814de937681809c4c7e0c`. The final fresh critical
       rereview independently verified the complete corrected call graph and
       returned `MERGE` with no findings.
-      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
-      5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
-      7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566,
-      39a455df1, 3c2d81ee8, 94d7dd446, 8ef520abe, 9b0d5891e,
-      ad6754038, a06e84af1, 6c85510a1, 3f504ee8e, a7a523c80,
-      8e6613904, c1ed12e82, 84b4cf01
+      Commits: 223ec413a, cef08bd1f, eab2e1f59, 1c8d9bf2d, 0c5c33fa6,
+      3967011eb, c675458c6, 0f214f012, e712cbf63, 22c6c17ef, 01d364d95,
+      bd744dddc, 992f9df1c, e57f8e929, 1dc18737f, 7d2db9f95, 14c81dd18,
+      3651b3a8b, 1b0a88eeb, 7973f68cd, 311589122, aa2744787,
+      0e2ec0810, c68f4a974, 1c3b86a85, c2ef221ca, 103c9e4a9,
+      f4594042e, 7b4cc6e98, 84b4cf01
 - [x] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
-      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
-      5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
-      7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566,
-      39a455df1, 3c2d81ee8, 94d7dd446, 9b0d5891e, ad6754038,
-      a06e84af1, 6c85510a1, 8e6613904, c1ed12e82
+      Commits: 223ec413a, cef08bd1f, eab2e1f59, 1c8d9bf2d, 0c5c33fa6,
+      3967011eb, c675458c6, 0f214f012, e712cbf63, 22c6c17ef, 01d364d95,
+      bd744dddc, 992f9df1c, e57f8e929, 1dc18737f, 7d2db9f95, 14c81dd18,
+      3651b3a8b, 1b0a88eeb, 7973f68cd, aa2744787, 0e2ec0810,
+      c68f4a974, 1c3b86a85, f4594042e, 7b4cc6e98
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
