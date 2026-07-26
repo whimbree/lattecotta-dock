@@ -168,11 +168,13 @@ public:
     friend class ::StorageTest;
 
 private:
+    //! Deterministic transaction test seam. Production always selects None.
     enum class ViewMoveInterruption
     {
         None,
         AfterDestinationPublish,
         AfterCommitDecision,
+        RejectCommitDecision,
     };
 
     //! Deterministic test seam for failed durability boundaries. Production
@@ -247,6 +249,12 @@ private:
     bool hasAppletsAndContainmentsWithSameId(const Layout::GenericLayout *layout, Data::Warning &warning);
     bool hasOrphanedSubContainments(const Layout::GenericLayout *layout, Data::Warning &warning);
 private:
+    //! Independent process-local clocks: rejection can create and retire a
+    //! journal without ever publishing a durable commit decision.
+    quint64 m_viewMoveJournalCreatedGeneration{0};
+    quint64 m_viewMoveCommitDecisionGeneration{0};
+    quint64 m_viewMoveJournalRetiredGeneration{0};
+
     QTemporaryDir m_storageTmpDir;
 
     Data::GenericTable<Data::Generic> s_knownErrors;

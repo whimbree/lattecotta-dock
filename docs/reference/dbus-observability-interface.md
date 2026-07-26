@@ -442,9 +442,17 @@ Landed before or during the 2026-07-16 stabilization session:
   off-screen canvas/trigger geometry, local geometry outside the canvas, or
   disagreement between the controller's stable canvas and Positioner's solved
   surface. No valid looking subset crosses D-Bus.
-- `viewMoveTransactionsData() -> s` (compact JSON object, schema version 1).
-  This is the durable cross-layout move recovery read. `transactions` is
-  canonically ordered and each valid record reports `transactionId`,
+- `viewMoveTransactionsData() -> s` (compact JSON object, readback schema
+  version 2; the on-disk journal remains schema 1). Its exact top-level keys
+  are `schemaVersion`, `journalCreatedGeneration`,
+  `commitDecisionGeneration`, `journalRetiredGeneration`, and `transactions`.
+  The three generations are process-local monotonic decimal strings. They
+  advance respectively after verified journal promotion, durable destination
+  ownership, and journal rename/removal plus a durable transaction-root flush.
+  A rejected rollback can advance created and retired without advancing
+  commit-decision. Startup recovery only advances retired because journal
+  creation and commit decisions belong to the prior process. `transactions`
+  is canonically ordered and each valid record reports `transactionId`,
   `originLayout`, `destinationLayout`, `rootContainmentId`,
   `containmentIds`, `persistentOwner`, and `recoveryAction`. The active hidden
   layout file is the commit authority: origin ownership rolls staging back,
