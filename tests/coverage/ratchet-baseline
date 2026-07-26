@@ -1,4 +1,4 @@
-120
+121
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -65,6 +65,7 @@ parabolicmathtest
 parabolicroutertest
 popupplacementcontracttest
 positionergeometrytest
+placementrequeststatetest
 previewcontractrules
 previewswitchenginetest
 qmlcompilegate

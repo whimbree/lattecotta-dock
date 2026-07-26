@@ -98,6 +98,10 @@ target_link_libraries(positionergeometrytest
     Qt6::Gui
     Plasma::Plasma)
 
+# FP-4C placement latest-intent authority: sparse UI requests compose into one
+# complete generation-tagged target, and stale callbacks cannot consume it.
+latte_add_unit_test(placementrequeststatetest)
+
 # FP-2 (the stable canvas and transition controller): header-only pure
 # attached/floated/envelope/trigger/mask/bridge geometry. Qt6::Test brings
 # the QRectF support; no live View or compositor reaches the core.
