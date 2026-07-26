@@ -4932,7 +4932,7 @@ prerequisites in the phases above are done.
       bd744dddc, 992f9df1c, e57f8e929, 1dc18737f, 7d2db9f95, 14c81dd18,
       3651b3a8b, 1b0a88eeb, 7973f68cd, 311589122, aa2744787,
       0e2ec0810, c68f4a974, 1c3b86a85, c2ef221ca, 103c9e4a9,
-      f4594042e, 7b4cc6e98, 84b4cf01
+      f4594042e, 7b4cc6e98, 15baaf034
 - [x] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
       Commits: 223ec413a, cef08bd1f, eab2e1f59, 1c8d9bf2d, 0c5c33fa6,
