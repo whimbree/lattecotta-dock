@@ -215,6 +215,16 @@ coverage ratchets, visual probes, the complete ASan/UBSan build, four nested
 sanitizer recipes, package provenance controls, and matrix refusals passed.
 Fresh critical independent rereview remains open.
 
+The fresh critical rereview returned `DO NOT MERGE`. KConfig canonicalizes an
+existing file before selecting its persistence path. A symlink in a writable
+directory can target a file under a non-writable directory, so classifying the
+lexical parent accepts an endpoint whose `QSaveFile` replacement cannot
+commit. KConfig also uses `QSaveFile` only for a file owned by the process;
+otherwise it takes a direct truncate-and-write branch whose individual device
+writes are not reported. D229 remains the PR #128 release blocker, and the
+canonical gate at `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2` is no longer
+final acceptance evidence.
+
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
 globally unique historical token. The oracle retires the removed symbolic

@@ -4783,7 +4783,7 @@ prerequisites in the phases above are done.
       derive placement and reservation ownership from assigned and LayerShell
       output state.
       Commits: 4ca4a33b0
-- [x] Fix D229 (cross-layout placement could report success after persistence
+- [ ] Fix D229 (cross-layout placement could report success after persistence
       failure). Preflight both layout files before mutation and make any
       post-mutation persistence failure an invariant failure or restore both
       runtime and durable ownership.
@@ -4856,7 +4856,9 @@ prerequisites in the phases above are done.
       filesystem cases. Its focused tests and exact replay pass. The
       replacement canonical gate passed at exact branch head
       `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`; fresh critical rereview
-      remains open.
+      then found that the classifier uses the lexical symlink parent while
+      KConfig uses the canonical target, and accepts non-owned files that
+      KConfig writes through its non-atomic direct branch.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
       7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d

@@ -3069,10 +3069,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D229 - Cross-layout placement could report success after persistence failure
-- STATUS: FIXED ON `test/fp4c-operation-storm` at `296666281`, `2f85a8ac7`,
-  and `0d1ce131d`; the replacement canonical gate passed at exact branch head
-  `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`. Fresh critical independent
-  rereview remains open.
+- STATUS: OPEN ON `test/fp4c-operation-storm`; the fresh critical rereview
+  found that the classifier does not yet mirror KConfig's canonical-path and
+  file-ownership branches.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3082,14 +3081,20 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   two layout persistence endpoints. After runtime mutation,
   `GenericLayout::unassignFromLayout()` and `assignToLayout()` only log
   `syncToLayoutFile()` failure and continue, so `Manager::moveView()` can pass
-  its runtime-only postcondition despite split durable ownership.
+  its runtime-only postcondition despite split durable ownership. The first
+  endpoint classifiers also inspected the lexical path and accepted files not
+  owned by the process. KConfig canonicalizes an existing path and uses
+  `QSaveFile` only for a process-owned target; Latte must classify that same
+  backend path and write mode.
 - FIX: preflight both persistence endpoints before the first layout
   mutation. Once mutation starts, persistence failure must be an invariant
   failure; it cannot remain a recoverable success path. Only regular writable
-  and readable layout files or absent paths in a real writable and searchable
-  parent directory qualify. Existing-file readability is required because
-  KConfig reparses the file before writing through `QSaveFile`; the parent
-  requirement permits that replacement to commit atomically.
+  and readable process-owned layout files or absent paths in a real writable
+  and searchable parent directory qualify. Existing symlinks are resolved to
+  the same canonical target KConfig uses before file and containing-directory
+  classification. Existing-file readability is required because KConfig
+  reparses the file before writing through `QSaveFile`; ownership and the
+  canonical parent requirement keep persistence on that atomic branch.
 - EVIDENCE: real filesystem cases cover existing writable, existing
   read-only, existing write-only, directory masquerade, absent creatable,
   missing parent, regular-file parent, non-writable parent, and non-searchable
@@ -3100,8 +3105,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   exact seed 127934575 nested-KWin replay completes all 76 operations, reload,
   and exact cleanup in
   `linked-dock-operation-stress.seed-127934575.run-WZU6e7`.
-- REQUIRED ACCEPTANCE: obtain a fresh critical independent rereview after
-  `0d1ce131d`.
+- REQUIRED ACCEPTANCE: add real canonical-target symlink coverage and a
+  compile-time non-owner negative control; rerun exact replay and canonical
+  gate; obtain a fresh critical independent rereview.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
@@ -3133,10 +3139,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: FIXED ON `test/fp4c-operation-storm`; the D229 write-only endpoint
-  correction passes its focused tests, exact replay, and replacement canonical
-  gate at `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`. Fresh critical independent
-  rereview remains open.
+- STATUS: INCOMPLETE ON `test/fp4c-operation-storm`; the D229 critical
+  rereview found unmodeled canonical-path and file-ownership persistence
+  branches after the replacement canonical gate.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
