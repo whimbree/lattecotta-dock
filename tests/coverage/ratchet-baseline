@@ -108,6 +108,7 @@ tooltiptexttest
 universalsettingstest
 userconfiguringcontracttest
 viewactionpolicytest
+viewmovetransactiontest
 viewmodelstest
 visibilityrevealtest
 visibleindextest
