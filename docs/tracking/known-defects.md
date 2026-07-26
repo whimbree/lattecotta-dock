@@ -3068,6 +3068,41 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   failed at the captured-prior contract, then passed after restoring the fix.
 - SEVERITY: release blocker.
 
+### D235 - Unanimated layout moves retained a delayed relocation completion
+- STATUS: OPEN on `test/fp4c-operation-storm`; PR blocked.
+- FOUND: 2026-07-26, fresh critical rereview of the complete corrected FP-4C
+  diff.
+- SYMPTOM: a same-activity layout move can apply geometry and reservation
+  twice, then emit a false critical error that its already committed placement
+  generation is stale.
+- ROOT: the synchronous `hidingForRelocationFinished` signal changes layout
+  and schedules the ordinary delayed last-reposition callback. The unanimated
+  branch then commits the same generation immediately without invalidating that
+  scheduled completion. Its later callback reapplies the solved state before
+  `completeIfCurrent()` rejects the already cleared request.
+- REQUIRED FIX: synchronous completion must invalidate only the delayed
+  completion for the exact generation it commits. A reentrant newer generation
+  must remain scheduled.
+- SEVERITY: beta blocker.
+
+### D234 - First transaction-root publication was not durable
+- STATUS: OPEN on `test/fp4c-operation-storm`; PR blocked.
+- FOUND: 2026-07-26, fresh critical rereview of the complete corrected FP-4C
+  diff.
+- SYMPTOM: the first cross-layout move after creating
+  `.view-move-transactions` can leave duplicate persistent dock state after a
+  host crash.
+- ROOT: journal promotion flushes the transaction root itself, but creation of
+  that root never flushes the parent layout directory that owns its directory
+  entry. A crash after destination publication can therefore preserve the
+  staged destination while losing the complete journal root needed for startup
+  rollback.
+- REQUIRED FIX: make the private transaction root and its parent directory
+  durable before journal preparation or endpoint mutation. Inject refusal at
+  that exact boundary and prove that no endpoint changes and no recoverable
+  journal are reported.
+- SEVERITY: critical release blocker.
+
 ### D233 - Nested seed cleanup waited forever on a crash-stopped dock
 - STATUS: FIXED ON `test/fp4c-operation-storm` by `3f504ee8e`; PR pending.
 - FOUND: 2026-07-26, replacement canonical gate after D230 through D232.

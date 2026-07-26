@@ -257,8 +257,10 @@ and PR #126 landed FP-4B.
       passes with creation, commit, and retirement generations advancing
       exactly from 0 to 1 to 2. Commit `3f504ee8e` bounds cleanup of a
       crash-stopped nested seed. The replacement canonical gate passes at
-      `a7a523c80d9c7a67147810e5b91009308ff32243`. Fresh critical rereview
-      remains.
+      `a7a523c80d9c7a67147810e5b91009308ff32243`. Fresh critical rereview found
+      D234 (first transaction-root publication was not durable) and D235
+      (unanimated layout moves retained a delayed relocation completion).
+      Both remain required before another gate and fresh critical rereview.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent
