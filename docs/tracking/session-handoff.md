@@ -3,6 +3,46 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-25.
 
+## 2026-07-25: FP-4C operation storm converges
+
+FP-4C (the deterministic operation-storm acceptance) now passes in the
+dual-output nested vehicle. The saved seed 127934575 plan contains 74 typed
+symbolic operations and is accepted as exact replay input. Its schema-7 oracle
+checks live identity and lineage, assigned output and edge, stable geometry and
+sizing, transition and edit ownership, maximum-depth reservation groups,
+compositor window ownership, immediate removal tombstones, convergence, and
+restart equivalence. The fixture transaction restores the pristine nested
+configuration after success and failure. All 21 adversarial pure-model tests
+and the real notification dock-and-applet Undo recipe pass.
+
+The storm found four product boundaries beyond the D211 through D214 harness
+preflight. Compound placement could expose a new QWindow rectangle with an old
+LayerShell output and reservation. Reversible removal parked the model View
+without retiring compositor ownership. Single-layout tombstone and Undo used a
+stale FullConfig repository and committed before libplasma finished child
+transient writes. Delayed hidden edit-chrome construction treated slider
+initialization as interaction and changed a Justify root's Maximum from 45
+percent to 1 percent.
+
+The branch now commits output policy, LayerShell output, edge, alignment,
+assigned-output geometry, reservation, relocation generation, remap, and reveal
+through one ordered placement transaction. Removal suspends visual, helper, and
+reservation ownership while Plasma retains the QObject, then restores
+persistence before remapping on Undo. Persistence uses Corona's path-validated
+live SimpleConfig authority at the post-action commit point. Maximum and Minimum
+controls perform config synchronization without invoking interaction writers.
+
+Plasma may reuse a containment's numeric ID after that persistent record is
+permanently removed. The ID is stable and unique for a live record, not a
+globally unique historical token. The oracle retires the removed symbolic
+binding only after proving the exact persistent delta.
+
+Remaining identity-plan limits are unchanged: Start and End placement still
+need one normalization path for every external configuration write, and
+overlapping same-edge stable spans still need deterministic refusal or recovery.
+Separated partial same-edge spans and maximum-depth reservation grouping remain
+the supported model; no inward stack feature is introduced.
+
 ## 2026-07-25: FP-4C preflight rejects the inherited stress oracle
 
 FP-4C (the deterministic operation-storm acceptance) preflight confirmed that

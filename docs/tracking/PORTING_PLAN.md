@@ -4699,27 +4699,54 @@ prerequisites in the phases above are done.
       mutations, and recipe 073 keep the Start, End, and vertical Panel applet
       and popup spans fixed through real attached and floated endpoints.
       Commits: dc0fda084 (PR #126)
-- [ ] Fix D211 (operation-storm convergence projected a nonexistent geometry
+- [x] Fix D211 (operation-storm convergence projected a nonexistent geometry
       field). Replace the optional `visibleGeometry` lookup with a schema-7
       typed projection of `currentVisibleGeometry` and the complete stable
       geometry, sizing, transition, reservation, and ownership state.
-      Commits:
-- [ ] Fix D212 (operation-storm teardown leaked its mutated dock fixture).
+      Commits: 64a1e44fa
+- [x] Fix D212 (operation-storm teardown leaked its mutated dock fixture).
       Arm restoration before the first destructive stage, restore the pristine
       nested configuration after success and failure, preserve the body status,
       and prove cleanup ordering with controlled failures.
-      Commits:
-- [ ] Fix D213 (operation-storm replay text was not a replayable typed plan).
+      Commits: 64a1e44fa
+- [x] Fix D213 (operation-storm replay text was not a replayable typed plan).
       Generate a versioned immutable operation document from the fixed seed,
       validate every operation and reference before mutation, accept that
       document as replay input, and retain a resolved execution log.
-      Commits:
-- [ ] Fix D214 (operation-storm acceptance did not require floating-panel
+      Commits: 64a1e44fa
+- [x] Fix D214 (operation-storm acceptance did not require floating-panel
       ownership). Stage a deterministic partial floating Panel fixture and
       assert schema 7, stable transition geometry, exact edit participants,
       maximum-depth reservation groups, independent runtime objects, immediate
       removal tombstones, convergence, and durable restart equivalence.
-      Commits:
+      Commits: 64a1e44fa
+- [x] Fix D215 (compound relocation exposed split placement authorities).
+      Commit output policy, physical LayerShell output, edge, alignment,
+      assigned-output geometry, maximum-depth reservation membership, applied
+      generation, remap, and reveal through one ordered transaction.
+      Commits: d7370bd6d
+- [x] Fix D216 (reversible removal retained compositor-owned surfaces).
+      Retire reservation and helper ownership before unmapping and parking a
+      removed View; Undo republishes before helper recreation and remap.
+      Commits: 200a1f745
+- [x] Fix D217 (removal tombstone committed before child transient writes).
+      Snapshot before removal and commit the exact subtree tombstone only after
+      libplasma's synchronous root and child destruction action returns.
+      Commits: 200a1f745
+- [x] Fix D218 (single-layout removal used a stale KConfig repository).
+      Use Corona's live `KConfig::SimpleConfig` authority for tombstone and
+      Undo, validate its path, synchronize once, and verify the exact disk
+      groups independently.
+      Commits: 200a1f745
+- [x] Fix D219 (hidden edit chrome initialization rewrote Maximum length).
+      Separate config-to-handle synchronization from interaction and compare
+      coupled length values through persistent configuration rather than
+      sibling visual state.
+      Commits: c5f1e5d5a
+- [x] Fix D220 (stress oracle treated containment IDs as globally unique
+      history). Retire a symbolic binding after exact removal and allow the
+      numeric allocator to reuse that ID only for a later live record.
+      Commits: 64a1e44fa
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
@@ -4770,11 +4797,17 @@ prerequisites in the phases above are done.
       arrangements, client minimization and destruction, and process restart.
       Commits: 4daa80121, dc0fda084, ad2a91c6f, 649fb79b4,
       4ac5208b9, 80e5d8fee, 3f6794861 (PR #126)
-- [ ] Complete FP-4C (the deterministic operation-storm acceptance).
-      Commits:
-- [ ] Complete FP-4 (the stable window-touch trigger and end-to-end
+- [x] Complete FP-4C (the deterministic operation-storm acceptance).
+      One immutable schema-versioned plan drives 74 symbolic operations through
+      Duplicate Dock, linked creation, output, edge, alignment, edit, removal,
+      recreation, runtime rotation, and persistence reload. Every checkpoint
+      validates exact schema-7 identity, geometry, presentation, reservation,
+      edit, compositor-window, and convergence ownership. The same document
+      replays exactly and the nested configuration is restored on every exit.
+      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, 64a1e44fa
+- [x] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
-      Commits:
+      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, 64a1e44fa
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

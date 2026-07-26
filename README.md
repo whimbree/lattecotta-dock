@@ -67,6 +67,14 @@ Applet membership and ordinary settings stay linked, while orientation-dependent
 applet length and effective sizing remain local to each output view. Runtime
 recreation and output disconnects preserve the persistent relationship and
 rebind only the views eligible on active outputs.
+Output, edge, and alignment changes commit as one applied placement
+transaction. The old reservation is retired before mutation; the view then
+solves geometry against its assigned output, applies the exact layer-shell
+output and anchors, publishes the new maximum-depth reservation membership,
+commits its relocation generation, and only then remaps and reveals. A
+reversible dock removal similarly retires visual, activation-helper, and
+reservation ownership while Plasma retains the containment for Undo. Undo
+restores the exact persistent subtree and reservation before remapping it.
 Horizontal and vertical layout changes use the same per-view animation tracker,
 so automatic sizing waits for settled content on both axes.
 Size changes use one velocity-preserving icon animation; margins and padding
@@ -233,7 +241,7 @@ How it is built
 ===============
 
 Every fix names its root cause and the evidence in its commit body, and
-the tree defends itself: 97 ctest entries and 31 paired unit headers,
+the tree defends itself: 120 CTest entries and 46 paired unit headers,
 with the unit suites running under ASan+UBSan with forced asserts, a QML
 compile gate that loads every shipped QML file in a real engine, contract tests
 that pin the exact libplasma/KSvg/Qt behaviors the dock relies on (so a

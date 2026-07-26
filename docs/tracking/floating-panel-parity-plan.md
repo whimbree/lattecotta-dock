@@ -164,17 +164,17 @@ and PR #126 landed FP-4B.
       touching, spanning-window, and same-edge separated-span fixtures.
       Commits: 4daa80121, ad2a91c6f, 649fb79b4, 4ac5208b9,
       80e5d8fee, 3f6794861 (PR #126)
-- [ ] Preserve replay logs for a deterministic operation storm covering
+- [x] Preserve replay logs for a deterministic operation storm covering
       duplicate, linked view, output move, edge, orientation, alignment, edit
       mode, destruction, recreation, and reload.
-      Commits:
-- [ ] Run that operation storm with a fixed seed in nested KWin. Assert through
+      Commits: 64a1e44fa
+- [x] Run that operation storm with a fixed seed in nested KWin. Assert through
       D-Bus after convergence that identities are unique where required,
       transition geometry is stable, reservation membership has no stale or
       orphan group, edit participants are exact, and restart reproduces the
       settled state. Fail on any divergence; keep the replay log only as the
       reproduction artifact.
-      Commits:
+      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, 64a1e44fa
 
 ## Definition of done
 
@@ -182,7 +182,7 @@ and PR #126 landed FP-4B.
       Commits: 6f6c33d9a
 - [x] D160 (same-edge maximum reservation depth was described as implemented)
       exposed the missing authority; FP-1 implements it.
-- [ ] D172 (floating panel attachment moves the surface and reservation instead
+- [x] D172 (floating panel attachment moves the surface and reservation instead
       of presentation) is fixed by FP-1 through FP-4.
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
@@ -197,6 +197,6 @@ and PR #126 landed FP-4B.
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent
       mergeable verdict.
-- [ ] Nested-KWin acceptance passes without touching the real desktop session.
+- [x] Nested-KWin acceptance passes without touching the real desktop session.
 - [ ] Final real-layout acceptance checks visual feel, pointer-edge behavior,
       popup placement, and multi-output composition before release sign-off.
