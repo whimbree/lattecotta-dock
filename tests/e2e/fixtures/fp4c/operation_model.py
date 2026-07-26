@@ -25,6 +25,12 @@ REPLAY_FORMAT = "lattecotta.fp4c.operation-replay"
 FORMAT_VERSION = 1
 DEFAULT_SEED = 127_934_575
 GENERATOR = "splitmix64-v1"
+VIEW_MOVE_LIFECYCLE_SCHEMA_VERSION = 2
+VIEW_MOVE_LIFECYCLE_GENERATIONS = (
+    "journalCreatedGeneration",
+    "commitDecisionGeneration",
+    "journalRetiredGeneration",
+)
 FLOAT32_ABSOLUTE_TOLERANCE = 1e-6
 STACKING_REASON = (
     "Inward same-edge stacking is unsupported; stable-span overlap is not yet rejected."
@@ -127,6 +133,11 @@ class OutputRole(str, Enum):
     SECONDARY = "secondary"
 
 
+class LayoutRole(str, Enum):
+    ORIGIN = "origin"
+    DESTINATION = "destination"
+
+
 @dataclass(frozen=True, slots=True)
 class OutputSnapshot:
     identity: int
@@ -176,6 +187,7 @@ class Alignment(IntEnum):
 
 class OperationKind(str, Enum):
     MOVE = "move"
+    MOVE_LAYOUT = "moveLayout"
     CREATE_LINKED = "createLinked"
     DUPLICATE = "duplicateIndependent"
     BEGIN_EDIT = "beginEdit"
@@ -229,6 +241,7 @@ class Operation:
     source: str | None = None
     result: str | None = None
     placement: Placement | None = None
+    layout: LayoutRole | None = None
     checkpoint: bool = True
     affected: tuple[str, ...] = ()
 
@@ -243,6 +256,8 @@ class Operation:
                 payload[key] = value
         if self.placement is not None:
             payload["placement"] = self.placement.to_json()
+        if self.layout is not None:
+            payload["layout"] = self.layout.value
         if self.affected:
             payload["affected"] = list(self.affected)
         return {"seq": self.seq, "checkpoint": self.checkpoint, "operation": payload}
@@ -254,6 +269,7 @@ class ExpectedView:
     relationship: str
     root: str | None
     placement: Placement | None
+    layout: LayoutRole = LayoutRole.ORIGIN
     follows_primary: bool | None = None
 
 
@@ -328,6 +344,7 @@ def generate_plan(seed: int, *, validate: bool = True) -> dict[str, Any]:
         source: str | None = None,
         result: str | None = None,
         placement: Placement | None = None,
+        layout: LayoutRole | None = None,
         checkpoint: bool = True,
         affected: tuple[str, ...] = (),
     ) -> None:
@@ -339,6 +356,7 @@ def generate_plan(seed: int, *, validate: bool = True) -> dict[str, Any]:
                 source,
                 result,
                 placement,
+                layout,
                 checkpoint,
                 affected,
             )
@@ -362,6 +380,16 @@ def generate_plan(seed: int, *, validate: bool = True) -> dict[str, Any]:
         append(OperationKind.END_EDIT, target=target)
 
     move("root", Placement(OutputRole.PRIMARY, Edge.BOTTOM, Alignment.START))
+    append(
+        OperationKind.MOVE_LAYOUT,
+        target="root",
+        layout=LayoutRole.DESTINATION,
+    )
+    append(
+        OperationKind.MOVE_LAYOUT,
+        target="root",
+        layout=LayoutRole.ORIGIN,
+    )
     append(
         OperationKind.CREATE_LINKED,
         source="root",
@@ -549,6 +577,17 @@ def parse_operation(value: Any, expected_seq: int) -> Operation:
         if "placement" in payload
         else None
     )
+    layout = None
+    if "layout" in payload:
+        try:
+            layout = LayoutRole(
+                require_string(
+                    payload["layout"],
+                    f"operation {expected_seq}.layout",
+                )
+            )
+        except ValueError:
+            fail(f"operation {expected_seq}.layout is not a known layout role")
     affected_raw = payload.get("affected", [])
     if not isinstance(affected_raw, list) or any(
         not isinstance(item, str) or not item for item in affected_raw
@@ -561,11 +600,13 @@ def parse_operation(value: Any, expected_seq: int) -> Operation:
         source,
         result,
         placement,
+        layout,
         step["checkpoint"],
         tuple(affected_raw),
     )
     requirements = {
         OperationKind.MOVE: (target is not None and placement is not None),
+        OperationKind.MOVE_LAYOUT: (target is not None and layout is not None),
         OperationKind.CREATE_LINKED: (
             source is not None and result is not None and placement is not None
         ),
@@ -606,6 +647,13 @@ def apply_operation(state: ModelState, operation: Operation) -> ModelState:
             placement=operation.placement,
             follows_primary=False,
         )
+    elif operation.kind is OperationKind.MOVE_LAYOUT:
+        current = require_live(operation.target, "target")
+        if current.relationship != "independent":
+            fail(f"operation {operation.seq} moves a linked relationship across layouts")
+        if operation.layout is current.layout:
+            fail(f"operation {operation.seq} does not change layout ownership")
+        views[current.handle] = replace(current, layout=operation.layout)
     elif operation.kind is OperationKind.CREATE_LINKED:
         source = require_live(operation.source, "source")
         if operation.result in views or operation.result in state.destroyed:
@@ -616,6 +664,7 @@ def apply_operation(state: ModelState, operation: Operation) -> ModelState:
             "linkedMember",
             root,
             None,
+            source.layout,
             False,
         )
         root_view = require_live(root, "relationship root")
@@ -629,6 +678,7 @@ def apply_operation(state: ModelState, operation: Operation) -> ModelState:
             "independent",
             None,
             None,
+            source.layout,
             source.follows_primary,
         )
     elif operation.kind is OperationKind.BEGIN_EDIT:
@@ -704,7 +754,18 @@ def state_through(plan: dict[str, Any], through: int) -> ModelState:
             f"0..{len(plan['operations'])}"
         )
     initial = parse_placement(plan["initial"]["placement"], "initial.placement")
-    state = ModelState((ExpectedView("root", "independent", None, initial, True),))
+    state = ModelState(
+        (
+            ExpectedView(
+                "root",
+                "independent",
+                None,
+                initial,
+                LayoutRole.ORIGIN,
+                True,
+            ),
+        )
+    )
     for expected_seq, raw in enumerate(plan["operations"], 1):
         if expected_seq > through:
             break
@@ -788,12 +849,19 @@ def validate_plan(
             if parse_operation(raw, index).kind is OperationKind.MOVE
         ]
         edit_rounds = kinds.count(OperationKind.BEGIN_EDIT)
+        layout_moves = [
+            parse_operation(raw, index).layout
+            for index, raw in enumerate(operations, 1)
+            if parse_operation(raw, index).kind is OperationKind.MOVE_LAYOUT
+        ]
         if (
             kinds.count(OperationKind.CREATE_LINKED) != 3
             or kinds.count(OperationKind.DUPLICATE) != 2
             or kinds.count(OperationKind.REMOVE) != 1
             or kinds.count(OperationKind.RELOAD) != 1
             or kinds.count(OperationKind.RESTART) != 2
+            or layout_moves
+            != [LayoutRole.DESTINATION, LayoutRole.ORIGIN]
             or edit_rounds != 7
             or kinds.count(OperationKind.END_EDIT) != edit_rounds
             or kinds.count(OperationKind.CONFIGURE_ON) != edit_rounds
@@ -1329,6 +1397,107 @@ def parse_outputs(value: Any) -> dict[str, OutputSnapshot]:
     return parsed
 
 
+def parse_layouts(value: Any) -> dict[str, str]:
+    layouts = require_object(value, "layouts")
+    if set(layouts) != {role.value for role in LayoutRole}:
+        fail("layouts must contain exactly origin and destination")
+    parsed = {
+        role.value: require_string(layouts[role.value], f"layout {role.value}")
+        for role in LayoutRole
+    }
+    if len(set(parsed.values())) != len(parsed):
+        fail("origin and destination layouts must have distinct names")
+    return parsed
+
+
+def parse_view_move_lifecycle(value: Any, label: str) -> dict[str, Any]:
+    lifecycle = require_object(value, label)
+    expected_keys = {
+        "schemaVersion",
+        "transactions",
+        *VIEW_MOVE_LIFECYCLE_GENERATIONS,
+    }
+    if set(lifecycle) != expected_keys:
+        fail(f"{label} has missing or surplus fields")
+    if (
+        require_int(lifecycle["schemaVersion"], f"{label}.schemaVersion")
+        != VIEW_MOVE_LIFECYCLE_SCHEMA_VERSION
+    ):
+        fail(f"{label} schema changed")
+    generations = {
+        key: require_decimal(lifecycle[key], f"{label}.{key}")
+        for key in VIEW_MOVE_LIFECYCLE_GENERATIONS
+    }
+    transactions = require_array(
+        lifecycle["transactions"],
+        f"{label}.transactions",
+    )
+    return {
+        "schemaVersion": VIEW_MOVE_LIFECYCLE_SCHEMA_VERSION,
+        **generations,
+        "transactions": transactions,
+    }
+
+
+def assert_view_move_lifecycle(payload_value: Any) -> dict[str, Any]:
+    payload = require_object(payload_value, "view move lifecycle input")
+    require_keys(
+        payload,
+        ("step", "before", "after"),
+        "view move lifecycle input",
+    )
+    step = require_object(payload["step"], "step")
+    operation = parse_operation(
+        step,
+        require_int(step.get("seq"), "step.seq", 1),
+    )
+    before = parse_view_move_lifecycle(
+        payload["before"],
+        "view move lifecycle before",
+    )
+    after = parse_view_move_lifecycle(
+        payload["after"],
+        "view move lifecycle after",
+    )
+    if before["transactions"]:
+        fail(
+            f"operation {operation.seq} started with a pending durable move"
+        )
+    if after["transactions"]:
+        fail(
+            f"operation {operation.seq} retained a pending durable move"
+        )
+
+    if operation.kind is OperationKind.RESTART:
+        if any(after[key] != 0 for key in VIEW_MOVE_LIFECYCLE_GENERATIONS):
+            fail(
+                f"operation {operation.seq} restarted with stale lifecycle generations"
+            )
+    else:
+        expected_delta = (
+            1
+            if operation.kind is OperationKind.MOVE_LAYOUT
+            else 0
+        )
+        for key in VIEW_MOVE_LIFECYCLE_GENERATIONS:
+            observed_delta = after[key] - before[key]
+            if observed_delta != expected_delta:
+                fail(
+                    f"operation {operation.seq} advanced {key} by "
+                    f"{observed_delta}, expected {expected_delta}"
+                )
+
+    return {
+        "ok": True,
+        "seq": operation.seq,
+        "kind": operation.kind.value,
+        "generations": {
+            key: after[key]
+            for key in VIEW_MOVE_LIFECYCLE_GENERATIONS
+        },
+    }
+
+
 def outputs_to_json(
     outputs: dict[str, OutputSnapshot],
 ) -> dict[str, dict[str, Any]]:
@@ -1675,12 +1844,17 @@ def assert_stable_spans(views: dict[int, dict[str, Any]]) -> None:
                 )
 
 
-def assert_runtime_ownership(views: dict[int, dict[str, Any]]) -> None:
+def assert_runtime_ownership(
+    state: ModelState,
+    bindings: dict[str, int],
+    layouts: dict[str, str],
+    views: dict[int, dict[str, Any]],
+) -> None:
     runtime_ids = [view["runtimeViewId"] for view in views.values()]
     if len(runtime_ids) != len(set(runtime_ids)):
         fail("runtimeViewId is shared")
     all_owned: list[str] = []
-    layouts: list[str] = []
+    layout_objects: dict[str, set[str]] = {}
     for persistent_id, view in views.items():
         objects = view["objects"]
         tokens = [objects[key] for key in OWNED_OBJECTS]
@@ -1689,13 +1863,29 @@ def assert_runtime_ownership(views: dict[int, dict[str, Any]]) -> None:
         if len(tokens) != len(set(tokens)):
             fail(f"view {persistent_id} aliases owned runtime authorities")
         all_owned.extend(tokens)
-        layouts.append(objects["layout"])
+        layout_objects.setdefault(view["layout"], set()).add(objects["layout"])
     if len(all_owned) != len(set(all_owned)):
         fail("a per-view runtime authority is shared across views")
-    if any(not isinstance(token, str) or not token for token in layouts) or len(
-        set(layouts)
-    ) != 1:
-        fail("views do not intentionally share exactly one layout authority")
+    for expected in state.views:
+        persistent_id = bindings[expected.handle]
+        view = views[persistent_id]
+        expected_layout = layouts[expected.layout.value]
+        if view["layout"] != expected_layout:
+            fail(
+                f"view {expected.handle} has layout {view['layout']!r}, "
+                f"expected {expected_layout!r}"
+            )
+    if any(
+        len(tokens) != 1
+        or any(not isinstance(token, str) or not token for token in tokens)
+        for tokens in layout_objects.values()
+    ):
+        fail("views in one persistent layout do not share exactly one layout authority")
+    flattened_layout_objects = {
+        next(iter(tokens)) for tokens in layout_objects.values()
+    }
+    if len(flattened_layout_objects) != len(layout_objects):
+        fail("distinct persistent layouts share one runtime layout authority")
 
 
 def assert_applet_geometry(view: dict[str, Any]) -> None:
@@ -2019,10 +2209,19 @@ def assert_snapshot(
     bindings_value: Any,
     outputs_value: Any,
     snapshot_value: Any,
+    layouts_value: Any | None = None,
 ) -> ModelState:
     snapshot = parse_snapshot(snapshot_value)
     bindings = parse_bindings(bindings_value)
     outputs = parse_outputs(outputs_value)
+    layouts = parse_layouts(
+        layouts_value
+        if layouts_value is not None
+        else {
+            LayoutRole.ORIGIN.value: "My Layout",
+            LayoutRole.DESTINATION.value: "Other Layout",
+        }
+    )
     state = state_through(plan, through)
     needed = {view.handle for view in state.views}
     missing = sorted(needed - set(bindings))
@@ -2034,7 +2233,7 @@ def assert_snapshot(
     views = view_map(snapshot)
     assert_lineage(state, bindings, views)
     assert_placement(state, bindings, outputs, views)
-    assert_runtime_ownership(views)
+    assert_runtime_ownership(state, bindings, layouts, views)
     assert_stable_spans(views)
     for view in views.values():
         assert_transition_and_lifecycle(view)
@@ -2049,11 +2248,16 @@ def snapshot_view_ids(snapshot: dict[str, Any]) -> set[int]:
 
 def resolve_operation(payload_value: Any) -> dict[str, Any]:
     payload = require_object(payload_value, "resolve input")
-    require_keys(payload, ("step", "bindings", "outputs"), "resolve input")
+    require_keys(
+        payload,
+        ("step", "bindings", "outputs", "layouts"),
+        "resolve input",
+    )
     step = require_object(payload["step"], "step")
     operation = parse_operation(step, require_int(step.get("seq"), "step.seq", 1))
     bindings = parse_bindings(payload["bindings"])
     outputs = parse_outputs(payload["outputs"])
+    layouts = parse_layouts(payload["layouts"])
 
     def bound(handle: str | None) -> int:
         if handle is None or handle not in bindings:
@@ -2078,6 +2282,21 @@ def resolve_operation(payload_value: Any) -> dict[str, Any]:
             ],
         }
         resolved = {"targetPersistentDockId": target, "screenId": screen_id}
+    elif operation.kind is OperationKind.MOVE_LAYOUT:
+        assert operation.layout is not None
+        target = bound(operation.target)
+        layout_name = layouts[operation.layout.value]
+        action = {
+            "kind": "dbus",
+            "method": "moveViewToLayout",
+            "signature": "us",
+            "args": [target, layout_name],
+        }
+        resolved = {
+            "targetPersistentDockId": target,
+            "layout": operation.layout.value,
+            "layoutName": layout_name,
+        }
     elif operation.kind is OperationKind.CREATE_LINKED:
         assert operation.placement is not None
         source = bound(operation.source)
@@ -2401,10 +2620,15 @@ def assert_runtime_reload(payload_value: Any) -> dict[str, bool]:
 
 def replay_header(payload_value: Any) -> dict[str, Any]:
     payload = require_object(payload_value, "replay header input")
-    require_keys(payload, ("plan", "bindings", "outputs"), "replay header input")
+    require_keys(
+        payload,
+        ("plan", "bindings", "outputs", "layouts"),
+        "replay header input",
+    )
     plan = validate_plan(payload["plan"])
     bindings = parse_bindings(payload["bindings"])
     outputs = parse_outputs(payload["outputs"])
+    layouts = parse_layouts(payload["layouts"])
     if set(bindings) != {"root"}:
         fail("initial replay header must bind only root")
     return {
@@ -2416,6 +2640,7 @@ def replay_header(payload_value: Any) -> dict[str, Any]:
         "seed": plan["seed"],
         "planSha256": plan["planSha256"],
         "outputs": outputs_to_json(outputs),
+        "layouts": layouts,
         "initialBindings": bindings,
     }
 
@@ -2435,14 +2660,20 @@ def validate_replay(path: str, plan_value: Any) -> dict[str, Any]:
         except json.JSONDecodeError as error:
             fail(f"replay line {index} is invalid JSON: {error}")
     header = require_object(records[0], "replay header")
-    require_keys(header, ("outputs", "initialBindings"), "replay header")
+    require_keys(
+        header,
+        ("outputs", "layouts", "initialBindings"),
+        "replay header",
+    )
     outputs = parse_outputs(header["outputs"])
+    layouts = parse_layouts(header["layouts"])
     bindings = parse_bindings(header["initialBindings"])
     expected_header = replay_header(
         {
             "plan": plan,
             "bindings": bindings,
             "outputs": outputs_to_json(outputs),
+            "layouts": layouts,
         }
     )
     if header != expected_header:
@@ -2459,6 +2690,7 @@ def validate_replay(path: str, plan_value: Any) -> dict[str, Any]:
                 "step": step,
                 "bindings": bindings,
                 "outputs": outputs_to_json(outputs),
+                "layouts": layouts,
             }
         )["record"]
         if operation != expected_operation:
@@ -2533,6 +2765,7 @@ def parser() -> argparse.ArgumentParser:
         "durable-projection",
         "assert-runtime-reload",
         "assert-visual-window-ownership",
+        "assert-view-move-lifecycle",
     ):
         subparsers.add_parser(name)
     replay = subparsers.add_parser("validate-replay")
@@ -2581,7 +2814,7 @@ def main() -> None:
         request = require_object(payload, "checkpoint input")
         require_keys(
             request,
-            ("plan", "through", "bindings", "outputs", "snapshot"),
+            ("plan", "through", "bindings", "outputs", "layouts", "snapshot"),
             "checkpoint input",
         )
         state = assert_snapshot(
@@ -2590,6 +2823,7 @@ def main() -> None:
             request["bindings"],
             request["outputs"],
             request["snapshot"],
+            request["layouts"],
         )
         output = {
             "ok": True,
@@ -2629,6 +2863,8 @@ def main() -> None:
         output = durable_projection(payload)
     elif args.command == "assert-runtime-reload":
         output = assert_runtime_reload(payload)
+    elif args.command == "assert-view-move-lifecycle":
+        output = assert_view_move_lifecycle(payload)
     elif args.command == "assert-visual-window-ownership":
         output = assert_visual_window_ownership(payload)
     else:
