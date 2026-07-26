@@ -4783,10 +4783,11 @@ prerequisites in the phases above are done.
       derive placement and reservation ownership from assigned and LayerShell
       output state.
       Commits: 4ca4a33b0
-- [x] Fix D229 (cross-layout placement could report success after persistence
-      failure). Preflight both layout files before mutation and make any
-      post-mutation persistence failure an invariant failure or restore both
-      runtime and durable ownership.
+- [ ] Fix D229 (cross-layout placement could report success after persistence
+      failure). Replace mutation-before-sync with one recoverable durable move
+      transaction. Filesystem preflight remains an early refusal only; KConfig
+      immutability, locks, parse failures, and write failures must preserve or
+      restore one complete durable owner before runtime ownership changes.
       Commits: 296666281, 2f85a8ac7, 0d1ce131d, cb9380566
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
@@ -4838,7 +4839,7 @@ prerequisites in the phases above are done.
       arrangements, client minimization and destruction, and process restart.
       Commits: 4daa80121, dc0fda084, ad2a91c6f, 649fb79b4,
       4ac5208b9, 80e5d8fee, 3f6794861 (PR #126)
-- [x] Complete FP-4C (the deterministic operation-storm acceptance).
+- [ ] Complete FP-4C (the deterministic operation-storm acceptance).
       One immutable schema-versioned plan drives 76 symbolic operations through
       Duplicate Dock, linked creation, output, edge, alignment, edit, removal,
       recreation, runtime rotation, and persistence reload. Every checkpoint
@@ -4862,12 +4863,13 @@ prerequisites in the phases above are done.
       mirrors both backend selections, pins ownership at compile time, and
       supplies non-vacuous canonical-target coverage. Its focused tests and
       exact replay pass. The replacement canonical gate passed at exact branch
-      head `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`; fresh critical rereview
-      remains open.
+      head `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`; the fresh critical
+      rereview found that KConfig immutability can still refuse after runtime
+      mutation. D229 now requires a recoverable durable move transaction.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
       7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566
-- [x] Complete FP-4 (the stable window-touch trigger and end-to-end
+- [ ] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,

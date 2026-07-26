@@ -3069,33 +3069,28 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D229 - Cross-layout placement could report success after persistence failure
-- STATUS: FIXED ON `test/fp4c-operation-storm` at `296666281`, `2f85a8ac7`,
-  `0d1ce131d`, and `cb9380566`; the replacement canonical gate passed at exact
-  branch head `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`. Fresh critical
-  independent rereview remains open.
+- STATUS: OPEN on `test/fp4c-operation-storm`. The critical independent
+  rereview found a non-filesystem KConfig refusal after the replacement
+  canonical gate at `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
   the origin file, fail to persist destination ownership, return success, and
   lose the dock after restart.
-- ROOT: `Manager::validatesViewMove()` validates runtime ownership but not the
-  two layout persistence endpoints. After runtime mutation,
-  `GenericLayout::unassignFromLayout()` and `assignToLayout()` only log
-  `syncToLayoutFile()` failure and continue, so `Manager::moveView()` can pass
-  its runtime-only postcondition despite split durable ownership. The first
-  endpoint classifiers also inspected the lexical path and accepted files not
-  owned by the process. KConfig canonicalizes an existing path and uses
-  `QSaveFile` only for a process-owned target; Latte must classify that same
-  backend path and write mode.
-- FIX: preflight both persistence endpoints before the first layout
-  mutation. Once mutation starts, persistence failure must be an invariant
-  failure; it cannot remain a recoverable success path. Only regular writable
-  and readable process-owned layout files or absent paths in a real writable
-  and searchable parent directory qualify. Existing symlinks are resolved to
-  the same canonical target KConfig uses before file and containing-directory
-  classification. Existing-file readability is required because KConfig
-  reparses the file before writing through `QSaveFile`; ownership and the
-  canonical parent requirement keep persistence on that atomic branch.
+- ROOT: `Manager::moveView()` mutates runtime and durable origin ownership
+  before every fallible destination write has committed. Filesystem endpoint
+  classification reduces predictable failures but cannot make KConfig
+  infallible. A valid, process-owned, readable and writable file may still
+  refuse a write because of KConfig immutability, a held lock, parse failure,
+  quota or device failure. The post-mutation `qFatal()` therefore converts a
+  normal persistence refusal into process termination after ownership may
+  already be split.
+- REQUIRED: move cross-layout persistence under one explicit durable
+  transaction. Record enough intent and snapshot state to recover after every
+  write boundary, verify destination ownership before retiring origin
+  ownership, mutate runtime only after durable convergence, and recover any
+  incomplete transaction at startup. KConfig refusal must leave or restore one
+  complete owner without reporting success.
 - EVIDENCE: real filesystem cases cover existing writable, existing
   read-only, existing write-only, directory masquerade, absent creatable,
   missing parent, regular-file parent, non-writable parent, and non-searchable
@@ -3110,8 +3105,14 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   is non-writable; restoring lexical classification fails that case.
   `constexpr` controls accept the process owner and reject another owner at
   compile time; removing the ownership comparison fails the production build.
-- REQUIRED ACCEPTANCE: obtain a fresh critical independent rereview after
-  `cb9380566`.
+  The next critical rereview supplied a valid immutable-file counterexample:
+  a file-wide `[$i]` marker passes every filesystem check and makes
+  `KConfig::sync()` refuse after mutation. This invalidates the preflight-only
+  architecture and its canonical gate as final acceptance evidence.
+- REQUIRED ACCEPTANCE: cover immutable configuration, held-lock and injected
+  write failures at every durable phase; prove crash recovery and exact
+  restart ownership; rerun seed 127934575; pass the replacement canonical gate;
+  obtain a fresh critical independent rereview.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
@@ -3143,11 +3144,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: FIXED ON `test/fp4c-operation-storm`; the D229 canonical-path and
-  file-ownership correction passes its focused tests, exact replay, and
-  replacement canonical gate at
-  `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`. Fresh critical independent
-  rereview remains open.
+- STATUS: INCOMPLETE on `test/fp4c-operation-storm`; FP-4C remains blocked by
+  D229 (cross-layout placement could report success after persistence
+  failure). The preflight-only persistence correction passed its focused
+  tests, exact replay, and replacement canonical gate at
+  `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`, but a critical rereview proved
+  that KConfig can still refuse after runtime mutation.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged

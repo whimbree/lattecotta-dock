@@ -240,7 +240,19 @@ canonical gate exited 0 at exact branch head
 `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`. All 122 CTest entries, QML and
 coverage ratchets, visual probes, the complete ASan/UBSan build, four nested
 sanitizer recipes, package provenance controls, and matrix refusals passed.
-Fresh critical independent rereview remains open.
+
+The fresh critical independent rereview returned `DO NOT MERGE`. A
+process-owned, readable and writable layout file can contain KConfig's
+file-wide `[$i]` immutability marker. That endpoint passes every filesystem
+classifier but makes `KConfig::sync()` refuse after layout mutation. Held
+KConfig locks, parse failures, quota failures, and device failures expose the
+same architectural boundary: preflight cannot turn a fallible durable write
+into a post-mutation invariant. D229 (cross-layout placement could report
+success after persistence failure) is reopened. The next correction must put
+the move under an explicit recoverable persistence transaction and mutate
+runtime ownership only after durable ownership converges. The canonical gate
+at `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be` remains historical evidence, not
+final acceptance.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
