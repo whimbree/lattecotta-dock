@@ -174,7 +174,8 @@ and PR #126 landed FP-4B.
       orphan group, edit participants are exact, and restart reproduces the
       settled state. Fail on any divergence; keep the replay log only as the
       reproduction artifact.
-      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa
+      Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
+      5ce307460, f58f70558, 0382044fe, ff41d8eca
 
 ## Definition of done
 
@@ -192,10 +193,10 @@ and PR #126 landed FP-4B.
       usage reference in the same source commit.
 - [x] The README describes the stable floating-panel behavior in timeless
       terms.
-- [x] The full canonical gate passes after the final source commit.
-      The gate exited 0 at exact branch head `03155fe50`, including all 120
-      CTest entries, the QML and coverage ratchets, visual probes, the complete
-      ASan/UBSan build, nested-compositor integration, and matrix refusals.
+- [ ] The full canonical gate passes after the final source commit.
+      The earlier gate exited 0 at `03155fe50`, but D221 through D224 changed
+      product and acceptance code after independent review. A replacement
+      exact-head gate is required.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent

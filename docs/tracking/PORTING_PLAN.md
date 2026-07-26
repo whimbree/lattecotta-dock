@@ -4755,10 +4755,15 @@ prerequisites in the phases above are done.
       ownership). Make every restoration and resume failure converge to a
       complete removal or complete restoration, with injected-failure tests.
       Commits: f58f70558
-- [ ] Fix D223 (reservation oracle trusted mutually wrong runtime geometry).
+- [x] Fix D223 (reservation oracle trusted mutually wrong runtime geometry).
       Derive exact publisher geometry, anchors, margins, edge, and depth from
       independent output state and reject controlled mutations for all edges.
-      Commits:
+      Commits: ff41d8eca
+- [x] Fix D224 (applied placement waited circularly on its own relocation
+      commit). Let the explicit applied-placement boundary publish after
+      verified surface and LayerShell placement while ordinary updates remain
+      deferred until the relocation commits.
+      Commits: 0382044fe
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
