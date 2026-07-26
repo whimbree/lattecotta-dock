@@ -42,6 +42,7 @@
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QObject>
+#include <QScopeGuard>
 #include <QString>
 #include <QTemporaryDir>
 #include <QTest>
@@ -371,6 +372,18 @@ void StorageTest::classifyLayoutPersistenceEndpoints()
     QVERIFY(readOnlyFile.setPermissions(
         originalPermissions));
 
+    const QString absentPath =
+        writeLayoutFixture(
+            QStringLiteral(
+                "creatable-endpoint"));
+    Latte::CentralLayout absentLayout(
+        nullptr,
+        absentPath,
+        QStringLiteral("absent"));
+    QVERIFY(QFile::remove(absentPath));
+    QVERIFY(!QFileInfo::exists(absentPath));
+    QVERIFY(absentLayout.isWritable());
+
     const QString directoryPath =
         m_dir.filePath(
             QStringLiteral(
@@ -381,6 +394,86 @@ void StorageTest::classifyLayoutPersistenceEndpoints()
         directoryPath,
         QStringLiteral("directory"));
     QVERIFY(!directoryLayout.isWritable());
+
+    const QString restrictedParentPath =
+        m_dir.filePath(
+            QStringLiteral("restricted-parent"));
+    QVERIFY(QDir().mkpath(
+        restrictedParentPath));
+    QFile restrictedParent(
+        restrictedParentPath);
+    const QFileDevice::Permissions
+        originalParentPermissions =
+            restrictedParent.permissions();
+    const auto restoreParentPermissions =
+        qScopeGuard(
+            [&restrictedParent,
+             originalParentPermissions]() {
+                restrictedParent.setPermissions(
+                    originalParentPermissions);
+            });
+
+    const QString nestedExistingPath =
+        QDir(restrictedParentPath)
+            .filePath(
+                QStringLiteral(
+                    "existing.layout.latte"));
+    QFile nestedExistingFile(
+        nestedExistingPath);
+    QVERIFY(nestedExistingFile.open(
+        QIODevice::WriteOnly));
+    QVERIFY(nestedExistingFile.write(
+        "[LayoutSettings]\nversion=2\n")
+        > 0);
+    nestedExistingFile.close();
+    Latte::CentralLayout nestedExistingLayout(
+        nullptr,
+        nestedExistingPath,
+        QStringLiteral("nested-existing"));
+
+    const QString nestedAbsentPath =
+        QDir(restrictedParentPath)
+            .filePath(
+                QStringLiteral(
+                    "absent.layout.latte"));
+    {
+        QFile nestedAbsentFile(
+            nestedAbsentPath);
+        QVERIFY(nestedAbsentFile.open(
+            QIODevice::WriteOnly));
+        QVERIFY(nestedAbsentFile.write(
+            "[LayoutSettings]\nversion=2\n")
+            > 0);
+    }
+    Latte::CentralLayout nestedAbsentLayout(
+        nullptr,
+        nestedAbsentPath,
+        QStringLiteral("nested-absent"));
+    QVERIFY(QFile::remove(
+        nestedAbsentPath));
+
+    QVERIFY(restrictedParent.setPermissions(
+        QFileDevice::ReadUser
+        | QFileDevice::ExeUser));
+    QVERIFY(
+        QFileInfo(nestedExistingPath)
+            .isWritable());
+    QVERIFY(!nestedExistingLayout.isWritable());
+    QVERIFY(!nestedAbsentLayout.isWritable());
+
+    QVERIFY(restrictedParent.setPermissions(
+        QFileDevice::ReadUser
+        | QFileDevice::WriteUser));
+    QVERIFY(
+        QFileInfo(restrictedParentPath)
+            .isWritable());
+    QVERIFY(
+        !QFileInfo(restrictedParentPath)
+            .isExecutable());
+    QVERIFY(!nestedAbsentLayout.isWritable());
+
+    QVERIFY(restrictedParent.setPermissions(
+        originalParentPermissions));
 }
 
 void StorageTest::tombstoneRemovalSnapshotRefreshesStaleSharedRepository()
