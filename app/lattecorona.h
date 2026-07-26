@@ -221,6 +221,11 @@ public:
     //! viewsData() remains the compatibility geometry/visibility array.
     QString dockSystemData();
 
+    //! D-Bus state readback (observability-first): pending durable
+    //! cross-layout view moves, their persisted owner, and the deterministic
+    //! startup recovery action as compact schema-versioned JSON.
+    QString viewMoveTransactionsData();
+
     //! D-Bus state readback (observability-first): one view's applets as a
     //! compact JSON array (id, plugin, index, geometry, expanded and
     //! destruction/lockedZoom/coloring flags), documented in

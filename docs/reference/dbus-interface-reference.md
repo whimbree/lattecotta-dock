@@ -333,6 +333,27 @@ jq '.views | map({persistentDockId,floatingGapConfigured,
                   windowTouchTracker:.objects.windowTouchTracker})' <<<"$state"
 ```
 
+### viewMoveTransactionsData - durable move recovery
+
+```bash
+call viewMoveTransactionsData           # s: compact schema-versioned JSON object
+```
+
+This readback exposes pending crash-recoverable cross-layout dock moves. The
+top-level `schemaVersion` is 1 and `transactions` is canonically ordered by
+transaction directory name. A valid record contains `transactionId`,
+`journalValid`, `originLayout`, `destinationLayout`, `rootContainmentId`,
+`containmentIds`, `persistentOwner` (`origin`, `destination`, or `unknown`),
+and `recoveryAction` (`rollBack`, `rollForward`, or `refuse`).
+
+The active hidden layout file is the commit authority. `origin` means the
+destination copy is staging and recovery removes it. `destination` means the
+move committed and recovery completes the destination, repairs the active
+owner, and retires the origin. A malformed journal is reported with
+`journalValid: false`, `persistentOwner: "unknown"`, and
+`recoveryAction: "refuse"` so startup refusal is pull-queryable without
+exposing filesystem paths.
+
 ### Per-view reads (all take the containment id)
 
 ```bash

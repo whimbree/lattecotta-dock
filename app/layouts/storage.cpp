@@ -17,14 +17,22 @@
 #include "../data/linkedconfigurationpolicy.h"
 #include "../data/viewdata.h"
 #include "../layout/abstractlayout.h"
+#include "../layout/genericlayout.h"
 #include "../view/view.h"
 
 // Qt
+#include <QCryptographicHash>
 #include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLatin1String>
+#include <QLockFile>
+#include <QSaveFile>
+#include <QUuid>
 
 // KDE
 #include <KConfig>
@@ -40,6 +48,10 @@
 #include <Plasma/Containment>
 
 // C++
+#include <fcntl.h>
+#include <limits>
+#include <optional>
+#include <ranges>
 #include <unistd.h>
 #include <utility>
 
@@ -47,6 +59,20 @@ namespace Latte {
 namespace Layouts {
 
 namespace {
+
+constexpr int ViewMoveJournalSchemaVersion = 1;
+constexpr auto ViewMoveTransactionsDirectory =
+    ".view-move-transactions";
+constexpr auto ViewMoveManifestFile = "manifest.json";
+constexpr auto ViewMoveSnapshotFile = "snapshot.latte";
+constexpr auto ViewMovePreparedSuffix = ".prepare";
+constexpr auto ViewMovePendingSuffix = ".move";
+constexpr auto ViewMoveCompletedSuffix = ".complete";
+constexpr QFileDevice::Permissions
+    ViewMovePrivateDirectoryPermissions =
+        QFileDevice::ReadOwner
+        | QFileDevice::WriteOwner
+        | QFileDevice::ExeOwner;
 
 struct ExistingFilePersistenceFacts final
 {
@@ -91,6 +117,65 @@ static_assert(!supportsKConfigAtomicReplacement(
         .ownerId = 1000U},
     1000U));
 
+[[nodiscard]] bool persistenceEndpointIsWritable(
+    const QString &path)
+{
+    const QFileInfo requestedFileInfo(path);
+    const bool existingEndpoint =
+        requestedFileInfo.exists();
+    if (requestedFileInfo.isSymLink()
+            && !existingEndpoint) {
+        return false;
+    }
+
+    //! KConfig canonicalizes every existing path before opening its backend.
+    //! Classifying the lexical symlink parent can approve a directory that the
+    //! QSaveFile replacement never uses.
+    const QString backendFilePath =
+        existingEndpoint
+            ? requestedFileInfo
+                .canonicalFilePath()
+            : requestedFileInfo
+                .absoluteFilePath();
+    if (backendFilePath.isEmpty()) {
+        qCritical()
+            << "layout storage could not resolve persistence endpoint"
+            << path;
+        return false;
+    }
+
+    const QFileInfo backendFileInfo(
+        backendFilePath);
+    const QFileInfo parentDirectory(
+        backendFileInfo.absolutePath());
+
+    //! KConfig reparses an existing file before persisting through QSaveFile,
+    //! which creates and renames a replacement in the containing directory.
+    //! Read and write permission alone do not prove that either phase uses the
+    //! atomic branch: KConfig writes non-owned files directly.
+    const bool parentSupportsReplacement =
+        parentDirectory.exists()
+        && parentDirectory.isDir()
+        && parentDirectory.isWritable()
+        && parentDirectory.isExecutable();
+    if (!parentSupportsReplacement) {
+        return false;
+    }
+
+    return !existingEndpoint
+        || supportsKConfigAtomicReplacement(
+            ExistingFilePersistenceFacts{
+                .isRegularFile =
+                    backendFileInfo.isFile(),
+                .isReadable =
+                    backendFileInfo.isReadable(),
+                .isWritable =
+                    backendFileInfo.isWritable(),
+                .ownerId =
+                    backendFileInfo.ownerId()},
+            static_cast<uint>(::getuid()));
+}
+
 [[nodiscard]] bool persistConfigurationOrReportFailure(
     const KSharedConfigPtr &config,
     const char *const operation)
@@ -103,6 +188,990 @@ static_assert(!supportsKConfigAtomicReplacement(
                 << "could not write"
                 << config->name();
     return false;
+}
+
+struct ViewMoveJournalRecord final
+{
+    QString transactionId;
+    QString originLayoutName;
+    QString originFile;
+    QString destinationLayoutName;
+    QString destinationFile;
+    QString hiddenFile;
+    uint rootContainmentId{0};
+    QStringList containmentIds;
+    QByteArray snapshotSha256;
+    QString directoryPath;
+
+    [[nodiscard]] QString snapshotPath() const
+    {
+        return QDir(directoryPath).filePath(
+            QString::fromLatin1(
+                ViewMoveSnapshotFile));
+    }
+
+    [[nodiscard]] QString manifestPath() const
+    {
+        return QDir(directoryPath).filePath(
+            QString::fromLatin1(
+                ViewMoveManifestFile));
+    }
+};
+
+[[nodiscard]] QString persistenceBackendPath(
+    const QString &path)
+{
+    const QFileInfo fileInfo(path);
+    return fileInfo.exists()
+        ? fileInfo.canonicalFilePath()
+        : fileInfo.absoluteFilePath();
+}
+
+[[nodiscard]] bool layoutNameIsSafe(
+    const QString &name)
+{
+    return !name.isEmpty()
+        && name != QStringLiteral(".")
+        && name != QStringLiteral("..")
+        && !name.contains(QLatin1Char('/'))
+        && !name.contains(QLatin1Char('\\'))
+        && QFileInfo(name).fileName()
+            == name;
+}
+
+[[nodiscard]] bool endpointIsDirectLayoutChild(
+    const QString &path)
+{
+    const QString layoutDirectory =
+        QFileInfo(
+            Importer::layoutUserDir())
+            .canonicalFilePath();
+    const QString endpointDirectory =
+        QFileInfo(
+            QFileInfo(path)
+                .absolutePath())
+            .canonicalFilePath();
+    return !layoutDirectory.isEmpty()
+        && endpointDirectory
+            == layoutDirectory;
+}
+
+[[nodiscard]] bool transactionFileIsSafe(
+    const QString &path)
+{
+    const QFileInfo file(path);
+    return file.exists()
+        && file.isFile()
+        && !file.isSymLink()
+        && file.isReadable()
+        && file.ownerId()
+            == static_cast<uint>(::getuid());
+}
+
+[[nodiscard]] QString viewMoveTransactionsRoot()
+{
+    return QDir(Importer::layoutUserDir())
+        .filePath(
+            QString::fromLatin1(
+                ViewMoveTransactionsDirectory));
+}
+
+[[nodiscard]] bool journalEndpointsAreConsistent(
+    const ViewMoveJournalRecord &journal,
+    const QString &expectedHiddenFile)
+{
+    if (!layoutNameIsSafe(
+            journal.originLayoutName)
+            || !layoutNameIsSafe(
+                journal
+                    .destinationLayoutName)
+            || journal.originLayoutName
+                == journal
+                    .destinationLayoutName
+            || !endpointIsDirectLayoutChild(
+                journal.originFile)
+            || !endpointIsDirectLayoutChild(
+                journal.destinationFile)
+            || !endpointIsDirectLayoutChild(
+                journal.hiddenFile)
+            || !endpointIsDirectLayoutChild(
+                expectedHiddenFile)) {
+        return false;
+    }
+
+    return journal.originFile
+            == persistenceBackendPath(
+                Importer::
+                    layoutUserFilePath(
+                        journal
+                            .originLayoutName))
+        && journal.destinationFile
+            == persistenceBackendPath(
+                Importer::
+                    layoutUserFilePath(
+                        journal
+                            .destinationLayoutName))
+        && journal.hiddenFile
+            == expectedHiddenFile
+        && journal.originFile
+            != journal
+                .destinationFile;
+}
+
+[[nodiscard]] bool flushDirectory(
+    const QString &path)
+{
+    const QByteArray encodedPath =
+        QFile::encodeName(path);
+    const int descriptor =
+        ::open(encodedPath.constData(),
+               O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (descriptor < 0) {
+        qCritical() << "view move transaction could not open directory for durable flush"
+                    << path;
+        return false;
+    }
+
+    const bool flushed = ::fsync(descriptor) == 0;
+    ::close(descriptor);
+    if (!flushed) {
+        qCritical() << "view move transaction could not durably flush directory"
+                    << path;
+    }
+    return flushed;
+}
+
+[[nodiscard]] QByteArray fileSha256(
+    const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+
+    QCryptographicHash hash(
+        QCryptographicHash::Sha256);
+    if (!hash.addData(&file)) {
+        return {};
+    }
+    return hash.result();
+}
+
+[[nodiscard]] bool copyFileAtomically(
+    const QString &sourcePath,
+    const QString &destinationPath)
+{
+    QFile source(sourcePath);
+    if (!source.open(QIODevice::ReadOnly)) {
+        qCritical() << "view move transaction could not read snapshot"
+                    << sourcePath;
+        return false;
+    }
+
+    const QByteArray payload = source.readAll();
+    if (source.error() != QFileDevice::NoError) {
+        qCritical() << "view move transaction could not finish reading snapshot"
+                    << sourcePath;
+        return false;
+    }
+
+    QSaveFile destination(destinationPath);
+    destination.setDirectWriteFallback(false);
+    if (!destination.open(QIODevice::WriteOnly)
+            || destination.write(payload)
+                != payload.size()
+            || !destination.commit()) {
+        qCritical() << "view move transaction could not persist snapshot"
+                    << destinationPath;
+        return false;
+    }
+    return flushDirectory(
+        QFileInfo(destinationPath)
+            .absolutePath());
+}
+
+//! KConfig owns this lock while sync() runs, so it cannot remain held by the
+//! transaction. This immediate probe rejects a lock that is already
+//! contended. A later contender is handled by the durable journal and exact
+//! semantic readback instead of being mistaken for a successful move.
+[[nodiscard]] bool kConfigEndpointLockIsAvailable(
+    const QString &path)
+{
+    QLockFile endpointLock(
+        path + QStringLiteral(".lock"));
+    endpointLock.setStaleLockTime(0);
+    return endpointLock.tryLock(0);
+}
+
+[[nodiscard]] QJsonObject journalJson(
+    const ViewMoveJournalRecord &journal)
+{
+    QJsonArray containmentIds;
+    for (const QString &id :
+            journal.containmentIds) {
+        containmentIds.append(id);
+    }
+
+    QJsonObject json;
+    json[QStringLiteral("schemaVersion")] =
+        ViewMoveJournalSchemaVersion;
+    json[QStringLiteral("transactionId")] =
+        journal.transactionId;
+    json[QStringLiteral("originLayout")] =
+        journal.originLayoutName;
+    json[QStringLiteral("originFile")] =
+        journal.originFile;
+    json[QStringLiteral("destinationLayout")] =
+        journal.destinationLayoutName;
+    json[QStringLiteral("destinationFile")] =
+        journal.destinationFile;
+    json[QStringLiteral("hiddenFile")] =
+        journal.hiddenFile;
+    json[QStringLiteral("rootContainmentId")] =
+        static_cast<qint64>(
+            journal.rootContainmentId);
+    json[QStringLiteral("containmentIds")] =
+        containmentIds;
+    json[QStringLiteral("snapshotSha256")] =
+        QString::fromLatin1(
+            journal.snapshotSha256.toHex());
+    return json;
+}
+
+[[nodiscard]] bool writeJournalManifest(
+    const ViewMoveJournalRecord &journal)
+{
+    QSaveFile manifest(
+        journal.manifestPath());
+    manifest.setDirectWriteFallback(false);
+    const QByteArray payload =
+        QJsonDocument(journalJson(journal))
+            .toJson(QJsonDocument::Compact);
+    if (!manifest.open(QIODevice::WriteOnly)
+            || manifest.write(payload)
+                != payload.size()
+            || !manifest.commit()) {
+        qCritical() << "view move transaction could not persist manifest"
+                    << journal.manifestPath();
+        return false;
+    }
+    return flushDirectory(journal.directoryPath);
+}
+
+[[nodiscard]] bool promotePreparedJournal(
+    ViewMoveJournalRecord &journal,
+    const QString &transactionsRoot)
+{
+    const QFileInfo preparedInfo(
+        journal.directoryPath);
+    if (!preparedInfo.exists()
+            || !preparedInfo.isDir()
+            || preparedInfo.absolutePath()
+                != QFileInfo(
+                    transactionsRoot)
+                    .absoluteFilePath()
+            || !preparedInfo.fileName()
+                .endsWith(
+                    QString::fromLatin1(
+                        ViewMovePreparedSuffix))) {
+        qCritical() << "view move transaction refused an invalid prepared journal"
+                    << journal.directoryPath;
+        return false;
+    }
+
+    QString pendingName =
+        preparedInfo.fileName();
+    pendingName.chop(
+        QString::fromLatin1(
+            ViewMovePreparedSuffix)
+            .size());
+    pendingName +=
+        QString::fromLatin1(
+            ViewMovePendingSuffix);
+    QDir root(transactionsRoot);
+    if (!root.rename(
+            preparedInfo.fileName(),
+            pendingName)) {
+        qCritical() << "view move transaction could not publish prepared journal"
+                    << journal.directoryPath;
+        return false;
+    }
+
+    journal.directoryPath =
+        root.filePath(pendingName);
+    return flushDirectory(
+        root.absolutePath());
+}
+
+[[nodiscard]] bool discardPreparedJournal(
+    const QString &path,
+    const QString &transactionsRoot)
+{
+    const QFileInfo preparedInfo(path);
+    if (!preparedInfo.exists()) {
+        return true;
+    }
+    if (!preparedInfo.isDir()
+            || preparedInfo.absolutePath()
+                != QFileInfo(
+                    transactionsRoot)
+                    .absoluteFilePath()
+            || !preparedInfo.fileName()
+                .endsWith(
+                    QString::fromLatin1(
+                        ViewMovePreparedSuffix))) {
+        qCritical() << "view move transaction refused invalid prepared cleanup path"
+                    << path;
+        return false;
+    }
+    return QDir(preparedInfo.absoluteFilePath())
+            .removeRecursively()
+        && flushDirectory(
+            transactionsRoot);
+}
+
+[[nodiscard]] std::optional<ViewMoveJournalRecord>
+readJournalManifest(
+    const QString &directoryPath)
+{
+    const QString manifestPath =
+        QDir(directoryPath).filePath(
+            QString::fromLatin1(
+                ViewMoveManifestFile));
+    if (!transactionFileIsSafe(
+            manifestPath)) {
+        qCritical() << "view move recovery refused an unsafe manifest in"
+                    << directoryPath;
+        return std::nullopt;
+    }
+    QFile manifest(manifestPath);
+    if (!manifest.open(QIODevice::ReadOnly)) {
+        qCritical() << "view move recovery could not read manifest in"
+                    << directoryPath;
+        return std::nullopt;
+    }
+
+    QJsonParseError parseError;
+    const QJsonDocument document =
+        QJsonDocument::fromJson(
+            manifest.readAll(),
+            &parseError);
+    if (parseError.error
+            != QJsonParseError::NoError
+            || !document.isObject()) {
+        qCritical() << "view move recovery found a malformed manifest in"
+                    << directoryPath
+                    << parseError.errorString();
+        return std::nullopt;
+    }
+
+    const QJsonObject json = document.object();
+    const QJsonValue schema =
+        json.value(QStringLiteral(
+            "schemaVersion"));
+    const QJsonValue rootId =
+        json.value(QStringLiteral(
+            "rootContainmentId"));
+    const QJsonValue ids =
+        json.value(QStringLiteral(
+            "containmentIds"));
+    if (!schema.isDouble()
+            || schema.toInt()
+                != ViewMoveJournalSchemaVersion
+            || !rootId.isDouble()
+            || rootId.toDouble() <= 0
+            || rootId.toDouble()
+                > std::numeric_limits<uint>::max()
+            || !ids.isArray()) {
+        qCritical() << "view move recovery found invalid typed fields in"
+                    << directoryPath;
+        return std::nullopt;
+    }
+
+    ViewMoveJournalRecord journal;
+    journal.directoryPath =
+        QFileInfo(directoryPath)
+            .absoluteFilePath();
+    journal.transactionId =
+        json.value(QStringLiteral(
+            "transactionId")).toString();
+    journal.originLayoutName =
+        json.value(QStringLiteral(
+            "originLayout")).toString();
+    journal.originFile =
+        json.value(QStringLiteral(
+            "originFile")).toString();
+    journal.destinationLayoutName =
+        json.value(QStringLiteral(
+            "destinationLayout")).toString();
+    journal.destinationFile =
+        json.value(QStringLiteral(
+            "destinationFile")).toString();
+    journal.hiddenFile =
+        json.value(QStringLiteral(
+            "hiddenFile")).toString();
+    journal.rootContainmentId =
+        static_cast<uint>(rootId.toDouble());
+    journal.snapshotSha256 =
+        QByteArray::fromHex(
+            json.value(QStringLiteral(
+                "snapshotSha256"))
+                .toString()
+                .toLatin1());
+    for (const QJsonValue id : ids.toArray()) {
+        if (!id.isString()
+                || id.toString().isEmpty()) {
+            qCritical() << "view move recovery found an invalid containment id in"
+                        << directoryPath;
+            return std::nullopt;
+        }
+        journal.containmentIds.append(
+            id.toString());
+    }
+
+    const QString rootIdString =
+        QString::number(
+            journal.rootContainmentId);
+    if (journal.transactionId.isEmpty()
+            || journal.originLayoutName.isEmpty()
+            || journal.destinationLayoutName.isEmpty()
+            || journal.originLayoutName
+                == journal.destinationLayoutName
+            || journal.originFile.isEmpty()
+            || journal.destinationFile.isEmpty()
+            || journal.hiddenFile.isEmpty()
+            || journal.snapshotSha256.size()
+                != QCryptographicHash::hashLength(
+                    QCryptographicHash::Sha256)
+            || journal.containmentIds.isEmpty()
+            || !journal.containmentIds.contains(
+                rootIdString)
+            || journal.containmentIds
+                .removeDuplicates() > 0) {
+        qCritical() << "view move recovery found incomplete or duplicate manifest state in"
+                    << directoryPath;
+        return std::nullopt;
+    }
+
+    journal.containmentIds.sort();
+    if (!transactionFileIsSafe(
+            journal.snapshotPath())) {
+        qCritical() << "view move recovery refused an unsafe snapshot in"
+                    << directoryPath;
+        return std::nullopt;
+    }
+    return journal;
+}
+
+[[nodiscard]] QStringList snapshotContainmentIds(
+    const QString &snapshotFile)
+{
+    const KConfig snapshot(
+        snapshotFile,
+        KConfig::SimpleConfig);
+    QStringList ids =
+        snapshot.group(
+            QStringLiteral("Containments"))
+            .groupList();
+    ids.sort();
+    return ids;
+}
+
+[[nodiscard]] bool groupMatchesSnapshot(
+    const KConfigGroup &snapshot,
+    const KConfigGroup &target,
+    const std::optional<QString> &layoutId)
+{
+    auto expectedEntries =
+        snapshot.entryMap();
+    if (layoutId) {
+        expectedEntries[QStringLiteral(
+            "layoutId")] = *layoutId;
+    }
+    if (expectedEntries
+            != target.entryMap()) {
+        return false;
+    }
+
+    QStringList expectedGroups =
+        snapshot.groupList();
+    QStringList targetGroups =
+        target.groupList();
+    expectedGroups.sort();
+    targetGroups.sort();
+    if (expectedGroups != targetGroups) {
+        return false;
+    }
+
+    for (const QString &group :
+            expectedGroups) {
+        if (!groupMatchesSnapshot(
+                snapshot.group(group),
+                target.group(group),
+                std::nullopt)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+[[nodiscard]] bool configMatchesSnapshot(
+    const QString &targetFile,
+    const QString &snapshotFile,
+    const QStringList &containmentIds,
+    const QString &layoutId)
+{
+    const KConfig snapshot(
+        snapshotFile,
+        KConfig::SimpleConfig);
+    const KConfig target(
+        targetFile,
+        KConfig::SimpleConfig);
+    const KConfigGroup snapshotContainments(
+        &snapshot,
+        QStringLiteral("Containments"));
+    const KConfigGroup targetContainments(
+        &target,
+        QStringLiteral("Containments"));
+    for (const QString &id :
+            containmentIds) {
+        if (!snapshotContainments.hasGroup(id)
+                || !targetContainments.hasGroup(id)
+                || !groupMatchesSnapshot(
+                    snapshotContainments.group(id),
+                    targetContainments.group(id),
+                    layoutId)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+[[nodiscard]] bool configOmitsSnapshot(
+    const QString &targetFile,
+    const QStringList &containmentIds)
+{
+    const KConfig target(
+        targetFile,
+        KConfig::SimpleConfig);
+    const KConfigGroup containments(
+        &target,
+        QStringLiteral("Containments"));
+    return std::ranges::none_of(
+        containmentIds,
+        [&containments](const QString &id) {
+            return containments.hasGroup(id);
+        });
+}
+
+[[nodiscard]] bool configAllowsMutation(
+    const KSharedConfigPtr &config)
+{
+    if (!config
+            || config->name().isEmpty()
+            || config->accessMode()
+                != KConfigBase::ReadWrite
+            || config->isImmutable()) {
+        return false;
+    }
+
+    const KConfigGroup containments(
+        config,
+        QStringLiteral("Containments"));
+    return !containments.isImmutable();
+}
+
+[[nodiscard]] bool groupAllowsReplacement(
+    const KConfigGroup &group)
+{
+    if (group.isImmutable()) {
+        return false;
+    }
+    for (const QString &key :
+            group.keyList()) {
+        if (group.isEntryImmutable(key)) {
+            return false;
+        }
+    }
+    return std::ranges::all_of(
+        group.groupList(),
+        [&group](const QString &child) {
+            return groupAllowsReplacement(
+                group.group(child));
+        });
+}
+
+[[nodiscard]] bool configAllowsContainmentReplacement(
+    const KSharedConfigPtr &config,
+    const QStringList &containmentIds)
+{
+    if (!configAllowsMutation(config)) {
+        return false;
+    }
+
+    const KConfigGroup containments(
+        config,
+        QStringLiteral("Containments"));
+    return std::ranges::all_of(
+        containmentIds,
+        [&containments](const QString &id) {
+            const KConfigGroup containment =
+                containments.group(id);
+            return !containment.exists()
+                || groupAllowsReplacement(
+                    containment);
+        });
+}
+
+[[nodiscard]] bool configAllowsLayoutOwnerMutation(
+    const KSharedConfigPtr &config,
+    const QStringList &containmentIds)
+{
+    if (!configAllowsMutation(config)) {
+        return false;
+    }
+
+    const KConfigGroup containments(
+        config,
+        QStringLiteral("Containments"));
+    return std::ranges::all_of(
+        containmentIds,
+        [&containments](const QString &id) {
+            const KConfigGroup containment =
+                containments.group(id);
+            return containment.exists()
+                && !containment.isImmutable()
+                && !containment
+                    .isEntryImmutable(
+                        QStringLiteral(
+                            "layoutId"));
+        });
+}
+
+[[nodiscard]] bool publishSnapshot(
+    const KSharedConfigPtr &target,
+    const QString &snapshotFile,
+    const QStringList &containmentIds,
+    const QString &layoutId,
+    const bool replaceExisting)
+{
+    if (configMatchesSnapshot(
+            target->name(),
+            snapshotFile,
+            containmentIds,
+            layoutId)) {
+        return true;
+    }
+    //! Re-read the standalone repository at the mutation boundary. A
+    //! concurrent destination identity must be observed and refused rather
+    //! than overwritten from the entry map captured during preflight.
+    target->reparseConfiguration();
+    if (!configAllowsContainmentReplacement(
+            target,
+            containmentIds)) {
+        qCritical() << "view move transaction refused immutable or read-only snapshot destination"
+                    << target->name();
+        return false;
+    }
+
+    KConfigGroup destinationContainments(
+        target,
+        QStringLiteral("Containments"));
+    const KConfig snapshot(
+        snapshotFile,
+        KConfig::SimpleConfig);
+    const KConfigGroup sourceContainments(
+        &snapshot,
+        QStringLiteral("Containments"));
+    for (const QString &id :
+            containmentIds) {
+        if (!sourceContainments.hasGroup(id)
+                || (!replaceExisting
+                    && destinationContainments
+                        .hasGroup(id))) {
+            qCritical() << "view move transaction refused missing snapshot or destination collision for containment"
+                        << id << "in" << target->name();
+            return false;
+        }
+    }
+
+    for (const QString &id :
+            containmentIds) {
+        KConfigGroup destination =
+            destinationContainments.group(id);
+        destination.deleteGroup();
+        sourceContainments.group(id)
+            .copyTo(&destination);
+        destination.writeEntry(
+            QStringLiteral("layoutId"),
+            layoutId);
+    }
+
+    if (!target->sync()) {
+        qCritical() << "view move transaction could not publish snapshot to"
+                    << target->name();
+        target->reparseConfiguration();
+        return false;
+    }
+    target->reparseConfiguration();
+    const bool persisted =
+        configMatchesSnapshot(
+            target->name(),
+            snapshotFile,
+            containmentIds,
+            layoutId);
+    if (!persisted) {
+        qCritical() << "view move transaction detected a semantically ignored snapshot write to"
+                    << target->name();
+        target->reparseConfiguration();
+    }
+    return persisted;
+}
+
+[[nodiscard]] bool publishLayoutOwner(
+    const KSharedConfigPtr &activeConfig,
+    const QStringList &containmentIds,
+    const QString &layoutId)
+{
+    bool alreadyPublished{true};
+    {
+        const KConfig fresh(
+            activeConfig->name(),
+            KConfig::SimpleConfig);
+        const KConfigGroup containments(
+            &fresh,
+            QStringLiteral("Containments"));
+        for (const QString &id :
+                containmentIds) {
+            if (!containments.hasGroup(id)
+                    || containments.group(id)
+                        .readEntry(
+                            QStringLiteral(
+                                "layoutId"),
+                            QString())
+                        != layoutId) {
+                alreadyPublished = false;
+                break;
+            }
+        }
+    }
+    if (alreadyPublished) {
+        return true;
+    }
+    if (!configAllowsLayoutOwnerMutation(
+            activeConfig,
+            containmentIds)) {
+        qCritical() << "view move transaction refused immutable active layout ownership in"
+                    << activeConfig->name();
+        return false;
+    }
+
+    KConfigGroup containments(
+        activeConfig,
+        QStringLiteral("Containments"));
+    for (const QString &id :
+            containmentIds) {
+        if (!containments.hasGroup(id)) {
+            qCritical() << "view move transaction could not resolve active containment"
+                        << id << "in" << activeConfig->name();
+            return false;
+        }
+        containments.group(id)
+            .writeEntry(
+                QStringLiteral("layoutId"),
+                layoutId);
+    }
+    if (!activeConfig->sync()) {
+        qCritical() << "view move transaction could not publish active layout ownership to"
+                    << activeConfig->name();
+        activeConfig->reparseConfiguration();
+        return false;
+    }
+    activeConfig->reparseConfiguration();
+
+    const KConfig fresh(
+        activeConfig->name(),
+        KConfig::SimpleConfig);
+    const KConfigGroup persistedContainments(
+        &fresh,
+        QStringLiteral("Containments"));
+    for (const QString &id :
+            containmentIds) {
+        if (!persistedContainments.hasGroup(id)
+                || persistedContainments.group(id)
+                    .readEntry(
+                        QStringLiteral(
+                            "layoutId"),
+                        QString())
+                    != layoutId) {
+            qCritical() << "view move transaction detected a semantically ignored active-owner write for containment"
+                        << id << "in" << activeConfig->name();
+            activeConfig->reparseConfiguration();
+            return false;
+        }
+    }
+    return true;
+}
+
+[[nodiscard]] bool tombstoneSnapshot(
+    const KSharedConfigPtr &target,
+    const QStringList &containmentIds)
+{
+    if (configOmitsSnapshot(
+            target->name(),
+            containmentIds)) {
+        return true;
+    }
+    //! Recovery and forward commit both mutate standalone layout files. Use
+    //! their current entry maps so an external immutability change is a loud
+    //! refusal and a post-decision retry remains journal-driven.
+    target->reparseConfiguration();
+    if (!configAllowsContainmentReplacement(
+            target,
+            containmentIds)) {
+        qCritical() << "view move transaction refused immutable snapshot retirement in"
+                    << target->name();
+        return false;
+    }
+
+    KConfigGroup containments(
+        target,
+        QStringLiteral("Containments"));
+    for (const QString &id :
+            containmentIds) {
+        containments.group(id)
+            .deleteGroup();
+    }
+    if (!target->sync()) {
+        qCritical() << "view move transaction could not retire snapshot from"
+                    << target->name();
+        target->reparseConfiguration();
+        return false;
+    }
+    target->reparseConfiguration();
+    const bool persisted =
+        configOmitsSnapshot(
+            target->name(),
+            containmentIds);
+    if (!persisted) {
+        qCritical() << "view move transaction detected a semantically ignored snapshot retirement in"
+                    << target->name();
+        target->reparseConfiguration();
+    }
+    return persisted;
+}
+
+[[nodiscard]] Layout::ViewMoveTransaction::
+PersistentOwner persistentOwnerForLayoutName(
+    const QString &owner,
+    const QString &originLayoutName,
+    const QString &destinationLayoutName)
+{
+    if (owner == originLayoutName) {
+        return Layout::ViewMoveTransaction::
+            PersistentOwner::Origin;
+    }
+    if (owner == destinationLayoutName) {
+        return Layout::ViewMoveTransaction::
+            PersistentOwner::Destination;
+    }
+    return Layout::ViewMoveTransaction::
+        PersistentOwner::Unknown;
+}
+
+[[nodiscard]] Layout::ViewMoveTransaction::
+PersistentOwner observePersistentOwner(
+    const QString &hiddenFile,
+    const QStringList &containmentIds,
+    const QString &originLayoutName,
+    const QString &destinationLayoutName)
+{
+    const KConfig hidden(
+        hiddenFile,
+        KConfig::SimpleConfig);
+    const KConfigGroup containments(
+        &hidden,
+        QStringLiteral("Containments"));
+    if (containmentIds.isEmpty()) {
+        return Layout::ViewMoveTransaction::
+            PersistentOwner::Unknown;
+    }
+
+    std::optional<Layout::ViewMoveTransaction::
+        PersistentOwner> commonOwner;
+    for (const QString &containmentId :
+            containmentIds) {
+        if (!containments.hasGroup(
+                containmentId)) {
+            return Layout::
+                ViewMoveTransaction::
+                    PersistentOwner::Unknown;
+        }
+
+        const QString owner =
+            containments
+                .group(containmentId)
+                .readEntry(
+                    QStringLiteral(
+                        "layoutId"),
+                    QString());
+        const auto observed =
+            persistentOwnerForLayoutName(
+                owner,
+                originLayoutName,
+                destinationLayoutName);
+        if (observed
+                == Layout::
+                    ViewMoveTransaction::
+                        PersistentOwner::Unknown
+                || (commonOwner
+                    && *commonOwner
+                        != observed)) {
+            return Layout::
+                ViewMoveTransaction::
+                    PersistentOwner::Unknown;
+        }
+        commonOwner = observed;
+    }
+    return *commonOwner;
+}
+
+[[nodiscard]] constexpr const char *persistentOwnerName(
+    const Layout::ViewMoveTransaction::
+        PersistentOwner owner) noexcept
+{
+    switch (owner) {
+    case Layout::ViewMoveTransaction::
+            PersistentOwner::Origin:
+        return "origin";
+    case Layout::ViewMoveTransaction::
+            PersistentOwner::Destination:
+        return "destination";
+    case Layout::ViewMoveTransaction::
+            PersistentOwner::Unknown:
+        return "unknown";
+    }
+
+    return "unknown";
+}
+
+[[nodiscard]] constexpr const char *recoveryActionName(
+    const Layout::ViewMoveTransaction::
+        RecoveryAction action) noexcept
+{
+    switch (action) {
+    case Layout::ViewMoveTransaction::
+            RecoveryAction::RollBack:
+        return "rollBack";
+    case Layout::ViewMoveTransaction::
+            RecoveryAction::RollForward:
+        return "rollForward";
+    case Layout::ViewMoveTransaction::
+            RecoveryAction::Refuse:
+        return "refuse";
+    }
+
+    return "refuse";
 }
 
 }
@@ -142,61 +1211,8 @@ Storage *Storage::self()
 bool Storage::isWritable(const Layout::GenericLayout *layout) const
 {
     Q_ASSERT(layout);
-    const QFileInfo requestedFileInfo(
+    return persistenceEndpointIsWritable(
         layout->file());
-    const bool existingEndpoint =
-        requestedFileInfo.exists();
-    if (requestedFileInfo.isSymLink()
-            && !existingEndpoint) {
-        return false;
-    }
-
-    //! KConfig canonicalizes every existing path before opening its backend.
-    //! Classifying the lexical symlink parent can approve a directory that the
-    //! QSaveFile replacement never uses.
-    const QString backendFilePath =
-        existingEndpoint
-            ? requestedFileInfo
-                .canonicalFilePath()
-            : requestedFileInfo
-                .absoluteFilePath();
-    if (backendFilePath.isEmpty()) {
-        qCritical()
-            << "layout storage could not resolve persistence endpoint"
-            << layout->file();
-        return false;
-    }
-
-    const QFileInfo backendFileInfo(
-        backendFilePath);
-    const QFileInfo parentDirectory(
-        backendFileInfo.absolutePath());
-
-    //! KConfig reparses an existing file before persisting through QSaveFile,
-    //! which creates and renames a replacement in the containing directory.
-    //! Read and write permission alone do not prove that either phase uses the
-    //! atomic branch: KConfig writes non-owned files directly.
-    const bool parentSupportsReplacement =
-        parentDirectory.exists()
-        && parentDirectory.isDir()
-        && parentDirectory.isWritable()
-        && parentDirectory.isExecutable();
-    if (!parentSupportsReplacement) {
-        return false;
-    }
-
-    return !existingEndpoint
-        || supportsKConfigAtomicReplacement(
-            ExistingFilePersistenceFacts{
-                .isRegularFile =
-                    backendFileInfo.isFile(),
-                .isReadable =
-                    backendFileInfo.isReadable(),
-                .isWritable =
-                    backendFileInfo.isWritable(),
-                .ownerId =
-                    backendFileInfo.ownerId()},
-            static_cast<uint>(::getuid()));
 }
 
 bool Storage::isLatteContainment(const Plasma::Containment *containment) const
@@ -2030,6 +3046,999 @@ bool Storage::restoreView(const KSharedConfigPtr &activeConfig,
     }
 
     return true;
+}
+
+ViewMovePersistenceResult Storage::persistViewMove(
+    const Layout::GenericLayout *originLayout,
+    const uint originViewId,
+    const Layout::GenericLayout *destinationLayout,
+    const KSharedConfigPtr &activeConfig)
+{
+    if (!originLayout
+            || !destinationLayout
+            || originLayout == destinationLayout
+            || originViewId == 0
+            || !activeConfig) {
+        qCritical() << "Storage::persistViewMove refused invalid move participants";
+        return {
+            .status =
+                ViewMovePersistenceResult::
+                    Status::Rejected,
+            .transactionPath = {},
+            .error =
+                QStringLiteral(
+                    "invalid durable move participants")};
+    }
+
+    const QString snapshotFile =
+        storedView(
+            originLayout,
+            static_cast<int>(
+                originViewId));
+    if (snapshotFile.isEmpty()) {
+        qCritical() << "Storage::persistViewMove could not capture containment"
+                    << originViewId
+                    << "from" << originLayout->name();
+        return {
+            .status =
+                ViewMovePersistenceResult::
+                    Status::Rejected,
+            .transactionPath = {},
+            .error =
+                QStringLiteral(
+                    "could not capture the complete source subtree")};
+    }
+
+    return persistViewMoveSnapshot(
+        originLayout->name(),
+        originLayout->file(),
+        destinationLayout->name(),
+        destinationLayout->file(),
+        activeConfig,
+        originViewId,
+        snapshotFile);
+}
+
+ViewMovePersistenceResult Storage::persistViewMoveSnapshot(
+    const QString &originLayoutName,
+    const QString &originFile,
+    const QString &destinationLayoutName,
+    const QString &destinationFile,
+    const KSharedConfigPtr &activeConfig,
+    const uint originViewId,
+    const QString &snapshotFile,
+    const ViewMoveInterruption interruption)
+{
+    const QString originBackend =
+        persistenceBackendPath(originFile);
+    const QString destinationBackend =
+        persistenceBackendPath(destinationFile);
+    const QString hiddenBackend =
+        activeConfig
+            ? persistenceBackendPath(
+                activeConfig->name())
+            : QString();
+    const QString expectedHiddenBackend =
+        persistenceBackendPath(
+            Importer::layoutUserFilePath(
+                QString::fromLatin1(
+                    Layout::
+                        MULTIPLELAYOUTSHIDDENNAME)));
+    QStringList containmentIds =
+        snapshotContainmentIds(
+            snapshotFile);
+    const QString rootId =
+        QString::number(originViewId);
+    if (!layoutNameIsSafe(
+            originLayoutName)
+            || !layoutNameIsSafe(
+                destinationLayoutName)
+            || originLayoutName
+                == destinationLayoutName
+            || originBackend.isEmpty()
+            || destinationBackend.isEmpty()
+            || originBackend
+                == destinationBackend
+            || hiddenBackend.isEmpty()
+            || hiddenBackend
+                != expectedHiddenBackend
+            || hiddenBackend
+                == originBackend
+            || hiddenBackend
+                == destinationBackend
+            || !endpointIsDirectLayoutChild(
+                originBackend)
+            || !endpointIsDirectLayoutChild(
+                destinationBackend)
+            || !endpointIsDirectLayoutChild(
+                hiddenBackend)
+            || !persistenceEndpointIsWritable(
+                originBackend)
+            || !persistenceEndpointIsWritable(
+                destinationBackend)
+            || !persistenceEndpointIsWritable(
+                hiddenBackend)
+            || containmentIds.isEmpty()
+            || !containmentIds.contains(rootId)) {
+        qCritical() << "Storage::persistViewMoveSnapshot refused an inconsistent durable move"
+                    << originLayoutName
+                    << destinationLayoutName
+                    << originViewId;
+        return {
+            .status =
+                ViewMovePersistenceResult::
+                    Status::Rejected,
+            .transactionPath = {},
+            .error =
+                QStringLiteral(
+                    "inconsistent durable move paths or snapshot")};
+    }
+
+    const auto initialOwner =
+        observePersistentOwner(
+            hiddenBackend,
+            containmentIds,
+            originLayoutName,
+            destinationLayoutName);
+    if (initialOwner
+            != Layout::ViewMoveTransaction::
+                PersistentOwner::Origin) {
+        qCritical() << "Storage::persistViewMoveSnapshot refused containment"
+                    << originViewId
+                    << "whose persistent owner is not"
+                    << originLayoutName;
+        return {
+            .status =
+                ViewMovePersistenceResult::
+                    Status::Rejected,
+            .transactionPath = {},
+            .error =
+                QStringLiteral(
+                    "active persistence does not name the source layout")};
+    }
+
+    const QString transactionsRoot =
+        viewMoveTransactionsRoot();
+    if (!QDir().mkpath(transactionsRoot)) {
+        qCritical() << "Storage::persistViewMoveSnapshot could not create transaction root"
+                    << transactionsRoot;
+        return {
+            .status =
+                ViewMovePersistenceResult::
+                    Status::Rejected,
+            .transactionPath = {},
+            .error =
+                QStringLiteral(
+                    "could not create the durable transaction directory")};
+    }
+    const QFileInfo transactionsRootInfo(
+        transactionsRoot);
+    if (!transactionsRootInfo.isDir()
+            || transactionsRootInfo.isSymLink()
+            || transactionsRootInfo.ownerId()
+                != static_cast<uint>(::getuid())
+            || !QFile::setPermissions(
+                transactionsRoot,
+                ViewMovePrivateDirectoryPermissions)) {
+        qCritical() << "Storage::persistViewMoveSnapshot refused an unsafe transaction root"
+                    << transactionsRoot;
+        return {
+            .status =
+                ViewMovePersistenceResult::
+                    Status::Rejected,
+            .transactionPath = {},
+            .error =
+                QStringLiteral(
+                    "durable transaction storage is not private")};
+    }
+
+    QLockFile transactionLock(
+        QDir(transactionsRoot)
+            .filePath(
+                QStringLiteral(
+                    "transaction.lock")));
+    transactionLock.setStaleLockTime(0);
+    if (!transactionLock.tryLock(0)) {
+        qCritical() << "Storage::persistViewMoveSnapshot refused a concurrent durable move";
+        return {
+            .status =
+                ViewMovePersistenceResult::
+                    Status::Rejected,
+            .transactionPath = {},
+            .error =
+                QStringLiteral(
+                    "another durable move owns the transaction lock")};
+    }
+
+    if (!pendingViewMoveTransactions()
+             .isEmpty()) {
+        qCritical() << "Storage::persistViewMoveSnapshot refused a new move while recovery is pending";
+        return {
+            .status =
+                ViewMovePersistenceResult::
+                    Status::RejectedRecoveryRequired,
+            .transactionPath = {},
+            .error =
+                QStringLiteral(
+                    "an earlier durable move requires recovery")};
+    }
+
+    const KSharedConfigPtr destinationConfig =
+        KSharedConfig::openConfig(
+            destinationBackend,
+            KConfig::SimpleConfig);
+    const KSharedConfigPtr originConfig =
+        KSharedConfig::openConfig(
+            originBackend,
+            KConfig::SimpleConfig);
+    if (!configAllowsContainmentReplacement(
+            originConfig,
+            containmentIds)
+            || !configAllowsContainmentReplacement(
+                destinationConfig,
+                containmentIds)
+            || !configAllowsLayoutOwnerMutation(
+                activeConfig,
+                containmentIds)) {
+        qCritical() << "Storage::persistViewMoveSnapshot refused an immutable or read-only move participant";
+        return {
+            .status =
+                ViewMovePersistenceResult::
+                    Status::Rejected,
+            .transactionPath = {},
+            .error =
+                QStringLiteral(
+                    "a durable move participant is immutable or read-only")};
+    }
+
+    const QStringList endpointPaths{
+        originBackend,
+        destinationBackend,
+        hiddenBackend,
+    };
+    for (const QString &endpointPath :
+            endpointPaths) {
+        if (!kConfigEndpointLockIsAvailable(
+                endpointPath)) {
+            qCritical() << "Storage::persistViewMoveSnapshot refused a locked move participant"
+                        << endpointPath;
+            return {
+                .status =
+                    ViewMovePersistenceResult::
+                        Status::Rejected,
+                .transactionPath = {},
+                .error =
+                    QStringLiteral(
+                        "a durable move participant is locked")};
+        }
+    }
+
+    if (!configOmitsSnapshot(
+            destinationBackend,
+            containmentIds)) {
+        qCritical() << "Storage::persistViewMoveSnapshot refused destination id collision for"
+                    << containmentIds
+                    << "in" << destinationBackend;
+        return {
+            .status =
+                ViewMovePersistenceResult::
+                    Status::Rejected,
+            .transactionPath = {},
+            .error =
+                QStringLiteral(
+                    "destination already contains an affected identity")};
+    }
+
+    ViewMoveJournalRecord journal;
+    journal.transactionId =
+        QUuid::createUuid()
+            .toString(
+                QUuid::WithoutBraces);
+    journal.originLayoutName =
+        originLayoutName;
+    journal.originFile =
+        originBackend;
+    journal.destinationLayoutName =
+        destinationLayoutName;
+    journal.destinationFile =
+        destinationBackend;
+    journal.hiddenFile =
+        hiddenBackend;
+    journal.rootContainmentId =
+        originViewId;
+    journal.containmentIds =
+        containmentIds;
+    journal.directoryPath =
+        QDir(transactionsRoot)
+            .filePath(
+                journal.transactionId
+                + QString::fromLatin1(
+                    ViewMovePreparedSuffix));
+
+    Layout::ViewMoveTransaction transaction;
+    const auto pureResult =
+        transaction.commit(
+            [&journal,
+             &snapshotFile,
+             &transactionsRoot]() {
+                if (!QDir().mkdir(
+                        journal.directoryPath)) {
+                    qCritical() << "view move transaction could not create"
+                                << journal.directoryPath;
+                    return false;
+                }
+                if (!QFile::setPermissions(
+                        journal.directoryPath,
+                        ViewMovePrivateDirectoryPermissions)) {
+                    qCritical() << "view move transaction could not make its journal private"
+                                << journal.directoryPath;
+                    return false;
+                }
+                if (!copyFileAtomically(
+                        snapshotFile,
+                        journal.snapshotPath())) {
+                    return false;
+                }
+                journal.snapshotSha256 =
+                    fileSha256(
+                        journal.snapshotPath());
+                if (journal.snapshotSha256
+                        .isEmpty()
+                        || !writeJournalManifest(
+                            journal)
+                        || !promotePreparedJournal(
+                            journal,
+                            transactionsRoot)) {
+                    return false;
+                }
+
+                const auto persisted =
+                    readJournalManifest(
+                        journal.directoryPath);
+                return persisted
+                    && persisted
+                        ->snapshotSha256
+                        == journal
+                            .snapshotSha256
+                    && fileSha256(
+                        journal.snapshotPath())
+                        == journal
+                            .snapshotSha256;
+            },
+            [destinationConfig,
+             &journal]() {
+                return publishSnapshot(
+                    destinationConfig,
+                    journal.snapshotPath(),
+                    journal.containmentIds,
+                    QString(),
+                    false);
+            },
+            [activeConfig,
+             &journal,
+             interruption]() {
+                if (interruption
+                        == ViewMoveInterruption::
+                            AfterDestinationPublish) {
+                    return false;
+                }
+                return publishLayoutOwner(
+                    activeConfig,
+                    journal.containmentIds,
+                    journal
+                        .destinationLayoutName);
+            },
+            [&journal,
+             interruption]() {
+                if (interruption
+                        == ViewMoveInterruption::
+                            AfterDestinationPublish) {
+                    return Layout::
+                        ViewMoveTransaction::
+                            PersistentOwner::Unknown;
+                }
+                return observePersistentOwner(
+                    journal.hiddenFile,
+                    journal
+                        .containmentIds,
+                    journal.originLayoutName,
+                    journal
+                        .destinationLayoutName);
+            },
+            [destinationConfig,
+             &journal]() {
+                return tombstoneSnapshot(
+                    destinationConfig,
+                    journal
+                        .containmentIds);
+            },
+            [&journal,
+             interruption]() {
+                if (interruption
+                        == ViewMoveInterruption::
+                            AfterCommitDecision) {
+                    return false;
+                }
+                const KSharedConfigPtr
+                    originConfig =
+                        KSharedConfig::
+                            openConfig(
+                                journal
+                                    .originFile,
+                                KConfig::
+                                    SimpleConfig);
+                return tombstoneSnapshot(
+                    originConfig,
+                    journal
+                        .containmentIds);
+            });
+
+    ViewMovePersistenceResult result;
+    result.transactionPath =
+        journal.directoryPath;
+    switch (pureResult) {
+    case Layout::ViewMoveTransaction::
+            Result::Rejected: {
+        result.status =
+            ViewMovePersistenceResult::
+                Status::Rejected;
+        result.error =
+            QStringLiteral(
+                "durable move was refused before its commit decision");
+        const bool journalCleanupSucceeded =
+            !QFileInfo::exists(
+                journal.directoryPath)
+            || (journal.directoryPath
+                    .endsWith(
+                        QString::fromLatin1(
+                            ViewMovePendingSuffix))
+                ? completeViewMovePersistence(
+                    journal.directoryPath)
+                : discardPreparedJournal(
+                    journal.directoryPath,
+                    transactionsRoot));
+        if (!journalCleanupSucceeded) {
+            result.status =
+                ViewMovePersistenceResult::
+                    Status::
+                        RejectedRecoveryRequired;
+            result.error =
+                QStringLiteral(
+                    "durable move rollback completed but journal cleanup requires recovery");
+        }
+        break;
+    }
+    case Layout::ViewMoveTransaction::
+            Result::
+                RejectedRecoveryRequired:
+        result.status =
+            ViewMovePersistenceResult::
+                Status::
+                    RejectedRecoveryRequired;
+        result.error =
+            QStringLiteral(
+                "durable move was not committed and rollback requires recovery");
+        break;
+    case Layout::ViewMoveTransaction::
+            Result::Committed:
+        result.status =
+            ViewMovePersistenceResult::
+                Status::Committed;
+        break;
+    case Layout::ViewMoveTransaction::
+            Result::
+                CommittedRecoveryRequired:
+        result.status =
+            ViewMovePersistenceResult::
+                Status::
+                    CommittedRecoveryRequired;
+        result.error =
+            QStringLiteral(
+                "durable move committed but source retirement requires recovery");
+        break;
+    }
+    return result;
+}
+
+QStringList Storage::pendingViewMoveTransactions() const
+{
+    const QDir root(
+        viewMoveTransactionsRoot());
+    if (!root.exists()) {
+        return {};
+    }
+
+    QStringList transactions;
+    const QFileInfoList entries =
+        root.entryInfoList(
+            {QStringLiteral("*")
+                + QString::fromLatin1(
+                    ViewMovePendingSuffix)},
+            QDir::Dirs
+                | QDir::NoDotAndDotDot,
+            QDir::Name);
+    transactions.reserve(entries.size());
+    for (const QFileInfo &entry :
+            entries) {
+        transactions.append(
+            entry.absoluteFilePath());
+    }
+    return transactions;
+}
+
+QString Storage::viewMoveTransactionsData() const
+{
+    QJsonArray transactions;
+    const QString expectedHiddenFile =
+        persistenceBackendPath(
+            Importer::layoutUserFilePath(
+                QString::fromLatin1(
+                    Layout::
+                        MULTIPLELAYOUTSHIDDENNAME)));
+    const QStringList paths =
+        pendingViewMoveTransactions();
+    for (const QString &path : paths) {
+        const auto journal =
+            readJournalManifest(path);
+        if (!journal) {
+            QString transactionId =
+                QFileInfo(path).fileName();
+            transactionId.chop(
+                QString::fromLatin1(
+                    ViewMovePendingSuffix)
+                    .size());
+            transactions.append(
+                QJsonObject{
+                    {QStringLiteral(
+                         "transactionId"),
+                     transactionId},
+                    {QStringLiteral(
+                         "journalValid"),
+                     false},
+                    {QStringLiteral(
+                         "persistentOwner"),
+                     QStringLiteral(
+                         "unknown")},
+                    {QStringLiteral(
+                         "recoveryAction"),
+                     QStringLiteral(
+                         "refuse")},
+                });
+            continue;
+        }
+
+        const bool journalValid =
+            journalEndpointsAreConsistent(
+                *journal,
+                expectedHiddenFile)
+            && snapshotContainmentIds(
+                journal->snapshotPath())
+                == journal
+                    ->containmentIds
+            && fileSha256(
+                journal->snapshotPath())
+                == journal
+                    ->snapshotSha256;
+        const auto owner =
+            journalValid
+                ? observePersistentOwner(
+                    journal->hiddenFile,
+                    journal
+                        ->containmentIds,
+                    journal
+                        ->originLayoutName,
+                    journal
+                        ->destinationLayoutName)
+                : Layout::
+                    ViewMoveTransaction::
+                        PersistentOwner::Unknown;
+        const auto action =
+            Layout::ViewMoveTransaction::
+                recoveryAction(owner);
+        QJsonArray containmentIds;
+        for (const QString &id :
+                journal->containmentIds) {
+            containmentIds.append(id);
+        }
+        transactions.append(
+            QJsonObject{
+                {QStringLiteral(
+                     "transactionId"),
+                 journal->transactionId},
+                {QStringLiteral(
+                     "journalValid"),
+                 journalValid},
+                {QStringLiteral(
+                     "originLayout"),
+                 journal->originLayoutName},
+                {QStringLiteral(
+                     "destinationLayout"),
+                 journal
+                     ->destinationLayoutName},
+                {QStringLiteral(
+                     "rootContainmentId"),
+                 static_cast<qint64>(
+                     journal
+                         ->rootContainmentId)},
+                {QStringLiteral(
+                     "containmentIds"),
+                 containmentIds},
+                {QStringLiteral(
+                     "persistentOwner"),
+                 QString::fromLatin1(
+                     persistentOwnerName(
+                         owner))},
+                {QStringLiteral(
+                     "recoveryAction"),
+                 QString::fromLatin1(
+                     recoveryActionName(
+                         action))},
+            });
+    }
+
+    return QString::fromUtf8(
+        QJsonDocument(
+            QJsonObject{
+                {QStringLiteral(
+                     "schemaVersion"),
+                 ViewMoveJournalSchemaVersion},
+                {QStringLiteral(
+                     "transactions"),
+                 transactions},
+            })
+            .toJson(
+                QJsonDocument::Compact));
+}
+
+bool Storage::completeViewMovePersistence(
+    const QString &transactionPath)
+{
+    const QFileInfo transactionInfo(
+        transactionPath);
+    const QFileInfo rootInfo(
+        viewMoveTransactionsRoot());
+    if (!transactionInfo.exists()
+            || !transactionInfo.isDir()
+            || transactionInfo.isSymLink()
+            || !transactionInfo.fileName()
+                .endsWith(
+                    QString::fromLatin1(
+                        ViewMovePendingSuffix))
+            || transactionInfo
+                .absolutePath()
+                != rootInfo
+                    .absoluteFilePath()) {
+        qCritical() << "Storage::completeViewMovePersistence refused transaction path"
+                    << transactionPath;
+        return false;
+    }
+
+    QString completedName =
+        transactionInfo.fileName();
+    completedName.chop(
+        QString::fromLatin1(
+            ViewMovePendingSuffix)
+            .size());
+    completedName +=
+        QString::fromLatin1(
+            ViewMoveCompletedSuffix);
+    QDir root(rootInfo.absoluteFilePath());
+    if (!root.rename(
+            transactionInfo.fileName(),
+            completedName)
+            || !flushDirectory(
+                root.absolutePath())) {
+        qCritical() << "Storage::completeViewMovePersistence could not retire transaction"
+                    << transactionPath;
+        return false;
+    }
+
+    const QString completedPath =
+        root.filePath(completedName);
+    if (!QDir(completedPath)
+            .removeRecursively()) {
+        qCritical() << "Storage::completeViewMovePersistence left completed journal cleanup residue"
+                    << completedPath;
+        return false;
+    }
+    return flushDirectory(
+        root.absolutePath());
+}
+
+bool Storage::recoverPendingViewMoves()
+{
+    return recoverPendingViewMovesIn(
+        viewMoveTransactionsRoot(),
+        persistenceBackendPath(
+            Importer::layoutUserFilePath(
+                QString::fromLatin1(
+                    Layout::
+                        MULTIPLELAYOUTSHIDDENNAME))));
+}
+
+bool Storage::recoverPendingViewMovesIn(
+    const QString &transactionsRoot,
+    const QString &expectedHiddenFile,
+    const ViewMoveRecoveryInterruption
+        interruption)
+{
+    QDir root(transactionsRoot);
+    if (!root.exists()) {
+        return true;
+    }
+
+    const QFileInfo rootInfo(
+        root.absolutePath());
+    if (!rootInfo.isDir()
+            || rootInfo.isSymLink()
+            || rootInfo.ownerId()
+                != static_cast<uint>(::getuid())
+            || !QFile::setPermissions(
+                root.absolutePath(),
+                ViewMovePrivateDirectoryPermissions)) {
+        qCritical() << "Storage::recoverPendingViewMoves refused an unsafe transaction root"
+                    << root.absolutePath();
+        return false;
+    }
+
+    QLockFile transactionLock(
+        root.filePath(
+            QStringLiteral(
+                "transaction.lock")));
+    transactionLock.setStaleLockTime(0);
+    if (!transactionLock.tryLock(0)) {
+        qCritical() << "Storage::recoverPendingViewMoves could not acquire the durable move lock";
+        return false;
+    }
+
+    const QFileInfoList completedEntries =
+        root.entryInfoList(
+            {QStringLiteral("*")
+                + QString::fromLatin1(
+                    ViewMoveCompletedSuffix)},
+            QDir::Dirs
+                | QDir::NoDotAndDotDot,
+            QDir::Name);
+    for (const QFileInfo &entry :
+            completedEntries) {
+        if (entry.isSymLink()
+                || !QDir(entry.absoluteFilePath())
+                .removeRecursively()) {
+            qCritical() << "Storage::recoverPendingViewMoves could not remove completed transaction residue"
+                        << entry.absoluteFilePath();
+            return false;
+        }
+    }
+    if (!completedEntries.isEmpty()
+            && !flushDirectory(
+                root.absolutePath())) {
+        return false;
+    }
+
+    const QFileInfoList preparedEntries =
+        root.entryInfoList(
+            {QStringLiteral("*")
+                + QString::fromLatin1(
+                    ViewMovePreparedSuffix)},
+            QDir::Dirs
+                | QDir::NoDotAndDotDot,
+            QDir::Name);
+    for (const QFileInfo &entry :
+            preparedEntries) {
+        //! Targets are not touched until a complete journal is atomically
+        //! promoted from .prepare to .move.
+        if (entry.isSymLink()
+                || !QDir(entry.absoluteFilePath())
+                .removeRecursively()) {
+            qCritical() << "Storage::recoverPendingViewMoves could not remove an unpublished journal"
+                        << entry.absoluteFilePath();
+            return false;
+        }
+    }
+    if (!preparedEntries.isEmpty()
+            && !flushDirectory(
+                root.absolutePath())) {
+        return false;
+    }
+
+    const QFileInfoList pendingEntries =
+        root.entryInfoList(
+            {QStringLiteral("*")
+                + QString::fromLatin1(
+                    ViewMovePendingSuffix)},
+            QDir::Dirs
+                | QDir::NoDotAndDotDot,
+            QDir::Name);
+    for (const QFileInfo &entry :
+            pendingEntries) {
+        if (entry.isSymLink()) {
+            qCritical() << "Storage::recoverPendingViewMoves refused a linked transaction directory"
+                        << entry.absoluteFilePath();
+            return false;
+        }
+        const auto journal =
+            readJournalManifest(
+                entry.absoluteFilePath());
+        if (!journal) {
+            qCritical() << "Storage::recoverPendingViewMoves refused a malformed committed journal";
+            return false;
+        }
+
+        QString directoryTransactionId =
+            entry.fileName();
+        directoryTransactionId.chop(
+            QString::fromLatin1(
+                ViewMovePendingSuffix)
+                .size());
+        const QStringList snapshotIds =
+            snapshotContainmentIds(
+                journal
+                    ->snapshotPath());
+        if (journal->transactionId
+                != directoryTransactionId
+                || !journalEndpointsAreConsistent(
+                    *journal,
+                    expectedHiddenFile)
+                || snapshotIds
+                    != journal
+                        ->containmentIds
+                || fileSha256(
+                    journal
+                        ->snapshotPath())
+                    != journal
+                        ->snapshotSha256) {
+            qCritical() << "Storage::recoverPendingViewMoves refused inconsistent journal"
+                        << entry.absoluteFilePath();
+            return false;
+        }
+
+        const QStringList endpointPaths{
+            journal->originFile,
+            journal->destinationFile,
+            journal->hiddenFile,
+        };
+        for (const QString &endpointPath :
+                endpointPaths) {
+            //! A held KConfig lock otherwise makes synchronous startup
+            //! recovery wait for KConfig's long backend timeout. Leave the
+            //! journal intact and retry on the next startup instead.
+            if (!persistenceEndpointIsWritable(
+                    endpointPath)
+                    || !kConfigEndpointLockIsAvailable(
+                        endpointPath)) {
+                qCritical() << "Storage::recoverPendingViewMoves refused an unavailable recovery endpoint"
+                            << endpointPath;
+                return false;
+            }
+        }
+
+        const KSharedConfigPtr
+            originConfig =
+                KSharedConfig::openConfig(
+                    journal->originFile,
+                    KConfig::SimpleConfig);
+        const KSharedConfigPtr
+            destinationConfig =
+                KSharedConfig::openConfig(
+                    journal
+                        ->destinationFile,
+                    KConfig::SimpleConfig);
+        const KSharedConfigPtr
+            hiddenConfig =
+                KSharedConfig::openConfig(
+                    journal->hiddenFile,
+                    KConfig::SimpleConfig);
+        const auto owner =
+            observePersistentOwner(
+                journal->hiddenFile,
+                journal
+                    ->containmentIds,
+                journal
+                    ->originLayoutName,
+                journal
+                    ->destinationLayoutName);
+        const auto action =
+            Layout::ViewMoveTransaction::
+                recoveryAction(owner);
+
+        bool recovered{false};
+        switch (action) {
+        case Layout::ViewMoveTransaction::
+                RecoveryAction::RollBack: {
+            const bool firstRepositoryPublished =
+                publishSnapshot(
+                    originConfig,
+                    journal->snapshotPath(),
+                    journal
+                        ->containmentIds,
+                    QString(),
+                    true);
+            const bool firstInterruption =
+                interruption
+                == ViewMoveRecoveryInterruption::
+                    AfterFirstRepositoryPublication;
+            const bool secondRepositoryPublished =
+                firstRepositoryPublished
+                && !firstInterruption
+                && publishLayoutOwner(
+                    hiddenConfig,
+                    journal
+                        ->containmentIds,
+                    journal
+                        ->originLayoutName);
+            const bool secondInterruption =
+                interruption
+                == ViewMoveRecoveryInterruption::
+                    AfterSecondRepositoryPublication;
+            recovered =
+                secondRepositoryPublished
+                && !secondInterruption
+                && tombstoneSnapshot(
+                    destinationConfig,
+                    journal
+                        ->containmentIds);
+            break;
+        }
+        case Layout::ViewMoveTransaction::
+                RecoveryAction::RollForward: {
+            const bool firstRepositoryPublished =
+                publishSnapshot(
+                    destinationConfig,
+                    journal->snapshotPath(),
+                    journal
+                        ->containmentIds,
+                    QString(),
+                    true);
+            const bool firstInterruption =
+                interruption
+                == ViewMoveRecoveryInterruption::
+                    AfterFirstRepositoryPublication;
+            const bool secondRepositoryPublished =
+                firstRepositoryPublished
+                && !firstInterruption
+                && publishLayoutOwner(
+                    hiddenConfig,
+                    journal
+                        ->containmentIds,
+                    journal
+                        ->destinationLayoutName);
+            const bool secondInterruption =
+                interruption
+                == ViewMoveRecoveryInterruption::
+                    AfterSecondRepositoryPublication;
+            recovered =
+                secondRepositoryPublished
+                && !secondInterruption
+                && tombstoneSnapshot(
+                    originConfig,
+                    journal
+                        ->containmentIds);
+            break;
+        }
+        case Layout::ViewMoveTransaction::
+                RecoveryAction::Refuse:
+            qCritical() << "Storage::recoverPendingViewMoves could not identify the committed owner for"
+                        << journal
+                            ->rootContainmentId;
+            return false;
+        }
+
+        if (!recovered
+                || !completeViewMovePersistence(
+                    entry.absoluteFilePath())) {
+            qCritical() << "Storage::recoverPendingViewMoves could not converge transaction"
+                        << journal
+                            ->transactionId;
+            return false;
+        }
+    }
+    return root.entryList(
+        {QStringLiteral("*")
+            + QString::fromLatin1(
+                ViewMovePendingSuffix)},
+        QDir::Dirs
+            | QDir::NoDotAndDotDot)
+        .isEmpty();
 }
 
 void Storage::removeContainment(const QString &filepath, const QString &containmentId)

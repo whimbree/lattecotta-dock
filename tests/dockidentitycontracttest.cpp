@@ -938,31 +938,78 @@ void DockIdentityContractTest::
 compoundPlacementPreflightsBeforeMutation()
 {
     const QString managerHeader = readFile(QStringLiteral("app/layouts/manager.h"));
-    QVERIFY(managerHeader.contains(QStringLiteral("[[nodiscard]] bool moveView")));
+    QVERIFY(managerHeader.contains(QStringLiteral("enum class MoveViewResult")));
+    QVERIFY(managerHeader.contains(QStringLiteral("[[nodiscard]] MoveViewResult moveView")));
+    QVERIFY(managerHeader.contains(QStringLiteral("[[nodiscard]] static constexpr bool moveWasCommitted")));
     QVERIFY(managerHeader.contains(QStringLiteral("[[nodiscard]] bool canMoveView")));
 
     const QString managerSource = readFile(QStringLiteral("app/layouts/manager.cpp"));
     const QString move = normalized(functionBody(
-        managerSource, QStringLiteral("bool Manager::moveView")));
+        managerSource, QStringLiteral("Manager::MoveViewResult Manager::moveView")));
     const int validate = move.indexOf(
         QStringLiteral("if(!validatesViewMove("));
+    const int persist = move.indexOf(
+        QStringLiteral("->persistViewMove("), validate);
+    const int committed = move.indexOf(
+        QStringLiteral("if(!persistence.committed())"), persist);
     const int unassign = move.indexOf(
-        QStringLiteral("unassignFromLayout"), validate);
+        QStringLiteral("unassignFromLayout"), committed);
     const int assign = move.indexOf(
         QStringLiteral("assignToLayout"), unassign);
     const int postcondition = move.indexOf(
         QStringLiteral("qFatal("), assign);
-    const int accept = move.lastIndexOf(QStringLiteral("returntrue"));
-    QVERIFY2(validate >= 0 && unassign > validate
+    const int retireJournal = move.indexOf(
+        QStringLiteral("->completeViewMovePersistence("), postcondition);
+    const int accept = move.lastIndexOf(
+        QStringLiteral("MoveViewResult::Committed"));
+    QVERIFY2(validate >= 0 && persist > validate
+                 && committed > persist
+                 && unassign > committed
                  && assign > unassign
                  && postcondition > assign
-                 && accept > postcondition,
-             "the layout move must validate before mutation and make every post-unassignment failure fatal");
+                 && retireJournal > postcondition
+                 && accept > retireJournal,
+             "the layout move must commit and verify persistence before runtime mutation, then retire its journal");
     QCOMPARE(
         move.indexOf(
-            QStringLiteral("returnfalse"),
+            QStringLiteral(
+                "returnMoveViewResult::Rejected"),
             unassign),
         -1);
+
+    const QString init = normalized(functionBody(
+        managerSource,
+        QStringLiteral("void Manager::init")));
+    const int recover = init.indexOf(
+        QStringLiteral("->recoverPendingViewMoves()"));
+    const int loadLayouts = init.indexOf(
+        QStringLiteral("m_synchronizer->initLayouts()"));
+    QVERIFY2(recover >= 0 && loadLayouts > recover,
+             "durable move recovery must converge before layout files are loaded");
+
+    const QString coronaHeader =
+        readFile(
+            QStringLiteral(
+                "app/lattecorona.h"));
+    const QString coronaSource =
+        readFile(
+            QStringLiteral(
+                "app/lattecorona.cpp"));
+    const QString dbusXml =
+        readFile(
+            QStringLiteral(
+                "app/dbus/org.kde.LatteDock.xml"));
+    QVERIFY(coronaHeader.contains(
+        QStringLiteral(
+            "QString viewMoveTransactionsData()")));
+    QVERIFY(normalized(functionBody(
+        coronaSource,
+        QStringLiteral(
+            "QString Corona::viewMoveTransactionsData")))
+        .contains(QStringLiteral(
+            "->viewMoveTransactionsData()")));
+    QVERIFY(dbusXml.contains(QStringLiteral(
+        "<method name=\"viewMoveTransactionsData\">")));
 
     const QString validateMove = normalized(functionBody(
         managerSource,
@@ -1008,10 +1055,170 @@ compoundPlacementPreflightsBeforeMutation()
             genericLayoutSource,
             QStringLiteral(
                 "QList<Plasma::Containment *> GenericLayout::unassignFromLayout")));
+    QVERIFY(!assignToLayout.contains(QStringLiteral(
+        "syncToLayoutFile")));
+    QVERIFY(!unassignFromLayout.contains(QStringLiteral(
+        "syncToLayoutFile")));
+    QVERIFY(!assignToLayout.contains(QStringLiteral(
+        "qFatal(")));
+    QVERIFY(!unassignFromLayout.contains(QStringLiteral(
+        "qFatal(")));
     QVERIFY(assignToLayout.contains(QStringLiteral(
-        "if(!Layouts::Storage::self()->syncToLayoutFile(this,false)){qFatal(")));
-    QVERIFY(unassignFromLayout.contains(QStringLiteral(
-        "if(!Layouts::Storage::self()->syncToLayoutFile(this,false)){qFatal(")));
+        "latteView->setLayout(this)")));
+
+    const QString genericLayoutHeader =
+        readFile(
+            QStringLiteral(
+                "app/layout/genericlayout.h"));
+    QVERIFY(genericLayoutHeader.contains(QStringLiteral(
+        "[[nodiscard]] bool updateView")));
+
+    const QString updateView = normalized(
+        functionBody(
+            genericLayoutSource,
+            QStringLiteral(
+                "bool GenericLayout::updateView")));
+    const int queuedPositionerRequest = updateView.indexOf(
+        QStringLiteral(
+            "view->positioner()->setNextLocation("));
+    const int acceptedPositionerRequest = updateView.indexOf(
+        QStringLiteral(
+            "returntrue;"),
+        queuedPositionerRequest);
+    const int checkedDirectMove = updateView.indexOf(
+        QStringLiteral(
+            "moveWasCommitted("),
+        acceptedPositionerRequest);
+    const int rejectedDirectMove = updateView.indexOf(
+        QStringLiteral(
+            "returnfalse;"),
+        checkedDirectMove);
+    const int synchronizeAcceptedUpdate = updateView.indexOf(
+        QStringLiteral(
+            "syncLatteViewsToScreens()"),
+        rejectedDirectMove);
+    QVERIFY2(queuedPositionerRequest >= 0
+                 && acceptedPositionerRequest
+                    > queuedPositionerRequest
+                 && checkedDirectMove
+                    > acceptedPositionerRequest
+                 && rejectedDirectMove
+                    > checkedDirectMove
+                 && synchronizeAcceptedUpdate
+                    > rejectedDirectMove,
+             "queued Positioner work is accepted asynchronously, while direct move rejection stops synchronization");
+
+    const QString viewsControllerSource =
+        readFile(
+            QStringLiteral(
+                "app/settings/viewsdialog/viewscontroller.cpp"));
+    const QString saveViews = normalized(
+        functionBody(
+            viewsControllerSource,
+            QStringLiteral(
+                "void Views::save")));
+    QCOMPARE(
+        saveViews.count(
+            QStringLiteral(
+                "if(!central->updateView(")),
+        2);
+    QCOMPARE(
+        saveViews.count(
+            QStringLiteral(
+                "if(!origin->updateView(")),
+        1);
+    const int alteredViewRefusal = saveViews.indexOf(
+        QStringLiteral(
+            "if(!central->updateView(alteredViews[i]))"));
+    const int alteredViewWarning = saveViews.indexOf(
+        QStringLiteral(
+            "showDefaultPersistentErrorWarningInlineMessage("),
+        alteredViewRefusal);
+    const int stopAlteredViewSave = saveViews.indexOf(
+        QStringLiteral(
+            "return;"),
+        alteredViewWarning);
+    const int removeDeprecatedViews = saveViews.indexOf(
+        QStringLiteral(
+            "Latte::Data::ViewsTableremovedViews="),
+        stopAlteredViewSave);
+    QVERIFY2(alteredViewRefusal >= 0
+                 && alteredViewWarning
+                    > alteredViewRefusal
+                 && stopAlteredViewSave
+                    > alteredViewWarning
+                 && removeDeprecatedViews
+                    > stopAlteredViewSave,
+             "an altered-view refusal must remain visible and stop later persistence");
+
+    const int queuedControllerMove = saveViews.indexOf(
+        QStringLiteral(
+            "if(!origin->updateView(pastedactiveview))"));
+    const int queuedMoveWarning = saveViews.indexOf(
+        QStringLiteral(
+            "showDefaultPersistentErrorWarningInlineMessage("),
+        queuedControllerMove);
+    const int stopQueuedMoveSave = saveViews.indexOf(
+        QStringLiteral(
+            "return;"),
+        queuedMoveWarning);
+    const int directControllerMove = saveViews.indexOf(
+        QStringLiteral(
+            "constautomoveResult="),
+        stopQueuedMoveSave);
+    QVERIFY2(queuedControllerMove >= 0
+                 && queuedMoveWarning
+                    > queuedControllerMove
+                 && stopQueuedMoveSave
+                    > queuedMoveWarning
+                 && directControllerMove
+                    > stopQueuedMoveSave,
+             "a queued move refusal must remain visible and stop model success bookkeeping");
+
+    const int directControllerRefusal = saveViews.indexOf(
+        QStringLiteral(
+            "if(!Latte::Layouts::Manager::moveWasCommitted(moveResult))"),
+        directControllerMove);
+    const int refusalWarning = saveViews.indexOf(
+        QStringLiteral(
+            "showDefaultPersistentErrorWarningInlineMessage("),
+        directControllerRefusal);
+    const int stopRejectedSave = saveViews.indexOf(
+        QStringLiteral(
+            "return;"),
+        refusalWarning);
+    const int finalizeMovedView = saveViews.indexOf(
+        QStringLiteral(
+            "if(!central->updateView(pastedactiveview))"),
+        stopRejectedSave);
+    const int finalizationWarning = saveViews.indexOf(
+        QStringLiteral(
+            "showDefaultPersistentErrorWarningInlineMessage("),
+        finalizeMovedView);
+    const int stopFailedFinalization = saveViews.indexOf(
+        QStringLiteral(
+            "return;"),
+        finalizationWarning);
+    const int recordMoveAsOriginal = saveViews.indexOf(
+        QStringLiteral(
+            "newviewsresponses[tempviewid]=pastedactiveview"),
+        stopFailedFinalization);
+    QVERIFY2(directControllerMove >= 0
+                 && directControllerRefusal
+                    > directControllerMove
+                 && refusalWarning
+                    > directControllerRefusal
+                 && stopRejectedSave
+                    > refusalWarning
+                 && finalizeMovedView
+                    > stopRejectedSave
+                 && finalizationWarning
+                    > finalizeMovedView
+                 && stopFailedFinalization
+                    > finalizationWarning
+                 && recordMoveAsOriginal
+                    > stopFailedFinalization,
+             "direct move and destination-finalization refusals must remain visible and stop model success bookkeeping");
 
     const QString positionerSource = readFile(QStringLiteral("app/view/positioner.cpp"));
     const QString relocation = normalized(functionBody(
@@ -1034,10 +1241,14 @@ compoundPlacementPreflightsBeforeMutation()
         QStringLiteral("validatesPlacementApplication(plan)"),
         reservationMutation);
     const int checkedMove = relocation.indexOf(
-        QStringLiteral("if(!m_corona->layoutsManager()->moveView"));
+        QStringLiteral("constautomoveResult="),
+        revalidate);
+    const int committedMove = relocation.indexOf(
+        QStringLiteral("moveWasCommitted("),
+        checkedMove);
     const int outputMutation = relocation.indexOf(
         QStringLiteral("applyOutputPlacement("),
-        checkedMove);
+        committedMove);
     const int edgeMutation = relocation.indexOf(
         QStringLiteral("m_view->setLocation("),
         outputMutation);
@@ -1053,7 +1264,8 @@ compoundPlacementPreflightsBeforeMutation()
                  && reservationMutation > animationMutation
                  && revalidate > reservationMutation
                  && checkedMove > revalidate
-                 && outputMutation > checkedMove
+                 && committedMove > checkedMove
+                 && outputMutation > committedMove
                  && edgeMutation > outputMutation
                  && alignmentMutation > edgeMutation
                  && groupMutation > alignmentMutation,

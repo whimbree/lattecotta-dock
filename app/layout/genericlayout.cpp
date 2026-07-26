@@ -1907,7 +1907,9 @@ void GenericLayout::updateLastUsedActivity()
     }
 }
 
-void GenericLayout::assignToLayout(Latte::View *latteView, QList<Plasma::Containment *> containments)
+void GenericLayout::assignToLayout(
+    Latte::View *latteView,
+    const QList<Plasma::Containment *> &containments)
 {
     if (!m_corona || containments.isEmpty()) {
         return;
@@ -1937,18 +1939,9 @@ void GenericLayout::assignToLayout(Latte::View *latteView, QList<Plasma::Contain
 
     Q_EMIT viewsCountChanged();
 
-    //! sync the original layout file for integrity
-    if (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::MultipleLayouts) {
-        if (!Layouts::Storage::self()
-                ->syncToLayoutFile(this, false)) {
-            //! Manager preflights both files before the synchronous transfer.
-            //! Continuing here would report a successful runtime move whose
-            //! destination ownership disappears after restart.
-            qFatal(
-                "layout %s lost its validated persistence endpoint while assigning containment ownership",
-                qPrintable(name()));
-        }
-    }
+    //! Manager's durable move transaction publishes and verifies every file
+    //! before this persistence-free runtime adoption. GenericLayout owns only
+    //! the in-process collections and signal graph at this boundary.
 }
 
 QList<Plasma::Containment *> GenericLayout::unassignFromLayout(Plasma::Containment *latteContainment)
@@ -1983,18 +1976,8 @@ QList<Plasma::Containment *> GenericLayout::unassignFromLayout(Plasma::Containme
         m_latteViews.remove(latteContainment);
     }
 
-    //! sync the original layout file for integrity
-    if (m_corona && m_corona->layoutsManager()->memoryUsage() == MemoryUsage::MultipleLayouts) {
-        if (!Layouts::Storage::self()
-                ->syncToLayoutFile(this, false)) {
-            //! The caller cannot recover after runtime ownership has changed.
-            //! Manager's endpoint preflight makes this a violated invariant,
-            //! not a recoverable move result.
-            qFatal(
-                "layout %s lost its validated persistence endpoint while unassigning containment ownership",
-                qPrintable(name()));
-        }
-    }
+    //! Durable ownership has already converged before Manager asks for this
+    //! persistence-free runtime extraction.
 
     return containments;
 }
@@ -2565,19 +2548,19 @@ Data::View GenericLayout::newView(const Latte::Data::View &nextViewData)
     return result;
 }
 
-void GenericLayout::updateView(const Latte::Data::View &viewData)
+bool GenericLayout::updateView(const Latte::Data::View &viewData)
 {
     //! storage -> storage [view scenario]
     if (!isActive()) {
         Layouts::Storage::self()->updateView(this, viewData);
-        return;
+        return true;
     }
 
     //! active -> active [view scenario]
-    Latte::View *view = viewForContainment(viewData.id.toUInt());
-    bool viewMustBeDeleted = (view && !viewData.onPrimary && !m_corona->screenPool()->isScreenActive(viewData.screen));
+    Latte::View *const view = viewForContainment(viewData.id.toUInt());
+    const bool viewMustBeDeleted = (view && !viewData.onPrimary && !m_corona->screenPool()->isScreenActive(viewData.screen));
 
-    QString nextactivelayoutname = (viewData.state() == Data::View::OriginFromLayout && !viewData.originLayout().isEmpty() ? viewData.originLayout() : QString());
+    const QString nextactivelayoutname = (viewData.state() == Data::View::OriginFromLayout && !viewData.originLayout().isEmpty() ? viewData.originLayout() : QString());
 
     if (view) {
         if (!viewMustBeDeleted) {
@@ -2593,7 +2576,7 @@ void GenericLayout::updateView(const Latte::Data::View &viewData)
 
             view->setName(viewData.name);
             view->positioner()->setNextLocation(nextactivelayoutname, viewData.screensGroup, scrName, viewData.edge, viewData.alignment);
-            return;
+            return true;
         } else {
             //! viewMustBeDeleted
             m_latteViews.remove(view->containment());
@@ -2604,7 +2587,7 @@ void GenericLayout::updateView(const Latte::Data::View &viewData)
 
     //! inactiveinmemory -> active/inactiveinmemory [viewscenario]
     //! active -> inactiveinmemory                  [viewscenario]
-    auto containment = containmentForId(viewData.id.toUInt());
+    Plasma::Containment *const containment = containmentForId(viewData.id.toUInt());
     if (containment) {
         Layouts::Storage::self()->updateView(this, viewData);
 
@@ -2619,10 +2602,18 @@ void GenericLayout::updateView(const Latte::Data::View &viewData)
     }
 
     if (!nextactivelayoutname.isEmpty()) {
-        if (!m_corona->layoutsManager()->moveView(
-                name(), viewData.id.toUInt(), nextactivelayoutname)) {
+        const auto moveResult =
+            m_corona->layoutsManager()
+                ->moveView(
+                    name(),
+                    viewData.id.toUInt(),
+                    nextactivelayoutname);
+        if (!Layouts::Manager::
+                moveWasCommitted(
+                    moveResult)) {
             qCritical() << "GenericLayout: failed to commit move for containment"
                         << viewData.id << "to" << nextactivelayoutname;
+            return false;
         }
     }
 
@@ -2633,6 +2624,7 @@ void GenericLayout::updateView(const Latte::Data::View &viewData)
     }
 
     syncLatteViewsToScreens();
+    return true;
 }
 
 void GenericLayout::removeView(const Latte::Data::View &viewData)
