@@ -54,6 +54,20 @@
 
 using Latte::Layouts::Storage;
 
+class PersistenceEndpointLayout final : public Latte::CentralLayout
+{
+public:
+    explicit PersistenceEndpointLayout(
+        const QString &filePath)
+        : Latte::CentralLayout(
+            nullptr,
+            QString(),
+            QString())
+    {
+        setFile(filePath);
+    }
+};
+
 class StorageTest : public QObject
 {
     Q_OBJECT
@@ -438,10 +452,12 @@ void StorageTest::classifyLayoutPersistenceEndpoints()
             .filePath(
                 QStringLiteral(
                     "absent.layout.latte"));
-    Latte::CentralLayout missingParentLayout(
-        nullptr,
-        missingParentEndpointPath,
-        QStringLiteral("missing-parent"));
+    PersistenceEndpointLayout
+        missingParentLayout(
+            missingParentEndpointPath);
+    QCOMPARE(
+        missingParentLayout.file(),
+        missingParentEndpointPath);
     QVERIFY(!missingParentLayout.isWritable());
 
     const QString regularFileParentPath =
@@ -456,10 +472,12 @@ void StorageTest::classifyLayoutPersistenceEndpoints()
             .filePath(
                 QStringLiteral(
                     "absent.layout.latte"));
-    Latte::CentralLayout regularFileParentLayout(
-        nullptr,
-        regularFileParentEndpointPath,
-        QStringLiteral("regular-file-parent"));
+    PersistenceEndpointLayout
+        regularFileParentLayout(
+            regularFileParentEndpointPath);
+    QCOMPARE(
+        regularFileParentLayout.file(),
+        regularFileParentEndpointPath);
     QVERIFY(!regularFileParentLayout.isWritable());
 
     const QString restrictedParentPath =
@@ -541,6 +559,63 @@ void StorageTest::classifyLayoutPersistenceEndpoints()
 
     QVERIFY(restrictedParent.setPermissions(
         originalParentPermissions));
+
+    const QString canonicalParentPath =
+        m_dir.filePath(
+            QStringLiteral("canonical-parent"));
+    QVERIFY(QDir().mkpath(
+        canonicalParentPath));
+    QFile canonicalParent(
+        canonicalParentPath);
+    const QFileDevice::Permissions
+        originalCanonicalParentPermissions =
+            canonicalParent.permissions();
+    const auto restoreCanonicalParentPermissions =
+        qScopeGuard(
+            [&canonicalParent,
+             originalCanonicalParentPermissions]() {
+                canonicalParent.setPermissions(
+                    originalCanonicalParentPermissions);
+            });
+    const QString canonicalTargetPath =
+        QDir(canonicalParentPath)
+            .filePath(
+                QStringLiteral(
+                    "target.layout.latte"));
+    QFile canonicalTarget(
+        canonicalTargetPath);
+    QVERIFY(canonicalTarget.open(
+        QIODevice::WriteOnly));
+    QVERIFY(canonicalTarget.write(
+        "[LayoutSettings]\nversion=2\n")
+        > 0);
+    canonicalTarget.close();
+
+    const QString symbolicEndpointPath =
+        m_dir.filePath(
+            QStringLiteral(
+                "symbolic-endpoint.layout.latte"));
+    QVERIFY(QFile::link(
+        canonicalTargetPath,
+        symbolicEndpointPath));
+    QVERIFY(
+        QFileInfo(symbolicEndpointPath)
+            .isSymLink());
+    Latte::CentralLayout symbolicLayout(
+        nullptr,
+        symbolicEndpointPath,
+        QStringLiteral("symbolic"));
+    QVERIFY(symbolicLayout.isWritable());
+
+    QVERIFY(canonicalParent.setPermissions(
+        QFileDevice::ReadUser
+        | QFileDevice::ExeUser));
+    QVERIFY(
+        QFileInfo(symbolicEndpointPath)
+            .isWritable());
+    QVERIFY(!symbolicLayout.isWritable());
+    QVERIFY(canonicalParent.setPermissions(
+        originalCanonicalParentPermissions));
 }
 
 void StorageTest::tombstoneRemovalSnapshotRefreshesStaleSharedRepository()

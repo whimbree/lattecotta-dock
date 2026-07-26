@@ -40,12 +40,56 @@
 #include <Plasma/Containment>
 
 // C++
+#include <unistd.h>
 #include <utility>
 
 namespace Latte {
 namespace Layouts {
 
 namespace {
+
+struct ExistingFilePersistenceFacts final
+{
+    bool isRegularFile;
+    bool isReadable;
+    bool isWritable;
+    uint ownerId;
+};
+
+[[nodiscard]] constexpr bool supportsKConfigAtomicReplacement(
+    const ExistingFilePersistenceFacts facts,
+    const uint processOwnerId) noexcept
+{
+    return facts.isRegularFile
+        && facts.isReadable
+        && facts.isWritable
+        && facts.ownerId == processOwnerId;
+}
+
+//! KConfig selects QSaveFile only for process-owned files. These compile-time
+//! controls prevent an ownership check from being removed as redundant and
+//! silently selecting its direct truncate-and-write branch.
+static_assert(supportsKConfigAtomicReplacement(
+    ExistingFilePersistenceFacts{
+        .isRegularFile = true,
+        .isReadable = true,
+        .isWritable = true,
+        .ownerId = 1000U},
+    1000U));
+static_assert(!supportsKConfigAtomicReplacement(
+    ExistingFilePersistenceFacts{
+        .isRegularFile = true,
+        .isReadable = true,
+        .isWritable = true,
+        .ownerId = 1001U},
+    1000U));
+static_assert(!supportsKConfigAtomicReplacement(
+    ExistingFilePersistenceFacts{
+        .isRegularFile = true,
+        .isReadable = false,
+        .isWritable = true,
+        .ownerId = 1000U},
+    1000U));
 
 [[nodiscard]] bool persistConfigurationOrReportFailure(
     const KSharedConfigPtr &config,
@@ -98,13 +142,40 @@ Storage *Storage::self()
 bool Storage::isWritable(const Layout::GenericLayout *layout) const
 {
     Q_ASSERT(layout);
-    const QFileInfo layoutFileInfo(layout->file());
+    const QFileInfo requestedFileInfo(
+        layout->file());
+    const bool existingEndpoint =
+        requestedFileInfo.exists();
+    if (requestedFileInfo.isSymLink()
+            && !existingEndpoint) {
+        return false;
+    }
+
+    //! KConfig canonicalizes every existing path before opening its backend.
+    //! Classifying the lexical symlink parent can approve a directory that the
+    //! QSaveFile replacement never uses.
+    const QString backendFilePath =
+        existingEndpoint
+            ? requestedFileInfo
+                .canonicalFilePath()
+            : requestedFileInfo
+                .absoluteFilePath();
+    if (backendFilePath.isEmpty()) {
+        qCritical()
+            << "layout storage could not resolve persistence endpoint"
+            << layout->file();
+        return false;
+    }
+
+    const QFileInfo backendFileInfo(
+        backendFilePath);
     const QFileInfo parentDirectory(
-        layoutFileInfo.absolutePath());
+        backendFileInfo.absolutePath());
 
     //! KConfig reparses an existing file before persisting through QSaveFile,
     //! which creates and renames a replacement in the containing directory.
-    //! Write permission alone does not prove that either phase can complete.
+    //! Read and write permission alone do not prove that either phase uses the
+    //! atomic branch: KConfig writes non-owned files directly.
     const bool parentSupportsReplacement =
         parentDirectory.exists()
         && parentDirectory.isDir()
@@ -114,10 +185,18 @@ bool Storage::isWritable(const Layout::GenericLayout *layout) const
         return false;
     }
 
-    return !layoutFileInfo.exists()
-        || (layoutFileInfo.isFile()
-            && layoutFileInfo.isReadable()
-            && layoutFileInfo.isWritable());
+    return !existingEndpoint
+        || supportsKConfigAtomicReplacement(
+            ExistingFilePersistenceFacts{
+                .isRegularFile =
+                    backendFileInfo.isFile(),
+                .isReadable =
+                    backendFileInfo.isReadable(),
+                .isWritable =
+                    backendFileInfo.isWritable(),
+                .ownerId =
+                    backendFileInfo.ownerId()},
+            static_cast<uint>(::getuid()));
 }
 
 bool Storage::isLatteContainment(const Plasma::Containment *containment) const
