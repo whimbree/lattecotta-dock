@@ -21,6 +21,9 @@
 #include <QScreen>
 #include <QSet>
 
+// KDE
+#include <KSharedConfig>
+
 // Plasma
 #include <Plasma/Plasma>
 
@@ -50,7 +53,12 @@ class GenericLayout : public AbstractLayout
     Q_OBJECT
     Q_PROPERTY(int viewsCount READ viewsCount NOTIFY viewsCountChanged)
 
-public:   
+public:
+    enum class RemovalCommitMode {
+        Reversible,
+        Permanent,
+    };
+
     GenericLayout(QObject *parent, QString layoutFile, QString assignedName = QString());
     ~GenericLayout() override;
 
@@ -123,6 +131,9 @@ public:
     bool newView(const QString &templateName);
     Data::View newView(const Latte::Data::View &nextViewData);
     [[nodiscard]] bool prepareViewRemoval(Plasma::Containment *containment);
+    [[nodiscard]] bool commitPreparedViewRemoval(
+        Plasma::Containment *containment,
+        RemovalCommitMode mode);
     void removeView(const Latte::Data::View &viewData);
     void updateView(const Latte::Data::View &viewData);    
     QString storedView(const int &containmentId); //returns temp filepath containing all view data
@@ -179,7 +190,7 @@ protected:
     QHash<const Plasma::Containment *, Latte::View *> m_latteViews;
     QHash<const Plasma::Containment *, Latte::View *> m_waitingLatteViews;
     QHash<const Plasma::Containment *, QTimer *> m_removalCommitTimers;
-    QHash<const Plasma::Containment *, QString> m_singleLayoutRemovalSnapshots;
+    QHash<const Plasma::Containment *, QString> m_removalSnapshots;
 
 private Q_SLOTS:
     void addContainment(Plasma::Containment *containment);
@@ -190,6 +201,9 @@ private Q_SLOTS:
 
 private:
     void cancelRemovalCommit(Plasma::Containment *containment);
+    void keepViewRemovedAfterFailedUndo(
+        Plasma::Containment *containment,
+        const QString &snapshot);
     void scheduleRemovalCommit(Plasma::Containment *containment);
 
     //! It can be used in order for LatteViews to not be created automatically when
@@ -216,6 +230,8 @@ private:
     void destroyContainment(Plasma::Containment *containment);
 
 private:
+    [[nodiscard]] KSharedConfigPtr activeSingleLayoutConfig() const;
+
     bool m_blockAutomaticLatteViewCreation{false};
     bool m_hasInitializedContainments{false};
     QPointer<Latte::View> m_lastConfigViewFor;

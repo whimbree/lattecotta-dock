@@ -19,6 +19,7 @@
 
 // KDE
 #include <KConfigGroup>
+#include <KSharedConfig>
 
 // Plasma
 #include <Plasma/Applet>
@@ -81,7 +82,10 @@ public:
     void updateView(const Layout::GenericLayout *layout, const Data::View &viewData);
     void updateView(KConfigGroup viewGroup, const Data::View &viewData);
     QString storedView(const Layout::GenericLayout *layout, const int &containmentId); //returns temp filepath containing all view data
-    [[nodiscard]] bool restoreView(const QString &filepath, const QString &snapshotFile);
+    [[nodiscard]] bool tombstoneViewFromSnapshot(const KSharedConfigPtr &activeConfig,
+                                                 const QString &snapshotFile);
+    [[nodiscard]] bool restoreView(const KSharedConfigPtr &activeConfig,
+                                   const QString &snapshotFile);
 
     void moveToLayoutFile(const QString &layoutName);
     QStringList storedLayoutsInMultipleFile();

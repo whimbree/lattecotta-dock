@@ -83,6 +83,8 @@ private Q_SLOTS:
     void enumerateViewsOfInactiveLayout();
     void validatePersistedRelationshipGraphs_data();
     void validatePersistedRelationshipGraphs();
+    void tombstoneRemovalSnapshotDeletesExactGroupsOnDisk();
+    void tombstoneRemovalSnapshotRefreshesStaleSharedRepository();
     void restoreRemovalSnapshotReplacesPartialGroup();
 
     //! clones
@@ -208,7 +210,8 @@ void StorageTest::restoreRemovalSnapshotReplacesPartialGroup()
     const QString destinationPath = m_dir.filePath(QStringLiteral("removal-destination.layout.latte"));
 
     {
-        const KSharedConfigPtr snapshot = KSharedConfig::openConfig(snapshotPath);
+        const KSharedConfigPtr snapshot =
+            KSharedConfig::openConfig(snapshotPath, KConfig::SimpleConfig);
         KConfigGroup containments(snapshot, QStringLiteral("Containments"));
         KConfigGroup containment = containments.group(QStringLiteral("12"));
         containment.writeEntry(QStringLiteral("plugin"), QStringLiteral("org.kde.latte.containment"));
@@ -220,19 +223,37 @@ void StorageTest::restoreRemovalSnapshotReplacesPartialGroup()
         snapshot->sync();
     }
 
+    const KSharedConfigPtr activeConfig =
+        KSharedConfig::openConfig(destinationPath, KConfig::SimpleConfig);
     {
-        const KSharedConfigPtr destination = KSharedConfig::openConfig(destinationPath);
-        KConfigGroup containments(destination, QStringLiteral("Containments"));
+        KConfigGroup containments(activeConfig, QStringLiteral("Containments"));
         KConfigGroup partial = containments.group(QStringLiteral("12"));
         partial.writeEntry(QStringLiteral("plugin"), QStringLiteral("org.kde.latte.containment"));
         partial.writeEntry(QStringLiteral("stalePartialValue"), true);
-        destination->sync();
+        QVERIFY(activeConfig->sync());
     }
 
-    QVERIFY(Storage::self()->restoreView(destinationPath, snapshotPath));
+    QVERIFY(Storage::self()->restoreView(activeConfig, snapshotPath));
 
-    const KSharedConfigPtr restored = KSharedConfig::openConfig(destinationPath);
-    const KConfigGroup containments(restored, QStringLiteral("Containments"));
+    //! Model libplasma clearing a child transient marker after the root Undo
+    //! signal returns. The restored subtree must remain owned by the same live
+    //! repository through that later sync.
+    activeConfig->group(QStringLiteral("Containments"))
+        .group(QStringLiteral("12"))
+        .group(QStringLiteral("Applets"))
+        .group(QStringLiteral("40"))
+        .deleteEntry(QStringLiteral("transient"));
+    QVERIFY(activeConfig->sync());
+
+    QFile rawDestination(destinationPath);
+    QVERIFY(rawDestination.open(QIODevice::ReadOnly));
+    const QString persisted = QString::fromUtf8(rawDestination.readAll());
+    QVERIFY2(persisted.contains(QStringLiteral("[Containments][12]")),
+             qPrintable(persisted));
+    QVERIFY2(persisted.contains(QStringLiteral("[Containments][12][Applets][40]")),
+             qPrintable(persisted));
+
+    const KConfigGroup containments(activeConfig, QStringLiteral("Containments"));
     const KConfigGroup containment = containments.group(QStringLiteral("12"));
     QCOMPARE(containment.readEntry(QStringLiteral("isClonedFrom"), -1), 1);
     QCOMPARE(containment.readEntry(QStringLiteral("linkPlacement"), -1),
@@ -241,6 +262,93 @@ void StorageTest::restoreRemovalSnapshotReplacesPartialGroup()
     QCOMPARE(containment.group(QStringLiteral("Applets")).group(QStringLiteral("40"))
                  .readEntry(QStringLiteral("plugin"), QString{}),
              QStringLiteral("org.kde.plasma.minimizeall"));
+}
+
+void StorageTest::tombstoneRemovalSnapshotDeletesExactGroupsOnDisk()
+{
+    const QString snapshotPath = m_dir.filePath(QStringLiteral("tombstone-snapshot.layout.latte"));
+    const QString destinationPath = writeLayoutFixture(
+        QStringLiteral("tombstone-destination.layout.latte"));
+
+    {
+        const KSharedConfigPtr snapshot =
+            KSharedConfig::openConfig(snapshotPath, KConfig::SimpleConfig);
+        KConfigGroup containments(snapshot, QStringLiteral("Containments"));
+        containments.group(QStringLiteral("1"))
+            .writeEntry(QStringLiteral("plugin"), QStringLiteral("org.kde.latte.containment"));
+        containments.group(QStringLiteral("99"))
+            .writeEntry(QStringLiteral("plugin"), QStringLiteral("org.kde.plasma.private.systemtray"));
+        QVERIFY(snapshot->sync());
+    }
+
+    const KSharedConfigPtr activeConfig =
+        KSharedConfig::openConfig(destinationPath, KConfig::SimpleConfig);
+    QVERIFY(Storage::self()->tombstoneViewFromSnapshot(activeConfig, snapshotPath));
+    QVERIFY(Storage::self()->tombstoneViewFromSnapshot(activeConfig, snapshotPath));
+
+    QFile rawLayout(destinationPath);
+    QVERIFY(rawLayout.open(QIODevice::ReadOnly));
+    const QString persisted = QString::fromUtf8(rawLayout.readAll());
+    QVERIFY2(!persisted.contains(QStringLiteral("[Containments][1]")),
+             qPrintable(persisted));
+    QVERIFY2(!persisted.contains(QStringLiteral("[Containments][99]")),
+             qPrintable(persisted));
+    QVERIFY2(persisted.contains(QStringLiteral("[Containments][5]")),
+             qPrintable(persisted));
+}
+
+void StorageTest::tombstoneRemovalSnapshotRefreshesStaleSharedRepository()
+{
+    const QString snapshotPath = m_dir.filePath(
+        QStringLiteral("stale-tombstone-snapshot.layout.latte"));
+    const QString destinationPath = m_dir.filePath(
+        QStringLiteral("stale-tombstone-destination.layout.latte"));
+
+    {
+        const KSharedConfigPtr snapshot =
+            KSharedConfig::openConfig(snapshotPath, KConfig::SimpleConfig);
+        snapshot->group(QStringLiteral("Containments"))
+            .group(QStringLiteral("12"))
+            .writeEntry(QStringLiteral("plugin"),
+                        QStringLiteral("org.kde.latte.containment"));
+        QVERIFY(snapshot->sync());
+    }
+
+    const KSharedConfigPtr staleRepository =
+        KSharedConfig::openConfig(destinationPath);
+    KConfigGroup staleContainments(staleRepository,
+                                   QStringLiteral("Containments"));
+    staleContainments.group(QStringLiteral("1"))
+        .writeEntry(QStringLiteral("plugin"),
+                    QStringLiteral("org.kde.latte.containment"));
+    QVERIFY(staleRepository->sync());
+
+    const KSharedConfigPtr activeConfig =
+        KSharedConfig::openConfig(destinationPath, KConfig::SimpleConfig);
+    {
+        //! Model a live Corona projection that adds a dock after the stale
+        //! FullConfig observer was opened.
+        activeConfig->group(QStringLiteral("Containments"))
+            .group(QStringLiteral("12"))
+            .writeEntry(QStringLiteral("plugin"),
+                        QStringLiteral("org.kde.latte.containment"));
+        QVERIFY(activeConfig->sync());
+    }
+
+    QVERIFY(!staleContainments.hasGroup(QStringLiteral("12")));
+    QVERIFY(Storage::self()->tombstoneViewFromSnapshot(activeConfig,
+                                                       snapshotPath));
+    staleContainments.group(QStringLiteral("1"))
+        .writeEntry(QStringLiteral("observerWrite"), true);
+    QVERIFY(staleRepository->sync());
+
+    QFile rawLayout(destinationPath);
+    QVERIFY(rawLayout.open(QIODevice::ReadOnly));
+    const QString persisted = QString::fromUtf8(rawLayout.readAll());
+    QVERIFY2(persisted.contains(QStringLiteral("[Containments][1]")),
+             qPrintable(persisted));
+    QVERIFY2(!persisted.contains(QStringLiteral("[Containments][12]")),
+             qPrintable(persisted));
 }
 
 QString StorageTest::writeLayoutFixture(const QString &name)

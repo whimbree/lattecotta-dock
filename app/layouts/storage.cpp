@@ -27,6 +27,7 @@
 #include <QLatin1String>
 
 // KDE
+#include <KConfig>
 #include <KConfigGroup>
 #include <KPluginMetaData>
 #include <KSharedConfig>
@@ -37,6 +38,9 @@
 #include <Plasma/Plasma>
 #include <Plasma/Applet>
 #include <Plasma/Containment>
+
+// C++
+#include <utility>
 
 namespace Latte {
 namespace Layouts {
@@ -1765,14 +1769,64 @@ void Storage::removeView(const QString &filepath, const Data::View &viewData)
     }
 }
 
-bool Storage::restoreView(const QString &filepath, const QString &snapshotFile)
+bool Storage::tombstoneViewFromSnapshot(const KSharedConfigPtr &activeConfig,
+                                        const QString &snapshotFile)
 {
-    if (filepath.isEmpty() || snapshotFile.isEmpty()) {
-        qCritical() << "Storage::restoreView refused an empty destination or snapshot path";
+    if (!activeConfig || activeConfig->name().isEmpty() || snapshotFile.isEmpty()) {
+        qCritical() << "Storage::tombstoneViewFromSnapshot refused an invalid active config or snapshot path";
         return false;
     }
 
-    const KSharedConfigPtr sourceFile = KSharedConfig::openConfig(snapshotFile);
+    const KSharedConfigPtr sourceFile =
+        KSharedConfig::openConfig(snapshotFile, KConfig::SimpleConfig);
+    const KConfigGroup sourceContainments(sourceFile, QStringLiteral("Containments"));
+    const QStringList containmentIds = sourceContainments.groupList();
+    if (containmentIds.isEmpty()) {
+        qCritical() << "Storage::tombstoneViewFromSnapshot refused an empty removal snapshot"
+                    << snapshotFile;
+        return false;
+    }
+
+    //! This must be Corona's live SimpleConfig repository. KConfig group
+    //! deletion only marks keys known to the supplied entry map; reopening the
+    //! same pathname under different flags creates a stale second authority.
+    KConfigGroup destinationContainments(activeConfig, QStringLiteral("Containments"));
+    for (const QString &containmentId : containmentIds) {
+        destinationContainments.group(containmentId).deleteGroup();
+    }
+
+    if (!activeConfig->sync()) {
+        qCritical() << "Storage::tombstoneViewFromSnapshot could not persist removal to"
+                    << activeConfig->name();
+        return false;
+    }
+
+    const KConfig persistedFile(activeConfig->name(), KConfig::SimpleConfig);
+    const KConfigGroup persistedContainments(&persistedFile,
+                                             QStringLiteral("Containments"));
+    for (const QString &containmentId : containmentIds) {
+        if (destinationContainments.hasGroup(containmentId)
+                || persistedContainments.hasGroup(containmentId)) {
+            qCritical() << "Storage::tombstoneViewFromSnapshot found containment"
+                        << containmentId << "after persisting removal to"
+                        << activeConfig->name();
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool Storage::restoreView(const KSharedConfigPtr &activeConfig,
+                          const QString &snapshotFile)
+{
+    if (!activeConfig || activeConfig->name().isEmpty() || snapshotFile.isEmpty()) {
+        qCritical() << "Storage::restoreView refused an invalid active config or snapshot path";
+        return false;
+    }
+
+    const KSharedConfigPtr sourceFile =
+        KSharedConfig::openConfig(snapshotFile, KConfig::SimpleConfig);
     const KConfigGroup sourceContainments(sourceFile, QStringLiteral("Containments"));
     const QStringList containmentIds = sourceContainments.groupList();
     if (containmentIds.isEmpty()) {
@@ -1780,8 +1834,7 @@ bool Storage::restoreView(const QString &filepath, const QString &snapshotFile)
         return false;
     }
 
-    const KSharedConfigPtr destinationFile = KSharedConfig::openConfig(filepath);
-    KConfigGroup destinationContainments(destinationFile, QStringLiteral("Containments"));
+    KConfigGroup destinationContainments(activeConfig, QStringLiteral("Containments"));
     for (const QString &containmentId : containmentIds) {
         //! Plasma recreates a partial group before destroyedChanged(false).
         //! Replace only the identities captured by this transaction so stale
@@ -1789,10 +1842,26 @@ bool Storage::restoreView(const QString &filepath, const QString &snapshotFile)
         destinationContainments.group(containmentId).deleteGroup();
         KConfigGroup destination = destinationContainments.group(containmentId);
         sourceContainments.group(containmentId).copyTo(&destination);
-        destination.sync();
     }
 
-    destinationFile->reparseConfiguration();
+    if (!activeConfig->sync()) {
+        qCritical() << "Storage::restoreView could not persist removal Undo to"
+                    << activeConfig->name();
+        return false;
+    }
+
+    const KConfig persistedFile(activeConfig->name(), KConfig::SimpleConfig);
+    const KConfigGroup persistedContainments(&persistedFile,
+                                             QStringLiteral("Containments"));
+    for (const QString &containmentId : containmentIds) {
+        if (!destinationContainments.hasGroup(containmentId)
+                || !persistedContainments.hasGroup(containmentId)) {
+            qCritical() << "Storage::restoreView did not persist containment"
+                        << containmentId << "to" << activeConfig->name();
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -1866,20 +1935,25 @@ QString Storage::storedView(const Layout::GenericLayout *layout, const int &cont
 
     KSharedConfigPtr destinationPtr = KSharedConfig::openConfig(nextTmpStoredViewAbsolutePath);
     KConfigGroup destinationContainments = KConfigGroup(destinationPtr, "Containments");
+    QStringList capturedContainmentIds;
 
     if (layout->isActive()) {
         //! update and copy containments
         auto containment = layout->containmentForId((uint)containmentId);
         syncContainmentConfig(containment);
 
-        KConfigGroup destinationViewContainment(&destinationContainments, QString::number(containment->id()));
+        const QString rootId = QString::number(containment->id());
+        capturedContainmentIds.append(rootId);
+        KConfigGroup destinationViewContainment(&destinationContainments, rootId);
         containment->config().copyTo(&destinationViewContainment);
 
         QList<Plasma::Containment *> subconts = layout->subContainmentsOf(containment->id());
 
         for(const auto subcont : subconts) {
             syncContainmentConfig(subcont);
-            KConfigGroup destinationsubcontainment(&destinationContainments, QString::number(subcont->id()));
+            const QString subId = QString::number(subcont->id());
+            capturedContainmentIds.append(subId);
+            KConfigGroup destinationsubcontainment(&destinationContainments, subId);
             subcont->config().copyTo(&destinationsubcontainment);
         }
 
@@ -1892,6 +1966,7 @@ QString Storage::storedView(const Layout::GenericLayout *layout, const int &cont
         }
     } else {
         QString containmentid = QString::number(containmentId);
+        capturedContainmentIds.append(containmentid);
         KConfigGroup destinationViewContainment(&destinationContainments, containmentid);
 
         KSharedConfigPtr originPtr = KSharedConfig::openConfig(layout->file());
@@ -1903,12 +1978,27 @@ QString Storage::storedView(const Layout::GenericLayout *layout, const int &cont
 
         for(int i=0; i<subconts.rowCount(); ++i) {
             QString subid = subconts[i].id;
+            capturedContainmentIds.append(subid);
             KConfigGroup destinationsubcontainment(&destinationContainments, subid);
             originContainments.group(subid).copyTo(&destinationsubcontainment);
         }
     }
 
+    if (!destinationPtr->sync()) {
+        qCritical() << "Storage::storedView could not persist removal snapshot"
+                    << nextTmpStoredViewAbsolutePath;
+        return {};
+    }
     destinationPtr->reparseConfiguration();
+    for (const QString &capturedId : std::as_const(capturedContainmentIds)) {
+        if (!destinationContainments.hasGroup(capturedId)) {
+            qCritical() << "Storage::storedView did not persist containment"
+                        << capturedId << "to removal snapshot"
+                        << nextTmpStoredViewAbsolutePath;
+            return {};
+        }
+    }
+
     return nextTmpStoredViewAbsolutePath;
 }
 

@@ -162,6 +162,8 @@ public:
         const QRect &strutGeometry,
         Plasma::Types::Location location);
     [[nodiscard]] bool clearScreenSpaceReservation();
+    [[nodiscard]] bool suspendForReversibleRemoval();
+    [[nodiscard]] bool resumeFromReversibleRemoval();
 
     Types::ViewType type() const;
     void setType(Types::ViewType type);

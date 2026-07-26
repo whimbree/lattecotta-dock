@@ -74,7 +74,9 @@ VisibilityManager::VisibilityManager(PlasmaQuick::ContainmentView *view)
     connect(this, &VisibilityManager::isFloatingGapWindowEnabledChanged, this, &VisibilityManager::onIsFloatingGapWindowEnabledChanged);
 
     connect(this, &VisibilityManager::mustBeShown, this, [&]() {
-        if (m_latteView && !m_latteView->isVisible()) {
+        if (m_latteView
+                && !m_suspendedForRemoval
+                && !m_latteView->isVisible()) {
             m_latteView->setVisible(true);
         }
     });
@@ -1287,6 +1289,11 @@ void VisibilityManager::setEnableKWinEdges(bool enable)
 
 void VisibilityManager::updateKWinEdgesSupport()
 {
+    if (m_suspendedForRemoval) {
+        deleteEdgeGhostWindow();
+        return;
+    }
+
     if ((m_mode == Types::AutoHide
          || m_mode == Types::DodgeActive
          || m_mode == Types::DodgeAllWindows
@@ -1307,6 +1314,11 @@ void VisibilityManager::updateKWinEdgesSupport()
 
 void VisibilityManager::onIsFloatingGapWindowEnabledChanged()
 {
+    if (m_suspendedForRemoval) {
+        deleteFloatingGapWindow();
+        return;
+    }
+
     if (m_isFloatingGapWindowEnabled) {
         createFloatingGapWindow();
     } else {
