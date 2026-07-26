@@ -257,6 +257,9 @@ void DockIdentityContractTest::relocationCompletionCommitsPlacementTransaction()
     QVERIFY2(publish.contains(QStringLiteral(
                  "updateStrutsBasedOnLayoutsAndActivities(forceUpdate,ReservationUpdateContext::AppliedPlacement)")),
              "the post-placement publication boundary must carry its authoritative context");
+    QVERIFY2(!publish.contains(QStringLiteral(
+                 "positioner->inRelocationAnimation()")),
+             "the applied-placement boundary must not wait for the relocation commit that waits on publication");
     const int authoritativeContext = update.indexOf(QStringLiteral(
         "context==ReservationUpdateContext::AppliedPlacement"));
     const int ordinaryGenerationGuard = update.indexOf(QStringLiteral(
