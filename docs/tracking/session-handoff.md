@@ -40,7 +40,7 @@ The first canonical gate exited 0 at exact branch head `03155fe50`. All 120
 CTest entries, the QML and coverage ratchets, visual probes, the complete
 ASan/UBSan build, nested-compositor integration, and matrix refusal checks
 passed. D221 through D224 changed product and acceptance code afterward, so
-that stamp is invalidated and a replacement exact-head gate is required.
+that stamp was invalidated.
 
 Independent PR #128 review returned `DO NOT MERGE`. D221 recorded sparse pending
 placement fields that can survive an A-to-B-to-A request sequence. D222 records
@@ -49,7 +49,7 @@ containment suspended outside the active map. D223 records circular reservation
 geometry validation that can accept matching wrong schema and compositor
 rectangles. All three review blockers are corrected. The exact nested replay
 then found D224, a circular wait between applied placement publication and its
-relocation commit, which is also corrected. The PR still requires a new
+relocation commit, which is also corrected. The PR then required a replacement
 canonical gate and a cold independent rereview.
 
 D221 (rapid return-to-origin placement retained stale pending fields) is fixed
@@ -89,7 +89,13 @@ stale settings-inventory selectors). D221 changed the screen connection
 ancestry and four alignment button bodies without updating their bidirectional
 source-ledger hashes. Commit `af063f83e` maps the current scanner identities to
 the same audit rows. SettingsInventoryTest validates all 278 affordances and 25
-exemptions again. The gate must restart at the new exact head.
+exemptions again.
+
+The replacement canonical gate exited 0 at exact code head `2a370029c`. All
+122 CTest entries, QML and coverage ratchets, visual probes, the complete
+ASan/UBSan build, four nested sanitizer recipes, package provenance controls,
+and matrix refusals pass. PR #128 now requires only the final cold independent
+diff review before merge preparation.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a

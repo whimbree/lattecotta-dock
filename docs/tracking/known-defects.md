@@ -3018,8 +3018,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: FIXED ON `test/fp4c-operation-storm`; final FP-4C PR awaits its
-  replacement canonical gate and cold independent rereview. FP-1
+- STATUS: FIXED ON `test/fp4c-operation-storm`; the replacement canonical gate
+  passed at `2a370029c`, and final FP-4C PR acceptance awaits its cold
+  independent rereview. FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
   through PR #120, including schema 5 and nested recipe 071 acceptance. The
