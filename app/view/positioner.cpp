@@ -1280,6 +1280,9 @@ void Positioner::onLastRepositionApplyEvent()
 
 void Positioner::applyUnanimatedPlacementGeneration()
 {
+    const auto completedGeneration =
+        m_relocationGeneration;
+
     if (hasPendingPlacementComponents()) {
         qCritical() << "Positioner retained unanimated relocation generation"
                     << m_appliedRelocationGeneration
@@ -1311,18 +1314,22 @@ void Positioner::applyUnanimatedPlacementGeneration()
     }
 
     if (!m_placementRequests.completeIfCurrent(
-            m_relocationGeneration)) {
+            completedGeneration)) {
         qCritical() << "Positioner refused to commit stale unanimated relocation generation"
-                    << m_relocationGeneration
+                    << completedGeneration
                     << "for"
                     << m_view->validTitle();
         return;
     }
     m_appliedRelocationGeneration =
-        m_relocationGeneration;
+        completedGeneration;
+    static_cast<void>(
+        invalidateScheduledPlacementCompletionForGeneration(
+            m_scheduledPlacementCompletion,
+            completedGeneration));
     Q_EMIT placementTransactionCommitted();
     completePlacementRequest(
-        m_relocationGeneration);
+        completedGeneration);
     m_view->showAppliedLayerShellPlacement();
 
     if (m_layoutSyncDeferredByPlacementTransaction) {
@@ -1332,7 +1339,7 @@ void Positioner::applyUnanimatedPlacementGeneration()
 
 void Positioner::scheduleLastRepositionApplyEvent()
 {
-    const quint64 scheduledGeneration =
+    const auto scheduledGeneration =
         m_relocationGeneration;
     if (m_scheduledPlacementCompletion
             == scheduledGeneration) {
@@ -1367,7 +1374,7 @@ void Positioner::scheduleLastRepositionApplyEvent()
 
 void Positioner::scheduleUnanimatedPlacementApplyEvent()
 {
-    const quint64 scheduledGeneration =
+    const auto scheduledGeneration =
         m_relocationGeneration;
     if (m_scheduledPlacementCompletion
             == scheduledGeneration) {

@@ -97,6 +97,23 @@ struct PlacementSubmission
     }
 };
 
+//! Invalidate only the delayed callback owned by the generation that just
+//! completed synchronously. A newer reentrant request may already own the
+//! scheduling slot and must remain intact.
+[[nodiscard]] constexpr bool
+invalidateScheduledPlacementCompletionForGeneration(
+    std::optional<std::uint64_t> &scheduledGeneration,
+    const std::uint64_t completedGeneration)
+{
+    if (scheduledGeneration
+            != completedGeneration) {
+        return false;
+    }
+
+    scheduledGeneration.reset();
+    return true;
+}
+
 //! Owns generation-scoped completion observers independently from the Qt
 //! object that drives placement. Removing the observer list before invocation
 //! makes completion exactly once even when a handler submits another request.

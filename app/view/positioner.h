@@ -304,9 +304,11 @@ private:
     //!used for relocation properties group
     bool m_repositionFromViewSettingsWindow{false};
     bool m_repositionIsAnimated{false};
-    quint64 m_relocationGeneration{0};
-    quint64 m_appliedRelocationGeneration{0};
-    std::optional<quint64>
+    PlacementRequestState::Token
+        m_relocationGeneration{0};
+    PlacementRequestState::Token
+        m_appliedRelocationGeneration{0};
+    std::optional<PlacementRequestState::Token>
         m_scheduledPlacementCompletion;
     PlacementRequestState m_placementRequests;
     PlacementCompletionRegistry
