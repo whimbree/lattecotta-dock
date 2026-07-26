@@ -1882,15 +1882,8 @@ void Corona::moveViewToLayout(const uint &containmentId, const QString &layoutNa
         return;
     }
 
-    if (!layoutName.isEmpty() && view->layout()->name() != layoutName) {
-        Latte::Types::ScreensGroup screensgroup{Latte::Types::SingleScreenGroup};
-
-        if (view->isOriginal()) {
-            auto originalview = qobject_cast<Latte::OriginalView *>(view);
-            screensgroup = originalview->screensGroup();
-        }
-
-        view->positioner()->setNextLocation(layoutName, screensgroup, "", Plasma::Types::Floating, Latte::Types::NoneAlignment);
+    if (!layoutName.isEmpty()) {
+        view->positioner()->setNextLayout(layoutName);
     }
 }
 

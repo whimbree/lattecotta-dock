@@ -18,6 +18,7 @@
 #include "../lattecorona.h"
 #include "../screenpool.h"
 #include "../data/screendata.h"
+#include "../data/viewdata.h"
 #include "../layout/centrallayout.h"
 #include "../layouts/manager.h"
 #include "../settings/universalsettings.h"
@@ -43,6 +44,23 @@ namespace {
 namespace FloatingPanelGeometry = Latte::ViewPart::FloatingPanelGeometry;
 
 constexpr auto RelocationApplyDelay = 100ms;
+constexpr int PreserveScreensGroup = -1;
+
+[[nodiscard]] std::string utf8(const QString &value)
+{
+    const QByteArray bytes = value.toUtf8();
+    return std::string(
+        bytes.constData(),
+        static_cast<std::size_t>(bytes.size()));
+}
+
+[[nodiscard]] QString qString(
+    const std::string &value)
+{
+    return QString::fromUtf8(
+        value.data(),
+        static_cast<qsizetype>(value.size()));
+}
 
 [[nodiscard]] std::optional<FloatingPanelGeometry::Edge>
 floatingPanelEdge(Plasma::Types::Location location)
@@ -1178,7 +1196,7 @@ void Positioner::updateFormFactor()
 
 void Positioner::onLastRepositionApplyEvent()
 {
-    Q_ASSERT(!inRelocationAnimation());
+    Q_ASSERT(!hasPendingPlacementComponents());
 
     //! The placement generation does not become authoritative until the
     //! complete solution has reached both the assigned QWindow and its
@@ -1204,7 +1222,16 @@ void Positioner::onLastRepositionApplyEvent()
         return;
     }
 
-    m_appliedRelocationGeneration = m_relocationGeneration;
+    if (!m_placementRequests.completeIfCurrent(
+            m_relocationGeneration)) {
+        qCritical() << "Positioner refused to commit stale relocation generation"
+                    << m_relocationGeneration
+                    << "for"
+                    << m_view->validTitle();
+        return;
+    }
+    m_appliedRelocationGeneration =
+        m_relocationGeneration;
     Q_EMIT placementTransactionCommitted();
     m_view->showAppliedLayerShellPlacement();
 
@@ -1224,7 +1251,7 @@ void Positioner::onLastRepositionApplyEvent()
 
 void Positioner::applyUnanimatedPlacementGeneration()
 {
-    if (inRelocationAnimation()) {
+    if (hasPendingPlacementComponents()) {
         qCritical() << "Positioner retained unanimated relocation generation"
                     << m_appliedRelocationGeneration
                     << "while generation"
@@ -1254,7 +1281,16 @@ void Positioner::applyUnanimatedPlacementGeneration()
         return;
     }
 
-    m_appliedRelocationGeneration = m_relocationGeneration;
+    if (!m_placementRequests.completeIfCurrent(
+            m_relocationGeneration)) {
+        qCritical() << "Positioner refused to commit stale unanimated relocation generation"
+                    << m_relocationGeneration
+                    << "for"
+                    << m_view->validTitle();
+        return;
+    }
+    m_appliedRelocationGeneration =
+        m_relocationGeneration;
     Q_EMIT placementTransactionCommitted();
     m_view->showAppliedLayerShellPlacement();
 
@@ -1265,16 +1301,29 @@ void Positioner::applyUnanimatedPlacementGeneration()
 
 void Positioner::scheduleLastRepositionApplyEvent()
 {
-    const quint64 scheduledGeneration = m_relocationGeneration;
+    const quint64 scheduledGeneration =
+        m_relocationGeneration;
+    if (m_scheduledPlacementCompletion
+            == scheduledGeneration) {
+        return;
+    }
+    m_scheduledPlacementCompletion =
+        scheduledGeneration;
     QTimer::singleShot(RelocationApplyDelay, this, [this, scheduledGeneration]() {
-        if (scheduledGeneration != m_relocationGeneration) {
+        if (m_scheduledPlacementCompletion
+                != scheduledGeneration) {
+            return;
+        }
+        m_scheduledPlacementCompletion.reset();
+        if (scheduledGeneration
+                != m_relocationGeneration) {
             qDebug() << "Ignoring superseded relocation completion generation"
                      << scheduledGeneration << "for view" << m_view->validTitle()
                      << "; current generation is" << m_relocationGeneration;
             return;
         }
 
-        if (inRelocationAnimation()) {
+        if (hasPendingPlacementComponents()) {
             qCritical() << "Refusing to complete relocation generation"
                         << scheduledGeneration << "for view" << m_view->validTitle()
                         << "while placement changes remain pending";
@@ -1289,10 +1338,21 @@ void Positioner::scheduleUnanimatedPlacementApplyEvent()
 {
     const quint64 scheduledGeneration =
         m_relocationGeneration;
+    if (m_scheduledPlacementCompletion
+            == scheduledGeneration) {
+        return;
+    }
+    m_scheduledPlacementCompletion =
+        scheduledGeneration;
     QTimer::singleShot(
         RelocationApplyDelay,
         this,
         [this, scheduledGeneration]() {
+            if (m_scheduledPlacementCompletion
+                    != scheduledGeneration) {
+                return;
+            }
+            m_scheduledPlacementCompletion.reset();
             if (scheduledGeneration
                     != m_relocationGeneration) {
                 return;
@@ -1307,8 +1367,11 @@ void Positioner::initSignalingForLocationChangeSliding()
 
     //! SCREEN_EDGE
     connect(m_view, &View::locationChanged, this, [&]() {
-        if (m_nextScreenEdge != Plasma::Types::Floating) {
-            bool isrelocationlastevent = isLastHidingRelocationEvent();
+        if (m_nextScreenEdge != Plasma::Types::Floating
+                && m_view->location()
+                    == m_nextScreenEdge) {
+            const bool isrelocationlastevent =
+                isLastHidingRelocationEvent();
             immediateSyncGeometry();
             m_nextScreenEdge = Plasma::Types::Floating;
 
@@ -1326,8 +1389,12 @@ void Positioner::initSignalingForLocationChangeSliding()
 
     //! LAYOUT
     connect(m_view, &View::layoutChanged, this, [&]() {
-        if (!m_nextLayoutName.isEmpty() && m_view->layout()) {
-            bool isrelocationlastevent = isLastHidingRelocationEvent();
+        if (!m_nextLayoutName.isEmpty()
+                && m_view->layout()
+                && m_view->layout()->name()
+                    == m_nextLayoutName) {
+            const bool isrelocationlastevent =
+                isLastHidingRelocationEvent();
             m_nextLayoutName = "";
 
             //! make sure that View has been repositioned properly in next layout and show view afterwards
@@ -1339,6 +1406,16 @@ void Positioner::initSignalingForLocationChangeSliding()
 
     //! APPLY CHANGES
     connect(this, &Positioner::hidingForRelocationFinished, this, [&]() {
+        const auto request =
+            m_placementRequests.pending();
+        if (!request) {
+            qCritical() << "Positioner received relocation hide completion without a pending request for"
+                        << m_view->validTitle();
+            return;
+        }
+        const auto generation = request->token;
+        const PlacementIntent target =
+            request->intent;
         const bool applyWithReveal =
             m_repositionIsAnimated;
         //! must be called only if relocation is animated
@@ -1365,9 +1442,10 @@ void Positioner::initSignalingForLocationChangeSliding()
                 m_applyingPlacementTransaction, true};
 
             //! LAYOUT
-            if (!m_nextLayoutName.isEmpty()) {
+            if (m_placementRequests.isCurrent(generation)
+                    && !m_nextLayoutName.isEmpty()) {
                 const QString destinationLayoutName =
-                    m_nextLayoutName;
+                    qString(target.layoutName);
                 if (!m_corona->layoutsManager()->moveView(
                         m_view->layout()->name(),
                         m_view->containment()->id(),
@@ -1382,7 +1460,8 @@ void Positioner::initSignalingForLocationChangeSliding()
             }
 
             //! OUTPUT POLICY AND PHYSICAL OUTPUT
-            if (m_pendingFollowsPrimary.has_value()) {
+            if (m_placementRequests.isCurrent(generation)
+                    && m_pendingFollowsPrimary.has_value()) {
                 if (!m_pendingOutputScreen) {
                     qCritical() << "Positioner: cancelling placement without a resolved output";
                     cancelFailedLayoutRelocation();
@@ -1400,35 +1479,55 @@ void Positioner::initSignalingForLocationChangeSliding()
                     cancelFailedLayoutRelocation();
                     return;
                 }
-                m_pendingOutputScreen.clear();
-                m_pendingFollowsPrimary.reset();
+                if (m_placementRequests.isCurrent(
+                        generation)) {
+                    m_pendingOutputScreen.clear();
+                    m_pendingFollowsPrimary.reset();
+                }
             }
 
             //! SCREEN_EDGE
-            if (m_nextScreenEdge != Plasma::Types::Floating) {
-                m_view->setLocation(m_nextScreenEdge);
+            if (m_placementRequests.isCurrent(generation)
+                    && m_nextScreenEdge
+                        != Plasma::Types::Floating) {
+                m_view->setLocation(
+                    static_cast<Plasma::Types::Location>(
+                        target.edge));
             }
 
             //! ALIGNMENT
-            if (m_nextAlignment != Latte::Types::NoneAlignment
+            if (m_placementRequests.isCurrent(generation)
+                    && m_nextAlignment
+                        != Latte::Types::NoneAlignment
                     && m_nextAlignment != m_view->alignment()) {
-                const bool isRelocationLastEvent =
-                    isLastHidingRelocationEvent();
-                m_view->setAlignment(m_nextAlignment);
-                m_nextAlignment =
-                    Latte::Types::NoneAlignment;
-                if (applyWithReveal
-                        && isRelocationLastEvent) {
-                    scheduleLastRepositionApplyEvent();
+                m_view->setAlignment(
+                    static_cast<Latte::Types::Alignment>(
+                        target.alignment));
+                if (m_placementRequests.isCurrent(
+                        generation)
+                        && m_view->alignment()
+                            == static_cast<Latte::Types::Alignment>(
+                                target.alignment)) {
+                    m_nextAlignment =
+                        Latte::Types::NoneAlignment;
                 }
             }
 
             //! SCREENSGROUP
-            if (m_view->isOriginal()) {
+            if (m_placementRequests.isCurrent(generation)
+                    && m_view->isOriginal()) {
                 auto *const originalView =
                     qobject_cast<Latte::OriginalView *>(m_view);
                 originalView->setScreensGroup(
-                    m_nextScreensGroup);
+                    static_cast<Latte::Types::ScreensGroup>(
+                        target.screensGroup));
+            }
+        }
+
+        if (m_placementRequests.isCurrent(generation)
+                && !hasPendingPlacementComponents()) {
+            if (applyWithReveal) {
+                scheduleLastRepositionApplyEvent();
             }
         }
     });
@@ -1467,20 +1566,18 @@ void Positioner::finishPendingScreenPlacementIfApplied()
 
 void Positioner::cancelFailedLayoutRelocation()
 {
-    m_nextLayoutName.clear();
-    m_pendingOutputScreen.clear();
-    m_pendingFollowsPrimary.reset();
-    m_nextScreenName.clear();
-    m_nextScreen = nullptr;
-    m_nextScreenEdge = Plasma::Types::Floating;
-    m_nextAlignment = Latte::Types::NoneAlignment;
-    if (m_view->isOriginal()) {
-        auto *const originalView = qobject_cast<Latte::OriginalView *>(m_view);
-        Q_ASSERT(originalView);
-        m_nextScreensGroup = originalView->screensGroup();
-    } else {
-        m_nextScreensGroup = Latte::Types::SingleScreenGroup;
+    if (!m_placementRequests
+            .cancelToCommittedIfCurrent(
+                m_relocationGeneration,
+                currentPlacementIntent())) {
+        qCritical() << "Positioner refused to cancel stale relocation generation"
+                    << m_relocationGeneration
+                    << "for"
+                    << m_view->validTitle();
+        return;
     }
+    projectPendingPlacement(
+        *m_placementRequests.pending());
 
     //! The hide animation already completed. Finish the same generation
     //! through the normal reveal path after making every pending placement
@@ -1496,10 +1593,17 @@ bool Positioner::inLayoutUnloading()
 
 bool Positioner::inRelocationAnimation() const
 {
+    return m_placementRequests.pending().has_value();
+}
+
+bool Positioner::hasPendingPlacementComponents() const
+{
     return m_nextScreenEdge != Plasma::Types::Floating
         || !m_nextLayoutName.isEmpty()
         || !m_nextScreenName.isEmpty()
-        || m_nextAlignment != Latte::Types::NoneAlignment;
+        || m_nextAlignment
+            != Latte::Types::NoneAlignment
+        || m_pendingFollowsPrimary.has_value();
 }
 
 bool Positioner::inSlideAnimation() const
@@ -1588,130 +1692,352 @@ bool Positioner::isLastHidingRelocationEvent() const
     return (events <= 1);
 }
 
-void Positioner::setNextLocation(const QString layoutName, const int screensGroup, QString screenName, int edge, int alignment)
+PlacementIntent Positioner::currentPlacementIntent() const
 {
-    bool isanimated{false};
-    bool haschanges{false};
+    const auto *const layout = m_view->layout();
+    QScreen *const output = assignedScreen();
+    return {
+        utf8(layout ? layout->name() : QString()),
+        static_cast<int>(m_view->screensGroup()),
+        utf8(
+            m_view->onPrimary()
+            ? Latte::Data::Screen::ONPRIMARYNAME
+            : currentScreenName()),
+        utf8(
+            output
+            ? output->name()
+            : currentScreenName()),
+        m_view->onPrimary(),
+        static_cast<int>(m_view->location()),
+        static_cast<int>(m_view->alignment()),
+    };
+}
 
-    //! LAYOUT
+void Positioner::projectPendingPlacement(
+    const PlacementRequestState::Request &request)
+{
+    Q_ASSERT(m_placementRequests.isCurrent(
+        request.token));
+    const PlacementIntent current =
+        currentPlacementIntent();
+    const PlacementIntent &target = request.intent;
+
+    m_nextLayoutName =
+        target.layoutName != current.layoutName
+        ? qString(target.layoutName)
+        : QString();
+    m_nextScreensGroup =
+        static_cast<Latte::Types::ScreensGroup>(
+            target.screensGroup);
+
+    m_pendingOutputScreen.clear();
+    m_pendingFollowsPrimary.reset();
+    m_nextScreenName.clear();
+    m_nextScreen.clear();
+    const QString resolvedOutput =
+        qString(target.resolvedOutputName);
+    const bool windowNeedsOutput =
+        !m_view->screen()
+        || m_view->screen()->name()
+            != resolvedOutput;
+    if (target.followsPrimary
+            != current.followsPrimary
+            || target.resolvedOutputName
+                != current.resolvedOutputName
+            || windowNeedsOutput) {
+        for (QScreen *const screen :
+                qGuiApp->screens()) {
+            if (screen
+                    && screen->name()
+                        == resolvedOutput) {
+                m_pendingOutputScreen = screen;
+                break;
+            }
+        }
+        Q_ASSERT(m_pendingOutputScreen);
+        m_pendingFollowsPrimary =
+            target.followsPrimary;
+        if (windowNeedsOutput) {
+            m_nextScreenName =
+                resolvedOutput;
+        }
+    }
+
+    m_nextScreenEdge =
+        target.edge != current.edge
+        ? static_cast<Plasma::Types::Location>(
+            target.edge)
+        : Plasma::Types::Floating;
+    m_nextAlignment =
+        target.alignment != current.alignment
+        ? static_cast<Latte::Types::Alignment>(
+            target.alignment)
+        : Latte::Types::NoneAlignment;
+}
+
+void Positioner::setNextScreen(
+    const int screensGroup,
+    const QString &screenName)
+{
+    setNextLocation(
+        QString(),
+        screensGroup,
+        screenName,
+        Plasma::Types::Floating,
+        Latte::Types::NoneAlignment);
+}
+
+void Positioner::setNextLayout(
+    const QString &layoutName)
+{
+    setNextLocation(
+        layoutName,
+        PreserveScreensGroup,
+        QString(),
+        Plasma::Types::Floating,
+        Latte::Types::NoneAlignment);
+}
+
+void Positioner::setNextEdge(const int edge)
+{
+    setNextLocation(
+        QString(),
+        PreserveScreensGroup,
+        QString(),
+        edge,
+        Latte::Types::NoneAlignment);
+}
+
+void Positioner::setNextAlignment(
+    const int alignment)
+{
+    setNextLocation(
+        QString(),
+        PreserveScreensGroup,
+        QString(),
+        Plasma::Types::Floating,
+        alignment);
+}
+
+void Positioner::setNextLocation(
+    const QString layoutName,
+    const int screensGroup,
+    QString screenName,
+    const int edge,
+    const int alignment)
+{
+    const PlacementIntent committed =
+        currentPlacementIntent();
+    const PlacementIntent base =
+        m_placementRequests.pending()
+        ? m_placementRequests.pending()->intent
+        : committed;
+    PlacementPatch patch;
+
     if (!layoutName.isEmpty()) {
-        auto layout = m_view->layout();
-        auto origin = qobject_cast<CentralLayout *>(layout);
-        auto destination = m_corona->layoutsManager()->synchronizer()->centralLayout(layoutName);
-
-        if (origin && destination && origin!=destination) {
-            //! Needs to be updated; when the next layout is in the same Visible Workarea
-            //! with the old one changing layouts should be instant
-            bool inVisibleWorkarea{origin->lastUsedActivity() == destination->lastUsedActivity()};
-
-            haschanges = true;
-            m_nextLayoutName = layoutName;
-
-            if (!inVisibleWorkarea) {
-                isanimated = true;
-            }
+        auto *const destination =
+            m_corona->layoutsManager()
+                ->synchronizer()
+                ->centralLayout(layoutName);
+        if (!destination) {
+            qCritical() << "Positioner refused placement in unavailable layout"
+                        << layoutName
+                        << "for"
+                        << m_view->validTitle();
+            return;
         }
+        patch.layoutName = utf8(layoutName);
     }
 
-    //! SCREENSGROUP
-    if (m_view->isOriginal()) {
-        auto originalview = qobject_cast<Latte::OriginalView *>(m_view);
-        //!initialize screens group
-        m_nextScreensGroup = originalview->screensGroup();
-
-        if (m_nextScreensGroup != screensGroup) {
-            haschanges = true;
-            m_nextScreensGroup = static_cast<Latte::Types::ScreensGroup>(screensGroup);
-
-            if (m_nextScreensGroup == Latte::Types::AllScreensGroup) {
-                screenName = Latte::Data::Screen::ONPRIMARYNAME;
-            } else if (m_nextScreensGroup == Latte::Types::AllSecondaryScreensGroup) {
-                int scrid = originalview->expectedScreenIdFromScreenGroup(m_nextScreensGroup);
-
-                if (scrid != Latte::ScreenPool::NOSCREENID) {
-                    screenName = m_corona->screenPool()->connector(scrid);
-                }
-            }
+    if (screensGroup != PreserveScreensGroup) {
+        if (screensGroup
+                < Latte::Types::SingleScreenGroup
+                || screensGroup
+                    > Latte::Types::AllSecondaryScreensGroup
+                || (!m_view->isOriginal()
+                    && screensGroup
+                        != Latte::Types::SingleScreenGroup)) {
+            qCritical() << "Positioner refused invalid screen group"
+                        << screensGroup
+                        << "for"
+                        << m_view->validTitle();
+            return;
         }
-    } else {
-        m_nextScreensGroup = Latte::Types::SingleScreenGroup;
-    }
 
-    //! SCREEN
-    if (!screenName.isEmpty()) {
-        const bool nextOnPrimary =
-            screenName
-            == Latte::Data::Screen::ONPRIMARYNAME;
-
-        if ((m_view->onPrimary() && !nextOnPrimary)
-                || (!m_view->onPrimary() && nextOnPrimary)
-                || (!m_view->onPrimary()
-                    && !nextOnPrimary
-                    && screenName != currentScreenName())) {
-            const QString nextScreenName =
-                nextOnPrimary
-                ? m_corona->screenPool()
-                    ->primaryScreen()->name()
-                : screenName;
-            QScreen *destinationScreen = nullptr;
-            for (QScreen *const screen : qGuiApp->screens()) {
-                if (screen
-                        && screen->name()
-                            == nextScreenName) {
-                    destinationScreen = screen;
-                    break;
-                }
-            }
-
-            if (!destinationScreen) {
-                qCritical() << "Positioner refused placement on unavailable output"
-                            << nextScreenName
-                            << "for"
+        const auto nextScreensGroup =
+            static_cast<Latte::Types::ScreensGroup>(
+                screensGroup);
+        patch.screensGroup = screensGroup;
+        if (nextScreensGroup
+                == Latte::Types::AllScreensGroup) {
+            screenName =
+                Latte::Data::Screen::ONPRIMARYNAME;
+        } else if (nextScreensGroup
+                == Latte::Types::AllSecondaryScreensGroup) {
+            auto *const originalView =
+                qobject_cast<Latte::OriginalView *>(
+                    m_view);
+            Q_ASSERT(originalView);
+            const int screenId =
+                originalView
+                    ->expectedScreenIdFromScreenGroup(
+                        nextScreensGroup);
+            if (screenId
+                    == Latte::ScreenPool::NOSCREENID) {
+                qCritical() << "Positioner refused all-secondary placement without an active secondary output for"
                             << m_view->validTitle();
-                cancelFailedLayoutRelocation();
                 return;
             }
+            screenName =
+                m_corona->screenPool()
+                    ->connector(screenId);
+        }
+    }
 
-            m_pendingOutputScreen = destinationScreen;
-            m_pendingFollowsPrimary = nextOnPrimary;
-            if (currentScreenName() != nextScreenName) {
-                m_nextScreenName = screenName;
-                isanimated = true;
+    if (!screenName.isEmpty()) {
+        const bool followsPrimary =
+            screenName
+            == Latte::Data::Screen::ONPRIMARYNAME;
+        QScreen *const primaryScreen =
+            m_corona->screenPool()
+                ->primaryScreen();
+        const QString resolvedOutput =
+            followsPrimary
+            ? (primaryScreen
+                ? primaryScreen->name()
+                : QString())
+            : screenName;
+        QScreen *destinationScreen{nullptr};
+        for (QScreen *const screen :
+                qGuiApp->screens()) {
+            if (screen
+                    && screen->name()
+                        == resolvedOutput) {
+                destinationScreen = screen;
+                break;
             }
-            haschanges = true;
         }
+        if (!destinationScreen) {
+            qCritical() << "Positioner refused placement on unavailable output"
+                        << resolvedOutput
+                        << "for"
+                        << m_view->validTitle();
+            return;
+        }
+        patch.logicalOutputName =
+            utf8(screenName);
+        patch.resolvedOutputName =
+            utf8(resolvedOutput);
+        patch.followsPrimary =
+            followsPrimary;
     }
 
-    //! SCREEN_EDGE
     if (edge != Plasma::Types::Floating) {
-        if (edge != m_view->location()) {
-            m_nextScreenEdge = static_cast<Plasma::Types::Location>(edge);
-            isanimated = true;
-            haschanges = true;
+        const auto nextEdge =
+            static_cast<Plasma::Types::Location>(
+                edge);
+        if (nextEdge != Plasma::Types::TopEdge
+                && nextEdge
+                    != Plasma::Types::BottomEdge
+                && nextEdge
+                    != Plasma::Types::LeftEdge
+                && nextEdge
+                    != Plasma::Types::RightEdge) {
+            qCritical() << "Positioner refused invalid edge"
+                        << edge
+                        << "for"
+                        << m_view->validTitle();
+            return;
         }
+        patch.edge = edge;
     }
 
-    //! ALIGNMENT
-    if (alignment != Latte::Types::NoneAlignment && m_view->alignment() != alignment) {
-        m_nextAlignment = static_cast<Latte::Types::Alignment>(alignment);
-        haschanges = true;
+    if (alignment
+            != Latte::Types::NoneAlignment) {
+        const auto targetEdge =
+            static_cast<Plasma::Types::Location>(
+                patch.edge.value_or(base.edge));
+        const auto normalized =
+            Latte::Data::View::
+                normalizeAlignmentForEdge(
+                    static_cast<
+                        Latte::Types::Alignment>(
+                        alignment),
+                    targetEdge);
+        if (normalized
+                == Latte::Types::NoneAlignment) {
+            qCritical() << "Positioner refused invalid alignment"
+                        << alignment
+                        << "for edge"
+                        << static_cast<int>(
+                            targetEdge);
+            return;
+        }
+        patch.alignment =
+            static_cast<int>(normalized);
     }
 
-    if (haschanges && m_view->isOriginal()) {
-        auto originalview = qobject_cast<Latte::OriginalView *>(m_view);
-        originalview->setNextLocationForClones(layoutName, edge, alignment);
+    const auto submission =
+        m_placementRequests.submit(
+            committed,
+            patch);
+    if (!submission.accepted) {
+        return;
     }
 
-    m_repositionIsAnimated = isanimated;
-    m_repositionFromViewSettingsWindow = m_view->settingsWindowIsShown();
-
-    if (haschanges) {
-        ++m_relocationGeneration;
+    const bool hideAlreadyOwned =
+        m_repositionIsAnimated;
+    const PlacementIntent &target =
+        submission.request.intent;
+    bool requiresAnimatedHide =
+        target.resolvedOutputName
+            != committed.resolvedOutputName
+        || target.edge != committed.edge;
+    if (target.layoutName
+            != committed.layoutName) {
+        auto *const origin =
+            qobject_cast<CentralLayout *>(
+                m_view->layout());
+        auto *const destination =
+            m_corona->layoutsManager()
+                ->synchronizer()
+                ->centralLayout(
+                    qString(target.layoutName));
+        Q_ASSERT(origin);
+        Q_ASSERT(destination);
+        requiresAnimatedHide =
+            requiresAnimatedHide
+            || origin->lastUsedActivity()
+                != destination
+                    ->lastUsedActivity();
     }
 
-    if (isanimated) {
+    m_relocationGeneration =
+        submission.request.token;
+    projectPendingPlacement(
+        submission.request);
+
+    if (m_view->isOriginal()) {
+        auto *const originalView =
+            qobject_cast<Latte::OriginalView *>(
+                m_view);
+        Q_ASSERT(originalView);
+        originalView->setNextLocationForClones(
+            layoutName,
+            edge,
+            alignment);
+    }
+
+    m_repositionFromViewSettingsWindow =
+        m_repositionFromViewSettingsWindow
+        || m_view->settingsWindowIsShown();
+    m_repositionIsAnimated =
+        hideAlreadyOwned
+        || requiresAnimatedHide;
+
+    if (requiresAnimatedHide) {
         Q_EMIT hidingForRelocationStarted();
-    } else if (haschanges){
+    } else if (!hideAlreadyOwned) {
         Q_EMIT hidingForRelocationFinished();
         applyUnanimatedPlacementGeneration();
     }

@@ -24,6 +24,7 @@ app/view/windowtouchstate.h
 app/view/helpers/screenspacereservationledger.h
 app/view/helpers/screenspacereservationpublication.h
 app/view/settings/retargetrequeststate.h
+app/view/placementrequeststate.h
 app/view/viewactionpolicy.h
 app/wm/ignoredwindowregistry.h
 app/wm/windowid.h

@@ -103,7 +103,7 @@ void DockIdentityContractTest::relationshipActionsGuardEveryProductionBoundary()
         {QStringLiteral("void Corona::createLinkedView"), QStringLiteral("Action::CreateLinked"), QStringLiteral("view->createLinkedView(screenId,static_cast<Plasma::Types::Location>(edge));")},
         {QStringLiteral("void Corona::setViewPlacement"), QStringLiteral("Action::Relocate"), QStringLiteral("view->positioner()->setNextLocation")},
         {QStringLiteral("void Corona::exportViewTemplate"), QStringLiteral("Action::ExportTemplate"), QStringLiteral("view->exportTemplate();")},
-        {QStringLiteral("void Corona::moveViewToLayout"), QStringLiteral("Action::MoveToLayout"), QStringLiteral("view->positioner()->setNextLocation")},
+        {QStringLiteral("void Corona::moveViewToLayout"), QStringLiteral("Action::MoveToLayout"), QStringLiteral("view->positioner()->setNextLayout")},
         {QStringLiteral("void Corona::removeView"), QStringLiteral("Action::Remove"), QStringLiteral("view->removeView();")},
     };
 
@@ -237,10 +237,10 @@ void DockIdentityContractTest::relocationCompletionCommitsPlacementTransaction()
     const int output = transaction.indexOf(
         QStringLiteral("applyOutputPlacement("), guard);
     const int edge = transaction.indexOf(
-        QStringLiteral("m_view->setLocation(m_nextScreenEdge)"),
+        QStringLiteral("m_view->setLocation("),
         output);
     const int alignment = transaction.indexOf(
-        QStringLiteral("m_view->setAlignment(m_nextAlignment)"),
+        QStringLiteral("m_view->setAlignment("),
         edge);
     QVERIFY2(begin >= 0 && guard > begin && output > guard
                  && edge > output && alignment > edge,
@@ -382,10 +382,13 @@ void DockIdentityContractTest::relocationCompletionRejectsSupersededGeneration()
     QVERIFY2(capture >= 0 && reject > capture && apply > reject,
              "delayed relocation completion must reject an older placement generation");
 
-    const int increment = setNext.indexOf(QStringLiteral("++m_relocationGeneration;"));
+    const int submit = setNext.indexOf(QStringLiteral(
+        "m_placementRequests.submit("));
+    const int claim = setNext.indexOf(QStringLiteral(
+        "m_relocationGeneration=submission.request.token;"), submit);
     const int beginHide = setNext.indexOf(QStringLiteral("Q_EMIThidingForRelocationStarted();"));
-    QVERIFY2(increment >= 0 && beginHide > increment,
-             "a relocation generation must be claimed before asynchronous hiding begins");
+    QVERIFY2(submit >= 0 && claim > submit && beginHide > claim,
+             "a complete latest-intent generation must be claimed before asynchronous hiding begins");
 }
 
 void DockIdentityContractTest::geometrySettlementIncludesDeferredWork()
@@ -759,10 +762,10 @@ void DockIdentityContractTest::refusedLayoutMoveCancelsRelocation()
 
     const QString cancellation = normalized(functionBody(
         positionerSource, QStringLiteral("void Positioner::cancelFailedLayoutRelocation")));
-    QVERIFY(cancellation.contains(QStringLiteral("m_nextLayoutName.clear()")));
-    QVERIFY(cancellation.contains(QStringLiteral("m_nextScreenName.clear()")));
-    QVERIFY(cancellation.contains(QStringLiteral("m_nextScreenEdge=Plasma::Types::Floating")));
-    QVERIFY(cancellation.contains(QStringLiteral("m_nextAlignment=Latte::Types::NoneAlignment")));
+    QVERIFY(cancellation.contains(QStringLiteral(
+        "cancelToCommittedIfCurrent(")));
+    QVERIFY(cancellation.contains(QStringLiteral(
+        "projectPendingPlacement(")));
     QVERIFY(cancellation.contains(QStringLiteral("scheduleLastRepositionApplyEvent()")));
 }
 

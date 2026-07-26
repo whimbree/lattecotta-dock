@@ -564,6 +564,51 @@ print(json.dumps(
 PY
 }
 
+assert_latest_intent_probe() {
+    local before_file="$1" after_file="$2"
+    python3 - "$plan_file" "$bindings_file" \
+        "$before_file" "$after_file" <<'PY'
+import json
+import sys
+
+def load(path):
+    with open(path, encoding="utf-8") as stream:
+        return json.load(stream)
+
+plan, bindings, before, after = map(load, sys.argv[1:])
+target = bindings[plan["latestIntentProbe"]["target"]]
+before_view = next(
+    view for view in before["views"]
+    if view["persistentDockId"] == target
+)
+after_view = next(
+    view for view in after["views"]
+    if view["persistentDockId"] == target
+)
+stable_placement = (
+    "screenId",
+    "edge",
+    "alignment",
+    "onPrimary",
+)
+if any(before_view[key] != after_view[key] for key in stable_placement):
+    raise SystemExit("latest-intent probe did not return to its exact origin")
+before_generation = int(before_view["relocationGeneration"])
+after_generation = int(after_view["relocationGeneration"])
+if after_generation != before_generation + 2:
+    raise SystemExit(
+        "latest-intent probe did not claim exactly two generations: "
+        f"{before_generation} -> {after_generation}"
+    )
+if (
+    not after_view["geometrySettled"]
+    or after_view["relocationGeneration"]
+       != after_view["appliedRelocationGeneration"]
+):
+    raise SystemExit("latest-intent probe did not settle its newest generation")
+PY
+}
+
 wait_for_visual_window_ownership() {
     local through="$1" snapshot_file="$2" windows_file="$3" i
     for ((i = 0; i < 120; ++i)); do
@@ -646,6 +691,19 @@ cmp -s "$candidate_plan" "$plan_file" \
 readonly artifact_dir transaction_dir backup_dir fixture_dir plan_file
 readonly operations_file replay_file bindings_file outputs_file
 readonly baseline_snapshot_file baseline_projection_file
+
+latest_intent_final_seq="$(
+    python3 - "$plan_file" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as stream:
+    print(json.load(stream)["latestIntentProbe"]["finalSeq"])
+PY
+)" || e2e_fail "could not read the validated latest-intent probe sequence"
+[[ "$latest_intent_final_seq" =~ ^[1-9][0-9]*$ ]] \
+    || e2e_fail "the latest-intent probe sequence is malformed"
+readonly latest_intent_final_seq
 
 # No command that can stop the pristine dock or replace its configuration runs
 # outside this trap.
@@ -969,6 +1027,11 @@ while IFS= read -r operation_row; do
     wait_for_checkpoint \
         "$step_number" "$last_checkpoint_file" "$checkpoint_attempts" \
         || e2e_fail "FP-4C operation checkpoint $step_number did not converge"
+    if [[ "$step_number" == "$latest_intent_final_seq" ]]; then
+        assert_latest_intent_probe \
+            "$pending_before_file" "$last_checkpoint_file" \
+            || e2e_fail "rapid return-to-origin did not preserve the newest complete placement intent"
+    fi
     if [[ "$reload_this_step" == true
        || "$restart_this_step" == true
        || -n "$removed_this_step" ]]; then

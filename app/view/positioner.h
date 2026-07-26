@@ -11,6 +11,7 @@
 #include <coretypes.h>
 #include "floatingpanelgeometry.h"
 #include "positionergeometry.h"
+#include "placementrequeststate.h"
 #include "../wm/abstractwindowinterface.h"
 #include "../wm/windowinfowrap.h"
 
@@ -115,6 +116,10 @@ public:
 
 public Q_SLOTS:
     Q_INVOKABLE void setNextLocation(const QString layoutName, const int screensGroup, QString screenName, int edge, int alignment);
+    Q_INVOKABLE void setNextScreen(const int screensGroup, const QString &screenName);
+    void setNextLayout(const QString &layoutName);
+    Q_INVOKABLE void setNextEdge(int edge);
+    Q_INVOKABLE void setNextAlignment(int alignment);
     Q_INVOKABLE void slideInDuringStartup();
 
     void syncGeometry();
@@ -177,9 +182,13 @@ private:
         bool followsPrimary);
     void applyUnanimatedPlacementGeneration();
     void cancelFailedLayoutRelocation();
+    [[nodiscard]] PlacementIntent currentPlacementIntent() const;
     void finishPendingScreenPlacementIfApplied();
+    [[nodiscard]] bool hasPendingPlacementComponents() const;
     void init();
     void initSignalingForLocationChangeSliding();
+    void projectPendingPlacement(
+        const PlacementRequestState::Request &request);
     void scheduleLastRepositionApplyEvent();
     void scheduleUnanimatedPlacementApplyEvent();
 
@@ -258,13 +267,19 @@ private:
     bool m_repositionIsAnimated{false};
     quint64 m_relocationGeneration{0};
     quint64 m_appliedRelocationGeneration{0};
+    std::optional<quint64>
+        m_scheduledPlacementCompletion;
+    PlacementRequestState m_placementRequests;
 
+    //! These fields are one current-generation projection of
+    //! m_placementRequests. They drive existing Qt change acknowledgements;
+    //! no field independently owns requested placement state.
     QString m_nextLayoutName;
     Latte::Types::ScreensGroup m_nextScreensGroup{Latte::Types::SingleScreenGroup};
     QPointer<QScreen> m_pendingOutputScreen;
     std::optional<bool> m_pendingFollowsPrimary;
     QString m_nextScreenName;
-    QScreen *m_nextScreen{nullptr};
+    QPointer<QScreen> m_nextScreen;
     Plasma::Types::Location m_nextScreenEdge{Plasma::Types::Floating};
     Latte::Types::Alignment m_nextAlignment{Latte::Types::NoneAlignment};
 

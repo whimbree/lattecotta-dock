@@ -438,6 +438,24 @@ def generate_plan(seed: int, *, validate: bool = True) -> dict[str, Any]:
         if index in (0, 5, 10):
             edit_cycle(target)
 
+    latest_intent_target = "root"
+    latest_intent_origin = placements[latest_intent_target]
+    generator, latest_intent_away = choose_safe_placement(
+        generator, placements, latest_intent_target
+    )
+    latest_intent_first_seq = len(operations) + 1
+    move(
+        latest_intent_target,
+        latest_intent_away,
+        checkpoint=False,
+    )
+    move(
+        latest_intent_target,
+        latest_intent_origin,
+        checkpoint=True,
+    )
+    latest_intent_final_seq = len(operations)
+
     burst_target = "root"
     for index in range(3):
         generator, placement = choose_safe_placement(
@@ -464,6 +482,11 @@ def generate_plan(seed: int, *, validate: bool = True) -> dict[str, Any]:
             "placement": Placement(
                 OutputRole.PRIMARY, Edge.BOTTOM, Alignment.JUSTIFY
             ).to_json(),
+        },
+        "latestIntentProbe": {
+            "target": latest_intent_target,
+            "firstSeq": latest_intent_first_seq,
+            "finalSeq": latest_intent_final_seq,
         },
         "operations": [operation.to_json() for operation in operations],
     }
@@ -698,6 +721,7 @@ def validate_plan(
             "generator",
             "seed",
             "initial",
+            "latestIntentProbe",
             "operations",
             "planSha256",
         ),
@@ -718,6 +742,31 @@ def validate_plan(
     if initial["handle"] != "root":
         fail("plan initial handle must be root")
     parse_placement(initial["placement"], "plan.initial.placement")
+    latest_intent_probe = require_object(
+        plan["latestIntentProbe"],
+        "plan.latestIntentProbe",
+    )
+    require_keys(
+        latest_intent_probe,
+        ("target", "firstSeq", "finalSeq"),
+        "plan.latestIntentProbe",
+    )
+    require_string(
+        latest_intent_probe["target"],
+        "plan.latestIntentProbe.target",
+    )
+    first_probe_seq = require_int(
+        latest_intent_probe["firstSeq"],
+        "plan.latestIntentProbe.firstSeq",
+        1,
+    )
+    final_probe_seq = require_int(
+        latest_intent_probe["finalSeq"],
+        "plan.latestIntentProbe.finalSeq",
+        1,
+    )
+    if final_probe_seq != first_probe_seq + 1:
+        fail("latest-intent probe must contain exactly two consecutive requests")
     operations = plan["operations"]
     if not isinstance(operations, list) or not operations:
         fail("plan operations must be a nonempty array")

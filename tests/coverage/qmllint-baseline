@@ -144,7 +144,7 @@
 12	share/plasma/shells/org.kde.latte.shell/contents/configuration/canvas/maxlength/RulerMouseArea.qml
 1	share/plasma/shells/org.kde.latte.shell/contents/configuration/config.qml
 242	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/AppearanceConfig.qml
-246	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/BehaviorConfig.qml
+238	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/BehaviorConfig.qml
 63	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/EffectsConfig.qml
 238	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/TasksConfig.qml
 31	share/plasma/shells/org.kde.latte.shell/contents/controls/CustomIndicatorButton.qml

@@ -194,7 +194,7 @@ PlasmaComponents.Page {
                     onClicked: {
                         //! clicked event is more wayland friendly because it release focus from the button before hiding the window
                         if (viewConfig.isReady && plasmoid.location !== edge) {
-                            latteView.positioner.setNextLocation("", latteView.screensGroup, "", edge, LatteCore.Types.NoneAlignment);
+                            latteView.positioner.setNextEdge(edge);
                         }
                     }
                 }
@@ -212,7 +212,7 @@ PlasmaComponents.Page {
                     onClicked: {
                         //! clicked event is more wayland friendly because it release focus from the button before hiding the window
                         if (viewConfig.isReady && plasmoid.location !== edge) {
-                            latteView.positioner.setNextLocation("", latteView.screensGroup, "", edge, LatteCore.Types.NoneAlignment);
+                            latteView.positioner.setNextEdge(edge);
                         }
                     }
                 }
@@ -230,7 +230,7 @@ PlasmaComponents.Page {
                     onClicked: {
                         //! clicked event is more wayland friendly because it release focus from the button before hiding the window
                         if (viewConfig.isReady && plasmoid.location !== edge) {
-                            latteView.positioner.setNextLocation("", latteView.screensGroup, "", edge, LatteCore.Types.NoneAlignment);
+                            latteView.positioner.setNextEdge(edge);
                         }
                     }
                 }
@@ -248,7 +248,7 @@ PlasmaComponents.Page {
                     onClicked: {
                         //! clicked event is more wayland friendly because it release focus from the button before hiding the window
                         if (viewConfig.isReady && plasmoid.location !== edge) {
-                            latteView.positioner.setNextLocation("", latteView.screensGroup, "", edge, LatteCore.Types.NoneAlignment);
+                            latteView.positioner.setNextEdge(edge);
                         }
                     }
                 }
@@ -288,7 +288,7 @@ PlasmaComponents.Page {
 
                     onPressedChanged: {
                         if (pressed) {
-                            latteView.positioner.setNextLocation("", latteView.screensGroup, "", PlasmaCore.Types.Floating, alignment);
+                            latteView.positioner.setNextAlignment(alignment);
                         }
                     }
                 }
@@ -304,7 +304,7 @@ PlasmaComponents.Page {
 
                     onPressedChanged: {
                         if (pressed) {
-                            latteView.positioner.setNextLocation("", latteView.screensGroup, "", PlasmaCore.Types.Floating, alignment);
+                            latteView.positioner.setNextAlignment(alignment);
                         }
                     }
                 }
@@ -320,7 +320,7 @@ PlasmaComponents.Page {
 
                     onPressedChanged: {
                         if (pressed) {
-                            latteView.positioner.setNextLocation("", latteView.screensGroup, "", PlasmaCore.Types.Floating, alignment);
+                            latteView.positioner.setNextAlignment(alignment);
                         }
                     }
                 }
@@ -337,7 +337,7 @@ PlasmaComponents.Page {
 
                     onPressedChanged: {
                         if (pressed) {
-                            latteView.positioner.setNextLocation("", latteView.screensGroup, "", PlasmaCore.Types.Floating, alignment);
+                            latteView.positioner.setNextAlignment(alignment);
                         }
                     }
                 }
