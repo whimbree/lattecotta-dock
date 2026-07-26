@@ -215,7 +215,9 @@ and PR #126 landed FP-4B.
       after restart is a CRITICAL persistence finding, so the rule's critical
       exception required one fresh independent rereview. That rereview returned
       `DO NOT MERGE`: existing files did not require a writable parent, and
-      absent paths did not require a searchable parent. D229 is reopened.
+      absent paths did not require a searchable parent. Commit `685ac6433`
+      completes both branches with real filesystem coverage. Its replacement
+      canonical gate and critical rereview remain open.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent

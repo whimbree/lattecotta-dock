@@ -3069,8 +3069,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D229 - Cross-layout placement could report success after persistence failure
-- STATUS: REOPENED on `test/fp4c-operation-storm`; the fresh critical rereview
-  returned `DO NOT MERGE`.
+- STATUS: FIXED ON `test/fp4c-operation-storm` at `296666281` and
+  `685ac6433`; replacement canonical gate and critical independent rereview
+  remain open.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3081,25 +3082,20 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `GenericLayout::unassignFromLayout()` and `assignToLayout()` only log
   `syncToLayoutFile()` failure and continue, so `Manager::moveView()` can pass
   its runtime-only postcondition despite split durable ownership.
-- PARTIAL FIX: preflight both persistence endpoints before the first layout
+- FIX: preflight both persistence endpoints before the first layout
   mutation. Once mutation starts, persistence failure must be an invariant
   failure; it cannot remain a recoverable success path. Only regular writable
-  layout files or files creatable in a writable parent directory qualify.
-- PARTIAL EVIDENCE: a real read-only file and a directory masquerading as a layout
-  file are refused. Negative controls made the filesystem classifier and
-  production preflight contract fail independently. The production build and
+  layout files or absent paths in a real writable and searchable parent
+  directory qualify. The parent requirement matches KConfig's `QSaveFile`
+  replacement mechanism.
+- EVIDENCE: real filesystem cases cover existing writable, existing
+  read-only, directory masquerade, absent creatable, non-writable parent, and
+  non-searchable parent endpoints. Separate negative controls removing parent
+  write and search checks fail their matching cases. The production build and
   seven focused tests pass, and the exact seed 127934575 nested-KWin replay
   completes all 76 operations, reload, and exact cleanup.
-- CRITICAL GAP: KConfig persists through `QSaveFile`, which creates a
-  replacement in the containing directory. An existing writable file under a
-  non-writable parent passes the partial classifier, then fails after origin
-  removal has persisted. The absent-path branch also omits directory
-  search/execute permission.
-- REQUIRED FIX: require a regular writable file plus a writable and searchable
-  parent for existing endpoints. Require a writable and searchable parent for
-  absent endpoints. Pin both branches with real filesystem permissions.
-- REQUIRED ACCEPTANCE: rerun the exact replay, canonical gate, and critical
-  independent rereview after the complete correction.
+- REQUIRED ACCEPTANCE: rerun the canonical gate and critical independent
+  rereview after `685ac6433`.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
@@ -3131,8 +3127,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: FIXED ON `test/fp4c-operation-storm`; the D229 critical rereview
-  reopened persistence acceptance and invalidated the final FP-4C disposition.
+- STATUS: FIXED ON `test/fp4c-operation-storm`; the complete D229 correction
+  invalidated the prior canonical gate and awaits critical rereview.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
