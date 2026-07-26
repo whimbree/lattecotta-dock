@@ -159,7 +159,15 @@ is now a fatal invariant violation, never a recoverable success path. A real
 read-only file and directory endpoint are refused; separate negative controls
 fail the filesystem classifier and production preflight contract. The
 production build, seven focused tests, and the exact 76-operation nested-KWin
-replay pass. The D229 source correction invalidates the prior canonical gate.
+replay pass.
+
+The replacement canonical gate exited 0 at exact corrected code head
+`f66a404c0a4623a602a58d7e343a94e1ad8e9897`. All 122 CTest entries,
+QML and coverage ratchets, visual probes, the complete ASan/UBSan build, four
+nested sanitizer recipes, package provenance controls, and matrix refusals
+passed. D229 can silently lose a dock after restart, so it is a CRITICAL
+persistence finding for the review rule. The rule's critical exception
+requires one fresh independent rereview after this fix.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a

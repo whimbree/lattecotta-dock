@@ -3070,7 +3070,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D229 - Cross-layout placement could report success after persistence failure
 - STATUS: FIXED ON `test/fp4c-operation-storm` at `296666281`; the source
-  correction invalidates the prior canonical gate.
+  correction's canonical gate passed at `f66a404c0`. A fresh critical
+  independent rereview remains open.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3090,9 +3091,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   production preflight contract fail independently. The production build and
   seven focused tests pass, and the exact seed 127934575 nested-KWin replay
   completes all 76 operations, reload, and exact cleanup.
-- REQUIRED ACCEPTANCE: rerun the canonical gate after `296666281`. The
-  independent-review disposition must satisfy the repository's single
-  follow-up-review rule before merge.
+- REQUIRED ACCEPTANCE: the silent loss of a dock after restart is a CRITICAL
+  persistence finding under the review rule, so it requires a fresh
+  independent rereview even though it was discovered during the normal
+  follow-up review.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
@@ -3124,8 +3126,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: FIXED ON `test/fp4c-operation-storm`; D229 invalidated the canonical
-  gate that passed at `0b2d069a3`, and final FP-4C PR acceptance remains open.
+- STATUS: FIXED ON `test/fp4c-operation-storm`; the canonical gate passed at
+  `f66a404c0`, and final FP-4C PR acceptance awaits the D229 critical rereview.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
