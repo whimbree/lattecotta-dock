@@ -8,9 +8,12 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
+#include <map>
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <QtGlobal>
 
@@ -46,6 +49,122 @@ struct PlacementPatch
     std::optional<bool> followsPrimary;
     std::optional<int> edge;
     std::optional<int> alignment;
+};
+
+enum class PlacementRequestOutcome
+{
+    Committed,
+    Refused,
+    Superseded,
+    Abandoned,
+};
+
+struct PlacementRequestCompletion
+{
+    std::uint64_t token{0};
+    PlacementRequestOutcome outcome{
+        PlacementRequestOutcome::Refused};
+
+    friend bool operator==(
+        const PlacementRequestCompletion &,
+        const PlacementRequestCompletion &) = default;
+};
+
+enum class PlacementSubmissionStatus
+{
+    Rejected,
+    Applied,
+    CompletionExpected,
+};
+
+struct PlacementSubmission
+{
+    PlacementSubmissionStatus status{
+        PlacementSubmissionStatus::Rejected};
+    std::uint64_t token{0};
+
+    [[nodiscard]] constexpr bool accepted() const
+    {
+        return status
+            != PlacementSubmissionStatus::Rejected;
+    }
+
+    [[nodiscard]] constexpr bool expectsCompletion() const
+    {
+        return status
+            == PlacementSubmissionStatus::
+                CompletionExpected;
+    }
+};
+
+//! Owns generation-scoped completion observers independently from the Qt
+//! object that drives placement. Removing the observer list before invocation
+//! makes completion exactly once even when a handler submits another request.
+class PlacementCompletionRegistry
+{
+public:
+    using Token = std::uint64_t;
+    using Handler = std::function<
+        void(const PlacementRequestCompletion &)>;
+
+    [[nodiscard]] bool watch(
+        const Token token,
+        Handler handler)
+    {
+        if (token == 0 || !handler) {
+            return false;
+        }
+
+        m_handlers[token].push_back(
+            std::move(handler));
+        return true;
+    }
+
+    [[nodiscard]] bool complete(
+        const Token token,
+        const PlacementRequestOutcome outcome)
+    {
+        const auto found = m_handlers.find(token);
+        if (found == m_handlers.end()) {
+            return false;
+        }
+
+        std::vector<Handler> handlers =
+            std::move(found->second);
+        m_handlers.erase(found);
+        const PlacementRequestCompletion completion{
+            token,
+            outcome,
+        };
+        for (auto &handler : handlers) {
+            handler(completion);
+        }
+        return true;
+    }
+
+    void abandonAll()
+    {
+        auto handlers = std::move(m_handlers);
+        m_handlers.clear();
+        for (auto &[token, observers] : handlers) {
+            const PlacementRequestCompletion completion{
+                token,
+                PlacementRequestOutcome::Abandoned,
+            };
+            for (auto &observer : observers) {
+                observer(completion);
+            }
+        }
+    }
+
+    [[nodiscard]] bool contains(
+        const Token token) const
+    {
+        return m_handlers.contains(token);
+    }
+
+private:
+    std::map<Token, std::vector<Handler>> m_handlers;
 };
 
 class PlacementRequestState

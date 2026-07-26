@@ -9,11 +9,18 @@
 
 #include <QtTest>
 
+#include <vector>
+
 namespace {
 
 using Latte::ViewPart::PlacementIntent;
+using Latte::ViewPart::PlacementCompletionRegistry;
 using Latte::ViewPart::PlacementPatch;
+using Latte::ViewPart::PlacementRequestCompletion;
+using Latte::ViewPart::PlacementRequestOutcome;
 using Latte::ViewPart::PlacementRequestState;
+using Latte::ViewPart::PlacementSubmission;
+using Latte::ViewPart::PlacementSubmissionStatus;
 
 constexpr int SingleScreen{0};
 constexpr int AllScreens{1};
@@ -49,6 +56,10 @@ private Q_SLOTS:
     void staleCompletionCannotConsumeLatestIntent();
     void cancellationRestoresCapturedCompleteIntent();
     void identicalTargetIsNoOp();
+    void submissionStatusDistinguishesImmediateAndDeferredResults();
+    void completionObserversReceiveExactGenerationOnce();
+    void supersessionDoesNotCompleteTheNewGeneration();
+    void destructionAbandonsEveryObservedGeneration();
 };
 
 void PlacementRequestStateTest::
@@ -258,6 +269,123 @@ identicalTargetIsNoOp()
     QCOMPARE(
         repeated.request.token,
         second.request.token);
+}
+
+void PlacementRequestStateTest::
+submissionStatusDistinguishesImmediateAndDeferredResults()
+{
+    constexpr PlacementSubmission rejected{
+        PlacementSubmissionStatus::Rejected,
+        0,
+    };
+    constexpr PlacementSubmission applied{
+        PlacementSubmissionStatus::Applied,
+        5,
+    };
+    constexpr PlacementSubmission deferred{
+        PlacementSubmissionStatus::CompletionExpected,
+        9,
+    };
+
+    static_assert(!rejected.accepted());
+    static_assert(!rejected.expectsCompletion());
+    static_assert(applied.accepted());
+    static_assert(!applied.expectsCompletion());
+    static_assert(deferred.accepted());
+    static_assert(deferred.expectsCompletion());
+    QCOMPARE(deferred.token, 9);
+}
+
+void PlacementRequestStateTest::
+completionObserversReceiveExactGenerationOnce()
+{
+    PlacementCompletionRegistry completions;
+    std::vector<PlacementRequestCompletion> observed;
+
+    QVERIFY(completions.watch(
+        7,
+        [&observed](
+            const PlacementRequestCompletion &completion) {
+            observed.push_back(completion);
+        }));
+    QVERIFY(!completions.complete(
+        6,
+        PlacementRequestOutcome::Committed));
+    QVERIFY(observed.empty());
+
+    QVERIFY(completions.complete(
+        7,
+        PlacementRequestOutcome::Committed));
+    QCOMPARE(observed.size(), 1);
+    QCOMPARE(observed.front().token, 7);
+    QCOMPARE(
+        observed.front().outcome,
+        PlacementRequestOutcome::Committed);
+    QVERIFY(!completions.complete(
+        7,
+        PlacementRequestOutcome::Refused));
+    QCOMPARE(observed.size(), 1);
+}
+
+void PlacementRequestStateTest::
+supersessionDoesNotCompleteTheNewGeneration()
+{
+    PlacementCompletionRegistry completions;
+    std::vector<PlacementRequestCompletion> observed;
+    const auto record =
+        [&observed](
+            const PlacementRequestCompletion &completion) {
+            observed.push_back(completion);
+        };
+
+    QVERIFY(completions.watch(11, record));
+    QVERIFY(completions.watch(12, record));
+    QVERIFY(completions.complete(
+        11,
+        PlacementRequestOutcome::Superseded));
+    QCOMPARE(observed.size(), 1);
+    QCOMPARE(observed.front().token, 11);
+    QCOMPARE(
+        observed.front().outcome,
+        PlacementRequestOutcome::Superseded);
+    QVERIFY(completions.contains(12));
+
+    QVERIFY(completions.complete(
+        12,
+        PlacementRequestOutcome::Refused));
+    QCOMPARE(observed.size(), 2);
+    QCOMPARE(observed.back().token, 12);
+    QCOMPARE(
+        observed.back().outcome,
+        PlacementRequestOutcome::Refused);
+}
+
+void PlacementRequestStateTest::
+destructionAbandonsEveryObservedGeneration()
+{
+    PlacementCompletionRegistry completions;
+    std::vector<PlacementRequestCompletion> observed;
+    const auto record =
+        [&observed](
+            const PlacementRequestCompletion &completion) {
+            observed.push_back(completion);
+        };
+
+    QVERIFY(completions.watch(21, record));
+    QVERIFY(completions.watch(22, record));
+    completions.abandonAll();
+
+    QCOMPARE(observed.size(), 2);
+    QCOMPARE(observed[0].token, 21);
+    QCOMPARE(observed[1].token, 22);
+    QCOMPARE(
+        observed[0].outcome,
+        PlacementRequestOutcome::Abandoned);
+    QCOMPARE(
+        observed[1].outcome,
+        PlacementRequestOutcome::Abandoned);
+    QVERIFY(!completions.contains(21));
+    QVERIFY(!completions.contains(22));
 }
 
 }

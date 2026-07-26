@@ -929,20 +929,197 @@ void Views::messageForWarningOrphanedSubContainments(const Data::Warning &warnin
                                                    extraactions);
 }
 
+bool Views::submitViewUpdate(
+    Latte::Layout::GenericLayout *layout,
+    const Data::View &view,
+    const QString &refusalMessage)
+{
+    Q_ASSERT(layout);
+    Q_ASSERT(m_pendingSave.has_value());
+    if (!layout || !m_pendingSave) {
+        qFatal(
+            "Views controller lost its active save transaction before submitting a view update");
+    }
+
+    const quint64 saveGeneration =
+        m_pendingSave->generation;
+    ++m_pendingSave->awaitingCompletions;
+    const QPointer<Views> controller{this};
+    const auto submission =
+        layout->updateView(
+            view,
+            [controller,
+             saveGeneration,
+             refusalMessage](
+                const ViewPart::
+                    PlacementRequestCompletion
+                        &completion) {
+                if (controller) {
+                    controller->finishViewUpdate(
+                        saveGeneration,
+                        refusalMessage,
+                        completion);
+                }
+            });
+
+    if (submission.expectsCompletion()) {
+        return m_pendingSave
+            && m_pendingSave->generation
+                == saveGeneration;
+    }
+
+    Q_ASSERT(m_pendingSave);
+    Q_ASSERT(
+        m_pendingSave->awaitingCompletions > 0);
+    --m_pendingSave->awaitingCompletions;
+    if (!submission.accepted()) {
+        failPendingSave(refusalMessage);
+        return false;
+    }
+
+    return true;
+}
+
+void Views::finishViewUpdate(
+    const quint64 saveGeneration,
+    const QString &refusalMessage,
+    const ViewPart::PlacementRequestCompletion
+        &completion)
+{
+    if (!m_pendingSave
+            || m_pendingSave->generation
+                != saveGeneration) {
+        return;
+    }
+
+    Q_ASSERT(
+        m_pendingSave->awaitingCompletions > 0);
+    if (m_pendingSave->awaitingCompletions <= 0) {
+        qFatal(
+            "Views controller received more placement completions than it submitted");
+    }
+    --m_pendingSave->awaitingCompletions;
+
+    switch (completion.outcome) {
+    case ViewPart::PlacementRequestOutcome::
+        Committed:
+        finalizePendingSaveIfReady();
+        return;
+    case ViewPart::PlacementRequestOutcome::
+        Refused:
+        failPendingSave(refusalMessage);
+        return;
+    case ViewPart::PlacementRequestOutcome::
+        Superseded:
+        failPendingSave(
+            i18n("The dock move was replaced by a newer placement request. Review the current dock placement, then save again."));
+        return;
+    case ViewPart::PlacementRequestOutcome::
+        Abandoned:
+        failPendingSave(
+            i18n("The dock move could not finish because the dock was closed. Reopen the layout settings, then save again."));
+        return;
+    }
+
+    qFatal(
+        "Views controller received an unknown placement completion result");
+}
+
+void Views::failPendingSave(
+    const QString &message)
+{
+    Q_ASSERT(m_pendingSave.has_value());
+    m_pendingSave.reset();
+    showDefaultPersistentErrorWarningInlineMessage(
+        message,
+        KMessageWidget::Warning);
+}
+
+void Views::finalizePendingSaveIfReady()
+{
+    if (!m_pendingSave
+            || m_pendingSave->collecting
+            || m_pendingSave
+                ->awaitingCompletions > 0) {
+        return;
+    }
+
+    PendingSaveTransaction transaction =
+        std::move(*m_pendingSave);
+    m_pendingSave.reset();
+
+    if (m_model->currentViewsData()
+            != transaction.requestedViews) {
+        showDefaultPersistentErrorWarningInlineMessage(
+            i18n("The layout changed while dock placement was still being saved. Review the current values, then save again."),
+            KMessageWidget::Warning);
+        return;
+    }
+
+    if (transaction.syncActiveLayouts) {
+        m_handler->corona()
+            ->layoutsManager()
+            ->synchronizer()
+            ->syncActiveLayoutsToOriginalFiles();
+    }
+
+    for (const QString &viewId :
+            transaction.newViewResponses.keys()) {
+        Data::View response =
+            transaction.newViewResponses[viewId];
+        m_model->setOriginalView(
+            viewId,
+            response);
+    }
+
+    Data::ViewsTable finalizedViews =
+        m_model->currentViewsData();
+    m_model->setOriginalData(
+        finalizedViews);
+
+    CentralLayout *const central =
+        m_handler->layoutsController()
+            ->centralLayout(
+                m_handler->currentData().id);
+    if (central && central->isActive()) {
+        m_model->updateActiveStatesBasedOn(
+            central);
+    }
+
+    m_handler->layoutsController()
+        ->templatesKeeper()
+        ->clear();
+}
+
 void Views::save()
 {
+    if (m_pendingSave) {
+        showDefaultPersistentErrorWarningInlineMessage(
+            i18n("Dock placement is still being saved. Wait for it to finish before saving again."),
+            KMessageWidget::Warning);
+        return;
+    }
+
     //! when this function is called we consider that removal has already been approved
     updateDoubledMoveDestinationRows();
 
-    Latte::Data::Layout originallayout = m_handler->originalData();
-    Latte::Data::Layout currentlayout = m_handler->currentData();
-    Latte::CentralLayout *central = m_handler->layoutsController()->centralLayout(currentlayout.id);
+    const Latte::Data::Layout originallayout =
+        m_handler->originalData();
+    const Latte::Data::Layout currentlayout =
+        m_handler->currentData();
+    Latte::CentralLayout *const central =
+        m_handler->layoutsController()
+            ->centralLayout(currentlayout.id);
 
     //! views in model
-    Latte::Data::ViewsTable originalViews = m_model->originalViewsData();
-    Latte::Data::ViewsTable currentViews = m_model->currentViewsData();
-    Latte::Data::ViewsTable alteredViews = m_model->alteredViews();
-    Latte::Data::ViewsTable newViews = m_model->newViews();
+    const Latte::Data::ViewsTable originalViews =
+        m_model->originalViewsData();
+    const Latte::Data::ViewsTable currentViews =
+        m_model->currentViewsData();
+    const Latte::Data::ViewsTable alteredViews =
+        m_model->alteredViews();
+    const Latte::Data::ViewsTable newViews =
+        m_model->newViews();
 
     //! Cut and Paste span multiple UI events. Revalidate at the transaction
     //! boundary before importing anything because the origin may have gained
@@ -954,6 +1131,16 @@ void Views::save()
             KMessageWidget::Warning);
         return;
     }
+
+    m_pendingSave.emplace(
+        PendingSaveTransaction{
+            ++m_nextSaveGeneration,
+            0,
+            true,
+            false,
+            currentViews,
+            {},
+        });
 
     QHash<QString, Data::View> newviewsresponses;
     QHash<QString, Data::View> cuttedpastedviews;
@@ -993,11 +1180,11 @@ void Views::save()
     for (int i=0; i<alteredViews.rowCount(); ++i) {
         if (alteredViews[i].state() == Data::View::IsCreated && !alteredViews[i].isMoveOrigin) {
             qDebug() << "org.kde.latte ViewsDialog::save() updating altered view :: " << alteredViews[i];
-            if (!central->updateView(alteredViews[i])) {
-                showDefaultPersistentErrorWarningInlineMessage(
+            if (!submitViewUpdate(
+                    central,
+                    alteredViews[i],
                     i18n("Changes to dock \"%1\" could not be saved. Close and reopen the layout settings, then try again.",
-                         alteredViews[i].name),
-                    KMessageWidget::Warning);
+                         alteredViews[i].name))) {
                 return;
             }
         }
@@ -1055,11 +1242,11 @@ void Views::save()
             //! onscreen_view->onscreen_view
             //! onscreen_view->offscreen_view
             pastedactiveview.setState(pastedactiveview.state(), pastedactiveview.originFile(), destinationlayoutname, pastedactiveview.originView());
-            if (!origin->updateView(pastedactiveview)) {
-                showDefaultPersistentErrorWarningInlineMessage(
+            if (!submitViewUpdate(
+                    origin,
+                    pastedactiveview,
                     i18n("The dock move to layout \"%1\" could not be saved. Close and reopen the layout settings, then try again.",
-                         destinationlayoutname),
-                    KMessageWidget::Warning);
+                         destinationlayoutname))) {
                 return;
             }
         } else {
@@ -1076,19 +1263,18 @@ void Views::save()
                         moveResult)) {
                 qCritical() << "Views controller failed to commit the revalidated move of containment"
                             << originviewid << "to" << destinationlayoutname;
-                showDefaultPersistentErrorWarningInlineMessage(
+                failPendingSave(
                     i18n("The dock move to layout \"%1\" could not be saved. Close and reopen the layout settings, then try again.",
-                         destinationlayoutname),
-                    KMessageWidget::Warning);
+                         destinationlayoutname));
                 return;
             }
             //!is needed in order for layout to not trigger another move
             pastedactiveview.setState(Data::View::IsCreated, QString(), QString(), QString());
-            if (!central->updateView(pastedactiveview)) {
-                showDefaultPersistentErrorWarningInlineMessage(
+            if (!submitViewUpdate(
+                    central,
+                    pastedactiveview,
                     i18n("The moved dock could not be finalized in layout \"%1\". Close and reopen the layout settings, then try again.",
-                         destinationlayoutname),
-                    KMessageWidget::Warning);
+                         destinationlayoutname))) {
                 return;
             }
         }
@@ -1097,27 +1283,14 @@ void Views::save()
         newviewsresponses[tempviewid] = pastedactiveview;
     }
 
-    //! update
-    if ((removedViews.rowCount() > 0) || (newViews.rowCount() > 0)) {
-        m_handler->corona()->layoutsManager()->synchronizer()->syncActiveLayoutsToOriginalFiles();
-    }
-
-    //! update model for newly added views
-    for (const auto vid: newviewsresponses.keys()) {
-        m_model->setOriginalView(vid, newviewsresponses[vid]);
-    }
-
-    //! update all table with latest data and make the original one
-    currentViews = m_model->currentViewsData();
-    m_model->setOriginalData(currentViews);
-
-    //! update model activeness
-    if (central->isActive()) {
-        m_model->updateActiveStatesBasedOn(central);
-    }
-
-    //! Clear any templates keeper data in order to produce reupdates if needed
-    m_handler->layoutsController()->templatesKeeper()->clear();
+    Q_ASSERT(m_pendingSave.has_value());
+    m_pendingSave->newViewResponses =
+        std::move(newviewsresponses);
+    m_pendingSave->syncActiveLayouts =
+        removedViews.rowCount() > 0
+        || newViews.rowCount() > 0;
+    m_pendingSave->collecting = false;
+    finalizePendingSaveIfReady();
 }
 
 QString Views::uniqueViewName(QString name)

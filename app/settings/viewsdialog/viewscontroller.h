@@ -13,6 +13,7 @@
 #include "../../lattecorona.h"
 #include "../../data/viewdata.h"
 #include "../../data/viewstable.h"
+#include "../../view/placementrequeststate.h"
 
 // Qt
 #include <QAbstractItemModel>
@@ -20,8 +21,11 @@
 #include <QItemSelection>
 #include <QList>
 #include <QMetaObject>
+#include <QPointer>
 #include <QSortFilterProxyModel>
 #include <QTableView>
+
+#include <optional>
 
 // KDE
 #include <KMessageWidget>
@@ -30,6 +34,9 @@ namespace Latte {
 class CentralLayout;
 class Corona;
 class ViewsDialog;
+namespace Layout {
+class GenericLayout;
+}
 
 namespace Settings {
 namespace Handler {
@@ -89,10 +96,30 @@ Q_SIGNALS:
     void dataChanged();
 
 private:
+    struct PendingSaveTransaction
+    {
+        quint64 generation{0};
+        int awaitingCompletions{0};
+        bool collecting{true};
+        bool syncActiveLayouts{false};
+        Data::ViewsTable requestedViews;
+        QHash<QString, Data::View> newViewResponses;
+    };
+
     void init();
 
     [[nodiscard]] bool canCommitMoveDestinations(const Data::ViewsTable &newViews) const;
     [[nodiscard]] bool hasValidOriginView(const Data::View &view) const;
+    [[nodiscard]] bool submitViewUpdate(
+        Latte::Layout::GenericLayout *layout,
+        const Data::View &view,
+        const QString &refusalMessage);
+    void finishViewUpdate(
+        quint64 saveGeneration,
+        const QString &refusalMessage,
+        const ViewPart::PlacementRequestCompletion &completion);
+    void failPendingSave(const QString &message);
+    void finalizePendingSaveIfReady();
     CentralLayout *originLayout(const Data::View &view) const;
 
     int rowForId(QString id) const;
@@ -142,6 +169,9 @@ private:
     QStringList m_viewColumnWidths;
 
     KConfigGroup m_storage;
+    quint64 m_nextSaveGeneration{0};
+    std::optional<PendingSaveTransaction>
+        m_pendingSave;
 
     //! context menu actions for docks panels
     QAction *m_cutAction;
