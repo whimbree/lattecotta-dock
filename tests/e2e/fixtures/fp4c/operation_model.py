@@ -127,6 +127,13 @@ class OutputRole(str, Enum):
     SECONDARY = "secondary"
 
 
+@dataclass(frozen=True, slots=True)
+class OutputSnapshot:
+    identity: int
+    name: str
+    geometry: tuple[int, int, int, int]
+
+
 class Edge(IntEnum):
     TOP = 3
     BOTTOM = 4
@@ -1287,23 +1294,175 @@ def parse_bindings(value: Any) -> dict[str, int]:
     return parsed
 
 
-def parse_outputs(value: Any) -> dict[str, int]:
+def parse_outputs(value: Any) -> dict[str, OutputSnapshot]:
     outputs = require_object(value, "outputs")
     if set(outputs) != {role.value for role in OutputRole}:
         fail("outputs must contain exactly primary and secondary")
-    parsed = {
-        role.value: require_int(outputs[role.value], f"output {role.value}", 0)
-        for role in OutputRole
-    }
-    if len(set(parsed.values())) != len(parsed):
+
+    parsed: dict[str, OutputSnapshot] = {}
+    for role in OutputRole:
+        label = f"output {role.value}"
+        record = require_object(outputs[role.value], label)
+        if set(record) != {"id", "name", "geometry"}:
+            fail(f"{label} must contain exactly id, name, and geometry")
+        raw_geometry = require_number_array(
+            record["geometry"], f"{label}.geometry", 4
+        )
+        if any(
+            not isinstance(component, int) or isinstance(component, bool)
+            for component in raw_geometry
+        ):
+            fail(f"{label}.geometry must contain integers")
+        geometry = tuple(raw_geometry)
+        if geometry[2] <= 0 or geometry[3] <= 0:
+            fail(f"{label}.geometry must have positive dimensions")
+        parsed[role.value] = OutputSnapshot(
+            require_int(record["id"], f"{label}.id", 0),
+            require_string(record["name"], f"{label}.name"),
+            geometry,
+        )
+
+    if len({output.identity for output in parsed.values()}) != len(parsed):
         fail("primary and secondary outputs must have distinct identities")
+    if len({output.name for output in parsed.values()}) != len(parsed):
+        fail("primary and secondary outputs must have distinct names")
     return parsed
+
+
+def outputs_to_json(
+    outputs: dict[str, OutputSnapshot],
+) -> dict[str, dict[str, Any]]:
+    return {
+        role: {
+            "id": output.identity,
+            "name": output.name,
+            "geometry": list(output.geometry),
+        }
+        for role, output in outputs.items()
+    }
+
+
+def edge_from_label(label: str) -> Edge:
+    try:
+        return Edge[label.upper()]
+    except KeyError:
+        fail(f"unknown edge {label}")
+
+
+def output_by_identity(
+    outputs: dict[str, OutputSnapshot],
+) -> dict[int, OutputSnapshot]:
+    return {output.identity: output for output in outputs.values()}
+
+
+def expected_reservation_depths(
+    views: dict[int, dict[str, Any]],
+) -> dict[tuple[int, str], int]:
+    depths: dict[tuple[int, str], int] = {}
+    for persistent_id, view in views.items():
+        depth = view["requestedReservationDepth"]
+        if not isinstance(depth, int) or isinstance(depth, bool) or depth <= 0:
+            fail(
+                f"view {persistent_id} has no positive integral requested reservation depth"
+            )
+        key = (view["screenId"], view["edge"])
+        depths[key] = max(depths.get(key, 0), depth)
+    return depths
+
+
+def expected_reservation_geometry(
+    output: OutputSnapshot,
+    edge: Edge,
+    depth: int,
+) -> list[int]:
+    x, y, width, height = output.geometry
+    return {
+        Edge.TOP: [x, y, width, depth],
+        Edge.BOTTOM: [x, y + height - depth, width, depth],
+        Edge.LEFT: [x, y, depth, height],
+        Edge.RIGHT: [x + width - depth, y, depth, height],
+    }[edge]
+
+
+def expected_view_strut_geometry(
+    output: OutputSnapshot,
+    edge: Edge,
+    primary_start: int,
+    primary_length: int,
+    depth: int,
+) -> list[int]:
+    x, y, width, height = output.geometry
+    return {
+        Edge.TOP: [primary_start, y, primary_length, depth],
+        Edge.BOTTOM: [
+            primary_start,
+            y + height - depth,
+            primary_length,
+            depth,
+        ],
+        Edge.LEFT: [x, primary_start, depth, primary_length],
+        Edge.RIGHT: [
+            x + width - depth,
+            primary_start,
+            depth,
+            primary_length,
+        ],
+    }[edge]
+
+
+def expected_reservation_window_geometry(
+    output: OutputSnapshot,
+    edge: Edge,
+    depths: dict[tuple[int, str], int],
+) -> list[int]:
+    _, _, width, height = output.geometry
+    if edge.orientation == "horizontal":
+        return [0, 0, width, 1]
+    top = depths.get((output.identity, Edge.TOP.label), 0)
+    bottom = depths.get((output.identity, Edge.BOTTOM.label), 0)
+    available_height = height - top - bottom
+    if available_height <= 0:
+        fail(
+            f"output {output.identity} has no vertical reservation publisher span"
+        )
+    return [0, 0, 1, available_height]
+
+
+def expected_reservation_anchors(edge: Edge) -> list[str]:
+    return {
+        Edge.TOP: ["top", "left", "right"],
+        Edge.BOTTOM: ["bottom", "left", "right"],
+        Edge.LEFT: ["top", "bottom", "left"],
+        Edge.RIGHT: ["top", "bottom", "right"],
+    }[edge]
+
+
+def expected_global_reservation_window_geometry(
+    output: OutputSnapshot,
+    edge: Edge,
+    depths: dict[tuple[int, str], int],
+) -> list[int]:
+    x, y, width, height = output.geometry
+    if edge is Edge.TOP:
+        return [x, y, width, 1]
+    if edge is Edge.BOTTOM:
+        return [x, y + height - 1, width, 1]
+    top = depths.get((output.identity, Edge.TOP.label), 0)
+    available_height = expected_reservation_window_geometry(
+        output, edge, depths
+    )[3]
+    if edge is Edge.LEFT:
+        return [x, y + top, 1, available_height]
+    return [x + width - 1, y + top, 1, available_height]
 
 
 def assert_visual_window_ownership(payload_value: Any) -> dict[str, Any]:
     payload = require_object(payload_value, "visual ownership input")
-    require_keys(payload, ("snapshot", "windows"), "visual ownership input")
+    require_keys(
+        payload, ("snapshot", "outputs", "windows"), "visual ownership input"
+    )
     snapshot = parse_snapshot(payload["snapshot"])
+    outputs = parse_outputs(payload["outputs"])
     raw_windows = require_array(payload["windows"], "visual windows")
 
     windows: list[dict[str, Any]] = []
@@ -1339,7 +1498,6 @@ def assert_visual_window_ownership(payload_value: Any) -> dict[str, Any]:
         window_ids.add(window_id)
 
     unmatched = list(windows)
-    output_views: dict[int, dict[str, Any]] = {}
     for view in snapshot["views"]:
         persistent_id = view["persistentDockId"]
         expected_geometry = tuple(
@@ -1358,62 +1516,26 @@ def assert_visual_window_ownership(payload_value: Any) -> dict[str, Any]:
             )
         unmatched.remove(candidates[0])
 
-        screen_id = view["screenId"]
-        previous = output_views.get(screen_id)
-        if previous is not None and (
-            previous["screen"] != view["screen"]
-            or previous["screenGeometry"] != view["screenGeometry"]
-        ):
-            fail(f"output {screen_id} has inconsistent runtime geometry")
-        output_views[screen_id] = view
-
+    outputs_by_id = output_by_identity(outputs)
+    views = view_map(snapshot)
+    depths = expected_reservation_depths(views)
     for group in snapshot["reservationGroups"]:
         output_id = group["outputId"]
-        try:
-            edge = Edge[group["edge"].upper()]
-        except KeyError:
-            fail(f"reservation group has unknown edge {group['edge']}")
-        output_view = output_views.get(output_id)
-        if output_view is None:
+        edge = edge_from_label(group["edge"])
+        output = outputs_by_id.get(output_id)
+        if output is None:
             fail(
-                f"reservation group {output_id}/{group['edge']} has no live output"
+                f"reservation group {output_id}/{group['edge']} has no independent output"
             )
-        _, _, expected_width, expected_height = group["windowGeometry"]
-        expected_size = (
-            int(round(expected_width)),
-            int(round(expected_height)),
+        expected_geometry = expected_global_reservation_window_geometry(
+            output, edge, depths
         )
-
-        screen_x, screen_y, screen_width, screen_height = (
-            int(round(component))
-            for component in output_view["screenGeometry"]
-        )
-        screen_right = screen_x + screen_width - 1
-        screen_bottom = screen_y + screen_height - 1
-        candidates = []
-        for window in unmatched:
-            actual_x, actual_y, actual_width, actual_height = window["geometry"]
-            actual_right = actual_x + actual_width - 1
-            actual_bottom = actual_y + actual_height - 1
-            contained = (
-                actual_x >= screen_x
-                and actual_y >= screen_y
-                and actual_right <= screen_right
-                and actual_bottom <= screen_bottom
-            )
-            touches_expected_edge = {
-                Edge.TOP: actual_y == screen_y,
-                Edge.BOTTOM: actual_bottom == screen_bottom,
-                Edge.LEFT: actual_x == screen_x,
-                Edge.RIGHT: actual_right == screen_right,
-            }[edge]
-            if (
-                window["output"] == output_view["screen"]
-                and (actual_width, actual_height) == expected_size
-                and contained
-                and touches_expected_edge
-            ):
-                candidates.append(window)
+        candidates = [
+            window
+            for window in unmatched
+            if list(window["geometry"]) == expected_geometry
+            and window["output"] == output.name
+        ]
         if len(candidates) != 1:
             fail(
                 f"reservation group {output_id}/{group['edge']} compositor "
@@ -1486,7 +1608,7 @@ def assert_lineage(
 def assert_placement(
     state: ModelState,
     bindings: dict[str, int],
-    outputs: dict[str, int],
+    outputs: dict[str, OutputSnapshot],
     views: dict[int, dict[str, Any]],
 ) -> None:
     for expected in state.views:
@@ -1494,14 +1616,19 @@ def assert_placement(
             continue
         view = views[bindings[expected.handle]]
         placement = expected.placement
+        output = outputs[placement.output.value]
         actual = (
             view["screenId"],
+            view["screen"],
+            tuple(view["screenGeometry"]),
             view["edge"],
             view["orientation"],
             view["alignment"],
         )
         wanted = (
-            outputs[placement.output.value],
+            output.identity,
+            output.name,
+            output.geometry,
             placement.edge.label,
             placement.edge.orientation,
             placement.alignment.label_for(placement.edge),
@@ -1630,7 +1757,7 @@ def assert_transition_and_lifecycle(view: dict[str, Any]) -> None:
         view["shadowEnabledBorders"] == view["enabledBorders"]
         and view["shadowPaddingOffsets"] is not None
     )
-    true_fields = (
+    required_true_fields = (
         "floatingGapConfigured",
         "floatingPanelConfigured",
         "floatingPanelEligible",
@@ -1641,8 +1768,15 @@ def assert_transition_and_lifecycle(view: dict[str, Any]) -> None:
         "layerShellPresent",
         "reservationSurfacePresent",
     )
-    if any(view[field] is not True for field in true_fields):
-        fail(f"view {persistent_id} is missing a required floating-panel authority")
+    missing_true_fields = [
+        field for field in required_true_fields
+        if view[field] is not True
+    ]
+    if missing_true_fields:
+        fail(
+            f"view {persistent_id} has false floating-panel authorities: "
+            f"{missing_true_fields}"
+        )
     if (
         view["type"] != "panel"
         or view["visibilityMode"] != "alwaysVisible"
@@ -1739,7 +1873,9 @@ def assert_transition_and_lifecycle(view: dict[str, Any]) -> None:
 
 
 def assert_reservations(
-    snapshot: dict[str, Any], views: dict[int, dict[str, Any]]
+    snapshot: dict[str, Any],
+    views: dict[int, dict[str, Any]],
+    outputs: dict[str, OutputSnapshot],
 ) -> None:
     group_keys = [
         (group["outputId"], group["edge"])
@@ -1754,29 +1890,53 @@ def assert_reservations(
     expected_keys = {(view["screenId"], view["edge"]) for view in views.values()}
     if set(groups) != expected_keys:
         fail(f"reservation groups {sorted(groups)} do not equal {sorted(expected_keys)}")
+    outputs_by_id = output_by_identity(outputs)
+    expected_depths = expected_reservation_depths(views)
     publisher_tokens: list[str] = []
     for key, group in groups.items():
+        output = outputs_by_id.get(key[0])
+        if output is None:
+            fail(f"reservation group {key} has no independent output")
+        edge = edge_from_label(key[1])
         members = sorted(
             view["persistentDockId"]
             for view in views.values()
             if (view["screenId"], view["edge"]) == key
         )
-        depths = [views[persistent_id]["reservationContributionDepth"] for persistent_id in members]
-        group_geometry = group["geometry"]
-        group_window_geometry = group["windowGeometry"]
+        contribution_depths = [
+            views[persistent_id]["reservationContributionDepth"]
+            for persistent_id in members
+        ]
+        requested_depths = [
+            views[persistent_id]["requestedReservationDepth"]
+            for persistent_id in members
+        ]
+        expected_depth = expected_depths[key]
+        expected_geometry = expected_reservation_geometry(
+            output, edge, expected_depth
+        )
+        expected_window_geometry = expected_reservation_window_geometry(
+            output, edge, expected_depths
+        )
+        expected_anchors = expected_reservation_anchors(edge)
         if (
             group["contributorDockIds"] != members
             or group["memberCount"] != len(members)
-            or any(not isinstance(depth, int) or depth <= 0 for depth in depths)
-            or group["publishedDepth"] != max(depths)
+            or any(
+                not isinstance(depth, int)
+                or isinstance(depth, bool)
+                or depth <= 0
+                for depth in contribution_depths
+            )
+            or contribution_depths != requested_depths
+            or group["publishedDepth"] != expected_depth
             or not group["layerShellPresent"]
-            or group_geometry[2] <= 0
-            or group_geometry[3] <= 0
-            or group_window_geometry[2] <= 0
-            or group_window_geometry[3] <= 0
-            or not group["layerShellAnchors"]
+            or group["geometry"] != expected_geometry
+            or group["windowGeometry"] != expected_window_geometry
+            or group["layerShellAnchors"] != expected_anchors
+            or group["layerShellMargins"] != [0, 0, 0, 0]
             or group["layerShellExclusiveEdge"] != group["edge"]
-            or group["layerShellExclusiveZone"] != group["publishedDepth"]
+            or group["layerShellExclusiveZone"] != expected_depth
             or not isinstance(group["publisher"], str)
             or not group["publisher"]
         ):
@@ -1798,8 +1958,23 @@ def assert_reservations(
         }
         for persistent_id in members:
             view = views[persistent_id]
+            depth = view["requestedReservationDepth"]
+            expected_strut = expected_view_strut_geometry(
+                output,
+                edge,
+                view["stablePrimaryAxisStart"],
+                view["stablePrimaryAxisLength"],
+                depth,
+            )
             if (
-                any(view[left] != group[right] for left, right in mirror.items())
+                view["normalThickness"] != depth
+                or view["strutsThickness"] != depth
+                or view["reservationContributionDepth"] != depth
+                or view["publishedStruts"] != expected_strut
+                or any(
+                    view[left] != group[right]
+                    for left, right in mirror.items()
+                )
                 or view["objects"]["reservationPublisher"] != group["publisher"]
             ):
                 fail(f"view {persistent_id} reservation mirror diverged")
@@ -1863,7 +2038,7 @@ def assert_snapshot(
     assert_stable_spans(views)
     for view in views.values():
         assert_transition_and_lifecycle(view)
-    assert_reservations(snapshot, views)
+    assert_reservations(snapshot, views, outputs)
     assert_edit(snapshot, state, bindings)
     return state
 
@@ -1890,7 +2065,7 @@ def resolve_operation(payload_value: Any) -> dict[str, Any]:
     if operation.kind is OperationKind.MOVE:
         assert operation.placement is not None
         target = bound(operation.target)
-        screen_id = outputs[operation.placement.output.value]
+        screen_id = outputs[operation.placement.output.value].identity
         action = {
             "kind": "dbus",
             "method": "setViewPlacement",
@@ -1906,7 +2081,7 @@ def resolve_operation(payload_value: Any) -> dict[str, Any]:
     elif operation.kind is OperationKind.CREATE_LINKED:
         assert operation.placement is not None
         source = bound(operation.source)
-        screen_id = outputs[operation.placement.output.value]
+        screen_id = outputs[operation.placement.output.value].identity
         action = {
             "kind": "dbus",
             "method": "createLinkedView",
@@ -2240,7 +2415,7 @@ def replay_header(payload_value: Any) -> dict[str, Any]:
         "generator": GENERATOR,
         "seed": plan["seed"],
         "planSha256": plan["planSha256"],
-        "outputs": outputs,
+        "outputs": outputs_to_json(outputs),
         "initialBindings": bindings,
     }
 
@@ -2264,7 +2439,11 @@ def validate_replay(path: str, plan_value: Any) -> dict[str, Any]:
     outputs = parse_outputs(header["outputs"])
     bindings = parse_bindings(header["initialBindings"])
     expected_header = replay_header(
-        {"plan": plan, "bindings": bindings, "outputs": outputs}
+        {
+            "plan": plan,
+            "bindings": bindings,
+            "outputs": outputs_to_json(outputs),
+        }
     )
     if header != expected_header:
         fail("replay header does not match the operation plan")
@@ -2276,7 +2455,11 @@ def validate_replay(path: str, plan_value: Any) -> dict[str, Any]:
         operation = require_object(records[2 * index - 1], f"replay operation {index}")
         result = require_object(records[2 * index], f"replay result {index}")
         expected_operation = resolve_operation(
-            {"step": step, "bindings": bindings, "outputs": outputs}
+            {
+                "step": step,
+                "bindings": bindings,
+                "outputs": outputs_to_json(outputs),
+            }
         )["record"]
         if operation != expected_operation:
             fail(f"replay operation/result pair {index} diverges from the plan")
