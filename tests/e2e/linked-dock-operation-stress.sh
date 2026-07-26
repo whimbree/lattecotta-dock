@@ -28,6 +28,7 @@ operations_file=""
 replay_file=""
 bindings_file=""
 outputs_file=""
+layouts_file=""
 baseline_snapshot_file=""
 baseline_projection_file=""
 candidate_plan=""
@@ -46,15 +47,41 @@ import sys
 
 with open(sys.argv[1], encoding="utf-8") as stream:
     state = json.load(stream)
-if set(state) != {"schemaVersion", "transactions"}:
+expected = {
+    "schemaVersion",
+    "journalCreatedGeneration",
+    "commitDecisionGeneration",
+    "journalRetiredGeneration",
+    "transactions",
+}
+if set(state) != expected:
     raise SystemExit("durable move readback has missing or surplus fields")
-if state["schemaVersion"] != 1:
+if state["schemaVersion"] != 2:
     raise SystemExit("durable move readback schema changed")
 if state["transactions"] != []:
     raise SystemExit(
         "operation checkpoint retained a pending durable move: "
         + json.dumps(state["transactions"], sort_keys=True)
     )
+PY
+}
+
+assert_view_move_lifecycle() {
+    local step_file="$1" before_file="$2" after_file="$3"
+    python3 - "$step_file" "$before_file" "$after_file" <<'PY' \
+        | python3 "$MODEL" assert-view-move-lifecycle >/dev/null
+import json
+import sys
+
+def load(path):
+    with open(path, encoding="utf-8") as stream:
+        return json.load(stream)
+
+print(json.dumps({
+    "step": load(sys.argv[1]),
+    "before": load(sys.argv[2]),
+    "after": load(sys.argv[3]),
+}, sort_keys=True, separators=(",", ":")))
 PY
 }
 
@@ -234,7 +261,8 @@ PY
 
 build_resolve_input() {
     local step_file="$1"
-    python3 - "$step_file" "$bindings_file" "$outputs_file" <<'PY'
+    python3 - "$step_file" "$bindings_file" "$outputs_file" \
+        "$layouts_file" <<'PY'
 import json
 import sys
 
@@ -246,6 +274,7 @@ print(json.dumps({
     "step": load(sys.argv[1]),
     "bindings": load(sys.argv[2]),
     "outputs": load(sys.argv[3]),
+    "layouts": load(sys.argv[4]),
 }, sort_keys=True, separators=(",", ":")))
 PY
 }
@@ -270,7 +299,8 @@ PY
 }
 
 build_replay_header_input() {
-    python3 - "$plan_file" "$bindings_file" "$outputs_file" <<'PY'
+    python3 - "$plan_file" "$bindings_file" "$outputs_file" \
+        "$layouts_file" <<'PY'
 import json
 import sys
 
@@ -282,6 +312,7 @@ print(json.dumps({
     "plan": load(sys.argv[1]),
     "bindings": load(sys.argv[2]),
     "outputs": load(sys.argv[3]),
+    "layouts": load(sys.argv[4]),
 }, sort_keys=True, separators=(",", ":")))
 PY
 }
@@ -289,7 +320,7 @@ PY
 build_checkpoint_input() {
     local through="$1" snapshot_file="$2"
     python3 - "$plan_file" "$bindings_file" "$outputs_file" \
-        "$snapshot_file" "$through" <<'PY'
+        "$layouts_file" "$snapshot_file" "$through" <<'PY'
 import json
 import sys
 
@@ -299,10 +330,11 @@ def load(path):
 
 print(json.dumps({
     "plan": load(sys.argv[1]),
-    "through": int(sys.argv[5]),
+    "through": int(sys.argv[6]),
     "bindings": load(sys.argv[2]),
     "outputs": load(sys.argv[3]),
-    "snapshot": load(sys.argv[4]),
+    "layouts": load(sys.argv[4]),
+    "snapshot": load(sys.argv[5]),
 }, sort_keys=True, separators=(",", ":")))
 PY
 }
@@ -708,6 +740,7 @@ operations_file="$artifact_dir/operations.jsonl"
 replay_file="$artifact_dir/replay.jsonl"
 bindings_file="$transaction_dir/bindings.json"
 outputs_file="$transaction_dir/outputs.json"
+layouts_file="$transaction_dir/layouts.json"
 baseline_snapshot_file="$artifact_dir/pristine-baseline.json"
 baseline_projection_file="$artifact_dir/pristine-baseline.projection.json"
 cp -- "$candidate_plan" "$plan_file" \
@@ -716,6 +749,7 @@ cmp -s "$candidate_plan" "$plan_file" \
     || e2e_fail "the artifact FP-4C plan differs from its validated input"
 readonly artifact_dir transaction_dir backup_dir fixture_dir plan_file
 readonly operations_file replay_file bindings_file outputs_file
+readonly layouts_file
 readonly baseline_snapshot_file baseline_projection_file
 
 latest_intent_final_seq="$(
@@ -821,10 +855,119 @@ kwriteconfig6 "${panel_group[@]}" --key useThemePanel true \
     || e2e_fail "could not retain FP-4C theme-panel behavior"
 kwriteconfig6 "${panel_group[@]}" --key panelSize 100 \
     || e2e_fail "could not retain the FP-4C panel background thickness"
+
+origin_layout_file="$(basename -- "$E2E_LAYOUT")"
+origin_layout_name="${origin_layout_file%.layout.latte}"
+destination_layout_name="FP4C Destination"
+layouts_directory="$(dirname -- "$E2E_LAYOUT")"
+destination_layout="$layouts_directory/$destination_layout_name.layout.latte"
+hidden_layout="$layouts_directory/.multiple-layouts_hidden.layout.latte"
+cp -- "$E2E_REPO/shell/package/contents/templates/Empty.layout.latte" \
+    "$destination_layout" \
+    || e2e_fail "could not stage the empty FP-4C destination layout"
+cp -- "$E2E_REPO/shell/package/contents/templates/.multiple-layouts_hidden.layout.latte" \
+    "$hidden_layout" \
+    || e2e_fail "could not stage the empty FP-4C multiple-layout repository"
+kwriteconfig6 --file "$E2E_LAYOUT" --group LayoutSettings \
+    --key activities '{0}' \
+    || e2e_fail "could not activate the FP-4C origin on all activities"
+kwriteconfig6 --file "$destination_layout" --group LayoutSettings \
+    --key activities '{0}' \
+    || e2e_fail "could not activate the FP-4C destination on all activities"
+kwriteconfig6 --file "$E2E_CONFIG_HOME/lattedockrc" \
+    --group UniversalSettings --key memoryUsage 1 \
+    || e2e_fail "could not enable FP-4C multiple-layout mode"
+
 e2e_dock_start 90 \
-    || e2e_fail "the configured partial floating FP-4C panel did not start"
+    || e2e_fail "the configured two-layout FP-4C fixture did not start"
+
+active_layouts_file="$artifact_dir/active-layouts.json"
+e2e_json layoutsData >"$active_layouts_file" \
+    || e2e_fail "could not read the active FP-4C layouts"
+python3 - "$active_layouts_file" "$layouts_file" \
+    "$origin_layout_name" "$destination_layout_name" <<'PY' \
+    || e2e_fail "the FP-4C fixture did not activate exactly two layouts"
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as stream:
+    state = json.load(stream)
+if state.get("memoryUsage") != "multiple":
+    raise SystemExit("FP-4C did not enter multiple-layout mode")
+active = {
+    layout["name"]: layout
+    for layout in state.get("layouts", [])
+    if layout.get("isActive")
+}
+expected = {sys.argv[3], sys.argv[4]}
+if set(active) != expected:
+    raise SystemExit(
+        f"expected active layouts {sorted(expected)}, got {sorted(active)}"
+    )
+if any(layout.get("activities") != ["{0}"] for layout in active.values()):
+    raise SystemExit("both FP-4C layouts must be active on all activities")
+with open(sys.argv[2], "w", encoding="utf-8") as stream:
+    json.dump({
+        "origin": sys.argv[3],
+        "destination": sys.argv[4],
+    }, stream, sort_keys=True, separators=(",", ":"))
+    stream.write("\n")
+PY
+
+runtime_views_file="$artifact_dir/runtime-root.json"
+e2e_json viewsData >"$runtime_views_file" \
+    || e2e_fail "could not resolve the FP-4C root after multiple-layout activation"
+root_id="$(
+    python3 - "$runtime_views_file" "$origin_layout_name" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as stream:
+    views = json.load(stream)
+matches = [
+    view for view in views
+    if view.get("layout") == sys.argv[2]
+    and view.get("type") == "panel"
+    and not view.get("isCloned")
+]
+if len(views) != 1 or len(matches) != 1:
+    raise SystemExit(
+        "multiple-layout activation did not retain exactly one independent "
+        f"origin panel: {views!r}"
+    )
+view = matches[0]
+if view.get("inStartup") or view.get("isOffScreen"):
+    raise SystemExit("the remapped FP-4C root is not ready on its output")
+print(view["containmentId"])
+PY
+)" || e2e_fail "could not bind the remapped FP-4C runtime root identity"
+[[ "$root_id" =~ ^[1-9][0-9]*$ ]] \
+    || e2e_fail "the remapped FP-4C runtime root identity is malformed"
 e2e_call setViewVisibilityMode us "$root_id" alwaysVisible >/dev/null \
     || e2e_fail "could not set the FP-4C root to Always Visible"
+for ((visibility_attempt = 0; visibility_attempt < 40; ++visibility_attempt)); do
+    e2e_json viewsData >"$runtime_views_file" \
+        || e2e_fail "could not observe the FP-4C visibility transition"
+    if python3 - "$runtime_views_file" "$root_id" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as stream:
+    views = json.load(stream)
+matching = [
+    view for view in views
+    if view.get("containmentId") == int(sys.argv[2])
+]
+if len(matching) != 1 or matching[0].get("visibilityMode") != "alwaysVisible":
+    raise SystemExit(1)
+PY
+    then
+        break
+    fi
+    sleep 0.25
+done
+(( visibility_attempt < 40 )) \
+    || e2e_fail "the FP-4C root did not enter Always Visible mode"
 
 screens_file="$artifact_dir/screens.json"
 e2e_json screensData >"$screens_file" \
@@ -890,6 +1033,8 @@ while IFS= read -r operation_row; do
     before_file="$step_dir/$step_tag.before.json"
     after_file="$step_dir/$step_tag.after.json"
     result_file="$step_dir/$step_tag.result.json"
+    view_move_before_file="$step_dir/$step_tag.view-move.before.json"
+    view_move_after_file="$step_dir/$step_tag.view-move.after.json"
     printf '%s\n' "$operation_row" >"$step_file"
 
     build_resolve_input "$step_file" \
@@ -901,6 +1046,8 @@ while IFS= read -r operation_row; do
         || e2e_fail "FP-4C operation $step_number has no typed operation kind"
     checkpoint="$(json_scalar "$step_file" checkpoint)" \
         || e2e_fail "FP-4C operation $step_number has no checkpoint policy"
+    assert_no_pending_view_move "$view_move_before_file" \
+        || e2e_fail "FP-4C operation $step_number started with an invalid durable move lifecycle"
 
     if [[ -z "$pending_before_file" ]]; then
         snapshot >"$before_file" \
@@ -1027,6 +1174,11 @@ while IFS= read -r operation_row; do
             pending_resolved=()
             pending_before_file=""
         fi
+        assert_no_pending_view_move "$view_move_after_file" \
+            || e2e_fail "unchecked FP-4C operation $step_number retained a durable move transaction"
+        assert_view_move_lifecycle \
+            "$step_file" "$view_move_before_file" "$view_move_after_file" \
+            || e2e_fail "unchecked FP-4C operation $step_number changed the durable move lifecycle"
         continue
     fi
     [[ "$checkpoint" == true ]] \
@@ -1061,9 +1213,11 @@ while IFS= read -r operation_row; do
     wait_for_checkpoint \
         "$step_number" "$last_checkpoint_file" "$checkpoint_attempts" \
         || e2e_fail "FP-4C operation checkpoint $step_number did not converge"
-    assert_no_pending_view_move \
-        "$step_dir/$step_tag.view-move-transactions.json" \
+    assert_no_pending_view_move "$view_move_after_file" \
         || e2e_fail "FP-4C operation checkpoint $step_number retained a durable move transaction"
+    assert_view_move_lifecycle \
+        "$step_file" "$view_move_before_file" "$view_move_after_file" \
+        || e2e_fail "FP-4C operation checkpoint $step_number has an incomplete durable move lifecycle"
     if [[ "$step_number" == "$latest_intent_final_seq" ]]; then
         assert_latest_intent_probe \
             "$pending_before_file" "$last_checkpoint_file" \

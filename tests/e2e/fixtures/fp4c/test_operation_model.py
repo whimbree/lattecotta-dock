@@ -57,6 +57,10 @@ class OperationModelTest(unittest.TestCase):
                 "geometry": [300, -700, 1000, 1400],
             },
         }
+        self.layouts = {
+            "origin": "My Layout",
+            "destination": "Other Layout",
+        }
         self.snapshot = self.make_snapshot(
             self.final_state, self.bindings, self.outputs
         )
@@ -186,11 +190,12 @@ class OperationModelTest(unittest.TestCase):
             link_placement = None
             linked_ids = sorted(bindings[handle] for handle in member_handles)
 
+        layout_name = self.layouts[expected.layout.value]
         objects = {
             "view": f"view-{persistent_id}",
             "containment": f"containment-{persistent_id}",
             "configuration": f"configuration-{persistent_id}",
-            "layout": "shared-layout",
+            "layout": f"layout-{expected.layout.value}",
             "layoutController": f"layout-controller-{persistent_id}",
             "geometryController": f"geometry-controller-{persistent_id}",
             "editController": f"edit-controller-{persistent_id}",
@@ -216,7 +221,7 @@ class OperationModelTest(unittest.TestCase):
             "linkPlacement": link_placement,
             "screensGroup": "single",
             "linkedDockIds": linked_ids,
-            "layout": "My Layout",
+            "layout": layout_name,
             "screenId": screen_id,
             "screen": output["name"],
             "onPrimary": (
@@ -653,6 +658,7 @@ class OperationModelTest(unittest.TestCase):
                     "plan": self.plan,
                     "bindings": {"root": recorded_identities["root"]},
                     "outputs": self.outputs,
+                    "layouts": self.layouts,
                 }
             )
         ]
@@ -666,6 +672,7 @@ class OperationModelTest(unittest.TestCase):
                         "step": raw,
                         "bindings": bindings,
                         "outputs": self.outputs,
+                        "layouts": self.layouts,
                     }
                 )["record"]
             )
@@ -736,6 +743,231 @@ class OperationModelTest(unittest.TestCase):
             for left_index, left in enumerate(placements):
                 for right in placements[left_index + 1 :]:
                     self.assertFalse(model.placements_overlap(left, right))
+
+    def test_plan_moves_an_independent_dock_across_both_layouts(self) -> None:
+        layout_steps = [
+            raw
+            for raw in self.plan["operations"]
+            if raw["operation"]["kind"]
+            == model.OperationKind.MOVE_LAYOUT.value
+        ]
+        self.assertEqual(len(self.plan["operations"]), 78)
+        self.assertEqual(
+            [step["operation"]["layout"] for step in layout_steps],
+            [
+                model.LayoutRole.DESTINATION.value,
+                model.LayoutRole.ORIGIN.value,
+            ],
+        )
+
+        destination_step = layout_steps[0]
+        destination_state = model.state_through(
+            self.plan,
+            destination_step["seq"],
+        )
+        self.assertEqual(
+            destination_state.by_handle()["root"].layout,
+            model.LayoutRole.DESTINATION,
+        )
+        snapshot = self.make_snapshot(
+            destination_state,
+            {"root": 1},
+            self.outputs,
+        )
+        model.assert_snapshot(
+            self.plan,
+            destination_step["seq"],
+            {"root": 1},
+            self.outputs,
+            snapshot,
+            self.layouts,
+        )
+        snapshot["views"][0]["layout"] = self.layouts["origin"]
+        self.assert_refused(
+            lambda: model.assert_snapshot(
+                self.plan,
+                destination_step["seq"],
+                {"root": 1},
+                self.outputs,
+                snapshot,
+                self.layouts,
+            ),
+            "expected 'Other Layout'",
+        )
+
+    def test_layout_move_resolves_to_the_real_durable_action(self) -> None:
+        destination_step = next(
+            raw
+            for raw in self.plan["operations"]
+            if raw["operation"].get("layout")
+            == model.LayoutRole.DESTINATION.value
+        )
+        resolved = model.resolve_operation(
+            {
+                "step": destination_step,
+                "bindings": {"root": 19},
+                "outputs": self.outputs,
+                "layouts": self.layouts,
+            }
+        )
+        self.assertEqual(
+            resolved["action"],
+            {
+                "kind": "dbus",
+                "method": "moveViewToLayout",
+                "signature": "us",
+                "args": [19, "Other Layout"],
+            },
+        )
+        self.assertEqual(
+            resolved["record"]["resolved"]["layout"],
+            model.LayoutRole.DESTINATION.value,
+        )
+
+    @staticmethod
+    def view_move_lifecycle(
+        created: int,
+        committed: int,
+        retired: int,
+        transactions: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "schemaVersion": model.VIEW_MOVE_LIFECYCLE_SCHEMA_VERSION,
+            "journalCreatedGeneration": str(created),
+            "commitDecisionGeneration": str(committed),
+            "journalRetiredGeneration": str(retired),
+            "transactions": transactions or [],
+        }
+
+    def test_layout_move_requires_one_complete_durable_lifecycle(self) -> None:
+        destination_step = next(
+            raw
+            for raw in self.plan["operations"]
+            if raw["operation"].get("layout")
+            == model.LayoutRole.DESTINATION.value
+        )
+        verdict = model.assert_view_move_lifecycle(
+            {
+                "step": destination_step,
+                "before": self.view_move_lifecycle(3, 3, 3),
+                "after": self.view_move_lifecycle(4, 4, 4),
+            }
+        )
+        self.assertEqual(
+            verdict["kind"],
+            model.OperationKind.MOVE_LAYOUT.value,
+        )
+
+        for generation in model.VIEW_MOVE_LIFECYCLE_GENERATIONS:
+            incomplete = self.view_move_lifecycle(4, 4, 4)
+            incomplete[generation] = "3"
+            self.assert_refused(
+                lambda incomplete=incomplete: model.assert_view_move_lifecycle(
+                    {
+                        "step": destination_step,
+                        "before": self.view_move_lifecycle(3, 3, 3),
+                        "after": incomplete,
+                    }
+                ),
+                generation,
+            )
+
+    def test_non_layout_operations_cannot_advance_move_lifecycle(self) -> None:
+        placement_step = next(
+            raw
+            for raw in self.plan["operations"]
+            if raw["operation"]["kind"] == model.OperationKind.MOVE.value
+        )
+        stable = self.view_move_lifecycle(2, 2, 2)
+        model.assert_view_move_lifecycle(
+            {
+                "step": placement_step,
+                "before": stable,
+                "after": copy.deepcopy(stable),
+            }
+        )
+        advanced = self.view_move_lifecycle(3, 2, 2)
+        self.assert_refused(
+            lambda: model.assert_view_move_lifecycle(
+                {
+                    "step": placement_step,
+                    "before": stable,
+                    "after": advanced,
+                }
+            ),
+            "expected 0",
+        )
+
+    def test_restart_resets_move_lifecycle_and_pending_moves_are_refused(
+        self,
+    ) -> None:
+        restart_step = next(
+            raw
+            for raw in self.plan["operations"]
+            if raw["operation"]["kind"]
+            == model.OperationKind.RESTART.value
+        )
+        model.assert_view_move_lifecycle(
+            {
+                "step": restart_step,
+                "before": self.view_move_lifecycle(2, 2, 2),
+                "after": self.view_move_lifecycle(0, 0, 0),
+            }
+        )
+        pending = self.view_move_lifecycle(
+            1,
+            1,
+            0,
+            [{"transactionId": "pending"}],
+        )
+        self.assert_refused(
+            lambda: model.assert_view_move_lifecycle(
+                {
+                    "step": restart_step,
+                    "before": self.view_move_lifecycle(2, 2, 2),
+                    "after": pending,
+                }
+            ),
+            "retained a pending",
+        )
+
+    def test_linked_relationship_cannot_cross_layouts_alone(self) -> None:
+        state = model.ModelState(
+            (
+                model.ExpectedView(
+                    "root",
+                    "linkedRoot",
+                    None,
+                    model.Placement(
+                        model.OutputRole.PRIMARY,
+                        model.Edge.BOTTOM,
+                        model.Alignment.CENTER,
+                    ),
+                ),
+                model.ExpectedView(
+                    "member",
+                    "linkedMember",
+                    "root",
+                    model.Placement(
+                        model.OutputRole.SECONDARY,
+                        model.Edge.LEFT,
+                        model.Alignment.CENTER,
+                    ),
+                ),
+            )
+        )
+        self.assert_refused(
+            lambda: model.apply_operation(
+                state,
+                model.Operation(
+                    seq=1,
+                    kind=model.OperationKind.MOVE_LAYOUT,
+                    target="member",
+                    layout=model.LayoutRole.DESTINATION,
+                ),
+            ),
+            "linked relationship",
+        )
 
     def test_numeric_primary_move_pins_instead_of_following_primary(self) -> None:
         initial = model.state_through(self.plan, 0)
@@ -1902,6 +2134,7 @@ class OperationModelTest(unittest.TestCase):
                 "step": create,
                 "bindings": {"root": 1},
                 "outputs": self.outputs,
+                "layouts": self.layouts,
             }
         )
         self.assertEqual(resolved["action"]["method"], "createLinkedView")

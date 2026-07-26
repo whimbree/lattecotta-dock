@@ -908,6 +908,9 @@ private:
         const QString durableMoveReadback = normalizedCode(functionBody(
             recipeSource,
             QStringLiteral("assert_no_pending_view_move()")));
+        const QString durableMoveLifecycle = normalizedCode(functionBody(
+            recipeSource,
+            QStringLiteral("assert_view_move_lifecycle()")));
         const QString model = normalizedCode(modelSource);
 
         const qsizetype privateSessionGuard =
@@ -1019,18 +1022,30 @@ private:
             && durableMoveReadback.contains(QStringLiteral(
                    "e2e_jsonviewMoveTransactionsData"))
             && durableMoveReadback.contains(QStringLiteral(
-                   "set(state)!={\"schemaVersion\",\"transactions\"}"))
+                   "\"journalCreatedGeneration\""))
             && durableMoveReadback.contains(QStringLiteral(
-                   "state[\"schemaVersion\"]!=1"))
+                   "\"commitDecisionGeneration\""))
+            && durableMoveReadback.contains(QStringLiteral(
+                   "\"journalRetiredGeneration\""))
+            && durableMoveReadback.contains(QStringLiteral(
+                   "state[\"schemaVersion\"]!=2"))
             && durableMoveReadback.contains(QStringLiteral(
                    "state[\"transactions\"]!=[]"))
+            && durableMoveLifecycle.contains(QStringLiteral(
+                   "python3\"$MODEL\"assert-view-move-lifecycle"))
             && recipe.count(QStringLiteral(
                    "assert_no_pending_view_move"))
-                == 3
+                == 5
             && recipe.contains(QStringLiteral(
-                   "$step_tag.view-move-transactions.json"))
+                   "$step_tag.view-move.before.json"))
+            && recipe.contains(QStringLiteral(
+                   "$step_tag.view-move.after.json"))
             && recipe.contains(QStringLiteral(
                    "final.view-move-transactions.json"))
+            && recipe.contains(QStringLiteral(
+                   "--groupUniversalSettings--keymemoryUsage1"))
+            && recipe.contains(QStringLiteral(
+                   "e2e_jsonlayoutsData"))
             && recipe.contains(QStringLiteral(
                    "\"name\":screen[\"name\"]"))
             && recipe.contains(QStringLiteral(
@@ -1040,6 +1055,17 @@ private:
             && !model.contains(QStringLiteral("\"visibleGeometry\""))
             && model.contains(QStringLiteral(
                    "classOperationKind(str,Enum):"))
+            && model.contains(QStringLiteral(
+                   "MOVE_LAYOUT=\"moveLayout\""))
+            && model.contains(QStringLiteral(
+                   "\"method\":\"moveViewToLayout\""))
+            && model.contains(QStringLiteral(
+                   "ifoperation.kindisOperationKind.MOVE_LAYOUT"))
+            && model.contains(QStringLiteral(
+                   "expected_delta=(1ifoperation.kindis"
+                   "OperationKind.MOVE_LAYOUTelse0)"))
+            && model.contains(QStringLiteral(
+                   "observed_delta!=expected_delta"))
             && model.contains(QStringLiteral(
                    "iflen(group_keys)!=len(set(group_keys)):"))
             && model.contains(QStringLiteral(
@@ -2731,6 +2757,33 @@ void SourceGuardTest::linkedOperationStormE2e_sourceGuardRejectsControlledMutati
             missingDurableMoveReadback,
             model),
         "removing durable move readback must fail the FP-4C guard");
+
+    QString missingCrossLayoutAction = model;
+    const QString crossLayoutAction =
+        QStringLiteral("\"method\": \"moveViewToLayout\"");
+    QCOMPARE(missingCrossLayoutAction.count(crossLayoutAction), 1);
+    missingCrossLayoutAction.replace(
+        crossLayoutAction,
+        QStringLiteral("\"method\": \"setViewPlacement\""));
+    QVERIFY2(
+        !matchesLinkedOperationStormE2eContract(
+            recipe,
+            missingCrossLayoutAction),
+        "replacing the durable cross-layout action must fail the FP-4C guard");
+
+    QString missingLifecycleVerdict = recipe;
+    const QString lifecycleVerdict =
+        QStringLiteral(
+            "python3 \"$MODEL\" assert-view-move-lifecycle");
+    QCOMPARE(missingLifecycleVerdict.count(lifecycleVerdict), 1);
+    missingLifecycleVerdict.replace(
+        lifecycleVerdict,
+        QStringLiteral("python3 \"$MODEL\" assert-checkpoint"));
+    QVERIFY2(
+        !matchesLinkedOperationStormE2eContract(
+            missingLifecycleVerdict,
+            model),
+        "removing durable move lifecycle deltas must fail the FP-4C guard");
 
     QString missingTrap = recipe;
     const QString trap = QStringLiteral("trap cleanup EXIT");
