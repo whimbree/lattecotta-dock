@@ -4861,8 +4861,9 @@ prerequisites in the phases above are done.
       KConfig writes through its non-atomic direct branch. Commit `cb9380566`
       mirrors both backend selections, pins ownership at compile time, and
       supplies non-vacuous canonical-target coverage. Its focused tests and
-      exact replay pass; replacement canonical gate and fresh critical
-      rereview remain open.
+      exact replay pass. The replacement canonical gate passed at exact branch
+      head `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`; fresh critical rereview
+      remains open.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
       7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566
