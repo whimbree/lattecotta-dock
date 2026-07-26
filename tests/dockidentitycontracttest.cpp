@@ -439,9 +439,18 @@ outputMigrationUsesLayerShellAuthority()
         QStringLiteral(
             "Positioner::preparePlacementApplication")));
     QVERIFY(prepare.contains(QStringLiteral(
-        "m_screenToFollow!=plan.outputScreen")));
-    QVERIFY(prepare.contains(QStringLiteral(
-        "layerShellNeedsOutput(plan.outputScreen)")));
+        "outputOwnershipIsNeeded(plan.outputScreen)")));
+    QVERIFY(!prepare.contains(QStringLiteral(
+        "outputPlacementIsNeeded(")));
+
+    const QString observation = normalized(functionBody(
+        positionerSource,
+        QStringLiteral(
+            "bool Positioner::outputPlacementIsNeeded")));
+    QVERIFY(observation.contains(QStringLiteral(
+        "outputOwnershipIsNeeded(destination)")));
+    QVERIFY(observation.contains(QStringLiteral(
+        "m_view->screen()!=destination")));
 
     const QString layerShellSource =
         readFile(QStringLiteral(

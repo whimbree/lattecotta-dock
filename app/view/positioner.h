@@ -195,6 +195,8 @@ private:
     void applyOutputPlacement(
         QScreen *destination,
         bool followsPrimary);
+    [[nodiscard]] bool outputOwnershipIsNeeded(
+        const QScreen *destination) const;
     [[nodiscard]] bool outputPlacementIsNeeded(
         const QScreen *destination) const;
     void applyUnanimatedPlacementGeneration();
