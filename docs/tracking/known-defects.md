@@ -3068,6 +3068,28 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   failed at the captured-prior contract, then passed after restoring the fix.
 - SEVERITY: release blocker.
 
+### D229 - Cross-layout placement could report success after persistence failure
+- STATUS: OPEN on `test/fp4c-operation-storm`; PR #128 independent-review
+  blocker.
+- FOUND: 2026-07-26, required independent follow-up review of the D227
+  placement preflight correction.
+- SYMPTOM: a move to a read-only destination layout can remove the dock from
+  the origin file, fail to persist destination ownership, return success, and
+  lose the dock after restart.
+- ROOT: `Manager::validatesViewMove()` validates runtime ownership but not the
+  two layout persistence endpoints. After runtime mutation,
+  `GenericLayout::unassignFromLayout()` and `assignToLayout()` only log
+  `syncToLayoutFile()` failure and continue, so `Manager::moveView()` can pass
+  its runtime-only postcondition despite split durable ownership.
+- REQUIRED FIX: preflight both persistence endpoints before the first layout
+  mutation. Once mutation starts, persistence failure must be an invariant
+  failure or restore complete runtime and durable ownership; it cannot remain
+  a recoverable success path.
+- REQUIRED EVIDENCE: exercise a real read-only layout-file endpoint, prove the
+  move preflight refuses before unassignment, and reject any non-fatal
+  persistence failure after mutation.
+- SEVERITY: release blocker.
+
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
 - STATUS: FIXED ON `test/fp4c-operation-storm` at `4ca4a33b0`; PR #128
   canonical gate passed at `0b2d069a3`, and independent follow-up review

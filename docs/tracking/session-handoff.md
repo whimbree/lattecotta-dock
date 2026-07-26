@@ -142,7 +142,16 @@ The replacement canonical gate exited 0 at exact corrected code head
 `0b2d069a36926e5190652db165a19bc2da9e031d`. All 122 CTest entries,
 QML and coverage ratchets, visual probes, the complete ASan/UBSan build, four
 nested sanitizer recipes, package provenance controls, and matrix refusals
-passed. Only the independent follow-up review and PR landing remain open.
+passed.
+
+The required independent follow-up review returned `DO NOT MERGE` for D229
+(cross-layout placement could report success after persistence failure).
+`Manager::validatesViewMove()` does not preflight either layout file.
+`GenericLayout` then logs and continues if source or destination persistence
+fails after runtime ownership has already changed. A read-only destination can
+therefore leave the origin removal durable, omit destination ownership, return
+success, and lose the dock after restart. D229 is the current PR #128 release
+blocker.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a

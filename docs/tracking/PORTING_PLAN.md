@@ -4783,6 +4783,11 @@ prerequisites in the phases above are done.
       derive placement and reservation ownership from assigned and LayerShell
       output state.
       Commits: 4ca4a33b0
+- [ ] Fix D229 (cross-layout placement could report success after persistence
+      failure). Preflight both layout files before mutation and make any
+      post-mutation persistence failure an invariant failure or restore both
+      runtime and durable ownership.
+      Commits:
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
