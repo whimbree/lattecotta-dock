@@ -125,9 +125,18 @@ neighboring output. Assigned and LayerShell ownership still correctly named
 Virtual-0, but preflight reused the broader observation-reconciliation
 predicate and rejected the placement as an inconsistent new output
 requirement. Relocation generation 5 remained hidden and unapplied on the
-right edge instead of committing top/Justify. The fixture transaction restored
-the exact pristine nested configuration. D228 remains the current PR #128
-release blocker.
+right edge instead of committing top/Justify.
+
+D228 is fixed at `4ca4a33b0`. Placement transaction preflight now distinguishes
+assigned and LayerShell output ownership from transient QWindow observation.
+The ordinary reconciliation path still observes QWindow drift, but a hide-time
+observation cannot create reservation ownership. Seven focused tests and the
+production build pass, and restoring the old predicate fails the source
+contract. The corrected exact seed 127934575 replay completes all 76 operations
+and exact cleanup in nested KWin. Its replay and snapshots are saved in
+`linked-dock-operation-stress.seed-127934575.run-P26Fo2`. The replacement
+canonical gate and required independent follow-up review remain open for PR
+#128.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a

@@ -205,9 +205,13 @@ and PR #126 landed FP-4B.
       remapping) and D227 (layout mutation preceded destination-output
       preflight).
       Commits: c51b3ec5f, 7578f1e4f
-- [ ] Fix D228 (placement preflight promoted a hide-time QWindow observation
-      to output ownership), rerun the exact operation storm and canonical
-      gate, then obtain the required independent follow-up review.
+- [x] Fix D228 (placement preflight promoted a hide-time QWindow observation
+      to output ownership) and rerun the exact operation storm.
+      Commit: 4ca4a33b0
+      Evidence: all 76 operations and exact cleanup pass for seed 127934575 in
+      nested KWin.
+- [ ] Rerun the canonical gate after the D226, D227, and D228 corrections,
+      then obtain the required independent follow-up review.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent

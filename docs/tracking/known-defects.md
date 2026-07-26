@@ -3069,7 +3069,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
-- STATUS: OPEN on `test/fp4c-operation-storm`; PR #128 replay blocker.
+- STATUS: FIXED ON `test/fp4c-operation-storm` at `4ca4a33b0`; PR #128
+  canonical gate and independent follow-up review remain open.
 - FOUND: 2026-07-25, exact seed 127934575 replay after the D226 and D227
   corrections.
 - SYMPTOM: operation 33 leaves independent dock 14 hidden on the right edge
@@ -3082,13 +3083,17 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   though the assigned output and LayerShell output still own the correct
   destination. The preflight rejects its earlier projection and strands the
   relocation.
-- REQUIRED FIX: keep assigned-output and LayerShell mismatches authoritative
+- FIX: keep assigned-output and LayerShell mismatches authoritative
   for placement and reservation ownership. A QWindow mismatch may request
   observation reconciliation when projected before relocation, but a
   hide-induced observation must not create output ownership during preflight.
-- REQUIRED EVIDENCE: pin the authority decision independently, reject the old
-  QWindow-only promotion, and complete all 76 operations plus exact cleanup in
-  seed 127934575.
+- EVIDENCE: the production build and seven focused placement, identity, and
+  reservation tests pass. A negative control that restored the QWindow-aware
+  observation predicate to transaction preflight failed
+  `DockIdentityContractTest`. The corrected exact seed 127934575 nested-KWin
+  replay completed all 76 operations and exact cleanup. Its replay and
+  snapshots are saved in
+  `linked-dock-operation-stress.seed-127934575.run-P26Fo2`.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
