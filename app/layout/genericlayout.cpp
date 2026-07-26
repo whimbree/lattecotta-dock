@@ -431,12 +431,10 @@ Latte::View *GenericLayout::viewForContainment(uint id) const
         }
     }
 
-    for(auto view : m_waitingLatteViews) {
-        if (view && view->containment()->id() == id) {
-            return view;
-        }
-    }
-
+    //! Suspended removal Views are not runtime action targets. Plasma's Undo
+    //! signal reaches destroyedChanged() through the containment directly;
+    //! exposing parked Views here lets D-Bus mutations edit a tombstoned
+    //! object outside the active ownership map.
     return nullptr;
 }
 
@@ -861,6 +859,9 @@ void GenericLayout::containmentDestroyed(QObject *cont)
     if (containment) {
         cancelRemovalCommit(containment);
         m_removalSnapshots.remove(containment);
+        m_removalTransactions.remove(containment);
+        m_finalizingRemovalContainments.remove(
+            containment);
 
         int containmentIndex = m_containments.indexOf(containment);
 
@@ -904,6 +905,12 @@ void GenericLayout::destroyedChanged(bool destroyed)
         return;
     }
 
+    if (destroyed
+            && m_finalizingRemovalContainments
+                .contains(containment)) {
+        return;
+    }
+
     const auto memoryUsage = m_corona->layoutsManager()->memoryUsage();
     Latte::View *view = destroyed
             ? m_latteViews.value(containment)
@@ -911,30 +918,43 @@ void GenericLayout::destroyedChanged(bool destroyed)
     const QString removalSnapshot =
         m_removalSnapshots.value(containment);
 
-    if (!destroyed
-            && memoryUsage == MemoryUsage::SingleLayout
-            && view) {
-        if (removalSnapshot.isEmpty()) {
-            qCritical() << "layout:" << name()
-                        << "cannot restore containment"
-                        << containment->id()
-                        << "without its prepared removal snapshot";
-            return;
+    //! Viewless child containments participate in Plasma's recursive Undo,
+    //! but they do not own a dock snapshot or runtime View. Their parent root
+    //! transaction restores them. In multiple-layout mode the projection is
+    //! delayed until the root and every child have left transient state.
+    if (!view) {
+        const auto *const parentApplet =
+            qobject_cast<const Plasma::Applet *>(
+                containment->parent());
+        const auto *const rootContainment =
+            parentApplet
+            ? parentApplet->containment()
+            : nullptr;
+        const bool rootTransactionOwnsProjection =
+            rootContainment
+            && m_removalTransactions.contains(
+                rootContainment);
+        if (destroyed
+                && !rootTransactionOwnsProjection) {
+            scheduleRemovalCommit(containment);
+        } else {
+            cancelRemovalCommit(containment);
         }
-        const KSharedConfigPtr activeConfig = activeSingleLayoutConfig();
-        if (!activeConfig
-                || !Layouts::Storage::self()->restoreView(
-                    activeConfig, removalSnapshot)) {
-            qCritical() << "layout:" << name()
-                        << "could not restore containment"
-                        << containment->id()
-                        << "before removal Undo";
-            keepViewRemovedAfterFailedUndo(containment, removalSnapshot);
-            return;
+        if (memoryUsage == MemoryUsage::MultipleLayouts
+                && !rootTransactionOwnsProjection) {
+            scheduleMultipleLayoutProjectionAfterTransientState(
+                destroyed
+                    ? "viewless containment removal"
+                    : "viewless containment Undo");
         }
+        return;
     }
 
     if (destroyed) {
+        auto &transaction =
+            m_removalTransactions[containment];
+        const auto token =
+            transaction.beginRemoval();
         if (view
                 && memoryUsage == MemoryUsage::SingleLayout
                 && removalSnapshot.isEmpty()) {
@@ -948,50 +968,267 @@ void GenericLayout::destroyedChanged(bool destroyed)
                         << "could not suspend containment"
                         << containment->id()
                         << "for reversible removal";
+            if (transaction
+                    .queueRemovalFinalizationIfCurrent(
+                        token)) {
+                scheduleRemovalFinalization(
+                    containment,
+                    token,
+                    memoryUsage,
+                    memoryUsage
+                        == MemoryUsage::SingleLayout
+                        ? activeSingleLayoutConfig()
+                        : KSharedConfigPtr{},
+                    removalSnapshot,
+                    "runtime suspension failed");
+            }
             return;
         }
         view = m_latteViews.take(containment);
         if (view) {
             m_waitingLatteViews[containment] = view;
         }
-        scheduleRemovalCommit(containment);
-    } else {
-        if (view && !view->resumeFromReversibleRemoval()) {
-            qCritical() << "layout:" << name()
-                        << "could not restore containment"
-                        << containment->id()
-                        << "after removal Undo";
-            keepViewRemovedAfterFailedUndo(containment, removalSnapshot);
-            return;
-        }
-        view = m_waitingLatteViews.take(containment);
-        if (view) {
-            m_latteViews[containment] = view;
-        }
-        cancelRemovalCommit(containment);
-    }
 
-    if (view) {
+        if (view
+                && memoryUsage
+                    == MemoryUsage::SingleLayout
+                && removalSnapshot.isEmpty()) {
+            if (transaction
+                    .queueRemovalFinalizationIfCurrent(
+                        token)) {
+                scheduleRemovalFinalization(
+                    containment,
+                    token,
+                    memoryUsage,
+                    activeSingleLayoutConfig(),
+                    removalSnapshot,
+                    "prepared removal snapshot was absent");
+            }
+        } else {
+            scheduleRemovalCommit(containment);
+        }
         Q_EMIT m_corona->availableScreenRectChangedFrom(view);
         Q_EMIT m_corona->availableScreenRegionChangedFrom(view);
         Q_EMIT viewEdgeChanged();
         Q_EMIT viewsCountChanged();
+        return;
     }
 
-    if (memoryUsage == MemoryUsage::MultipleLayouts) {
-        //! The per-layout file is Latte's restart authority. Commit both
-        //! sides of Plasma's undo transaction: Storage omits scheduled
-        //! containments while destroyed is true, then an undo signal writes
-        //! the still-live containment subtree back with its original ids and
-        //! configuration.
-        Layouts::Storage::self()->syncToLayoutFile(this, false);
-    } else if (memoryUsage == MemoryUsage::SingleLayout
-            && !destroyed
-            && view) {
-        //! The exact snapshot was restored before runtime ownership returned.
-        //! It is no longer needed after the complete Undo transaction commits.
-        m_removalSnapshots.remove(containment);
+    auto transaction =
+        m_removalTransactions.find(
+            containment);
+    if (transaction
+            == m_removalTransactions.end()) {
+        qCritical() << "layout:" << name()
+                    << "received removal Undo without a live transaction for containment"
+                    << containment->id();
+        return;
     }
+    const auto token =
+        transaction->token();
+    if (!transaction
+            ->queueUndoResolutionIfCurrent(
+                token)) {
+        qCritical() << "layout:" << name()
+                    << "refused stale removal Undo for containment"
+                    << containment->id();
+        return;
+    }
+
+    cancelRemovalCommit(containment);
+    scheduleRemovalUndoResolution(
+        containment,
+        token,
+        memoryUsage,
+        memoryUsage == MemoryUsage::SingleLayout
+            ? activeSingleLayoutConfig()
+            : KSharedConfigPtr{},
+        removalSnapshot);
+}
+
+void GenericLayout::
+scheduleMultipleLayoutProjectionAfterTransientState(
+    const char *const transition)
+{
+    const QString transitionDescription =
+        QString::fromLatin1(transition);
+    QTimer::singleShot(
+        0,
+        this,
+        [this, transitionDescription]() {
+            if (!m_corona
+                    || m_corona->layoutsManager()
+                        ->memoryUsage()
+                        != MemoryUsage::MultipleLayouts) {
+                return;
+            }
+            if (!Layouts::Storage::self()
+                    ->syncToLayoutFile(this, false)) {
+                qFatal(
+                    "layout %s could not persist %s after libplasma completed child transient state",
+                    qPrintable(name()),
+                    qPrintable(transitionDescription));
+            }
+        });
+}
+
+void GenericLayout::scheduleRemovalUndoResolution(
+    Plasma::Containment *containment,
+    const RemovalUndoTransaction::Token token,
+    const MemoryUsage::LayoutsMemory memoryUsage,
+    KSharedConfigPtr activeConfig,
+    QString snapshot)
+{
+    Q_ASSERT(containment);
+    const auto pending =
+        m_removalTransactions.constFind(containment);
+    Q_ASSERT(pending
+             != m_removalTransactions.cend());
+    if (pending
+            == m_removalTransactions.cend()) {
+        qCritical() << "layout:" << name()
+                    << "cannot queue removal Undo resolution without its transaction";
+        return;
+    }
+
+    const QPointer<Plasma::Containment>
+        guardedContainment{containment};
+    RemovalUndoTransaction queuedTransaction =
+        *pending;
+
+    //! libplasma emits root destroyedChanged(false) before recursively
+    //! clearing child transient state. No persistence or runtime owner changes
+    //! are permitted until this next-turn boundary.
+    QTimer::singleShot(
+        0,
+        this,
+        [this,
+         guardedContainment,
+         containmentIdentity = containment,
+         token,
+         memoryUsage,
+         activeConfig = std::move(activeConfig),
+         snapshot = std::move(snapshot),
+         transaction = std::move(
+             queuedTransaction)]() mutable {
+            if (!guardedContainment) {
+                const auto resolution =
+                    transaction
+                        .resolveUndoOrRequireRemoval(
+                            token,
+                            []() { return false; },
+                            []() { return false; });
+                Q_ASSERT(
+                    resolution
+                    == RemovalUndoTransaction::
+                        UndoResolution::
+                            RemovalRequired);
+                const auto result =
+                    transaction
+                        .finalizeRemovalIfCurrent(
+                            token,
+                            []() { return true; },
+                            []() { return true; },
+                            [this, memoryUsage,
+                             &activeConfig,
+                             &snapshot]() {
+                                return commitRemovalPersistenceAfterDestruction(
+                                    memoryUsage,
+                                    activeConfig,
+                                    snapshot);
+                            });
+                if (result
+                        != RemovalUndoTransaction::
+                            FinalizationResult::
+                                Removed) {
+                    qFatal(
+                        "layout %s lost a containment during Undo and could not preserve its removal tombstone",
+                        qPrintable(name()));
+                }
+                return;
+            }
+
+            auto liveTransaction =
+                m_removalTransactions.find(
+                    containmentIdentity);
+            if (liveTransaction
+                    == m_removalTransactions.end()
+                    || liveTransaction->token()
+                        != token) {
+                return;
+            }
+            transaction = *liveTransaction;
+            View *const waitingView =
+                m_waitingLatteViews.value(
+                    containmentIdentity);
+            const auto resolution =
+                transaction
+                    .resolveUndoOrRequireRemoval(
+                        token,
+                        [this, memoryUsage,
+                         &activeConfig,
+                         &snapshot]() {
+                            if (memoryUsage
+                                    == MemoryUsage::
+                                        MultipleLayouts) {
+                                return Layouts::Storage::self()
+                                    ->syncToLayoutFile(
+                                        this,
+                                        false);
+                            }
+                            return activeConfig
+                                && !snapshot.isEmpty()
+                                && Layouts::Storage::self()
+                                    ->restoreView(
+                                        activeConfig,
+                                        snapshot);
+                        },
+                        [waitingView]() {
+                            return waitingView
+                                && waitingView
+                                    ->resumeFromReversibleRemoval();
+                        });
+            if (resolution
+                    == RemovalUndoTransaction::
+                        UndoResolution::Stale) {
+                return;
+            }
+            if (resolution
+                    == RemovalUndoTransaction::
+                        UndoResolution::
+                            RemovalRequired) {
+                *liveTransaction = transaction;
+                scheduleRemovalFinalization(
+                    containmentIdentity,
+                    token,
+                    memoryUsage,
+                    activeConfig,
+                    snapshot,
+                    "persistence restore or runtime resume failed");
+                return;
+            }
+
+            View *const restoredView =
+                m_waitingLatteViews.take(
+                    containmentIdentity);
+            Q_ASSERT(restoredView
+                     == waitingView);
+            m_latteViews[containmentIdentity] =
+                restoredView;
+            m_removalTransactions.erase(
+                liveTransaction);
+            m_removalSnapshots.remove(
+                containmentIdentity);
+
+            Q_EMIT m_corona
+                ->availableScreenRectChangedFrom(
+                    restoredView);
+            Q_EMIT m_corona
+                ->availableScreenRegionChangedFrom(
+                    restoredView);
+            Q_EMIT viewEdgeChanged();
+            Q_EMIT viewsCountChanged();
+        });
 }
 
 bool GenericLayout::prepareViewRemoval(Plasma::Containment *containment)
@@ -1040,29 +1277,45 @@ bool GenericLayout::commitPreparedViewRemoval(
         return false;
     }
 
-    if (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::MultipleLayouts) {
-        //! Multiple-layout mode has a separate hidden Corona authority. Its
-        //! existing projection sync remains distinct from the single-layout
-        //! snapshot transaction and is repeated here after libplasma finishes
-        //! recursively marking the complete subtree.
-        Layouts::Storage::self()->syncToLayoutFile(this, false);
-        return true;
-    }
-
+    const auto memoryUsage =
+        m_corona->layoutsManager()->memoryUsage();
     const QString snapshot = m_removalSnapshots.value(containment);
-    if (snapshot.isEmpty()) {
-        qCritical() << "layout:" << name()
-                    << "cannot commit removal for containment"
-                    << containment->id() << "without its prepared snapshot";
-        return false;
-    }
-    const KSharedConfigPtr activeConfig = activeSingleLayoutConfig();
-    if (!activeConfig
-            || !Layouts::Storage::self()->tombstoneViewFromSnapshot(
-                activeConfig, snapshot)) {
+    const KSharedConfigPtr activeConfig =
+        memoryUsage == MemoryUsage::SingleLayout
+        ? activeSingleLayoutConfig()
+        : KSharedConfigPtr{};
+    const bool persistenceCommitted =
+        memoryUsage == MemoryUsage::MultipleLayouts
+        ? Layouts::Storage::self()
+            ->syncToLayoutFile(this, false)
+        : activeConfig
+            && !snapshot.isEmpty()
+            && Layouts::Storage::self()
+                ->tombstoneViewFromSnapshot(
+                    activeConfig,
+                    snapshot);
+    if (!persistenceCommitted) {
         qCritical() << "layout:" << name()
                     << "could not persist removal tombstone for containment"
                     << containment->id();
+        auto transaction =
+            m_removalTransactions.find(
+                containment);
+        if (mode
+                == RemovalCommitMode::Reversible
+                && transaction
+                    != m_removalTransactions.end()
+                && transaction
+                    ->queueRemovalFinalizationIfCurrent(
+                        transaction->token())) {
+            scheduleRemovalFinalization(
+                containment,
+                transaction->token(),
+                memoryUsage,
+                activeConfig,
+                snapshot,
+                "initial removal tombstone failed");
+        }
         return false;
     }
 
@@ -1080,25 +1333,177 @@ void GenericLayout::cancelRemovalCommit(Plasma::Containment *containment)
     }
 }
 
-void GenericLayout::keepViewRemovedAfterFailedUndo(
-    Plasma::Containment *containment,
+bool GenericLayout::
+commitRemovalPersistenceAfterDestruction(
+    const MemoryUsage::LayoutsMemory memoryUsage,
+    const KSharedConfigPtr &activeConfig,
     const QString &snapshot)
 {
-    if (snapshot.isEmpty()) {
+    if (memoryUsage
+            == MemoryUsage::MultipleLayouts) {
+        return Layouts::Storage::self()
+            ->syncToLayoutFile(this, false);
+    }
+
+    if (!activeConfig || snapshot.isEmpty()) {
         qCritical() << "layout:" << name()
-                    << "cannot retain a removal tombstone after failed Undo"
-                    << "without the prepared snapshot for containment"
-                    << (containment ? containment->id() : 0);
+                    << "cannot commit failed-Undo removal without its captured config and snapshot";
+        return false;
+    }
+
+    return Layouts::Storage::self()
+        ->tombstoneViewFromSnapshot(
+            activeConfig,
+            snapshot);
+}
+
+bool GenericLayout::retireRuntimeViewForFailedRemoval(
+    Plasma::Containment *containment)
+{
+    View *view =
+        m_latteViews.take(containment);
+    if (!view) {
+        view = m_waitingLatteViews.take(
+            containment);
+    }
+    if (view) {
+        view->disconnectSensitiveSignals();
+        view->setVisible(false);
+        view->deleteLater();
+        Q_EMIT m_corona
+            ->availableScreenRectChangedFrom(view);
+        Q_EMIT m_corona
+            ->availableScreenRegionChangedFrom(view);
+        Q_EMIT viewEdgeChanged();
+        Q_EMIT viewsCountChanged();
+    }
+
+    return !m_latteViews.contains(containment)
+        && !m_waitingLatteViews.contains(
+            containment);
+}
+
+void GenericLayout::scheduleRemovalFinalization(
+    Plasma::Containment *containment,
+    const RemovalUndoTransaction::Token token,
+    const MemoryUsage::LayoutsMemory memoryUsage,
+    KSharedConfigPtr activeConfig,
+    QString snapshot,
+    const char *const failure)
+{
+    Q_ASSERT(containment);
+    const auto pending =
+        m_removalTransactions.constFind(containment);
+    Q_ASSERT(pending
+             != m_removalTransactions.cend());
+    if (pending
+            == m_removalTransactions.cend()) {
+        qCritical() << "layout:" << name()
+                    << "cannot queue removal finalization without its transaction";
         return;
     }
-    const KSharedConfigPtr activeConfig = activeSingleLayoutConfig();
-    if (!activeConfig
-            || !Layouts::Storage::self()->tombstoneViewFromSnapshot(
-                activeConfig, snapshot)) {
-        qCritical() << "layout:" << name()
-                    << "could not retain the removal tombstone after failed Undo for containment"
-                    << (containment ? containment->id() : 0);
-    }
+    const QPointer<Plasma::Containment>
+        guardedContainment{containment};
+    RemovalUndoTransaction queuedTransaction =
+        *pending;
+    const QString failureDescription =
+        QString::fromLatin1(failure);
+
+    //! libplasma emits root destroyedChanged(false) before recursively
+    //! clearing child transient state. The next event-loop turn is the first
+    //! boundary at which permanent destruction and the following tombstone
+    //! cannot be overwritten by the remainder of that Undo.
+    QTimer::singleShot(
+        0,
+        this,
+        [this,
+         guardedContainment,
+         containmentIdentity = containment,
+         token,
+         memoryUsage,
+         activeConfig = std::move(activeConfig),
+         snapshot = std::move(snapshot),
+         failureDescription,
+         transaction = std::move(
+             queuedTransaction)]() mutable {
+            Plasma::Containment *const identity =
+                guardedContainment
+                ? guardedContainment.data()
+                : containmentIdentity;
+            if (guardedContainment) {
+                const auto liveTransaction =
+                    m_removalTransactions.find(
+                        identity);
+                if (liveTransaction
+                        == m_removalTransactions.end()
+                        || liveTransaction->token()
+                            != token) {
+                    return;
+                }
+                transaction = *liveTransaction;
+                m_removalTransactions.erase(
+                    liveTransaction);
+            }
+            cancelRemovalCommit(
+                identity);
+            m_finalizingRemovalContainments.insert(
+                identity);
+
+            const auto result =
+                transaction
+                    .finalizeRemovalIfCurrent(
+                        token,
+                        [this, identity]() {
+                            return retireRuntimeViewForFailedRemoval(
+                                identity);
+                        },
+                        [this, guardedContainment,
+                         identity]() {
+                            if (!guardedContainment) {
+                                return !m_containments
+                                    .contains(identity);
+                            }
+                            guardedContainment
+                                ->setImmutability(
+                                    Plasma::Types::
+                                        Mutable);
+                            //! Applet::destroy(), unlike the public remove
+                            //! action, commits transient deletion immediately.
+                            //! containmentDestroyed() removes layout ownership
+                            //! synchronously before deleteLater() retires the
+                            //! QObject itself.
+                            guardedContainment->destroy();
+                            return !m_containments
+                                    .contains(identity)
+                                && !m_latteViews
+                                    .contains(identity)
+                                && !m_waitingLatteViews
+                                    .contains(identity);
+                        },
+                        [this, memoryUsage,
+                         &activeConfig,
+                         &snapshot]() {
+                            return commitRemovalPersistenceAfterDestruction(
+                                memoryUsage,
+                                activeConfig,
+                                snapshot);
+                        });
+            m_finalizingRemovalContainments.remove(
+                identity);
+            if (result
+                    != RemovalUndoTransaction::
+                        FinalizationResult::Removed) {
+                qFatal(
+                    "layout %s could not converge failed removal (%s), finalization result %d",
+                    qPrintable(name()),
+                    qPrintable(failureDescription),
+                    static_cast<int>(result));
+            }
+
+            qCritical() << "layout:" << name()
+                        << "completed removal after failed restoration:"
+                        << failureDescription;
+        });
 }
 
 void GenericLayout::scheduleRemovalCommit(Plasma::Containment *containment)
@@ -1107,12 +1512,25 @@ void GenericLayout::scheduleRemovalCommit(Plasma::Containment *containment)
 
     cancelRemovalCommit(containment);
 
+    const auto memoryUsage =
+        m_corona->layoutsManager()->memoryUsage();
+    const KSharedConfigPtr activeConfig =
+        memoryUsage == MemoryUsage::SingleLayout
+        ? activeSingleLayoutConfig()
+        : KSharedConfigPtr{};
+    const QString snapshot =
+        m_removalSnapshots.value(containment);
     auto *const timer = new QTimer(this);
     timer->setSingleShot(true);
     timer->setInterval(RemovalUndoWindow);
     m_removalCommitTimers.insert(containment, timer);
 
-    connect(timer, &QTimer::timeout, this, [this, containment, timer]() {
+    connect(
+        timer,
+        &QTimer::timeout,
+        this,
+        [this, containment, timer, memoryUsage,
+         activeConfig, snapshot]() {
         const bool ownsCurrentGeneration = m_removalCommitTimers.value(containment) == timer;
         Q_ASSERT(ownsCurrentGeneration);
         if (!ownsCurrentGeneration) {
@@ -1124,10 +1542,54 @@ void GenericLayout::scheduleRemovalCommit(Plasma::Containment *containment)
         m_removalCommitTimers.remove(containment);
         timer->deleteLater();
 
-        if (containment->destroyed()) {
-            //! Applet::destroy() commits immediately when the applet is
-            //! already in Plasma's transient Undo state.
-            containment->destroy();
+        if (!containment->destroyed()) {
+            qCritical() << "layout:" << name()
+                        << "discarded an expired removal timer after containment Undo"
+                        << containment->id();
+            return;
+        }
+
+        auto transaction =
+            m_removalTransactions.find(
+                containment);
+        if (transaction
+                != m_removalTransactions.end()) {
+            const auto token =
+                transaction->token();
+            if (!transaction
+                    ->queueRemovalFinalizationIfCurrent(
+                        token)) {
+                qFatal(
+                    "layout %s could not finalize expired removal for containment %u from transaction phase %d",
+                    qPrintable(name()),
+                    containment->id(),
+                    static_cast<int>(
+                        transaction->phase()));
+            }
+            scheduleRemovalFinalization(
+                containment,
+                token,
+                memoryUsage,
+                activeConfig,
+                snapshot,
+                "removal Undo window expired");
+            return;
+        }
+
+        //! A viewless containment has no root transaction. Direct destroy
+        //! must still prove that libplasma released layout ownership.
+        m_finalizingRemovalContainments.insert(
+            containment);
+        containment->setImmutability(
+            Plasma::Types::Mutable);
+        containment->destroy();
+        m_finalizingRemovalContainments.remove(
+            containment);
+        if (m_containments.contains(containment)) {
+            qFatal(
+                "layout %s could not retire expired viewless containment %u",
+                qPrintable(name()),
+                containment->id());
         }
     });
 
@@ -1477,7 +1939,11 @@ void GenericLayout::assignToLayout(Latte::View *latteView, QList<Plasma::Contain
 
     //! sync the original layout file for integrity
     if (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::MultipleLayouts) {
-        Layouts::Storage::self()->syncToLayoutFile(this, false);
+        if (!Layouts::Storage::self()
+                ->syncToLayoutFile(this, false)) {
+            qCritical() << "layout:" << name()
+                        << "could not synchronize assigned containment ownership";
+        }
     }
 }
 
@@ -1515,7 +1981,11 @@ QList<Plasma::Containment *> GenericLayout::unassignFromLayout(Plasma::Containme
 
     //! sync the original layout file for integrity
     if (m_corona && m_corona->layoutsManager()->memoryUsage() == MemoryUsage::MultipleLayouts) {
-        Layouts::Storage::self()->syncToLayoutFile(this, false);
+        if (!Layouts::Storage::self()
+                ->syncToLayoutFile(this, false)) {
+            qCritical() << "layout:" << name()
+                        << "could not synchronize unassigned containment ownership";
+        }
     }
 
     return containments;
@@ -2037,7 +2507,13 @@ void GenericLayout::unlock()
 void GenericLayout::syncToLayoutFile(bool removeLayoutId)
 {
     syncSettings();
-    Layouts::Storage::self()->syncToLayoutFile(this, removeLayoutId);
+    if (!Layouts::Storage::self()
+            ->syncToLayoutFile(
+                this,
+                removeLayoutId)) {
+        qCritical() << "layout:" << name()
+                    << "could not synchronize its layout file";
+    }
 }
 
 bool GenericLayout::newView(const QString &templateName)
@@ -2174,13 +2650,41 @@ void GenericLayout::removeView(const Latte::Data::View &viewData)
     if (!prepareViewRemoval(viewcontainment)) {
         return;
     }
+    const auto memoryUsage =
+        m_corona->layoutsManager()->memoryUsage();
+    const QString removalSnapshot =
+        m_removalSnapshots.value(
+            viewcontainment);
+    const KSharedConfigPtr activeConfig =
+        memoryUsage == MemoryUsage::SingleLayout
+        ? activeSingleLayoutConfig()
+        : KSharedConfigPtr{};
+
+    //! Direct removal has no Undo phase. Suppress the reversible transition
+    //! callback, finish libplasma's root and child destruction, then commit
+    //! the captured snapshot tombstone after layout ownership disappears.
+    m_finalizingRemovalContainments.insert(
+        viewcontainment);
     destroyContainment(viewcontainment);
-    if (!commitPreparedViewRemoval(
-            viewcontainment,
-            RemovalCommitMode::Permanent)) {
-        qCritical() << "layout:" << name()
-                    << "could not commit permanent removal for containment"
-                    << viewData.id;
+    m_finalizingRemovalContainments.remove(
+        viewcontainment);
+    if (m_containments.contains(viewcontainment)
+            || m_latteViews.contains(viewcontainment)
+            || m_waitingLatteViews.contains(
+                viewcontainment)) {
+        qFatal(
+            "layout %s could not retire runtime ownership for containment %s; persistent removal was not committed",
+            qPrintable(name()),
+            qPrintable(viewData.id));
+    }
+    if (!commitRemovalPersistenceAfterDestruction(
+            memoryUsage,
+            activeConfig,
+            removalSnapshot)) {
+        qFatal(
+            "layout %s destroyed containment %s but could not commit its permanent persistence tombstone",
+            qPrintable(name()),
+            qPrintable(viewData.id));
     }
 }
 

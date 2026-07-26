@@ -75,7 +75,9 @@ public:
     void unlock(const Layout::GenericLayout *layout); //! make it writable which it should be the default
 
     void importToCorona(const Layout::GenericLayout *layout);
-    void syncToLayoutFile(const Layout::GenericLayout *layout, bool removeLayoutId);
+    [[nodiscard]] bool syncToLayoutFile(
+        const Layout::GenericLayout *layout,
+        bool removeLayoutId);
 
     Data::View newView(const Layout::GenericLayout *destination, const Data::View &nextViewData);
     void removeView(const QString &filepath, const Data::View &viewData);

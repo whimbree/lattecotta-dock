@@ -10,6 +10,8 @@
 // local
 #include <coretypes.h>
 #include "abstractlayout.h"
+#include "removalundotransaction.h"
+#include "../apptypes.h"
 #include "../data/errordata.h"
 #include "../data/viewdata.h"
 #include "../data/viewstable.h"
@@ -191,6 +193,10 @@ protected:
     QHash<const Plasma::Containment *, Latte::View *> m_waitingLatteViews;
     QHash<const Plasma::Containment *, QTimer *> m_removalCommitTimers;
     QHash<const Plasma::Containment *, QString> m_removalSnapshots;
+    QHash<const Plasma::Containment *, RemovalUndoTransaction>
+        m_removalTransactions;
+    QSet<const Plasma::Containment *>
+        m_finalizingRemovalContainments;
 
 private Q_SLOTS:
     void addContainment(Plasma::Containment *containment);
@@ -201,9 +207,27 @@ private Q_SLOTS:
 
 private:
     void cancelRemovalCommit(Plasma::Containment *containment);
-    void keepViewRemovedAfterFailedUndo(
-        Plasma::Containment *containment,
+    [[nodiscard]] bool commitRemovalPersistenceAfterDestruction(
+        MemoryUsage::LayoutsMemory memoryUsage,
+        const KSharedConfigPtr &activeConfig,
         const QString &snapshot);
+    [[nodiscard]] bool retireRuntimeViewForFailedRemoval(
+        Plasma::Containment *containment);
+    void scheduleMultipleLayoutProjectionAfterTransientState(
+        const char *transition);
+    void scheduleRemovalFinalization(
+        Plasma::Containment *containment,
+        RemovalUndoTransaction::Token token,
+        MemoryUsage::LayoutsMemory memoryUsage,
+        KSharedConfigPtr activeConfig,
+        QString snapshot,
+        const char *failure);
+    void scheduleRemovalUndoResolution(
+        Plasma::Containment *containment,
+        RemovalUndoTransaction::Token token,
+        MemoryUsage::LayoutsMemory memoryUsage,
+        KSharedConfigPtr activeConfig,
+        QString snapshot);
     void scheduleRemovalCommit(Plasma::Containment *containment);
 
     //! It can be used in order for LatteViews to not be created automatically when
