@@ -193,7 +193,7 @@ and PR #126 landed FP-4B.
       usage reference in the same source commit.
 - [x] The README describes the stable floating-panel behavior in timeless
       terms.
-- [x] The full canonical gate passes after the final source commit.
+- [ ] The full canonical gate passes after the final source commit.
       The final replacement gate exited 0 at exact branch head
       `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`, including all 122 CTest
       entries, QML and coverage ratchets, visual probes, the complete
@@ -226,8 +226,11 @@ and PR #126 landed FP-4B.
       Commit `0d1ce131d` requires readable existing targets and completes the
       real-filesystem matrix. Its seven focused tests and exact 76-operation
       replay pass. The replacement canonical gate passed at exact branch head
-      `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`; fresh critical rereview
-      remains open.
+      `2ec84d1d0ed58d9de61e6d422a9c2bd7f32676c2`. The fresh critical rereview
+      returned `DO NOT MERGE`: KConfig canonicalizes existing paths and uses
+      `QSaveFile` only for process-owned targets, but the classifier models
+      neither branch. A corrected source head needs a new canonical gate and
+      critical rereview.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent
