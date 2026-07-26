@@ -45,7 +45,18 @@ class OperationModelTest(unittest.TestCase):
             view.handle: self.historical_bindings[view.handle]
             for view in self.final_state.views
         }
-        self.outputs = {"primary": 10, "secondary": 20}
+        self.outputs = {
+            "primary": {
+                "id": 10,
+                "name": "Virtual-Negative",
+                "geometry": [-1600, 240, 1200, 900],
+            },
+            "secondary": {
+                "id": 20,
+                "name": "Virtual-Portrait",
+                "geometry": [300, -700, 1000, 1400],
+            },
+        }
         self.snapshot = self.make_snapshot(
             self.final_state, self.bindings, self.outputs
         )
@@ -61,66 +72,63 @@ class OperationModelTest(unittest.TestCase):
                 action()
 
     @staticmethod
-    def group_key(placement: model.Placement, outputs: dict[str, int]) -> tuple[int, str]:
-        return outputs[placement.output.value], placement.edge.label
+    def group_key(
+        placement: model.Placement,
+        outputs: dict[str, dict[str, Any]],
+    ) -> tuple[int, str]:
+        return outputs[placement.output.value]["id"], placement.edge.label
 
     @staticmethod
-    def span_for(placement: model.Placement) -> tuple[int, int]:
+    def span_for(
+        placement: model.Placement,
+        outputs: dict[str, dict[str, Any]],
+    ) -> tuple[int, int]:
+        x, y, width, height = outputs[placement.output.value]["geometry"]
+        axis_start = x if placement.edge.orientation == "horizontal" else y
+        axis_length = (
+            width if placement.edge.orientation == "horizontal" else height
+        )
         if placement.alignment is model.Alignment.START:
-            return 0, 450
-        if placement.alignment is model.Alignment.END:
-            return 550, 450
-        return 275, 450
-
-    @classmethod
-    def rect_for(
-        cls, placement: model.Placement, outputs: dict[str, int]
-    ) -> list[int]:
-        output_offset = 0 if placement.output is model.OutputRole.PRIMARY else 2000
-        primary_start, primary_length = cls.span_for(placement)
-        gap = 18
-        depth = 50
-        if placement.edge in (model.Edge.TOP, model.Edge.BOTTOM):
-            y = 0 if placement.edge is model.Edge.TOP else 1000 - depth - gap
-            return [output_offset + primary_start, y, primary_length, depth + gap]
-        x = output_offset if placement.edge is model.Edge.LEFT else output_offset + 1000 - depth - gap
-        return [x, primary_start, depth + gap, primary_length]
+            start_ratio = 0.0
+        elif placement.alignment is model.Alignment.END:
+            start_ratio = 0.55
+        else:
+            start_ratio = 0.275
+        return (
+            axis_start + round(axis_length * start_ratio),
+            round(axis_length * 0.45),
+        )
 
     def make_view(
         self,
         expected: model.ExpectedView,
         state: model.ModelState,
         bindings: dict[str, int],
-        outputs: dict[str, int],
+        outputs: dict[str, dict[str, Any]],
         group: dict[str, Any],
     ) -> dict[str, Any]:
         persistent_id = bindings[expected.handle]
         placement = expected.placement
         self.assertIsNotNone(placement)
         assert placement is not None
-        screen_id = outputs[placement.output.value]
-        primary_start, primary_length = self.span_for(placement)
-        output_offset = (
-            0 if placement.output is model.OutputRole.PRIMARY else 2000
-        )
-        if placement.output is model.OutputRole.SECONDARY and (
-            placement.edge.orientation == "horizontal"
-        ):
-            primary_start += 2000
+        output = outputs[placement.output.value]
+        screen_id = output["id"]
+        screen_x, screen_y, screen_width, screen_height = output["geometry"]
+        primary_start, primary_length = self.span_for(placement, outputs)
         depth = 40 + persistent_id
         gap = 18
         if placement.edge in (model.Edge.TOP, model.Edge.BOTTOM):
             y = (
-                0
+                screen_y
                 if placement.edge is model.Edge.TOP
-                else 1000 - depth - gap
+                else screen_y + screen_height - depth - gap
             )
             rect = [primary_start, y, primary_length, depth + gap]
         else:
             x = (
-                output_offset
+                screen_x
                 if placement.edge is model.Edge.LEFT
-                else output_offset + 1000 - depth - gap
+                else screen_x + screen_width - depth - gap
             )
             rect = [x, primary_start, depth + gap, primary_length]
         local = [0, 0, rect[2], rect[3]]
@@ -128,12 +136,17 @@ class OperationModelTest(unittest.TestCase):
             attached = [0, 0, primary_length, depth]
             floated = [0, gap, primary_length, depth]
             bridge = [0, 0, primary_length, depth + gap]
-            trigger = [rect[0], 0, primary_length, 1]
+            trigger = [rect[0], screen_y, primary_length, 1]
         elif placement.edge is model.Edge.BOTTOM:
             attached = [0, gap, primary_length, depth]
             floated = [0, 0, primary_length, depth]
             bridge = [0, 0, primary_length, depth + gap]
-            trigger = [rect[0], 999, primary_length, 1]
+            trigger = [
+                rect[0],
+                screen_y + screen_height - 1,
+                primary_length,
+                1,
+            ]
         elif placement.edge is model.Edge.LEFT:
             attached = [0, 0, depth, primary_length]
             floated = [gap, 0, depth, primary_length]
@@ -205,7 +218,7 @@ class OperationModelTest(unittest.TestCase):
             "linkedDockIds": linked_ids,
             "layout": "My Layout",
             "screenId": screen_id,
-            "screen": placement.output.value,
+            "screen": output["name"],
             "onPrimary": (
                 expected.follows_primary
                 if expected.follows_primary is not None
@@ -225,12 +238,7 @@ class OperationModelTest(unittest.TestCase):
             "windowGeometry": rect,
             "absoluteGeometry": rect,
             "localGeometry": local,
-            "screenGeometry": [
-                0 if placement.output is model.OutputRole.PRIMARY else 2000,
-                0,
-                1000,
-                1000,
-            ],
+            "screenGeometry": list(output["geometry"]),
             "surfaceGeometry": rect,
             "canvasGeometry": rect,
             "effectsRect": floated,
@@ -247,11 +255,23 @@ class OperationModelTest(unittest.TestCase):
             "floatingAnchorRevision": "11",
             "strutsThickness": depth,
             "publishedStruts": (
-                [rect[0], 0 if placement.edge is model.Edge.TOP else 1000 - depth,
-                 primary_length, depth]
+                [
+                    rect[0],
+                    (
+                        screen_y
+                        if placement.edge is model.Edge.TOP
+                        else screen_y + screen_height - depth
+                    ),
+                    primary_length,
+                    depth,
+                ]
                 if placement.edge.orientation == "horizontal"
                 else [
-                    rect[0] if placement.edge is model.Edge.LEFT else rect[0] + rect[2] - depth,
+                    (
+                        screen_x
+                        if placement.edge is model.Edge.LEFT
+                        else screen_x + screen_width - depth
+                    ),
                     primary_start,
                     depth,
                     primary_length,
@@ -333,7 +353,7 @@ class OperationModelTest(unittest.TestCase):
         self,
         state: model.ModelState,
         bindings: dict[str, int],
-        outputs: dict[str, int],
+        outputs: dict[str, dict[str, Any]],
     ) -> dict[str, Any]:
         expected_groups: dict[tuple[int, str], list[model.ExpectedView]] = {}
         for expected in state.views:
@@ -343,6 +363,13 @@ class OperationModelTest(unittest.TestCase):
                 self.group_key(expected.placement, outputs), []
             ).append(expected)
 
+        depths_by_key = {
+            key: max(40 + bindings[view.handle] for view in contributors)
+            for key, contributors in expected_groups.items()
+        }
+        output_by_id = {
+            output["id"]: output for output in outputs.values()
+        }
         groups: list[dict[str, Any]] = []
         groups_by_key: dict[tuple[int, str], dict[str, Any]] = {}
         for generation, (key, contributors) in enumerate(
@@ -352,31 +379,44 @@ class OperationModelTest(unittest.TestCase):
             depths = [40 + persistent_id for persistent_id in contributor_ids]
             edge = key[1]
             horizontal = edge in ("top", "bottom")
-            geometry = [
-                0 if key[0] == outputs["primary"] else 2000,
-                0 if edge == "top" else 950 if edge == "bottom" else 0,
-                1000 if horizontal else max(depths),
-                max(depths) if horizontal else 1000,
-            ]
+            output = output_by_id[key[0]]
+            x, y, width, height = output["geometry"]
+            depth = max(depths)
+            geometry = {
+                "top": [x, y, width, depth],
+                "bottom": [x, y + height - depth, width, depth],
+                "left": [x, y, depth, height],
+                "right": [x + width - depth, y, depth, height],
+            }[edge]
+            top_depth = depths_by_key.get((key[0], "top"), 0)
+            bottom_depth = depths_by_key.get((key[0], "bottom"), 0)
+            publisher_height = height - top_depth - bottom_depth
+            self.assertGreater(publisher_height, 0)
+            window_geometry = (
+                [0, 0, width, 1]
+                if horizontal
+                else [0, 0, 1, publisher_height]
+            )
+            anchors = {
+                "top": ["top", "left", "right"],
+                "bottom": ["bottom", "left", "right"],
+                "left": ["top", "bottom", "left"],
+                "right": ["top", "bottom", "right"],
+            }[edge]
             group = {
                 "outputId": key[0],
                 "edge": edge,
                 "generation": str(generation),
-                "publishedDepth": max(depths),
+                "publishedDepth": depth,
                 "contributorDockIds": contributor_ids,
                 "memberCount": len(contributor_ids),
                 "geometry": geometry,
-                "windowGeometry": [
-                    0,
-                    0,
-                    geometry[2] if horizontal else 1,
-                    1 if horizontal else geometry[3],
-                ],
+                "windowGeometry": window_geometry,
                 "layerShellPresent": True,
-                "layerShellAnchors": [edge],
+                "layerShellAnchors": anchors,
                 "layerShellMargins": [0, 0, 0, 0],
                 "layerShellExclusiveEdge": edge,
-                "layerShellExclusiveZone": max(depths),
+                "layerShellExclusiveZone": depth,
                 "publisher": f"reservation-{key[0]}-{edge}",
             }
             groups.append(group)
@@ -407,7 +447,10 @@ class OperationModelTest(unittest.TestCase):
         }
 
     @staticmethod
-    def make_visual_windows(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+    def make_visual_windows(
+        snapshot: dict[str, Any],
+        outputs: dict[str, dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         result = [
             {
                 "id": f"canvas-{view['persistentDockId']}",
@@ -417,26 +460,43 @@ class OperationModelTest(unittest.TestCase):
             }
             for view in snapshot["views"]
         ]
-        output_views = {
-            view["screenId"]: view for view in snapshot["views"]
+        output_by_id = {
+            output["id"]: output for output in outputs.values()
+        }
+        depths = {
+            (group["outputId"], group["edge"]): group["publishedDepth"]
+            for group in snapshot["reservationGroups"]
         }
         for group in snapshot["reservationGroups"]:
-            output_view = output_views[group["outputId"]]
-            screen_x, screen_y, screen_width, screen_height = (
-                output_view["screenGeometry"]
-            )
-            _, _, width, height = group["windowGeometry"]
+            output = output_by_id[group["outputId"]]
+            screen_x, screen_y, screen_width, screen_height = output[
+                "geometry"
+            ]
             edge = model.Edge[group["edge"].upper()]
-            x = (
-                screen_x + screen_width - width
-                if edge is model.Edge.RIGHT
-                else screen_x
-            )
-            y = (
-                screen_y + screen_height - height
-                if edge is model.Edge.BOTTOM
-                else screen_y
-            )
+            top_depth = depths.get((group["outputId"], "top"), 0)
+            bottom_depth = depths.get((group["outputId"], "bottom"), 0)
+            vertical_height = screen_height - top_depth - bottom_depth
+            geometry = {
+                model.Edge.TOP: [screen_x, screen_y, screen_width, 1],
+                model.Edge.BOTTOM: [
+                    screen_x,
+                    screen_y + screen_height - 1,
+                    screen_width,
+                    1,
+                ],
+                model.Edge.LEFT: [
+                    screen_x,
+                    screen_y + top_depth,
+                    1,
+                    vertical_height,
+                ],
+                model.Edge.RIGHT: [
+                    screen_x + screen_width - 1,
+                    screen_y + top_depth,
+                    1,
+                    vertical_height,
+                ],
+            }[edge]
             result.append(
                 {
                     "id": (
@@ -446,8 +506,8 @@ class OperationModelTest(unittest.TestCase):
                         "#screen-space-reservation"
                         f"#output={group['outputId']}#edge={int(edge)}"
                     ),
-                    "geometry": [x, y, width, height],
-                    "output": output_view["screen"],
+                    "geometry": geometry,
+                    "output": output["name"],
                 }
             )
         return result
@@ -473,6 +533,110 @@ class OperationModelTest(unittest.TestCase):
             ),
             message,
         )
+
+    def first_checkpoint_for_edge(
+        self,
+        edge: model.Edge,
+    ) -> tuple[
+        int,
+        model.ModelState,
+        dict[str, int],
+        dict[str, Any],
+        tuple[int, str],
+    ]:
+        for through in range(self.final_seq + 1):
+            state = model.state_through(
+                self.plan,
+                through,
+            )
+            if any(
+                view.placement is None
+                for view in state.views
+            ):
+                continue
+            expected = next(
+                (
+                    view
+                    for view in state.views
+                    if view.placement is not None
+                    and view.placement.edge is edge
+                ),
+                None,
+            )
+            if expected is None:
+                continue
+            bindings = {
+                view.handle: self.historical_bindings[
+                    view.handle
+                ]
+                for view in state.views
+            }
+            assert expected.placement is not None
+            return (
+                through,
+                state,
+                bindings,
+                self.make_snapshot(
+                    state,
+                    bindings,
+                    self.outputs,
+                ),
+                self.group_key(
+                    expected.placement,
+                    self.outputs,
+                ),
+            )
+        self.fail(f"operation plan never exercises {edge.label}")
+
+    @staticmethod
+    def set_group_field_and_mirrors(
+        snapshot: dict[str, Any],
+        key: tuple[int, str],
+        field: str,
+        value: Any,
+    ) -> None:
+        mirror_fields = {
+            "outputId": "reservationOutputId",
+            "edge": "reservationEdge",
+            "publishedDepth":
+                "reservationPublishedDepth",
+            "contributorDockIds":
+                "reservationContributorDockIds",
+            "memberCount":
+                "reservationGroupMemberCount",
+            "generation":
+                "reservationGroupGeneration",
+            "geometry": "reservationGeometry",
+            "windowGeometry":
+                "reservationWindowGeometry",
+            "layerShellAnchors":
+                "reservationLayerShellAnchors",
+            "layerShellMargins":
+                "reservationLayerShellMargins",
+            "layerShellExclusiveEdge":
+                "reservationLayerShellExclusiveEdge",
+            "layerShellExclusiveZone":
+                "reservationLayerShellExclusiveZone",
+        }
+        group = next(
+            candidate
+            for candidate in snapshot[
+                "reservationGroups"
+            ]
+            if (
+                candidate["outputId"],
+                candidate["edge"],
+            )
+            == key
+        )
+        group[field] = copy.deepcopy(value)
+        mirror_field = mirror_fields.get(field)
+        if mirror_field is None:
+            return
+        members = set(group["contributorDockIds"])
+        for view in snapshot["views"]:
+            if view["persistentDockId"] in members:
+                view[mirror_field] = copy.deepcopy(value)
 
     def make_replay_records(
         self,
@@ -763,9 +927,13 @@ class OperationModelTest(unittest.TestCase):
         )
 
     def test_visual_ownership_matches_global_output_edge_geometry(self) -> None:
-        windows = self.make_visual_windows(self.snapshot)
+        windows = self.make_visual_windows(self.snapshot, self.outputs)
         result = model.assert_visual_window_ownership(
-            {"snapshot": self.snapshot, "windows": windows}
+            {
+                "snapshot": self.snapshot,
+                "outputs": self.outputs,
+                "windows": windows,
+            }
         )
         self.assertEqual(result["windowCount"], len(windows))
 
@@ -789,7 +957,11 @@ class OperationModelTest(unittest.TestCase):
         )
         self.assert_refused(
             lambda: model.assert_visual_window_ownership(
-                {"snapshot": self.snapshot, "windows": leaked}
+                {
+                    "snapshot": self.snapshot,
+                    "outputs": self.outputs,
+                    "windows": leaked,
+                }
             ),
             "surplus",
         )
@@ -811,9 +983,431 @@ class OperationModelTest(unittest.TestCase):
             reservation["geometry"][0] -= 1
         self.assert_refused(
             lambda: model.assert_visual_window_ownership(
-                {"snapshot": self.snapshot, "windows": wrong_edge}
+                {
+                    "snapshot": self.snapshot,
+                    "outputs": self.outputs,
+                    "windows": wrong_edge,
+                }
             ),
             "publisher match count is 0",
+        )
+
+    def test_external_geometry_rejects_coherent_wrong_groups_on_every_edge(
+        self,
+    ) -> None:
+        exercised: set[model.Edge] = set()
+        for edge in model.Edge:
+            through, _, bindings, snapshot, key = (
+                self.first_checkpoint_for_edge(edge)
+            )
+            self.assertEqual(
+                model.assert_snapshot(
+                    self.plan,
+                    through,
+                    bindings,
+                    self.outputs,
+                    snapshot,
+                ),
+                model.state_through(
+                    self.plan,
+                    through,
+                ),
+            )
+            group = next(
+                candidate
+                for candidate in snapshot[
+                    "reservationGroups"
+                ]
+                if (
+                    candidate["outputId"],
+                    candidate["edge"],
+                )
+                == key
+            )
+            wrong_geometry = list(group["geometry"])
+            wrong_geometry[0] += 7
+            self.set_group_field_and_mirrors(
+                snapshot,
+                key,
+                "geometry",
+                wrong_geometry,
+            )
+            self.assert_refused(
+                lambda: model.assert_snapshot(
+                    self.plan,
+                    through,
+                    bindings,
+                    self.outputs,
+                    snapshot,
+                ),
+                "maximum-depth ownership",
+            )
+            exercised.add(edge)
+        self.assertEqual(exercised, set(model.Edge))
+
+    def test_visual_oracle_ignores_coherent_wrong_runtime_window_mirrors(
+        self,
+    ) -> None:
+        exercised: set[model.Edge] = set()
+        for edge in model.Edge:
+            _, _, _, snapshot, key = (
+                self.first_checkpoint_for_edge(edge)
+            )
+            windows = self.make_visual_windows(
+                snapshot,
+                self.outputs,
+            )
+            group = next(
+                candidate
+                for candidate in snapshot[
+                    "reservationGroups"
+                ]
+                if (
+                    candidate["outputId"],
+                    candidate["edge"],
+                )
+                == key
+            )
+            wrong_window_geometry = list(
+                group["windowGeometry"]
+            )
+            length_index = (
+                2
+                if edge.orientation == "horizontal"
+                else 3
+            )
+            wrong_window_geometry[length_index] -= 1
+            self.assertGreater(
+                wrong_window_geometry[length_index],
+                0,
+            )
+            self.set_group_field_and_mirrors(
+                snapshot,
+                key,
+                "windowGeometry",
+                wrong_window_geometry,
+            )
+            publisher = next(
+                window
+                for window in windows
+                if window["caption"]
+                == (
+                    "#screen-space-reservation"
+                    f"#output={key[0]}"
+                    f"#edge={int(edge)}"
+                )
+            )
+            publisher["geometry"][length_index] -= 1
+            self.assert_refused(
+                lambda: model.assert_visual_window_ownership(
+                    {
+                        "snapshot": snapshot,
+                        "outputs": self.outputs,
+                        "windows": windows,
+                    }
+                ),
+                "publisher match count is 0",
+            )
+            exercised.add(edge)
+        self.assertEqual(exercised, set(model.Edge))
+
+    def test_reservation_oracle_rejects_coherent_metadata_drift(self) -> None:
+        shared_group = next(
+            group
+            for group in self.snapshot[
+                "reservationGroups"
+            ]
+            if group["memberCount"] > 1
+        )
+        key = (
+            shared_group["outputId"],
+            shared_group["edge"],
+        )
+
+        mutations: dict[str, tuple[str, Any]] = {
+            "anchors": (
+                "layerShellAnchors",
+                [shared_group["edge"]],
+            ),
+            "margins": (
+                "layerShellMargins",
+                [0, 4, 0, 4],
+            ),
+            "exclusive zone": (
+                "layerShellExclusiveZone",
+                shared_group[
+                    "layerShellExclusiveZone"
+                ]
+                + 1,
+            ),
+        }
+        for name, (field, value) in mutations.items():
+            with self.subTest(name=name):
+                snapshot = copy.deepcopy(
+                    self.snapshot
+                )
+                self.set_group_field_and_mirrors(
+                    snapshot,
+                    key,
+                    field,
+                    value,
+                )
+                self.assert_refused(
+                    lambda: model.assert_snapshot(
+                        self.plan,
+                        self.final_seq,
+                        self.bindings,
+                        self.outputs,
+                        snapshot,
+                    ),
+                    "maximum-depth ownership",
+                )
+
+        depth_snapshot = copy.deepcopy(self.snapshot)
+        wrong_depth = shared_group["publishedDepth"] + 1
+        output = next(
+            candidate
+            for candidate in self.outputs.values()
+            if candidate["id"] == key[0]
+        )
+        edge = model.Edge[key[1].upper()]
+        x, y, width, height = output["geometry"]
+        wrong_geometry = {
+            model.Edge.TOP: [
+                x,
+                y,
+                width,
+                wrong_depth,
+            ],
+            model.Edge.BOTTOM: [
+                x,
+                y + height - wrong_depth,
+                width,
+                wrong_depth,
+            ],
+            model.Edge.LEFT: [
+                x,
+                y,
+                wrong_depth,
+                height,
+            ],
+            model.Edge.RIGHT: [
+                x + width - wrong_depth,
+                y,
+                wrong_depth,
+                height,
+            ],
+        }[edge]
+        for field, value in (
+            ("publishedDepth", wrong_depth),
+            ("layerShellExclusiveZone", wrong_depth),
+            ("geometry", wrong_geometry),
+        ):
+            self.set_group_field_and_mirrors(
+                depth_snapshot,
+                key,
+                field,
+                value,
+            )
+        self.assert_refused(
+            lambda: model.assert_snapshot(
+                self.plan,
+                self.final_seq,
+                self.bindings,
+                self.outputs,
+                depth_snapshot,
+            ),
+            "maximum-depth ownership",
+        )
+
+        bounded_snapshot = copy.deepcopy(
+            self.snapshot
+        )
+        member_views = [
+            view
+            for view in bounded_snapshot["views"]
+            if view["persistentDockId"]
+            in set(shared_group["contributorDockIds"])
+        ]
+        axis_start = (
+            output["geometry"][0]
+            if edge.orientation == "horizontal"
+            else output["geometry"][1]
+        )
+        axis_length = (
+            output["geometry"][2]
+            if edge.orientation == "horizontal"
+            else output["geometry"][3]
+        )
+        partial_length = round(axis_length * 0.2)
+        for index, view in enumerate(
+            sorted(
+                member_views,
+                key=lambda candidate:
+                    candidate["persistentDockId"],
+            )
+        ):
+            partial_start = (
+                axis_start
+                + round(
+                    axis_length
+                    * (0.1 + index * 0.5)
+                )
+            )
+            view["stablePrimaryAxisStart"] = (
+                partial_start
+            )
+            view["stablePrimaryAxisLength"] = (
+                partial_length
+            )
+            trigger = view[
+                "stableTriggerGeometry"
+            ]
+            if edge.orientation == "horizontal":
+                trigger[0] = partial_start
+                trigger[2] = partial_length
+                view["publishedStruts"][0] = (
+                    partial_start
+                )
+                view["publishedStruts"][2] = (
+                    partial_length
+                )
+            else:
+                trigger[1] = partial_start
+                trigger[3] = partial_length
+                view["publishedStruts"][1] = (
+                    partial_start
+                )
+                view["publishedStruts"][3] = (
+                    partial_length
+                )
+        self.assertEqual(
+            model.assert_snapshot(
+                self.plan,
+                self.final_seq,
+                self.bindings,
+                self.outputs,
+                bounded_snapshot,
+            ),
+            self.final_state,
+        )
+        starts = [
+            view["stablePrimaryAxisStart"]
+            for view in member_views
+        ]
+        ends = [
+            view["stablePrimaryAxisStart"]
+            + view["stablePrimaryAxisLength"]
+            for view in member_views
+        ]
+        bounded_geometry = list(
+            shared_group["geometry"]
+        )
+        if edge.orientation == "horizontal":
+            bounded_geometry[0] = min(starts)
+            bounded_geometry[2] = (
+                max(ends) - min(starts)
+            )
+        else:
+            bounded_geometry[1] = min(starts)
+            bounded_geometry[3] = (
+                max(ends) - min(starts)
+            )
+        self.set_group_field_and_mirrors(
+            bounded_snapshot,
+            key,
+            "geometry",
+            bounded_geometry,
+        )
+        self.assert_refused(
+            lambda: model.assert_snapshot(
+                self.plan,
+                self.final_seq,
+                self.bindings,
+                self.outputs,
+                bounded_snapshot,
+            ),
+            "maximum-depth ownership",
+        )
+
+    def test_reservation_membership_comes_from_live_placement(self) -> None:
+        missing = copy.deepcopy(self.snapshot)
+        missing.pop("reservationGroups")
+        missing["reservationGroups"] = copy.deepcopy(
+            self.snapshot["reservationGroups"][1:]
+        )
+        self.assert_refused(
+            lambda: model.assert_snapshot(
+                self.plan,
+                self.final_seq,
+                self.bindings,
+                self.outputs,
+                missing,
+            ),
+            "reservation groups",
+        )
+
+        stale = copy.deepcopy(self.snapshot)
+        existing_keys = {
+            (group["outputId"], group["edge"])
+            for group in stale["reservationGroups"]
+        }
+        stale_key = next(
+            (output["id"], edge.label)
+            for output in self.outputs.values()
+            for edge in model.Edge
+            if (output["id"], edge.label)
+            not in existing_keys
+        )
+        stale_group = copy.deepcopy(
+            stale["reservationGroups"][0]
+        )
+        stale_group["outputId"] = stale_key[0]
+        stale_group["edge"] = stale_key[1]
+        stale_group["publisher"] = (
+            f"stale-{stale_key[0]}-"
+            f"{stale_key[1]}"
+        )
+        stale["reservationGroups"].append(
+            stale_group
+        )
+        self.assert_refused(
+            lambda: model.assert_snapshot(
+                self.plan,
+                self.final_seq,
+                self.bindings,
+                self.outputs,
+                stale,
+            ),
+            "reservation groups",
+        )
+
+        swapped = copy.deepcopy(self.snapshot)
+        group = swapped["reservationGroups"][0]
+        old_key = (
+            group["outputId"],
+            group["edge"],
+        )
+        other_output = next(
+            output
+            for output in self.outputs.values()
+            if output["id"] != old_key[0]
+        )
+        self.set_group_field_and_mirrors(
+            swapped,
+            old_key,
+            "outputId",
+            other_output["id"],
+        )
+        self.assert_refused(
+            lambda: model.assert_snapshot(
+                self.plan,
+                self.final_seq,
+                self.bindings,
+                self.outputs,
+                swapped,
+            ),
+            "reservation groups",
         )
 
     def test_valid_checkpoint_and_identity_authority_negatives(self) -> None:
@@ -937,7 +1531,10 @@ class OperationModelTest(unittest.TestCase):
                 self.plan,
                 self.final_seq,
                 self.bindings,
-                {"primary": 10, "secondary": 10},
+                {
+                    "primary": self.outputs["primary"],
+                    "secondary": self.outputs["primary"],
+                },
                 self.snapshot,
             ),
             "distinct identities",
@@ -959,9 +1556,27 @@ class OperationModelTest(unittest.TestCase):
         self.assert_checkpoint_refuses(
             lambda snapshot: snapshot["views"][0].__setitem__(
                 "screenId",
-                self.outputs["secondary"]
-                if snapshot["views"][0]["screenId"] == self.outputs["primary"]
-                else self.outputs["primary"],
+                self.outputs["secondary"]["id"]
+                if snapshot["views"][0]["screenId"]
+                == self.outputs["primary"]["id"]
+                else self.outputs["primary"]["id"],
+            )
+        )
+        self.assert_checkpoint_refuses(
+            lambda snapshot: snapshot["views"][0].__setitem__(
+                "screen",
+                "stale-connector-name",
+            )
+        )
+        self.assert_checkpoint_refuses(
+            lambda snapshot: snapshot["views"][0][
+                "screenGeometry"
+            ].__setitem__(
+                0,
+                snapshot["views"][0][
+                    "screenGeometry"
+                ][0]
+                + 1,
             )
         )
         self.assert_checkpoint_refuses(
@@ -1239,7 +1854,10 @@ class OperationModelTest(unittest.TestCase):
     def test_replay_rejects_tampered_authoritative_fields(self) -> None:
         mutations: dict[str, tuple[Callable[[list[dict[str, Any]]], None], str]] = {
             "header outputs": (
-                lambda records: records[0]["outputs"].__setitem__("primary", 11),
+                lambda records: records[0]["outputs"]["primary"].__setitem__(
+                    "id",
+                    records[0]["outputs"]["primary"]["id"] + 1,
+                ),
                 "pair 1 diverges",
             ),
             "resolved operation": (

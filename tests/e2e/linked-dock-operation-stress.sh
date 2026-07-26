@@ -546,8 +546,8 @@ print(json.dumps([json.loads(row) for row in rows],
 }
 
 assert_visual_window_ownership() {
-    local snapshot_file="$1" windows_file="$2"
-    python3 - "$snapshot_file" "$windows_file" <<'PY' \
+    local snapshot_file="$1" windows_file="$2" output_file="$3"
+    python3 - "$snapshot_file" "$windows_file" "$output_file" <<'PY' \
         | python3 "$MODEL" assert-visual-window-ownership >/dev/null
 import json
 import sys
@@ -556,8 +556,10 @@ with open(sys.argv[1], encoding="utf-8") as stream:
     snapshot = json.load(stream)
 with open(sys.argv[2], encoding="utf-8") as stream:
     windows = json.load(stream)
+with open(sys.argv[3], encoding="utf-8") as stream:
+    outputs = json.load(stream)
 print(json.dumps(
-    {"snapshot": snapshot, "windows": windows},
+    {"snapshot": snapshot, "outputs": outputs, "windows": windows},
     sort_keys=True,
     separators=(",", ":"),
 ))
@@ -622,7 +624,8 @@ wait_for_visual_window_ownership() {
                 | python3 "$MODEL" assert-checkpoint >/dev/null 2>&1 \
             && capture_layer3_latte_windows >"$windows_file" 2>/dev/null \
             && assert_visual_window_ownership \
-                "$snapshot_file" "$windows_file" >/dev/null 2>&1; then
+                "$snapshot_file" "$windows_file" \
+                "$outputs_file" >/dev/null 2>&1; then
             return 0
         fi
         sleep 0.25
@@ -631,7 +634,8 @@ wait_for_visual_window_ownership() {
         | python3 "$MODEL" assert-checkpoint >/dev/null
     capture_layer3_latte_windows >"$windows_file" \
         || return 1
-    assert_visual_window_ownership "$snapshot_file" "$windows_file"
+    assert_visual_window_ownership \
+        "$snapshot_file" "$windows_file" "$outputs_file"
 }
 
 require_private_nested_session
@@ -816,10 +820,18 @@ if len(screens) != 2 or len(primary) != 1 or len(secondary) != 1:
     raise SystemExit(
         "expected two active screens with one primary, got %r" % screens
     )
+
+def output_record(screen):
+    return {
+        "id": screen["id"],
+        "name": screen["name"],
+        "geometry": screen["geometry"],
+    }
+
 with open(sys.argv[2], "w", encoding="utf-8") as stream:
     json.dump({
-        "primary": primary[0]["id"],
-        "secondary": secondary[0]["id"],
+        "primary": output_record(primary[0]),
+        "secondary": output_record(secondary[0]),
     }, stream, sort_keys=True, separators=(",", ":"))
     stream.write("\n")
 PY

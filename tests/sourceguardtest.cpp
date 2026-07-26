@@ -1011,6 +1011,12 @@ private:
             && visualOwnership.contains(QStringLiteral(
                    "python3\"$MODEL\""
                    "assert-visual-window-ownership"))
+            && visualOwnership.contains(QStringLiteral(
+                   "\"outputs\":outputs"))
+            && recipe.contains(QStringLiteral(
+                   "\"name\":screen[\"name\"]"))
+            && recipe.contains(QStringLiteral(
+                   "\"geometry\":screen[\"geometry\"]"))
             && model.contains(QStringLiteral(
                    "\"currentVisibleGeometry\""))
             && !model.contains(QStringLiteral("\"visibleGeometry\""))
@@ -1020,6 +1026,20 @@ private:
                    "iflen(group_keys)!=len(set(group_keys)):"))
             && model.contains(QStringLiteral(
                    "ifleft[1]>right[0]:"))
+            && model.contains(QStringLiteral(
+                   "classOutputSnapshot:"))
+            && model.contains(QStringLiteral(
+                   "outputs=parse_outputs(payload[\"outputs\"])"))
+            && model.contains(QStringLiteral(
+                   "expected_global_reservation_window_geometry("))
+            && model.contains(QStringLiteral(
+                   "group[\"geometry\"]!=expected_geometry"))
+            && model.contains(QStringLiteral(
+                   "group[\"layerShellAnchors\"]!=expected_anchors"))
+            && model.contains(QStringLiteral(
+                   "group[\"layerShellMargins\"]!=[0,0,0,0]"))
+            && model.contains(QStringLiteral(
+                   "view[\"publishedStruts\"]!=expected_strut"))
             && model.contains(QStringLiteral(
                    "forgroupinsnapshot[\"reservationGroups\"]:"))
             && model.contains(QStringLiteral(
@@ -2723,6 +2743,37 @@ void SourceGuardTest::linkedOperationStormE2e_sourceGuardRejectsControlledMutati
     QVERIFY2(
         !matchesLinkedOperationStormE2eContract(recipe, legacySchema),
         "using the nonexistent visibleGeometry field must fail the FP-4C guard");
+
+    QString missingExternalOutputs = recipe;
+    const QString visualInput = QStringLiteral(
+        "{\"snapshot\": snapshot, \"outputs\": outputs, \"windows\": windows}");
+    QCOMPARE(missingExternalOutputs.count(visualInput), 1);
+    missingExternalOutputs.replace(
+        visualInput,
+        QStringLiteral("{\"snapshot\": snapshot, \"windows\": windows}"));
+    QVERIFY2(
+        !matchesLinkedOperationStormE2eContract(
+            missingExternalOutputs,
+            model),
+        "visual ownership must consume independent output identity and geometry");
+
+    QString circularReservationGeometry = model;
+    const QString externalGeometry =
+        QStringLiteral(
+            "expected_global_reservation_window_geometry");
+    QCOMPARE(
+        circularReservationGeometry.count(
+            externalGeometry),
+        2);
+    circularReservationGeometry.replace(
+        externalGeometry,
+        QStringLiteral(
+            "observed_reservation_window_geometry"));
+    QVERIFY2(
+        !matchesLinkedOperationStormE2eContract(
+            recipe,
+            circularReservationGeometry),
+        "reservation publishers must be derived from external output geometry");
 }
 
 void SourceGuardTest::linkedOperationStormE2e_cleanupPreservesFailureAndSafety()
