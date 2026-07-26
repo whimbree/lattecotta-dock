@@ -591,6 +591,16 @@ add_test(NAME multioutputstatecontracttest
 set_tests_properties(multioutputstatecontracttest PROPERTIES
     ENVIRONMENT "REPO_ROOT=${CMAKE_SOURCE_DIR}")
 
+# FP-4C (the deterministic linked-view operation storm): the pure typed model
+# validates its canonical seeded plan, schema-7 checkpoints, lineage graph,
+# stable-span isolation, maximum-depth reservations, edit ownership, runtime
+# rotation, durable projections, and exact replay log.
+add_test(NAME linkedoperationstormmodeltest
+    COMMAND ${CMAKE_COMMAND} -E env
+        PYTHONDONTWRITEBYTECODE=1
+        python3
+        ${CMAKE_SOURCE_DIR}/tests/e2e/fixtures/fp4c/test_operation_model.py)
+
 # Dock identity and edit-session boundary wiring. The value-only action policy
 # and retarget generations have sanitized unit tests; this pins their use by
 # the runtime objects that need a complete Plasma shell to construct.

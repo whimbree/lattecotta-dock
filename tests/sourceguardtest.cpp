@@ -45,6 +45,9 @@
 //   * Floating-panel acceptance: recipe 071 keeps a partial Justify QWindow,
 //     reservation, applet span, and physical-publication revisions stable
 //     through both directions and a rapid reversal storm
+//   * FP-4C linked-view operation storm: a validated typed plan enters a
+//     whole-config transaction before any mutation, records exact replay and
+//     schema-7 state, and restores the pristine nested runtime on every exit
 //   * Theme-aware icon rendering: every view shares the registered singleton's
 //     QML engine and offscreen software teardown stays on the basic render loop
 //   * Dock-system reporting: persistent-id ordering and original/clone
@@ -890,6 +893,146 @@ private:
                    "\"popupprimaryoriginoutsidestablepaint\""));
     }
 
+    static bool matchesLinkedOperationStormE2eContract(
+        const QString &recipeSource,
+        const QString &modelSource)
+    {
+        const QString recipe = normalizedCode(recipeSource);
+        const QString cleanup = normalizedCode(functionBody(
+            recipeSource, QStringLiteral("cleanup()")));
+        const QString restore = normalizedCode(functionBody(
+            recipeSource, QStringLiteral("restore_config_exactly()")));
+        const QString visualOwnership = normalizedCode(functionBody(
+            recipeSource,
+            QStringLiteral("assert_visual_window_ownership()")));
+        const QString model = normalizedCode(modelSource);
+
+        const qsizetype privateSessionGuard =
+            recipe.lastIndexOf(QStringLiteral(
+                "require_private_nested_session"));
+        const qsizetype privatePlanStage =
+            recipe.indexOf(QStringLiteral(
+                "candidate_plan=\"$(mktemp"
+                "\"$E2E_RT/fp4c-operation-plan.XXXXXX\")\""));
+        const qsizetype suppliedPlanValidation =
+            recipe.indexOf(QStringLiteral(
+                "python3\"$MODEL\"validate-plan"
+                "<\"$plan_source\">/dev/null"));
+        const qsizetype privatePlanCopy =
+            recipe.indexOf(QStringLiteral(
+                "cp--\"$plan_source\"\"$candidate_plan\""));
+        const qsizetype cleanupTrap =
+            recipe.indexOf(QStringLiteral("trapcleanupEXIT"));
+        const qsizetype baselineCapture =
+            recipe.indexOf(QStringLiteral(
+                "snapshot>\"$baseline_snapshot_file\""));
+        const qsizetype pristineStop =
+            recipe.indexOf(QStringLiteral(
+                "stop_dock_if_running"), baselineCapture);
+        const qsizetype pristineBackup =
+            recipe.indexOf(QStringLiteral(
+                "cp-a--\"$E2E_CONFIG_HOME/.\"\"$backup_dir/\""));
+        const qsizetype configReplacement =
+            recipe.indexOf(QStringLiteral(
+                "rm-rf--\"$E2E_CONFIG_HOME\""), pristineBackup);
+        const qsizetype cleanupStop =
+            cleanup.indexOf(QStringLiteral("stop_dock_if_running"));
+        const qsizetype cleanupRemove =
+            restore.indexOf(QStringLiteral(
+                "rm-rf--\"$E2E_CONFIG_HOME\""));
+        const qsizetype cleanupRestore =
+            restore.indexOf(QStringLiteral(
+                "cp-a--\"$backup_dir/.\"\"$E2E_CONFIG_HOME/\""),
+                cleanupRemove);
+        const qsizetype cleanupCompare =
+            restore.indexOf(QStringLiteral(
+                "diff-qr--no-dereference"
+                "\"$backup_dir\"\"$E2E_CONFIG_HOME\""),
+                cleanupRestore);
+        const qsizetype cleanupRestart =
+            cleanup.indexOf(QStringLiteral(
+                "e2e_dock_start90"));
+
+        constexpr qsizetype minimumPlanValidationCount = 3;
+        return privateSessionGuard >= 0
+            && privatePlanStage > privateSessionGuard
+            && suppliedPlanValidation > privatePlanStage
+            && privatePlanCopy > suppliedPlanValidation
+            && cleanupTrap > privatePlanCopy
+            && baselineCapture > cleanupTrap
+            && pristineStop > baselineCapture
+            && pristineBackup > pristineStop
+            && configReplacement > pristineBackup
+            && cleanupStop >= 0
+            && cleanup.contains(QStringLiteral(
+                   "if[[\"$backup_ready\"==true"
+                   "&&\"$dock_stopped\"==true]];then"))
+            && cleanup.contains(QStringLiteral(
+                   "restore_config_exactly"))
+            && cleanup.count(QStringLiteral(
+                   "&&\"$config_safe_to_start\"==true")) == 2
+            && cleanupRemove >= 0
+            && cleanupRestore > cleanupRemove
+            && cleanupCompare > cleanupRestore
+            && cleanupRestart > cleanupStop
+            && recipe.count(QStringLiteral(
+                   "python3\"$MODEL\"validate-plan"))
+                >= minimumPlanValidationCount
+            && recipe.contains(QStringLiteral(
+                   "kwriteconfig6\"${panel_group[@]}\""
+                   "--keyminLength45"))
+            && recipe.contains(QStringLiteral(
+                   "kwriteconfig6\"${panel_group[@]}\""
+                   "--keymaxLength45"))
+            && recipe.contains(QStringLiteral(
+                   "kwriteconfig6\"${panel_group[@]}\""
+                   "--keyscreenEdgeMargin18"))
+            && recipe.contains(QStringLiteral(
+                   "assert_tombstone_on_disk"
+                   "\"$removed_this_step\""))
+            && recipe.contains(QStringLiteral(
+                   "removal_elapsed_ms<60000"))
+            && recipe.contains(QStringLiteral(
+                   "build_replay_header_input"
+                   "|python3\"$MODEL\"replay-header"
+                   ">\"$replay_file\""))
+            && recipe.contains(QStringLiteral(
+                   "python3\"$MODEL\"validate-replay"))
+            && recipe.contains(QStringLiteral(
+                   "--plan\"$plan_file\""))
+            && recipe.contains(QStringLiteral(
+                   "--replay\"$replay_file\""))
+            && recipe.contains(QStringLiteral(
+                   "wait_for_quiescent_projection"))
+            && recipe.contains(QStringLiteral(
+                   "wait_for_visual_window_ownership"))
+            && recipe.contains(QStringLiteral(
+                   "||-n\"$removed_this_step\""))
+            && visualOwnership.contains(QStringLiteral(
+                   "python3\"$MODEL\""
+                   "assert-visual-window-ownership"))
+            && model.contains(QStringLiteral(
+                   "\"currentVisibleGeometry\""))
+            && !model.contains(QStringLiteral("\"visibleGeometry\""))
+            && model.contains(QStringLiteral(
+                   "classOperationKind(str,Enum):"))
+            && model.contains(QStringLiteral(
+                   "iflen(group_keys)!=len(set(group_keys)):"))
+            && model.contains(QStringLiteral(
+                   "ifleft[1]>right[0]:"))
+            && model.contains(QStringLiteral(
+                   "forgroupinsnapshot[\"reservationGroups\"]:"))
+            && model.contains(QStringLiteral(
+                   "iflen(candidates)!=1:"))
+            && model.contains(QStringLiteral(
+                   "ifunmatched:"))
+            && model.contains(QStringLiteral(
+                   "ifoperation!=expected_operation:"))
+            && model.contains(QStringLiteral(
+                   "andafter_views[persistent_id]"
+                   "[\"runtimeViewId\"]inbefore_runtime_ids"));
+    }
+
     static bool matchesCompleteKScreenRestoreContract(const QString &source)
     {
         const QString code = normalizedCode(source);
@@ -1432,7 +1575,7 @@ private:
             functionBody(
                 visibilitySource,
                 QStringLiteral(
-                    "void VisibilityManager::updateStrutsBasedOnLayoutsAndActivities")));
+                    "bool VisibilityManager::updateStrutsBasedOnLayoutsAndActivities")));
         const QString setMode = normalizedCode(
             functionBody(
                 visibilitySource,
@@ -1466,7 +1609,7 @@ private:
                 "*m_latteView,target.struts,"
                 "target.edge);})"))
             && update.count(QStringLiteral(
-                "m_timerBlockStrutsUpdate.start();")) == 2
+                "m_timerBlockStrutsUpdate.start();")) >= 2
             && modeCommit != -1
             && retirement > modeCommit
             && setMode.contains(QStringLiteral(
@@ -1486,7 +1629,7 @@ private:
             functionBody(
                 visibilitySource,
                 QStringLiteral(
-                    "void VisibilityManager::updateStrutsBasedOnLayoutsAndActivities")));
+                    "bool VisibilityManager::updateStrutsBasedOnLayoutsAndActivities")));
         const QString outputResolver = normalizedCode(
             functionBody(
                 coordinatorSource,
@@ -1753,6 +1896,9 @@ private Q_SLOTS:
     void windowTouchE2e_drivesOneStableTriggerClient();
     void windowTouchTopologyE2e_keepsIndependentRegionsAndOutputs();
     void windowTouchTopologyE2e_cleanupGuardRejectsControlledMutations();
+    void linkedOperationStormE2e_keepsTransactionalReplayContract();
+    void linkedOperationStormE2e_sourceGuardRejectsControlledMutations();
+    void linkedOperationStormE2e_cleanupPreservesFailureAndSafety();
     void multiOutputRestore_keepsCompleteSemanticStateContract();
     void multiOutputRestore_sourceGuardRejectsProjectionOnlyVerification();
     void multiOutputRestore_sourceGuardRejectsMissingPrioritySetter();
@@ -2500,6 +2646,181 @@ run_cleanup_case 0 1 1 || exit 1
          harness,
          QStringLiteral("fp4b-cleanup-test"),
          cleanupBody,
+         temporary.path()});
+    QVERIFY(process.waitForStarted());
+    QVERIFY(process.waitForFinished());
+    const QByteArray processError = process.readAllStandardError();
+    QVERIFY2(
+        process.exitStatus() == QProcess::NormalExit
+            && process.exitCode() == 0,
+        processError.constData());
+}
+
+void SourceGuardTest::linkedOperationStormE2e_keepsTransactionalReplayContract()
+{
+    QVERIFY2(
+        matchesLinkedOperationStormE2eContract(
+            readFile(QStringLiteral(
+                "tests/e2e/linked-dock-operation-stress.sh")),
+            readFile(QStringLiteral(
+                "tests/e2e/fixtures/fp4c/operation_model.py"))),
+        "the FP-4C operation storm must validate its typed plan before a"
+        " whole-config transaction, prove every schema-7 checkpoint and"
+        " compositor owner, record exact replay, and restore the pristine"
+        " nested state on every exit");
+}
+
+void SourceGuardTest::linkedOperationStormE2e_sourceGuardRejectsControlledMutations()
+{
+    const QString recipe = readFile(QStringLiteral(
+        "tests/e2e/linked-dock-operation-stress.sh"));
+    const QString model = readFile(QStringLiteral(
+        "tests/e2e/fixtures/fp4c/operation_model.py"));
+    QVERIFY(matchesLinkedOperationStormE2eContract(recipe, model));
+
+    QString missingTrap = recipe;
+    const QString trap = QStringLiteral("trap cleanup EXIT");
+    QCOMPARE(missingTrap.count(trap), 1);
+    missingTrap.remove(trap);
+    QVERIFY2(
+        !matchesLinkedOperationStormE2eContract(missingTrap, model),
+        "removing pre-mutation cleanup arming must fail the FP-4C guard");
+
+    QString liveRestore = recipe;
+    const QString stoppedGate = QStringLiteral(
+        "[[ \"$backup_ready\" == true && \"$dock_stopped\" == true ]]");
+    QCOMPARE(liveRestore.count(stoppedGate), 1);
+    liveRestore.replace(
+        stoppedGate,
+        QStringLiteral("[[ \"$backup_ready\" == true ]]"));
+    QVERIFY2(
+        !matchesLinkedOperationStormE2eContract(liveRestore, model),
+        "allowing config replacement under a live dock must fail the FP-4C guard");
+
+    QString partialRestoreStart = recipe;
+    const QString restoredGate =
+        QStringLiteral("&& \"$config_safe_to_start\" == true");
+    QCOMPARE(partialRestoreStart.count(restoredGate), 2);
+    partialRestoreStart.remove(restoredGate);
+    QVERIFY2(
+        !matchesLinkedOperationStormE2eContract(partialRestoreStart, model),
+        "starting against a partial restore must fail the FP-4C guard");
+
+    QString incompleteWindowSet = model;
+    const QString exactWindowSet =
+        QStringLiteral("if len(candidates) != 1:");
+    QCOMPARE(incompleteWindowSet.count(exactWindowSet), 2);
+    incompleteWindowSet.replace(exactWindowSet, QStringLiteral("if False:"));
+    QVERIFY2(
+        !matchesLinkedOperationStormE2eContract(recipe, incompleteWindowSet),
+        "ignoring leaked layer-3 windows must fail the FP-4C guard");
+
+    QString legacySchema = model;
+    QVERIFY(legacySchema.contains(QStringLiteral("currentVisibleGeometry")));
+    legacySchema.replace(
+        QStringLiteral("currentVisibleGeometry"),
+        QStringLiteral("visibleGeometry"));
+    QVERIFY2(
+        !matchesLinkedOperationStormE2eContract(recipe, legacySchema),
+        "using the nonexistent visibleGeometry field must fail the FP-4C guard");
+}
+
+void SourceGuardTest::linkedOperationStormE2e_cleanupPreservesFailureAndSafety()
+{
+    const QString recipe = readFile(QStringLiteral(
+        "tests/e2e/linked-dock-operation-stress.sh"));
+    const QString cleanupBody = functionBody(
+        recipe, QStringLiteral("cleanup()"));
+    const QString restoreBody = functionBody(
+        recipe, QStringLiteral("restore_config_exactly()"));
+    QVERIFY2(!cleanupBody.isEmpty(), "FP-4C cleanup function not found");
+    QVERIFY2(!restoreBody.isEmpty(), "FP-4C restore function not found");
+
+    QTemporaryDir temporary;
+    QVERIFY(temporary.isValid());
+    const QString harness = QStringLiteral(R"SH(
+cleanup_body=$1
+restore_body=$2
+test_root=$3
+E2E_RT=$test_root/runtime
+E2E_CONFIG_HOME=$E2E_RT/config
+backup_dir=$E2E_RT/backup
+mkdir -p "$E2E_CONFIG_HOME" "$backup_dir"
+printf 'staged\n' > "$E2E_CONFIG_HOME/state"
+printf 'pristine\n' > "$backup_dir/state"
+
+path_is_within() {
+    return 0
+}
+eval "restore_config_exactly() $restore_body"
+backup_ready=true
+restore_config_exactly || exit 10
+[[ "$(cat "$E2E_CONFIG_HOME/state")" == pristine ]] || exit 11
+
+eval "cleanup() $cleanup_body"
+run_cleanup_case() {
+    case_name=$1
+    original_status=$2
+    stop_status=$3
+    pid_live=$4
+    restore_status=$5
+    expected_status=$6
+    expected_log=$7
+    case_log=$test_root/$case_name.log
+    : > "$case_log"
+    (
+        transaction_started=true
+        backup_ready=true
+        acceptance_completed=true
+        cleanup_failed=0
+        artifact_dir=$test_root
+        baseline_projection_file=$test_root/baseline
+        stop_dock_if_running() {
+            printf 'stop\n' >> "$case_log"
+            return "$stop_status"
+        }
+        e2e_dock_pid() {
+            [[ "$pid_live" == true ]] || return 1
+            printf '%s\n' "$$"
+        }
+        restore_config_exactly() {
+            printf 'restore\n' >> "$case_log"
+            return "$restore_status"
+        }
+        dock_is_running() {
+            return 1
+        }
+        e2e_dock_start() {
+            printf 'start\n' >> "$case_log"
+            return 0
+        }
+        snapshot() {
+            return 1
+        }
+        return_status() {
+            return "$1"
+        }
+        return_status "$original_status"
+        cleanup
+    )
+    actual_status=$?
+    [[ "$actual_status" -eq "$expected_status" ]] || exit 20
+    [[ "$(cat "$case_log")" == "$expected_log" ]] || exit 21
+}
+
+run_cleanup_case success 37 0 false 0 37 $'stop\nrestore\nstart' || exit $?
+run_cleanup_case live-dock 0 1 true 0 1 $'stop' || exit $?
+run_cleanup_case partial-restore 0 0 false 1 1 $'stop\nrestore' || exit $?
+)SH");
+
+    QProcess process;
+    process.start(
+        QStringLiteral("bash"),
+        {QStringLiteral("-c"),
+         harness,
+         QStringLiteral("fp4c-cleanup-test"),
+         cleanupBody,
+         restoreBody,
          temporary.path()});
     QVERIFY(process.waitForStarted());
     QVERIFY(process.waitForFinished());
