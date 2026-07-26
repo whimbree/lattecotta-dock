@@ -194,13 +194,12 @@ and PR #126 landed FP-4B.
       Commits: 3c2d81ee8
 - [x] The README describes the stable floating-panel behavior in timeless
       terms.
-- [ ] The full canonical gate passes after the final source commit.
-      The latest historical gate exited 0 at exact branch head
-      `8ef520abe4478abcb94c9818ef942d8360857c37`, including all 123 CTest
+- [x] The full canonical gate passes after the final source commit.
+      The replacement gate exited 0 at exact source head
+      `a7a523c80d9c7a67147810e5b91009308ff32243`, including all 124 CTest
       entries, QML and coverage ratchets, visual probes, the complete
       ASan/UBSan build, four nested-compositor recipes, package provenance
-      controls, and matrix refusals. The subsequent critical rereview found
-      D230 through D232, so corrected source requires a replacement gate.
+      controls, and matrix refusals.
 - [x] Correct D226 (LayerShell output migration bypassed reservation-gated
       remapping) and D227 (layout mutation preceded destination-output
       preflight).
@@ -256,8 +255,10 @@ and PR #126 landed FP-4B.
       `a06e84af1` and `6c85510a1` expose transaction lifecycle generations and
       drive two real cross-layout moves. The replacement 78-operation replay
       passes with creation, commit, and retirement generations advancing
-      exactly from 0 to 1 to 2. The replacement canonical gate and fresh
-      critical rereview remain.
+      exactly from 0 to 1 to 2. Commit `3f504ee8e` bounds cleanup of a
+      crash-stopped nested seed. The replacement canonical gate passes at
+      `a7a523c80d9c7a67147810e5b91009308ff32243`. Fresh critical rereview
+      remains.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent
