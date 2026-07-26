@@ -49,6 +49,13 @@ geometry validation that can accept matching wrong schema and compositor
 rectangles. These are release blockers for the FP-4C acceptance claim. The PR
 must receive root fixes, a new canonical gate, and a second independent review.
 
+D221 (rapid return-to-origin placement retained stale pending fields) is fixed
+at `5ce307460`. One typed latest-intent value now owns layout, screen group,
+logical and resolved output, follow-primary policy, edge, and alignment.
+Callbacks carry the current token, hide ownership survives supersession, and a
+new real A-to-B-to-A probe requires two claimed generations before exact
+settlement. D222 and D223 remain PR #128 blockers.
+
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
 globally unique historical token. The oracle retires the removed symbolic
