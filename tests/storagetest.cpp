@@ -54,6 +54,9 @@
 #include <QTemporaryDir>
 #include <QTest>
 
+// C++
+#include <optional>
+
 // KDE
 #include <KConfig>
 #include <KConfigGroup>
@@ -71,6 +74,110 @@ struct DurableMoveFixture final
     QString snapshotFile;
     KSharedConfigPtr hiddenConfig;
 };
+
+struct DurableMoveLifecycleReadback final
+{
+    quint64 journalCreatedGeneration;
+    quint64 commitDecisionGeneration;
+    quint64 journalRetiredGeneration;
+    QJsonArray transactions;
+};
+
+[[nodiscard]] std::optional<
+    DurableMoveLifecycleReadback>
+parseDurableMoveLifecycleReadback(
+    const QString &payload)
+{
+    QJsonParseError parseError;
+    const QJsonDocument document =
+        QJsonDocument::fromJson(
+            payload.toUtf8(),
+            &parseError);
+    if (parseError.error
+            != QJsonParseError::NoError
+            || !document.isObject()) {
+        return std::nullopt;
+    }
+
+    const QJsonObject readback =
+        document.object();
+    const QStringList expectedKeys{
+        QStringLiteral(
+            "commitDecisionGeneration"),
+        QStringLiteral(
+            "journalCreatedGeneration"),
+        QStringLiteral(
+            "journalRetiredGeneration"),
+        QStringLiteral("schemaVersion"),
+        QStringLiteral("transactions"),
+    };
+    if (readback.keys() != expectedKeys
+            || readback.value(
+                QStringLiteral(
+                    "schemaVersion"))
+                .toInt()
+                != 2
+            || !readback.value(
+                QStringLiteral(
+                    "transactions"))
+                .isArray()) {
+        return std::nullopt;
+    }
+
+    const auto parseGeneration =
+        [&readback](
+            const QString &key)
+            -> std::optional<quint64> {
+        const QJsonValue value =
+            readback.value(key);
+        if (!value.isString()) {
+            return std::nullopt;
+        }
+        bool parsed{false};
+        const quint64 generation =
+            value.toString()
+                .toULongLong(
+                    &parsed);
+        if (!parsed
+                || value.toString()
+                    != QString::number(
+                        generation)) {
+            return std::nullopt;
+        }
+        return generation;
+    };
+    const auto journalCreated =
+        parseGeneration(
+            QStringLiteral(
+                "journalCreatedGeneration"));
+    const auto commitDecision =
+        parseGeneration(
+            QStringLiteral(
+                "commitDecisionGeneration"));
+    const auto journalRetired =
+        parseGeneration(
+            QStringLiteral(
+                "journalRetiredGeneration"));
+    if (!journalCreated
+            || !commitDecision
+            || !journalRetired) {
+        return std::nullopt;
+    }
+
+    return DurableMoveLifecycleReadback{
+        .journalCreatedGeneration =
+            *journalCreated,
+        .commitDecisionGeneration =
+            *commitDecision,
+        .journalRetiredGeneration =
+            *journalRetired,
+        .transactions =
+            readback.value(
+                QStringLiteral(
+                    "transactions"))
+                .toArray(),
+    };
+}
 
 class PersistenceEndpointLayout final : public Latte::CentralLayout
 {
@@ -123,9 +230,11 @@ private Q_SLOTS:
     void restoreRemovalSnapshotReplacesPartialGroup();
     void removalPersistenceReportsWriteFailure();
     void classifyLayoutPersistenceEndpoints();
+    void exposeExactDurableMoveLifecycleSchema();
     void refuseImmutableDurableMoveBeforeCommit();
     void refuseImmutableActiveOwnerBeforeStaging();
     void refuseLockedDurableMoveBeforeCommit();
+    void rejectPreparedMoveRetiresJournalWithoutCommit();
     void commitDurableMoveAndRetireJournal();
     void commitFromSnapshotWhenStandaloneSourceIsStale();
     void discardUnpublishedPreparedJournalDuringRecovery();
@@ -347,12 +456,67 @@ createDurableMoveFixture(
 }
 
 void StorageTest::
+exposeExactDurableMoveLifecycleSchema()
+{
+    const QJsonObject readback =
+        QJsonDocument::fromJson(
+            Storage::self()
+                ->viewMoveTransactionsData()
+                .toUtf8())
+            .object();
+    const QStringList expectedKeys{
+        QStringLiteral(
+            "commitDecisionGeneration"),
+        QStringLiteral(
+            "journalCreatedGeneration"),
+        QStringLiteral(
+            "journalRetiredGeneration"),
+        QStringLiteral(
+            "schemaVersion"),
+        QStringLiteral(
+            "transactions"),
+    };
+    QCOMPARE(
+        readback.keys(),
+        expectedKeys);
+    QCOMPARE(
+        readback.value(
+            QStringLiteral(
+                "schemaVersion"))
+            .toInt(),
+        2);
+
+    const auto lifecycle =
+        parseDurableMoveLifecycleReadback(
+            Storage::self()
+                ->viewMoveTransactionsData());
+    QVERIFY(lifecycle);
+    QCOMPARE(
+        lifecycle
+            ->journalCreatedGeneration,
+        quint64{0});
+    QCOMPARE(
+        lifecycle
+            ->commitDecisionGeneration,
+        quint64{0});
+    QCOMPARE(
+        lifecycle
+            ->journalRetiredGeneration,
+        quint64{0});
+}
+
+void StorageTest::
 refuseImmutableDurableMoveBeforeCommit()
 {
     const DurableMoveFixture fixture =
         createDurableMoveFixture(
             QStringLiteral("immutable"));
     QVERIFY(!fixture.originFile.isEmpty());
+    const auto lifecycleBefore =
+        parseDurableMoveLifecycleReadback(
+            Storage::self()
+                ->viewMoveTransactionsData());
+    QVERIFY(lifecycleBefore);
 
     QFile immutableDestination(
         fixture.destinationFile);
@@ -391,6 +555,26 @@ refuseImmutableDurableMoveBeforeCommit()
     QVERIFY(Storage::self()
         ->pendingViewMoveTransactions()
         .isEmpty());
+    const auto lifecycleAfter =
+        parseDurableMoveLifecycleReadback(
+            Storage::self()
+                ->viewMoveTransactionsData());
+    QVERIFY(lifecycleAfter);
+    QCOMPARE(
+        lifecycleAfter
+            ->journalCreatedGeneration,
+        lifecycleBefore
+            ->journalCreatedGeneration);
+    QCOMPARE(
+        lifecycleAfter
+            ->commitDecisionGeneration,
+        lifecycleBefore
+            ->commitDecisionGeneration);
+    QCOMPARE(
+        lifecycleAfter
+            ->journalRetiredGeneration,
+        lifecycleBefore
+            ->journalRetiredGeneration);
 
     const KConfig origin(
         fixture.originFile,
@@ -533,6 +717,69 @@ refuseImmutableActiveOwnerBeforeStaging()
 }
 
 void StorageTest::
+rejectPreparedMoveRetiresJournalWithoutCommit()
+{
+    const DurableMoveFixture fixture =
+        createDurableMoveFixture(
+            QStringLiteral(
+                "reject-and-retire"));
+    QVERIFY(!fixture.originFile.isEmpty());
+    const auto lifecycleBefore =
+        parseDurableMoveLifecycleReadback(
+            Storage::self()
+                ->viewMoveTransactionsData());
+    QVERIFY(lifecycleBefore);
+
+    const auto result =
+        Storage::self()
+            ->persistViewMoveSnapshot(
+                fixture.originLayout,
+                fixture.originFile,
+                fixture.destinationLayout,
+                fixture.destinationFile,
+                fixture.hiddenConfig,
+                12,
+                fixture.snapshotFile,
+                Storage::
+                    ViewMoveInterruption::
+                        RejectCommitDecision);
+    QCOMPARE(
+        result.status,
+        Latte::Layouts::
+            ViewMovePersistenceResult::
+                Status::Rejected);
+    QVERIFY(!result.transactionPath.isEmpty());
+    QVERIFY(!QFileInfo::exists(
+        result.transactionPath));
+    QVERIFY(Storage::self()
+        ->pendingViewMoveTransactions()
+        .isEmpty());
+
+    const auto lifecycleAfter =
+        parseDurableMoveLifecycleReadback(
+            Storage::self()
+                ->viewMoveTransactionsData());
+    QVERIFY(lifecycleAfter);
+    QCOMPARE(
+        lifecycleAfter
+            ->journalCreatedGeneration,
+        lifecycleBefore
+                ->journalCreatedGeneration
+            + 1);
+    QCOMPARE(
+        lifecycleAfter
+            ->commitDecisionGeneration,
+        lifecycleBefore
+            ->commitDecisionGeneration);
+    QCOMPARE(
+        lifecycleAfter
+            ->journalRetiredGeneration,
+        lifecycleBefore
+                ->journalRetiredGeneration
+            + 1);
+}
+
+void StorageTest::
 commitDurableMoveAndRetireJournal()
 {
     const DurableMoveFixture fixture =
@@ -540,6 +787,11 @@ commitDurableMoveAndRetireJournal()
             QStringLiteral(
                 "commit-and-retire"));
     QVERIFY(!fixture.originFile.isEmpty());
+    const auto lifecycleBefore =
+        parseDurableMoveLifecycleReadback(
+            Storage::self()
+                ->viewMoveTransactionsData());
+    QVERIFY(lifecycleBefore);
 
     const auto result =
         Storage::self()
@@ -562,6 +814,45 @@ commitDurableMoveAndRetireJournal()
             ->pendingViewMoveTransactions(),
         QStringList{
             result.transactionPath});
+    QFile manifest(
+        QDir(result.transactionPath)
+            .filePath(
+                QStringLiteral(
+                    "manifest.json")));
+    QVERIFY(manifest.open(
+        QIODevice::ReadOnly));
+    const QJsonObject manifestReadback =
+        QJsonDocument::fromJson(
+            manifest.readAll())
+            .object();
+    QCOMPARE(
+        manifestReadback.value(
+            QStringLiteral(
+                "schemaVersion"))
+            .toInt(),
+        1);
+    const auto lifecycleAfterCommit =
+        parseDurableMoveLifecycleReadback(
+            Storage::self()
+                ->viewMoveTransactionsData());
+    QVERIFY(lifecycleAfterCommit);
+    QCOMPARE(
+        lifecycleAfterCommit
+            ->journalCreatedGeneration,
+        lifecycleBefore
+                ->journalCreatedGeneration
+            + 1);
+    QCOMPARE(
+        lifecycleAfterCommit
+            ->commitDecisionGeneration,
+        lifecycleBefore
+                ->commitDecisionGeneration
+            + 1);
+    QCOMPARE(
+        lifecycleAfterCommit
+            ->journalRetiredGeneration,
+        lifecycleBefore
+            ->journalRetiredGeneration);
 
     {
         const KConfig origin(
@@ -615,6 +906,27 @@ commitDurableMoveAndRetireJournal()
         .isEmpty());
     QVERIFY(!QFileInfo::exists(
         result.transactionPath));
+    const auto lifecycleAfterRetirement =
+        parseDurableMoveLifecycleReadback(
+            Storage::self()
+                ->viewMoveTransactionsData());
+    QVERIFY(lifecycleAfterRetirement);
+    QCOMPARE(
+        lifecycleAfterRetirement
+            ->journalCreatedGeneration,
+        lifecycleAfterCommit
+            ->journalCreatedGeneration);
+    QCOMPARE(
+        lifecycleAfterRetirement
+            ->commitDecisionGeneration,
+        lifecycleAfterCommit
+            ->commitDecisionGeneration);
+    QCOMPARE(
+        lifecycleAfterRetirement
+            ->journalRetiredGeneration,
+        lifecycleAfterCommit
+                ->journalRetiredGeneration
+            + 1);
 }
 
 void StorageTest::
@@ -1608,7 +1920,7 @@ recoverInterruptedDestinationStagingByRollingBack()
                 QStringLiteral(
                     "schemaVersion"))
                 .toInt(),
-            1);
+            2);
         const QJsonArray transactions =
             readback.value(
                 QStringLiteral(
@@ -1702,6 +2014,11 @@ recoverCommittedMoveByRollingForward()
         createDurableMoveFixture(
             QStringLiteral("rollforward"));
     QVERIFY(!fixture.originFile.isEmpty());
+    const auto lifecycleBefore =
+        parseDurableMoveLifecycleReadback(
+            Storage::self()
+                ->viewMoveTransactionsData());
+    QVERIFY(lifecycleBefore);
 
     const auto result =
         Storage::self()
@@ -1727,6 +2044,28 @@ recoverCommittedMoveByRollingForward()
             ->pendingViewMoveTransactions()
             .size(),
         1);
+    const auto lifecycleAfterCommit =
+        parseDurableMoveLifecycleReadback(
+            Storage::self()
+                ->viewMoveTransactionsData());
+    QVERIFY(lifecycleAfterCommit);
+    QCOMPARE(
+        lifecycleAfterCommit
+            ->journalCreatedGeneration,
+        lifecycleBefore
+                ->journalCreatedGeneration
+            + 1);
+    QCOMPARE(
+        lifecycleAfterCommit
+            ->commitDecisionGeneration,
+        lifecycleBefore
+                ->commitDecisionGeneration
+            + 1);
+    QCOMPARE(
+        lifecycleAfterCommit
+            ->journalRetiredGeneration,
+        lifecycleBefore
+            ->journalRetiredGeneration);
 
     {
         const KConfig origin(
@@ -1761,6 +2100,27 @@ recoverCommittedMoveByRollingForward()
     QVERIFY(Storage::self()
         ->pendingViewMoveTransactions()
         .isEmpty());
+    const auto lifecycleAfterRecovery =
+        parseDurableMoveLifecycleReadback(
+            Storage::self()
+                ->viewMoveTransactionsData());
+    QVERIFY(lifecycleAfterRecovery);
+    QCOMPARE(
+        lifecycleAfterRecovery
+            ->journalCreatedGeneration,
+        lifecycleAfterCommit
+            ->journalCreatedGeneration);
+    QCOMPARE(
+        lifecycleAfterRecovery
+            ->commitDecisionGeneration,
+        lifecycleAfterCommit
+            ->commitDecisionGeneration);
+    QCOMPARE(
+        lifecycleAfterRecovery
+            ->journalRetiredGeneration,
+        lifecycleAfterCommit
+                ->journalRetiredGeneration
+            + 1);
 
     const KConfig origin(
         fixture.originFile,

@@ -148,9 +148,13 @@
     <method name="dockSystemData">
         <arg name="data" type="s" direction="out"/>
     </method>
-    <!-- Pending crash-recoverable cross-layout view moves. The schema-versioned
-         JSON identifies the two layouts, complete containment subtree,
-         persisted owner, and deterministic startup recovery action. -->
+    <!-- Pending crash-recoverable cross-layout view moves. Readback schema 2
+         identifies the two layouts, complete containment subtree, persisted
+         owner, deterministic startup recovery action, and three process-local
+         lifecycle generations serialized as decimal strings. The created,
+         commit-decision, and retired generations advance only after their
+         corresponding durable filesystem boundary. The on-disk journal
+         remains schema 1. -->
     <method name="viewMoveTransactionsData">
         <arg name="data" type="s" direction="out"/>
     </method>

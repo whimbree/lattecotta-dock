@@ -61,6 +61,7 @@ namespace Layouts {
 namespace {
 
 constexpr int ViewMoveJournalSchemaVersion = 1;
+constexpr int ViewMoveTransactionsReadbackSchemaVersion = 2;
 constexpr auto ViewMoveTransactionsDirectory =
     ".view-move-transactions";
 constexpr auto ViewMoveManifestFile = "manifest.json";
@@ -339,6 +340,20 @@ struct ViewMoveJournalRecord final
                     << path;
     }
     return flushed;
+}
+
+void advanceViewMoveLifecycleGeneration(
+    quint64 &generation,
+    const char *const lifecycleBoundary)
+{
+    if (generation
+            == std::numeric_limits<
+                quint64>::max()) {
+        qFatal(
+            "view move lifecycle generation exhausted at %s",
+            lifecycleBoundary);
+    }
+    ++generation;
 }
 
 enum class EndpointPublicationResult
@@ -3449,7 +3464,8 @@ ViewMovePersistenceResult Storage::persistViewMoveSnapshot(
         transaction.commit(
             [&journal,
              &snapshotFile,
-             &transactionsRoot]() {
+             &transactionsRoot,
+             this]() {
                 if (!QDir().mkdir(
                         journal.directoryPath)) {
                     qCritical() << "view move transaction could not create"
@@ -3484,7 +3500,8 @@ ViewMovePersistenceResult Storage::persistViewMoveSnapshot(
                 const auto persisted =
                     readJournalManifest(
                         journal.directoryPath);
-                return persisted
+                const bool journalVerified =
+                    persisted
                     && persisted
                         ->snapshotSha256
                         == journal
@@ -3493,6 +3510,12 @@ ViewMovePersistenceResult Storage::persistViewMoveSnapshot(
                         journal.snapshotPath())
                         == journal
                             .snapshotSha256;
+                if (journalVerified) {
+                    advanceViewMoveLifecycleGeneration(
+                        m_viewMoveJournalCreatedGeneration,
+                        "journal creation");
+                }
+                return journalVerified;
             },
             [destinationConfig,
              &journal,
@@ -3518,7 +3541,10 @@ ViewMovePersistenceResult Storage::persistViewMoveSnapshot(
              &acceptDurablePublication]() {
                 if (interruption
                         == ViewMoveInterruption::
-                            AfterDestinationPublish) {
+                            AfterDestinationPublish
+                        || interruption
+                            == ViewMoveInterruption::
+                                RejectCommitDecision) {
                     return false;
                 }
                 commitDecisionPublication =
@@ -3598,6 +3624,18 @@ ViewMovePersistenceResult Storage::persistViewMoveSnapshot(
                             == ViewMoveDirectoryFlushFailure::
                                 Origin));
             });
+
+    if (pureResult
+            == Layout::ViewMoveTransaction::
+                Result::Committed
+            || pureResult
+                == Layout::ViewMoveTransaction::
+                    Result::
+                        CommittedRecoveryRequired) {
+        advanceViewMoveLifecycleGeneration(
+            m_viewMoveCommitDecisionGeneration,
+            "commit decision");
+    }
 
     ViewMovePersistenceResult result;
     result.transactionPath =
@@ -3807,7 +3845,19 @@ QString Storage::viewMoveTransactionsData() const
             QJsonObject{
                 {QStringLiteral(
                      "schemaVersion"),
-                 ViewMoveJournalSchemaVersion},
+                 ViewMoveTransactionsReadbackSchemaVersion},
+                {QStringLiteral(
+                     "journalCreatedGeneration"),
+                 QString::number(
+                     m_viewMoveJournalCreatedGeneration)},
+                {QStringLiteral(
+                     "commitDecisionGeneration"),
+                 QString::number(
+                     m_viewMoveCommitDecisionGeneration)},
+                {QStringLiteral(
+                     "journalRetiredGeneration"),
+                 QString::number(
+                     m_viewMoveJournalRetiredGeneration)},
                 {QStringLiteral(
                      "transactions"),
                  transactions},
@@ -3867,8 +3917,15 @@ bool Storage::completeViewMovePersistence(
                     << completedPath;
         return false;
     }
-    return flushDirectory(
-        root.absolutePath());
+    if (!flushDirectory(
+            root.absolutePath())) {
+        return false;
+    }
+
+    advanceViewMoveLifecycleGeneration(
+        m_viewMoveJournalRetiredGeneration,
+        "journal retirement");
+    return true;
 }
 
 bool Storage::recoverPendingViewMoves()

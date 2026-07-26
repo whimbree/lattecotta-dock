@@ -340,11 +340,29 @@ call viewMoveTransactionsData           # s: compact schema-versioned JSON objec
 ```
 
 This readback exposes pending crash-recoverable cross-layout dock moves. The
-top-level `schemaVersion` is 1 and `transactions` is canonically ordered by
-transaction directory name. A valid record contains `transactionId`,
-`journalValid`, `originLayout`, `destinationLayout`, `rootContainmentId`,
-`containmentIds`, `persistentOwner` (`origin`, `destination`, or `unknown`),
-and `recoveryAction` (`rollBack`, `rollForward`, or `refuse`).
+top-level schema is exactly:
+
+- `schemaVersion`: number `2`. The on-disk recovery journal remains schema 1.
+- `journalCreatedGeneration`: process-local monotonic decimal string. Advances
+  after a prepared journal is promoted and verified.
+- `commitDecisionGeneration`: process-local monotonic decimal string. Advances
+  only after the hidden active-layout owner is durably published as the
+  destination.
+- `journalRetiredGeneration`: process-local monotonic decimal string. Advances
+  after the journal has been renamed, removed, and the transaction root has
+  been durably flushed.
+- `transactions`: array canonically ordered by transaction directory name.
+
+The generations start at zero for each process and are independent counters.
+A rejected move can create and retire a journal without advancing the commit
+decision. Startup recovery does not attribute a prior process's journal
+creation or commit decision to the new process, so only retirement advances
+while recovery converges an inherited journal.
+
+A valid transaction record contains `transactionId`, `journalValid`,
+`originLayout`, `destinationLayout`, `rootContainmentId`, `containmentIds`,
+`persistentOwner` (`origin`, `destination`, or `unknown`), and
+`recoveryAction` (`rollBack`, `rollForward`, or `refuse`).
 
 The active hidden layout file is the commit authority. `origin` means the
 destination copy is staging and recovery removes it. `destination` means the
