@@ -2722,7 +2722,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   matrix, QML interaction, compile, lint, and source-mutation checks pass.
 
 ### D211 - Operation-storm convergence projected a nonexistent geometry field
-- STATUS: OPEN.
+- STATUS: FIXED ON `test/fp4c-operation-storm` (`64a1e44fa`); PR pending.
 - FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
   preflight.
 - SYMPTOM: the settled-state comparison could report unchanged visible
@@ -2739,7 +2739,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   therefore converted the misspelling into equal null values.
 
 ### D212 - Operation-storm teardown leaked its mutated dock fixture
-- STATUS: OPEN.
+- STATUS: FIXED ON `test/fp4c-operation-storm` (`64a1e44fa`); PR pending.
 - FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
   preflight.
 - SYMPTOM: a successful run leaves five created dock records in the nested
@@ -2755,7 +2755,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   call; its final state intentionally contains the five stress views.
 
 ### D213 - Operation-storm replay text was not a replayable typed plan
-- STATUS: OPEN.
+- STATUS: FIXED ON `test/fp4c-operation-storm` (`64a1e44fa`); PR pending.
 - FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
   preflight.
 - SYMPTOM: the artifact names a seed and resolved shell calls, but cannot be
@@ -2772,7 +2772,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   state or validate operation fields.
 
 ### D214 - Operation-storm acceptance did not require floating-panel ownership
-- STATUS: OPEN.
+- STATUS: FIXED ON `test/fp4c-operation-storm` (`64a1e44fa`); PR pending.
 - FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
   preflight.
 - SYMPTOM: the operation storm can pass without exercising the stable
@@ -2790,9 +2790,123 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   The final projection omits the listed FP-4 authorities and its fixture setup
   never configures Panel or floating-gap state.
 
+### D215 - Compound relocation exposed split placement authorities
+- STATUS: FIXED ON `test/fp4c-operation-storm` (`d7370bd6d`); PR pending.
+- FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
+  checkpoint 33.
+- SYMPTOM: an edge and output move could leave the QWindow geometry on one
+  output while LayerShellQt and the reservation coordinator still named the
+  other output. The applied relocation generation nevertheless advanced.
+- ROOT: output policy, QWindow retargeting, edge, alignment, geometry solving,
+  layer-shell state, reservation publication, and reveal were separate
+  observer-visible transitions. Intermediate resize could also make
+  `QWindow::screen()` follow an adjacent output before final margins applied.
+- FIX: one Positioner transaction retires old reservation ownership, applies
+  output policy, physical output, edge, and alignment under an observer guard,
+  solves against the assigned `QScreen`, verifies the LayerShellQt output and
+  exact anchors and margins, publishes the new reservation, commits the
+  generation, then remaps and reveals. Deferred reservation inputs remain
+  dirty until successful publication.
+- EVIDENCE: layer-shell, reservation-publication, identity-contract, and source
+  tests pin the order and failure semantics. The saved seed 127934575 replay
+  completes every output, edge, orientation, and alignment mutation with
+  equal applied authorities.
+
+### D216 - Reversible removal retained compositor-owned surfaces
+- STATUS: FIXED ON `test/fp4c-operation-storm` (`200a1f745`); PR pending.
+- FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
+  removal checkpoint.
+- SYMPTOM: a removed containment left its mapped dock surface, screen-edge
+  helper, floating-gap helper, or reservation contribution alive while Plasma
+  retained the QObject for its 60-second Undo window.
+- ROOT: `GenericLayout` moved the runtime View out of its active map but did
+  not transfer compositor ownership. Plasma's reversible object lifetime was
+  incorrectly treated as continued visual and reservation lifetime.
+- FIX: reversible removal stops visibility timers, retires reservation
+  membership, destroys helper surfaces, and unmaps the canvas before parking
+  the View. Undo republishes reservation ownership before recreating helpers
+  and remapping the same runtime View.
+- EVIDENCE: the ownership contract pins retirement and restoration order. The
+  operation storm requires the exact compositor window multiset and no
+  reservation contributor for every removed handle.
+
+### D217 - Removal tombstone committed before child transient writes
+- STATUS: FIXED ON `test/fp4c-operation-storm` (`200a1f745`); PR pending.
+- FOUND: 2026-07-25, real notification Undo acceptance.
+- SYMPTOM: a root containment could be deleted from persistence and then
+  partially recreated by later applet or subcontainment transient writes from
+  the same removal action.
+- ROOT: libplasma emits root `destroyedChanged(true)` before recursively
+  marking its child objects transient. Committing the tombstone in that signal
+  handler was therefore not the complete transaction boundary.
+- FIX: prepare the full subtree snapshot before removal, trigger libplasma's
+  synchronous action, and commit the tombstone only after the action returns.
+  Direct permanent removal uses the same post-destruction commit boundary.
+- EVIDENCE: the source contract rejects a tombstone from
+  `destroyedChanged()`. The real notification recipe removes and restores a
+  linked dock with its exact root, applet, and subcontainment state.
+
+### D218 - Single-layout removal used a stale KConfig repository
+- STATUS: FIXED ON `test/fp4c-operation-storm` (`200a1f745`); PR pending.
+- FOUND: 2026-07-25, real notification Undo acceptance.
+- SYMPTOM: a tombstone call reported success while the removed containment
+  remained on disk, or Undo restored a subtree that a later live sync could
+  overwrite.
+- ROOT: Corona opened the active layout as `KConfig::SimpleConfig`, while
+  `AbstractLayout` and Storage reopened the same pathname with default
+  `FullConfig` flags. `KSharedConfig` caches those as distinct repositories,
+  so group deletion operated on a stale entry map and became a no-op.
+- FIX: active single-layout removal and Undo accept Corona's live
+  `KSharedConfigPtr`, validate that its canonical path is the layout file, use
+  `SimpleConfig` consistently, synchronize once, and independently verify the
+  exact on-disk groups.
+- EVIDENCE: the stale-FullConfig observer test proves that deleting through the
+  live SimpleConfig authority persists even when the old observer later
+  writes. The real Undo and restart recipe preserves the complete subtree.
+
+### D219 - Hidden edit chrome initialization rewrote Maximum length
+- STATUS: FIXED ON `test/fp4c-operation-storm` (`c5f1e5d5a`); PR pending.
+- FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
+  checkpoint 43.
+- SYMPTOM: eight seconds after linked-dock creation, hidden settings chrome
+  changed the unrelated Justify root's `maxLength` from 45 percent to 1
+  percent. The new linked member remained at 45 percent.
+- ROOT: Maximum and Minimum slider handlers were connected before their
+  config-to-handle initialization completed. Minimum initialization compared
+  persistent state with the sibling Maximum handle's temporary zero and
+  invoked that sibling's config writer. Justify correctly ignores stored
+  minimum length, so the temporary zero clamped to the one-percent floor and
+  became persistent.
+- FIX: both controls distinguish config synchronization from interaction,
+  initialize before enabling handlers, and treat persistent configuration
+  rather than a sibling visual handle as the coupling authority.
+- EVIDENCE: the focused QML lifecycle test observes zero writes during
+  construction and config resynchronization, then exactly one write for an
+  interaction. All 131 shipped QML files compile, and the exact saved operation
+  replay keeps both dock values stable through delayed chrome warmup.
+
+### D220 - Stress oracle treated containment IDs as globally unique history
+- STATUS: FIXED ON `test/fp4c-operation-storm` (`64a1e44fa`); PR pending.
+- FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
+  step 42.
+- SYMPTOM: creating a dock after permanent removal failed replay validation
+  because Plasma reused the removed containment's numeric ID.
+- ROOT: the model retained symbolic-to-numeric bindings after the represented
+  persistent record ceased to exist. Plasma allocates the lowest available
+  containment ID, so uniqueness applies to live persistent records, not all
+  records that ever existed.
+- FIX: removal first proves the exact before-and-after persistent delta, then
+  retires that handle's binding. Later creation may bind the freed number to a
+  new symbolic record while live identities, lineage, reservation
+  contributors, and replay transitions remain exact.
+- EVIDENCE: the pure model covers removal followed by numeric ID reuse and all
+  21 adversarial cases pass. The same immutable plan and resolved replay pass
+  after multiple destruction and creation cycles.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: PARTIALLY FIXED. FP-1 (the output-edge maximum reservation authority)
-  is merged. FP-2 (the stable canvas and transition controller) is merged
+- STATUS: FIXED ON `test/fp4c-operation-storm`; final FP-4C PR pending. FP-1
+  (the output-edge maximum reservation authority) is merged. FP-2 (the stable
+  canvas and transition controller) is merged
   through PR #120, including schema 5 and nested recipe 071 acceptance. The
   independent review returned MERGE and the canonical gate passed at branch
   head `902bba7f8`, rebased as `c10e1756c`. FP-3 (internal presentation,
@@ -2802,8 +2916,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   acceptance) is merged through PR #124 at `f8396b5ed` through `5636966b5`.
   FP-4B (multi-output and separated-span topology acceptance) is merged through
   PR #126 at `4daa80121` through `6fa3c5703`. FP-4C (deterministic
-  operation-storm acceptance) remains open, so the FP-4 (stable window-touch
-  trigger and end-to-end acceptance) umbrella remains open.
+  operation-storm acceptance) now passes its immutable 74-operation nested
+  replay, exact schema-7 convergence, compositor ownership, removal, and
+  restart assertions on this branch.
   Execution is tracked in `floating-panel-parity-plan.md`.
 - FOUND: 2026-07-24, Plasma 6.7.3 parity investigation after live floating
   panel maximize, radius, shadow, and animation regressions.

@@ -1,9 +1,10 @@
 # Dock identity, placement, and replication hardening
 
 Status: independent Duplicate Dock and explicit Create Linked Dock implemented;
-linked runtime lifecycle and sizing ownership hardened; bounded placement and
-same-edge span validation remain separate work
-(2026-07-24)
+linked runtime lifecycle, sizing, compound placement, and reversible removal
+ownership hardened; bounded alignment normalization and same-edge span
+validation remain separate work
+(2026-07-25)
 
 This record defines the ownership model used to investigate dock duplication,
 screen-group cloning, edit mode, placement, and same-edge occupancy. It
@@ -71,16 +72,16 @@ that is the boundary with deferred work.
 | Entity | Unique or shared | Lifetime owner | Persistence key | Duplication | Output or orientation change | Edit mode | Cleanup |
 |---|---|---|---|---|---|---|---|
 | Logical dock | One independent containment, or one original plus its linked members | Original persistent containment | Original containment ID | Duplicate Dock creates one new independent logical dock | Identity stays stable | Selects the intended edit target | Ends when the original and all linked members are removed |
-| Persistent dock record | Unique per containment | Layout configuration | Containment ID | All containment and applet IDs are regenerated | Screen, edge, alignment, and length state update on the same record | Supplies menu and edit target identity | Removed with the containment configuration |
+| Persistent dock record | Unique among live containments and stable for that record's lifetime; Plasma may reuse the numeric ID after permanent removal | Layout configuration | Containment ID | All containment and applet IDs are regenerated | Screen, edge, alignment, and length state update on the same record | Supplies menu and edit target identity | Removed with the containment configuration; only then may the allocator reuse its numeric ID |
 | Containment | Unique per visible original or clone | Plasma Corona and layout | Containment ID | Must be newly imported with remapped IDs | Persists placement and QML configuration | Own `userConfiguring` is the per-view edit presentation state | Destroyed by layout removal; no runtime view may retain it |
 | Runtime dock view | Unique QObject and QWindow per active containment | `GenericLayout` containment-to-view map | Not persisted | Constructed fresh | Remaps or recreates its layer surface | Holds only a non-owning pointer to shared edit chrome | Disconnects, unregisters, and deletes all child managers |
 | Per-output view | Every linked member is one separate containment and runtime view | `OriginalView` owns relationship membership; layout owns runtime registration | Member containment ID plus `isClonedFrom` and `linkPlacement` | Duplicate Dock clears this relationship | Derived members follow screen-group output policy; explicit members own output and edge | Derived members edit the root; explicit members edit themselves | Member unregisters from the root before destruction |
 | Linked relationship | Shared logical group, explicit and acyclic | Root persistent dock | Member `isClonedFrom=<root id>` | Create Linked extends the direct-root group; Duplicate never copies it | `linkPlacement` names derived versus member-local placement ownership | Menu wording and edit targeting use the same runtime role | Explicit root removal is refused while members persist; member removal unregisters without dangling entries; runtime unload never deletes persistence |
 | Applet layout | Unique QML object, applet ID, and config group per containment; one explicit content projection per relationship | Root view coordinates structural mutations; each containment owns its projection and per-view geometry keys | Applet groups under containment ID | Deep-copied and ID-remapped; linked import clears per-view `length` | Local geometry and applet length recalculate for that view | Its containment controls edit presentation | Root transaction removes every projection; Undo recreates member-local identities and shared config while keeping local geometry excluded; containment teardown destroys the remainder |
-| Geometry controller | Unique `Positioner` per runtime view | Runtime `View` QObject parent | Derived, not persisted | Constructed fresh | Consumes that view's output and owns monotonic relocation generations | Edit thickness may change local placement | QObject parent destruction cancels timers and callbacks |
+| Geometry controller | Unique `Positioner` per runtime view | Runtime `View` QObject parent | Derived, not persisted | Constructed fresh | Consumes the assigned output and commits output policy, LayerShell output, edge, alignment, geometry, reservation, generation, remap, and reveal as one ordered transaction | Edit thickness may change local placement | QObject parent destruction cancels timers and callbacks |
 | Applet sizing | Unique `AutoSize`, effective icon state, and applet `length` per containment | Containment QML tree | Configured dock values plus per-applet local `length` | Independent Duplicate copies the snapshot; linked creation clears local `length`; effective values recompute | Consumes the same view's solved primary length and orientation | Recomputes only for local edit geometry | QML tree destruction |
 | Edit-mode controller | One reusable chrome ensemble, one current owner, one requested generation | `ViewSettingsFactory` under Corona | Not persisted | Never copied | Retarget is one cancelable generation | Exactly one effective owner; clone requests resolve explicitly | Cancels deferred work and clears the old containment before rebinding |
-| Reservation coordinator | One Corona-owned coordinator, one active group and publisher per persistent output identity and edge | Corona | Runtime key: output identity plus edge; no persisted group id | Duplicate contributes independently; no rank, lane, or mutable view state is copied | Stages old and new groups before committing membership, maximum depth, publishers, and generation | Independent of edit mode; edit-only reservation changes use the same member contribution path | Removes membership before view destruction; last-member removal destroys the publisher and advances the observable generation |
+| Reservation coordinator | One Corona-owned coordinator, one active group and publisher per persistent output identity and edge | Corona | Runtime key: output identity plus edge; no persisted group id | Duplicate contributes independently; no rank, lane, or mutable view state is copied | Retires old membership before a compound placement, then publishes the complete applied output and edge with maximum depth before remap or reveal | Independent of edit mode; edit-only reservation changes use the same member contribution path | Reversible removal retires membership before parking; last-member removal destroys the publisher and advances the observable generation |
 | Same-edge span validator | Missing in the current tree | Required owner: layout or Corona placement domain | Required key: output and edge | Duplicate remains independent; no rank or lane is copied | Revalidates exact stable spans without assuming adjacent outputs | Prevents committing overlap while permitting separated partial spans | Removes membership before view destruction |
 | Configuration object | Unique mutable map per containment; an explicit policy selects linked applet keys | Containment owns storage; relationship root owns shared mutation routing; each view owns applet geometry keys | Containment configuration group | Deep-copied into fresh groups for Duplicate Dock; linked import removes per-view keys | Explicit members keep containment placement, appearance, and applet length local | Menu and edit relationship are read from runtime identity | Destroyed with containment; Undo and reconnect restore shared values without overwriting local keys; signal contexts are the receiving view |
 
@@ -283,6 +284,38 @@ and every move carries a monotonic generation. Superseded callbacks are
 discarded. `geometrySettled` becomes true only after the newest generation is
 applied and the view's screen, geometry, validation, and reveal queues drain.
 
+### Placement completion exposed partially applied authorities (fixed)
+
+Relocation generation ownership alone did not make a placement atomic. Output
+policy, `QWindow::screen()`, LayerShellQt output, edge, alignment, solved
+geometry, reservation membership, and reveal still changed through independent
+signal paths. During a side-to-top move, the intermediate wide QWindow crossed
+an adjacent equal-height output. Qt inferred that output while LayerShellQt and
+the maximum-depth reservation still named the old one.
+
+Positioner now treats the persistent assignment as geometry authority. One
+transaction retires old reservation membership, stages output policy, physical
+output, edge, and alignment under an observer guard, solves against the
+assigned `QScreen`, applies and verifies the exact LayerShellQt output, anchors,
+and margins, publishes the new reservation, commits the relocation generation,
+then remaps and reveals. A stable replay with zero layer-shell setters is
+success; refusal is a separate `std::nullopt` result. Failed application cannot
+advance the applied generation or reveal a cross-output surface.
+
+### Reversible removal retained visual and reservation ownership (fixed)
+
+Moving a destroyed containment's View from the active map into the 60-second
+Undo map changed model ownership only. The QWindow, edge helper, floating-gap
+helper, visibility timers, and reservation contribution could remain active
+for an entity that no longer appeared in `dockSystemData`.
+
+Removal now suspends visibility timers, retires reservation ownership, deletes
+helper surfaces, and unmaps the canvas before the View is parked. Undo restores
+the persistent subtree first, republishes reservation ownership, recreates
+helpers, remaps the same runtime View, and only then returns it to the active
+map. Runtime object continuity during the Undo window is intentional; active
+compositor ownership is not.
+
 ### Removed containments remained persistent (fixed)
 
 Plasma keeps a removed containment alive during its 60-second Undo window.
@@ -302,6 +335,18 @@ removal if that snapshot fails, and replaces Plasma's partial groups from the
 snapshot on Undo. The containment ID and complete relationship record survive
 Undo, while restart inside the window still observes the tombstone.
 
+Two later acceptance failures refined that transaction. Libplasma emits the
+root `destroyedChanged(true)` before recursively marking applets and
+subcontainments transient, so a tombstone from that signal can be partially
+recreated by later child writes. The complete forward commit point is after the
+synchronous remove action returns. Corona also holds the active single-layout
+file through `KConfig::SimpleConfig`, while reopening the same path with default
+`FullConfig` flags creates a distinct cached `KSharedConfig` repository. Group
+deletion through that stale map can report success without deleting the live
+record. Snapshot, tombstone, and Undo now use Corona's path-validated live
+SimpleConfig authority, synchronize once, and verify the exact groups from an
+independent disk reader.
+
 ### Deferred edit-chrome retargets are not cancelable (fixed)
 
 `PrimaryConfigView::setParentView()` scheduled an unversioned 400 ms retarget.
@@ -310,6 +355,21 @@ B's configuring session. The second rebound directly to C without ending B's
 session, leaving more than one containment with `userConfiguring=true`. The
 retarget is now cancelable and generation-checked, and every rebind ends the old
 session first.
+
+### Hidden settings chrome treated initialization as interaction (fixed)
+
+The delayed chrome warmup constructs the settings pages against a real dock
+even though the window remains hidden. Maximum and Minimum length sliders
+connected their write handlers before config-to-handle synchronization. The
+Minimum control could compare its persistent value with the sibling Maximum
+handle's temporary zero and invoke the sibling writer. On Justify alignment,
+that zero correctly bypassed the stored Minimum floor and became the persistent
+one-percent Maximum.
+
+Both controls now distinguish presentation synchronization from interaction,
+initialize their handles before enabling writers, and compare coupled values
+through persistent configuration rather than sibling visual state. Constructing
+or resynchronizing hidden chrome performs zero writes.
 
 ### Same-edge occupancy needs span validation, not stacking
 
@@ -420,13 +480,14 @@ through the wrong authority:
 | State or identity | Intended ownership | Confirmed violation | Status |
 |---|---|---|---|
 | `screensGroup` and `isClonedFrom` | Relationship policy on the new persistent record | Duplicate Dock retained both fields and therefore created or rejoined a linked group | Fixed; one const snapshot transformation clears the relation |
-| Persistent containment ID | Unique per dock record | No shared ID found; every import remaps it | Regression-pinned |
+| Persistent containment ID | Unique and stable for one live dock record; reusable only after that record is permanently removed | No live shared ID found; every import remaps it. The stress oracle incorrectly retained historical bindings after removal | Regression-pinned with explicit remove-then-reuse coverage |
 | Applet ID | Unique per containment | Member-to-root routing used positional coincidence after reorder | Fixed; explicit ID maps route every mutation |
 | Runtime view identity | Unique per live QObject | No copied runtime ID found; the opaque diagnostic token is process-local | Regression-pinned |
 | Mutable containment configuration | Unique per containment | No shared KConfig object found; blanket linked mirroring gave applet-local `length` root-owned relationship semantics | Fixed through the compile-time shared-versus-local key policy on import, live signals, Undo, and reconciliation |
 | Applet removal transaction | One logical content transaction at the relationship root | Scheduled-destruction state was mirrored into member-local transactions and persistence | Fixed; root owns Undo, members own disposable projections |
 | Edit chrome | Intentionally one reusable factory-owned ensemble | Unversioned retarget callbacks and inconsistent linked target resolution left stale edit owners | Fixed; one cancelable generation and one authoritative relationship target |
-| Geometry and sizing controllers | Unique per runtime view | No shared cache found; stale relocation callbacks crossed generations, transient screen state overrode persisted placement, and applet `length` crossed orientations | Relocation, output authority, and linked applet length fixed; alignment normalization and same-edge span validation remain open |
+| Geometry and sizing controllers | Unique per runtime view | No shared cache found; stale relocation callbacks crossed generations, compound placement exposed different output authorities, transient screen state overrode persisted placement, hidden slider initialization wrote configuration, and applet `length` crossed orientations | Generation, applied placement, output authority, hidden initialization, and linked applet length fixed; alignment normalization and same-edge span validation remain open |
+| Reversible removal ownership | Plasma retains the QObject; active visual, helper, reservation, and persistence ownership must be suspended | Parking the View left compositor resources active, the tombstone preceded child transient writes, and a stale FullConfig repository diverged from Corona's live SimpleConfig authority | Fixed; suspension and persistence restore order are regression-pinned and driven through real notification Undo |
 | Runtime relationship membership | Persistent records outlive runtime views; live members require a live root generation | Root destruction deleted persistent members, while root-only recreation stranded surviving member pointers | Fixed; teardown is nonpersistent, recreation replaces the complete eligible group root-first |
 | Cross-layout move transaction | One independent dock or a coordinated derived-only group | Explicit roots and members could move alone; stale Cut could import before later source refusal | Fixed; one persistent predicate is revalidated before any destination import |
 | Layouts-dialog clipboard | Independent snapshots for Copy; origin identity only for Cut | Copy retained a linked member's root ID while importing only that member | Fixed; Copy normalizes through `toIndependentSnapshot()` before publication |
@@ -439,15 +500,16 @@ through the wrong authority:
 |---|---|---|
 | Duplicate an All Screens source | A fresh root immediately produced another linked ensemble | Exactly one independent containment with fresh applet IDs |
 | Duplicate from a linked member | Relationship lineage could be retained or the action was hidden | Exactly one independent containment; the source group remains unchanged |
-| Rapid output, edge, and alignment changes | An older reveal could clear a newer move and strand geometry | Seed 127934575 completed 28 placements and seven edit transitions; two settled snapshots remained byte-equivalent for geometry and sizing |
+| Rapid output, edge, and alignment changes | An older reveal could clear a newer move, or QWindow geometry, LayerShell output, reservation membership, and applied generation could describe different placements | The immutable 74-operation plan for seed 127934575 completes with one applied transaction per settled placement; exact schema-7 projections converge and replay identically |
 | Disconnect and reconnect a member output after root changes | Runtime screen fallback kept the member mapped to primary; offline applet changes had no guaranteed replay | The member runtime parks, its persistent record remains, and reconnect restores exact shared applet content while preserving local `length` |
 | Recreate a linked root runtime | Only the root rotated, leaving member root pointers stale | Root and all live members receive fresh runtime IDs root-first; the unrelated Duplicate and every persistent containment ID stay unchanged |
 | Disconnect the root output while members target another output | Members could outlive the missing runtime coordinator or teardown could remove persistence | The complete linked runtime group parks; every containment record remains; reconnect rebuilds a fresh complete generation |
 | Copy a linked member between layouts | Paste could preserve a missing or unrelated numeric root reference | The pasted dock is an independent snapshot with no relationship lineage |
 | Reject a move after its hide animation starts | No failure result cleared the pending layout, so the dock remained hidden | Refusal occurs before unassignment; all pending placement state clears and the same generation reveals normally |
-| Remove and recreate a member | Persistent tombstones could be overwritten or never committed | The removed member leaves runtime and disk, replacement receives a fresh identity, and reload restores only intended records |
+| Remove and recreate a member | Persistent tombstones could be overwritten or never committed; the test model also treated a removed numeric ID as unavailable forever | The removed member leaves runtime, compositor ownership, and disk; a later record may reuse the freed numeric ID without sharing one live identity, and reload restores only intended records |
 | Remove a linked applet, then restart inside Undo | A member projection could resurrect | Root and every member remain removed in runtime and persistence |
 | Invoke real dock and applet Undo | No executable relationship-aware coverage | Applet projection, full dock subtree, direct-root relationship, and reload all recover deterministically |
+| Construct hidden settings chrome after linked creation | Programmatic slider initialization could write a temporary sibling-handle value into an unrelated dock | Configuration-to-handle synchronization performs no writes; delayed chrome warmup leaves every dock's Maximum and Minimum values unchanged |
 
 Same-edge overlap rejection and final alignment bounds are deliberately not
 listed as passing. Their validation and normalization slices have not landed
@@ -469,8 +531,11 @@ yet.
 4. Make edit-chrome ownership a single transition with one cancelable pending
    target. Ending the old containment's configuring session precedes every
    rebind.
-5. Route every placement mutation through one normalization transaction for
-   output, edge, semantic alignment, minimum and maximum length, and offset.
+5. Route output policy, physical output, edge, semantic alignment, solved
+   geometry, reservation publication, generation commit, remap, and reveal
+   through one applied transaction. This boundary is implemented. Length and
+   offset normalization for every non-UI configuration path remains part of
+   the separate bounded-placement slice.
 6. Add one output-edge span validator and reservation coordinator. The
    coordinator is implemented and publishes only the maximum required
    exclusive depth. The remaining validator must permit separated
@@ -602,6 +667,18 @@ MERGE. The final canonical gate exited 0 at exact executable head
 coverage and QML ratchets, all 13 scene probes, three sanitizer recipes, and the
 deterministic output matrix passing.
 
+FP-4C replaces the earlier procedural storm with an immutable schema-versioned
+plan and symbolic identity model. Seed 127934575 now drives 74 operations
+through independent Duplicate Dock, explicit linked creation, cross-output
+placement, all edge orientations and semantic alignments, edit entry and exit,
+removal, creation after numeric ID reuse, runtime recreation, and persistence
+reload. Every checkpoint validates the complete schema-7 ownership projection,
+exact compositor window multiset, nonoverlapping stable spans, maximum-depth
+reservation groups, and settled equivalence. The accepted plan can be supplied
+back as replay input and must produce the same resolved operation log. The
+transaction restores its pristine nested configuration after both success and
+failure.
+
 Each slice requires a failing regression first, pure-core ASan and UBSan tests
 where a value model can carry the invariant, nested-KWin state and render
 agreement for compositor behavior, and an independent cold diff review before
@@ -622,9 +699,9 @@ merge.
 ## Current release severity
 
 - **Beta blocker:** same-edge stable overlaps are not rejected or recovered
-  deterministically, and positive exclusive zones are not aggregated to the
-  maximum depth. Separated partial-length views are the intended model, but
-  current overlap and work-area reservation can still compose unpredictably.
+  deterministically. Separated partial-length views and maximum-depth
+  reservation grouping are supported, but an imported overlapping layout still
+  has undefined visual and activation composition.
 - **Release blocker:** Start and End alignment can leave the rendered rectangle
   outside its selected output because alignment bypasses placement
   normalization.
