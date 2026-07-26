@@ -4807,15 +4807,15 @@ prerequisites in the phases above are done.
       Replace unbounded leader-only wait with bounded process-group cleanup and
       gate the exact stopped-process case.
       Commits: 3f504ee8e
-- [ ] Fix D234 (first transaction-root publication was not durable). Flush the
+- [x] Fix D234 (first transaction-root publication was not durable). Flush the
       private transaction root and its containing layout directory before
       journal preparation or endpoint mutation, with an injected refusal at
       that exact boundary.
-      Commits:
-- [ ] Fix D235 (unanimated layout moves retained a delayed relocation
+      Commits: 8e6613904
+- [x] Fix D235 (unanimated layout moves retained a delayed relocation
       completion). Invalidate only the queued completion for the synchronously
       committed generation while preserving any reentrant newer generation.
-      Commits:
+      Commits: c1ed12e82
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing

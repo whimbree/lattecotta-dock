@@ -15,9 +15,21 @@ same-activity movement can commit while a signal-scheduled callback for the
 same generation remains queued, causing duplicate geometry and reservation
 application followed by a false critical error.
 
-Both defects are recorded before correction. D234 requires exact
-transaction-root parent-flush injection, and its critical severity requires a
-new canonical gate and fresh independent rereview after both corrections.
+Commit `8e6613904` fixes D234 by flushing the private transaction directory and
+its containing layout directory before lock acquisition, journal preparation,
+or endpoint mutation. Exact injection leaves the root empty, every endpoint
+byte and lifecycle generation unchanged, and no pending recovery. `storagetest`
+passes 1/1.
+
+Commit `c1ed12e82` fixes D235 by invalidating only the delayed callback owned by
+the synchronously committed token before publishing reentrant completion.
+Constexpr coverage preserves a newer scheduled token, and the production
+contract retains the animated scheduling path. The production target builds,
+`placementrequeststatetest` passes 14/14, and `dockidentitycontracttest` passes
+27/27.
+
+D234's critical severity requires a new canonical gate and fresh independent
+rereview after both corrections.
 
 ## 2026-07-26: D229 durable cross-layout move transaction
 
