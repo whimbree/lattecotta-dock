@@ -4747,6 +4747,18 @@ prerequisites in the phases above are done.
       history). Retire a symbolic binding after exact removal and allow the
       numeric allocator to reuse that ID only for a later live record.
       Commits: 64a1e44fa
+- [ ] Fix D221 (rapid return-to-origin placement retained stale pending
+      fields). Replace the complete pending placement intent on every request
+      and prove A-to-B-to-A plus mixed placement supersession.
+      Commits:
+- [ ] Fix D222 (failed removal Undo left split runtime and persistent
+      ownership). Make every restoration and resume failure converge to a
+      complete removal or complete restoration, with injected-failure tests.
+      Commits:
+- [ ] Fix D223 (reservation oracle trusted mutually wrong runtime geometry).
+      Derive exact publisher geometry, anchors, margins, edge, and depth from
+      independent output state and reject controlled mutations for all edges.
+      Commits:
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing

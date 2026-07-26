@@ -2908,8 +2908,59 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   21 adversarial cases pass. The same immutable plan and resolved replay pass
   after multiple destruction and creation cycles.
 
+### D221 - Rapid return-to-origin placement retained stale pending fields
+- STATUS: OPEN on `test/fp4c-operation-storm`; PR #128 review blocker.
+- FOUND: 2026-07-25, independent FP-4C (deterministic operation-storm
+  acceptance) review.
+- SYMPTOM: an applied Bottom/Center view can receive Top/Left and then
+  Bottom/Center again before the first relocation settles, yet still apply the
+  stale Top/Left request.
+- ROOT: `Positioner::setNextLocation()` represents pending placement as sparse
+  field deltas compared with currently applied state. The second request
+  matches applied state, so it neither replaces the stale pending fields nor
+  advances the relocation generation.
+- REQUIRED: every request atomically replaces the complete pending placement
+  intent. Generation and animation decisions must derive from that complete
+  intent, including return-to-origin and mixed output, edge, alignment,
+  screen-group, and follow-primary changes.
+- SEVERITY: release blocker.
+
+### D222 - Failed removal Undo left split runtime and persistent ownership
+- STATUS: OPEN on `test/fp4c-operation-storm`; PR #128 review blocker.
+- FOUND: 2026-07-25, independent FP-4C (deterministic operation-storm
+  acceptance) review.
+- SYMPTOM: if persistence restoration or runtime resume fails during Undo, the
+  containment remains non-destroyed and the View remains suspended in
+  `m_waitingLatteViews`, while the persistent subtree is tombstoned.
+- ROOT: the failed-Undo path retains the tombstone but does not restore
+  Plasma's destroyed state or otherwise finish removal. The commit timer
+  destroys only containments whose destroyed flag is still true, so the split
+  state can survive indefinitely.
+- REQUIRED: every failed Undo converges to one explicit state. Either the
+  original removal completes across persistence, runtime, and compositor
+  ownership, or the complete pre-removal state is restored. No suspended live
+  containment may remain outside both lifecycle maps.
+- SEVERITY: release blocker.
+
+### D223 - Reservation oracle trusted mutually wrong runtime geometry
+- STATUS: OPEN on `test/fp4c-operation-storm`; PR #128 review blocker.
+- FOUND: 2026-07-25, independent FP-4C (deterministic operation-storm
+  acceptance) review.
+- SYMPTOM: a reservation publisher with wrong geometry can pass when schema
+  readback and the compositor expose the same wrong rectangle.
+- ROOT: the oracle checks positivity, member mirrors, and runtime agreement
+  against the snapshot's own `windowGeometry`. It does not independently
+  derive the exact one-pixel publisher rectangle, anchors, or margins from
+  output geometry, edge, and contributors.
+- REQUIRED: derive expected publisher geometry and LayerShell placement from
+  independent output and edge inputs for all four edges. Controlled mutations
+  of geometry, anchors, margins, depth, membership, output, and absent groups
+  must fail.
+- SEVERITY: release blocker for FP-4C acceptance.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: FIXED ON `test/fp4c-operation-storm`; final FP-4C PR pending. FP-1
+- STATUS: FIXED ON `test/fp4c-operation-storm`; final FP-4C PR blocked by
+  D221 through D223. FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
   through PR #120, including schema 5 and nested recipe 071 acceptance. The
@@ -2921,9 +2972,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   acceptance) is merged through PR #124 at `f8396b5ed` through `5636966b5`.
   FP-4B (multi-output and separated-span topology acceptance) is merged through
   PR #126 at `4daa80121` through `6fa3c5703`. FP-4C (deterministic
-  operation-storm acceptance) now passes its immutable 74-operation nested
-  replay, exact schema-7 convergence, compositor ownership, removal, and
-  restart assertions on this branch.
+  operation-storm acceptance) passes its immutable 74-operation nested replay,
+  but the independent review found missing latest-intent, failed-Undo
+  convergence, and independently derived reservation-geometry assertions.
   Execution is tracked in `floating-panel-parity-plan.md`.
 - FOUND: 2026-07-24, Plasma 6.7.3 parity investigation after live floating
   panel maximize, radius, shadow, and animation regressions.
