@@ -118,6 +118,17 @@ binary and eight focused placement, identity, layout-manager, LayerShell, and
 reservation tests pass. Reintroducing the late live-state cancellation
 snapshot fails the new captured-prior contract.
 
+The first post-correction seed 127934575 replay found D228 (placement preflight
+promoted a hide-time QWindow observation to output ownership) at operation 33.
+Hiding independent dock 14 from the right edge temporarily made Qt report the
+neighboring output. Assigned and LayerShell ownership still correctly named
+Virtual-0, but preflight reused the broader observation-reconciliation
+predicate and rejected the placement as an inconsistent new output
+requirement. Relocation generation 5 remained hidden and unapplied on the
+right edge instead of committing top/Justify. The fixture transaction restored
+the exact pristine nested configuration. D228 remains the current PR #128
+release blocker.
+
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
 globally unique historical token. The oracle retires the removed symbolic

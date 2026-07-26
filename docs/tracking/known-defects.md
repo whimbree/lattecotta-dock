@@ -3068,6 +3068,29 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   failed at the captured-prior contract, then passed after restoring the fix.
 - SEVERITY: release blocker.
 
+### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
+- STATUS: OPEN on `test/fp4c-operation-storm`; PR #128 replay blocker.
+- FOUND: 2026-07-25, exact seed 127934575 replay after the D226 and D227
+  corrections.
+- SYMPTOM: operation 33 leaves independent dock 14 hidden on the right edge
+  with relocation generation 5 unapplied. The requested top/Justify placement
+  never commits.
+- ROOT: hiding a right-edge dock temporarily makes Qt report the neighboring
+  output. `preparePlacementApplication()` recomputes output application through
+  `outputPlacementIsNeeded()`, which includes `QWindow::screen()`. The
+  hide-time observation therefore appears as a new output requirement even
+  though the assigned output and LayerShell output still own the correct
+  destination. The preflight rejects its earlier projection and strands the
+  relocation.
+- REQUIRED FIX: keep assigned-output and LayerShell mismatches authoritative
+  for placement and reservation ownership. A QWindow mismatch may request
+  observation reconciliation when projected before relocation, but a
+  hide-induced observation must not create output ownership during preflight.
+- REQUIRED EVIDENCE: pin the authority decision independently, reject the old
+  QWindow-only promotion, and complete all 76 operations plus exact cleanup in
+  seed 127934575.
+- SEVERITY: release blocker.
+
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
 - STATUS: FIXED ON `test/fp4c-operation-storm`; the replacement canonical gate
   passed at `2a370029c`, and final FP-4C PR acceptance awaits its cold
