@@ -209,7 +209,7 @@ and PR #126 landed FP-4B.
       Commit: 4ca4a33b0
       Evidence: all 76 operations and exact cleanup pass for seed 127934575 in
       nested KWin.
-- [ ] Obtain the required independent follow-up review after the D226, D227,
+- [x] Obtain the required independent follow-up review after the D226, D227,
       and D228 corrections. The replacement canonical gate passed at
       `0b2d069a3`. That review found D229 (cross-layout placement could report
       success after persistence failure). Commit `296666281` partially fixed
@@ -263,8 +263,8 @@ and PR #126 landed FP-4B.
       Commits `8e6613904` and `c1ed12e82` correct both findings with exact
       durability injection and generation-preserving callback coverage. The new
       canonical gate passes at
-      `84b4cf01ada214f2d48723de43566254f8d08839`. Fresh critical rereview remains
-      required.
+      `84b4cf01ada214f2d48723de43566254f8d08839`. The final fresh critical
+      rereview returned `MERGE` with no findings.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent

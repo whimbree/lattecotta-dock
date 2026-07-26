@@ -4783,14 +4783,14 @@ prerequisites in the phases above are done.
       derive placement and reservation ownership from assigned and LayerShell
       output state.
       Commits: 4ca4a33b0
-- [ ] Fix D229 (cross-layout placement could report success after persistence
+- [x] Fix D229 (cross-layout placement could report success after persistence
       failure). Replace mutation-before-sync with one recoverable durable move
       transaction. Filesystem preflight remains an early refusal only; KConfig
       immutability, locks, parse failures, and write failures must preserve or
       restore one complete durable owner before runtime ownership changes.
       Commits: 296666281, 2f85a8ac7, 0d1ce131d, cb9380566, 39a455df1,
       3c2d81ee8, 94d7dd446, 9b0d5891e, ad6754038, a06e84af1,
-      6c85510a1
+      6c85510a1, 8e6613904, c1ed12e82
 - [x] Fix D230 (layout directory entries were not durable before journal
       retirement). Flush each endpoint directory after semantic publication
       and before advancing or retiring the recovery journal.
@@ -4866,7 +4866,7 @@ prerequisites in the phases above are done.
       arrangements, client minimization and destruction, and process restart.
       Commits: 4daa80121, dc0fda084, ad2a91c6f, 649fb79b4,
       4ac5208b9, 80e5d8fee, 3f6794861 (PR #126)
-- [ ] Complete FP-4C (the deterministic operation-storm acceptance).
+- [x] Complete FP-4C (the deterministic operation-storm acceptance).
       One immutable schema-versioned plan drives 78 symbolic operations through
       Duplicate Dock, linked creation, cross-layout ownership, output, edge,
       alignment, edit, removal, recreation, runtime rotation, and persistence
@@ -4924,20 +4924,22 @@ prerequisites in the phases above are done.
       correct both. The next replacement canonical gate passed the complete
       124-test, QML, coverage, visual, sanitizer, nested-recipe, package, and
       matrix suite at exact branch head
-      `84b4cf01ada214f2d48723de43566254f8d08839`. Fresh critical rereview remains.
+      `84b4cf01ada214f2d48723de43566254f8d08839`. The final fresh critical
+      rereview independently verified the complete corrected call graph and
+      returned `MERGE` with no findings.
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
       7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566,
       39a455df1, 3c2d81ee8, 94d7dd446, 8ef520abe, 9b0d5891e,
       ad6754038, a06e84af1, 6c85510a1, 3f504ee8e, a7a523c80,
       8e6613904, c1ed12e82, 84b4cf01
-- [ ] Complete FP-4 (the stable window-touch trigger and end-to-end
+- [x] Complete FP-4 (the stable window-touch trigger and end-to-end
       acceptance).
       Commits: d7370bd6d, 200a1f745, c5f1e5d5a, a5583868c, 64a1e44fa,
       5ce307460, f58f70558, ff41d8eca, 0382044fe, af063f83e, c51b3ec5f,
       7578f1e4f, 4ca4a33b0, 296666281, 2f85a8ac7, 0d1ce131d, cb9380566,
       39a455df1, 3c2d81ee8, 94d7dd446, 9b0d5891e, ad6754038,
-      a06e84af1, 6c85510a1
+      a06e84af1, 6c85510a1, 8e6613904, c1ed12e82
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

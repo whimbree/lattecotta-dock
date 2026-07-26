@@ -3069,7 +3069,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D235 - Unanimated layout moves retained a delayed relocation completion
-- STATUS: FIXED ON `test/fp4c-operation-storm` by `c1ed12e82`; PR pending.
+- STATUS: FIXED ON `test/fp4c-operation-storm` by `c1ed12e82`; the final fresh
+  independent review returned `MERGE`; PR pending.
 - FOUND: 2026-07-26, fresh critical rereview of the complete corrected FP-4C
   diff.
 - SYMPTOM: a same-activity layout move can apply geometry and reservation
@@ -3093,7 +3094,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D234 - First transaction-root publication was not durable
-- STATUS: FIXED ON `test/fp4c-operation-storm` by `8e6613904`; PR pending.
+- STATUS: FIXED ON `test/fp4c-operation-storm` by `8e6613904`; the final fresh
+  independent review returned `MERGE`; PR pending.
 - FOUND: 2026-07-26, fresh critical rereview of the complete corrected FP-4C
   diff.
 - SYMPTOM: the first cross-layout move after creating
@@ -3208,8 +3210,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: critical release blocker.
 
 ### D229 - Cross-layout placement could report success after persistence failure
-- STATUS: CORRECTED ON `test/fp4c-operation-storm`; the replacement canonical
-  gate passes and fresh critical rereview remains required before acceptance.
+- STATUS: FIXED ON `test/fp4c-operation-storm`; the replacement canonical gate
+  passes and the final fresh independent review returned `MERGE`; PR pending.
 - FOUND: 2026-07-26, required independent follow-up review of the D227
   placement preflight correction.
 - SYMPTOM: a move to a read-only destination layout can remove the dock from
@@ -3264,8 +3266,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   found D234 and D235. After their corrections, the replacement canonical gate
   passed the same complete matrix at exact branch head
   `84b4cf01ada214f2d48723de43566254f8d08839`.
-- REQUIRED ACCEPTANCE: obtain a fresh critical independent rereview of the
-  complete corrected diff.
+- ACCEPTANCE: the final fresh critical rereview independently verified the
+  first-root durability boundary, rollback and roll-forward authority, exact
+  placement completion, surviving typed callers, operation-storm lifecycle
+  coverage, and bounded seed cleanup. It returned `MERGE` with no findings.
 - SEVERITY: release blocker.
 
 ### D228 - Placement preflight promoted a hide-time QWindow observation to output ownership
@@ -3297,10 +3301,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: INCOMPLETE on `test/fp4c-operation-storm`; D229 (cross-layout
-  placement could report success after persistence failure) has a durable
-  recovery transaction, D230 through D233 are corrected, and the replacement
-  canonical gate passes. Fresh critical rereview remains.
+- STATUS: FIXED ON `test/fp4c-operation-storm`; the replacement canonical gate
+  passes and the final fresh independent review returned `MERGE`; PR pending.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
