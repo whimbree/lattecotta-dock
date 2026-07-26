@@ -177,6 +177,15 @@ removal has persisted. The absent-path branch likewise omits parent search
 permission, and neither branch has complete filesystem coverage. D229 is
 reopened.
 
+The complete D229 correction is `685ac6433`. Existing and absent endpoints now
+share one containing-directory contract: the parent exists, is a directory,
+and is both writable and searchable. Existing targets must additionally be
+regular writable files. Real filesystem coverage exercises every accepted and
+refused branch, and independent negative controls remove parent write and
+search permission checks one at a time. The production build, seven focused
+tests, and exact seed 127934575 nested-KWin replay pass. The replacement
+canonical gate and critical independent rereview remain open.
+
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
 globally unique historical token. The oracle retires the removed symbolic
