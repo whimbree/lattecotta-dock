@@ -183,7 +183,7 @@ and PR #126 landed FP-4B.
       Commits: 6f6c33d9a
 - [x] D160 (same-edge maximum reservation depth was described as implemented)
       exposed the missing authority; FP-1 implements it.
-- [x] D172 (floating panel attachment moves the surface and reservation instead
+- [ ] D172 (floating panel attachment moves the surface and reservation instead
       of presentation) is fixed by FP-1 through FP-4.
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
@@ -193,7 +193,7 @@ and PR #126 landed FP-4B.
       usage reference in the same source commit.
 - [x] The README describes the stable floating-panel behavior in timeless
       terms.
-- [x] The full canonical gate passes after the final source commit.
+- [ ] The full canonical gate passes after the final source commit.
       The final replacement gate exited 0 at exact branch head
       `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`, including all 122 CTest
       entries, QML and coverage ratchets, visual probes, the complete
@@ -233,8 +233,11 @@ and PR #126 landed FP-4B.
       and requires the process owner. Its real symlink case and compile-time
       ownership negative control are non-vacuous, and the focused tests and
       exact replay pass. The replacement canonical gate passed at exact branch
-      head `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`; fresh critical rereview
-      remains open.
+      head `dbedac425ff0a80a8718e8ffb10cfba7a5d8f0be`; the fresh critical
+      rereview returned `DO NOT MERGE`. A file-wide KConfig `[$i]`
+      immutability marker passes filesystem preflight and makes the later
+      sync refuse after mutation. D229 now requires a recoverable durable move
+      transaction; the recorded gate remains historical evidence only.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent
