@@ -71,6 +71,15 @@ PR #128 remains blocked only until the replacement canonical gate passes and a
 fresh critical rereview of the complete corrected diff returns a mergeable
 verdict.
 
+The replacement gate then found D233 (nested seed cleanup waited forever on a
+crash-stopped dock). An old incremental production artifact stopped inside
+KCrash before view creation. The seed helper sent SIGTERM and entered an
+unbounded `wait`; a stopped process cannot consume SIGTERM. Resuming the
+private nested PID allowed the pending termination to complete and the gate
+returned its real status 2. D233 requires bounded process-group escalation and
+an exact stopped-leader regression before the clean rebuild and replacement
+gate.
+
 ## 2026-07-25: FP-4C operation storm converges
 
 FP-4C (the deterministic operation-storm acceptance) now passes in the

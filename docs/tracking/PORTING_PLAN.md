@@ -4803,6 +4803,9 @@ prerequisites in the phases above are done.
       layouts). Add exact cross-layout operations and non-vacuous transaction
       lifecycle acceptance to the immutable replay.
       Commits: a06e84af1, 6c85510a1
+- [ ] Fix D233 (nested seed cleanup waited forever on a crash-stopped dock).
+      Replace unbounded leader-only wait with bounded process-group cleanup and
+      gate the exact stopped-process case.
 - [x] Complete FP-1 (the output-edge maximum reservation authority). Replace
       independent positive same-edge zones with one output-identity-and-edge
       coordinator that publishes the maximum eligible depth without changing
