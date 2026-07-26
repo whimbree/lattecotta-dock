@@ -87,6 +87,7 @@ private Q_SLOTS:
     void linkedAppletGeometryRemainsPerView();
     void numericPlacementPinsStableOutputIdentity();
     void relocationCompletionCommitsPlacementTransaction();
+    void outputMigrationUsesLayerShellAuthority();
 };
 
 void DockIdentityContractTest::relationshipActionsGuardEveryProductionBoundary()
@@ -218,7 +219,7 @@ void DockIdentityContractTest::relocationCompletionCommitsPlacementTransaction()
     const int retire = setScreen.indexOf(
         QStringLiteral("beginPlacementTransaction(true)"));
     const int physicalMove = setScreen.indexOf(
-        QStringLiteral("m_view->moveToScreen(scr)"), retire);
+        QStringLiteral("m_view->moveToScreen(scr,"), retire);
     const int screenCompletion = setScreen.indexOf(
         QStringLiteral("finishPendingScreenPlacementIfApplied()"),
         physicalMove);
@@ -392,6 +393,58 @@ void DockIdentityContractTest::relocationCompletionRejectsSupersededGeneration()
     const int beginHide = setNext.indexOf(QStringLiteral("Q_EMIThidingForRelocationStarted();"));
     QVERIFY2(submit >= 0 && claim > submit && beginHide > claim,
              "a complete latest-intent generation must be claimed before asynchronous hiding begins");
+}
+
+void DockIdentityContractTest::
+outputMigrationUsesLayerShellAuthority()
+{
+    const QString viewSource =
+        readFile(QStringLiteral("app/view/view.cpp"));
+    const QString move = normalized(functionBody(
+        viewSource,
+        QStringLiteral("void View::moveToScreen")));
+    QVERIFY(move.contains(QStringLiteral(
+        "layerShellNeedsOutput(nextScreen)")));
+    QVERIFY(move.contains(QStringLiteral(
+        "OutputMove::OwnershipTransfer")));
+
+    const QString positionerSource =
+        readFile(QStringLiteral(
+            "app/view/positioner.cpp"));
+    const QString projection = normalized(functionBody(
+        positionerSource,
+        QStringLiteral(
+            "void Positioner::projectPendingPlacement")));
+    QVERIFY(projection.contains(QStringLiteral(
+        "layerShellOutputNeedsChange")));
+    QVERIFY(projection.contains(QStringLiteral(
+        "m_pendingOutputOwnershipChange=")));
+
+    const QString transaction = normalized(functionBody(
+        positionerSource,
+        QStringLiteral(
+            "void Positioner::initSignalingForLocationChangeSliding")));
+    const int ownership =
+        transaction.indexOf(QStringLiteral(
+            "m_pendingOutputOwnershipChange"));
+    const int retire = transaction.indexOf(
+        QStringLiteral(
+            "beginPlacementTransaction("),
+        ownership);
+    QVERIFY2(ownership >= 0 && retire > ownership,
+             "reservation retirement must consume assigned and LayerShell output ownership");
+
+    const QString layerShellSource =
+        readFile(QStringLiteral(
+            "app/wm/waylandlayershell.cpp"));
+    const QString apply = normalized(functionBody(
+        layerShellSource,
+        QStringLiteral(
+            "std::optional<int> applyViewPlacement")));
+    QVERIFY(apply.contains(QStringLiteral(
+        "retargetScreen(window,ls,screen)")));
+    QVERIFY(!apply.contains(QStringLiteral(
+        "window->setVisible(true)")));
 }
 
 void DockIdentityContractTest::geometrySettlementIncludesDeferredWork()

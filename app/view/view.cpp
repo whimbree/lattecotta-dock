@@ -598,6 +598,16 @@ const LayerShellQt::Window *View::layerShellWindow() const
     return m_layerShellWindow;
 }
 
+bool View::layerShellNeedsOutput(
+    const QScreen *const nextScreen) const
+{
+    Q_ASSERT(nextScreen);
+    return m_layerShellConfigured
+        && (!m_layerShellWindow
+            || m_layerShellWindow->screen()
+                != nextScreen);
+}
+
 bool View::publishScreenSpaceReservation(
     const QRect &strutGeometry,
     Plasma::Types::Location reservationLocation)
@@ -720,6 +730,18 @@ bool View::applyPositionedLayerShellGeometry(
             || m_positioner->inStartup()) {
         return false;
     }
+    if (isVisible()
+            && layerShellNeedsOutput(
+                assignedScreen)) {
+        qCritical() << "View refused a visible LayerShell output migration outside the reservation-gated remap transaction"
+                    << "containment="
+                    << (containment()
+                        ? containment()->id()
+                        : 0)
+                    << "destination="
+                    << assignedScreen->name();
+        return false;
+    }
 
     const QRect outputGeometry = assignedScreen->geometry();
     if (!outputGeometry.isValid() || !geometry.isValid()
@@ -790,7 +812,9 @@ void View::reconsiderScreen()
     m_positioner->reconsiderScreen();
 }
 
-void View::moveToScreen(QScreen *nextScreen)
+void View::moveToScreen(
+    QScreen *nextScreen,
+    const OutputMove outputMove)
 {
     //! a mapped wlr-layer surface is bound to the output it was created on;
     //! the protocol has no request to move it, so QWindow::setScreen alone
@@ -803,7 +827,9 @@ void View::moveToScreen(QScreen *nextScreen)
     const bool remap =
         m_layerShellConfigured
         && isVisible()
-        && screen() != nextScreen;
+        && (outputMove
+                == OutputMove::OwnershipTransfer
+            || layerShellNeedsOutput(nextScreen));
 
     if (!remap) {
         setScreen(nextScreen);

@@ -138,6 +138,12 @@ class View : public PlasmaQuick::ContainmentView
                    NOTIFY layerShellConfigureRequestRevisionChanged)
 
 public:
+    enum class OutputMove
+    {
+        ObservationOnly,
+        OwnershipTransfer,
+    };
+
     View(Plasma::Corona *corona, QScreen *targetScreen = nullptr, bool byPassX11WM = false);
     virtual ~View();
 
@@ -152,6 +158,8 @@ public:
     //! QWindow::screen() may follow a compositor configure asynchronously.
     //! Success also requires the requested anchors, margins, and
     //! non-reserving visual policy.
+    [[nodiscard]] bool layerShellNeedsOutput(
+        const QScreen *screen) const;
     [[nodiscard]] bool applyPositionedLayerShellGeometry(
         QScreen *assignedScreen,
         const QRect &geometry);
@@ -336,9 +344,12 @@ public:
 
     virtual void reconsiderScreen();
 
-    //! move the view window to @p nextScreen, remapping the layer surface
-    //! when the platform requires it (see implementation)
-    void moveToScreen(QScreen *nextScreen);
+    //! Move the view window to @p nextScreen. An ownership transfer remaps
+    //! even when Qt has already observed the destination because Latte or
+    //! LayerShell can still own the source output.
+    void moveToScreen(
+        QScreen *nextScreen,
+        OutputMove outputMove);
 
     //! these are signals that create crashes, such a example is the availableScreenRectChanged from corona
     //! when its containment is destroyed

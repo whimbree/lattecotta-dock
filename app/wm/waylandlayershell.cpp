@@ -349,7 +349,7 @@ std::optional<int> applyViewPlacement(
     const bool outputChanged =
         window->screen() != screen
         || ls->screen() != screen;
-    const bool remap = retargetScreen(window, ls, screen);
+    retargetScreen(window, ls, screen);
     int configureRequests = outputChanged ? 1 : 0;
 
     //! Geometry synchronization can run repeatedly with an unchanged
@@ -370,10 +370,6 @@ std::optional<int> applyViewPlacement(
     if (ls->margins() != placement.margins) {
         ls->setMargins(placement.margins);
         ++configureRequests;
-    }
-
-    if (remap) {
-        window->setVisible(true);
     }
 
     if (ls->screen() != screen
