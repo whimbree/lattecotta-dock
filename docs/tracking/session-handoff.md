@@ -190,6 +190,16 @@ coverage ratchets, visual probes, the complete ASan/UBSan build, four nested
 sanitizer recipes, package provenance controls, and matrix refusals passed.
 Critical independent rereview remains open.
 
+The next critical rereview returned `DO NOT MERGE`. An existing regular file
+can be writable but unreadable. `Storage::isWritable()` accepts that endpoint,
+but KConfig reparses every existing file before writing its atomic replacement.
+Destination sync can therefore fail after origin removal is durable. The
+filesystem matrix also lacks absent endpoints with a nonexistent parent and
+with a regular file in the parent position. D229 remains the PR #128 release
+blocker, and the canonical gate at
+`a1a154fd0843d64e4551d61fe559963532dee70a` is no longer final acceptance
+evidence.
+
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
 globally unique historical token. The oracle retires the removed symbolic
