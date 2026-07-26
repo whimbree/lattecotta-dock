@@ -210,10 +210,12 @@ and PR #126 landed FP-4B.
 - [ ] Obtain the required independent follow-up review after the D226, D227,
       and D228 corrections. The replacement canonical gate passed at
       `0b2d069a3`. That review found D229 (cross-layout placement could report
-      success after persistence failure). D229 is fixed at `296666281`; its
-      canonical gate passed at `f66a404c0`. Silent dock loss after restart is a
-      CRITICAL persistence finding, so the rule's critical exception requires
-      one fresh independent rereview before merge.
+      success after persistence failure). Commit `296666281` partially fixed
+      D229, and its canonical gate passed at `f66a404c0`. Silent dock loss
+      after restart is a CRITICAL persistence finding, so the rule's critical
+      exception required one fresh independent rereview. That rereview returned
+      `DO NOT MERGE`: existing files did not require a writable parent, and
+      absent paths did not require a searchable parent. D229 is reopened.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent

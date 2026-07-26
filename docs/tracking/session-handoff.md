@@ -167,7 +167,15 @@ QML and coverage ratchets, visual probes, the complete ASan/UBSan build, four
 nested sanitizer recipes, package provenance controls, and matrix refusals
 passed. D229 can silently lose a dock after restart, so it is a CRITICAL
 persistence finding for the review rule. The rule's critical exception
-requires one fresh independent rereview after this fix.
+required one fresh independent rereview after this fix.
+
+That critical rereview returned `DO NOT MERGE`. KConfig writes through
+`QSaveFile`, so an existing writable layout file also requires a writable and
+searchable containing directory. The partial classifier accepts a `0644` file
+under a `0555` parent; destination replacement then fails after the origin
+removal has persisted. The absent-path branch likewise omits parent search
+permission, and neither branch has complete filesystem coverage. D229 is
+reopened.
 
 Plasma may reuse a containment's numeric ID after that persistent record is
 permanently removed. The ID is stable and unique for a live record, not a
