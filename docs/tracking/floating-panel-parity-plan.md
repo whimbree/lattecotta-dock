@@ -197,7 +197,12 @@ and PR #126 landed FP-4B.
       The replacement gate exited 0 at exact code head `2a370029c`, including
       all 122 CTest entries, QML and coverage ratchets, visual probes, the
       complete ASan/UBSan build, nested-compositor integration, package
-      provenance controls, and matrix refusals.
+      provenance controls, and matrix refusals. The final cold review then
+      found D226 (LayerShell output migration bypassed reservation-gated
+      remapping) and D227 (layout mutation preceded destination-output
+      preflight). Their required source corrections invalidate this gate.
+- [ ] Correct D226 and D227, rerun the exact operation storm and canonical
+      gate, then obtain the required independent follow-up review.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent
