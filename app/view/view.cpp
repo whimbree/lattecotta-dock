@@ -442,8 +442,6 @@ void View::init(Plasma::Containment *plasma_containment)
     });
     connect(m_positioner, &ViewPart::Positioner::onHideWindowsForSlidingOut, this, &View::hideWindowsForSlidingOut);
     connect(m_positioner, &ViewPart::Positioner::screenGeometryChanged, this, &View::screenGeometryChanged);
-    connect(m_positioner, &ViewPart::Positioner::surfaceGeometryCalculated,
-            this, &View::applyPositionedLayerShellGeometry);
     connect(m_positioner, &ViewPart::Positioner::windowSizeChanged, this, [&]() {
         Q_EMIT availableScreenRectChangedFrom(this);
     });
@@ -578,9 +576,19 @@ void View::setupWaylandLayerShell()
     m_layerShellConfigured = true;
 
     if (m_positioner && !m_positioner->inStartup()) {
+        QScreen *const assignedScreen =
+            m_positioner->assignedScreen();
         const QRect geometry = m_positioner->surfaceGeometry();
-        if (geometry.isValid() && screenGeometry().contains(geometry)) {
-            applyPositionedLayerShellGeometry(geometry);
+        if (assignedScreen
+                && geometry.isValid()
+                && assignedScreen->geometry().contains(geometry)
+                && !applyPositionedLayerShellGeometry(
+                    assignedScreen,
+                    geometry)) {
+            qCritical() << "View could not restore its existing solved placement"
+                        << "containment=" << containment()->id()
+                        << "output=" << assignedScreen->name()
+                        << "geometry=" << geometry;
         }
     }
 }
@@ -620,10 +628,28 @@ void View::reanchorLayerShell()
         return;
     }
 
+    if (m_positioner
+            && (m_positioner->inRelocationAnimation()
+                || m_positioner->relocationGeneration()
+                    != m_positioner->appliedRelocationGeneration())) {
+        //! Keep the old LayerShell output and edge paired with the old
+        //! coordinator membership until Positioner applies the complete
+        //! output, edge, alignment, and geometry transaction.
+        return;
+    }
+
+    QScreen *const assignedScreen =
+        m_positioner
+        ? m_positioner->assignedScreen()
+        : screen();
     if (m_positioner && !m_positioner->inStartup()) {
         const QRect geometry = m_positioner->surfaceGeometry();
-        if (geometry.isValid() && screenGeometry().contains(geometry)) {
-            applyPositionedLayerShellGeometry(geometry);
+        if (assignedScreen
+                && geometry.isValid()
+                && assignedScreen->geometry().contains(geometry)
+                && applyPositionedLayerShellGeometry(
+                    assignedScreen,
+                    geometry)) {
             return;
         }
     }
@@ -634,31 +660,64 @@ void View::reanchorLayerShell()
     //! Floating-gap changes route through Positioner's stable canvas instead
     //! of this physical anchoring path.
     namespace LS = Latte::WindowSystem::LayerShell;
-    LS::updateAnchoring(this, screen(), location(), static_cast<Latte::Types::Alignment>(alignment()),
+    LS::updateAnchoring(this, assignedScreen, location(), static_cast<Latte::Types::Alignment>(alignment()),
                         windowSpansScreenLength(), layerShellEdgeMargin());
 }
 
-void View::applyPositionedLayerShellGeometry(const QRect &geometry)
+bool View::applyPositionedLayerShellGeometry(
+    QScreen *const assignedScreen,
+    const QRect &geometry)
 {
-    if (!m_layerShellConfigured || !m_positioner || m_positioner->inStartup()) {
-        return;
+    if (!assignedScreen
+            || !m_layerShellConfigured
+            || !m_positioner
+            || m_positioner->inStartup()) {
+        return false;
     }
 
-    const QRect outputGeometry = screenGeometry();
+    const QRect outputGeometry = assignedScreen->geometry();
     if (!outputGeometry.isValid() || !geometry.isValid()
             || !outputGeometry.contains(geometry)) {
         qCritical() << "View refused layer-shell placement outside its assigned output"
                     << "view=" << geometry << "output=" << outputGeometry
                     << "containment=" << (containment() ? containment()->id() : 0);
+        return false;
+    }
+
+    const auto configureRequests =
+        WindowSystem::LayerShell::applyViewPlacement(
+            this,
+            assignedScreen,
+            location(),
+            geometry,
+            outputGeometry);
+    if (!configureRequests.has_value()) {
+        qCritical() << "View could not apply its solved layer-shell placement"
+                    << "containment="
+                    << (containment() ? containment()->id() : 0)
+                    << "output=" << assignedScreen->name()
+                    << "location=" << location()
+                    << "geometry=" << geometry;
+        return false;
+    }
+    if (*configureRequests > 0) {
+        m_layerShellConfigureRequestRevision +=
+            static_cast<quint64>(*configureRequests);
+        Q_EMIT layerShellConfigureRequestRevisionChanged();
+    }
+
+    return true;
+}
+
+void View::showAppliedLayerShellPlacement()
+{
+    if (!m_showAfterLayerShellPlacement
+            || m_suspendedForRemoval) {
         return;
     }
 
-    const int configureRequests = WindowSystem::LayerShell::applyViewPlacement(
-        this, location(), geometry, outputGeometry);
-    if (configureRequests > 0) {
-        m_layerShellConfigureRequestRevision += static_cast<quint64>(configureRequests);
-        Q_EMIT layerShellConfigureRequestRevisionChanged();
-    }
+    m_showAfterLayerShellPlacement = false;
+    setVisible(true);
 }
 
 quint64 View::layerShellConfigureRequestRevision() const
@@ -695,17 +754,23 @@ void View::moveToScreen(QScreen *nextScreen)
     //! landscape one, vertically centered at y=-113). Hide first so the
     //! surface is destroyed, retarget both QWindow and layer-shell desired
     //! output, then show to map a fresh surface on the next output.
-    const bool remap = m_layerShellConfigured && isVisible() && screen() != nextScreen;
+    const bool remap =
+        m_layerShellConfigured
+        && isVisible()
+        && screen() != nextScreen;
 
     if (!remap) {
         setScreen(nextScreen);
         return;
     }
 
+    m_showAfterLayerShellPlacement = true;
     setVisible(false);
     setScreen(nextScreen);
-    reanchorLayerShell();
-    setVisible(true);
+    //! Do not retarget the LayerShell object yet. Its old output remains
+    //! paired with the old reservation membership until Positioner applies
+    //! the complete placement transaction and immediately reindexes the
+    //! coordinator before reveal.
 }
 
 void View::duplicateView()

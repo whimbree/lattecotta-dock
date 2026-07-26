@@ -136,6 +136,22 @@ public:
     //! none are published (mode without struts, hidden, or off-screen)
     QRect publishedStruts() const;
 
+    //! Retire old coordinator membership before a placement transaction
+    //! changes its LayerShell output or edge. Failure leaves the old placement
+    //! and old reservation paired, so the model mutation can be cancelled.
+    [[nodiscard]] bool beginPlacementTransaction(
+        bool changesReservationOwnership);
+
+    //! Publish the complete LayerShell placement before Positioner commits
+    //! its relocation generation, remaps the surface, or begins reveal.
+    [[nodiscard]] bool publishReservationAfterAppliedPlacement();
+
+    //! A Plasma removal remains reversible for its Undo window. Retire every
+    //! compositor-owned helper before the View leaves the active layout map,
+    //! then restore reservation ownership before the canvas is remapped.
+    [[nodiscard]] bool suspendForReversibleRemoval();
+    [[nodiscard]] bool resumeFromReversibleRemoval();
+
     //! Used mostly to show / hide Sidebars
     void toggleHiddenState();
 
@@ -193,6 +209,11 @@ private Q_SLOTS:
     void updateSidebarState();
 
 private:
+    enum class ReservationUpdateContext {
+        Ordinary,
+        AppliedPlacement,
+    };
+
     void setContainsMouse(bool contains);
 
     void raiseView(bool raise);
@@ -208,7 +229,10 @@ private:
     void deleteFloatingGapWindow();
     bool supportsFloatingGap() const;
 
-    void updateStrutsBasedOnLayoutsAndActivities(bool forceUpdate = false);
+    bool updateStrutsBasedOnLayoutsAndActivities(
+        bool forceUpdate = false,
+        ReservationUpdateContext context =
+            ReservationUpdateContext::Ordinary);
     void viewEventManager(QEvent *ev);
 
     void checkMouseInFloatingArea();
@@ -224,7 +248,6 @@ private Q_SLOTS:
     void updateHiddenState();
 
     void updateStrutsAfterTimer();
-
     bool isValidMode() const;
 
 private:
@@ -235,7 +258,7 @@ private:
 private:
     WindowSystem::AbstractWindowInterface *m_wm;
     Types::Visibility m_mode{Types::None};
-    //! 8 slots: the AlwaysVisible arm uses base(2) + 6 connections
+    //! Capacity covers the largest visibility-mode connection set.
     std::array<QMetaObject::Connection, 8> m_connections;
 
     QTimer m_timerShow;
@@ -259,6 +282,12 @@ private:
     bool m_raiseOnDesktopChange{false};
     bool m_raiseOnActivityChange{false};
     bool m_hideNow{false};
+    //! Reservation inputs can change while Positioner owns a compound
+    //! placement transaction. Preserve both the dirty state and force intent
+    //! so the complete applied boundary replays the normal publication path.
+    bool m_reservationUpdateDirty{false};
+    bool m_reservationForceUpdatePending{false};
+    bool m_suspendedForRemoval{false};
 
     //! valid on demand sidebar hidden state in order to be checked after slide-ins/outs
     bool m_isRequestedShownSidebarOnDemand{false};

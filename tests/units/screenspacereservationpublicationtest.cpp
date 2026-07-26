@@ -21,6 +21,7 @@ private Q_SLOTS:
     void failedUpdateKeepsCommittedStateAndRetries();
     void failedRemovalKeepsCommittedStateAndRetries();
     void sameGeometryOutputMigrationPublishes();
+    void successfulRemovalRequiresRepublish();
 };
 
 void ScreenSpaceReservationPublicationTest::
@@ -191,6 +192,33 @@ sameGeometryOutputMigrationPublishes()
     QCOMPARE(
         state.committedTarget()->struts,
         secondary.struts);
+}
+
+void ScreenSpaceReservationPublicationTest::
+successfulRemovalRequiresRepublish()
+{
+    ScreenSpaceReservationPublicationState state;
+    const ScreenSpaceReservationPublicationTarget target{
+        QRect(0, 952, 1600, 48),
+        10,
+        Plasma::Types::BottomEdge};
+    int publications{0};
+    const auto publish =
+        [&publications](const auto &) {
+            ++publications;
+            return true;
+        };
+
+    QVERIFY(state.update(target, false, publish));
+    QVERIFY(state.remove([]() {
+        return true;
+    }));
+    QVERIFY(!state.committedTarget());
+    QVERIFY(state.update(target, false, publish));
+
+    QCOMPARE(publications, 2);
+    QVERIFY(state.committedTarget());
+    QVERIFY(*state.committedTarget() == target);
 }
 
 QTEST_GUILESS_MAIN(ScreenSpaceReservationPublicationTest)

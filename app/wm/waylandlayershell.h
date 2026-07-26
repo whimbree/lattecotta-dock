@@ -16,6 +16,9 @@
 #include <QRegion>
 #include <QSize>
 
+// C++
+#include <optional>
+
 // Plasma
 #include <Plasma/Plasma>
 
@@ -148,12 +151,13 @@ struct ViewPlacement {
     const QRect &viewGeometry,
     const QRect &screenGeometry);
 
-//! Apply viewPlacement() to an already configured dock surface without
-//! changing its layer, keyboard policy, or output. The visual surface never
-//! reserves space itself. The return value counts layer-shell setters issued,
-//! so callers can distinguish a stable replay from compositor-facing churn.
-[[nodiscard]] int applyViewPlacement(
-    QWindow *window, Plasma::Types::Location location,
+//! Apply viewPlacement() to an already configured dock surface on @p screen
+//! without changing its layer or keyboard policy. The visual surface never
+//! reserves space itself. A successful value counts compositor-facing state
+//! changes, including an output retarget; std::nullopt reports refusal or a
+//! failed postcondition. This keeps unchanged success distinct from failure.
+[[nodiscard]] std::optional<int> applyViewPlacement(
+    QWindow *window, QScreen *screen, Plasma::Types::Location location,
     const QRect &viewGeometry, const QRect &screenGeometry);
 
 //! Layer-shell state for a transparent surface that publishes one output-edge

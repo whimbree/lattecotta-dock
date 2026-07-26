@@ -147,6 +147,17 @@ public:
     //! only turn a not-yet-created surface into a layer surface
     void setupWaylandLayerShell();
     [[nodiscard]] const LayerShellQt::Window *layerShellWindow() const;
+    //! Apply one complete Positioner solution to the explicitly assigned
+    //! output. LayerShellQt is the synchronous output authority because
+    //! QWindow::screen() may follow a compositor configure asynchronously.
+    //! Success also requires the requested anchors, margins, and
+    //! non-reserving visual policy.
+    [[nodiscard]] bool applyPositionedLayerShellGeometry(
+        QScreen *assignedScreen,
+        const QRect &geometry);
+    //! Remap a surface hidden by moveToScreen() only after reservation
+    //! ownership has moved to the same applied output and edge.
+    void showAppliedLayerShellPlacement();
     [[nodiscard]] bool publishScreenSpaceReservation(
         const QRect &strutGeometry,
         Plasma::Types::Location location);
@@ -464,7 +475,6 @@ private:
 
     void createViewFromTemplate(const QString &templateFile, TemplateImportRelationship relationship);
     void initSignalingForLocationChangeSliding();
-    void applyPositionedLayerShellGeometry(const QRect &geometry);
     void reanchorLayerShell();
     //! true when this view's window covers the whole screen along its length
     //! axis (a horizontal masked dock: PositionerGeometry::windowSize gives it
@@ -504,6 +514,11 @@ private:
     bool m_isTouchingTopViewAndIsBusy{false};
 
     bool m_layerShellConfigured{false};
+    //! A visible mapped surface stays hidden between QWindow retarget and the
+    //! complete LayerShell placement. It is remapped only after output,
+    //! anchors, margins, and geometry pass their joint postcondition.
+    bool m_showAfterLayerShellPlacement{false};
+    bool m_suspendedForRemoval{false};
     //! Non-owning. LayerShellQt parents the attached state to this QWindow.
     LayerShellQt::Window *m_layerShellWindow{nullptr};
 
