@@ -2865,7 +2865,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   writes. The real Undo and restart recipe preserves the complete subtree.
 
 ### D219 - Hidden edit chrome initialization rewrote Maximum length
-- STATUS: FIXED ON `test/fp4c-operation-storm` (`c5f1e5d5a`); PR pending.
+- STATUS: FIXED ON `test/fp4c-operation-storm` (`c5f1e5d5a`,
+  `a5583868c`); PR pending.
 - FOUND: 2026-07-25, FP-4C (deterministic operation-storm acceptance)
   checkpoint 43.
 - SYMPTOM: eight seconds after linked-dock creation, hidden settings chrome
@@ -2879,11 +2880,15 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   became persistent.
 - FIX: both controls distinguish config synchronization from interaction,
   initialize before enabling handlers, and treat persistent configuration
-  rather than a sibling visual handle as the coupling authority.
+  rather than a sibling visual handle as the coupling authority. Maximum owns
+  the single clamp-and-store operation; Minimum delegates to it instead of
+  duplicating configuration and offset writes.
 - EVIDENCE: the focused QML lifecycle test observes zero writes during
   construction and config resynchronization, then exactly one write for an
   interaction. All 131 shipped QML files compile, and the exact saved operation
-  replay keeps both dock values stable through delayed chrome warmup.
+  replay keeps both dock values stable through delayed chrome warmup. The
+  focused settings and QML gates pass while the AppearanceConfig.qml curated
+  warning baseline shrinks from 243 to 242.
 
 ### D220 - Stress oracle treated containment IDs as globally unique history
 - STATUS: FIXED ON `test/fp4c-operation-storm` (`64a1e44fa`); PR pending.
