@@ -905,6 +905,9 @@ private:
         const QString visualOwnership = normalizedCode(functionBody(
             recipeSource,
             QStringLiteral("assert_visual_window_ownership()")));
+        const QString durableMoveReadback = normalizedCode(functionBody(
+            recipeSource,
+            QStringLiteral("assert_no_pending_view_move()")));
         const QString model = normalizedCode(modelSource);
 
         const qsizetype privateSessionGuard =
@@ -1013,6 +1016,21 @@ private:
                    "assert-visual-window-ownership"))
             && visualOwnership.contains(QStringLiteral(
                    "\"outputs\":outputs"))
+            && durableMoveReadback.contains(QStringLiteral(
+                   "e2e_jsonviewMoveTransactionsData"))
+            && durableMoveReadback.contains(QStringLiteral(
+                   "set(state)!={\"schemaVersion\",\"transactions\"}"))
+            && durableMoveReadback.contains(QStringLiteral(
+                   "state[\"schemaVersion\"]!=1"))
+            && durableMoveReadback.contains(QStringLiteral(
+                   "state[\"transactions\"]!=[]"))
+            && recipe.count(QStringLiteral(
+                   "assert_no_pending_view_move"))
+                == 3
+            && recipe.contains(QStringLiteral(
+                   "$step_tag.view-move-transactions.json"))
+            && recipe.contains(QStringLiteral(
+                   "final.view-move-transactions.json"))
             && recipe.contains(QStringLiteral(
                    "\"name\":screen[\"name\"]"))
             && recipe.contains(QStringLiteral(
@@ -2697,6 +2715,22 @@ void SourceGuardTest::linkedOperationStormE2e_sourceGuardRejectsControlledMutati
     const QString model = readFile(QStringLiteral(
         "tests/e2e/fixtures/fp4c/operation_model.py"));
     QVERIFY(matchesLinkedOperationStormE2eContract(recipe, model));
+
+    QString missingDurableMoveReadback = recipe;
+    const QString durableMoveReadback =
+        QStringLiteral("viewMoveTransactionsData");
+    QCOMPARE(
+        missingDurableMoveReadback.count(
+            durableMoveReadback),
+        1);
+    missingDurableMoveReadback.replace(
+        durableMoveReadback,
+        QStringLiteral("dockSystemData"));
+    QVERIFY2(
+        !matchesLinkedOperationStormE2eContract(
+            missingDurableMoveReadback,
+            model),
+        "removing durable move readback must fail the FP-4C guard");
 
     QString missingTrap = recipe;
     const QString trap = QStringLiteral("trap cleanup EXIT");

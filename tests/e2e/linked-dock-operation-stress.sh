@@ -36,6 +36,28 @@ snapshot() {
     e2e_json dockSystemData
 }
 
+assert_no_pending_view_move() {
+    local destination="$1"
+    e2e_json viewMoveTransactionsData >"$destination" \
+        || return 1
+    python3 - "$destination" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as stream:
+    state = json.load(stream)
+if set(state) != {"schemaVersion", "transactions"}:
+    raise SystemExit("durable move readback has missing or surplus fields")
+if state["schemaVersion"] != 1:
+    raise SystemExit("durable move readback schema changed")
+if state["transactions"] != []:
+    raise SystemExit(
+        "operation checkpoint retained a pending durable move: "
+        + json.dumps(state["transactions"], sort_keys=True)
+    )
+PY
+}
+
 capture_snapshot() {
     local destination="$1"
     local candidate="${destination}.next"
@@ -1039,6 +1061,9 @@ while IFS= read -r operation_row; do
     wait_for_checkpoint \
         "$step_number" "$last_checkpoint_file" "$checkpoint_attempts" \
         || e2e_fail "FP-4C operation checkpoint $step_number did not converge"
+    assert_no_pending_view_move \
+        "$step_dir/$step_tag.view-move-transactions.json" \
+        || e2e_fail "FP-4C operation checkpoint $step_number retained a durable move transaction"
     if [[ "$step_number" == "$latest_intent_final_seq" ]]; then
         assert_latest_intent_probe \
             "$pending_before_file" "$last_checkpoint_file" \
@@ -1109,6 +1134,9 @@ wait_for_quiescent_projection "$final_quiescent" "$final_snapshot" \
 build_checkpoint_input "${last_step_number:-0}" "$final_snapshot" \
     | python3 "$MODEL" assert-checkpoint >/dev/null \
     || e2e_fail "the final quiescent FP-4C state diverged from the typed plan"
+assert_no_pending_view_move \
+    "$artifact_dir/final.view-move-transactions.json" \
+    || e2e_fail "the final FP-4C state retained a durable move transaction"
 wait_for_visual_window_ownership \
     "${last_step_number:-0}" \
     "$artifact_dir/final.visual-snapshot.json" \
