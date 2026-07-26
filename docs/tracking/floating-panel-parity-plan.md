@@ -250,7 +250,14 @@ and PR #126 landed FP-4B.
       returned `DO NOT MERGE` for D230 (endpoint directory entries were not
       durable before journal retirement), D231 (queued active-view moves could
       be recorded as committed), and D232 (the operation storm never invoked
-      a cross-layout transaction).
+      a cross-layout transaction). Commit `9b0d5891e` flushes the containing
+      directory after each endpoint publication. Commit `ad6754038` gives
+      every queued placement one exact terminal generation result. Commits
+      `a06e84af1` and `6c85510a1` expose transaction lifecycle generations and
+      drive two real cross-layout moves. The replacement 78-operation replay
+      passes with creation, commit, and retirement generations advancing
+      exactly from 0 to 1 to 2. The replacement canonical gate and fresh
+      critical rereview remain.
 - [ ] Land FP-1, FP-2, FP-3, and FP-4 serially through the orchestrator review,
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent

@@ -6,9 +6,10 @@ Last updated 2026-07-26.
 ## 2026-07-26: D229 durable cross-layout move transaction
 
 D229 (cross-layout placement could report success after persistence failure)
-is corrected on `test/fp4c-operation-storm` by `39a455df1`, `3c2d81ee8`, and
-`94d7dd446`. Filesystem endpoint classification remains an early refusal, but
-it is no longer treated as a proof that later KConfig operations cannot fail.
+is corrected on `test/fp4c-operation-storm` by `39a455df1`, `3c2d81ee8`,
+`94d7dd446`, `9b0d5891e`, `ad6754038`, `a06e84af1`, and `6c85510a1`.
+Filesystem endpoint classification remains an early refusal, but it is no
+longer treated as a proof that later KConfig operations cannot fail.
 
 One private checksummed journal now captures the complete root and
 subcontainment subtree before any target mutation. The destination layout is
@@ -28,46 +29,47 @@ a fresh semantic readback. A startup retry is bounded by zero-time lock probes,
 and an interrupted recovery retains its evidence rather than loading
 ambiguous ownership.
 
-`GenericLayout::updateView()` now returns checked acceptance. A queued live
-Positioner request is accepted asynchronously, while a direct Manager refusal
-returns false. Every layouts-dialog caller displays a persistent warning and
-stops before model-original bookkeeping. `viewMoveTransactionsData()` exposes
-the schema-versioned transaction ID, layouts, complete containment set,
-persistent owner, and recovery action without endpoint paths.
+Every destination, active-owner, and origin publication now flushes its
+containing layout directory after semantic readback and before journal
+advancement or retirement. A flush refusal retains the recovery record.
+
+`GenericLayout::updateView()` now forwards the exact generation-tagged
+Positioner result. Each queued request ends as committed, refused, superseded,
+or abandoned. The settings save remains dirty until every submitted placement
+commits, displays a persistent warning on refusal, and cannot be finalized by
+a stale callback. `viewMoveTransactionsData()` schema 2 exposes process-local
+journal-created, commit-decision, and journal-retired generations as decimal
+strings alongside the pending transaction set. Endpoint paths remain private.
 
 The real KConfig matrix covers normal commit and journal retirement, a
 legitimately stale standalone origin, file and entry immutability, all three
 held endpoint locks, unpublished `.prepare` residue, rollback and roll-forward
 interruption after each repository publication, mixed subtree ownership,
-repeated recovery, traversal-bearing manifests, and checksum corruption. The
-production build and focused `storagetest`, `dockidentitycontracttest`,
-`sourceguardtest`, and `viewmovetransactiontest` pass.
+repeated recovery, traversal-bearing manifests, checksum corruption, and
+containing-directory flush refusal. The production build and focused
+`storagetest`, `placementrequeststatetest`, `dockidentitycontracttest`,
+`sourceguardtest`, and `viewmovetransactiontest` pass. The pure FP-4C model
+passes all 31 cases.
 
-The exact two-output nested-KWin replay passed all 76 operations for seed
-127934575. Every checkpoint and final quiescence reported an empty durable move
-transaction set, reload converged, and cleanup restored the pristine nested
-configuration. Evidence is stored in
-`linked-dock-operation-stress.seed-127934575.run-APzTUu`. The replacement
-canonical gate exited 0 at exact source head
+The replacement exact two-output nested-KWin replay passed all 78 operations
+for seed 127934575. Operations 2 and 3 move the independent root to a second
+active layout and back through the real durable transaction. Journal creation,
+commit decision, and retirement advance exactly from 0 to 1 to 2; ordinary
+operations leave them unchanged; process restart resets them. Every boundary
+and final quiescence reports an empty transaction set, reload converges, and
+cleanup restores the pristine nested configuration. Evidence is stored in
+`linked-dock-operation-stress.seed-127934575.run-GFqh3X`.
+
+The previous canonical gate exited 0 at exact source head
 `8ef520abe4478abcb94c9818ef942d8360857c37`: all 123 CTest entries, QML and
 coverage ratchets, visual probes, the complete ASan/UBSan nested recipes,
 package provenance controls, and matrix refusals passed. Fresh critical
-independent rereview then returned `DO NOT MERGE`.
+independent rereview then returned `DO NOT MERGE` for D230 through D232. Those
+three findings are corrected and invalidate that historical stamp.
 
-D230 (layout directory entries were not durable before journal retirement) is
-critical. KConfig sync and semantic readback did not flush the shared layout
-directory before the separately flushed journal directory was retired. D231
-(queued active-view moves could be recorded as committed) found that
-`GenericLayout::updateView()` returned true when Positioner merely accepted a
-request, while its later durable refusal had no result path back to the
-settings model. D232 (operation-storm journal assertion never moved a dock
-across layouts) found that all replay moves changed only output, edge, and
-alignment, making the empty-journal assertion vacuous for D229.
-
-PR #128 remains blocked until endpoint publication is durably ordered, active
-settings moves finalize asynchronously from the exact Positioner generation,
-the real operation storm drives cross-layout movement, the replacement gate
-passes, and a fresh critical rereview returns a mergeable verdict.
+PR #128 remains blocked only until the replacement canonical gate passes and a
+fresh critical rereview of the complete corrected diff returns a mergeable
+verdict.
 
 ## 2026-07-25: FP-4C operation storm converges
 
