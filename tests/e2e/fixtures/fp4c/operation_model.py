@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: 2026 Latte Dock contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Typed deterministic plan and schema-7 oracle for FP-4C."""
+"""Typed deterministic plan and schema-8 oracle for FP-4C."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Iterable, NoReturn
 
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 PLAN_FORMAT = "lattecotta.fp4c.operation-plan"
 REPLAY_FORMAT = "lattecotta.fp4c.operation-replay"
 FORMAT_VERSION = 1

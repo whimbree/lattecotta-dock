@@ -1074,6 +1074,7 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
 
         record.normalThickness = view->normalThickness();
         record.maximumNormalThickness = view->maxNormalThickness();
+        record.screenEdgeMargin = view->screenEdgeMargin();
         record.windowGeometry = view->geometry();
         record.absoluteGeometry = view->absoluteGeometry();
         record.localGeometry = view->localGeometry();
@@ -1259,6 +1260,10 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
             transition->hasGeometry();
         record.transitionGeometryRevision =
             transition->geometryRevision();
+        if (windowTouchTracker->triggerGeometry().isValid()) {
+            record.stableTriggerGeometry =
+                windowTouchTracker->triggerGeometry();
+        }
         record.stableLayerShellMargin =
             physicalLayerShellMarginAtEdge(
                 record.layerShellMargins,
@@ -1287,8 +1292,6 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
                 transition->fittsBridgeGeometry();
             record.contentTranslation =
                 transition->contentTranslation();
-            record.stableTriggerGeometry =
-                transition->stableTriggerGeometry();
             record.stableAppletMeasurementBounds =
                 transition->appletMeasurementBounds();
             record.stablePrimaryAxisStart =

@@ -500,6 +500,7 @@ private:
     //! Floating presentation is internal, so this is always zero.
     int layerShellEdgeMargin() const;
     void updateAppletContainsMethod();
+    void updateWindowTouchTriggerGeometry();
 
     //! apply the window's keyboard-focus stance (Qt flags + layer-shell
     //! keyboard interactivity) computed from the containment status and

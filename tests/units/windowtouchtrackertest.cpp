@@ -181,7 +181,7 @@ private Q_SLOTS:
     void skipsNonWindowRowsBeforeWindowRoleValidation();
     void rejectsMalformedTrueWindowRoles_data();
     void rejectsMalformedTrueWindowRoles();
-    void followsStableTriggerGeometry();
+    void followsExplicitTriggerGeometryAndResetsInvalidStartup();
     void refusesRoleNameDrift();
     void fixedDeadlineCannotStarveUnderSustainedChanges();
 };
@@ -194,7 +194,8 @@ void WindowTouchTrackerTest::followsRowsResetRemovalAndModelDestruction()
     transition.reconcileTargetPolicy(
         true, true, false, false, 0, false);
 
-    WindowTouchTracker tracker(&transition);
+    WindowTouchTracker tracker;
+    tracker.setTriggerGeometry(transition.stableTriggerGeometry());
     connectPolicy(tracker, transition);
     auto *model = new WindowModel;
     model->append(touchingRow(transition));
@@ -235,7 +236,8 @@ void WindowTouchTrackerTest::
     transition.setAnimationDuration(0);
     QVERIFY(transition.configureGeometry(geometry()));
 
-    WindowTouchTracker tracker(&transition);
+    WindowTouchTracker tracker;
+    tracker.setTriggerGeometry(transition.stableTriggerGeometry());
     WindowModel model;
     model.append(WindowModel::Row{
         .isWindow = false,
@@ -302,7 +304,8 @@ void WindowTouchTrackerTest::rejectsMalformedTrueWindowRoles()
     transition.setAnimationDuration(0);
     QVERIFY(transition.configureGeometry(geometry()));
 
-    WindowTouchTracker tracker(&transition);
+    WindowTouchTracker tracker;
+    tracker.setTriggerGeometry(transition.stableTriggerGeometry());
     WindowModel model;
     model.append(touchingRow(transition));
     tracker.setModel(&model);
@@ -335,23 +338,48 @@ void WindowTouchTrackerTest::rejectsMalformedTrueWindowRoles()
     QCOMPARE(tracker.geometryRoleTypeName(), QString{});
 }
 
-void WindowTouchTrackerTest::followsStableTriggerGeometry()
+void WindowTouchTrackerTest::
+    followsExplicitTriggerGeometryAndResetsInvalidStartup()
 {
     FloatingTransition transition;
     transition.setAnimationDuration(0);
     QVERIFY(transition.configureGeometry(geometry(0, 80)));
+    transition.reconcileTargetPolicy(
+        true, true, false, false, 0, false);
 
-    WindowTouchTracker tracker(&transition);
+    const QRect firstTrigger = transition.stableTriggerGeometry();
+    const auto secondSolution = solve(geometry(120, 80));
+    QVERIFY(secondSolution.has_value());
+    const QRect secondTrigger = secondSolution->trigger.value;
+    QVERIFY(!firstTrigger.intersects(secondTrigger));
+
+    WindowTouchTracker tracker;
+    connectPolicy(tracker, transition);
     WindowModel model;
-    model.append(touchingRow(transition));
+    model.append(WindowModel::Row{.geometry = firstTrigger});
     tracker.setModel(&model);
-    QTRY_COMPARE_WITH_TIMEOUT(tracker.touchingWindowCount(), 1, 100);
 
-    QVERIFY(transition.configureGeometry(geometry(120, 80)));
-    QTRY_COMPARE_WITH_TIMEOUT(tracker.touchingWindowCount(), 0, 100);
-
-    transition.clearGeometry();
+    QVERIFY(!tracker.triggerGeometry().isValid());
+    QTest::qWait(WindowTouchTracker::EvaluationDelayMs * 2);
     QCOMPARE(tracker.touchingWindowCount(), 0);
+    QCOMPARE(transition.target(), FloatingTransition::Target::Floated);
+
+    tracker.setTriggerGeometry(firstTrigger);
+    QTRY_COMPARE_WITH_TIMEOUT(tracker.touchingWindowCount(), 1, 100);
+    QCOMPARE(transition.target(), FloatingTransition::Target::Attached);
+
+    tracker.setTriggerGeometry(secondTrigger);
+    QTRY_COMPARE_WITH_TIMEOUT(tracker.touchingWindowCount(), 0, 100);
+    QCOMPARE(transition.target(), FloatingTransition::Target::Floated);
+
+    tracker.setTriggerGeometry(firstTrigger);
+    QTRY_COMPARE_WITH_TIMEOUT(tracker.touchingWindowCount(), 1, 100);
+    QCOMPARE(transition.target(), FloatingTransition::Target::Attached);
+
+    tracker.setTriggerGeometry({});
+    QVERIFY(!tracker.triggerGeometry().isValid());
+    QCOMPARE(tracker.touchingWindowCount(), 0);
+    QCOMPARE(transition.target(), FloatingTransition::Target::Floated);
 }
 
 void WindowTouchTrackerTest::refusesRoleNameDrift()
@@ -360,7 +388,8 @@ void WindowTouchTrackerTest::refusesRoleNameDrift()
     transition.setAnimationDuration(0);
     QVERIFY(transition.configureGeometry(geometry()));
 
-    WindowTouchTracker tracker(&transition);
+    WindowTouchTracker tracker;
+    tracker.setTriggerGeometry(transition.stableTriggerGeometry());
     WindowModel model;
     model.append(touchingRow(transition));
     tracker.setModel(&model);
@@ -384,7 +413,8 @@ void WindowTouchTrackerTest::
     transition.setAnimationDuration(0);
     QVERIFY(transition.configureGeometry(geometry()));
 
-    WindowTouchTracker tracker(&transition);
+    WindowTouchTracker tracker;
+    tracker.setTriggerGeometry(transition.stableTriggerGeometry());
     WindowModel model;
     model.append(WindowModel::Row{
         .geometry = QRect(500, 500, 20, 20),

@@ -51,6 +51,9 @@
 #include <QScopedValueRollback>
 #include <QMenu>
 
+// C++
+#include <optional>
+
 // KDe
 #include <KActionCollection>
 #include <PlasmaActivities/Consumer>
@@ -67,6 +70,35 @@
 #define BLOCKHIDINGNEEDSATTENTIONTYPE "View::Containment::NeedsAttentionState()"
 #define BLOCKHIDINGREQUESTSINPUTTYPE "View::Containment::RequestsInputState()"
 
+namespace {
+
+[[nodiscard]] std::optional<
+    Latte::ViewPart::FloatingPanelGeometry::Edge>
+floatingPresentationEdge(Plasma::Types::Location location)
+{
+    using Edge =
+        Latte::ViewPart::FloatingPanelGeometry::Edge;
+
+    switch (location) {
+    case Plasma::Types::TopEdge:
+        return Edge::Top;
+    case Plasma::Types::RightEdge:
+        return Edge::Right;
+    case Plasma::Types::BottomEdge:
+        return Edge::Bottom;
+    case Plasma::Types::LeftEdge:
+        return Edge::Left;
+    case Plasma::Types::Floating:
+    case Plasma::Types::Desktop:
+    case Plasma::Types::FullScreen:
+        return std::nullopt;
+    }
+
+    return std::nullopt;
+}
+
+} // namespace
+
 namespace Latte {
 
 //! both alwaysVisible and byPassWMX11 are passed through corona because
@@ -76,8 +108,7 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
     : PlasmaQuick::ContainmentView(corona),
       m_effects(new ViewPart::Effects(this)),
       m_floatingTransition(new ViewPart::FloatingTransition(this)),
-      m_windowTouchTracker(
-          new ViewPart::WindowTouchTracker(m_floatingTransition, this)),
+      m_windowTouchTracker(new ViewPart::WindowTouchTracker(this)),
       m_interface(new ViewPart::ContainmentInterface(this)),
       m_parabolic(new ViewPart::Parabolic(this)),
       m_sink(new ViewPart::EventsSink(this))
@@ -384,7 +415,20 @@ void View::init(Plasma::Containment *plasma_containment)
     connect(m_floatingTransition, &ViewPart::FloatingTransition::stableGeometryChanged,
             this, [this]() {
                 updateAbsoluteGeometry();
+                updateWindowTouchTriggerGeometry();
             });
+    connect(this, &View::locationChanged,
+            this, &View::updateWindowTouchTriggerGeometry);
+    connect(this, &View::behaveAsPlasmaPanelChanged,
+            this, &View::updateWindowTouchTriggerGeometry);
+    connect(this, &View::maxNormalThicknessChanged,
+            this, &View::updateWindowTouchTriggerGeometry);
+    connect(this, &View::screenEdgeMarginChanged,
+            this, &View::updateWindowTouchTriggerGeometry);
+    connect(this, &View::screenEdgeMarginEnabledChanged,
+            this, &View::updateWindowTouchTriggerGeometry);
+    connect(this, &View::screenGeometryChanged,
+            this, &View::updateWindowTouchTriggerGeometry);
 
     connect(this, &View::alignmentChanged, this, [&](){
         // inform neighbour vertical docks/panels to adjust their positioning
@@ -1237,6 +1281,82 @@ void View::updateAbsoluteGeometry(bool bypassChecks)
         Q_EMIT availableScreenRectChangedFrom(this);
         Q_EMIT availableScreenRegionChangedFrom(this);
     }
+
+    updateWindowTouchTriggerGeometry();
+}
+
+void View::updateWindowTouchTriggerGeometry()
+{
+    if (behaveAsPlasmaPanel()) {
+        m_windowTouchTracker->setTriggerGeometry(
+            m_floatingTransition->hasGeometry()
+                ? m_floatingTransition->stableTriggerGeometry()
+                : QRect{});
+        return;
+    }
+
+    //! A masked Dock already owns a stable zoom-sized QWindow. Its window-touch
+    //! region is the smaller resting floating envelope: exact occupied
+    //! primary span, attached item depth, and configured outward gap.
+    const QRect outputGeometry = screenGeometry();
+    const QRect occupiedGeometry = absoluteGeometry();
+    if (!floatingGapConfigured()
+            || !outputGeometry.isValid()
+            || !occupiedGeometry.isValid()
+            || !outputGeometry.contains(occupiedGeometry)) {
+        //! Placement startup and output migration legitimately have no
+        //! complete geometry yet. The first settled absolute geometry installs
+        //! the trigger synchronously.
+        m_windowTouchTracker->setTriggerGeometry({});
+        return;
+    }
+
+    const auto edge = floatingPresentationEdge(location());
+    const int attachedDepth =
+        maxNormalThickness() - screenEdgeMargin();
+    if (!edge || attachedDepth <= 0) {
+        qCritical() << "View refused invalid floating Dock touch geometry"
+                    << validTitle()
+                    << "edge=" << location()
+                    << "maximumNormalThickness=" << maxNormalThickness()
+                    << "screenEdgeMargin=" << screenEdgeMargin();
+        m_windowTouchTracker->setTriggerGeometry({});
+        return;
+    }
+
+    const bool horizontal =
+        *edge == ViewPart::FloatingPanelGeometry::Edge::Top
+        || *edge
+            == ViewPart::FloatingPanelGeometry::Edge::Bottom;
+    const ViewPart::FloatingPanelGeometry::Inputs inputs{
+        .outputGeometry = outputGeometry,
+        .edge = *edge,
+        .primaryAxisSpan = {
+            horizontal
+                ? occupiedGeometry.left()
+                : occupiedGeometry.top(),
+            horizontal
+                ? occupiedGeometry.width()
+                : occupiedGeometry.height(),
+        },
+        .panelDepth = attachedDepth,
+        .floatingGap = screenEdgeMargin(),
+    };
+    const auto solution =
+        ViewPart::FloatingPanelGeometry::solve(inputs);
+    if (!solution) {
+        qCritical() << "View could not solve floating Dock touch geometry"
+                    << validTitle()
+                    << "output=" << outputGeometry
+                    << "occupied=" << occupiedGeometry
+                    << "attachedDepth=" << attachedDepth
+                    << "gap=" << screenEdgeMargin();
+        m_windowTouchTracker->setTriggerGeometry({});
+        return;
+    }
+
+    m_windowTouchTracker->setTriggerGeometry(
+        solution->trigger.value);
 }
 
 //! Fix for #443236, setFlags(...) needs to run for every status but

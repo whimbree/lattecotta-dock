@@ -157,7 +157,7 @@ ContainmentItem {
         !!(latteView
            && latteView.visibility
            && latteView.visibility.containsMouse)
-    readonly property bool dockGapHideRequested:
+    readonly property bool directDockWindowTouchEligible:
         latteView
         && root.behaveAsDockWithMask
         && latteView.floatingGapConfigured
@@ -166,6 +166,8 @@ ContainmentItem {
         && latteView.visibility
         && (latteView.visibility.mode === LatteCore.Types.AlwaysVisible
             || latteView.visibility.mode === LatteCore.Types.WindowsGoBelow)
+    readonly property bool dockGapHideRequested:
+        directDockWindowTouchEligible
         && hideThickScreenGap
     //! Compatibility readback for layout/background consumers. Target
     //! selection belongs exclusively to FloatingTransition.
@@ -391,8 +393,12 @@ ContainmentItem {
         when: !(Plasmoid.configuration.floatingGapHidingWaitsMouse && dockContainsMouse)
         value: screenEdgeMarginEnabled
                && Plasmoid.configuration.hideFloatingGapForMaximized
-               && latteView && latteView.windowsTracker
-               && latteView.windowsTracker.currentScreen.existsWindowMaximized
+               && latteView
+               && (directDockWindowTouchEligible
+                   ? latteView.windowTouchTracker
+                     && latteView.windowTouchTracker.touchingWindowCount > 0
+                   : latteView.windowsTracker
+                     && latteView.windowsTracker.currentScreen.existsWindowMaximized)
         restoreMode: Binding.RestoreNone
     }
 

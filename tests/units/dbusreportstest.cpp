@@ -173,6 +173,8 @@ static DockSystemViewRecord stableBottomTransitionRecord()
     record.type = Types::PanelView;
     record.edge = Plasma::Types::BottomEdge;
     record.normalThickness = 40;
+    record.maximumNormalThickness = 47;
+    record.screenEdgeMargin = 7;
     record.windowGeometry = QRect(100, 953, 300, 47);
     record.absoluteGeometry = QRect(100, 960, 300, 40);
     record.screenGeometry = QRect(0, 0, 1920, 1000);
@@ -228,7 +230,7 @@ static DockSystemViewRecord stableBottomTransitionRecord()
     record.contentTranslation =
         QPointF(0.0, 4.375);
     record.stableTriggerGeometry =
-        QRect(100, 959, 300, 41);
+        QRect(100, 952, 300, 47);
     record.stableAppletMeasurementBounds =
         QRect(0, 0, 300, 40);
     record.stablePrimaryAxisStart = 100;
@@ -883,6 +885,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     record.availablePrimaryLength = 900;
     record.normalThickness = 72;
     record.maximumNormalThickness = 96;
+    record.screenEdgeMargin = 8;
     record.windowGeometry = QRect(1, 2, 3, 4);
     record.absoluteGeometry = QRect(5, 6, 7, 8);
     record.localGeometry = QRect(9, 10, 11, 12);
@@ -1046,8 +1049,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("snapshotSequence"),
         QStringLiteral("stacking"),
         QStringLiteral("views")}));
-    QCOMPARE(DockSystemSnapshot::SchemaVersion, 7);
-    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 7);
+    QCOMPARE(DockSystemSnapshot::SchemaVersion, 8);
+    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 8);
     QCOMPARE(root.value(QStringLiteral("snapshotSequence")).toString(), QStringLiteral("41"));
     QCOMPARE(
         root.value(
@@ -1180,6 +1183,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("reservationWindowGeometry"),
         QStringLiteral("runtimeViewId"),
         QStringLiteral("screen"),
+        QStringLiteral("screenEdgeMargin"),
         QStringLiteral("screenGeometry"), QStringLiteral("screenId"),
         QStringLiteral("screensGroup"), QStringLiteral("settingsWindowShown"),
         QStringLiteral("shadowEnabledBorders"),
@@ -1214,6 +1218,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(view.value(QStringLiteral("configuredIconSize")).toInt(), 64);
     QCOMPARE(view.value(QStringLiteral("effectiveIconSize")).toInt(), 52);
     QCOMPARE(view.value(QStringLiteral("availablePrimaryLength")).toInt(), 900);
+    QCOMPARE(view.value(QStringLiteral("screenEdgeMargin")).toInt(), 8);
     QCOMPARE(view.value(QStringLiteral("surfaceGeometry")).toArray(),
              serializeRect(record.surfaceGeometry));
     QCOMPARE(view.value(QStringLiteral("layerShellAnchors")).toArray(),
@@ -1440,7 +1445,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("maximumLengthRatio"), QStringLiteral("offsetRatio"),
         QStringLiteral("configuredIconSize"), QStringLiteral("effectiveIconSize"),
         QStringLiteral("availablePrimaryLength"), QStringLiteral("normalThickness"),
-        QStringLiteral("maximumNormalThickness"), QStringLiteral("strutsThickness"),
+        QStringLiteral("maximumNormalThickness"), QStringLiteral("screenEdgeMargin"),
+        QStringLiteral("strutsThickness"),
         QStringLiteral("layerShellExclusiveZone"),
         QStringLiteral("reservationContributionDepth"),
         QStringLiteral("reservationGroupMemberCount"),
@@ -1609,6 +1615,7 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     requireJsonType(view, QStringLiteral("transitionGeometryPresent"), QJsonValue::Bool);
     requireJsonType(view, QStringLiteral("transitionGeometryRevision"), QJsonValue::String);
     requireJsonType(view, QStringLiteral("stableLayerShellMargin"), QJsonValue::Double);
+    requireJsonType(view, QStringLiteral("screenEdgeMargin"), QJsonValue::Double);
     QCOMPARE(view.value(QStringLiteral("floatingGapConfigured")).toBool(), false);
     QCOMPARE(view.value(QStringLiteral("floatingPanelConfigured")).toBool(), false);
     QCOMPARE(view.value(QStringLiteral("floatingDamageMaskPending")).toBool(), false);
@@ -1643,6 +1650,7 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     QCOMPARE(view.value(QStringLiteral("transitionGeometryRevision")).toString(),
              QStringLiteral("0"));
     QCOMPARE(view.value(QStringLiteral("stableLayerShellMargin")).toInt(), 0);
+    QCOMPARE(view.value(QStringLiteral("screenEdgeMargin")).toInt(), 0);
     const QStringList absentTransitionFields{
         QStringLiteral("attachedPresentationGeometry"),
         QStringLiteral("contentTranslation"),
@@ -1654,11 +1662,14 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
         QStringLiteral("stableAppletMeasurementBounds"),
         QStringLiteral("stableCanvasGeometry"),
         QStringLiteral("stablePrimaryAxisLength"),
-        QStringLiteral("stablePrimaryAxisStart"),
-        QStringLiteral("stableTriggerGeometry")};
+        QStringLiteral("stablePrimaryAxisStart")};
     for (const auto &key : absentTransitionFields) {
         requireJsonType(view, key, QJsonValue::Null);
     }
+    requireJsonType(
+        view,
+        QStringLiteral("stableTriggerGeometry"),
+        QJsonValue::Null);
     requireJsonType(
         view,
         QStringLiteral(
@@ -2140,6 +2151,13 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         dockRecord.persistentDockId = 8;
         dockRecord.logicalDockId = 8;
         dockRecord.type = Types::DockView;
+        dockRecord.edge = Plasma::Types::BottomEdge;
+        dockRecord.maximumNormalThickness = 15;
+        dockRecord.screenEdgeMargin = 5;
+        dockRecord.absoluteGeometry =
+            QRect(20, 90, 100, 10);
+        dockRecord.screenGeometry =
+            QRect(0, 0, 200, 100);
         dockRecord.floatingGapConfigured = true;
         dockRecord.floatingPanelConfigured = false;
         dockRecord.attachOnWindowTouchConfigured = true;
@@ -2148,6 +2166,10 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         dockRecord.transitionTarget =
             DockTransitionTarget::Floated;
         dockRecord.transitionProgress = 1.0;
+        dockRecord.geometrySettled = true;
+        dockRecord.inReadyState = true;
+        dockRecord.stableTriggerGeometry =
+            QRect(20, 84, 100, 15);
         dockRecord.objects.transitionController =
             QStringLiteral("dock-transition");
         dockRecord.objects.windowTouchTracker =
@@ -2159,6 +2181,17 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         dock.visibilityMode =
             Types::WindowsGoBelow;
         QVERIFY(dockTransitionRecordsAgree(dockSnapshot));
+        dock.stableTriggerGeometry->translate(1, 0);
+        QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
+        dock.stableTriggerGeometry =
+            QRect(20, 84, 100, 15);
+        dock.stableTriggerGeometry.reset();
+        QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
+        dock.inReadyState = false;
+        QVERIFY(dockTransitionRecordsAgree(dockSnapshot));
+        dock.stableTriggerGeometry =
+            QRect(20, 84, 100, 15);
+        dock.inReadyState = true;
         dock.visibilityMode =
             Types::DodgeActive;
         QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
@@ -2338,6 +2371,7 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
     auto flushView = stableBottomTransitionRecord();
     flushView.floatingGapConfigured = false;
     flushView.floatingPanelConfigured = false;
+    flushView.screenEdgeMargin = 0;
     flushView.floatingPanelEligible = false;
     flushView.floatingAppletPopupsPreferred = false;
     flushView.transitionTarget =
@@ -2354,6 +2388,8 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         flushView.windowGeometry;
     flushView.stableCanvasGeometry =
         flushView.windowGeometry;
+    flushView.stableTriggerGeometry =
+        QRect(100, 959, 300, 40);
     flushView.attachedPresentationGeometry =
         QRect(0, 0, 300, 40);
     flushView.floatedPresentationGeometry =
