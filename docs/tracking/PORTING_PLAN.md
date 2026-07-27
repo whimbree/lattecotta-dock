@@ -4574,7 +4574,9 @@ prerequisites in the phases above are done.
       bridge, visible-mask popup anchor, and direct nested-KWin
       drag/cancel/maximize coverage. Internal content may translate with the
       visual background but must not refit or resize.
-      Commits: 8d4ac1e90, 559cb666b
+      Commits: complete FP-1 through FP-4 per-stage commit lists in
+      `docs/tracking/floating-panel-parity-plan.md`; final live-drag
+      corrections 8d4ac1e90, 559cb666b
 - [x] Fix D187 (full-span End floating panels extended one pixel beyond their
       output). Remove the unrelated reversed-alignment primary-axis increment
       while preserving both reservation +1 gap-prevention conventions.
@@ -4954,6 +4956,14 @@ prerequisites in the phases above are done.
       Recapture the stable projection after structural validation and accept
       it only when the candidate still matches.
       Commits: e47d5c1c0
+- [x] Fix D239 (schema 8 accepted impossible floating trigger states).
+      Enforce the runtime positive-margin implication and exact Panel trigger
+      presence in the atomic D-Bus invariant validator.
+      Commits: ebacda53e
+- [x] Fix D240 (operation model omitted the schema-8 screen-edge margin).
+      Require the numeric field and retain it in the deterministic restart
+      projection.
+      Commits: d291e651d
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

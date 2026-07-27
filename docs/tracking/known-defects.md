@@ -3061,6 +3061,37 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   failed at the captured-prior contract, then passed after restoring the fix.
 - SEVERITY: release blocker.
 
+### D240 - Operation model omitted the schema-8 screen-edge margin
+- STATUS: FIXED on the live-drag branch by `d291e651d`.
+- FOUND: 2026-07-26, independent review of PR #130.
+- SYMPTOM: the deterministic operation-storm model accepts a schema-8 view
+  without `screenEdgeMargin`, accepts the field with an invalid type, and drops
+  it from the restart projection.
+- ROOT: the D-Bus schema version was raised when the field was added, but the
+  required, numeric, and durable model inventories were not extended with it.
+- FIX: require a numeric `screenEdgeMargin`, populate it in the canonical
+  fixture, and retain it in the durable projection.
+- EVIDENCE: `linkedoperationstormmodeltest` passes the canonical replay plus
+  controlled missing-field and wrong-type negatives.
+- SEVERITY: beta blocker.
+
+### D239 - Schema 8 accepted impossible floating trigger states
+- STATUS: FIXED on the live-drag branch by `ebacda53e`.
+- FOUND: 2026-07-26, independent review of PR #130.
+- SYMPTOM: an active floating gap with a zero screen-edge margin passes the
+  atomic D-Bus invariant check. A Panel can also retain a stale trigger after
+  all transition geometry is absent.
+- ROOT: the validator did not encode the runtime view's positive-margin
+  implication. Removing the trigger from the generic geometry bundle for
+  Dock-specific triggers also removed exact trigger-presence validation for
+  Panels.
+- FIX: enforce the positive-margin implication directly and require Panel
+  trigger presence to match Panel transition-geometry presence exactly.
+- EVIDENCE: `dbusreportstest` passes controlled negatives for both impossible
+  states and preserves a legal Dock-owned trigger without Panel transition
+  geometry.
+- SEVERITY: beta blocker.
+
 ### D238 - Topology acceptance retained a pre-validation snapshot
 - STATUS: FIXED on the live-drag branch by `e47d5c1c0`.
 - FOUND: 2026-07-26, corrected-trigger multi-output acceptance.
