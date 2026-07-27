@@ -19,8 +19,8 @@ type-checking, or preserving `screenEdgeMargin` across restart. Commit
 `5a2948bb5` completes all three inventories and covers missing and invalid
 forms. The replacement canonical gate passed at tree-equivalent branch head
 `1ad1123f3`, including all 124 tests, QML checks, visual probes, ASan and UBSan
-nested execution, packaging, and the topology matrix. The cold repair-delta
-rereview returned `MERGE` with no findings.
+nested execution, package provenance controls, and matrix refusals. The cold
+repair-delta rereview returned `MERGE` with no findings.
 
 ## 2026-07-26: live titlebar attachment correction
 
