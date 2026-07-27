@@ -61,8 +61,8 @@ private Q_SLOTS:
     void projectsEdgeInputIntoVisibleShape_data();
     void projectsEdgeInputIntoVisibleShape();
     void keepsFloatingBordersAndCornersForEveryNonzeroProgress();
-    void triggerOverlapsOneLogicalPixelInward_data();
-    void triggerOverlapsOneLogicalPixelInward();
+    void triggerTranslatesStableEnvelopeOnePixelInward_data();
+    void triggerTranslatesStableEnvelopeOnePixelInward();
     void solvesExtremeOriginGeometryWithoutIntermediateOverflow_data();
     void solvesExtremeOriginGeometryWithoutIntermediateOverflow();
     void solvesAlignedPartialPlacement_data();
@@ -423,23 +423,64 @@ void FloatingPanelGeometryTest::keepsFloatingBordersAndCornersForEveryNonzeroPro
     QVERIFY(!flushSolution->floatingCornersVisible(1.0));
 }
 
-void FloatingPanelGeometryTest::triggerOverlapsOneLogicalPixelInward_data()
+void FloatingPanelGeometryTest::
+    triggerTranslatesStableEnvelopeOnePixelInward_data()
 {
-    QTest::addColumn<Edge>("edge");
+    QTest::addColumn<Inputs>("input");
     QTest::addColumn<QRect>("trigger");
 
-    QTest::newRow("top") << Edge::Top << QRect(2120, -200, 800, 49);
-    QTest::newRow("right") << Edge::Right << QRect(3471, -100, 49, 500);
-    QTest::newRow("bottom") << Edge::Bottom << QRect(2120, 651, 800, 49);
-    QTest::newRow("left") << Edge::Left << QRect(1920, -100, 49, 500);
+    QTest::newRow("top")
+        << inputs(Edge::Top) << QRect(2120, -199, 800, 60);
+    QTest::newRow("right")
+        << inputs(Edge::Right) << QRect(3459, -100, 60, 500);
+    QTest::newRow("bottom")
+        << inputs(Edge::Bottom) << QRect(2120, 639, 800, 60);
+    QTest::newRow("left")
+        << inputs(Edge::Left) << QRect(1921, -100, 60, 500);
+
+    constexpr int outputDepth = 100;
+    for (const auto [name, edge] : {
+             std::pair{"full-depth top", Edge::Top},
+             std::pair{"full-depth right", Edge::Right},
+             std::pair{"full-depth bottom", Edge::Bottom},
+             std::pair{"full-depth left", Edge::Left},
+         }) {
+        Inputs fullDepthInputs{
+            .outputGeometry = QRect(200, 300, 100, outputDepth),
+            .edge = edge,
+            .primaryAxisSpan =
+                isHorizontal(edge)
+                ? StablePrimaryAxisSpan{200, 100}
+                : StablePrimaryAxisSpan{300, outputDepth},
+            .panelDepth = outputDepth,
+            .floatingGap = 0,
+        };
+        QRect expected = fullDepthInputs.outputGeometry;
+        switch (edge) {
+        case Edge::Top:
+            expected.setTop(expected.top() + 1);
+            break;
+        case Edge::Right:
+            expected.setRight(expected.right() - 1);
+            break;
+        case Edge::Bottom:
+            expected.setBottom(expected.bottom() - 1);
+            break;
+        case Edge::Left:
+            expected.setLeft(expected.left() + 1);
+            break;
+        }
+        QTest::newRow(name) << fullDepthInputs << expected;
+    }
 }
 
-void FloatingPanelGeometryTest::triggerOverlapsOneLogicalPixelInward()
+void FloatingPanelGeometryTest::
+    triggerTranslatesStableEnvelopeOnePixelInward()
 {
-    QFETCH(Edge, edge);
+    QFETCH(Inputs, input);
     QFETCH(QRect, trigger);
 
-    const auto solution = solve(inputs(edge));
+    const auto solution = solve(input);
     QVERIFY(solution.has_value());
     QCOMPARE(solution->trigger.value, trigger);
 }
@@ -599,13 +640,6 @@ void FloatingPanelGeometryTest::rejectsInvalidBoundaryGeometry_data()
     envelopeTooDeep.panelDepth = 1590;
     envelopeTooDeep.floatingGap = 11;
     QTest::newRow("envelope too deep") << envelopeTooDeep;
-
-    Inputs triggerOutsideOutput = inputs(Edge::Top);
-    triggerOutsideOutput.panelDepth =
-        triggerOutsideOutput.outputGeometry.height();
-    triggerOutsideOutput.floatingGap = 0;
-    QTest::newRow("mandatory trigger pixel outside output")
-        << triggerOutsideOutput;
 
     Inputs overflowingEnvelope = inputs(Edge::Bottom);
     overflowingEnvelope.panelDepth = std::numeric_limits<int>::max();

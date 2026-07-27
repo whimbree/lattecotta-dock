@@ -232,6 +232,12 @@ struct PlacementInputs {
     int floatingGap{0};
 };
 
+struct StableWindowTouchTriggerInputs {
+    QRect outputGeometry;
+    Edge edge{Edge::Bottom};
+    StableEnvelope envelope;
+};
+
 struct RectangleMetrics {
     int left{0};
     int top{0};
@@ -349,12 +355,73 @@ struct RectangleMetrics {
     const qint64 spanEnd = qint64(in.primaryAxisSpan.start) + in.primaryAxisSpan.length;
     const qint64 outputEnd = qint64(outputStart) + outputLength;
     const qint64 envelopeDepth = qint64(in.panelDepth) + in.floatingGap;
-    const qint64 triggerDepth = qint64(in.panelDepth) + 1;
     const int outputDepth =
         isHorizontal(in.edge) ? output->height : output->width;
 
     return in.primaryAxisSpan.start >= outputStart && spanEnd <= outputEnd
-        && envelopeDepth <= outputDepth && triggerDepth <= outputDepth;
+        && envelopeDepth <= outputDepth;
+}
+
+[[nodiscard]] inline std::optional<TriggerRectangle>
+solveStableWindowTouchTrigger(const StableWindowTouchTriggerInputs &in)
+{
+    const auto output = validateRectangle(in.outputGeometry);
+    const auto envelope = validateRectangle(in.envelope.value);
+    if (!output || !envelope || !isSupportedEdge(in.edge)
+        || !containsRectangle(*output, *envelope)) {
+        return std::nullopt;
+    }
+
+    //! Plasma tests the complete stable floating envelope after translating
+    //! it one logical pixel toward the workspace. This is a translation, not
+    //! an expansion of the attached background: the floating gap participates
+    //! while the output clip removes the row shifted beyond the opposite edge.
+    qint64 horizontalTranslation{0};
+    qint64 verticalTranslation{0};
+    switch (in.edge) {
+    case Edge::Top:
+        verticalTranslation = 1;
+        break;
+    case Edge::Right:
+        horizontalTranslation = -1;
+        break;
+    case Edge::Bottom:
+        verticalTranslation = -1;
+        break;
+    case Edge::Left:
+        horizontalTranslation = 1;
+        break;
+    }
+
+    const qint64 left = std::max(
+        qint64(output->left),
+        qint64(envelope->left) + horizontalTranslation);
+    const qint64 top = std::max(
+        qint64(output->top),
+        qint64(envelope->top) + verticalTranslation);
+    const qint64 right = std::min(
+        qint64(output->right),
+        qint64(envelope->right) + horizontalTranslation);
+    const qint64 bottom = std::min(
+        qint64(output->bottom),
+        qint64(envelope->bottom) + verticalTranslation);
+    const auto narrowedLeft = narrowToRepresentableInt(left);
+    const auto narrowedTop = narrowToRepresentableInt(top);
+    const auto narrowedRight = narrowToRepresentableInt(right);
+    const auto narrowedBottom = narrowToRepresentableInt(bottom);
+    if (left > right || top > bottom
+        || !narrowedLeft || !narrowedTop
+        || !narrowedRight || !narrowedBottom) {
+        return std::nullopt;
+    }
+
+    QRect trigger;
+    trigger.setCoords(
+        *narrowedLeft,
+        *narrowedTop,
+        *narrowedRight,
+        *narrowedBottom);
+    return TriggerRectangle{trigger};
 }
 
 [[nodiscard]] inline std::optional<Solution> solve(const Inputs &in)
@@ -434,31 +501,20 @@ struct RectangleMetrics {
     }
     }
 
-    QRect trigger = attached.translated(envelope.topLeft());
-    switch (in.edge) {
-    case Edge::Top:
-        // The one logical pixel is for overlap detection at the inward edge.
-        trigger.setBottom(trigger.bottom() + 1);
-        break;
-    case Edge::Right:
-        // The one logical pixel is for overlap detection at the inward edge.
-        trigger.setLeft(trigger.left() - 1);
-        break;
-    case Edge::Bottom:
-        // The one logical pixel is for overlap detection at the inward edge.
-        trigger.setTop(trigger.top() - 1);
-        break;
-    case Edge::Left:
-        // The one logical pixel is for overlap detection at the inward edge.
-        trigger.setRight(trigger.right() + 1);
-        break;
+    const auto trigger = solveStableWindowTouchTrigger({
+        .outputGeometry = in.outputGeometry,
+        .edge = in.edge,
+        .envelope = {envelope},
+    });
+    if (!trigger) {
+        return std::nullopt;
     }
 
     const Solution solution{
         .attached = {attached},
         .floated = {floated},
         .envelope = {envelope},
-        .trigger = {trigger},
+        .trigger = *trigger,
         .appletMeasurementBounds = {
             QRect(QPoint(0, 0), attached.size()),
         },
