@@ -1,23 +1,26 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-26.
+Last updated 2026-07-27.
 
-## 2026-07-26: live-drag branch independent review corrections
+## 2026-07-27: PR #130 merges live titlebar attachment
 
-The independent PR #130 review returned `MERGE AFTER FIXES` with two contract
+PR #130 merged through GitHub's rebase flow at `1b7d804ec` on `main`. The
+initial independent review returned `MERGE AFTER FIXES` with two contract
 findings. D239 (schema 8 accepted impossible floating trigger states) found
 that the atomic validator accepted an active zero-margin gap and a Panel
-trigger without transition geometry. Commit `ebacda53e` encodes the runtime
+trigger without transition geometry. Commit `909889a23` encodes the runtime
 positive-margin implication and exact Panel trigger-presence rule with
 controlled negatives.
 
 D240 (operation model omitted the schema-8 screen-edge margin) found that the
 deterministic operation model raised its schema version without requiring,
 type-checking, or preserving `screenEdgeMargin` across restart. Commit
-`d291e651d` completes all three inventories and covers missing and invalid
-forms. Focused C++ and deterministic-model tests pass. A replacement canonical
-gate and independent rereview remain required before merge.
+`5a2948bb5` completes all three inventories and covers missing and invalid
+forms. The replacement canonical gate passed at tree-equivalent branch head
+`1ad1123f3`, including all 124 tests, QML checks, visual probes, ASan and UBSan
+nested execution, packaging, and the topology matrix. The cold repair-delta
+rereview returned `MERGE` with no findings.
 
 ## 2026-07-26: live titlebar attachment correction
 
@@ -29,8 +32,8 @@ the workspace and clips it to the output. D237 (floating Docks waited for
 committed maximize) left Docks on the legacy `existsWindowMaximized` binding
 because the direct tracker accepted geometry only from `FloatingTransition`.
 
-Commit `8d4ac1e90` centralizes the exact Plasma trigger rule. Commit
-`559cb666b` gives `WindowTouchTracker` one explicit per-view trigger, feeds it
+Commit `da89c1262` centralizes the exact Plasma trigger rule. Commit
+`cf976eccd` gives `WindowTouchTracker` one explicit per-view trigger, feeds it
 from Panel transition geometry or a Dock-specific envelope, routes eligible
 Dock gap presentation from the live count, keeps the attached reservation
 depth fixed, and exposes the exact trigger plus `screenEdgeMargin` through
@@ -44,7 +47,7 @@ Panel reversals, Escape restoration, pointer deferral, committed maximize, and
 destruction cleanup.
 
 The corrected-trigger multi-output pass exposed D238 (topology acceptance
-retained a pre-validation snapshot). Commit `e47d5c1c0` recaptures the stable
+retained a pre-validation snapshot). Commit `b97ae60ca` recaptures the stable
 projection after structural validation. Recipe 073 then passes separated
 partial spans, spanning-window fanout, maximum-depth reservations, restart,
 and full-touching, partial-touching, and disconnected output topologies.

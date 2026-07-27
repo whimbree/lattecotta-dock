@@ -3062,7 +3062,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D240 - Operation model omitted the schema-8 screen-edge margin
-- STATUS: FIXED on the live-drag branch by `d291e651d`.
+- STATUS: FIXED on `main` by `5a2948bb5`; merged through PR #130.
 - FOUND: 2026-07-26, independent review of PR #130.
 - SYMPTOM: the deterministic operation-storm model accepts a schema-8 view
   without `screenEdgeMargin`, accepts the field with an invalid type, and drops
@@ -3076,7 +3076,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D239 - Schema 8 accepted impossible floating trigger states
-- STATUS: FIXED on the live-drag branch by `ebacda53e`.
+- STATUS: FIXED on `main` by `909889a23`; merged through PR #130.
 - FOUND: 2026-07-26, independent review of PR #130.
 - SYMPTOM: an active floating gap with a zero screen-edge margin passes the
   atomic D-Bus invariant check. A Panel can also retain a stale trigger after
@@ -3093,7 +3093,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D238 - Topology acceptance retained a pre-validation snapshot
-- STATUS: FIXED on the live-drag branch by `e47d5c1c0`.
+- STATUS: FIXED on `main` by `b97ae60ca`; merged through PR #130.
 - FOUND: 2026-07-26, corrected-trigger multi-output acceptance.
 - SYMPTOM: the first parked-client case can report stable surface drift where
   `geometrySettled` changes from false to true and the surface publication
@@ -3110,7 +3110,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: known issue.
 
 ### D237 - Floating Docks waited for committed maximize
-- STATUS: FIXED on the live-drag branch by `559cb666b`.
+- STATUS: FIXED on `main` by `cf976eccd`; merged through PR #130.
 - FOUND: 2026-07-26, real-session comparison with Plasma's panel dodge
   animation.
 - SYMPTOM: dragging a window toward a floating Dock does not hide the floating
@@ -3131,7 +3131,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D236 - Floating Panel touch trigger omitted the gap
-- STATUS: FIXED on the live-drag branch by `8d4ac1e90`.
+- STATUS: FIXED on `main` by `da89c1262`; merged through PR #130.
 - FOUND: 2026-07-26, source comparison after live Panel attachment still
   lagged Plasma's animation.
 - SYMPTOM: a true floating Panel has the direct KWin geometry feed but does not
@@ -3382,7 +3382,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: FIXED on the live-drag branch by `8d4ac1e90` and `559cb666b`.
+- STATUS: FIXED on `main` by `da89c1262` and `cf976eccd`; merged through
+  PR #130.
   PR #128 established the stable-surface architecture on `main`; D236 and D237
   found and corrected the remaining trigger and Dock-feed gaps.
   FP-1
