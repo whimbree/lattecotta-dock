@@ -4576,7 +4576,7 @@ prerequisites in the phases above are done.
       visual background but must not refit or resize.
       Commits: complete FP-1 through FP-4 per-stage commit lists in
       `docs/tracking/floating-panel-parity-plan.md`; final live-drag
-      corrections 8d4ac1e90, 559cb666b
+      corrections da89c1262, cf976eccd
 - [x] Fix D187 (full-span End floating panels extended one pixel beyond their
       output). Remove the unrelated reversed-alignment primary-axis increment
       while preserving both reservation +1 gap-prevention conventions.
@@ -4946,24 +4946,24 @@ prerequisites in the phases above are done.
       Translate the complete stable envelope one logical pixel toward the
       workspace and clip it to the output. Keep each view's exact primary-axis
       span.
-      Commits: 8d4ac1e90
+      Commits: da89c1262
 - [x] Fix D237 (floating Docks waited for committed maximize).
       Give the tracker one explicit per-view trigger, route eligible Dock gap
       presentation from its live touching count, retain stable attached-depth
       reservation, and expose the exact authority through D-Bus schema 8.
-      Commits: 559cb666b
+      Commits: cf976eccd
 - [x] Fix D238 (topology acceptance retained a pre-validation snapshot).
       Recapture the stable projection after structural validation and accept
       it only when the candidate still matches.
-      Commits: e47d5c1c0
+      Commits: b97ae60ca
 - [x] Fix D239 (schema 8 accepted impossible floating trigger states).
       Enforce the runtime positive-margin implication and exact Panel trigger
       presence in the atomic D-Bus invariant validator.
-      Commits: ebacda53e
+      Commits: 909889a23
 - [x] Fix D240 (operation model omitted the schema-8 screen-edge margin).
       Require the numeric field and retain it in the deterministic restart
       projection.
-      Commits: d291e651d
+      Commits: 5a2948bb5
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

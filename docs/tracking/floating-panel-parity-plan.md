@@ -153,7 +153,7 @@ and PR #126 landed FP-4B.
       gap, moves one logical pixel toward the workspace and clips to the
       output. Do not expand only the attached background or use the moving
       visible rectangle.
-      Commits: d0d499d50 (PR #124), 8d4ac1e90
+      Commits: d0d499d50 (PR #124), da89c1262
 - [x] Deliver the direct interaction path with a bounded 10 ms debounce
       instead of the generic 150 ms window-change coalescer.
       Commits: d0d499d50 (PR #124)
@@ -162,7 +162,7 @@ and PR #126 landed FP-4B.
       Commits: d0d499d50, b552508e3, f4232ae54 (PR #124)
 - [x] Drive drag-in, drag-out, mid-flight reverse, Escape cancel, and committed
       maximize against real nested-KWin client frames.
-      Commits: f8396b5ed, d0d499d50 (PR #124), 559cb666b
+      Commits: f8396b5ed, d0d499d50 (PR #124), cf976eccd
 - [x] Drive portrait, landscape, disconnected, partially touching, fully
       touching, spanning-window, and same-edge separated-span fixtures.
       Commits: 4daa80121, ad2a91c6f, 649fb79b4, 4ac5208b9,
@@ -183,14 +183,14 @@ and PR #126 landed FP-4B.
       Docks one tracker-owned per-view trigger, make eligible Docks consume the
       live count instead of committed maximize, and keep one attached-depth
       reservation throughout Dock presentation changes.
-      Commits: 8d4ac1e90, 559cb666b
+      Commits: da89c1262, cf976eccd
       Evidence: recipe 074 holds a real titlebar drag across and back out of
       both a Panel and a Dock trigger. Both state changes occur before button
       release while the QWindow, reservation, layer-shell state, tracker
       identity, and publication revisions remain byte-identical.
 - [x] Make multi-output baseline capture transactional after structural
       validation.
-      Commits: e47d5c1c0
+      Commits: b97ae60ca
       Evidence: recipe 073 passes exact separated-span activation,
       spanning-window fanout, maximum-depth reservations, restart persistence,
       and full-touching, partial-touching, and disconnected output topologies.
@@ -204,7 +204,7 @@ and PR #126 landed FP-4B.
 - [x] D172 (floating panel attachment moves the surface and reservation instead
       of presentation) is fixed by FP-1 through FP-4.
       Commits: complete FP-1 through FP-4 per-stage commit lists above; final
-      live-drag corrections 8d4ac1e90, 559cb666b
+      live-drag corrections da89c1262, cf976eccd
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
       independent unless a shared root is proved.
