@@ -3,6 +3,22 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-26.
 
+## 2026-07-26: live-drag branch independent review corrections
+
+The independent PR #130 review returned `MERGE AFTER FIXES` with two contract
+findings. D239 (schema 8 accepted impossible floating trigger states) found
+that the atomic validator accepted an active zero-margin gap and a Panel
+trigger without transition geometry. Commit `ebacda53e` encodes the runtime
+positive-margin implication and exact Panel trigger-presence rule with
+controlled negatives.
+
+D240 (operation model omitted the schema-8 screen-edge margin) found that the
+deterministic operation model raised its schema version without requiring,
+type-checking, or preserving `screenEdgeMargin` across restart. Commit
+`d291e651d` completes all three inventories and covers missing and invalid
+forms. Focused C++ and deterministic-model tests pass. A replacement canonical
+gate and independent rereview remain required before merge.
+
 ## 2026-07-26: live titlebar attachment correction
 
 The post-PR #128 real-session pass found that the stable-surface architecture

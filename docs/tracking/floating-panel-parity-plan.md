@@ -203,7 +203,8 @@ and PR #126 landed FP-4B.
       exposed the missing authority; FP-1 implements it.
 - [x] D172 (floating panel attachment moves the surface and reservation instead
       of presentation) is fixed by FP-1 through FP-4.
-      Commits: 8d4ac1e90, 559cb666b
+      Commits: complete FP-1 through FP-4 per-stage commit lists above; final
+      live-drag corrections 8d4ac1e90, 559cb666b
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
       independent unless a shared root is proved.
