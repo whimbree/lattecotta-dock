@@ -199,7 +199,8 @@ persistent_projection() {
 }
 
 wait_for_stable_topology() {
-    local expected="$1" previous="" current="" structure_error=""
+    local expected="$1" previous="" current="" verified=""
+    local structure_error=""
     mo_assert_output_topology "$expected" \
         || e2e_fail "output helper did not observe $expected"
     mo_screens_json | python3 "$ORACLE" assert-topology "$expected" >/dev/null \
@@ -208,11 +209,15 @@ wait_for_stable_topology() {
         current="$(stable_projection 2>/dev/null)" || current=""
         if [[ -n "$current" && "$current" == "$previous" ]]; then
             if structure_error="$(assert_structure 2>&1)"; then
-                baseline_stable="$current"
-                previous_anchor_revisions="$(
-                    snapshot | python3 "$ORACLE" anchor-revisions --ids "$view_ids_csv"
-                )" || e2e_fail "could not capture popup anchor revisions"
-                return 0
+                verified="$(stable_projection 2>/dev/null)" \
+                    || verified=""
+                if [[ "$verified" == "$current" ]]; then
+                    baseline_stable="$verified"
+                    previous_anchor_revisions="$(
+                        snapshot | python3 "$ORACLE" anchor-revisions --ids "$view_ids_csv"
+                    )" || e2e_fail "could not capture popup anchor revisions"
+                    return 0
+                fi
             fi
         fi
         previous="$current"
