@@ -4574,7 +4574,7 @@ prerequisites in the phases above are done.
       bridge, visible-mask popup anchor, and direct nested-KWin
       drag/cancel/maximize coverage. Internal content may translate with the
       visual background but must not refit or resize.
-      Commits: 8d4ac1e90, 14a8aba11
+      Commits: 8d4ac1e90, 559cb666b
 - [x] Fix D187 (full-span End floating panels extended one pixel beyond their
       output). Remove the unrelated reversed-alignment primary-axis increment
       while preserving both reservation +1 gap-prevention conventions.
@@ -4949,11 +4949,11 @@ prerequisites in the phases above are done.
       Give the tracker one explicit per-view trigger, route eligible Dock gap
       presentation from its live touching count, retain stable attached-depth
       reservation, and expose the exact authority through D-Bus schema 8.
-      Commits: 14a8aba11
+      Commits: 559cb666b
 - [x] Fix D238 (topology acceptance retained a pre-validation snapshot).
       Recapture the stable projection after structural validation and accept
       it only when the candidate still matches.
-      Commits: 766e0abf9
+      Commits: e47d5c1c0
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

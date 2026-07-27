@@ -3062,7 +3062,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D238 - Topology acceptance retained a pre-validation snapshot
-- STATUS: FIXED on the live-drag branch by `766e0abf9`.
+- STATUS: FIXED on the live-drag branch by `e47d5c1c0`.
 - FOUND: 2026-07-26, corrected-trigger multi-output acceptance.
 - SYMPTOM: the first parked-client case can report stable surface drift where
   `geometrySettled` changes from false to true and the surface publication
@@ -3079,7 +3079,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: known issue.
 
 ### D237 - Floating Docks waited for committed maximize
-- STATUS: FIXED on the live-drag branch by `14a8aba11`.
+- STATUS: FIXED on the live-drag branch by `559cb666b`.
 - FOUND: 2026-07-26, real-session comparison with Plasma's panel dodge
   animation.
 - SYMPTOM: dragging a window toward a floating Dock does not hide the floating
@@ -3351,7 +3351,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: FIXED on the live-drag branch by `8d4ac1e90` and `14a8aba11`.
+- STATUS: FIXED on the live-drag branch by `8d4ac1e90` and `559cb666b`.
   PR #128 established the stable-surface architecture on `main`; D236 and D237
   found and corrected the remaining trigger and Dock-feed gaps.
   FP-1
