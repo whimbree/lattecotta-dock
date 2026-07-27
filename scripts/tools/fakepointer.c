@@ -15,6 +15,9 @@
  *        fakepointer rightclick <x> <y>
  *        fakepointer drag <x1> <y1> <x2> <y2> [x3 y3 ...]  (left press, glide
  *          through every waypoint in one hold, release at the last)
+ *        fakepointer draghold <milliseconds> <x1> <y1> <x2> <y2> [x3 y3 ...]
+ *          (same held drag, but dwell at every waypoint before continuing;
+ *          lets an external observer prove state while the button is down)
  *        fakepointer glide <x1> <y1> <x2> <y2> [x3 y3 ...]  (same smooth
  *          motion stream, no buttons - replicates a real fast hover sweep)
  *        fakepointer scroll <x> <y> <detents> <ms-gap>
@@ -180,6 +183,7 @@ static int parse_wheel_angle_delta(const char *text, int *angle_delta)
 int main(int argc, char **argv)
 {
     int isdrag = (argc > 1) && (strcmp(argv[1], "drag") == 0);
+    int isdraghold = (argc > 1) && (strcmp(argv[1], "draghold") == 0);
     int isglide = (argc > 1) && (strcmp(argv[1], "glide") == 0);
     int isscroll = (argc > 1) && (strcmp(argv[1], "scroll") == 0);
     int iswheel = (argc > 1) && (strcmp(argv[1], "wheel") == 0);
@@ -202,20 +206,42 @@ int main(int argc, char **argv)
                     argv[0]);
             return 2;
         }
+    } else if (isdraghold) {
+        //! draghold <ms> <x1> <y1> <x2> <y2> [...]: duration then >=2
+        //! coordinate pairs, so argc is odd and at least 7.
+        if (argc < 7 || (argc % 2) == 0) {
+            fprintf(stderr, "usage: %s draghold <milliseconds 1..999> <x1> <y1> <x2> <y2> [x3 y3 ...]\n",
+                    argv[0]);
+            return 2;
+        }
     } else if (((isdrag || isglide) && (argc < 6 || (argc % 2) != 0))
         || (isscroll && argc != 6)
         || (iswheel && argc != 5 && argc != 6)
         || (isaxisstop && argc != 4 && argc != 5)
         || (!isdrag && !isglide && !isscroll && !iswheel && !isaxisstop
             && (argc != 4 || (strcmp(argv[1], "move") && strcmp(argv[1], "click") && strcmp(argv[1], "middleclick") && strcmp(argv[1], "rightclick"))))) {
-        fprintf(stderr, "usage: %s move|click|middleclick|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>  |  %s wheel <x> <y> <integer-angle-delta> [horizontal]  |  %s axisstop <x> <y> [horizontal]  |  %s key <keysym> [down|up|press]  |  %s dragkey <keysym> <x1> <y1> <x2> <y2> [x3 y3 ...]\n"
+        fprintf(stderr, "usage: %s move|click|middleclick|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s draghold <milliseconds 1..999> <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>  |  %s wheel <x> <y> <integer-angle-delta> [horizontal]  |  %s axisstop <x> <y> [horizontal]  |  %s key <keysym> [down|up|press]  |  %s dragkey <keysym> <x1> <y1> <x2> <y2> [x3 y3 ...]\n"
                         "  scroll: positive detents scroll up, negative down; one detent = one wheel click\n"
                         "  wheel:  nonzero signed integer Qt angleDelta for one axis event; vertical unless 'horizontal' is supplied\n"
                         "  axisstop: send a zero-axis Wayland stop, which produces no Qt wheel event\n"
                         "  key:    <keysym> is an XKB name (Escape, Up, Return, space) or a numeric literal; state defaults to press (down then up)\n"
                         "  dragkey: press, glide (button held), tap <keysym> at the last point, release - one held-drag session\n",
-                argv[0], argv[0], argv[0], argv[0], argv[0], argv[0], argv[0]);
+                argv[0], argv[0], argv[0], argv[0], argv[0], argv[0], argv[0], argv[0]);
         return 2;
+    }
+
+    int draghold_milliseconds = 0;
+    if (isdraghold) {
+        char *end = NULL;
+        errno = 0;
+        const long parsed = strtol(argv[2], &end, 10);
+        if (errno == ERANGE || end == argv[2] || *end != '\0'
+                || parsed < 1 || parsed > 999) {
+            fprintf(stderr, "invalid draghold duration '%s' (want 1..999 milliseconds)\n",
+                    argv[2]);
+            return 2;
+        }
+        draghold_milliseconds = (int)parsed;
     }
 
     int wheel_angle_delta = 0;
@@ -365,6 +391,43 @@ int main(int argc, char **argv)
         org_kde_kwin_fake_input_button(fake_input, BTN_LEFT, 0);
         wl_display_roundtrip(display);
 
+        wl_display_disconnect(display);
+        return 0;
+    }
+
+    if (isdraghold) {
+        const int steps = 24;
+        double x = atof(argv[3]);
+        double y = atof(argv[4]);
+
+        org_kde_kwin_fake_input_pointer_motion_absolute(fake_input,
+            wl_fixed_from_double(x), wl_fixed_from_double(y));
+        wl_display_roundtrip(display);
+        usleep(100000);
+        org_kde_kwin_fake_input_button(fake_input, BTN_LEFT, 1);
+        wl_display_roundtrip(display);
+        usleep(150000);
+
+        double cx = x;
+        double cy = y;
+        for (int w = 5; w + 1 < argc; w += 2) {
+            const double wx = atof(argv[w]);
+            const double wy = atof(argv[w + 1]);
+            for (int i = 1; i <= steps; ++i) {
+                const double sx = cx + (wx - cx) * i / steps;
+                const double sy = cy + (wy - cy) * i / steps;
+                org_kde_kwin_fake_input_pointer_motion_absolute(fake_input,
+                    wl_fixed_from_double(sx), wl_fixed_from_double(sy));
+                wl_display_roundtrip(display);
+                usleep(12000);
+            }
+            usleep((useconds_t)draghold_milliseconds * 1000);
+            cx = wx;
+            cy = wy;
+        }
+
+        org_kde_kwin_fake_input_button(fake_input, BTN_LEFT, 0);
+        wl_display_roundtrip(display);
         wl_display_disconnect(display);
         return 0;
     }

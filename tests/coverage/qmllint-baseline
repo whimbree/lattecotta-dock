@@ -53,7 +53,7 @@
 23	share/latte/indicators/org.kde.latte.plasma/package/ui/main.qml
 8	share/latte/indicators/org.kde.latte.plasmatabstyle/package/ui/BackLayer.qml
 6	share/latte/indicators/org.kde.latte.plasmatabstyle/package/ui/main.qml
-236	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/BindingsExternal.qml
+235	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/BindingsExternal.qml
 6	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/DragDropArea.qml
 32	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/Upgrader.qml
 145	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/VisibilityManager.qml

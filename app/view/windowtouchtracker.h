@@ -13,12 +13,11 @@
 #include <QMetaObject>
 #include <QObject>
 #include <QPointer>
+#include <QRect>
 #include <QString>
 #include <QTimer>
 
 namespace Latte::ViewPart {
-
-class FloatingTransition;
 
 class WindowTouchTracker final : public QObject
 {
@@ -26,6 +25,8 @@ class WindowTouchTracker final : public QObject
 
     Q_PROPERTY(QAbstractItemModel *model READ model WRITE setModel
                    NOTIFY modelChanged)
+    Q_PROPERTY(QRect triggerGeometry READ triggerGeometry
+                   WRITE setTriggerGeometry NOTIFY triggerGeometryChanged)
     Q_PROPERTY(int touchingWindowCount READ touchingWindowCount
                    NOTIFY touchingWindowCountChanged)
     Q_PROPERTY(QString geometryRoleTypeName READ geometryRoleTypeName
@@ -34,18 +35,21 @@ class WindowTouchTracker final : public QObject
 public:
     static constexpr int EvaluationDelayMs = 10;
 
-    explicit WindowTouchTracker(FloatingTransition *transition,
-                                QObject *parent = nullptr);
+    explicit WindowTouchTracker(QObject *parent = nullptr);
     ~WindowTouchTracker() override;
 
     [[nodiscard]] QAbstractItemModel *model() const;
     void setModel(QAbstractItemModel *model);
+
+    [[nodiscard]] QRect triggerGeometry() const;
+    void setTriggerGeometry(const QRect &geometry);
 
     [[nodiscard]] int touchingWindowCount() const;
     [[nodiscard]] QString geometryRoleTypeName() const;
 
 Q_SIGNALS:
     void modelChanged();
+    void triggerGeometryChanged();
     void touchingWindowCountChanged();
     void geometryRoleTypeNameChanged();
 
@@ -58,11 +62,11 @@ private:
     void setTouchingWindowCount(int count);
     void setGeometryRoleTypeName(const QString &typeName);
 
-    QPointer<FloatingTransition> m_transition;
     QPointer<QAbstractItemModel> m_model;
     QObject *m_registeredModelIdentity{nullptr};
     QList<QMetaObject::Connection> m_modelConnections;
     QTimer m_evaluationTimer;
+    QRect m_triggerGeometry;
     int m_touchingWindowCount{0};
     QString m_geometryRoleTypeName;
 };

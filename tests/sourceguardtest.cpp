@@ -47,7 +47,7 @@
 //     through both directions and a rapid reversal storm
 //   * FP-4C linked-view operation storm: a validated typed plan enters a
 //     whole-config transaction before any mutation, records exact replay and
-//     schema-7 state, and restores the pristine nested runtime on every exit
+//     schema-8 state, and restores the pristine nested runtime on every exit
 //   * Theme-aware icon rendering: every view shares the registered singleton's
 //     QML engine and offscreen software teardown stays on the basic render loop
 //   * Dock-system reporting: persistent-id ordering and original/clone
@@ -291,7 +291,7 @@ private:
                    "readonlypropertyboolbehaveAsDockWithMask:"
                    "!behaveAsPlasmaPanel"))
             && main.contains(QStringLiteral(
-                   "readonlypropertybooldockGapHideRequested:"
+                   "readonlypropertybooldirectDockWindowTouchEligible:"
                    "latteView"
                    "&&root.behaveAsDockWithMask"
                    "&&latteView.floatingGapConfigured"
@@ -301,7 +301,10 @@ private:
                    "&&(latteView.visibility.mode"
                    "===LatteCore.Types.AlwaysVisible"
                    "||latteView.visibility.mode"
-                   "===LatteCore.Types.WindowsGoBelow)"
+                   "===LatteCore.Types.WindowsGoBelow)"))
+            && main.contains(QStringLiteral(
+                   "readonlypropertybooldockGapHideRequested:"
+                   "directDockWindowTouchEligible"
                    "&&hideThickScreenGap"))
             && !main.contains(QStringLiteral(
                    "floatingTransitionEligible:behaveAsPlasmaPanel"
@@ -329,6 +332,20 @@ private:
                    "when:latteView&&latteView.visibility"
                    "value:{if(root.behaveAsPlasmaPanel)"
                    "{returnvisibilityManager.thicknessAsPanel;}"))
+            && bindings.contains(QStringLiteral(
+                   "constedgeThickness=isCapableToHideScreenGap"
+                   "?0:metrics.mask.screenEdge*mirrorGapFactor;"
+                   "returnedgeThickness"
+                   "+metrics.mask.thickness."
+                   "maxNormalForItemsWithoutScreenEdge;"))
+            && bindings.contains(QStringLiteral(
+                   "constownsStableAttachedReservation="
+                   "root.screenEdgeMarginEnabled"
+                   "&&Plasmoid.configuration."
+                   "hideFloatingGapForMaximized;"
+                   "constedgeThickness="
+                   "ownsStableAttachedReservation"
+                   "?0:metrics.mask.screenEdge;"))
             && main.contains(QStringLiteral(
                    "latteView.floatingTransition.reconcileTargetPolicy("
                    "floatingTransitionEligible,"
@@ -575,6 +592,10 @@ private:
                    "filterByScreen:true"))
             && trackerHeader.contains(QStringLiteral(
                    "staticconstexprintEvaluationDelayMs=10;"))
+            && trackerHeader.contains(QStringLiteral(
+                   "Q_PROPERTY(QRecttriggerGeometryREADtriggerGeometry"
+                   "WRITEsetTriggerGeometry"
+                   "NOTIFYtriggerGeometryChanged)"))
             && trackerImplementation.contains(QStringLiteral(
                    "QByteArrayLiteral(\"IsWindow\")"))
             && trackerImplementation.contains(QStringLiteral(
@@ -593,6 +614,9 @@ private:
             && trackerImplementation.contains(QStringLiteral(
                    "if(!m_evaluationTimer.isActive())"
                    "{m_evaluationTimer.start();}"))
+            && trackerImplementation.contains(QStringLiteral(
+                   "StableWindowTouchTrigger::fromGeometry("
+                   "m_triggerGeometry)"))
             && !trackerImplementation.contains(QStringLiteral(
                    "m_evaluationTimer.start(EvaluationDelayMs)"))
             && transitionHeader.contains(QStringLiteral(
@@ -648,8 +672,20 @@ private:
                    "Q_PROPERTY(Latte::ViewPart::WindowTouchTracker"
                    "*windowTouchTrackerREADwindowTouchTrackerCONSTANT)"))
             && viewImplementation.contains(QStringLiteral(
-                   "newViewPart::WindowTouchTracker("
-                   "m_floatingTransition,this)"))
+                   "newViewPart::WindowTouchTracker(this)"))
+            && viewImplementation.contains(QStringLiteral(
+                   "m_windowTouchTracker->setTriggerGeometry("
+                   "m_floatingTransition->hasGeometry()"
+                   "?m_floatingTransition->stableTriggerGeometry()"
+                   ":QRect{});"))
+            && viewImplementation.contains(QStringLiteral(
+                   "ViewPart::FloatingPanelGeometry::solve(inputs)"))
+            && mainQml.contains(QStringLiteral(
+                   "directDockWindowTouchEligible"
+                   "?latteView.windowTouchTracker"
+                   "&&latteView.windowTouchTracker."
+                   "touchingWindowCount>0"
+                   ":latteView.windowsTracker"))
             && !viewImplementation.contains(QStringLiteral(
                    "&ViewPart::WindowTouchTracker::"
                    "touchingWindowCountChanged"))
@@ -681,7 +717,7 @@ private:
             && code.contains(QStringLiteral(
                    "--keyfloatingInternalGapIsForcedfalse"))
             && code.contains(QStringLiteral(
-                   "snapshot['schemaVersion']!=7"))
+                   "snapshot['schemaVersion']!=8"))
             && code.contains(QStringLiteral(
                    "v[\"attachOnWindowTouchConfigured\"]"))
             && code.contains(QStringLiteral(
@@ -797,6 +833,67 @@ private:
                    "\"$transition_token\"!=\"$tracker_token\""));
     }
 
+    static bool matchesLiveTitlebarWindowTouchE2eContract(
+        const QString &source)
+    {
+        const QString code = normalizedCode(source);
+        const qsizetype cleanupTrap =
+            code.indexOf(QStringLiteral("trapcleanupEXIT"));
+        const qsizetype panelCase =
+            code.indexOf(QStringLiteral(
+                "configure_casepanel-top-center-1out"));
+        const qsizetype dockCase =
+            code.indexOf(QStringLiteral(
+                "configure_casedock-top-center-1out"));
+
+        return cleanupTrap >= 0
+            && panelCase > cleanupTrap
+            && dockCase > panelCase
+            && code.contains(QStringLiteral(
+                   "snapshot['schemaVersion']!=8"))
+            && code.contains(QStringLiteral(
+                   "--keyfloatingGapHidingWaitsMousefalse"))
+            && code.contains(QStringLiteral(
+                   "fpdraghold900"))
+            && code.contains(QStringLiteral(
+                   "\"$start_x\"\"$touching_y\""))
+            && code.contains(QStringLiteral(
+                   "\"$start_x\"\"$start_y\"&"
+                   "drag_pid=$!"))
+            && code.contains(QStringLiteral(
+                   "kill-0\"$drag_pid\""))
+            && code.contains(QStringLiteral(
+                   "exercise_held_dragpaneltruefalseattached"))
+            && code.contains(QStringLiteral(
+                   "exercise_held_dragdockfalsetruefloated"))
+            && code.count(QStringLiteral(
+                   "wait_for_policy_while_held")) >= 4
+            && code.count(QStringLiteral(
+                   "[[\"$(stable_physical_snapshot)\""
+                   "==\"$base_snapshot\"]]")) >= 3
+            && code.contains(QStringLiteral(
+                   "\"stableTriggerGeometry\":"
+                   "v[\"stableTriggerGeometry\"]"))
+            && code.contains(QStringLiteral(
+                   "\"reservationStateGeneration\":"
+                   "snapshot[\"reservationStateGeneration\"]"))
+            && code.contains(QStringLiteral(
+                   "\"surfaceGeometryPublicationRevision\":"
+                   "v[\"surfaceGeometryPublicationRevision\"]"))
+            && code.contains(QStringLiteral(
+                   "\"layerShellConfigureRequestRevision\":"
+                   "v[\"layerShellConfigureRequestRevision\"]"))
+            && code.contains(QStringLiteral(
+                   "\"windowTouchTracker\":"
+                   "v[\"objects\"][\"windowTouchTracker\"]"))
+            && code.contains(QStringLiteral(
+                   "\"$trigger_height\""
+                   "-eq\"$expected_envelope_depth\""))
+            && code.contains(QStringLiteral(
+                   "expected_envelope_depth=$((normal+gap))"
+                   "expected_normal=\"$maximum\""));
+    }
+
     static bool matchesWindowTouchTopologyE2eContract(
         const QString &recipeSource,
         const QString &oracleSource)
@@ -866,7 +963,7 @@ private:
             && recipe.contains(QStringLiteral(
                    "[[\"$after_restart\"==\"$before_restart\"]]"))
             && oracle.contains(QStringLiteral(
-                   "ifsnapshot.get(\"schemaVersion\")!=7:"))
+                   "ifsnapshot.get(\"schemaVersion\")!=8:"))
             && oracle.contains(QStringLiteral(
                    "view[\"relationship\"]!=\"independent\""))
             && oracle.contains(QStringLiteral(
@@ -1572,6 +1669,13 @@ private:
                 "record.transitionGeometryRevision="
                 "transition->geometryRevision();"))
             && code.contains(QStringLiteral(
+                "if(windowTouchTracker->triggerGeometry().isValid()){"
+                "record.stableTriggerGeometry="
+                "windowTouchTracker->triggerGeometry();}"))
+            && !code.contains(QStringLiteral(
+                "record.stableTriggerGeometry="
+                "transition->stableTriggerGeometry();"))
+            && code.contains(QStringLiteral(
                 "record.enabledBorders=enabledBorderNames("
                 "view->effects()->enabledBorders());"))
             && code.contains(QStringLiteral(
@@ -1958,6 +2062,8 @@ private Q_SLOTS:
     void windowTouchAuthority_keepsDedicatedStableModel();
     void windowTouchAuthority_rejectsControlledMutations();
     void windowTouchE2e_drivesOneStableTriggerClient();
+    void liveTitlebarWindowTouchE2e_coversPanelsAndDocksBeforeRelease();
+    void liveTitlebarWindowTouchE2e_rejectsMissingHeldProof();
     void windowTouchTopologyE2e_keepsIndependentRegionsAndOutputs();
     void windowTouchTopologyE2e_cleanupGuardRejectsControlledMutations();
     void linkedOperationStormE2e_keepsTransactionalReplayContract();
@@ -2587,6 +2693,37 @@ void SourceGuardTest::windowTouchE2e_drivesOneStableTriggerClient()
         " physical geometry and per-view authorities remain fixed");
 }
 
+void SourceGuardTest::
+    liveTitlebarWindowTouchE2e_coversPanelsAndDocksBeforeRelease()
+{
+    QVERIFY2(
+        matchesLiveTitlebarWindowTouchE2eContract(
+            readFile(QStringLiteral(
+                "tests/e2e/074-live-titlebar-window-touch.sh"))),
+        "recipe 074 must cross and reverse both Panel and Dock triggers"
+        " during one button-held titlebar drag without changing physical"
+        " surface or reservation state");
+}
+
+void SourceGuardTest::
+    liveTitlebarWindowTouchE2e_rejectsMissingHeldProof()
+{
+    QString recipe = readFile(QStringLiteral(
+        "tests/e2e/074-live-titlebar-window-touch.sh"));
+    QVERIFY(matchesLiveTitlebarWindowTouchE2eContract(recipe));
+
+    const QString heldProof = QStringLiteral(
+        "                kill -0 \"$drag_pid\" 2>/dev/null \\\n"
+        "                    || e2e_fail \"$boundary appeared only after "
+        "button release\"\n");
+    QCOMPARE(recipe.count(heldProof), 1);
+    recipe.remove(heldProof);
+    QVERIFY2(
+        !matchesLiveTitlebarWindowTouchE2eContract(recipe),
+        "a visual endpoint observed after release is not evidence of live"
+        " button-held attachment");
+}
+
 void SourceGuardTest::windowTouchTopologyE2e_keepsIndependentRegionsAndOutputs()
 {
     QVERIFY2(
@@ -2729,7 +2866,7 @@ void SourceGuardTest::linkedOperationStormE2e_keepsTransactionalReplayContract()
             readFile(QStringLiteral(
                 "tests/e2e/fixtures/fp4c/operation_model.py"))),
         "the FP-4C operation storm must validate its typed plan before a"
-        " whole-config transaction, prove every schema-7 checkpoint and"
+        " whole-config transaction, prove every schema-8 checkpoint and"
         " compositor owner, record exact replay, and restore the pristine"
         " nested state on every exit");
 }
@@ -3720,7 +3857,7 @@ void SourceGuardTest::dockSystemTransitionCollection_keepsAuthoritativeRouting()
     QVERIFY2(
         matchesTransitionSnapshotRoute(
             collector),
-        "schema 7 transition fields must read the per-view controller without rounding and fail closed");
+        "schema 8 transition fields must read their per-view authorities without rounding and fail closed");
 }
 
 void SourceGuardTest::dockSystemTransitionCollection_rejectsControlledMutations()

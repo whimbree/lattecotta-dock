@@ -439,7 +439,7 @@ class OperationModelTest(unittest.TestCase):
             if expected.placement is not None
         ]
         return {
-            "schemaVersion": 7,
+            "schemaVersion": 8,
             "snapshotSequence": "41",
             "globalConfigureAppletsMode": state.configuring,
             "stacking": {
@@ -1115,7 +1115,7 @@ class OperationModelTest(unittest.TestCase):
         malformed = self.mutated(
             lambda snapshot: snapshot.__setitem__("schemaVersion", 6)
         )
-        self.assert_refused(lambda: model.parse_snapshot(malformed), "schema 7")
+        self.assert_refused(lambda: model.parse_snapshot(malformed), "schema 8")
 
         nullable_publisher_wire = self.mutated(
             lambda snapshot: snapshot["views"][0]["objects"].__setitem__(

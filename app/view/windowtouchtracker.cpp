@@ -6,7 +6,6 @@
 
 #include "windowtouchtracker.h"
 
-#include "floatingtransition.h"
 #include "windowtouchstate.h"
 
 #include <QDebug>
@@ -176,37 +175,15 @@ collectWindowTouchCandidates(
 
 } // namespace
 
-WindowTouchTracker::WindowTouchTracker(
-    FloatingTransition *transition,
-    QObject *parent)
-    : QObject(parent),
-      m_transition(transition)
+WindowTouchTracker::WindowTouchTracker(QObject *parent)
+    : QObject(parent)
 {
-    if (!m_transition) {
-        qFatal("WindowTouchTracker requires a FloatingTransition");
-    }
-
     m_evaluationTimer.setSingleShot(true);
     m_evaluationTimer.setInterval(EvaluationDelayMs);
     m_evaluationTimer.setTimerType(Qt::PreciseTimer);
 
     connect(&m_evaluationTimer, &QTimer::timeout,
             this, &WindowTouchTracker::evaluateCurrentState);
-    connect(m_transition, &FloatingTransition::stableGeometryChanged,
-            this, [this]() {
-                if (!m_transition || !m_transition->hasGeometry()) {
-                    m_evaluationTimer.stop();
-                    setTouchingWindowCount(0);
-                    return;
-                }
-
-                scheduleEvaluation();
-            });
-    connect(m_transition, &QObject::destroyed, this, [this]() {
-        m_evaluationTimer.stop();
-        m_transition.clear();
-        setTouchingWindowCount(0);
-    });
 }
 
 WindowTouchTracker::~WindowTouchTracker()
@@ -239,6 +216,28 @@ void WindowTouchTracker::setModel(QAbstractItemModel *model)
     }
 
     Q_EMIT modelChanged();
+}
+
+QRect WindowTouchTracker::triggerGeometry() const
+{
+    return m_triggerGeometry;
+}
+
+void WindowTouchTracker::setTriggerGeometry(const QRect &geometry)
+{
+    if (m_triggerGeometry == geometry) {
+        return;
+    }
+
+    m_triggerGeometry = geometry;
+    if (m_triggerGeometry.isValid()) {
+        scheduleEvaluation();
+    } else {
+        m_evaluationTimer.stop();
+        setTouchingWindowCount(0);
+    }
+
+    Q_EMIT triggerGeometryChanged();
 }
 
 int WindowTouchTracker::touchingWindowCount() const
@@ -297,10 +296,17 @@ void WindowTouchTracker::disconnectModel()
 
 void WindowTouchTracker::scheduleEvaluation()
 {
-    if (!m_model || !m_transition) {
+    if (!m_model) {
         resetForUnavailableModel(
-            !m_model ? "no model is available"
-                     : "the transition controller was destroyed");
+            "no model is available");
+        return;
+    }
+
+    //! An invalid trigger is a legitimate pre-placement state. View installs
+    //! the first output-contained trigger after its resting geometry settles.
+    if (!m_triggerGeometry.isValid()) {
+        m_evaluationTimer.stop();
+        setTouchingWindowCount(0);
         return;
     }
 
@@ -311,23 +317,22 @@ void WindowTouchTracker::scheduleEvaluation()
 
 void WindowTouchTracker::evaluateCurrentState()
 {
-    if (!m_model || !m_transition) {
+    if (!m_model) {
         resetForUnavailableModel(
-            !m_model ? "the model disappeared before evaluation"
-                     : "the transition controller disappeared before evaluation");
+            "the model disappeared before evaluation");
         return;
     }
 
-    if (!m_transition->hasGeometry()) {
+    if (!m_triggerGeometry.isValid()) {
         setTouchingWindowCount(0);
         return;
     }
 
     const auto trigger = StableWindowTouchTrigger::fromGeometry(
-        m_transition->stableTriggerGeometry());
+        m_triggerGeometry);
     if (!trigger) {
         qCritical() << "WindowTouchTracker refused invalid stable trigger"
-                    << m_transition->stableTriggerGeometry();
+                    << m_triggerGeometry;
         setTouchingWindowCount(0);
         return;
     }

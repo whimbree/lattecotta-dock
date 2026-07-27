@@ -45,7 +45,20 @@ Item {
         property:"normalThickness"
         restoreMode: Binding.RestoreNone
         when: latteView && updateIsEnabled
-        value: root.behaveAsPlasmaPanel ? visibilityManager.thicknessAsPanel : metrics.mask.screenEdge + metrics.mask.thickness.maxNormalForItemsWithoutScreenEdge
+        value: {
+            if (root.behaveAsPlasmaPanel) {
+                return visibilityManager.thicknessAsPanel;
+            }
+
+            const ownsStableAttachedReservation =
+                    root.screenEdgeMarginEnabled
+                    && Plasmoid.configuration.hideFloatingGapForMaximized;
+            const edgeThickness = ownsStableAttachedReservation
+                    ? 0
+                    : metrics.mask.screenEdge;
+            return edgeThickness
+                    + metrics.mask.thickness.maxNormalForItemsWithoutScreenEdge;
+        }
     }
 
     Binding{
@@ -375,19 +388,17 @@ Item {
                 return visibilityManager.thicknessAsPanel;
             }
 
-            var isCapableToHideScreenGap = root.screenEdgeMarginEnabled && Plasmoid.configuration.hideFloatingGapForMaximized
-            var mirrorGapFactor = root.mirrorScreenGap ? 2 : 1;
+            const isCapableToHideScreenGap = root.screenEdgeMarginEnabled
+                    && Plasmoid.configuration.hideFloatingGapForMaximized;
+            const mirrorGapFactor = root.mirrorScreenGap ? 2 : 1;
 
-            //! Hide Thickness Screen Gap scenario provides two different struts thicknesses.
-            //! [1] The first struts thickness is when there is no maximized window and is such case
-            //!     the view is behaving as in normal AlwaysVisible visibility mode. This is very useful
-            //!     when users tile windows. [bug #432122]
-            //! [2] The second struts thickness is when there is a maximized window present and in such case
-            //!     the view is hiding all of its screen edges. It is used mostly when the view is wanted
-            //!     to act as a window titlebar.
-            var thicknessForIsCapableToHideScreenGap = (root.hideThickScreenGap ? 0 : mirrorGapFactor * metrics.mask.screenEdge);
-
-            var edgeThickness = isCapableToHideScreenGap ? thicknessForIsCapableToHideScreenGap : metrics.mask.screenEdge * mirrorGapFactor;
+            //! A Dock that can attach keeps the attached reservation depth
+            //! throughout its visual transition, matching the stable Panel
+            //! contract. The floated gap may overlap ordinary workspace; it
+            //! never resizes the work area while a window is being dragged.
+            const edgeThickness = isCapableToHideScreenGap
+                    ? 0
+                    : metrics.mask.screenEdge * mirrorGapFactor;
             return edgeThickness + metrics.mask.thickness.maxNormalForItemsWithoutScreenEdge;
         }
         restoreMode: Binding.RestoreNone

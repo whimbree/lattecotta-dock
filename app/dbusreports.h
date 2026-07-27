@@ -11,6 +11,7 @@
 #include <coretypes.h>
 #include "apptypes.h"
 #include "data/viewdata.h"
+#include "view/floatingpanelgeometry.h"
 #include "../plasmoid/plugin/middleclickdispatch.h"
 //! the containment plugin's enum home, included relatively: the theme and
 //! window color modes colorizerData() names live there (a header-only
@@ -579,6 +580,7 @@ struct DockSystemViewRecord {
     std::optional<int> availablePrimaryLength;
     int normalThickness{0};
     int maximumNormalThickness{0};
+    int screenEdgeMargin{0};
 
     QRect windowGeometry;
     QRect absoluteGeometry;
@@ -699,7 +701,7 @@ struct DockReservationGroupRecord
 };
 
 struct DockSystemSnapshot {
-    static constexpr int SchemaVersion = 7;
+    static constexpr int SchemaVersion = 8;
 
     quint64 snapshotSequence{0};
     bool globalConfigureAppletsMode{false};
@@ -1674,6 +1676,7 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
     json[QStringLiteral("availablePrimaryLength")] = serializeOptionalInt(record.availablePrimaryLength);
     json[QStringLiteral("normalThickness")] = record.normalThickness;
     json[QStringLiteral("maximumNormalThickness")] = record.maximumNormalThickness;
+    json[QStringLiteral("screenEdgeMargin")] = record.screenEdgeMargin;
 
     json[QStringLiteral("windowGeometry")] = serializeRect(record.windowGeometry);
     json[QStringLiteral("absoluteGeometry")] = serializeRect(record.absoluteGeometry);
@@ -1886,6 +1889,30 @@ inline QJsonObject serializeDockReservationGroupRecord(
     return json;
 }
 
+[[nodiscard]] inline std::optional<
+    ViewPart::FloatingPanelGeometry::Edge>
+stableWindowTouchEdge(Plasma::Types::Location edge)
+{
+    using GeometryEdge =
+        ViewPart::FloatingPanelGeometry::Edge;
+    switch (edge) {
+    case Plasma::Types::TopEdge:
+        return GeometryEdge::Top;
+    case Plasma::Types::RightEdge:
+        return GeometryEdge::Right;
+    case Plasma::Types::BottomEdge:
+        return GeometryEdge::Bottom;
+    case Plasma::Types::LeftEdge:
+        return GeometryEdge::Left;
+    case Plasma::Types::Floating:
+    case Plasma::Types::Desktop:
+    case Plasma::Types::FullScreen:
+        return std::nullopt;
+    }
+
+    return std::nullopt;
+}
+
 //! Verify that every per-view transition record is one self-consistent
 //! observation of its controller and stable placement. The controller owns
 //! geometry that is deliberately mirrored by existing placement fields. A
@@ -1988,13 +2015,15 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                         view.transitionProgress))
                 || view.transitionProgress < 0.0
                 || view.transitionProgress > 1.0
+                || view.screenEdgeMargin < 0
                 || view.touchingWindowCount < 0
                 || (!view.windowTouchGeometryRoleType.isEmpty()
                     && view.windowTouchGeometryRoleType
                         != QStringLiteral("QRect"))
                 || (view.touchingWindowCount > 0
-                    && view.windowTouchGeometryRoleType
-                        != QStringLiteral("QRect"))
+                    && (view.windowTouchGeometryRoleType
+                            != QStringLiteral("QRect")
+                        || !view.stableTriggerGeometry))
                 || (view.attachmentDeferredByPointer
                     && (!view.attachOnWindowTouchConfigured
                         || !view.attachmentWaitsForPointerExitConfigured
@@ -2084,7 +2113,6 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
             || view.computedPaintMaskGeometry
             || view.computedInputBridgeGeometry
             || view.contentTranslation
-            || view.stableTriggerGeometry
             || view.stableAppletMeasurementBounds
             || view.stablePrimaryAxisStart
             || view.stablePrimaryAxisLength
@@ -2094,6 +2122,63 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                 != anyGeometry) {
             return false;
         }
+
+        const bool floatingDock =
+            view.type == Types::DockView
+            && view.floatingGapConfigured;
+        const bool dockTriggerRequired =
+            floatingDock
+            && view.inReadyState
+            && view.geometrySettled;
+        if (floatingDock) {
+            const auto edge =
+                stableWindowTouchEdge(view.edge);
+            const bool horizontal =
+                edge
+                && ViewPart::FloatingPanelGeometry::
+                    isHorizontal(*edge);
+            const int attachedDepth =
+                view.maximumNormalThickness
+                - view.screenEdgeMargin;
+            const ViewPart::FloatingPanelGeometry::
+                StablePrimaryAxisSpan primarySpan{
+                    horizontal
+                    ? view.absoluteGeometry.x()
+                    : view.absoluteGeometry.y(),
+                    horizontal
+                    ? view.absoluteGeometry.width()
+                    : view.absoluteGeometry.height(),
+                };
+            const auto dockGeometry =
+                edge
+                ? ViewPart::FloatingPanelGeometry::solve({
+                      .outputGeometry =
+                          view.screenGeometry,
+                      .edge = *edge,
+                      .primaryAxisSpan =
+                          primarySpan,
+                      .panelDepth =
+                          attachedDepth,
+                      .floatingGap =
+                          view.screenEdgeMargin,
+                  })
+                : std::optional<
+                      ViewPart::FloatingPanelGeometry::
+                          Solution>{};
+            if ((dockTriggerRequired
+                    && !view.stableTriggerGeometry)
+                || (view.stableTriggerGeometry
+                    && (!dockGeometry
+                        || *view.stableTriggerGeometry
+                            != dockGeometry
+                                ->trigger.value))) {
+                return false;
+            }
+        } else if (view.type == Types::DockView
+                && view.stableTriggerGeometry) {
+            return false;
+        }
+
         if (!view.transitionGeometryPresent) {
             continue;
         }
@@ -2171,7 +2256,20 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
         int expectedPrimaryLength{0};
         int expectedDepth{0};
         int appliedLayerShellMargin{0};
-        QRect expectedTrigger = attachedOnOutput;
+        const auto triggerEdge =
+            stableWindowTouchEdge(view.edge);
+        const auto expectedTrigger =
+            triggerEdge
+            ? ViewPart::FloatingPanelGeometry::
+                solveStableWindowTouchTrigger({
+                    .outputGeometry =
+                        view.screenGeometry,
+                    .edge = *triggerEdge,
+                    .envelope = {canvas},
+                })
+            : std::optional<
+                  ViewPart::FloatingPanelGeometry::
+                      TriggerRectangle>{};
         QString physicalEdgeBorder;
         switch (view.edge) {
         case Plasma::Types::TopEdge:
@@ -2186,8 +2284,6 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                 view.layerShellMargins.top();
             physicalEdgeBorder =
                 QStringLiteral("top");
-            expectedTrigger.setBottom(
-                expectedTrigger.bottom() + 1);
             break;
         case Plasma::Types::RightEdge:
             if (canvas.right()
@@ -2201,8 +2297,6 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                 view.layerShellMargins.right();
             physicalEdgeBorder =
                 QStringLiteral("right");
-            expectedTrigger.setLeft(
-                expectedTrigger.left() - 1);
             break;
         case Plasma::Types::BottomEdge:
             if (canvas.bottom()
@@ -2216,8 +2310,6 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                 view.layerShellMargins.bottom();
             physicalEdgeBorder =
                 QStringLiteral("bottom");
-            expectedTrigger.setTop(
-                expectedTrigger.top() - 1);
             break;
         case Plasma::Types::LeftEdge:
             if (canvas.left()
@@ -2231,8 +2323,6 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                 view.layerShellMargins.left();
             physicalEdgeBorder =
                 QStringLiteral("left");
-            expectedTrigger.setRight(
-                expectedTrigger.right() + 1);
             break;
         case Plasma::Types::Floating:
         case Plasma::Types::Desktop:
@@ -2245,8 +2335,9 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                     != expectedPrimaryLength
                 || *view.requestedReservationDepth
                     != expectedDepth
+                || !expectedTrigger
                 || *view.stableTriggerGeometry
-                    != expectedTrigger
+                    != expectedTrigger->value
                 || (view.layerShellPresent
                     && view.stableLayerShellMargin
                         != appliedLayerShellMargin)
