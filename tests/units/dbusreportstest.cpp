@@ -2081,6 +2081,41 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
                 0, 0, 1, 0);
     });
 
+    {
+        DockSystemSnapshot prePlacement;
+        auto panel = stableBottomTransitionRecord();
+        panel.transitionTarget =
+            DockTransitionTarget::Floated;
+        panel.transitionProgress = 1.0;
+        panel.transitionPhase =
+            DockTransitionPhase::Resting;
+        panel.transitionDirection =
+            DockTransitionDirection::None;
+        panel.transitionRunning = false;
+        panel.transitionGeometryPresent = false;
+        panel.stableCanvasGeometry.reset();
+        panel.attachedPresentationGeometry.reset();
+        panel.floatedPresentationGeometry.reset();
+        panel.currentVisibleGeometry.reset();
+        panel.computedPaintMaskGeometry.reset();
+        panel.computedInputBridgeGeometry.reset();
+        panel.contentTranslation.reset();
+        panel.stableAppletMeasurementBounds.reset();
+        panel.stablePrimaryAxisStart.reset();
+        panel.stablePrimaryAxisLength.reset();
+        panel.requestedReservationDepth.reset();
+        prePlacement.views = {panel};
+        QVERIFY(
+            !dockTransitionRecordsAgree(
+                prePlacement));
+
+        prePlacement.views[0]
+            .stableTriggerGeometry.reset();
+        QVERIFY(
+            dockTransitionRecordsAgree(
+                prePlacement));
+    }
+
     auto attached = stableBottomTransitionRecord();
     attached.attachOnWindowTouchConfigured = true;
     attached.attachmentDeferredByPointer = false;
@@ -2178,6 +2213,9 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         auto &dock = dockSnapshot.views[0];
         QVERIFY(dockTransitionRecordsAgree(dockSnapshot));
 
+        dock.screenEdgeMargin = 0;
+        QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
+        dock.screenEdgeMargin = 5;
         dock.visibilityMode =
             Types::WindowsGoBelow;
         QVERIFY(dockTransitionRecordsAgree(dockSnapshot));
