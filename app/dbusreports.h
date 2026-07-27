@@ -2016,6 +2016,8 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                 || view.transitionProgress < 0.0
                 || view.transitionProgress > 1.0
                 || view.screenEdgeMargin < 0
+                || (view.floatingGapConfigured
+                    && view.screenEdgeMargin <= 0)
                 || view.touchingWindowCount < 0
                 || (!view.windowTouchGeometryRoleType.isEmpty()
                     && view.windowTouchGeometryRoleType
@@ -2119,7 +2121,10 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
             || view.requestedReservationDepth;
         if (view.stableLayerShellMargin != 0
                 || view.transitionGeometryPresent
-                != anyGeometry) {
+                != anyGeometry
+                || (view.type == Types::PanelView
+                    && view.stableTriggerGeometry.has_value()
+                        != view.transitionGeometryPresent)) {
             return false;
         }
 
