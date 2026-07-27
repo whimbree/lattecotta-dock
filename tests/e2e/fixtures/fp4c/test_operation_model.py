@@ -240,6 +240,7 @@ class OperationModelTest(unittest.TestCase):
             "availablePrimaryLength": available_primary_length,
             "normalThickness": depth,
             "maximumNormalThickness": depth + 8,
+            "screenEdgeMargin": gap,
             "windowGeometry": rect,
             "absoluteGeometry": rect,
             "localGeometry": local,
@@ -1116,6 +1117,24 @@ class OperationModelTest(unittest.TestCase):
             lambda snapshot: snapshot.__setitem__("schemaVersion", 6)
         )
         self.assert_refused(lambda: model.parse_snapshot(malformed), "schema 8")
+
+        missing_margin = self.mutated(
+            lambda snapshot: snapshot["views"][0].pop("screenEdgeMargin")
+        )
+        self.assert_refused(
+            lambda: model.parse_snapshot(missing_margin),
+            "screenEdgeMargin",
+        )
+
+        wrong_margin_type = self.mutated(
+            lambda snapshot: snapshot["views"][0].__setitem__(
+                "screenEdgeMargin", "18"
+            )
+        )
+        self.assert_refused(
+            lambda: model.parse_snapshot(wrong_margin_type),
+            "screenEdgeMargin",
+        )
 
         nullable_publisher_wire = self.mutated(
             lambda snapshot: snapshot["views"][0]["objects"].__setitem__(
