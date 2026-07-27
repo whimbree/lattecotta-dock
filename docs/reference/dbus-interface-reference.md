@@ -70,7 +70,7 @@ true with `isOffScreen`), what the compositor was told to reserve.
 call dockSystemData                    # s: compact schema-versioned JSON object
 ```
 
-Top level: `schemaVersion` (currently 7), `snapshotSequence` (decimal string,
+Top level: `schemaVersion` (currently 8), `snapshotSequence` (decimal string,
 process-local monotonic call identity), `globalConfigureAppletsMode`,
 `stacking`, `reservationStateGeneration` (decimal string),
 `reservationGroups`, and `views`. The complete view and reservation graph is
@@ -297,9 +297,10 @@ value is the tracker-owned count. `transitionTarget` must be
 `attached` exactly when `floatingPanelEligible &&
 attachOnWindowTouchConfigured && !attachmentDeferredByPointer &&
 touchingWindowCount > 0`; every other state must target `floated`.
-`dockGapHideRequested` remains independent because Docks consume the legacy
-gap path directly in `alwaysVisible` and `windowsGoBelow` and have no stable
-Panel transition geometry.
+`dockGapHideRequested` remains independent because Docks consume their
+tracker-owned live trigger through the existing internal gap presentation in
+`alwaysVisible` and `windowsGoBelow`. They do not manufacture stable Panel
+transition geometry.
 
 An internal lineage, transition, or reservation invariant failure logs at
 critical severity and returns an empty D-Bus string. It never returns a smaller
@@ -317,6 +318,7 @@ state=$(call dockSystemData)
 jq '.views | map({persistentDockId,logicalDockId,relationship,linkPlacement,linkedDockIds})' <<<"$state"
 jq '[.views[] | select(.effectiveConfigureAppletsMode)] | length' <<<"$state"
 jq '.views | map({persistentDockId,floatingGapConfigured,
+                  screenEdgeMargin,stableTriggerGeometry,
                   floatingPanelConfigured,floatingPanelEligible,
                   transitionTarget,transitionProgress,transitionPhase,
                   transitionGeometryRevision,

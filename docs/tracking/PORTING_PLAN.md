@@ -4566,7 +4566,7 @@ prerequisites in the phases above are done.
       evidence). Record the tree-wide removed-API search and corrected
       exact-boundary dual-output replay in the commits that make those claims.
       Commits: 59146fd4e, cdb9c6d20
-- [ ] Fix D172 (floating panel attachment moves the surface and reservation
+- [x] Fix D172 (floating panel attachment moves the surface and reservation
       instead of presentation). Execute
       `docs/tracking/floating-panel-parity-plan.md`: one stable per-view canvas,
       qreal internal `floatingness`, stable trigger, resting applet measurements
@@ -4574,7 +4574,7 @@ prerequisites in the phases above are done.
       bridge, visible-mask popup anchor, and direct nested-KWin
       drag/cancel/maximize coverage. Internal content may translate with the
       visual background but must not refit or resize.
-      Commits:
+      Commits: 8d4ac1e90, 14a8aba11
 - [x] Fix D187 (full-span End floating panels extended one pixel beyond their
       output). Remove the unrelated reversed-alignment primary-axis increment
       while preserving both reservation +1 gap-prevention conventions.
@@ -4940,6 +4940,20 @@ prerequisites in the phases above are done.
       bd744dddc, 992f9df1c, e57f8e929, 1dc18737f, 7d2db9f95, 14c81dd18,
       3651b3a8b, 1b0a88eeb, 7973f68cd, aa2744787, 0e2ec0810,
       c68f4a974, 1c3b86a85, f4594042e, 7b4cc6e98
+- [x] Fix D236 (floating Panel touch trigger omitted the gap).
+      Translate the complete stable envelope one logical pixel toward the
+      workspace and clip it to the output. Keep each view's exact primary-axis
+      span.
+      Commits: 8d4ac1e90
+- [x] Fix D237 (floating Docks waited for committed maximize).
+      Give the tracker one explicit per-view trigger, route eligible Dock gap
+      presentation from its live touching count, retain stable attached-depth
+      reservation, and expose the exact authority through D-Bus schema 8.
+      Commits: 14a8aba11
+- [x] Fix D238 (topology acceptance retained a pre-validation snapshot).
+      Recapture the stable projection after structural validation and accept
+      it only when the candidate still matches.
+      Commits: 766e0abf9
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

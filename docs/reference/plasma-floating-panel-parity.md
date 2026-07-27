@@ -1,6 +1,6 @@
 # Plasma floating-panel parity
 
-Research date: 2026-07-24.
+Research date: 2026-07-24. Live-drag trigger correction: 2026-07-26.
 
 This record fixes the architecture target for Lattecotta's floating panel
 transition. The inspected upstream sources are Plasma 6.7.3:
@@ -66,11 +66,17 @@ fractional reversal can select the wrong easing.
 Plasma's task model filters to the current desktop and activity, excludes
 hidden and minimized windows, and does not filter only by screen. A window
 spanning outputs can therefore affect every panel whose exact trigger it
-intersects. The trigger is derived from stable panel geometry and overlaps the
-output by one logical pixel where edge adjacency would otherwise fail
-`QRect::intersects()`. A 10 ms delayed evaluation filters transient geometry
-noise without routing the interaction through the general 150 ms window
-coalescer.
+intersects. The trigger is the complete stable floating envelope translated
+one logical pixel toward the workspace and clipped to the output. It is not
+the attached background expanded by one pixel. The floating gap therefore
+participates while the trigger retains the view's exact primary-axis span.
+A 10 ms delayed evaluation filters transient geometry noise without routing
+the interaction through the general 150 ms window coalescer.
+
+KWin continuously publishes frame geometry during a button-held interactive
+move. Plasma and the electric maximize preview react independently to that same
+geometry stream. There is no separate public "about to maximize" state that
+the panel subscribes to.
 
 The visible mask follows the internal background. Blur, contrast, borders, and
 shadows consume that same shape. The input mask additionally reaches from the
@@ -87,36 +93,35 @@ Popup placement uses the visible mask rather than the oversized QWindow. The
 containment also publishes the floating-applet hint so compact applet popups
 can animate their visual spacing with the panel.
 
-## Current Lattecotta mismatch
+## Corrected Lattecotta paths
 
-The current panel path gives the floating gap to three authorities that change
-together:
+The stable-surface migration removed the earlier physical layer-surface
+movement and changing reservation. A later live acceptance pass found two
+remaining authority errors:
 
-- `PositionerGeometry` subtracts `slideOffset` from the physical edge margin;
-- `VisibilityManager.qml` animates `Positioner.slideOffset`;
-- the layer-shell path applies the result as a real surface margin; and
-- `BindingsExternal.qml` changes `strutsThickness` between gap-plus-panel and
-  panel-only values.
+- the Panel trigger was built from only the attached background, so it omitted
+  the floating gap even though the direct task-model feed was live;
+- floating Docks still bound gap hiding to the legacy committed-maximize
+  summary instead of the per-view live trigger.
 
-The trigger currently intersects window geometry with a view rectangle that
-can move during the same transition. Maximize delivery was made immediate by
-D27 (maximize transitions leave a stale floating-gap work area), but that fix
-does not remove the geometry feedback or the changing reservation.
-
-The stable-surface migration supersedes the old panel-issues hypothesis that a
-floating gap should be a real layer-shell offset. That offset is the mechanism
-that must be removed from the presentation transition.
+The trigger solver now matches Plasma's translated full-envelope rule.
+`WindowTouchTracker` owns one explicit trigger supplied by its `View`. A Panel
+supplies its stable transition trigger. A Dock supplies a trigger solved from
+its own output, edge, exact resting primary span, attached depth, and configured
+gap. Eligible Docks consume the live touching count while keeping the attached
+reservation depth fixed. Schema 8 exposes that exact tracker-owned trigger and
+the configured `screenEdgeMargin`.
 
 ## Lattecotta ownership model
 
 ### Per view
 
-Every panel view owns:
+Every floating view owns:
 
 - one stable QWindow canvas;
 - one transition controller and qreal `floatingness`;
-- one attached background rectangle;
-- one floated background rectangle;
+- one attached and one floated presentation rectangle where its presentation
+  path supports fractional transition;
 - one current visible-background rectangle;
 - one current internal content-translation offset;
 - one stable window-touch trigger;
@@ -153,11 +158,11 @@ use the same per-output calculation.
 
 ## Initial policy
 
-The attach-on-window-touch transition initially applies to floating
-`AlwaysVisible` panels. Other visibility modes retain their existing
-visibility policy and remain visually floated unless a separately specified
-policy says otherwise. `WindowsGoBelow` is not silently reclassified as an
-ordinary reserving panel.
+The fractional attach-on-window-touch transition applies to floating
+`AlwaysVisible` Panels. Floating Docks use the same live trigger for their
+existing internal gap presentation in `AlwaysVisible` and `WindowsGoBelow`
+modes. Other visibility modes retain their existing visibility policy.
+`WindowsGoBelow` is not reclassified as an ordinary reserving Panel.
 
 ## Required observability
 
@@ -189,7 +194,8 @@ Deterministic coverage must prove:
 - exact input bridging without widening separated partial spans;
 - correct masks, borders, shadows, and popup anchors at progress 0, fractional
   progress, and progress 1;
-- real-window drag in, drag out, Escape cancellation, and committed maximize;
+- real button-held titlebar drag in and out before release, Escape
+  cancellation, and committed maximize;
 - same-edge maximum-depth reservation without accumulated zones;
 - portrait and landscape outputs in disconnected and touching topologies;
 - no stale coordinator membership after output, edge, visibility, or lifecycle

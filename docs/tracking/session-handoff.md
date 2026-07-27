@@ -3,6 +3,36 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-26.
 
+## 2026-07-26: live titlebar attachment correction
+
+The post-PR #128 real-session pass found that the stable-surface architecture
+was correct but two window-touch routes were incomplete. D236 (floating Panel
+touch trigger omitted the gap) used the attached background plus one pixel,
+while Plasma translates the complete stable envelope one logical pixel toward
+the workspace and clips it to the output. D237 (floating Docks waited for
+committed maximize) left Docks on the legacy `existsWindowMaximized` binding
+because the direct tracker accepted geometry only from `FloatingTransition`.
+
+Commit `8d4ac1e90` centralizes the exact Plasma trigger rule. Commit
+`14a8aba11` gives `WindowTouchTracker` one explicit per-view trigger, feeds it
+from Panel transition geometry or a Dock-specific envelope, routes eligible
+Dock gap presentation from the live count, keeps the attached reservation
+depth fixed, and exposes the exact trigger plus `screenEdgeMargin` through
+D-Bus schema 8.
+
+Recipe 074 drives one decorated client into and out of both a Panel and a Dock
+during a single button-held titlebar drag. Both state changes are observed
+before release while QWindow, reservation, layer-shell state, tracker identity,
+and publication revisions remain fixed. Recipe 072 still passes fractional
+Panel reversals, Escape restoration, pointer deferral, committed maximize, and
+destruction cleanup.
+
+The corrected-trigger multi-output pass exposed D238 (topology acceptance
+retained a pre-validation snapshot). Commit `766e0abf9` recaptures the stable
+projection after structural validation. Recipe 073 then passes separated
+partial spans, spanning-window fanout, maximum-depth reservations, restart,
+and full-touching, partial-touching, and disconnected output topologies.
+
 ## 2026-07-26: PR #128 merges Option 1 stable per-view surfaces
 
 PR #128 merged through GitHub's rebase flow at `4d52a1917` on `main`. The

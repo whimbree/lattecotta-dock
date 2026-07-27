@@ -52,8 +52,9 @@ after icon-theme changes, parabolic zoom, edit mode with drag rearranging,
 per-applet context menus and settings, the three bundled indicator styles,
 layer-shell placement with struts and auto-hide/dodge visibility modes,
 layout management with templates and import/export, applet colorization,
-stable floating-panel attachment inside a fixed partial surface and work area,
-and the full settings UI. Beyond upstream parity, the port has grown
+live floating-panel and floating-dock attachment during window drags inside a
+fixed partial surface and work area, and the full settings UI. Beyond upstream
+parity, the port has grown
 continuation features of its own, the first being resizable applet popups
 with per-applet size persistence.
 

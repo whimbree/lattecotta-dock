@@ -149,8 +149,11 @@ and PR #126 landed FP-4B.
       output.
       Commits: d0d499d50, 36e835fb9, fd445ee2f (PR #124)
 - [x] Intersect against the stable per-view trigger with one logical pixel of
-      inward overlap. Do not use the moving visible rectangle.
-      Commits: d0d499d50 (PR #124)
+      inward translation. The complete stable envelope, including the floating
+      gap, moves one logical pixel toward the workspace and clips to the
+      output. Do not expand only the attached background or use the moving
+      visible rectangle.
+      Commits: d0d499d50 (PR #124), 8d4ac1e90
 - [x] Deliver the direct interaction path with a bounded 10 ms debounce
       instead of the generic 150 ms window-change coalescer.
       Commits: d0d499d50 (PR #124)
@@ -159,7 +162,7 @@ and PR #126 landed FP-4B.
       Commits: d0d499d50, b552508e3, f4232ae54 (PR #124)
 - [x] Drive drag-in, drag-out, mid-flight reverse, Escape cancel, and committed
       maximize against real nested-KWin client frames.
-      Commits: f8396b5ed, d0d499d50 (PR #124)
+      Commits: f8396b5ed, d0d499d50 (PR #124), 14a8aba11
 - [x] Drive portrait, landscape, disconnected, partially touching, fully
       touching, spanning-window, and same-edge separated-span fixtures.
       Commits: 4daa80121, ad2a91c6f, 649fb79b4, 4ac5208b9,
@@ -176,6 +179,21 @@ and PR #126 landed FP-4B.
       reproduction artifact.
       Commits: 223ec413a, cef08bd1f, eab2e1f59, 1c8d9bf2d, 0c5c33fa6,
       3967011eb, c675458c6, e712cbf63, 0f214f012, 7973f68cd
+- [x] Correct the post-merge live-drag parity findings. Give both Panels and
+      Docks one tracker-owned per-view trigger, make eligible Docks consume the
+      live count instead of committed maximize, and keep one attached-depth
+      reservation throughout Dock presentation changes.
+      Commits: 8d4ac1e90, 14a8aba11
+      Evidence: recipe 074 holds a real titlebar drag across and back out of
+      both a Panel and a Dock trigger. Both state changes occur before button
+      release while the QWindow, reservation, layer-shell state, tracker
+      identity, and publication revisions remain byte-identical.
+- [x] Make multi-output baseline capture transactional after structural
+      validation.
+      Commits: 766e0abf9
+      Evidence: recipe 073 passes exact separated-span activation,
+      spanning-window fanout, maximum-depth reservations, restart persistence,
+      and full-touching, partial-touching, and disconnected output topologies.
 
 ## Definition of done
 
@@ -183,8 +201,9 @@ and PR #126 landed FP-4B.
       Commits: 6f6c33d9a
 - [x] D160 (same-edge maximum reservation depth was described as implemented)
       exposed the missing authority; FP-1 implements it.
-- [ ] D172 (floating panel attachment moves the surface and reservation instead
+- [x] D172 (floating panel attachment moves the surface and reservation instead
       of presentation) is fixed by FP-1 through FP-4.
+      Commits: 8d4ac1e90, 14a8aba11
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
       independent unless a shared root is proved.

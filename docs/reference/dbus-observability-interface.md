@@ -80,7 +80,7 @@ Landed before or during the 2026-07-16 stabilization session:
   `editMode && universalSettings.inConfigureAppletsMode`, not the raw global
   toggle. A global rearrange session therefore does not report unrelated docks
   as configuring applets.
-- `dockSystemData() -> s` (compact JSON object, schema version 7; added by C0
+- `dockSystemData() -> s` (compact JSON object, schema version 8; added by C0
   (the atomic dock-system observability snapshot)). This is the relational
   all-docks read. One synchronous call captures the global configuration mode,
   every current dock, and every active output-edge reservation group. Docks
@@ -90,7 +90,7 @@ Landed before or during the 2026-07-16 stabilization session:
   only after a complete coordinator projection transaction.
   ```json
   {
-    "schemaVersion": 7,
+    "schemaVersion": 8,
     "snapshotSequence": "14",
     "globalConfigureAppletsMode": true,
     "stacking": {
@@ -178,6 +178,7 @@ Landed before or during the 2026-07-16 stabilization session:
       "reservationLayerShellExclusiveEdge": "left",
       "reservationLayerShellExclusiveZone": 48,
       "floatingGapConfigured": true,
+      "screenEdgeMargin": 18,
       "floatingPanelConfigured": true,
       "floatingPanelEligible": true,
       "attachOnWindowTouchConfigured": true,
@@ -300,6 +301,10 @@ Landed before or during the 2026-07-16 stabilization session:
   Schema 7 also adds the dedicated window-touch inputs and count plus the
   separate legacy Dock maximized-gap request. A Dock reports that request while
   its Panel transition target remains `floated`.
+  Schema 8 makes `WindowTouchTracker` the `stableTriggerGeometry` authority for
+  both Panels and floating Docks and adds `screenEdgeMargin`. A ready, settled
+  floating Dock must report the exact trigger reconstructed from its own output,
+  edge, stable resting span, attached depth, and gap.
 
   `transitionTarget`, `transitionProgress`, `transitionPhase`,
   `transitionDirection`, and `transitionRunning` report the controller's
@@ -311,7 +316,9 @@ Landed before or during the 2026-07-16 stabilization session:
   geometry and `requestedReservationDepth` is null when it is false.
 
   `stableCanvasGeometry` and `stableTriggerGeometry` use virtual-desktop
-  coordinates. `attachedPresentationGeometry`,
+  coordinates. The trigger is the full stable floating envelope translated one
+  logical pixel toward the workspace and clipped to the selected output. It
+  retains the view's exact primary-axis span. `attachedPresentationGeometry`,
   `floatedPresentationGeometry`, `currentVisibleGeometry`,
   `computedPaintMaskGeometry`, `computedInputBridgeGeometry`, and
   `stableAppletMeasurementBounds` use stable-canvas-local coordinates.

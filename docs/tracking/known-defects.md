@@ -3061,6 +3061,63 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   failed at the captured-prior contract, then passed after restoring the fix.
 - SEVERITY: release blocker.
 
+### D238 - Topology acceptance retained a pre-validation snapshot
+- STATUS: FIXED on the live-drag branch by `766e0abf9`.
+- FOUND: 2026-07-26, corrected-trigger multi-output acceptance.
+- SYMPTOM: the first parked-client case can report stable surface drift where
+  `geometrySettled` changes from false to true and the surface publication
+  revision advances once.
+- ROOT: the recipe observed two equal projections, then validated structure
+  through a newer atomic snapshot, but retained the older projection as its
+  baseline. A generation that settled between those calls made validation
+  succeed against one state and comparison use another.
+- FIX: recapture the stable projection after structural validation and accept
+  the baseline only when it still equals the candidate.
+- EVIDENCE: the two-output recipe passes exact separated-span activation,
+  spanning-window fanout, maximum-depth reservations, restart persistence, and
+  full-touching, partial-touching, and disconnected output arrangements.
+- SEVERITY: known issue.
+
+### D237 - Floating Docks waited for committed maximize
+- STATUS: FIXED on the live-drag branch by `14a8aba11`.
+- FOUND: 2026-07-26, real-session comparison with Plasma's panel dodge
+  animation.
+- SYMPTOM: dragging a window toward a floating Dock does not hide the floating
+  gap in real time. The gap changes only after KWin commits maximize.
+- ROOT: the direct 10 ms `WindowTouchTracker` was constructed around
+  `FloatingTransition`, so only Panel transition geometry could feed it.
+  Floating Docks still bound `hideThickScreenGap` to the legacy
+  `existsWindowMaximized` summary.
+- FIX: make the tracker own an explicit per-view trigger. `View` supplies
+  stable Panel transition geometry or a Dock envelope solved from that Dock's
+  output, edge, exact resting span, attached depth, and configured gap.
+  Eligible Docks consume the live count and retain one attached-depth
+  reservation while their internal presentation moves.
+- EVIDENCE: tracker and schema tests prove per-view isolation and exact
+  reconstruction. Recipe 074 observes Dock attachment and reversal during one
+  button-held titlebar drag before release, with no surface, reservation, or
+  layer-shell publication drift.
+- SEVERITY: beta blocker.
+
+### D236 - Floating Panel touch trigger omitted the gap
+- STATUS: FIXED on the live-drag branch by `8d4ac1e90`.
+- FOUND: 2026-07-26, source comparison after live Panel attachment still
+  lagged Plasma's animation.
+- SYMPTOM: a true floating Panel has the direct KWin geometry feed but does not
+  begin attaching when a dragged frame enters the visible floating envelope.
+  It reacts only after the frame travels through the gap toward the attached
+  background, which can resemble a committed-maximize trigger.
+- ROOT: Latte expanded the attached background one logical pixel inward.
+  Plasma translates the complete stable floating envelope one logical pixel
+  toward the workspace and clips it to the output.
+- FIX: centralize the translated full-envelope rule in the pure geometry
+  solver and use it for placement, tracker readback, and invariant validation.
+- EVIDENCE: all four edges, offset outputs, full-depth clipping, overflow
+  refusal, and exact rectangles pass under the pure geometry test. Recipes 072
+  and 074 pass Panel reversal and button-held live attachment with stable
+  physical state.
+- SEVERITY: beta blocker.
+
 ### D235 - Unanimated layout moves retained a delayed relocation completion
 - STATUS: FIXED on `main` by `7b4cc6e98`; the final fresh
   independent review returned `MERGE`; merged through PR #128.
@@ -3294,8 +3351,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D172 - Floating panel attachment moves the surface and reservation instead of presentation
-- STATUS: FIXED on `main`; the replacement canonical gate
-  passes and the final fresh independent review returned `MERGE`; merged through PR #128.
+- STATUS: FIXED on the live-drag branch by `8d4ac1e90` and `14a8aba11`.
+  PR #128 established the stable-surface architecture on `main`; D236 and D237
+  found and corrected the remaining trigger and Dock-feed gaps.
   FP-1
   (the output-edge maximum reservation authority) is merged. FP-2 (the stable
   canvas and transition controller) is merged
@@ -3344,7 +3402,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   surface publications, and layer-shell configure count remain stable. FP-4A
   adds exact current-desktop and current-activity window tracking, schema 7
   policy ownership, and recipe 072 single-client interaction while retaining
-  those physical invariants.
+  those physical invariants. Schema 8 makes the per-view tracker trigger
+  authoritative for Panels and Docks. Recipe 074 proves both view types attach
+  and reverse during one button-held titlebar drag before release without
+  changing physical surface or reservation state.
 
 ### D93 - Duplicate submenu change left a stale settings-inventory identity
 - STATUS: FIXED IN PR #109 (`feea7158f`).
