@@ -162,7 +162,7 @@ and PR #126 landed FP-4B.
       Commits: d0d499d50, b552508e3, f4232ae54 (PR #124)
 - [x] Drive drag-in, drag-out, mid-flight reverse, Escape cancel, and committed
       maximize against real nested-KWin client frames.
-      Commits: f8396b5ed, d0d499d50 (PR #124), 14a8aba11
+      Commits: f8396b5ed, d0d499d50 (PR #124), 559cb666b
 - [x] Drive portrait, landscape, disconnected, partially touching, fully
       touching, spanning-window, and same-edge separated-span fixtures.
       Commits: 4daa80121, ad2a91c6f, 649fb79b4, 4ac5208b9,
@@ -183,14 +183,14 @@ and PR #126 landed FP-4B.
       Docks one tracker-owned per-view trigger, make eligible Docks consume the
       live count instead of committed maximize, and keep one attached-depth
       reservation throughout Dock presentation changes.
-      Commits: 8d4ac1e90, 14a8aba11
+      Commits: 8d4ac1e90, 559cb666b
       Evidence: recipe 074 holds a real titlebar drag across and back out of
       both a Panel and a Dock trigger. Both state changes occur before button
       release while the QWindow, reservation, layer-shell state, tracker
       identity, and publication revisions remain byte-identical.
 - [x] Make multi-output baseline capture transactional after structural
       validation.
-      Commits: 766e0abf9
+      Commits: e47d5c1c0
       Evidence: recipe 073 passes exact separated-span activation,
       spanning-window fanout, maximum-depth reservations, restart persistence,
       and full-touching, partial-touching, and disconnected output topologies.
@@ -203,7 +203,7 @@ and PR #126 landed FP-4B.
       exposed the missing authority; FP-1 implements it.
 - [x] D172 (floating panel attachment moves the surface and reservation instead
       of presentation) is fixed by FP-1 through FP-4.
-      Commits: 8d4ac1e90, 14a8aba11
+      Commits: 8d4ac1e90, 559cb666b
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
       independent unless a shared root is proved.

@@ -14,7 +14,7 @@ committed maximize) left Docks on the legacy `existsWindowMaximized` binding
 because the direct tracker accepted geometry only from `FloatingTransition`.
 
 Commit `8d4ac1e90` centralizes the exact Plasma trigger rule. Commit
-`14a8aba11` gives `WindowTouchTracker` one explicit per-view trigger, feeds it
+`559cb666b` gives `WindowTouchTracker` one explicit per-view trigger, feeds it
 from Panel transition geometry or a Dock-specific envelope, routes eligible
 Dock gap presentation from the live count, keeps the attached reservation
 depth fixed, and exposes the exact trigger plus `screenEdgeMargin` through
@@ -28,7 +28,7 @@ Panel reversals, Escape restoration, pointer deferral, committed maximize, and
 destruction cleanup.
 
 The corrected-trigger multi-output pass exposed D238 (topology acceptance
-retained a pre-validation snapshot). Commit `766e0abf9` recaptures the stable
+retained a pre-validation snapshot). Commit `e47d5c1c0` recaptures the stable
 projection after structural validation. Recipe 073 then passes separated
 partial spans, spanning-window fanout, maximum-depth reservations, restart,
 and full-touching, partial-touching, and disconnected output topologies.
