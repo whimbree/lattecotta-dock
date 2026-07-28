@@ -3078,7 +3078,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: all 164 D-Bus tests pass numeric and null serialization, accept the
   explicit startup form, and reject the same missing value after readiness.
   The deterministic schema-9 operation model accepts the nullable lifecycle
-  form and passes all 31 adversarial tests.
+  form and passes all 31 adversarial tests. The complete canonical gate passes
+  at source head `c5efcbdf4`.
 - SEVERITY: beta blocker.
 
 ### D242 - Dock visibility callbacks erased QML-owned effects geometry
@@ -3095,7 +3096,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   ownership, and the destructive handoff remains limited to actual Dock/Panel
   type changes.
 - EVIDENCE: the production binary rebuilds. The source contract passes and
-  controlled mutations that restore either destructive callback fail.
+  controlled mutations that restore either destructive callback fail. The
+  complete canonical gate passes at source head `c5efcbdf4`.
 - SEVERITY: beta blocker.
 
 ### D241 - Floating Docks bypassed fractional presentation

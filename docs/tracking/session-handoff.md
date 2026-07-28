@@ -35,8 +35,11 @@ required nullable wire value through startup and requires the exact number
 after readiness. Commit `59a9c5a67` replaces the weak prefix guard with
 controlled negatives for every Dock transition-ownership arm and both
 visibility callbacks. Focused D-Bus, source-contract, operation-model, and
-production builds pass after the corrections. A replacement canonical gate and
-fresh independent review remain required before merge.
+production builds pass after the corrections. The replacement canonical gate
+passes at exact source head `c5efcbdf461f25d8c2bc8bb3e99c63b0d5d2cfac`
+with all 124 CTest entries, QML compile and lint ratchets, rendered scene
+probes, ASan and UBSan nested execution, package provenance controls, and
+matrix refusals. A fresh independent review remains required before merge.
 
 ## 2026-07-27: PR #130 merges live titlebar attachment
 
