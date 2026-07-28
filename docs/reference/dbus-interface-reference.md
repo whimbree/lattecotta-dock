@@ -122,7 +122,8 @@ Per dock:
   `availablePrimaryLength`, `normalThickness`, and `maximumNormalThickness`.
   `screenEdgeMargin` is the configured floating gap.
   `presentedScreenEdgeGap` is the current integer gap after applying the
-  per-view fractional transition.
+  per-view fractional transition. It is null during startup or teardown while
+  the live QML Metrics authority is not constructed.
   `effectiveIconSize` and `availablePrimaryLength` are null while their live
   QML authorities are not constructed. A null `configuredIconSize` instead
   means the required containment configuration map or its `iconSize` entry is
@@ -165,7 +166,7 @@ Per dock:
   transition geometry. It is valid for `alwaysVisible` and `windowsGoBelow`
   Dock modes. `presentedScreenEdgeGap` equals
   `round(screenEdgeMargin * transitionProgress)` while that transition owns
-  the Dock gap.
+  the Dock gap and the Metrics authority is live.
   Each geometry field is null when the controller has no stable geometry.
   The stable canvas and trigger use virtual-desktop coordinates. Attached,
   floated, current visible, computed mask and bridge, and applet measurement

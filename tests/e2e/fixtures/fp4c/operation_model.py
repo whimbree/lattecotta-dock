@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: 2026 Latte Dock contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Typed deterministic plan and schema-8 oracle for FP-4C."""
+"""Typed deterministic plan and schema-9 oracle for FP-4C."""
 
 from __future__ import annotations
 
@@ -1103,7 +1103,6 @@ VIEW_NUMBER_KEYS = (
     "normalThickness",
     "maximumNormalThickness",
     "screenEdgeMargin",
-    "presentedScreenEdgeGap",
     "strutsThickness",
     "stableLayerShellMargin",
     "touchingWindowCount",
@@ -1114,6 +1113,7 @@ VIEW_OPTIONAL_NUMBER_KEYS = (
     "configuredIconSize",
     "effectiveIconSize",
     "availablePrimaryLength",
+    "presentedScreenEdgeGap",
     "layerShellExclusiveZone",
     "reservationContributionDepth",
     "reservationGroupMemberCount",

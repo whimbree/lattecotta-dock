@@ -1078,16 +1078,10 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
                     << "dbusreports: containment"
                     << record.persistentDockId
                     << "metrics exposes no presentedScreenEdgeGap";
-                return std::nullopt;
+            } else {
+                record.presentedScreenEdgeGap =
+                    presentedGap.toInt();
             }
-            record.presentedScreenEdgeGap =
-                presentedGap.toInt();
-        } else {
-            qCritical()
-                << "dbusreports: containment"
-                << record.persistentDockId
-                << "has no live metrics authority";
-            return std::nullopt;
         }
 
         const auto *const editController = view->rootObject();
