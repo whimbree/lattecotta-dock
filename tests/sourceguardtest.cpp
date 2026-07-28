@@ -2623,26 +2623,47 @@ void SourceGuardTest::stableFloatingPanelQml_rejectsDroppedDockTransitionOwnersh
                 backgroundTotals, viewHeader, viewImplementation);
         };
 
-    const QList<QString> retainedOwnershipArms{
-        QStringLiteral(
-            "        && (directDockWindowTouchEligible\n"),
-        QStringLiteral(
-            "            || latteView.floatingTransition.running\n"),
-        QStringLiteral(
-            "            || floatingPresentationDisplaced)\n"),
+    struct OwnershipMutation {
+        QString source;
+        QString replacement;
     };
-    for (const QString &arm : retainedOwnershipArms) {
+    const QList<OwnershipMutation> retainedOwnershipMutations{
+        {
+            QStringLiteral(
+                "        && (directDockWindowTouchEligible\n"),
+            QStringLiteral(
+                "        && (false\n"),
+        },
+        {
+            QStringLiteral(
+                "            || latteView.floatingTransition.running\n"),
+            QString{},
+        },
+        {
+            QStringLiteral(
+                "            || floatingPresentationDisplaced)\n"),
+            QStringLiteral(
+                "            || false)\n"),
+        },
+    };
+    for (const auto &mutation : retainedOwnershipMutations) {
         QString mutatedMain = originalMain;
-        QCOMPARE(mutatedMain.count(arm), 1);
-        mutatedMain.remove(arm);
+        QCOMPARE(
+            mutatedMain.count(
+                mutation.source),
+            1);
+        mutatedMain.replace(
+            mutation.source,
+            mutation.replacement);
         QVERIFY2(
             !matches(
                 mutatedMain,
                 originalViewImplementation),
             qPrintable(
                 QStringLiteral(
-                    "removing Dock transition ownership arm '%1' must fail")
-                    .arg(arm.trimmed())));
+                    "disabling Dock transition ownership arm '%1' must fail")
+                    .arg(
+                        mutation.source.trimmed())));
     }
 
     const QList<QString> ownershipAwareCallbacks{
