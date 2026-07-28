@@ -268,7 +268,8 @@ Landed before or during the 2026-07-16 stabilization session:
   `effectiveIconSize` comes from the live Metrics object;
   `availablePrimaryLength` is the layouter's current logical-pixel
   `contentsMaxLength`, the post-padding applet span the autosizer consumes.
-  `presentedScreenEdgeGap` is also null while Metrics is not constructed.
+  `presentedScreenEdgeGap` may also be null while Metrics is not constructed.
+  Floating Panels retain a numeric value from their C++ transition controller.
   It is smaller than raw containment `maxLength` when the solid background owns
   internal primary-axis end padding. External shadow paint does not reduce it.
   `screensGroup` is always a string in a valid response. A derived member
@@ -309,9 +310,10 @@ Landed before or during the 2026-07-16 stabilization session:
   Schema 9 routes eligible Docks through the same per-view fractional
   transition authority as Panels and adds `presentedScreenEdgeGap`. The
   presented gap must equal the configured margin multiplied by
-  `transitionProgress` and rounded to the nearest logical pixel. A Dock still
-  reports null Panel transition geometry because its QML layout owns paint and
-  input presentation inside the stable surface.
+  `transitionProgress` and rounded to the nearest logical pixel while the Panel
+  or Dock transition owns the gap. A Dock still reports null Panel transition
+  geometry because its QML layout owns paint and input presentation inside the
+  stable surface.
 
   `transitionTarget`, `transitionProgress`, `transitionPhase`,
   `transitionDirection`, and `transitionRunning` report the controller's

@@ -122,8 +122,10 @@ Per dock:
   `availablePrimaryLength`, `normalThickness`, and `maximumNormalThickness`.
   `screenEdgeMargin` is the configured floating gap.
   `presentedScreenEdgeGap` is the current integer gap after applying the
-  per-view fractional transition. It is null during startup or teardown while
-  the live QML Metrics authority is not constructed.
+  per-view fractional transition. It may be null during startup or teardown
+  while the live QML Metrics authority is not constructed. Floating Panels
+  retain a numeric value because their C++ transition controller remains the
+  presentation authority.
   `effectiveIconSize` and `availablePrimaryLength` are null while their live
   QML authorities are not constructed. A null `configuredIconSize` instead
   means the required containment configuration map or its `iconSize` entry is
