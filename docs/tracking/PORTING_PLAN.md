@@ -4964,6 +4964,12 @@ prerequisites in the phases above are done.
       Require the numeric field and retain it in the deterministic restart
       projection.
       Commits: 5a2948bb5
+- [x] Fix D241 (floating Docks bypassed fractional presentation).
+      Route the live Dock request through the per-view qreal transition while
+      retaining Dock-owned paint and input geometry, a stable QWindow,
+      primary span, output assignment, and reservation. Expose the presented
+      gap and exact attached border endpoint through D-Bus schema 9.
+      Commits: 20bae6edc
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
