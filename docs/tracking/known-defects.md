@@ -3062,8 +3062,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D243 - Schema 9 refused pre-Metrics startup snapshots
-- STATUS: FIXED on `fix/floating-dock-presentation` by `6b2864a81`; PR
-  pending.
+- STATUS: FIXED on `main` by `b9136b0b4`; merged through PR #132.
 - FOUND: 2026-07-27, independent review of PR #132.
 - SYMPTOM: `dockSystemData()` returns an empty string while a Dock's live QML
   Metrics object is not yet constructed. The startup and teardown states that
@@ -3079,12 +3078,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   explicit startup form, and reject the same missing value after readiness.
   The deterministic schema-9 operation model accepts the nullable lifecycle
   form and passes all 31 adversarial tests. The complete canonical gate passes
-  at source head `c5efcbdf4`.
+  at tree-equivalent reviewed branch head `fb9e527a1`.
 - SEVERITY: beta blocker.
 
 ### D242 - Dock visibility callbacks erased QML-owned effects geometry
-- STATUS: FIXED on `fix/floating-dock-presentation` by `2d4c49b`; PR
-  pending.
+- STATUS: FIXED on `main` by `2ac15ad22`; merged through PR #132.
 - FOUND: 2026-07-27, independent review of PR #132.
 - SYMPTOM: an ordinary hidden or sidebar transition can briefly clear a Dock's
   effects rectangle and mask before QML republishes them.
@@ -3097,12 +3095,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   type changes.
 - EVIDENCE: the production binary rebuilds. The source contract passes and
   controlled mutations that restore either destructive callback fail. The
-  complete canonical gate passes at source head `c5efcbdf4`.
+  complete canonical gate passes at tree-equivalent reviewed branch head
+  `fb9e527a1`.
 - SEVERITY: beta blocker.
 
 ### D241 - Floating Docks bypassed fractional presentation
-- STATUS: FIXED on `fix/floating-dock-presentation` by `20bae6edc`; PR
-  pending.
+- STATUS: FIXED on `main` by `193cf9514`; merged through PR #132.
 - FOUND: 2026-07-27, real-session comparison with Plasma after PR #130.
 - SYMPTOM: a dragged window reaches a floating Dock in real time, but the Dock
   gap either changes as a separate Boolean animation or waits for a committed
