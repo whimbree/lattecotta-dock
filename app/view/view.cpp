@@ -211,12 +211,12 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
                 if (m_visibility->isHidden()) {
                     m_interface->deactivateApplets();
                 }
-                m_effects->applyFloatingPanelPresentation();
+                m_effects->applyFloatingPresentationProgress();
             });
             connect(m_visibility,
                     &ViewPart::VisibilityManager::isSidebarChanged,
                     m_effects,
-                    &ViewPart::Effects::applyFloatingPanelPresentation);
+                    &ViewPart::Effects::applyFloatingPresentationProgress);
 
             connect(m_visibility, &ViewPart::VisibilityManager::containsMouseChanged,
                     this, &View::updateTransientWindowsTracking);
