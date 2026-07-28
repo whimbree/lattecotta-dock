@@ -321,7 +321,21 @@ private:
                    "root.behaveAsDockWithMask"
                    "&&latteView"
                    "&&!latteView.floatingPanelConfigured"
-                   "&&latteView.floatingTransition"))
+                   "&&latteView.floatingTransition"
+                   "&&(directDockWindowTouchEligible"
+                   "||latteView.floatingTransition.running"
+                   "||floatingPresentationDisplaced)"))
+            && viewImplementation.contains(QStringLiteral(
+                   "connect(m_visibility,"
+                   "&ViewPart::VisibilityManager::isHiddenChanged,"
+                   "this,[&](){if(m_visibility->isHidden())"
+                   "{m_interface->deactivateApplets();}"
+                   "m_effects->applyFloatingPresentationProgress();});"))
+            && viewImplementation.contains(QStringLiteral(
+                   "connect(m_visibility,"
+                   "&ViewPart::VisibilityManager::isSidebarChanged,"
+                   "m_effects,"
+                   "&ViewPart::Effects::applyFloatingPresentationProgress);"))
             && !main.contains(QStringLiteral(
                    "floatingTransitionEligible:behaveAsPlasmaPanel"
                    "&&latteView.visibility.mode===LatteCore.Types.WindowsGoBelow"))
@@ -2104,6 +2118,7 @@ private Q_SLOTS:
     void justifyAppletSpan_sourceGuardRejectsShadowOverlap();
     void stableFloatingPanelQml_keepsOneTransitionAuthority();
     void stableFloatingPanelQml_rejectsDivergentZeroGapEligibility();
+    void stableFloatingPanelQml_rejectsDroppedDockTransitionOwnership();
     void stablePanelPopupAnchor_rejectsLegacyAnimationFreeze();
     void stableFloatingPanelE2e_keepsCanvasAndRevisionsFixed();
     void windowTouchAuthority_keepsDedicatedStableModel();
@@ -2580,6 +2595,87 @@ void SourceGuardTest::stableFloatingPanelQml_rejectsDivergentZeroGapEligibility(
                  viewHeader, panelImplementation),
              "floating Panel identity must remain the conjunction of Panel"
              " behavior and the shared positive-gap predicate");
+}
+
+void SourceGuardTest::stableFloatingPanelQml_rejectsDroppedDockTransitionOwnership()
+{
+    const QString originalMain = readFile(QStringLiteral(
+        "containment/package/contents/ui/main.qml"));
+    const QString bindings = readFile(QStringLiteral(
+        "containment/package/contents/ui/BindingsExternal.qml"));
+    const QString visibility = readFile(QStringLiteral(
+        "containment/package/contents/ui/VisibilityManager.qml"));
+    const QString layouts = readFile(QStringLiteral(
+        "containment/package/contents/ui/layouts/LayoutsContainer.qml"));
+    const QString metrics = readFile(QStringLiteral(
+        "containment/package/contents/ui/abilities/Metrics.qml"));
+    const QString backgroundTotals = readFile(QStringLiteral(
+        "containment/package/contents/ui/background/types/Totals.qml"));
+    const QString viewHeader = readFile(QStringLiteral(
+        "app/view/view.h"));
+    const QString originalViewImplementation = readFile(QStringLiteral(
+        "app/view/view.cpp"));
+
+    const auto matches =
+        [&](const QString &main, const QString &viewImplementation) {
+            return matchesStableFloatingPanelQmlContract(
+                main, bindings, visibility, layouts, metrics,
+                backgroundTotals, viewHeader, viewImplementation);
+        };
+
+    const QList<QString> retainedOwnershipArms{
+        QStringLiteral(
+            "        && (directDockWindowTouchEligible\n"),
+        QStringLiteral(
+            "            || latteView.floatingTransition.running\n"),
+        QStringLiteral(
+            "            || floatingPresentationDisplaced)\n"),
+    };
+    for (const QString &arm : retainedOwnershipArms) {
+        QString mutatedMain = originalMain;
+        QCOMPARE(mutatedMain.count(arm), 1);
+        mutatedMain.remove(arm);
+        QVERIFY2(
+            !matches(
+                mutatedMain,
+                originalViewImplementation),
+            qPrintable(
+                QStringLiteral(
+                    "removing Dock transition ownership arm '%1' must fail")
+                    .arg(arm.trimmed())));
+    }
+
+    const QList<QString> ownershipAwareCallbacks{
+        QStringLiteral(
+            "                m_effects->"
+            "applyFloatingPresentationProgress();"),
+        QStringLiteral(
+            "                    &ViewPart::Effects::"
+            "applyFloatingPresentationProgress);"),
+    };
+    for (const QString &callback : ownershipAwareCallbacks) {
+        QString mutatedViewImplementation =
+            originalViewImplementation;
+        QString destructiveCallback = callback;
+        destructiveCallback.replace(
+            QStringLiteral(
+                "applyFloatingPresentationProgress"),
+            QStringLiteral(
+                "applyFloatingPanelPresentation"));
+        QCOMPARE(
+            mutatedViewImplementation.count(
+                callback),
+            1);
+        mutatedViewImplementation.replace(
+            callback,
+            destructiveCallback);
+        QVERIFY2(
+            !matches(
+                originalMain,
+                mutatedViewImplementation),
+            "ordinary visibility changes must not invoke the destructive"
+            " Panel-to-Dock ownership handoff");
+    }
 }
 
 void SourceGuardTest::stablePanelPopupAnchor_rejectsLegacyAnimationFreeze()
