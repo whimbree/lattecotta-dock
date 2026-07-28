@@ -16,6 +16,10 @@ import "./privates" as Ability
 Ability.MetricsPrivate {
     id: metrics
     property bool stablePanelEnvelope: false
+    property bool screenEdgeMarginIsEnabled: false
+    property real presentationProgress: 1.0
+    property bool thickScreenGapIsHidden: false
+    property int configuredScreenEdgeMargin: 0
     //! Signals
     signal iconSizeAnimationEnded();
 
@@ -32,10 +36,20 @@ Ability.MetricsPrivate {
     margin.maxHeadThickness: (background.isGreaterThanItemThickness ? (background.totals.visualMaxThickness - _maxIconSize - margin.maxTailThickness) : margin.maxTailThickness)
     //margin.thickness: fraction.thicknessMargin * iconSize
    // margin.maxThickness: fraction.thicknessMargin * maxIconSize
-    margin.screenEdge: (root.screenEdgeMarginEnabled && metrics.stablePanelEnvelope)
-                       || !root.screenEdgeMarginEnabled
-                       || root.hideThickScreenGap ?
-                           0 : Plasmoid.configuration.screenEdgeMargin
+    margin.screenEdge: {
+        if (!metrics.screenEdgeMarginIsEnabled
+                || metrics.stablePanelEnvelope) {
+            return 0;
+        }
+        if (metrics.dockTransitionOwnsGap) {
+            return Math.round(
+                metrics.configuredScreenEdgeMargin
+                * metrics.presentationProgress);
+        }
+
+        return metrics.thickScreenGapIsHidden
+                ? 0 : metrics.configuredScreenEdgeMargin;
+    }
 
     //! MarginsAra
     marginsArea.tailThickness: {
@@ -77,14 +91,26 @@ Ability.MetricsPrivate {
     }
 
     //! Mask
-    mask.maxScreenEdge : root.behaveAsDockWithMask ? Math.max(0, Plasmoid.configuration.screenEdgeMargin) : 0
+    mask.maxScreenEdge: root.behaveAsDockWithMask
+                        ? Math.max(0, metrics.configuredScreenEdgeMargin) : 0
       // window geometry is updated after the local screen margin animation was zeroed*/
     //! A panel's stable envelope always owns the configured gap. Attaching is
     //! an internal translation, so this measurement must not jump at target
     //! changes and feed a different local/applet/effects geometry downstream.
-    mask.screenEdge: (!root.screenEdgeMarginEnabled
-                      || (!metrics.stablePanelEnvelope && root.hideThickScreenGap))
-                     ? 0 : Plasmoid.configuration.screenEdgeMargin
+    mask.screenEdge: {
+        if (!metrics.screenEdgeMarginIsEnabled) {
+            return 0;
+        }
+        if (metrics.stablePanelEnvelope) {
+            return metrics.configuredScreenEdgeMargin;
+        }
+        if (metrics.dockTransitionOwnsGap) {
+            return metrics.margin.screenEdge;
+        }
+
+        return metrics.thickScreenGapIsHidden
+                ? 0 : metrics.configuredScreenEdgeMargin;
+    }
 
     mask.thickness.hidden: LatteCore.WindowSystem.compositingActive ?  2 : 1
     mask.thickness.normal: mask.screenEdge + Math.max(totals.thickness + extraThicknessForNormal, background.thickness + background.shadows.headThickness)

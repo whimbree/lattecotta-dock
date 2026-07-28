@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Iterable, NoReturn
 
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 PLAN_FORMAT = "lattecotta.fp4c.operation-plan"
 REPLAY_FORMAT = "lattecotta.fp4c.operation-replay"
 FORMAT_VERSION = 1
@@ -909,6 +909,7 @@ VIEW_REQUIRED_KEYS = (
     "normalThickness",
     "maximumNormalThickness",
     "screenEdgeMargin",
+    "presentedScreenEdgeGap",
     "windowGeometry",
     "absoluteGeometry",
     "localGeometry",
@@ -1102,6 +1103,7 @@ VIEW_NUMBER_KEYS = (
     "normalThickness",
     "maximumNormalThickness",
     "screenEdgeMargin",
+    "presentedScreenEdgeGap",
     "strutsThickness",
     "stableLayerShellMargin",
     "touchingWindowCount",
@@ -1998,6 +2000,7 @@ def assert_transition_and_lifecycle(view: dict[str, Any]) -> None:
             rel_tol=0.0,
             abs_tol=FLOAT32_ABSOLUTE_TOLERANCE,
         )
+        or view["presentedScreenEdgeGap"] != view["screenEdgeMargin"]
         or view["transitionPhase"] != "resting"
         or view["transitionDirection"] != "none"
         or view["transitionRunning"]

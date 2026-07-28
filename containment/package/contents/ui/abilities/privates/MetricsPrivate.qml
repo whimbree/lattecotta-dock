@@ -22,6 +22,8 @@ AbilityHost.Metrics {
     property Item background: null
     property Item indicators: null
     property Item parabolic: null
+    property bool dockTransitionOwnsGap: false
+    readonly property int presentedScreenEdgeGap: mets.margin.screenEdge
 
     //! private properties to avoid too many not needed animation calculations
     readonly property int _iconSize: autosizeEnabled && autosize.iconSize > 0 ? Math.min(autosize.iconSize, maxIconSize) : maxIconSize
@@ -117,6 +119,7 @@ AbilityHost.Metrics {
     margin {
         Behavior on screenEdge {
             enabled: !root.behaveAsPlasmaPanel
+                     && !mets.dockTransitionOwnsGap
             NumberAnimation {
                 duration: 0.8 * animations.duration.proposed
                 easing.type: Easing.OutCubic

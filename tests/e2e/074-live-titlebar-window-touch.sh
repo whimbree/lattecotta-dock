@@ -27,8 +27,8 @@ dock_field() {
     e2e_json dockSystemData | python3 -c "
 import json, sys
 snapshot = json.load(sys.stdin)
-if snapshot['schemaVersion'] != 8:
-    sys.exit('expected dockSystemData schema 8')
+if snapshot['schemaVersion'] != 9:
+    sys.exit('expected dockSystemData schema 9')
 matches = [record for record in snapshot['views']
            if record['persistentDockId'] == $view]
 if len(matches) != 1:
@@ -69,14 +69,30 @@ stable_physical_snapshot() {
 }
 
 policy_probe() {
-    dock_field '"%s %d %s %s %s %s" % (
+    dock_field '"%s %d %s %s %s %.9f %s %d %d" % (
         v["type"],
         v["touchingWindowCount"],
         str(v["dockGapHideRequested"]).lower(),
         v["transitionTarget"],
         v["transitionPhase"],
+        v["transitionProgress"],
         v["windowTouchGeometryRoleType"],
+        v["screenEdgeMargin"],
+        v["presentedScreenEdgeGap"],
     )'
+}
+
+presented_gap_matches_progress() {
+    python3 - "$1" "$2" "$3" <<'PY'
+import math
+import sys
+
+progress = float(sys.argv[1])
+configured = int(sys.argv[2])
+presented = int(sys.argv[3])
+expected = math.floor(configured * progress + 0.5)
+raise SystemExit(0 if presented == expected else 1)
+PY
 }
 
 wait_for_policy_while_held() {
@@ -84,16 +100,20 @@ wait_for_policy_while_held() {
     local expected_request="$3" expected_target="$4" boundary="$5"
     local require_held="${6:-true}"
     local actual_type=unread count=-1 request=unread target=unread
-    local phase=unread role=unread
+    local phase=unread progress=unread role=unread
+    local configured_gap=-1 presented_gap=-1
 
     for _ in $(seq 1 100); do
-        read -r actual_type count request target phase role \
+        read -r actual_type count request target phase progress role \
+            configured_gap presented_gap \
             <<< "$(policy_probe)"
         if [[ "$actual_type" == "$expected_type"
               && "$count" == "$expected_count"
               && "$request" == "$expected_request"
               && "$target" == "$expected_target"
-              && "$role" == QRect ]]; then
+              && "$role" == QRect ]] \
+                && presented_gap_matches_progress \
+                    "$progress" "$configured_gap" "$presented_gap"; then
             if [[ "$require_held" == true ]]; then
                 (( drag_pid > 0 )) \
                     || e2e_fail "$boundary has no owned held-drag process"
@@ -105,7 +125,41 @@ wait_for_policy_while_held() {
         sleep 0.01
     done
 
-    e2e_fail "$boundary did not appear during the held drag (type=$actual_type count=$count request=$request target=$target phase=$phase role=$role)"
+    e2e_fail "$boundary did not appear during the held drag (type=$actual_type count=$count request=$request target=$target phase=$phase progress=$progress configuredGap=$configured_gap presentedGap=$presented_gap role=$role)"
+}
+
+wait_for_fractional_progress_while_held() {
+    local expected_type="$1" expected_phase="$2" boundary="$3"
+    local actual_type=unread count=-1 request=unread target=unread
+    local phase=unread progress=unread role=unread
+    local configured_gap=-1 presented_gap=-1
+
+    for _ in $(seq 1 100); do
+        read -r actual_type count request target phase progress role \
+            configured_gap presented_gap \
+            <<< "$(policy_probe)"
+        if [[ "$actual_type" == "$expected_type"
+              && "$phase" == "$expected_phase"
+              && "$role" == QRect ]] \
+                && presented_gap_matches_progress \
+                    "$progress" "$configured_gap" "$presented_gap" \
+                && python3 - "$progress" <<'PY'
+import sys
+
+progress = float(sys.argv[1])
+raise SystemExit(0 if 0.0 < progress < 1.0 else 1)
+PY
+        then
+            (( drag_pid > 0 )) \
+                || e2e_fail "$boundary has no owned held-drag process"
+            kill -0 "$drag_pid" 2>/dev/null \
+                || e2e_fail "$boundary appeared only after button release"
+            return 0
+        fi
+        sleep 0.01
+    done
+
+    e2e_fail "$boundary exposed no fractional transition frame (type=$actual_type count=$count request=$request target=$target phase=$phase progress=$progress configuredGap=$configured_gap presentedGap=$presented_gap role=$role)"
 }
 
 konsole_row() {
@@ -315,12 +369,18 @@ exercise_held_drag() {
     wait_for_policy_while_held \
         "$expected_type" 1 "$expected_request" "$expected_target" \
         "$expected_type live inward crossing"
+    wait_for_fractional_progress_while_held \
+        "$expected_type" attaching \
+        "$expected_type live inward presentation"
     [[ "$(stable_physical_snapshot)" == "$base_snapshot" ]] \
         || e2e_fail "$expected_type changed its QWindow, reservation, layer-shell publication, or tracker authority during live attachment"
 
     wait_for_policy_while_held \
         "$expected_type" 0 false floated \
         "$expected_type live outward reversal"
+    wait_for_fractional_progress_while_held \
+        "$expected_type" floating \
+        "$expected_type live outward presentation"
     [[ "$(stable_physical_snapshot)" == "$base_snapshot" ]] \
         || e2e_fail "$expected_type changed its stable physical contract during live reversal"
 
@@ -373,6 +433,6 @@ configure_case panel-top-center-1out
 exercise_held_drag panel true false attached
 
 configure_case dock-top-center-1out
-exercise_held_drag dock false true floated
+exercise_held_drag dock false true attached
 
-echo "Live titlebar window touch passed before button release for both Panel and Dock, including held reversal and zero stable physical-state drift"
+echo "Live titlebar window touch passed before button release for both Panel and Dock, including fractional held reversal and zero stable physical-state drift"

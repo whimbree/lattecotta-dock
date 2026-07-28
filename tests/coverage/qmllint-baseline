@@ -56,12 +56,12 @@
 235	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/BindingsExternal.qml
 6	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/DragDropArea.qml
 32	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/Upgrader.qml
-145	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/VisibilityManager.qml
+143	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/VisibilityManager.qml
 3	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Indexer.qml
 4	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Indicators.qml
 31	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Launchers.qml
 11	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Layouter.qml
-16	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Metrics.qml
+11	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/Metrics.qml
 17	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/MyView.qml
 3	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/ParabolicEffect.qml
 4	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/abilities/PositionShortcuts.qml

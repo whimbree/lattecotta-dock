@@ -124,6 +124,7 @@ public:
     void setPanelBackgroundSvg(QQuickItem *quickitem);
 
 public Q_SLOTS:
+    void applyFloatingPresentationProgress();
     void applyFloatingPanelPresentation();
     void clearShadows();
     void updateShadows();

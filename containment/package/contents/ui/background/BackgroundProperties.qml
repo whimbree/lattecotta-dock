@@ -14,6 +14,7 @@ Item{
     id: backgroundProperties
 
     property bool stablePanelEnvelope: false
+    property bool dockTransitionDisplaced: false
     property bool isShown: false
 
     property bool hasAllBorders: false
@@ -39,5 +40,7 @@ Item{
     readonly property BackgroundTypes.Paddings paddings: BackgroundTypes.Paddings{}
     readonly property BackgroundTypes.Totals totals: BackgroundTypes.Totals{
         stablePanelEnvelope: backgroundProperties.stablePanelEnvelope
+        dockTransitionDisplaced:
+            backgroundProperties.dockTransitionDisplaced
     }
 }

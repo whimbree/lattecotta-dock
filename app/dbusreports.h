@@ -581,6 +581,7 @@ struct DockSystemViewRecord {
     int normalThickness{0};
     int maximumNormalThickness{0};
     int screenEdgeMargin{0};
+    int presentedScreenEdgeGap{0};
 
     QRect windowGeometry;
     QRect absoluteGeometry;
@@ -701,7 +702,7 @@ struct DockReservationGroupRecord
 };
 
 struct DockSystemSnapshot {
-    static constexpr int SchemaVersion = 8;
+    static constexpr int SchemaVersion = 9;
 
     quint64 snapshotSequence{0};
     bool globalConfigureAppletsMode{false};
@@ -770,6 +771,27 @@ inline QString edgeName(Plasma::Types::Location location)
     case Plasma::Types::BottomEdge: return QStringLiteral("bottom");
     case Plasma::Types::LeftEdge: return QStringLiteral("left");
     case Plasma::Types::RightEdge: return QStringLiteral("right");
+    }
+
+    Q_UNREACHABLE();
+}
+
+inline std::optional<QString> physicalEdgeBorderName(
+    Plasma::Types::Location location)
+{
+    switch (location) {
+    case Plasma::Types::TopEdge:
+        return QStringLiteral("top");
+    case Plasma::Types::RightEdge:
+        return QStringLiteral("right");
+    case Plasma::Types::BottomEdge:
+        return QStringLiteral("bottom");
+    case Plasma::Types::LeftEdge:
+        return QStringLiteral("left");
+    case Plasma::Types::Floating:
+    case Plasma::Types::Desktop:
+    case Plasma::Types::FullScreen:
+        return std::nullopt;
     }
 
     Q_UNREACHABLE();
@@ -1677,6 +1699,8 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
     json[QStringLiteral("normalThickness")] = record.normalThickness;
     json[QStringLiteral("maximumNormalThickness")] = record.maximumNormalThickness;
     json[QStringLiteral("screenEdgeMargin")] = record.screenEdgeMargin;
+    json[QStringLiteral("presentedScreenEdgeGap")] =
+        record.presentedScreenEdgeGap;
 
     json[QStringLiteral("windowGeometry")] = serializeRect(record.windowGeometry);
     json[QStringLiteral("absoluteGeometry")] = serializeRect(record.absoluteGeometry);
@@ -1994,6 +2018,13 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
             view.objects.transitionController;
         const QString &windowTouchTracker =
             view.objects.windowTouchTracker;
+        const bool expectedDockGapHideRequest =
+            view.type == Types::DockView
+            && view.floatingGapConfigured
+            && (view.visibilityMode == Types::AlwaysVisible
+                || view.visibilityMode == Types::WindowsGoBelow)
+            && view.attachOnWindowTouchConfigured
+            && view.touchingWindowCount > 0;
         if (view.objects.transitionController.isEmpty()
                 || otherAuthorities.contains(
                     transitionController)
@@ -2016,8 +2047,13 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                 || view.transitionProgress < 0.0
                 || view.transitionProgress > 1.0
                 || view.screenEdgeMargin < 0
+                || view.presentedScreenEdgeGap < 0
+                || view.presentedScreenEdgeGap
+                    > view.screenEdgeMargin
                 || (view.floatingGapConfigured
                     && view.screenEdgeMargin <= 0)
+                || (!view.floatingGapConfigured
+                    && view.presentedScreenEdgeGap != 0)
                 || view.touchingWindowCount < 0
                 || (!view.windowTouchGeometryRoleType.isEmpty()
                     && view.windowTouchGeometryRoleType
@@ -2030,23 +2066,16 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                     && (!view.attachOnWindowTouchConfigured
                         || !view.attachmentWaitsForPointerExitConfigured
                         || !view.pointerInsideView
-                        || !view.floatingPanelEligible
+                        || (!view.floatingPanelEligible
+                            && !view.dockGapHideRequested)
                         || view.touchingWindowCount <= 0))
                 || (view.floatingPanelConfigured
                     != (view.type == Types::PanelView
                         && view.floatingGapConfigured))
                 || (view.floatingPanelEligible
                     && view.dockGapHideRequested)
-                || (view.dockGapHideRequested
-                    && (view.type != Types::DockView
-                        || !view.floatingGapConfigured
-                        || view.floatingPanelConfigured
-                        || (view.visibilityMode
-                                != Types::AlwaysVisible
-                            && view.visibilityMode
-                                != Types::WindowsGoBelow)
-                        || !view
-                            .attachOnWindowTouchConfigured))
+                || view.dockGapHideRequested
+                    != expectedDockGapHideRequest
                 || (view.floatingPanelEligible
                     && (!view.floatingPanelConfigured
                         || view.type != Types::PanelView
@@ -2054,10 +2083,11 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                             != Types::AlwaysVisible))
                 || ((view.transitionTarget
                         == DockTransitionTarget::Attached)
-                    != (view.floatingPanelEligible
-                        && view.attachOnWindowTouchConfigured
-                        && !view.attachmentDeferredByPointer
-                        && view.touchingWindowCount > 0))) {
+                    != (((view.floatingPanelEligible
+                          && view.attachOnWindowTouchConfigured
+                          && view.touchingWindowCount > 0)
+                         || expectedDockGapHideRequest)
+                        && !view.attachmentDeferredByPointer))) {
             return false;
         }
         transitionControllers.insert(
@@ -2105,6 +2135,28 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
             if (view.transitionProgress != endpoint) {
                 return false;
             }
+        }
+
+        const bool dockTransitionOwnsGap =
+            view.type == Types::DockView
+            && view.floatingGapConfigured
+            && ((view.attachOnWindowTouchConfigured
+                 && (view.visibilityMode
+                        == Types::AlwaysVisible
+                     || view.visibilityMode
+                        == Types::WindowsGoBelow))
+                || view.transitionRunning
+                || view.transitionProgress < 1.0);
+        const int expectedPresentedGap =
+            qRound(
+                static_cast<qreal>(
+                    view.screenEdgeMargin)
+                * view.transitionProgress);
+        if ((view.floatingPanelConfigured
+                || dockTransitionOwnsGap)
+            && view.presentedScreenEdgeGap
+                != expectedPresentedGap) {
+            return false;
         }
 
         const bool anyGeometry =
@@ -2185,6 +2237,19 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
         }
 
         if (!view.transitionGeometryPresent) {
+            const auto physicalBorder =
+                physicalEdgeBorderName(view.edge);
+            if (!physicalBorder
+                || (view.floatingGapConfigured
+                    && view.transitionProgress > 0.0
+                    && view.enabledBorders
+                        != canonicalBorders)
+                || (view.floatingGapConfigured
+                    && view.transitionProgress == 0.0
+                    && view.enabledBorders.contains(
+                        *physicalBorder))) {
+                return false;
+            }
             continue;
         }
 

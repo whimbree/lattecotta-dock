@@ -261,6 +261,7 @@ wait_for_dock_gap_policy() {
     local transition_geometry=unread panel_geometry_absent=unread
     local floating_popups=unread
     local target=unread phase=unread running=unread progress=-1
+    local configured_gap=-1 presented_gap=-1
     for _ in $(seq 1 80); do
         read -r active_maximized exists_maximized \
             <<< "$(e2e_json trackerData u "$view" | python3 -c '
@@ -272,7 +273,8 @@ print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMa
             configured_panel eligible_panel configured_hide \
             dock_request target phase running progress \
             transition_geometry panel_geometry_absent floating_popups \
-            <<< "$(dock_field '"%s %s %s %s %s %s %s %s %s %s %.9f %s %s %s" % (
+            configured_gap presented_gap \
+            <<< "$(dock_field '"%s %s %s %s %s %s %s %s %s %s %.9f %s %s %s %d %d" % (
                 v["type"],
                 v["visibilityMode"],
                 str(v["floatingGapConfigured"]).lower(),
@@ -294,6 +296,8 @@ print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMa
                     "computedInputBridgeGeometry",
                 ))).lower(),
                 str(v["floatingAppletPopupsPreferred"]).lower(),
+                v["screenEdgeMargin"],
+                v["presentedScreenEdgeGap"],
             )')"
         if [[ "$active_maximized" == "$expected_maximized"
               && "$exists_maximized" == "$expected_maximized"
@@ -309,14 +313,17 @@ print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMa
               && "$running" == false
               && "$transition_geometry" == false
               && "$panel_geometry_absent" == true
-              && "$floating_popups" == false ]] \
+              && "$floating_popups" == false
+              && "$presented_gap" -eq "$((
+                  configured_gap * expected_progress
+              ))" ]] \
                 && awk -v actual="$progress" -v expected="$expected_progress" \
                     'BEGIN { difference = actual - expected; if (difference < 0) difference = -difference; exit !(difference < 0.000001) }'; then
             return 0
         fi
         sleep 0.05
     done
-    e2e_fail "Dock maximized-gap policy did not settle (active=$active_maximized exists=$exists_maximized type=$view_type visibility=$visibility_mode floatingGapConfigured=$floating_gap_configured configuredPanel=$configured_panel panelEligible=$eligible_panel configuredHide=$configured_hide dockRequest=$dock_request target=$target phase=$phase running=$running progress=$progress transitionGeometry=$transition_geometry panelGeometryAbsent=$panel_geometry_absent floatingPopups=$floating_popups)"
+    e2e_fail "Dock maximized-gap policy did not settle (active=$active_maximized exists=$exists_maximized type=$view_type visibility=$visibility_mode floatingGapConfigured=$floating_gap_configured configuredPanel=$configured_panel panelEligible=$eligible_panel configuredHide=$configured_hide dockRequest=$dock_request target=$target phase=$phase running=$running progress=$progress configuredGap=$configured_gap presentedGap=$presented_gap transitionGeometry=$transition_geometry panelGeometryAbsent=$panel_geometry_absent floatingPopups=$floating_popups)"
 }
 
 konsole_frame_geometry() {
@@ -510,7 +517,7 @@ e2e_call setViewVisibilityMode us "$view" alwaysVisible >/dev/null \
 wait_for_dock_gap_policy alwaysVisible false false floated 1
 [[ "$(set_konsole_maximized true)" == "$fixture_id" ]] \
     || e2e_fail "KWin did not maximize the client for the legacy Dock check"
-wait_for_dock_gap_policy alwaysVisible true true floated 1
+wait_for_dock_gap_policy alwaysVisible true true attached 0
 [[ "$(set_konsole_maximized false)" == "$fixture_id" ]] \
     || e2e_fail "KWin did not restore the client for the legacy Dock check"
 wait_for_dock_gap_policy alwaysVisible false false floated 1
@@ -520,7 +527,7 @@ e2e_call setViewVisibilityMode us "$view" windowsGoBelow >/dev/null \
 wait_for_dock_gap_policy windowsGoBelow false false floated 1
 [[ "$(set_konsole_maximized true)" == "$fixture_id" ]] \
     || e2e_fail "KWin did not maximize the client for the WindowsGoBelow Dock check"
-wait_for_dock_gap_policy windowsGoBelow true true floated 1
+wait_for_dock_gap_policy windowsGoBelow true true attached 0
 [[ "$(set_konsole_maximized false)" == "$fixture_id" ]] \
     || e2e_fail "KWin did not restore the client for the WindowsGoBelow Dock check"
 wait_for_dock_gap_policy windowsGoBelow false false floated 1

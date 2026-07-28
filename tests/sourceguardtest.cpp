@@ -47,7 +47,7 @@
 //     through both directions and a rapid reversal storm
 //   * FP-4C linked-view operation storm: a validated typed plan enters a
 //     whole-config transaction before any mutation, records exact replay and
-//     schema-8 state, and restores the pristine nested runtime on every exit
+//     schema-9 state, and restores the pristine nested runtime on every exit
 //   * Theme-aware icon rendering: every view shares the registered singleton's
 //     QML engine and offscreen software teardown stays on the basic render loop
 //   * Dock-system reporting: persistent-id ordering and original/clone
@@ -264,6 +264,10 @@ private:
         const QString visibility = normalizedCode(visibilitySource);
         const QString layouts = normalizedCode(layoutsSource);
         const QString metrics = normalizedCode(metricsSource);
+        const QString metricsPrivate = normalizedCode(
+            readFile(QStringLiteral(
+                "containment/package/contents/ui/abilities/privates/"
+                "MetricsPrivate.qml")));
         const QString backgroundTotals = normalizedCode(backgroundTotalsSource);
         const QString viewHeader = normalizedCode(viewHeaderSource);
         const QString viewImplementation =
@@ -305,7 +309,19 @@ private:
             && main.contains(QStringLiteral(
                    "readonlypropertybooldockGapHideRequested:"
                    "directDockWindowTouchEligible"
-                   "&&hideThickScreenGap"))
+                   "&&latteView.windowTouchTracker"
+                   "&&latteView.windowTouchTracker."
+                   "touchingWindowCount>0"))
+            && main.contains(QStringLiteral(
+                   "readonlypropertyrealfloatingPresentationProgress:"
+                   "latteView&&latteView.floatingTransition"
+                   "?latteView.floatingTransition.floatingness:1.0"))
+            && main.contains(QStringLiteral(
+                   "readonlypropertybooldockFloatingTransitionOwnsGap:"
+                   "root.behaveAsDockWithMask"
+                   "&&latteView"
+                   "&&!latteView.floatingPanelConfigured"
+                   "&&latteView.floatingTransition"))
             && !main.contains(QStringLiteral(
                    "floatingTransitionEligible:behaveAsPlasmaPanel"
                    "&&latteView.visibility.mode===LatteCore.Types.WindowsGoBelow"))
@@ -325,6 +341,17 @@ private:
                    "property:\"animationDuration\""
                    "when:root.latteView&&root.latteView.floatingTransition"
                    "value:manager.animationSpeed"))
+            && visibility.contains(QStringLiteral(
+                   "propertyboolinClientSideScreenEdgeSliding:false"))
+            && main.contains(QStringLiteral(
+                   "inClientSideScreenEdgeSliding:"
+                   "root.behaveAsDockWithMask"
+                   "&&(root.dockFloatingTransitionOwnsGap"
+                   "?(root.floatingPresentationDisplaced"
+                   "||(root.latteView"
+                   "&&root.latteView.floatingTransition"
+                   "&&root.latteView.floatingTransition.running))"
+                   ":root.hideThickScreenGap)"))
             && !visibility.contains(QStringLiteral(
                    "property:\"eligible\""))
             && bindings.contains(QStringLiteral(
@@ -374,13 +401,24 @@ private:
             && layouts.contains(QStringLiteral(
                    "floatingTransition.appletMeasurementBounds.height"))
             && metrics.contains(QStringLiteral(
-                   "mask.screenEdge:(!root.screenEdgeMarginEnabled"
-                   "||(!metrics.stablePanelEnvelope&&root.hideThickScreenGap))"
-                   "?0:Plasmoid.configuration.screenEdgeMargin"))
+                   "if(metrics.dockTransitionOwnsGap)"
+                   "{returnMath.round("
+                   "metrics.configuredScreenEdgeMargin"
+                   "*metrics.presentationProgress);}"))
+            && metrics.contains(QStringLiteral(
+                   "if(metrics.dockTransitionOwnsGap)"
+                   "{returnmetrics.margin.screenEdge;}"))
+            && metricsPrivate.contains(QStringLiteral(
+                   "readonlypropertyintpresentedScreenEdgeGap:"
+                   "mets.margin.screenEdge"))
+            && metricsPrivate.contains(QStringLiteral(
+                   "enabled:!root.behaveAsPlasmaPanel"
+                   "&&!mets.dockTransitionOwnsGap"))
             && backgroundTotals.contains(QStringLiteral(
                    "property:\"minThickness\""
                    "when:totalsItem.stablePanelEnvelope"
-                   "||!(hideThickScreenGap||hideLengthScreenGaps)"))
+                   "||!totalsItem.dockTransitionDisplaced"
+                   "&&!(hideThickScreenGap||hideLengthScreenGaps)"))
             && viewHeader.contains(QStringLiteral(
                    "Q_PROPERTY(boolfloatingGapConfigured"
                    "READfloatingGapConfigured"
@@ -527,12 +565,14 @@ private:
                    "&&\"$floating_popups\"==false"))
             && code.contains(QStringLiteral(
                    "wait_for_dock_gap_policy"
-                   "alwaysVisibletruetruefloated1"))
+                   "alwaysVisibletruetrueattached0"))
             && code.contains(QStringLiteral(
                    "setViewVisibilityModeus\"$view\"windowsGoBelow"))
             && code.contains(QStringLiteral(
                    "wait_for_dock_gap_policy"
-                   "windowsGoBelowtruetruefloated1"))
+                   "windowsGoBelowtruetrueattached0"))
+            && code.contains(QStringLiteral(
+                   "v[\"presentedScreenEdgeGap\"]"))
             && code.contains(QStringLiteral(
                    "expected_h=$((screen_h-stable_reservation_depth))"))
             && !code.contains(QStringLiteral("max_strut<base_strut"))
@@ -652,18 +692,19 @@ private:
                    "m_target==Target::Attached;"))
             && transitionImplementation.contains(QStringLiteral(
                    "m_attachmentDeferredByPointer="
-                   "panelAttachmentRequested"
+                   "attachmentRequested"
                    "&&m_attachmentWaitsForPointerExitConfigured"
                    "&&m_pointerInsideView"
                    "&&!attachmentAlreadyTargeted;"))
             && transitionImplementation.contains(QStringLiteral(
                    "constboolshouldAttach="
-                   "panelAttachmentRequested"
+                   "attachmentRequested"
                    "&&!m_attachmentDeferredByPointer;"))
             && transitionImplementation.contains(QStringLiteral(
                    "if(dockGapHideRequested"
                    "&&(floatingPanelEligible"
-                   "||!attachOnWindowTouchConfigured))"))
+                   "||!attachOnWindowTouchConfigured"
+                   "||touchingWindowCount<=0))"))
             && !transitionHeader.contains(QStringLiteral(
                    "requestAttached"))
             && !transitionHeader.contains(QStringLiteral(
@@ -681,11 +722,11 @@ private:
             && viewImplementation.contains(QStringLiteral(
                    "ViewPart::FloatingPanelGeometry::solve(inputs)"))
             && mainQml.contains(QStringLiteral(
+                   "readonlypropertybooldockGapHideRequested:"
                    "directDockWindowTouchEligible"
-                   "?latteView.windowTouchTracker"
+                   "&&latteView.windowTouchTracker"
                    "&&latteView.windowTouchTracker."
-                   "touchingWindowCount>0"
-                   ":latteView.windowsTracker"))
+                   "touchingWindowCount>0"))
             && !viewImplementation.contains(QStringLiteral(
                    "&ViewPart::WindowTouchTracker::"
                    "touchingWindowCountChanged"))
@@ -717,7 +758,7 @@ private:
             && code.contains(QStringLiteral(
                    "--keyfloatingInternalGapIsForcedfalse"))
             && code.contains(QStringLiteral(
-                   "snapshot['schemaVersion']!=8"))
+                   "snapshot['schemaVersion']!=9"))
             && code.contains(QStringLiteral(
                    "v[\"attachOnWindowTouchConfigured\"]"))
             && code.contains(QStringLiteral(
@@ -850,7 +891,7 @@ private:
             && panelCase > cleanupTrap
             && dockCase > panelCase
             && code.contains(QStringLiteral(
-                   "snapshot['schemaVersion']!=8"))
+                   "snapshot['schemaVersion']!=9"))
             && code.contains(QStringLiteral(
                    "--keyfloatingGapHidingWaitsMousefalse"))
             && code.contains(QStringLiteral(
@@ -860,14 +901,20 @@ private:
             && code.contains(QStringLiteral(
                    "\"$start_x\"\"$start_y\"&"
                    "drag_pid=$!"))
-            && code.contains(QStringLiteral(
-                   "kill-0\"$drag_pid\""))
+            && code.count(QStringLiteral(
+                   "kill-0\"$drag_pid\"")) >= 2
             && code.contains(QStringLiteral(
                    "exercise_held_dragpaneltruefalseattached"))
             && code.contains(QStringLiteral(
-                   "exercise_held_dragdockfalsetruefloated"))
+                   "exercise_held_dragdockfalsetrueattached"))
             && code.count(QStringLiteral(
                    "wait_for_policy_while_held")) >= 4
+            && code.count(QStringLiteral(
+                   "wait_for_fractional_progress_while_held")) >= 3
+            && code.contains(QStringLiteral(
+                   "presented_gap_matches_progress"))
+            && code.contains(QStringLiteral(
+                   "v[\"presentedScreenEdgeGap\"]"))
             && code.count(QStringLiteral(
                    "[[\"$(stable_physical_snapshot)\""
                    "==\"$base_snapshot\"]]")) >= 3
@@ -963,7 +1010,7 @@ private:
             && recipe.contains(QStringLiteral(
                    "[[\"$after_restart\"==\"$before_restart\"]]"))
             && oracle.contains(QStringLiteral(
-                   "ifsnapshot.get(\"schemaVersion\")!=8:"))
+                   "ifsnapshot.get(\"schemaVersion\")!=9:"))
             && oracle.contains(QStringLiteral(
                    "view[\"relationship\"]!=\"independent\""))
             && oracle.contains(QStringLiteral(
@@ -2866,7 +2913,7 @@ void SourceGuardTest::linkedOperationStormE2e_keepsTransactionalReplayContract()
             readFile(QStringLiteral(
                 "tests/e2e/fixtures/fp4c/operation_model.py"))),
         "the FP-4C operation storm must validate its typed plan before a"
-        " whole-config transaction, prove every schema-8 checkpoint and"
+        " whole-config transaction, prove every schema-9 checkpoint and"
         " compositor owner, record exact replay, and restore the pristine"
         " nested state on every exit");
 }
@@ -3231,7 +3278,8 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         "&&!manager.window.visibility.isSidebar){return;}")));
     QVERIFY(main.contains(QStringLiteral(
         "VisibilityManager{id:visibilityManager"
-        "layouts:layoutsContainerwindow:latteView}")));
+        "layouts:layoutsContainerwindow:latteView"
+        "inClientSideScreenEdgeSliding:")));
     QVERIFY(main.contains(QStringLiteral(
         "Background.MultiLayered{id:_background"
         "containmentRoot:rootdockView:latteView}")));
@@ -3857,7 +3905,7 @@ void SourceGuardTest::dockSystemTransitionCollection_keepsAuthoritativeRouting()
     QVERIFY2(
         matchesTransitionSnapshotRoute(
             collector),
-        "schema 8 transition fields must read their per-view authorities without rounding and fail closed");
+        "schema 9 transition fields must read their per-view authorities without rounding and fail closed");
 }
 
 void SourceGuardTest::dockSystemTransitionCollection_rejectsControlledMutations()

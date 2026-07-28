@@ -20,6 +20,7 @@ class PanelBorderDecisionTest : public QObject
 private Q_SLOTS:
     void everyFloatingAlignmentKeepsAllBorders();
     void attachedAndDegeneratePanelsKeepBoundaryClipping();
+    void attachedFullSpanOverridesAllCornersAtOutputBoundaries();
 };
 
 void PanelBorderDecisionTest::everyFloatingAlignmentKeepsAllBorders()
@@ -65,7 +66,7 @@ void PanelBorderDecisionTest::everyFloatingAlignmentKeepsAllBorders()
                             const PanelBorderDecision::Inputs inputs{
                                 .edge = edge,
                                 .alignment = alignment,
-                                .configuredFloatingPanel = true,
+                                .configuredFloatingPresentation = true,
                                 .screenEdgeBorderVisible =
                                     solution->screenEdgeBorderVisible(
                                         progress),
@@ -108,7 +109,7 @@ void PanelBorderDecisionTest::attachedAndDegeneratePanelsKeepBoundaryClipping()
         const PanelBorderDecision::Inputs attached{
             .edge = edge,
             .alignment = PanelBorderDecision::Alignment::Center,
-            .configuredFloatingPanel = true,
+            .configuredFloatingPresentation = true,
             .screenEdgeBorderVisible = false,
             .floatingCornersVisible = false,
             .screenEdgeMarginEnabled = true,
@@ -125,7 +126,7 @@ void PanelBorderDecisionTest::attachedAndDegeneratePanelsKeepBoundaryClipping()
     PanelBorderDecision::Inputs attached{
         .edge = FloatingPanelGeometry::Edge::Bottom,
         .alignment = PanelBorderDecision::Alignment::Justify,
-        .configuredFloatingPanel = true,
+        .configuredFloatingPresentation = true,
         .screenEdgeBorderVisible = false,
         .floatingCornersVisible = false,
         .screenEdgeMarginEnabled = true,
@@ -141,16 +142,78 @@ void PanelBorderDecisionTest::attachedAndDegeneratePanelsKeepBoundaryClipping()
 
     // A flush gap=0 panel rests at controller progress 1. Configuration is
     // the boundary guard that prevents raw progress from inventing corners.
-    attached.configuredFloatingPanel = false;
+    attached.configuredFloatingPresentation = false;
     attached.screenEdgeMarginEnabled = false;
     attached.screenEdgeBorderVisible = true;
     attached.floatingCornersVisible = true;
     QCOMPARE(PanelBorderDecision::enabledBorders(attached), attachedBorders);
 
-    attached.configuredFloatingPanel = true;
+    attached.configuredFloatingPresentation = true;
     attached.floatingCornersVisible = true;
     QCOMPARE(PanelBorderDecision::enabledBorders(attached),
              KSvg::FrameSvg::AllBorders);
+}
+
+void PanelBorderDecisionTest::
+    attachedFullSpanOverridesAllCornersAtOutputBoundaries()
+{
+    constexpr std::array attachedEdges{
+        std::pair{
+            FloatingPanelGeometry::Edge::Top,
+            KSvg::FrameSvg::EnabledBorders{
+                KSvg::FrameSvg::BottomBorder}},
+        std::pair{
+            FloatingPanelGeometry::Edge::Right,
+            KSvg::FrameSvg::EnabledBorders{
+                KSvg::FrameSvg::LeftBorder}},
+        std::pair{
+            FloatingPanelGeometry::Edge::Bottom,
+            KSvg::FrameSvg::EnabledBorders{
+                KSvg::FrameSvg::TopBorder}},
+        std::pair{
+            FloatingPanelGeometry::Edge::Left,
+            KSvg::FrameSvg::EnabledBorders{
+                KSvg::FrameSvg::RightBorder}},
+    };
+
+    for (const auto &[edge, expectedBorders] : attachedEdges) {
+        const PanelBorderDecision::Inputs attached{
+            .edge = edge,
+            .alignment = PanelBorderDecision::Alignment::Justify,
+            .configuredFloatingPresentation = true,
+            .screenEdgeBorderVisible = false,
+            .floatingCornersVisible = false,
+            .screenEdgeMarginEnabled = true,
+            .backgroundAllCorners = true,
+            .maxLength = 1.0,
+        };
+        QCOMPARE(
+            PanelBorderDecision::enabledBorders(attached),
+            expectedBorders);
+
+        auto partial = attached;
+        partial.alignment = PanelBorderDecision::Alignment::Center;
+        partial.maxLength = 0.6;
+        const auto partialBorders =
+            PanelBorderDecision::enabledBorders(partial);
+        const auto physicalBorder = [edge]() {
+            switch (edge) {
+            case FloatingPanelGeometry::Edge::Top:
+                return KSvg::FrameSvg::TopBorder;
+            case FloatingPanelGeometry::Edge::Right:
+                return KSvg::FrameSvg::RightBorder;
+            case FloatingPanelGeometry::Edge::Bottom:
+                return KSvg::FrameSvg::BottomBorder;
+            case FloatingPanelGeometry::Edge::Left:
+                return KSvg::FrameSvg::LeftBorder;
+            }
+
+            Q_UNREACHABLE_RETURN(KSvg::FrameSvg::NoBorder);
+        }();
+        QCOMPARE(
+            partialBorders | physicalBorder,
+            KSvg::FrameSvg::AllBorders);
+    }
 }
 
 QTEST_MAIN(PanelBorderDecisionTest)

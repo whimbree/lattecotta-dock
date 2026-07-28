@@ -175,6 +175,7 @@ static DockSystemViewRecord stableBottomTransitionRecord()
     record.normalThickness = 40;
     record.maximumNormalThickness = 47;
     record.screenEdgeMargin = 7;
+    record.presentedScreenEdgeGap = 3;
     record.windowGeometry = QRect(100, 953, 300, 47);
     record.absoluteGeometry = QRect(100, 960, 300, 40);
     record.screenGeometry = QRect(0, 0, 1920, 1000);
@@ -886,6 +887,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     record.normalThickness = 72;
     record.maximumNormalThickness = 96;
     record.screenEdgeMargin = 8;
+    record.presentedScreenEdgeGap = 6;
     record.windowGeometry = QRect(1, 2, 3, 4);
     record.absoluteGeometry = QRect(5, 6, 7, 8);
     record.localGeometry = QRect(9, 10, 11, 12);
@@ -1049,8 +1051,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("snapshotSequence"),
         QStringLiteral("stacking"),
         QStringLiteral("views")}));
-    QCOMPARE(DockSystemSnapshot::SchemaVersion, 8);
-    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 8);
+    QCOMPARE(DockSystemSnapshot::SchemaVersion, 9);
+    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 9);
     QCOMPARE(root.value(QStringLiteral("snapshotSequence")).toString(), QStringLiteral("41"));
     QCOMPARE(
         root.value(
@@ -1164,6 +1166,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("onPrimary"), QStringLiteral("orientation"),
         QStringLiteral("originalDockId"), QStringLiteral("persistentDockId"),
         QStringLiteral("pointerInsideView"),
+        QStringLiteral("presentedScreenEdgeGap"),
         QStringLiteral("publishedStruts"), QStringLiteral("relationship"),
         QStringLiteral("relocationGeneration"),
         QStringLiteral("requestedReservationDepth"),
@@ -1219,6 +1222,10 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(view.value(QStringLiteral("effectiveIconSize")).toInt(), 52);
     QCOMPARE(view.value(QStringLiteral("availablePrimaryLength")).toInt(), 900);
     QCOMPARE(view.value(QStringLiteral("screenEdgeMargin")).toInt(), 8);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("presentedScreenEdgeGap")).toInt(),
+        6);
     QCOMPARE(view.value(QStringLiteral("surfaceGeometry")).toArray(),
              serializeRect(record.surfaceGeometry));
     QCOMPARE(view.value(QStringLiteral("layerShellAnchors")).toArray(),
@@ -1446,6 +1453,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("configuredIconSize"), QStringLiteral("effectiveIconSize"),
         QStringLiteral("availablePrimaryLength"), QStringLiteral("normalThickness"),
         QStringLiteral("maximumNormalThickness"), QStringLiteral("screenEdgeMargin"),
+        QStringLiteral("presentedScreenEdgeGap"),
         QStringLiteral("strutsThickness"),
         QStringLiteral("layerShellExclusiveZone"),
         QStringLiteral("reservationContributionDepth"),
@@ -1616,6 +1624,10 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     requireJsonType(view, QStringLiteral("transitionGeometryRevision"), QJsonValue::String);
     requireJsonType(view, QStringLiteral("stableLayerShellMargin"), QJsonValue::Double);
     requireJsonType(view, QStringLiteral("screenEdgeMargin"), QJsonValue::Double);
+    requireJsonType(
+        view,
+        QStringLiteral("presentedScreenEdgeGap"),
+        QJsonValue::Double);
     QCOMPARE(view.value(QStringLiteral("floatingGapConfigured")).toBool(), false);
     QCOMPARE(view.value(QStringLiteral("floatingPanelConfigured")).toBool(), false);
     QCOMPARE(view.value(QStringLiteral("floatingDamageMaskPending")).toBool(), false);
@@ -1651,6 +1663,10 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
              QStringLiteral("0"));
     QCOMPARE(view.value(QStringLiteral("stableLayerShellMargin")).toInt(), 0);
     QCOMPARE(view.value(QStringLiteral("screenEdgeMargin")).toInt(), 0);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("presentedScreenEdgeGap")).toInt(),
+        0);
     const QStringList absentTransitionFields{
         QStringLiteral("attachedPresentationGeometry"),
         QStringLiteral("contentTranslation"),
@@ -1797,6 +1813,10 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
     rejects([](auto &snapshot) {
         snapshot.views[0]
             .objects.transitionController.clear();
+    });
+    rejects([](auto &snapshot) {
+        ++snapshot.views[0]
+              .presentedScreenEdgeGap;
     });
     rejects([](auto &snapshot) {
         snapshot.views[0]
@@ -2087,6 +2107,8 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         panel.transitionTarget =
             DockTransitionTarget::Floated;
         panel.transitionProgress = 1.0;
+        panel.presentedScreenEdgeGap =
+            panel.screenEdgeMargin;
         panel.transitionPhase =
             DockTransitionPhase::Resting;
         panel.transitionDirection =
@@ -2125,6 +2147,7 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
     attached.transitionTarget =
         DockTransitionTarget::Attached;
     attached.transitionProgress = 0.0;
+    attached.presentedScreenEdgeGap = 0;
     attached.transitionPhase =
         DockTransitionPhase::Resting;
     attached.transitionDirection =
@@ -2189,6 +2212,7 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         dockRecord.edge = Plasma::Types::BottomEdge;
         dockRecord.maximumNormalThickness = 15;
         dockRecord.screenEdgeMargin = 5;
+        dockRecord.presentedScreenEdgeGap = 0;
         dockRecord.absoluteGeometry =
             QRect(20, 90, 100, 10);
         dockRecord.screenGeometry =
@@ -2197,10 +2221,18 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         dockRecord.floatingPanelConfigured = false;
         dockRecord.attachOnWindowTouchConfigured = true;
         dockRecord.dockGapHideRequested = true;
+        dockRecord.touchingWindowCount = 1;
+        dockRecord.windowTouchGeometryRoleType =
+            QStringLiteral("QRect");
         dockRecord.visibilityMode = Types::AlwaysVisible;
         dockRecord.transitionTarget =
-            DockTransitionTarget::Floated;
-        dockRecord.transitionProgress = 1.0;
+            DockTransitionTarget::Attached;
+        dockRecord.transitionProgress = 0.0;
+        dockRecord.enabledBorders = {
+            QStringLiteral("top"),
+            QStringLiteral("right"),
+            QStringLiteral("left"),
+        };
         dockRecord.geometrySettled = true;
         dockRecord.inReadyState = true;
         dockRecord.stableTriggerGeometry =
@@ -2226,10 +2258,36 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         dock.stableTriggerGeometry.reset();
         QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
         dock.inReadyState = false;
+        dock.dockGapHideRequested = false;
+        dock.touchingWindowCount = 0;
+        dock.windowTouchGeometryRoleType.clear();
+        dock.transitionTarget =
+            DockTransitionTarget::Floated;
+        dock.transitionProgress = 1.0;
+        dock.presentedScreenEdgeGap = 5;
+        dock.enabledBorders = {
+            QStringLiteral("top"),
+            QStringLiteral("right"),
+            QStringLiteral("bottom"),
+            QStringLiteral("left"),
+        };
         QVERIFY(dockTransitionRecordsAgree(dockSnapshot));
         dock.stableTriggerGeometry =
             QRect(20, 84, 100, 15);
         dock.inReadyState = true;
+        dock.dockGapHideRequested = true;
+        dock.touchingWindowCount = 1;
+        dock.windowTouchGeometryRoleType =
+            QStringLiteral("QRect");
+        dock.transitionTarget =
+            DockTransitionTarget::Attached;
+        dock.transitionProgress = 0.0;
+        dock.presentedScreenEdgeGap = 0;
+        dock.enabledBorders = {
+            QStringLiteral("top"),
+            QStringLiteral("right"),
+            QStringLiteral("left"),
+        };
         dock.visibilityMode =
             Types::DodgeActive;
         QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
@@ -2242,6 +2300,9 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
         dock.floatingGapConfigured = true;
         dock.floatingPanelEligible = true;
+        QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
+        dock.floatingPanelEligible = false;
+        dock.dockGapHideRequested = false;
         QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
     }
 
@@ -2315,6 +2376,8 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
     ineligibleView.transitionTarget =
         DockTransitionTarget::Floated;
     ineligibleView.transitionProgress = 1.0;
+    ineligibleView.presentedScreenEdgeGap =
+        ineligibleView.screenEdgeMargin;
     ineligibleView.transitionPhase =
         DockTransitionPhase::Resting;
     ineligibleView.transitionDirection =
@@ -2349,6 +2412,11 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
     const auto setBottomProgress =
         [](DockSystemViewRecord &record, qreal progress) {
             record.transitionProgress = progress;
+            record.presentedScreenEdgeGap =
+                qRound(
+                    static_cast<qreal>(
+                        record.screenEdgeMargin)
+                    * progress);
             const qreal visibleY = 7.0 * (1.0 - progress);
             record.currentVisibleGeometry =
                 QRectF(0.0, visibleY, 300.0, 40.0);
@@ -2410,6 +2478,7 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
     flushView.floatingGapConfigured = false;
     flushView.floatingPanelConfigured = false;
     flushView.screenEdgeMargin = 0;
+    flushView.presentedScreenEdgeGap = 0;
     flushView.floatingPanelEligible = false;
     flushView.floatingAppletPopupsPreferred = false;
     flushView.transitionTarget =

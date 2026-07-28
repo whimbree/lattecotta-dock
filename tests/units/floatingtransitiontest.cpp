@@ -47,7 +47,7 @@ private Q_SLOTS:
     void canonicalizesNearEndpointsExactly();
     void togglesPopupHintFromTargetAndPreservesUnknownBits();
     void ineligibleControllerRemainsFloated();
-    void preservesDockMaximizedGapPolicy();
+    void drivesDockPresentationFromTheSharedFractionalController();
     void defersOnlyANewAttachmentUntilPointerExit();
     void reconcilesEveryPolicyInputAtomically();
     void rejectsInvalidConfigurationWithoutReplacingStableState();
@@ -263,26 +263,49 @@ void FloatingTransitionTest::ineligibleControllerRemainsFloated()
     QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
 }
 
-void FloatingTransitionTest::preservesDockMaximizedGapPolicy()
+void FloatingTransitionTest::
+    drivesDockPresentationFromTheSharedFractionalController()
 {
-    FloatingTransition controller;
-    controller.setAnimationDuration(0);
+    auto *const animation = new QPropertyAnimation;
+    FloatingTransition controller(nullptr, animation);
+    controller.setAnimationDuration(400);
 
     controller.reconcileTargetPolicy(
-        false, true, true, true, 0, false);
+        false, true, true, true, 1, false);
     QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
     QVERIFY(!controller.dockGapHideRequested());
     QVERIFY(!controller.attachmentDeferredByPointer());
 
     controller.reconcileTargetPolicy(
-        false, true, true, true, 0, true);
+        false, true, true, true, 1, true);
     QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
+    QVERIFY(controller.dockGapHideRequested());
+    QVERIFY(controller.attachmentDeferredByPointer());
+
+    controller.reconcileTargetPolicy(
+        false, true, true, false, 1, true);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Attached);
+    QCOMPARE(controller.phase(), FloatingTransition::Phase::Attaching);
+    QCOMPARE(animation->startValue().toReal(), 1.0);
+    QCOMPARE(animation->endValue().toReal(), 0.0);
+    QCOMPARE(animation->duration(), 400);
+    QCOMPARE(animation->easingCurve().type(), QEasingCurve::InCubic);
     QVERIFY(controller.dockGapHideRequested());
     QVERIFY(!controller.attachmentDeferredByPointer());
 
+    animation->setCurrentTime(200);
+    const qreal inwardValue = controller.floatingness();
+    QVERIFY(inwardValue > 0.0);
+    QVERIFY(inwardValue < 1.0);
+
     controller.reconcileTargetPolicy(
-        false, true, true, true, 0, false);
+        false, true, true, false, 0, false);
     QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
+    QCOMPARE(controller.phase(), FloatingTransition::Phase::Floating);
+    QCOMPARE(animation->startValue().toReal(), inwardValue);
+    QCOMPARE(animation->endValue().toReal(), 1.0);
+    QCOMPARE(animation->duration(), 400);
+    QCOMPARE(animation->easingCurve().type(), QEasingCurve::OutCubic);
 
     QTest::ignoreMessage(
         QtCriticalMsg,
@@ -291,6 +314,14 @@ void FloatingTransitionTest::preservesDockMaximizedGapPolicy()
         true, true, false, false, 1, true);
     QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
     QVERIFY(!controller.floatingPanelEligible());
+    QVERIFY(!controller.dockGapHideRequested());
+
+    QTest::ignoreMessage(
+        QtCriticalMsg,
+        "FloatingTransition refused an inconsistent Dock gap-hide request");
+    controller.reconcileTargetPolicy(
+        false, true, false, false, 0, true);
+    QCOMPARE(controller.target(), FloatingTransition::Target::Floated);
     QVERIFY(!controller.dockGapHideRequested());
 }
 
@@ -335,11 +366,14 @@ void FloatingTransitionTest::reconcilesEveryPolicyInputAtomically()
     int observedSignals{0};
     const auto verifyCompletePolicy = [&controller, &observedSignals]() {
         ++observedSignals;
-        const bool shouldAttach =
+        const bool panelAttachmentRequested =
             controller.floatingPanelEligible()
             && controller.attachOnWindowTouchConfigured()
-            && !controller.attachmentDeferredByPointer()
             && controller.touchingWindowCount() > 0;
+        const bool shouldAttach =
+            (panelAttachmentRequested
+             || controller.dockGapHideRequested())
+            && !controller.attachmentDeferredByPointer();
         QVERIFY(!controller.attachmentDeferredByPointer()
                 || (controller.attachmentWaitsForPointerExitConfigured()
                     && controller.pointerInsideView()));
@@ -395,6 +429,15 @@ void FloatingTransitionTest::reconcilesEveryPolicyInputAtomically()
             }
         }
     }
+
+    controller.reconcileTargetPolicy(
+        false, true, true, true, 1, true);
+    verifyCompletePolicy();
+    QVERIFY(controller.attachmentDeferredByPointer());
+    controller.reconcileTargetPolicy(
+        false, true, true, false, 1, true);
+    verifyCompletePolicy();
+    QCOMPARE(controller.target(), FloatingTransition::Target::Attached);
 
     QVERIFY(observedSignals > 0);
 

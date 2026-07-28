@@ -127,7 +127,7 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
     connect(m_floatingTransition,
             &ViewPart::FloatingTransition::currentGeometryChanged,
             m_effects,
-            &ViewPart::Effects::applyFloatingPanelPresentation);
+            &ViewPart::Effects::applyFloatingPresentationProgress);
     connect(this,
             &View::floatingPanelConfiguredChanged,
             m_effects,
