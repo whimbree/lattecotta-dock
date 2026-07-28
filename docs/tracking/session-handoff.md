@@ -5,13 +5,17 @@ Last updated 2026-07-27.
 
 ## 2026-07-27: D241 unifies floating Dock presentation
 
+PR #132 merged through GitHub's rebase flow at `6944d24e4` on `main`. The
+tree-equivalent reviewed branch passed the canonical gate at `fb9e527a1`, and
+the fresh final independent review returned `MERGE` with no remaining findings.
+
 D241 (floating Docks bypassed fractional presentation) remained after PR #130
 fixed live trigger delivery. `FloatingTransition` recorded the Dock request but
 kept the `floated` target, while QML separately animated the legacy
 `hideThickScreenGap` Boolean. The same window crossing therefore drove two
 different presentation models.
 
-Commit `20bae6edc` routes eligible Docks through the per-view qreal transition.
+Commit `193cf9514` routes eligible Docks through the per-view qreal transition.
 Dock QML retains paint, input, background, and sizing ownership. C++ owns the
 target, progress, reversal, and exact attached physical-edge border. The
 QWindow, output, primary span, and maximum-depth reservation remain fixed.
@@ -28,22 +32,22 @@ the mixed portrait and landscape outputs.
 The first independent PR #132 review returned `MERGE AFTER FIXES`. D242 (Dock
 visibility callbacks erased QML-owned effects geometry) found that hidden and
 sidebar changes called the destructive Panel ownership handoff. Commit
-`2d4c49b` routes them through the Dock-aware dispatcher. D243 (schema 9 refused
+`2ac15ad22` routes them through the Dock-aware dispatcher. D243 (schema 9 refused
 pre-Metrics startup snapshots) found that the new presented-gap field aborted
-the complete query before QML Metrics existed. Commit `6b2864a81` preserves a
+the complete query before QML Metrics existed. Commit `b9136b0b4` preserves a
 required nullable wire value through startup and requires the exact number
-after readiness. Commit `59a9c5a67` replaces the weak prefix guard with
+after readiness. Commit `6fb6dfe0c` replaces the weak prefix guard with
 controlled negatives for every Dock transition-ownership arm and both
-visibility callbacks. Commit `aa2ebd4f7` keeps every ownership mutation
+visibility callbacks. Commit `ca702d402` keeps every ownership mutation
 syntactically valid while disabling exactly one semantic arm. Focused D-Bus,
 source-contract, operation-model, and production builds pass after the
 corrections. The replacement canonical gate
-passes at exact source head `c7be75996ed34496038637c95c726411b6d23912`
+passes at tree-equivalent reviewed branch head
+`fb9e527a180b7bc5ff0a027d96b6cd06edc18089`
 with all 124 CTest entries, QML compile and lint ratchets, rendered scene
 probes, ASan and UBSan nested execution, package provenance controls, and
-matrix refusals. The fresh independent review found no code issue. Its only
-remaining finding was this stale gate-evidence line, corrected here before the
-final exact-head gate and verdict.
+matrix refusals. The fresh independent review found no code issue and returned
+`MERGE` after the stale gate-evidence line was corrected.
 
 ## 2026-07-27: PR #130 merges live titlebar attachment
 
