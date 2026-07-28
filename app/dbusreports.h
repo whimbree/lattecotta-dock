@@ -581,7 +581,7 @@ struct DockSystemViewRecord {
     int normalThickness{0};
     int maximumNormalThickness{0};
     int screenEdgeMargin{0};
-    int presentedScreenEdgeGap{0};
+    std::optional<int> presentedScreenEdgeGap;
 
     QRect windowGeometry;
     QRect absoluteGeometry;
@@ -1700,7 +1700,7 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
     json[QStringLiteral("maximumNormalThickness")] = record.maximumNormalThickness;
     json[QStringLiteral("screenEdgeMargin")] = record.screenEdgeMargin;
     json[QStringLiteral("presentedScreenEdgeGap")] =
-        record.presentedScreenEdgeGap;
+        serializeOptionalInt(record.presentedScreenEdgeGap);
 
     json[QStringLiteral("windowGeometry")] = serializeRect(record.windowGeometry);
     json[QStringLiteral("absoluteGeometry")] = serializeRect(record.absoluteGeometry);
@@ -2025,6 +2025,12 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                 || view.visibilityMode == Types::WindowsGoBelow)
             && view.attachOnWindowTouchConfigured
             && view.touchingWindowCount > 0;
+        const bool presentedGapAvailable =
+            view.presentedScreenEdgeGap.has_value();
+        const int presentedGap =
+            view.presentedScreenEdgeGap.value_or(0);
+        const bool presentedGapRequired =
+            view.inReadyState && !view.inStartup;
         if (view.objects.transitionController.isEmpty()
                 || otherAuthorities.contains(
                     transitionController)
@@ -2047,13 +2053,17 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                 || view.transitionProgress < 0.0
                 || view.transitionProgress > 1.0
                 || view.screenEdgeMargin < 0
-                || view.presentedScreenEdgeGap < 0
-                || view.presentedScreenEdgeGap
-                    > view.screenEdgeMargin
+                || (presentedGapRequired
+                    && !presentedGapAvailable)
+                || (presentedGapAvailable
+                    && (presentedGap < 0
+                        || presentedGap
+                            > view.screenEdgeMargin))
                 || (view.floatingGapConfigured
                     && view.screenEdgeMargin <= 0)
-                || (!view.floatingGapConfigured
-                    && view.presentedScreenEdgeGap != 0)
+                || (presentedGapAvailable
+                    && !view.floatingGapConfigured
+                    && presentedGap != 0)
                 || view.touchingWindowCount < 0
                 || (!view.windowTouchGeometryRoleType.isEmpty()
                     && view.windowTouchGeometryRoleType
@@ -2154,8 +2164,8 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                 * view.transitionProgress);
         if ((view.floatingPanelConfigured
                 || dockTransitionOwnsGap)
-            && view.presentedScreenEdgeGap
-                != expectedPresentedGap) {
+            && presentedGapAvailable
+            && presentedGap != expectedPresentedGap) {
             return false;
         }
 

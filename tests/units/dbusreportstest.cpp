@@ -1226,6 +1226,17 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         view.value(
             QStringLiteral("presentedScreenEdgeGap")).toInt(),
         6);
+    auto startupRecord = record;
+    startupRecord.presentedScreenEdgeGap.reset();
+    const QJsonObject startupView =
+        serializeDockSystemViewRecord(
+            startupRecord,
+            false);
+    requireJsonType(
+        startupView,
+        QStringLiteral(
+            "presentedScreenEdgeGap"),
+        QJsonValue::Null);
     QCOMPARE(view.value(QStringLiteral("surfaceGeometry")).toArray(),
              serializeRect(record.surfaceGeometry));
     QCOMPARE(view.value(QStringLiteral("layerShellAnchors")).toArray(),
@@ -1627,7 +1638,7 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     requireJsonType(
         view,
         QStringLiteral("presentedScreenEdgeGap"),
-        QJsonValue::Double);
+        QJsonValue::Null);
     QCOMPARE(view.value(QStringLiteral("floatingGapConfigured")).toBool(), false);
     QCOMPARE(view.value(QStringLiteral("floatingPanelConfigured")).toBool(), false);
     QCOMPARE(view.value(QStringLiteral("floatingDamageMaskPending")).toBool(), false);
@@ -1663,10 +1674,10 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
              QStringLiteral("0"));
     QCOMPARE(view.value(QStringLiteral("stableLayerShellMargin")).toInt(), 0);
     QCOMPARE(view.value(QStringLiteral("screenEdgeMargin")).toInt(), 0);
-    QCOMPARE(
+    QVERIFY(
         view.value(
-            QStringLiteral("presentedScreenEdgeGap")).toInt(),
-        0);
+            QStringLiteral(
+                "presentedScreenEdgeGap")).isNull());
     const QStringList absentTransitionFields{
         QStringLiteral("attachedPresentationGeometry"),
         QStringLiteral("contentTranslation"),
@@ -1815,9 +1826,26 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
             .objects.transitionController.clear();
     });
     rejects([](auto &snapshot) {
-        ++snapshot.views[0]
-              .presentedScreenEdgeGap;
+        ++*snapshot.views[0]
+               .presentedScreenEdgeGap;
     });
+
+    {
+        DockSystemSnapshot startup = valid;
+        startup.views[0].inStartup = true;
+        startup.views[0].inReadyState = false;
+        startup.views[0]
+            .presentedScreenEdgeGap.reset();
+        QVERIFY(
+            dockTransitionRecordsAgree(
+                startup));
+
+        startup.views[0].inStartup = false;
+        startup.views[0].inReadyState = true;
+        QVERIFY(
+            !dockTransitionRecordsAgree(
+                startup));
+    }
     rejects([](auto &snapshot) {
         snapshot.views[0]
             .objects.transitionController =

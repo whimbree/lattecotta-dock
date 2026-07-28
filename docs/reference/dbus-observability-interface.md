@@ -80,7 +80,7 @@ Landed before or during the 2026-07-16 stabilization session:
   `editMode && universalSettings.inConfigureAppletsMode`, not the raw global
   toggle. A global rearrange session therefore does not report unrelated docks
   as configuring applets.
-- `dockSystemData() -> s` (compact JSON object, schema version 8; added by C0
+- `dockSystemData() -> s` (compact JSON object, schema version 9; added by C0
   (the atomic dock-system observability snapshot)). This is the relational
   all-docks read. One synchronous call captures the global configuration mode,
   every current dock, and every active output-edge reservation group. Docks
@@ -268,6 +268,7 @@ Landed before or during the 2026-07-16 stabilization session:
   `effectiveIconSize` comes from the live Metrics object;
   `availablePrimaryLength` is the layouter's current logical-pixel
   `contentsMaxLength`, the post-padding applet span the autosizer consumes.
+  `presentedScreenEdgeGap` is also null while Metrics is not constructed.
   It is smaller than raw containment `maxLength` when the solid background owns
   internal primary-axis end padding. External shadow paint does not reduce it.
   `screensGroup` is always a string in a valid response. A derived member
