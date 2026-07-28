@@ -4969,7 +4969,7 @@ prerequisites in the phases above are done.
       retaining Dock-owned paint and input geometry, a stable QWindow,
       primary span, output assignment, and reservation. Expose the presented
       gap and exact attached border endpoint through D-Bus schema 9.
-      Commits: 20bae6edc, 59a9c5a67
+      Commits: 20bae6edc, 59a9c5a67, aa2ebd4f7
 - [x] Fix D242 (Dock visibility callbacks erased QML-owned effects geometry).
       Route ordinary visibility changes through the presentation dispatcher.
       Reserve the destructive Panel-to-Dock geometry handoff for actual type
