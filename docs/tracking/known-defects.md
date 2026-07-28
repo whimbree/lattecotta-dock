@@ -3061,6 +3061,43 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   failed at the captured-prior contract, then passed after restoring the fix.
 - SEVERITY: release blocker.
 
+### D243 - Schema 9 refused pre-Metrics startup snapshots
+- STATUS: FIXED on `fix/floating-dock-presentation` by `6b2864a81`; PR
+  pending.
+- FOUND: 2026-07-27, independent review of PR #132.
+- SYMPTOM: `dockSystemData()` returns an empty string while a Dock's live QML
+  Metrics object is not yet constructed. The startup and teardown states that
+  most need atomic observability therefore become unobservable.
+- ROOT: schema 9 made `presentedScreenEdgeGap` an unconditional integer and
+  treated absent Metrics as a collection failure. Existing live QML sizing
+  fields already represent that expected lifecycle interval as JSON null.
+- FIX: make the presented gap optional while keeping the wire key required.
+  Startup and teardown may report null. A settled ready view requires the
+  numeric value, and a constructed Metrics object missing its declared property
+  still logs a critical defect.
+- EVIDENCE: all 164 D-Bus tests pass numeric and null serialization, accept the
+  explicit startup form, and reject the same missing value after readiness.
+  The deterministic schema-9 operation model accepts the nullable lifecycle
+  form and passes all 31 adversarial tests.
+- SEVERITY: beta blocker.
+
+### D242 - Dock visibility callbacks erased QML-owned effects geometry
+- STATUS: FIXED on `fix/floating-dock-presentation` by `2d4c49b`; PR
+  pending.
+- FOUND: 2026-07-27, independent review of PR #132.
+- SYMPTOM: an ordinary hidden or sidebar transition can briefly clear a Dock's
+  effects rectangle and mask before QML republishes them.
+- ROOT: both visibility callbacks invoked the Panel presentation handoff
+  directly. Its Dock branch deliberately clears C++ geometry when ownership
+  changes from Panel to Dock, but visibility state is not an ownership change.
+- FIX: route ordinary visibility callbacks through the presentation dispatcher.
+  Panels retain C++ geometry publication, Docks retain QML paint and input
+  ownership, and the destructive handoff remains limited to actual Dock/Panel
+  type changes.
+- EVIDENCE: the production binary rebuilds. The source contract passes and
+  controlled mutations that restore either destructive callback fail.
+- SEVERITY: beta blocker.
+
 ### D241 - Floating Docks bypassed fractional presentation
 - STATUS: FIXED on `fix/floating-dock-presentation` by `20bae6edc`; PR
   pending.
@@ -3088,7 +3125,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   combinations. Nested recipe 071 passes committed maximize and restore.
   Recipe 074 observes fractional Panel and Dock frames during one button-held
   titlebar crossing and reversal with no QWindow, reservation, layer-shell, or
-  tracker-authority drift.
+  tracker-authority drift. The corrected source contract requires direct
+  eligibility, running-transition retention, and displaced-progress retention
+  independently; removing any arm fails.
 - SEVERITY: beta blocker.
 
 ### D240 - Operation model omitted the schema-8 screen-edge margin

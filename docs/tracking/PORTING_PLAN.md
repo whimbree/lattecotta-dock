@@ -4969,7 +4969,16 @@ prerequisites in the phases above are done.
       retaining Dock-owned paint and input geometry, a stable QWindow,
       primary span, output assignment, and reservation. Expose the presented
       gap and exact attached border endpoint through D-Bus schema 9.
-      Commits: 20bae6edc
+      Commits: 20bae6edc, 59a9c5a67
+- [x] Fix D242 (Dock visibility callbacks erased QML-owned effects geometry).
+      Route ordinary visibility changes through the presentation dispatcher.
+      Reserve the destructive Panel-to-Dock geometry handoff for actual type
+      ownership changes.
+      Commits: 2d4c49b
+- [x] Fix D243 (schema 9 refused pre-Metrics startup snapshots).
+      Preserve the required presented-gap key as null until the live QML
+      authority exists, then require its exact numeric value after readiness.
+      Commits: 6b2864a81
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

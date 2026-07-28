@@ -25,6 +25,19 @@ crossing and outward reversal, with zero stable physical-state drift. The real
 configuration starts successfully and returns valid schema-9 snapshots across
 the mixed portrait and landscape outputs.
 
+The first independent PR #132 review returned `MERGE AFTER FIXES`. D242 (Dock
+visibility callbacks erased QML-owned effects geometry) found that hidden and
+sidebar changes called the destructive Panel ownership handoff. Commit
+`2d4c49b` routes them through the Dock-aware dispatcher. D243 (schema 9 refused
+pre-Metrics startup snapshots) found that the new presented-gap field aborted
+the complete query before QML Metrics existed. Commit `6b2864a81` preserves a
+required nullable wire value through startup and requires the exact number
+after readiness. Commit `59a9c5a67` replaces the weak prefix guard with
+controlled negatives for every Dock transition-ownership arm and both
+visibility callbacks. Focused D-Bus, source-contract, operation-model, and
+production builds pass after the corrections. A replacement canonical gate and
+fresh independent review remain required before merge.
+
 ## 2026-07-27: PR #130 merges live titlebar attachment
 
 PR #130 merged through GitHub's rebase flow at `1b7d804ec` on `main`. The
