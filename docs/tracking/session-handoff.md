@@ -34,8 +34,10 @@ the complete query before QML Metrics existed. Commit `6b2864a81` preserves a
 required nullable wire value through startup and requires the exact number
 after readiness. Commit `59a9c5a67` replaces the weak prefix guard with
 controlled negatives for every Dock transition-ownership arm and both
-visibility callbacks. Focused D-Bus, source-contract, operation-model, and
-production builds pass after the corrections. The replacement canonical gate
+visibility callbacks. Commit `aa2ebd4f7` keeps every ownership mutation
+syntactically valid while disabling exactly one semantic arm. Focused D-Bus,
+source-contract, operation-model, and production builds pass after the
+corrections. The replacement canonical gate
 passes at exact source head `c5efcbdf461f25d8c2bc8bb3e99c63b0d5d2cfac`
 with all 124 CTest entries, QML compile and lint ratchets, rendered scene
 probes, ASan and UBSan nested execution, package provenance controls, and
