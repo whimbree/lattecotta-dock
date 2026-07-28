@@ -103,14 +103,19 @@ remaining authority errors:
   the floating gap even though the direct task-model feed was live;
 - floating Docks still bound gap hiding to the legacy committed-maximize
   summary instead of the per-view live trigger.
+- after the live trigger was corrected, floating Docks still bypassed the
+  fractional controller and animated a separate Boolean gap.
 
 The trigger solver now matches Plasma's translated full-envelope rule.
 `WindowTouchTracker` owns one explicit trigger supplied by its `View`. A Panel
 supplies its stable transition trigger. A Dock supplies a trigger solved from
 its own output, edge, exact resting primary span, attached depth, and configured
 gap. Eligible Docks consume the live touching count while keeping the attached
-reservation depth fixed. Schema 8 exposes that exact tracker-owned trigger and
-the configured `screenEdgeMargin`.
+reservation depth fixed. The Dock request selects the same per-view qreal
+target as a Panel, but Dock QML retains paint and input ownership and does not
+manufacture `FloatingPanelGeometry`. Schema 9 exposes the tracker-owned
+trigger, configured `screenEdgeMargin`, and current
+`presentedScreenEdgeGap`.
 
 ## Lattecotta ownership model
 

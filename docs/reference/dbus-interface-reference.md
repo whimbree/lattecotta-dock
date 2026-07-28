@@ -70,7 +70,7 @@ true with `isOffScreen`), what the compositor was told to reserve.
 call dockSystemData                    # s: compact schema-versioned JSON object
 ```
 
-Top level: `schemaVersion` (currently 8), `snapshotSequence` (decimal string,
+Top level: `schemaVersion` (currently 9), `snapshotSequence` (decimal string,
 process-local monotonic call identity), `globalConfigureAppletsMode`,
 `stacking`, `reservationStateGeneration` (decimal string),
 `reservationGroups`, and `views`. The complete view and reservation graph is
@@ -120,6 +120,9 @@ Per dock:
   `orientation`, `alignment`, `maximumLengthRatio`, and `offsetRatio`.
 - Sizing: `configuredIconSize`, `effectiveIconSize`,
   `availablePrimaryLength`, `normalThickness`, and `maximumNormalThickness`.
+  `screenEdgeMargin` is the configured floating gap.
+  `presentedScreenEdgeGap` is the current integer gap after applying the
+  per-view fractional transition.
   `effectiveIconSize` and `availablePrimaryLength` are null while their live
   QML authorities are not constructed. A null `configuredIconSize` instead
   means the required containment configuration map or its `iconSize` entry is
@@ -133,6 +136,7 @@ Per dock:
   `floatingPanelEligible`, `attachOnWindowTouchConfigured`,
   `attachmentWaitsForPointerExitConfigured`, `pointerInsideView`,
   `attachmentDeferredByPointer`, `dockGapHideRequested`,
+  `screenEdgeMargin`, `presentedScreenEdgeGap`,
   `touchingWindowCount`, `windowTouchGeometryRoleType`,
   `transitionTarget` (`attached|floated`),
   `transitionProgress` (qreal 0 through 1), `transitionPhase`
@@ -156,10 +160,12 @@ Per dock:
   `floatingPanelEligible` is the transition controller's current Panel
   window-touch admission decision. An ineligible Panel cannot attach through
   the window-touch arm. The separate `dockGapHideRequested` fact requires
-  `floatingGapConfigured` and rejects `floatingPanelConfigured`, but it does
-  not target a Panel transition for a Dock. It is valid for the legacy
-  `alwaysVisible` and `windowsGoBelow` Dock modes that consume
-  `hideThickScreenGap`.
+  `floatingGapConfigured`, rejects `floatingPanelConfigured`, and selects the
+  same per-view fractional target for a Dock without manufacturing Panel
+  transition geometry. It is valid for `alwaysVisible` and `windowsGoBelow`
+  Dock modes. `presentedScreenEdgeGap` equals
+  `round(screenEdgeMargin * transitionProgress)` while that transition owns
+  the Dock gap.
   Each geometry field is null when the controller has no stable geometry.
   The stable canvas and trigger use virtual-desktop coordinates. Attached,
   floated, current visible, computed mask and bridge, and applet measurement
@@ -283,24 +289,22 @@ The stable window-touch policy is reported by
 `touchingWindowCount`, and `windowTouchGeometryRoleType`. The first two fields
 are raw persistent preferences and `pointerInsideView` is the raw per-view
 pointer state. `attachmentDeferredByPointer` is the controller-owned latch for
-a new Panel attachment request. Pointer entry does not detach an already
-attached Panel. The latch clears when the pointer leaves or the touch request
-disappears. `floatingGapConfigured` is the presentation-independent positive
-screen-edge margin predicate. `dockGapHideRequested` is the separate legacy
-Dock maximized-gap arm; it requires that predicate and cannot coexist with
+a new attachment request. Pointer entry does not detach an already attached
+view. The latch clears when the pointer leaves or the touch request disappears.
+`floatingGapConfigured` is the presentation-independent positive
+screen-edge margin predicate. `dockGapHideRequested` is the separate Dock
+policy input; it requires that predicate and cannot coexist with
 `floatingPanelConfigured` or Panel eligibility. The role-type field is empty
 until a live task row is validated and is then exactly `QRect`; a positive
 touch count requires that validated type. The dedicated tracker owns
 `touchingWindowCount`; the transition controller holds a policy copy, and
 snapshot collection fails closed unless both counts agree. The serialized
-value is the tracker-owned count. `transitionTarget` must be
-`attached` exactly when `floatingPanelEligible &&
-attachOnWindowTouchConfigured && !attachmentDeferredByPointer &&
-touchingWindowCount > 0`; every other state must target `floated`.
-`dockGapHideRequested` remains independent because Docks consume their
-tracker-owned live trigger through the existing internal gap presentation in
-`alwaysVisible` and `windowsGoBelow`. They do not manufacture stable Panel
-transition geometry.
+value is the tracker-owned count. `transitionTarget` must be `attached`
+exactly when either the eligible Panel equation or
+`dockGapHideRequested` is true and pointer deferral is false. Every other
+state must target `floated`. Docks consume the shared scalar through their
+existing internal layout in `alwaysVisible` and `windowsGoBelow`; they do not
+manufacture stable Panel transition geometry.
 
 An internal lineage, transition, or reservation invariant failure logs at
 critical severity and returns an empty D-Bus string. It never returns a smaller
@@ -318,7 +322,8 @@ state=$(call dockSystemData)
 jq '.views | map({persistentDockId,logicalDockId,relationship,linkPlacement,linkedDockIds})' <<<"$state"
 jq '[.views[] | select(.effectiveConfigureAppletsMode)] | length' <<<"$state"
 jq '.views | map({persistentDockId,floatingGapConfigured,
-                  screenEdgeMargin,stableTriggerGeometry,
+                  screenEdgeMargin,presentedScreenEdgeGap,
+                  stableTriggerGeometry,
                   floatingPanelConfigured,floatingPanelEligible,
                   transitionTarget,transitionProgress,transitionPhase,
                   transitionGeometryRevision,

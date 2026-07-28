@@ -3061,6 +3061,36 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   failed at the captured-prior contract, then passed after restoring the fix.
 - SEVERITY: release blocker.
 
+### D241 - Floating Docks bypassed fractional presentation
+- STATUS: FIXED on `fix/floating-dock-presentation` by `20bae6edc`; PR
+  pending.
+- FOUND: 2026-07-27, real-session comparison with Plasma after PR #130.
+- SYMPTOM: a dragged window reaches a floating Dock in real time, but the Dock
+  gap either changes as a separate Boolean animation or waits for a committed
+  maximize. Radius and physical-edge border state can disagree with the
+  presented gap.
+- ROOT: PR #130 supplied the correct live trigger but left presentation
+  authority split. `FloatingTransition` stored `dockGapHideRequested` while
+  deliberately retaining the `floated` target. QML separately consumed
+  `hideThickScreenGap` through its own `NumberAnimation`. Panels and Docks
+  therefore observed the same interaction through different state machines.
+- FIX: route eligible Docks through the existing per-view qreal transition.
+  Dock QML consumes that scalar for the gap while retaining ownership of its
+  paint and input geometry. C++ owns target selection and the exact attached
+  border endpoint. The Dock QWindow, primary span, output assignment, and
+  reservation do not move. Outward reversal retains transition ownership when
+  visibility or the attachment setting changes.
+- EVIDENCE: 13 transition tests prove current-value reversal, pointer
+  deferral, and invalid-request refusal. Five border tests cover every edge and
+  alignment plus full-span and partial-span attached endpoints. The schema-9
+  D-Bus tests require `presentedScreenEdgeGap` to equal the configured gap
+  multiplied by progress and reject impossible target, request, and border
+  combinations. Nested recipe 071 passes committed maximize and restore.
+  Recipe 074 observes fractional Panel and Dock frames during one button-held
+  titlebar crossing and reversal with no QWindow, reservation, layer-shell, or
+  tracker-authority drift.
+- SEVERITY: beta blocker.
+
 ### D240 - Operation model omitted the schema-8 screen-edge margin
 - STATUS: FIXED on `main` by `5a2948bb5`; merged through PR #130.
 - FOUND: 2026-07-26, independent review of PR #130.

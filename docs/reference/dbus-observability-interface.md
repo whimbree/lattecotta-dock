@@ -90,7 +90,7 @@ Landed before or during the 2026-07-16 stabilization session:
   only after a complete coordinator projection transaction.
   ```json
   {
-    "schemaVersion": 8,
+    "schemaVersion": 9,
     "snapshotSequence": "14",
     "globalConfigureAppletsMode": true,
     "stacking": {
@@ -179,6 +179,7 @@ Landed before or during the 2026-07-16 stabilization session:
       "reservationLayerShellExclusiveZone": 48,
       "floatingGapConfigured": true,
       "screenEdgeMargin": 18,
+      "presentedScreenEdgeGap": 7,
       "floatingPanelConfigured": true,
       "floatingPanelEligible": true,
       "attachOnWindowTouchConfigured": true,
@@ -299,12 +300,17 @@ Landed before or during the 2026-07-16 stabilization session:
   `View::floatingGapConfigured()`: screen-edge margins are enabled and the
   configured margin is positive, independent of Dock or Panel identity.
   Schema 7 also adds the dedicated window-touch inputs and count plus the
-  separate legacy Dock maximized-gap request. A Dock reports that request while
-  its Panel transition target remains `floated`.
+  separate Dock attachment request.
   Schema 8 makes `WindowTouchTracker` the `stableTriggerGeometry` authority for
   both Panels and floating Docks and adds `screenEdgeMargin`. A ready, settled
   floating Dock must report the exact trigger reconstructed from its own output,
   edge, stable resting span, attached depth, and gap.
+  Schema 9 routes eligible Docks through the same per-view fractional
+  transition authority as Panels and adds `presentedScreenEdgeGap`. The
+  presented gap must equal the configured margin multiplied by
+  `transitionProgress` and rounded to the nearest logical pixel. A Dock still
+  reports null Panel transition geometry because its QML layout owns paint and
+  input presentation inside the stable surface.
 
   `transitionTarget`, `transitionProgress`, `transitionPhase`,
   `transitionDirection`, and `transitionRunning` report the controller's
@@ -378,12 +384,12 @@ Landed before or during the 2026-07-16 stabilization session:
   `attachOnWindowTouchConfigured` and
   `attachmentWaitsForPointerExitConfigured` are raw persistent preferences;
   `pointerInsideView` is the raw per-view pointer state.
-  `attachmentDeferredByPointer` is the controller-owned latch for a new Panel
-  attachment request. Entering an already attached Panel does not detach it.
-  `dockGapHideRequested` is the separate legacy Dock maximized-gap request.
+  `attachmentDeferredByPointer` is the controller-owned latch for a new
+  attachment request. Entering an already attached view does not detach it.
+  `dockGapHideRequested` is the separate Dock policy input.
   It requires `floatingGapConfigured` and rejects
   `floatingPanelConfigured`. It is valid in the `alwaysVisible` and
-  `windowsGoBelow` Dock modes that consume `hideThickScreenGap`.
+  `windowsGoBelow` Dock modes.
   `touchingWindowCount` is the current count from the dedicated stable-trigger
   model and the tracker is authoritative for the serialized value. The
   transition controller retains a policy copy; collection refuses the entire
@@ -392,10 +398,11 @@ Landed before or during the 2026-07-16 stabilization session:
   touch count without that exact observed type is rejected. A record is
   accepted only when its transition target satisfies this exact fail-closed
   equation:
-  `attached == floatingPanelEligible && attachOnWindowTouchConfigured &&
-  !attachmentDeferredByPointer && touchingWindowCount > 0`.
-  `dockGapHideRequested` remains independent because Docks consume the legacy
-  gap path directly and have no stable Panel transition geometry.
+  `attached == ((floatingPanelEligible && attachOnWindowTouchConfigured &&
+  touchingWindowCount > 0) || dockGapHideRequested) &&
+  !attachmentDeferredByPointer`.
+  The Dock request targets the shared scalar but does not create stable Panel
+  transition geometry.
   `effectiveConfigureAppletsMode` is derived from the same per-view expression
   as QML. The raw global bit appears only once at the snapshot root.
 

@@ -3,6 +3,28 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-27.
 
+## 2026-07-27: D241 unifies floating Dock presentation
+
+D241 (floating Docks bypassed fractional presentation) remained after PR #130
+fixed live trigger delivery. `FloatingTransition` recorded the Dock request but
+kept the `floated` target, while QML separately animated the legacy
+`hideThickScreenGap` Boolean. The same window crossing therefore drove two
+different presentation models.
+
+Commit `20bae6edc` routes eligible Docks through the per-view qreal transition.
+Dock QML retains paint, input, background, and sizing ownership. C++ owns the
+target, progress, reversal, and exact attached physical-edge border. The
+QWindow, output, primary span, and maximum-depth reservation remain fixed.
+D-Bus schema 9 adds `presentedScreenEdgeGap` and rejects inconsistent Dock
+requests, progress-derived gaps, transition targets, and attached borders.
+
+Focused transition, border, D-Bus, source, QML compile, and qmllint checks
+pass. Nested recipe 071 passes committed maximize and restore. Recipe 074
+observes fractional Panel and Dock frames during one button-held titlebar
+crossing and outward reversal, with zero stable physical-state drift. The real
+configuration starts successfully and returns valid schema-9 snapshots across
+the mixed portrait and landscape outputs.
+
 ## 2026-07-27: PR #130 merges live titlebar attachment
 
 PR #130 merged through GitHub's rebase flow at `1b7d804ec` on `main`. The
