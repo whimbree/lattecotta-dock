@@ -38,10 +38,12 @@ visibility callbacks. Commit `aa2ebd4f7` keeps every ownership mutation
 syntactically valid while disabling exactly one semantic arm. Focused D-Bus,
 source-contract, operation-model, and production builds pass after the
 corrections. The replacement canonical gate
-passes at exact source head `c5efcbdf461f25d8c2bc8bb3e99c63b0d5d2cfac`
+passes at exact source head `c7be75996ed34496038637c95c726411b6d23912`
 with all 124 CTest entries, QML compile and lint ratchets, rendered scene
 probes, ASan and UBSan nested execution, package provenance controls, and
-matrix refusals. A fresh independent review remains required before merge.
+matrix refusals. The fresh independent review found no code issue. Its only
+remaining finding was this stale gate-evidence line, corrected here before the
+final exact-head gate and verdict.
 
 ## 2026-07-27: PR #130 merges live titlebar attachment
 
