@@ -29,7 +29,7 @@ Item{
     property int animationSpeed: LatteCore.WindowSystem.compositingActive ?
                                      (root.editMode ? 400 : animations.speedFactor.current * 1.62 * animations.duration.large) : 0
 
-    property bool inClientSideScreenEdgeSliding: root.behaveAsDockWithMask && hideThickScreenGap
+    property bool inClientSideScreenEdgeSliding: false
     property bool inNormalState: ((animations.needBothAxis.count === 0) && (animations.needLength.count === 0))
                                  || (latteView && latteView.visibility.isHidden && !latteView.visibility.containsMouse && animations.needThickness.count === 0)
     property bool inRelocationAnimation: latteView && latteView.positioner && latteView.positioner.inRelocationAnimation

@@ -136,6 +136,8 @@ void Effects::init()
     connect(m_view, &Latte::View::maxLengthChanged, this, &Effects::updateEnabledBorders);
     connect(m_view, &Latte::View::offsetChanged, this, &Effects::updateEnabledBorders);
     connect(m_view, &Latte::View::screenEdgeMarginEnabledChanged, this, &Effects::updateEnabledBorders);
+    connect(m_view, &Latte::View::floatingGapConfiguredChanged,
+            this, &Effects::updateEnabledBorders);
     connect(m_view, &Latte::View::behaveAsPlasmaPanelChanged, this, &Effects::updateEffects);
     connect(this, &Effects::drawShadowsChanged, this, &Effects::updateShadows);
     connect(m_view, &Latte::View::behaveAsPlasmaPanelChanged, this, &Effects::updateShadows);
@@ -444,6 +446,23 @@ bool Effects::floatingPresentationOwnsInput() const
         && (!m_view->visibility()
             || (!m_view->visibility()->isHidden()
                 && !m_view->visibility()->isSidebar()));
+}
+
+void Effects::applyFloatingPresentationProgress()
+{
+    if (!m_view) {
+        return;
+    }
+
+    if (m_view->behaveAsPlasmaPanel()) {
+        applyFloatingPanelPresentation();
+        return;
+    }
+
+    //! Docks retain QML ownership of their paint and input rectangles. Only
+    //! endpoint borders derive from the shared fractional presentation; using
+    //! the Panel handoff here would clear the Dock-owned effects rectangle.
+    updateEnabledBorders();
 }
 
 void Effects::applyFloatingPanelPresentation()
@@ -885,17 +904,29 @@ void Effects::updateEnabledBorders()
         m_view->isFloatingPanel()
         && transition
         && transition->hasGeometry();
+    const bool configuredFloatingDock =
+        !m_view->behaveAsPlasmaPanel()
+        && m_view->floatingGapConfigured()
+        && transition;
+    const bool configuredFloatingPresentation =
+        configuredFloatingPanel || configuredFloatingDock;
+    const bool floatingBoundaryVisible =
+        configuredFloatingPanel
+        ? transition->screenEdgeBorderVisible()
+        : configuredFloatingDock
+            && transition->floatingness() != 0.0;
     const KSvg::FrameSvg::EnabledBorders borders =
         PanelBorderDecision::enabledBorders({
             .edge = *edge,
             .alignment = *alignment,
-            .configuredFloatingPanel = configuredFloatingPanel,
+            .configuredFloatingPresentation =
+                configuredFloatingPresentation,
             .screenEdgeBorderVisible =
-                configuredFloatingPanel
-                && transition->screenEdgeBorderVisible(),
+                configuredFloatingPresentation
+                && floatingBoundaryVisible,
             .floatingCornersVisible =
-                configuredFloatingPanel
-                && transition->floatingCornersVisible(),
+                configuredFloatingPresentation
+                && floatingBoundaryVisible,
             .screenEdgeMarginEnabled =
                 m_view->screenEdgeMarginEnabled(),
             .backgroundAllCorners = m_backgroundAllCorners,

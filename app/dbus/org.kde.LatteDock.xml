@@ -128,7 +128,11 @@
          authoritative for both Panels and Docks, reports screenEdgeMargin,
          and defines stableTriggerGeometry as the full stable floating
          envelope translated one logical pixel inward and clipped to its
-         output. The dockSystemData schema version is 8.
+         output. Schema 9 adds presentedScreenEdgeGap and routes eligible
+         floating Docks through the same fractional transition authority as
+         floating Panels. Dock presentation keeps its QML-owned paint and
+         input geometry while the stable QWindow and reservation remain
+         unchanged. The dockSystemData schema version is 9.
          The mandatory per-view transition geometry,
          surface publication, and layer-shell configure revisions are
          process-local monotonic decimal strings.

@@ -168,14 +168,27 @@ ContainmentItem {
             || latteView.visibility.mode === LatteCore.Types.WindowsGoBelow)
     readonly property bool dockGapHideRequested:
         directDockWindowTouchEligible
-        && hideThickScreenGap
-    //! Compatibility readback for layout/background consumers. Target
-    //! selection belongs exclusively to FloatingTransition.
-    readonly property bool floatingGapIsAttached:
-        !!(latteView
-           && latteView.floatingTransition
-           && latteView.floatingTransition.attachmentTargeted)
-
+        && latteView.windowTouchTracker
+        && latteView.windowTouchTracker.touchingWindowCount > 0
+    readonly property real floatingPresentationProgress:
+        latteView && latteView.floatingTransition
+        ? latteView.floatingTransition.floatingness : 1.0
+    readonly property bool floatingPresentationDisplaced:
+        floatingPresentationProgress < 1.0
+    readonly property bool floatingGapIsFullyAttached:
+        floatingPresentationProgress === 0.0
+    //! A Dock keeps consuming the shared scalar until an outward reversal has
+    //! fully settled. Dropping ownership when visibility eligibility or the
+    //! attachment setting changes would expose the legacy Boolean margin for
+    //! the final animation frames.
+    readonly property bool dockFloatingTransitionOwnsGap:
+        root.behaveAsDockWithMask
+        && latteView
+        && !latteView.floatingPanelConfigured
+        && latteView.floatingTransition
+        && (directDockWindowTouchEligible
+            || latteView.floatingTransition.running
+            || floatingPresentationDisplaced)
     property bool mirrorScreenGap: screenEdgeMarginEnabled
                                    && Plasmoid.configuration.floatingGapIsMirrored
                                    && latteView.visibility.mode === LatteCore.Types.AlwaysVisible
@@ -227,6 +240,7 @@ ContainmentItem {
     property real maxLengthPerCentage: behaveAsPlasmaPanel
                                       ? Plasmoid.configuration.maxLength
                                       : (hideLengthScreenGaps
+                                         && !dockFloatingTransitionOwnsGap
                                          ? 100 : Plasmoid.configuration.maxLength)
 
     property int minLength: {
@@ -390,15 +404,15 @@ ContainmentItem {
     Binding {
         target: root
         property: "hideThickScreenGap"
-        when: !(Plasmoid.configuration.floatingGapHidingWaitsMouse && dockContainsMouse)
+        when: root.dockFloatingTransitionOwnsGap
+              || !(Plasmoid.configuration.floatingGapHidingWaitsMouse
+                   && dockContainsMouse)
         value: screenEdgeMarginEnabled
                && Plasmoid.configuration.hideFloatingGapForMaximized
                && latteView
-               && (directDockWindowTouchEligible
-                   ? latteView.windowTouchTracker
-                     && latteView.windowTouchTracker.touchingWindowCount > 0
-                   : latteView.windowsTracker
-                     && latteView.windowsTracker.currentScreen.existsWindowMaximized)
+               && !root.dockFloatingTransitionOwnsGap
+               && latteView.windowsTracker
+               && latteView.windowsTracker.currentScreen.existsWindowMaximized
         restoreMode: Binding.RestoreNone
     }
 
@@ -411,8 +425,10 @@ ContainmentItem {
               && ((root.behaveAsPlasmaPanel && latteView.positioner.slideOffset === 0)
                   || root.behaveAsDockWithMask)
               && !(Plasmoid.configuration.floatingGapHidingWaitsMouse && dockContainsMouse)
-        value: ((root.behaveAsPlasmaPanel
-                 ? root.floatingGapIsAttached : root.hideThickScreenGap)
+        value: ((root.floatingTransitionEligible
+                 || root.dockFloatingTransitionOwnsGap
+                 ? root.floatingGapIsFullyAttached
+                 : root.hideThickScreenGap)
                 && (latteView.visibility.mode === LatteCore.Types.AlwaysVisible
                     || (!root.behaveAsPlasmaPanel
                         && latteView.visibility.mode === LatteCore.Types.WindowsGoBelow))
@@ -914,6 +930,14 @@ ContainmentItem {
         id: visibilityManager
         layouts: layoutsContainer
         window: latteView
+        inClientSideScreenEdgeSliding:
+            root.behaveAsDockWithMask
+            && (root.dockFloatingTransitionOwnsGap
+                ? (root.floatingPresentationDisplaced
+                   || (root.latteView
+                       && root.latteView.floatingTransition
+                       && root.latteView.floatingTransition.running))
+                : root.hideThickScreenGap)
     }
 
     DragDropArea {
@@ -1213,6 +1237,12 @@ ContainmentItem {
     Ability.Metrics {
         id: _metrics
         stablePanelEnvelope: root.behaveAsPlasmaPanel
+        screenEdgeMarginIsEnabled: root.screenEdgeMarginEnabled
+        dockTransitionOwnsGap: root.dockFloatingTransitionOwnsGap
+        presentationProgress: root.floatingPresentationProgress
+        thickScreenGapIsHidden: root.hideThickScreenGap
+        configuredScreenEdgeMargin:
+            Plasmoid.configuration.screenEdgeMargin
         availablePrimaryLength: _layouter.contentsMaxLength
         animations: _animations
         autosize: _autosize

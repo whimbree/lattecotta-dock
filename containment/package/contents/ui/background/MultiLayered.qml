@@ -28,6 +28,9 @@ BackgroundProperties{
     required property var dockView
 
     stablePanelEnvelope: root.behaveAsPlasmaPanel
+    dockTransitionDisplaced:
+        barLine.containmentRoot.dockFloatingTransitionOwnsGap
+        && barLine.containmentRoot.floatingPresentationDisplaced
 
     //! stateless resolver for the per-edge padding math and the effects
     //! area rect (EX-13; units/backgroundstate.h)

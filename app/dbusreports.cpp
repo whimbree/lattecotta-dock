@@ -1068,6 +1068,26 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
                 qWarning() << "dbusreports: containment" << record.persistentDockId
                            << "metrics exposes no availablePrimaryLength";
             }
+
+            const QVariant presentedGap =
+                readLiveProperty(
+                    metrics,
+                    "presentedScreenEdgeGap");
+            if (!presentedGap.isValid()) {
+                qCritical()
+                    << "dbusreports: containment"
+                    << record.persistentDockId
+                    << "metrics exposes no presentedScreenEdgeGap";
+                return std::nullopt;
+            }
+            record.presentedScreenEdgeGap =
+                presentedGap.toInt();
+        } else {
+            qCritical()
+                << "dbusreports: containment"
+                << record.persistentDockId
+                << "has no live metrics authority";
+            return std::nullopt;
         }
 
         const auto *const editController = view->rootObject();
@@ -1248,6 +1268,13 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
                         ContainmentPrefersFloatingApplets);
         record.transitionProgress =
             transition->floatingness();
+        if (record.floatingPanelConfigured) {
+            record.presentedScreenEdgeGap =
+                qRound(
+                    static_cast<qreal>(
+                        record.screenEdgeMargin)
+                    * record.transitionProgress);
+        }
         record.transitionPhase =
             transitionPhaseForSnapshot(
                 transition->phase());

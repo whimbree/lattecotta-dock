@@ -84,8 +84,8 @@ def parse_ids(raw: str) -> tuple[int, int, int]:
 def select_views(
     snapshot: dict[str, Any], ids: tuple[int, int, int]
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    if snapshot.get("schemaVersion") != 8:
-        fail(f"expected dockSystemData schema 8, got {snapshot.get('schemaVersion')}")
+    if snapshot.get("schemaVersion") != 9:
+        fail(f"expected dockSystemData schema 9, got {snapshot.get('schemaVersion')}")
     records = {view["persistentDockId"]: view for view in snapshot["views"]}
     assert_exact_view_set(set(records), set(ids))
     return records[ids[0]], records[ids[1]], records[ids[2]]

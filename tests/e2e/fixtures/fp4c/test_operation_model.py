@@ -241,6 +241,7 @@ class OperationModelTest(unittest.TestCase):
             "normalThickness": depth,
             "maximumNormalThickness": depth + 8,
             "screenEdgeMargin": gap,
+            "presentedScreenEdgeGap": gap,
             "windowGeometry": rect,
             "absoluteGeometry": rect,
             "localGeometry": local,
@@ -440,7 +441,7 @@ class OperationModelTest(unittest.TestCase):
             if expected.placement is not None
         ]
         return {
-            "schemaVersion": 8,
+            "schemaVersion": 9,
             "snapshotSequence": "41",
             "globalConfigureAppletsMode": state.configuring,
             "stacking": {
@@ -1112,11 +1113,11 @@ class OperationModelTest(unittest.TestCase):
             "canonical splitmix64-v1",
         )
 
-    def test_schema_and_current_visible_geometry_are_strict(self) -> None:
+    def test_schema_and_presentation_geometry_are_strict(self) -> None:
         malformed = self.mutated(
             lambda snapshot: snapshot.__setitem__("schemaVersion", 6)
         )
-        self.assert_refused(lambda: model.parse_snapshot(malformed), "schema 8")
+        self.assert_refused(lambda: model.parse_snapshot(malformed), "schema 9")
 
         missing_margin = self.mutated(
             lambda snapshot: snapshot["views"][0].pop("screenEdgeMargin")
@@ -1134,6 +1135,26 @@ class OperationModelTest(unittest.TestCase):
         self.assert_refused(
             lambda: model.parse_snapshot(wrong_margin_type),
             "screenEdgeMargin",
+        )
+
+        missing_presented_gap = self.mutated(
+            lambda snapshot: snapshot["views"][0].pop(
+                "presentedScreenEdgeGap"
+            )
+        )
+        self.assert_refused(
+            lambda: model.parse_snapshot(missing_presented_gap),
+            "presentedScreenEdgeGap",
+        )
+
+        wrong_presented_gap_type = self.mutated(
+            lambda snapshot: snapshot["views"][0].__setitem__(
+                "presentedScreenEdgeGap", "18"
+            )
+        )
+        self.assert_refused(
+            lambda: model.parse_snapshot(wrong_presented_gap_type),
+            "presentedScreenEdgeGap",
         )
 
         nullable_publisher_wire = self.mutated(

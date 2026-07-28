@@ -310,7 +310,8 @@ void FloatingTransition::reconcileTargetPolicy(
     }
     if (dockGapHideRequested
         && (floatingPanelEligible
-            || !attachOnWindowTouchConfigured)) {
+            || !attachOnWindowTouchConfigured
+            || touchingWindowCount <= 0)) {
         qCritical()
             << "FloatingTransition refused an inconsistent Dock gap-hide"
                " request";
@@ -347,22 +348,24 @@ void FloatingTransition::reconcileTargetPolicy(
         m_floatingPanelEligible
         && m_attachOnWindowTouchConfigured
         && m_touchingWindowCount > 0;
+    const bool attachmentRequested =
+        panelAttachmentRequested || m_dockGapHideRequested;
     //! Pointer entry is not a detach request. It defers only an attachment
     //! that begins while the pointer is already inside this view.
     const bool attachmentAlreadyTargeted =
         m_target == Target::Attached;
     m_attachmentDeferredByPointer =
-        panelAttachmentRequested
+        attachmentRequested
         && m_attachmentWaitsForPointerExitConfigured
         && m_pointerInsideView
         && !attachmentAlreadyTargeted;
     const bool deferralDidChange =
         deferredBefore != m_attachmentDeferredByPointer;
-    //! Docks consume the legacy hideThickScreenGap path directly and do not
-    //! own stable transition geometry. Keep that request observable without
-    //! manufacturing an Attached target that no Dock presentation can render.
+    //! The scalar presentation belongs to this controller for both view
+    //! types. A Dock deliberately owns no FloatingPanelGeometry; its QML
+    //! layout consumes floatingness while its stable QWindow stays unchanged.
     const bool shouldAttach =
-        panelAttachmentRequested
+        attachmentRequested
         && !m_attachmentDeferredByPointer;
     requestTarget(shouldAttach ? Target::Attached : Target::Floated);
 

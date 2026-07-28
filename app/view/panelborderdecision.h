@@ -23,7 +23,7 @@ enum class Alignment {
 struct Inputs {
     FloatingPanelGeometry::Edge edge{FloatingPanelGeometry::Edge::Bottom};
     Alignment alignment{Alignment::Center};
-    bool configuredFloatingPanel{false};
+    bool configuredFloatingPresentation{false};
     bool screenEdgeBorderVisible{false};
     bool floatingCornersVisible{false};
     bool screenEdgeMarginEnabled{false};
@@ -41,15 +41,18 @@ struct Inputs {
 
     // Every floating shape owns all four corners. Gate the geometric predicate
     // with view configuration because flush panels also rest at progress 1.
-    if (inputs.configuredFloatingPanel && inputs.floatingCornersVisible) {
+    if (inputs.configuredFloatingPresentation
+        && inputs.floatingCornersVisible) {
         return Border::AllBorders;
     }
 
     Border::EnabledBorders borders = Border::AllBorders;
 
     const bool hidePhysicalEdge =
-        (inputs.configuredFloatingPanel && !inputs.screenEdgeBorderVisible)
-        || (!inputs.configuredFloatingPanel && !inputs.screenEdgeMarginEnabled
+        (inputs.configuredFloatingPresentation
+         && !inputs.screenEdgeBorderVisible)
+        || (!inputs.configuredFloatingPresentation
+            && !inputs.screenEdgeMarginEnabled
             && !inputs.backgroundAllCorners);
     if (hidePhysicalEdge) {
         switch (inputs.edge) {
@@ -68,7 +71,11 @@ struct Inputs {
         }
     }
 
-    if (inputs.backgroundAllCorners) {
+    const bool attachedFloatingPresentation =
+        inputs.configuredFloatingPresentation
+        && !inputs.floatingCornersVisible;
+    if (inputs.backgroundAllCorners
+        && !attachedFloatingPresentation) {
         return borders;
     }
 
