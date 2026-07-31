@@ -4992,10 +4992,11 @@ prerequisites in the phases above are done.
       Classify output coverage from translated presentation geometry and the
       assigned output endpoints, not from whether paint fills the local
       QWindow canvas. Preserve endpoint borders for partial Panels on every
-      edge and output origin. Read the applied output and global surface from
-      Positioner, defer changes across incomplete relocation generations, and
-      recompute after placement commit.
-      Commits: 88b4eef27, 5be872c20
+      edge and output origin. Positioner publishes one applied surface, output
+      geometry, placement generation, and forced-border snapshot only after
+      LayerShell accepts the placement. Solver scratch, mutable screen
+      observation, and incomplete output changes cannot feed border policy.
+      Commits: 88b4eef27, 5be872c20, 45772ac13
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
