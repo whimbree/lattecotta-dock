@@ -214,8 +214,10 @@ and PR #126 landed FP-4B.
       Commits: eabe3df05, 3cf23db0a, 19104b58e
 - [x] D245 (partial Panels lost endpoint borders at live attachment) compares
       translated presentation geometry with the assigned output endpoints.
-      Filling a partial QWindow no longer impersonates full output coverage.
-      Commit: 88b4eef27
+      Filling a partial QWindow no longer impersonates full output coverage,
+      and lagging `QWindow::screen()` observation cannot replace the applied
+      Positioner output during relocation.
+      Commits: 88b4eef27, 5be872c20
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
       independent unless a shared root is proved.
@@ -227,7 +229,7 @@ and PR #126 landed FP-4B.
       terms.
 - [x] The full canonical gate passes after the final source commit.
       The replacement gate exited 0 at exact source head
-      `88b4eef27958fbd2a61e741a5e84c3201ee2198e`, including all 124 CTest
+      `5be872c20052b89142e2a1a4dfe370b0af2196dd`, including all 124 CTest
       entries, QML and coverage ratchets, visual probes, the complete
       ASan/UBSan build, four nested-compositor recipes, package provenance
       controls, and matrix refusals.
