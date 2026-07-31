@@ -3879,6 +3879,11 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         "m_view->screenGeometry()")));
     QVERIFY(effects.contains(QStringLiteral(
         "Effectsrefusedinvalidbordergeometryfor")));
+    QVERIFY(effects.contains(QStringLiteral(
+        "if(m_waitingForLegacyDockPresentation&&!m_rect.isValid())")));
+    QVERIFY(effects.contains(QStringLiteral(
+        "if(!m_rect.isValid()||!surfaceGeometry.isValid()"
+        "||!assignedOutputGeometry.isValid())")));
     QVERIFY(view.contains(QStringLiteral(
         "&ViewPart::Positioner::surfaceGeometryPublicationRevisionChanged,"
         "m_effects,&ViewPart::Effects::updateEnabledBorders")));

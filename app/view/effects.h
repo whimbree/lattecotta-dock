@@ -185,6 +185,10 @@ private:
     bool m_drawEffects{false};
     bool m_forceTopBorder{false};
     bool m_forceBottomBorder{false};
+    //! A Panel-to-Dock handoff clears the controller-owned rectangle before
+    //! QML publishes the first legacy Dock rectangle. This explicit state is
+    //! the only valid post-startup presentation absence.
+    bool m_waitingForLegacyDockPresentation{false};
 
     bool m_hasTopLeftCorner{false};
     bool m_hasTopRightCorner{false};

@@ -373,6 +373,10 @@ void Effects::setRect(QRect area)
         return;
     }
 
+    if (area.isValid()) {
+        m_waitingForLegacyDockPresentation = false;
+    }
+
     if (m_rect == area) {
         return;
     }
@@ -478,6 +482,7 @@ void Effects::applyFloatingPanelPresentation()
         const bool rectWasChanged = !m_rect.isNull();
         const bool maskWasChanged = !m_mask.isNull();
         m_rect = {};
+        m_waitingForLegacyDockPresentation = true;
         m_mask = {};
         m_view->setProperty("_floating_visible_geometry",
                             QVariant{});
@@ -912,8 +917,16 @@ void Effects::updateEnabledBorders()
     const QRect assignedOutputGeometry =
         positioner->surfaceOutputGeometry();
     const QRect surfaceGeometry = positioner->surfaceGeometry();
-    if (!assignedOutputGeometry.isValid()
-            || (m_rect.isValid() && !surfaceGeometry.isValid())) {
+    if (m_waitingForLegacyDockPresentation
+            && !m_rect.isValid()) {
+        //! applyFloatingPanelPresentation() explicitly transferred paint to
+        //! QML. setRect() ends this handoff and recomputes the borders.
+        return;
+    }
+
+    if (!m_rect.isValid()
+            || !surfaceGeometry.isValid()
+            || !assignedOutputGeometry.isValid()) {
         qCritical() << "Effects refused invalid border geometry for"
                     << m_view->validTitle()
                     << "presentation=" << m_rect
