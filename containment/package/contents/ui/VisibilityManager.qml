@@ -123,6 +123,21 @@ Item{
         }
     }
 
+    // The containment supplies root as this component's runtime context. It
+    // has no static qualifier in this inherited Qt5-shaped boundary.
+    // qmllint disable unqualified
+    Connections {
+        target: root
+        function onAutomaticSizingMaximumLengthChanged() {
+            //! A fully attached Justify Dock keeps a full-width effects rect,
+            //! so a configured length change has no paint signal to refresh
+            //! its stable occupied footprint. The configured resting budget
+            //! is an independent authority and must publish itself directly.
+            manager.updateMaskArea();
+        }
+    }
+    // qmllint enable unqualified
+
     Connections {
         target: manager.window ? manager.window.visibility : null
         function onIsSidebarChanged() {

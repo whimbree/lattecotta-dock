@@ -38,6 +38,16 @@ print($expression)
 "
 }
 
+view_config_field() {
+    local expression="$1"
+    e2e_json viewConfigData u "$view" | python3 -c "
+import json, sys
+payload = json.load(sys.stdin)
+config = payload['config']
+print($expression)
+"
+}
+
 stable_physical_snapshot() {
     dock_field 'json.dumps({
         "reservationStateGeneration": snapshot["reservationStateGeneration"],
@@ -70,6 +80,24 @@ stable_physical_snapshot() {
         "configuredIconSize": v["configuredIconSize"],
         "effectiveIconSize": v["effectiveIconSize"],
         "availablePrimaryLength": v["availablePrimaryLength"],
+    }, sort_keys=True, separators=(",", ":"))'
+}
+
+configured_length_independent_snapshot() {
+    dock_field 'json.dumps({
+        "windowGeometry": v["windowGeometry"],
+        "surfaceGeometry": v["surfaceGeometry"],
+        "canvasGeometry": v["canvasGeometry"],
+        "screenGeometry": v["screenGeometry"],
+        "configuredIconSize": v["configuredIconSize"],
+        "effectiveIconSize": v["effectiveIconSize"],
+        "screenEdgeMargin": v["screenEdgeMargin"],
+        "reservationContributionDepth": v["reservationContributionDepth"],
+        "reservationPublishedDepth": v["reservationPublishedDepth"],
+        "layerShellMargins": v["layerShellMargins"],
+        "layerShellAnchors": v["layerShellAnchors"],
+        "layerShellExclusiveEdge": v["layerShellExclusiveEdge"],
+        "layerShellExclusiveZone": v["layerShellExclusiveZone"],
     }, sort_keys=True, separators=(",", ":"))'
 }
 
@@ -155,6 +183,7 @@ fractional_presentation_probe() {
 }
 
 wait_for_dock_attached_presentation_while_held() {
+    local require_held="${1:-true}"
     local progress=unread configured_ratio=unread
     local presented_x=-1 presented_length=-1 output_x=-1 output_length=-1
     local borders=unread
@@ -166,10 +195,12 @@ wait_for_dock_attached_presentation_while_held() {
               && "$presented_x" -eq "$output_x"
               && "$presented_length" -eq "$output_length"
               && "$borders" == bottom ]]; then
-            (( drag_pid > 0 )) \
-                || e2e_fail "attached Dock presentation has no held drag"
-            kill -0 "$drag_pid" 2>/dev/null \
-                || e2e_fail "Dock reached full span only after button release"
+            if [[ "$require_held" == true ]]; then
+                (( drag_pid > 0 )) \
+                    || e2e_fail "attached Dock presentation has no held drag"
+                kill -0 "$drag_pid" 2>/dev/null \
+                    || e2e_fail "Dock reached full span only after button release"
+            fi
             return 0
         fi
         sleep 0.01
@@ -332,6 +363,18 @@ move_konsole() {
     }" | tail -1
 }
 
+set_konsole_maximized() {
+    local enabled="$1"
+    e2e_kwin_js "for (const window of workspace.windowList()) {
+        if (window.resourceClass === 'org.kde.konsole'
+                && window.caption.includes('LATTE LIVE TITLEBAR TOUCH')) {
+            workspace.activeWindow = window;
+            window.setMaximize($enabled, $enabled);
+            print('@TAG@|' + window.internalId);
+        }
+    }" | tail -1
+}
+
 wait_for_konsole_geometry() {
     local expected_x="$1" expected_y="$2"
     local expected_width="$3" expected_height="$4"
@@ -387,6 +430,8 @@ configure_case() {
     kwriteconfig6 "${group_args[@]}" --key minLength 60 \
         || e2e_fail "could not keep the partial Panel span static for $cell"
     if [[ "$cell" == dock-* ]]; then
+        kwriteconfig6 "${group_args[@]}" --key autoSizeEnabled false \
+            || e2e_fail "could not disable automatic sizing for $cell"
         kwriteconfig6 "${group_args[@]}" --key backgroundRadius 50 \
             || e2e_fail "could not retain Dock presentation for $cell"
         kwriteconfig6 "${group_args[@]}" --key maximizeWhenMaximized true \
@@ -529,13 +574,19 @@ PY
         "$expected_type" attaching \
         "$expected_type live inward presentation" \
         "$expect_dock_expansion"
+    if [[ "$expected_type" == dock
+          && "$expect_dock_expansion" == true ]]; then
+        #! The complete-span endpoint is the shortest-lived assertion in the
+        #! held crossing. Observe it before the policy query spends another
+        #! D-Bus round trip; the endpoint itself also proves the attached
+        #! target and the still-owned button hold.
+        wait_for_dock_attached_presentation_while_held true
+    fi
     wait_for_policy_while_held \
         "$expected_type" 1 "$expected_request" "$expected_target" \
         "$expected_type live inward crossing"
     if [[ "$expected_type" == dock
-          && "$expect_dock_expansion" == true ]]; then
-        wait_for_dock_attached_presentation_while_held
-    elif [[ "$expected_type" == dock ]]; then
+          && "$expect_dock_expansion" != true ]]; then
         assert_partial_dock_presentation \
             "$expected_type live attachment" \
             "$base_presented_x" "$base_presented_length"
@@ -564,6 +615,146 @@ PY
     fi
     assert_stable_physical_snapshot \
         "$expected_type after release" "$base_snapshot"
+    stop_owned_konsole
+}
+
+exercise_attached_maximum_length_change() {
+    local screen_x screen_y screen_width screen_height
+    local initial_maximum initial_absolute_x initial_absolute_width
+    local initial_trigger_x initial_trigger_width
+
+    [[ "$(view_config_field 'json.dumps(config["autoSizeEnabled"])')" == false ]] \
+        || e2e_fail "attached length-mutation fixture did not disable automatic sizing"
+    initial_maximum="$(view_config_field 'config["maxLength"]')" \
+        || e2e_fail "could not read the initial configured maximum length"
+    [[ "$initial_maximum" == 60 ]] \
+        || e2e_fail "attached length-mutation fixture began at ${initial_maximum}% instead of 60%"
+
+    read -r screen_x screen_y screen_width screen_height \
+        <<< "$(dock_field '"%d %d %d %d" % tuple(v["screenGeometry"])')"
+    read -r initial_absolute_x initial_absolute_width \
+        initial_trigger_x initial_trigger_width \
+        <<< "$(dock_field '"%d %d %d %d" % (
+            v["absoluteGeometry"][0], v["absoluteGeometry"][2],
+            v["stableTriggerGeometry"][0], v["stableTriggerGeometry"][2],
+        )')"
+    local expected_initial_width=$((screen_width * initial_maximum / 100))
+    local expected_initial_x=$((screen_x + (screen_width - expected_initial_width) / 2))
+    [[ "$initial_absolute_x $initial_absolute_width" \
+          == "$expected_initial_x $expected_initial_width"
+          && "$initial_trigger_width" -eq "$expected_initial_width"
+          && "$initial_trigger_x" -ge $((expected_initial_x - 1))
+          && "$initial_trigger_x" -le $((expected_initial_x + 1)) ]] \
+        || e2e_fail "initial configured authorities do not describe the centered 60% rest span (absolute=$initial_absolute_x+$initial_absolute_width trigger=$initial_trigger_x+$initial_trigger_width expected=$expected_initial_x+$expected_initial_width)"
+
+    [[ "$(konsole_count)" -eq 0 ]] \
+        || e2e_fail "a tagged titlebar client already exists before the attached length mutation"
+    setsid konsole -p 'LocalTabTitleFormat=LATTE LIVE TITLEBAR TOUCH' \
+        >/dev/null 2>&1 &
+    kpid=$!
+    for _ in $(seq 1 40); do
+        [[ "$(konsole_count)" -eq 1 ]] && break
+        sleep 0.1
+    done
+    [[ "$(konsole_count)" -eq 1 ]] \
+        || e2e_fail "the attached length-mutation client never mapped"
+    [[ -n "$(set_konsole_maximized true)" ]] \
+        || e2e_fail "KWin did not maximize the attached length-mutation client"
+    wait_for_dock_attached_presentation_while_held false
+
+    local windows_before canvas cx cy cw ch
+    windows_before="$(e2e_dumpwins | grep '|latte-dock|' | sort)"
+    "$E2E_FAKEPOINTER" move \
+        $((screen_x + screen_width / 2)) \
+        $((screen_y + screen_height / 2))
+    e2e_call setViewEditMode ub "$view" true >/dev/null \
+        || e2e_fail "could not enter edit mode for the attached length mutation"
+    sleep 3
+    wait_for_dock_attached_presentation_while_held false
+
+    canvas="$(comm -13 \
+        <(printf '%s\n' "$windows_before") \
+        <(e2e_dumpwins | grep '|latte-dock|' | sort) \
+        | awk -F'|' -v sx="$screen_x" -v sw="$screen_width" '
+            { split($4, g, " "); split(g[1], p, ","); split(g[2], s, "x");
+              if (p[1] == sx && s[1] == sw && s[2] < 300) {
+                  printf "%d %d %d %d\n", p[1], p[2], s[1], s[2];
+                  exit;
+              } }')"
+    [[ -n "$canvas" ]] \
+        || e2e_fail "no edit canvas mapped for the attached length mutation"
+    read -r cx cy cw ch <<< "$canvas"
+
+    local stable_before
+    stable_before="$(configured_length_independent_snapshot)" \
+        || e2e_fail "could not capture stable state before the attached length mutation"
+
+    local ruler_x=$((screen_x + screen_width / 2))
+    local ruler_y=$((cy + ch - 7))
+    local changed_maximum="$initial_maximum"
+    for attempt in 1 2 3 4 5; do
+        "$E2E_FAKEPOINTER" scroll "$ruler_x" "$ruler_y" -1 100
+        "$E2E_FAKEPOINTER" move \
+            "$ruler_x" $((screen_y + screen_height / 2))
+        for _ in $(seq 1 8); do
+            sleep 0.5
+            changed_maximum="$(view_config_field 'config["maxLength"]')" \
+                || continue
+            [[ "$changed_maximum" != "$initial_maximum" ]] && break 2
+        done
+    done
+    [[ "$changed_maximum" == 54 ]] \
+        || e2e_fail "one attached ruler detent changed Maximum Length from $initial_maximum to $changed_maximum instead of 54"
+
+    local expected_width=$((screen_width * changed_maximum / 100))
+    local expected_x=$((screen_x + (screen_width - expected_width) / 2))
+    local progress=unread target=unread absolute_x=-1 absolute_width=-1
+    local trigger_x=-1 trigger_width=-1 paint_x=-1 paint_width=-1
+    local stable_after=unread
+    for _ in $(seq 1 100); do
+        read -r progress target absolute_x absolute_width \
+            trigger_x trigger_width paint_x paint_width \
+            <<< "$(dock_field '"%.9f %s %d %d %d %d %d %d" % (
+                v["transitionProgress"], v["transitionTarget"],
+                v["absoluteGeometry"][0], v["absoluteGeometry"][2],
+                v["stableTriggerGeometry"][0], v["stableTriggerGeometry"][2],
+                v["windowGeometry"][0] + v["effectsRect"][0],
+                v["effectsRect"][2],
+            )' 2>/dev/null)" || {
+                sleep 0.05
+                continue
+            }
+        stable_after="$(configured_length_independent_snapshot 2>/dev/null)" || {
+                sleep 0.05
+                continue
+            }
+        if [[ "$progress" == 0.000000000
+              && "$target" == attached
+              && "$absolute_x $absolute_width" == "$expected_x $expected_width"
+              && "$trigger_width" -eq "$expected_width"
+              && "$trigger_x" -ge $((expected_x - 1))
+              && "$trigger_x" -le $((expected_x + 1))
+              && "$paint_x $paint_width" == "$screen_x $screen_width"
+              && "$stable_after" == "$stable_before" ]]; then
+            break
+        fi
+        sleep 0.05
+    done
+    [[ "$progress" == 0.000000000
+          && "$target" == attached
+          && "$absolute_x $absolute_width" == "$expected_x $expected_width"
+          && "$trigger_width" -eq "$expected_width"
+          && "$trigger_x" -ge $((expected_x - 1))
+          && "$trigger_x" -le $((expected_x + 1))
+          && "$paint_x $paint_width" == "$screen_x $screen_width"
+          && "$stable_after" == "$stable_before" ]] \
+        || e2e_fail "attached configured-length authorities did not converge without presentation feedback (progress=$progress target=$target absolute=$absolute_x+$absolute_width trigger=$trigger_x+$trigger_width paint=$paint_x+$paint_width expectedRest=$expected_x+$expected_width expectedPaint=$screen_x+$screen_width stableBefore=$stable_before stableAfter=$stable_after)"
+
+    e2e_call setViewEditMode ub "$view" false >/dev/null \
+        || e2e_fail "could not leave edit mode after the attached length mutation"
+    [[ -n "$(set_konsole_maximized false)" ]] \
+        || e2e_fail "KWin did not restore the attached length-mutation client"
+    wait_for_dock_floated_presentation "$expected_x" "$expected_width"
     stop_owned_konsole
 }
 
@@ -610,5 +801,6 @@ exercise_held_drag dock false true attached
 
 configure_case dock-top-justify-1out
 exercise_held_drag dock false true attached true
+exercise_attached_maximum_length_change
 
-echo "Live titlebar window touch passed before button release for Panel, partial Center Dock, and expanding Justify Dock; every view reversed fractionally and retained stable physical geometry"
+echo "Live titlebar window touch passed before button release for Panel, partial Center Dock, and expanding Justify Dock; attached Maximum Length mutation refreshed stable occupancy and touch authority without changing presentation or surface ownership"
