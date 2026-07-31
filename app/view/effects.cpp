@@ -906,11 +906,11 @@ void Effects::updateEnabledBorders()
         return;
     }
 
-    if (positioner->surfacePlacementGeneration()
-            != positioner->relocationGeneration()) {
-        //! Keep the previous applied borders while a newer edge/alignment
-        //! request has not reached LayerShell. The next coherent surface
-        //! publication recomputes them from one generation.
+    if (!positioner->hasPublishedCurrentPlacement()) {
+        //! Keep the previous applied borders while any output, edge,
+        //! alignment, or geometry change has not reached LayerShell. The
+        //! next coherent surface publication recomputes them from one
+        //! complete snapshot.
         return;
     }
 

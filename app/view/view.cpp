@@ -442,7 +442,10 @@ void View::init(Plasma::Containment *plasma_containment)
 
     connect(this, &View::alignmentChanged, this, [&](){
         // inform neighbour vertical docks/panels to adjust their positioning
-        if (m_inDelete || formFactor() == Plasma::Types::Vertical) {
+        if (m_inDelete
+                || !m_positioner
+                    ->hasPublishedCurrentPlacement()
+                || formFactor() == Plasma::Types::Vertical) {
             return;
         }
 
@@ -451,7 +454,9 @@ void View::init(Plasma::Containment *plasma_containment)
     });
 
     connect(this, &View::maxLengthChanged, this, [&]() {
-        if (m_inDelete) {
+        if (m_inDelete
+                || !m_positioner
+                    ->hasPublishedCurrentPlacement()) {
             return;
         }
 
@@ -460,7 +465,9 @@ void View::init(Plasma::Containment *plasma_containment)
     });
 
     connect(this, &View::offsetChanged, this, [&]() {
-        if (m_inDelete ) {
+        if (m_inDelete
+                || !m_positioner
+                    ->hasPublishedCurrentPlacement()) {
             return;
         }
 
@@ -488,6 +495,10 @@ void View::init(Plasma::Containment *plasma_containment)
     connect(this, &View::typeChanged, this, &View::saveConfig);
 
     connect(this, &View::normalThicknessChanged, this, [&]() {
+        if (!m_positioner
+                ->hasPublishedCurrentPlacement()) {
+            return;
+        }
         Q_EMIT availableScreenRectChangedFrom(this);
     });
 
@@ -739,7 +750,9 @@ void View::reanchorLayerShell()
     }
 
     if (m_positioner
-            && (m_positioner->inRelocationAnimation()
+            && (!m_positioner
+                    ->hasPublishedCurrentPlacement()
+                || m_positioner->inRelocationAnimation()
                 || m_positioner->relocationGeneration()
                     != m_positioner->appliedRelocationGeneration())) {
         //! Keep the old LayerShell output and edge paired with the old
@@ -878,25 +891,30 @@ void View::moveToScreen(
     //! landscape one, vertically centered at y=-113). Hide first so the
     //! surface is destroyed, retarget both QWindow and layer-shell desired
     //! output, then show to map a fresh surface on the next output.
-    const bool remap =
-        m_layerShellConfigured
-        && isVisible()
-        && (outputMove
-                == OutputMove::OwnershipTransfer
-            || layerShellNeedsOutput(nextScreen));
-
-    if (!remap) {
+    Q_ASSERT(nextScreen);
+    if (!m_layerShellConfigured) {
         setScreen(nextScreen);
         return;
     }
 
-    m_showAfterLayerShellPlacement = true;
-    setVisible(false);
-    setScreen(nextScreen);
-    //! Do not retarget the LayerShell object yet. Its old output remains
-    //! paired with the old reservation membership until Positioner applies
-    //! the complete placement transaction and immediately reindexes the
-    //! coordinator before reveal.
+    const bool needsOutputRetarget =
+        screen() != nextScreen
+        || outputMove
+            == OutputMove::OwnershipTransfer
+        || layerShellNeedsOutput(nextScreen);
+    if (!needsOutputRetarget) {
+        return;
+    }
+
+    if (isVisible()) {
+        m_showAfterLayerShellPlacement = true;
+        setVisible(false);
+    }
+    //! Keep QWindow and LayerShell on their previous applied output. The
+    //! transactional LayerShell boundary retargets both under blocked window
+    //! notifications, then Positioner publishes the matching geometry before
+    //! releasing those notifications. Setting QWindow::screen here exposed a
+    //! destination screen with the previous applied surface for 150 ms.
 }
 
 void View::duplicateView()
@@ -1257,6 +1275,15 @@ QString View::validTitle() const
 
 void View::updateAbsoluteGeometry(bool bypassChecks)
 {
+    if (m_positioner
+            && !m_positioner
+                ->hasPublishedCurrentPlacement()) {
+        //! Placement setters notify synchronously, before the delayed
+        //! LayerShell application. Retain the previous applied occupancy
+        //! until Positioner publishes the complete replacement snapshot.
+        return;
+    }
+
     //! there was a -1 in height and width here. The reason of this
     //! if I remember correctly was related to multi-screen but I cant
     //! remember exactly the reason, something related to right edge in
@@ -1297,6 +1324,14 @@ void View::updateAbsoluteGeometry(bool bypassChecks)
 
 void View::updateWindowTouchTriggerGeometry()
 {
+    if (m_positioner
+            && !m_positioner
+                ->hasPublishedCurrentPlacement()) {
+        //! The trigger is applied placement state. A target edge or output
+        //! must not clear or move it before LayerShell accepts that target.
+        return;
+    }
+
     if (behaveAsPlasmaPanel()) {
         m_windowTouchTracker->setTriggerGeometry(
             m_floatingTransition->hasGeometry()
@@ -1869,9 +1904,15 @@ QRect View::absoluteGeometry() const
 
 QRect View::screenGeometry() const
 {
+    if (m_positioner
+            && m_positioner
+                ->surfaceGeometryPublicationRevision() > 0) {
+        return m_positioner
+            ->surfaceOutputGeometry();
+    }
+
     if (this->screen()) {
-        QRect geom = this->screen()->geometry();
-        return geom;
+        return this->screen()->geometry();
     }
 
     return QRect();

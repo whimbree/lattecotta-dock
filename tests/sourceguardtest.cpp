@@ -3832,8 +3832,13 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
             "containment/package/contents/ui/VisibilityManager.qml")));
     const QString dialog = normalizedCode(readFile(
         QStringLiteral("declarativeimports/core/dialog.cpp")));
-    const QString positioner = normalizedCode(readFile(
-        QStringLiteral("app/view/positioner.cpp")));
+    const QString positionerSource = readFile(
+        QStringLiteral("app/view/positioner.cpp"));
+    const QString positioner = normalizedCode(positionerSource);
+    const QString layerShellSource = readFile(
+        QStringLiteral("app/wm/waylandlayershell.cpp"));
+    const QString dbusSource = readFile(
+        QStringLiteral("app/dbusreports.cpp"));
     const QString transition = normalizedCode(readFile(
         QStringLiteral("app/view/floatingtransition.cpp")));
     const QString positionerCore = normalizedCode(readFile(
@@ -3873,8 +3878,7 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
     QVERIFY(effects.contains(QStringLiteral(
         "positioner->surfaceOutputGeometry()")));
     QVERIFY(effects.contains(QStringLiteral(
-        "positioner->surfacePlacementGeneration()"
-        "!=positioner->relocationGeneration()")));
+        "if(!positioner->hasPublishedCurrentPlacement()){return;}")));
     QVERIFY(!effects.contains(QStringLiteral(
         "m_view->screenGeometry()")));
     QVERIFY(effects.contains(QStringLiteral(
@@ -3887,33 +3891,122 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
     QVERIFY(view.contains(QStringLiteral(
         "&ViewPart::Positioner::surfaceGeometryPublicationRevisionChanged,"
         "m_effects,&ViewPart::Effects::updateEnabledBorders")));
-    QVERIFY(positioner.contains(QStringLiteral(
+    const QString installApplied = normalizedCode(functionBody(
+        positionerSource,
+        QStringLiteral("Positioner::installAppliedGeometry(")));
+    const QString publishApplied = normalizedCode(functionBody(
+        positionerSource,
+        QStringLiteral("void Positioner::publishAppliedGeometry(")));
+    const QString solveAndApply = normalizedCode(functionBody(
+        positionerSource,
+        QStringLiteral("bool Positioner::solveAndApplyGeometry(")));
+    QVERIFY(installApplied.contains(QStringLiteral(
+        "m_appliedScreen=assignedScreen;"
         "m_appliedSurfaceGeometry=solved.surface;"
         "m_appliedOutputGeometry=assignedScreenGeometry;"
         "m_surfacePlacementGeneration=m_relocationGeneration;")));
+    const qsizetype pendingClear = installApplied.indexOf(QStringLiteral(
+        "m_geometryApplicationPending=false;"));
+    const qsizetype appliedRevision = installApplied.indexOf(QStringLiteral(
+        "++m_surfaceGeometryPublicationRevision;"));
+    QVERIFY(pendingClear >= 0 && appliedRevision > pendingClear);
     QVERIFY(positioner.contains(QStringLiteral(
-        "++m_surfaceGeometryPublicationRevision;"
-        "applySolvedWindowGeometry(solved.surface);")));
-    const qsizetype layerApplication = positioner.indexOf(QStringLiteral(
+        "connect(scr,&QScreen::geometryChanged,this,&Positioner::syncGeometry);")));
+    QVERIFY(!positioner.contains(QStringLiteral(
+        "connect(this,&Positioner::screenGeometryChanged,this,"
+        "&Positioner::syncGeometry);")));
+    QVERIFY(publishApplied.startsWith(QStringLiteral(
+        "{Q_ASSERT(assignedScreen);"
+        "applySolvedWindowGeometry(solved.surface);"
+        "m_view->updateAbsoluteGeometry(true);")));
+    const qsizetype signalBlocker = solveAndApply.indexOf(QStringLiteral(
+        "QSignalBlockerqWindowPlacementSignals{m_view};"));
+    const qsizetype layerApplication = solveAndApply.indexOf(QStringLiteral(
         "if(!m_view->applyPositionedLayerShellGeometry("
         "placementScreen,solved->surface))"));
-    const qsizetype appliedPublication = positioner.indexOf(QStringLiteral(
-        "publishAppliedGeometry(*solved,assignedScreenGeometry,"));
-    QVERIFY(layerApplication >= 0
-            && appliedPublication > layerApplication);
-    QVERIFY(!positioner.mid(layerApplication,
+    const qsizetype appliedInstallation = solveAndApply.indexOf(QStringLiteral(
+        "installAppliedGeometry(*solved,placementScreen,"));
+    const qsizetype signalRelease = solveAndApply.indexOf(QStringLiteral(
+        "qWindowPlacementSignals.unblock();"),
+        appliedInstallation);
+    const qsizetype appliedPublication = solveAndApply.indexOf(QStringLiteral(
+        "publishAppliedGeometry(*solved,placementScreen,changes);"));
+    QVERIFY(signalBlocker >= 0
+            && layerApplication > signalBlocker
+            && appliedInstallation > layerApplication
+            && signalRelease > appliedInstallation
+            && appliedPublication > signalRelease);
+    QVERIFY(!solveAndApply.mid(layerApplication,
                             appliedPublication - layerApplication)
                  .contains(QStringLiteral("configureGeometry(")));
     QVERIFY(transition.contains(QStringLiteral(
         "if(installGeometryWithoutNotification(solution)){"
         "publishInstalledGeometryChange();}")));
-    QVERIFY(positioner.contains(QStringLiteral(
+    QVERIFY(installApplied.contains(QStringLiteral(
         "transition->installGeometryWithoutNotification("
         "solved.floatingPresentation);")));
-    QVERIFY(positioner.contains(QStringLiteral(
-        "if(transitionChanged){"
-        "transition->publishInstalledGeometryChange();}"
+    QVERIFY(publishApplied.contains(QStringLiteral(
+        "if(changes.transitionChanged){"
+        "m_view->floatingTransition()->publishInstalledGeometryChange();}"
         "Q_EMITsurfaceGeometryPublicationRevisionChanged();")));
+
+    const QString moveToScreen = normalizedCode(functionBody(
+        readFile(QStringLiteral("app/view/view.cpp")),
+        QStringLiteral("void View::moveToScreen(")));
+    QCOMPARE(moveToScreen.count(QStringLiteral("setScreen(nextScreen);")), 1);
+    QVERIFY(moveToScreen.contains(QStringLiteral(
+        "if(!m_layerShellConfigured){setScreen(nextScreen);return;}")));
+    const QString reanchor = normalizedCode(functionBody(
+        readFile(QStringLiteral("app/view/view.cpp")),
+        QStringLiteral("void View::reanchorLayerShell()")));
+    QVERIFY(reanchor.contains(QStringLiteral(
+        "if(m_positioner&&(!m_positioner->hasPublishedCurrentPlacement()")));
+    const QString absoluteGeometry = normalizedCode(functionBody(
+        readFile(QStringLiteral("app/view/view.cpp")),
+        QStringLiteral("void View::updateAbsoluteGeometry(")));
+    const QString touchGeometry = normalizedCode(functionBody(
+        readFile(QStringLiteral("app/view/view.cpp")),
+        QStringLiteral("void View::updateWindowTouchTriggerGeometry()")));
+    const QString screenGeometry = normalizedCode(functionBody(
+        readFile(QStringLiteral("app/view/view.cpp")),
+        QStringLiteral("QRect View::screenGeometry() const")));
+    QVERIFY(absoluteGeometry.startsWith(QStringLiteral(
+        "{if(m_positioner&&!m_positioner->hasPublishedCurrentPlacement())"
+        "{return;}")));
+    QVERIFY(touchGeometry.startsWith(QStringLiteral(
+        "{if(m_positioner&&!m_positioner->hasPublishedCurrentPlacement())"
+        "{return;}")));
+    QVERIFY(screenGeometry.contains(QStringLiteral(
+        "surfaceGeometryPublicationRevision()>0)"
+        "{returnm_positioner->surfaceOutputGeometry();}")));
+
+    const QString layerApplicationBody = normalizedCode(functionBody(
+        layerShellSource,
+        QStringLiteral("std::optional<int> applyViewPlacement(")));
+    const qsizetype failedPostcondition = layerApplicationBody.indexOf(
+        QStringLiteral("faileditsapplied-statepostcondition"));
+    const qsizetype rollback = layerApplicationBody.indexOf(
+        QStringLiteral("restoreViewPlacementOrTerminate("),
+        failedPostcondition);
+    const qsizetype refusedResult = layerApplicationBody.indexOf(
+        QStringLiteral("returnstd::nullopt;"),
+        rollback);
+    QVERIFY(failedPostcondition >= 0
+            && rollback > failedPostcondition
+            && refusedResult > rollback);
+
+    const QString viewRecord = normalizedCode(functionBody(
+        dbusSource,
+        QStringLiteral("ViewRecord collectViewRecord(")));
+    const QString systemSnapshot = normalizedCode(functionBody(
+        dbusSource,
+        QStringLiteral("collectDockSystemSnapshot(")));
+    for (const QString &collector : {viewRecord, systemSnapshot}) {
+        QVERIFY(collector.contains(QStringLiteral(
+            "positioner->appliedScreen()->name()")));
+        QVERIFY(collector.contains(QStringLiteral(
+            "positioner->surfaceOutputGeometry()")));
+    }
     QVERIFY(!effects.contains(QStringLiteral(
         "enableBlurBehind(m_view,true);")));
     QVERIFY(!effects.contains(QStringLiteral(

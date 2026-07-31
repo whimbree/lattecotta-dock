@@ -41,6 +41,7 @@ private Q_SLOTS:
     void viewPlacementPinsSolvedRectangle();
     void appliedViewPlacementPreservesSurfacePolicy();
     void appliedViewPlacementDistinguishesRefusalFromStableSuccess();
+    void appliedViewPlacementRollsBackFailedPostcondition();
     void hiddenAppliedViewPlacementRetargetsBothOutputAuthorities();
     void visibleAppliedViewPlacementDefersRemapAfterQWindowRetarget();
     void reservationPlacementTracksOccupiedSpan();
@@ -327,6 +328,77 @@ void LayerShellMappingTest::appliedViewPlacementDistinguishesRefusalFromStableSu
         screen->geometry());
     QVERIFY(stableApply.has_value());
     QCOMPARE(*stableApply, 0);
+}
+
+void LayerShellMappingTest::
+appliedViewPlacementRollsBackFailedPostcondition()
+{
+    QScreen *const origin =
+        QGuiApplication::screens().at(0);
+    QScreen *const target =
+        QGuiApplication::screens().at(1);
+    QWindow window;
+    QVERIFY(LayerShell::configureView(
+        &window,
+        origin,
+        Plasma::Types::BottomEdge,
+        Latte::Types::Left,
+        false));
+    LSW *const layerShell = LSW::get(&window);
+    QVERIFY(layerShell);
+
+    const LSW::Anchors originalAnchors =
+        LSW::Anchors{LSW::AnchorBottom} | LSW::AnchorLeft;
+    const QMargins originalMargins{17, 23, 0, 0};
+    layerShell->setAnchors(originalAnchors);
+    layerShell->setExclusiveEdge(
+        LSW::AnchorBottom);
+    layerShell->setMargins(originalMargins);
+    layerShell->setExclusiveZone(41);
+
+    bool sabotageNextMarginsChange{true};
+    connect(
+        layerShell,
+        &LSW::marginsChanged,
+        &window,
+        [layerShell, &sabotageNextMarginsChange]() {
+            if (!sabotageNextMarginsChange) {
+                return;
+            }
+            sabotageNextMarginsChange = false;
+            //! Force the postcondition to fail after every production setter
+            //! has run. Rollback itself then proceeds without interference.
+            layerShell->setAnchors(
+                LSW::AnchorBottom);
+        });
+
+    const QRect targetGeometry =
+        target->geometry();
+    const QRect viewGeometry{
+        targetGeometry.left() + 120,
+        targetGeometry.top() + 180,
+        600,
+        72};
+    const auto refused =
+        LayerShell::applyViewPlacement(
+            &window,
+            target,
+            Plasma::Types::TopEdge,
+            viewGeometry,
+            targetGeometry);
+
+    QVERIFY(!refused.has_value());
+    QVERIFY(!sabotageNextMarginsChange);
+    QCOMPARE(window.screen(), origin);
+    QCOMPARE(layerShell->screen(), origin);
+    QCOMPARE(layerShell->anchors(),
+             originalAnchors);
+    QCOMPARE(layerShell->exclusiveEdge(),
+             LSW::AnchorBottom);
+    QCOMPARE(layerShell->margins(),
+             originalMargins);
+    QCOMPARE(layerShell->exclusionZone(), 41);
+    QVERIFY(!window.isVisible());
 }
 
 void LayerShellMappingTest::hiddenAppliedViewPlacementRetargetsBothOutputAuthorities()
