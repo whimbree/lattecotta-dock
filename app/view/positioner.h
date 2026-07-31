@@ -105,7 +105,11 @@ public:
     bool inStartup() const;
 
     QRect canvasGeometry();
+    //! One immutable placement publication. These rectangles are replaced
+    //! together only after LayerShell accepted the solved surface.
     [[nodiscard]] QRect surfaceGeometry() const;
+    [[nodiscard]] QRect surfaceOutputGeometry() const;
+    [[nodiscard]] quint64 surfacePlacementGeneration() const;
     [[nodiscard]] quint64 surfaceGeometryPublicationRevision() const;
 
     bool setScreenToFollow(QScreen *scr, bool updateScreenId = true);
@@ -286,7 +290,12 @@ private:
     QRect m_canvasGeometry;
     //! it is used in order to enforce X11 to never miss window geometry
     QRect m_validGeometry;
+    QRect m_appliedSurfaceGeometry;
+    QRect m_appliedOutputGeometry;
+    quint64 m_surfacePlacementGeneration{0};
     quint64 m_surfaceGeometryPublicationRevision{0};
+    bool m_solvedForceTopBorder{false};
+    bool m_solvedForceBottomBorder{false};
     //! it is used to update geometry calculations without requesting no needed Corona calculations
     QRect m_lastAvailableScreenRect;
     QRegion m_lastAvailableScreenRegion;

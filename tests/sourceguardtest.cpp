@@ -3815,6 +3815,8 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
             "containment/package/contents/ui/VisibilityManager.qml")));
     const QString dialog = normalizedCode(readFile(
         QStringLiteral("declarativeimports/core/dialog.cpp")));
+    const QString positioner = normalizedCode(readFile(
+        QStringLiteral("app/view/positioner.cpp")));
     const QString positionerCore = normalizedCode(readFile(
         QStringLiteral("app/view/positionergeometry.h")));
     const QString panelShadowsHeader = normalizedCode(readFile(
@@ -3848,19 +3850,26 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         "PanelBorderDecision::doesPresentationFillOutputPrimaryAxis("
         "m_rect,surfaceGeometry,assignedOutputGeometry,*edge)")));
     QVERIFY(effects.contains(QStringLiteral(
-        "positioner->assignedScreen()")));
-    QVERIFY(effects.contains(QStringLiteral(
         "positioner->surfaceGeometry()")));
+    QVERIFY(effects.contains(QStringLiteral(
+        "positioner->surfaceOutputGeometry()")));
+    QVERIFY(effects.contains(QStringLiteral(
+        "positioner->surfacePlacementGeneration()"
+        "!=positioner->relocationGeneration()")));
     QVERIFY(!effects.contains(QStringLiteral(
         "m_view->screenGeometry()")));
     QVERIFY(effects.contains(QStringLiteral(
-        "positioner->relocationGeneration()"
-        "!=positioner->appliedRelocationGeneration()")));
-    QVERIFY(effects.contains(QStringLiteral(
         "Effectsrefusedinvalidbordergeometryfor")));
     QVERIFY(view.contains(QStringLiteral(
-        "&ViewPart::Positioner::placementTransactionCommitted,"
+        "&ViewPart::Positioner::surfaceGeometryPublicationRevisionChanged,"
         "m_effects,&ViewPart::Effects::updateEnabledBorders")));
+    QVERIFY(positioner.contains(QStringLiteral(
+        "m_appliedSurfaceGeometry=m_validGeometry;"
+        "m_appliedOutputGeometry=assignedScreenGeometry;"
+        "m_surfacePlacementGeneration=m_relocationGeneration;")));
+    QVERIFY(positioner.contains(QStringLiteral(
+        "++m_surfaceGeometryPublicationRevision;"
+        "Q_EMITsurfaceGeometryPublicationRevisionChanged();")));
     QVERIFY(!effects.contains(QStringLiteral(
         "enableBlurBehind(m_view,true);")));
     QVERIFY(!effects.contains(QStringLiteral(
