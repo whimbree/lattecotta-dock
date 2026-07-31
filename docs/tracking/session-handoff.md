@@ -35,6 +35,15 @@ test covers every edge on a negative-origin output, and nested recipe 074 holds
 a real drag at attachment while the partial top Panel retains its left and
 right endpoint borders.
 
+The next cold review returned `DO NOT MERGE` because the corrected helper's
+caller still supplied lagging `QWindow::screen()` geometry and silently treated
+invalid geometry as an ordinary partial presentation. Commit `5be872c20` reads
+the assigned output and solved global surface from Positioner only after the
+relocation generation is applied, retains the last applied borders during the
+transaction, and recomputes when placement commits. Missing output or surface
+authority now produces a critical refusal. The pure test rejects the lagging
+source output, and the source contract pins all four ownership boundaries.
+
 The focused background, border, mask, D-Bus, identity, source-contract, QML
 interaction, and QML compile checks pass. Expanded nested recipe 074 drives a
 Panel, partial Center Dock, and expanding Justify Dock through fractional
@@ -46,7 +55,7 @@ remains full-width. Plasma 6.7.3 also keeps the rounded floating FrameSvg
 during fractional frames and switches enabled borders at exact attachment; it
 does not numerically shrink the radius each frame. The final replacement
 canonical gate passes at exact source head
-`88b4eef27958fbd2a61e741a5e84c3201ee2198e`,
+`5be872c20052b89142e2a1a4dfe370b0af2196dd`,
 including all 124 CTest entries, the reduced qmllint ratchet, rendered scene
 probes, ASan and UBSan nested execution, package provenance controls, and
 matrix refusals. The real-session dock remains stopped until the corrected
