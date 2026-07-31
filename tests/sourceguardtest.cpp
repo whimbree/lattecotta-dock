@@ -2258,10 +2258,12 @@ private:
 
     static bool matchesStableDockOccupancyContract(
         const QString &visibilityManager,
-        const QString &bridgeHeader)
+        const QString &bridgeHeader,
+        const QString &viewSource)
     {
         const QString visibility = normalizedCode(visibilityManager);
         const QString bridge = normalizedCode(bridgeHeader);
+        const QString view = normalizedCode(viewSource);
         const QString updateMask = normalizedCode(functionBody(
             visibilityManager, QStringLiteral("function updateMaskArea()")));
         const QString updateInput = normalizedCode(functionBody(
@@ -2270,6 +2272,12 @@ private:
 
         return bridge.contains(QStringLiteral(
                    "Q_INVOKABLEQRectstableJustifyDockOccupancyFor("))
+            && visibility.contains(QStringLiteral(
+                   "target:rootfunctiononAutomaticSizingMaximumLengthChanged(){"
+                   "manager.updateMaskArea();}"))
+            && view.contains(QStringLiteral(
+                   "connect(this,&View::maxLengthChanged,this,"
+                   "&View::updateWindowTouchTriggerGeometry);"))
             && updateMask.contains(QStringLiteral(
                    "constpresentedLocalGeometry="
                    "manager.presentedLocalGeometry();"))
@@ -3029,10 +3037,12 @@ void SourceGuardTest::
                  readFile(QStringLiteral(
                      "containment/package/contents/ui/VisibilityManager.qml")),
                  readFile(QStringLiteral(
-                     "containment/plugin/maskgeometrybridge.h"))),
+                     "containment/plugin/maskgeometrybridge.h")),
+                 readFile(QStringLiteral("app/view/view.cpp"))),
              "a live Dock must retain its configured gap, a Justify Dock must"
-             " also retain its resting length, and input must follow the"
-             " animated presentation");
+             " also retain its resting length, configured length changes must"
+             " refresh occupancy and touch authority directly, and input must"
+             " follow the animated presentation");
 }
 
 void SourceGuardTest::
@@ -3040,9 +3050,11 @@ void SourceGuardTest::
 {
     const QString bridge = readFile(QStringLiteral(
         "containment/plugin/maskgeometrybridge.h"));
+    const QString viewSource = readFile(QStringLiteral("app/view/view.cpp"));
     QString visibility = readFile(QStringLiteral(
         "containment/package/contents/ui/VisibilityManager.qml"));
-    QVERIFY(matchesStableDockOccupancyContract(visibility, bridge));
+    QVERIFY(matchesStableDockOccupancyContract(
+        visibility, bridge, viewSource));
 
     const QString presentedInput = QStringLiteral(
         "                                                                "
@@ -3053,7 +3065,8 @@ void SourceGuardTest::
         QStringLiteral(
             "                                                                "
             "latteView.localGeometry,\n"));
-    QVERIFY2(!matchesStableDockOccupancyContract(visibility, bridge),
+    QVERIFY2(!matchesStableDockOccupancyContract(
+                 visibility, bridge, viewSource),
              "input must not collapse onto the stable reservation footprint"
              " while paint expands");
 
@@ -3064,7 +3077,8 @@ void SourceGuardTest::
     QCOMPARE(visibility.count(stableLength), 1);
     visibility.replace(stableLength,
                        QStringLiteral("                    root.maxLength,\n"));
-    QVERIFY2(!matchesStableDockOccupancyContract(visibility, bridge),
+    QVERIFY2(!matchesStableDockOccupancyContract(
+                 visibility, bridge, viewSource),
              "stable occupancy must not consume the animated maximum length");
 
     visibility = readFile(QStringLiteral(
@@ -3076,9 +3090,51 @@ void SourceGuardTest::
         stableGap,
         QStringLiteral(
             "                            metrics.mask.screenEdge);\n"));
-    QVERIFY2(!matchesStableDockOccupancyContract(visibility, bridge),
+    QVERIFY2(!matchesStableDockOccupancyContract(
+                 visibility, bridge, viewSource),
              "every live Dock alignment must keep its configured gap out of"
              " animated occupancy");
+
+    visibility = readFile(QStringLiteral(
+        "containment/package/contents/ui/VisibilityManager.qml"));
+    const QString occupancyRefresh = QStringLiteral(
+        "        function onAutomaticSizingMaximumLengthChanged() {\n"
+        "            //! A fully attached Justify Dock keeps a full-width effects rect,\n"
+        "            //! so a configured length change has no paint signal to refresh\n"
+        "            //! its stable occupied footprint. The configured resting budget\n"
+        "            //! is an independent authority and must publish itself directly.\n"
+        "            manager.updateMaskArea();\n"
+        "        }");
+    QCOMPARE(visibility.count(occupancyRefresh), 1);
+    visibility.replace(
+        occupancyRefresh,
+        QStringLiteral(
+            "        function onAutomaticSizingMaximumLengthChanged() {\n"
+            "            //! Mutation probe: route to the wrong authority.\n"
+            "            manager.updateInputGeometry();\n"
+            "        }"));
+    QVERIFY2(!matchesStableDockOccupancyContract(
+                 visibility, bridge, viewSource),
+             "configured resting length must explicitly republish stable"
+             " occupancy even when attached paint remains full-span");
+
+    QString triggerLeak = viewSource;
+    const QString triggerRefresh = QStringLiteral(
+        "    connect(this, &View::maxLengthChanged,\n"
+        "            this, &View::updateWindowTouchTriggerGeometry);");
+    QCOMPARE(triggerLeak.count(triggerRefresh), 1);
+    triggerLeak.replace(
+        triggerRefresh,
+        QStringLiteral(
+            "    connect(this, &View::screenGeometryChanged,\n"
+            "            this, &View::updateWindowTouchTriggerGeometry);"));
+    QVERIFY2(!matchesStableDockOccupancyContract(
+                 readFile(QStringLiteral(
+                     "containment/package/contents/ui/VisibilityManager.qml")),
+                 bridge, triggerLeak),
+             "configured resting length must explicitly recompute the"
+             " window-touch trigger even when attached paint remains"
+             " full-span");
 }
 
 void SourceGuardTest::stablePanelPopupAnchor_rejectsLegacyAnimationFreeze()

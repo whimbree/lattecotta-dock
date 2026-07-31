@@ -429,6 +429,12 @@ void View::init(Plasma::Containment *plasma_containment)
             this, &View::updateWindowTouchTriggerGeometry);
     connect(this, &View::screenGeometryChanged,
             this, &View::updateWindowTouchTriggerGeometry);
+    //! A fully attached Justify Dock paints the complete output span, so its
+    //! effects rect does not change when the configured resting ratio changes.
+    //! The trigger consumes that ratio directly and therefore needs its own
+    //! explicit dependency instead of waiting for a paint or placement signal.
+    connect(this, &View::maxLengthChanged,
+            this, &View::updateWindowTouchTriggerGeometry);
 
     connect(this, &View::alignmentChanged, this, [&](){
         // inform neighbour vertical docks/panels to adjust their positioning
