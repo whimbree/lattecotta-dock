@@ -41,15 +41,20 @@ struct Inputs {
     const QRect &outputGeometry,
     FloatingPanelGeometry::Edge edge)
 {
+    //! No presentation exists until QML publishes its first effects rectangle
+    //! during startup. That absence has no output endpoints. The caller owns
+    //! the surface and output authorities and must never provide invalid
+    //! geometry once a presentation exists.
+    if (!presentation.isValid()) {
+        return false;
+    }
+    Q_ASSERT(viewGeometry.isValid());
+    Q_ASSERT(outputGeometry.isValid());
+
     //! Effects geometry is local to the view. A Dock normally owns an
     //! output-sized masked canvas, while a Panel's QWindow is only its own
     //! configured span. Compare translated paint to the assigned output so a
     //! partial Panel filling its canvas cannot impersonate output coverage.
-    if (!presentation.isValid()
-        || !viewGeometry.isValid()
-        || !outputGeometry.isValid()) {
-        return false;
-    }
 
     const qint64 presentationStart =
         FloatingPanelGeometry::isHorizontal(edge)

@@ -77,6 +77,20 @@ void PanelBorderDecisionTest::presentationSpan_followsOutputEndpoints()
 
     QVERIFY(!PanelBorderDecision::doesPresentationFillOutputPrimaryAxis(
         QRect(), QRect(0, 0, 1440, 80), output, Edge::Top));
+
+    //! QWindow::screen() can still name the source output while Positioner has
+    //! synchronously applied the destination LayerShell placement. Only the
+    //! assigned destination output can classify the translated endpoints.
+    const QRect laggingSourceOutput(0, 0, 1920, 1080);
+    const QRect destinationSurface(output.x(), output.y(), output.width(), 80);
+    const QRect destinationPresentation(0, 17, output.width(), 40);
+    QVERIFY(PanelBorderDecision::doesPresentationFillOutputPrimaryAxis(
+        destinationPresentation, destinationSurface, output, Edge::Top));
+    QVERIFY(!PanelBorderDecision::doesPresentationFillOutputPrimaryAxis(
+        destinationPresentation,
+        destinationSurface,
+        laggingSourceOutput,
+        Edge::Top));
 }
 
 void PanelBorderDecisionTest::everyFloatingAlignmentKeepsAllBorders()

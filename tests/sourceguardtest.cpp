@@ -3846,7 +3846,21 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         "PanelBorderDecision::enabledBorders(")));
     QVERIFY(effects.contains(QStringLiteral(
         "PanelBorderDecision::doesPresentationFillOutputPrimaryAxis("
-        "m_rect,m_view->geometry(),m_view->screenGeometry(),*edge)")));
+        "m_rect,surfaceGeometry,assignedOutputGeometry,*edge)")));
+    QVERIFY(effects.contains(QStringLiteral(
+        "positioner->assignedScreen()")));
+    QVERIFY(effects.contains(QStringLiteral(
+        "positioner->surfaceGeometry()")));
+    QVERIFY(!effects.contains(QStringLiteral(
+        "m_view->screenGeometry()")));
+    QVERIFY(effects.contains(QStringLiteral(
+        "positioner->relocationGeneration()"
+        "!=positioner->appliedRelocationGeneration()")));
+    QVERIFY(effects.contains(QStringLiteral(
+        "Effectsrefusedinvalidbordergeometryfor")));
+    QVERIFY(view.contains(QStringLiteral(
+        "&ViewPart::Positioner::placementTransactionCommitted,"
+        "m_effects,&ViewPart::Effects::updateEnabledBorders")));
     QVERIFY(!effects.contains(QStringLiteral(
         "enableBlurBehind(m_view,true);")));
     QVERIFY(!effects.contains(QStringLiteral(
