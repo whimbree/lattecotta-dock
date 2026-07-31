@@ -96,6 +96,36 @@ TestCase {
         compareRect(rect, -1, -1, 1, 1);
     }
 
+    function test_hiddenDockRevealRetainsStableLengthDespiteEffectsSentinel() {
+        const stableLocalGeometry = Qt.rect(200, 72, 800, 56);
+        const hiddenEffectsSentinel = Qt.rect(-1, -1, 1, 1);
+        const sentinelPresentation = maskGeometry.localGeometryFor(
+            bottomEdge,
+            false, //! behaveAsPlasmaPanel
+            1200, 140,
+            1200, 140,
+            hiddenEffectsSentinel,
+            56, 12);
+        compareRect(sentinelPresentation, 0, 72, 1, 56);
+
+        //! VisibilityManager selects retained localGeometry while the hidden
+        //! legacy reveal path owns input, so the sentinel cannot collapse the
+        //! primary-axis activation span.
+        const hidden = true;
+        const inputLengthGeometry = hidden
+            ? stableLocalGeometry : sentinelPresentation;
+        const rect = maskGeometry.inputMaskFor(bottomEdge,
+                                               true, false,
+                                               hidden,
+                                               false, //! isSidebar
+                                               false, false,
+                                               2, 102, 12, 56, 12,
+                                               inputLengthGeometry,
+                                               1200, 140,
+                                               1200, 140);
+        compareRect(rect, 200, 138, 800, 2);
+    }
+
     function test_invalidInputsAreRefused() {
         //! a negative dimension is refused loudly (qCritical in the log):
         //! empty local geometry, accept-everywhere input mask

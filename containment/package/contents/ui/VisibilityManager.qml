@@ -414,7 +414,13 @@ Item{
         //! Input follows the animated presentation, not localGeometry's stable
         //! occupancy. This keeps newly exposed applets and the Fitts bridge
         //! interactive without publishing presentation pixels as work area.
-        const presentedLocalGeometry = manager.presentedLocalGeometry();
+        //! Hidden docks and sidebars deliberately replace effects.rect with
+        //! a 1x1 sentinel. Their reveal strip must retain the last stable
+        //! occupied length; only a visible Dock follows animated paint.
+        const inputLengthGeometry = manager.window.visibility.isHidden
+                || manager.window.visibility.isSidebar
+            ? latteView.localGeometry
+            : manager.presentedLocalGeometry();
         latteView.effects.inputMask = maskGeometry.inputMaskFor(Plasmoid.location,
                                                                 LatteCore.WindowSystem.compositingActive,
                                                                 latteView.behaveAsPlasmaPanel,
@@ -427,7 +433,7 @@ Item{
                                                                 metrics.margin.screenEdge,
                                                                 metrics.totals.thickness,
                                                                 metrics.mask.screenEdge,
-                                                                presentedLocalGeometry,
+                                                                inputLengthGeometry,
                                                                 root.width, root.height,
                                                                 latteView.width, latteView.height);
     }
