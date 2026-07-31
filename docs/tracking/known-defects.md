@@ -3241,8 +3241,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   absence of the publication feedback loop. Nested recipe 074 observes stable
   physical state throughout held live attachment. Two-output recipe 073 passes
   one-publication axis change, output topology changes, and restart
-  persistence. The focused contracts pass at `4a6c1aa20`; a replacement
-  canonical gate remains pending.
+  persistence. The canonical gate passes at exact source head
+  `74c98a5db4123143306b720f2a6c994ac24980d1`, including all 125 CTest entries,
+  QML and coverage ratchets, scene probes, the ASan/UBSan nested drive, package
+  provenance checks, and matrix refusals.
 - SEVERITY: release blocker.
 
 ### D246 - Hidden partial Docks collapsed edge activation to one pixel

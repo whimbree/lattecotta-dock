@@ -148,9 +148,12 @@ the ratchet's independent count header because it still said 124. Commit
 `9e013a64a` raises the header to 125. The entry list and count are now
 consistent.
 
-A replacement canonical gate and fresh cold review remain required before PR
-#134 lands. The real-session dock remains intentionally stopped until the
-reviewed merge is available.
+The replacement canonical gate passes at exact source head
+`74c98a5db4123143306b720f2a6c994ac24980d1`, including all 125 CTest entries,
+QML and coverage ratchets, scene probes, the ASan/UBSan nested drive, package
+provenance checks, and matrix refusals. A fresh cold review remains required
+before PR #134 lands. The real-session dock remains intentionally stopped until
+the reviewed merge is available.
 
 ## 2026-07-27: D241 unifies floating Dock presentation
 
