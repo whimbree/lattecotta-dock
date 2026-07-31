@@ -4984,7 +4984,7 @@ prerequisites in the phases above are done.
       but keep touch placement, automatic sizing, layout clearance, occupancy,
       struts, and reservation on configured resting geometry. Let input follow
       the animated paint rectangle independently.
-      Commits: eabe3df05
+      Commits: eabe3df05, 3cf23db0a
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

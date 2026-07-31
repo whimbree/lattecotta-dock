@@ -3062,7 +3062,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D244 - Live attached Dock presentation leaked into stable geometry
-- STATUS: FIXED on the feature branch by `eabe3df05`; pending PR.
+- STATUS: FIXED on the feature branch by `eabe3df05` and `3cf23db0a`;
+  pending PR.
 - FOUND: 2026-07-31, live-presentation ownership audit and expanded nested
   acceptance after D241 (floating Docks bypassed fractional presentation).
 - SYMPTOM: a floating Dock can animate its gap while a partial Justify
@@ -3086,7 +3087,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   and reversal before button release. The Justify presentation reaches the
   output endpoints and drops its rounded end borders while QWindow geometry,
   local and absolute occupancy, struts, reservation, trigger, icon sizes, and
-  available resting length remain stable.
+  available resting length remain stable. The replacement canonical gate passes
+  at exact source head `3cf23db0aa936ce03d0fbe3658cba842fa0ddddf`,
+  including all 124 CTest entries, the reduced qmllint ratchet, rendered scene
+  probes, ASan and UBSan nested execution, package provenance controls, and
+  matrix refusals.
 - SEVERITY: beta blocker.
 
 ### D243 - Schema 9 refused pre-Metrics startup snapshots
