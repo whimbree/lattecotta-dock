@@ -59,6 +59,10 @@ back to `inputRegionRects` once the band settles - differs only
 mid-shrink), `editMode`, `inConfigureAppletsMode`, `keyboardNavigation`.
 `inConfigureAppletsMode` is effective for that view: it is true only when the
 view is in edit mode and the global rearrange toggle is on.
+After the first surface publication, `screen` and `screenGeometry` identify
+Positioner's last complete applied output snapshot. They retain that snapshot
+while a newer output or geometry request is pending. The target assignment is
+used only during startup before an applied snapshot exists.
 
 This replaces pixel-peeping for dock state: hidden-or-not, where the
 input region really is, whether startup stranded (`inStartup` stuck
@@ -233,6 +237,10 @@ Per dock:
   Qt logical pixels. `windowGeometry`, `absoluteGeometry`, `screenGeometry`,
   `surfaceGeometry`, `canvasGeometry`, and `publishedStruts` use
   virtual-desktop coordinates.
+  `screen`, `screenId`, and `screenGeometry` come from the same last complete
+  Positioner output publication after startup. A delayed or refused placement
+  therefore cannot combine a target output identity with the previous applied
+  surface in one report.
   `localGeometry`, `effectsRect`, `appletsLayoutGeometry`, `maskRect`,
   `inputMask`, and `appliedInputMask` use dock-window-local coordinates.
   Thickness values are logical pixels as well. `surfaceGeometry` is

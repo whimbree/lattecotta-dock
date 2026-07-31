@@ -3063,7 +3063,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D245 - Partial Panels lost endpoint borders at live attachment
 - STATUS: FIXED on the feature branch by `88b4eef27`, `5be872c20`,
-  `45772ac13`, `0ee5f4463`, and `2a99fd2b1`; pending PR.
+  `45772ac13`, `f2be2e994`, `139c860b2`, and `fb22372c8`; pending PR.
 - FOUND: 2026-07-31, second independent review of PR #134.
 - SYMPTOM: a partial floating Panel loses both primary-axis endpoint borders
   when a dragged window reaches its live attached endpoint. Its rounded ends
@@ -3107,12 +3107,15 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   Maximum Length lifecycle. Two-output recipe 073 passes full-touching,
   partial-touching, and disconnected output arrangements, exact separated-span
   activation, restart persistence, and its controlled negative oracles. The
-  exact source head `a601494ff9eb9f3430307dd166df9a16871d8517`
-  passes the full canonical gate.
+  previous exact source head `a601494ff9eb9f3430307dd166df9a16871d8517`
+  passed the full canonical gate before the final release review strengthened
+  the D247 applied-placement boundary. The corrected focused suite passes; a
+  replacement canonical gate is pending.
 - SEVERITY: beta blocker.
 
 ### D247 - Placement controllers published before LayerShell acceptance
-- STATUS: FIXED on the feature branch by `0ee5f4463`; pending PR.
+- STATUS: FIXED on the feature branch by `f2be2e994` and `fb22372c8`;
+  pending PR.
 - FOUND: 2026-07-31, final cold independent review of PR #134.
 - SYMPTOM: a failed placement or direct resize could expose new Panel
   occupancy, window-touch triggers, presentation geometry, or enabled borders
@@ -3123,21 +3126,46 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   signals immediately. A refused LayerShell call returned without restoring
   the old controller state, and a successful call still exposed mixed old and
   new state before the later Positioner snapshot update.
+  The first correction staged controller geometry but left three paths outside
+  that boundary. `setScreenToFollow()` still changed QWindow output and emitted
+  screen, containment, absolute-geometry, reservation, and touch observers
+  before the delayed solve. `applyViewPlacement()` mutated QWindow and
+  LayerShell output, anchors, margins, and exclusion zone without restoring
+  them when its postcondition failed. Both D-Bus collectors also paired target
+  screen identity with applied Positioner geometry. The applied
+  `screenGeometryChanged` signal fed back into `syncGeometry()`, scheduling a
+  redundant second application after every real output publication.
 - FIX: solve Panel or Dock surface, canvas, presentation, and border state into
   local values. Pass only the staged surface to LayerShell. On success, install
   every backing value before QWindow or controller notifications; on failure,
   discard the stage without mutating runtime state. Dock offset and edit-canvas
-  changes use the same solve-and-publish path.
-- EVIDENCE: the production binary and focused source contract pass. Nested
+  changes use the same solve-and-publish path. Keep configured LayerShell
+  QWindows on the previous output until the lower placement boundary runs,
+  suppress their placement signals during retarget, install one applied output
+  and geometry snapshot, then replay the screen notification. Restore the
+  complete prior QWindow and LayerShell state before refusing a failed
+  postcondition. Placement-dependent geometry, touch, borders, neighbor
+  availability, and D-Bus retain the old applied snapshot while a replacement
+  is pending. Output geometry observation now enters the solver directly;
+  applied output publication no longer loops back into another solve.
+- EVIDENCE: the production binary and focused LayerShell, source-contract,
+  D-Bus, panel-border, window-touch, and reservation-publication tests pass.
+  The LayerShell test deliberately corrupts the final anchors after all
+  production setters run and verifies exact rollback of QWindow output,
+  LayerShell output, anchors, exclusive edge, margins, exclusion zone, and
+  visibility. The source contract pins signal suppression, install-before-
+  notify ordering, applied-output reporting, pending-consumer refusal, and the
+  absence of the publication feedback loop. Nested
   recipe 074 observes stable physical state throughout held live attachment,
   and two-output recipe 073 passes output topology changes and restart
-  persistence. Exact source head
-  `a601494ff9eb9f3430307dd166df9a16871d8517` passes the full canonical gate.
+  persistence. The earlier exact source head
+  `a601494ff9eb9f3430307dd166df9a16871d8517` passed the full canonical gate;
+  a replacement gate at the corrected source head is pending.
 - SEVERITY: release blocker.
 
 ### D246 - Hidden partial Docks collapsed edge activation to one pixel
-- STATUS: FIXED on the feature branch by `e8e73cc8e`, `a5b964eb7`, and
-  `a601494ff`; pending PR.
+- STATUS: FIXED on the feature branch by `2ed7553c5`, `ba7cc5f6d`, and
+  `12a6254fa`; pending PR.
 - FOUND: 2026-07-31, final cold independent review of PR #134.
 - SYMPTOM: an auto-hidden partial Dock can retain only one pixel of its
   primary-axis reveal strip, making ordinary pointer reveal effectively
@@ -3154,7 +3182,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   always-stable source. All 247 QML interaction checks pass. The qualified
   runtime-view ownership path and its updated source guard keep the QML lint
   ratchet unchanged. Exact source head
-  `a601494ff9eb9f3430307dd166df9a16871d8517` passes the full canonical gate.
+  `a601494ff9eb9f3430307dd166df9a16871d8517` passed the full canonical gate
+  before the final D247 follow-up. A replacement canonical gate is pending.
 - SEVERITY: release blocker.
 
 ### D244 - Live attached Dock presentation leaked into stable geometry
