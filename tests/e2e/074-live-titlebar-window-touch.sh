@@ -230,6 +230,32 @@ wait_for_dock_floated_presentation() {
     e2e_fail "Dock did not restore its configured floated span and corners (progress=$progress configuredRatio=$configured_ratio presentation=$presented_x+$presented_length expected=$expected_x+$expected_length borders=$borders)"
 }
 
+wait_for_partial_panel_attached_presentation() {
+    local expected_x="$1" expected_length="$2"
+    local progress=unread configured_ratio=unread
+    local presented_x=-1 presented_length=-1 output_x=-1 output_length=-1
+    local borders=unread
+
+    for _ in $(seq 1 100); do
+        read -r progress configured_ratio presented_x presented_length \
+            output_x output_length borders <<< "$(presentation_probe)"
+        if [[ "$progress" == 0.000000000
+              && "$presented_x $presented_length" \
+                  == "$expected_x $expected_length"
+              && "$presented_length" -lt "$output_length"
+              && "$borders" == bottom,left,right ]]; then
+            (( drag_pid > 0 )) \
+                || e2e_fail "attached partial Panel has no held drag"
+            kill -0 "$drag_pid" 2>/dev/null \
+                || e2e_fail "partial Panel border endpoint appeared only after button release"
+            return 0
+        fi
+        sleep 0.01
+    done
+
+    e2e_fail "partial Panel did not keep both primary-axis end borders at attachment (progress=$progress presentation=$presented_x+$presented_length expected=$expected_x+$expected_length output=$output_x+$output_length borders=$borders)"
+}
+
 assert_partial_dock_presentation() {
     local boundary="$1" expected_x="$2" expected_length="$3"
     local progress configured_ratio presented_x presented_length
@@ -539,9 +565,9 @@ exercise_held_drag() {
     local base_snapshot
     base_snapshot="$(stable_physical_snapshot)" \
         || e2e_fail "could not capture the stable $expected_type surface"
+    read -r _ configured_ratio base_presented_x base_presented_length \
+        _ output_length borders <<< "$(presentation_probe)"
     if [[ "$expected_type" == dock ]]; then
-        read -r _ configured_ratio base_presented_x base_presented_length \
-            _ output_length borders <<< "$(presentation_probe)"
         if ! python3 - "$configured_ratio" <<'PY'
 import math
 import sys
@@ -555,6 +581,11 @@ PY
             || e2e_fail "Dock fixture is not partial before live attachment"
         [[ "$borders" == bottom,left,right,top ]] \
             || e2e_fail "floated Dock fixture did not begin with all corners"
+    else
+        (( base_presented_length < output_length )) \
+            || e2e_fail "Panel fixture is not partial before live attachment"
+        [[ "$borders" == bottom,left,right,top ]] \
+            || e2e_fail "floated Panel fixture did not begin with all corners"
     fi
 
     local titlebar_offset=12
@@ -581,6 +612,9 @@ PY
         #! D-Bus round trip; the endpoint itself also proves the attached
         #! target and the still-owned button hold.
         wait_for_dock_attached_presentation_while_held true
+    elif [[ "$expected_panel" == true ]]; then
+        wait_for_partial_panel_attached_presentation \
+            "$base_presented_x" "$base_presented_length"
     fi
     wait_for_policy_while_held \
         "$expected_type" 1 "$expected_request" "$expected_target" \

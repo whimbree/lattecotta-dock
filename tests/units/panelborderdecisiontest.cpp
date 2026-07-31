@@ -18,26 +18,65 @@ class PanelBorderDecisionTest : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
-    void presentationSpan_followsRenderedEndpoints();
+    void presentationSpan_followsOutputEndpoints();
     void everyFloatingAlignmentKeepsAllBorders();
     void attachedAndDegeneratePanelsKeepBoundaryClipping();
     void attachedFullSpanOverridesAllCornersAtOutputBoundaries();
 };
 
-void PanelBorderDecisionTest::presentationSpan_followsRenderedEndpoints()
+void PanelBorderDecisionTest::presentationSpan_followsOutputEndpoints()
 {
     using Edge = FloatingPanelGeometry::Edge;
+    constexpr std::array edges{
+        Edge::Top,
+        Edge::Right,
+        Edge::Bottom,
+        Edge::Left,
+    };
+    const QRect output(-1920, -400, 1440, 2560);
 
-    QVERIFY(PanelBorderDecision::doesPresentationFillPrimaryAxis(
-        QRect(0, 17, 1440, 40), QSize(1440, 80), Edge::Top));
-    QVERIFY(PanelBorderDecision::doesPresentationFillPrimaryAxis(
-        QRect(17, 0, 40, 2560), QSize(80, 2560), Edge::Left));
-    QVERIFY(!PanelBorderDecision::doesPresentationFillPrimaryAxis(
-        QRect(1, 17, 1439, 40), QSize(1440, 80), Edge::Bottom));
-    QVERIFY(!PanelBorderDecision::doesPresentationFillPrimaryAxis(
-        QRect(17, 0, 40, 2559), QSize(80, 2560), Edge::Right));
-    QVERIFY(!PanelBorderDecision::doesPresentationFillPrimaryAxis(
-        QRect(), QSize(1440, 80), Edge::Top));
+    for (const auto edge : edges) {
+        const bool horizontal = FloatingPanelGeometry::isHorizontal(edge);
+        const QRect fullView = horizontal
+            ? QRect(output.x(), output.y(), output.width(), 80)
+            : QRect(output.x(), output.y(), 80, output.height());
+        const QRect fullPresentation = horizontal
+            ? QRect(0, 17, fullView.width(), 40)
+            : QRect(17, 0, 40, fullView.height());
+        QVERIFY(
+            PanelBorderDecision::doesPresentationFillOutputPrimaryAxis(
+                fullPresentation, fullView, output, edge));
+
+        //! A partial Panel's paint fills its complete local QWindow canvas,
+        //! but neither primary endpoint reaches the output. This is not a
+        //! full-span presentation on any edge or output origin.
+        const QRect partialView = horizontal
+            ? QRect(output.x() + output.width() / 4,
+                    output.y(), output.width() / 2, 80)
+            : QRect(output.x(), output.y() + output.height() / 4,
+                    80, output.height() / 2);
+        const QRect partialPresentation = horizontal
+            ? QRect(0, 17, partialView.width(), 40)
+            : QRect(17, 0, 40, partialView.height());
+        QVERIFY(
+            !PanelBorderDecision::doesPresentationFillOutputPrimaryAxis(
+                partialPresentation, partialView, output, edge));
+
+        auto clippedPresentation = fullPresentation;
+        if (horizontal) {
+            clippedPresentation.setWidth(
+                clippedPresentation.width() - 1);
+        } else {
+            clippedPresentation.setHeight(
+                clippedPresentation.height() - 1);
+        }
+        QVERIFY(
+            !PanelBorderDecision::doesPresentationFillOutputPrimaryAxis(
+                clippedPresentation, fullView, output, edge));
+    }
+
+    QVERIFY(!PanelBorderDecision::doesPresentationFillOutputPrimaryAxis(
+        QRect(), QRect(0, 0, 1440, 80), output, Edge::Top));
 }
 
 void PanelBorderDecisionTest::everyFloatingAlignmentKeepsAllBorders()

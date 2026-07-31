@@ -1042,6 +1042,13 @@ private:
                    "\\"
                    "\"$base_presented_x\""
                    "\"$base_presented_length\""))
+            && code.contains(QStringLiteral(
+                   "wait_for_partial_panel_attached_presentation"
+                   "\\"
+                   "\"$base_presented_x\""
+                   "\"$base_presented_length\""))
+            && code.contains(QStringLiteral(
+                   "\"$borders\"==bottom,left,right"))
             && code.count(QStringLiteral(
                    "wait_for_policy_while_held")) >= 4
             && code.count(QStringLiteral(
@@ -3837,6 +3844,9 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         "EffectRegion::rasterizedTranslatedShape(visibleShape,localShape)")));
     QVERIFY(effects.contains(QStringLiteral(
         "PanelBorderDecision::enabledBorders(")));
+    QVERIFY(effects.contains(QStringLiteral(
+        "PanelBorderDecision::doesPresentationFillOutputPrimaryAxis("
+        "m_rect,m_view->geometry(),m_view->screenGeometry(),*edge)")));
     QVERIFY(!effects.contains(QStringLiteral(
         "enableBlurBehind(m_view,true);")));
     QVERIFY(!effects.contains(QStringLiteral(
