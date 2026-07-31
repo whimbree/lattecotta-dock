@@ -3062,8 +3062,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D245 - Partial Panels lost endpoint borders at live attachment
-- STATUS: FIXED on the feature branch by `88b4eef27` and `5be872c20`;
-  pending PR.
+- STATUS: FIXED on the feature branch by `88b4eef27`, `5be872c20`, and
+  `45772ac13`; pending PR.
 - FOUND: 2026-07-31, second independent review of PR #134.
 - SYMPTOM: a partial floating Panel loses both primary-axis endpoint borders
   when a dragged window reaches its live attached endpoint. Its rounded ends
@@ -3075,27 +3075,34 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `QWindow::screen()` geometry at its call site. That observation can lag the
   synchronously applied Positioner and LayerShell output during relocation.
   The helper also silently classified invalid view or output geometry as a
-  partial presentation.
+  partial presentation. The following cold review found that relocation tokens
+  still did not cover direct output reassignment or `QScreen::geometryChanged`.
+  Positioner also requested a border update before replacing its solver
+  scratch, so valid old surface and new output rectangles could still be
+  combined.
 - FIX: translate local effects geometry through the view's global geometry and
   compare the result with the assigned output's primary-axis endpoints. Keep
   the decision independent of view type, output origin, orientation, and
-  topology. Read the assigned output and solved global surface from Positioner
-  only when its relocation generation is applied. Retain the previous borders
-  during the atomic transaction and recompute at commit. Treat absent paint as
-  the documented startup state, but report missing output or surface authority
-  as a critical refusal.
+  topology. Positioner now publishes the applied surface, the output geometry
+  used to solve it, the placement generation, and forced endpoint borders
+  together only after LayerShell accepts the placement. Effects retains the
+  previous publication until the new one arrives. Treat absent paint as the
+  documented startup state, but report missing output or surface authority as
+  a critical refusal.
 - EVIDENCE: the pure border test covers all four edges on a negative-origin
   output. It accepts complete output coverage, rejects a partial Panel that
   fills only its QWindow, rejects a one-pixel short presentation, and rejects
-  the lagging source output. The
-  source contract requires the Positioner authorities, the relocation barrier,
-  the commit callback, and the loud invalid-geometry refusal. Nested recipe 074
+  the lagging source output. The source contract requires the immutable
+  Positioner geometry pair, placement-generation match, publication callback,
+  and loud invalid-geometry refusal. Nested recipe 074
   holds a real titlebar drag at attachment and observes a partial top Panel
   retain `bottom,left,right` borders before button release. The same recipe
-  still observes full-output Justify Dock
-  attachment and the 60% to 54% Maximum Length lifecycle. The complete
-  canonical gate passes at exact source head
-  `5be872c20052b89142e2a1a4dfe370b0af2196dd`, including all 124 CTest
+  still observes full-output Justify Dock attachment and the 60% to 54%
+  Maximum Length lifecycle. Two-output recipe 073 passes full-touching,
+  partial-touching, and disconnected output arrangements, exact separated-span
+  activation, restart persistence, and its controlled negative oracles. The
+  complete canonical gate passes at exact source head
+  `42244c77d33613490a2cd1eca401703d19517c4e`, including all 124 CTest
   entries, the qmllint ratchet, rendered scene probes, ASan and UBSan nested
   execution, package provenance controls, and matrix refusals.
 - SEVERITY: beta blocker.

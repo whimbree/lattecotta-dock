@@ -44,6 +44,16 @@ transaction, and recomputes when placement commits. Missing output or surface
 authority now produces a critical refusal. The pure test rejects the lagging
 source output, and the source contract pins all four ownership boundaries.
 
+The following cold review returned `DO NOT MERGE` because direct
+`setScreenToFollow()` and output geometry changes do not advance relocation
+tokens. Positioner could therefore update border policy with its previous
+solved surface and current output geometry before LayerShell accepted the new
+solution. Commit `45772ac13` makes one Positioner publication own applied
+surface geometry, the exact output geometry used to solve it, placement
+generation, and forced endpoint borders. Publication happens only after the
+LayerShell application succeeds. Solver scratch and failed placement attempts
+are no longer observable as applied geometry.
+
 The focused background, border, mask, D-Bus, identity, source-contract, QML
 interaction, and QML compile checks pass. Expanded nested recipe 074 drives a
 Panel, partial Center Dock, and expanding Justify Dock through fractional
@@ -51,11 +61,14 @@ attachment and reversal before button release. Stable physical state remains
 byte-identical. With automatic sizing disabled, the same recipe attaches a 60%
 Justify Dock, changes Maximum Length to 54% through the real edit ruler, and
 observes stable occupancy and touch geometry converge while attached paint
-remains full-width. Plasma 6.7.3 also keeps the rounded floating FrameSvg
+remains full-width. Two-output recipe 073 passes full-touching,
+partial-touching, and disconnected arrangements, exact separated-span
+activation, restart persistence, and its controlled negative oracles. Plasma
+6.7.3 also keeps the rounded floating FrameSvg
 during fractional frames and switches enabled borders at exact attachment; it
 does not numerically shrink the radius each frame. The final replacement
 canonical gate passes at exact source head
-`5be872c20052b89142e2a1a4dfe370b0af2196dd`,
+`42244c77d33613490a2cd1eca401703d19517c4e`,
 including all 124 CTest entries, the reduced qmllint ratchet, rendered scene
 probes, ASan and UBSan nested execution, package provenance controls, and
 matrix refusals. The real-session dock remains stopped until the corrected
