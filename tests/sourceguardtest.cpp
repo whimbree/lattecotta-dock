@@ -2307,13 +2307,14 @@ private:
                    "metrics.totals.thickness,"
                    "metrics.configuredScreenEdgeMargin);"))
             && updateInput.contains(QStringLiteral(
-                   "constpresentedLocalGeometry="
-                   "manager.presentedLocalGeometry();"))
+                   "constinputLengthGeometry="
+                   "manager.window.visibility.isHidden"
+                   "||manager.window.visibility.isSidebar"
+                   "?latteView.localGeometry"
+                   ":manager.presentedLocalGeometry();"))
             && updateInput.contains(QStringLiteral(
                    "metrics.mask.screenEdge,"
-                   "presentedLocalGeometry,"))
-            && !updateInput.contains(QStringLiteral(
-                   "metrics.mask.screenEdge,latteView.localGeometry,"));
+                   "inputLengthGeometry,"));
     }
 
 private Q_SLOTS:
@@ -3063,19 +3064,35 @@ void SourceGuardTest::
     QVERIFY(matchesStableDockOccupancyContract(
         visibility, bridge, viewSource));
 
-    const QString presentedInput = QStringLiteral(
+    const QString selectedInput = QStringLiteral(
         "                                                                "
-        "presentedLocalGeometry,\n");
-    QCOMPARE(visibility.count(presentedInput), 1);
+        "inputLengthGeometry,\n");
+    QCOMPARE(visibility.count(selectedInput), 1);
     visibility.replace(
-        presentedInput,
+        selectedInput,
         QStringLiteral(
             "                                                                "
-            "latteView.localGeometry,\n"));
+            "manager.presentedLocalGeometry(),\n"));
     QVERIFY2(!matchesStableDockOccupancyContract(
                  visibility, bridge, viewSource),
-             "input must not collapse onto the stable reservation footprint"
-             " while paint expands");
+             "hidden input must not collapse onto the 1x1 effects sentinel");
+
+    visibility = readFile(QStringLiteral(
+        "containment/package/contents/ui/VisibilityManager.qml"));
+    const QString hiddenSelection = QStringLiteral(
+        "        const inputLengthGeometry = manager.window.visibility.isHidden\n"
+        "                || manager.window.visibility.isSidebar\n"
+        "            ? latteView.localGeometry\n"
+        "            : manager.presentedLocalGeometry();\n");
+    QCOMPARE(visibility.count(hiddenSelection), 1);
+    visibility.replace(
+        hiddenSelection,
+        QStringLiteral(
+            "        const inputLengthGeometry = latteView.localGeometry;\n"));
+    QVERIFY2(!matchesStableDockOccupancyContract(
+                 visibility, bridge, viewSource),
+             "visible input must follow animated paint instead of stable"
+             " occupancy");
 
     visibility = readFile(QStringLiteral(
         "containment/package/contents/ui/VisibilityManager.qml"));
