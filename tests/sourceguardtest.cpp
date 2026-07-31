@@ -262,8 +262,10 @@ private:
         return layouterPrivate.contains(QStringLiteral(
                    "readonlypropertyintautomaticSizingContentsMaxLength:"
                    "{constbackgroundTotals=background.totals;"
-                   "returnroot.automaticSizingMaximumLength"
-                   "-backgroundTotals.paddingsLength;}"))
+                   "constavailableLength="
+                   "root.automaticSizingMaximumLength"
+                   "-backgroundTotals.paddingsLength;"
+                   "returnavailableLength;}"))
             && autoSize.contains(QStringLiteral(
                    "functiononAutomaticSizingMaximumLengthChanged()"))
             && autoSize.contains(QStringLiteral(
@@ -2992,13 +2994,13 @@ void SourceGuardTest::
 
     QString layouterLeak = originalLayouter;
     const QString stableMaximum = QStringLiteral(
-        "return root.automaticSizingMaximumLength\n"
+        "const availableLength = root.automaticSizingMaximumLength\n"
         "            - backgroundTotals.paddingsLength;");
     QCOMPARE(layouterLeak.count(stableMaximum), 1);
     layouterLeak.replace(
         stableMaximum,
         QStringLiteral(
-            "return root.maxLength\n"
+            "const availableLength = root.maxLength\n"
             "            - backgroundTotals.paddingsLength;"));
     QVERIFY2(!matchesStableDockAutomaticSizingContract(
                  originalAutoSize, layouterLeak, originalMain),
