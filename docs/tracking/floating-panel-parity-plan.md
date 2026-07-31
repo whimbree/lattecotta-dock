@@ -205,6 +205,11 @@ and PR #126 landed FP-4B.
       of presentation) is fixed by FP-1 through FP-4.
       Commits: complete FP-1 through FP-4 per-stage commit lists above; final
       live-drag corrections da89c1262, cf976eccd
+- [x] D244 (live attached Dock presentation leaked into stable geometry) keeps
+      animated length, gap, input, and endpoint borders inside presentation
+      while configured touch, sizing, occupancy, strut, and reservation
+      authorities remain stable.
+      Commits: eabe3df05
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
       independent unless a shared root is proved.
