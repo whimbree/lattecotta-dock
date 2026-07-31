@@ -263,33 +263,43 @@ bool FloatingTransition::configureGeometry(
 void FloatingTransition::configureGeometry(
     const FloatingPanelGeometry::Solution &solution)
 {
-    const bool unchanged = hasGeometry()
-        && m_geometry->attached.value == solution.attached.value
-        && m_geometry->floated.value == solution.floated.value
-        && m_geometry->envelope.value == solution.envelope.value
-        && m_geometry->trigger.value == solution.trigger.value
-        && m_geometry->appletMeasurementBounds.value
-            == solution.appletMeasurementBounds.value
-        && m_geometry->primaryAxisSpan == solution.primaryAxisSpan
-        && m_geometry->reservationDepth == solution.reservationDepth;
-    if (unchanged) {
-        return;
+    if (installGeometryWithoutNotification(solution)) {
+        publishInstalledGeometryChange();
     }
-
-    m_geometry = solution;
-    ++m_geometryRevision;
-    Q_EMIT stableGeometryChanged();
-    Q_EMIT currentGeometryChanged();
 }
 
 void FloatingTransition::clearGeometry()
 {
-    if (!hasGeometry()) {
-        return;
+    if (installGeometryWithoutNotification(std::nullopt)) {
+        publishInstalledGeometryChange();
+    }
+}
+
+bool FloatingTransition::installGeometryWithoutNotification(
+    const std::optional<FloatingPanelGeometry::Solution> &geometry)
+{
+    const bool unchanged = !geometry
+        ? !m_geometry
+        : m_geometry
+            && m_geometry->attached.value == geometry->attached.value
+            && m_geometry->floated.value == geometry->floated.value
+            && m_geometry->envelope.value == geometry->envelope.value
+            && m_geometry->trigger.value == geometry->trigger.value
+            && m_geometry->appletMeasurementBounds.value
+                == geometry->appletMeasurementBounds.value
+            && m_geometry->primaryAxisSpan == geometry->primaryAxisSpan
+            && m_geometry->reservationDepth == geometry->reservationDepth;
+    if (unchanged) {
+        return false;
     }
 
-    m_geometry.reset();
+    m_geometry = geometry;
     ++m_geometryRevision;
+    return true;
+}
+
+void FloatingTransition::publishInstalledGeometryChange()
+{
     Q_EMIT stableGeometryChanged();
     Q_EMIT currentGeometryChanged();
 }

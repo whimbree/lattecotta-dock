@@ -205,6 +205,15 @@ private:
         bool movesScreensGroup{false};
     };
 
+    struct SolvedViewGeometry
+    {
+        QRect surface;
+        QRect canvas;
+        std::optional<FloatingPanelGeometry::Solution>
+            floatingPresentation;
+        PositionerGeometry::ForcedBorders forcedBorders;
+    };
+
     void applyOutputPlacement(
         QScreen *destination,
         bool followsPrimary);
@@ -236,28 +245,32 @@ private:
     void scheduleUnanimatedPlacementApplyEvent();
 
     void updateFormFactor();
-    void resizeWindow(
-        const QRect &availableScreenRect,
-        const QSize &assignedScreenSize);
+    void applySolvedWindowGeometry(const QRect &surface);
     void updatePosition(QRect availableScreenRect = QRect());
-    void updateCanvasGeometry(
+    [[nodiscard]] std::optional<SolvedViewGeometry>
+    solveViewGeometry(
         const QRect &availableScreenRect,
-        const QRect &assignedScreenGeometry = QRect());
+        const QRect &assignedScreenGeometry) const;
+    void installStartupGeometry(
+        const SolvedViewGeometry &solved,
+        const QRect &availableScreenRect,
+        const QRegion &availableScreenRegion);
+    void publishAppliedGeometry(
+        const SolvedViewGeometry &solved,
+        const QRect &assignedScreenGeometry,
+        const QRect &availableScreenRect,
+        const QRegion &availableScreenRegion);
     [[nodiscard]] bool solveAndApplyGeometry(
         bool completesRelocation = false);
     [[nodiscard]] std::optional<FloatingPanelGeometry::Solution>
     solveStablePanelGeometry(
         const QRect &availableScreenRect,
         const QRect &assignedScreenGeometry) const;
-    void applyStablePanelGeometry(
-        const FloatingPanelGeometry::Solution &solution);
-
-    void validateTopBottomBorders(
+    [[nodiscard]] PositionerGeometry::ForcedBorders
+    solveTopBottomBorders(
         const QRect &availableScreenRect,
         const QRegion &availableScreenRegion,
-        const QRect &assignedScreenGeometry);
-
-    void setCanvasGeometry(const QRect &geometry);
+        const QRect &assignedScreenGeometry) const;
 
     bool isLastHidingRelocationEvent() const;
 
@@ -294,8 +307,6 @@ private:
     QRect m_appliedOutputGeometry;
     quint64 m_surfacePlacementGeneration{0};
     quint64 m_surfaceGeometryPublicationRevision{0};
-    bool m_solvedForceTopBorder{false};
-    bool m_solvedForceBottomBorder{false};
     //! it is used to update geometry calculations without requesting no needed Corona calculations
     QRect m_lastAvailableScreenRect;
     QRegion m_lastAvailableScreenRegion;
