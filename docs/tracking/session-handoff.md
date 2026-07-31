@@ -4161,7 +4161,7 @@ NOT blanket-fixed (per CLAUDE.md a guard is a contract or a bandaid):
   just suboptimal, no corruption. Left as is.
 - AutoSize updateIconSize() maxLength<=0 early-return: deliberate
   contract, commented in place since ad9b823f (re-run wired via
-  onMaxLengthChanged).
+  onAutomaticSizingMaximumLengthChanged).
 - fa02b887's liveness filter in Storage::importLayoutFile: still a
   band-aid by its own admission (deleter unidentified); NOT
   headless-drivable (needs a live corona), so the importerregression

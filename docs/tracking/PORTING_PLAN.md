@@ -2302,8 +2302,9 @@ multi-view, multi-monitor setup.
       condition could not exit either, starving the event loop at 100%
       CPU. Inherited from upstream 747d4870, latent on X11. Both loops
       now clamp and exit on inequality, and recalculation skips the
-      unsized-window degenerate input (re-run by onMaxLengthChanged).
-      Verified with the throwaway layout at 78 and my real
+      unsized-window degenerate input (re-run by
+      onAutomaticSizingMaximumLengthChanged).
+      Verified with the throwaway layout at 78 and the real
       layout, which starts again
       Commits: ad9b823f
 - [x] D26 (VisibilityManager inNormalState binding-loop warning): keep

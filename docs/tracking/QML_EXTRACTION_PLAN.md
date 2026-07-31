@@ -1228,8 +1228,8 @@ Conventions used by all specs:
   about the oscillation the asymmetry prevents - encode as a test
   that a grow immediately after a shrink at the boundary is
   rejected); maxLength<=0 remains OUTSIDE the core (the QML contract
-  comment and its onMaxLengthChanged re-run stay; core asserts
-  maxLength>0 via Q_ASSERT so misuse is loud).
+  comment and its onAutomaticSizingMaximumLengthChanged re-run stay;
+  core asserts maxLength>0 via Q_ASSERT so misuse is loud).
 - Qt5-fidelity: f0ad7b23 containment/package/contents/ui/abilities/
   AutoSize.qml:151 `updateIconSize`, :131 `producesEndlessLoop`
   (verified). DEVIATION, named: ad9b823f's termination guarantee wins

@@ -190,7 +190,8 @@ into "runs once with garbage and never again with truth".
 REAL EXAMPLES:
 - ad9b823f: autosize loops clamp to their bounds and exit on
   inequality; updateIconSize() skips entirely while maxLength <= 0 and
-  onMaxLengthChanged re-runs it as soon as real geometry exists.
+  onAutomaticSizingMaximumLengthChanged re-runs it as soon as the real
+  content budget exists.
 - c5bdc239: Containment::screenChanged connected to
   Positioner::syncGeometry so the late screen id re-triggers the
   availability computation and the edit chrome re-places itself.
