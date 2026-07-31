@@ -37,9 +37,13 @@ Item {
     //! its icon fit. AutoSize consumes this resting budget while layout and
     //! background placement continue to consume contentsMaxLength above.
     readonly property int automaticSizingContentsMaxLength: {
+        // root and background are supplied by the owning containment context.
+        // qmllint disable unqualified
         const backgroundTotals = background.totals;
-        return root.automaticSizingMaximumLength
+        const availableLength = root.automaticSizingMaximumLength
             - backgroundTotals.paddingsLength;
+        // qmllint enable unqualified
+        return availableLength;
     }
 
     readonly property Item startLayout: LayouterElements.AppletsContainer {

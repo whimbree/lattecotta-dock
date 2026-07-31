@@ -333,6 +333,10 @@ Item{
             //! configured resting length. The separate input rectangle below
             //! follows animated paint without publishing it as occupancy.
             const presentedLocalGeometry = manager.presentedLocalGeometry();
+            // The containment supplies root, latteView, and metrics as the
+            // component's runtime context. They have no static qualifier in
+            // this inherited Qt5-shaped boundary.
+            // qmllint disable unqualified
             if (!root.dockFloatingTransitionOwnsGap) {
                 latteView.localGeometry = presentedLocalGeometry;
             } else if (root.myView.alignment === LatteCore.Types.Justify) {
@@ -353,6 +357,7 @@ Item{
                             metrics.totals.thickness,
                             metrics.configuredScreenEdgeMargin);
             }
+            // qmllint enable unqualified
         }
 
         //! Input Mask
