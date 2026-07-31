@@ -41,13 +41,10 @@ struct Inputs {
     const QRect &outputGeometry,
     FloatingPanelGeometry::Edge edge)
 {
-    //! No presentation exists until QML publishes its first effects rectangle
-    //! during startup. That absence has no output endpoints. The caller owns
-    //! the surface and output authorities and must never provide invalid
-    //! geometry once a presentation exists.
-    if (!presentation.isValid()) {
-        return false;
-    }
+    //! Startup and type-handoff absence belong to the Effects boundary. Once
+    //! this pure decision is called, all three rectangles are one complete
+    //! applied presentation snapshot.
+    Q_ASSERT(presentation.isValid());
     Q_ASSERT(viewGeometry.isValid());
     Q_ASSERT(outputGeometry.isValid());
 
