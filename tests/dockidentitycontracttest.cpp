@@ -254,15 +254,18 @@ void DockIdentityContractTest::relocationCompletionCommitsPlacementTransaction()
         begin);
     const int output = transaction.indexOf(
         QStringLiteral("applyOutputPlacement("), guard);
+    const int outputAcknowledged = transaction.indexOf(
+        QStringLiteral("m_nextScreenName.clear()"), output);
     const int edge = transaction.indexOf(
         QStringLiteral("m_view->setLocation("),
-        output);
+        outputAcknowledged);
     const int alignment = transaction.indexOf(
         QStringLiteral("m_view->setAlignment("),
         edge);
     QVERIFY2(begin >= 0 && guard > begin && output > guard
-                 && edge > output && alignment > edge,
-             "compound placement must retire ownership and stage output, edge, and alignment under one observer guard");
+                 && outputAcknowledged > output
+                 && edge > outputAcknowledged && alignment > edge,
+             "compound placement must retire ownership, acknowledge the staged output, and stage edge and alignment under one observer guard");
 
     const QString visibilitySource = readFile(
         QStringLiteral("app/view/visibilitymanager.cpp"));
@@ -551,7 +554,7 @@ outputMigrationUsesLayerShellAuthority()
     const QString apply = normalized(functionBody(
         layerShellSource,
         QStringLiteral(
-            "std::optional<int> applyViewPlacement")));
+            "ViewPlacementApplication applyViewPlacement")));
     QVERIFY(apply.contains(QStringLiteral(
         "retargetScreen(window,ls,screen)")));
     QVERIFY(!apply.contains(QStringLiteral(

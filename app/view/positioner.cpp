@@ -668,9 +668,10 @@ void Positioner::reconsiderScreen()
 
 void Positioner::onScreenChanged(QScreen *scr)
 {
-    if (m_appliedScreen == scr
+    if (m_appliedOutput
+            && m_appliedOutput->liveScreen == scr
             && scr
-            && m_appliedOutputGeometry
+            && m_appliedOutput->identity.geometry
                 == scr->geometry()) {
         //! Positioner emits the applied screen edge after installing the
         //! complete snapshot. Do not turn that publication into another
@@ -928,9 +929,18 @@ bool Positioner::solveAndApplyGeometry(
 
 void Positioner::validateDockGeometry()
 {
-    if (m_slideOffset==0 && m_view->geometry() != m_validGeometry) {
-        m_validateGeometryTimer.start();
+    if (m_geometryApplicationPending) {
+        return;
     }
+
+    if (m_slideOffset == 0
+            && m_view->geometry()
+                != m_validGeometry) {
+        m_validateGeometryTimer.start();
+        return;
+    }
+
+    m_validateGeometryTimer.stop();
 }
 
 QRect Positioner::canvasGeometry() const
@@ -940,7 +950,15 @@ QRect Positioner::canvasGeometry() const
 
 QScreen *Positioner::appliedScreen() const
 {
-    return m_appliedScreen;
+    return m_appliedOutput
+        ? m_appliedOutput->liveScreen.data()
+        : nullptr;
+}
+
+const std::optional<AppliedOutputSnapshot> &
+Positioner::appliedOutputSnapshot() const
+{
+    return m_appliedOutput;
 }
 
 QRect Positioner::surfaceGeometry() const
@@ -950,7 +968,9 @@ QRect Positioner::surfaceGeometry() const
 
 QRect Positioner::surfaceOutputGeometry() const
 {
-    return m_appliedOutputGeometry;
+    return m_appliedOutput
+        ? m_appliedOutput->identity.geometry
+        : QRect{};
 }
 
 quint64 Positioner::surfacePlacementGeneration() const
@@ -971,12 +991,15 @@ bool Positioner::hasPublishedCurrentPlacement() const
 
     return !m_geometryApplicationPending
         && m_surfaceGeometryPublicationRevision > 0
-        && m_appliedScreen
-        && m_appliedScreen == m_screenToFollow
-        && m_view->screen() == m_appliedScreen
+        && m_appliedOutput
+        && m_appliedOutput->liveScreen
+        && m_appliedOutput->liveScreen
+            == m_screenToFollow
+        && m_view->screen()
+            == m_appliedOutput->liveScreen
         && m_surfacePlacementGeneration
             == m_relocationGeneration
-        && m_appliedOutputGeometry
+        && m_appliedOutput->identity.geometry
             == m_screenToFollow->geometry();
 }
 
@@ -1159,7 +1182,6 @@ void Positioner::installStartupGeometry(
     const QRect &availableScreenRect,
     const QRegion &availableScreenRegion)
 {
-    m_geometryApplicationPending = false;
     m_validGeometry = solved.surface;
     m_lastAvailableScreenRect = availableScreenRect;
     m_lastAvailableScreenRegion = availableScreenRegion;
@@ -1173,6 +1195,8 @@ void Positioner::installStartupGeometry(
     m_canvasGeometry = solved.canvas;
 
     applySolvedWindowGeometry(solved.surface);
+    m_geometryApplicationPending = false;
+    validateDockGeometry();
     if (canvasChanged) {
         Q_EMIT canvasGeometryChanged();
     }
@@ -1195,17 +1219,33 @@ Positioner::installAppliedGeometry(
     //! this function, so it cannot leak solver scratch as applied state.
     const QRect assignedScreenGeometry =
         assignedScreen->geometry();
+    const int assignedScreenId =
+        m_corona->screenPool()->id(
+            assignedScreen->name());
+    if (assignedScreenId
+            < Latte::ScreenPool::FIRSTSCREENID) {
+        qFatal(
+            "Positioner cannot publish an output without a stable ScreenPool identity");
+    }
     const bool screenChanged =
-        m_appliedScreen != assignedScreen
+        !m_appliedOutput
+        || m_appliedOutput->liveScreen
+            != assignedScreen
         || qWindowScreenChanged;
     const bool outputChanged =
         screenChanged
-        || m_appliedOutputGeometry
+        || m_appliedOutput->identity.geometry
             != assignedScreenGeometry;
     m_validGeometry = solved.surface;
-    m_appliedScreen = assignedScreen;
+    m_appliedOutput = AppliedOutputSnapshot{
+        .identity = {
+            .connector = assignedScreen->name(),
+            .screenId = assignedScreenId,
+            .geometry = assignedScreenGeometry,
+        },
+        .liveScreen = assignedScreen,
+    };
     m_appliedSurfaceGeometry = solved.surface;
-    m_appliedOutputGeometry = assignedScreenGeometry;
     m_surfacePlacementGeneration = m_relocationGeneration;
     m_lastAvailableScreenRect = availableScreenRect;
     m_lastAvailableScreenRegion = availableScreenRegion;
@@ -1221,12 +1261,6 @@ Positioner::installAppliedGeometry(
             solved.floatingPresentation);
     const bool canvasChanged = m_canvasGeometry != solved.canvas;
     m_canvasGeometry = solved.canvas;
-    m_geometryApplicationPending = false;
-
-    //! Repeated stable syncs stay cheap in LayerShell::applyViewPlacement,
-    //! while this revision records each complete solved-and-applied boundary.
-    ++m_surfaceGeometryPublicationRevision;
-
     return {
         .canvasChanged = canvasChanged,
         .transitionChanged = transitionChanged,
@@ -1243,6 +1277,14 @@ void Positioner::publishAppliedGeometry(
     Q_ASSERT(assignedScreen);
 
     applySolvedWindowGeometry(solved.surface);
+
+    //! Geometry signals must observe the old publication while QWindow moves
+    //! through its intermediate resize and position notifications. Commit the
+    //! new revision only after the final rectangle is installed, then disarm
+    //! any validation retry that the completed rectangle satisfies.
+    m_geometryApplicationPending = false;
+    ++m_surfaceGeometryPublicationRevision;
+    validateDockGeometry();
 
     //! Reservation geometry and touch authority now consume the same applied
     //! surface, output, and FloatingTransition backing snapshot.
@@ -1556,11 +1598,6 @@ void Positioner::initSignalingForLocationChangeSliding()
         }
     });
 
-    //! SCREEN
-    connect(m_view, &QQuickView::screenChanged, this, [&]() {
-        finishPendingScreenPlacementIfApplied();
-    });
-
     //! LAYOUT
     connect(m_view, &View::layoutChanged, this, [&]() {
         if (!m_nextLayoutName.isEmpty()
@@ -1682,15 +1719,18 @@ void Positioner::initSignalingForLocationChangeSliding()
                     return;
                 }
 
-                if (!m_nextScreenName.isEmpty()) {
-                    m_nextScreen =
-                        plan.outputScreen;
-                }
                 applyOutputPlacement(
                     plan.outputScreen,
                     plan.target.followsPrimary);
                 if (m_placementRequests.isCurrent(
                         plan.token)) {
+                    //! The output component is staged once Positioner and
+                    //! LayerShell own the validated destination. QWindow is
+                    //! retargeted later by the single applied-geometry
+                    //! boundary. Waiting for QWindow::screenChanged here
+                    //! deadlocks that boundary because relocation completion
+                    //! is what invokes it.
+                    m_nextScreenName.clear();
                     m_pendingOutputScreen.clear();
                     m_pendingFollowsPrimary.reset();
                     m_pendingOutputOwnershipChange =
@@ -1750,37 +1790,6 @@ void Positioner::initSignalingForLocationChangeSliding()
             }
         }
     });
-}
-
-void Positioner::finishPendingScreenPlacementIfApplied()
-{
-    if (!m_view || !m_nextScreen
-            || m_nextScreen != m_view->screen()) {
-        return;
-    }
-
-    //[1] if panels are not excluded from confirmed geometry check then they are stuck in sliding out end
-    //and they do not switch to new screen geometry
-    //[2] under wayland view geometry may be delayed to be updated even though the screen has been updated correctly
-    const bool geometryConfirmsOutput =
-        KWindowSystem::isPlatformWayland()
-        || m_view->behaveAsPlasmaPanel()
-        || m_nextScreen->geometry().contains(
-            m_view->geometry().center());
-    if (!geometryConfirmsOutput) {
-        return;
-    }
-
-    const bool isRelocationLastEvent =
-        isLastHidingRelocationEvent();
-    m_nextScreen = nullptr;
-    m_nextScreenName.clear();
-
-    //! Make sure that View has been repositioned properly in the next screen
-    //! and show it afterwards.
-    if (isRelocationLastEvent) {
-        scheduleLastRepositionApplyEvent();
-    }
 }
 
 void Positioner::cancelFailedLayoutRelocation(
@@ -2122,7 +2131,6 @@ void Positioner::projectPendingPlacement(
     m_pendingFollowsPrimary.reset();
     m_pendingOutputOwnershipChange = false;
     m_nextScreenName.clear();
-    m_nextScreen.clear();
     const QString resolvedOutput =
         qString(target.resolvedOutputName);
     QScreen *resolvedScreen{nullptr};
