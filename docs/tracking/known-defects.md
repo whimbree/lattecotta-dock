@@ -3112,7 +3112,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D251 - Hot-unplug erased applied output identity before geometry
-- STATUS: FIXED on the feature branch by `4a6c1aa20`; pending PR.
+- STATUS: FIXED on the feature branch by `4a6c1aa20` and `79d43f2c8`;
+  pending PR.
 - FOUND: 2026-07-31, fresh cold independent review of PR #134.
 - SYMPTOM: destroying the applied `QScreen` could make D-Bus report the target
   connector and screen id with geometry retained from the previous applied
@@ -3126,8 +3127,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   process-owned live handle required for a new placement application.
 - EVIDENCE: the applied-output unit test pins value identity with no live
   screen. D-Bus and source-contract tests require both collectors and
-  `View::screenGeometry()` to consume the durable snapshot. Two-output recipe
-  073 passes full-touching, partial-touching, disconnected, and restart cases.
+  `View::screenGeometry()` to consume the durable snapshot. The canonical gate
+  runs all 125 CTest entries and the coverage inventory includes the new unit.
+  Two-output recipe 073 passes full-touching, partial-touching, disconnected,
+  and restart cases.
 - SEVERITY: release blocker.
 
 ### D250 - Failed LayerShell rollback traffic disappeared from observability

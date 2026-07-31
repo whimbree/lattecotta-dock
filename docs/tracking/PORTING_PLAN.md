@@ -5032,7 +5032,7 @@ prerequisites in the phases above are done.
 - [x] Fix D251 (hot-unplug erased applied output identity before geometry).
       Retain connector, stable ScreenPool id, and output rectangle as one value
       snapshot whose lifetime does not depend on the optional live `QScreen`.
-      Commits: 4a6c1aa20
+      Commits: 4a6c1aa20, 79d43f2c8
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
