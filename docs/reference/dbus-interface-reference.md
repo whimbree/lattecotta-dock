@@ -134,9 +134,10 @@ Per dock:
   QML authorities are not constructed. A null `configuredIconSize` instead
   means the required containment configuration map or its `iconSize` entry is
   missing; collection logs that defect. `availablePrimaryLength` is the
-  layouter's current logical-pixel `contentsMaxLength`: the containment span
-  available to applets after internal primary-axis background end padding is
-  removed. External shadow paint does not reduce it. It is not the raw
+  layouter's logical-pixel `automaticSizingContentsMaxLength`: the stable
+  resting applet-fit span after internal primary-axis background end padding
+  is removed. External shadow paint does not reduce it. The animated
+  presentation uses a separate `contentsMaxLength`; neither value is the raw
   containment `maxLength` or the configured ratio.
 - Stable floating-panel transition: `floatingGapConfigured`,
   `floatingPanelConfigured`,

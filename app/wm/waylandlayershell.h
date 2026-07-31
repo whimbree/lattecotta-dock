@@ -16,9 +16,6 @@
 #include <QRegion>
 #include <QSize>
 
-// C++
-#include <optional>
-
 // Plasma
 #include <Plasma/Plasma>
 
@@ -140,6 +137,13 @@ struct ViewPlacement {
     QMargins margins;
 };
 
+//! Result of one guarded view-placement attempt. Setter traffic remains
+//! observable even when a failed postcondition rolls the state back.
+struct ViewPlacementApplication {
+    bool applied{false};
+    int configureRequests{0};
+};
+
 //! Map @p viewGeometry to layer-shell anchors and margins relative to
 //! @p screenGeometry. The view must be contained by the output. The visual
 //! surface anchors its top-left corner and opts out of every exclusive zone;
@@ -153,10 +157,10 @@ struct ViewPlacement {
 
 //! Apply viewPlacement() to an already configured dock surface on @p screen
 //! without changing its layer or keyboard policy. The visual surface never
-//! reserves space itself. A successful value counts compositor-facing state
-//! changes, including an output retarget; std::nullopt reports refusal or a
-//! failed postcondition. This keeps unchanged success distinct from failure.
-[[nodiscard]] std::optional<int> applyViewPlacement(
+//! reserves space itself. The result distinguishes stable success from
+//! refusal and counts compositor-facing state changes, including rollback
+//! after a failed postcondition.
+[[nodiscard]] ViewPlacementApplication applyViewPlacement(
     QWindow *window, QScreen *screen, Plasma::Types::Location location,
     const QRect &viewGeometry, const QRect &screenGeometry);
 

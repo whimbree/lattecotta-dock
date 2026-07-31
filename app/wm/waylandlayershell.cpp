@@ -77,23 +77,49 @@ struct ViewPlacementState
         && window->isVisible() == state.visible;
 }
 
-void restoreViewPlacementOrTerminate(
+[[nodiscard]] int restoreViewPlacementOrTerminate(
     QWindow *const window,
     LSW *const layerShell,
     const ViewPlacementState &state)
 {
     Q_ASSERT(window);
     Q_ASSERT(layerShell);
-    window->setVisible(false);
-    window->setScreen(state.windowScreen);
+    int configureRequests{0};
+    const bool outputChanged =
+        window->screen() != state.windowScreen
+        || layerShell->screen()
+            != state.layerShellScreen;
+    if (outputChanged) {
+        window->setVisible(false);
+        window->setScreen(state.windowScreen);
 #ifdef LATTE_LAYERSHELL_HAS_SET_SCREEN
-    layerShell->setScreen(state.layerShellScreen);
+        layerShell->setScreen(state.layerShellScreen);
 #endif
-    layerShell->setAnchors(state.anchors);
-    layerShell->setExclusiveEdge(state.exclusiveEdge);
-    layerShell->setMargins(state.margins);
-    layerShell->setExclusiveZone(state.exclusionZone);
-    window->setVisible(state.visible);
+        ++configureRequests;
+    }
+    if (layerShell->anchors() != state.anchors) {
+        layerShell->setAnchors(state.anchors);
+        ++configureRequests;
+    }
+    if (layerShell->exclusiveEdge()
+            != state.exclusiveEdge) {
+        layerShell->setExclusiveEdge(
+            state.exclusiveEdge);
+        ++configureRequests;
+    }
+    if (layerShell->margins() != state.margins) {
+        layerShell->setMargins(state.margins);
+        ++configureRequests;
+    }
+    if (layerShell->exclusionZone()
+            != state.exclusionZone) {
+        layerShell->setExclusiveZone(
+            state.exclusionZone);
+        ++configureRequests;
+    }
+    if (window->isVisible() != state.visible) {
+        window->setVisible(state.visible);
+    }
 
     if (!viewPlacementStateMatches(
             window,
@@ -101,6 +127,8 @@ void restoreViewPlacementOrTerminate(
             state)) {
         qFatal("LayerShell could not restore the previous view placement after a failed apply");
     }
+
+    return configureRequests;
 }
 
 }
@@ -385,7 +413,7 @@ ViewPlacement viewPlacement(Plasma::Types::Location location,
     return placement;
 }
 
-std::optional<int> applyViewPlacement(
+ViewPlacementApplication applyViewPlacement(
     QWindow *window,
     QScreen *screen,
     Plasma::Types::Location location,
@@ -394,7 +422,7 @@ std::optional<int> applyViewPlacement(
 {
     if (!window || !screen) {
         qCritical() << "LayerShell::applyViewPlacement refused a null window or screen";
-        return std::nullopt;
+        return {};
     }
 
     if (!screenGeometry.isValid() || !viewGeometry.isValid()
@@ -402,19 +430,19 @@ std::optional<int> applyViewPlacement(
             || !screenGeometry.contains(viewGeometry)) {
         qCritical() << "LayerShell::applyViewPlacement refused geometry outside its output"
                     << "view=" << viewGeometry << "screen=" << screenGeometry;
-        return std::nullopt;
+        return {};
     }
 
     if (!isScreenEdge(location)) {
         qCritical() << "LayerShell::applyViewPlacement refused non-edge location"
                     << static_cast<int>(location);
-        return std::nullopt;
+        return {};
     }
 
     LSW *const ls = LSW::get(window);
     if (!ls) {
         qCritical() << "LayerShell::applyViewPlacement found no attached layer-shell state";
-        return std::nullopt;
+        return {};
     }
 
     const ViewPlacementState previous =
@@ -458,14 +486,22 @@ std::optional<int> applyViewPlacement(
                     << "expectedScreen=" << screen
                     << "location=" << static_cast<int>(location)
                     << "view=" << viewGeometry;
-        restoreViewPlacementOrTerminate(
-            window,
-            ls,
-            previous);
-        return std::nullopt;
+        configureRequests +=
+            restoreViewPlacementOrTerminate(
+                window,
+                ls,
+                previous);
+        return {
+            .applied = false,
+            .configureRequests =
+                configureRequests,
+        };
     }
 
-    return configureRequests;
+    return {
+        .applied = true,
+        .configureRequests = configureRequests,
+    };
 }
 
 ReservationPlacement reservationPlacement(Plasma::Types::Location location,

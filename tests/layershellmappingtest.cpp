@@ -269,8 +269,8 @@ void LayerShellMappingTest::appliedViewPlacementPreservesSurfacePolicy()
         &window, QGuiApplication::screens().at(0),
         Plasma::Types::RightEdge, viewGeometry, screenGeometry);
 
-    QVERIFY(initialConfigureRequests.has_value());
-    QVERIFY(*initialConfigureRequests > 0);
+    QVERIFY(initialConfigureRequests.applied);
+    QVERIFY(initialConfigureRequests.configureRequests > 0);
     QCOMPARE(ls->anchors(), LSW::Anchors(LSW::AnchorTop | LSW::AnchorLeft));
     QCOMPARE(ls->margins(), QMargins(1872, 40, 0, 0));
     QCOMPARE(ls->exclusiveEdge(), LSW::AnchorNone);
@@ -281,8 +281,8 @@ void LayerShellMappingTest::appliedViewPlacementPreservesSurfacePolicy()
     const auto stableConfigureRequests = LayerShell::applyViewPlacement(
         &window, QGuiApplication::screens().at(0),
         Plasma::Types::RightEdge, viewGeometry, screenGeometry);
-    QVERIFY(stableConfigureRequests.has_value());
-    QCOMPARE(*stableConfigureRequests, 0);
+    QVERIFY(stableConfigureRequests.applied);
+    QCOMPARE(stableConfigureRequests.configureRequests, 0);
 }
 
 void LayerShellMappingTest::appliedViewPlacementDistinguishesRefusalFromStableSuccess()
@@ -305,7 +305,8 @@ void LayerShellMappingTest::appliedViewPlacementDistinguishesRefusalFromStableSu
               48,
               48),
         screen->geometry());
-    QVERIFY(!outsideOutput.has_value());
+    QVERIFY(!outsideOutput.applied);
+    QCOMPARE(outsideOutput.configureRequests, 0);
 
     const QRect validGeometry(
         screen->geometry().right() - 47,
@@ -318,7 +319,7 @@ void LayerShellMappingTest::appliedViewPlacementDistinguishesRefusalFromStableSu
         Plasma::Types::BottomEdge,
         validGeometry,
         screen->geometry());
-    QVERIFY(firstApply.has_value());
+    QVERIFY(firstApply.applied);
 
     const auto stableApply = LayerShell::applyViewPlacement(
         &window,
@@ -326,8 +327,8 @@ void LayerShellMappingTest::appliedViewPlacementDistinguishesRefusalFromStableSu
         Plasma::Types::BottomEdge,
         validGeometry,
         screen->geometry());
-    QVERIFY(stableApply.has_value());
-    QCOMPARE(*stableApply, 0);
+    QVERIFY(stableApply.applied);
+    QCOMPARE(stableApply.configureRequests, 0);
 }
 
 void LayerShellMappingTest::
@@ -387,7 +388,8 @@ appliedViewPlacementRollsBackFailedPostcondition()
             viewGeometry,
             targetGeometry);
 
-    QVERIFY(!refused.has_value());
+    QVERIFY(!refused.applied);
+    QVERIFY(refused.configureRequests > 0);
     QVERIFY(!sabotageNextMarginsChange);
     QCOMPARE(window.screen(), origin);
     QCOMPARE(layerShell->screen(), origin);
@@ -432,8 +434,8 @@ void LayerShellMappingTest::hiddenAppliedViewPlacementRetargetsBothOutputAuthori
         viewGeometry,
         targetGeometry);
 
-    QVERIFY(applied.has_value());
-    QVERIFY(*applied > 0);
+    QVERIFY(applied.applied);
+    QVERIFY(applied.configureRequests > 0);
     QCOMPARE(layerShell->screen(), target);
     QCOMPARE(layerShell->anchors(),
              LSW::Anchors(LSW::AnchorTop | LSW::AnchorLeft));
@@ -489,7 +491,7 @@ visibleAppliedViewPlacementDefersRemapAfterQWindowRetarget()
             viewGeometry,
             targetGeometry);
 
-    QVERIFY(applied.has_value());
+    QVERIFY(applied.applied);
     QCOMPARE(layerShell->screen(), target);
     QVERIFY(!window.isVisible());
 }

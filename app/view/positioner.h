@@ -9,6 +9,7 @@
 
 //local
 #include <coretypes.h>
+#include "appliedoutputsnapshot.h"
 #include "floatingpanelgeometry.h"
 #include "positionergeometry.h"
 #include "placementrequeststate.h"
@@ -107,6 +108,8 @@ public:
     [[nodiscard]] QRect canvasGeometry() const;
     //! One immutable placement publication. These rectangles are replaced
     //! together only after LayerShell accepted the solved surface.
+    [[nodiscard]] const std::optional<AppliedOutputSnapshot> &
+    appliedOutputSnapshot() const;
     [[nodiscard]] QScreen *appliedScreen() const;
     [[nodiscard]] QRect surfaceGeometry() const;
     [[nodiscard]] QRect surfaceOutputGeometry() const;
@@ -247,7 +250,6 @@ private:
         const PlacementIntent &prior) const;
     [[nodiscard]] bool validatesPlacementApplication(
         const PlacementApplicationPlan &plan) const;
-    void finishPendingScreenPlacementIfApplied();
     [[nodiscard]] bool hasPendingPlacementComponents() const;
     void init();
     void initSignalingForLocationChangeSliding();
@@ -324,9 +326,9 @@ private:
     QRect m_canvasGeometry;
     //! it is used in order to enforce X11 to never miss window geometry
     QRect m_validGeometry;
-    QPointer<QScreen> m_appliedScreen;
+    std::optional<AppliedOutputSnapshot>
+        m_appliedOutput;
     QRect m_appliedSurfaceGeometry;
-    QRect m_appliedOutputGeometry;
     quint64 m_surfacePlacementGeneration{0};
     quint64 m_surfaceGeometryPublicationRevision{0};
     //! it is used to update geometry calculations without requesting no needed Corona calculations
@@ -367,7 +369,6 @@ private:
     std::optional<bool> m_pendingFollowsPrimary;
     bool m_pendingOutputOwnershipChange{false};
     QString m_nextScreenName;
-    QPointer<QScreen> m_nextScreen;
     Plasma::Types::Location m_nextScreenEdge{Plasma::Types::Floating};
     Latte::Types::Alignment m_nextAlignment{Latte::Types::NoneAlignment};
 

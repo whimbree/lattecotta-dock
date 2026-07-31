@@ -826,7 +826,13 @@ bool View::applyPositionedLayerShellGeometry(
             location(),
             geometry,
             outputGeometry);
-    if (!configureRequests.has_value()) {
+    if (configureRequests.configureRequests > 0) {
+        m_layerShellConfigureRequestRevision +=
+            static_cast<quint64>(
+                configureRequests.configureRequests);
+        Q_EMIT layerShellConfigureRequestRevisionChanged();
+    }
+    if (!configureRequests.applied) {
         qCritical() << "View could not apply its solved layer-shell placement"
                     << "containment="
                     << (containment() ? containment()->id() : 0)
@@ -834,11 +840,6 @@ bool View::applyPositionedLayerShellGeometry(
                     << "location=" << location()
                     << "geometry=" << geometry;
         return false;
-    }
-    if (*configureRequests > 0) {
-        m_layerShellConfigureRequestRevision +=
-            static_cast<quint64>(*configureRequests);
-        Q_EMIT layerShellConfigureRequestRevisionChanged();
     }
 
     return true;
@@ -1906,9 +1907,10 @@ QRect View::screenGeometry() const
 {
     if (m_positioner
             && m_positioner
-                ->surfaceGeometryPublicationRevision() > 0) {
+                ->appliedOutputSnapshot()) {
         return m_positioner
-            ->surfaceOutputGeometry();
+            ->appliedOutputSnapshot()
+            ->identity.geometry;
     }
 
     if (this->screen()) {

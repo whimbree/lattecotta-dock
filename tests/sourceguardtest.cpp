@@ -3900,25 +3900,70 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
     const QString solveAndApply = normalizedCode(functionBody(
         positionerSource,
         QStringLiteral("bool Positioner::solveAndApplyGeometry(")));
-    QVERIFY(installApplied.contains(QStringLiteral(
-        "m_appliedScreen=assignedScreen;"
-        "m_appliedSurfaceGeometry=solved.surface;"
-        "m_appliedOutputGeometry=assignedScreenGeometry;"
-        "m_surfacePlacementGeneration=m_relocationGeneration;")));
-    const qsizetype pendingClear = installApplied.indexOf(QStringLiteral(
-        "m_geometryApplicationPending=false;"));
-    const qsizetype appliedRevision = installApplied.indexOf(QStringLiteral(
-        "++m_surfaceGeometryPublicationRevision;"));
-    QVERIFY(pendingClear >= 0 && appliedRevision > pendingClear);
+    const qsizetype stableOutputId = installApplied.indexOf(
+        QStringLiteral("assignedScreenId=m_corona->screenPool()->id("));
+    const qsizetype appliedOutput = installApplied.indexOf(
+        QStringLiteral("m_appliedOutput=AppliedOutputSnapshot{"),
+        stableOutputId);
+    const qsizetype appliedConnector = installApplied.indexOf(
+        QStringLiteral(".identity={.connector=assignedScreen->name()"),
+        appliedOutput);
+    const qsizetype appliedScreenId = installApplied.indexOf(
+        QStringLiteral(".screenId=assignedScreenId"),
+        appliedConnector);
+    const qsizetype appliedOutputGeometry = installApplied.indexOf(
+        QStringLiteral(".geometry=assignedScreenGeometry"),
+        appliedScreenId);
+    const qsizetype appliedLiveScreen = installApplied.indexOf(
+        QStringLiteral(".liveScreen=assignedScreen"),
+        appliedOutputGeometry);
+    const qsizetype appliedSurface = installApplied.indexOf(
+        QStringLiteral("m_appliedSurfaceGeometry=solved.surface;"),
+        appliedLiveScreen);
+    const qsizetype appliedGeneration = installApplied.indexOf(
+        QStringLiteral("m_surfacePlacementGeneration=m_relocationGeneration;"),
+        appliedSurface);
+    QVERIFY(stableOutputId >= 0 && appliedOutput > stableOutputId
+            && appliedConnector > appliedOutput
+            && appliedScreenId > appliedConnector
+            && appliedOutputGeometry > appliedScreenId
+            && appliedLiveScreen > appliedOutputGeometry
+            && appliedSurface > appliedLiveScreen
+            && appliedGeneration > appliedSurface);
+    QVERIFY(!installApplied.contains(QStringLiteral(
+        "m_geometryApplicationPending=false;")));
+    QVERIFY(!installApplied.contains(QStringLiteral(
+        "++m_surfaceGeometryPublicationRevision;")));
     QVERIFY(positioner.contains(QStringLiteral(
         "connect(scr,&QScreen::geometryChanged,this,&Positioner::syncGeometry);")));
     QVERIFY(!positioner.contains(QStringLiteral(
         "connect(this,&Positioner::screenGeometryChanged,this,"
         "&Positioner::syncGeometry);")));
-    QVERIFY(publishApplied.startsWith(QStringLiteral(
-        "{Q_ASSERT(assignedScreen);"
-        "applySolvedWindowGeometry(solved.surface);"
-        "m_view->updateAbsoluteGeometry(true);")));
+    const qsizetype applyWindow = publishApplied.indexOf(QStringLiteral(
+        "applySolvedWindowGeometry(solved.surface);"));
+    const qsizetype pendingClear = publishApplied.indexOf(QStringLiteral(
+        "m_geometryApplicationPending=false;"), applyWindow);
+    const qsizetype appliedRevision = publishApplied.indexOf(QStringLiteral(
+        "++m_surfaceGeometryPublicationRevision;"), pendingClear);
+    const qsizetype validateWindow = publishApplied.indexOf(QStringLiteral(
+        "validateDockGeometry();"), appliedRevision);
+    const qsizetype publishAbsolute = publishApplied.indexOf(QStringLiteral(
+        "m_view->updateAbsoluteGeometry(true);"), validateWindow);
+    QVERIFY(applyWindow >= 0 && pendingClear > applyWindow
+            && appliedRevision > pendingClear
+            && validateWindow > appliedRevision
+            && publishAbsolute > validateWindow);
+    const QString validateGeometry = normalizedCode(functionBody(
+        positionerSource,
+        QStringLiteral("void Positioner::validateDockGeometry()")));
+    const qsizetype freezePending = validateGeometry.indexOf(QStringLiteral(
+        "if(m_geometryApplicationPending){return;}"));
+    const qsizetype armRetry = validateGeometry.indexOf(QStringLiteral(
+        "m_validateGeometryTimer.start();"), freezePending);
+    const qsizetype disarmRetry = validateGeometry.indexOf(QStringLiteral(
+        "m_validateGeometryTimer.stop();"), armRetry);
+    QVERIFY(freezePending >= 0 && armRetry > freezePending
+            && disarmRetry > armRetry);
     const qsizetype signalBlocker = solveAndApply.indexOf(QStringLiteral(
         "QSignalBlockerqWindowPlacementSignals{m_view};"));
     const qsizetype layerApplication = solveAndApply.indexOf(QStringLiteral(
@@ -3977,19 +4022,19 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         "{if(m_positioner&&!m_positioner->hasPublishedCurrentPlacement())"
         "{return;}")));
     QVERIFY(screenGeometry.contains(QStringLiteral(
-        "surfaceGeometryPublicationRevision()>0)"
-        "{returnm_positioner->surfaceOutputGeometry();}")));
+        "appliedOutputSnapshot())"
+        "{returnm_positioner->appliedOutputSnapshot()->identity.geometry;}")));
 
     const QString layerApplicationBody = normalizedCode(functionBody(
         layerShellSource,
-        QStringLiteral("std::optional<int> applyViewPlacement(")));
+        QStringLiteral("ViewPlacementApplication applyViewPlacement(")));
     const qsizetype failedPostcondition = layerApplicationBody.indexOf(
         QStringLiteral("faileditsapplied-statepostcondition"));
     const qsizetype rollback = layerApplicationBody.indexOf(
         QStringLiteral("restoreViewPlacementOrTerminate("),
         failedPostcondition);
     const qsizetype refusedResult = layerApplicationBody.indexOf(
-        QStringLiteral("returnstd::nullopt;"),
+        QStringLiteral(".applied=false"),
         rollback);
     QVERIFY(failedPostcondition >= 0
             && rollback > failedPostcondition
@@ -4003,10 +4048,16 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         QStringLiteral("collectDockSystemSnapshot(")));
     for (const QString &collector : {viewRecord, systemSnapshot}) {
         QVERIFY(collector.contains(QStringLiteral(
-            "positioner->appliedScreen()->name()")));
+            "positioner->appliedOutputSnapshot()")));
         QVERIFY(collector.contains(QStringLiteral(
-            "positioner->surfaceOutputGeometry()")));
+            "appliedOutput->identity.connector")));
+        QVERIFY(collector.contains(QStringLiteral(
+            "appliedOutput->identity.geometry")));
+        QVERIFY(!collector.contains(QStringLiteral(
+            "positioner->appliedScreen()")));
     }
+    QVERIFY(systemSnapshot.contains(QStringLiteral(
+        "appliedOutput->identity.screenId")));
     QVERIFY(!effects.contains(QStringLiteral(
         "enableBlurBehind(m_view,true);")));
     QVERIFY(!effects.contains(QStringLiteral(

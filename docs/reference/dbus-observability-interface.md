@@ -269,8 +269,10 @@ Landed before or during the 2026-07-16 stabilization session:
   `availablePrimaryLength` values may be null during startup or teardown.
   `configuredIconSize` comes from the containment's live configuration map;
   `effectiveIconSize` comes from the live Metrics object;
-  `availablePrimaryLength` is the layouter's current logical-pixel
-  `contentsMaxLength`, the post-padding applet span the autosizer consumes.
+  `availablePrimaryLength` is the layouter's logical-pixel
+  `automaticSizingContentsMaxLength`, the stable resting post-padding applet
+  span the autosizer consumes. The animated presentation uses a separate
+  `contentsMaxLength`.
   `presentedScreenEdgeGap` may also be null while Metrics is not constructed.
   Floating Panels retain a numeric value from their C++ transition controller.
   It is smaller than raw containment `maxLength` when the solid background owns
