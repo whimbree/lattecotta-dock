@@ -27,6 +27,7 @@
 // Qt
 #include <QDebug>
 #include <QScopedValueRollback>
+#include <QSignalBlocker>
 
 // C++
 #include <chrono>
@@ -188,8 +189,6 @@ void Positioner::init()
     m_lastLocation = m_view->location();
 
     //! connections
-    connect(this, &Positioner::screenGeometryChanged, this, &Positioner::syncGeometry);
-
     connect(this, &Positioner::hidingForRelocationStarted, this, &Positioner::updateInRelocationAnimation);
     connect(this, &Positioner::showingAfterRelocationFinished, this, &Positioner::updateInRelocationAnimation);
     connect(this, &Positioner::showingAfterRelocationFinished, this, &Positioner::syncLatteViews);
@@ -229,7 +228,6 @@ void Positioner::init()
     connect(m_view, &QQuickWindow::yChanged, this, &Positioner::validateDockGeometry);
     connect(m_view, &QQuickWindow::widthChanged, this, &Positioner::validateDockGeometry);
     connect(m_view, &QQuickWindow::heightChanged, this, &Positioner::validateDockGeometry);
-    connect(m_view, &QQuickWindow::screenChanged, this, &Positioner::currentScreenChanged);
     connect(m_view, &QQuickWindow::screenChanged, this, &Positioner::onScreenChanged);
 
     connect(m_view, &Latte::View::behaveAsPlasmaPanelChanged, this, &Positioner::syncGeometry);
@@ -361,6 +359,7 @@ void Positioner::setInRelocationShowing(bool active)
 bool Positioner::geometryIsSettled() const
 {
     return m_relocationGeneration == m_appliedRelocationGeneration
+        && !m_geometryApplicationPending
         && !inRelocationAnimation()
         && !m_inRelocationShowing
         && !m_inSlideAnimation
@@ -605,21 +604,14 @@ bool Positioner::setScreenToFollow(QScreen *scr, bool updateScreenId)
         changesOutputOwnership
         ? View::OutputMove::OwnershipTransfer
         : View::OutputMove::ObservationOnly);
-    //! A hidden Wayland layer surface can complete setScreen() synchronously
-    //! without delivering a later screenChanged edge. Confirm from the
-    //! applied QWindow state here; the signal path below remains for
-    //! compositor-delayed changes.
-    finishPendingScreenPlacementIfApplied();
 
-    updateContainmentScreen();
-
-    m_screenGeometryConnection = connect(scr, &QScreen::geometryChanged, this, &Positioner::screenGeometryChanged);
+    m_screenGeometryConnection = connect(
+        scr,
+        &QScreen::geometryChanged,
+        this,
+        &Positioner::syncGeometry);
     syncGeometry();
-    m_view->updateAbsoluteGeometry(true);
     qDebug() << "setScreenToFollow() ended...";
-
-    Q_EMIT screenGeometryChanged();
-    Q_EMIT currentScreenChanged();
     return true;
 }
 
@@ -676,14 +668,17 @@ void Positioner::reconsiderScreen()
 
 void Positioner::onScreenChanged(QScreen *scr)
 {
-    m_screenSyncTimer.start();
-
-    //! this is needed in order to update the struts on screen change
-    //! and even though the geometry has been set correctly the offsets
-    //! of the screen must be updated to the new ones
-    if (m_view->visibility() && m_view->visibility()->mode() == Latte::Types::AlwaysVisible) {
-        m_view->updateAbsoluteGeometry(true);
+    if (m_appliedScreen == scr
+            && scr
+            && m_appliedOutputGeometry
+                == scr->geometry()) {
+        //! Positioner emits the applied screen edge after installing the
+        //! complete snapshot. Do not turn that publication into another
+        //! speculative solve.
+        return;
     }
+
+    m_screenSyncTimer.start();
 }
 
 void Positioner::syncGeometry()
@@ -694,6 +689,7 @@ void Positioner::syncGeometry()
 
     qDebug() << "syncGeometry() called...";
 
+    m_geometryApplicationPending = true;
     if (!m_syncGeometryTimer.isActive()) {
         m_syncGeometryTimer.start();
     }
@@ -701,6 +697,7 @@ void Positioner::syncGeometry()
 
 bool Positioner::immediateSyncGeometry()
 {
+    m_geometryApplicationPending = true;
     const bool applied = solveAndApplyGeometry();
     if (applied
             && m_relocationGeneration
@@ -737,7 +734,8 @@ bool Positioner::solveAndApplyGeometry(
     //! horizontal edge change can temporarily put the resized window centre
     //! on an adjacent output before the final LayerShell margins apply.
     if (m_view->screen() != placementScreen
-            && !completesRelocation) {
+            && !completesRelocation
+            && m_view->isVisible()) {
         qDebug() << "Sync Geometry screens inconsistent!!!! ";
         qDebug() << "Sync Geometry screens inconsistent for assigned screen:"
                  << placementScreen->name()
@@ -883,6 +881,13 @@ bool Positioner::solveAndApplyGeometry(
         return false;
     }
 
+    const bool qWindowScreenChanges =
+        m_view->screen() != placementScreen;
+    QSignalBlocker qWindowPlacementSignals{m_view};
+    if (!qWindowScreenChanges) {
+        qWindowPlacementSignals.unblock();
+    }
+
     if (!m_view->applyPositionedLayerShellGeometry(
             placementScreen,
             solved->surface)) {
@@ -898,11 +903,18 @@ bool Positioner::solveAndApplyGeometry(
         return false;
     }
 
-    publishAppliedGeometry(
+    const AppliedGeometryChanges changes =
+        installAppliedGeometry(
         *solved,
-        assignedScreenGeometry,
+        placementScreen,
+        qWindowScreenChanges,
         availableScreenRect,
         freeRegion);
+    qWindowPlacementSignals.unblock();
+    publishAppliedGeometry(
+        *solved,
+        placementScreen,
+        changes);
 
     qDebug() << "syncGeometry() calculations for screen:"
              << placementScreen->name()
@@ -921,9 +933,14 @@ void Positioner::validateDockGeometry()
     }
 }
 
-QRect Positioner::canvasGeometry()
+QRect Positioner::canvasGeometry() const
 {
     return m_canvasGeometry;
+}
+
+QScreen *Positioner::appliedScreen() const
+{
+    return m_appliedScreen;
 }
 
 QRect Positioner::surfaceGeometry() const
@@ -944,6 +961,23 @@ quint64 Positioner::surfacePlacementGeneration() const
 quint64 Positioner::surfaceGeometryPublicationRevision() const
 {
     return m_surfaceGeometryPublicationRevision;
+}
+
+bool Positioner::hasPublishedCurrentPlacement() const
+{
+    if (m_inStartup) {
+        return true;
+    }
+
+    return !m_geometryApplicationPending
+        && m_surfaceGeometryPublicationRevision > 0
+        && m_appliedScreen
+        && m_appliedScreen == m_screenToFollow
+        && m_view->screen() == m_appliedScreen
+        && m_surfacePlacementGeneration
+            == m_relocationGeneration
+        && m_appliedOutputGeometry
+            == m_screenToFollow->geometry();
 }
 
 //! this is used mainly from vertical panels in order to
@@ -1125,6 +1159,7 @@ void Positioner::installStartupGeometry(
     const QRect &availableScreenRect,
     const QRegion &availableScreenRegion)
 {
+    m_geometryApplicationPending = false;
     m_validGeometry = solved.surface;
     m_lastAvailableScreenRect = availableScreenRect;
     m_lastAvailableScreenRegion = availableScreenRegion;
@@ -1146,16 +1181,29 @@ void Positioner::installStartupGeometry(
     }
 }
 
-void Positioner::publishAppliedGeometry(
+Positioner::AppliedGeometryChanges
+Positioner::installAppliedGeometry(
     const SolvedViewGeometry &solved,
-    const QRect &assignedScreenGeometry,
+    QScreen *const assignedScreen,
+    const bool qWindowScreenChanged,
     const QRect &availableScreenRect,
     const QRegion &availableScreenRegion)
 {
+    Q_ASSERT(assignedScreen);
     //! Install every backing value before QWindow, controller, or Positioner
     //! notifications can run. A failed LayerShell application never reaches
     //! this function, so it cannot leak solver scratch as applied state.
+    const QRect assignedScreenGeometry =
+        assignedScreen->geometry();
+    const bool screenChanged =
+        m_appliedScreen != assignedScreen
+        || qWindowScreenChanged;
+    const bool outputChanged =
+        screenChanged
+        || m_appliedOutputGeometry
+            != assignedScreenGeometry;
     m_validGeometry = solved.surface;
+    m_appliedScreen = assignedScreen;
     m_appliedSurfaceGeometry = solved.surface;
     m_appliedOutputGeometry = assignedScreenGeometry;
     m_surfacePlacementGeneration = m_relocationGeneration;
@@ -1173,10 +1221,26 @@ void Positioner::publishAppliedGeometry(
             solved.floatingPresentation);
     const bool canvasChanged = m_canvasGeometry != solved.canvas;
     m_canvasGeometry = solved.canvas;
+    m_geometryApplicationPending = false;
 
     //! Repeated stable syncs stay cheap in LayerShell::applyViewPlacement,
     //! while this revision records each complete solved-and-applied boundary.
     ++m_surfaceGeometryPublicationRevision;
+
+    return {
+        .canvasChanged = canvasChanged,
+        .transitionChanged = transitionChanged,
+        .screenChanged = screenChanged,
+        .outputChanged = outputChanged,
+    };
+}
+
+void Positioner::publishAppliedGeometry(
+    const SolvedViewGeometry &solved,
+    QScreen *const assignedScreen,
+    const AppliedGeometryChanges &changes)
+{
+    Q_ASSERT(assignedScreen);
 
     applySolvedWindowGeometry(solved.surface);
 
@@ -1184,11 +1248,24 @@ void Positioner::publishAppliedGeometry(
     //! surface, output, and FloatingTransition backing snapshot.
     m_view->updateAbsoluteGeometry(true);
 
-    if (canvasChanged) {
+    if (changes.screenChanged) {
+        //! QWindow::screenChanged was blocked while LayerShell and QWindow
+        //! retargeted. Replay it only after the matching surface and output
+        //! snapshot is installed, so QML and subwindows cannot observe a
+        //! mixed generation.
+        Q_EMIT m_view->screenChanged(assignedScreen);
+        updateContainmentScreen();
+        Q_EMIT currentScreenChanged();
+    }
+    if (changes.outputChanged) {
+        Q_EMIT screenGeometryChanged();
+    }
+    if (changes.canvasChanged) {
         Q_EMIT canvasGeometryChanged();
     }
-    if (transitionChanged) {
-        transition->publishInstalledGeometryChange();
+    if (changes.transitionChanged) {
+        m_view->floatingTransition()
+            ->publishInstalledGeometryChange();
     }
     Q_EMIT surfaceGeometryPublicationRevisionChanged();
     Q_EMIT surfaceGeometryCalculated(solved.surface);

@@ -104,13 +104,17 @@ public:
     //! both set never slid in (the Phase 8 startup-stranding item)
     bool inStartup() const;
 
-    QRect canvasGeometry();
+    [[nodiscard]] QRect canvasGeometry() const;
     //! One immutable placement publication. These rectangles are replaced
     //! together only after LayerShell accepted the solved surface.
+    [[nodiscard]] QScreen *appliedScreen() const;
     [[nodiscard]] QRect surfaceGeometry() const;
     [[nodiscard]] QRect surfaceOutputGeometry() const;
     [[nodiscard]] quint64 surfacePlacementGeneration() const;
     [[nodiscard]] quint64 surfaceGeometryPublicationRevision() const;
+    //! Runtime observers may consume placement-dependent state only after
+    //! the complete assigned output and request generation have published.
+    [[nodiscard]] bool hasPublishedCurrentPlacement() const;
 
     bool setScreenToFollow(QScreen *scr, bool updateScreenId = true);
     void setWindowOnActivities(const Latte::WindowSystem::WindowId &wid, const QStringList &activities);
@@ -214,6 +218,14 @@ private:
         PositionerGeometry::ForcedBorders forcedBorders;
     };
 
+    struct AppliedGeometryChanges
+    {
+        bool canvasChanged{false};
+        bool transitionChanged{false};
+        bool screenChanged{false};
+        bool outputChanged{false};
+    };
+
     void applyOutputPlacement(
         QScreen *destination,
         bool followsPrimary);
@@ -255,11 +267,16 @@ private:
         const SolvedViewGeometry &solved,
         const QRect &availableScreenRect,
         const QRegion &availableScreenRegion);
-    void publishAppliedGeometry(
+    [[nodiscard]] AppliedGeometryChanges installAppliedGeometry(
         const SolvedViewGeometry &solved,
-        const QRect &assignedScreenGeometry,
+        QScreen *assignedScreen,
+        bool qWindowScreenChanged,
         const QRect &availableScreenRect,
         const QRegion &availableScreenRegion);
+    void publishAppliedGeometry(
+        const SolvedViewGeometry &solved,
+        QScreen *assignedScreen,
+        const AppliedGeometryChanges &changes);
     [[nodiscard]] bool solveAndApplyGeometry(
         bool completesRelocation = false);
     [[nodiscard]] std::optional<FloatingPanelGeometry::Solution>
@@ -288,6 +305,10 @@ private:
     bool m_inRelocationShowing{false};
     bool m_inSlideAnimation{false};
     bool m_inStartup{true};
+    //! Set when placement-dependent properties have invalidated the applied
+    //! snapshot. Observers retain the previous snapshot until one successful
+    //! solve and LayerShell application clears this flag.
+    bool m_geometryApplicationPending{false};
     //! Placement signals normally synchronize the layout immediately. Hold
     //! that callback through policy, output, edge, alignment, geometry,
     //! LayerShell application, and reservation publication so no observer
@@ -303,6 +324,7 @@ private:
     QRect m_canvasGeometry;
     //! it is used in order to enforce X11 to never miss window geometry
     QRect m_validGeometry;
+    QPointer<QScreen> m_appliedScreen;
     QRect m_appliedSurfaceGeometry;
     QRect m_appliedOutputGeometry;
     quint64 m_surfacePlacementGeneration{0};

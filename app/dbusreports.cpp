@@ -196,7 +196,13 @@ ViewRecord collectViewRecord(const Latte::View *view, bool globalConfigureApplet
     //! report -1 per docs/reference/dbus-observability-interface.md
     record.isClonedFrom = record.isCloned ? view->groupId() : -1;
     record.type = view->type();
-    record.screen = view->positioner()->currentScreenName();
+    const auto *const positioner = view->positioner();
+    const bool hasAppliedOutput =
+        positioner->surfaceGeometryPublicationRevision() > 0
+        && positioner->appliedScreen();
+    record.screen = hasAppliedOutput
+        ? positioner->appliedScreen()->name()
+        : positioner->currentScreenName();
     record.onPrimary = view->onPrimary();
     record.edge = view->location();
     //! View's alignment surface is int (its QML property type); the value
@@ -208,7 +214,9 @@ ViewRecord collectViewRecord(const Latte::View *view, bool globalConfigureApplet
     record.isOffScreen = view->positioner()->isOffScreen();
     record.absoluteGeometry = view->absoluteGeometry();
     record.localGeometry = view->localGeometry();
-    record.screenGeometry = view->screenGeometry();
+    record.screenGeometry = hasAppliedOutput
+        ? positioner->surfaceOutputGeometry()
+        : view->screenGeometry();
     record.strutsThickness = view->visibility()->strutsThickness();
     record.publishedStruts = view->visibility()->publishedStruts();
     record.maskRect = view->effects()->mask();
@@ -1034,8 +1042,23 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.runtimeViewId = identities->idFor(view);
 
         record.layout = view->layout() ? view->layout()->name() : QString();
-        record.screenId = view->positioner()->currentScreenId();
-        record.screen = view->positioner()->currentScreenName();
+        const auto *const positioner =
+            view->positioner();
+        const bool hasAppliedOutput =
+            positioner
+                ->surfaceGeometryPublicationRevision() > 0
+            && positioner->appliedScreen();
+        record.screen = hasAppliedOutput
+            ? positioner->appliedScreen()->name()
+            : positioner->currentScreenName();
+        auto *const latteCorona =
+            qobject_cast<Latte::Corona *>(
+                view->corona());
+        Q_ASSERT(latteCorona);
+        record.screenId = latteCorona
+            ? latteCorona->screenPool()
+                ->id(record.screen)
+            : -1;
         record.onPrimary = view->onPrimary();
         record.type = view->type();
         record.edge = view->location();
@@ -1092,9 +1115,11 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.windowGeometry = view->geometry();
         record.absoluteGeometry = view->absoluteGeometry();
         record.localGeometry = view->localGeometry();
-        record.screenGeometry = view->screenGeometry();
-        record.surfaceGeometry = view->positioner()->surfaceGeometry();
-        record.canvasGeometry = view->positioner()->canvasGeometry();
+        record.screenGeometry = hasAppliedOutput
+            ? positioner->surfaceOutputGeometry()
+            : view->screenGeometry();
+        record.surfaceGeometry = positioner->surfaceGeometry();
+        record.canvasGeometry = positioner->canvasGeometry();
         record.effectsRect = view->effects()->rect();
         record.appletsLayoutGeometry = view->effects()->appletsLayoutGeometry();
         record.maskRect = view->effects()->mask();

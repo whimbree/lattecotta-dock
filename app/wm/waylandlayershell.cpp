@@ -31,6 +31,78 @@ namespace {
     }
 }
 
+struct ViewPlacementState
+{
+    QScreen *windowScreen{nullptr};
+    QScreen *layerShellScreen{nullptr};
+    LSW::Anchors anchors;
+    LSW::Anchor exclusiveEdge{LSW::AnchorNone};
+    QMargins margins;
+    int exclusionZone{0};
+    bool visible{false};
+};
+
+[[nodiscard]] ViewPlacementState captureViewPlacementState(
+    const QWindow *const window,
+    const LSW *const layerShell)
+{
+    Q_ASSERT(window);
+    Q_ASSERT(layerShell);
+    return {
+        .windowScreen = window->screen(),
+        .layerShellScreen = layerShell->screen(),
+        .anchors = layerShell->anchors(),
+        .exclusiveEdge = layerShell->exclusiveEdge(),
+        .margins = layerShell->margins(),
+        .exclusionZone = layerShell->exclusionZone(),
+        .visible = window->isVisible(),
+    };
+}
+
+[[nodiscard]] bool viewPlacementStateMatches(
+    const QWindow *const window,
+    const LSW *const layerShell,
+    const ViewPlacementState &state)
+{
+    Q_ASSERT(window);
+    Q_ASSERT(layerShell);
+    return window->screen() == state.windowScreen
+        && layerShell->screen() == state.layerShellScreen
+        && layerShell->anchors() == state.anchors
+        && layerShell->exclusiveEdge()
+            == state.exclusiveEdge
+        && layerShell->margins() == state.margins
+        && layerShell->exclusionZone()
+            == state.exclusionZone
+        && window->isVisible() == state.visible;
+}
+
+void restoreViewPlacementOrTerminate(
+    QWindow *const window,
+    LSW *const layerShell,
+    const ViewPlacementState &state)
+{
+    Q_ASSERT(window);
+    Q_ASSERT(layerShell);
+    window->setVisible(false);
+    window->setScreen(state.windowScreen);
+#ifdef LATTE_LAYERSHELL_HAS_SET_SCREEN
+    layerShell->setScreen(state.layerShellScreen);
+#endif
+    layerShell->setAnchors(state.anchors);
+    layerShell->setExclusiveEdge(state.exclusiveEdge);
+    layerShell->setMargins(state.margins);
+    layerShell->setExclusiveZone(state.exclusionZone);
+    window->setVisible(state.visible);
+
+    if (!viewPlacementStateMatches(
+            window,
+            layerShell,
+            state)) {
+        qFatal("LayerShell could not restore the previous view placement after a failed apply");
+    }
+}
+
 }
 
 static bool retargetScreen(QWindow *window, LSW *ls, QScreen *screen);
@@ -345,11 +417,13 @@ std::optional<int> applyViewPlacement(
         return std::nullopt;
     }
 
+    const ViewPlacementState previous =
+        captureViewPlacementState(window, ls);
     const ViewPlacement placement = viewPlacement(location, viewGeometry, screenGeometry);
     const bool outputChanged =
         window->screen() != screen
         || ls->screen() != screen;
-    retargetScreen(window, ls, screen);
+    static_cast<void>(retargetScreen(window, ls, screen));
     int configureRequests = outputChanged ? 1 : 0;
 
     //! Geometry synchronization can run repeatedly with an unchanged
@@ -372,7 +446,8 @@ std::optional<int> applyViewPlacement(
         ++configureRequests;
     }
 
-    if (ls->screen() != screen
+    if (window->screen() != screen
+            || ls->screen() != screen
             || ls->exclusionZone() != -1
             || ls->exclusiveEdge() != LSW::AnchorNone
             || ls->anchors() != placement.anchors
@@ -383,6 +458,10 @@ std::optional<int> applyViewPlacement(
                     << "expectedScreen=" << screen
                     << "location=" << static_cast<int>(location)
                     << "view=" << viewGeometry;
+        restoreViewPlacementOrTerminate(
+            window,
+            ls,
+            previous);
         return std::nullopt;
     }
 
