@@ -865,12 +865,11 @@ bool Positioner::solveAndApplyGeometry(
             assignedScreenGeometry);
         m_lastAvailableScreenRegion = freeRegion;
     } else {
-        m_view->effects()->setForceTopBorder(false);
-        m_view->effects()->setForceBottomBorder(false);
+        m_solvedForceTopBorder = false;
+        m_solvedForceBottomBorder = false;
     }
 
     m_lastAvailableScreenRect = availableScreenRect;
-    m_view->effects()->updateEnabledBorders();
 
     if (m_view->behaveAsPlasmaPanel()) {
         const auto stableGeometry =
@@ -924,6 +923,15 @@ bool Positioner::solveAndApplyGeometry(
     //! new output and edge membership.
     m_view->updateAbsoluteGeometry(true);
 
+    //! Publish one coherent applied placement. m_validGeometry is mutable
+    //! solver scratch and assignedScreen() can change before the surface is
+    //! accepted, so neither is a safe observation authority on its own.
+    m_appliedSurfaceGeometry = m_validGeometry;
+    m_appliedOutputGeometry = assignedScreenGeometry;
+    m_surfacePlacementGeneration = m_relocationGeneration;
+    m_view->effects()->setForceTopBorder(m_solvedForceTopBorder);
+    m_view->effects()->setForceBottomBorder(m_solvedForceBottomBorder);
+
     //! Repeated stable syncs stay cheap in LayerShell::applyViewPlacement,
     //! while this revision records each complete solved-and-applied boundary.
     ++m_surfaceGeometryPublicationRevision;
@@ -954,7 +962,17 @@ QRect Positioner::canvasGeometry()
 
 QRect Positioner::surfaceGeometry() const
 {
-    return m_validGeometry;
+    return m_appliedSurfaceGeometry;
+}
+
+QRect Positioner::surfaceOutputGeometry() const
+{
+    return m_appliedOutputGeometry;
+}
+
+quint64 Positioner::surfacePlacementGeneration() const
+{
+    return m_surfacePlacementGeneration;
 }
 
 quint64 Positioner::surfaceGeometryPublicationRevision() const
@@ -999,8 +1017,8 @@ void Positioner::validateTopBottomBorders(
                                                            availableScreenRect,
                                                            availableScreenRegion);
 
-    m_view->effects()->setForceTopBorder(borders.top);
-    m_view->effects()->setForceBottomBorder(borders.bottom);
+    m_solvedForceTopBorder = borders.top;
+    m_solvedForceBottomBorder = borders.bottom;
 }
 
 void Positioner::updateCanvasGeometry(

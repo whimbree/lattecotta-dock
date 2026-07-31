@@ -122,7 +122,7 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
     //! and avoid a crash from View::winId() at the same time
     m_positioner = new ViewPart::Positioner(this);
     connect(m_positioner,
-            &ViewPart::Positioner::placementTransactionCommitted,
+            &ViewPart::Positioner::surfaceGeometryPublicationRevisionChanged,
             m_effects,
             &ViewPart::Effects::updateEnabledBorders);
 

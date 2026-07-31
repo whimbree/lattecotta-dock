@@ -282,7 +282,6 @@ void Effects::setForceBottomBorder(bool draw)
     }
 
     m_forceBottomBorder = draw;
-    updateEnabledBorders();
 }
 
 void Effects::setForceTopBorder(bool draw)
@@ -292,7 +291,6 @@ void Effects::setForceTopBorder(bool draw)
     }
 
     m_forceTopBorder = draw;
-    updateEnabledBorders();
 }
 
 int Effects::backgroundRadius()
@@ -897,22 +895,22 @@ void Effects::updateEnabledBorders()
         return;
     }
 
-    if (positioner->relocationGeneration()
-            != positioner->appliedRelocationGeneration()) {
-        //! Placement is atomic. Keep the previous applied borders while the
-        //! requested output, edge and surface are intentionally incoherent;
-        //! placementTransactionCommitted recomputes from the complete result.
+    if (positioner->surfaceGeometryPublicationRevision() == 0) {
+        //! No LayerShell surface placement exists during normal startup.
+        //! The first coherent publication recomputes the borders.
         return;
     }
 
-    QScreen *const assignedScreen = positioner->assignedScreen();
-    if (!assignedScreen) {
-        qCritical() << "Effects cannot update panel borders without an assigned output for"
-                    << m_view->validTitle();
+    if (positioner->surfacePlacementGeneration()
+            != positioner->relocationGeneration()) {
+        //! Keep the previous applied borders while a newer edge/alignment
+        //! request has not reached LayerShell. The next coherent surface
+        //! publication recomputes them from one generation.
         return;
     }
 
-    const QRect assignedOutputGeometry = assignedScreen->geometry();
+    const QRect assignedOutputGeometry =
+        positioner->surfaceOutputGeometry();
     const QRect surfaceGeometry = positioner->surfaceGeometry();
     if (!assignedOutputGeometry.isValid()
             || (m_rect.isValid() && !surfaceGeometry.isValid())) {
