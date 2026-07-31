@@ -209,7 +209,7 @@ and PR #126 landed FP-4B.
       animated length, gap, input, and endpoint borders inside presentation
       while configured touch, sizing, occupancy, strut, and reservation
       authorities remain stable.
-      Commits: eabe3df05
+      Commits: eabe3df05, 3cf23db0a
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
       independent unless a shared root is proved.

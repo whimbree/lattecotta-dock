@@ -26,8 +26,12 @@ Panel, partial Center Dock, and expanding Justify Dock through fractional
 attachment and reversal before button release. Stable physical state remains
 byte-identical. Plasma 6.7.3 also keeps the rounded floating FrameSvg during
 fractional frames and switches enabled borders at exact attachment; it does not
-numerically shrink the radius each frame. The real-session dock remains stopped
-until the branch passes the canonical gate and independent review.
+numerically shrink the radius each frame. The replacement canonical gate passes
+at exact source head `3cf23db0aa936ce03d0fbe3658cba842fa0ddddf`,
+including all 124 CTest entries, the reduced qmllint ratchet, rendered scene
+probes, ASan and UBSan nested execution, package provenance controls, and
+matrix refusals. The real-session dock remains stopped until the branch passes
+independent review.
 
 ## 2026-07-27: D241 unifies floating Dock presentation
 
