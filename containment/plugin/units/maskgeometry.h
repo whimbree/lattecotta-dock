@@ -122,6 +122,59 @@ inline QRectF computeLocalGeometry(const LocalGeometryInputs &in)
     return clampIntoViewWindow(geometry, in.viewSize);
 }
 
+//! The occupied footprint of a Justify Dock whose attached presentation may
+//! expand inside its stable QWindow. The footprint remains centered at the
+//! configured resting length and retains the configured floating gap. Paint
+//! and input use the separate presented effects rectangle.
+struct StableJustifyDockOccupancyInputs {
+    Plasma::Types::Location location{Plasma::Types::Floating};
+    QSizeF rootSize;
+    QSize viewSize;
+    qreal stablePrimaryLength{0};
+    qreal totalsThickness{0};
+    qreal configuredScreenEdgeMargin{0};
+};
+
+inline QRectF computeStableJustifyDockOccupancy(
+    const StableJustifyDockOccupancyInputs &in)
+{
+    Q_ASSERT(in.rootSize.width() >= 0 && in.rootSize.height() >= 0);
+    Q_ASSERT(in.viewSize.width() >= 0 && in.viewSize.height() >= 0);
+    Q_ASSERT(in.stablePrimaryLength >= 0);
+    Q_ASSERT(in.totalsThickness >= 0);
+    Q_ASSERT(in.configuredScreenEdgeMargin >= 0);
+
+    const bool horizontal =
+        in.location == Plasma::Types::TopEdge
+        || in.location == Plasma::Types::BottomEdge;
+    Q_ASSERT(horizontal
+             || in.location == Plasma::Types::LeftEdge
+             || in.location == Plasma::Types::RightEdge);
+
+    const qreal owningPrimaryLength = horizontal
+        ? in.rootSize.width()
+        : in.rootSize.height();
+    Q_ASSERT(in.stablePrimaryLength <= owningPrimaryLength);
+
+    const qreal stablePrimaryOrigin =
+        (owningPrimaryLength - in.stablePrimaryLength) / 2.0;
+    const QRect stableEffectsRect = horizontal
+        ? QRectF(stablePrimaryOrigin, 0,
+                 in.stablePrimaryLength, in.rootSize.height()).toRect()
+        : QRectF(0, stablePrimaryOrigin,
+                 in.rootSize.width(), in.stablePrimaryLength).toRect();
+
+    return computeLocalGeometry({
+        .location = in.location,
+        .behaveAsPlasmaPanel = false,
+        .rootSize = in.rootSize,
+        .viewSize = in.viewSize,
+        .effectsRect = stableEffectsRect,
+        .totalsThickness = in.totalsThickness,
+        .screenEdgeMargin = in.configuredScreenEdgeMargin,
+    });
+}
+
 struct InputMaskInputs {
     Plasma::Types::Location location{Plasma::Types::Floating};
     bool compositingActive{true};

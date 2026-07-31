@@ -236,12 +236,31 @@ ContainmentItem {
     readonly property int maxJustifySplitterSize: 64
 
     property bool maximizeWhenMaximized: Plasmoid.configuration.maximizeWhenMaximized;
+    readonly property real presentedDockMaximumLengthPercent:
+        _backgroundState.presentedDockMaximumLengthPercent(
+            Plasmoid.configuration.maxLength,
+            root.floatingPresentationProgress,
+            root.dockFloatingTransitionOwnsGap
+                && root.maximizeWhenMaximized)
     property real minLengthPerCentage: Plasmoid.configuration.minLength
     property real maxLengthPerCentage: behaveAsPlasmaPanel
                                       ? Plasmoid.configuration.maxLength
                                       : (hideLengthScreenGaps
                                          && !dockFloatingTransitionOwnsGap
                                          ? 100 : Plasmoid.configuration.maxLength)
+
+    //! The live attached presentation may widen a Justify Dock, but automatic
+    //! icon fitting must continue to solve against the configured resting
+    //! layout. This keeps a temporary window drag from resizing applets.
+    readonly property int automaticSizingMaximumLength: {
+        if (!root.dockFloatingTransitionOwnsGap) {
+            return root.maxLength;
+        }
+
+        return root.isHorizontal
+            ? root.width * (Plasmoid.configuration.maxLength / 100)
+            : root.height * (Plasmoid.configuration.maxLength / 100);
+    }
 
     property int minLength: {
         if (myView.alignment === LatteCore.Types.Justify) {
@@ -257,11 +276,15 @@ ContainmentItem {
 
     property int maxLength: {
         const maximize = behaveAsPlasmaPanel
-          || (maximizeWhenMaximized && latteView.windowsTracker.currentScreen.existsWindowMaximized);
+          || (!dockFloatingTransitionOwnsGap
+              && maximizeWhenMaximized
+              && latteView.windowsTracker.currentScreen.existsWindowMaximized);
+        const presentedMaximumLengthPercent = dockFloatingTransitionOwnsGap
+            ? presentedDockMaximumLengthPercent : maxLengthPerCentage;
         if (root.isHorizontal) {
-            return maximize ? width : width * (maxLengthPerCentage/100)
+            return maximize ? width : width * (presentedMaximumLengthPercent/100)
         } else {
-            return maximize ? height : height * (maxLengthPerCentage/100)
+            return maximize ? height : height * (presentedMaximumLengthPercent/100)
         }
     }
 
@@ -571,7 +594,7 @@ ContainmentItem {
         reconcileFloatingTargetPolicy()
     onPointerInsideViewChanged:
         reconcileFloatingTargetPolicy()
-    onDockGapHideRequestedChanged:
+    onDirectDockWindowTouchEligibleChanged:
         reconcileFloatingTargetPolicy()
 
     function reconcileFloatingTargetPolicy() {
@@ -581,13 +604,18 @@ ContainmentItem {
             return;
         }
 
+        const currentTouchingWindowCount =
+            latteView.windowTouchTracker.touchingWindowCount;
+        const currentDockGapHideRequested =
+            directDockWindowTouchEligible
+            && currentTouchingWindowCount > 0;
         latteView.floatingTransition.reconcileTargetPolicy(
             floatingTransitionEligible,
             attachOnWindowTouchConfigured,
             attachmentWaitsForPointerExitConfigured,
             pointerInsideView,
-            latteView.windowTouchTracker.touchingWindowCount,
-            dockGapHideRequested);
+            currentTouchingWindowCount,
+            currentDockGapHideRequested);
         //! Reconciliation may preserve the current target and therefore emit
         //! no targetChanged signal. Refresh the derived display hint after
         //! the complete policy has been committed.
@@ -1172,7 +1200,10 @@ ContainmentItem {
     }
 
     Behavior on maxLengthPerCentage {
-        enabled: root.behaveAsDockWithMask && Plasmoid.configuration.floatingGapHidingWaitsMouse && dockContainsMouse
+        enabled: root.behaveAsDockWithMask
+                 && !root.dockFloatingTransitionOwnsGap
+                 && Plasmoid.configuration.floatingGapHidingWaitsMouse
+                 && dockContainsMouse
         NumberAnimation {
             duration: animations.duration.short
             easing.type: Easing.InQuad
@@ -1243,7 +1274,7 @@ ContainmentItem {
         thickScreenGapIsHidden: root.hideThickScreenGap
         configuredScreenEdgeMargin:
             Plasmoid.configuration.screenEdgeMargin
-        availablePrimaryLength: _layouter.contentsMaxLength
+        availablePrimaryLength: _layouter.automaticSizingContentsMaxLength
         animations: _animations
         autosize: _autosize
         background: _background

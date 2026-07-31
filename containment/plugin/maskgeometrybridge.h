@@ -46,6 +46,17 @@ public Q_SLOTS:
                                        QRect effectsRect,
                                        qreal totalsThickness, qreal screenEdgeMargin);
 
+    //! The stable occupied footprint for a Justify Dock whose live attached
+    //! presentation may widen independently. Refuses non-edge locations,
+    //! negative inputs, and a resting span larger than its owning canvas.
+    Q_INVOKABLE QRect stableJustifyDockOccupancyFor(
+        int location,
+        qreal rootWidth, qreal rootHeight,
+        int viewWidth, int viewHeight,
+        qreal stablePrimaryLength,
+        qreal totalsThickness,
+        qreal configuredScreenEdgeMargin);
+
     //! The input-region rect (updateInputGeometry): which part of the
     //! window accepts pointer input for the current visibility state,
     //! with the core's decision alternatives mapped onto the effects

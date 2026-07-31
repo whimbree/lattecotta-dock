@@ -18,10 +18,27 @@ class PanelBorderDecisionTest : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void presentationSpan_followsRenderedEndpoints();
     void everyFloatingAlignmentKeepsAllBorders();
     void attachedAndDegeneratePanelsKeepBoundaryClipping();
     void attachedFullSpanOverridesAllCornersAtOutputBoundaries();
 };
+
+void PanelBorderDecisionTest::presentationSpan_followsRenderedEndpoints()
+{
+    using Edge = FloatingPanelGeometry::Edge;
+
+    QVERIFY(PanelBorderDecision::doesPresentationFillPrimaryAxis(
+        QRect(0, 17, 1440, 40), QSize(1440, 80), Edge::Top));
+    QVERIFY(PanelBorderDecision::doesPresentationFillPrimaryAxis(
+        QRect(17, 0, 40, 2560), QSize(80, 2560), Edge::Left));
+    QVERIFY(!PanelBorderDecision::doesPresentationFillPrimaryAxis(
+        QRect(1, 17, 1439, 40), QSize(1440, 80), Edge::Bottom));
+    QVERIFY(!PanelBorderDecision::doesPresentationFillPrimaryAxis(
+        QRect(17, 0, 40, 2559), QSize(80, 2560), Edge::Right));
+    QVERIFY(!PanelBorderDecision::doesPresentationFillPrimaryAxis(
+        QRect(), QSize(1440, 80), Edge::Top));
+}
 
 void PanelBorderDecisionTest::everyFloatingAlignmentKeepsAllBorders()
 {
@@ -213,6 +230,14 @@ void PanelBorderDecisionTest::
         QCOMPARE(
             partialBorders | physicalBorder,
             KSvg::FrameSvg::AllBorders);
+
+        //! The configured resting span stays partial while the live
+        //! maximize-length presentation reaches both output ends. Border
+        //! ownership must follow the presented geometry, not stale config.
+        partial.primaryAxisFillsOutput = true;
+        QCOMPARE(
+            PanelBorderDecision::enabledBorders(partial),
+            expectedBorders);
     }
 }
 

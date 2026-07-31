@@ -58,6 +58,15 @@ TestCase {
         compareRect(rect, 200, 72, 800, 56);
     }
 
+    function test_stableJustifyDockOccupancyBottomEdge() {
+        var rect = maskGeometry.stableJustifyDockOccupancyFor(
+            bottomEdge,
+            1200, 140,
+            1200, 140,
+            800, 56, 12);
+        compareRect(rect, 200, 72, 800, 56);
+    }
+
     function test_inputMaskNormalStateFollowsLocalGeometry() {
         var rect = maskGeometry.inputMaskFor(bottomEdge,
                                              true,  //! compositingActive

@@ -13,6 +13,7 @@
 #include <QDebug>
 
 // C++
+#include <cmath>
 #include <optional>
 #include <type_traits>
 #include <variant>
@@ -82,6 +83,64 @@ QRect MaskGeometryBridge::localGeometryFor(int location, bool behaveAsPlasmaPane
     //! toRect() is exactly the conversion the QML rect -> QRect
     //! Q_PROPERTY assignment performed before the extraction
     return MaskGeometry::computeLocalGeometry(in).toRect();
+}
+
+QRect MaskGeometryBridge::stableJustifyDockOccupancyFor(
+    int location,
+    qreal rootWidth, qreal rootHeight,
+    int viewWidth, int viewHeight,
+    qreal stablePrimaryLength,
+    qreal totalsThickness,
+    qreal configuredScreenEdgeMargin)
+{
+    const std::optional<Plasma::Types::Location> loc = toLocation(location);
+    const bool isEdge = loc
+        && (*loc == Plasma::Types::TopEdge
+            || *loc == Plasma::Types::BottomEdge
+            || *loc == Plasma::Types::LeftEdge
+            || *loc == Plasma::Types::RightEdge);
+    const bool finite = std::isfinite(rootWidth)
+        && std::isfinite(rootHeight)
+        && std::isfinite(stablePrimaryLength)
+        && std::isfinite(totalsThickness)
+        && std::isfinite(configuredScreenEdgeMargin);
+    const bool horizontal = isEdge
+        && (*loc == Plasma::Types::TopEdge
+            || *loc == Plasma::Types::BottomEdge);
+    const qreal owningPrimaryLength = horizontal
+        ? rootWidth : rootHeight;
+    const bool geometryIsValid = finite
+        && rootWidth >= 0 && rootHeight >= 0
+        && viewWidth >= 0 && viewHeight >= 0
+        && stablePrimaryLength >= 0
+        && stablePrimaryLength <= owningPrimaryLength
+        && totalsThickness >= 0
+        && configuredScreenEdgeMargin >= 0;
+
+    if (!isEdge || !geometryIsValid) {
+        qCritical()
+            << "MaskGeometryBridge.stableJustifyDockOccupancyFor:"
+               " invalid stable occupancy"
+            << "location" << location
+            << "root" << rootWidth << "x" << rootHeight
+            << "view" << viewWidth << "x" << viewHeight
+            << "stablePrimaryLength" << stablePrimaryLength
+            << "totalsThickness" << totalsThickness
+            << "configuredScreenEdgeMargin"
+            << configuredScreenEdgeMargin
+            << "- refusing; returning an empty occupied geometry";
+        return {};
+    }
+
+    const MaskGeometry::StableJustifyDockOccupancyInputs in{
+        .location = *loc,
+        .rootSize = QSizeF(rootWidth, rootHeight),
+        .viewSize = QSize(viewWidth, viewHeight),
+        .stablePrimaryLength = stablePrimaryLength,
+        .totalsThickness = totalsThickness,
+        .configuredScreenEdgeMargin = configuredScreenEdgeMargin,
+    };
+    return MaskGeometry::computeStableJustifyDockOccupancy(in).toRect();
 }
 
 QRect MaskGeometryBridge::inputMaskFor(int location,

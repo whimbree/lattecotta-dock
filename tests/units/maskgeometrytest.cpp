@@ -133,6 +133,8 @@ private Q_SLOTS:
     void localGeometryClampsIntoViewWindow_data();
     void localGeometryClampsIntoViewWindow();
     void localGeometryWarmupZeroSizePassesThrough();
+    void stableJustifyDockOccupancyPerEdge_data();
+    void stableJustifyDockOccupancyPerEdge();
 
     //! input region (the input half)
     void inputMaskPerEdgeAndState_data();
@@ -148,6 +150,7 @@ private Q_SLOTS:
     //! wrapper boundary (containment/plugin/maskgeometrybridge.cpp,
     //! compiled into this binary per the sanitized-core rule)
     void bridgeComputesLocalGeometry();
+    void bridgeComputesStableJustifyDockOccupancy();
     void bridgeMapsAcceptAllToClearRequestRect();
     void bridgeMapsAcceptNoneToBlockAllRect();
     void bridgeConvertsFractionalRectLikeTheQmlAssignmentDid();
@@ -269,6 +272,53 @@ void MaskGeometryTest::localGeometryWarmupZeroSizePassesThrough()
     const QRectF result = MaskGeometry::computeLocalGeometry(in);
     QCOMPARE(result, QRectF(0, 0, 0, 0));
     QVERIFY(result.isEmpty());
+}
+
+void MaskGeometryTest::stableJustifyDockOccupancyPerEdge_data()
+{
+    QTest::addColumn<int>("location");
+    QTest::addColumn<QSizeF>("rootSize");
+    QTest::addColumn<QSize>("viewSize");
+    QTest::addColumn<qreal>("stablePrimaryLength");
+    QTest::addColumn<QRectF>("expected");
+
+    QTest::newRow("top")
+        << int(Plasma::Types::TopEdge)
+        << QSizeF(1200, 140) << QSize(1200, 140)
+        << qreal(800) << QRectF(200, 12, 800, 56);
+    QTest::newRow("bottom")
+        << int(Plasma::Types::BottomEdge)
+        << QSizeF(1200, 140) << QSize(1200, 140)
+        << qreal(800) << QRectF(200, 72, 800, 56);
+    QTest::newRow("left")
+        << int(Plasma::Types::LeftEdge)
+        << QSizeF(140, 800) << QSize(140, 800)
+        << qreal(600) << QRectF(12, 100, 56, 600);
+    QTest::newRow("right")
+        << int(Plasma::Types::RightEdge)
+        << QSizeF(140, 800) << QSize(140, 800)
+        << qreal(600) << QRectF(72, 100, 56, 600);
+}
+
+void MaskGeometryTest::stableJustifyDockOccupancyPerEdge()
+{
+    QFETCH(int, location);
+    QFETCH(QSizeF, rootSize);
+    QFETCH(QSize, viewSize);
+    QFETCH(qreal, stablePrimaryLength);
+    QFETCH(QRectF, expected);
+
+    const MaskGeometry::StableJustifyDockOccupancyInputs in{
+        .location = static_cast<Plasma::Types::Location>(location),
+        .rootSize = rootSize,
+        .viewSize = viewSize,
+        .stablePrimaryLength = stablePrimaryLength,
+        .totalsThickness = 56,
+        .configuredScreenEdgeMargin = 12,
+    };
+
+    QCOMPARE(MaskGeometry::computeStableJustifyDockOccupancy(in),
+             expected);
 }
 
 void MaskGeometryTest::inputMaskPerEdgeAndState_data()
@@ -425,6 +475,17 @@ void MaskGeometryTest::bridgeComputesLocalGeometry()
                                      1200, 140, 1200, 140,
                                      QRect(200, 0, 800, 140),
                                      56, 12),
+             QRect(200, 72, 800, 56));
+}
+
+void MaskGeometryTest::bridgeComputesStableJustifyDockOccupancy()
+{
+    Containment::MaskGeometryBridge bridge;
+
+    QCOMPARE(bridge.stableJustifyDockOccupancyFor(
+                 Plasma::Types::BottomEdge,
+                 1200, 140, 1200, 140,
+                 800, 56, 12),
              QRect(200, 72, 800, 56));
 }
 

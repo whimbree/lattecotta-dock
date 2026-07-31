@@ -57,14 +57,13 @@ BackgroundProperties{
     hasTopBorder: hasAllBorders || ((solidBackground.enabledBorders & KSvg.FrameSvg.TopBorder) > 0)
     hasBottomBorder: hasAllBorders || ((solidBackground.enabledBorders & KSvg.FrameSvg.BottomBorder) > 0)
 
-    //! Attached floating Panels deliberately drop rounded primary-axis
-    //! borders when their alignment meets an output end. Keep those visual
-    //! borders independent from the stable clearance used by applet sizing
-    //! and popup bounds. floatingPanelConfigured is the view-owned
-    //! positive-gap Panel predicate and remains true at both presentation
-    //! endpoints.
+    //! Attached floating Panels and live-attached Docks deliberately drop
+    //! rounded primary-axis borders when their presentation meets an output
+    //! end. Keep those visual borders independent from the stable clearance
+    //! used by applet sizing and popup bounds.
     readonly property bool stablePrimaryAxisLayoutClearance: !!(barLine.dockView
-                                                                 && barLine.dockView.floatingPanelConfigured)
+                                                                 && (barLine.dockView.floatingPanelConfigured
+                                                                     || barLine.containmentRoot.dockFloatingTransitionOwnsGap))
     readonly property bool topLayoutClearanceIsRequired:
         backgroundStateResolver.layoutClearanceIsRequired(
             barLine.hasTopBorder,

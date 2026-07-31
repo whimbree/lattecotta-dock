@@ -42,6 +42,8 @@ stable_physical_snapshot() {
     dock_field 'json.dumps({
         "reservationStateGeneration": snapshot["reservationStateGeneration"],
         "windowGeometry": v["windowGeometry"],
+        "absoluteGeometry": v["absoluteGeometry"],
+        "localGeometry": v["localGeometry"],
         "surfaceGeometry": v["surfaceGeometry"],
         "canvasGeometry": v["canvasGeometry"],
         "stableTriggerGeometry": v["stableTriggerGeometry"],
@@ -65,7 +67,18 @@ stable_physical_snapshot() {
         "layerShellConfigureRequestRevision":
             v["layerShellConfigureRequestRevision"],
         "windowTouchTracker": v["objects"]["windowTouchTracker"],
+        "configuredIconSize": v["configuredIconSize"],
+        "effectiveIconSize": v["effectiveIconSize"],
+        "availablePrimaryLength": v["availablePrimaryLength"],
     }, sort_keys=True, separators=(",", ":"))'
+}
+
+assert_stable_physical_snapshot() {
+    local boundary="$1" expected="$2" actual
+    actual="$(stable_physical_snapshot)" \
+        || e2e_fail "could not read the $boundary physical contract"
+    [[ "$actual" == "$expected" ]] \
+        || e2e_fail "$boundary changed stable physical state (expected=$expected actual=$actual)"
 }
 
 policy_probe() {
@@ -93,6 +106,111 @@ presented = int(sys.argv[3])
 expected = math.floor(configured * progress + 0.5)
 raise SystemExit(0 if presented == expected else 1)
 PY
+}
+
+dock_length_matches_progress() {
+    python3 - "$1" "$2" "$3" "$4" <<'PY'
+import math
+import sys
+
+progress = float(sys.argv[1])
+configured_ratio = float(sys.argv[2])
+presented_length = int(sys.argv[3])
+output_length = int(sys.argv[4])
+expected = output_length * (
+    configured_ratio + (1.0 - configured_ratio) * (1.0 - progress)
+)
+raise SystemExit(0 if math.isclose(presented_length, expected, abs_tol=2.0)
+                 else 1)
+PY
+}
+
+presentation_probe() {
+    dock_field '"%.9f %.9f %d %d %d %d %s" % (
+        v["transitionProgress"],
+        v["maximumLengthRatio"],
+        v["windowGeometry"][0] + v["effectsRect"][0],
+        v["effectsRect"][2],
+        v["screenGeometry"][0],
+        v["screenGeometry"][2],
+        ",".join(sorted(v["enabledBorders"])),
+    )'
+}
+
+fractional_presentation_probe() {
+    dock_field '"%s %d %s %s %s %.9f %s %d %d %.9f %d %d" % (
+        v["type"],
+        v["touchingWindowCount"],
+        str(v["dockGapHideRequested"]).lower(),
+        v["transitionTarget"],
+        v["transitionPhase"],
+        v["transitionProgress"],
+        v["windowTouchGeometryRoleType"],
+        v["screenEdgeMargin"],
+        v["presentedScreenEdgeGap"],
+        v["maximumLengthRatio"],
+        v["effectsRect"][2],
+        v["screenGeometry"][2],
+    )'
+}
+
+wait_for_dock_attached_presentation_while_held() {
+    local progress=unread configured_ratio=unread
+    local presented_x=-1 presented_length=-1 output_x=-1 output_length=-1
+    local borders=unread
+
+    for _ in $(seq 1 100); do
+        read -r progress configured_ratio presented_x presented_length \
+            output_x output_length borders <<< "$(presentation_probe)"
+        if [[ "$progress" == 0.000000000
+              && "$presented_x" -eq "$output_x"
+              && "$presented_length" -eq "$output_length"
+              && "$borders" == bottom ]]; then
+            (( drag_pid > 0 )) \
+                || e2e_fail "attached Dock presentation has no held drag"
+            kill -0 "$drag_pid" 2>/dev/null \
+                || e2e_fail "Dock reached full span only after button release"
+            return 0
+        fi
+        sleep 0.01
+    done
+
+    e2e_fail "Dock did not reach the full attached span with only the inward border (progress=$progress configuredRatio=$configured_ratio presentation=$presented_x+$presented_length output=$output_x+$output_length borders=$borders)"
+}
+
+wait_for_dock_floated_presentation() {
+    local expected_x="$1" expected_length="$2"
+    local progress=unread configured_ratio=unread
+    local presented_x=-1 presented_length=-1 output_x=-1 output_length=-1
+    local borders=unread
+
+    for _ in $(seq 1 100); do
+        read -r progress configured_ratio presented_x presented_length \
+            output_x output_length borders <<< "$(presentation_probe)"
+        if [[ "$progress" == 1.000000000
+              && "$presented_x" -eq "$expected_x"
+              && "$presented_length" -eq "$expected_length"
+              && "$borders" == bottom,left,right,top ]]; then
+            return 0
+        fi
+        sleep 0.01
+    done
+
+    e2e_fail "Dock did not restore its configured floated span and corners (progress=$progress configuredRatio=$configured_ratio presentation=$presented_x+$presented_length expected=$expected_x+$expected_length borders=$borders)"
+}
+
+assert_partial_dock_presentation() {
+    local boundary="$1" expected_x="$2" expected_length="$3"
+    local progress configured_ratio presented_x presented_length
+    local output_x output_length borders
+
+    read -r progress configured_ratio presented_x presented_length \
+        output_x output_length borders <<< "$(presentation_probe)"
+    [[ "$presented_x" -eq "$expected_x"
+          && "$presented_length" -eq "$expected_length"
+          && "$presented_length" -lt "$output_length"
+          && "$borders" == bottom,left,right,top ]] \
+        || e2e_fail "$boundary changed a partial Dock's primary presentation (progress=$progress configuredRatio=$configured_ratio presentation=$presented_x+$presented_length expected=$expected_x+$expected_length output=$output_x+$output_length borders=$borders)"
 }
 
 wait_for_policy_while_held() {
@@ -130,14 +248,17 @@ wait_for_policy_while_held() {
 
 wait_for_fractional_progress_while_held() {
     local expected_type="$1" expected_phase="$2" boundary="$3"
+    local expect_dock_expansion="${4:-false}"
     local actual_type=unread count=-1 request=unread target=unread
     local phase=unread progress=unread role=unread
     local configured_gap=-1 presented_gap=-1
+    local configured_ratio=0 presented_length=0 output_length=0
 
     for _ in $(seq 1 100); do
         read -r actual_type count request target phase progress role \
-            configured_gap presented_gap \
-            <<< "$(policy_probe)"
+            configured_gap presented_gap configured_ratio \
+            presented_length output_length \
+            <<< "$(fractional_presentation_probe)"
         if [[ "$actual_type" == "$expected_type"
               && "$phase" == "$expected_phase"
               && "$role" == QRect ]] \
@@ -150,6 +271,13 @@ progress = float(sys.argv[1])
 raise SystemExit(0 if 0.0 < progress < 1.0 else 1)
 PY
         then
+            if [[ "$expected_type" == dock
+                  && "$expect_dock_expansion" == true ]]; then
+                dock_length_matches_progress \
+                    "$progress" "$configured_ratio" \
+                    "$presented_length" "$output_length" \
+                    || continue
+            fi
             (( drag_pid > 0 )) \
                 || e2e_fail "$boundary has no owned held-drag process"
             kill -0 "$drag_pid" 2>/dev/null \
@@ -258,6 +386,15 @@ configure_case() {
         || e2e_fail "could not set the partial primary span for $cell"
     kwriteconfig6 "${group_args[@]}" --key minLength 60 \
         || e2e_fail "could not keep the partial Panel span static for $cell"
+    if [[ "$cell" == dock-* ]]; then
+        kwriteconfig6 "${group_args[@]}" --key backgroundRadius 50 \
+            || e2e_fail "could not retain Dock presentation for $cell"
+        kwriteconfig6 "${group_args[@]}" --key maximizeWhenMaximized true \
+            || e2e_fail "could not enable live maximize-length presentation for $cell"
+    else
+        kwriteconfig6 "${group_args[@]}" --key maximizeWhenMaximized false \
+            || e2e_fail "could not keep the partial Panel span stable for $cell"
+    fi
     kwriteconfig6 "${group_args[@]}" --key hideFloatingGapForMaximized true \
         || e2e_fail "could not enable live attachment for $cell"
     kwriteconfig6 "${group_args[@]}" --key floatingGapHidingWaitsMouse false \
@@ -283,9 +420,12 @@ exercise_held_drag() {
     local expected_panel="$2"
     local expected_request="$3"
     local expected_target="$4"
+    local expect_dock_expansion="${5:-false}"
     local type panel geometry_present edge floating_gap gap
     local normal maximum trigger_x trigger_y trigger_width trigger_height
     local screen_x screen_y screen_width screen_height
+    local base_presented_x=-1 base_presented_length=-1
+    local configured_ratio=unread output_length=-1 borders=unread
 
     read -r type panel geometry_present edge floating_gap gap normal maximum \
         trigger_x trigger_y trigger_width trigger_height \
@@ -354,6 +494,23 @@ exercise_held_drag() {
     local base_snapshot
     base_snapshot="$(stable_physical_snapshot)" \
         || e2e_fail "could not capture the stable $expected_type surface"
+    if [[ "$expected_type" == dock ]]; then
+        read -r _ configured_ratio base_presented_x base_presented_length \
+            _ output_length borders <<< "$(presentation_probe)"
+        if ! python3 - "$configured_ratio" <<'PY'
+import math
+import sys
+raise SystemExit(0 if math.isclose(float(sys.argv[1]), 0.6, abs_tol=1e-6)
+                 else 1)
+PY
+        then
+            e2e_fail "Dock fixture did not retain its configured 60% resting length"
+        fi
+        (( base_presented_length < output_length )) \
+            || e2e_fail "Dock fixture is not partial before live attachment"
+        [[ "$borders" == bottom,left,right,top ]] \
+            || e2e_fail "floated Dock fixture did not begin with all corners"
+    fi
 
     local titlebar_offset=12
     local start_x=$((baseline_x + client_width / 2))
@@ -366,31 +523,47 @@ exercise_held_drag() {
         "$start_x" "$start_y" &
     drag_pid=$!
 
+    # Sample the short-lived fractional phase before its stable endpoint. The
+    # endpoint policy remains observable for the rest of the held interval.
+    wait_for_fractional_progress_while_held \
+        "$expected_type" attaching \
+        "$expected_type live inward presentation" \
+        "$expect_dock_expansion"
     wait_for_policy_while_held \
         "$expected_type" 1 "$expected_request" "$expected_target" \
         "$expected_type live inward crossing"
-    wait_for_fractional_progress_while_held \
-        "$expected_type" attaching \
-        "$expected_type live inward presentation"
-    [[ "$(stable_physical_snapshot)" == "$base_snapshot" ]] \
-        || e2e_fail "$expected_type changed its QWindow, reservation, layer-shell publication, or tracker authority during live attachment"
+    if [[ "$expected_type" == dock
+          && "$expect_dock_expansion" == true ]]; then
+        wait_for_dock_attached_presentation_while_held
+    elif [[ "$expected_type" == dock ]]; then
+        assert_partial_dock_presentation \
+            "$expected_type live attachment" \
+            "$base_presented_x" "$base_presented_length"
+    fi
+    assert_stable_physical_snapshot \
+        "$expected_type live attachment" "$base_snapshot"
 
+    wait_for_fractional_progress_while_held \
+        "$expected_type" floating \
+        "$expected_type live outward presentation" \
+        "$expect_dock_expansion"
     wait_for_policy_while_held \
         "$expected_type" 0 false floated \
         "$expected_type live outward reversal"
-    wait_for_fractional_progress_while_held \
-        "$expected_type" floating \
-        "$expected_type live outward presentation"
-    [[ "$(stable_physical_snapshot)" == "$base_snapshot" ]] \
-        || e2e_fail "$expected_type changed its stable physical contract during live reversal"
+    assert_stable_physical_snapshot \
+        "$expected_type live reversal" "$base_snapshot"
 
     wait "$drag_pid" \
         || e2e_fail "$expected_type held titlebar drag failed"
     drag_pid=0
     wait_for_konsole_geometry "$baseline_x" "$baseline_y" \
         "$client_width" "$client_height"
-    [[ "$(stable_physical_snapshot)" == "$base_snapshot" ]] \
-        || e2e_fail "$expected_type changed its stable physical contract after release"
+    if [[ "$expected_type" == dock ]]; then
+        wait_for_dock_floated_presentation \
+            "$base_presented_x" "$base_presented_length"
+    fi
+    assert_stable_physical_snapshot \
+        "$expected_type after release" "$base_snapshot"
     stop_owned_konsole
 }
 
@@ -435,4 +608,7 @@ exercise_held_drag panel true false attached
 configure_case dock-top-center-1out
 exercise_held_drag dock false true attached
 
-echo "Live titlebar window touch passed before button release for both Panel and Dock, including fractional held reversal and zero stable physical-state drift"
+configure_case dock-top-justify-1out
+exercise_held_drag dock false true attached true
+
+echo "Live titlebar window touch passed before button release for Panel, partial Center Dock, and expanding Justify Dock; every view reversed fractionally and retained stable physical geometry"

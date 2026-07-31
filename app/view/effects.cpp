@@ -118,6 +118,8 @@ void Effects::init()
     connect(this, &Effects::panelBackgroundSvgChanged,
             this, &Effects::updateEffects);
     connect(this, &Effects::rectChanged, this, &Effects::updateEffects);
+    connect(this, &Effects::rectChanged,
+            this, &Effects::updateEnabledBorders);
 
 
     connect(this, &Effects::backgroundRadiusChanged, this, &Effects::updateBackgroundCorners);
@@ -927,6 +929,11 @@ void Effects::updateEnabledBorders()
             .floatingCornersVisible =
                 configuredFloatingPresentation
                 && floatingBoundaryVisible,
+            .primaryAxisFillsOutput =
+                PanelBorderDecision::doesPresentationFillPrimaryAxis(
+                    m_rect,
+                    m_view->size(),
+                    *edge),
             .screenEdgeMarginEnabled =
                 m_view->screenEdgeMarginEnabled(),
             .backgroundAllCorners = m_backgroundAllCorners,

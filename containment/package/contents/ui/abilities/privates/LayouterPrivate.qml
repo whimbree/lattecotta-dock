@@ -33,6 +33,15 @@ Item {
         return root.maxLength - backgroundTotals.paddingsLength;
     }
 
+    //! A live attached presentation can widen the applet row without changing
+    //! its icon fit. AutoSize consumes this resting budget while layout and
+    //! background placement continue to consume contentsMaxLength above.
+    readonly property int automaticSizingContentsMaxLength: {
+        const backgroundTotals = background.totals;
+        return root.automaticSizingMaximumLength
+            - backgroundTotals.paddingsLength;
+    }
+
     readonly property Item startLayout: LayouterElements.AppletsContainer {
         grid: _fillsPrivate.layouts.startLayout
     }

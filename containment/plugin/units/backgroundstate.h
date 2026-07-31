@@ -337,6 +337,30 @@ inline constexpr qreal fitDockBackgroundLength(qreal requestedBackgroundLength,
     return std::min(requestedBackgroundLength, owningCanvasLength);
 }
 
+//! Plasma 6 animates floatingness from 1 (floated) to 0 (attached) while a
+//! window approaches the panel. Lattecotta deliberately extends that live
+//! presentation to Qt5 Latte's optional maximize-length behavior. The stored
+//! resting percentage remains unchanged; only the presented Dock length
+//! interpolates, using the same scalar and therefore the same reversal.
+inline constexpr qreal resolvePresentedDockMaximumLengthPercent(
+    qreal configuredMaximumLengthPercent,
+    qreal floatingness,
+    bool maximizeLengthWhenAttached)
+{
+    Q_ASSERT(configuredMaximumLengthPercent >= 0.0);
+    Q_ASSERT(configuredMaximumLengthPercent <= 100.0);
+    Q_ASSERT(floatingness >= 0.0);
+    Q_ASSERT(floatingness <= 1.0);
+
+    if (!maximizeLengthWhenAttached) {
+        return configuredMaximumLengthPercent;
+    }
+
+    const qreal attachment = 1.0 - floatingness;
+    return configuredMaximumLengthPercent
+        + (100.0 - configuredMaximumLengthPercent) * attachment;
+}
+
 //! Keep a centered dock's configured and parabolic offset inside its actual
 //! view. When the complete visual fills the view, no offset is possible;
 //! shorter visuals retain the full symmetric movement available around them.

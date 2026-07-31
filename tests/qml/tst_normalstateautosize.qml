@@ -33,6 +33,7 @@ Item {
     property real backgroundLengthPadding: 0
     property real backgroundShadowLength: 0
     property real maxLength: 997.6
+    property real automaticSizingMaximumLength: maxLength
 
     property int destroyedContinuationCalls: 0
     property int rapidContinuationCalls: 0
@@ -86,6 +87,9 @@ Item {
         id: layouterMock
         property real contentsMaxLength: root.maxLength
                                          - root.backgroundLengthPadding
+        property real automaticSizingContentsMaxLength:
+            root.automaticSizingMaximumLength
+            - root.backgroundLengthPadding
         property int fillApplets: 0
     }
 

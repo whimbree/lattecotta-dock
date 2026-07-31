@@ -249,6 +249,36 @@ private:
             && !main.contains(QStringLiteral("anchors.fill:layoutsContainer"));
     }
 
+    static bool matchesStableDockAutomaticSizingContract(
+        const QString &autoSizeSource,
+        const QString &layouterPrivateSource,
+        const QString &mainSource)
+    {
+        const QString autoSize = normalizedCode(autoSizeSource);
+        const QString layouterPrivate = normalizedCode(
+            layouterPrivateSource);
+        const QString main = normalizedCode(mainSource);
+
+        return layouterPrivate.contains(QStringLiteral(
+                   "readonlypropertyintautomaticSizingContentsMaxLength:"
+                   "{constbackgroundTotals=background.totals;"
+                   "returnroot.automaticSizingMaximumLength"
+                   "-backgroundTotals.paddingsLength;}"))
+            && autoSize.contains(QStringLiteral(
+                   "functiononAutomaticSizingMaximumLengthChanged()"))
+            && autoSize.contains(QStringLiteral(
+                   "functiononAutomaticSizingContentsMaxLengthChanged()"))
+            && autoSize.contains(QStringLiteral(
+                   "sizer.layouter.automaticSizingContentsMaxLength"))
+            && main.contains(QStringLiteral(
+                   "availablePrimaryLength:"
+                   "_layouter.automaticSizingContentsMaxLength"))
+            && !autoSize.contains(QStringLiteral(
+                   "functiononMaxLengthChanged()"))
+            && !autoSize.contains(QStringLiteral(
+                   "functiononContentsMaxLengthChanged()"));
+    }
+
     static bool matchesStableFloatingPanelQmlContract(
         const QString &mainSource,
         const QString &bindingsSource,
@@ -317,6 +347,13 @@ private:
                    "latteView&&latteView.floatingTransition"
                    "?latteView.floatingTransition.floatingness:1.0"))
             && main.contains(QStringLiteral(
+                   "readonlypropertyrealpresentedDockMaximumLengthPercent:"
+                   "_backgroundState.presentedDockMaximumLengthPercent("
+                   "Plasmoid.configuration.maxLength,"
+                   "root.floatingPresentationProgress,"
+                   "root.dockFloatingTransitionOwnsGap"
+                   "&&root.maximizeWhenMaximized)"))
+            && main.contains(QStringLiteral(
                    "readonlypropertybooldockFloatingTransitionOwnsGap:"
                    "root.behaveAsDockWithMask"
                    "&&latteView"
@@ -341,7 +378,39 @@ private:
                    "&&latteView.visibility.mode===LatteCore.Types.WindowsGoBelow"))
             && main.contains(QStringLiteral(
                    "propertyrealmaxLengthPerCentage:behaveAsPlasmaPanel"
-                   "?Plasmoid.configuration.maxLength"))
+                   "?Plasmoid.configuration.maxLength"
+                   ":(hideLengthScreenGaps"
+                   "&&!dockFloatingTransitionOwnsGap"
+                   "?100:Plasmoid.configuration.maxLength)"))
+            && main.contains(QStringLiteral(
+                   "readonlypropertyintautomaticSizingMaximumLength:"
+                   "{if(!root.dockFloatingTransitionOwnsGap)"
+                   "{returnroot.maxLength;}returnroot.isHorizontal"
+                   "?root.width*(Plasmoid.configuration.maxLength/100)"
+                   ":root.height*(Plasmoid.configuration.maxLength/100);}"))
+            && main.contains(QStringLiteral(
+                   "constmaximize=behaveAsPlasmaPanel"
+                   "||(!dockFloatingTransitionOwnsGap"
+                   "&&maximizeWhenMaximized"
+                   "&&latteView.windowsTracker.currentScreen."
+                   "existsWindowMaximized);"))
+            && main.contains(QStringLiteral(
+                   "constpresentedMaximumLengthPercent="
+                   "dockFloatingTransitionOwnsGap"
+                   "?presentedDockMaximumLengthPercent"
+                   ":maxLengthPerCentage;"))
+            && main.contains(QStringLiteral(
+                   "BehavioronmaxLengthPerCentage"
+                   "{enabled:root.behaveAsDockWithMask"
+                   "&&!root.dockFloatingTransitionOwnsGap"))
+            && matchesStableDockAutomaticSizingContract(
+                readFile(QStringLiteral(
+                    "containment/package/contents/ui/abilities/"
+                    "AutoSize.qml")),
+                readFile(QStringLiteral(
+                    "containment/package/contents/ui/abilities/privates/"
+                    "LayouterPrivate.qml")),
+                mainSource)
             && bindings.contains(QStringLiteral(
                    "property:\"screenEdgeMarginEnabled\""
                    "when:latteViewvalue:root.screenEdgeMarginEnabled"))
@@ -388,15 +457,21 @@ private:
                    "ownsStableAttachedReservation"
                    "?0:metrics.mask.screenEdge;"))
             && main.contains(QStringLiteral(
+                   "constcurrentTouchingWindowCount="
+                   "latteView.windowTouchTracker.touchingWindowCount;"
+                   "constcurrentDockGapHideRequested="
+                   "directDockWindowTouchEligible"
+                   "&&currentTouchingWindowCount>0;"))
+            && main.contains(QStringLiteral(
                    "latteView.floatingTransition.reconcileTargetPolicy("
                    "floatingTransitionEligible,"
                    "attachOnWindowTouchConfigured,"
                    "attachmentWaitsForPointerExitConfigured,"
                    "pointerInsideView,"
-                   "latteView.windowTouchTracker.touchingWindowCount,"
-                   "dockGapHideRequested);"))
+                   "currentTouchingWindowCount,"
+                   "currentDockGapHideRequested);"))
             && main.contains(QStringLiteral(
-                   "onDockGapHideRequestedChanged:"
+                   "onDirectDockWindowTouchEligibleChanged:"
                    "reconcileFloatingTargetPolicy()"))
             && !visibility.contains(QStringLiteral(
                    "updateFloatingTransition"))
@@ -682,15 +757,19 @@ private:
                    "inttouchingWindowCount,"
                    "booldockGapHideRequested);"))
             && mainQml.contains(QStringLiteral(
+                   "constcurrentTouchingWindowCount="
+                   "latteView.windowTouchTracker.touchingWindowCount;"
+                   "constcurrentDockGapHideRequested="
+                   "directDockWindowTouchEligible"
+                   "&&currentTouchingWindowCount>0;"
                    "latteView.floatingTransition."
                    "reconcileTargetPolicy("
                    "floatingTransitionEligible,"
                    "attachOnWindowTouchConfigured,"
                    "attachmentWaitsForPointerExitConfigured,"
                    "pointerInsideView,"
-                   "latteView.windowTouchTracker."
-                   "touchingWindowCount,"
-                   "dockGapHideRequested);"
+                   "currentTouchingWindowCount,"
+                   "currentDockGapHideRequested);"
                    "updateFloatingAppletPopupHint();"))
             && mainQml.contains(QStringLiteral(
                    "functiononFloatingPanelConfiguredChanged(){"
@@ -735,6 +814,17 @@ private:
                    ":QRect{});"))
             && viewImplementation.contains(QStringLiteral(
                    "ViewPart::FloatingPanelGeometry::solve(inputs)"))
+            && viewImplementation.contains(QStringLiteral(
+                   "if(m_alignment==Latte::Types::Justify)"))
+            && viewImplementation.contains(QStringLiteral(
+                   "ViewPart::FloatingPanelGeometry::solvePlacement({"
+                   ".outputGeometry=outputGeometry,"
+                   ".availablePrimaryGeometry=geometry(),"
+                   ".edge=*edge,"
+                   ".alignment=ViewPart::FloatingPanelGeometry::"
+                   "PrimaryAxisAlignment::Center,"
+                   ".maxLength=maxLength(),"
+                   ".offset=0.0F,"))
             && mainQml.contains(QStringLiteral(
                    "readonlypropertybooldockGapHideRequested:"
                    "directDockWindowTouchEligible"
@@ -900,14 +990,28 @@ private:
         const qsizetype dockCase =
             code.indexOf(QStringLiteral(
                 "configure_casedock-top-center-1out"));
+        const qsizetype justifyDockCase =
+            code.indexOf(QStringLiteral(
+                "configure_casedock-top-justify-1out"));
+        const QString heldPolicy = normalizedCode(functionBody(
+            source, QStringLiteral("wait_for_policy_while_held()")));
+        const QString heldFraction = normalizedCode(functionBody(
+            source,
+            QStringLiteral("wait_for_fractional_progress_while_held()")));
+        const QString heldProof = QStringLiteral(
+            "kill-0\"$drag_pid\"2>/dev/null"
+            "\\||e2e_fail\"$boundaryappearedonlyafterbuttonrelease\"");
 
         return cleanupTrap >= 0
             && panelCase > cleanupTrap
             && dockCase > panelCase
+            && justifyDockCase > dockCase
             && code.contains(QStringLiteral(
                    "snapshot['schemaVersion']!=9"))
             && code.contains(QStringLiteral(
                    "--keyfloatingGapHidingWaitsMousefalse"))
+            && code.contains(QStringLiteral(
+                   "--keymaximizeWhenMaximizedtrue"))
             && code.contains(QStringLiteral(
                    "fpdraghold900"))
             && code.contains(QStringLiteral(
@@ -917,10 +1021,25 @@ private:
                    "drag_pid=$!"))
             && code.count(QStringLiteral(
                    "kill-0\"$drag_pid\"")) >= 2
+            && heldPolicy.contains(heldProof)
+            && heldFraction.contains(heldProof)
+            && heldFraction.contains(QStringLiteral(
+                   "fractional_presentation_probe"))
+            && !heldFraction.contains(QStringLiteral(
+                   "<<<\"$(presentation_probe)\""))
             && code.contains(QStringLiteral(
                    "exercise_held_dragpaneltruefalseattached"))
             && code.contains(QStringLiteral(
                    "exercise_held_dragdockfalsetrueattached"))
+            && code.contains(QStringLiteral(
+                   "exercise_held_dragdockfalsetrueattachedtrue"))
+            && code.contains(QStringLiteral(
+                   "assert_partial_dock_presentation"
+                   "\\"
+                   "\"$expected_typeliveattachment\""
+                   "\\"
+                   "\"$base_presented_x\""
+                   "\"$base_presented_length\""))
             && code.count(QStringLiteral(
                    "wait_for_policy_while_held")) >= 4
             && code.count(QStringLiteral(
@@ -928,10 +1047,31 @@ private:
             && code.contains(QStringLiteral(
                    "presented_gap_matches_progress"))
             && code.contains(QStringLiteral(
+                   "dock_length_matches_progress"))
+            && code.contains(QStringLiteral(
+                   "v[\"windowGeometry\"][0]+v[\"effectsRect\"][0]"))
+            && code.contains(QStringLiteral(
+                   "v[\"effectsRect\"][2]"))
+            && code.count(QStringLiteral(
+                   "wait_for_dock_attached_presentation_while_held")) >= 2
+            && code.contains(QStringLiteral(
+                   "\"$presented_x\"-eq\"$output_x\""
+                   "&&\"$presented_length\"-eq\"$output_length\""
+                   "&&\"$borders\"==bottom"))
+            && code.contains(QStringLiteral(
+                   "wait_for_dock_floated_presentation"
+                   "\\"
+                   "\"$base_presented_x\"\"$base_presented_length\""))
+            && code.contains(QStringLiteral(
+                   "\"$borders\"==bottom"))
+            && code.contains(QStringLiteral(
+                   "\"$borders\"==bottom,left,right,top"))
+            && code.contains(QStringLiteral(
                    "v[\"presentedScreenEdgeGap\"]"))
             && code.count(QStringLiteral(
-                   "[[\"$(stable_physical_snapshot)\""
-                   "==\"$base_snapshot\"]]")) >= 3
+                   "assert_stable_physical_snapshot")) >= 4
+            && code.contains(QStringLiteral(
+                   "actual=\"$(stable_physical_snapshot)\""))
             && code.contains(QStringLiteral(
                    "\"stableTriggerGeometry\":"
                    "v[\"stableTriggerGeometry\"]"))
@@ -947,6 +1087,17 @@ private:
             && code.contains(QStringLiteral(
                    "\"windowTouchTracker\":"
                    "v[\"objects\"][\"windowTouchTracker\"]"))
+            && code.contains(QStringLiteral(
+                   "\"configuredIconSize\":v[\"configuredIconSize\"]"))
+            && code.contains(QStringLiteral(
+                   "\"effectiveIconSize\":v[\"effectiveIconSize\"]"))
+            && code.contains(QStringLiteral(
+                   "\"absoluteGeometry\":v[\"absoluteGeometry\"]"))
+            && code.contains(QStringLiteral(
+                   "\"localGeometry\":v[\"localGeometry\"]"))
+            && code.contains(QStringLiteral(
+                   "\"availablePrimaryLength\":"
+                   "v[\"availablePrimaryLength\"]"))
             && code.contains(QStringLiteral(
                    "\"$trigger_height\""
                    "-eq\"$expected_envelope_depth\""))
@@ -1388,7 +1539,9 @@ private:
 
         const QString stableAuthority = QStringLiteral(
             "readonlypropertyboolstablePrimaryAxisLayoutClearance:"
-            "!!(barLine.dockView&&barLine.dockView.floatingPanelConfigured)");
+            "!!(barLine.dockView"
+            "&&(barLine.dockView.floatingPanelConfigured"
+            "||barLine.containmentRoot.dockFloatingTransitionOwnsGap))");
         const QString topClearance = QStringLiteral(
             "readonlypropertybooltopLayoutClearanceIsRequired:"
             "backgroundStateResolver.layoutClearanceIsRequired("
@@ -2101,6 +2254,51 @@ private:
             "manager.updateInputGeometry();}"));
     }
 
+    static bool matchesStableDockOccupancyContract(
+        const QString &visibilityManager,
+        const QString &bridgeHeader)
+    {
+        const QString visibility = normalizedCode(visibilityManager);
+        const QString bridge = normalizedCode(bridgeHeader);
+        const QString updateMask = normalizedCode(functionBody(
+            visibilityManager, QStringLiteral("function updateMaskArea()")));
+        const QString updateInput = normalizedCode(functionBody(
+            visibilityManager,
+            QStringLiteral("function updateInputGeometry()")));
+
+        return bridge.contains(QStringLiteral(
+                   "Q_INVOKABLEQRectstableJustifyDockOccupancyFor("))
+            && updateMask.contains(QStringLiteral(
+                   "constpresentedLocalGeometry="
+                   "manager.presentedLocalGeometry();"))
+            && updateMask.contains(QStringLiteral(
+                   "if(!root.dockFloatingTransitionOwnsGap){"
+                   "latteView.localGeometry=presentedLocalGeometry;"
+                   "}elseif(root.myView.alignment==="
+                   "LatteCore.Types.Justify){"
+                   "latteView.localGeometry="
+                   "maskGeometry.stableJustifyDockOccupancyFor("))
+            && updateMask.contains(QStringLiteral(
+                   "root.automaticSizingMaximumLength,"))
+            && updateMask.contains(QStringLiteral(
+                   "metrics.configuredScreenEdgeMargin);"
+                   "}else{latteView.localGeometry="
+                   "maskGeometry.localGeometryFor("
+                   "Plasmoid.location,false,"))
+            && updateMask.contains(QStringLiteral(
+                   "latteView.effects.rect,"
+                   "metrics.totals.thickness,"
+                   "metrics.configuredScreenEdgeMargin);"))
+            && updateInput.contains(QStringLiteral(
+                   "constpresentedLocalGeometry="
+                   "manager.presentedLocalGeometry();"))
+            && updateInput.contains(QStringLiteral(
+                   "metrics.mask.screenEdge,"
+                   "presentedLocalGeometry,"))
+            && !updateInput.contains(QStringLiteral(
+                   "metrics.mask.screenEdge,latteView.localGeometry,"));
+    }
+
 private Q_SLOTS:
     void visibilityManager_updateSidebarState_assignsState();
     void layoutsController_modeIsChanged_delegatesToModel();
@@ -2119,6 +2317,9 @@ private Q_SLOTS:
     void stableFloatingPanelQml_keepsOneTransitionAuthority();
     void stableFloatingPanelQml_rejectsDivergentZeroGapEligibility();
     void stableFloatingPanelQml_rejectsDroppedDockTransitionOwnership();
+    void stableDockAutomaticSizing_rejectsPresentedLengthFeedback();
+    void stableDockOccupancy_separatesPresentationFromReservations();
+    void stableDockOccupancy_rejectsPresentationFeedback();
     void stablePanelPopupAnchor_rejectsLegacyAnimationFreeze();
     void stableFloatingPanelE2e_keepsCanvasAndRevisionsFixed();
     void windowTouchAuthority_keepsDedicatedStableModel();
@@ -2630,6 +2831,23 @@ void SourceGuardTest::stableFloatingPanelQml_rejectsDroppedDockTransitionOwnersh
     const QList<OwnershipMutation> retainedOwnershipMutations{
         {
             QStringLiteral(
+                "        const currentTouchingWindowCount =\n"
+                "            latteView.windowTouchTracker."
+                "touchingWindowCount;\n"),
+            QStringLiteral(
+                "        const currentTouchingWindowCount = 0;\n"),
+        },
+        {
+            QStringLiteral(
+                "        const currentDockGapHideRequested =\n"
+                "            directDockWindowTouchEligible\n"
+                "            && currentTouchingWindowCount > 0;\n"),
+            QStringLiteral(
+                "        const currentDockGapHideRequested =\n"
+                "            dockGapHideRequested;\n"),
+        },
+        {
+            QStringLiteral(
                 "        && (directDockWindowTouchEligible\n"),
             QStringLiteral(
                 "        && (false\n"),
@@ -2644,6 +2862,46 @@ void SourceGuardTest::stableFloatingPanelQml_rejectsDroppedDockTransitionOwnersh
                 "            || floatingPresentationDisplaced)\n"),
             QStringLiteral(
                 "            || false)\n"),
+        },
+        {
+            QStringLiteral(
+                "            root.floatingPresentationProgress,\n"),
+            QStringLiteral(
+                "            1.0,\n"),
+        },
+        {
+            QStringLiteral(
+                "            root.dockFloatingTransitionOwnsGap\n"
+                "                && root.maximizeWhenMaximized)\n"),
+            QStringLiteral(
+                "            root.dockFloatingTransitionOwnsGap\n"
+                "                && true)\n"),
+        },
+        {
+            QStringLiteral(
+                "          || (!dockFloatingTransitionOwnsGap\n"
+                "              && maximizeWhenMaximized\n"),
+            QStringLiteral(
+                "          || (maximizeWhenMaximized\n"),
+        },
+        {
+            QStringLiteral(
+                "                 && !root.dockFloatingTransitionOwnsGap\n"
+                "                 && Plasmoid.configuration."
+                "floatingGapHidingWaitsMouse\n"),
+            QStringLiteral(
+                "                 && Plasmoid.configuration."
+                "floatingGapHidingWaitsMouse\n"),
+        },
+        {
+            QStringLiteral(
+                "        return root.isHorizontal\n"
+                "            ? root.width * "
+                "(Plasmoid.configuration.maxLength / 100)\n"
+                "            : root.height * "
+                "(Plasmoid.configuration.maxLength / 100);\n"),
+            QStringLiteral(
+                "        return root.maxLength;\n"),
         },
     };
     for (const auto &mutation : retainedOwnershipMutations) {
@@ -2697,6 +2955,128 @@ void SourceGuardTest::stableFloatingPanelQml_rejectsDroppedDockTransitionOwnersh
             "ordinary visibility changes must not invoke the destructive"
             " Panel-to-Dock ownership handoff");
     }
+}
+
+void SourceGuardTest::
+    stableDockAutomaticSizing_rejectsPresentedLengthFeedback()
+{
+    const QString originalAutoSize = readFile(QStringLiteral(
+        "containment/package/contents/ui/abilities/AutoSize.qml"));
+    const QString originalLayouter = readFile(QStringLiteral(
+        "containment/package/contents/ui/abilities/privates/"
+        "LayouterPrivate.qml"));
+    const QString originalMain = readFile(QStringLiteral(
+        "containment/package/contents/ui/main.qml"));
+    QVERIFY(matchesStableDockAutomaticSizingContract(
+        originalAutoSize, originalLayouter, originalMain));
+
+    QString eventLeak = originalAutoSize;
+    const QString stableEvent = QStringLiteral(
+        "function onAutomaticSizingMaximumLengthChanged()");
+    QCOMPARE(eventLeak.count(stableEvent), 1);
+    eventLeak.replace(stableEvent,
+                      QStringLiteral("function onMaxLengthChanged()"));
+    QVERIFY2(!matchesStableDockAutomaticSizingContract(
+                 eventLeak, originalLayouter, originalMain),
+             "presentation frames must not trigger an automatic-size pass");
+
+    QString budgetLeak = originalAutoSize;
+    const QString stableBudget = QStringLiteral(
+        "sizer.layouter.automaticSizingContentsMaxLength");
+    QCOMPARE(budgetLeak.count(stableBudget), 1);
+    budgetLeak.replace(stableBudget,
+                       QStringLiteral("sizer.layouter.contentsMaxLength"));
+    QVERIFY2(!matchesStableDockAutomaticSizingContract(
+                 budgetLeak, originalLayouter, originalMain),
+             "automatic sizing must not consume the presented Dock length");
+
+    QString layouterLeak = originalLayouter;
+    const QString stableMaximum = QStringLiteral(
+        "return root.automaticSizingMaximumLength\n"
+        "            - backgroundTotals.paddingsLength;");
+    QCOMPARE(layouterLeak.count(stableMaximum), 1);
+    layouterLeak.replace(
+        stableMaximum,
+        QStringLiteral(
+            "return root.maxLength\n"
+            "            - backgroundTotals.paddingsLength;"));
+    QVERIFY2(!matchesStableDockAutomaticSizingContract(
+                 originalAutoSize, layouterLeak, originalMain),
+             "the resting fit budget must not alias live presentation state");
+
+    const QString stableDiagnostic = QStringLiteral(
+        "        availablePrimaryLength: "
+        "_layouter.automaticSizingContentsMaxLength\n");
+    QCOMPARE(originalMain.count(stableDiagnostic), 1);
+    QString diagnosticLeak = originalMain;
+    diagnosticLeak.replace(
+        stableDiagnostic,
+        QStringLiteral(
+            "        availablePrimaryLength: "
+            "_layouter.contentsMaxLength\n"));
+    QVERIFY2(!matchesStableDockAutomaticSizingContract(
+                 originalAutoSize, originalLayouter, diagnosticLeak),
+             "the per-view available-length readback must not consume the"
+             " animated presentation budget");
+}
+
+void SourceGuardTest::
+    stableDockOccupancy_separatesPresentationFromReservations()
+{
+    QVERIFY2(matchesStableDockOccupancyContract(
+                 readFile(QStringLiteral(
+                     "containment/package/contents/ui/VisibilityManager.qml")),
+                 readFile(QStringLiteral(
+                     "containment/plugin/maskgeometrybridge.h"))),
+             "a live Dock must retain its configured gap, a Justify Dock must"
+             " also retain its resting length, and input must follow the"
+             " animated presentation");
+}
+
+void SourceGuardTest::
+    stableDockOccupancy_rejectsPresentationFeedback()
+{
+    const QString bridge = readFile(QStringLiteral(
+        "containment/plugin/maskgeometrybridge.h"));
+    QString visibility = readFile(QStringLiteral(
+        "containment/package/contents/ui/VisibilityManager.qml"));
+    QVERIFY(matchesStableDockOccupancyContract(visibility, bridge));
+
+    const QString presentedInput = QStringLiteral(
+        "                                                                "
+        "presentedLocalGeometry,\n");
+    QCOMPARE(visibility.count(presentedInput), 1);
+    visibility.replace(
+        presentedInput,
+        QStringLiteral(
+            "                                                                "
+            "latteView.localGeometry,\n"));
+    QVERIFY2(!matchesStableDockOccupancyContract(visibility, bridge),
+             "input must not collapse onto the stable reservation footprint"
+             " while paint expands");
+
+    visibility = readFile(QStringLiteral(
+        "containment/package/contents/ui/VisibilityManager.qml"));
+    const QString stableLength = QStringLiteral(
+        "                    root.automaticSizingMaximumLength,\n");
+    QCOMPARE(visibility.count(stableLength), 1);
+    visibility.replace(stableLength,
+                       QStringLiteral("                    root.maxLength,\n"));
+    QVERIFY2(!matchesStableDockOccupancyContract(visibility, bridge),
+             "stable occupancy must not consume the animated maximum length");
+
+    visibility = readFile(QStringLiteral(
+        "containment/package/contents/ui/VisibilityManager.qml"));
+    const QString stableGap = QStringLiteral(
+        "                            metrics.configuredScreenEdgeMargin);\n");
+    QCOMPARE(visibility.count(stableGap), 2);
+    visibility.replace(
+        stableGap,
+        QStringLiteral(
+            "                            metrics.mask.screenEdge);\n"));
+    QVERIFY2(!matchesStableDockOccupancyContract(visibility, bridge),
+             "every live Dock alignment must keep its configured gap out of"
+             " animated occupancy");
 }
 
 void SourceGuardTest::stablePanelPopupAnchor_rejectsLegacyAnimationFreeze()
@@ -2844,6 +3224,26 @@ void SourceGuardTest::windowTouchAuthority_rejectsControlledMutations()
                  viewHeader, viewImplementation, behaviorConfig),
              "window-only roles must not be decoded before a heterogeneous"
              " task row is classified");
+
+    QString dynamicJustifyTrigger = viewImplementation;
+    const QString stableRatio = QStringLiteral(
+        "                .maxLength = maxLength(),\n");
+    QCOMPARE(dynamicJustifyTrigger.count(stableRatio), 1);
+    dynamicJustifyTrigger.replace(
+        stableRatio,
+        QStringLiteral("                .maxLength = 1.0F,\n"));
+    QVERIFY2(!matchesWindowTouchAuthorityContract(
+                 mainQml,
+                 readFile(QStringLiteral(
+                     "containment/package/contents/ui/"
+                     "WindowTouchTracker.qml")),
+                 trackerHeader,
+                 readFile(QStringLiteral(
+                     "app/view/windowtouchtracker.cpp")),
+                 transitionHeader, transitionImplementation,
+                 viewHeader, dynamicJustifyTrigger, behaviorConfig),
+             "a presented full-span Dock must not widen its stable touch"
+             " trigger authority");
 }
 
 void SourceGuardTest::windowTouchE2e_drivesOneStableTriggerClient()
@@ -2864,9 +3264,9 @@ void SourceGuardTest::
         matchesLiveTitlebarWindowTouchE2eContract(
             readFile(QStringLiteral(
                 "tests/e2e/074-live-titlebar-window-touch.sh"))),
-        "recipe 074 must cross and reverse both Panel and Dock triggers"
-        " during one button-held titlebar drag without changing physical"
-        " surface or reservation state");
+        "recipe 074 must cross and reverse Panel, partial Center Dock, and"
+        " expanding Justify Dock triggers during a button-held titlebar"
+        " drag without changing physical surface or reservation state");
 }
 
 void SourceGuardTest::
@@ -2886,6 +3286,21 @@ void SourceGuardTest::
         !matchesLiveTitlebarWindowTouchE2eContract(recipe),
         "a visual endpoint observed after release is not evidence of live"
         " button-held attachment");
+
+    QString partialEndpoint = readFile(QStringLiteral(
+        "tests/e2e/074-live-titlebar-window-touch.sh"));
+    const QString fullSpan = QStringLiteral(
+        "              && \"$presented_length\" -eq "
+        "\"$output_length\"\n");
+    QCOMPARE(partialEndpoint.count(fullSpan), 1);
+    partialEndpoint.replace(
+        fullSpan,
+        QStringLiteral(
+            "              && \"$presented_length\" -lt "
+            "\"$output_length\"\n"));
+    QVERIFY2(!matchesLiveTitlebarWindowTouchE2eContract(partialEndpoint),
+             "live attachment must prove the complete output span, not"
+             " merely a wider partial presentation");
 }
 
 void SourceGuardTest::windowTouchTopologyE2e_keepsIndependentRegionsAndOutputs()
@@ -3604,7 +4019,7 @@ void SourceGuardTest::floatingPanelLayoutClearance_keepsStablePrimarySpan()
         "containment/package/contents/ui/BindingsExternal.qml"));
 
     QVERIFY2(matchesStableFloatingPanelLayoutClearance(background, bindings),
-             "configured positive-gap floating Panels must keep one"
+             "configured floating Panels and live-attached Docks must keep one"
              " primary-axis applet and popup clearance budget while visual"
              " borders change");
 }
@@ -3623,7 +4038,9 @@ void SourceGuardTest::floatingPanelLayoutClearance_sourceGuardsRejectDivergence(
         "readonly property bool stablePrimaryAxisLayoutClearance: "
         "!!(barLine.dockView\n"
         "                                                                 "
-        "&& barLine.dockView.floatingPanelConfigured)");
+        "&& (barLine.dockView.floatingPanelConfigured\n"
+        "                                                                     "
+        "|| barLine.containmentRoot.dockFloatingTransitionOwnsGap))");
     QCOMPARE(broadPanelAuthority.count(exactAuthority), 1);
     broadPanelAuthority.replace(
         exactAuthority,

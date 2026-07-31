@@ -224,6 +224,30 @@ double BackgroundStateResolver::dockBackgroundLength(double requestedBackgroundL
                                                      owningCanvasLength);
 }
 
+double BackgroundStateResolver::presentedDockMaximumLengthPercent(
+    double configuredMaximumLengthPercent,
+    double floatingness,
+    bool maximizeLengthWhenAttached) const
+{
+    if (!std::isfinite(configuredMaximumLengthPercent)
+        || !std::isfinite(floatingness)
+        || configuredMaximumLengthPercent < 0.0
+        || configuredMaximumLengthPercent > 100.0
+        || floatingness < 0.0
+        || floatingness > 1.0) {
+        qCritical()
+            << "BackgroundStateResolver.presentedDockMaximumLengthPercent:"
+               " invalid presentation"
+            << configuredMaximumLengthPercent << floatingness;
+        return 0.0;
+    }
+
+    return BackgroundState::resolvePresentedDockMaximumLengthPercent(
+        configuredMaximumLengthPercent,
+        floatingness,
+        maximizeLengthWhenAttached);
+}
+
 double BackgroundStateResolver::centeredDockOffset(double requestedOffset,
                                                     double visualLength,
                                                     double viewPrimaryLength) const

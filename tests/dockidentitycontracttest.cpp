@@ -855,7 +855,8 @@ void DockIdentityContractTest::geometryDiagnosticsReadEachViewsSizingAuthority()
 
     QVERIFY(metricsSource.contains(QStringLiteral("propertyintavailablePrimaryLength:0")));
     QVERIFY(containmentSource.contains(
-        QStringLiteral("availablePrimaryLength:_layouter.contentsMaxLength")));
+        QStringLiteral(
+            "availablePrimaryLength:_layouter.automaticSizingContentsMaxLength")));
     QVERIFY(reportsSource.contains(
         QStringLiteral("readLiveProperty(metrics,\"availablePrimaryLength\")")));
     QVERIFY(!reportsSource.contains(
