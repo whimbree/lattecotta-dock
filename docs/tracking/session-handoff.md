@@ -20,18 +20,28 @@ rectangle separately. Policy reconciliation reads one touching count and
 derives the Dock request from the same snapshot, removing a QML notify-order
 race.
 
+The first independent review returned `MERGE AFTER FIXES`. A fully attached
+Justify Dock retains a full-span effects rectangle, so changing Maximum Length
+did not emit the paint event that had been relied on to update stable occupancy.
+The independent C++ touch trigger also had no direct `maxLengthChanged` route.
+Commit `19104b58e` makes both configured-length dependencies explicit.
+
 The focused background, border, mask, D-Bus, identity, source-contract, QML
 interaction, and QML compile checks pass. Expanded nested recipe 074 drives a
 Panel, partial Center Dock, and expanding Justify Dock through fractional
 attachment and reversal before button release. Stable physical state remains
-byte-identical. Plasma 6.7.3 also keeps the rounded floating FrameSvg during
-fractional frames and switches enabled borders at exact attachment; it does not
-numerically shrink the radius each frame. The replacement canonical gate passes
-at exact source head `3cf23db0aa936ce03d0fbe3658cba842fa0ddddf`,
+byte-identical. With automatic sizing disabled, the same recipe attaches a 60%
+Justify Dock, changes Maximum Length to 54% through the real edit ruler, and
+observes stable occupancy and touch geometry converge while attached paint
+remains full-width. Plasma 6.7.3 also keeps the rounded floating FrameSvg
+during fractional frames and switches enabled borders at exact attachment; it
+does not numerically shrink the radius each frame. The replacement canonical
+gate passes at exact source head
+`19104b58ea531f3110722891aaab73f3cdf82272`,
 including all 124 CTest entries, the reduced qmllint ratchet, rendered scene
 probes, ASan and UBSan nested execution, package provenance controls, and
-matrix refusals. The real-session dock remains stopped until the branch passes
-independent review.
+matrix refusals. The real-session dock remains stopped until the corrected
+branch passes the required second independent review.
 
 ## 2026-07-27: D241 unifies floating Dock presentation
 

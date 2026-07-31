@@ -208,8 +208,10 @@ and PR #126 landed FP-4B.
 - [x] D244 (live attached Dock presentation leaked into stable geometry) keeps
       animated length, gap, input, and endpoint borders inside presentation
       while configured touch, sizing, occupancy, strut, and reservation
-      authorities remain stable.
-      Commits: eabe3df05, 3cf23db0a
+      authorities remain stable. Configured Maximum Length changes explicitly
+      refresh stable occupancy and touch geometry even while attached paint
+      remains full-span.
+      Commits: eabe3df05, 3cf23db0a, 19104b58e
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
       independent unless a shared root is proved.
@@ -221,7 +223,7 @@ and PR #126 landed FP-4B.
       terms.
 - [x] The full canonical gate passes after the final source commit.
       The replacement gate exited 0 at exact source head
-      `15baaf03426c39e752e814de937681809c4c7e0c`, including all 124 CTest
+      `19104b58ea531f3110722891aaab73f3cdf82272`, including all 124 CTest
       entries, QML and coverage ratchets, visual probes, the complete
       ASan/UBSan build, four nested-compositor recipes, package provenance
       controls, and matrix refusals.

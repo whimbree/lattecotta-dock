@@ -3062,8 +3062,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D244 - Live attached Dock presentation leaked into stable geometry
-- STATUS: FIXED on the feature branch by `eabe3df05` and `3cf23db0a`;
-  pending PR.
+- STATUS: FIXED on the feature branch by `eabe3df05`, `3cf23db0a`, and
+  `19104b58e`; pending PR.
 - FOUND: 2026-07-31, live-presentation ownership audit and expanded nested
   acceptance after D241 (floating Docks bypassed fractional presentation).
 - SYMPTOM: a floating Dock can animate its gap while a partial Justify
@@ -3076,19 +3076,30 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   animated effects rectangle into `absoluteGeometry`, struts, reservation, and
   sizing readback. Reconciliation could also combine a new Dock request with a
   stale touching count because related QML properties notified in sequence.
+  The first independent review also found that a Maximum Length change at the
+  fully attached endpoint had no paint event to republish stable occupancy or
+  recompute the independent touch trigger. Both could retain the old ratio
+  until an unrelated geometry event.
 - FIX: derive the presented maximum length and rendered endpoint borders from
   the per-view qreal while retaining configured geometry for touch placement,
   automatic sizing, layout clearance, local occupancy, struts, and reservation.
   Input alone follows the animated effects rectangle. Read the touching count
-  once and derive the Dock request from that same policy snapshot.
+  once and derive the Dock request from that same policy snapshot. Route
+  configured-length changes directly to both stable occupancy publication and
+  trigger recomputation instead of depending on animated paint signals.
 - EVIDENCE: the background, border, mask, D-Bus, identity, source-contract, QML
   interaction, and QML compile suites pass. Nested recipe 074 drives a Panel, a
   partial Center Dock, and an expanding Justify Dock through fractional attach
   and reversal before button release. The Justify presentation reaches the
   output endpoints and drops its rounded end borders while QWindow geometry,
   local and absolute occupancy, struts, reservation, trigger, icon sizes, and
-  available resting length remain stable. The replacement canonical gate passes
-  at exact source head `3cf23db0aa936ce03d0fbe3658cba842fa0ddddf`,
+  available resting length remain stable. With automatic sizing disabled, the
+  same recipe attaches a 60% Justify Dock, changes Maximum Length to 54%
+  through the real edit ruler, and observes occupancy and trigger converge to
+  54% while the attached presentation stays full-width and surface, icon, and
+  reservation ownership remain unchanged. The replacement canonical gate
+  passes at exact source head
+  `19104b58ea531f3110722891aaab73f3cdf82272`,
   including all 124 CTest entries, the reduced qmllint ratchet, rendered scene
   probes, ASan and UBSan nested execution, package provenance controls, and
   matrix refusals.
