@@ -111,9 +111,36 @@ application, and completion only after LayerShell acceptance. The full
 canonical gate then passes at exact source head
 `b1a27c1002e570ad99442bcd543d7e01c38519d3`, including all 124 CTest entries,
 QML and coverage ratchets, scene probes, the ASan/UBSan nested drive, package
-provenance checks, and matrix refusals. A fresh cold review remains required
-before PR #134 lands. The real-session dock remains stopped until that reviewed
-merge is available.
+provenance checks, and matrix refusals.
+
+The fresh cold review returned `DO NOT MERGE` with three remaining publication
+findings. D249 (completed geometry armed a delayed duplicate publication) found
+that QWindow resize notifications armed the 500 ms validator before final
+positioning, causing its 150 ms coalescer to publish again. D250 (failed
+LayerShell rollback traffic disappeared from observability) found that
+`std::nullopt` discarded both attempted and rollback setter counts. D251
+(hot-unplug erased applied output identity before geometry) found that a
+cleared `QPointer<QScreen>` made D-Bus pair mutable target identity with retained
+applied geometry. Manual replay also found D248 (output relocation waited for
+its own QWindow retarget): the transaction waited for `screenChanged`, while
+the atomic retarget waited for the transaction to clear its pending output.
+
+Commit `4a6c1aa20` completes one applied-placement lifecycle. Accepted output
+ownership retires the staged component without waiting for QWindow. Connector,
+ScreenPool id, geometry, and optional live screen publish as one snapshot.
+LayerShell reports setter traffic independently from acceptance. Positioner
+keeps application pending through the final QWindow rectangle, advances the
+revision afterward, and disarms the satisfied validator. Focused LayerShell,
+source-contract, identity, applied-output, and D-Bus tests pass. Two-output
+recipe 073 passes the axis-change publication deadline, full-touching,
+partial-touching, disconnected, and restart cases. Recipe 074 passes all held
+titlebar transitions and attached Maximum Length mutation when driven by the
+current branch-built fakepointer helper. The desktop-installed helper predates
+the recipe's `draghold` verb and is not valid for that replay.
+
+A replacement canonical gate and fresh cold review remain required before PR
+#134 lands. The real-session dock remains intentionally stopped until the
+reviewed merge is available.
 
 ## 2026-07-27: D241 unifies floating Dock presentation
 
