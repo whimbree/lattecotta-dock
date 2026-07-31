@@ -66,6 +66,7 @@ parabolicmathtest
 parabolicroutertest
 popupplacementcontracttest
 positionergeometrytest
+appliedoutputsnapshottest
 placementrequeststatetest
 removalundotransactiontest
 previewcontractrules
