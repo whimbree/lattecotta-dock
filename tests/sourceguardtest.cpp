@@ -2310,7 +2310,7 @@ private:
                    "constinputLengthGeometry="
                    "manager.window.visibility.isHidden"
                    "||manager.window.visibility.isSidebar"
-                   "?latteView.localGeometry"
+                   "?manager.window.localGeometry"
                    ":manager.presentedLocalGeometry();"))
             && updateInput.contains(QStringLiteral(
                    "metrics.mask.screenEdge,"
@@ -3082,7 +3082,7 @@ void SourceGuardTest::
     const QString hiddenSelection = QStringLiteral(
         "        const inputLengthGeometry = manager.window.visibility.isHidden\n"
         "                || manager.window.visibility.isSidebar\n"
-        "            ? latteView.localGeometry\n"
+        "            ? manager.window.localGeometry\n"
         "            : manager.presentedLocalGeometry();\n");
     QCOMPARE(visibility.count(hiddenSelection), 1);
     visibility.replace(
