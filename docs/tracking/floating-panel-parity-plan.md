@@ -224,7 +224,7 @@ and PR #126 landed FP-4B.
 - [x] D246 (hidden partial Docks collapsed edge activation to one pixel) keeps
       hidden and sidebar reveal input on retained stable occupancy while
       visible Dock input follows animated presentation geometry.
-      Commits: e8e73cc8e
+      Commits: e8e73cc8e, a5b964eb7, a601494ff
 - [x] D247 (placement controllers published before LayerShell acceptance)
       stages geometry locally and installs one applied runtime snapshot only
       after LayerShell accepts the surface.
@@ -240,7 +240,7 @@ and PR #126 landed FP-4B.
       terms.
 - [x] The full canonical gate passes after the final source commit.
       The replacement gate exited 0 at exact source head
-      `42244c77d33613490a2cd1eca401703d19517c4e`, including all 124 CTest
+      `a601494ff9eb9f3430307dd166df9a16871d8517`, including all 124 CTest
       entries, QML and coverage ratchets, visual probes, the complete
       ASan/UBSan build, four nested-compositor recipes, package provenance
       controls, and matrix refusals.
