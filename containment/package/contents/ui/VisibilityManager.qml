@@ -419,7 +419,7 @@ Item{
         //! occupied length; only a visible Dock follows animated paint.
         const inputLengthGeometry = manager.window.visibility.isHidden
                 || manager.window.visibility.isSidebar
-            ? latteView.localGeometry
+            ? manager.window.localGeometry
             : manager.presentedLocalGeometry();
         latteView.effects.inputMask = maskGeometry.inputMaskFor(Plasmoid.location,
                                                                 LatteCore.WindowSystem.compositingActive,
