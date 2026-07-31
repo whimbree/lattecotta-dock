@@ -4983,8 +4983,10 @@ prerequisites in the phases above are done.
       Drive Justify length and endpoint borders from the shared per-view qreal,
       but keep touch placement, automatic sizing, layout clearance, occupancy,
       struts, and reservation on configured resting geometry. Let input follow
-      the animated paint rectangle independently.
-      Commits: eabe3df05, 3cf23db0a
+      the animated paint rectangle independently. Republish stable occupancy
+      and recompute the touch trigger directly when configured Maximum Length
+      changes at the fully attached endpoint.
+      Commits: eabe3df05, 3cf23db0a, 19104b58e
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
