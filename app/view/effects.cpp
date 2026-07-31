@@ -14,6 +14,7 @@
 #include "inputmaskflush.h"
 #include "panelborderdecision.h"
 #include "panelshadows_p.h"
+#include "positioner.h"
 #include "view.h"
 #include "visibilitymanager.h"
 #include "../lattecorona.h"
@@ -889,7 +890,37 @@ void Effects::updateBackgroundContrastValues()
 
 void Effects::updateEnabledBorders()
 {
-    if (!m_view->screen()) {
+    const Positioner *const positioner = m_view->positioner();
+    if (!positioner) {
+        qCritical() << "Effects cannot update panel borders without a Positioner for"
+                    << m_view->validTitle();
+        return;
+    }
+
+    if (positioner->relocationGeneration()
+            != positioner->appliedRelocationGeneration()) {
+        //! Placement is atomic. Keep the previous applied borders while the
+        //! requested output, edge and surface are intentionally incoherent;
+        //! placementTransactionCommitted recomputes from the complete result.
+        return;
+    }
+
+    QScreen *const assignedScreen = positioner->assignedScreen();
+    if (!assignedScreen) {
+        qCritical() << "Effects cannot update panel borders without an assigned output for"
+                    << m_view->validTitle();
+        return;
+    }
+
+    const QRect assignedOutputGeometry = assignedScreen->geometry();
+    const QRect surfaceGeometry = positioner->surfaceGeometry();
+    if (!assignedOutputGeometry.isValid()
+            || (m_rect.isValid() && !surfaceGeometry.isValid())) {
+        qCritical() << "Effects refused invalid border geometry for"
+                    << m_view->validTitle()
+                    << "presentation=" << m_rect
+                    << "surface=" << surfaceGeometry
+                    << "output=" << assignedOutputGeometry;
         return;
     }
 
@@ -932,8 +963,8 @@ void Effects::updateEnabledBorders()
             .primaryAxisFillsOutput =
                 PanelBorderDecision::doesPresentationFillOutputPrimaryAxis(
                     m_rect,
-                    m_view->geometry(),
-                    m_view->screenGeometry(),
+                    surfaceGeometry,
+                    assignedOutputGeometry,
                     *edge),
             .screenEdgeMarginEnabled =
                 m_view->screenEdgeMarginEnabled(),

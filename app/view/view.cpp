@@ -121,6 +121,10 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
     //! needs to be created after Effects because it catches some of its signals
     //! and avoid a crash from View::winId() at the same time
     m_positioner = new ViewPart::Positioner(this);
+    connect(m_positioner,
+            &ViewPart::Positioner::placementTransactionCommitted,
+            m_effects,
+            &ViewPart::Effects::updateEnabledBorders);
 
     // Effects is constructed before FloatingTransition, so presentation
     // wiring belongs here after both objects exist.
