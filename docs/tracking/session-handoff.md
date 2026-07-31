@@ -143,6 +143,11 @@ refused the stale 124-entry coverage inventory. Commit `79d43f2c8` registers
 the new applied-output unit at its CTest position. This was a bookkeeping
 failure after the suite, not a failed test.
 
+The second replacement gate again passed 125/125 CTest entries, then refused
+the ratchet's independent count header because it still said 124. Commit
+`9e013a64a` raises the header to 125. The entry list and count are now
+consistent.
+
 A replacement canonical gate and fresh cold review remain required before PR
 #134 lands. The real-session dock remains intentionally stopped until the
 reviewed merge is available.
