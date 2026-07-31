@@ -138,6 +138,11 @@ titlebar transitions and attached Maximum Length mutation when driven by the
 current branch-built fakepointer helper. The desktop-installed helper predates
 the recipe's `draghold` verb and is not valid for that replay.
 
+The first replacement gate ran all 125 CTest entries successfully, then
+refused the stale 124-entry coverage inventory. Commit `79d43f2c8` registers
+the new applied-output unit at its CTest position. This was a bookkeeping
+failure after the suite, not a failed test.
+
 A replacement canonical gate and fresh cold review remain required before PR
 #134 lands. The real-session dock remains intentionally stopped until the
 reviewed merge is available.
