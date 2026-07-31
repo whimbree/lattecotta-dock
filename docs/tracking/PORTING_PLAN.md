@@ -5003,7 +5003,7 @@ prerequisites in the phases above are done.
       Retain the stable occupied primary span for hidden and sidebar reveal
       input instead of consuming the composited hide sentinel. Visible Dock
       input continues to follow animated paint.
-      Commits: e8e73cc8e
+      Commits: e8e73cc8e, a5b964eb7, a601494ff
 - [x] Fix D247 (placement controllers published before LayerShell acceptance).
       Solve surface, canvas, transition, and border values locally. Discard a
       refused stage without runtime mutation, or install one complete backing

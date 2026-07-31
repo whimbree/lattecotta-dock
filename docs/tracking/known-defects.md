@@ -3107,7 +3107,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   Maximum Length lifecycle. Two-output recipe 073 passes full-touching,
   partial-touching, and disconnected output arrangements, exact separated-span
   activation, restart persistence, and its controlled negative oracles. The
-  final source head and gate evidence are pending.
+  exact source head `a601494ff9eb9f3430307dd166df9a16871d8517`
+  passes the full canonical gate.
 - SEVERITY: beta blocker.
 
 ### D247 - Placement controllers published before LayerShell acceptance
@@ -3130,11 +3131,13 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: the production binary and focused source contract pass. Nested
   recipe 074 observes stable physical state throughout held live attachment,
   and two-output recipe 073 passes output topology changes and restart
-  persistence. The final canonical gate is pending.
+  persistence. Exact source head
+  `a601494ff9eb9f3430307dd166df9a16871d8517` passes the full canonical gate.
 - SEVERITY: release blocker.
 
 ### D246 - Hidden partial Docks collapsed edge activation to one pixel
-- STATUS: FIXED on the feature branch by `e8e73cc8e`; pending PR.
+- STATUS: FIXED on the feature branch by `e8e73cc8e`, `a5b964eb7`, and
+  `a601494ff`; pending PR.
 - FOUND: 2026-07-31, final cold independent review of PR #134.
 - SYMPTOM: an auto-hidden partial Dock can retain only one pixel of its
   primary-axis reveal strip, making ordinary pointer reveal effectively
@@ -3148,7 +3151,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: the QML boundary test combines the 1x1 hide sentinel with an
   800-pixel retained partial span and produces an 800x2 edge reveal strip. The
   source mutation guard rejects both an always-presented input source and an
-  always-stable source. All 247 QML interaction checks pass.
+  always-stable source. All 247 QML interaction checks pass. The qualified
+  runtime-view ownership path and its updated source guard keep the QML lint
+  ratchet unchanged. Exact source head
+  `a601494ff9eb9f3430307dd166df9a16871d8517` passes the full canonical gate.
 - SEVERITY: release blocker.
 
 ### D244 - Live attached Dock presentation leaked into stable geometry
