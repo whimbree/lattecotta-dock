@@ -3061,6 +3061,33 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   failed at the captured-prior contract, then passed after restoring the fix.
 - SEVERITY: release blocker.
 
+### D245 - Partial Panels lost endpoint borders at live attachment
+- STATUS: FIXED on the feature branch by `88b4eef27`; pending PR.
+- FOUND: 2026-07-31, second independent review of PR #134.
+- SYMPTOM: a partial floating Panel loses both primary-axis endpoint borders
+  when a dragged window reaches its live attached endpoint. Its rounded ends
+  become square even though the Panel does not reach either output endpoint.
+- ROOT: the enabled-border decision compared the local effects rectangle with
+  the QWindow canvas. A partial Panel's QWindow is itself partial, so paint
+  filling that local canvas was incorrectly classified as presentation filling
+  the output.
+- FIX: translate local effects geometry through the view's global geometry and
+  compare the result with the assigned output's primary-axis endpoints. Keep
+  the decision independent of view type, output origin, orientation, and
+  topology.
+- EVIDENCE: the pure border test covers all four edges on a negative-origin
+  output. It accepts complete output coverage, rejects a partial Panel that
+  fills only its QWindow, rejects a one-pixel short presentation, and rejects
+  invalid geometry. Nested recipe 074 holds a real titlebar drag at attachment
+  and observes a partial top Panel retain `bottom,left,right` borders before
+  button release. The same recipe still observes full-output Justify Dock
+  attachment and the 60% to 54% Maximum Length lifecycle. The complete
+  canonical gate passes at exact source head
+  `88b4eef27958fbd2a61e741a5e84c3201ee2198e`, including all 124 CTest
+  entries, the qmllint ratchet, rendered scene probes, ASan and UBSan nested
+  execution, package provenance controls, and matrix refusals.
+- SEVERITY: beta blocker.
+
 ### D244 - Live attached Dock presentation leaked into stable geometry
 - STATUS: FIXED on the feature branch by `eabe3df05`, `3cf23db0a`, and
   `19104b58e`; pending PR.

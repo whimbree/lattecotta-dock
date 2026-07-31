@@ -4987,6 +4987,12 @@ prerequisites in the phases above are done.
       and recompute the touch trigger directly when configured Maximum Length
       changes at the fully attached endpoint.
       Commits: eabe3df05, 3cf23db0a, 19104b58e
+- [x] Fix D245 (partial Panels lost endpoint borders at live attachment).
+      Classify output coverage from translated presentation geometry and the
+      assigned output endpoints, not from whether paint fills the local
+      QWindow canvas. Preserve endpoint borders for partial Panels on every
+      edge and output origin.
+      Commit: 88b4eef27
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

@@ -3,7 +3,7 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-31.
 
-## 2026-07-31: D244 isolates live Dock presentation
+## 2026-07-31: D244 and D245 isolate live presentation
 
 D244 (live attached Dock presentation leaked into stable geometry) remained
 after D241 unified the floating transition. The qreal moved the gap, but a
@@ -26,6 +26,15 @@ did not emit the paint event that had been relied on to update stable occupancy.
 The independent C++ touch trigger also had no direct `maxLengthChanged` route.
 Commit `19104b58e` makes both configured-length dependencies explicit.
 
+The second independent review returned `DO NOT MERGE` after finding D245
+(partial Panels lost endpoint borders at live attachment). The border decision
+mistook effects paint filling a partial Panel's local QWindow for presentation
+reaching both output endpoints. Commit `88b4eef27` translates local paint
+through global view geometry and compares it with the assigned output. The pure
+test covers every edge on a negative-origin output, and nested recipe 074 holds
+a real drag at attachment while the partial top Panel retains its left and
+right endpoint borders.
+
 The focused background, border, mask, D-Bus, identity, source-contract, QML
 interaction, and QML compile checks pass. Expanded nested recipe 074 drives a
 Panel, partial Center Dock, and expanding Justify Dock through fractional
@@ -35,13 +44,13 @@ Justify Dock, changes Maximum Length to 54% through the real edit ruler, and
 observes stable occupancy and touch geometry converge while attached paint
 remains full-width. Plasma 6.7.3 also keeps the rounded floating FrameSvg
 during fractional frames and switches enabled borders at exact attachment; it
-does not numerically shrink the radius each frame. The replacement canonical
-gate passes at exact source head
-`19104b58ea531f3110722891aaab73f3cdf82272`,
+does not numerically shrink the radius each frame. The final replacement
+canonical gate passes at exact source head
+`88b4eef27958fbd2a61e741a5e84c3201ee2198e`,
 including all 124 CTest entries, the reduced qmllint ratchet, rendered scene
 probes, ASan and UBSan nested execution, package provenance controls, and
 matrix refusals. The real-session dock remains stopped until the corrected
-branch passes the required second independent review.
+branch receives a fresh independent `MERGE` verdict and lands through PR #134.
 
 ## 2026-07-27: D241 unifies floating Dock presentation
 
