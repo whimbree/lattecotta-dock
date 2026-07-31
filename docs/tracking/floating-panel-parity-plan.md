@@ -242,10 +242,12 @@ and PR #126 landed FP-4B.
       Commits: 1b0a88eeb
 - [x] The README describes the stable floating-panel behavior in timeless
       terms.
-- [ ] The full canonical gate passes after the final source commit.
-      The gate at `a601494ff9eb9f3430307dd166df9a16871d8517` was retired
-      when the final release review required a stronger D247 applied-placement
-      boundary. A replacement gate at the corrected source head is pending.
+- [x] The full canonical gate passes after the final source commit.
+      The replacement gate exited 0 at exact source head
+      `b1a27c1002e570ad99442bcd543d7e01c38519d3`, including all 124 CTest
+      entries, QML and coverage ratchets, visual probes, the complete
+      ASan/UBSan build, four nested-compositor recipes, package provenance
+      controls, and matrix refusals.
 - [x] Correct D226 (LayerShell output migration bypassed reservation-gated
       remapping) and D227 (layout mutation preceded destination-output
       preflight).

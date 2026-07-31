@@ -104,9 +104,16 @@ It also removes the applied `screenGeometryChanged` feedback route that
 scheduled a redundant second solve after output publication. The production
 binary and focused LayerShell, source-contract, D-Bus, border, touch, and
 reservation tests pass, including a deliberate postcondition corruption that
-verifies exact rollback. The old gate stamp is retired; the replacement full
-gate and fresh cold review remain required before PR #134 lands. The
-real-session dock remains stopped until that reviewed merge is available.
+verifies exact rollback. The first replacement gate caught one stale identity
+contract that still required the removed premature QWindow move. Commit
+`b1a27c100` now requires reservation retirement, target staging, delayed
+application, and completion only after LayerShell acceptance. The full
+canonical gate then passes at exact source head
+`b1a27c1002e570ad99442bcd543d7e01c38519d3`, including all 124 CTest entries,
+QML and coverage ratchets, scene probes, the ASan/UBSan nested drive, package
+provenance checks, and matrix refusals. A fresh cold review remains required
+before PR #134 lands. The real-session dock remains stopped until that reviewed
+merge is available.
 
 ## 2026-07-27: D241 unifies floating Dock presentation
 

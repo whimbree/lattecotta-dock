@@ -3107,10 +3107,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   Maximum Length lifecycle. Two-output recipe 073 passes full-touching,
   partial-touching, and disconnected output arrangements, exact separated-span
   activation, restart persistence, and its controlled negative oracles. The
-  previous exact source head `a601494ff9eb9f3430307dd166df9a16871d8517`
-  passed the full canonical gate before the final release review strengthened
-  the D247 applied-placement boundary. The corrected focused suite passes; a
-  replacement canonical gate is pending.
+  corrected exact source head
+  `b1a27c1002e570ad99442bcd543d7e01c38519d3` passes the full canonical gate.
 - SEVERITY: beta blocker.
 
 ### D247 - Placement controllers published before LayerShell acceptance
@@ -3158,9 +3156,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   absence of the publication feedback loop. Nested
   recipe 074 observes stable physical state throughout held live attachment,
   and two-output recipe 073 passes output topology changes and restart
-  persistence. The earlier exact source head
-  `a601494ff9eb9f3430307dd166df9a16871d8517` passed the full canonical gate;
-  a replacement gate at the corrected source head is pending.
+  persistence. Corrected exact source head
+  `b1a27c1002e570ad99442bcd543d7e01c38519d3` passes the full canonical gate,
+  including all 124 CTest entries, QML and coverage ratchets, scene probes,
+  the ASan/UBSan nested drive, package provenance checks, and matrix refusals.
 - SEVERITY: release blocker.
 
 ### D246 - Hidden partial Docks collapsed edge activation to one pixel
@@ -3182,8 +3181,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   always-stable source. All 247 QML interaction checks pass. The qualified
   runtime-view ownership path and its updated source guard keep the QML lint
   ratchet unchanged. Exact source head
-  `a601494ff9eb9f3430307dd166df9a16871d8517` passed the full canonical gate
-  before the final D247 follow-up. A replacement canonical gate is pending.
+  corrected exact source head
+  `b1a27c1002e570ad99442bcd543d7e01c38519d3` passes the full canonical gate.
 - SEVERITY: release blocker.
 
 ### D244 - Live attached Dock presentation leaked into stable geometry
