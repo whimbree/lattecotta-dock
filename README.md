@@ -76,7 +76,10 @@ solves geometry against its assigned output, applies the exact layer-shell
 output and anchors, publishes the new maximum-depth reservation membership,
 commits its relocation generation, and only then remaps and reveals. A
 failed surface solve or LayerShell application cannot publish replacement
-presentation, occupancy, trigger, or border state. Hidden partial docks retain
+presentation, occupancy, trigger, border, output, or D-Bus state. A failed
+LayerShell postcondition restores the previous QWindow output, layer-shell
+output, anchors, margins, exclusion zone, and visibility before reporting the
+refusal. Hidden partial docks retain
 their complete stable edge-reveal span even while compositing uses the 1x1 hide
 sentinel for paint. A cross-layout move first journals the complete containment
 subtree, publishes

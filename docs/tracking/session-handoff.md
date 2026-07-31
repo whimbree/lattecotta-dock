@@ -57,14 +57,14 @@ are no longer observable as applied geometry.
 The final snapshot review returned `DO NOT MERGE` with three additional
 lifecycle findings. D246 (hidden partial Docks collapsed edge activation to
 one pixel) found that hidden input consumed the composited 1x1 effects
-sentinel instead of retained stable occupancy. Commit `e8e73cc8e` selects
+sentinel instead of retained stable occupancy. Commit `2ed7553c5` selects
 stable local geometry while hidden or in sidebar mode and leaves visible Dock
 input on animated presentation geometry. D247 (placement controllers published
 before LayerShell acceptance) found that FloatingTransition and QWindow
-mutation still preceded the acceptance boundary. Commit `0ee5f4463` solves
+mutation still preceded the acceptance boundary. Commit `f2be2e994` solves
 surface, canvas, controller, and border state locally, discards refused stages,
 and installs every backing value before publishing successful notifications.
-Commit `2a99fd2b1` closes D245's remaining silent-invalid arm by allowing absent
+Commit `139c860b2` closes D245's remaining silent-invalid arm by allowing absent
 paint only during revision-zero startup or an explicit Panel-to-Dock handoff.
 
 The focused background, border, mask, D-Bus, identity, source-contract, QML
@@ -77,7 +77,7 @@ observes stable occupancy and touch geometry converge while attached paint
 remains full-width. The corrected committed head passes all 247 QML interaction
 checks. The hidden-Dock boundary case combines the valid 1x1 hide sentinel with
 an 800-pixel retained partial span and produces an 800x2 reveal strip. Commits
-`a5b964eb7` and `a601494ff` qualify that runtime-view geometry read and update
+`ba7cc5f6d` and `12a6254fa` qualify that runtime-view geometry read and update
 its adversarial source guard without expanding the QML warning baseline. Nested
 recipe 074 passes again after the final lifecycle changes. Two-output recipe
 073 passes full-touching,
@@ -86,12 +86,27 @@ activation, restart persistence, and its controlled negative oracles. Plasma
 6.7.3 also keeps the rounded floating FrameSvg
 during fractional frames and switches enabled borders at exact attachment; it
 does not numerically shrink the radius each frame. The replacement canonical
-gate passes at exact source head
+gate passed at exact source head
 `a601494ff9eb9f3430307dd166df9a16871d8517`, including package provenance,
 all 124 CTest entries, QML and coverage ratchets, scene probes, the ASan/UBSan
-nested drive, and fixture-matrix refusals. The real-session dock remains
-stopped until the corrected branch receives a fresh independent `MERGE`
-verdict and PR #134 lands.
+nested drive, and fixture-matrix refusals.
+
+The final release review then returned `DO NOT MERGE` because direct output
+assignment still escaped D247's applied-placement boundary. QWindow and
+LayerShell mutations were not rolled back after a failed postcondition, and
+D-Bus could combine target screen identity with the previous applied surface.
+Commit `fb22372c8` keeps both output authorities behind suppressed QWindow
+signals, installs one complete Positioner snapshot before notification, and
+restores the complete previous lower-layer state before refusing a failed
+apply. Placement-dependent geometry, touch, borders, neighbor availability,
+and D-Bus retain the previous applied snapshot while replacement is pending.
+It also removes the applied `screenGeometryChanged` feedback route that
+scheduled a redundant second solve after output publication. The production
+binary and focused LayerShell, source-contract, D-Bus, border, touch, and
+reservation tests pass, including a deliberate postcondition corruption that
+verifies exact rollback. The old gate stamp is retired; the replacement full
+gate and fresh cold review remain required before PR #134 lands. The
+real-session dock remains stopped until that reviewed merge is available.
 
 ## 2026-07-27: D241 unifies floating Dock presentation
 

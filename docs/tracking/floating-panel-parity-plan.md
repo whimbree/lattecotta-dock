@@ -220,15 +220,19 @@ and PR #126 landed FP-4B.
       replacing applied output ownership.
       Failed LayerShell stages do not publish controller state, and invalid
       post-startup presentations are refused outside an explicit type handoff.
-      Commits: 88b4eef27, 5be872c20, 45772ac13, 0ee5f4463, 2a99fd2b1
+      Commits: 88b4eef27, 5be872c20, 45772ac13, f2be2e994, 139c860b2,
+      fb22372c8
 - [x] D246 (hidden partial Docks collapsed edge activation to one pixel) keeps
       hidden and sidebar reveal input on retained stable occupancy while
       visible Dock input follows animated presentation geometry.
-      Commits: e8e73cc8e, a5b964eb7, a601494ff
+      Commits: 2ed7553c5, ba7cc5f6d, 12a6254fa
 - [x] D247 (placement controllers published before LayerShell acceptance)
       stages geometry locally and installs one applied runtime snapshot only
-      after LayerShell accepts the surface.
-      Commits: 0ee5f4463
+      after LayerShell accepts the surface. QWindow output changes and their
+      observer signals share that boundary, failed LayerShell postconditions
+      restore the exact previous state, and D-Bus retains the previous applied
+      output until replacement succeeds.
+      Commits: f2be2e994, fb22372c8
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
       independent unless a shared root is proved.
@@ -238,12 +242,10 @@ and PR #126 landed FP-4B.
       Commits: 1b0a88eeb
 - [x] The README describes the stable floating-panel behavior in timeless
       terms.
-- [x] The full canonical gate passes after the final source commit.
-      The replacement gate exited 0 at exact source head
-      `a601494ff9eb9f3430307dd166df9a16871d8517`, including all 124 CTest
-      entries, QML and coverage ratchets, visual probes, the complete
-      ASan/UBSan build, four nested-compositor recipes, package provenance
-      controls, and matrix refusals.
+- [ ] The full canonical gate passes after the final source commit.
+      The gate at `a601494ff9eb9f3430307dd166df9a16871d8517` was retired
+      when the final release review required a stronger D247 applied-placement
+      boundary. A replacement gate at the corrected source head is pending.
 - [x] Correct D226 (LayerShell output migration bypassed reservation-gated
       remapping) and D227 (layout mutation preceded destination-output
       preflight).

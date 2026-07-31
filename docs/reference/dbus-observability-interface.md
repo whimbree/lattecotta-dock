@@ -78,8 +78,11 @@ Landed before or during the 2026-07-16 stabilization session:
   exactly the stranded bits).
   `inConfigureAppletsMode` is the effective per-view value, matching QML's
   `editMode && universalSettings.inConfigureAppletsMode`, not the raw global
-  toggle. A global rearrange session therefore does not report unrelated docks
-  as configuring applets.
+  toggle. After the first surface publication, `screen` and `screenGeometry`
+  retain Positioner's last complete applied output snapshot while a newer
+  placement is pending. Startup alone reports the target assignment before
+  that snapshot exists. A global rearrange session therefore does not report
+  unrelated docks as configuring applets.
 - `dockSystemData() -> s` (compact JSON object, schema version 9; added by C0
   (the atomic dock-system observability snapshot)). This is the relational
   all-docks read. One synchronous call captures the global configuration mode,
@@ -413,8 +416,12 @@ Landed before or during the 2026-07-16 stabilization session:
   device-pixel scaling. `windowGeometry`, `absoluteGeometry`, `screenGeometry`,
   `surfaceGeometry`, `canvasGeometry`, and `publishedStruts` use
   virtual-desktop coordinates. `surfaceGeometry` is Positioner's solved
-  layer-surface rectangle, not the masked background rectangle. Schema 5 also
-  reports the exact visual layer-shell request state: `layerShellPresent`,
+  layer-surface rectangle, not the masked background rectangle. `screen`,
+  `screenId`, and `screenGeometry` stay on the same last complete
+  applied output publication. A delayed or refused placement cannot expose a
+  target output identity beside the previous applied surface.
+  Schema 5 also reports the exact visual layer-shell request state:
+  `layerShellPresent`,
   `layerShellAnchors`, `layerShellMargins` in left/top/right/bottom order,
   `layerShellExclusiveEdge`, and `layerShellExclusiveZone`. The edge and zone
   are null only when attached layer-shell state is absent. These fields expose
