@@ -281,8 +281,8 @@ struct AutoSizeInput {
     //! available length for the view; must be > 0. The no-geometry <= 0
     //! early-return contract (ad9b823f: early wayland startup calls arrive
     //! before the window is sized) stays in the QML shell, which owns the
-    //! onMaxLengthChanged re-run; reaching the core with <= 0 is a shell
-    //! bug and asserts.
+    //! onAutomaticSizingMaximumLengthChanged re-run; reaching the core with
+    //! <= 0 is a shell bug and asserts.
     double maxLength;
     //! the size layoutLength was measured at (metrics.iconSize)
     int currentIconSize;

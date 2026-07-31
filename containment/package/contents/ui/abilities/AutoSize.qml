@@ -143,8 +143,9 @@ Item {
             //! the view window has no geometry yet (early startup on wayland:
             //! the first call arrives from visibilityChanged before the window
             //! is sized), so every shrink limit would be negative and any
-            //! computed size garbage; onMaxLengthChanged re-runs this as soon
-            //! as a real length exists
+            //! computed size garbage;
+            //! onAutomaticSizingMaximumLengthChanged re-runs this as soon as
+            //! a real content budget exists
             return;
         }
 
