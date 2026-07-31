@@ -243,11 +243,7 @@ void Positioner::init()
     });
 
     connect(m_view, &Latte::View::offsetChanged, this, [&]() {
-        if (m_view->behaveAsPlasmaPanel()) {
-            syncGeometry();
-        } else {
-            updatePosition(m_lastAvailableScreenRect);
-        }
+        syncGeometry();
     });
 
     connect(m_view, &Latte::View::locationChanged, this, [&]() {
@@ -260,7 +256,7 @@ void Positioner::init()
     });
 
     connect(m_view, &Latte::View::editThicknessChanged, this, [&]() {
-        updateCanvasGeometry(m_lastAvailableScreenRect);
+        syncGeometry();
     });
 
     connect(m_view, &Latte::View::maxLengthChanged, this, [&]() {
@@ -859,45 +855,29 @@ bool Positioner::solveAndApplyGeometry(
             }
         }
 
-        validateTopBottomBorders(
+    }
+
+    auto solved = solveViewGeometry(
+        availableScreenRect,
+        assignedScreenGeometry);
+    if (!solved) {
+        qCritical() << "Positioner refused to mutate a window after geometry"
+                       " solving failed for"
+                    << m_view->validTitle();
+        return false;
+    }
+    if (m_view->formFactor() == Plasma::Types::Vertical) {
+        solved->forcedBorders = solveTopBottomBorders(
             availableScreenRect,
             freeRegion,
             assignedScreenGeometry);
-        m_lastAvailableScreenRegion = freeRegion;
-    } else {
-        m_solvedForceTopBorder = false;
-        m_solvedForceBottomBorder = false;
     }
-
-    m_lastAvailableScreenRect = availableScreenRect;
-
-    if (m_view->behaveAsPlasmaPanel()) {
-        const auto stableGeometry =
-            solveStablePanelGeometry(
-                availableScreenRect,
-                assignedScreenGeometry);
-        if (!stableGeometry.has_value()) {
-            qCritical() << "Positioner refused to mutate a panel window after"
-                           " stable geometry solving failed for"
-                        << m_view->validTitle();
-            return false;
-        }
-
-        m_view->floatingTransition()->configureGeometry(
-            *stableGeometry);
-        applyStablePanelGeometry(*stableGeometry);
-    } else {
-        m_view->floatingTransition()->clearGeometry();
-        resizeWindow(
-            availableScreenRect,
-            assignedScreenGeometry.size());
-        updatePosition(availableScreenRect);
-    }
-    updateCanvasGeometry(
-        availableScreenRect,
-        assignedScreenGeometry);
 
     if (m_inStartup) {
+        installStartupGeometry(
+            *solved,
+            availableScreenRect,
+            freeRegion);
         qDebug() << "syncGeometry() solved startup geometry without publishing a mapped placement";
         qDebug() << "syncGeometry() ended...";
         return false;
@@ -905,12 +885,12 @@ bool Positioner::solveAndApplyGeometry(
 
     if (!m_view->applyPositionedLayerShellGeometry(
             placementScreen,
-            m_validGeometry)) {
+            solved->surface)) {
         qCritical() << "Positioner could not publish solved geometry for"
                     << m_view->validTitle()
                     << "output=" << placementScreen->name()
                     << "edge=" << m_view->location()
-                    << "geometry=" << m_validGeometry;
+                    << "geometry=" << solved->surface;
         if (!m_syncGeometryTimer.isActive()) {
             m_syncGeometryTimer.start();
         }
@@ -918,25 +898,11 @@ bool Positioner::solveAndApplyGeometry(
         return false;
     }
 
-    //! Reservation geometry is derived from View::absoluteGeometry(). Refresh
-    //! it from this exact solved surface before the transaction publishes its
-    //! new output and edge membership.
-    m_view->updateAbsoluteGeometry(true);
-
-    //! Publish one coherent applied placement. m_validGeometry is mutable
-    //! solver scratch and assignedScreen() can change before the surface is
-    //! accepted, so neither is a safe observation authority on its own.
-    m_appliedSurfaceGeometry = m_validGeometry;
-    m_appliedOutputGeometry = assignedScreenGeometry;
-    m_surfacePlacementGeneration = m_relocationGeneration;
-    m_view->effects()->setForceTopBorder(m_solvedForceTopBorder);
-    m_view->effects()->setForceBottomBorder(m_solvedForceBottomBorder);
-
-    //! Repeated stable syncs stay cheap in LayerShell::applyViewPlacement,
-    //! while this revision records each complete solved-and-applied boundary.
-    ++m_surfaceGeometryPublicationRevision;
-    Q_EMIT surfaceGeometryPublicationRevisionChanged();
-    Q_EMIT surfaceGeometryCalculated(m_validGeometry);
+    publishAppliedGeometry(
+        *solved,
+        assignedScreenGeometry,
+        availableScreenRect,
+        freeRegion);
 
     qDebug() << "syncGeometry() calculations for screen:"
              << placementScreen->name()
@@ -980,17 +946,6 @@ quint64 Positioner::surfaceGeometryPublicationRevision() const
     return m_surfaceGeometryPublicationRevision;
 }
 
-void Positioner::setCanvasGeometry(const QRect &geometry)
-{
-    if (m_canvasGeometry == geometry) {
-        return;
-    }
-
-    m_canvasGeometry = geometry;
-    Q_EMIT canvasGeometryChanged();
-}
-
-
 //! this is used mainly from vertical panels in order to
 //! to get the maximum geometry that can be used from the dock
 //! based on their alignment type and the location dock
@@ -1003,54 +958,89 @@ QRect Positioner::maximumNormalGeometry(QRect screenGeometry)
                                                      currentScrGeometry);
 }
 
-void Positioner::validateTopBottomBorders(
+PositionerGeometry::ForcedBorders Positioner::solveTopBottomBorders(
     const QRect &availableScreenRect,
     const QRegion &availableScreenRegion,
-    const QRect &assignedScreenGeometry)
+    const QRect &assignedScreenGeometry) const
 {
     //! whether the top/bottom borders must be drawn too: a one-pixel probe
     //! at each edge of the available area must fit entirely in the free
     //! region (the math lives in the tested PositionerGeometry core)
-    const auto borders = PositionerGeometry::forcedBorders(m_view->location(),
-                                                           m_view->screenEdgeMargin(),
-                                                           assignedScreenGeometry,
-                                                           availableScreenRect,
-                                                           availableScreenRegion);
-
-    m_solvedForceTopBorder = borders.top;
-    m_solvedForceBottomBorder = borders.bottom;
+    return PositionerGeometry::forcedBorders(
+        m_view->location(),
+        m_view->screenEdgeMargin(),
+        assignedScreenGeometry,
+        availableScreenRect,
+        availableScreenRegion);
 }
 
-void Positioner::updateCanvasGeometry(
+std::optional<Positioner::SolvedViewGeometry>
+Positioner::solveViewGeometry(
     const QRect &availableScreenRect,
-    const QRect &assignedScreenGeometry)
+    const QRect &assignedScreenGeometry) const
 {
-    if (availableScreenRect.isEmpty()) {
-        return;
+    if (availableScreenRect.isEmpty()
+            || !assignedScreenGeometry.isValid()
+            || m_view->location() == Plasma::Types::Floating) {
+        qCritical() << "Positioner refused invalid solved-view inputs"
+                    << "available=" << availableScreenRect
+                    << "output=" << assignedScreenGeometry
+                    << "location=" << m_view->location();
+        return std::nullopt;
     }
 
-    if (m_view->location() == Plasma::Types::Floating) {
-        qWarning() << "wrong location, couldn't update the canvas config window geometry " << m_view->location();
-    }
-
-    const QRect outputGeometry =
-        assignedScreenGeometry.isValid()
-        ? assignedScreenGeometry
-        : (assignedScreen()
-           ? assignedScreen()->geometry()
-           : QRect());
-    if (!outputGeometry.isValid()) {
-        qCritical() << "Positioner could not update its canvas without an assigned output";
-        return;
-    }
-
-    setCanvasGeometry(
-        PositionerGeometry::canvasGeometry(
+    SolvedViewGeometry solved;
+    solved.canvas = PositionerGeometry::canvasGeometry(
             m_view->location(),
             m_view->formFactor(),
             m_view->editThickness(),
-            outputGeometry,
-            availableScreenRect));
+            assignedScreenGeometry,
+            availableScreenRect);
+
+    if (m_view->behaveAsPlasmaPanel()) {
+        solved.floatingPresentation = solveStablePanelGeometry(
+            availableScreenRect,
+            assignedScreenGeometry);
+        if (!solved.floatingPresentation) {
+            return std::nullopt;
+        }
+        solved.surface =
+            solved.floatingPresentation->envelope.value;
+        return solved;
+    }
+
+    auto inputs = geometryInputs();
+    const QSize size = PositionerGeometry::windowSize(
+        inputs,
+        availableScreenRect,
+        assignedScreenGeometry.size());
+    inputs.viewWidth = size.width();
+    inputs.viewHeight = size.height();
+    const QPoint position = PositionerGeometry::dockPosition(
+        inputs,
+        availableScreenRect);
+
+    solved.surface = m_validGeometry;
+    solved.surface.setSize(size);
+    if (m_slideOffset == 0
+            || m_nextScreenEdge != Plasma::Types::Floating) {
+        solved.surface.moveTopLeft(position);
+    } else if (m_view->formFactor() == Plasma::Types::Horizontal) {
+        solved.surface.moveLeft(position.x());
+    } else {
+        solved.surface.moveTop(position.y());
+    }
+
+    if (!solved.surface.isValid()
+            || (!m_inStartup
+                && !assignedScreenGeometry.contains(solved.surface))) {
+        qCritical() << "Positioner refused Dock geometry outside its output"
+                    << "surface=" << solved.surface
+                    << "output=" << assignedScreenGeometry;
+        return std::nullopt;
+    }
+
+    return solved;
 }
 
 //! snapshot the View properties the PositionerGeometry core reads (EX-09)
@@ -1115,20 +1105,93 @@ Positioner::solveStablePanelGeometry(
     return solution;
 }
 
-void Positioner::applyStablePanelGeometry(
-    const FloatingPanelGeometry::Solution &solution)
+void Positioner::applySolvedWindowGeometry(const QRect &surface)
 {
-    m_validGeometry = solution.envelope.value;
-    const QSize size = m_validGeometry.size();
+    Q_ASSERT(surface.isValid());
+    const QSize size = surface.size();
 
     m_view->setMinimumSize(size);
     m_view->setMaximumSize(size);
     m_view->resize(size);
-    m_view->setPosition(m_validGeometry.topLeft());
+    m_view->setPosition(surface.topLeft());
 
     if (m_view->formFactor() == Plasma::Types::Horizontal) {
         Q_EMIT windowSizeChanged();
     }
+}
+
+void Positioner::installStartupGeometry(
+    const SolvedViewGeometry &solved,
+    const QRect &availableScreenRect,
+    const QRegion &availableScreenRegion)
+{
+    m_validGeometry = solved.surface;
+    m_lastAvailableScreenRect = availableScreenRect;
+    m_lastAvailableScreenRegion = availableScreenRegion;
+
+    FloatingTransition *const transition =
+        m_view->floatingTransition();
+    const bool transitionChanged =
+        transition->installGeometryWithoutNotification(
+            solved.floatingPresentation);
+    const bool canvasChanged = m_canvasGeometry != solved.canvas;
+    m_canvasGeometry = solved.canvas;
+
+    applySolvedWindowGeometry(solved.surface);
+    if (canvasChanged) {
+        Q_EMIT canvasGeometryChanged();
+    }
+    if (transitionChanged) {
+        transition->publishInstalledGeometryChange();
+    }
+}
+
+void Positioner::publishAppliedGeometry(
+    const SolvedViewGeometry &solved,
+    const QRect &assignedScreenGeometry,
+    const QRect &availableScreenRect,
+    const QRegion &availableScreenRegion)
+{
+    //! Install every backing value before QWindow, controller, or Positioner
+    //! notifications can run. A failed LayerShell application never reaches
+    //! this function, so it cannot leak solver scratch as applied state.
+    m_validGeometry = solved.surface;
+    m_appliedSurfaceGeometry = solved.surface;
+    m_appliedOutputGeometry = assignedScreenGeometry;
+    m_surfacePlacementGeneration = m_relocationGeneration;
+    m_lastAvailableScreenRect = availableScreenRect;
+    m_lastAvailableScreenRegion = availableScreenRegion;
+    m_view->effects()->setForceTopBorder(
+        solved.forcedBorders.top);
+    m_view->effects()->setForceBottomBorder(
+        solved.forcedBorders.bottom);
+
+    FloatingTransition *const transition =
+        m_view->floatingTransition();
+    const bool transitionChanged =
+        transition->installGeometryWithoutNotification(
+            solved.floatingPresentation);
+    const bool canvasChanged = m_canvasGeometry != solved.canvas;
+    m_canvasGeometry = solved.canvas;
+
+    //! Repeated stable syncs stay cheap in LayerShell::applyViewPlacement,
+    //! while this revision records each complete solved-and-applied boundary.
+    ++m_surfaceGeometryPublicationRevision;
+
+    applySolvedWindowGeometry(solved.surface);
+
+    //! Reservation geometry and touch authority now consume the same applied
+    //! surface, output, and FloatingTransition backing snapshot.
+    m_view->updateAbsoluteGeometry(true);
+
+    if (canvasChanged) {
+        Q_EMIT canvasGeometryChanged();
+    }
+    if (transitionChanged) {
+        transition->publishInstalledGeometryChange();
+    }
+    Q_EMIT surfaceGeometryPublicationRevisionChanged();
+    Q_EMIT surfaceGeometryCalculated(solved.surface);
 }
 
 void Positioner::updatePosition(QRect availableScreenRect)
@@ -1195,28 +1258,6 @@ void Positioner::setSlideOffset(int offset)
     Q_EMIT slideOffsetChanged();
 }
 
-
-void Positioner::resizeWindow(
-    const QRect &availableScreenRect,
-    const QSize &assignedScreenSize)
-{
-    Q_ASSERT(!m_view->behaveAsPlasmaPanel());
-
-    //! EX-09: non-panel sizing math lives in the PositionerGeometry core.
-    const QSize size = PositionerGeometry::windowSize(geometryInputs(),
-                                                      availableScreenRect,
-                                                      assignedScreenSize);
-
-    m_validGeometry.setSize(size);
-
-    m_view->setMinimumSize(size);
-    m_view->setMaximumSize(size);
-    m_view->resize(size);
-
-    if (m_view->formFactor() == Plasma::Types::Horizontal) {
-        Q_EMIT windowSizeChanged();
-    }
-}
 
 void Positioner::updateFormFactor()
 {

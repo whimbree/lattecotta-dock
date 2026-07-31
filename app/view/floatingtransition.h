@@ -23,6 +23,8 @@
 
 namespace Latte::ViewPart {
 
+class Positioner;
+
 class FloatingTransition final : public QObject
 {
     Q_OBJECT
@@ -175,6 +177,11 @@ Q_SIGNALS:
     void currentGeometryChanged();
 
 private:
+    friend class Positioner;
+
+    [[nodiscard]] bool installGeometryWithoutNotification(
+        const std::optional<FloatingPanelGeometry::Solution> &geometry);
+    void publishInstalledGeometryChange();
     void requestTarget(Target target);
     void setFloatingness(qreal floatingness);
     void setPhase(Phase phase);

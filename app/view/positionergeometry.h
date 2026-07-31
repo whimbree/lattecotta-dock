@@ -52,7 +52,7 @@ struct ViewGeometryInputs {
     int viewHeight{0};
 };
 
-// The top/bottom border flags set by validateTopBottomBorders.
+// The top/bottom border flags solved before applied-state publication.
 struct ForcedBorders {
     bool top{false};
     bool bottom{false};
@@ -99,7 +99,7 @@ inline QPoint dockPosition(const ViewGeometryInputs &in, const QRect &availableS
     return {};
 }
 
-// From Positioner::resizeWindow(): the window size for the given available
+// From Positioner's Dock geometry solve: the window size for the available
 // screen rect and physical screen size.
 inline QSize windowSize(const ViewGeometryInputs &in,
                         const QRect &availableScreenRect,
@@ -148,7 +148,7 @@ inline QRect maximumNormalGeometry(Plasma::Types::Location location,
     return maxGeometry;
 }
 
-// From Positioner::updateCanvasGeometry(): the edit-mode canvas rect.
+// From Positioner's staged geometry solve: the edit-mode canvas rect.
 inline QRect canvasGeometry(Plasma::Types::Location location,
                              Plasma::Types::FormFactor formFactor,
                              int editThickness,
@@ -219,7 +219,7 @@ inline SlideEdge slideEdge(Plasma::Types::Location location)
     }
 }
 
-// From Positioner::validateTopBottomBorders(): decide whether the top/bottom
+// From Positioner's border solve: decide whether the top/bottom
 // internal panel borders must be forced on for a vertical dock. The probe rect
 // is one pixel tall at the edge of the available area; if it sits entirely in
 // the free region the border is drawn.

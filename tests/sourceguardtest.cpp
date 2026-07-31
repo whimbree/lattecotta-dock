@@ -3834,6 +3834,8 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         QStringLiteral("declarativeimports/core/dialog.cpp")));
     const QString positioner = normalizedCode(readFile(
         QStringLiteral("app/view/positioner.cpp")));
+    const QString transition = normalizedCode(readFile(
+        QStringLiteral("app/view/floatingtransition.cpp")));
     const QString positionerCore = normalizedCode(readFile(
         QStringLiteral("app/view/positionergeometry.h")));
     const QString panelShadowsHeader = normalizedCode(readFile(
@@ -3881,11 +3883,31 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         "&ViewPart::Positioner::surfaceGeometryPublicationRevisionChanged,"
         "m_effects,&ViewPart::Effects::updateEnabledBorders")));
     QVERIFY(positioner.contains(QStringLiteral(
-        "m_appliedSurfaceGeometry=m_validGeometry;"
+        "m_appliedSurfaceGeometry=solved.surface;"
         "m_appliedOutputGeometry=assignedScreenGeometry;"
         "m_surfacePlacementGeneration=m_relocationGeneration;")));
     QVERIFY(positioner.contains(QStringLiteral(
         "++m_surfaceGeometryPublicationRevision;"
+        "applySolvedWindowGeometry(solved.surface);")));
+    const qsizetype layerApplication = positioner.indexOf(QStringLiteral(
+        "if(!m_view->applyPositionedLayerShellGeometry("
+        "placementScreen,solved->surface))"));
+    const qsizetype appliedPublication = positioner.indexOf(QStringLiteral(
+        "publishAppliedGeometry(*solved,assignedScreenGeometry,"));
+    QVERIFY(layerApplication >= 0
+            && appliedPublication > layerApplication);
+    QVERIFY(!positioner.mid(layerApplication,
+                            appliedPublication - layerApplication)
+                 .contains(QStringLiteral("configureGeometry(")));
+    QVERIFY(transition.contains(QStringLiteral(
+        "if(installGeometryWithoutNotification(solution)){"
+        "publishInstalledGeometryChange();}")));
+    QVERIFY(positioner.contains(QStringLiteral(
+        "transition->installGeometryWithoutNotification("
+        "solved.floatingPresentation);")));
+    QVERIFY(positioner.contains(QStringLiteral(
+        "if(transitionChanged){"
+        "transition->publishInstalledGeometryChange();}"
         "Q_EMITsurfaceGeometryPublicationRevisionChanged();")));
     QVERIFY(!effects.contains(QStringLiteral(
         "enableBlurBehind(m_view,true);")));
