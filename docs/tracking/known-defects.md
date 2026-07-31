@@ -3061,6 +3061,34 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   failed at the captured-prior contract, then passed after restoring the fix.
 - SEVERITY: release blocker.
 
+### D244 - Live attached Dock presentation leaked into stable geometry
+- STATUS: FIXED on the feature branch by `eabe3df05`; pending PR.
+- FOUND: 2026-07-31, live-presentation ownership audit and expanded nested
+  acceptance after D241 (floating Docks bypassed fractional presentation).
+- SYMPTOM: a floating Dock can animate its gap while a partial Justify
+  background remains short, keeps rounded end borders, or publishes animated
+  paint as occupied geometry. Automatic sizing and another edge view can then
+  react to a temporary titlebar drag.
+- ROOT: D241 unified the transition scalar but only the screen-edge gap consumed
+  it. Maximum length still followed the committed-maximize route, end borders
+  were derived from persistent configuration, and QML local geometry fed the
+  animated effects rectangle into `absoluteGeometry`, struts, reservation, and
+  sizing readback. Reconciliation could also combine a new Dock request with a
+  stale touching count because related QML properties notified in sequence.
+- FIX: derive the presented maximum length and rendered endpoint borders from
+  the per-view qreal while retaining configured geometry for touch placement,
+  automatic sizing, layout clearance, local occupancy, struts, and reservation.
+  Input alone follows the animated effects rectangle. Read the touching count
+  once and derive the Dock request from that same policy snapshot.
+- EVIDENCE: the background, border, mask, D-Bus, identity, source-contract, QML
+  interaction, and QML compile suites pass. Nested recipe 074 drives a Panel, a
+  partial Center Dock, and an expanding Justify Dock through fractional attach
+  and reversal before button release. The Justify presentation reaches the
+  output endpoints and drops its rounded end borders while QWindow geometry,
+  local and absolute occupancy, struts, reservation, trigger, icon sizes, and
+  available resting length remain stable.
+- SEVERITY: beta blocker.
+
 ### D243 - Schema 9 refused pre-Metrics startup snapshots
 - STATUS: FIXED on `main` by `b9136b0b4`; merged through PR #132.
 - FOUND: 2026-07-27, independent review of PR #132.

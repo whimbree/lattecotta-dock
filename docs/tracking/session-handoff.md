@@ -1,7 +1,33 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-27.
+Last updated 2026-07-31.
+
+## 2026-07-31: D244 isolates live Dock presentation
+
+D244 (live attached Dock presentation leaked into stable geometry) remained
+after D241 unified the floating transition. The qreal moved the gap, but a
+partial Justify Dock still derived maximum length from committed maximize
+state. Rendered effects geometry also flowed back into local and absolute
+occupancy, struts, reservation, and available-length readback. Endpoint borders
+continued to use persistent maximum-length configuration.
+
+Commit `eabe3df05` routes the presented Justify length and endpoint border
+decision from the existing per-view transition while retaining configured
+resting authorities for the touch trigger, automatic sizing, layout clearance,
+local occupancy, struts, and reservation. Input follows the animated effects
+rectangle separately. Policy reconciliation reads one touching count and
+derives the Dock request from the same snapshot, removing a QML notify-order
+race.
+
+The focused background, border, mask, D-Bus, identity, source-contract, QML
+interaction, and QML compile checks pass. Expanded nested recipe 074 drives a
+Panel, partial Center Dock, and expanding Justify Dock through fractional
+attachment and reversal before button release. Stable physical state remains
+byte-identical. Plasma 6.7.3 also keeps the rounded floating FrameSvg during
+fractional frames and switches enabled borders at exact attachment; it does not
+numerically shrink the radius each frame. The real-session dock remains stopped
+until the branch passes the canonical gate and independent review.
 
 ## 2026-07-27: D241 unifies floating Dock presentation
 

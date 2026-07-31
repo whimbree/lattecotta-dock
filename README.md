@@ -53,11 +53,12 @@ per-applet context menus and settings, the three bundled indicator styles,
 layer-shell placement with struts and auto-hide/dodge visibility modes,
 layout management with templates and import/export, applet colorization,
 live floating-panel and floating-dock attachment during window drags through
-one reversible per-view fractional transition inside a fixed partial surface
-and work area, and the full settings UI. Beyond upstream parity, the port has
-grown
-continuation features of its own, the first being resizable applet popups
-with per-applet size persistence.
+one reversible per-view fractional transition inside a fixed surface and work
+area, and the full settings UI. A partial Justify Dock can stretch its visual
+background to the attached output endpoints without changing its resting icon
+fit, occupied geometry, struts, or reservation. Beyond upstream parity, the
+port has grown continuation features of its own, the first being resizable
+applet popups with per-applet size persistence.
 
 Dock identity boundaries distinguish independent snapshots from linked content.
 Duplicate Dock creates one independent snapshot from the live dock or layouts

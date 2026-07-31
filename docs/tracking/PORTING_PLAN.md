@@ -4979,6 +4979,12 @@ prerequisites in the phases above are done.
       Preserve the required presented-gap key as null until the live QML
       authority exists, then require its exact numeric value after readiness.
       Commits: b9136b0b4
+- [x] Fix D244 (live attached Dock presentation leaked into stable geometry).
+      Drive Justify length and endpoint borders from the shared per-view qreal,
+      but keep touch placement, automatic sizing, layout clearance, occupancy,
+      struts, and reservation on configured resting geometry. Let input follow
+      the animated paint rectangle independently.
+      Commits: eabe3df05
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

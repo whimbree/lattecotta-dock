@@ -57,6 +57,13 @@ QML interpolates a `floatingness` value between the two background rectangles
 inside that surface. The containment follows the background inside the stable
 surface, but its layout measurements do not refit during the transition.
 
+Rounded ends are an endpoint decision, not a separately interpolated numeric
+radius. Fractional frames use Plasma's floating background item. At exact
+`floatingness == 0`, `PanelView::updateEnabledBorders()` removes the borders
+that meet output boundaries and QML selects the attached background item. A
+reimplementation should therefore animate the geometry continuously and switch
+the boundary pieces at exact attachment.
+
 `PanelView` owns a `QPropertyAnimation` for the qreal progress. A reversal
 starts from the current fractional value. Attaching uses an inward easing and
 floating uses an outward easing. Lattecotta will select direction from the
@@ -105,6 +112,9 @@ remaining authority errors:
   summary instead of the per-view live trigger.
 - after the live trigger was corrected, floating Docks still bypassed the
   fractional controller and animated a separate Boolean gap.
+- after the controller was shared, Dock maximum length, endpoint borders,
+  automatic sizing, and local occupancy still consumed mixed configured and
+  presented state.
 
 The trigger solver now matches Plasma's translated full-envelope rule.
 `WindowTouchTracker` owns one explicit trigger supplied by its `View`. A Panel
@@ -116,6 +126,15 @@ target as a Panel, but Dock QML retains paint and input ownership and does not
 manufacture `FloatingPanelGeometry`. Schema 9 exposes the tracker-owned
 trigger, configured `screenEdgeMargin`, and current
 `presentedScreenEdgeGap`.
+
+An eligible Justify Dock now derives its presented maximum length from the same
+per-view qreal and reaches the complete attached output span. Rendered endpoints
+select attached borders. The configured resting length and gap remain the
+authorities for touch placement, automatic sizing, layout clearance, local and
+absolute occupancy, struts, and reservation. Center, Start, and End Docks retain
+their partial primary span while moving only the floating presentation. Input
+continues to follow the animated effects rectangle, so newly presented pixels
+remain interactive without becoming occupied workspace.
 
 ## Lattecotta ownership model
 
