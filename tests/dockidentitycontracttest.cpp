@@ -218,14 +218,31 @@ void DockIdentityContractTest::relocationCompletionCommitsPlacementTransaction()
         QStringLiteral("bool Positioner::setScreenToFollow")));
     const int retire = setScreen.indexOf(
         QStringLiteral("beginPlacementTransaction(true)"));
-    const int physicalMove = setScreen.indexOf(
+    const int targetAssignment = setScreen.indexOf(
+        QStringLiteral("m_screenToFollow=scr;"), retire);
+    const int prepareRemap = setScreen.indexOf(
         QStringLiteral("m_view->moveToScreen(scr,"), retire);
-    const int screenCompletion = setScreen.indexOf(
-        QStringLiteral("finishPendingScreenPlacementIfApplied()"),
-        physicalMove);
-    QVERIFY2(retire >= 0 && physicalMove > retire
-                 && screenCompletion > physicalMove,
-             "direct output reassignment must retire reservation ownership before moving the surface");
+    const int scheduleApply = setScreen.indexOf(
+        QStringLiteral("syncGeometry();"), prepareRemap);
+    QVERIFY2(retire >= 0 && targetAssignment > retire
+                 && prepareRemap > targetAssignment
+                 && scheduleApply > prepareRemap,
+             "direct output reassignment must retire reservation ownership before staging and scheduling the replacement");
+    QVERIFY2(!setScreen.contains(QStringLiteral(
+                 "finishPendingScreenPlacementIfApplied()")),
+             "target assignment must not complete before LayerShell applies the replacement");
+
+    const QString viewSource = readFile(
+        QStringLiteral("app/view/view.cpp"));
+    const QString moveToScreen = normalized(functionBody(
+        viewSource,
+        QStringLiteral("void View::moveToScreen(")));
+    QCOMPARE(moveToScreen.count(
+                 QStringLiteral("setScreen(nextScreen);")),
+             1);
+    QVERIFY2(moveToScreen.contains(QStringLiteral(
+                 "if(!m_layerShellConfigured){setScreen(nextScreen);return;}")),
+             "only a view without LayerShell may retarget QWindow before applied placement");
 
     const QString transaction = normalized(functionBody(
         positionerSource,
