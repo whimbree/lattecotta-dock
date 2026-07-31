@@ -1328,6 +1328,40 @@ void View::updateWindowTouchTriggerGeometry()
         *edge == ViewPart::FloatingPanelGeometry::Edge::Top
         || *edge
             == ViewPart::FloatingPanelGeometry::Edge::Bottom;
+    if (m_alignment == Latte::Types::Justify) {
+        //! A live attached Justify Dock may widen its rendered background.
+        //! Its window-touch authority remains the configured resting span,
+        //! solved from the stable QWindow canvas and persistent length ratio.
+        const auto stableSolution =
+            ViewPart::FloatingPanelGeometry::solvePlacement({
+                .outputGeometry = outputGeometry,
+                .availablePrimaryGeometry = geometry(),
+                .edge = *edge,
+                .alignment = ViewPart::FloatingPanelGeometry::
+                    PrimaryAxisAlignment::Center,
+                .maxLength = maxLength(),
+                .offset = 0.0F,
+                .panelDepth = attachedDepth,
+                .floatingGap = screenEdgeMargin(),
+            });
+        if (!stableSolution) {
+            qCritical()
+                << "View could not solve stable Justify Dock touch geometry"
+                << validTitle()
+                << "output=" << outputGeometry
+                << "canvas=" << geometry()
+                << "maxLength=" << maxLength()
+                << "attachedDepth=" << attachedDepth
+                << "gap=" << screenEdgeMargin();
+            m_windowTouchTracker->setTriggerGeometry({});
+            return;
+        }
+
+        m_windowTouchTracker->setTriggerGeometry(
+            stableSolution->trigger.value);
+        return;
+    }
+
     const ViewPart::FloatingPanelGeometry::Inputs inputs{
         .outputGeometry = outputGeometry,
         .edge = *edge,

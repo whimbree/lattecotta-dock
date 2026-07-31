@@ -326,20 +326,49 @@ Item{
 
         if (!latteView.visibility.isHidden && manager.updateIsEnabled && manager.inNormalState) {
             //! Important: Local Geometry must not be updated when view ISHIDDEN
-            //! because it breaks Dodge(s) modes in such case
-            latteView.localGeometry = maskGeometry.localGeometryFor(Plasmoid.location,
-                                                                    latteView.behaveAsPlasmaPanel,
-                                                                    root.width, root.height,
-                                                                    latteView.width, latteView.height,
-                                                                    latteView.effects.rect,
-                                                                    metrics.totals.thickness,
-                                                                    metrics.mask.screenEdge);
+            //! because it breaks Dodge(s) modes in such case. localGeometry is
+            //! the stable occupied footprint consumed by peer views and
+            //! reservations. Every live Dock presentation retains its
+            //! configured floating gap here; Justify additionally retains its
+            //! configured resting length. The separate input rectangle below
+            //! follows animated paint without publishing it as occupancy.
+            const presentedLocalGeometry = manager.presentedLocalGeometry();
+            if (!root.dockFloatingTransitionOwnsGap) {
+                latteView.localGeometry = presentedLocalGeometry;
+            } else if (root.myView.alignment === LatteCore.Types.Justify) {
+                latteView.localGeometry = maskGeometry.stableJustifyDockOccupancyFor(
+                            Plasmoid.location,
+                            root.width, root.height,
+                            latteView.width, latteView.height,
+                            root.automaticSizingMaximumLength,
+                            metrics.totals.thickness,
+                            metrics.configuredScreenEdgeMargin);
+            } else {
+                latteView.localGeometry = maskGeometry.localGeometryFor(
+                            Plasmoid.location,
+                            false,
+                            root.width, root.height,
+                            latteView.width, latteView.height,
+                            latteView.effects.rect,
+                            metrics.totals.thickness,
+                            metrics.configuredScreenEdgeMargin);
+            }
         }
 
         //! Input Mask
         if (manager.updateIsEnabled) {
             manager.updateInputGeometry();
         }
+    }
+
+    function presentedLocalGeometry() {
+        return maskGeometry.localGeometryFor(Plasmoid.location,
+                                             latteView.behaveAsPlasmaPanel,
+                                             root.width, root.height,
+                                             latteView.width, latteView.height,
+                                             latteView.effects.rect,
+                                             metrics.totals.thickness,
+                                             metrics.mask.screenEdge);
     }
 
     function updateInputGeometry() : void {
@@ -362,6 +391,10 @@ Item{
         //! 11f42978's workaround for faulty onEntered() signals from
         //! ParabolicMouseArea right after sglClearZoom: while zoomed, input
         //! covers the zoomedForItems thickness over the full length axis.
+        //! Input follows the animated presentation, not localGeometry's stable
+        //! occupancy. This keeps newly exposed applets and the Fitts bridge
+        //! interactive without publishing presentation pixels as work area.
+        const presentedLocalGeometry = manager.presentedLocalGeometry();
         latteView.effects.inputMask = maskGeometry.inputMaskFor(Plasmoid.location,
                                                                 LatteCore.WindowSystem.compositingActive,
                                                                 latteView.behaveAsPlasmaPanel,
@@ -374,7 +407,7 @@ Item{
                                                                 metrics.margin.screenEdge,
                                                                 metrics.totals.thickness,
                                                                 metrics.mask.screenEdge,
-                                                                latteView.localGeometry,
+                                                                presentedLocalGeometry,
                                                                 root.width, root.height,
                                                                 latteView.width, latteView.height);
     }

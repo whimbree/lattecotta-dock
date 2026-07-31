@@ -46,6 +46,12 @@ static_assert(resolveDockVisualCenterOffset(0.0, 90.0, 0.0, 10.0, 100.0) == 5.0,
               "asymmetric paint must move only the visual parent");
 static_assert(resolveDockVisualCenterOffset(0.0, 90.0, 10.0, 0.0, 100.0) == -5.0,
               "swapped asymmetric paint must preserve the same solid center");
+static_assert(resolvePresentedDockMaximumLengthPercent(84.0, 1.0, true) == 84.0,
+              "a floated dock must retain its configured resting length");
+static_assert(resolvePresentedDockMaximumLengthPercent(84.0, 0.5, true) == 92.0,
+              "a live attachment must interpolate the length with floatingness");
+static_assert(resolvePresentedDockMaximumLengthPercent(84.0, 0.0, true) == 100.0,
+              "an attached dock must reach the complete output span");
 static_assert(isBackgroundEdgeClearanceRequired(false, true, true),
               "a floating Panel keeps missing primary-axis edge clearance");
 static_assert(!isBackgroundEdgeClearanceRequired(false, false, true),
@@ -103,6 +109,7 @@ private Q_SLOTS:
 
     // MultiLayered.qml dock background length and centered placement
     void dockBackground_keepsSolidSpanIndependentOfShadows();
+    void dockMaximumLength_followsFloatingPresentation();
     void centeredDockOffset_staysInsideView();
     void dockVisualCenterOffset_preservesSolidPosition_data();
     void dockVisualCenterOffset_preservesSolidPosition();
@@ -129,6 +136,7 @@ private Q_SLOTS:
     void wrapper_visualThicknessMatchesCore();
     void wrapper_refusesMalformedVisualThickness();
     void wrapper_refusesMalformedDockVisualGeometry();
+    void wrapper_refusesMalformedDockLengthPresentation();
 };
 
 // a panel-worthy environment: every clause of the Panel branch satisfied,
@@ -685,6 +693,31 @@ void BackgroundStateTest::dockBackground_keepsSolidSpanIndependentOfShadows()
     QCOMPARE(resolver.dockBackgroundLength(2239.0, 2560.0), 2239.0);
 }
 
+void BackgroundStateTest::dockMaximumLength_followsFloatingPresentation()
+{
+    QCOMPARE(resolvePresentedDockMaximumLengthPercent(60.0, 1.0, true),
+             60.0);
+    QCOMPARE(resolvePresentedDockMaximumLengthPercent(60.0, 0.75, true),
+             70.0);
+    QCOMPARE(resolvePresentedDockMaximumLengthPercent(60.0, 0.5, true),
+             80.0);
+    QCOMPARE(resolvePresentedDockMaximumLengthPercent(60.0, 0.25, true),
+             90.0);
+    QCOMPARE(resolvePresentedDockMaximumLengthPercent(60.0, 0.0, true),
+             100.0);
+
+    //! The option remains authoritative. Live gap attachment without the
+    //! maximize-length option must not widen a separated partial dock.
+    QCOMPARE(resolvePresentedDockMaximumLengthPercent(60.0, 0.0, false),
+             60.0);
+    QCOMPARE(resolvePresentedDockMaximumLengthPercent(100.0, 0.37, true),
+             100.0);
+
+    Latte::Containment::BackgroundStateResolver resolver;
+    QCOMPARE(resolver.presentedDockMaximumLengthPercent(84.0, 0.5, true),
+             92.0);
+}
+
 void BackgroundStateTest::centeredDockOffset_staysInsideView()
 {
     static_assert(fitCenteredDockOffset(-34.0, 1240.0, 1240.0) == 0.0);
@@ -1064,6 +1097,26 @@ void BackgroundStateTest::wrapper_refusesMalformedDockVisualGeometry()
                          QRegularExpression(QStringLiteral("dockVisualCenterOffset: invalid geometry")));
     QCOMPARE(resolver.dockVisualCenterOffset(
                  std::numeric_limits<double>::quiet_NaN(), 90.0, 0.0, 10.0, 100.0),
+             0.0);
+}
+
+void BackgroundStateTest::wrapper_refusesMalformedDockLengthPresentation()
+{
+    Latte::Containment::BackgroundStateResolver resolver;
+
+    QTest::ignoreMessage(
+        QtCriticalMsg,
+        QRegularExpression(QStringLiteral(
+            "presentedDockMaximumLengthPercent: invalid presentation")));
+    QCOMPARE(resolver.presentedDockMaximumLengthPercent(84.0, 1.1, true),
+             0.0);
+
+    QTest::ignoreMessage(
+        QtCriticalMsg,
+        QRegularExpression(QStringLiteral(
+            "presentedDockMaximumLengthPercent: invalid presentation")));
+    QCOMPARE(resolver.presentedDockMaximumLengthPercent(
+                 std::numeric_limits<double>::quiet_NaN(), 0.5, true),
              0.0);
 }
 

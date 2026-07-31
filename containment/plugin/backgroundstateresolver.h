@@ -119,6 +119,15 @@ public Q_SLOTS:
     //! do not reduce the applet budget.
     Q_INVOKABLE double dockBackgroundLength(double requestedBackgroundLength,
                                             double owningCanvasLength) const;
+
+    //! main.qml's dynamic maximum length. This is a presentation-only Qt5
+    //! divergence: the existing Latte maximize-length option follows Plasma
+    //! 6's live floatingness scalar instead of waiting for committed maximize.
+    Q_INVOKABLE double presentedDockMaximumLengthPercent(
+        double configuredMaximumLengthPercent,
+        double floatingness,
+        bool maximizeLengthWhenAttached) const;
+
     Q_INVOKABLE double centeredDockOffset(double requestedOffset,
                                           double visualLength,
                                           double viewPrimaryLength) const;

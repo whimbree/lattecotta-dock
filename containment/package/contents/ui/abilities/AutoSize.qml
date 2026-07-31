@@ -69,7 +69,7 @@ Item {
         function onContainsOnlyPlasmaTasksChanged() {
             sizer.updateIconSize();
         }
-        function onMaxLengthChanged() {
+        function onAutomaticSizingMaximumLengthChanged() {
             if (sizer.view && sizer.view.positioner && !sizer.view.positioner.isOffScreen) {
                 sizer.updateIconSize();
             }
@@ -89,12 +89,13 @@ Item {
     Connections {
         target: sizer.layouter
 
-        function onContentsMaxLengthChanged() {
+        function onAutomaticSizingContentsMaxLengthChanged() {
             //! Internal background padding can change the usable span without
-            //! changing containment.maxLength. Painted shadow margins are
-            //! deliberately absent from contentsMaxLength. Defer the refit so
-            //! all bindings publish one coherent geometry snapshot; Qt
-            //! coalesces repeated calls to this same bound method.
+            //! changing the configured resting maximum. Painted shadow
+            //! margins and live presentation length are deliberately absent
+            //! from this budget. Defer the refit so all bindings publish one
+            //! coherent geometry snapshot; Qt coalesces repeated calls to
+            //! this same bound method.
             Qt.callLater(sizer.updateIconSize);
         }
     }
@@ -138,7 +139,7 @@ Item {
             sizer.iconSize = -1;
         }
 
-        if (sizer.containment.maxLength <= 0) {
+        if (sizer.containment.automaticSizingMaximumLength <= 0) {
             //! the view window has no geometry yet (early startup on wayland:
             //! the first call arrives from visibilityChanged before the window
             //! is sized), so every shrink limit would be negative and any
@@ -155,10 +156,12 @@ Item {
             //! measured applet row. The layouter's content budget subtracts
             //! that internal padding from maxLength. Shadows remain external
             //! paint and do not reduce the stable icon-size budget.
-            const availableContentLength = sizer.layouter.contentsMaxLength;
+            const availableContentLength =
+                sizer.layouter.automaticSizingContentsMaxLength;
             if (availableContentLength <= 0) {
                 console.error("AutoSize: background end padding leaves no content length within maxLength",
-                              sizer.containment.maxLength, availableContentLength);
+                              sizer.containment.automaticSizingMaximumLength,
+                              availableContentLength);
                 return;
             }
 

@@ -2335,6 +2335,52 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
     }
 
     {
+        //! Justify Dock touch authority is solved from persistent placement,
+        //! not from the rendered background. At 60%, float truncation places
+        //! the stable trigger one pixel before the QML-rendered rectangle.
+        DockSystemSnapshot justifyDockSnapshot;
+        DockSystemViewRecord justifyDock;
+        justifyDock.runtimeViewId = 9;
+        justifyDock.persistentDockId = 9;
+        justifyDock.logicalDockId = 9;
+        justifyDock.type = Types::DockView;
+        justifyDock.edge = Plasma::Types::TopEdge;
+        justifyDock.alignment = Types::Justify;
+        justifyDock.maximumLengthRatio = 0.6F;
+        justifyDock.maximumNormalThickness = 106;
+        justifyDock.screenEdgeMargin = 18;
+        justifyDock.presentedScreenEdgeGap = 18;
+        justifyDock.windowGeometry = QRect(0, 0, 1600, 384);
+        justifyDock.absoluteGeometry = QRect(320, 18, 960, 88);
+        justifyDock.screenGeometry = QRect(0, 0, 1600, 1000);
+        justifyDock.floatingGapConfigured = true;
+        justifyDock.floatingPanelConfigured = false;
+        justifyDock.attachOnWindowTouchConfigured = true;
+        justifyDock.visibilityMode = Types::AlwaysVisible;
+        justifyDock.transitionTarget = DockTransitionTarget::Floated;
+        justifyDock.transitionProgress = 1.0;
+        justifyDock.enabledBorders = {
+            QStringLiteral("top"),
+            QStringLiteral("right"),
+            QStringLiteral("bottom"),
+            QStringLiteral("left"),
+        };
+        justifyDock.geometrySettled = true;
+        justifyDock.inReadyState = true;
+        justifyDock.stableTriggerGeometry = QRect(319, 1, 960, 106);
+        justifyDock.objects.transitionController =
+            QStringLiteral("justify-dock-transition");
+        justifyDock.objects.windowTouchTracker =
+            QStringLiteral("justify-dock-window-touch");
+        justifyDockSnapshot.views = {justifyDock};
+
+        QVERIFY(dockTransitionRecordsAgree(justifyDockSnapshot));
+        justifyDockSnapshot.views[0].stableTriggerGeometry =
+            QRect(320, 1, 960, 106);
+        QVERIFY(!dockTransitionRecordsAgree(justifyDockSnapshot));
+    }
+
+    {
         DockSystemSnapshot deferredSnapshot = valid;
         auto &deferred = deferredSnapshot.views[0];
         deferred.attachOnWindowTouchConfigured = true;

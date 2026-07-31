@@ -2207,31 +2207,51 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
             const int attachedDepth =
                 view.maximumNormalThickness
                 - view.screenEdgeMargin;
-            const ViewPart::FloatingPanelGeometry::
-                StablePrimaryAxisSpan primarySpan{
-                    horizontal
-                    ? view.absoluteGeometry.x()
-                    : view.absoluteGeometry.y(),
-                    horizontal
-                    ? view.absoluteGeometry.width()
-                    : view.absoluteGeometry.height(),
-                };
+            //! Justify Docks may animate the rendered rectangle to the full
+            //! output span. Their window-touch authority remains the
+            //! configured resting placement, including its established float
+            //! truncation. Other alignments still follow occupied geometry.
             const auto dockGeometry =
-                edge
-                ? ViewPart::FloatingPanelGeometry::solve({
+                !edge
+                ? std::optional<
+                      ViewPart::FloatingPanelGeometry::
+                          Solution>{}
+                : view.alignment == Types::Justify
+                ? ViewPart::FloatingPanelGeometry::
+                      solvePlacement({
+                          .outputGeometry =
+                              view.screenGeometry,
+                          .availablePrimaryGeometry =
+                              view.windowGeometry,
+                          .edge = *edge,
+                          .alignment =
+                              ViewPart::FloatingPanelGeometry::
+                                  PrimaryAxisAlignment::Center,
+                          .maxLength =
+                              view.maximumLengthRatio,
+                          .offset = 0.0F,
+                          .panelDepth =
+                              attachedDepth,
+                          .floatingGap =
+                              view.screenEdgeMargin,
+                      })
+                : ViewPart::FloatingPanelGeometry::solve({
                       .outputGeometry =
                           view.screenGeometry,
                       .edge = *edge,
-                      .primaryAxisSpan =
-                          primarySpan,
+                      .primaryAxisSpan = {
+                          horizontal
+                          ? view.absoluteGeometry.x()
+                          : view.absoluteGeometry.y(),
+                          horizontal
+                          ? view.absoluteGeometry.width()
+                          : view.absoluteGeometry.height(),
+                      },
                       .panelDepth =
                           attachedDepth,
                       .floatingGap =
                           view.screenEdgeMargin,
-                  })
-                : std::optional<
-                      ViewPart::FloatingPanelGeometry::
-                          Solution>{};
+                  });
             if ((dockTriggerRequired
                     && !view.stableTriggerGeometry)
                 || (view.stableTriggerGeometry
