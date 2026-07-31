@@ -930,9 +930,10 @@ void Effects::updateEnabledBorders()
                 configuredFloatingPresentation
                 && floatingBoundaryVisible,
             .primaryAxisFillsOutput =
-                PanelBorderDecision::doesPresentationFillPrimaryAxis(
+                PanelBorderDecision::doesPresentationFillOutputPrimaryAxis(
                     m_rect,
-                    m_view->size(),
+                    m_view->geometry(),
+                    m_view->screenGeometry(),
                     *edge),
             .screenEdgeMarginEnabled =
                 m_view->screenEdgeMarginEnabled(),

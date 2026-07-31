@@ -35,23 +35,37 @@ struct Inputs {
     qreal offset{0.0};
 };
 
-[[nodiscard]] inline bool doesPresentationFillPrimaryAxis(
+[[nodiscard]] inline bool doesPresentationFillOutputPrimaryAxis(
     const QRect &presentation,
-    const QSize &canvas,
+    const QRect &viewGeometry,
+    const QRect &outputGeometry,
     FloatingPanelGeometry::Edge edge)
 {
-    //! The Dock effects rectangle is empty during normal startup warmup. It
-    //! has no presented endpoints until QML publishes the first background.
-    if (!presentation.isValid() || canvas.isEmpty()) {
+    //! Effects geometry is local to the view. A Dock normally owns an
+    //! output-sized masked canvas, while a Panel's QWindow is only its own
+    //! configured span. Compare translated paint to the assigned output so a
+    //! partial Panel filling its canvas cannot impersonate output coverage.
+    if (!presentation.isValid()
+        || !viewGeometry.isValid()
+        || !outputGeometry.isValid()) {
         return false;
     }
 
-    const QRect canvasBounds(QPoint(0, 0), canvas);
-    return FloatingPanelGeometry::isHorizontal(edge)
-        ? presentation.left() == canvasBounds.left()
-            && presentation.right() == canvasBounds.right()
-        : presentation.top() == canvasBounds.top()
-            && presentation.bottom() == canvasBounds.bottom();
+    const qint64 presentationStart =
+        FloatingPanelGeometry::isHorizontal(edge)
+        ? qint64(viewGeometry.x()) + presentation.x()
+        : qint64(viewGeometry.y()) + presentation.y();
+    const qint64 presentationEnd = presentationStart
+        + (FloatingPanelGeometry::isHorizontal(edge)
+            ? presentation.width() : presentation.height());
+    const qint64 outputStart =
+        FloatingPanelGeometry::isHorizontal(edge)
+        ? outputGeometry.x() : outputGeometry.y();
+    const qint64 outputEnd = outputStart
+        + (FloatingPanelGeometry::isHorizontal(edge)
+            ? outputGeometry.width() : outputGeometry.height());
+    return presentationStart == outputStart
+        && presentationEnd == outputEnd;
 }
 
 [[nodiscard]] inline KSvg::FrameSvg::EnabledBorders enabledBorders(
