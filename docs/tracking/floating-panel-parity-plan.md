@@ -218,7 +218,17 @@ and PR #126 landed FP-4B.
       and one Positioner-owned applied snapshot prevents lagging
       `QWindow::screen()`, mutable `QScreen` geometry, or solver scratch from
       replacing applied output ownership.
-      Commits: 88b4eef27, 5be872c20, 45772ac13
+      Failed LayerShell stages do not publish controller state, and invalid
+      post-startup presentations are refused outside an explicit type handoff.
+      Commits: 88b4eef27, 5be872c20, 45772ac13, 0ee5f4463, 2a99fd2b1
+- [x] D246 (hidden partial Docks collapsed edge activation to one pixel) keeps
+      hidden and sidebar reveal input on retained stable occupancy while
+      visible Dock input follows animated presentation geometry.
+      Commits: e8e73cc8e
+- [x] D247 (placement controllers published before LayerShell acceptance)
+      stages geometry locally and installs one applied runtime snapshot only
+      after LayerShell accepts the surface.
+      Commits: 0ee5f4463
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
       independent unless a shared root is proved.

@@ -3,7 +3,7 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-31.
 
-## 2026-07-31: D244 and D245 isolate live presentation
+## 2026-07-31: D244 through D247 isolate live presentation
 
 D244 (live attached Dock presentation leaked into stable geometry) remained
 after D241 unified the floating transition. The qreal moved the gap, but a
@@ -54,6 +54,19 @@ generation, and forced endpoint borders. Publication happens only after the
 LayerShell application succeeds. Solver scratch and failed placement attempts
 are no longer observable as applied geometry.
 
+The final snapshot review returned `DO NOT MERGE` with three additional
+lifecycle findings. D246 (hidden partial Docks collapsed edge activation to
+one pixel) found that hidden input consumed the composited 1x1 effects
+sentinel instead of retained stable occupancy. Commit `e8e73cc8e` selects
+stable local geometry while hidden or in sidebar mode and leaves visible Dock
+input on animated presentation geometry. D247 (placement controllers published
+before LayerShell acceptance) found that FloatingTransition and QWindow
+mutation still preceded the acceptance boundary. Commit `0ee5f4463` solves
+surface, canvas, controller, and border state locally, discards refused stages,
+and installs every backing value before publishing successful notifications.
+Commit `2a99fd2b1` closes D245's remaining silent-invalid arm by allowing absent
+paint only during revision-zero startup or an explicit Panel-to-Dock handoff.
+
 The focused background, border, mask, D-Bus, identity, source-contract, QML
 interaction, and QML compile checks pass. Expanded nested recipe 074 drives a
 Panel, partial Center Dock, and expanding Justify Dock through fractional
@@ -61,18 +74,19 @@ attachment and reversal before button release. Stable physical state remains
 byte-identical. With automatic sizing disabled, the same recipe attaches a 60%
 Justify Dock, changes Maximum Length to 54% through the real edit ruler, and
 observes stable occupancy and touch geometry converge while attached paint
-remains full-width. Two-output recipe 073 passes full-touching,
+remains full-width. The corrected committed head passes all 247 QML interaction
+checks. The hidden-Dock boundary case combines the valid 1x1 hide sentinel with
+an 800-pixel retained partial span and produces an 800x2 reveal strip. Nested
+recipe 074 passes again after the final lifecycle changes. Two-output recipe
+073 passes full-touching,
 partial-touching, and disconnected arrangements, exact separated-span
 activation, restart persistence, and its controlled negative oracles. Plasma
 6.7.3 also keeps the rounded floating FrameSvg
 during fractional frames and switches enabled borders at exact attachment; it
-does not numerically shrink the radius each frame. The final replacement
-canonical gate passes at exact source head
-`42244c77d33613490a2cd1eca401703d19517c4e`,
-including all 124 CTest entries, the reduced qmllint ratchet, rendered scene
-probes, ASan and UBSan nested execution, package provenance controls, and
-matrix refusals. The real-session dock remains stopped until the corrected
-branch receives a fresh independent `MERGE` verdict and lands through PR #134.
+does not numerically shrink the radius each frame. The replacement canonical
+gate must run at the new committed head. The real-session dock remains stopped
+until that gate passes, the corrected branch receives a fresh independent
+`MERGE` verdict, and PR #134 lands.
 
 ## 2026-07-27: D241 unifies floating Dock presentation
 

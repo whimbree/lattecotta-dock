@@ -3062,8 +3062,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D245 - Partial Panels lost endpoint borders at live attachment
-- STATUS: FIXED on the feature branch by `88b4eef27`, `5be872c20`, and
-  `45772ac13`; pending PR.
+- STATUS: FIXED on the feature branch by `88b4eef27`, `5be872c20`,
+  `45772ac13`, `0ee5f4463`, and `2a99fd2b1`; pending PR.
 - FOUND: 2026-07-31, second independent review of PR #134.
 - SYMPTOM: a partial floating Panel loses both primary-axis endpoint borders
   when a dragged window reaches its live attached endpoint. Its rounded ends
@@ -3079,7 +3079,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   still did not cover direct output reassignment or `QScreen::geometryChanged`.
   Positioner also requested a border update before replacing its solver
   scratch, so valid old surface and new output rectangles could still be
-  combined.
+  combined. The final review found that FloatingTransition and QWindow state
+  still changed before LayerShell accepted the staged surface. It also found
+  that an invalid effects rectangle after the first surface publication was
+  still silently classified as a partial presentation.
 - FIX: translate local effects geometry through the view's global geometry and
   compare the result with the assigned output's primary-axis endpoints. Keep
   the decision independent of view type, output origin, orientation, and
@@ -3087,8 +3090,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   used to solve it, the placement generation, and forced endpoint borders
   together only after LayerShell accepts the placement. Effects retains the
   previous publication until the new one arrives. Treat absent paint as the
-  documented startup state, but report missing output or surface authority as
-  a critical refusal.
+  documented startup or explicit Panel-to-Dock handoff state, but report every
+  other missing presentation, output, or surface authority as a critical
+  refusal. Geometry solving now produces local staged values. The applied
+  surface, controller backing state, QWindow, occupancy, triggers, and observer
+  signals publish only after LayerShell accepts that stage.
 - EVIDENCE: the pure border test covers all four edges on a negative-origin
   output. It accepts complete output coverage, rejects a partial Panel that
   fills only its QWindow, rejects a one-pixel short presentation, and rejects
@@ -3101,11 +3107,49 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   Maximum Length lifecycle. Two-output recipe 073 passes full-touching,
   partial-touching, and disconnected output arrangements, exact separated-span
   activation, restart persistence, and its controlled negative oracles. The
-  complete canonical gate passes at exact source head
-  `42244c77d33613490a2cd1eca401703d19517c4e`, including all 124 CTest
-  entries, the qmllint ratchet, rendered scene probes, ASan and UBSan nested
-  execution, package provenance controls, and matrix refusals.
+  final source head and gate evidence are pending.
 - SEVERITY: beta blocker.
+
+### D247 - Placement controllers published before LayerShell acceptance
+- STATUS: FIXED on the feature branch by `0ee5f4463`; pending PR.
+- FOUND: 2026-07-31, final cold independent review of PR #134.
+- SYMPTOM: a failed placement or direct resize could expose new Panel
+  occupancy, window-touch triggers, presentation geometry, or enabled borders
+  while the live surface still used its previous placement.
+- ROOT: `solveAndApplyGeometry()` synchronously installed or cleared
+  FloatingTransition geometry and mutated the QWindow before calling the
+  LayerShell placement boundary. Those mutations emitted controller and window
+  signals immediately. A refused LayerShell call returned without restoring
+  the old controller state, and a successful call still exposed mixed old and
+  new state before the later Positioner snapshot update.
+- FIX: solve Panel or Dock surface, canvas, presentation, and border state into
+  local values. Pass only the staged surface to LayerShell. On success, install
+  every backing value before QWindow or controller notifications; on failure,
+  discard the stage without mutating runtime state. Dock offset and edit-canvas
+  changes use the same solve-and-publish path.
+- EVIDENCE: the production binary and focused source contract pass. Nested
+  recipe 074 observes stable physical state throughout held live attachment,
+  and two-output recipe 073 passes output topology changes and restart
+  persistence. The final canonical gate is pending.
+- SEVERITY: release blocker.
+
+### D246 - Hidden partial Docks collapsed edge activation to one pixel
+- STATUS: FIXED on the feature branch by `e8e73cc8e`; pending PR.
+- FOUND: 2026-07-31, final cold independent review of PR #134.
+- SYMPTOM: an auto-hidden partial Dock can retain only one pixel of its
+  primary-axis reveal strip, making ordinary pointer reveal effectively
+  unreachable.
+- ROOT: the live-presentation input path always rebuilt its length from
+  `effects.rect`. Hidden composited Docks intentionally replace that rectangle
+  with the valid `(-1,-1,1,1)` hide sentinel. The mask core then used the
+  sentinel's one-pixel span instead of the last stable occupied geometry.
+- FIX: hidden and sidebar input consumes retained `localGeometry`; visible Dock
+  input alone consumes the animated presentation rectangle.
+- EVIDENCE: the QML boundary test combines the 1x1 hide sentinel with an
+  800-pixel retained partial span and produces an 800x2 edge reveal strip. The
+  source mutation guard rejects both an always-presented input source and an
+  always-stable source. All 247 QML interaction checks pass.
+- SEVERITY: release blocker.
 
 ### D244 - Live attached Dock presentation leaked into stable geometry
 - STATUS: FIXED on the feature branch by `eabe3df05`, `3cf23db0a`, and

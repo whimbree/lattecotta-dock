@@ -4996,7 +4996,19 @@ prerequisites in the phases above are done.
       geometry, placement generation, and forced-border snapshot only after
       LayerShell accepts the placement. Solver scratch, mutable screen
       observation, and incomplete output changes cannot feed border policy.
-      Commits: 88b4eef27, 5be872c20, 45772ac13
+      Refuse every invalid post-startup presentation outside the explicit
+      Panel-to-Dock handoff.
+      Commits: 88b4eef27, 5be872c20, 45772ac13, 0ee5f4463, 2a99fd2b1
+- [x] Fix D246 (hidden partial Docks collapsed edge activation to one pixel).
+      Retain the stable occupied primary span for hidden and sidebar reveal
+      input instead of consuming the composited hide sentinel. Visible Dock
+      input continues to follow animated paint.
+      Commits: e8e73cc8e
+- [x] Fix D247 (placement controllers published before LayerShell acceptance).
+      Solve surface, canvas, transition, and border values locally. Discard a
+      refused stage without runtime mutation, or install one complete backing
+      snapshot before publishing QWindow and controller notifications.
+      Commits: 0ee5f4463
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

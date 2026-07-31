@@ -75,7 +75,11 @@ transaction. The old reservation is retired before mutation; the view then
 solves geometry against its assigned output, applies the exact layer-shell
 output and anchors, publishes the new maximum-depth reservation membership,
 commits its relocation generation, and only then remaps and reveals. A
-cross-layout move first journals the complete containment subtree, publishes
+failed surface solve or LayerShell application cannot publish replacement
+presentation, occupancy, trigger, or border state. Hidden partial docks retain
+their complete stable edge-reveal span even while compositing uses the 1x1 hide
+sentinel for paint. A cross-layout move first journals the complete containment
+subtree, publishes
 destination persistence, records the active layout owner, and retires the
 origin before changing runtime membership. An interrupted move converges from
 that journal before layouts load again. A reversible dock removal similarly
