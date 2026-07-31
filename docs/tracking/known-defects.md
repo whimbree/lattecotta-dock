@@ -3111,9 +3111,88 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `b1a27c1002e570ad99442bcd543d7e01c38519d3` passes the full canonical gate.
 - SEVERITY: beta blocker.
 
+### D251 - Hot-unplug erased applied output identity before geometry
+- STATUS: FIXED on the feature branch by `4a6c1aa20`; pending PR.
+- FOUND: 2026-07-31, fresh cold independent review of PR #134.
+- SYMPTOM: destroying the applied `QScreen` could make D-Bus report the target
+  connector and screen id with geometry retained from the previous applied
+  output. Placement consumers could observe the same mixed generation.
+- ROOT: Positioner retained output identity only through a `QPointer<QScreen>`.
+  Qt correctly cleared that handle on destruction, but the applied surface and
+  output rectangle remained. Collectors then fell back to mutable target
+  identity while continuing to publish the retained applied geometry.
+- FIX: publish connector, stable ScreenPool id, and output rectangle as one
+  durable value snapshot. Keep the `QPointer<QScreen>` only as the optional
+  process-owned live handle required for a new placement application.
+- EVIDENCE: the applied-output unit test pins value identity with no live
+  screen. D-Bus and source-contract tests require both collectors and
+  `View::screenGeometry()` to consume the durable snapshot. Two-output recipe
+  073 passes full-touching, partial-touching, disconnected, and restart cases.
+- SEVERITY: release blocker.
+
+### D250 - Failed LayerShell rollback traffic disappeared from observability
+- STATUS: FIXED on the feature branch by `4a6c1aa20`; pending PR.
+- FOUND: 2026-07-31, fresh cold independent review of PR #134.
+- SYMPTOM: a LayerShell postcondition failure could retarget and then restore
+  output, anchors, margins, and exclusion state while the configure-request
+  revision reported no compositor-facing traffic.
+- ROOT: `applyViewPlacement()` returned `std::nullopt` for every refusal. That
+  discarded the setter count accumulated before the failed postcondition and
+  during rollback, conflating a mutation-free refusal with a restored apply.
+- FIX: return an explicit application result containing independent `applied`
+  and `configureRequests` fields. Count guarded rollback setters and publish
+  their revision before reporting the failed placement.
+- EVIDENCE: the LayerShell sabotage test corrupts the final anchors, verifies
+  exact rollback, and requires nonzero configure traffic on the refused result.
+  Focused LayerShell, D-Bus, and source-contract tests pass.
+- SEVERITY: beta blocker.
+
+### D249 - Completed geometry armed a delayed duplicate publication
+- STATUS: FIXED on the feature branch by `4a6c1aa20`; pending PR.
+- FOUND: 2026-07-31, fresh cold independent review of PR #134.
+- SYMPTOM: an axis-changing placement could publish its correct rectangle and
+  then publish again about 650 ms later, adding avoidable geometry traffic and
+  visible jitter under repeated resizing or relocation.
+- ROOT: Positioner installed the new backing state and cleared its pending bit
+  before applying the final QWindow rectangle. The intermediate resize at the
+  old origin armed the 500 ms geometry validator. The final position satisfied
+  the geometry but did not stop that timer, whose sync coalescer published
+  again 150 ms later.
+- FIX: retain the pending state through the complete QWindow rectangle apply.
+  Clear it, advance the publication revision, and validate only after the final
+  position is installed. Validation now has symmetric pending, arm, and disarm
+  paths, including startup geometry.
+- EVIDENCE: two-output recipe 073 changes a live view from vertical to
+  horizontal, captures the first complete publication, observes beyond both
+  old timer deadlines, and requires the revision and QWindow rectangle to stay
+  unchanged before separately waiting for full convergence. Focused source and
+  identity contracts pass.
+- SEVERITY: beta blocker.
+
+### D248 - Output relocation waited for its own QWindow retarget
+- STATUS: FIXED on the feature branch by `4a6c1aa20`; pending PR.
+- FOUND: 2026-07-31, manual two-output replay after the fresh cold review of
+  PR #134.
+- SYMPTOM: a cross-output placement could remain hidden in relocation with its
+  output component pending indefinitely. The three-panel topology fixture
+  stayed assigned to the source output.
+- ROOT: transaction completion waited for `QWindow::screenChanged` to clear
+  `m_nextScreenName`. The atomic placement boundary intentionally delays the
+  QWindow retarget until final geometry application, while final application
+  refuses to run until every pending placement component clears. Each side
+  therefore waited for the other.
+- FIX: acknowledge the staged output immediately after Positioner accepts the
+  destination ownership. The later single applied-geometry boundary still
+  retargets QWindow and LayerShell together before publishing observers.
+- EVIDENCE: the identity contract requires output acknowledgement before edge
+  and alignment staging. Two-output recipe 073 then passes initial cross-output
+  placement, an axis change, all three output topologies, and persistence
+  reload without stranding a view.
+- SEVERITY: release blocker.
+
 ### D247 - Placement controllers published before LayerShell acceptance
-- STATUS: FIXED on the feature branch by `f2be2e994` and `fb22372c8`;
-  pending PR.
+- STATUS: FIXED on the feature branch by `f2be2e994`, `fb22372c8`, and
+  `4a6c1aa20`; pending PR.
 - FOUND: 2026-07-31, final cold independent review of PR #134.
 - SYMPTOM: a failed placement or direct resize could expose new Panel
   occupancy, window-touch triggers, presentation geometry, or enabled borders
@@ -3145,7 +3224,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   postcondition. Placement-dependent geometry, touch, borders, neighbor
   availability, and D-Bus retain the old applied snapshot while a replacement
   is pending. Output geometry observation now enters the solver directly;
-  applied output publication no longer loops back into another solve.
+  applied output publication no longer loops back into another solve. The
+  completed boundary also owns output-component acknowledgement, durable
+  output identity, rollback configure traffic, the final QWindow rectangle,
+  validator disarm, and the publication revision.
 - EVIDENCE: the production binary and focused LayerShell, source-contract,
   D-Bus, panel-border, window-touch, and reservation-publication tests pass.
   The LayerShell test deliberately corrupts the final anchors after all
@@ -3153,13 +3235,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   LayerShell output, anchors, exclusive edge, margins, exclusion zone, and
   visibility. The source contract pins signal suppression, install-before-
   notify ordering, applied-output reporting, pending-consumer refusal, and the
-  absence of the publication feedback loop. Nested
-  recipe 074 observes stable physical state throughout held live attachment,
-  and two-output recipe 073 passes output topology changes and restart
-  persistence. Corrected exact source head
-  `b1a27c1002e570ad99442bcd543d7e01c38519d3` passes the full canonical gate,
-  including all 124 CTest entries, QML and coverage ratchets, scene probes,
-  the ASan/UBSan nested drive, package provenance checks, and matrix refusals.
+  absence of the publication feedback loop. Nested recipe 074 observes stable
+  physical state throughout held live attachment. Two-output recipe 073 passes
+  one-publication axis change, output topology changes, and restart
+  persistence. The focused contracts pass at `4a6c1aa20`; a replacement
+  canonical gate remains pending.
 - SEVERITY: release blocker.
 
 ### D246 - Hidden partial Docks collapsed edge activation to one pixel
@@ -3180,8 +3260,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   source mutation guard rejects both an always-presented input source and an
   always-stable source. All 247 QML interaction checks pass. The qualified
   runtime-view ownership path and its updated source guard keep the QML lint
-  ratchet unchanged. Exact source head
-  corrected exact source head
+  ratchet unchanged. Corrected exact source head
   `b1a27c1002e570ad99442bcd543d7e01c38519d3` passes the full canonical gate.
 - SEVERITY: release blocker.
 

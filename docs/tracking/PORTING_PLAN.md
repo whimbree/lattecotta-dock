@@ -5012,7 +5012,27 @@ prerequisites in the phases above are done.
       QWindow and LayerShell output changes inside the same boundary, restore
       their prior state on a failed postcondition, and report only the last
       complete applied output through D-Bus.
-      Commits: f2be2e994, fb22372c8
+      Commits: f2be2e994, fb22372c8, 4a6c1aa20
+- [x] Fix D248 (output relocation waited for its own QWindow retarget).
+      Acknowledge output ownership after Positioner accepts the staged
+      destination so final geometry application can retarget QWindow and
+      LayerShell atomically without a circular wait.
+      Commits: 4a6c1aa20
+- [x] Fix D249 (completed geometry armed a delayed duplicate publication).
+      Keep geometry application pending through the final QWindow rectangle,
+      then advance the publication and disarm validation from the completed
+      state. Prove the old validator and coalescer deadlines cannot republish
+      an axis change.
+      Commits: 4a6c1aa20
+- [x] Fix D250 (failed LayerShell rollback traffic disappeared from
+      observability). Return placement acceptance and configure traffic as
+      separate values, including guarded setters used to restore a failed
+      postcondition.
+      Commits: 4a6c1aa20
+- [x] Fix D251 (hot-unplug erased applied output identity before geometry).
+      Retain connector, stable ScreenPool id, and output rectangle as one value
+      snapshot whose lifetime does not depend on the optional live `QScreen`.
+      Commits: 4a6c1aa20
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
