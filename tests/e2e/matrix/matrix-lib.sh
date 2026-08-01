@@ -99,7 +99,9 @@ MATRIX_FIXTURE="$MATRIX_DIR/fixture.py"
 # e2e_assert_golden / e2e_screenshot_crop serve the committed-golden scenarios.
 source "$MATRIX_DIR/golden-bridge.sh"
 MATRIX_WORK="${E2E_ARTIFACTS:?}/matrix"
-MATRIX_PRISTINE="$MATRIX_WORK/_pristine-seed"
+# The loaded seed belongs to one nested vehicle. Keeping it in persistent
+# artifacts let a later run silently reuse a different run's layout.
+MATRIX_PRISTINE="${E2E_RT:?matrix-lib requires a nested runtime}/matrix-pristine-seed"
 MATRIX_BASELINE="$MATRIX_WORK/_baseline"
 MATRIX_STAGE_TIMEOUT="${MATRIX_STAGE_TIMEOUT:-90}"
 
