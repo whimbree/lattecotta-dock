@@ -1015,7 +1015,7 @@ private:
             && code.contains(QStringLiteral(
                    "--keymaximizeWhenMaximizedtrue"))
             && code.contains(QStringLiteral(
-                   "fpdraghold900"))
+                   "fpdraghold2000"))
             && code.contains(QStringLiteral(
                    "\"$start_x\"\"$touching_y\""))
             && code.contains(QStringLiteral(
@@ -1180,8 +1180,11 @@ private:
                    "\"$view_c\"\"$secondary_id\"topcenter"
                    "\"$before_axis_revision\""))
             && recipe.contains(QStringLiteral(
-                   "str(view[\"surfaceGeometryPublicationRevision\"])"
-                   "==sys.argv[5]"))
+                   "int(view[\"surfaceGeometryPublicationRevision\"])"
+                   "<=int(sys.argv[5])"))
+            && recipe.contains(QStringLiteral(
+                   "int(view[\"surfaceGeometryPublicationRevision\"])"
+                   "!=before_revision+1"))
             && recipe.contains(QStringLiteral("sleep0.8"))
             && recipe.contains(QStringLiteral(
                    "geometryvalidatorrepublishedacompletedplacement"))
@@ -2363,6 +2366,7 @@ private Q_SLOTS:
     void liveTitlebarWindowTouchE2e_rejectsMissingHeldProof();
     void windowTouchTopologyE2e_keepsIndependentRegionsAndOutputs();
     void windowTouchTopologyE2e_cleanupGuardRejectsControlledMutations();
+    void relocationReveal_reusesCompletedPlacement();
     void linkedOperationStormE2e_keepsTransactionalReplayContract();
     void linkedOperationStormE2e_sourceGuardRejectsControlledMutations();
     void linkedOperationStormE2e_cleanupPreservesFailureAndSafety();
@@ -2544,7 +2548,9 @@ void SourceGuardTest::occupiedGeometryChange_notifiesPerpendicularPeers()
 void SourceGuardTest::viewsDataConfigureMode_keepsPerViewContract()
 {
     const QString source = readFile(QStringLiteral("app/dbusreports.cpp"));
-    const QString collector = functionBody(source, QStringLiteral("ViewRecord collectViewRecord"));
+    const QString collector = functionBody(
+        source,
+        QStringLiteral("std::optional<ViewRecord> collectViewRecord"));
     QVERIFY2(!collector.isEmpty(), "collectViewRecord not found");
     QVERIFY2(matchesEffectiveConfigureModeCollection(collector),
              "D76 (configure-applets mode leaked across docks) must combine local and global state");
@@ -2554,7 +2560,9 @@ void SourceGuardTest::viewsDataConfigureMode_sourceGuardRejectsGlobalLeak()
 {
     const QString source = readFile(QStringLiteral("app/dbusreports.cpp"));
     QString collector = normalizedCode(
-        functionBody(source, QStringLiteral("ViewRecord collectViewRecord")));
+        functionBody(
+            source,
+            QStringLiteral("std::optional<ViewRecord> collectViewRecord")));
     QVERIFY(matchesEffectiveConfigureModeCollection(collector));
 
     const QString effectiveAssignment = QStringLiteral(
@@ -3415,6 +3423,36 @@ void SourceGuardTest::windowTouchTopologyE2e_keepsIndependentRegionsAndOutputs()
         " landscape/portrait outputs");
 }
 
+void SourceGuardTest::relocationReveal_reusesCompletedPlacement()
+{
+    const QString positionerSource = readFile(QStringLiteral(
+        "app/view/positioner.cpp"));
+    const auto keepsCompletedPlacement = [](const QString &source) {
+        const QString body = normalizedCode(functionBody(
+            source,
+            QStringLiteral("void Positioner::initDelayedSignals()")));
+        return body.contains(QStringLiteral(
+            "constboolhasCurrentWindowGeometry="
+            "hasPublishedCurrentPlacement()"
+            "&&m_view->geometry()==m_appliedSurfaceGeometry;"))
+            && body.contains(QStringLiteral(
+                "&&qAbs(m_slideOffset)>0"
+                "&&!hasCurrentWindowGeometry)"
+                "{immediateSyncGeometry();}"));
+    };
+
+    QVERIFY(keepsCompletedPlacement(positionerSource));
+    QString unconditionalReveal = positionerSource;
+    const QString exactWindowCheck = QStringLiteral(
+        "            && m_view->geometry()\n"
+        "                == m_appliedSurfaceGeometry");
+    QCOMPARE(unconditionalReveal.count(exactWindowCheck), 1);
+    unconditionalReveal.remove(exactWindowCheck);
+    QVERIFY2(!keepsCompletedPlacement(unconditionalReveal),
+             "a published model generation alone cannot prove that a hidden"
+             " QWindow already occupies its accepted rectangle");
+}
+
 void SourceGuardTest::windowTouchTopologyE2e_cleanupGuardRejectsControlledMutations()
 {
     const QString recipeSource = readFile(QStringLiteral(
@@ -3474,15 +3512,15 @@ void SourceGuardTest::windowTouchTopologyE2e_cleanupGuardRejectsControlledMutati
     QString missingPriorRevision = recipe;
     const QString priorRevisionComparison =
         QStringLiteral(
-            "str(view[\"surfaceGeometryPublicationRevision\"])"
-            "==sys.argv[5]");
-    QVERIFY(missingPriorRevision.count(
-                priorRevisionComparison) >= 1);
+            "int(view[\"surfaceGeometryPublicationRevision\"])"
+            "!=before_revision+1");
+    QCOMPARE(missingPriorRevision.count(
+                 priorRevisionComparison), 1);
     missingPriorRevision.remove(
         priorRevisionComparison);
     QVERIFY2(!matchesWindowTouchTopologyE2eContract(
                  missingPriorRevision, oracle),
-             "removing the pre-mutation revision comparison must fail the publication guard");
+             "removing the exact pre-mutation revision delta must fail the publication guard");
 
     const QString cleanupBody = functionBody(
         recipeSource, QStringLiteral("cleanup()"));
@@ -3998,10 +4036,8 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
     QVERIFY(!positioner.contains(QStringLiteral(
         "connect(this,&Positioner::screenGeometryChanged,this,"
         "&Positioner::syncGeometry);")));
-    const qsizetype applyWindow = publishApplied.indexOf(QStringLiteral(
-        "applySolvedWindowGeometry(solved.surface);"));
     const qsizetype consumeCoalescedSync = publishApplied.indexOf(
-        QStringLiteral("m_syncGeometryTimer.stop();"), applyWindow);
+        QStringLiteral("m_syncGeometryTimer.stop();"));
     const qsizetype pendingClear = publishApplied.indexOf(QStringLiteral(
         "m_geometryApplicationPending=false;"), consumeCoalescedSync);
     const qsizetype appliedRevision = publishApplied.indexOf(QStringLiteral(
@@ -4010,8 +4046,7 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         "validateDockGeometry();"), appliedRevision);
     const qsizetype publishAbsolute = publishApplied.indexOf(QStringLiteral(
         "m_view->updateAbsoluteGeometry(true);"), validateWindow);
-    QVERIFY(applyWindow >= 0
-            && consumeCoalescedSync > applyWindow
+    QVERIFY(consumeCoalescedSync >= 0
             && pendingClear > consumeCoalescedSync
             && appliedRevision > pendingClear
             && validateWindow > appliedRevision
@@ -4032,18 +4067,54 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
     const qsizetype layerApplication = solveAndApply.indexOf(QStringLiteral(
         "if(!m_view->applyPositionedLayerShellGeometry("
         "placementScreen,solved->surface))"));
-    const qsizetype appliedInstallation = solveAndApply.indexOf(QStringLiteral(
-        "installAppliedGeometry(*solved,placementScreen,"));
     const qsizetype signalRelease = solveAndApply.indexOf(QStringLiteral(
         "qWindowPlacementSignals.unblock();"),
-        appliedInstallation);
+        layerApplication);
+    const qsizetype applyWindow = solveAndApply.indexOf(QStringLiteral(
+        "applySolvedWindowGeometry(solved->surface);"),
+        signalRelease);
+    const QString installationToken = QStringLiteral(
+        "installAppliedGeometry(*solved,placementScreen,");
+    const qsizetype appliedInstallation = solveAndApply.indexOf(
+        installationToken,
+        applyWindow);
     const qsizetype appliedPublication = solveAndApply.indexOf(QStringLiteral(
-        "publishAppliedGeometry(*solved,placementScreen,changes);"));
+        "publishAppliedGeometry(*solved,placementScreen,changes);"),
+        appliedInstallation);
     QVERIFY(signalBlocker >= 0
             && layerApplication > signalBlocker
-            && appliedInstallation > layerApplication
-            && signalRelease > appliedInstallation
-            && appliedPublication > signalRelease);
+            && signalRelease > layerApplication
+            && applyWindow > signalRelease
+            && appliedInstallation > applyWindow
+            && appliedPublication > appliedInstallation);
+    const auto keepsAcceptedSnapshotAfterFinalWindow =
+        [&](const QString &body) {
+            const qsizetype release = body.indexOf(QStringLiteral(
+                "qWindowPlacementSignals.unblock();"));
+            const qsizetype window = body.indexOf(QStringLiteral(
+                "applySolvedWindowGeometry(solved->surface);"), release);
+            const qsizetype install = body.indexOf(
+                installationToken,
+                release);
+            const qsizetype publish = body.indexOf(QStringLiteral(
+                "publishAppliedGeometry(*solved,placementScreen,changes);"),
+                release);
+            return release >= 0
+                && window > release
+                && install > window
+                && publish > install;
+        };
+    QVERIFY(keepsAcceptedSnapshotAfterFinalWindow(
+        solveAndApply));
+    QString prematureSnapshot = solveAndApply;
+    prematureSnapshot.insert(
+        signalRelease
+            + QStringLiteral(
+                "qWindowPlacementSignals.unblock();").size(),
+        installationToken);
+    QVERIFY2(!keepsAcceptedSnapshotAfterFinalWindow(
+                 prematureSnapshot),
+             "installing accepted placement before the final QWindow rectangle must fail the publication guard");
     QVERIFY(!solveAndApply.mid(layerApplication,
                             appliedPublication - layerApplication)
                  .contains(QStringLiteral("configureGeometry(")));
@@ -4105,7 +4176,8 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
 
     const QString viewRecord = normalizedCode(functionBody(
         dbusSource,
-        QStringLiteral("ViewRecord collectViewRecord(")));
+        QStringLiteral(
+            "std::optional<ViewRecord> collectViewRecord(")));
     const QString systemSnapshot = normalizedCode(functionBody(
         dbusSource,
         QStringLiteral("collectDockSystemSnapshot(")));
@@ -4129,6 +4201,39 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         "appliedPlacement->output.screenId")));
     QVERIFY(systemSnapshot.contains(QStringLiteral(
         "appliedPlacement->orientation")));
+    const QString missingViewPlacementRefusal = QStringLiteral(
+        "if(!appliedPlacement&&!inStartup){qCritical()"
+        "<<\"dbusreports:refusingviewrecordwithoutanacceptedplacement\""
+        "<<view->containment()->id();returnstd::nullopt;}");
+    const QString missingSystemPlacementRefusal = QStringLiteral(
+        "if(!appliedPlacement&&!positioner->inStartup()){qCritical()"
+        "<<\"dbusreports:refusingdock-systemrecordwithoutanacceptedplacement\""
+        "<<record.persistentDockId;returnstd::nullopt;}");
+    const auto refusesMissingAcceptedPlacement =
+        [&](const QString &viewCollector,
+            const QString &systemCollector) {
+            return viewCollector.contains(
+                       missingViewPlacementRefusal)
+                && systemCollector.contains(
+                       missingSystemPlacementRefusal);
+        };
+    QVERIFY(refusesMissingAcceptedPlacement(
+        viewRecord,
+        systemSnapshot));
+    QString targetFallback = viewRecord;
+    targetFallback.remove(
+        missingViewPlacementRefusal);
+    QVERIFY2(!refusesMissingAcceptedPlacement(
+                 targetFallback,
+                 systemSnapshot),
+             "removing the post-startup view-record refusal must fail the applied-placement guard");
+    QString partialSystemSnapshot = systemSnapshot;
+    partialSystemSnapshot.remove(
+        missingSystemPlacementRefusal);
+    QVERIFY2(!refusesMissingAcceptedPlacement(
+                 viewRecord,
+                 partialSystemSnapshot),
+             "removing the post-startup system-record refusal must fail the applied-placement guard");
     QVERIFY(windowTracker.contains(QStringLiteral(
         "view->positioner()->appliedPlacementSnapshot()")));
     QVERIFY(windowTracker.contains(QStringLiteral(
