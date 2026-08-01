@@ -4987,7 +4987,7 @@ prerequisites in the phases above are done.
       the animated paint rectangle independently. Republish stable occupancy
       and recompute the touch trigger directly when configured Maximum Length
       changes at the fully attached endpoint.
-      Commits: eabe3df05, 3cf23db0a, 19104b58e
+      Commits: 51eb53c69, 0322214c1, b8dd08b68
 - [x] Fix D245 (partial Panels lost endpoint borders at live attachment).
       Classify output coverage from translated presentation geometry and the
       assigned output endpoints, not from whether paint fills the local
@@ -4998,13 +4998,13 @@ prerequisites in the phases above are done.
       observation, and incomplete output changes cannot feed border policy.
       Refuse every invalid post-startup presentation outside the explicit
       Panel-to-Dock handoff.
-      Commits: 88b4eef27, 5be872c20, 45772ac13, f2be2e994, 139c860b2,
-      fb22372c8
+      Commits: 18bc78ed4, 65f0d5c1a, 21bb65bae, 27704ff82, 5abc94338,
+      d8a1b093a
 - [x] Fix D246 (hidden partial Docks collapsed edge activation to one pixel).
       Retain the stable occupied primary span for hidden and sidebar reveal
       input instead of consuming the composited hide sentinel. Visible Dock
       input continues to follow animated paint.
-      Commits: 2ed7553c5, ba7cc5f6d, 12a6254fa
+      Commits: 4397109f8, e72574be4, dd3f041cf
 - [x] Fix D247 (placement controllers published before LayerShell acceptance).
       Solve surface, canvas, transition, and border values locally. Discard a
       refused stage without runtime mutation, or install one complete backing
@@ -5012,50 +5012,50 @@ prerequisites in the phases above are done.
       QWindow and LayerShell output changes inside the same boundary, restore
       their prior state on a failed postcondition, and report only the last
       complete applied output through D-Bus.
-      Commits: f2be2e994, fb22372c8, 4a6c1aa20, 69ae849e1
+      Commits: 27704ff82, d8a1b093a, 2bedd1174, 68e6cd32f
 - [x] Fix D248 (output relocation waited for its own QWindow retarget).
       Acknowledge output ownership after Positioner accepts the staged
       destination so final geometry application can retarget QWindow and
       LayerShell atomically without a circular wait.
-      Commits: 4a6c1aa20
+      Commits: 2bedd1174
 - [x] Fix D249 (completed geometry armed a delayed duplicate publication).
       Keep geometry application pending through the final QWindow rectangle,
       then advance the publication and disarm validation from the completed
       state. Reuse an already committed final rectangle during relocation
       reveal. Prove the old validator and coalescer deadlines cannot republish
       an axis change.
-      Commits: 4a6c1aa20, 69ae849e1, 035602730, 5563f8f20
+      Commits: 2bedd1174, 68e6cd32f, bdd6cb3a9, 8284accfb
 - [x] Fix D250 (failed LayerShell rollback traffic disappeared from
       observability). Return placement acceptance and configure traffic as
       separate values, including guarded setters used to restore a failed
       postcondition.
-      Commits: 4a6c1aa20
+      Commits: 2bedd1174
 - [x] Fix D251 (hot-unplug erased applied output identity before geometry).
       Retain connector, stable ScreenPool id, and output rectangle as one value
       snapshot whose lifetime does not depend on the optional live `QScreen`.
-      Commits: 4a6c1aa20, 79d43f2c8, 9e013a64a, 69ae849e1
+      Commits: 2bedd1174, 46da3e898, cabde65ce, 68e6cd32f
 - [x] Fix D252 (placement consumers mixed accepted and target dimensions).
       Publish edge, orientation, alignment, primary-output policy, output
       identity, output geometry, and the optional live screen as one accepted
       value snapshot. Window tracking and D-Bus consume only that coherent
       snapshot after startup.
-      Commits: 69ae849e1
+      Commits: 68e6cd32f
 - [x] Fix D253 (accepted placement preceded the final QWindow rectangle).
       Retain the previous accepted snapshot until QWindow reaches the final
       solved rectangle, then install and publish the new generation.
-      Commits: e76f63c71, 5563f8f20
+      Commits: 508801032, 8284accfb
 - [x] Fix D254 (D-Bus substituted target placement after startup). Permit
       target fallback only during startup and refuse a missing accepted
       placement afterward.
-      Commits: a39454327, 5563f8f20
+      Commits: d9bd9811c, 8284accfb
 - [x] Fix D255 (axis-change acceptance could adopt a duplicate publication).
       Compare the settled revision with the pre-mutation accepted revision and
       require exactly one increment.
-      Commits: 5563f8f20
+      Commits: 8284accfb
 - [x] Fix D256 (held titlebar endpoint expired before observer sampling).
       Keep the button-held endpoint stable long enough for repeated D-Bus
       sampling under nested-host load.
-      Commits: 226736315, 5563f8f20
+      Commits: 1bd392e1f, 8284accfb
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
