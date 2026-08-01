@@ -175,9 +175,34 @@ window. Recipe 074 passes live titlebar attachment before button release for
 Panel, Center Dock, and expanding Justify Dock. The replacement canonical gate
 passes at exact source head `993a5cc5e98fbe70295efe8cb00c915b13389523`,
 including all 125 CTest entries, QML and coverage ratchets, scene probes, the
-ASan/UBSan nested drive, package provenance checks, and matrix refusals. The one
-required independent follow-up review remains pending. The real-session dock
-remains intentionally stopped until the reviewed merge is available.
+ASan/UBSan nested drive, package provenance checks, and matrix refusals.
+
+The required independent follow-up review returned `DO NOT MERGE` with three
+remaining publication findings. D253 (accepted placement preceded the final
+QWindow rectangle) found that the accepted snapshot changed before resize and
+position observers saw the final window. D254 (D-Bus substituted target
+placement after startup) found that both collectors used mutable target state
+during a real post-startup interval without an accepted snapshot. D255
+(axis-change acceptance could adopt a duplicate publication) found that recipe
+073 could capture an extra publication as its baseline.
+
+Commits `e76f63c71`, `a39454327`, and `5563f8f20` keep the old accepted snapshot
+through final QWindow placement, refuse absent post-startup accepted state, and
+compare the axis change with its pre-mutation revision. The strengthened recipe
+then exposed the remaining D249 path directly: relocation reveal's
+`isHiddenChanged` hook republished the already committed rectangle. Commit
+`035602730` reuses that rectangle only when both the accepted generation and
+live QWindow geometry match, while preserving the recovery solve for an
+ordinary displaced reveal. Recipe 073 passes its complete two-output topology
+matrix and exact one-publication assertion.
+
+Recipe 074 produced one loaded-host false failure and then passed unchanged.
+D256 (held titlebar endpoint expired before observer sampling) traced that race
+to the scripted 900 ms waypoint expiring during repeated D-Bus reads. Commit
+`226736315` uses a bounded two-second hold so the button-held endpoint remains
+observable before reversal. The final canonical gate remains pending. The
+real-session dock remains intentionally stopped until the reviewed merge is
+available.
 
 ## 2026-07-27: D241 unifies floating Dock presentation
 

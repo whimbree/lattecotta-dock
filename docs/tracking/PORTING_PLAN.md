@@ -5021,9 +5021,10 @@ prerequisites in the phases above are done.
 - [x] Fix D249 (completed geometry armed a delayed duplicate publication).
       Keep geometry application pending through the final QWindow rectangle,
       then advance the publication and disarm validation from the completed
-      state. Prove the old validator and coalescer deadlines cannot republish
+      state. Reuse an already committed final rectangle during relocation
+      reveal. Prove the old validator and coalescer deadlines cannot republish
       an axis change.
-      Commits: 4a6c1aa20, 69ae849e1
+      Commits: 4a6c1aa20, 69ae849e1, 035602730, 5563f8f20
 - [x] Fix D250 (failed LayerShell rollback traffic disappeared from
       observability). Return placement acceptance and configure traffic as
       separate values, including guarded setters used to restore a failed
@@ -5039,6 +5040,22 @@ prerequisites in the phases above are done.
       value snapshot. Window tracking and D-Bus consume only that coherent
       snapshot after startup.
       Commits: 69ae849e1
+- [x] Fix D253 (accepted placement preceded the final QWindow rectangle).
+      Retain the previous accepted snapshot until QWindow reaches the final
+      solved rectangle, then install and publish the new generation.
+      Commits: e76f63c71, 5563f8f20
+- [x] Fix D254 (D-Bus substituted target placement after startup). Permit
+      target fallback only during startup and refuse a missing accepted
+      placement afterward.
+      Commits: a39454327, 5563f8f20
+- [x] Fix D255 (axis-change acceptance could adopt a duplicate publication).
+      Compare the settled revision with the pre-mutation accepted revision and
+      require exactly one increment.
+      Commits: 5563f8f20
+- [x] Fix D256 (held titlebar endpoint expired before observer sampling).
+      Keep the button-held endpoint stable long enough for repeated D-Bus
+      sampling under nested-host load.
+      Commits: 226736315, 5563f8f20
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).
