@@ -192,6 +192,7 @@ static DockSystemViewRecord stableBottomTransitionRecord()
     record.transitionTarget =
         DockTransitionTarget::Floated;
     record.transitionProgress = 0.375;
+    record.transitionAnimationDuration = 200;
     record.transitionPhase =
         DockTransitionPhase::Floating;
     record.transitionDirection =
@@ -951,6 +952,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     record.transitionTarget =
         DockTransitionTarget::Floated;
     record.transitionProgress = 0.375;
+    record.transitionAnimationDuration = 200;
     record.transitionPhase =
         DockTransitionPhase::Floating;
     record.transitionDirection =
@@ -1051,8 +1053,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("snapshotSequence"),
         QStringLiteral("stacking"),
         QStringLiteral("views")}));
-    QCOMPARE(DockSystemSnapshot::SchemaVersion, 9);
-    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 9);
+    QCOMPARE(DockSystemSnapshot::SchemaVersion, 10);
+    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 10);
     QCOMPARE(root.value(QStringLiteral("snapshotSequence")).toString(), QStringLiteral("41"));
     QCOMPARE(
         root.value(
@@ -1200,6 +1202,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("strutsThickness"), QStringLiteral("surfaceGeometry"),
         QStringLiteral("surfaceGeometryPublicationRevision"),
         QStringLiteral("touchingWindowCount"),
+        QStringLiteral("transitionAnimationDuration"),
         QStringLiteral("transitionDirection"),
         QStringLiteral("transitionGeometryPresent"),
         QStringLiteral("transitionGeometryRevision"),
@@ -1321,6 +1324,10 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         view.value(
             QStringLiteral("transitionProgress")).toDouble(),
         0.375);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("transitionAnimationDuration")).toInt(),
+        200);
     QCOMPARE(
         view.value(
             QStringLiteral("transitionPhase")).toString(),
@@ -1477,6 +1484,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("stablePrimaryAxisLength"),
         QStringLiteral("stablePrimaryAxisStart"),
         QStringLiteral("touchingWindowCount"),
+        QStringLiteral("transitionAnimationDuration"),
         QStringLiteral("transitionProgress")};
     const QStringList booleanFields{
         QStringLiteral("onPrimary"), QStringLiteral("isHidden"), QStringLiteral("inStartup"),
@@ -1628,6 +1636,10 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
     requireJsonType(view, QStringLiteral("windowTouchGeometryRoleType"), QJsonValue::String);
     requireJsonType(view, QStringLiteral("transitionTarget"), QJsonValue::String);
     requireJsonType(view, QStringLiteral("transitionProgress"), QJsonValue::Double);
+    requireJsonType(
+        view,
+        QStringLiteral("transitionAnimationDuration"),
+        QJsonValue::Double);
     requireJsonType(view, QStringLiteral("transitionPhase"), QJsonValue::String);
     requireJsonType(view, QStringLiteral("transitionDirection"), QJsonValue::String);
     requireJsonType(view, QStringLiteral("transitionRunning"), QJsonValue::Bool);
@@ -1666,6 +1678,10 @@ void DbusReportsTest::dockSystemSnapshotPinsNullableWireStates()
              QString{});
     QCOMPARE(view.value(QStringLiteral("transitionTarget")).toString(), QStringLiteral("floated"));
     QCOMPARE(view.value(QStringLiteral("transitionProgress")).toDouble(), 1.0);
+    QCOMPARE(
+        view.value(
+            QStringLiteral("transitionAnimationDuration")).toInt(),
+        0);
     QCOMPARE(view.value(QStringLiteral("transitionPhase")).toString(), QStringLiteral("resting"));
     QCOMPARE(view.value(QStringLiteral("transitionDirection")).toString(), QStringLiteral("none"));
     QCOMPARE(view.value(QStringLiteral("transitionRunning")).toBool(), false);

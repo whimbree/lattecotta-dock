@@ -261,7 +261,7 @@ wait_for_dock_gap_policy() {
     local transition_geometry=unread panel_geometry_absent=unread
     local floating_popups=unread
     local target=unread phase=unread running=unread progress=-1
-    local configured_gap=-1 presented_gap=-1
+    local transition_duration=-1 configured_gap=-1 presented_gap=-1
     for _ in $(seq 1 80); do
         read -r active_maximized exists_maximized \
             <<< "$(e2e_json trackerData u "$view" | python3 -c '
@@ -272,9 +272,10 @@ print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMa
         read -r view_type visibility_mode floating_gap_configured \
             configured_panel eligible_panel configured_hide \
             dock_request target phase running progress \
+            transition_duration \
             transition_geometry panel_geometry_absent floating_popups \
             configured_gap presented_gap \
-            <<< "$(dock_field '"%s %s %s %s %s %s %s %s %s %s %.9f %s %s %s %d %d" % (
+            <<< "$(dock_field '"%s %s %s %s %s %s %s %s %s %s %.9f %d %s %s %s %d %d" % (
                 v["type"],
                 v["visibilityMode"],
                 str(v["floatingGapConfigured"]).lower(),
@@ -286,6 +287,7 @@ print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMa
                 v["transitionPhase"],
                 str(v["transitionRunning"]).lower(),
                 v["transitionProgress"],
+                v["transitionAnimationDuration"],
                 str(v["transitionGeometryPresent"]).lower(),
                 str(all(v[key] is None for key in (
                     "stableCanvasGeometry",
@@ -311,6 +313,7 @@ print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMa
               && "$target" == "$expected_target"
               && "$phase" == resting
               && "$running" == false
+              && "$transition_duration" -eq 200
               && "$transition_geometry" == false
               && "$panel_geometry_absent" == true
               && "$floating_popups" == false
@@ -507,6 +510,10 @@ kwriteconfig6 "${group_args[@]}" --key screenEdgeMargin 18 \
     || e2e_fail "could not configure the legacy Dock floating gap"
 kwriteconfig6 "${group_args[@]}" --key floatingInternalGapIsForced false \
     || e2e_fail "could not keep the legacy Dock gap under transition ownership"
+kwriteconfig6 "${group_args[@]}" --key floatingGapHidingWaitsMouse false \
+    || e2e_fail "could not configure immediate Dock attachment under the pointer"
+kwriteconfig6 "${group_args[@]}" --key durationTime 2 \
+    || e2e_fail "could not configure normal animation speed"
 e2e_dock_start 90 \
     || e2e_fail "dock did not restart with the legacy floating-Dock fixture"
 e2e_call setViewVisibilityMode us "$view" alwaysVisible >/dev/null \

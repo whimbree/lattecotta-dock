@@ -635,6 +635,7 @@ struct DockSystemViewRecord {
     QString windowTouchGeometryRoleType;
     DockTransitionTarget transitionTarget{DockTransitionTarget::Floated};
     qreal transitionProgress{1.0};
+    int transitionAnimationDuration{0};
     DockTransitionPhase transitionPhase{DockTransitionPhase::Resting};
     DockTransitionDirection transitionDirection{DockTransitionDirection::None};
     bool transitionRunning{false};
@@ -702,7 +703,7 @@ struct DockReservationGroupRecord
 };
 
 struct DockSystemSnapshot {
-    static constexpr int SchemaVersion = 9;
+    static constexpr int SchemaVersion = 10;
 
     quint64 snapshotSequence{0};
     bool globalConfigureAppletsMode{false};
@@ -1807,6 +1808,8 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
         transitionTargetName(record.transitionTarget);
     json[QStringLiteral("transitionProgress")] =
         record.transitionProgress;
+    json[QStringLiteral("transitionAnimationDuration")] =
+        record.transitionAnimationDuration;
     json[QStringLiteral("transitionPhase")] =
         transitionPhaseName(record.transitionPhase);
     json[QStringLiteral("transitionDirection")] =
@@ -2052,6 +2055,7 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                         view.transitionProgress))
                 || view.transitionProgress < 0.0
                 || view.transitionProgress > 1.0
+                || view.transitionAnimationDuration < 0
                 || view.screenEdgeMargin < 0
                 || (presentedGapRequired
                     && !presentedGapAvailable)

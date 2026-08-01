@@ -8,6 +8,7 @@
 import QtQuick 2.1
 import QtQuick.Window 2.2
 
+import org.kde.kirigami as Kirigami
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.plasmoid 2.0
 
@@ -28,6 +29,12 @@ Item{
 
     property int animationSpeed: LatteCore.WindowSystem.compositingActive ?
                                      (root.editMode ? 400 : animations.speedFactor.current * 1.62 * animations.duration.large) : 0
+    //! Floating attachment follows Plasma's own long-duration transition.
+    //! The 1.62 multiplier above belongs to Latte's full Dock slide and made
+    //! this much shorter internal gap motion feel delayed and heavy.
+    readonly property int floatingTransitionAnimationSpeed:
+        LatteCore.WindowSystem.compositingActive
+        ? animations.speedFactor.current * Kirigami.Units.longDuration : 0
 
     property bool inClientSideScreenEdgeSliding: false
     property bool inNormalState: ((animations.needBothAxis.count === 0) && (animations.needLength.count === 0))
@@ -63,7 +70,7 @@ Item{
         target: root.latteView ? root.latteView.floatingTransition : null
         property: "animationDuration"
         when: root.latteView && root.latteView.floatingTransition
-        value: manager.animationSpeed
+        value: manager.floatingTransitionAnimationSpeed
         restoreMode: Binding.RestoreNone
     }
 

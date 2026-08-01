@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Iterable, NoReturn
 
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 PLAN_FORMAT = "lattecotta.fp4c.operation-plan"
 REPLAY_FORMAT = "lattecotta.fp4c.operation-replay"
 FORMAT_VERSION = 1
@@ -961,6 +961,7 @@ VIEW_REQUIRED_KEYS = (
     "windowTouchGeometryRoleType",
     "transitionTarget",
     "transitionProgress",
+    "transitionAnimationDuration",
     "transitionPhase",
     "transitionDirection",
     "transitionRunning",
@@ -1107,6 +1108,7 @@ VIEW_NUMBER_KEYS = (
     "stableLayerShellMargin",
     "touchingWindowCount",
     "transitionProgress",
+    "transitionAnimationDuration",
 )
 
 VIEW_OPTIONAL_NUMBER_KEYS = (
