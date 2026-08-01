@@ -123,8 +123,9 @@
          positive floating-gap configuration, and separate legacy Dock
          maximized-gap request. The tracker owns touchingWindowCount; snapshot
          collection refuses a transition-policy copy that disagrees with it.
-         The Dock request covers Always Visible and Windows Go Below without
-         targeting the Panel transition. Schema 8 makes the tracker trigger
+         The Dock request is independent of visibility mode, so an edge-revealed
+         Dock reaches the same flush presentation without targeting the Panel
+         transition. Schema 8 makes the tracker trigger
          authoritative for both Panels and Docks, reports screenEdgeMargin,
          and defines stableTriggerGeometry as the full stable floating
          envelope translated one logical pixel inward and clipped to its
@@ -132,7 +133,9 @@
          floating Docks through the same fractional transition authority as
          floating Panels. Dock presentation keeps its QML-owned paint and
          input geometry while the stable QWindow and reservation remain
-         unchanged. The dockSystemData schema version is 9.
+         unchanged. Schema 10 adds transitionAnimationDuration, the exact
+         controller duration in milliseconds after the QML animation-speed
+         policy is applied. The dockSystemData schema version is 10.
          The mandatory per-view transition geometry,
          surface publication, and layer-shell configure revisions are
          process-local monotonic decimal strings.

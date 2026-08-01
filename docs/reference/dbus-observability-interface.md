@@ -83,7 +83,7 @@ Landed before or during the 2026-07-16 stabilization session:
   placement is pending. Startup alone reports the target assignment before
   that snapshot exists. A global rearrange session therefore does not report
   unrelated docks as configuring applets.
-- `dockSystemData() -> s` (compact JSON object, schema version 9; added by C0
+- `dockSystemData() -> s` (compact JSON object, schema version 10; added by C0
   (the atomic dock-system observability snapshot)). This is the relational
   all-docks read. One synchronous call captures the global configuration mode,
   every current dock, and every active output-edge reservation group. Docks
@@ -93,7 +93,7 @@ Landed before or during the 2026-07-16 stabilization session:
   only after a complete coordinator projection transaction.
   ```json
   {
-    "schemaVersion": 9,
+    "schemaVersion": 10,
     "snapshotSequence": "14",
     "globalConfigureAppletsMode": true,
     "stacking": {
@@ -194,6 +194,7 @@ Landed before or during the 2026-07-16 stabilization session:
       "windowTouchGeometryRoleType": "QRect",
       "transitionTarget": "attached",
       "transitionProgress": 0.375,
+      "transitionAnimationDuration": 200,
       "transitionPhase": "attaching",
       "transitionDirection": "towardAttached",
       "transitionRunning": true,
@@ -319,8 +320,11 @@ Landed before or during the 2026-07-16 stabilization session:
   or Dock transition owns the gap. A Dock still reports null Panel transition
   geometry because its QML layout owns paint and input presentation inside the
   stable surface.
+  Schema 10 adds `transitionAnimationDuration`, the controller's exact
+  duration in milliseconds after the QML animation-speed policy is applied.
 
-  `transitionTarget`, `transitionProgress`, `transitionPhase`,
+  `transitionTarget`, `transitionProgress`, `transitionAnimationDuration`,
+  `transitionPhase`,
   `transitionDirection`, and `transitionRunning` report the controller's
   complete qreal state. The direction is `none`, `towardAttached`, or
   `towardFloated`; it deliberately mirrors the phase so a torn observation
@@ -396,8 +400,8 @@ Landed before or during the 2026-07-16 stabilization session:
   attachment request. Entering an already attached view does not detach it.
   `dockGapHideRequested` is the separate Dock policy input.
   It requires `floatingGapConfigured` and rejects
-  `floatingPanelConfigured`. It is valid in the `alwaysVisible` and
-  `windowsGoBelow` Dock modes.
+  `floatingPanelConfigured`. It is independent of visibility mode because a
+  revealed Dock must use the same flush endpoint as an always-visible Dock.
   `touchingWindowCount` is the current count from the dedicated stable-trigger
   model and the tracker is authoritative for the serialized value. The
   transition controller retains a policy copy; collection refuses the entire
