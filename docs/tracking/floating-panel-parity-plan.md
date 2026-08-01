@@ -232,7 +232,28 @@ and PR #126 landed FP-4B.
       observer signals share that boundary, failed LayerShell postconditions
       restore the exact previous state, and D-Bus retains the previous applied
       output until replacement succeeds.
-      Commits: f2be2e994, fb22372c8
+      Commits: f2be2e994, fb22372c8, 4a6c1aa20, 69ae849e1
+- [x] D248 (output relocation waited for its own QWindow retarget) retires the
+      staged output component after Positioner accepts destination ownership,
+      without moving QWindow before the final placement boundary.
+      Commits: 4a6c1aa20
+- [x] D249 (completed geometry armed a delayed duplicate publication) keeps
+      application pending through the final QWindow rectangle and consumes the
+      already-satisfied geometry coalescer before advancing the revision.
+      Commits: 4a6c1aa20, 69ae849e1
+- [x] D250 (failed LayerShell rollback traffic disappeared from observability)
+      reports attempted and guarded rollback setter traffic independently from
+      placement acceptance.
+      Commits: 4a6c1aa20
+- [x] D251 (hot-unplug erased applied output identity before geometry) retains
+      durable connector, ScreenPool id, and output geometry after the optional
+      live screen disappears.
+      Commits: 4a6c1aa20, 79d43f2c8, 9e013a64a, 69ae849e1
+- [x] D252 (placement consumers mixed accepted and target dimensions) publishes
+      edge, orientation, alignment, primary-output policy, output identity, and
+      output geometry as one accepted value snapshot for window tracking and
+      D-Bus.
+      Commits: 69ae849e1
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
       independent unless a shared root is proved.
@@ -242,12 +263,14 @@ and PR #126 landed FP-4B.
       Commits: 1b0a88eeb
 - [x] The README describes the stable floating-panel behavior in timeless
       terms.
-- [x] The full canonical gate passes after the final source commit.
-      The replacement gate exited 0 at exact source head
-      `b1a27c1002e570ad99442bcd543d7e01c38519d3`, including all 124 CTest
+- [ ] The full canonical gate passes after the final source commit.
+      The pre-review replacement gate exited 0 at exact source head
+      `74c98a5db4123143306b720f2a6c994ac24980d1`, including all 125 CTest
       entries, QML and coverage ratchets, visual probes, the complete
       ASan/UBSan build, four nested-compositor recipes, package provenance
-      controls, and matrix refusals.
+      controls, and matrix refusals. The D249 and D252 follow-up correction at
+      `69ae849e1` passes its focused tests and nested recipes 073 and 074; its
+      replacement canonical gate is pending.
 - [x] Correct D226 (LayerShell output migration bypassed reservation-gated
       remapping) and D227 (layout mutation preceded destination-output
       preflight).
