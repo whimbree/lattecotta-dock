@@ -3132,7 +3132,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   across axes, preserves one accepted publication through the old delayed
   deadlines, then passes full-touching, partial-touching, disconnected, and
   restart cases. Recipe 074 passes live titlebar attachment before button
-  release for Panel, Center Dock, and expanding Justify Dock.
+  release for Panel, Center Dock, and expanding Justify Dock. Exact source head
+  `993a5cc5e98fbe70295efe8cb00c915b13389523` passes the canonical gate,
+  including all 125 CTest entries and the sanitized nested drive.
 - SEVERITY: release blocker.
 
 ### D251 - Hot-unplug erased applied output identity before geometry
@@ -3272,8 +3274,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `74c98a5db4123143306b720f2a6c994ac24980d1`, including all 125 CTest entries,
   QML and coverage ratchets, scene probes, the ASan/UBSan nested drive, package
   provenance checks, and matrix refusals. The corrected focused tests and both
-  nested placement recipes pass at `69ae849e1`; its replacement canonical gate
-  is pending.
+  nested placement recipes pass at `69ae849e1`. Exact source head
+  `993a5cc5e98fbe70295efe8cb00c915b13389523` passes the replacement canonical
+  gate with all 125 CTest entries, the ASan/UBSan nested drive, package
+  provenance checks, and matrix refusals.
 - SEVERITY: release blocker.
 
 ### D246 - Hidden partial Docks collapsed edge activation to one pixel
