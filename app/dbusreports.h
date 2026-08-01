@@ -2024,8 +2024,6 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
         const bool expectedDockGapHideRequest =
             view.type == Types::DockView
             && view.floatingGapConfigured
-            && (view.visibilityMode == Types::AlwaysVisible
-                || view.visibilityMode == Types::WindowsGoBelow)
             && view.attachOnWindowTouchConfigured
             && view.touchingWindowCount > 0;
         const bool presentedGapAvailable =
@@ -2154,11 +2152,7 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
         const bool dockTransitionOwnsGap =
             view.type == Types::DockView
             && view.floatingGapConfigured
-            && ((view.attachOnWindowTouchConfigured
-                 && (view.visibilityMode
-                        == Types::AlwaysVisible
-                     || view.visibilityMode
-                        == Types::WindowsGoBelow))
+            && (view.attachOnWindowTouchConfigured
                 || view.transitionRunning
                 || view.transitionProgress < 1.0);
         const int expectedPresentedGap =

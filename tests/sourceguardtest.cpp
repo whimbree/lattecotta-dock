@@ -334,10 +334,7 @@ private:
                    "&&!latteView.floatingPanelConfigured"
                    "&&attachOnWindowTouchConfigured"
                    "&&latteView.visibility"
-                   "&&(latteView.visibility.mode"
-                   "===LatteCore.Types.AlwaysVisible"
-                   "||latteView.visibility.mode"
-                   "===LatteCore.Types.WindowsGoBelow)"))
+                   "readonlypropertybooldockGapHideRequested:"))
             && main.contains(QStringLiteral(
                    "readonlypropertybooldockGapHideRequested:"
                    "directDockWindowTouchEligible"
@@ -668,6 +665,27 @@ private:
             && code.contains(QStringLiteral(
                    "wait_for_dock_gap_policy"
                    "windowsGoBelowtruetrueattached0"))
+            && code.contains(QStringLiteral(
+                   "setViewVisibilityModeus\"$view\"dodgeActive"))
+            && code.contains(QStringLiteral(
+                   "wait_for_dock_gap_policy"
+                   "dodgeActivetruetrueattached0"))
+            && code.contains(QStringLiteral(
+                   "wait_for_hidden_statetrue"))
+            && code.contains(QStringLiteral(
+                   "\"$E2E_FAKEPOINTER\"glide"
+                   "\\"
+                   "\"$reveal_x\"$((reveal_y-80))"
+                   "\\"
+                   "\"$reveal_x\"\"$reveal_y\""))
+            && code.contains(QStringLiteral(
+                   "wait_for_revealed_attached_bottom_dock"))
+            && code.contains(QStringLiteral(
+                   "str(\"bottom\"inv[\"enabledBorders\"]).lower()"))
+            && code.contains(QStringLiteral(
+                   "v[\"surfaceGeometry\"][1]"
+                   "+v[\"effectsRect\"][1]"
+                   "+v[\"effectsRect\"][3]"))
             && code.contains(QStringLiteral(
                    "v[\"presentedScreenEdgeGap\"]"))
             && code.contains(QStringLiteral(
@@ -2807,25 +2825,25 @@ void SourceGuardTest::stableFloatingPanelQml_rejectsDivergentZeroGapEligibility(
 
     QString dockVisibilityMain = readFile(QStringLiteral(
         "containment/package/contents/ui/main.qml"));
-    const QString dockVisibilityModes = QStringLiteral(
-        "        && (latteView.visibility.mode === "
-        "LatteCore.Types.AlwaysVisible\n"
-        "            || latteView.visibility.mode === "
-        "LatteCore.Types.WindowsGoBelow)");
+    const QString dockVisibilityAuthority = QStringLiteral(
+        "        && attachOnWindowTouchConfigured\n"
+        "        && latteView.visibility\n");
     QCOMPARE(
         dockVisibilityMain.count(
-            dockVisibilityModes),
+            dockVisibilityAuthority),
         1);
     dockVisibilityMain.replace(
-        dockVisibilityModes,
+        dockVisibilityAuthority,
         QStringLiteral(
+            "        && attachOnWindowTouchConfigured\n"
+            "        && latteView.visibility\n"
             "        && latteView.visibility.mode === "
-            "LatteCore.Types.AlwaysVisible"));
+            "LatteCore.Types.AlwaysVisible\n"));
     QVERIFY2(!matchesStableFloatingPanelQmlContract(
                  dockVisibilityMain, bindings, visibility, layouts, metrics,
                  backgroundTotals, viewHeader, viewImplementation),
-             "the legacy Dock request must cover both visibility modes that"
-             " consume hideThickScreenGap");
+             "Dock window-touch presentation must not depend on visibility"
+             " mode");
 
     QString gapImplementation = viewImplementation;
     const QString positiveGapDefinition = QStringLiteral(

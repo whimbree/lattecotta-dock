@@ -157,6 +157,9 @@ ContainmentItem {
         !!(latteView
            && latteView.visibility
            && latteView.visibility.containsMouse)
+    //! Gap attachment is visual presentation, not visibility policy. A Dock
+    //! revealed over an occupying window must reach the same flush endpoint
+    //! whether it was always visible, dodging, covered, or auto-hidden.
     readonly property bool directDockWindowTouchEligible:
         latteView
         && root.behaveAsDockWithMask
@@ -164,8 +167,6 @@ ContainmentItem {
         && !latteView.floatingPanelConfigured
         && attachOnWindowTouchConfigured
         && latteView.visibility
-        && (latteView.visibility.mode === LatteCore.Types.AlwaysVisible
-            || latteView.visibility.mode === LatteCore.Types.WindowsGoBelow)
     readonly property bool dockGapHideRequested:
         directDockWindowTouchEligible
         && latteView.windowTouchTracker
