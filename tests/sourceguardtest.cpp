@@ -47,7 +47,7 @@
 //     through both directions and a rapid reversal storm
 //   * FP-4C linked-view operation storm: a validated typed plan enters a
 //     whole-config transaction before any mutation, records exact replay and
-//     schema-9 state, and restores the pristine nested runtime on every exit
+//     schema-10 state, and restores the pristine nested runtime on every exit
 //   * Theme-aware icon rendering: every view shares the registered singleton's
 //     QML engine and offscreen software teardown stays on the basic render loop
 //   * Dock-system reporting: persistent-id ordering and original/clone
@@ -3644,7 +3644,7 @@ void SourceGuardTest::linkedOperationStormE2e_keepsTransactionalReplayContract()
             readFile(QStringLiteral(
                 "tests/e2e/fixtures/fp4c/operation_model.py"))),
         "the FP-4C operation storm must validate its typed plan before a"
-        " whole-config transaction, prove every schema-9 checkpoint and"
+        " whole-config transaction, prove every schema-10 checkpoint and"
         " compositor owner, record exact replay, and restore the pristine"
         " nested state on every exit");
 }

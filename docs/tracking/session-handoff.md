@@ -3,6 +3,35 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-08-01.
 
+## 2026-08-01: revealed Docks now retain the attached presentation
+
+D259 (floating attachment reused the slower whole-Dock slide timing) made the
+short internal gap transition use the same `1.62 * 240 ms` duration as a full
+Dock hide or reveal. `VisibilityManager.qml` now binds the per-view controller
+to Plasma's Kirigami long duration, still scaled by Latte's animation-speed
+preference. Schema 10 adds `transitionAnimationDuration`, collected from the
+controller after QML applies that policy. Nested recipe 071 pins the normal
+speed to 200 ms while preserving stable geometry and publication revisions.
+
+D260 (revealed dodge and auto-hide Docks kept their floating gap over windows)
+was a separate policy-routing defect. Live Dock 14 reported Dodge Active,
+seven touching windows, and configured attachment while
+`dockGapHideRequested` remained false. `directDockWindowTouchEligible` admitted
+only Always Visible and Windows Go Below, even though visibility determines
+whether the surface is shown rather than how the revealed surface is presented.
+The visibility allowlist is removed from QML and from the atomic snapshot
+agreement model. Nested recipe 071 now hides a bottom Dodge Active Dock behind
+a maximized client, reveals it through KWin's real edge, and observes an
+attached resting endpoint with zero gap, no screen-edge border, and painted
+output-edge equality.
+
+The reproduction also exposed D261 (the matrix pristine seed survived across
+nested vehicles). The persistent artifact directory retained a six-view seed
+for later runs that selected a one-view configuration base. The pristine seed
+now lives under the per-vehicle runtime. The corrected recipe stages exactly
+one view and passes. Commits `b1ed551be`, `d57f0ee4f`, and `1fe46b1e6` carry the
+three independent roots.
+
 ## 2026-08-01: real-test launcher lacked KWin window authority
 
 The exact merged `main` build at `86728e6c0` started from

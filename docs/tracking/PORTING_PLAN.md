@@ -5062,6 +5062,20 @@ prerequisites in the phases above are done.
       boundary, refresh KService, and refuse an invalid authority description
       instead of starting a half-functional dock.
       Commits: 0d30286cb, d97fe9d90
+- [x] Fix D259 (floating attachment reused the slower whole-Dock slide timing).
+      Give the internal per-view transition Plasma's Kirigami long duration,
+      retain Latte's animation-speed preference, and expose the applied
+      duration in the atomic dock-system snapshot.
+      Commits: b1ed551be
+- [x] Fix D260 (revealed dodge and auto-hide Docks kept their floating gap over
+      windows). Keep visibility policy responsible for showing the surface,
+      but make its window-touch presentation endpoint independent of visibility
+      mode once revealed.
+      Commits: d57f0ee4f
+- [x] Fix D261 (the matrix pristine seed survived across nested vehicles).
+      Store the seed in the per-vehicle runtime so a later recipe cannot reuse
+      another run's layout through persistent artifact storage.
+      Commits: 1fe46b1e6
 - [ ] Report D258 (KF6 device enumeration blocks the GUI thread on an
       unavailable hard NFS mount) upstream to KDE Solid/KIO. Preserve the traced
       Folder View call chain and keep the exact-path diagnostic isolation out

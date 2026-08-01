@@ -129,9 +129,11 @@ controller translates the visible presentation inside that stable edge canvas
 and reverses from its current fractional position without republishing physical
 geometry. The visible mask, blur and contrast regions, borders, corners, shadow
 padding, exact partial-span edge input, and popup anchor all follow that same
-internal presentation. Legacy Docks keep their maximized-window gap request in
-both Always Visible and Windows Go Below without gaining Panel transition
-geometry.
+internal presentation. Floating Docks keep their window-touch gap presentation
+in every visibility mode, including edge-revealed auto-hide and dodge modes,
+without gaining Panel transition geometry. That short internal motion uses
+Plasma's Kirigami long duration and cubic attachment curves; Latte's slower
+whole-Dock slide timing remains confined to hiding and revealing the surface.
 
 Legacy On All Screens members retain their derived-output behavior. A linked
 source stays protected from removal until its explicit members are removed, so

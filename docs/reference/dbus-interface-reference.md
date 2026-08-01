@@ -74,7 +74,7 @@ true with `isOffScreen`), what the compositor was told to reserve.
 call dockSystemData                    # s: compact schema-versioned JSON object
 ```
 
-Top level: `schemaVersion` (currently 9), `snapshotSequence` (decimal string,
+Top level: `schemaVersion` (currently 10), `snapshotSequence` (decimal string,
 process-local monotonic call identity), `globalConfigureAppletsMode`,
 `stacking`, `reservationStateGeneration` (decimal string),
 `reservationGroups`, and `views`. The complete view and reservation graph is
@@ -147,7 +147,9 @@ Per dock:
   `screenEdgeMargin`, `presentedScreenEdgeGap`,
   `touchingWindowCount`, `windowTouchGeometryRoleType`,
   `transitionTarget` (`attached|floated`),
-  `transitionProgress` (qreal 0 through 1), `transitionPhase`
+  `transitionProgress` (qreal 0 through 1),
+  `transitionAnimationDuration` (milliseconds after the QML animation-speed
+  policy is applied), `transitionPhase`
   (`resting|attaching|floating`), `transitionDirection`
   (`none|towardAttached|towardFloated`), `transitionRunning`,
   `transitionGeometryPresent`, `transitionGeometryRevision`,
@@ -170,8 +172,8 @@ Per dock:
   the window-touch arm. The separate `dockGapHideRequested` fact requires
   `floatingGapConfigured`, rejects `floatingPanelConfigured`, and selects the
   same per-view fractional target for a Dock without manufacturing Panel
-  transition geometry. It is valid for `alwaysVisible` and `windowsGoBelow`
-  Dock modes. `presentedScreenEdgeGap` equals
+  transition geometry. It is independent of Dock visibility mode.
+  `presentedScreenEdgeGap` equals
   `round(screenEdgeMargin * transitionProgress)` while that transition owns
   the Dock gap and the Metrics authority is live.
   Each geometry field is null when the controller has no stable geometry.
@@ -315,8 +317,8 @@ value is the tracker-owned count. `transitionTarget` must be `attached`
 exactly when either the eligible Panel equation or
 `dockGapHideRequested` is true and pointer deferral is false. Every other
 state must target `floated`. Docks consume the shared scalar through their
-existing internal layout in `alwaysVisible` and `windowsGoBelow`; they do not
-manufacture stable Panel transition geometry.
+existing internal layout in every visibility mode; they do not manufacture
+stable Panel transition geometry.
 
 An internal lineage, transition, or reservation invariant failure logs at
 critical severity and returns an empty D-Bus string. It never returns a smaller
@@ -337,7 +339,8 @@ jq '.views | map({persistentDockId,floatingGapConfigured,
                   screenEdgeMargin,presentedScreenEdgeGap,
                   stableTriggerGeometry,
                   floatingPanelConfigured,floatingPanelEligible,
-                  transitionTarget,transitionProgress,transitionPhase,
+                  transitionTarget,transitionProgress,
+                  transitionAnimationDuration,transitionPhase,
                   transitionGeometryRevision,
                   stableCanvasGeometry,currentVisibleGeometry,
                   requestedReservationDepth,reservationContributionDepth,

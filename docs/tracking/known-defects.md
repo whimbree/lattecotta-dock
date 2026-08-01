@@ -3191,6 +3191,64 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   presentation. No layout or configuration mutation was involved.
 - SEVERITY: known issue.
 
+### D261 - Matrix pristine seed survived across nested vehicles
+- STATUS: FIXED on the feature branch by `1fe46b1e6`.
+- FOUND: 2026-08-01, nested reproduction of the revealed Dodge Active Dock.
+- SYMPTOM: recipe 071 selects a one-view seed but starts with six views from an
+  earlier unrelated nested run. The requested Dock is not the only runtime
+  participant, so the recipe refuses before exercising its transition.
+- ROOT: `MATRIX_PRISTINE` lived under persistent e2e artifacts. `matrix_init`
+  intentionally preserves an existing pristine directory, which made a seed
+  outlive the nested compositor and configuration runtime that captured it.
+- FIX: keep the pristine configuration under the per-vehicle `E2E_RT`
+  directory. Artifacts remain persistent output, but executable fixture state
+  now has the same lifetime as its nested process vehicle.
+- EVIDENCE: two runs using a one-view base reproduced the same stale six-view
+  layout. After relocating the seed, the same command staged exactly one view
+  and recipe 071 completed its transition assertions.
+- SEVERITY: known issue.
+
+### D260 - Revealed dodge and auto-hide Docks kept their floating gap over windows
+- STATUS: FIXED on the feature branch by `d57f0ee4f`.
+- FOUND: 2026-08-01, real-layout acceptance of floating attachment.
+- SYMPTOM: a bottom Dodge Active Dock hides normally, but calling it forth over
+  a maximized or fullscreen client leaves the floating gap and rounded
+  screen-edge corners visible.
+- ROOT: `directDockWindowTouchEligible` admitted only Always Visible and
+  Windows Go Below. The per-view tracker still reported touching windows in
+  Dodge Active, but QML discarded that count before transition-policy
+  reconciliation. Visibility mode was incorrectly treated as presentation
+  ownership.
+- FIX: keep visibility responsible for whether the surface is shown and make
+  direct Dock window-touch attachment independent of visibility mode. The
+  atomic snapshot validator applies the same rule to every supported
+  visibility value.
+- EVIDENCE: live Dock 14 reported Dodge Active, seven touching windows,
+  attachment configured, and `dockGapHideRequested=false`. Nested recipe 071
+  now maximizes a real client, observes the Dock hidden at attached progress
+  zero, reveals it through KWin's edge, and observes zero presented gap, no
+  bottom border, and exact painted-output-edge equality.
+- SEVERITY: beta blocker.
+
+### D259 - Floating attachment reused the slower whole-Dock slide timing
+- STATUS: FIXED on the feature branch by `b1ed551be`.
+- FOUND: 2026-08-01, live comparison with Plasma 6 panel attachment.
+- SYMPTOM: removing or restoring a floating gap is visibly slower and less
+  fluid than Plasma even though the short internal presentation moves inside a
+  stable QWindow.
+- ROOT: the per-view transition reused `animationSpeed`, which multiplies
+  Latte's 240 ms large duration by 1.62 for a complete Dock hide or reveal.
+  That legacy surface-slide policy stretched the internal gap motion to about
+  389 ms. Plasma uses Kirigami's 200 ms long duration for this presentation.
+- FIX: bind `FloatingTransition::animationDuration` to Kirigami's long duration
+  scaled only by Latte's animation-speed preference. Keep the 1.62 multiplier
+  on the complete Dock slide. Schema 10 exposes the exact applied duration.
+- EVIDENCE: source guards reject restoring the whole-Dock timing authority and
+  reject inferring the readback from a global constant. Unit tests pin the
+  schema and typed field. Nested recipe 071 reports 200 ms while its stable
+  geometry and physical publication revisions remain fixed.
+- SEVERITY: beta blocker.
+
 ### D255 - Axis-change acceptance could adopt a duplicate publication
 - STATUS: FIXED on `main` by `8284accfb`.
 - FOUND: 2026-07-31, required independent follow-up review of PR #134.

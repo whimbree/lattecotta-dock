@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: 2026 Latte Dock contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Typed deterministic plan and schema-9 oracle for FP-4C."""
+"""Typed deterministic plan and schema-10 oracle for FP-4C."""
 
 from __future__ import annotations
 
