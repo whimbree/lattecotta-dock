@@ -2823,7 +2823,9 @@ inline QString serializeAppletConfigData(uint containmentId, int appletId, const
 }
 
 //! snapshot one live view into a value record (dbusreports.cpp)
-ViewRecord collectViewRecord(const Latte::View *view, bool globalConfigureAppletsMode);
+std::optional<ViewRecord> collectViewRecord(
+    const Latte::View *view,
+    bool globalConfigureAppletsMode);
 
 //! serialize a set of live views for the viewsData() D-Bus read
 QString collectViewsData(const QList<Latte::View *> &views, bool globalConfigureAppletsMode);
