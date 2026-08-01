@@ -3155,6 +3155,25 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   real-session window-feed and attachment acceptance remains pending.
 - SEVERITY: beta blocker.
 
+### D258 - Unavailable hard network mount can block the real-config process
+- STATUS: SUSPECTED.
+- FOUND: 2026-08-01, controlled restart during D257 diagnosis.
+- SYMPTOM: a real-config dock can stop answering D-Bus after startup while its
+  render threads remain alive.
+- ROOT: the main thread was observed in kernel wait
+  `rpc_wait_bit_killable` while both `/home/bree/nas` and `/mnt/downloads`
+  independently timed out against an unreachable server. The exact Latte,
+  applet, KIO, or task-metadata call that entered the mount is not yet proved.
+  Yama refused live attach, so attribution beyond the kernel wait would be a
+  guess.
+- FIX: none yet. Capture from process launch under syscall and debugger
+  tracing during the next deterministic outage, then fix or isolate the
+  synchronous caller at its owner.
+- EVIDENCE: both authorized and non-authorized launches reached the same
+  uninterruptible-looking but killable RPC wait. Killing the exact process
+  removed it cleanly. No layout or configuration mutation was involved.
+- SEVERITY: known issue.
+
 ### D255 - Axis-change acceptance could adopt a duplicate publication
 - STATUS: FIXED on `main` by `8284accfb`.
 - FOUND: 2026-07-31, required independent follow-up review of PR #134.
