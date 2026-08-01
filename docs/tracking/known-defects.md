@@ -3231,7 +3231,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D259 - Floating attachment reused the slower whole-Dock slide timing
-- STATUS: FIXED on the feature branch by `b1ed551be`.
+- STATUS: FIXED on the feature branch by `b1ed551be` and `ecb310a34`.
 - FOUND: 2026-08-01, live comparison with Plasma 6 panel attachment.
 - SYMPTOM: removing or restoring a floating gap is visibly slower and less
   fluid than Plasma even though the short internal presentation moves inside a
