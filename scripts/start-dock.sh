@@ -14,5 +14,4 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 readonly repo
 
-"$repo/scripts/ensure-dev-wayland-interfaces.sh" "$repo/build/bin/latte-dock"
 exec "$repo/scripts/restart-staged.sh" --user-config "$@"

@@ -15,6 +15,17 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
+readonly repo
+
+# KWin authorizes privileged Wayland interfaces against the exact executable
+# recorded by KService. Resolve BUILD at the shared real-config boundary so
+# normal, sanitized and post-e2e restarts cannot register one binary and run
+# another. This must finish before the lifecycle below stops the current dock.
+if [[ "${1:-}" == "--user-config" ]]; then
+    authority_build="${BUILD:-$repo/build}"
+    readonly authority_build
+    "$repo/scripts/ensure-dev-wayland-interfaces.sh" "$authority_build/bin/latte-dock"
+fi
 
 # The dock's comm depends on the build shape: the dev/staged binary runs as
 # latte-dock, but the nixpkgs-packaged one (programs.latte-dock module,

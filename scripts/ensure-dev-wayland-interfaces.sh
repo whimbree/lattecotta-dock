@@ -27,8 +27,8 @@ readonly data_home="${XDG_DATA_HOME:-${HOME:?HOME is required when XDG_DATA_HOME
 readonly applications_dir="$data_home/applications"
 readonly desktop_entry="$applications_dir/org.kde.latte-dock.current-dev.desktop"
 
-if [[ "$binary" == *$'\n'* || "$binary" == *$'\r'* ]]; then
-    echo "Lattecotta development binary path contains a desktop-entry line break" >&2
+if [[ "$binary" == *%* || "$binary" == *$'\n'* || "$binary" == *$'\r'* ]]; then
+    echo "Lattecotta development binary path cannot be represented as an exact KService executable: $binary" >&2
     exit 2
 fi
 
@@ -38,6 +38,13 @@ if [[ -z "$wayland_interfaces" || "$(grep -c '^X-KDE-Wayland-Interfaces=' "$desk
     echo "Lattecotta desktop template must declare exactly one Wayland interface list" >&2
     exit 2
 fi
+case ",$wayland_interfaces," in
+    *,org_kde_plasma_window_management,*) ;;
+    *)
+        echo "Lattecotta desktop template is missing org_kde_plasma_window_management" >&2
+        exit 2
+        ;;
+esac
 
 escape_exec_path() {
     local escaped="$1"
@@ -45,7 +52,6 @@ escape_exec_path() {
     escaped="${escaped//\"/\\\"}"
     escaped="${escaped//\`/\\\`}"
     escaped="${escaped//\$/\\$}"
-    escaped="${escaped//\%/%%}"
     printf '"%s"' "$escaped"
 }
 

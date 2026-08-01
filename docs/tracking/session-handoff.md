@@ -20,12 +20,14 @@ is a launcher identity defect, not transition geometry or task-model sharing.
 KWin grants the privileged protocol only when a desktop entry names the exact
 executable. Existing local development entries named the primary checkout and
 older validation worktrees, not `/tmp/latte-main-realtest`. The proposed fix
-makes `start-dock.sh` install one current-development entry using the
-authoritative interface list from the shipped desktop template and refresh
-KService before any dock process starts. The isolated launcher test covers
-paths with spaces and desktop field-code characters, an unchanged cache
-refresh, worktree replacement, missing-binary refusal, and helper-before-launch
-ordering.
+registers the executable selected by `BUILD` at the shared real-config restart
+boundary, using the authoritative interface list from the shipped desktop
+template, and refreshes KService before any dock process is stopped. This also
+covers sanitized and post-e2e restores. The isolated launcher test covers paths
+with spaces, refusal of percent paths that cannot round-trip through KService,
+an unchanged cache refresh, worktree replacement, a real `BUILD` override,
+missing-binary refusal, required-interface validation, and
+helper-before-lifecycle ordering.
 
 The controlled authority restart also exposed D258 (an unavailable hard
 network mount can block the real-config process). Both `/home/bree/nas` and
