@@ -180,13 +180,14 @@ does not use monitor adjacency. Portrait, landscape, disconnected, partially
 touching, fully touching, and overlapping-coordinate arrangements therefore
 use the same per-output calculation.
 
-## Initial policy
+## Window-touch policy
 
 The fractional attach-on-window-touch transition applies to floating
-`AlwaysVisible` Panels. Floating Docks use the same live trigger for their
-existing internal gap presentation in `AlwaysVisible` and `WindowsGoBelow`
-modes. Other visibility modes retain their existing visibility policy.
-`WindowsGoBelow` is not reclassified as an ordinary reserving Panel.
+`AlwaysVisible` Panels. Every floating Dock uses the same live trigger for its
+existing internal gap presentation. Visibility mode independently decides
+whether the Dock is shown; when revealed over a touching window, its stable
+presentation is attached in every mode. `WindowsGoBelow` is not reclassified
+as an ordinary reserving Panel.
 
 ## Required observability
 
@@ -194,7 +195,7 @@ The atomic dock-system readback must expose, per view:
 
 - eligibility and configured policy;
 - target and current floatingness;
-- transition phase and direction;
+- transition phase, direction, and applied animation duration;
 - stable canvas, attached, floated, current visible, trigger, paint-mask, and
   input-bridge rectangles;
 - current internal content-translation offset;
