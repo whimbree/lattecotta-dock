@@ -153,9 +153,9 @@ for dock_id, placement in expected.items():
 assert_axis_change_publishes_once() {
     local view="$1" expected_screen_id="$2" expected_edge="$3" expected_alignment="$4"
     local before_revision="$5"
-    local first_revision=""
+    local publication_observed=0
     for _ in $(seq 1 150); do
-        first_revision="$(snapshot | python3 -c '
+        if snapshot | python3 -c '
 import json, sys
 dock_id = int(sys.argv[1])
 expected = (int(sys.argv[2]), sys.argv[3], sys.argv[4])
@@ -167,27 +167,28 @@ if not view:
 actual = (view["screenId"], view["edge"], view["alignment"])
 if (actual != expected
         or view["relocationGeneration"] != view["appliedRelocationGeneration"]
-        or str(view["surfaceGeometryPublicationRevision"]) == sys.argv[5]
+        or int(view["surfaceGeometryPublicationRevision"]) <= int(sys.argv[5])
         or view["windowGeometry"] != view["surfaceGeometry"]):
     raise SystemExit(1)
-print(view["surfaceGeometryPublicationRevision"])
-' "$view" "$expected_screen_id" "$expected_edge" "$expected_alignment" "$before_revision" 2>/dev/null)" \
-            && [[ -n "$first_revision" ]] \
-            && break
+' "$view" "$expected_screen_id" "$expected_edge" "$expected_alignment" "$before_revision" \
+                2>/dev/null; then
+            publication_observed=1
+            break
+        fi
         sleep 0.02
     done
-    [[ -n "$first_revision" ]] \
+    ((publication_observed == 1)) \
         || e2e_fail "axis-changing placement never reached its first complete publication"
 
-    # The old validator fired at 500 ms and its coalescer republished at
-    # 650 ms. Observe past both deadlines and require the first complete
-    # publication to remain authoritative.
+    # Old coalescers could fire at 150 ms directly or at 650 ms after the
+    # validator. Compare with the pre-mutation revision after both deadlines;
+    # even a missed intermediate sample cannot hide an extra publication.
     sleep 0.8
-    snapshot | python3 -c '
+    if ! snapshot | python3 -c '
 import json, sys
 dock_id = int(sys.argv[1])
 expected = (int(sys.argv[2]), sys.argv[3], sys.argv[4])
-first_revision = sys.argv[5]
+before_revision = int(sys.argv[5])
 views = {view["persistentDockId"]: view
          for view in json.load(sys.stdin)["views"]}
 view = views.get(dock_id)
@@ -196,12 +197,17 @@ if not view:
 actual = (view["screenId"], view["edge"], view["alignment"])
 if actual != expected:
     raise SystemExit(f"axis-changing placement drifted: {actual!r}")
-if str(view["surfaceGeometryPublicationRevision"]) != first_revision:
+if int(view["surfaceGeometryPublicationRevision"]) != before_revision + 1:
     raise SystemExit("geometry validator republished a completed placement")
 if view["windowGeometry"] != view["surfaceGeometry"]:
     raise SystemExit("QWindow and applied surface diverged after publication")
-' "$view" "$expected_screen_id" "$expected_edge" "$expected_alignment" "$first_revision" \
-        || e2e_fail "axis-changing placement scheduled a redundant geometry publication"
+' "$view" "$expected_screen_id" "$expected_edge" "$expected_alignment" "$before_revision"; then
+        snapshot > "$E2E_ARTIFACTS/fp4b-axis-change-extra-publication.json" \
+            || e2e_fail "could not preserve the duplicate axis-change publication"
+        printf '%s\n' "$before_revision" \
+            > "$E2E_ARTIFACTS/fp4b-axis-change-before-revision.txt"
+        e2e_fail "axis-changing placement scheduled a redundant geometry publication"
+    fi
 
     # Settlement also includes longer-lived presentation bookkeeping and may
     # include a later content-driven publication. Wait for convergence without
