@@ -4687,12 +4687,12 @@ prerequisites in the phases above are done.
       Commits: b552508e3 (PR #124)
 - [ ] Fix D209 (partial-reservation recipe lacks a reproducible schema-current
       front door).
-      Recipe 061 hard-codes schema version 6 after schema 7 landed and assumes
-      an externally prepared three-view fixture. Give the recipe a
-      deterministic fixture and registered invocation, then pin the current
-      schema contract without folding the repair invisibly into FP-4B (the
-      multi-output and separated-span topology acceptance).
-      Commits:
+      Recipe 061 assumed an externally prepared three-view fixture and formerly
+      hard-coded schema version 6. PR #139 updates that boundary to schema 10.
+      Give the recipe a deterministic fixture and registered invocation without
+      folding the remaining repair invisibly into FP-4B (the multi-output and
+      separated-span topology acceptance).
+      Commits: 8cfa1ce20 (schema-current assertion only, PR #139)
 - [x] Fix D210 (floating panel attachment changed primary-axis layout
       clearance). Keep the painted-border transition visual-only. Configured
       floating Panels must retain their reactive primary-axis layout and popup
