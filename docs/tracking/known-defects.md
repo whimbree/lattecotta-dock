@@ -2682,19 +2682,19 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FOUND: 2026-07-25, FP-4B (multi-output and separated-span topology
   acceptance) preflight.
 - SYMPTOM: `tests/e2e/061-partial-reservation-placement.sh` requires an
-  externally prepared three-view fixture and rejects the current
-  `dockSystemData` readback because it still requires schema version 6 after
-  schema version 7 landed.
+  externally prepared three-view fixture. Before PR #139, it also rejected the
+  current `dockSystemData` readback because it still required schema version 6.
 - ROOT: the specialized recipe was added without a deterministic fixture
   constructor or registered runner entry, so its embedded schema contract did
   not participate in the schema 7 gate.
 - REQUIRED: give recipe 061 a reproducible fixture and explicit runner entry,
-  update its schema assertion to the current contract, and prove its
-  maximum-depth reservation and non-intersecting side-view assertions remain
-  non-vacuous.
-- EVIDENCE: the recipe's final state assertion requires
-  `schemaVersion == 6`; no script, manifest, or tracking entry invokes recipe
-  061 by name.
+  then prove its maximum-depth reservation and non-intersecting side-view
+  assertions remain non-vacuous.
+- PARTIAL FIX: PR #139 commit `8cfa1ce20` updates the first-read publication
+  boundary to schema 10. The missing fixture and registered invocation keep
+  D209 open.
+- EVIDENCE: the recipe now requires `schemaVersion == 10`; no script, manifest,
+  or tracking entry invokes recipe 061 by name.
 
 ### D210 - Floating panel attachment changed primary-axis layout clearance
 - STATUS: FIXED IN PR #126 (`dc0fda084`).
