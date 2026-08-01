@@ -27,6 +27,17 @@ paths with spaces and desktop field-code characters, an unchanged cache
 refresh, worktree replacement, missing-binary refusal, and helper-before-launch
 ordering.
 
+The controlled authority restart also exposed D258 (an unavailable hard
+network mount can block the real-config process). Both `/home/bree/nas` and
+`/mnt/downloads` timed out independently while their server was unreachable.
+The Latte main thread entered kernel wait
+`rpc_wait_bit_killable`; D-Bus stopped responding until the process was killed.
+The exact in-process caller remains unproved because live attach is blocked by
+Yama and the kernel wait occurred before child-launched tracing was armed.
+This is recorded separately rather than attributed to the launcher or floating
+transition. The real dock is intentionally stopped until the mounts recover;
+no layout or configuration was changed.
+
 ## 2026-07-31: D244 through D247 isolate live presentation
 
 D244 (live attached Dock presentation leaked into stable geometry) remained
