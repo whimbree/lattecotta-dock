@@ -3175,7 +3175,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   NFS4 mount is hard and its server is unreachable. This call is outside
   Latte's window, placement, task, and transition code.
 - FIX: no Latte-side masking is appropriate. Report the synchronous device
-  accessibility probe to the KF6 Solid/KIO owner and restore normal launches
+  accessibility probe upstream to KDE Solid/KIO and restore normal launches
   when the mount server is reachable or the mount policy no longer permits an
   unbounded GUI-thread wait. The diagnostic run may intercept only this exact
   path to prove unrelated Latte behavior, but that interception is not a
