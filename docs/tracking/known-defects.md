@@ -2690,7 +2690,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - REQUIRED: give recipe 061 a reproducible fixture and explicit runner entry,
   then prove its maximum-depth reservation and non-intersecting side-view
   assertions remain non-vacuous.
-- PARTIAL FIX: PR #139 commit `8cfa1ce20` updates the first-read publication
+- PARTIAL FIX: PR #139 commit `1427e9b41` updates the first-read publication
   boundary to schema 10. The missing fixture and registered invocation keep
   D209 open.
 - EVIDENCE: the recipe now requires `schemaVersion == 10`; no script, manifest,
@@ -3192,7 +3192,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: known issue.
 
 ### D261 - Matrix pristine seed survived across nested vehicles
-- STATUS: FIXED on the feature branch by `1fe46b1e6`.
+- STATUS: FIXED on `main` by `d17a81367` (PR #139).
 - FOUND: 2026-08-01, nested reproduction of the revealed Dodge Active Dock.
 - SYMPTOM: recipe 071 selects a one-view seed but starts with six views from an
   earlier unrelated nested run. The requested Dock is not the only runtime
@@ -3209,7 +3209,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: known issue.
 
 ### D260 - Revealed dodge and auto-hide Docks kept their floating gap over windows
-- STATUS: FIXED on the feature branch by `d57f0ee4f`.
+- STATUS: FIXED on `main` by `6f96f9408` (PR #139).
 - FOUND: 2026-08-01, real-layout acceptance of floating attachment.
 - SYMPTOM: a bottom Dodge Active Dock hides normally, but calling it forth over
   a maximized or fullscreen client leaves the floating gap and rounded
@@ -3231,7 +3231,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D259 - Floating attachment reused the slower whole-Dock slide timing
-- STATUS: FIXED on the feature branch by `b1ed551be` and `ecb310a34`.
+- STATUS: FIXED on `main` by `cd74a9244` and `96040fe34` (PR #139).
 - FOUND: 2026-08-01, live comparison with Plasma 6 panel attachment.
 - SYMPTOM: removing or restoring a floating gap is visibly slower and less
   fluid than Plasma even though the short internal presentation moves inside a

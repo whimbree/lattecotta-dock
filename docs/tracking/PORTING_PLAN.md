@@ -4692,7 +4692,7 @@ prerequisites in the phases above are done.
       Give the recipe a deterministic fixture and registered invocation without
       folding the remaining repair invisibly into FP-4B (the multi-output and
       separated-span topology acceptance).
-      Commits: 8cfa1ce20 (schema-current assertion only, PR #139)
+      Commits: 1427e9b41 (schema-current assertion only, PR #139)
 - [x] Fix D210 (floating panel attachment changed primary-axis layout
       clearance). Keep the painted-border transition visual-only. Configured
       floating Panels must retain their reactive primary-axis layout and popup
@@ -5066,16 +5066,16 @@ prerequisites in the phases above are done.
       Give the internal per-view transition Plasma's Kirigami long duration,
       retain Latte's animation-speed preference, and expose the applied
       duration in the atomic dock-system snapshot.
-      Commits: b1ed551be, ecb310a34
+      Commits: cd74a9244, 96040fe34
 - [x] Fix D260 (revealed dodge and auto-hide Docks kept their floating gap over
       windows). Keep visibility policy responsible for showing the surface,
       but make its window-touch presentation endpoint independent of visibility
       mode once revealed.
-      Commits: d57f0ee4f
+      Commits: 6f96f9408
 - [x] Fix D261 (the matrix pristine seed survived across nested vehicles).
       Store the seed in the per-vehicle runtime so a later recipe cannot reuse
       another run's layout through persistent artifact storage.
-      Commits: 1fe46b1e6
+      Commits: d17a81367
 - [ ] Report D258 (KF6 device enumeration blocks the GUI thread on an
       unavailable hard NFS mount) upstream to KDE Solid/KIO. Preserve the traced
       Folder View call chain and keep the exact-path diagnostic isolation out
