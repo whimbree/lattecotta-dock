@@ -176,7 +176,9 @@ int physicalLayerShellMarginAtEdge(
 }
 }
 
-ViewRecord collectViewRecord(const Latte::View *view, bool globalConfigureAppletsMode)
+std::optional<ViewRecord> collectViewRecord(
+    const Latte::View *view,
+    bool globalConfigureAppletsMode)
 {
     //! views come from Synchronizer::currentViews(), not from outside the
     //! process, and a registered view always carries its containment and
@@ -199,6 +201,13 @@ ViewRecord collectViewRecord(const Latte::View *view, bool globalConfigureApplet
     const auto *const positioner = view->positioner();
     const auto &appliedPlacement =
         positioner->appliedPlacementSnapshot();
+    const bool inStartup = positioner->inStartup();
+    if (!appliedPlacement && !inStartup) {
+        qCritical()
+            << "dbusreports: refusing view record without an accepted placement"
+            << view->containment()->id();
+        return std::nullopt;
+    }
     record.screen = appliedPlacement
         ? appliedPlacement->output.connector
         : positioner->currentScreenName();
@@ -216,7 +225,7 @@ ViewRecord collectViewRecord(const Latte::View *view, bool globalConfigureApplet
             view->alignment());
     record.visibilityMode = view->visibility()->mode();
     record.isHidden = view->visibility()->isHidden();
-    record.inStartup = view->positioner()->inStartup();
+    record.inStartup = inStartup;
     record.isOffScreen = view->positioner()->isOffScreen();
     record.absoluteGeometry = view->absoluteGeometry();
     record.localGeometry = view->localGeometry();
@@ -841,7 +850,13 @@ QString collectViewsData(const QList<Latte::View *> &views, bool globalConfigure
     records.reserve(views.count());
 
     for (const auto view : views) {
-        records << collectViewRecord(view, globalConfigureAppletsMode);
+        const auto record = collectViewRecord(
+            view,
+            globalConfigureAppletsMode);
+        if (!record) {
+            return {};
+        }
+        records << *record;
     }
 
     return serializeViewRecords(records);
@@ -1052,6 +1067,13 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
             view->positioner();
         const auto &appliedPlacement =
             positioner->appliedPlacementSnapshot();
+        if (!appliedPlacement
+                && !positioner->inStartup()) {
+            qCritical()
+                << "dbusreports: refusing dock-system record without an accepted placement"
+                << record.persistentDockId;
+            return std::nullopt;
+        }
         record.screen = appliedPlacement
             ? appliedPlacement->output.connector
             : positioner->currentScreenName();
