@@ -326,7 +326,58 @@ print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMa
         fi
         sleep 0.05
     done
-    e2e_fail "Dock maximized-gap policy did not settle (active=$active_maximized exists=$exists_maximized type=$view_type visibility=$visibility_mode floatingGapConfigured=$floating_gap_configured configuredPanel=$configured_panel panelEligible=$eligible_panel configuredHide=$configured_hide dockRequest=$dock_request target=$target phase=$phase running=$running progress=$progress configuredGap=$configured_gap presentedGap=$presented_gap transitionGeometry=$transition_geometry panelGeometryAbsent=$panel_geometry_absent floatingPopups=$floating_popups)"
+    e2e_fail "Dock maximized-gap policy did not settle (active=$active_maximized exists=$exists_maximized type=$view_type visibility=$visibility_mode floatingGapConfigured=$floating_gap_configured configuredPanel=$configured_panel panelEligible=$eligible_panel configuredHide=$configured_hide dockRequest=$dock_request target=$target phase=$phase running=$running progress=$progress duration=$transition_duration configuredGap=$configured_gap presentedGap=$presented_gap transitionGeometry=$transition_geometry panelGeometryAbsent=$panel_geometry_absent floatingPopups=$floating_popups)"
+}
+
+wait_for_hidden_state() {
+    local expected="$1" hidden=unread
+    for _ in $(seq 1 100); do
+        hidden="$(dock_field 'str(v["isHidden"]).lower()')" \
+            || e2e_fail "could not read the Dodge Active hidden state"
+        [[ "$hidden" == "$expected" ]] && return 0
+        sleep 0.05
+    done
+    e2e_fail "Dodge Active Dock hidden state stayed $hidden; expected $expected"
+}
+
+wait_for_revealed_attached_bottom_dock() {
+    local snapshot="" hidden=unread target=unread phase=unread running=unread
+    local progress=-1 presented_gap=-1 screen_bottom=-1 painted_bottom=-1
+    local screen_edge_border=unread
+    for _ in $(seq 1 100); do
+        snapshot="$(dock_field '"%s %s %s %s %.9f %d %d %d %s" % (
+            str(v["isHidden"]).lower(),
+            v["transitionTarget"],
+            v["transitionPhase"],
+            str(v["transitionRunning"]).lower(),
+            v["transitionProgress"],
+            v["presentedScreenEdgeGap"],
+            v["screenGeometry"][1] + v["screenGeometry"][3],
+            v["surfaceGeometry"][1] + v["effectsRect"][1]
+                + v["effectsRect"][3],
+            str("bottom" in v["enabledBorders"]).lower(),
+        )')" || {
+            sleep 0.05
+            continue
+        }
+        read -r hidden target phase running progress presented_gap \
+            screen_bottom painted_bottom screen_edge_border <<< "$snapshot"
+        if [[ "$hidden" == false
+              && "$target" == attached
+              && "$phase" == resting
+              && "$running" == false
+              && "$presented_gap" -eq 0
+              && "$screen_bottom" -eq "$painted_bottom"
+              && "$screen_edge_border" == false ]] \
+                && awk -v actual="$progress" \
+                    'BEGIN { difference = actual; if (difference < 0) difference = -difference; exit !(difference < 0.000001) }'; then
+            return 0
+        fi
+        sleep 0.05
+    done
+    e2e_dumpwins >&2 || true
+    e2e_json viewConfigData u "$view" >&2 || true
+    e2e_fail "revealed Dodge Active Dock did not become flush and square-edged (hidden=$hidden target=$target phase=$phase running=$running progress=$progress gap=$presented_gap screenBottom=$screen_bottom paintedBottom=$painted_bottom screenEdgeBorder=$screen_edge_border)"
 }
 
 konsole_frame_geometry() {
@@ -539,4 +590,27 @@ wait_for_dock_gap_policy windowsGoBelow true true attached 0
     || e2e_fail "KWin did not restore the client for the WindowsGoBelow Dock check"
 wait_for_dock_gap_policy windowsGoBelow false false floated 1
 
-echo "FP-2/FP-4A stable canvas held its maximum-depth reservation across qreal reversals and preserved the separate Always Visible and Windows Go Below Dock maximized-gap arm"
+e2e_call setViewVisibilityMode us "$view" dodgeActive >/dev/null \
+    || e2e_fail "could not set the floating Dock fixture to Dodge Active"
+wait_for_dock_gap_policy dodgeActive false false floated 1
+wait_for_hidden_state false
+[[ "$(set_konsole_maximized true)" == "$fixture_id" ]] \
+    || e2e_fail "KWin did not maximize the client for the Dodge Active Dock check"
+wait_for_dock_gap_policy dodgeActive true true attached 0
+wait_for_hidden_state true
+
+read -r reveal_x reveal_y <<< "$(dock_field '"%d %d" % (
+    v["absoluteGeometry"][0] + v["absoluteGeometry"][2] // 2,
+    v["screenGeometry"][1] + v["screenGeometry"][3] - 1,
+)')"
+"$E2E_FAKEPOINTER" glide \
+    "$reveal_x" $((reveal_y - 80)) \
+    "$reveal_x" "$reveal_y" \
+    || e2e_fail "could not glide the pointer toward the Dodge Active screen edge"
+wait_for_revealed_attached_bottom_dock
+
+[[ "$(set_konsole_maximized false)" == "$fixture_id" ]] \
+    || e2e_fail "KWin did not restore the client after the Dodge Active Dock check"
+wait_for_dock_gap_policy dodgeActive false false floated 1
+
+echo "FP-2/FP-4A stable canvas held its maximum-depth reservation across qreal reversals; Always Visible, Windows Go Below, and edge-revealed Dodge Active Docks reached the correct window-touch endpoint"

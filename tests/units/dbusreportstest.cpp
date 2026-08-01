@@ -20,6 +20,7 @@
 #include <QVariantMap>
 
 // C++
+#include <array>
 #include <cstddef>
 #include <limits>
 #include <memory>
@@ -2292,9 +2293,24 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         dock.screenEdgeMargin = 0;
         QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
         dock.screenEdgeMargin = 5;
-        dock.visibilityMode =
-            Types::WindowsGoBelow;
-        QVERIFY(dockTransitionRecordsAgree(dockSnapshot));
+        constexpr std::array dockVisibilityModes{
+            Types::AlwaysVisible,
+            Types::AutoHide,
+            Types::DodgeActive,
+            Types::DodgeMaximized,
+            Types::DodgeAllWindows,
+            Types::WindowsGoBelow,
+            Types::WindowsCanCover,
+            Types::WindowsAlwaysCover,
+            Types::SidebarOnDemand,
+            Types::SidebarAutoHide,
+            Types::NormalWindow,
+        };
+        for (const Types::Visibility mode : dockVisibilityModes) {
+            dock.visibilityMode = mode;
+            QVERIFY(dockTransitionRecordsAgree(dockSnapshot));
+        }
+        dock.visibilityMode = Types::AlwaysVisible;
         dock.stableTriggerGeometry->translate(1, 0);
         QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
         dock.stableTriggerGeometry =
@@ -2332,11 +2348,9 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
             QStringLiteral("right"),
             QStringLiteral("left"),
         };
-        dock.visibilityMode =
-            Types::DodgeActive;
-        QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
-        dock.visibilityMode =
-            Types::AlwaysVisible;
+        dock.visibilityMode = Types::DodgeActive;
+        QVERIFY(dockTransitionRecordsAgree(dockSnapshot));
+        dock.visibilityMode = Types::AlwaysVisible;
         dock.floatingPanelConfigured = true;
         QVERIFY(!dockTransitionRecordsAgree(dockSnapshot));
         dock.floatingPanelConfigured = false;
