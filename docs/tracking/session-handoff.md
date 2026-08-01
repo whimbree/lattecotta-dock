@@ -172,10 +172,11 @@ a live view across axes, observes one accepted publication beyond both old
 deadlines, then passes full-touching, partial-touching, disconnected, and
 restart cases. A later content-sized solve remains valid after the stale-timer
 window. Recipe 074 passes live titlebar attachment before button release for
-Panel, Center Dock, and expanding Justify Dock. The replacement canonical gate
-passes at exact source head `993a5cc5e98fbe70295efe8cb00c915b13389523`,
-including all 125 CTest entries, QML and coverage ratchets, scene probes, the
-ASan/UBSan nested drive, package provenance checks, and matrix refusals.
+Panel, Center Dock, and expanding Justify Dock. The earlier replacement
+canonical gate passed at exact source head
+`993a5cc5e98fbe70295efe8cb00c915b13389523`, including all 125 CTest entries,
+QML and coverage ratchets, scene probes, the ASan/UBSan nested drive, package
+provenance checks, and matrix refusals.
 
 The required independent follow-up review returned `DO NOT MERGE` with three
 remaining publication findings. D253 (accepted placement preceded the final
@@ -200,7 +201,10 @@ Recipe 074 produced one loaded-host false failure and then passed unchanged.
 D256 (held titlebar endpoint expired before observer sampling) traced that race
 to the scripted 900 ms waypoint expiring during repeated D-Bus reads. Commit
 `226736315` uses a bounded two-second hold so the button-held endpoint remains
-observable before reversal. The final canonical gate remains pending. The
+observable before reversal. The final canonical gate exited 0 at exact source
+head `3a9b941df4d6cf77759e1c18e4598a0a23c8b5ce`, including all 125 CTest
+entries, QML and coverage ratchets, scene probes, the complete ASan/UBSan build
+and nested drive, package provenance checks, and matrix refusals. The
 real-session dock remains intentionally stopped until the reviewed merge is
 available.
 

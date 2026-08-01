@@ -3203,7 +3203,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   deadlines, then passes full-touching, partial-touching, disconnected, and
   restart cases. Recipe 074 passes live titlebar attachment before button
   release for Panel, Center Dock, and expanding Justify Dock. Exact source head
-  `993a5cc5e98fbe70295efe8cb00c915b13389523` passes the canonical gate,
+  `3a9b941df4d6cf77759e1c18e4598a0a23c8b5ce` passes the canonical gate,
   including all 125 CTest entries and the sanitized nested drive.
 - SEVERITY: release blocker.
 
@@ -3353,7 +3353,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   QML and coverage ratchets, scene probes, the ASan/UBSan nested drive, package
   provenance checks, and matrix refusals. The corrected focused tests and both
   nested placement recipes pass at `69ae849e1`. Exact source head
-  `993a5cc5e98fbe70295efe8cb00c915b13389523` passes the replacement canonical
+  `3a9b941df4d6cf77759e1c18e4598a0a23c8b5ce` passes the replacement canonical
   gate with all 125 CTest entries, the ASan/UBSan nested drive, package
   provenance checks, and matrix refusals.
 - SEVERITY: release blocker.
