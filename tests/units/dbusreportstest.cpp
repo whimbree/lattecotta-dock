@@ -1846,6 +1846,10 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         ++*snapshot.views[0]
                .presentedScreenEdgeGap;
     });
+    rejects([](auto &snapshot) {
+        snapshot.views[0]
+            .transitionAnimationDuration = -1;
+    });
 
     {
         DockSystemSnapshot startup = valid;
