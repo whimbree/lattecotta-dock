@@ -19,15 +19,19 @@ D257 (the real-desktop launcher omitted KWin authority for worktree binaries)
 is a launcher identity defect, not transition geometry or task-model sharing.
 KWin grants the privileged protocol only when a desktop entry names the exact
 executable. Existing local development entries named the primary checkout and
-older validation worktrees, not `/tmp/latte-main-realtest`. The proposed fix
-registers the executable selected by `BUILD` at the shared real-config restart
-boundary, using the authoritative interface list from the shipped desktop
-template, and refreshes KService before any dock process is stopped. This also
-covers sanitized and post-e2e restores. The isolated launcher test covers paths
-with spaces, refusal of percent paths that cannot round-trip through KService,
-an unchanged cache refresh, worktree replacement, a real `BUILD` override,
-missing-binary refusal, required-interface validation, and
-helper-before-lifecycle ordering.
+older validation worktrees, not `/tmp/latte-main-realtest`. PR #136 fixed the
+launcher boundary in `0d30286cb` and `d97fe9d90`: the executable selected by
+`BUILD` is now registered at the shared real-config restart boundary using the
+authoritative interface list from the shipped desktop template, and KService
+is refreshed before any dock process is stopped. This also covers sanitized
+and post-e2e restores. The isolated launcher test covers paths with spaces,
+refusal of percent paths that cannot round-trip through KService, an unchanged
+cache refresh, worktree replacement, a real `BUILD` override, missing-binary
+refusal, required-interface validation, and helper-before-lifecycle ordering.
+The final fast gate passed at source head `c0714a633` with all 126 CTest entries,
+QML lint, scene probes, and matrix fixtures. Three cold reviews caught the
+incomplete launcher ownership, insufficient metadata checks, missing public
+contract, and commit wording before returning no code blockers.
 
 The controlled authority restart also exposed D258 (an unavailable hard
 network mount can block the real-config process). Both `/home/bree/nas` and
