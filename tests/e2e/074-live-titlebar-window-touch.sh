@@ -593,7 +593,10 @@ PY
     local start_y=$((baseline_y + titlebar_offset))
     local touching_y=$((trigger_y + trigger_height - 8 + titlebar_offset))
 
-    fp draghold 900 \
+    # Leave enough endpoint time for several D-Bus samples on a loaded test
+    # host. The production transition is short, but the observer must still
+    # prove its endpoint before the pointer reverses.
+    fp draghold 2000 \
         "$start_x" "$start_y" \
         "$start_x" "$touching_y" \
         "$start_x" "$start_y" &

@@ -210,7 +210,7 @@ int main(int argc, char **argv)
         //! draghold <ms> <x1> <y1> <x2> <y2> [...]: duration then >=2
         //! coordinate pairs, so argc is odd and at least 7.
         if (argc < 7 || (argc % 2) == 0) {
-            fprintf(stderr, "usage: %s draghold <milliseconds 1..999> <x1> <y1> <x2> <y2> [x3 y3 ...]\n",
+            fprintf(stderr, "usage: %s draghold <milliseconds 1..5000> <x1> <y1> <x2> <y2> [x3 y3 ...]\n",
                     argv[0]);
             return 2;
         }
@@ -220,7 +220,7 @@ int main(int argc, char **argv)
         || (isaxisstop && argc != 4 && argc != 5)
         || (!isdrag && !isglide && !isscroll && !iswheel && !isaxisstop
             && (argc != 4 || (strcmp(argv[1], "move") && strcmp(argv[1], "click") && strcmp(argv[1], "middleclick") && strcmp(argv[1], "rightclick"))))) {
-        fprintf(stderr, "usage: %s move|click|middleclick|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s draghold <milliseconds 1..999> <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>  |  %s wheel <x> <y> <integer-angle-delta> [horizontal]  |  %s axisstop <x> <y> [horizontal]  |  %s key <keysym> [down|up|press]  |  %s dragkey <keysym> <x1> <y1> <x2> <y2> [x3 y3 ...]\n"
+        fprintf(stderr, "usage: %s move|click|middleclick|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s draghold <milliseconds 1..5000> <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>  |  %s wheel <x> <y> <integer-angle-delta> [horizontal]  |  %s axisstop <x> <y> [horizontal]  |  %s key <keysym> [down|up|press]  |  %s dragkey <keysym> <x1> <y1> <x2> <y2> [x3 y3 ...]\n"
                         "  scroll: positive detents scroll up, negative down; one detent = one wheel click\n"
                         "  wheel:  nonzero signed integer Qt angleDelta for one axis event; vertical unless 'horizontal' is supplied\n"
                         "  axisstop: send a zero-axis Wayland stop, which produces no Qt wheel event\n"
@@ -236,8 +236,8 @@ int main(int argc, char **argv)
         errno = 0;
         const long parsed = strtol(argv[2], &end, 10);
         if (errno == ERANGE || end == argv[2] || *end != '\0'
-                || parsed < 1 || parsed > 999) {
-            fprintf(stderr, "invalid draghold duration '%s' (want 1..999 milliseconds)\n",
+                || parsed < 1 || parsed > 5000) {
+            fprintf(stderr, "invalid draghold duration '%s' (want 1..5000 milliseconds)\n",
                     argv[2]);
             return 2;
         }
