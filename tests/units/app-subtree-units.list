@@ -10,7 +10,7 @@ app/layouts/storageidremapper.h
 app/plasma/extended/panelbackgroundscan.h
 app/settings/lengthoffsetclamp.h
 app/screengeometrycalculator.h
-app/view/appliedoutputsnapshot.h
+app/view/appliedplacementsnapshot.h
 app/view/effectregion.h
 app/view/floatinganchorwindowfilter.h
 app/view/floatinginputevent.h

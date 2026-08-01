@@ -152,6 +152,7 @@ for dock_id, placement in expected.items():
 
 assert_axis_change_publishes_once() {
     local view="$1" expected_screen_id="$2" expected_edge="$3" expected_alignment="$4"
+    local before_revision="$5"
     local first_revision=""
     for _ in $(seq 1 150); do
         first_revision="$(snapshot | python3 -c '
@@ -166,12 +167,11 @@ if not view:
 actual = (view["screenId"], view["edge"], view["alignment"])
 if (actual != expected
         or view["relocationGeneration"] != view["appliedRelocationGeneration"]
-        or view["inRelocationAnimation"]
-        or view["inRelocationShowing"]
+        or str(view["surfaceGeometryPublicationRevision"]) == sys.argv[5]
         or view["windowGeometry"] != view["surfaceGeometry"]):
     raise SystemExit(1)
 print(view["surfaceGeometryPublicationRevision"])
-' "$view" "$expected_screen_id" "$expected_edge" "$expected_alignment" 2>/dev/null)" \
+' "$view" "$expected_screen_id" "$expected_edge" "$expected_alignment" "$before_revision" 2>/dev/null)" \
             && [[ -n "$first_revision" ]] \
             && break
         sleep 0.02
@@ -196,7 +196,7 @@ if not view:
 actual = (view["screenId"], view["edge"], view["alignment"])
 if actual != expected:
     raise SystemExit(f"axis-changing placement drifted: {actual!r}")
-if view["surfaceGeometryPublicationRevision"] != first_revision:
+if str(view["surfaceGeometryPublicationRevision"]) != first_revision:
     raise SystemExit("geometry validator republished a completed placement")
 if view["windowGeometry"] != view["surfaceGeometry"]:
     raise SystemExit("QWindow and applied surface diverged after publication")
@@ -217,7 +217,9 @@ view = views.get(dock_id)
 if not view:
     raise SystemExit(1)
 actual = (view["screenId"], view["edge"], view["alignment"])
-if actual != expected:
+if (actual != expected
+        or view["relocationGeneration"] != view["appliedRelocationGeneration"]
+        or view["windowGeometry"] != view["surfaceGeometry"]):
     raise SystemExit(1)
 if view["geometrySettled"]:
     raise SystemExit(0)
@@ -228,6 +230,8 @@ raise SystemExit(1)
         fi
         sleep 0.25
     done
+    snapshot > "$E2E_ARTIFACTS/fp4b-axis-change-unsettled.json" \
+        || e2e_fail "could not preserve the unsettled axis-change state"
     e2e_fail "axis-changing placement did not settle"
 }
 
@@ -584,9 +588,21 @@ for view in "$view_a" "$view_b" "$view_c"; do
 done
 wait_for_fixture_placement "$primary_id" "$secondary_id"
 
+before_axis_revision="$(snapshot | python3 -c '
+import json, sys
+dock_id = int(sys.argv[1])
+views = {view["persistentDockId"]: view
+         for view in json.load(sys.stdin)["views"]}
+view = views.get(dock_id)
+if not view:
+    raise SystemExit(1)
+print(view["surfaceGeometryPublicationRevision"])
+' "$view_c")" \
+    || e2e_fail "could not capture C publication revision before its axis change"
+readonly before_axis_revision
 e2e_call setViewPlacement uiii "$view_c" "$secondary_id" 3 0 >/dev/null \
     || e2e_fail "could not exercise C across vertical-to-horizontal placement"
-assert_axis_change_publishes_once "$view_c" "$secondary_id" top center
+assert_axis_change_publishes_once "$view_c" "$secondary_id" top center "$before_axis_revision"
 e2e_call setViewPlacement uiii "$view_c" "$secondary_id" 5 0 >/dev/null \
     || e2e_fail "could not restore C to secondary left center"
 wait_for_fixture_placement "$primary_id" "$secondary_id"

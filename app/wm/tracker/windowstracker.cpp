@@ -723,40 +723,60 @@ bool Windows::isTouchingViewEdge(Latte::View *view, const QRect &windowgeometry)
         return false;
     }
 
+    const auto &appliedPlacement =
+        view->positioner()->appliedPlacementSnapshot();
+    if (!appliedPlacement
+            && !view->positioner()->inStartup()) {
+        qCritical() << "Windows tracker refused edge-touch classification without an applied placement"
+                    << "containment="
+                    << (view->containment()
+                        ? view->containment()->id()
+                        : 0);
+        return false;
+    }
+    const Plasma::Types::Location edge =
+        appliedPlacement
+        ? appliedPlacement->edge
+        : view->location();
+    const Plasma::Types::FormFactor orientation =
+        appliedPlacement
+        ? appliedPlacement->orientation
+        : view->formFactor();
+
     bool inViewThicknessEdge{false};
     bool inViewLengthBoundaries{false};
 
-    QRect screenGeometry = view->screenGeometry();
+    const QRect screenGeometry = view->screenGeometry();
 
-    bool inCurrentScreen{screenGeometry.contains(windowgeometry.topLeft()) || screenGeometry.contains(windowgeometry.bottomRight())};
+    const bool inCurrentScreen{screenGeometry.contains(windowgeometry.topLeft()) || screenGeometry.contains(windowgeometry.bottomRight())};
 
     if (inCurrentScreen) {
-        if (view->location() == Plasma::Types::TopEdge) {
+        if (edge == Plasma::Types::TopEdge) {
             inViewThicknessEdge = (windowgeometry.y() == view->absoluteGeometry().bottom() + 1);
-        } else if (view->location() == Plasma::Types::BottomEdge) {
+        } else if (edge == Plasma::Types::BottomEdge) {
             inViewThicknessEdge = (windowgeometry.bottom() == view->absoluteGeometry().top() - 1);
-        } else if (view->location() == Plasma::Types::LeftEdge) {
+        } else if (edge == Plasma::Types::LeftEdge) {
             inViewThicknessEdge = (windowgeometry.x() == view->absoluteGeometry().right() + 1);
-        } else if (view->location() == Plasma::Types::RightEdge) {
+        } else if (edge == Plasma::Types::RightEdge) {
             inViewThicknessEdge = (windowgeometry.right() == view->absoluteGeometry().left() - 1);
         }
 
-        if (view->formFactor() == Plasma::Types::Horizontal) {
-            int yCenter = view->absoluteGeometry().center().y();
+        if (orientation == Plasma::Types::Horizontal) {
+            const int yCenter = view->absoluteGeometry().center().y();
 
-            QPoint leftChecker(windowgeometry.left(), yCenter);
-            QPoint rightChecker(windowgeometry.right(), yCenter);
+            const QPoint leftChecker(windowgeometry.left(), yCenter);
+            const QPoint rightChecker(windowgeometry.right(), yCenter);
 
-            bool fulloverlap = (windowgeometry.left()<=view->absoluteGeometry().left()) && (windowgeometry.right()>=view->absoluteGeometry().right());
+            const bool fulloverlap = (windowgeometry.left()<=view->absoluteGeometry().left()) && (windowgeometry.right()>=view->absoluteGeometry().right());
 
             inViewLengthBoundaries = fulloverlap || view->absoluteGeometry().contains(leftChecker) || view->absoluteGeometry().contains(rightChecker);
-        } else if (view->formFactor() == Plasma::Types::Vertical) {
-            int xCenter = view->absoluteGeometry().center().x();
+        } else if (orientation == Plasma::Types::Vertical) {
+            const int xCenter = view->absoluteGeometry().center().x();
 
-            QPoint topChecker(xCenter, windowgeometry.top());
-            QPoint bottomChecker(xCenter, windowgeometry.bottom());
+            const QPoint topChecker(xCenter, windowgeometry.top());
+            const QPoint bottomChecker(xCenter, windowgeometry.bottom());
 
-            bool fulloverlap = (windowgeometry.top()<=view->absoluteGeometry().top()) && (windowgeometry.bottom()>=view->absoluteGeometry().bottom());
+            const bool fulloverlap = (windowgeometry.top()<=view->absoluteGeometry().top()) && (windowgeometry.bottom()>=view->absoluteGeometry().bottom());
 
             inViewLengthBoundaries = fulloverlap || view->absoluteGeometry().contains(topChecker) || view->absoluteGeometry().contains(bottomChecker);
         }
@@ -836,15 +856,33 @@ void Windows::updateExtraViewHints()
     for (auto it = m_views.constKeyValueBegin(); it != m_views.constKeyValueEnd(); ++it) {
         Latte::View *view = it->first;
         const TrackedViewInfo *info = it->second;
+        const auto &appliedPlacement =
+            view->positioner()->appliedPlacementSnapshot();
+        if (!appliedPlacement
+                && !view->positioner()->inStartup()) {
+            qCritical() << "Windows tracker refused extra-view hints without an applied placement"
+                        << "containment="
+                        << (view->containment()
+                            ? view->containment()->id()
+                            : 0);
+            continue;
+        }
 
         Tracker::TrackedViewGeometry snapshot;
         snapshot.viewKey = trackedViews.size();
         snapshot.enabled = info->enabled();
         snapshot.trackingCurrentActivity = info->isTrackingCurrentActivity();
-        snapshot.isHorizontal = (view->formFactor() == Plasma::Types::Horizontal);
-        snapshot.isVertical = (view->formFactor() == Plasma::Types::Vertical);
-        snapshot.screenId = view->positioner()->currentScreenId();
-        snapshot.location = view->location();
+        const auto orientation = appliedPlacement
+            ? appliedPlacement->orientation
+            : view->formFactor();
+        snapshot.isHorizontal = orientation == Plasma::Types::Horizontal;
+        snapshot.isVertical = orientation == Plasma::Types::Vertical;
+        snapshot.screenId = appliedPlacement
+            ? appliedPlacement->output.screenId
+            : view->positioner()->currentScreenId();
+        snapshot.location = appliedPlacement
+            ? appliedPlacement->edge
+            : view->location();
         snapshot.isTouchingTopViewAndIsBusy = view->isTouchingTopViewAndIsBusy();
         snapshot.isTouchingBottomViewAndIsBusy = view->isTouchingBottomViewAndIsBusy();
         snapshot.absoluteGeometry = view->absoluteGeometry();

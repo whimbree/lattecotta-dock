@@ -668,10 +668,10 @@ void Positioner::reconsiderScreen()
 
 void Positioner::onScreenChanged(QScreen *scr)
 {
-    if (m_appliedOutput
-            && m_appliedOutput->liveScreen == scr
+    if (m_appliedPlacement
+            && m_appliedPlacement->liveScreen == scr
             && scr
-            && m_appliedOutput->identity.geometry
+            && m_appliedPlacement->output.geometry
                 == scr->geometry()) {
         //! Positioner emits the applied screen edge after installing the
         //! complete snapshot. Do not turn that publication into another
@@ -950,15 +950,15 @@ QRect Positioner::canvasGeometry() const
 
 QScreen *Positioner::appliedScreen() const
 {
-    return m_appliedOutput
-        ? m_appliedOutput->liveScreen.data()
+    return m_appliedPlacement
+        ? m_appliedPlacement->liveScreen.data()
         : nullptr;
 }
 
-const std::optional<AppliedOutputSnapshot> &
-Positioner::appliedOutputSnapshot() const
+const std::optional<AppliedPlacementSnapshot> &
+Positioner::appliedPlacementSnapshot() const
 {
-    return m_appliedOutput;
+    return m_appliedPlacement;
 }
 
 QRect Positioner::surfaceGeometry() const
@@ -968,8 +968,8 @@ QRect Positioner::surfaceGeometry() const
 
 QRect Positioner::surfaceOutputGeometry() const
 {
-    return m_appliedOutput
-        ? m_appliedOutput->identity.geometry
+    return m_appliedPlacement
+        ? m_appliedPlacement->output.geometry
         : QRect{};
 }
 
@@ -991,15 +991,15 @@ bool Positioner::hasPublishedCurrentPlacement() const
 
     return !m_geometryApplicationPending
         && m_surfaceGeometryPublicationRevision > 0
-        && m_appliedOutput
-        && m_appliedOutput->liveScreen
-        && m_appliedOutput->liveScreen
+        && m_appliedPlacement
+        && m_appliedPlacement->liveScreen
+        && m_appliedPlacement->liveScreen
             == m_screenToFollow
         && m_view->screen()
-            == m_appliedOutput->liveScreen
+            == m_appliedPlacement->liveScreen
         && m_surfacePlacementGeneration
             == m_relocationGeneration
-        && m_appliedOutput->identity.geometry
+        && m_appliedPlacement->output.geometry
             == m_screenToFollow->geometry();
 }
 
@@ -1195,6 +1195,7 @@ void Positioner::installStartupGeometry(
     m_canvasGeometry = solved.canvas;
 
     applySolvedWindowGeometry(solved.surface);
+    m_syncGeometryTimer.stop();
     m_geometryApplicationPending = false;
     validateDockGeometry();
     if (canvasChanged) {
@@ -1228,21 +1229,26 @@ Positioner::installAppliedGeometry(
             "Positioner cannot publish an output without a stable ScreenPool identity");
     }
     const bool screenChanged =
-        !m_appliedOutput
-        || m_appliedOutput->liveScreen
+        !m_appliedPlacement
+        || m_appliedPlacement->liveScreen
             != assignedScreen
         || qWindowScreenChanged;
     const bool outputChanged =
         screenChanged
-        || m_appliedOutput->identity.geometry
+        || m_appliedPlacement->output.geometry
             != assignedScreenGeometry;
     m_validGeometry = solved.surface;
-    m_appliedOutput = AppliedOutputSnapshot{
-        .identity = {
+    m_appliedPlacement = AppliedPlacementSnapshot{
+        .output = {
             .connector = assignedScreen->name(),
             .screenId = assignedScreenId,
             .geometry = assignedScreenGeometry,
         },
+        .edge = m_view->location(),
+        .orientation = m_view->formFactor(),
+        .alignment = static_cast<Latte::Types::Alignment>(
+            m_view->alignment()),
+        .followsPrimary = m_view->onPrimary(),
         .liveScreen = assignedScreen,
     };
     m_appliedSurfaceGeometry = solved.surface;
@@ -1280,8 +1286,11 @@ void Positioner::publishAppliedGeometry(
 
     //! Geometry signals must observe the old publication while QWindow moves
     //! through its intermediate resize and position notifications. Commit the
-    //! new revision only after the final rectangle is installed, then disarm
-    //! any validation retry that the completed rectangle satisfies.
+    //! new revision only after the final rectangle is installed. This solve
+    //! consumes the coalesced request that scheduled it, including a
+    //! locationChanged request preceding final relocation. Stop that request
+    //! and any satisfied validation retry before publishing the revision.
+    m_syncGeometryTimer.stop();
     m_geometryApplicationPending = false;
     ++m_surfaceGeometryPublicationRevision;
     validateDockGeometry();
