@@ -3143,16 +3143,20 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   from any checkout, but it did not register that path. Existing entries named
   the installed package, primary checkout, or older validation worktrees, so
   KWin correctly withheld the window feed without failing the process.
-- FIX: before entering the desk lifecycle, register the canonical build
-  executable in one current-development desktop entry. Copy the privileged
-  interface list from the shipped desktop template as its single source and
-  refresh KService on every start. Refuse a missing executable or malformed
-  template before stopping the existing dock.
+- FIX: at the shared real-config restart boundary, resolve the same `BUILD`
+  executable that `run-staged.sh` will launch and register it in one
+  current-development desktop entry. Copy the privileged interface list from
+  the shipped desktop template as its single source and refresh KService on
+  every start. This covers normal, sanitized, and post-e2e restoration paths.
+  Refuse a missing or unrepresentable executable and malformed or insufficient
+  authority metadata before stopping the existing dock.
 - EVIDENCE: the isolated launcher test requires the exact canonical executable,
-  preserves spaces and percent field codes, refreshes an unchanged cache,
-  replaces stale worktree identity, refuses a missing binary without changing
-  the last valid entry, and pins registration before process launch. Final
-  real-session window-feed and attachment acceptance remains pending.
+  preserves spaces, rejects percent paths that KService cannot match exactly,
+  refreshes an unchanged cache, replaces stale worktree identity, exercises a
+  `BUILD` override through the shared restart boundary, and rejects missing
+  binaries or an interface list without window-management authority without
+  changing the last valid entry. Final real-session window-feed and attachment
+  acceptance remains pending.
 - SEVERITY: beta blocker.
 
 ### D258 - Unavailable hard network mount can block the real-config process
