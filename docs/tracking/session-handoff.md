@@ -33,16 +33,28 @@ QML lint, scene probes, and matrix fixtures. Three cold reviews caught the
 incomplete launcher ownership, insufficient metadata checks, missing public
 contract, and commit wording before returning no code blockers.
 
+Final live acceptance passed on the exact merged build. Every view reported a
+`QRect` window-touch role, `viewTasksData` contained running windows, and the
+partial top Panel reported one touching window. It requested attachment,
+settled at a zero presented gap, and rendered flush and full-width over the
+touching Firefox window. The live dock remains running from
+`/tmp/latte-main-realtest` for real-layout testing.
+
 The controlled authority restart also exposed D258 (an unavailable hard
-network mount can block the real-config process). Both `/home/bree/nas` and
-`/mnt/downloads` timed out independently while their server was unreachable.
-The Latte main thread entered kernel wait
-`rpc_wait_bit_killable`; D-Bus stopped responding until the process was killed.
-The exact in-process caller remains unproved because live attach is blocked by
-Yama and the kernel wait occurred before child-launched tracing was armed.
-This is recorded separately rather than attributed to the launcher or floating
-transition. The real dock is intentionally stopped until the mounts recover;
-no layout or configuration was changed.
+network mount can block the real-config process). Launch-time syscall tracing
+proved the incomplete call was `access("/home/bree/nas", R_OK)`. An exact-path
+diagnostic probe printed the complete in-process chain:
+`KFilePlacesModelPrivate::initDeviceList()` -> `Solid::Device::listFromQuery`
+-> `Solid::Backends::Fstab::FstabStorageAccess` ->
+`isNetworkDeviceAccessibleToUser()` -> `QDir::isReadable()` -> `access()`.
+The Plasma Folder View applet in containment 13 initializes that model; Latte
+does not enter the hard NFS mount from its window, placement, task, or
+transition code. Returning `ENOENT` for only that diagnostic access allowed the
+exact merged build to complete the acceptance above. This temporary process
+is suitable for testing Latte while the server is unreachable, but the probe
+is not a product fix. The synchronous device-accessibility call belongs to
+KF6 Solid/KIO and still needs an upstream report. No layout or configuration
+was changed.
 
 ## 2026-07-31: D244 through D247 isolate live presentation
 

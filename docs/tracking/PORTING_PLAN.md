@@ -5062,6 +5062,11 @@ prerequisites in the phases above are done.
       boundary, refresh KService, and refuse an invalid authority description
       instead of starting a half-functional dock.
       Commits: 0d30286cb, d97fe9d90
+- [ ] Report D258 (KF6 device enumeration blocks the GUI thread on an
+      unavailable hard NFS mount) to the Solid/KIO owner. Preserve the traced
+      Folder View call chain and keep the exact-path diagnostic isolation out
+      of the shipped Latte launcher.
+      Commits:
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

@@ -3155,27 +3155,40 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   refreshes an unchanged cache, replaces stale worktree identity, exercises a
   `BUILD` override through the shared restart boundary, and rejects missing
   binaries or an interface list without window-management authority without
-  changing the last valid entry. Final real-session window-feed and attachment
-  acceptance remains pending.
+  changing the last valid entry. Final real-session acceptance on the exact
+  merged build reported `QRect` window-touch roles on all five views, running
+  window rows from `viewTasksData`, and one touching window on the partial top
+  Panel. That Panel requested attachment, settled at a zero presented gap, and
+  rendered flush and full-width over the touching Firefox window.
 - SEVERITY: beta blocker.
 
 ### D258 - Unavailable hard network mount can block the real-config process
-- STATUS: SUSPECTED.
+- STATUS: CONFIRMED EXTERNAL; upstream report pending.
 - FOUND: 2026-08-01, controlled restart during D257 diagnosis.
 - SYMPTOM: a real-config dock can stop answering D-Bus after startup while its
   render threads remain alive.
-- ROOT: the main thread was observed in kernel wait
-  `rpc_wait_bit_killable` while both `/home/bree/nas` and `/mnt/downloads`
-  independently timed out against an unreachable server. The exact Latte,
-  applet, KIO, or task-metadata call that entered the mount is not yet proved.
-  Yama refused live attach, so attribution beyond the kernel wait would be a
-  guess.
-- FIX: none yet. Capture from process launch under syscall and debugger
-  tracing during the next deterministic outage, then fix or isolate the
-  synchronous caller at its owner.
-- EVIDENCE: both authorized and non-authorized launches reached the same
-  uninterruptible-looking but killable RPC wait. Killing the exact process
-  removed it cleanly. No layout or configuration mutation was involved.
+- ROOT: the real layout contains an `org.kde.plasma.folder` applet. Its
+  `KFilePlacesModelPrivate::initDeviceList()` startup path asks KF6 Solid for
+  matching devices. Solid constructs an fstab storage-access interface and
+  calls `QDir::isReadable()` for `/home/bree/nas` on the GUI thread. The final
+  `access("/home/bree/nas", R_OK)` enters `rpc_wait_bit_killable` because the
+  NFS4 mount is hard and its server is unreachable. This call is outside
+  Latte's window, placement, task, and transition code.
+- FIX: no Latte-side masking is appropriate. Report the synchronous device
+  accessibility probe to the KF6 Solid/KIO owner and restore normal launches
+  when the mount server is reachable or the mount policy no longer permits an
+  unbounded GUI-thread wait. The diagnostic run may intercept only this exact
+  path to prove unrelated Latte behavior, but that interception is not a
+  product fix.
+- EVIDENCE: launch-time file syscall tracing stopped at the incomplete
+  `access("/home/bree/nas", R_OK)` call. A temporary exact-path access probe
+  returned `ENOENT` and printed the caller stack:
+  `KFilePlacesModelPrivate::initDeviceList()` -> `Solid::Device::listFromQuery`
+  -> `Solid::Backends::Fstab::FstabStorageAccess` ->
+  `isNetworkDeviceAccessibleToUser()` -> `QDir::isReadable()` -> `access()`.
+  With only that access isolated, the exact merged Latte build remained
+  responsive, exposed running task rows, and completed the top-Panel attached
+  presentation. No layout or configuration mutation was involved.
 - SEVERITY: known issue.
 
 ### D255 - Axis-change acceptance could adopt a duplicate publication
