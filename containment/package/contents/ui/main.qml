@@ -957,6 +957,7 @@ ContainmentItem {
 
     VisibilityManager{
         id: visibilityManager
+        animationSpeedFactor: root.animations.speedFactor.current
         layouts: layoutsContainer
         window: latteView
         inClientSideScreenEdgeSliding:
