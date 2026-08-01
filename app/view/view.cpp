@@ -1907,10 +1907,10 @@ QRect View::screenGeometry() const
 {
     if (m_positioner
             && m_positioner
-                ->appliedOutputSnapshot()) {
+                ->appliedPlacementSnapshot()) {
         return m_positioner
-            ->appliedOutputSnapshot()
-            ->identity.geometry;
+            ->appliedPlacementSnapshot()
+            ->output.geometry;
     }
 
     if (this->screen()) {

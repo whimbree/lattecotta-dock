@@ -9,7 +9,7 @@
 
 //local
 #include <coretypes.h>
-#include "appliedoutputsnapshot.h"
+#include "appliedplacementsnapshot.h"
 #include "floatingpanelgeometry.h"
 #include "positionergeometry.h"
 #include "placementrequeststate.h"
@@ -108,8 +108,8 @@ public:
     [[nodiscard]] QRect canvasGeometry() const;
     //! One immutable placement publication. These rectangles are replaced
     //! together only after LayerShell accepted the solved surface.
-    [[nodiscard]] const std::optional<AppliedOutputSnapshot> &
-    appliedOutputSnapshot() const;
+    [[nodiscard]] const std::optional<AppliedPlacementSnapshot> &
+    appliedPlacementSnapshot() const;
     [[nodiscard]] QScreen *appliedScreen() const;
     [[nodiscard]] QRect surfaceGeometry() const;
     [[nodiscard]] QRect surfaceOutputGeometry() const;
@@ -326,8 +326,8 @@ private:
     QRect m_canvasGeometry;
     //! it is used in order to enforce X11 to never miss window geometry
     QRect m_validGeometry;
-    std::optional<AppliedOutputSnapshot>
-        m_appliedOutput;
+    std::optional<AppliedPlacementSnapshot>
+        m_appliedPlacement;
     QRect m_appliedSurfaceGeometry;
     quint64 m_surfacePlacementGeneration{0};
     quint64 m_surfaceGeometryPublicationRevision{0};

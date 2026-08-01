@@ -197,24 +197,31 @@ ViewRecord collectViewRecord(const Latte::View *view, bool globalConfigureApplet
     record.isClonedFrom = record.isCloned ? view->groupId() : -1;
     record.type = view->type();
     const auto *const positioner = view->positioner();
-    const auto &appliedOutput =
-        positioner->appliedOutputSnapshot();
-    record.screen = appliedOutput
-        ? appliedOutput->identity.connector
+    const auto &appliedPlacement =
+        positioner->appliedPlacementSnapshot();
+    record.screen = appliedPlacement
+        ? appliedPlacement->output.connector
         : positioner->currentScreenName();
-    record.onPrimary = view->onPrimary();
-    record.edge = view->location();
+    record.onPrimary = appliedPlacement
+        ? appliedPlacement->followsPrimary
+        : view->onPrimary();
+    record.edge = appliedPlacement
+        ? appliedPlacement->edge
+        : view->location();
     //! View's alignment surface is int (its QML property type); the value
     //! is stored as Types::Alignment internally, so the cast is lossless
-    record.alignment = static_cast<Types::Alignment>(view->alignment());
+    record.alignment = appliedPlacement
+        ? appliedPlacement->alignment
+        : static_cast<Types::Alignment>(
+            view->alignment());
     record.visibilityMode = view->visibility()->mode();
     record.isHidden = view->visibility()->isHidden();
     record.inStartup = view->positioner()->inStartup();
     record.isOffScreen = view->positioner()->isOffScreen();
     record.absoluteGeometry = view->absoluteGeometry();
     record.localGeometry = view->localGeometry();
-    record.screenGeometry = appliedOutput
-        ? appliedOutput->identity.geometry
+    record.screenGeometry = appliedPlacement
+        ? appliedPlacement->output.geometry
         : view->screenGeometry();
     record.strutsThickness = view->visibility()->strutsThickness();
     record.publishedStruts = view->visibility()->publishedStruts();
@@ -1043,26 +1050,35 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.layout = view->layout() ? view->layout()->name() : QString();
         const auto *const positioner =
             view->positioner();
-        const auto &appliedOutput =
-            positioner->appliedOutputSnapshot();
-        record.screen = appliedOutput
-            ? appliedOutput->identity.connector
+        const auto &appliedPlacement =
+            positioner->appliedPlacementSnapshot();
+        record.screen = appliedPlacement
+            ? appliedPlacement->output.connector
             : positioner->currentScreenName();
         auto *const latteCorona =
             qobject_cast<Latte::Corona *>(
                 view->corona());
         Q_ASSERT(latteCorona);
-        record.screenId = appliedOutput
-            ? appliedOutput->identity.screenId
+        record.screenId = appliedPlacement
+            ? appliedPlacement->output.screenId
             : (latteCorona
                 ? latteCorona->screenPool()
                     ->id(record.screen)
                 : -1);
-        record.onPrimary = view->onPrimary();
+        record.onPrimary = appliedPlacement
+            ? appliedPlacement->followsPrimary
+            : view->onPrimary();
         record.type = view->type();
-        record.edge = view->location();
-        record.orientation = view->formFactor();
-        record.alignment = static_cast<Types::Alignment>(view->alignment());
+        record.edge = appliedPlacement
+            ? appliedPlacement->edge
+            : view->location();
+        record.orientation = appliedPlacement
+            ? appliedPlacement->orientation
+            : view->formFactor();
+        record.alignment = appliedPlacement
+            ? appliedPlacement->alignment
+            : static_cast<Types::Alignment>(
+                view->alignment());
         record.maximumLengthRatio = view->maxLength();
         record.offsetRatio = view->offset();
 
@@ -1114,8 +1130,8 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.windowGeometry = view->geometry();
         record.absoluteGeometry = view->absoluteGeometry();
         record.localGeometry = view->localGeometry();
-        record.screenGeometry = appliedOutput
-            ? appliedOutput->identity.geometry
+        record.screenGeometry = appliedPlacement
+            ? appliedPlacement->output.geometry
             : view->screenGeometry();
         record.surfaceGeometry = positioner->surfaceGeometry();
         record.canvasGeometry = positioner->canvasGeometry();

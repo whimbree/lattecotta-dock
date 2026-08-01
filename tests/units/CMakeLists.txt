@@ -98,10 +98,14 @@ target_link_libraries(positionergeometrytest
     Qt6::Gui
     Plasma::Plasma)
 
-# Applied output publication: value identity survives QScreen destruction
-# while the optional live compositor handle clears independently.
-latte_add_unit_test(appliedoutputsnapshottest)
-target_link_libraries(appliedoutputsnapshottest Qt6::Gui)
+# Applied placement publication: value identity and geometry dimensions survive
+# QScreen destruction while the optional live compositor handle clears.
+latte_add_unit_test(appliedplacementsnapshottest)
+target_include_directories(appliedplacementsnapshottest PRIVATE
+    ${CMAKE_BINARY_DIR}/app) # coretypes.h is generated there
+target_link_libraries(appliedplacementsnapshottest
+    Qt6::Gui
+    Plasma::Plasma)
 
 # FP-4C placement latest-intent authority: sparse UI requests compose into one
 # complete generation-tagged target, and stale callbacks cannot consume it.

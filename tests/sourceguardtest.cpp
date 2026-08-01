@@ -1171,6 +1171,22 @@ private:
                    "setViewPlacementuiii\"$view_b\"\"$primary_id\"42"))
             && recipe.contains(QStringLiteral(
                    "setViewPlacementuiii\"$view_c\"\"$secondary_id\"50"))
+            && recipe.contains(QStringLiteral(
+                   "before_axis_revision=\"$(snapshot|python3-c'"))
+            && recipe.contains(QStringLiteral(
+                   "setViewPlacementuiii\"$view_c\"\"$secondary_id\"30"))
+            && recipe.contains(QStringLiteral(
+                   "assert_axis_change_publishes_once"
+                   "\"$view_c\"\"$secondary_id\"topcenter"
+                   "\"$before_axis_revision\""))
+            && recipe.contains(QStringLiteral(
+                   "str(view[\"surfaceGeometryPublicationRevision\"])"
+                   "==sys.argv[5]"))
+            && recipe.contains(QStringLiteral("sleep0.8"))
+            && recipe.contains(QStringLiteral(
+                   "geometryvalidatorrepublishedacompletedplacement"))
+            && recipe.contains(QStringLiteral(
+                   "axis-changingplacementdidnotsettle"))
             && recipe.count(QStringLiteral(
                    "mo_place_secondary_for_topology")) == 3
             && recipe.contains(QStringLiteral(
@@ -3443,6 +3459,31 @@ void SourceGuardTest::windowTouchTopologyE2e_cleanupGuardRejectsControlledMutati
                  missingRestart, oracle),
              "removing the pristine nested-dock restart must fail the lifecycle guard");
 
+    QString shortPublicationDeadline = recipe;
+    const QString publicationDeadline =
+        QStringLiteral("sleep0.8");
+    QCOMPARE(shortPublicationDeadline.count(
+                 publicationDeadline), 1);
+    shortPublicationDeadline.replace(
+        publicationDeadline,
+        QStringLiteral("sleep0.05"));
+    QVERIFY2(!matchesWindowTouchTopologyE2eContract(
+                 shortPublicationDeadline, oracle),
+             "sampling before the old coalescer deadline must fail the publication guard");
+
+    QString missingPriorRevision = recipe;
+    const QString priorRevisionComparison =
+        QStringLiteral(
+            "str(view[\"surfaceGeometryPublicationRevision\"])"
+            "==sys.argv[5]");
+    QVERIFY(missingPriorRevision.count(
+                priorRevisionComparison) >= 1);
+    missingPriorRevision.remove(
+        priorRevisionComparison);
+    QVERIFY2(!matchesWindowTouchTopologyE2eContract(
+                 missingPriorRevision, oracle),
+             "removing the pre-mutation revision comparison must fail the publication guard");
+
     const QString cleanupBody = functionBody(
         recipeSource, QStringLiteral("cleanup()"));
     QVERIFY2(!cleanupBody.isEmpty(), "production cleanup function not found");
@@ -3839,6 +3880,8 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         QStringLiteral("app/wm/waylandlayershell.cpp"));
     const QString dbusSource = readFile(
         QStringLiteral("app/dbusreports.cpp"));
+    const QString windowTracker = normalizedCode(readFile(
+        QStringLiteral("app/wm/tracker/windowstracker.cpp")));
     const QString transition = normalizedCode(readFile(
         QStringLiteral("app/view/floatingtransition.cpp")));
     const QString positionerCore = normalizedCode(readFile(
@@ -3902,32 +3945,48 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         QStringLiteral("bool Positioner::solveAndApplyGeometry(")));
     const qsizetype stableOutputId = installApplied.indexOf(
         QStringLiteral("assignedScreenId=m_corona->screenPool()->id("));
-    const qsizetype appliedOutput = installApplied.indexOf(
-        QStringLiteral("m_appliedOutput=AppliedOutputSnapshot{"),
+    const qsizetype appliedPlacement = installApplied.indexOf(
+        QStringLiteral("m_appliedPlacement=AppliedPlacementSnapshot{"),
         stableOutputId);
     const qsizetype appliedConnector = installApplied.indexOf(
-        QStringLiteral(".identity={.connector=assignedScreen->name()"),
-        appliedOutput);
+        QStringLiteral(".output={.connector=assignedScreen->name()"),
+        appliedPlacement);
     const qsizetype appliedScreenId = installApplied.indexOf(
         QStringLiteral(".screenId=assignedScreenId"),
         appliedConnector);
     const qsizetype appliedOutputGeometry = installApplied.indexOf(
         QStringLiteral(".geometry=assignedScreenGeometry"),
         appliedScreenId);
+    const qsizetype appliedEdge = installApplied.indexOf(
+        QStringLiteral(".edge=m_view->location()"),
+        appliedOutputGeometry);
+    const qsizetype appliedOrientation = installApplied.indexOf(
+        QStringLiteral(".orientation=m_view->formFactor()"),
+        appliedEdge);
+    const qsizetype appliedAlignment = installApplied.indexOf(
+        QStringLiteral(".alignment=static_cast<Latte::Types::Alignment>("),
+        appliedOrientation);
+    const qsizetype appliedPrimaryPolicy = installApplied.indexOf(
+        QStringLiteral(".followsPrimary=m_view->onPrimary()"),
+        appliedAlignment);
     const qsizetype appliedLiveScreen = installApplied.indexOf(
         QStringLiteral(".liveScreen=assignedScreen"),
-        appliedOutputGeometry);
+        appliedPrimaryPolicy);
     const qsizetype appliedSurface = installApplied.indexOf(
         QStringLiteral("m_appliedSurfaceGeometry=solved.surface;"),
         appliedLiveScreen);
     const qsizetype appliedGeneration = installApplied.indexOf(
         QStringLiteral("m_surfacePlacementGeneration=m_relocationGeneration;"),
         appliedSurface);
-    QVERIFY(stableOutputId >= 0 && appliedOutput > stableOutputId
-            && appliedConnector > appliedOutput
+    QVERIFY(stableOutputId >= 0 && appliedPlacement > stableOutputId
+            && appliedConnector > appliedPlacement
             && appliedScreenId > appliedConnector
             && appliedOutputGeometry > appliedScreenId
-            && appliedLiveScreen > appliedOutputGeometry
+            && appliedEdge > appliedOutputGeometry
+            && appliedOrientation > appliedEdge
+            && appliedAlignment > appliedOrientation
+            && appliedPrimaryPolicy > appliedAlignment
+            && appliedLiveScreen > appliedPrimaryPolicy
             && appliedSurface > appliedLiveScreen
             && appliedGeneration > appliedSurface);
     QVERIFY(!installApplied.contains(QStringLiteral(
@@ -3941,15 +4000,19 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         "&Positioner::syncGeometry);")));
     const qsizetype applyWindow = publishApplied.indexOf(QStringLiteral(
         "applySolvedWindowGeometry(solved.surface);"));
+    const qsizetype consumeCoalescedSync = publishApplied.indexOf(
+        QStringLiteral("m_syncGeometryTimer.stop();"), applyWindow);
     const qsizetype pendingClear = publishApplied.indexOf(QStringLiteral(
-        "m_geometryApplicationPending=false;"), applyWindow);
+        "m_geometryApplicationPending=false;"), consumeCoalescedSync);
     const qsizetype appliedRevision = publishApplied.indexOf(QStringLiteral(
         "++m_surfaceGeometryPublicationRevision;"), pendingClear);
     const qsizetype validateWindow = publishApplied.indexOf(QStringLiteral(
         "validateDockGeometry();"), appliedRevision);
     const qsizetype publishAbsolute = publishApplied.indexOf(QStringLiteral(
         "m_view->updateAbsoluteGeometry(true);"), validateWindow);
-    QVERIFY(applyWindow >= 0 && pendingClear > applyWindow
+    QVERIFY(applyWindow >= 0
+            && consumeCoalescedSync > applyWindow
+            && pendingClear > consumeCoalescedSync
             && appliedRevision > pendingClear
             && validateWindow > appliedRevision
             && publishAbsolute > validateWindow);
@@ -4022,8 +4085,8 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         "{if(m_positioner&&!m_positioner->hasPublishedCurrentPlacement())"
         "{return;}")));
     QVERIFY(screenGeometry.contains(QStringLiteral(
-        "appliedOutputSnapshot())"
-        "{returnm_positioner->appliedOutputSnapshot()->identity.geometry;}")));
+        "appliedPlacementSnapshot())"
+        "{returnm_positioner->appliedPlacementSnapshot()->output.geometry;}")));
 
     const QString layerApplicationBody = normalizedCode(functionBody(
         layerShellSource,
@@ -4048,16 +4111,35 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         QStringLiteral("collectDockSystemSnapshot(")));
     for (const QString &collector : {viewRecord, systemSnapshot}) {
         QVERIFY(collector.contains(QStringLiteral(
-            "positioner->appliedOutputSnapshot()")));
+            "positioner->appliedPlacementSnapshot()")));
         QVERIFY(collector.contains(QStringLiteral(
-            "appliedOutput->identity.connector")));
+            "appliedPlacement->output.connector")));
         QVERIFY(collector.contains(QStringLiteral(
-            "appliedOutput->identity.geometry")));
+            "appliedPlacement->output.geometry")));
+        QVERIFY(collector.contains(QStringLiteral(
+            "appliedPlacement->edge")));
+        QVERIFY(collector.contains(QStringLiteral(
+            "appliedPlacement->alignment")));
+        QVERIFY(collector.contains(QStringLiteral(
+            "appliedPlacement->followsPrimary")));
         QVERIFY(!collector.contains(QStringLiteral(
             "positioner->appliedScreen()")));
     }
     QVERIFY(systemSnapshot.contains(QStringLiteral(
-        "appliedOutput->identity.screenId")));
+        "appliedPlacement->output.screenId")));
+    QVERIFY(systemSnapshot.contains(QStringLiteral(
+        "appliedPlacement->orientation")));
+    QVERIFY(windowTracker.contains(QStringLiteral(
+        "view->positioner()->appliedPlacementSnapshot()")));
+    QVERIFY(windowTracker.contains(QStringLiteral(
+        "edge=appliedPlacement?appliedPlacement->edge:view->location()")));
+    QVERIFY(windowTracker.contains(QStringLiteral(
+        "orientation=appliedPlacement?"
+        "appliedPlacement->orientation:view->formFactor()")));
+    QVERIFY(windowTracker.contains(QStringLiteral(
+        "snapshot.screenId=appliedPlacement?"
+        "appliedPlacement->output.screenId:"
+        "view->positioner()->currentScreenId()")));
     QVERIFY(!effects.contains(QStringLiteral(
         "enableBlurBehind(m_view,true);")));
     QVERIFY(!effects.contains(QStringLiteral(
