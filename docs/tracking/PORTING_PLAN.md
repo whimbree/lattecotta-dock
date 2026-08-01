@@ -5066,7 +5066,7 @@ prerequisites in the phases above are done.
       Give the internal per-view transition Plasma's Kirigami long duration,
       retain Latte's animation-speed preference, and expose the applied
       duration in the atomic dock-system snapshot.
-      Commits: b1ed551be
+      Commits: b1ed551be, ecb310a34
 - [x] Fix D260 (revealed dodge and auto-hide Docks kept their floating gap over
       windows). Keep visibility policy responsible for showing the surface,
       but make its window-touch presentation endpoint independent of visibility

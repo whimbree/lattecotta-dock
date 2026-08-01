@@ -29,8 +29,8 @@ The reproduction also exposed D261 (the matrix pristine seed survived across
 nested vehicles). The persistent artifact directory retained a six-view seed
 for later runs that selected a one-view configuration base. The pristine seed
 now lives under the per-vehicle runtime. The corrected recipe stages exactly
-one view and passes. Commits `b1ed551be`, `d57f0ee4f`, and `1fe46b1e6` carry the
-three independent roots.
+one view and passes. Commits `b1ed551be`, `ecb310a34`, `d57f0ee4f`, and
+`1fe46b1e6` carry the three independent roots.
 
 ## 2026-08-01: real-test launcher lacked KWin window authority
 
