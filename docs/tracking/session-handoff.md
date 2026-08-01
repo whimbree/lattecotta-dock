@@ -12,7 +12,7 @@ state. Rendered effects geometry also flowed back into local and absolute
 occupancy, struts, reservation, and available-length readback. Endpoint borders
 continued to use persistent maximum-length configuration.
 
-Commit `eabe3df05` routes the presented Justify length and endpoint border
+Commit `51eb53c69` routes the presented Justify length and endpoint border
 decision from the existing per-view transition while retaining configured
 resting authorities for the touch trigger, automatic sizing, layout clearance,
 local occupancy, struts, and reservation. Input follows the animated effects
@@ -24,12 +24,12 @@ The first independent review returned `MERGE AFTER FIXES`. A fully attached
 Justify Dock retains a full-span effects rectangle, so changing Maximum Length
 did not emit the paint event that had been relied on to update stable occupancy.
 The independent C++ touch trigger also had no direct `maxLengthChanged` route.
-Commit `19104b58e` makes both configured-length dependencies explicit.
+Commit `b8dd08b68` makes both configured-length dependencies explicit.
 
 The second independent review returned `DO NOT MERGE` after finding D245
 (partial Panels lost endpoint borders at live attachment). The border decision
 mistook effects paint filling a partial Panel's local QWindow for presentation
-reaching both output endpoints. Commit `88b4eef27` translates local paint
+reaching both output endpoints. Commit `18bc78ed4` translates local paint
 through global view geometry and compares it with the assigned output. The pure
 test covers every edge on a negative-origin output, and nested recipe 074 holds
 a real drag at attachment while the partial top Panel retains its left and
@@ -37,7 +37,7 @@ right endpoint borders.
 
 The next cold review returned `DO NOT MERGE` because the corrected helper's
 caller still supplied lagging `QWindow::screen()` geometry and silently treated
-invalid geometry as an ordinary partial presentation. Commit `5be872c20` reads
+invalid geometry as an ordinary partial presentation. Commit `65f0d5c1a` reads
 the assigned output and solved global surface from Positioner only after the
 relocation generation is applied, retains the last applied borders during the
 transaction, and recomputes when placement commits. Missing output or surface
@@ -48,7 +48,7 @@ The following cold review returned `DO NOT MERGE` because direct
 `setScreenToFollow()` and output geometry changes do not advance relocation
 tokens. Positioner could therefore update border policy with its previous
 solved surface and current output geometry before LayerShell accepted the new
-solution. Commit `45772ac13` makes one Positioner publication own applied
+solution. Commit `21bb65bae` makes one Positioner publication own applied
 surface geometry, the exact output geometry used to solve it, placement
 generation, and forced endpoint borders. Publication happens only after the
 LayerShell application succeeds. Solver scratch and failed placement attempts
@@ -57,14 +57,14 @@ are no longer observable as applied geometry.
 The final snapshot review returned `DO NOT MERGE` with three additional
 lifecycle findings. D246 (hidden partial Docks collapsed edge activation to
 one pixel) found that hidden input consumed the composited 1x1 effects
-sentinel instead of retained stable occupancy. Commit `2ed7553c5` selects
+sentinel instead of retained stable occupancy. Commit `4397109f8` selects
 stable local geometry while hidden or in sidebar mode and leaves visible Dock
 input on animated presentation geometry. D247 (placement controllers published
 before LayerShell acceptance) found that FloatingTransition and QWindow
-mutation still preceded the acceptance boundary. Commit `f2be2e994` solves
+mutation still preceded the acceptance boundary. Commit `27704ff82` solves
 surface, canvas, controller, and border state locally, discards refused stages,
 and installs every backing value before publishing successful notifications.
-Commit `139c860b2` closes D245's remaining silent-invalid arm by allowing absent
+Commit `5abc94338` closes D245's remaining silent-invalid arm by allowing absent
 paint only during revision-zero startup or an explicit Panel-to-Dock handoff.
 
 The focused background, border, mask, D-Bus, identity, source-contract, QML
@@ -77,7 +77,7 @@ observes stable occupancy and touch geometry converge while attached paint
 remains full-width. The corrected committed head passes all 247 QML interaction
 checks. The hidden-Dock boundary case combines the valid 1x1 hide sentinel with
 an 800-pixel retained partial span and produces an 800x2 reveal strip. Commits
-`ba7cc5f6d` and `12a6254fa` qualify that runtime-view geometry read and update
+`e72574be4` and `dd3f041cf` qualify that runtime-view geometry read and update
 its adversarial source guard without expanding the QML warning baseline. Nested
 recipe 074 passes again after the final lifecycle changes. Two-output recipe
 073 passes full-touching,
@@ -95,7 +95,7 @@ The final release review then returned `DO NOT MERGE` because direct output
 assignment still escaped D247's applied-placement boundary. QWindow and
 LayerShell mutations were not rolled back after a failed postcondition, and
 D-Bus could combine target screen identity with the previous applied surface.
-Commit `fb22372c8` keeps both output authorities behind suppressed QWindow
+Commit `d8a1b093a` keeps both output authorities behind suppressed QWindow
 signals, installs one complete Positioner snapshot before notification, and
 restores the complete previous lower-layer state before refusing a failed
 apply. Placement-dependent geometry, touch, borders, neighbor availability,
@@ -106,10 +106,10 @@ binary and focused LayerShell, source-contract, D-Bus, border, touch, and
 reservation tests pass, including a deliberate postcondition corruption that
 verifies exact rollback. The first replacement gate caught one stale identity
 contract that still required the removed premature QWindow move. Commit
-`b1a27c100` now requires reservation retirement, target staging, delayed
+`2049878ae` now requires reservation retirement, target staging, delayed
 application, and completion only after LayerShell acceptance. The full
 canonical gate then passes at exact source head
-`b1a27c1002e570ad99442bcd543d7e01c38519d3`, including all 124 CTest entries,
+`2049878ae462a4a4efd324a2bd9b5f8922f3f6ea`, including all 124 CTest entries,
 QML and coverage ratchets, scene probes, the ASan/UBSan nested drive, package
 provenance checks, and matrix refusals.
 
@@ -125,7 +125,7 @@ applied geometry. Manual replay also found D248 (output relocation waited for
 its own QWindow retarget): the transaction waited for `screenChanged`, while
 the atomic retarget waited for the transaction to clear its pending output.
 
-Commit `4a6c1aa20` completes one applied-placement lifecycle. Accepted output
+Commit `2bedd1174` completes one applied-placement lifecycle. Accepted output
 ownership retires the staged component without waiting for QWindow. Connector,
 ScreenPool id, geometry, and optional live screen publish as one snapshot.
 LayerShell reports setter traffic independently from acceptance. Positioner
@@ -139,17 +139,17 @@ current branch-built fakepointer helper. The desktop-installed helper predates
 the recipe's `draghold` verb and is not valid for that replay.
 
 The first replacement gate ran all 125 CTest entries successfully, then
-refused the stale 124-entry coverage inventory. Commit `79d43f2c8` registers
+refused the stale 124-entry coverage inventory. Commit `46da3e898` registers
 the new applied-output unit at its CTest position. This was a bookkeeping
 failure after the suite, not a failed test.
 
 The second replacement gate again passed 125/125 CTest entries, then refused
 the ratchet's independent count header because it still said 124. Commit
-`9e013a64a` raises the header to 125. The entry list and count are now
+`cabde65ce` raises the header to 125. The entry list and count are now
 consistent.
 
 The replacement canonical gate passes at exact source head
-`74c98a5db4123143306b720f2a6c994ac24980d1`, including all 125 CTest entries,
+`b80afdd79dad724b1841925bdd8da88cf6bd5e93`, including all 125 CTest entries,
 QML and coverage ratchets, scene probes, the ASan/UBSan nested drive, package
 provenance checks, and matrix refusals.
 
@@ -163,7 +163,7 @@ target edge, orientation, alignment, primary-output policy, or screen id.
 The review also found stale completion evidence in the floating-panel parity
 plan.
 
-Commit `69ae849e1` publishes one durable accepted-placement value containing
+Commit `68e6cd32f` publishes one durable accepted-placement value containing
 the complete output and axis identity, routes placement-dependent window
 tracking and D-Bus through it, and consumes the satisfied coalescer before
 advancing the publication revision. The applied-placement unit and focused
@@ -174,7 +174,7 @@ restart cases. A later content-sized solve remains valid after the stale-timer
 window. Recipe 074 passes live titlebar attachment before button release for
 Panel, Center Dock, and expanding Justify Dock. The earlier replacement
 canonical gate passed at exact source head
-`993a5cc5e98fbe70295efe8cb00c915b13389523`, including all 125 CTest entries,
+`f4c9a042935ce769a908e02acb5467b2e2a2ecc0`, including all 125 CTest entries,
 QML and coverage ratchets, scene probes, the ASan/UBSan nested drive, package
 provenance checks, and matrix refusals.
 
@@ -187,12 +187,12 @@ during a real post-startup interval without an accepted snapshot. D255
 (axis-change acceptance could adopt a duplicate publication) found that recipe
 073 could capture an extra publication as its baseline.
 
-Commits `e76f63c71`, `a39454327`, and `5563f8f20` keep the old accepted snapshot
+Commits `508801032`, `d9bd9811c`, and `8284accfb` keep the old accepted snapshot
 through final QWindow placement, refuse absent post-startup accepted state, and
 compare the axis change with its pre-mutation revision. The strengthened recipe
 then exposed the remaining D249 path directly: relocation reveal's
 `isHiddenChanged` hook republished the already committed rectangle. Commit
-`035602730` reuses that rectangle only when both the accepted generation and
+`bdd6cb3a9` reuses that rectangle only when both the accepted generation and
 live QWindow geometry match, while preserving the recovery solve for an
 ordinary displaced reveal. Recipe 073 passes its complete two-output topology
 matrix and exact one-publication assertion.
@@ -200,13 +200,14 @@ matrix and exact one-publication assertion.
 Recipe 074 produced one loaded-host false failure and then passed unchanged.
 D256 (held titlebar endpoint expired before observer sampling) traced that race
 to the scripted 900 ms waypoint expiring during repeated D-Bus reads. Commit
-`226736315` uses a bounded two-second hold so the button-held endpoint remains
+`1bd392e1f` uses a bounded two-second hold so the button-held endpoint remains
 observable before reversal. The final canonical gate exited 0 at exact source
-head `3a9b941df4d6cf77759e1c18e4598a0a23c8b5ce`, including all 125 CTest
+head `dbc9bdd03434ceb0d27e4b48a1a73d0c48b5f94f`, including all 125 CTest
 entries, QML and coverage ratchets, scene probes, the complete ASan/UBSan build
 and nested drive, package provenance checks, and matrix refusals. The
-real-session dock remains intentionally stopped until the reviewed merge is
-available.
+real-session dock remained intentionally stopped through review and merge.
+PR #134 merged through GitHub's rebase flow at `aaaa11727` on `main`; the
+tree-equivalent canonical-gate source head is `dbc9bdd03`.
 
 ## 2026-07-27: D241 unifies floating Dock presentation
 

@@ -3062,8 +3062,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D245 - Partial Panels lost endpoint borders at live attachment
-- STATUS: FIXED on the feature branch by `88b4eef27`, `5be872c20`,
-  `45772ac13`, `f2be2e994`, `139c860b2`, and `fb22372c8`; pending PR.
+- STATUS: FIXED on `main` by `18bc78ed4`, `65f0d5c1a`, `21bb65bae`,
+  `27704ff82`, `5abc94338`, and `d8a1b093a`.
 - FOUND: 2026-07-31, second independent review of PR #134.
 - SYMPTOM: a partial floating Panel loses both primary-axis endpoint borders
   when a dragged window reaches its live attached endpoint. Its rounded ends
@@ -3108,11 +3108,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   partial-touching, and disconnected output arrangements, exact separated-span
   activation, restart persistence, and its controlled negative oracles. The
   corrected exact source head
-  `b1a27c1002e570ad99442bcd543d7e01c38519d3` passes the full canonical gate.
+  `2049878ae462a4a4efd324a2bd9b5f8922f3f6ea` passes the full canonical gate.
 - SEVERITY: beta blocker.
 
 ### D256 - Held titlebar endpoint expired before observer sampling
-- STATUS: FIXED on the feature branch by `226736315`; pending PR.
+- STATUS: FIXED on `main` by `1bd392e1f`.
 - FOUND: 2026-07-31, repeated nested recipe 074 after the required PR #134
   follow-up review.
 - SYMPTOM: the live-titlebar recipe can report an expanding Justify Dock at
@@ -3131,7 +3131,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D255 - Axis-change acceptance could adopt a duplicate publication
-- STATUS: FIXED on the feature branch by `5563f8f20`; pending PR.
+- STATUS: FIXED on `main` by `8284accfb`.
 - FOUND: 2026-07-31, required independent follow-up review of PR #134.
 - SYMPTOM: recipe 073 could miss an identical extra placement publication if
   that publication landed before the first complete sample. The duplicate
@@ -3147,8 +3147,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D254 - D-Bus substituted target placement after startup
-- STATUS: FIXED on the feature branch by `a39454327` and `5563f8f20`; pending
-  PR.
+- STATUS: FIXED on `main` by `d9bd9811c` and `8284accfb`.
 - FOUND: 2026-07-31, required independent follow-up review of PR #134.
 - SYMPTOM: both D-Bus snapshots could report target output, edge, alignment,
   or orientation as accepted state after startup when no accepted placement
@@ -3165,8 +3164,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D253 - Accepted placement preceded the final QWindow rectangle
-- STATUS: FIXED on the feature branch by `e76f63c71` and `5563f8f20`; pending
-  PR.
+- STATUS: FIXED on `main` by `508801032` and `8284accfb`.
 - FOUND: 2026-07-31, required independent follow-up review of PR #134.
 - SYMPTOM: synchronous geometry observers could consume a newly accepted
   output, edge, and orientation while QWindow still exposed its previous
@@ -3182,7 +3180,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D252 - Placement consumers mixed accepted and target dimensions
-- STATUS: FIXED on the feature branch by `69ae849e1`; pending PR.
+- STATUS: FIXED on `main` by `68e6cd32f`.
 - FOUND: 2026-07-31, required independent follow-up review of PR #134.
 - SYMPTOM: during a pending output or axis change, window touch could classify
   the previous applied rectangle with the target edge, orientation, or screen
@@ -3203,13 +3201,13 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   deadlines, then passes full-touching, partial-touching, disconnected, and
   restart cases. Recipe 074 passes live titlebar attachment before button
   release for Panel, Center Dock, and expanding Justify Dock. Exact source head
-  `3a9b941df4d6cf77759e1c18e4598a0a23c8b5ce` passes the canonical gate,
+  `dbc9bdd03434ceb0d27e4b48a1a73d0c48b5f94f` passes the canonical gate,
   including all 125 CTest entries and the sanitized nested drive.
 - SEVERITY: release blocker.
 
 ### D251 - Hot-unplug erased applied output identity before geometry
-- STATUS: FIXED on the feature branch by `4a6c1aa20`, `79d43f2c8`,
-  `9e013a64a`, and `69ae849e1`; pending PR.
+- STATUS: FIXED on `main` by `2bedd1174`, `46da3e898`, `cabde65ce`, and
+  `68e6cd32f`.
 - FOUND: 2026-07-31, fresh cold independent review of PR #134.
 - SYMPTOM: destroying the applied `QScreen` could make D-Bus report the target
   connector and screen id with geometry retained from the previous applied
@@ -3231,7 +3229,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D250 - Failed LayerShell rollback traffic disappeared from observability
-- STATUS: FIXED on the feature branch by `4a6c1aa20`; pending PR.
+- STATUS: FIXED on `main` by `2bedd1174`.
 - FOUND: 2026-07-31, fresh cold independent review of PR #134.
 - SYMPTOM: a LayerShell postcondition failure could retarget and then restore
   output, anchors, margins, and exclusion state while the configure-request
@@ -3248,9 +3246,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D249 - Completed geometry armed a delayed duplicate publication
-- STATUS: FIXED on the feature branch by `4a6c1aa20`, `69ae849e1`,
-  `035602730`, and `5563f8f20`;
-  pending PR.
+- STATUS: FIXED on `main` by `2bedd1174`, `68e6cd32f`, `bdd6cb3a9`, and
+  `8284accfb`.
 - FOUND: 2026-07-31, fresh cold independent review of PR #134.
 - SYMPTOM: an axis-changing placement could publish its correct rectangle and
   then publish again about 650 ms later, adding avoidable geometry traffic and
@@ -3279,7 +3276,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D248 - Output relocation waited for its own QWindow retarget
-- STATUS: FIXED on the feature branch by `4a6c1aa20`; pending PR.
+- STATUS: FIXED on `main` by `2bedd1174`.
 - FOUND: 2026-07-31, manual two-output replay after the fresh cold review of
   PR #134.
 - SYMPTOM: a cross-output placement could remain hidden in relocation with its
@@ -3300,8 +3297,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D247 - Placement controllers published before LayerShell acceptance
-- STATUS: FIXED on the feature branch by `f2be2e994`, `fb22372c8`,
-  `4a6c1aa20`, and `69ae849e1`; pending PR.
+- STATUS: FIXED on `main` by `27704ff82`, `d8a1b093a`, `2bedd1174`, and
+  `68e6cd32f`.
 - FOUND: 2026-07-31, final cold independent review of PR #134.
 - SYMPTOM: a failed placement or direct resize could expose new Panel
   occupancy, window-touch triggers, presentation geometry, or enabled borders
@@ -3349,18 +3346,17 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   physical state throughout held live attachment. Two-output recipe 073 passes
   one-publication axis change, output topology changes, and restart
   persistence. The pre-review canonical gate passed at exact source head
-  `74c98a5db4123143306b720f2a6c994ac24980d1`, including all 125 CTest entries,
+  `b80afdd79dad724b1841925bdd8da88cf6bd5e93`, including all 125 CTest entries,
   QML and coverage ratchets, scene probes, the ASan/UBSan nested drive, package
   provenance checks, and matrix refusals. The corrected focused tests and both
-  nested placement recipes pass at `69ae849e1`. Exact source head
-  `3a9b941df4d6cf77759e1c18e4598a0a23c8b5ce` passes the replacement canonical
+  nested placement recipes pass at `68e6cd32f`. Exact source head
+  `dbc9bdd03434ceb0d27e4b48a1a73d0c48b5f94f` passes the replacement canonical
   gate with all 125 CTest entries, the ASan/UBSan nested drive, package
   provenance checks, and matrix refusals.
 - SEVERITY: release blocker.
 
 ### D246 - Hidden partial Docks collapsed edge activation to one pixel
-- STATUS: FIXED on the feature branch by `2ed7553c5`, `ba7cc5f6d`, and
-  `12a6254fa`; pending PR.
+- STATUS: FIXED on `main` by `4397109f8`, `e72574be4`, and `dd3f041cf`.
 - FOUND: 2026-07-31, final cold independent review of PR #134.
 - SYMPTOM: an auto-hidden partial Dock can retain only one pixel of its
   primary-axis reveal strip, making ordinary pointer reveal effectively
@@ -3377,12 +3373,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   always-stable source. All 247 QML interaction checks pass. The qualified
   runtime-view ownership path and its updated source guard keep the QML lint
   ratchet unchanged. Corrected exact source head
-  `b1a27c1002e570ad99442bcd543d7e01c38519d3` passes the full canonical gate.
+  `2049878ae462a4a4efd324a2bd9b5f8922f3f6ea` passes the full canonical gate.
 - SEVERITY: release blocker.
 
 ### D244 - Live attached Dock presentation leaked into stable geometry
-- STATUS: FIXED on the feature branch by `eabe3df05`, `3cf23db0a`, and
-  `19104b58e`; pending PR.
+- STATUS: FIXED on `main` by `51eb53c69`, `0322214c1`, and `b8dd08b68`.
 - FOUND: 2026-07-31, live-presentation ownership audit and expanded nested
   acceptance after D241 (floating Docks bypassed fractional presentation).
 - SYMPTOM: a floating Dock can animate its gap while a partial Justify
@@ -3418,7 +3413,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   54% while the attached presentation stays full-width and surface, icon, and
   reservation ownership remain unchanged. The replacement canonical gate
   passes at exact source head
-  `19104b58ea531f3110722891aaab73f3cdf82272`,
+  `b8dd08b68e7c02ed1078629f7e19df0dca954618`,
   including all 124 CTest entries, the reduced qmllint ratchet, rendered scene
   probes, ASan and UBSan nested execution, package provenance controls, and
   matrix refusals.

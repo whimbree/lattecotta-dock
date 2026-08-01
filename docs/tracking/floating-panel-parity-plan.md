@@ -211,7 +211,7 @@ and PR #126 landed FP-4B.
       authorities remain stable. Configured Maximum Length changes explicitly
       refresh stable occupancy and touch geometry even while attached paint
       remains full-span.
-      Commits: eabe3df05, 3cf23db0a, 19104b58e
+      Commits: 51eb53c69, 0322214c1, b8dd08b68
 - [x] D245 (partial Panels lost endpoint borders at live attachment) compares
       translated presentation geometry with the assigned output endpoints.
       Filling a partial QWindow no longer impersonates full output coverage,
@@ -220,55 +220,55 @@ and PR #126 landed FP-4B.
       replacing applied output ownership.
       Failed LayerShell stages do not publish controller state, and invalid
       post-startup presentations are refused outside an explicit type handoff.
-      Commits: 88b4eef27, 5be872c20, 45772ac13, f2be2e994, 139c860b2,
-      fb22372c8
+      Commits: 18bc78ed4, 65f0d5c1a, 21bb65bae, 27704ff82, 5abc94338,
+      d8a1b093a
 - [x] D246 (hidden partial Docks collapsed edge activation to one pixel) keeps
       hidden and sidebar reveal input on retained stable occupancy while
       visible Dock input follows animated presentation geometry.
-      Commits: 2ed7553c5, ba7cc5f6d, 12a6254fa
+      Commits: 4397109f8, e72574be4, dd3f041cf
 - [x] D247 (placement controllers published before LayerShell acceptance)
       stages geometry locally and installs one applied runtime snapshot only
       after LayerShell accepts the surface. QWindow output changes and their
       observer signals share that boundary, failed LayerShell postconditions
       restore the exact previous state, and D-Bus retains the previous applied
       output until replacement succeeds.
-      Commits: f2be2e994, fb22372c8, 4a6c1aa20, 69ae849e1
+      Commits: 27704ff82, d8a1b093a, 2bedd1174, 68e6cd32f
 - [x] D248 (output relocation waited for its own QWindow retarget) retires the
       staged output component after Positioner accepts destination ownership,
       without moving QWindow before the final placement boundary.
-      Commits: 4a6c1aa20
+      Commits: 2bedd1174
 - [x] D249 (completed geometry armed a delayed duplicate publication) keeps
       application pending through the final QWindow rectangle and consumes the
       already-satisfied geometry coalescer before advancing the revision.
       Relocation reveal reuses the completed rectangle instead of publishing
       it twice.
-      Commits: 4a6c1aa20, 69ae849e1, 035602730, 5563f8f20
+      Commits: 2bedd1174, 68e6cd32f, bdd6cb3a9, 8284accfb
 - [x] D250 (failed LayerShell rollback traffic disappeared from observability)
       reports attempted and guarded rollback setter traffic independently from
       placement acceptance.
-      Commits: 4a6c1aa20
+      Commits: 2bedd1174
 - [x] D251 (hot-unplug erased applied output identity before geometry) retains
       durable connector, ScreenPool id, and output geometry after the optional
       live screen disappears.
-      Commits: 4a6c1aa20, 79d43f2c8, 9e013a64a, 69ae849e1
+      Commits: 2bedd1174, 46da3e898, cabde65ce, 68e6cd32f
 - [x] D252 (placement consumers mixed accepted and target dimensions) publishes
       edge, orientation, alignment, primary-output policy, output identity, and
       output geometry as one accepted value snapshot for window tracking and
       D-Bus.
-      Commits: 69ae849e1
+      Commits: 68e6cd32f
 - [x] D253 (accepted placement preceded the final QWindow rectangle) retains
       the previous accepted snapshot through final resize and positioning.
-      Commits: e76f63c71, 5563f8f20
+      Commits: 508801032, 8284accfb
 - [x] D254 (D-Bus substituted target placement after startup) refuses a
       missing accepted snapshot after startup rather than exposing target
       placement as applied state.
-      Commits: a39454327, 5563f8f20
+      Commits: d9bd9811c, 8284accfb
 - [x] D255 (axis-change acceptance could adopt a duplicate publication)
       requires exactly one revision increment from the pre-mutation state.
-      Commits: 5563f8f20
+      Commits: 8284accfb
 - [x] D256 (held titlebar endpoint expired before observer sampling) keeps the
       held transition endpoint stable through repeated D-Bus observations.
-      Commits: 226736315, 5563f8f20
+      Commits: 1bd392e1f, 8284accfb
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
       independent unless a shared root is proved.
@@ -280,7 +280,7 @@ and PR #126 landed FP-4B.
       terms.
 - [x] The full canonical gate passes after the final source commit.
       The replacement gate exited 0 at exact source head
-      `3a9b941df4d6cf77759e1c18e4598a0a23c8b5ce`, including all 125 CTest
+      `dbc9bdd03434ceb0d27e4b48a1a73d0c48b5f94f`, including all 125 CTest
       entries, QML and coverage ratchets, visual probes, the complete
       ASan/UBSan build, four nested-compositor recipes, package provenance
       controls, and matrix refusals. The separate focused acceptance also
@@ -354,7 +354,8 @@ and PR #126 landed FP-4B.
       correction, rereview where required, rebase, canonical-gate, and GitHub
       rebase-merge flow. Each final code diff must have an independent
       mergeable verdict. PR #128 merged FP-4C and completed Option 1 at
-      `4d52a1917` on `main`.
+      `4d52a1917` on `main`. PR #134 merged the corrected presentation and
+      applied-placement ownership at `aaaa11727` on `main`.
 - [x] Nested-KWin acceptance passes without touching the real desktop session.
 - [ ] Final real-layout acceptance checks visual feel, pointer-edge behavior,
       popup placement, and multi-output composition before release sign-off.
