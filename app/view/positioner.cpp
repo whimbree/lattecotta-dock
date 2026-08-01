@@ -904,6 +904,12 @@ bool Positioner::solveAndApplyGeometry(
         return false;
     }
 
+    qWindowPlacementSignals.unblock();
+    //! QWindow geometry notifications must retain the previous accepted
+    //! placement. Keep the solved placement local until the final rectangle
+    //! is installed; pending-state consumers therefore continue to observe
+    //! one coherent old generation during resize and reposition signals.
+    applySolvedWindowGeometry(solved->surface);
     const AppliedGeometryChanges changes =
         installAppliedGeometry(
         *solved,
@@ -911,7 +917,6 @@ bool Positioner::solveAndApplyGeometry(
         qWindowScreenChanges,
         availableScreenRect,
         freeRegion);
-    qWindowPlacementSignals.unblock();
     publishAppliedGeometry(
         *solved,
         placementScreen,
@@ -1282,14 +1287,13 @@ void Positioner::publishAppliedGeometry(
 {
     Q_ASSERT(assignedScreen);
 
-    applySolvedWindowGeometry(solved.surface);
-
     //! Geometry signals must observe the old publication while QWindow moves
-    //! through its intermediate resize and position notifications. Commit the
-    //! new revision only after the final rectangle is installed. This solve
-    //! consumes the coalesced request that scheduled it, including a
-    //! locationChanged request preceding final relocation. Stop that request
-    //! and any satisfied validation retry before publishing the revision.
+    //! through its intermediate resize and position notifications. The new
+    //! snapshot is installed only after the final rectangle, immediately
+    //! before this publication. This solve consumes the coalesced request that
+    //! scheduled it, including a locationChanged request preceding final
+    //! relocation. Stop that request and any satisfied validation retry before
+    //! publishing the revision.
     m_syncGeometryTimer.stop();
     m_geometryApplicationPending = false;
     ++m_surfaceGeometryPublicationRevision;
