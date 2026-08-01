@@ -240,7 +240,9 @@ and PR #126 landed FP-4B.
 - [x] D249 (completed geometry armed a delayed duplicate publication) keeps
       application pending through the final QWindow rectangle and consumes the
       already-satisfied geometry coalescer before advancing the revision.
-      Commits: 4a6c1aa20, 69ae849e1
+      Relocation reveal reuses the completed rectangle instead of publishing
+      it twice.
+      Commits: 4a6c1aa20, 69ae849e1, 035602730, 5563f8f20
 - [x] D250 (failed LayerShell rollback traffic disappeared from observability)
       reports attempted and guarded rollback setter traffic independently from
       placement acceptance.
@@ -254,6 +256,19 @@ and PR #126 landed FP-4B.
       output geometry as one accepted value snapshot for window tracking and
       D-Bus.
       Commits: 69ae849e1
+- [x] D253 (accepted placement preceded the final QWindow rectangle) retains
+      the previous accepted snapshot through final resize and positioning.
+      Commits: e76f63c71, 5563f8f20
+- [x] D254 (D-Bus substituted target placement after startup) refuses a
+      missing accepted snapshot after startup rather than exposing target
+      placement as applied state.
+      Commits: a39454327, 5563f8f20
+- [x] D255 (axis-change acceptance could adopt a duplicate publication)
+      requires exactly one revision increment from the pre-mutation state.
+      Commits: 5563f8f20
+- [x] D256 (held titlebar endpoint expired before observer sampling) keeps the
+      held transition endpoint stable through repeated D-Bus observations.
+      Commits: 226736315, 5563f8f20
 - [ ] D151 (nested hover preview did not exercise parabolic expansion) and
       D152 (linked portrait dock overflowed with automatic sizing off) remain
       independent unless a shared root is proved.

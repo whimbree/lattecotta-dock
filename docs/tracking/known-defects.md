@@ -3111,6 +3111,76 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `b1a27c1002e570ad99442bcd543d7e01c38519d3` passes the full canonical gate.
 - SEVERITY: beta blocker.
 
+### D256 - Held titlebar endpoint expired before observer sampling
+- STATUS: FIXED on the feature branch by `226736315`; pending PR.
+- FOUND: 2026-07-31, repeated nested recipe 074 after the required PR #134
+  follow-up review.
+- SYMPTOM: the live-titlebar recipe can report an expanding Justify Dock at
+  its later floated endpoint even though an unchanged rerun observes the
+  complete attached endpoint correctly.
+- ROOT: fakepointer held each drag waypoint for 900 ms. Repeated D-Bus samples
+  on a loaded nested host could consume that interval, letting the scripted
+  outward reversal begin before the endpoint assertion observed the frame.
+- FIX: allow bounded fakepointer holds up to five seconds and retain each
+  recipe endpoint for two seconds. The pointer button remains held throughout
+  both transition proofs.
+- EVIDENCE: the unchanged production path passed on immediate replay. The
+  rebuilt helper rejects 5001 ms and accepts the new bounded range. Recipe 074
+  passes its Panel, Center Dock, expanding Justify Dock, and attached ruler
+  cases with the longer held endpoint.
+- SEVERITY: beta blocker.
+
+### D255 - Axis-change acceptance could adopt a duplicate publication
+- STATUS: FIXED on the feature branch by `5563f8f20`; pending PR.
+- FOUND: 2026-07-31, required independent follow-up review of PR #134.
+- SYMPTOM: recipe 073 could miss an identical extra placement publication if
+  that publication landed before the first complete sample. The duplicate
+  became the test baseline and the later stability check passed.
+- ROOT: the recipe captured its comparison revision after mutation instead of
+  retaining the accepted revision that preceded the operation.
+- FIX: capture the pre-mutation revision and require exactly one increment
+  after the old 150 ms coalescer and 500 ms validator deadlines. Preserve the
+  prior revision and complete D-Bus state on failure.
+- EVIDENCE: the strengthened recipe failed deterministically with revision 4
+  advancing to 6, then passed after the duplicate reveal solve was removed.
+  Its source guard rejects removal of the exact revision delta.
+- SEVERITY: beta blocker.
+
+### D254 - D-Bus substituted target placement after startup
+- STATUS: FIXED on the feature branch by `a39454327` and `5563f8f20`; pending
+  PR.
+- FOUND: 2026-07-31, required independent follow-up review of PR #134.
+- SYMPTOM: both D-Bus snapshots could report target output, edge, alignment,
+  or orientation as accepted state after startup when no accepted placement
+  snapshot existed.
+- ROOT: both collectors treated every absent accepted snapshot as startup and
+  fell back to mutable View and Positioner target fields. Setting
+  `inStartup=false` precedes the first accepted solve, so a real post-startup
+  interval reached that fallback.
+- FIX: retain fallback reporting only during startup. A missing accepted
+  placement after startup logs the violated invariant and refuses the complete
+  snapshot.
+- EVIDENCE: focused D-Bus and source-contract tests pass. Controlled source
+  mutations that remove either collector's refusal fail the contract.
+- SEVERITY: release blocker.
+
+### D253 - Accepted placement preceded the final QWindow rectangle
+- STATUS: FIXED on the feature branch by `e76f63c71` and `5563f8f20`; pending
+  PR.
+- FOUND: 2026-07-31, required independent follow-up review of PR #134.
+- SYMPTOM: synchronous geometry observers could consume a newly accepted
+  output, edge, and orientation while QWindow still exposed its previous
+  rectangle during placement.
+- ROOT: `installAppliedGeometry()` replaced the accepted snapshot before
+  `applySolvedWindowGeometry()` performed the final resize and position.
+- FIX: retain the complete previous accepted snapshot through QWindow resize
+  and positioning, then install and publish the new accepted placement.
+- EVIDENCE: the source contract requires signal release, final QWindow apply,
+  accepted snapshot install, and publication in that order. Its controlled
+  premature-install mutation fails. Focused placement tests and two-output
+  recipe 073 pass.
+- SEVERITY: release blocker.
+
 ### D252 - Placement consumers mixed accepted and target dimensions
 - STATUS: FIXED on the feature branch by `69ae849e1`; pending PR.
 - FOUND: 2026-07-31, required independent follow-up review of PR #134.
@@ -3178,7 +3248,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D249 - Completed geometry armed a delayed duplicate publication
-- STATUS: FIXED on the feature branch by `4a6c1aa20` and `69ae849e1`;
+- STATUS: FIXED on the feature branch by `4a6c1aa20`, `69ae849e1`,
+  `035602730`, and `5563f8f20`;
   pending PR.
 - FOUND: 2026-07-31, fresh cold independent review of PR #134.
 - SYMPTOM: an axis-changing placement could publish its correct rectangle and
@@ -3188,16 +3259,23 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   before applying the final QWindow rectangle. The intermediate resize at the
   old origin armed the 500 ms geometry validator. The final position satisfied
   the geometry but did not stop that timer, whose sync coalescer published
-  again 150 ms later.
+  again 150 ms later. The first correction still left a second duplicate path:
+  relocation reveal changed `isHidden`, whose delayed-signal hook
+  unconditionally solved the already committed final QWindow rectangle again.
 - FIX: retain the pending state through the complete QWindow rectangle apply.
   Stop the consumed geometry coalescer, clear the pending state, advance the
   publication revision, and validate only after the final position is
-  installed. Startup geometry consumes the same coalesced request.
+  installed. Startup geometry consumes the same coalesced request. During
+  reveal, reuse a completed placement only when both the accepted generation
+  and live QWindow rectangle match. An ordinary displaced reveal retains its
+  recovery solve.
 - EVIDENCE: two-output recipe 073 changes a live view from vertical to
-  horizontal, captures the first complete publication, observes beyond both
-  old timer deadlines, and requires the revision and QWindow rectangle to stay
-  unchanged before separately waiting for full convergence. Focused source and
-  identity contracts pass.
+  horizontal, compares against the pre-mutation revision beyond both old timer
+  deadlines, and requires exactly one publication with a matching QWindow
+  rectangle before separately waiting for full convergence. The strengthened
+  recipe first exposed revision 4 advancing to 6, then passed after the reveal
+  hook reused the exact accepted rectangle. Focused source and identity
+  contracts pass.
 - SEVERITY: beta blocker.
 
 ### D248 - Output relocation waited for its own QWindow retarget
