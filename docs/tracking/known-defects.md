@@ -3111,9 +3111,33 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `b1a27c1002e570ad99442bcd543d7e01c38519d3` passes the full canonical gate.
 - SEVERITY: beta blocker.
 
+### D252 - Placement consumers mixed accepted and target dimensions
+- STATUS: FIXED on the feature branch by `69ae849e1`; pending PR.
+- FOUND: 2026-07-31, required independent follow-up review of PR #134.
+- SYMPTOM: during a pending output or axis change, window touch could classify
+  the previous applied rectangle with the target edge, orientation, or screen
+  id. D-Bus could likewise report retained applied geometry with target edge,
+  alignment, or primary-output policy.
+- ROOT: Positioner's accepted snapshot retained only output identity and
+  geometry. Placement consumers continued to read every other dimension from
+  mutable View target state, so the acceptance boundary was atomic only for
+  part of a placement.
+- FIX: publish output identity, output geometry, edge, orientation, alignment,
+  primary-output policy, and the optional live `QScreen` as one durable value
+  snapshot. Window tracking and both D-Bus collectors consume those accepted
+  dimensions together and refuse a missing post-startup snapshot loudly.
+- EVIDENCE: the applied-placement unit pins every durable value with no live
+  screen. Source contracts require Positioner install ordering and every
+  window-tracking and D-Bus consumer. Nested recipe 073 changes a live view
+  across axes, preserves one accepted publication through the old delayed
+  deadlines, then passes full-touching, partial-touching, disconnected, and
+  restart cases. Recipe 074 passes live titlebar attachment before button
+  release for Panel, Center Dock, and expanding Justify Dock.
+- SEVERITY: release blocker.
+
 ### D251 - Hot-unplug erased applied output identity before geometry
-- STATUS: FIXED on the feature branch by `4a6c1aa20`, `79d43f2c8`, and
-  `9e013a64a`; pending PR.
+- STATUS: FIXED on the feature branch by `4a6c1aa20`, `79d43f2c8`,
+  `9e013a64a`, and `69ae849e1`; pending PR.
 - FOUND: 2026-07-31, fresh cold independent review of PR #134.
 - SYMPTOM: destroying the applied `QScreen` could make D-Bus report the target
   connector and screen id with geometry retained from the previous applied
@@ -3122,10 +3146,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   Qt correctly cleared that handle on destruction, but the applied surface and
   output rectangle remained. Collectors then fell back to mutable target
   identity while continuing to publish the retained applied geometry.
-- FIX: publish connector, stable ScreenPool id, and output rectangle as one
-  durable value snapshot. Keep the `QPointer<QScreen>` only as the optional
-  process-owned live handle required for a new placement application.
-- EVIDENCE: the applied-output unit test pins value identity with no live
+- FIX: publish connector, stable ScreenPool id, output rectangle, and the
+  remaining accepted placement dimensions as one durable value snapshot. Keep
+  the `QPointer<QScreen>` only as the optional process-owned live handle
+  required for a new placement application.
+- EVIDENCE: the applied-placement unit test pins value identity with no live
   screen. D-Bus and source-contract tests require both collectors and
   `View::screenGeometry()` to consume the durable snapshot. Both the coverage
   inventory and its independent count header include the new 125th unit.
@@ -3151,7 +3176,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D249 - Completed geometry armed a delayed duplicate publication
-- STATUS: FIXED on the feature branch by `4a6c1aa20`; pending PR.
+- STATUS: FIXED on the feature branch by `4a6c1aa20` and `69ae849e1`;
+  pending PR.
 - FOUND: 2026-07-31, fresh cold independent review of PR #134.
 - SYMPTOM: an axis-changing placement could publish its correct rectangle and
   then publish again about 650 ms later, adding avoidable geometry traffic and
@@ -3162,9 +3188,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   the geometry but did not stop that timer, whose sync coalescer published
   again 150 ms later.
 - FIX: retain the pending state through the complete QWindow rectangle apply.
-  Clear it, advance the publication revision, and validate only after the final
-  position is installed. Validation now has symmetric pending, arm, and disarm
-  paths, including startup geometry.
+  Stop the consumed geometry coalescer, clear the pending state, advance the
+  publication revision, and validate only after the final position is
+  installed. Startup geometry consumes the same coalesced request.
 - EVIDENCE: two-output recipe 073 changes a live view from vertical to
   horizontal, captures the first complete publication, observes beyond both
   old timer deadlines, and requires the revision and QWindow rectangle to stay
@@ -3194,8 +3220,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: release blocker.
 
 ### D247 - Placement controllers published before LayerShell acceptance
-- STATUS: FIXED on the feature branch by `f2be2e994`, `fb22372c8`, and
-  `4a6c1aa20`; pending PR.
+- STATUS: FIXED on the feature branch by `f2be2e994`, `fb22372c8`,
+  `4a6c1aa20`, and `69ae849e1`; pending PR.
 - FOUND: 2026-07-31, final cold independent review of PR #134.
 - SYMPTOM: a failed placement or direct resize could expose new Panel
   occupancy, window-touch triggers, presentation geometry, or enabled borders
@@ -3230,7 +3256,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   applied output publication no longer loops back into another solve. The
   completed boundary also owns output-component acknowledgement, durable
   output identity, rollback configure traffic, the final QWindow rectangle,
-  validator disarm, and the publication revision.
+  validator and coalescer disarm, the accepted edge, orientation, alignment,
+  primary-output policy, and the publication revision.
 - EVIDENCE: the production binary and focused LayerShell, source-contract,
   D-Bus, panel-border, window-touch, and reservation-publication tests pass.
   The LayerShell test deliberately corrupts the final anchors after all
@@ -3241,10 +3268,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   absence of the publication feedback loop. Nested recipe 074 observes stable
   physical state throughout held live attachment. Two-output recipe 073 passes
   one-publication axis change, output topology changes, and restart
-  persistence. The canonical gate passes at exact source head
+  persistence. The pre-review canonical gate passed at exact source head
   `74c98a5db4123143306b720f2a6c994ac24980d1`, including all 125 CTest entries,
   QML and coverage ratchets, scene probes, the ASan/UBSan nested drive, package
-  provenance checks, and matrix refusals.
+  provenance checks, and matrix refusals. The corrected focused tests and both
+  nested placement recipes pass at `69ae849e1`; its replacement canonical gate
+  is pending.
 - SEVERITY: release blocker.
 
 ### D246 - Hidden partial Docks collapsed edge activation to one pixel

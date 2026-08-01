@@ -5012,7 +5012,7 @@ prerequisites in the phases above are done.
       QWindow and LayerShell output changes inside the same boundary, restore
       their prior state on a failed postcondition, and report only the last
       complete applied output through D-Bus.
-      Commits: f2be2e994, fb22372c8, 4a6c1aa20
+      Commits: f2be2e994, fb22372c8, 4a6c1aa20, 69ae849e1
 - [x] Fix D248 (output relocation waited for its own QWindow retarget).
       Acknowledge output ownership after Positioner accepts the staged
       destination so final geometry application can retarget QWindow and
@@ -5023,7 +5023,7 @@ prerequisites in the phases above are done.
       then advance the publication and disarm validation from the completed
       state. Prove the old validator and coalescer deadlines cannot republish
       an axis change.
-      Commits: 4a6c1aa20
+      Commits: 4a6c1aa20, 69ae849e1
 - [x] Fix D250 (failed LayerShell rollback traffic disappeared from
       observability). Return placement acceptance and configure traffic as
       separate values, including guarded setters used to restore a failed
@@ -5032,7 +5032,13 @@ prerequisites in the phases above are done.
 - [x] Fix D251 (hot-unplug erased applied output identity before geometry).
       Retain connector, stable ScreenPool id, and output rectangle as one value
       snapshot whose lifetime does not depend on the optional live `QScreen`.
-      Commits: 4a6c1aa20, 79d43f2c8, 9e013a64a
+      Commits: 4a6c1aa20, 79d43f2c8, 9e013a64a, 69ae849e1
+- [x] Fix D252 (placement consumers mixed accepted and target dimensions).
+      Publish edge, orientation, alignment, primary-output policy, output
+      identity, output geometry, and the optional live screen as one accepted
+      value snapshot. Window tracking and D-Bus consume only that coherent
+      snapshot after startup.
+      Commits: 69ae849e1
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

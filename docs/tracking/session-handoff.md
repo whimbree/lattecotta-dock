@@ -151,9 +151,31 @@ consistent.
 The replacement canonical gate passes at exact source head
 `74c98a5db4123143306b720f2a6c994ac24980d1`, including all 125 CTest entries,
 QML and coverage ratchets, scene probes, the ASan/UBSan nested drive, package
-provenance checks, and matrix refusals. A fresh cold review remains required
-before PR #134 lands. The real-session dock remains intentionally stopped until
-the reviewed merge is available.
+provenance checks, and matrix refusals.
+
+The required independent review returned `DO NOT MERGE` with D249 still
+incomplete and one new release blocker. The final rectangle stopped the 500 ms
+validator, but its already-armed 150 ms coalescer still republished the same
+accepted placement. D252 (placement consumers mixed accepted and target
+dimensions) found that the accepted snapshot covered output identity and
+geometry only. Window tracking and D-Bus could still pair that rectangle with
+target edge, orientation, alignment, primary-output policy, or screen id.
+The review also found stale completion evidence in the floating-panel parity
+plan.
+
+Commit `69ae849e1` publishes one durable accepted-placement value containing
+the complete output and axis identity, routes placement-dependent window
+tracking and D-Bus through it, and consumes the satisfied coalescer before
+advancing the publication revision. The applied-placement unit and focused
+LayerShell, D-Bus, identity, and source-contract tests pass. Recipe 073 changes
+a live view across axes, observes one accepted publication beyond both old
+deadlines, then passes full-touching, partial-touching, disconnected, and
+restart cases. A later content-sized solve remains valid after the stale-timer
+window. Recipe 074 passes live titlebar attachment before button release for
+Panel, Center Dock, and expanding Justify Dock. The replacement canonical gate
+and the one required independent follow-up review remain pending. The
+real-session dock remains intentionally stopped until the reviewed merge is
+available.
 
 ## 2026-07-27: D241 unifies floating Dock presentation
 
