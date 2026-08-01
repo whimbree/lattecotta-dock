@@ -19,6 +19,7 @@ Item{
     id: manager
     anchors.fill: parent
 
+    required property real animationSpeedFactor
     property QtObject window
 
     property bool isFloatingInClientSide: !root.behaveAsPlasmaPanel
@@ -34,7 +35,7 @@ Item{
     //! this much shorter internal gap motion feel delayed and heavy.
     readonly property int floatingTransitionAnimationSpeed:
         LatteCore.WindowSystem.compositingActive
-        ? animations.speedFactor.current * Kirigami.Units.longDuration : 0
+        ? manager.animationSpeedFactor * Kirigami.Units.longDuration : 0
 
     property bool inClientSideScreenEdgeSliding: false
     property bool inNormalState: ((animations.needBothAxis.count === 0) && (animations.needLength.count === 0))

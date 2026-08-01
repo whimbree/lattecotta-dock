@@ -420,11 +420,18 @@ private:
                    "&&(externalBindings.containmentItem.behaveAsPlasmaPanel"
                    "||visibilityManager.inNormalState)"))
             && visibility.contains(QStringLiteral(
+                   "requiredpropertyrealanimationSpeedFactor"))
+            && visibility.contains(QStringLiteral(
                    "readonlypropertyint"
                    "floatingTransitionAnimationSpeed:"
                    "LatteCore.WindowSystem.compositingActive"
-                   "?animations.speedFactor.current"
+                   "?manager.animationSpeedFactor"
                    "*Kirigami.Units.longDuration:0"))
+            && main.contains(QStringLiteral(
+                   "VisibilityManager{"
+                   "id:visibilityManager"
+                   "animationSpeedFactor:"
+                   "root.animations.speedFactor.current"))
             && visibility.contains(QStringLiteral(
                    "property:\"animationDuration\""
                    "when:root.latteView&&root.latteView.floatingTransition"
@@ -2754,9 +2761,11 @@ void SourceGuardTest::stableFloatingPanelQml_keepsOneTransitionAuthority()
              " stable window, reservation, and applet-measurement envelope");
 
     QString slowFloatingTransition = visibility;
+    const QString floatingTransitionBinding = QStringLiteral(
+        "value: manager.floatingTransitionAnimationSpeed");
+    QCOMPARE(slowFloatingTransition.count(floatingTransitionBinding), 1);
     slowFloatingTransition.replace(
-        QStringLiteral(
-            "value:manager.floatingTransitionAnimationSpeed"),
+        floatingTransitionBinding,
         QStringLiteral("value:manager.animationSpeed"));
     QVERIFY2(!matchesStableFloatingPanelQmlContract(
                  main, bindings, slowFloatingTransition, layouts, metrics,
@@ -4314,6 +4323,7 @@ void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
         "&&!manager.window.visibility.isSidebar){return;}")));
     QVERIFY(main.contains(QStringLiteral(
         "VisibilityManager{id:visibilityManager"
+        "animationSpeedFactor:root.animations.speedFactor.current"
         "layouts:layoutsContainerwindow:latteView"
         "inClientSideScreenEdgeSliding:")));
     QVERIFY(main.contains(QStringLiteral(
