@@ -3130,6 +3130,31 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   cases with the longer held endpoint.
 - SEVERITY: beta blocker.
 
+### D257 - Real-desktop launcher omitted KWin authority for worktree binaries
+- STATUS: OPEN; root fix prepared on `fix/dev-wayland-authority`.
+- FOUND: 2026-08-01, final real-layout acceptance of merged PR #134.
+- SYMPTOM: a dock launched from a clean validation worktree starts and renders,
+  but open-application indicators, direct window-touch attachment, and other
+  task-window behavior remain inert. D-Bus reports an empty
+  `windowTouchGeometryRoleType`, zero touching windows, and launcher-only task
+  rows even after a new client opens.
+- ROOT: KWin gates `org_kde_plasma_window_management` by an exact executable
+  match in the KService desktop-entry cache. `start-dock.sh` can run a binary
+  from any checkout, but it did not register that path. Existing entries named
+  the installed package, primary checkout, or older validation worktrees, so
+  KWin correctly withheld the window feed without failing the process.
+- FIX: before entering the desk lifecycle, register the canonical build
+  executable in one current-development desktop entry. Copy the privileged
+  interface list from the shipped desktop template as its single source and
+  refresh KService on every start. Refuse a missing executable or malformed
+  template before stopping the existing dock.
+- EVIDENCE: the isolated launcher test requires the exact canonical executable,
+  preserves spaces and percent field codes, refreshes an unchanged cache,
+  replaces stale worktree identity, refuses a missing binary without changing
+  the last valid entry, and pins registration before process launch. Final
+  real-session window-feed and attachment acceptance remains pending.
+- SEVERITY: beta blocker.
+
 ### D255 - Axis-change acceptance could adopt a duplicate publication
 - STATUS: FIXED on `main` by `8284accfb`.
 - FOUND: 2026-07-31, required independent follow-up review of PR #134.

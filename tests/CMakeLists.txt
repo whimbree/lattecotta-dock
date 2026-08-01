@@ -720,6 +720,13 @@ add_test(NAME qmleffectrules
 add_test(NAME qmltooltiprules
     COMMAND ${CMAKE_SOURCE_DIR}/scripts/qml-tooltip-rules.sh)
 
+# The real-desktop launcher must authorize the exact worktree binary before
+# KWin exposes window-management state. Without this entry the dock starts but
+# every task model contains only launchers, so open indicators, dodge, and
+# floating-gap attachment all fail together without an error.
+add_test(NAME startdockauthority
+    COMMAND ${CMAKE_SOURCE_DIR}/tests/startdockauthoritytest.sh)
+
 # Previews-pipeline contract scan: pins the ten line-level invariants the
 # 2026-07-15 hover-lag excavation earned (burst debounce ordering and
 # numbers, hide-countdown cancel, direct settle adoption, rootIndex token

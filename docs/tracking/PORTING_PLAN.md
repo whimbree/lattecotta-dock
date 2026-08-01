@@ -5056,6 +5056,12 @@ prerequisites in the phases above are done.
       Keep the button-held endpoint stable long enough for repeated D-Bus
       sampling under nested-host load.
       Commits: 1bd392e1f, 8284accfb
+- [ ] Fix D257 (the real-desktop launcher omitted KWin authority for worktree
+      binaries). Register the exact development executable and the shipped
+      privileged Wayland interface list before launch, refresh KService, and
+      refuse an invalid authority description instead of starting a
+      half-functional dock.
+      Commits: pending
 - [ ] Ship the Latte separator applet in-tree (requested 2026-07-15
       while surveying what the repo actually ships: shell,
       containment, tasks plasmoid and three indicators - NO applets).

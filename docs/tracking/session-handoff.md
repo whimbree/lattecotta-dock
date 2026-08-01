@@ -1,7 +1,31 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-31.
+Last updated 2026-08-01.
+
+## 2026-08-01: real-test launcher lacked KWin window authority
+
+The exact merged `main` build at `86728e6c0` started from
+`/tmp/latte-main-realtest`, but KWin supplied no
+`org_kde_plasma_window_management` feed. Every per-view
+`windowTouchGeometryRoleType` was empty, each touching count remained zero,
+and `viewTasksData` exposed launchers without any running windows. Creating a
+new Konsole after startup did not change either readback. The partial top Dock
+therefore retained its configured 18-pixel floating gap over a maximized
+Firefox window, and running-application indicators were absent for the same
+reason.
+
+D257 (the real-desktop launcher omitted KWin authority for worktree binaries)
+is a launcher identity defect, not transition geometry or task-model sharing.
+KWin grants the privileged protocol only when a desktop entry names the exact
+executable. Existing local development entries named the primary checkout and
+older validation worktrees, not `/tmp/latte-main-realtest`. The proposed fix
+makes `start-dock.sh` install one current-development entry using the
+authoritative interface list from the shipped desktop template and refresh
+KService before any dock process starts. The isolated launcher test covers
+paths with spaces and desktop field-code characters, an unchanged cache
+refresh, worktree replacement, missing-binary refusal, and helper-before-launch
+ordering.
 
 ## 2026-07-31: D244 through D247 isolate live presentation
 
