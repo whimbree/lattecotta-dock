@@ -280,7 +280,7 @@ and PR #126 landed FP-4B.
       terms.
 - [x] The full canonical gate passes after the final source commit.
       The replacement gate exited 0 at exact source head
-      `993a5cc5e98fbe70295efe8cb00c915b13389523`, including all 125 CTest
+      `3a9b941df4d6cf77759e1c18e4598a0a23c8b5ce`, including all 125 CTest
       entries, QML and coverage ratchets, visual probes, the complete
       ASan/UBSan build, four nested-compositor recipes, package provenance
       controls, and matrix refusals. The separate focused acceptance also
