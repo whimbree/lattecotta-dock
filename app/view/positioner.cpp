@@ -306,8 +306,18 @@ void Positioner::init()
 void Positioner::initDelayedSignals()
 {
     connect(m_view->visibility(), &ViewPart::VisibilityManager::isHiddenChanged, this, [&]() {
-        if (m_view->behaveAsPlasmaPanel() && !m_view->visibility()->isHidden() && qAbs(m_slideOffset)>0) {
-            //! ignore any checks to make sure the panel geometry is up-to-date
+        const bool hasCurrentWindowGeometry =
+            hasPublishedCurrentPlacement()
+            && m_view->geometry()
+                == m_appliedSurfaceGeometry;
+        if (m_view->behaveAsPlasmaPanel()
+                && !m_view->visibility()->isHidden()
+                && qAbs(m_slideOffset) > 0
+                && !hasCurrentWindowGeometry) {
+            //! An ordinary reveal can start with the QWindow still displaced
+            //! by hiding. A relocation reveal already installs its final
+            //! rectangle before changing visibility, so solving it again
+            //! would publish the completed transaction twice.
             immediateSyncGeometry();
         }
     });
