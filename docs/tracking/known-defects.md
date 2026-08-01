@@ -3131,7 +3131,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D257 - Real-desktop launcher omitted KWin authority for worktree binaries
-- STATUS: OPEN; root fix prepared on `fix/dev-wayland-authority`.
+- STATUS: FIXED on `main` by `0d30286cb` and `d97fe9d90` (PR #136).
 - FOUND: 2026-08-01, final real-layout acceptance of merged PR #134.
 - SYMPTOM: a dock launched from a clean validation worktree starts and renders,
   but open-application indicators, direct window-touch attachment, and other
