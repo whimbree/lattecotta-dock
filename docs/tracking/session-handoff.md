@@ -173,9 +173,11 @@ deadlines, then passes full-touching, partial-touching, disconnected, and
 restart cases. A later content-sized solve remains valid after the stale-timer
 window. Recipe 074 passes live titlebar attachment before button release for
 Panel, Center Dock, and expanding Justify Dock. The replacement canonical gate
-and the one required independent follow-up review remain pending. The
-real-session dock remains intentionally stopped until the reviewed merge is
-available.
+passes at exact source head `993a5cc5e98fbe70295efe8cb00c915b13389523`,
+including all 125 CTest entries, QML and coverage ratchets, scene probes, the
+ASan/UBSan nested drive, package provenance checks, and matrix refusals. The one
+required independent follow-up review remains pending. The real-session dock
+remains intentionally stopped until the reviewed merge is available.
 
 ## 2026-07-27: D241 unifies floating Dock presentation
 
