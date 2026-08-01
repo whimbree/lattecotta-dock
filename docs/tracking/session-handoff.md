@@ -33,11 +33,11 @@ QML lint, scene probes, and matrix fixtures. Three cold reviews caught the
 incomplete launcher ownership, insufficient metadata checks, missing public
 contract, and commit wording before returning no code blockers.
 
-Final live acceptance passed on the exact merged build. Every view reported a
-`QRect` window-touch role, `viewTasksData` contained running windows, and the
-partial top Panel reported one touching window. It requested attachment,
-settled at a zero presented gap, and rendered flush and full-width over the
-touching Firefox window. The live dock remains running from
+Final live acceptance passed on exact merged `main` at `a5c3c0c38`. Every view
+reported a `QRect` window-touch role, `viewTasksData` contained running windows,
+and the partial top Panel reported one touching window. It requested
+attachment, settled at a zero presented gap, and rendered flush and full-width
+over the touching Firefox window. The live dock remains running from
 `/tmp/latte-main-realtest` for real-layout testing.
 
 The controlled authority restart also exposed D258 (an unavailable hard

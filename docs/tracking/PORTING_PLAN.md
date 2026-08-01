@@ -5063,7 +5063,7 @@ prerequisites in the phases above are done.
       instead of starting a half-functional dock.
       Commits: 0d30286cb, d97fe9d90
 - [ ] Report D258 (KF6 device enumeration blocks the GUI thread on an
-      unavailable hard NFS mount) to the Solid/KIO owner. Preserve the traced
+      unavailable hard NFS mount) upstream to KDE Solid/KIO. Preserve the traced
       Folder View call chain and keep the exact-path diagnostic isolation out
       of the shipped Latte launcher.
       Commits:
