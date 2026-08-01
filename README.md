@@ -393,6 +393,13 @@ scripts/restart-staged.sh -d   # staged run: throwaway config home,
                                # touches your real Plasma or Latte config
 ```
 
+`scripts/start-dock.sh` is the real-config development entry point. Every
+real-config restart registers the exact executable selected by `BUILD` and the
+shipped privileged Wayland interface list with KService before stopping an
+existing dock. Normal, sanitized, custom-build, and post-test restores therefore
+receive the same KWin window-management feed; an identity or authority error
+refuses the restart instead of launching a half-functional dock.
+
 `scripts/` carries the verification tooling: `build-check.sh` (full
 build + full ctest + the ratchets), the QML gates, a KWin
 window-geometry dumper, and a Wayland pointer injector for driving the
