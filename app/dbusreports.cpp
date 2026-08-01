@@ -1324,6 +1324,8 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
                         ContainmentPrefersFloatingApplets);
         record.transitionProgress =
             transition->floatingness();
+        record.transitionAnimationDuration =
+            transition->animationDuration();
         if (record.floatingPanelConfigured) {
             record.presentedScreenEdgeGap =
                 qRound(

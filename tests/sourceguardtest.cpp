@@ -423,9 +423,15 @@ private:
                    "&&(externalBindings.containmentItem.behaveAsPlasmaPanel"
                    "||visibilityManager.inNormalState)"))
             && visibility.contains(QStringLiteral(
+                   "readonlypropertyint"
+                   "floatingTransitionAnimationSpeed:"
+                   "LatteCore.WindowSystem.compositingActive"
+                   "?animations.speedFactor.current"
+                   "*Kirigami.Units.longDuration:0"))
+            && visibility.contains(QStringLiteral(
                    "property:\"animationDuration\""
                    "when:root.latteView&&root.latteView.floatingTransition"
-                   "value:manager.animationSpeed"))
+                   "value:manager.floatingTransitionAnimationSpeed"))
             && visibility.contains(QStringLiteral(
                    "propertyboolinClientSideScreenEdgeSliding:false"))
             && main.contains(QStringLiteral(
@@ -864,7 +870,7 @@ private:
             && code.contains(QStringLiteral(
                    "--keyfloatingInternalGapIsForcedfalse"))
             && code.contains(QStringLiteral(
-                   "snapshot['schemaVersion']!=9"))
+                   "snapshot['schemaVersion']!=10"))
             && code.contains(QStringLiteral(
                    "v[\"attachOnWindowTouchConfigured\"]"))
             && code.contains(QStringLiteral(
@@ -1009,7 +1015,7 @@ private:
             && dockCase > panelCase
             && justifyDockCase > dockCase
             && code.contains(QStringLiteral(
-                   "snapshot['schemaVersion']!=9"))
+                   "snapshot['schemaVersion']!=10"))
             && code.contains(QStringLiteral(
                    "--keyfloatingGapHidingWaitsMousefalse"))
             && code.contains(QStringLiteral(
@@ -1203,7 +1209,7 @@ private:
             && recipe.contains(QStringLiteral(
                    "[[\"$after_restart\"==\"$before_restart\"]]"))
             && oracle.contains(QStringLiteral(
-                   "ifsnapshot.get(\"schemaVersion\")!=9:"))
+                   "ifsnapshot.get(\"schemaVersion\")!=10:"))
             && oracle.contains(QStringLiteral(
                    "view[\"relationship\"]!=\"independent\""))
             && oracle.contains(QStringLiteral(
@@ -1907,6 +1913,9 @@ private:
             && code.contains(QStringLiteral(
                 "record.transitionProgress="
                 "transition->floatingness();"))
+            && code.contains(QStringLiteral(
+                "record.transitionAnimationDuration="
+                "transition->animationDuration();"))
             && code.contains(QStringLiteral(
                 "record.transitionGeometryRevision="
                 "transition->geometryRevision();"))
@@ -2725,6 +2734,17 @@ void SourceGuardTest::stableFloatingPanelQml_keepsOneTransitionAuthority()
                  viewHeader, viewImplementation),
              "floating panels must animate only controller progress inside one"
              " stable window, reservation, and applet-measurement envelope");
+
+    QString slowFloatingTransition = visibility;
+    slowFloatingTransition.replace(
+        QStringLiteral(
+            "value:manager.floatingTransitionAnimationSpeed"),
+        QStringLiteral("value:manager.animationSpeed"));
+    QVERIFY2(!matchesStableFloatingPanelQmlContract(
+                 main, bindings, slowFloatingTransition, layouts, metrics,
+                 backgroundTotals, viewHeader, viewImplementation),
+             "floating attachment must use Plasma's long duration without"
+             " Latte's 1.62 full-slide multiplier");
 }
 
 void SourceGuardTest::stableFloatingPanelQml_rejectsDivergentZeroGapEligibility()
@@ -4905,7 +4925,7 @@ void SourceGuardTest::dockSystemTransitionCollection_keepsAuthoritativeRouting()
     QVERIFY2(
         matchesTransitionSnapshotRoute(
             collector),
-        "schema 9 transition fields must read their per-view authorities without rounding and fail closed");
+        "schema 10 transition fields must read their per-view authorities without rounding and fail closed");
 }
 
 void SourceGuardTest::dockSystemTransitionCollection_rejectsControlledMutations()
@@ -4920,6 +4940,24 @@ void SourceGuardTest::dockSystemTransitionCollection_rejectsControlledMutations(
     QVERIFY(
         matchesTransitionSnapshotRoute(
             collector));
+
+    QString inferredAnimationDuration =
+        normalizedCode(collector);
+    QCOMPARE(
+        inferredAnimationDuration.count(
+            QStringLiteral(
+                "transition->animationDuration()")),
+        1);
+    inferredAnimationDuration.replace(
+        QStringLiteral(
+            "transition->animationDuration()"),
+        QStringLiteral(
+            "LatteCore::Environment::longDuration()"));
+    QVERIFY2(
+        !matchesTransitionSnapshotRoute(
+            inferredAnimationDuration),
+        "the live duration readback must come from the per-view transition"
+        " controller after QML policy is applied");
 
     QString inferredPopupPreference =
         normalizedCode(collector);

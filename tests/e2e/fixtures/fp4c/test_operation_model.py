@@ -319,6 +319,7 @@ class OperationModelTest(unittest.TestCase):
             "windowTouchGeometryRoleType": "",
             "transitionTarget": "floated",
             "transitionProgress": 1.0,
+            "transitionAnimationDuration": 200,
             "transitionPhase": "resting",
             "transitionDirection": "none",
             "transitionRunning": False,
@@ -441,7 +442,7 @@ class OperationModelTest(unittest.TestCase):
             if expected.placement is not None
         ]
         return {
-            "schemaVersion": 9,
+            "schemaVersion": 10,
             "snapshotSequence": "41",
             "globalConfigureAppletsMode": state.configuring,
             "stacking": {
@@ -1117,7 +1118,7 @@ class OperationModelTest(unittest.TestCase):
         malformed = self.mutated(
             lambda snapshot: snapshot.__setitem__("schemaVersion", 6)
         )
-        self.assert_refused(lambda: model.parse_snapshot(malformed), "schema 9")
+        self.assert_refused(lambda: model.parse_snapshot(malformed), "schema 10")
 
         missing_margin = self.mutated(
             lambda snapshot: snapshot["views"][0].pop("screenEdgeMargin")
