@@ -19,11 +19,19 @@ exit, and runtime recreation recompute or clear the state. Commit `df7e53f41`
 adds the boolean to `viewsData` and the stable D-Bus references. Commit
 `7f3e4c49c` extends the nested dual-output linked-dock vehicle.
 
+Independent review found that recreation could attach a containment whose edit
+level was already true without emitting the edge observed by the coordinator.
+Commit `f4359e62a` recomputes when either the root or a linked member attaches
+its containment and keeps the feature's connection handles isolated from other
+clone wiring. Commit `5b4f03455` keeps the editor active through recreation,
+requires the replacement generation to restore exactly one editor and the
+exact passive-peer set, and checks that keyboard navigation remains false.
+
 The focused C++, D-Bus, QML compile, and qmllint checks pass. The nested vehicle
 proved that a hidden Auto Hide root reveals only while another linked member is
-edited, hides again afterward, and never acquires edit or configuration
-ownership. An independent duplicate never highlights, and recreation leaves no
-stale cue.
+edited, remains correctly highlighted across live runtime recreation, hides
+again afterward, and never acquires edit, focus, or configuration ownership. An
+independent duplicate never highlights, and edit exit leaves no stale cue.
 
 ## 2026-08-02: Dodge Active follows current KWin window admission
 

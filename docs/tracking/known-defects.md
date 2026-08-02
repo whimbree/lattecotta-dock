@@ -3192,7 +3192,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: known issue.
 
 ### D265 - Linked docks gave no passive edit cue
-- STATUS: FIXED on branch by `d48a2828f`, `df7e53f41`, and `7f3e4c49c`.
+- STATUS: FIXED on branch by `d48a2828f`, `df7e53f41`, `7f3e4c49c`,
+  `f4359e62a`, and `5b4f03455`.
 - FOUND: 2026-08-02, linked-dock edit presentation review.
 - SYMPTOM: entering edit mode on one linked dock gives no visual indication on
   its linked peers. Activating every peer would make the relationship visible
@@ -3205,12 +3206,13 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FIX: derive a read-only passive cue at `OriginalView`, reveal highlighted
   peers with a dedicated visibility blocker, and render the existing
   non-interactive blueprint without changing edit or configuration ownership.
-  Membership changes, edit exit, root destruction, and runtime recreation
-  recompute or clear the cue.
+  Membership changes, containment attachment, edit exit, root destruction, and
+  runtime recreation recompute or clear the cue.
 - EVIDENCE: focused identity and D-Bus tests pass with QML compile and lint
   checks. The nested dual-output vehicle proves hidden-peer reveal and
   re-hiding, exclusive edit/settings/config-window ownership, exclusion of an
-  independent duplicate, and clean runtime recreation.
+  independent duplicate, edit ownership preserved through runtime recreation,
+  focus isolation, and complete cleanup after edit exit.
 - SEVERITY: beta blocker.
 
 ### D264 - Dodge Active retained stale window eligibility
