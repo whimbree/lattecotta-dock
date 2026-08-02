@@ -12,6 +12,7 @@
 #include "view.h"
 
 // Qt
+#include <QHash>
 #include <QList>
 
 namespace Latte {
@@ -64,6 +65,12 @@ private Q_SLOTS:
     void saveConfig();
 
 private:
+    struct LinkedEditHighlightConnections {
+        QMetaObject::Connection editModeChanged;
+        QMetaObject::Connection containmentChanged;
+        QMetaObject::Connection rootDestroyed;
+    };
+
     void cleanScreenGroupClones();
     void createClone(int screenId);
     void forgetClone(Latte::ClonedView *view);
@@ -73,6 +80,7 @@ private:
 private:
     Latte::Types::ScreensGroup m_screensGroup{Latte::Types::SingleScreenGroup};
     QList<QPointer<Latte::ClonedView>> m_clones;
+    QHash<Latte::ClonedView *, LinkedEditHighlightConnections> m_linkedEditHighlightConnections;
     QMetaObject::Connection m_relationshipTableConnection;
 
     QList<int> m_waitingCreation;
