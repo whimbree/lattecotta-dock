@@ -5096,6 +5096,10 @@ prerequisites in the phases above are done.
       granting edit or configuration ownership, and clear the cue across
       removal, destruction, and runtime recreation.
       Commits: 08d2c3985, 0f78b52b8, fb340286d, 23e30c4f0, 141fd0b5e
+- [x] Fix D266 (inline Global Menu text ignored a light panel palette). Apply
+      the panel's Kirigami roles to inline full representations while retaining
+      explicit applet and splitter exemptions and leaving fixed pixels intact.
+      Commits: 111a46b47
 - [ ] Report D258 (KF6 device enumeration blocks the GUI thread on an
       unavailable hard NFS mount) upstream to KDE Solid/KIO. Preserve the traced
       Folder View call chain and keep the exact-path diagnostic isolation out

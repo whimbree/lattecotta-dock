@@ -3,6 +3,27 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-08-02.
 
+## 2026-08-02: Inline applets inherit the panel palette
+
+D266 (inline Global Menu text ignored a light panel palette) came from the
+generic applet wrapper, not Global Menu itself. D21 (stock applet palette
+propagation) still exempted every inline full representation after the old
+layer-FBO color overlay had been retired. Global Menu uses an inline full
+representation, so its role-responsive labels kept desktop colors on a light
+panel.
+
+Commit `111a46b47` removes that stale representation exemption. The same
+Kirigami palette ownership now applies to compact and inline applet content;
+explicit applet opt-outs and internal splitters stay authoritative, and fixed
+image, SVG, and Rectangle pixels remain untouched. The D-Bus reason vocabulary
+and both interface references drop the obsolete `inlineFull` outcome.
+
+The exact parent fails the new nested inline fixture with
+`colorizerReason=inlineFull`. The corrected build changes the responsive sample
+from `#fcfcfc` to `#202326` under the light-panel scheme while the fixed
+`#d62976` sample remains byte-identical. The source contract and 131-file QML
+compile gate pass.
+
 ## 2026-08-02: Linked peers receive a passive edit cue
 
 D265 (linked docks gave no passive edit cue) left a linked relationship
