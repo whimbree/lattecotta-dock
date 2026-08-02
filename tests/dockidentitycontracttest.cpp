@@ -385,6 +385,13 @@ void DockIdentityContractTest::linkedEditHighlightRemainsPassiveAndRelationshipS
     QVERIFY(visibility.contains(QStringLiteral("addBlockHidingEvent(BLOCKHIDINGLINKEDEDITHIGHLIGHTTYPE)")));
     QVERIFY(visibility.contains(QStringLiteral("removeBlockHidingEvent(BLOCKHIDINGLINKEDEDITHIGHLIGHTTYPE)")));
 
+    const QString originalHeader = normalized(readFile(QStringLiteral("app/view/originalview.h")));
+    QVERIFY(originalHeader.contains(QStringLiteral(
+        "structLinkedEditHighlightConnections{QMetaObject::ConnectioneditModeChanged;"
+        "QMetaObject::ConnectioncontainmentChanged;QMetaObject::ConnectionrootDestroyed;};")));
+    QVERIFY(originalHeader.contains(QStringLiteral(
+        "QHash<Latte::ClonedView*,LinkedEditHighlightConnections>m_linkedEditHighlightConnections;")));
+
     const QString originalSource = readFile(QStringLiteral("app/view/originalview.cpp"));
     const QString constructor = normalized(functionBody(
         originalSource, QStringLiteral("OriginalView::OriginalView")));
@@ -396,12 +403,20 @@ void DockIdentityContractTest::linkedEditHighlightRemainsPassiveAndRelationshipS
         originalSource, QStringLiteral("void OriginalView::updateLinkedEditHighlights")));
     QVERIFY(constructor.contains(QStringLiteral(
         "connect(this,&View::inEditModeChanged,this,&OriginalView::updateLinkedEditHighlights);")));
+    QVERIFY(constructor.contains(QStringLiteral(
+        "connect(this,&View::containmentChanged,this,&OriginalView::updateLinkedEditHighlights);")));
     QVERIFY(addClone.contains(QStringLiteral(
-        "connect(view,&View::inEditModeChanged,this,&OriginalView::updateLinkedEditHighlights);")));
+        "connect(view,&View::inEditModeChanged,this,&OriginalView::updateLinkedEditHighlights)")));
+    QVERIFY(addClone.contains(QStringLiteral(
+        "connect(view,&View::containmentChanged,this,&OriginalView::updateLinkedEditHighlights)")));
     QVERIFY(addClone.contains(QStringLiteral("connect(this,&QObject::destroyed,view")));
+    QVERIFY(addClone.contains(QStringLiteral(
+        "m_linkedEditHighlightConnections.insert(view,highlightConnections);")));
     QVERIFY(addClone.contains(QStringLiteral("updateLinkedEditHighlights();")));
-    QVERIFY(forgetClone.contains(QStringLiteral(
-        "disconnect(view,&View::inEditModeChanged,this,&OriginalView::updateLinkedEditHighlights);")));
+    QVERIFY(forgetClone.contains(QStringLiteral("QObject::disconnect(connections->editModeChanged);")));
+    QVERIFY(forgetClone.contains(QStringLiteral("QObject::disconnect(connections->containmentChanged);")));
+    QVERIFY(forgetClone.contains(QStringLiteral("QObject::disconnect(connections->rootDestroyed);")));
+    QVERIFY(forgetClone.contains(QStringLiteral("m_linkedEditHighlightConnections.erase(connections);")));
     QVERIFY(forgetClone.contains(QStringLiteral("view->setLinkedEditHighlight(false);")));
     QVERIFY(forgetClone.contains(QStringLiteral("updateLinkedEditHighlights();")));
     QVERIFY(coordinate.contains(QStringLiteral("hasLinkedMembers&&relationshipIsEditing&&!inEditMode()")));

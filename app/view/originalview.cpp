@@ -23,6 +23,10 @@ OriginalView::OriginalView(Plasma::Corona *corona, QScreen *targetScreen, bool b
     : View(corona, targetScreen, byPassX11WM)
 {
     connect(this, &View::inEditModeChanged, this, &OriginalView::updateLinkedEditHighlights);
+    //! A recreated runtime can attach an existing containment whose edit bit is
+    //! already true. Recompute from the level after attachment because no new
+    //! userConfiguringChanged edge is required in that state.
+    connect(this, &View::containmentChanged, this, &OriginalView::updateLinkedEditHighlights);
 
     connect(this, &View::containmentChanged, this, [&]() {
         if (!this->containment()) {
@@ -125,14 +129,23 @@ void OriginalView::addClone(Latte::ClonedView *view)
     }
 
     m_clones << view;
-    connect(view, &View::inEditModeChanged, this, &OriginalView::updateLinkedEditHighlights);
-    //! A runtime root can be replaced while its old linked members are still
-    //! alive. QObject emits destroyed after this class's members are gone, so
-    //! this receiver-scoped connection clears each surviving member without
-    //! consulting the dismantled coordinator.
-    connect(this, &QObject::destroyed, view, [view]() {
-        view->setLinkedEditHighlight(false);
-    });
+    const LinkedEditHighlightConnections highlightConnections{
+        connect(view, &View::inEditModeChanged,
+                this, &OriginalView::updateLinkedEditHighlights),
+        //! ClonedView joins before GenericLayout assigns its containment. The
+        //! attached containment may already be configuring during recreation,
+        //! so its current level must be observed as well as later edges.
+        connect(view, &View::containmentChanged,
+                this, &OriginalView::updateLinkedEditHighlights),
+        //! A runtime root can be replaced while its old linked members are still
+        //! alive. QObject emits destroyed after this class's members are gone, so
+        //! this receiver-scoped connection clears each surviving member without
+        //! consulting the dismantled coordinator.
+        connect(this, &QObject::destroyed, view, [view]() {
+            view->setLinkedEditHighlight(false);
+        })
+    };
+    m_linkedEditHighlightConnections.insert(view, highlightConnections);
     updateLinkedEditHighlights();
     Q_EMIT canRemoveChanged();
     if (view->linkPlacement() == Data::View::LinkPlacement::ScreenGroupDerived) {
@@ -143,7 +156,14 @@ void OriginalView::addClone(Latte::ClonedView *view)
 void OriginalView::forgetClone(Latte::ClonedView *view)
 {
     if (view) {
-        disconnect(view, &View::inEditModeChanged, this, &OriginalView::updateLinkedEditHighlights);
+        const auto connections = m_linkedEditHighlightConnections.find(view);
+        Q_ASSERT(connections != m_linkedEditHighlightConnections.end());
+        if (connections != m_linkedEditHighlightConnections.end()) {
+            QObject::disconnect(connections->editModeChanged);
+            QObject::disconnect(connections->containmentChanged);
+            QObject::disconnect(connections->rootDestroyed);
+            m_linkedEditHighlightConnections.erase(connections);
+        }
         view->setLinkedEditHighlight(false);
     }
 
