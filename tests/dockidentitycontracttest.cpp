@@ -835,7 +835,9 @@ void DockIdentityContractTest::ignoredWindowCleanupRetainsOtherOwners()
     }
 
     const QString wayland = normalized(readFile(QStringLiteral("app/wm/waylandinterface.cpp")));
-    QVERIFY(wayland.contains(QStringLiteral("registerIgnoredWindow(WindowId::fromWaylandUuid(w->uuid()),w);")));
+    QVERIFY(wayland.contains(QStringLiteral(
+        "constWindowIdwid=WindowId::fromWaylandUuid(w->uuid());")));
+    QVERIFY(wayland.contains(QStringLiteral("registerIgnoredWindow(wid,w);")));
 }
 
 void DockIdentityContractTest::persistentMenuIdentitySurvivesRuntimeGap()
