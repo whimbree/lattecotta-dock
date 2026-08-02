@@ -18,18 +18,20 @@ never observed, `skipSwitcherChanged` was not connected, and the Wayland
 ignored-window override disconnected objects whose eligibility could later
 change. Both Plasma 6 reference forks retain the same lifecycle.
 
-Commit `ac0b78e02` separates persistent KWin object observation from temporary
+Commit `724b91c59` separates persistent KWin object observation from temporary
 Latte admission. A constexpr transition table covers unpublished,
 published-rejected, and accepted rows. Current application, taskbar, switcher,
 and ignore state can withdraw or re-admit one row without inventing object
 destruction; unmap alone retires observation and cancels pending delivery.
-Commit `5c32fcc0e` adds nested recipe 075. The exact parent build fails while
+Commit `575f04db6` adds nested recipe 075. The exact parent build fails while
 the same skipped Konsole identity remains touching and keeps the dock hidden.
 The corrected build passes rejection, re-admission under the unchanged KWin
 identity, destruction during a queued rejection, and post-debounce convergence.
-Commit `b1b8124c1` updates the ignored-window source contract to follow the
+Commit `d9956a4fc` updates the ignored-window source contract to follow the
 const identity without weakening its owner requirement. The focused predicate,
 debounce, source-contract, identity-contract, and production-link checks pass.
+The independent review returned MERGE with no findings, and PR #143 landed the
+five commits on `main` through GitHub's rebase merge.
 
 ## 2026-08-02: KWin now owns hidden dock edge reveal
 

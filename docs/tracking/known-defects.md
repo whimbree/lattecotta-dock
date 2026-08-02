@@ -3192,7 +3192,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: known issue.
 
 ### D264 - Dodge Active retained stale window eligibility
-- STATUS: FIXED on branch by `ac0b78e02` and `5c32fcc0e`.
+- STATUS: FIXED on `main` by `724b91c59` and `575f04db6` (PR #143).
 - FOUND: 2026-08-02, live DP-2 left-dock Dodge Active diagnosis and nested
   replay.
 - SYMPTOM: the left Dodge Active dock hides even when no currently eligible
