@@ -28,6 +28,7 @@ restore_original_layout() {
 trap restore_original_layout EXIT
 
 snapshot() { e2e_json dockSystemData; }
+views_data() { e2e_json viewsData; }
 
 wait_for_snapshot() {
     local predicate="$1" label="$2" i current
@@ -44,6 +45,24 @@ wait_for_snapshot() {
         sleep 0.25
     done
     printf 'last dockSystemData: %s\n' "$current" >&2
+    e2e_fail "$label"
+}
+
+wait_for_views_data() {
+    local predicate="$1" label="$2" i current
+    if ! python3 -c 'import sys; compile(sys.argv[1], "<viewsData predicate>", "exec")' "$predicate"; then
+        printf '%s\n' "$predicate" >&2
+        e2e_fail "invalid viewsData predicate for: $label"
+    fi
+    for ((i = 0; i < 120; ++i)); do
+        current="$(views_data)"
+        if python3 -c "$predicate" <<<"$current" >/dev/null; then
+            printf '%s\n' "$current"
+            return 0
+        fi
+        sleep 0.25
+    done
+    printf 'last viewsData: %s\n' "$current" >&2
     e2e_fail "$label"
 }
 
@@ -327,12 +346,7 @@ import json, sys
 want = int(sys.argv[1])
 print(next(v for v in json.load(sys.stdin)["views"] if v["persistentDockId"] == want)["visibilityMode"])
 ' "$remote_id")"
-root_mode="$(snapshot | python3 -c '
-import json, sys
-want = int(sys.argv[1])
-print(next(v for v in json.load(sys.stdin)["views"] if v["persistentDockId"] == want)["visibilityMode"])
-' "$root_id")"
-[[ "$root_mode" == alwaysVisible ]] && new_root_mode=dodgeActive || new_root_mode=alwaysVisible
+new_root_mode=autoHide
 e2e_call setViewVisibilityMode us "$root_id" "$new_root_mode" >/dev/null \
     || e2e_fail "root visibility change failed"
 wait_for_snapshot "
@@ -342,21 +356,45 @@ sys.exit(0 if views[$root_id][\"visibilityMode\"] == \"$new_root_mode\"
          and views[$remote_id][\"visibilityMode\"] == \"$old_member_mode\"
          and views[$same_edge_id][\"visibilityMode\"] == \"$old_member_mode\" else 1)
 " 'root visibility change leaked into an explicit member' >/dev/null
+wait_for_views_data "
+import json, sys
+root = next(v for v in json.load(sys.stdin) if v[\"containmentId\"] == $root_id)
+sys.exit(0 if root[\"isHidden\"] else 1)
+" 'Auto Hide root did not hide before peer editing' >/dev/null
 
 e2e_call setViewEditMode ub "$remote_id" true >/dev/null \
     || e2e_fail "could not enter the linked member edit presentation"
+wait_for_views_data "
+import json, sys
+views = json.load(sys.stdin)
+editing = {v[\"containmentId\"] for v in views if v[\"editMode\"]}
+highlighted = {v[\"containmentId\"] for v in views if v[\"linkedEditHighlight\"]}
+visible_highlights = all(not v[\"isHidden\"] for v in views if v[\"linkedEditHighlight\"])
+passive = all(not v[\"inConfigureAppletsMode\"] for v in views if v[\"linkedEditHighlight\"])
+sys.exit(0 if editing == {$remote_id}
+         and highlighted == {$root_id, $same_edge_id}
+         and visible_highlights and passive else 1)
+" 'linked peers did not expose a visible passive edit highlight' >/dev/null
 wait_for_snapshot "
 import json, sys
-views = json.load(sys.stdin)[\"views\"]
-editing = [v[\"persistentDockId\"] for v in views if v[\"editMode\"]]
-sys.exit(0 if editing == [$remote_id] else 1)
-" 'edit mode included an unrelated dock or output' >/dev/null
+views = {v[\"persistentDockId\"]: v for v in json.load(sys.stdin)[\"views\"]}
+active = views[$remote_id]
+peers = [views[$root_id], views[$same_edge_id]]
+sys.exit(0 if active[\"editMode\"] and active[\"settingsWindowShown\"]
+         and active[\"objects\"][\"configWindow\"] is not None
+         and all(not peer[\"editMode\"] and not peer[\"settingsWindowShown\"]
+                 and peer[\"objects\"][\"configWindow\"] is None for peer in peers)
+         else 1)
+" 'passive linked peers acquired edit or configuration-window ownership' >/dev/null
 e2e_call setViewEditMode ub "$remote_id" false >/dev/null \
     || e2e_fail "could not leave the linked member edit presentation"
-wait_for_snapshot '
+wait_for_views_data '
 import json, sys
-sys.exit(0 if not any(v["editMode"] for v in json.load(sys.stdin)["views"]) else 1)
-' 'linked member edit mode did not close' >/dev/null
+views = json.load(sys.stdin)
+root = next(v for v in views if v["containmentId"] == '$root_id')
+sys.exit(0 if not any(v["editMode"] or v["linkedEditHighlight"] for v in views)
+         and root["isHidden"] else 1)
+' 'linked member edit mode or peer highlight did not close' >/dev/null
 
 # Temporarily expose the occupied-edge member on the primary top edge while
 # pointer-driven mutations run. Same-edge overlap remains supported and is
@@ -583,6 +621,28 @@ print(next(v["persistentDockId"] for v in json.load(sys.stdin)["views"]
            if v["persistentDockId"] not in before))
 ' "$before_ids" <<<"$duplicate_state")"
 
+# Editing the relationship after Duplicate Dock exists must still highlight
+# only the inactive relationship peers. The snapshot has no durable relation
+# from the duplicate to infer, so a cue there would expose relationship leakage.
+e2e_call setViewEditMode ub "$remote_id" true >/dev/null \
+    || e2e_fail "could not re-enter edit mode for duplicate isolation"
+wait_for_views_data "
+import json, sys
+views = json.load(sys.stdin)
+editing = {v[\"containmentId\"] for v in views if v[\"editMode\"]}
+highlighted = {v[\"containmentId\"] for v in views if v[\"linkedEditHighlight\"]}
+duplicate = next(v for v in views if v[\"containmentId\"] == $duplicate_id)
+sys.exit(0 if editing == {$remote_id}
+         and highlighted == {$root_id, $same_edge_id}
+         and not duplicate[\"linkedEditHighlight\"] and not duplicate[\"editMode\"] else 1)
+" 'independent duplicate inherited the linked relationship edit highlight' >/dev/null
+e2e_call setViewEditMode ub "$remote_id" false >/dev/null \
+    || e2e_fail "could not leave edit mode after duplicate isolation"
+wait_for_views_data '
+import json, sys
+sys.exit(0 if not any(v["editMode"] or v["linkedEditHighlight"] for v in json.load(sys.stdin)) else 1)
+' 'duplicate isolation edit state did not clear' >/dev/null
+
 # Recreate the root runtime through the same path used when an installed
 # custom indicator changes. Every linked runtime must rotate to the new root
 # generation, preserve its containment identity, and converge to identical
@@ -609,6 +669,10 @@ sys.exit(0 if set(views) == {$root_id, $same_edge_id, $remote_id, $duplicate_id}
                  for identity in [$same_edge_id, $remote_id]) else 1)
 " 'root recreation did not replace and rebind the whole linked runtime group')" \
     || e2e_fail "linked root runtime recreation did not settle"
+wait_for_views_data '
+import json, sys
+sys.exit(0 if not any(v["linkedEditHighlight"] for v in json.load(sys.stdin)) else 1)
+' 'root runtime recreation retained a stale linked edit highlight' >/dev/null
 recreate_sync=false
 for _ in $(seq 1 160); do
     if [[ "$(view_content_fingerprint "$root_id")" == "$before_reload_content" \
