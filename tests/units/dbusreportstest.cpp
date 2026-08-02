@@ -1874,8 +1874,15 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
     rejects([](auto &snapshot) {
         snapshot.views[0].screenEdgeBackend = QStringLiteral("unknown");
     });
+    {
+        DockSystemSnapshot capable = valid;
+        capable.views[0].compositorScreenEdgeSupported = true;
+        QVERIFY(dockTransitionRecordsAgree(capable));
+    }
     rejects([](auto &snapshot) {
-        snapshot.views[0].compositorScreenEdgeSupported = true;
+        auto &view = snapshot.views[0];
+        view.visibilityMode = Types::AutoHide;
+        view.screenEdgeBackend = QStringLiteral("kwinAutoHide");
     });
 
     {

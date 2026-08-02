@@ -62,6 +62,7 @@ VisibilityManager::VisibilityManager(PlasmaQuick::ContainmentView *view)
     m_latteView = qobject_cast<Latte::View *>(view);
     m_corona = qobject_cast<Latte::Corona *>(view->corona());
     m_wm = m_corona->wm();
+    createAutoHideScreenEdge();
 
     connect(this, &VisibilityManager::hidingIsBlockedChanged, this, &VisibilityManager::onHidingIsBlockedChanged);
 
@@ -102,6 +103,11 @@ VisibilityManager::VisibilityManager(PlasmaQuick::ContainmentView *view)
 
             updateKWinEdgeState();
         });
+        connect(m_latteView, &Latte::View::layoutChanged,
+                this, &VisibilityManager::updateKWinEdgeState);
+        connect(m_latteView->positioner(),
+                &ViewPart::Positioner::inRelocationAnimationChanged,
+                this, &VisibilityManager::updateKWinEdgeState);
 
         connect(m_latteView, &Latte::View::typeChanged, this, [&]() {
             if (m_latteView->inEditMode()) {
@@ -535,7 +541,7 @@ bool VisibilityManager::suspendForReversibleRemoval()
     m_reservationUpdateDirty = true;
     m_reservationForceUpdatePending = true;
     m_suspendedForRemoval = true;
-    deleteAutoHideScreenEdge();
+    m_autoHideScreenEdge->setEnabled(false);
     deleteEdgeGhostWindow();
     deleteFloatingGapWindow();
     return true;
@@ -556,7 +562,7 @@ bool VisibilityManager::resumeFromReversibleRemoval()
         qCritical() << "visibility could not republish reservation after removal Undo"
                     << m_latteView->validTitle();
         m_suspendedForRemoval = true;
-        deleteAutoHideScreenEdge();
+        m_autoHideScreenEdge->setEnabled(false);
         deleteEdgeGhostWindow();
         deleteFloatingGapWindow();
         return false;
@@ -980,7 +986,9 @@ bool VisibilityManager::supportsKWinEdges() const
 
 VisibilityManager::ScreenEdgeBackend VisibilityManager::screenEdgeBackend() const
 {
-    if (compositorScreenEdgeSupported()) {
+    if (m_autoHideScreenEdge
+            && m_autoHideScreenEdge->isEnabled()
+            && m_autoHideScreenEdge->isSupported()) {
         return ScreenEdgeBackend::KWinAutoHide;
     }
 
@@ -993,7 +1001,16 @@ VisibilityManager::ScreenEdgeBackend VisibilityManager::screenEdgeBackend() cons
 
 bool VisibilityManager::screenEdgeArmed() const
 {
-    return m_autoHideScreenEdge && m_autoHideScreenEdge->isArmed();
+    switch (screenEdgeBackend()) {
+    case ScreenEdgeBackend::KWinAutoHide:
+        return m_autoHideScreenEdge->isArmed();
+    case ScreenEdgeBackend::ClientGhost:
+        return m_edgeGhostWindowArmed;
+    case ScreenEdgeBackend::None:
+        return false;
+    }
+
+    return false;
 }
 
 bool VisibilityManager::screenEdgeRegistered() const
@@ -1015,7 +1032,7 @@ void VisibilityManager::updateKWinEdgeState()
             && !m_latteView->positioner()->inRelocationAnimation()
             && m_latteView->layout()->isCurrent());
     const bool usesCompositorAutoHide =
-        m_autoHideScreenEdge && m_autoHideScreenEdge->isSupported();
+        screenEdgeBackend() == ScreenEdgeBackend::KWinAutoHide;
 
     if (m_autoHideScreenEdge) {
         const bool armed = inCurrentLayout
@@ -1027,6 +1044,7 @@ void VisibilityManager::updateKWinEdgeState()
     }
 
     if (!m_edgeGhostWindow) {
+        m_edgeGhostWindowArmed = false;
         return;
     }
 
@@ -1039,7 +1057,8 @@ void VisibilityManager::updateKWinEdgeState()
         }
     }
 
-    m_wm->setActiveEdge(m_edgeGhostWindow, active);
+    m_edgeGhostWindowArmed = active;
+    m_wm->setActiveEdge(m_edgeGhostWindow, m_edgeGhostWindowArmed);
 }
 
 void VisibilityManager::toggleHiddenState()
@@ -1346,7 +1365,7 @@ void VisibilityManager::setEnableKWinEdges(bool enable)
 void VisibilityManager::updateKWinEdgesSupport()
 {
     if (m_suspendedForRemoval) {
-        deleteAutoHideScreenEdge();
+        m_autoHideScreenEdge->setEnabled(false);
         deleteEdgeGhostWindow();
         return;
     }
@@ -1358,21 +1377,21 @@ void VisibilityManager::updateKWinEdgesSupport()
             && !m_latteView->byPassWM()) {
 
         if (m_enableKWinEdgesFromUser || m_latteView->behaveAsPlasmaPanel()) {
-            createAutoHideScreenEdge();
+            m_autoHideScreenEdge->setEnabled(true);
             if (m_autoHideScreenEdge->isSupported()) {
                 deleteEdgeGhostWindow();
             } else {
                 createEdgeGhostWindow();
             }
         } else if (!m_enableKWinEdgesFromUser) {
-            deleteAutoHideScreenEdge();
+            m_autoHideScreenEdge->setEnabled(false);
             deleteEdgeGhostWindow();
         }
     } else if (m_mode == Types::WindowsCanCover) {
-        deleteAutoHideScreenEdge();
+        m_autoHideScreenEdge->setEnabled(false);
         createEdgeGhostWindow();
     } else {
-        deleteAutoHideScreenEdge();
+        m_autoHideScreenEdge->setEnabled(false);
         deleteEdgeGhostWindow();
     }
 
@@ -1438,7 +1457,7 @@ void VisibilityManager::deleteAutoHideScreenEdge()
         return;
     }
 
-    m_autoHideScreenEdge->setArmed(false);
+    m_autoHideScreenEdge->setEnabled(false);
     m_autoHideScreenEdge->deleteLater();
     m_autoHideScreenEdge = nullptr;
     Q_EMIT supportsKWinEdgesChanged();
@@ -1447,6 +1466,8 @@ void VisibilityManager::deleteAutoHideScreenEdge()
 void VisibilityManager::deleteEdgeGhostWindow()
 {
     if (m_edgeGhostWindow) {
+        m_edgeGhostWindowArmed = false;
+        m_wm->setActiveEdge(m_edgeGhostWindow, false);
         m_edgeGhostWindow->deleteLater();
         m_edgeGhostWindow = nullptr;
 

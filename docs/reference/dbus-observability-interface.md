@@ -331,7 +331,11 @@ Landed before or during the 2026-07-16 stabilization session:
   registration state, compositor protocol support, and the visibility
   manager's pointer state. These fields distinguish compositor-owned reveal
   from the fallback client ghost and distinguish actual surface input from the
-  transition policy's `pointerInsideView` value.
+  transition policy's `pointerInsideView` value. Protocol support is a stable
+  compositor capability, not an alias for the backend selected by the current
+  visibility mode. Armed state applies to both the compositor backend and the
+  client trigger used by fallback reveal or `WindowsCanCover`; registration
+  applies only to the real dock surface.
 
   `transitionTarget`, `transitionProgress`, `transitionAnimationDuration`,
   `transitionPhase`,

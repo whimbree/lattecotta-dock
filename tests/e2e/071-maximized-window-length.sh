@@ -772,6 +772,8 @@ wait_for_cursor_position \
     $((screen_x + screen_w / 2)) \
     $((screen_y + screen_h / 2)) \
     "post-reveal pointer departure"
+wait_for_hidden_state true "post-reveal pointer departure"
+wait_for_native_screen_edge_armed "post-reveal pointer departure"
 
 [[ "$(set_konsole_maximized false)" == "$fixture_id" ]] \
     || e2e_fail "KWin did not restore the client after the Dodge Active Dock check"

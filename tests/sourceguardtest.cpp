@@ -729,11 +729,15 @@ private:
     static bool matchesCompositorScreenEdgeContract(
         const QString &cmakeSource,
         const QString &helperSource,
-        const QString &visibilitySource)
+        const QString &visibilitySource,
+        const QString &dbusXmlSource,
+        const QString &e2eSource)
     {
         const QString cmake = normalizedCode(cmakeSource);
         const QString helper = normalizedCode(helperSource);
         const QString visibility = normalizedCode(visibilitySource);
+        const QString dbusXml = normalizedCode(dbusXmlSource);
+        const QString e2e = normalizedCode(e2eSource);
 
         return cmake.contains(QStringLiteral(
                    "PROTOCOL${PLASMA_WAYLAND_PROTOCOLS_DIR}/"
@@ -745,12 +749,16 @@ private:
                    "m_manager->get_auto_hide_screen_edge(border,*surface)"))
             && helper.contains(QStringLiteral("m_edge->activate()"))
             && helper.contains(QStringLiteral("m_edge->deactivate()"))
+            && helperSource.contains(QStringLiteral(
+                   "4c3ace3dfc7b06b3107b52b6e09508be14e73e8a"))
             && visibility.contains(QStringLiteral(
+                   "m_autoHideScreenEdge->setEnabled(true);"
                    "if(m_autoHideScreenEdge->isSupported())"
                    "{deleteEdgeGhostWindow();}else{createEdgeGhostWindow();}"))
             && visibility.contains(QStringLiteral(
                    "elseif(m_mode==Types::WindowsCanCover)"
-                   "{deleteAutoHideScreenEdge();createEdgeGhostWindow();}"))
+                   "{m_autoHideScreenEdge->setEnabled(false);"
+                   "createEdgeGhostWindow();}"))
             && visibility.contains(QStringLiteral(
                    "constboolarmed=inCurrentLayout"
                    "&&usesCompositorAutoHide"
@@ -760,7 +768,22 @@ private:
             && visibility.contains(QStringLiteral(
                    "m_containsMouse=contains;"
                    "updateKWinEdgeState();"
-                   "Q_EMITcontainsMouseChanged();"));
+                   "Q_EMITcontainsMouseChanged();"))
+            && visibility.contains(QStringLiteral(
+                   "&Latte::View::layoutChanged,"
+                   "this,&VisibilityManager::updateKWinEdgeState"))
+            && visibility.contains(QStringLiteral(
+                   "&ViewPart::Positioner::inRelocationAnimationChanged,"
+                   "this,&VisibilityManager::updateKWinEdgeState"))
+            && visibility.contains(QStringLiteral(
+                   "m_wm->setActiveEdge(m_edgeGhostWindow,false);"))
+            && dbusXml.contains(QStringLiteral(
+                   "ThedockSystemDataschemaversionis11."))
+            && dbusXml.contains(QStringLiteral(
+                   "compositorScreenEdgeSupported"))
+            && e2e.contains(QStringLiteral(
+                   "wait_for_native_screen_edge_armed"
+                   "\"post-revealpointerdeparture\""));
     }
 
     static bool matchesWindowTouchAuthorityContract(
@@ -3351,8 +3374,13 @@ void SourceGuardTest::compositorScreenEdge_ownsRealLayerSurface()
         "app/view/visibilitymanager.cpp"));
     const QString helper = readFile(QStringLiteral(
         "app/view/helpers/autohidescreenedge.cpp"));
+    const QString dbusXml = readFile(QStringLiteral(
+        "app/dbus/org.kde.LatteDock.xml"));
+    const QString e2e = readFile(QStringLiteral(
+        "tests/e2e/071-maximized-window-length.sh"));
 
-    QVERIFY2(matchesCompositorScreenEdgeContract(cmake, helper, visibility),
+    QVERIFY2(matchesCompositorScreenEdgeContract(
+                 cmake, helper, visibility, dbusXml, e2e),
              "AutoHide and Dodge modes must register the real dock layer"
              " surface with KWin, retain the client ghost only as a protocol"
              " fallback, and leave WindowsCanCover on its distinct ghost"
@@ -3363,7 +3391,7 @@ void SourceGuardTest::compositorScreenEdge_ownsRealLayerSurface()
         QStringLiteral("Surface::fromWindow(m_view)"),
         QStringLiteral("Surface::fromWindow(nullptr)"));
     QVERIFY2(!matchesCompositorScreenEdgeContract(
-                 cmake, detachedSurface, visibility),
+                 cmake, detachedSurface, visibility, dbusXml, e2e),
              "a detached helper surface must not satisfy compositor-owned"
              " edge reveal");
 
@@ -3372,9 +3400,27 @@ void SourceGuardTest::compositorScreenEdge_ownsRealLayerSurface()
         QStringLiteral("deleteEdgeGhostWindow();"),
         QStringLiteral("createEdgeGhostWindow();"));
     QVERIFY2(!matchesCompositorScreenEdgeContract(
-                 cmake, helper, overlappingBackends),
+                 cmake, helper, overlappingBackends,
+                 dbusXml, e2e),
              "the compositor edge and client ghost must not both own one"
              " AutoHide or Dodge edge");
+
+    QString staleRelocation = visibility;
+    staleRelocation.replace(
+        QStringLiteral("Positioner::inRelocationAnimationChanged"),
+        QStringLiteral("Positioner::slideOffsetChanged"));
+    QVERIFY2(!matchesCompositorScreenEdgeContract(
+                 cmake, helper, staleRelocation, dbusXml, e2e),
+             "relocation must synchronously remove stale screen-edge"
+             " ownership");
+
+    QString staleSchema = dbusXml;
+    staleSchema.replace(
+        QStringLiteral("11."),
+        QStringLiteral("10."));
+    QVERIFY2(!matchesCompositorScreenEdgeContract(
+                 cmake, helper, visibility, staleSchema, e2e),
+             "the installed D-Bus contract must name the live schema");
 }
 
 void SourceGuardTest::windowTouchAuthority_keepsDedicatedStableModel()

@@ -6,6 +6,11 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
+//! Adapted from plasma-workspace
+//! (shell/autohidescreenedge.cpp at
+//! 4c3ace3dfc7b06b3107b52b6e09508be14e73e8a,
+//! invent.kde.org/plasma/plasma-workspace).
+
 #include "autohidescreenedge.h"
 
 // local
@@ -56,7 +61,7 @@ public:
     {
     }
 
-    ~WaylandAutoHideScreenEdgeV1()
+    ~WaylandAutoHideScreenEdgeV1() override
     {
         destroy();
     }
@@ -98,6 +103,11 @@ bool AutoHideScreenEdge::isArmed() const
     return m_armed;
 }
 
+bool AutoHideScreenEdge::isEnabled() const
+{
+    return m_enabled;
+}
+
 bool AutoHideScreenEdge::isRegistered() const
 {
     return m_edge != nullptr;
@@ -110,6 +120,14 @@ bool AutoHideScreenEdge::isSupported() const
 
 void AutoHideScreenEdge::setArmed(const bool armed)
 {
+    if (armed && !m_enabled) {
+        qCritical() << "Cannot arm a disabled compositor screen edge for"
+                    << (m_view
+                        ? m_view->validTitle()
+                        : QStringLiteral("<destroyed view>"));
+        return;
+    }
+
     if (m_armed == armed) {
         refreshRegistration();
         return;
@@ -129,6 +147,28 @@ void AutoHideScreenEdge::setArmed(const bool armed)
         m_reportedUnsupported = true;
         qWarning() << "KWin does not advertise kde_screen_edge_manager_v1;"
                       " falling back to the client edge window";
+    }
+
+    refreshRegistration();
+}
+
+void AutoHideScreenEdge::setEnabled(const bool enabled)
+{
+    if (m_enabled == enabled) {
+        if (m_enabled) {
+            refreshRegistration();
+        }
+        return;
+    }
+
+    m_enabled = enabled;
+    if (!m_enabled) {
+        if (m_armed) {
+            m_armed = false;
+            Q_EMIT armedChanged();
+        }
+        destroyEdge();
+        return;
     }
 
     refreshRegistration();
@@ -219,7 +259,7 @@ void AutoHideScreenEdge::refreshRegistration()
         destroyEdge();
     }
 
-    if (!m_armed || !isSupported() || !m_view->isExposed()) {
+    if (!m_enabled || !m_armed || !isSupported() || !m_view->isExposed()) {
         return;
     }
 

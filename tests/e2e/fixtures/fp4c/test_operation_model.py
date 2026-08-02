@@ -242,9 +242,9 @@ class OperationModelTest(unittest.TestCase):
             "maximumNormalThickness": depth + 8,
             "screenEdgeMargin": gap,
             "presentedScreenEdgeGap": gap,
-            "screenEdgeBackend": "kwinAutoHide",
+            "screenEdgeBackend": "none",
             "screenEdgeArmed": False,
-            "screenEdgeRegistered": True,
+            "screenEdgeRegistered": False,
             "compositorScreenEdgeSupported": True,
             "visibilityContainsMouse": False,
             "windowGeometry": rect,
@@ -1154,27 +1154,59 @@ class OperationModelTest(unittest.TestCase):
         )
 
         conflicting_edge_owners = self.mutated(
-            lambda snapshot: snapshot["views"][0].__setitem__(
-                "compositorScreenEdgeSupported", False
+            lambda snapshot: snapshot["views"][0].update(
+                {
+                    "screenEdgeBackend": "kwinAutoHide",
+                    "compositorScreenEdgeSupported": False,
+                    "visibilityMode": "dodgeActive",
+                }
             )
         )
         self.assert_refused(
             lambda: model.parse_snapshot(conflicting_edge_owners),
-            "disagrees with backend",
+            "no supported reveal mode",
         )
 
         armed_without_registration = self.mutated(
             lambda snapshot: snapshot["views"][0].update(
                 {
                     "isHidden": True,
+                    "screenEdgeBackend": "kwinAutoHide",
                     "screenEdgeArmed": True,
                     "screenEdgeRegistered": False,
+                    "visibilityMode": "dodgeActive",
                 }
             )
         )
         self.assert_refused(
             lambda: model.parse_snapshot(armed_without_registration),
             "incompatible visibility state",
+        )
+
+        client_cover = self.mutated(
+            lambda snapshot: snapshot["views"][0].update(
+                {
+                    "screenEdgeBackend": "clientGhost",
+                    "screenEdgeArmed": True,
+                    "visibilityMode": "windowsCanCover",
+                }
+            )
+        )
+        model.parse_snapshot(client_cover)
+
+        redundant_client_fallback = self.mutated(
+            lambda snapshot: snapshot["views"][0].update(
+                {
+                    "isHidden": True,
+                    "screenEdgeBackend": "clientGhost",
+                    "screenEdgeArmed": True,
+                    "visibilityMode": "dodgeActive",
+                }
+            )
+        )
+        self.assert_refused(
+            lambda: model.parse_snapshot(redundant_client_fallback),
+            "conflicts with edge ownership",
         )
 
         missing_presented_gap = self.mutated(
