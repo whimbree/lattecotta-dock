@@ -342,6 +342,7 @@ struct ViewRecord {
     QRect inputMask;
     QRect appliedInputMask;
     bool editMode{false};
+    bool linkedEditHighlight{false};
     bool inConfigureAppletsMode{false};
     bool keyboardNavigation{false};
 };
@@ -1549,6 +1550,7 @@ inline QJsonObject serializeViewRecord(const ViewRecord &record)
 
     json[QStringLiteral("appliedInputRegionRects")] = appliedInputRegion;
     json[QStringLiteral("editMode")] = record.editMode;
+    json[QStringLiteral("linkedEditHighlight")] = record.linkedEditHighlight;
     json[QStringLiteral("inConfigureAppletsMode")] = record.inConfigureAppletsMode;
     json[QStringLiteral("keyboardNavigation")] = record.keyboardNavigation;
 

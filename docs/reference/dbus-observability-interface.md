@@ -67,7 +67,8 @@ Landed before or during the 2026-07-16 stabilization session:
     "strutsThickness": 88, "publishedStruts": [x, y, w, h],
     "maskRect": [x, y, w, h], "inputRegionRects": [[...], ...],
     "appliedInputRegionRects": [[...], ...],
-    "editMode": false, "inConfigureAppletsMode": false
+    "editMode": false, "linkedEditHighlight": false,
+    "inConfigureAppletsMode": false
   }
   ```
   This single call replaces the pixel-peeping used across the whole
@@ -83,6 +84,12 @@ Landed before or during the 2026-07-16 stabilization session:
   placement is pending. Startup alone reports the target assignment before
   that snapshot exists. A global rearrange session therefore does not report
   unrelated docks as configuring applets.
+  `linkedEditHighlight` is true only on inactive live peers in the same direct-
+  root linked-dock relationship while another member owns edit mode. Its
+  dedicated visibility blocker reveals a hidden peer for the passive blueprint
+  cue. It does not set `editMode`, enable applet configuration, create a
+  settings or canvas window, focus the dock, or extend to an independent
+  duplicate.
 - `dockSystemData() -> s` (compact JSON object, schema version 11; added by C0
   (the atomic dock-system observability snapshot)). This is the relational
   all-docks read. One synchronous call captures the global configuration mode,

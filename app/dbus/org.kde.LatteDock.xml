@@ -97,6 +97,10 @@
     <method name="viewTemplatesData">
         <arg name="data" type="as" direction="out"/>
     </method>
+    <!-- JSON array of live view records. linkedEditHighlight is true only for
+         an inactive live linked member while another member of its direct-root
+         relationship owns edit mode. It is a passive visibility cue and never
+         implies editMode, a settings window, or a configuration canvas. -->
     <method name="viewsData">
         <arg name="data" type="s" direction="out"/>
     </method>

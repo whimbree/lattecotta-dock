@@ -508,6 +508,7 @@ void DbusReportsTest::recordSerialization()
     //! where the applied window mask and the logical band diverge
     record.appliedInputMask = QRect(13, 14, 40, 16);
     record.editMode = true;
+    record.linkedEditHighlight = true;
     record.inConfigureAppletsMode = true;
     record.keyboardNavigation = true;
 
@@ -542,6 +543,7 @@ void DbusReportsTest::recordSerialization()
     QCOMPARE(appliedInputRegion.at(0).toArray(), serializeRect(QRect(13, 14, 40, 16)));
 
     QCOMPARE(json.value(QStringLiteral("editMode")).toBool(), true);
+    QCOMPARE(json.value(QStringLiteral("linkedEditHighlight")).toBool(), true);
     QCOMPARE(json.value(QStringLiteral("inConfigureAppletsMode")).toBool(), true);
     QCOMPARE(json.value(QStringLiteral("keyboardNavigation")).toBool(), true);
 }
@@ -557,7 +559,8 @@ void DbusReportsTest::viewRecordKeySet()
         QStringLiteral("isCloned"), QStringLiteral("isClonedFrom"),
         QStringLiteral("isHidden"), QStringLiteral("isOffScreen"),
         QStringLiteral("keyboardNavigation"),
-        QStringLiteral("layout"), QStringLiteral("localGeometry"),
+        QStringLiteral("layout"), QStringLiteral("linkedEditHighlight"),
+        QStringLiteral("localGeometry"),
         QStringLiteral("maskRect"), QStringLiteral("onPrimary"),
         QStringLiteral("publishedStruts"), QStringLiteral("screen"),
         QStringLiteral("screenGeometry"), QStringLiteral("strutsThickness"),

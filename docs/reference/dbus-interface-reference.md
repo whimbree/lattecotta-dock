@@ -56,9 +56,14 @@ sidebarOnDemand|sidebarAutoHide|normalWindow), `isHidden`,
 `appliedInputRegionRects` (array of rects: the region actually handed
 to `QWindow::setMask`, kept wide across a length shrink and collapsing
 back to `inputRegionRects` once the band settles - differs only
-mid-shrink), `editMode`, `inConfigureAppletsMode`, `keyboardNavigation`.
+mid-shrink), `editMode`, `linkedEditHighlight`, `inConfigureAppletsMode`,
+`keyboardNavigation`.
 `inConfigureAppletsMode` is effective for that view: it is true only when the
 view is in edit mode and the global rearrange toggle is on.
+`linkedEditHighlight` is true only for an inactive live member of a linked-dock
+relationship while another member owns edit mode. The highlighted member is
+kept visible, but remains outside edit mode and does not own a settings window
+or configuration canvas. Independent docks never report the cue.
 After the first surface publication, `screen` and `screenGeometry` identify
 Positioner's last complete applied output snapshot. They retain that snapshot
 while a newer output or geometry request is pending. The target assignment is
