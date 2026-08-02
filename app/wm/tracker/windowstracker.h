@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2019 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -73,6 +74,7 @@ public:
     LastActiveWindow *lastActiveWindow(Latte::Layout::GenericLayout *layout);
 
     //! Windows management
+    [[nodiscard]] bool containsWindow(const WindowId &wid) const;
     bool isValidFor(const WindowId &wid) const;
     QIcon iconFor(const WindowId &wid);
     QString appNameFor(const WindowId &wid);

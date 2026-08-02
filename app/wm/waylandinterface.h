@@ -84,8 +84,6 @@ public:
     void setFrameExtents(QWindow *view, const QMargins &margins) override;
     void setInputMask(QWindow *window, const QRect &rect) override;
 
-    void registerIgnoredWindow(WindowId wid, const QObject *owner) override;
-
     void initWindowManagement(KWayland::Client::PlasmaWindowManagement *windowManagement);
 
     //! VirtualDesktopsSupport
@@ -104,9 +102,12 @@ private:
     bool isFullScreenWindow(const KWayland::Client::PlasmaWindow *w) const;
     bool isPlasmaPanel(const KWayland::Client::PlasmaWindow *w) const;
     bool isSidepanel(const KWayland::Client::PlasmaWindow *w) const;
+    bool reconcileWindowAdmission(
+        KWayland::Client::PlasmaWindow *w,
+        WindowChangeDelivery delivery);
     void windowCreatedProxy(KWayland::Client::PlasmaWindow *w);
-    void trackWindow(KWayland::Client::PlasmaWindow *w);
-    void untrackWindow(KWayland::Client::PlasmaWindow *w);
+    void observeWindow(KWayland::Client::PlasmaWindow *w);
+    void stopObservingWindow(KWayland::Client::PlasmaWindow *w);
 
     KWayland::Client::PlasmaWindow *windowFor(WindowId wid);
     KWayland::Client::PlasmaShell *waylandCoronaInterface() const;

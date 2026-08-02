@@ -47,6 +47,8 @@ private Q_SLOTS:
     void registry_isIgnoredPlasmaWhitelisted_contains();
     void hasBlockedTracking_whitelistWins();
     void shouldRegister_idempotentAndSkipNull();
+    void skippedWindowExceptions_areExplicit();
+    void windowAdmissionTransitions_preserveObservation();
 };
 
 void WindowTrackingPredicatesTest::intersects_minimizedOrShaded_false()
@@ -196,6 +198,41 @@ void WindowTrackingPredicatesTest::shouldRegister_idempotentAndSkipNull()
     QVERIFY(!WindowTrackingPredicates::shouldRegister(set, w));
     // fresh → true
     QVERIFY(WindowTrackingPredicates::shouldRegister(empty, w));
+}
+
+void WindowTrackingPredicatesTest::skippedWindowExceptions_areExplicit()
+{
+    QVERIFY(WindowTrackingPredicates::allowsSkippedWindowForApplication(
+        QStringLiteral("yakuake")));
+    QVERIFY(WindowTrackingPredicates::allowsSkippedWindowForApplication(
+        QStringLiteral("krunner")));
+    QVERIFY(!WindowTrackingPredicates::allowsSkippedWindowForApplication(
+        QStringLiteral("org.kde.konsole")));
+}
+
+void WindowTrackingPredicatesTest::windowAdmissionTransitions_preserveObservation()
+{
+    using Action = WindowTrackingPredicates::WindowAdmissionAction;
+    using State = WindowTrackingPredicates::WindowAdmissionState;
+    using Transition = WindowTrackingPredicates::WindowAdmissionTransition;
+
+    constexpr auto plan = WindowTrackingPredicates::planWindowAdmission;
+
+    static_assert(plan(State::Unpublished, false)
+                  == Transition{State::Unpublished, Action::None});
+    static_assert(plan(State::Unpublished, true)
+                  == Transition{State::Accepted, Action::Publish});
+    static_assert(plan(State::PublishedRejected, false)
+                  == Transition{State::PublishedRejected, Action::None});
+    static_assert(plan(State::PublishedRejected, true)
+                  == Transition{State::Accepted, Action::Refresh});
+    static_assert(plan(State::Accepted, false)
+                  == Transition{State::PublishedRejected, Action::Refresh});
+    static_assert(plan(State::Accepted, true)
+                  == Transition{State::Accepted, Action::Refresh});
+
+    QCOMPARE(plan(State::Accepted, false).action, Action::Refresh);
+    QCOMPARE(plan(State::PublishedRejected, true).action, Action::Refresh);
 }
 
 QTEST_GUILESS_MAIN(WindowTrackingPredicatesTest)

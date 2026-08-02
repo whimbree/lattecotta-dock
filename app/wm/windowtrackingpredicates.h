@@ -25,6 +25,67 @@ namespace Latte {
 namespace WindowSystem {
 namespace WindowTrackingPredicates {
 
+[[nodiscard]] inline bool allowsSkippedWindowForApplication(
+    const QString &applicationId)
+{
+    return applicationId == QLatin1String("yakuake")
+        || applicationId == QLatin1String("krunner");
+}
+
+enum class WindowAdmissionState
+{
+    Unpublished,
+    PublishedRejected,
+    Accepted,
+};
+
+enum class WindowAdmissionAction
+{
+    None,
+    Publish,
+    Refresh,
+};
+
+struct WindowAdmissionTransition
+{
+    WindowAdmissionState nextState{WindowAdmissionState::Unpublished};
+    WindowAdmissionAction action{WindowAdmissionAction::None};
+
+    friend constexpr bool operator==(const WindowAdmissionTransition &left,
+                                     const WindowAdmissionTransition &right) = default;
+};
+
+//! KWin object observation outlives temporary tracking rejection. A published
+//! row therefore changes validity in place; only an acceptable never-published
+//! window needs windowAdded, and only compositor destruction needs
+//! windowRemoved. Keeping this table constexpr makes every state transition
+//! exhaustively testable without a Wayland connection.
+[[nodiscard]] constexpr WindowAdmissionTransition planWindowAdmission(
+    WindowAdmissionState current,
+    bool isAcceptable) noexcept
+{
+    switch (current) {
+    case WindowAdmissionState::Unpublished:
+        return isAcceptable
+            ? WindowAdmissionTransition{WindowAdmissionState::Accepted,
+                                        WindowAdmissionAction::Publish}
+            : WindowAdmissionTransition{};
+    case WindowAdmissionState::PublishedRejected:
+        return isAcceptable
+            ? WindowAdmissionTransition{WindowAdmissionState::Accepted,
+                                        WindowAdmissionAction::Refresh}
+            : WindowAdmissionTransition{WindowAdmissionState::PublishedRejected,
+                                        WindowAdmissionAction::None};
+    case WindowAdmissionState::Accepted:
+        return WindowAdmissionTransition{
+            isAcceptable ? WindowAdmissionState::Accepted
+                         : WindowAdmissionState::PublishedRejected,
+            WindowAdmissionAction::Refresh};
+    }
+
+    return {};
+}
+
 inline bool intersects(const WindowInfoWrap &winfo, const QRect &viewAbsoluteGeometry)
 {
     return (!winfo.isMinimized() && !winfo.isShaded() && winfo.geometry().intersects(viewAbsoluteGeometry));

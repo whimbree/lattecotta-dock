@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2019 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -92,9 +93,10 @@ void Windows::init()
     });
 
     connect(m_wm, &AbstractWindowInterface::windowAdded, this, [&](WindowId wid) {
-        if (!m_windows.contains(wid)) {
-            m_windows.insert(wid, m_wm->requestInfo(wid));
-        }
+        //! A compositor window can become acceptable after an earlier
+        //! rejected publication. Refreshing is idempotent and guarantees that
+        //! re-admission replaces the invalid row with current state.
+        m_windows.insert(wid, m_wm->requestInfo(wid));
         updateAllHints();
     });
 
@@ -108,7 +110,12 @@ void Windows::init()
             }
         }
 
-        m_windows[wid] = m_wm->requestInfo(wid);
+        if (!wid.isEmpty()) {
+            const WindowInfoWrap activeInfo = m_wm->requestInfo(wid);
+            if (activeInfo.isValid() || m_windows.contains(wid)) {
+                m_windows.insert(wid, activeInfo);
+            }
+        }
         updateAllHints();
 
         Q_EMIT activeWindowChanged(wid);
@@ -590,6 +597,11 @@ LastActiveWindow *Windows::lastActiveWindow(Latte::Layout::GenericLayout *layout
 
 
 //! Windows
+bool Windows::containsWindow(const WindowId &wid) const
+{
+    return m_windows.contains(wid);
+}
+
 bool Windows::isValidFor(const WindowId &wid) const
 {
     if (!m_windows.contains(wid)) {
