@@ -3191,8 +3191,29 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   presentation. No layout or configuration mutation was involved.
 - SEVERITY: known issue.
 
+### D263 - Windows Can Cover filtered out its own edge trigger
+- STATUS: FIXED on `fix/d262-fullscreen-reveal` by `afa86840d`; pending PR.
+- FOUND: 2026-08-02, review of the native screen-edge fallback boundary.
+- SYMPTOM: a `WindowsCanCover` dock moves below application windows but cannot
+  return to the front when the pointer reaches its screen edge.
+- ROOT: the layer-shell port used `revealsOnScreenEdge()` to gate every client
+  edge strip. That predicate correctly excludes modes that do not slide
+  offscreen, but `WindowsCanCover` still needs its strip for a different job:
+  raising the dock from the below-window layer. The port conflated sliding
+  reveal with client edge-trigger eligibility.
+- FIX: classify client edge-trigger modes separately with an exhaustive
+  `constexpr` function. Auto Hide and Dodge use that client path only as an
+  unsupported-compositor fallback; `WindowsCanCover` uses it for the existing
+  front/back-layer transition.
+- EVIDENCE: the focused visibility test covers the full visibility enum and a
+  source mutation replacing the corrected classifier with the old sliding
+  predicate is rejected. The production dock target links with the corrected
+  Wayland dispatch.
+- SEVERITY: beta blocker.
+
 ### D262 - Auto-hide and Dodge reveal used a client ghost instead of KWin's dock surface
-- STATUS: FIXED on `fix/d262-fullscreen-reveal` by `40ccce057`; pending PR.
+- STATUS: FIXED on `fix/d262-fullscreen-reveal` by `40ccce057` and `006c6befa`;
+  pending PR.
 - FOUND: 2026-08-02, nested comparison with Plasma 6 screen-edge reveal.
 - SYMPTOM: Auto Hide and Dodge modes delegate edge activation to a second
   client window instead of registering the hidden dock surface with KWin.
@@ -3211,9 +3232,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - EVIDENCE: the C++ snapshot and source-mutation contracts pass, and the
   deterministic operation model passes 31 tests. Nested recipe 071 drives a
   real KWin layer surface through maximized concealment, native edge reveal,
-  pointer departure, and true-fullscreen concealment. The settled snapshot
-  reports `kwinAutoHide`, supported and registered state, and no simultaneous
-  client ghost.
+  pointer departure, renewed concealment and edge arming, and true-fullscreen
+  concealment. The settled snapshot reports `kwinAutoHide`, supported and
+  registered state, and no simultaneous client ghost. Capability remains true
+  independently of the backend selected by the current visibility mode.
 - SEVERITY: beta blocker.
 
 ### D261 - Matrix pristine seed survived across nested vehicles

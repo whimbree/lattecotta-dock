@@ -12,22 +12,30 @@ client Wayland window at the output edge and used it to request reveal. Plasma
 `kde_screen_edge_manager_v1`, allowing KWin to own concealment, edge pressure,
 the exact partial span, and fullscreen policy as one compositor lifecycle.
 
-Commit `40ccce057` ports that boundary at the protocol source. Auto Hide and
-the three Dodge modes prefer the real dock-surface registration and fall back
-to `ScreenEdgeGhostWindow` only when the compositor does not advertise the
-protocol. `WindowsCanCover` retains the ghost as its distinct stacking trigger.
-The first live invariant pass caught an ordering defect where surface entry
-updated `containsMouse` without deactivating the edge; the setter now performs
-both changes synchronously before publishing the pointer notification.
+Commits `40ccce057` and `006c6befa` port that boundary at the protocol source
+and close its review findings. Auto Hide and the three Dodge modes prefer the
+real dock-surface registration and fall back to `ScreenEdgeGhostWindow` only
+when the compositor does not advertise the protocol. Protocol capability now
+has the view lifetime and is independent of the backend selected by the
+current mode. Layout changes, relocation start and finish, surface entry, and
+destruction synchronously update or retire edge ownership.
 
 Schema 11 exposes `screenEdgeBackend`, `screenEdgeArmed`,
 `screenEdgeRegistered`, `compositorScreenEdgeSupported`, and
 `visibilityContainsMouse`. The C++ snapshot and source-mutation contracts pass,
 and the operation model passes all 31 tests. Nested recipe 071 drives
-maximized concealment, native edge reveal, pointer departure, and true
-fullscreen concealment through a real KWin surface. True fullscreen edge
-reveal remains blocked by KWin's panel policy; concealment and the attached
-presentation endpoint are covered there.
+maximized concealment, native edge reveal, pointer departure, renewed
+concealment and arming, and true fullscreen concealment through a real KWin
+surface. True fullscreen edge reveal remains blocked by KWin's panel policy;
+concealment and the attached presentation endpoint are covered there.
+
+D263 (Windows Can Cover filtered out its own edge trigger) was an adjacent
+layer-shell regression. The July 7 port gated the client edge strip with the
+predicate for modes that slide offscreen. `WindowsCanCover` does not slide, but
+still needs that strip to raise its below-window surface. Commit `afa86840d`
+adds a separate exhaustive client-trigger classifier. Auto Hide and Dodge use
+it only for the unsupported-compositor fallback; `WindowsCanCover` uses it for
+the existing front/back-layer transition.
 
 ## 2026-08-01: revealed Docks now retain the attached presentation
 
