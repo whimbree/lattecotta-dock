@@ -98,6 +98,8 @@ ContainmentItem {
     property bool drawShadowsExternal: panelShadowsActive && behaveAsPlasmaPanel
 
     property bool editMode: Plasmoid.userConfiguring
+    readonly property bool linkedEditHighlight: latteView
+                                                ? latteView.linkedEditHighlight : false
     property bool windowIsTouching: latteView && latteView.windowsTracker
                                     && (latteView.windowsTracker.currentScreen.activeWindowTouching
                                         || latteView.windowsTracker.currentScreen.activeWindowTouchingEdge
@@ -1013,21 +1015,32 @@ ContainmentItem {
 
             readonly property int thickness: latteView ? latteView.editThickness : 0
 
+            //! Active edit mode keeps the Qt5 stacking below the dock
+            //! background. The continuation-only linked-peer cue moves the
+            //! same non-interactive image above that background but below the
+            //! z=10 applet layouts, so it remains visible without intercepting
+            //! input or creating another configuration surface.
+            z: root.linkedEditHighlight && !root.editMode ? 1 : -1
             visible: opacity > 0
             //! Qt5 semantics: solid while rearranging widgets (the grid is the rearrange
             //! backdrop) and without compositing (no real transparency); otherwise the
             //! editBackgroundOpacity setting, which the mouse wheel adjusts in edit mode,
             //! so the dock background stays visible through the grid.
             opacity: {
-                if (!root.editMode) {
-                    return 0;
+                if (root.editMode) {
+                    if (root.inConfigureAppletsMode || !LatteCore.WindowSystem.compositingActive) {
+                        return 1;
+                    }
+
+                    return Plasmoid.configuration.editBackgroundOpacity;
                 }
 
-                if (root.inConfigureAppletsMode || !LatteCore.WindowSystem.compositingActive) {
-                    return 1;
+                if (root.linkedEditHighlight) {
+                    return LatteCore.WindowSystem.compositingActive
+                           ? Math.max(Plasmoid.configuration.editBackgroundOpacity, 0.35) : 1;
                 }
 
-                return Plasmoid.configuration.editBackgroundOpacity;
+                return 0;
             }
 
             Behavior on opacity {

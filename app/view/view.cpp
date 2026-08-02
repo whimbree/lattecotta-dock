@@ -67,6 +67,7 @@
 
 #define BLOCKHIDINGDRAGTYPE "View::ContainsDrag()"
 #define BLOCKHIDINGKEYBOARDNAVIGATIONTYPE "View::KeyboardNavigation()"
+#define BLOCKHIDINGLINKEDEDITHIGHLIGHTTYPE "View::LinkedEditHighlight()"
 #define BLOCKHIDINGNEEDSATTENTIONTYPE "View::Containment::NeedsAttentionState()"
 #define BLOCKHIDINGREQUESTSINPUTTYPE "View::Containment::RequestsInputState()"
 
@@ -210,6 +211,11 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
 
         if (!m_visibility) {
             m_visibility = new ViewPart::VisibilityManager(this);
+
+            //! Linked membership is established before the containment helper
+            //! ensemble exists. Reapply the transient cue's visibility contract
+            //! once its dedicated blocker becomes available.
+            updateLinkedEditHighlightVisibilityBlocker();
 
             connect(m_visibility, &ViewPart::VisibilityManager::isHiddenChanged, this, [&]() {
                 if (m_visibility->isHidden()) {
@@ -1735,6 +1741,39 @@ void View::setBehaveAsPlasmaPanel(bool behavior)
 bool View::inEditMode() const
 {
     return containment() && containment()->isUserConfiguring();
+}
+
+bool View::linkedEditHighlight() const
+{
+    return m_linkedEditHighlight;
+}
+
+void View::setLinkedEditHighlight(bool highlighted)
+{
+    if (m_linkedEditHighlight == highlighted) {
+        return;
+    }
+
+    Q_ASSERT(!highlighted || !inEditMode());
+    m_linkedEditHighlight = highlighted;
+    updateLinkedEditHighlightVisibilityBlocker();
+    Q_EMIT linkedEditHighlightChanged();
+}
+
+void View::updateLinkedEditHighlightVisibilityBlocker()
+{
+    //! A linked member joins its root before containment initialization creates
+    //! VisibilityManager. The stored property is applied from that creation
+    //! path, so absence here is a valid construction state.
+    if (!m_visibility) {
+        return;
+    }
+
+    if (m_linkedEditHighlight) {
+        m_visibility->addBlockHidingEvent(BLOCKHIDINGLINKEDEDITHIGHLIGHTTYPE);
+    } else {
+        m_visibility->removeBlockHidingEvent(BLOCKHIDINGLINKEDEDITHIGHLIGHTTYPE);
+    }
 }
 
 bool View::floatingGapConfigured() const

@@ -69,7 +69,9 @@ visibility, appearance, removal, and edit presentation local to that member.
 Applet membership and ordinary settings stay linked, while orientation-dependent
 applet length and effective sizing remain local to each output view. Runtime
 recreation and output disconnects preserve the persistent relationship and
-rebind only the views eligible on active outputs.
+rebind only the views eligible on active outputs. Editing one linked member
+shows a passive blueprint cue on its other live members without opening their
+settings, enabling their edit mode, or affecting independent duplicates.
 Output, edge, and alignment changes commit as one applied placement
 transaction. The old reservation is retired before mutation; the view then
 solves geometry against its assigned output, applies the exact layer-shell

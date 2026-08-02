@@ -82,6 +82,10 @@ identities. The relationship itself is one explicit logical group:
   Undo restoration, and reconnect reconciliation all exclude that key;
 - output, edge, alignment, visibility, appearance, edit presentation, and
   runtime geometry remain local to an explicitly placed member;
+- one active edit presentation publishes a passive blueprint cue to every
+  other live member of the relationship. The cue temporarily blocks hiding,
+  but does not enter edit mode, open configuration surfaces, take focus, or
+  propagate to an independent duplicate;
 - derived members retain the legacy root-owned screen-group placement and edit
   target;
 - menu wording and edit behavior derive from the same runtime relationship
@@ -112,8 +116,10 @@ The target implementation must satisfy these rules:
    Cut alone preserves origin identity for its checked move transaction.
 3. **Synchronization scope.** Content synchronization is explicit. Placement,
    output, edge, alignment, visibility policy, runtime geometry, applet-local
-   length, and transient edit presentation are not blanket-copied through the
-   relationship.
+   length, and edit ownership are not blanket-copied through the relationship.
+   The original coordinates one transient passive highlight for inactive live
+   peers while a member is editing; this cue is relationship state, not copied
+   configuration or shared edit ownership.
 4. **One relationship policy.** Menu capabilities, edit targeting, lifecycle,
    persistence, and migration derive from the same relation. No surface infers
    relationship semantics from window title, pointer ancestry, or presentation
@@ -122,7 +128,9 @@ The target implementation must satisfy these rules:
    as Edit Linked Dock or Panel. Placement and containment settings act on the
    selected member. Applet changes flow through the root content coordinator.
    The shared edit chrome still has exactly one effective owner and one
-   cancelable pending target.
+   cancelable pending target. Other live relationship members display only the
+   passive blueprint cue, remain non-configuring, and keep no settings or
+   canvas window.
 6. **Lifecycle.** An explicitly placed member owns its own Remove action and
    unregisters from the root. Runtime removal immediately writes a persistence
    tombstone. Plasma Undo restores the same containment ID and its complete

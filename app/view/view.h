@@ -58,6 +58,7 @@ namespace Latte {
 class Corona;
 class Interfaces;
 class GenericLayout;
+class OriginalView;
 namespace ViewActionPolicy {
 enum class Role;
 }
@@ -82,6 +83,7 @@ class View : public PlasmaQuick::ContainmentView
     Q_PROPERTY(bool inSettingsAdvancedMode READ inSettingsAdvancedMode NOTIFY inSettingsAdvancedModeChanged)
 
     Q_PROPERTY(bool inEditMode READ inEditMode NOTIFY inEditModeChanged)
+    Q_PROPERTY(bool linkedEditHighlight READ linkedEditHighlight NOTIFY linkedEditHighlightChanged)
     Q_PROPERTY(bool isPreferredForShortcuts READ isPreferredForShortcuts WRITE setIsPreferredForShortcuts NOTIFY isPreferredForShortcutsChanged)
     Q_PROPERTY(bool keyboardNavigationIsActive READ keyboardNavigationIsActive NOTIFY keyboardNavigationIsActiveChanged)
     Q_PROPERTY(bool onPrimary READ onPrimary WRITE setOnPrimary NOTIFY onPrimaryChanged)
@@ -198,6 +200,7 @@ public:
     void setByPassWM(bool bypass);
 
     bool inEditMode() const;
+    [[nodiscard]] bool linkedEditHighlight() const;
 
     [[nodiscard]] bool floatingGapConfigured() const;
     [[nodiscard]] bool isFloatingPanel() const;
@@ -417,6 +420,7 @@ Q_SIGNALS:
     void interfacesGraphicObjChanged();
     void isPreferredForShortcutsChanged();
     void keyboardNavigationIsActiveChanged();
+    void linkedEditHighlightChanged();
     void isTouchingBottomViewAndIsBusyChanged();
     void isTouchingTopViewAndIsBusyChanged();
     void layoutChanged();
@@ -508,6 +512,8 @@ private:
     void applyKeyboardFocusPolicy(bool takesFocus);
 
     void setContainsDrag(bool contains);
+    void setLinkedEditHighlight(bool highlighted);
+    void updateLinkedEditHighlightVisibilityBlocker();
 
 private:
     Plasma::Containment *containmentById(uint id);
@@ -520,6 +526,7 @@ private:
     bool m_inDelete{false};
     bool m_isPreferredForShortcuts{false};
     bool m_keyboardNavigationIsActive{false};
+    bool m_linkedEditHighlight{false};
     quint64 m_layerShellConfigureRequestRevision{0};
     bool m_onPrimary{true};
     bool m_screenEdgeMarginEnabled{false};
@@ -596,6 +603,8 @@ private:
 
     //! track transientWindows
     QList<QWindow *> m_transientWindows;
+
+    friend class Latte::OriginalView;
 
 };
 

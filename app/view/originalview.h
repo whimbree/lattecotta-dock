@@ -68,6 +68,7 @@ private:
     void createClone(int screenId);
     void forgetClone(Latte::ClonedView *view);
     void removeClone(Latte::ClonedView *view);
+    void updateLinkedEditHighlights();
 
 private:
     Latte::Types::ScreensGroup m_screensGroup{Latte::Types::SingleScreenGroup};
