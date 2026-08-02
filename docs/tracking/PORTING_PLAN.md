@@ -5086,6 +5086,11 @@ prerequisites in the phases above are done.
       the client edge-strip classifier from the modes that slide offscreen so
       the below-layer dock can return to the front.
       Commits: 28e1df850, 29e1b3008
+- [x] Fix D264 (Dodge Active retained stale window eligibility). Keep KWin
+      object observation alive independently of current Latte admission,
+      reconcile skip and ignore changes against an exhaustive transition, and
+      retire the tracker row only when the compositor object is destroyed.
+      Commits: ac0b78e02, 5c32fcc0e
 - [ ] Report D258 (KF6 device enumeration blocks the GUI thread on an
       unavailable hard NFS mount) upstream to KDE Solid/KIO. Preserve the traced
       Folder View call chain and keep the exact-path diagnostic isolation out
