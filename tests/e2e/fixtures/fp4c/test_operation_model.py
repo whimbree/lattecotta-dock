@@ -1183,6 +1183,23 @@ class OperationModelTest(unittest.TestCase):
             "incompatible visibility state",
         )
 
+        relocating_armed_edge = self.mutated(
+            lambda snapshot: snapshot["views"][0].update(
+                {
+                    "inRelocationAnimation": True,
+                    "isHidden": True,
+                    "screenEdgeBackend": "kwinAutoHide",
+                    "screenEdgeArmed": True,
+                    "screenEdgeRegistered": True,
+                    "visibilityMode": "dodgeActive",
+                }
+            )
+        )
+        self.assert_refused(
+            lambda: model.parse_snapshot(relocating_armed_edge),
+            "relocating view owns an armed edge",
+        )
+
         client_cover = self.mutated(
             lambda snapshot: snapshot["views"][0].update(
                 {

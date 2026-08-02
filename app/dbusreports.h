@@ -2009,6 +2009,8 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
                     && !compositorScreenEdgeBackend)
                 || (view.screenEdgeArmed
                     && noScreenEdgeBackend)
+                || (view.screenEdgeArmed
+                    && view.inRelocationAnimation)
                 || (compositorScreenEdgeBackend
                     && view.screenEdgeArmed
                     && (!view.isHidden

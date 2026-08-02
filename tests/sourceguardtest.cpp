@@ -762,7 +762,10 @@ private:
                    "{m_autoHideScreenEdge->setEnabled(false);"
                    "createEdgeGhostWindow();}"))
             && visibility.contains(QStringLiteral(
-                   "constboolarmed=inCurrentLayout"
+                   "constboolcanOwnScreenEdge=layoutIsCurrent"
+                   "&&!m_latteView->positioner()->inRelocationAnimation();"))
+            && visibility.contains(QStringLiteral(
+                   "constboolarmed=canOwnScreenEdge"
                    "&&usesCompositorAutoHide"
                    "&&revealsOnScreenEdge(m_mode)"
                    "&&m_isHidden"
@@ -780,7 +783,12 @@ private:
             && visibility.contains(QStringLiteral(
                    "m_wm->setActiveEdge(m_edgeGhostWindow,false);"))
             && wayland.contains(QStringLiteral(
-                   "VisibilityManager::usesClientScreenEdgeTrigger("))
+                   "if(active"
+                   "&&!ViewPart::VisibilityManager::"
+                   "usesClientScreenEdgeTrigger(visibility->mode()))"))
+            && wayland.contains(QStringLiteral(
+                   "if(active){window->showWithMask();}"
+                   "else{window->hideWithMask();}"))
             && dbusXml.contains(QStringLiteral(
                    "ThedockSystemDataschemaversionis11."))
             && dbusXml.contains(QStringLiteral(
@@ -3420,6 +3428,15 @@ void SourceGuardTest::compositorScreenEdge_ownsRealLayerSurface()
              "relocation must synchronously remove stale screen-edge"
              " ownership");
 
+    QString ignoredSingleLayoutRelocation = visibility;
+    ignoredSingleLayoutRelocation.replace(
+        QStringLiteral("layoutIsCurrent\n        && !m_latteView"),
+        QStringLiteral("layoutIsCurrent\n        && m_latteView"));
+    QVERIFY2(!matchesCompositorScreenEdgeContract(
+                 cmake, helper, ignoredSingleLayoutRelocation,
+                 wayland, dbusXml, e2e),
+             "single-layout relocation must disarm screen-edge ownership");
+
     QString staleClientClassifier = wayland;
     staleClientClassifier.replace(
         QStringLiteral("usesClientScreenEdgeTrigger"),
@@ -3429,6 +3446,16 @@ void SourceGuardTest::compositorScreenEdge_ownsRealLayerSurface()
                  dbusXml, e2e),
              "WindowsCanCover must retain its distinct below-layer edge"
              " trigger");
+
+    QString modeGatedDeactivation = wayland;
+    modeGatedDeactivation.replace(
+        QStringLiteral("if (active\n            && !ViewPart::VisibilityManager"),
+        QStringLiteral("if (!ViewPart::VisibilityManager"));
+    QVERIFY2(!matchesCompositorScreenEdgeContract(
+                 cmake, helper, visibility, modeGatedDeactivation,
+                 dbusXml, e2e),
+             "client edge cleanup must deactivate after the visibility mode"
+             " changes");
 
     QString staleSchema = dbusXml;
     staleSchema.replace(
