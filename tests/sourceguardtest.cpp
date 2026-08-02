@@ -2595,9 +2595,11 @@ void SourceGuardTest::windowsTrackerBinding_keepsRequesters()
 
 void SourceGuardTest::waylandWindowSignals_keepDeliveryPolicy()
 {
-    const QString s = stripped(functionBody(readFile(QStringLiteral("app/wm/waylandinterface.cpp")),
-                                            QStringLiteral("void WaylandInterface::trackWindow(KWayland::Client::PlasmaWindow *w)")));
-    QVERIFY2(!s.isEmpty(), "WaylandInterface::trackWindow() not found");
+    const QString source = readFile(QStringLiteral("app/wm/waylandinterface.cpp"));
+    const QString s = stripped(functionBody(
+        source,
+        QStringLiteral("void WaylandInterface::observeWindow(KWayland::Client::PlasmaWindow *w)")));
+    QVERIFY2(!s.isEmpty(), "WaylandInterface::observeWindow() not found");
 
     const QString maximizedSignal = QStringLiteral("&PlasmaWindow::maximizedChanged");
     QCOMPARE(s.count(maximizedSignal), 1);
@@ -2605,6 +2607,7 @@ void SourceGuardTest::waylandWindowSignals_keepDeliveryPolicy()
              "maximizedChanged must retain its immediate updateWindowMaximized route");
 
     const QStringList noisySignals{
+        QStringLiteral("appIdChanged"),
         QStringLiteral("activeChanged"),
         QStringLiteral("titleChanged"),
         QStringLiteral("fullscreenChanged"),
@@ -2612,6 +2615,7 @@ void SourceGuardTest::waylandWindowSignals_keepDeliveryPolicy()
         QStringLiteral("minimizedChanged"),
         QStringLiteral("shadedChanged"),
         QStringLiteral("skipTaskbarChanged"),
+        QStringLiteral("skipSwitcherChanged"),
         QStringLiteral("onAllDesktopsChanged"),
         QStringLiteral("parentWindowChanged"),
         QStringLiteral("plasmaVirtualDesktopEntered"),
@@ -2626,6 +2630,46 @@ void SourceGuardTest::waylandWindowSignals_keepDeliveryPolicy()
         QVERIFY2(s.contains(expectedConnection),
                  qPrintable(QStringLiteral("%1 must retain its coalesced updateWindow route").arg(signal)));
     }
+
+    const QString validity = stripped(functionBody(
+        source,
+        QStringLiteral("bool WaylandInterface::isValidWindow(const KWayland::Client::PlasmaWindow *w)")));
+    QVERIFY2(validity.contains(QStringLiteral("returnisAcceptableWindow(w);")),
+             "Wayland validity must consume current compositor policy");
+    QVERIFY2(!validity.contains(QStringLiteral("windowsTracker()->isValidFor")),
+             "a cached tracker row must not grandfather stale eligibility");
+
+    const QString acceptance = stripped(functionBody(
+        source,
+        QStringLiteral("bool WaylandInterface::isAcceptableWindow(const KWayland::Client::PlasmaWindow *w)")));
+    QVERIFY2(acceptance.contains(QStringLiteral("allowsSkippedWindowForApplication(w->appId())"))
+                 && acceptance.contains(QStringLiteral("registerWhitelistedWindow(wid);returntrue;")),
+             "explicit skipped-window exceptions must be admitted on their first observation");
+
+    const QString reconciliation = stripped(functionBody(
+        source,
+        QStringLiteral("bool WaylandInterface::reconcileWindowAdmission(")));
+    QVERIFY2(reconciliation.contains(QStringLiteral("planWindowAdmission(current,isAcceptable)")),
+             "Wayland updates must pass through the admission transition table");
+    QVERIFY2(reconciliation.contains(QStringLiteral("Q_EMITwindowAdded(wid);"))
+                 && reconciliation.contains(QStringLiteral("considerWindowChanged(wid,delivery);")),
+             "admission must distinguish first publication from eligibility refresh");
+
+    const QString created = stripped(functionBody(
+        source,
+        QStringLiteral("void WaylandInterface::windowCreatedProxy(KWayland::Client::PlasmaWindow *w)")));
+    QVERIFY2(created.indexOf(QStringLiteral("observeWindow(w);"))
+                 < created.indexOf(QStringLiteral("reconcileWindowAdmission(")),
+             "every KWin window must be observed before initial admission");
+
+    const QString unmapped = stripped(functionBody(
+        source,
+        QStringLiteral("void WaylandInterface::windowUnmapped()")));
+    QVERIFY2(unmapped.contains(QStringLiteral("stopObservingWindow(window);"))
+                 && unmapped.contains(QStringLiteral("discardPendingWindowChange(wid);"))
+                 && unmapped.indexOf(QStringLiteral("discardPendingWindowChange(wid);"))
+                    < unmapped.indexOf(QStringLiteral("Q_EMITwindowRemoved(wid);")),
+             "unmap must retire observation and pending callbacks before removal");
 }
 
 void SourceGuardTest::visibilityManager_strutThicknessBypassesGeometryThrottle()

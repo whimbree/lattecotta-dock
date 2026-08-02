@@ -45,10 +45,26 @@ public:
         considerWindowChanged(wid, WindowChangeDelivery::Immediate);
     }
 
+    void retire(const WindowId &wid)
+    {
+        discardPendingWindowChange(wid);
+        Q_EMIT windowRemoved(wid);
+    }
+
     void announce(const WindowInfoWrap &winfo)
     {
         m_windowInfo[winfo.wid()] = winfo;
         Q_EMIT windowAdded(winfo.wid());
+    }
+
+    void seed(const WindowInfoWrap &winfo)
+    {
+        m_windowInfo.insert(winfo.wid(), winfo);
+    }
+
+    void activate(const WindowId &wid)
+    {
+        Q_EMIT activeWindowChanged(wid);
     }
 
     void change(const WindowInfoWrap &winfo)
@@ -69,7 +85,12 @@ public:
     bool removeViewStruts(QWindow &) override { return true; }
 
     WindowId activeWindow() override { return WindowId(); }
-    WindowInfoWrap requestInfo(WindowId wid) override { return m_windowInfo.value(wid); }
+    WindowInfoWrap requestInfo(WindowId wid) override
+    {
+        WindowInfoWrap info = m_windowInfo.value(wid);
+        info.setIsValid(info.isValid() && !hasBlockedTracking(wid));
+        return info;
+    }
     WindowInfoWrap requestInfoActive() override { return WindowInfoWrap(); }
 
     void skipTaskBar(const QDialog &) override {}
@@ -114,6 +135,9 @@ private Q_SLOTS:
     void differentWindowFlushesPendingBeforeStartingDeadline();
     void immediateChangeFlushesDifferentPendingWindowFirst();
     void immediateStateChangesPropagateWithoutDeadline();
+    void retiredWindowDiscardsPendingChange();
+    void ignoredWindowRefreshesWithoutPretendingDestruction();
+    void rejectedActiveWindowDoesNotPublishTrackerRow();
 
 private:
     static WindowId makeWid(int id)
@@ -259,6 +283,59 @@ void WindowChangeDebounceTest::immediateStateChangesPropagateWithoutDeadline()
 
     QTest::qWait(200);
     QCOMPARE(changedSpy.count(), 2);
+}
+
+void WindowChangeDebounceTest::retiredWindowDiscardsPendingChange()
+{
+    TestableWindowInterface wm;
+    QSignalSpy changedSpy(&wm, &AbstractWindowInterface::windowChanged);
+    QSignalSpy removedSpy(&wm, &AbstractWindowInterface::windowRemoved);
+    const WindowId wid = makeWid(8);
+
+    wm.announce(makeShownWindow(wid, 0, false));
+    wm.change(makeShownWindow(wid, 1, false));
+    wm.retire(wid);
+
+    QCOMPARE(removedSpy.count(), 1);
+    QVERIFY(!wm.windowsTracker()->containsWindow(wid));
+    QTest::qWait(200);
+    QCOMPARE(changedSpy.count(), 0);
+    QVERIFY(!wm.windowsTracker()->containsWindow(wid));
+}
+
+void WindowChangeDebounceTest::ignoredWindowRefreshesWithoutPretendingDestruction()
+{
+    TestableWindowInterface wm;
+    QObject owner;
+    QSignalSpy changedSpy(&wm, &AbstractWindowInterface::windowChanged);
+    QSignalSpy removedSpy(&wm, &AbstractWindowInterface::windowRemoved);
+    const WindowId wid = makeWid(9);
+
+    wm.announce(makeShownWindow(wid, 0, false));
+    QVERIFY(wm.windowsTracker()->isValidFor(wid));
+
+    wm.registerIgnoredWindow(wid, &owner);
+    QCOMPARE(changedSpy.count(), 1);
+    QVERIFY(wm.windowsTracker()->containsWindow(wid));
+    QVERIFY(!wm.windowsTracker()->isValidFor(wid));
+
+    wm.unregisterIgnoredWindow(wid, &owner);
+    QCOMPARE(changedSpy.count(), 2);
+    QCOMPARE(removedSpy.count(), 0);
+    QVERIFY(wm.windowsTracker()->isValidFor(wid));
+}
+
+void WindowChangeDebounceTest::rejectedActiveWindowDoesNotPublishTrackerRow()
+{
+    TestableWindowInterface wm;
+    const WindowId wid = makeWid(10);
+    WindowInfoWrap rejected = makeShownWindow(wid, 0, false);
+    rejected.setIsValid(false);
+
+    wm.seed(rejected);
+    wm.activate(wid);
+
+    QVERIFY(!wm.windowsTracker()->containsWindow(wid));
 }
 
 int main(int argc, char *argv[])

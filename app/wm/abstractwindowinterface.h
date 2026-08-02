@@ -178,6 +178,7 @@ protected:
     KSharedConfig::Ptr rulesConfig;
 
     void considerWindowChanged(WindowId wid, WindowChangeDelivery delivery);
+    void discardPendingWindowChange(const WindowId &wid);
 
     bool isIgnored(const WindowId &wid) const;
     bool isRegisteredPlasmaIgnoredWindow(const WindowId &wid) const;

@@ -300,7 +300,10 @@ void AbstractWindowInterface::unregisterIgnoredWindow(WindowId wid, const QObjec
 
     const auto change = m_ignoredWindowRegistry.unregisterOwner(wid, reinterpret_cast<quintptr>(owner));
     if (change == IgnoredWindowRegistry::Change::BecameTrackable) {
-        Q_EMIT windowRemoved(wid);
+        //! Tracking eligibility changed, but the compositor window still
+        //! exists. Consumers reconcile its admission instead of treating a
+        //! temporary policy change as object destruction.
+        Q_EMIT windowChanged(wid);
     }
 }
 
@@ -308,7 +311,6 @@ void AbstractWindowInterface::registerPlasmaIgnoredWindow(WindowId wid)
 {
     if (!wid.isEmpty() && !m_plasmaIgnoredWindows.contains(wid)) {
         m_plasmaIgnoredWindows.append(wid);
-        Q_EMIT windowChanged(wid);
     }
 }
 
@@ -323,7 +325,6 @@ void AbstractWindowInterface::registerWhitelistedWindow(WindowId wid)
 {
     if (!wid.isEmpty() && !m_whitelistedWindows.contains(wid)) {
         m_whitelistedWindows.append(wid);
-        Q_EMIT windowChanged(wid);
     }
 }
 
@@ -419,6 +420,16 @@ void AbstractWindowInterface::considerWindowChanged(WindowId wid, WindowChangeDe
 
     m_windowChangedWaiting = wid;
     m_windowWaitingTimer.start();
+}
+
+void AbstractWindowInterface::discardPendingWindowChange(const WindowId &wid)
+{
+    if (!m_windowWaitingTimer.isActive() || m_windowChangedWaiting != wid) {
+        return;
+    }
+
+    m_windowWaitingTimer.stop();
+    m_windowChangedWaiting = WindowId();
 }
 
 }
