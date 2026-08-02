@@ -371,9 +371,10 @@ editing = {v[\"containmentId\"] for v in views if v[\"editMode\"]}
 highlighted = {v[\"containmentId\"] for v in views if v[\"linkedEditHighlight\"]}
 visible_highlights = all(not v[\"isHidden\"] for v in views if v[\"linkedEditHighlight\"])
 passive = all(not v[\"inConfigureAppletsMode\"] for v in views if v[\"linkedEditHighlight\"])
+keyboard_clear = all(not v[\"keyboardNavigation\"] for v in views)
 sys.exit(0 if editing == {$remote_id}
          and highlighted == {$root_id, $same_edge_id}
-         and visible_highlights and passive else 1)
+         and visible_highlights and passive and keyboard_clear else 1)
 " 'linked peers did not expose a visible passive edit highlight' >/dev/null
 wait_for_snapshot "
 import json, sys
@@ -621,11 +622,11 @@ print(next(v["persistentDockId"] for v in json.load(sys.stdin)["views"]
            if v["persistentDockId"] not in before))
 ' "$before_ids" <<<"$duplicate_state")"
 
-# Editing the relationship after Duplicate Dock exists must still highlight
-# only the inactive relationship peers. The snapshot has no durable relation
-# from the duplicate to infer, so a cue there would expose relationship leakage.
+# Keep the relationship in edit mode across root runtime recreation. The
+# independent duplicate has no durable relation to infer, so a cue or keyboard
+# mode there would expose relationship leakage before or after replacement.
 e2e_call setViewEditMode ub "$remote_id" true >/dev/null \
-    || e2e_fail "could not re-enter edit mode for duplicate isolation"
+    || e2e_fail "could not enter edit mode for runtime recreation"
 wait_for_views_data "
 import json, sys
 views = json.load(sys.stdin)
@@ -634,19 +635,14 @@ highlighted = {v[\"containmentId\"] for v in views if v[\"linkedEditHighlight\"]
 duplicate = next(v for v in views if v[\"containmentId\"] == $duplicate_id)
 sys.exit(0 if editing == {$remote_id}
          and highlighted == {$root_id, $same_edge_id}
-         and not duplicate[\"linkedEditHighlight\"] and not duplicate[\"editMode\"] else 1)
-" 'independent duplicate inherited the linked relationship edit highlight' >/dev/null
-e2e_call setViewEditMode ub "$remote_id" false >/dev/null \
-    || e2e_fail "could not leave edit mode after duplicate isolation"
-wait_for_views_data '
-import json, sys
-sys.exit(0 if not any(v["editMode"] or v["linkedEditHighlight"] for v in json.load(sys.stdin)) else 1)
-' 'duplicate isolation edit state did not clear' >/dev/null
+         and not duplicate[\"linkedEditHighlight\"] and not duplicate[\"editMode\"]
+         and all(not v[\"keyboardNavigation\"] for v in views) else 1)
+" 'pre-recreation edit state leaked into the independent duplicate or keyboard mode' >/dev/null
 
 # Recreate the root runtime through the same path used when an installed
 # custom indicator changes. Every linked runtime must rotate to the new root
-# generation, preserve its containment identity, and converge to identical
-# content. The independent duplicate must remain untouched.
+# generation while preserving the active member and exact passive-peer set.
+# The independent duplicate must remain untouched.
 before_reload_runtime="$(snapshot | python3 -c '
 import json, sys
 print(" ".join("%s:%s" % (v["persistentDockId"], v["runtimeViewId"])
@@ -662,17 +658,42 @@ before = {int(pair.split(\":\", 1)[0]): pair.split(\":\", 1)[1]
           for pair in \"$before_reload_runtime\".split()}
 views = {v[\"persistentDockId\"]: v for v in json.load(sys.stdin)[\"views\"]}
 group = [$root_id, $same_edge_id, $remote_id]
+editing = {identity for identity, view in views.items() if view[\"editMode\"]}
+active = views.get($remote_id)
+passive = [views.get($root_id), views.get($same_edge_id), views.get($duplicate_id)]
 sys.exit(0 if set(views) == {$root_id, $same_edge_id, $remote_id, $duplicate_id}
          and all(views[identity][\"runtimeViewId\"] != before[identity] for identity in group)
          and views[$duplicate_id][\"runtimeViewId\"] == before[$duplicate_id]
          and all(views[identity][\"originalDockId\"] == $root_id
-                 for identity in [$same_edge_id, $remote_id]) else 1)
+                 for identity in [$same_edge_id, $remote_id])
+         and editing == {$remote_id} and active[\"settingsWindowShown\"]
+         and active[\"objects\"][\"configWindow\"] is not None
+         and all(view and not view[\"settingsWindowShown\"]
+                 and view[\"objects\"][\"configWindow\"] is None for view in passive)
+         else 1)
 " 'root recreation did not replace and rebind the whole linked runtime group')" \
     || e2e_fail "linked root runtime recreation did not settle"
-wait_for_views_data '
+wait_for_views_data "
 import json, sys
-sys.exit(0 if not any(v["linkedEditHighlight"] for v in json.load(sys.stdin)) else 1)
-' 'root runtime recreation retained a stale linked edit highlight' >/dev/null
+views = json.load(sys.stdin)
+editing = {v[\"containmentId\"] for v in views if v[\"editMode\"]}
+highlighted = {v[\"containmentId\"] for v in views if v[\"linkedEditHighlight\"]}
+visible_highlights = all(not v[\"isHidden\"] for v in views if v[\"linkedEditHighlight\"])
+sys.exit(0 if editing == {$remote_id}
+         and highlighted == {$root_id, $same_edge_id}
+         and visible_highlights
+         and all(not v[\"keyboardNavigation\"] for v in views) else 1)
+" 'replacement runtimes lost edit ownership, passive peers, or focus isolation' >/dev/null
+e2e_call setViewEditMode ub "$remote_id" false >/dev/null \
+    || e2e_fail "could not leave edit mode after runtime recreation"
+wait_for_views_data "
+import json, sys
+views = json.load(sys.stdin)
+root = next(v for v in views if v[\"containmentId\"] == $root_id)
+sys.exit(0 if not any(v[\"editMode\"] or v[\"linkedEditHighlight\"]
+                      or v[\"keyboardNavigation\"] for v in views)
+         and root[\"isHidden\"] else 1)
+" 'post-recreation edit exit retained a cue, focus mode, or hiding blocker' >/dev/null
 recreate_sync=false
 for _ in $(seq 1 160); do
     if [[ "$(view_content_fingerprint "$root_id")" == "$before_reload_content" \
