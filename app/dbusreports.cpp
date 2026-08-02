@@ -238,6 +238,7 @@ std::optional<ViewRecord> collectViewRecord(
     record.inputMask = view->effects()->inputMask();
     record.appliedInputMask = view->effects()->appliedInputMask();
     record.editMode = view->inEditMode();
+    record.linkedEditHighlight = view->linkedEditHighlight();
     //! QML's effective rearrange mode is root.editMode AND the global toggle.
     //! Reporting the global bit on every view made unrelated docks appear to
     //! enter applet configuration together.
