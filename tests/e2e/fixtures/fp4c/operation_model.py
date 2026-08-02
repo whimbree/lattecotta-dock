@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: 2026 Latte Dock contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Typed deterministic plan and schema-10 oracle for FP-4C."""
+"""Typed deterministic plan and schema-11 oracle for FP-4C."""
 
 from __future__ import annotations
 
@@ -1267,6 +1267,8 @@ def parse_snapshot(value: Any) -> dict[str, Any]:
             fail(f"views[{index}] non-compositor backend owns a registration")
         if view["screenEdgeArmed"] and view["screenEdgeBackend"] == "none":
             fail(f"views[{index}] missing backend owns an armed edge")
+        if view["screenEdgeArmed"] and view["inRelocationAnimation"]:
+            fail(f"views[{index}] relocating view owns an armed edge")
         if compositor_backend and view["screenEdgeArmed"] and (
             not view["isHidden"] or view["visibilityContainsMouse"]
             or (view["inReadyState"] and not view["screenEdgeRegistered"])

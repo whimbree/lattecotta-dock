@@ -1025,17 +1025,19 @@ bool VisibilityManager::compositorScreenEdgeSupported() const
 
 void VisibilityManager::updateKWinEdgeState()
 {
-    const bool inCurrentLayout =
+    const bool layoutIsCurrent =
         m_corona->layoutsManager()->memoryUsage() == MemoryUsage::SingleLayout
         || (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::MultipleLayouts
             && m_latteView->layout()
-            && !m_latteView->positioner()->inRelocationAnimation()
             && m_latteView->layout()->isCurrent());
+    const bool canOwnScreenEdge =
+        layoutIsCurrent
+        && !m_latteView->positioner()->inRelocationAnimation();
     const bool usesCompositorAutoHide =
         screenEdgeBackend() == ScreenEdgeBackend::KWinAutoHide;
 
     if (m_autoHideScreenEdge) {
-        const bool armed = inCurrentLayout
+        const bool armed = canOwnScreenEdge
             && usesCompositorAutoHide
             && revealsOnScreenEdge(m_mode)
             && m_isHidden
@@ -1049,7 +1051,7 @@ void VisibilityManager::updateKWinEdgeState()
     }
 
     bool active{false};
-    if (inCurrentLayout) {
+    if (canOwnScreenEdge) {
         if (m_mode == Latte::Types::WindowsCanCover) {
             active = m_isBelowLayer && !m_containsMouse;
         } else if (!usesCompositorAutoHide && revealsOnScreenEdge(m_mode)) {

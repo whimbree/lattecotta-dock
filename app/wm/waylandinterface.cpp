@@ -349,19 +349,29 @@ void WaylandInterface::setActiveEdge(QWindow *view, bool active)
         return;
     }
 
-    if (window->parentView()->visibility()
-            && ViewPart::VisibilityManager::usesClientScreenEdgeTrigger(
-                window->parentView()->visibility()->mode())) {
-        //! Auto Hide and Dodge reach this fallback only when KWin does not
-        //! advertise kde_screen_edge_manager_v1. WindowsCanCover always uses
-        //! the client strip to raise its below-layer dock without sliding the
-        //! dock surface away. Unmasking the strip enables its pointer signal;
-        //! masking it removes that input region synchronously.
-        if (active) {
-            window->showWithMask();
-        } else {
-            window->hideWithMask();
-        }
+    const auto *const visibility = window->parentView()->visibility();
+    if (!visibility) {
+        qCritical() << "Cannot change a client screen edge without visibility state";
+        return;
+    }
+
+    if (active
+            && !ViewPart::VisibilityManager::usesClientScreenEdgeTrigger(
+                visibility->mode())) {
+        qCritical() << "Cannot activate a client screen edge for visibility mode"
+                    << static_cast<int>(visibility->mode());
+        return;
+    }
+
+    //! Auto Hide and Dodge reach this fallback only when KWin does not
+    //! advertise kde_screen_edge_manager_v1. WindowsCanCover always uses
+    //! the client strip to raise its below-layer dock without sliding the
+    //! dock surface away. Activation is mode-gated; deactivation is
+    //! unconditional because cleanup runs after the mode may have changed.
+    if (active) {
+        window->showWithMask();
+    } else {
+        window->hideWithMask();
     }
 }
 

@@ -1897,6 +1897,10 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         view.compositorScreenEdgeSupported = true;
         QVERIFY(dockTransitionRecordsAgree(hidden));
 
+        view.inRelocationAnimation = true;
+        QVERIFY(!dockTransitionRecordsAgree(hidden));
+        view.inRelocationAnimation = false;
+
         view.visibilityContainsMouse = true;
         QVERIFY(!dockTransitionRecordsAgree(hidden));
     }
