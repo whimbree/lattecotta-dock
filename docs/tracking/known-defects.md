@@ -3191,6 +3191,36 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   presentation. No layout or configuration mutation was involved.
 - SEVERITY: known issue.
 
+### D264 - Dodge Active retained stale window eligibility
+- STATUS: FIXED on branch by `ac0b78e02` and `5c32fcc0e`.
+- FOUND: 2026-08-02, live DP-2 left-dock Dodge Active diagnosis and nested
+  replay.
+- SYMPTOM: the left Dodge Active dock hides even when no currently eligible
+  application window overlaps it. Operation order can make the stale decision
+  appear to follow another dock or output.
+- ROOT: Wayland `isValidWindow()` returned true for any row already valid in
+  `WindowsTracker`, before evaluating the KWin object's current skip and ignore
+  policy. Upstream commit `4d3b5e86e` introduced this cached-validity shortcut
+  with window whitelisting. The same lifecycle also stopped observing windows
+  rejected at creation, omitted `skipSwitcherChanged`, disconnected ignored
+  windows, and allowed active-window notification to publish an initially
+  invalid row. The two Plasma 6 reference forks retain the same behavior. Dock
+  identity, containment ownership, output assignment, and geometry were not
+  shared incorrectly in this reproduction.
+- FIX: observe every KWin object until compositor unmap, while independently
+  reconciling whether its tracker row is unpublished, published-rejected, or
+  accepted. An exhaustive constexpr transition publishes only first
+  admission, refreshes rejection and re-admission in place, and reserves
+  removal for actual destruction. Current app ID, taskbar, switcher, and ignore
+  state all participate; pending delivery is discarded before unmap removal.
+- EVIDENCE: the exact parent build fails nested recipe 075 at same-window
+  rejection with active touching, existing touching, existing active, and
+  hidden state all still true. The corrected build passes rejection and
+  re-admission under one unchanged KWin internal ID, then destroys the client
+  during a queued rejection without stale resurrection. The focused predicate,
+  debounce, source-contract, and production-link checks pass.
+- SEVERITY: beta blocker.
+
 ### D263 - Windows Can Cover filtered out its own edge trigger
 - STATUS: FIXED on `main` by `28e1df850` and `29e1b3008` (PR #141).
 - FOUND: 2026-08-02, review of the native screen-edge fallback boundary.

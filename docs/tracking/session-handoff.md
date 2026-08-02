@@ -3,6 +3,33 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-08-02.
 
+## 2026-08-02: Dodge Active follows current KWin window admission
+
+D264 (Dodge Active retained stale window eligibility) made the DP-2 left dock
+hide without a currently eligible overlapping window. Dock identity, output
+assignment, geometry, and clone lineage remained stable. The first incorrect
+state was the shared window tracker retaining an old valid row after KWin made
+that same window taskbar-and-switcher-skipped.
+
+Upstream commit `4d3b5e86e` introduced a cached-validity shortcut while adding
+Wayland window whitelisting. Once a row became valid, `isValidWindow()` returned
+before reading current compositor policy. Initial rejected windows were also
+never observed, `skipSwitcherChanged` was not connected, and the Wayland
+ignored-window override disconnected objects whose eligibility could later
+change. Both Plasma 6 reference forks retain the same lifecycle.
+
+Commit `ac0b78e02` separates persistent KWin object observation from temporary
+Latte admission. A constexpr transition table covers unpublished,
+published-rejected, and accepted rows. Current application, taskbar, switcher,
+and ignore state can withdraw or re-admit one row without inventing object
+destruction; unmap alone retires observation and cancels pending delivery.
+Commit `5c32fcc0e` adds nested recipe 075. The exact parent build fails while
+the same skipped Konsole identity remains touching and keeps the dock hidden.
+The corrected build passes rejection, re-admission under the unchanged KWin
+identity, destruction during a queued rejection, and post-debounce convergence.
+The focused predicate, debounce, source-contract, and production-link checks
+pass.
+
 ## 2026-08-02: KWin now owns hidden dock edge reveal
 
 D262 (Auto Hide and Dodge reveal used a client ghost instead of KWin's dock
