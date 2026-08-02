@@ -518,7 +518,7 @@ Landed before or during the 2026-07-16 stabilization session:
   colorizerActive + colorizerReason (D21, added 2026-07-18: whether the
   colorizer scheme is EFFECTIVELY pushed into the applet's own colour
   group, and the single winning reason - applied / notEngaged / splitter
-  / selfColored / userBlocked / inlineFull; colorizingBlocked
+  / selfColored / userBlocked; colorizingBlocked
   stays the narrower user-opt-out list),
   z (stacking order). The per-applet `id` is the stable Plasma instance
   id, so two applets of the SAME plugin are distinguishable by id and

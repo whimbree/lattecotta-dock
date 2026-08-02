@@ -423,7 +423,7 @@ call viewAppletsData u 1               # s: JSON array per applet, in visual ord
 #   lockedZoom, colorizingBlocked, colorizerActive, colorizerReason, z
 #   colorizerActive (D21): true when the colorizer scheme is pushed into this
 #   applet's own colour group; colorizerReason names the decision - applied /
-#   notEngaged / splitter / selfColored / userBlocked / inlineFull.
+#   notEngaged / splitter / selfColored / userBlocked.
 #   colorizingBlocked stays the user opt-out list ONLY (narrower than the above)
 #   id is the stable Plasma INSTANCE id: two applets of the same plugin
 #   are distinguishable by id and their order is unambiguous (G1)

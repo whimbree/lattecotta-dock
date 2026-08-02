@@ -180,7 +180,7 @@
     <!-- D21: each applet's JSON payload adds colorizerActive (the colorizer
          scheme is EFFECTIVELY pushed into the applet's own colour group) and
          colorizerReason (applied / notEngaged / splitter / selfColored /
-         userBlocked / inlineFull). This is the whole decision, wider
+         userBlocked). This is the whole decision, wider
          than colorizingBlocked (the user opt-out list only). Signature stays s
          (JSON string). See DbusReports::AppletRecord and
          AppletItem.colorizerPaletteActive. -->

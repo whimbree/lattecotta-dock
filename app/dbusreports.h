@@ -306,7 +306,7 @@ struct AppletRecord {
     //! single reason it is not when it is not ("applied" when it is). Unlike
     //! colorizingBlocked - which reflects only the user opt-out list - this is
     //! the whole decision: applied / notEngaged / splitter / selfColored /
-    //! userBlocked / inlineFull.
+    //! userBlocked.
     bool colorizerActive{false};
     QString colorizerReason;
     //! the G2 stacking readback (docs/tracking/e2e-interaction-test-plan.md): the z of

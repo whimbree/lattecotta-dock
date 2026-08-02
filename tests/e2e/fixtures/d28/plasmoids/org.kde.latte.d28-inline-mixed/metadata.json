@@ -1,0 +1,26 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Latte Dock contributors"
+            },
+            {
+                "Name": "Bree Spektor"
+            }
+        ],
+        "Description": "Deterministic inline full-representation palette fixture",
+        "EnabledByDefault": false,
+        "Id": "org.kde.latte.d28-inline-mixed",
+        "License": "GPL-2.0-or-later",
+        "Name": "D28 Inline Mixed Content",
+        "Version": "1.0"
+    },
+    "X-Plasma-API": "declarativeappletscript",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-MainScript": "ui/main.qml",
+    "SPDX-FileCopyrightText": [
+        "2026 Latte Dock contributors",
+        "2026 Bree Spektor"
+    ],
+    "SPDX-License-Identifier": "GPL-2.0-or-later"
+}
