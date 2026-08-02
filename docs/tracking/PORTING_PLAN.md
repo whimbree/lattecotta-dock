@@ -5095,7 +5095,7 @@ prerequisites in the phases above are done.
       relationship cue at the original view, reveal hidden linked peers without
       granting edit or configuration ownership, and clear the cue across
       removal, destruction, and runtime recreation.
-      Commits: d48a2828f, df7e53f41, 7f3e4c49c, f4359e62a, 5b4f03455
+      Commits: 08d2c3985, 0f78b52b8, fb340286d, 23e30c4f0, 141fd0b5e
 - [ ] Report D258 (KF6 device enumeration blocks the GUI thread on an
       unavailable hard NFS mount) upstream to KDE Solid/KIO. Preserve the traced
       Folder View call chain and keep the exact-path diagnostic isolation out

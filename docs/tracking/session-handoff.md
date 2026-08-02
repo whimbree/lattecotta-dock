@@ -10,20 +10,20 @@ invisible while one member was being edited. Activating edit mode on every
 member would have violated containment and configuration-window ownership, so
 the cue is deliberately separate from edit state.
 
-Commit `d48a2828f` makes `OriginalView` the sole coordinator of a read-only
+Commit `08d2c3985` makes `OriginalView` the sole coordinator of a read-only
 `View::linkedEditHighlight`. The cue reveals hidden peers through its own
 visibility blocker and reuses the non-interactive edit blueprint above the
 background and below applets. It never sets edit mode, applet-configuration
 mode, focus, or settings-window ownership. Add, removal, root destruction, edit
-exit, and runtime recreation recompute or clear the state. Commit `df7e53f41`
+exit, and runtime recreation recompute or clear the state. Commit `0f78b52b8`
 adds the boolean to `viewsData` and the stable D-Bus references. Commit
-`7f3e4c49c` extends the nested dual-output linked-dock vehicle.
+`fb340286d` extends the nested dual-output linked-dock vehicle.
 
 Independent review found that recreation could attach a containment whose edit
 level was already true without emitting the edge observed by the coordinator.
-Commit `f4359e62a` recomputes when either the root or a linked member attaches
+Commit `23e30c4f0` recomputes when either the root or a linked member attaches
 its containment and keeps the feature's connection handles isolated from other
-clone wiring. Commit `5b4f03455` keeps the editor active through recreation,
+clone wiring. Commit `141fd0b5e` keeps the editor active through recreation,
 requires the replacement generation to restore exactly one editor and the
 exact passive-peer set, and checks that keyboard navigation remains false.
 
