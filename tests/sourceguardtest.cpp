@@ -730,12 +730,14 @@ private:
         const QString &cmakeSource,
         const QString &helperSource,
         const QString &visibilitySource,
+        const QString &waylandSource,
         const QString &dbusXmlSource,
         const QString &e2eSource)
     {
         const QString cmake = normalizedCode(cmakeSource);
         const QString helper = normalizedCode(helperSource);
         const QString visibility = normalizedCode(visibilitySource);
+        const QString wayland = normalizedCode(waylandSource);
         const QString dbusXml = normalizedCode(dbusXmlSource);
         const QString e2e = normalizedCode(e2eSource);
 
@@ -777,6 +779,8 @@ private:
                    "this,&VisibilityManager::updateKWinEdgeState"))
             && visibility.contains(QStringLiteral(
                    "m_wm->setActiveEdge(m_edgeGhostWindow,false);"))
+            && wayland.contains(QStringLiteral(
+                   "VisibilityManager::usesClientScreenEdgeTrigger("))
             && dbusXml.contains(QStringLiteral(
                    "ThedockSystemDataschemaversionis11."))
             && dbusXml.contains(QStringLiteral(
@@ -3374,13 +3378,15 @@ void SourceGuardTest::compositorScreenEdge_ownsRealLayerSurface()
         "app/view/visibilitymanager.cpp"));
     const QString helper = readFile(QStringLiteral(
         "app/view/helpers/autohidescreenedge.cpp"));
+    const QString wayland = readFile(QStringLiteral(
+        "app/wm/waylandinterface.cpp"));
     const QString dbusXml = readFile(QStringLiteral(
         "app/dbus/org.kde.LatteDock.xml"));
     const QString e2e = readFile(QStringLiteral(
         "tests/e2e/071-maximized-window-length.sh"));
 
     QVERIFY2(matchesCompositorScreenEdgeContract(
-                 cmake, helper, visibility, dbusXml, e2e),
+                 cmake, helper, visibility, wayland, dbusXml, e2e),
              "AutoHide and Dodge modes must register the real dock layer"
              " surface with KWin, retain the client ghost only as a protocol"
              " fallback, and leave WindowsCanCover on its distinct ghost"
@@ -3391,7 +3397,7 @@ void SourceGuardTest::compositorScreenEdge_ownsRealLayerSurface()
         QStringLiteral("Surface::fromWindow(m_view)"),
         QStringLiteral("Surface::fromWindow(nullptr)"));
     QVERIFY2(!matchesCompositorScreenEdgeContract(
-                 cmake, detachedSurface, visibility, dbusXml, e2e),
+                 cmake, detachedSurface, visibility, wayland, dbusXml, e2e),
              "a detached helper surface must not satisfy compositor-owned"
              " edge reveal");
 
@@ -3401,7 +3407,7 @@ void SourceGuardTest::compositorScreenEdge_ownsRealLayerSurface()
         QStringLiteral("createEdgeGhostWindow();"));
     QVERIFY2(!matchesCompositorScreenEdgeContract(
                  cmake, helper, overlappingBackends,
-                 dbusXml, e2e),
+                 wayland, dbusXml, e2e),
              "the compositor edge and client ghost must not both own one"
              " AutoHide or Dodge edge");
 
@@ -3410,16 +3416,26 @@ void SourceGuardTest::compositorScreenEdge_ownsRealLayerSurface()
         QStringLiteral("Positioner::inRelocationAnimationChanged"),
         QStringLiteral("Positioner::slideOffsetChanged"));
     QVERIFY2(!matchesCompositorScreenEdgeContract(
-                 cmake, helper, staleRelocation, dbusXml, e2e),
+                 cmake, helper, staleRelocation, wayland, dbusXml, e2e),
              "relocation must synchronously remove stale screen-edge"
              " ownership");
+
+    QString staleClientClassifier = wayland;
+    staleClientClassifier.replace(
+        QStringLiteral("usesClientScreenEdgeTrigger"),
+        QStringLiteral("revealsOnScreenEdge"));
+    QVERIFY2(!matchesCompositorScreenEdgeContract(
+                 cmake, helper, visibility, staleClientClassifier,
+                 dbusXml, e2e),
+             "WindowsCanCover must retain its distinct below-layer edge"
+             " trigger");
 
     QString staleSchema = dbusXml;
     staleSchema.replace(
         QStringLiteral("11."),
         QStringLiteral("10."));
     QVERIFY2(!matchesCompositorScreenEdgeContract(
-                 cmake, helper, visibility, staleSchema, e2e),
+                 cmake, helper, visibility, wayland, staleSchema, e2e),
              "the installed D-Bus contract must name the live schema");
 }
 

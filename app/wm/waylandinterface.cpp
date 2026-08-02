@@ -350,14 +350,13 @@ void WaylandInterface::setActiveEdge(QWindow *view, bool active)
     }
 
     if (window->parentView()->visibility()
-            && ViewPart::VisibilityManager::revealsOnScreenEdge(window->parentView()->visibility()->mode())) {
-        //! Under layer-shell the auto-hide reveal is driven client-side:
-        //! arming the edge ghost (un-masking it) lets its mouse detection
-        //! fire containsMouseChanged, which slides the dock in and re-hides
-        //! it on leave. The plasma-shell requestShow/HideAutoHidingPanel
-        //! protocol has no layer-shell equivalent. The old code also gated
-        //! this on parentView()->surface(), which is always null under
-        //! layer-shell, so the edge detector never armed.
+            && ViewPart::VisibilityManager::usesClientScreenEdgeTrigger(
+                window->parentView()->visibility()->mode())) {
+        //! Auto Hide and Dodge reach this fallback only when KWin does not
+        //! advertise kde_screen_edge_manager_v1. WindowsCanCover always uses
+        //! the client strip to raise its below-layer dock without sliding the
+        //! dock surface away. Unmasking the strip enables its pointer signal;
+        //! masking it removes that input region synchronously.
         if (active) {
             window->showWithMask();
         } else {
