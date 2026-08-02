@@ -3191,6 +3191,25 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   presentation. No layout or configuration mutation was involved.
 - SEVERITY: known issue.
 
+### D266 - Inline Global Menu text ignored a light panel palette
+- STATUS: FIXED on branch by `111a46b47`.
+- FOUND: 2026-08-02, light top-panel Global Menu acceptance.
+- SYMPTOM: Global Menu labels retained desktop text colors on a light panel,
+  leaving the applet visibly inconsistent with the rest of the panel.
+- ROOT: D21 (stock applet palette propagation) kept a generic exemption for
+  inline full representations after the old layer-FBO color overlay was
+  retired. Plasma Global Menu uses that representation, so its
+  palette-responsive labels never inherited Latte's selected panel roles.
+- FIX: remove the stale representation exemption at the shared applet wrapper.
+  Explicit applet opt-outs and internal splitters remain exempt. Literal image,
+  SVG, and Rectangle pixels still render their own colors.
+- EVIDENCE: the exact parent fails the nested inline fixture with
+  `colorizerReason=inlineFull`. The corrected build changes the responsive
+  sample from `#fcfcfc` to `#202326` under the light-panel scheme while the
+  fixed `#d62976` sample remains byte-identical. The source contract and
+  131-file QML compile gate pass.
+- SEVERITY: beta blocker.
+
 ### D265 - Linked docks gave no passive edit cue
 - STATUS: FIXED on `main` by `08d2c3985`, `0f78b52b8`, `fb340286d`,
   `23e30c4f0`, and `141fd0b5e` (PR #145).
