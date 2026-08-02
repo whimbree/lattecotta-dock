@@ -12,7 +12,7 @@ layer-FBO color overlay had been retired. Global Menu uses an inline full
 representation, so its role-responsive labels kept desktop colors on a light
 panel.
 
-Commit `111a46b47` removes that stale representation exemption. The same
+Commit `fa36143ad` removes that stale representation exemption. The same
 Kirigami palette ownership now applies to compact and inline applet content;
 explicit applet opt-outs and internal splitters stay authoritative, and fixed
 image, SVG, and Rectangle pixels remain untouched. The D-Bus reason vocabulary
