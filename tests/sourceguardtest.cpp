@@ -682,11 +682,36 @@ private:
             && code.contains(QStringLiteral(
                    "\"$E2E_FAKEPOINTER\"glide"
                    "\\"
-                   "\"$reveal_x\"$((reveal_y-80))"
+                   "\"$x\"$((y-80))"
+                   "\\"
+                   "\"$x\"\"$y\""))
+            && code.contains(QStringLiteral(
+                   "start_kwin_screen_edge_round_trip"
                    "\\"
                    "\"$reveal_x\"\"$reveal_y\""))
             && code.contains(QStringLiteral(
+                   "finish_kwin_screen_edge_round_trip"))
+            && code.contains(QStringLiteral(
                    "wait_for_revealed_attached_bottom_dock"))
+            && code.contains(QStringLiteral(
+                   "set_konsole_fullscreentrue"))
+            && code.contains(QStringLiteral(
+                   "wait_for_dock_window_touch_policytrueattached0"))
+            && code.contains(QStringLiteral(
+                   "wait_for_hidden_statetrue"
+                   "\"fullscreen-windowconcealment\""))
+            && code.contains(QStringLiteral(
+                   "print(v['screenEdgeBackend'],"
+                   "str(v['screenEdgeArmed']).lower(),"
+                   "str(v['screenEdgeRegistered']).lower(),"
+                   "str(v['compositorScreenEdgeSupported']).lower(),"
+                   "str(v['visibilityContainsMouse']).lower())"))
+            && code.contains(QStringLiteral(
+                   "unavailable_snapshots="
+                   "$((unavailable_snapshots+1))"))
+            && code.contains(QStringLiteral(
+                   "wait_for_native_screen_edge_armed"
+                   "\"maximized-windowconcealment\""))
             && code.contains(QStringLiteral(
                    "str(\"bottom\"inv[\"enabledBorders\"]).lower()"))
             && code.contains(QStringLiteral(
@@ -699,6 +724,43 @@ private:
                    "expected_h=$((screen_h-stable_reservation_depth))"))
             && !code.contains(QStringLiteral("max_strut<base_strut"))
             && !code.contains(QStringLiteral("reservation_ms"));
+    }
+
+    static bool matchesCompositorScreenEdgeContract(
+        const QString &cmakeSource,
+        const QString &helperSource,
+        const QString &visibilitySource)
+    {
+        const QString cmake = normalizedCode(cmakeSource);
+        const QString helper = normalizedCode(helperSource);
+        const QString visibility = normalizedCode(visibilitySource);
+
+        return cmake.contains(QStringLiteral(
+                   "PROTOCOL${PLASMA_WAYLAND_PROTOCOLS_DIR}/"
+                   "kde-screen-edge-v1.xml"))
+            && cmake.contains(QStringLiteral("Qt6::WaylandClient"))
+            && helper.contains(QStringLiteral(
+                   "KWayland::Client::Surface::fromWindow(m_view)"))
+            && helper.contains(QStringLiteral(
+                   "m_manager->get_auto_hide_screen_edge(border,*surface)"))
+            && helper.contains(QStringLiteral("m_edge->activate()"))
+            && helper.contains(QStringLiteral("m_edge->deactivate()"))
+            && visibility.contains(QStringLiteral(
+                   "if(m_autoHideScreenEdge->isSupported())"
+                   "{deleteEdgeGhostWindow();}else{createEdgeGhostWindow();}"))
+            && visibility.contains(QStringLiteral(
+                   "elseif(m_mode==Types::WindowsCanCover)"
+                   "{deleteAutoHideScreenEdge();createEdgeGhostWindow();}"))
+            && visibility.contains(QStringLiteral(
+                   "constboolarmed=inCurrentLayout"
+                   "&&usesCompositorAutoHide"
+                   "&&revealsOnScreenEdge(m_mode)"
+                   "&&m_isHidden"
+                   "&&!m_containsMouse;"))
+            && visibility.contains(QStringLiteral(
+                   "m_containsMouse=contains;"
+                   "updateKWinEdgeState();"
+                   "Q_EMITcontainsMouseChanged();"));
     }
 
     static bool matchesWindowTouchAuthorityContract(
@@ -895,7 +957,7 @@ private:
             && code.contains(QStringLiteral(
                    "--keyfloatingInternalGapIsForcedfalse"))
             && code.contains(QStringLiteral(
-                   "snapshot['schemaVersion']!=10"))
+                   "snapshot['schemaVersion']!=11"))
             && code.contains(QStringLiteral(
                    "v[\"attachOnWindowTouchConfigured\"]"))
             && code.contains(QStringLiteral(
@@ -1040,7 +1102,7 @@ private:
             && dockCase > panelCase
             && justifyDockCase > dockCase
             && code.contains(QStringLiteral(
-                   "snapshot['schemaVersion']!=10"))
+                   "snapshot['schemaVersion']!=11"))
             && code.contains(QStringLiteral(
                    "--keyfloatingGapHidingWaitsMousefalse"))
             && code.contains(QStringLiteral(
@@ -1234,7 +1296,7 @@ private:
             && recipe.contains(QStringLiteral(
                    "[[\"$after_restart\"==\"$before_restart\"]]"))
             && oracle.contains(QStringLiteral(
-                   "ifsnapshot.get(\"schemaVersion\")!=10:"))
+                   "ifsnapshot.get(\"schemaVersion\")!=11:"))
             && oracle.contains(QStringLiteral(
                    "view[\"relationship\"]!=\"independent\""))
             && oracle.contains(QStringLiteral(
@@ -2393,6 +2455,7 @@ private Q_SLOTS:
     void stableDockOccupancy_rejectsPresentationFeedback();
     void stablePanelPopupAnchor_rejectsLegacyAnimationFreeze();
     void stableFloatingPanelE2e_keepsCanvasAndRevisionsFixed();
+    void compositorScreenEdge_ownsRealLayerSurface();
     void windowTouchAuthority_keepsDedicatedStableModel();
     void windowTouchAuthority_rejectsControlledMutations();
     void windowTouchE2e_drivesOneStableTriggerClient();
@@ -3279,6 +3342,39 @@ void SourceGuardTest::stableFloatingPanelE2e_keepsCanvasAndRevisionsFixed()
              "recipe 071 must keep the partial QWindow, applet measurements,"
              " maximum-depth reservation, and physical-publication revisions"
              " stable through qreal progress and rapid reversals");
+}
+
+void SourceGuardTest::compositorScreenEdge_ownsRealLayerSurface()
+{
+    const QString cmake = readFile(QStringLiteral("app/CMakeLists.txt"));
+    const QString visibility = readFile(QStringLiteral(
+        "app/view/visibilitymanager.cpp"));
+    const QString helper = readFile(QStringLiteral(
+        "app/view/helpers/autohidescreenedge.cpp"));
+
+    QVERIFY2(matchesCompositorScreenEdgeContract(cmake, helper, visibility),
+             "AutoHide and Dodge modes must register the real dock layer"
+             " surface with KWin, retain the client ghost only as a protocol"
+             " fallback, and leave WindowsCanCover on its distinct ghost"
+             " stacking contract");
+
+    QString detachedSurface = helper;
+    detachedSurface.replace(
+        QStringLiteral("Surface::fromWindow(m_view)"),
+        QStringLiteral("Surface::fromWindow(nullptr)"));
+    QVERIFY2(!matchesCompositorScreenEdgeContract(
+                 cmake, detachedSurface, visibility),
+             "a detached helper surface must not satisfy compositor-owned"
+             " edge reveal");
+
+    QString overlappingBackends = visibility;
+    overlappingBackends.replace(
+        QStringLiteral("deleteEdgeGhostWindow();"),
+        QStringLiteral("createEdgeGhostWindow();"));
+    QVERIFY2(!matchesCompositorScreenEdgeContract(
+                 cmake, helper, overlappingBackends),
+             "the compositor edge and client ghost must not both own one"
+             " AutoHide or Dodge edge");
 }
 
 void SourceGuardTest::windowTouchAuthority_keepsDedicatedStableModel()

@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Iterable, NoReturn
 
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 PLAN_FORMAT = "lattecotta.fp4c.operation-plan"
 REPLAY_FORMAT = "lattecotta.fp4c.operation-replay"
 FORMAT_VERSION = 1
@@ -910,6 +910,11 @@ VIEW_REQUIRED_KEYS = (
     "maximumNormalThickness",
     "screenEdgeMargin",
     "presentedScreenEdgeGap",
+    "screenEdgeBackend",
+    "screenEdgeArmed",
+    "screenEdgeRegistered",
+    "compositorScreenEdgeSupported",
+    "visibilityContainsMouse",
     "windowGeometry",
     "absoluteGeometry",
     "localGeometry",
@@ -1045,6 +1050,7 @@ VIEW_STRING_KEYS = (
     "orientation",
     "alignment",
     "visibilityMode",
+    "screenEdgeBackend",
     "transitionDirection",
     "transitionPhase",
     "transitionTarget",
@@ -1093,6 +1099,10 @@ VIEW_BOOL_KEYS = (
     "floatingPanelConfigured",
     "floatingPanelEligible",
     "pointerInsideView",
+    "screenEdgeArmed",
+    "screenEdgeRegistered",
+    "compositorScreenEdgeSupported",
+    "visibilityContainsMouse",
     "transitionGeometryPresent",
     "transitionRunning",
 )
@@ -1229,6 +1239,22 @@ def parse_snapshot(value: Any) -> dict[str, Any]:
                 )
         for key in VIEW_BOOL_KEYS:
             require_bool(view[key], f"views[{index}].{key}")
+        compositor_backend = view["screenEdgeBackend"] == "kwinAutoHide"
+        if view["screenEdgeBackend"] not in (
+            "none",
+            "clientGhost",
+            "kwinAutoHide",
+        ):
+            fail(f"views[{index}].screenEdgeBackend is invalid")
+        if view["compositorScreenEdgeSupported"] != compositor_backend:
+            fail(f"views[{index}] compositor screen-edge support disagrees with backend")
+        if (view["screenEdgeArmed"] or view["screenEdgeRegistered"]) and not compositor_backend:
+            fail(f"views[{index}] non-compositor backend owns compositor edge state")
+        if view["screenEdgeArmed"] and (
+            not view["isHidden"] or view["visibilityContainsMouse"]
+            or (view["inReadyState"] and not view["screenEdgeRegistered"])
+        ):
+            fail(f"views[{index}] armed screen edge has incompatible visibility state")
         for key in VIEW_NUMBER_KEYS:
             require_number(view[key], f"views[{index}].{key}")
         for key in VIEW_OPTIONAL_NUMBER_KEYS:

@@ -56,6 +56,11 @@ ecm_add_qtwayland_client_protocol(lattedock-app_SRCS
     BASENAME kde-primary-output-v1
 )
 
+ecm_add_qtwayland_client_protocol(lattedock-app_SRCS
+    PROTOCOL ${PLASMA_WAYLAND_PROTOCOLS_DIR}/kde-screen-edge-v1.xml
+    BASENAME kde-screen-edge-v1
+)
+
 # Plasma 6 KWin no longer advertises kde_primary_output_v1;
 # kde_output_order_v1 replaces it (the compositor sends the desktop output
 # order, first entry is the logical primary). Bind both so old and new
@@ -78,6 +83,7 @@ target_link_libraries(lattedock-core PUBLIC
     Qt6::DBus
     Qt6::Quick
     Qt6::Qml
+    Qt6::WaylandClient
     Plasma::Activities
     KF6::Archive
     KF6::Package

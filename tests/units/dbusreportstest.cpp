@@ -890,6 +890,11 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     record.maximumNormalThickness = 96;
     record.screenEdgeMargin = 8;
     record.presentedScreenEdgeGap = 6;
+    record.screenEdgeBackend = QStringLiteral("kwinAutoHide");
+    record.screenEdgeArmed = false;
+    record.screenEdgeRegistered = true;
+    record.compositorScreenEdgeSupported = true;
+    record.visibilityContainsMouse = true;
     record.windowGeometry = QRect(1, 2, 3, 4);
     record.absoluteGeometry = QRect(5, 6, 7, 8);
     record.localGeometry = QRect(9, 10, 11, 12);
@@ -1054,8 +1059,8 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("snapshotSequence"),
         QStringLiteral("stacking"),
         QStringLiteral("views")}));
-    QCOMPARE(DockSystemSnapshot::SchemaVersion, 10);
-    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 10);
+    QCOMPARE(DockSystemSnapshot::SchemaVersion, 11);
+    QCOMPARE(root.value(QStringLiteral("schemaVersion")).toInt(), 11);
     QCOMPARE(root.value(QStringLiteral("snapshotSequence")).toString(), QStringLiteral("41"));
     QCOMPARE(
         root.value(
@@ -1135,6 +1140,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("attachmentWaitsForPointerExitConfigured"),
         QStringLiteral("availablePrimaryLength"),
         QStringLiteral("canvasGeometry"),
+        QStringLiteral("compositorScreenEdgeSupported"),
         QStringLiteral("computedInputBridgeGeometry"),
         QStringLiteral("computedPaintMaskGeometry"),
         QStringLiteral("configuredIconSize"), QStringLiteral("contentTranslation"),
@@ -1189,7 +1195,10 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("reservationWindowGeometry"),
         QStringLiteral("runtimeViewId"),
         QStringLiteral("screen"),
+        QStringLiteral("screenEdgeArmed"),
+        QStringLiteral("screenEdgeBackend"),
         QStringLiteral("screenEdgeMargin"),
+        QStringLiteral("screenEdgeRegistered"),
         QStringLiteral("screenGeometry"), QStringLiteral("screenId"),
         QStringLiteral("screensGroup"), QStringLiteral("settingsWindowShown"),
         QStringLiteral("shadowEnabledBorders"),
@@ -1212,6 +1221,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("transitionRunning"),
         QStringLiteral("transitionTarget"),
         QStringLiteral("type"),
+        QStringLiteral("visibilityContainsMouse"),
         QStringLiteral("visibilityMode"), QStringLiteral("windowGeometry"),
         QStringLiteral("windowTouchGeometryRoleType")}));
     QCOMPARE(view.value(QStringLiteral("runtimeViewId")).toString(), QStringLiteral("19"));
@@ -1226,6 +1236,12 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
     QCOMPARE(view.value(QStringLiteral("effectiveIconSize")).toInt(), 52);
     QCOMPARE(view.value(QStringLiteral("availablePrimaryLength")).toInt(), 900);
     QCOMPARE(view.value(QStringLiteral("screenEdgeMargin")).toInt(), 8);
+    QCOMPARE(view.value(QStringLiteral("screenEdgeBackend")).toString(),
+             QStringLiteral("kwinAutoHide"));
+    QCOMPARE(view.value(QStringLiteral("screenEdgeArmed")).toBool(), false);
+    QCOMPARE(view.value(QStringLiteral("screenEdgeRegistered")).toBool(), true);
+    QCOMPARE(view.value(QStringLiteral("compositorScreenEdgeSupported")).toBool(), true);
+    QCOMPARE(view.value(QStringLiteral("visibilityContainsMouse")).toBool(), true);
     QCOMPARE(
         view.value(
             QStringLiteral("presentedScreenEdgeGap")).toInt(),
@@ -1464,6 +1480,7 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("transitionGeometryRevision"),
         QStringLiteral("transitionPhase"),
         QStringLiteral("transitionTarget"),
+        QStringLiteral("screenEdgeBackend"),
         QStringLiteral("windowTouchGeometryRoleType")};
     const QStringList numberFields{
         QStringLiteral("persistentDockId"), QStringLiteral("logicalDockId"),
@@ -1504,6 +1521,10 @@ void DbusReportsTest::dockSystemSnapshotSerializesTypedRuntimeState()
         QStringLiteral("floatingPanelConfigured"),
         QStringLiteral("floatingPanelEligible"),
         QStringLiteral("pointerInsideView"),
+        QStringLiteral("screenEdgeArmed"),
+        QStringLiteral("screenEdgeRegistered"),
+        QStringLiteral("compositorScreenEdgeSupported"),
+        QStringLiteral("visibilityContainsMouse"),
         QStringLiteral("transitionGeometryPresent"),
         QStringLiteral("transitionRunning")};
     const QStringList arrayFields{
@@ -1850,6 +1871,28 @@ void DbusReportsTest::dockSystemSnapshotRejectsTransitionDisagreement()
         snapshot.views[0]
             .transitionAnimationDuration = -1;
     });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].screenEdgeBackend = QStringLiteral("unknown");
+    });
+    rejects([](auto &snapshot) {
+        snapshot.views[0].compositorScreenEdgeSupported = true;
+    });
+
+    {
+        DockSystemSnapshot hidden = valid;
+        auto &view = hidden.views[0];
+        view.visibilityMode = Types::AutoHide;
+        view.floatingPanelEligible = false;
+        view.isHidden = true;
+        view.screenEdgeBackend = QStringLiteral("kwinAutoHide");
+        view.screenEdgeArmed = true;
+        view.screenEdgeRegistered = true;
+        view.compositorScreenEdgeSupported = true;
+        QVERIFY(dockTransitionRecordsAgree(hidden));
+
+        view.visibilityContainsMouse = true;
+        QVERIFY(!dockTransitionRecordsAgree(hidden));
+    }
 
     {
         DockSystemSnapshot startup = valid;

@@ -242,6 +242,11 @@ class OperationModelTest(unittest.TestCase):
             "maximumNormalThickness": depth + 8,
             "screenEdgeMargin": gap,
             "presentedScreenEdgeGap": gap,
+            "screenEdgeBackend": "kwinAutoHide",
+            "screenEdgeArmed": False,
+            "screenEdgeRegistered": True,
+            "compositorScreenEdgeSupported": True,
+            "visibilityContainsMouse": False,
             "windowGeometry": rect,
             "absoluteGeometry": rect,
             "localGeometry": local,
@@ -442,7 +447,7 @@ class OperationModelTest(unittest.TestCase):
             if expected.placement is not None
         ]
         return {
-            "schemaVersion": 10,
+            "schemaVersion": 11,
             "snapshotSequence": "41",
             "globalConfigureAppletsMode": state.configuring,
             "stacking": {
@@ -1118,7 +1123,7 @@ class OperationModelTest(unittest.TestCase):
         malformed = self.mutated(
             lambda snapshot: snapshot.__setitem__("schemaVersion", 6)
         )
-        self.assert_refused(lambda: model.parse_snapshot(malformed), "schema 10")
+        self.assert_refused(lambda: model.parse_snapshot(malformed), "schema 11")
 
         missing_margin = self.mutated(
             lambda snapshot: snapshot["views"][0].pop("screenEdgeMargin")
@@ -1136,6 +1141,40 @@ class OperationModelTest(unittest.TestCase):
         self.assert_refused(
             lambda: model.parse_snapshot(wrong_margin_type),
             "screenEdgeMargin",
+        )
+
+        invalid_edge_backend = self.mutated(
+            lambda snapshot: snapshot["views"][0].__setitem__(
+                "screenEdgeBackend", "ghostAndCompositor"
+            )
+        )
+        self.assert_refused(
+            lambda: model.parse_snapshot(invalid_edge_backend),
+            "screenEdgeBackend",
+        )
+
+        conflicting_edge_owners = self.mutated(
+            lambda snapshot: snapshot["views"][0].__setitem__(
+                "compositorScreenEdgeSupported", False
+            )
+        )
+        self.assert_refused(
+            lambda: model.parse_snapshot(conflicting_edge_owners),
+            "disagrees with backend",
+        )
+
+        armed_without_registration = self.mutated(
+            lambda snapshot: snapshot["views"][0].update(
+                {
+                    "isHidden": True,
+                    "screenEdgeArmed": True,
+                    "screenEdgeRegistered": False,
+                }
+            )
+        )
+        self.assert_refused(
+            lambda: model.parse_snapshot(armed_without_registration),
+            "incompatible visibility state",
         )
 
         missing_presented_gap = self.mutated(

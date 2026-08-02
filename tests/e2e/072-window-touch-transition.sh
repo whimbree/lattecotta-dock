@@ -33,8 +33,8 @@ dock_field() {
     e2e_json dockSystemData | python3 -c "
 import json, math, sys
 snapshot = json.load(sys.stdin)
-if snapshot['schemaVersion'] != 10:
-    sys.exit('expected dockSystemData schema 10')
+if snapshot['schemaVersion'] != 11:
+    sys.exit('expected dockSystemData schema 11')
 match = [v for v in snapshot['views'] if v['persistentDockId'] == $view]
 if len(match) != 1:
     sys.exit('expected exactly one dockSystemData record for containment $view')

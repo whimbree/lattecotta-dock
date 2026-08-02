@@ -11,6 +11,7 @@
 // local
 #include "positioner.h"
 #include "view.h"
+#include "helpers/autohidescreenedge.h"
 #include "helpers/floatinggapwindow.h"
 #include "helpers/screenedgeghostwindow.h"
 #include "windowstracker/currentscreentracker.h"
@@ -70,6 +71,8 @@ VisibilityManager::VisibilityManager(PlasmaQuick::ContainmentView *view)
     connect(this, &VisibilityManager::enableKWinEdgesChanged, this, &VisibilityManager::updateKWinEdgesSupport);
     connect(this, &VisibilityManager::modeChanged, this, &VisibilityManager::updateKWinEdgesSupport);
     connect(this, &VisibilityManager::modeChanged, this, &VisibilityManager::updateSidebarState);
+    connect(m_wm, &WindowSystem::AbstractWindowInterface::currentActivityChanged,
+            this, &VisibilityManager::updateKWinEdgeState);
 
     connect(this, &VisibilityManager::isFloatingGapWindowEnabledChanged, this, &VisibilityManager::onIsFloatingGapWindowEnabledChanged);
 
@@ -96,6 +99,8 @@ VisibilityManager::VisibilityManager(PlasmaQuick::ContainmentView *view)
                 const bool forceUpdate{true};
                 publishFrameExtents(forceUpdate);
             }
+
+            updateKWinEdgeState();
         });
 
         connect(m_latteView, &Latte::View::typeChanged, this, [&]() {
@@ -174,9 +179,8 @@ VisibilityManager::~VisibilityManager()
         qCritical() << "visibility teardown could not clear its screen-space reservation";
     }
 
-    if (m_edgeGhostWindow) {
-        m_edgeGhostWindow->deleteLater();
-    }
+    deleteAutoHideScreenEdge();
+    deleteEdgeGhostWindow();
 
     if (m_floatingGapWindow) {
         m_floatingGapWindow->deleteLater();
@@ -531,6 +535,7 @@ bool VisibilityManager::suspendForReversibleRemoval()
     m_reservationUpdateDirty = true;
     m_reservationForceUpdatePending = true;
     m_suspendedForRemoval = true;
+    deleteAutoHideScreenEdge();
     deleteEdgeGhostWindow();
     deleteFloatingGapWindow();
     return true;
@@ -551,6 +556,7 @@ bool VisibilityManager::resumeFromReversibleRemoval()
         qCritical() << "visibility could not republish reservation after removal Undo"
                     << m_latteView->validTitle();
         m_suspendedForRemoval = true;
+        deleteAutoHideScreenEdge();
         deleteEdgeGhostWindow();
         deleteFloatingGapWindow();
         return false;
@@ -783,7 +789,7 @@ void VisibilityManager::setIsBelowLayer(bool below)
 
     m_isBelowLayer = below;
 
-    updateGhostWindowState();
+    updateKWinEdgeState();
 
     Q_EMIT isBelowLayerChanged();
 }
@@ -799,7 +805,7 @@ void VisibilityManager::setIsHidden(bool isHidden)
         return;
 
     m_isHidden = isHidden;
-    updateGhostWindowState();
+    updateKWinEdgeState();
 
     Q_EMIT isHiddenChanged();
 }
@@ -969,29 +975,71 @@ bool VisibilityManager::isSidebar() const
 
 bool VisibilityManager::supportsKWinEdges() const
 {
-    return (m_edgeGhostWindow != nullptr);
+    return screenEdgeBackend() != ScreenEdgeBackend::None;
 }
 
-void VisibilityManager::updateGhostWindowState()
+VisibilityManager::ScreenEdgeBackend VisibilityManager::screenEdgeBackend() const
 {
-    if (supportsKWinEdges()) {
-        bool inCurrentLayout = (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::SingleLayout ||
-                                (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::MultipleLayouts
-                                 && m_latteView->layout() && !m_latteView->positioner()->inRelocationAnimation()
-                                 && m_latteView->layout()->isCurrent()));
+    if (compositorScreenEdgeSupported()) {
+        return ScreenEdgeBackend::KWinAutoHide;
+    }
 
-        if (inCurrentLayout) {
-            if (m_mode == Latte::Types::WindowsCanCover) {
-                m_wm->setActiveEdge(m_edgeGhostWindow, m_isBelowLayer && !m_containsMouse);
-            } else {
-                bool activated = (m_isHidden && !windowContainsMouse());
+    if (m_edgeGhostWindow) {
+        return ScreenEdgeBackend::ClientGhost;
+    }
 
-                m_wm->setActiveEdge(m_edgeGhostWindow, activated);
-            }
-        } else {
-            m_wm->setActiveEdge(m_edgeGhostWindow, false);
+    return ScreenEdgeBackend::None;
+}
+
+bool VisibilityManager::screenEdgeArmed() const
+{
+    return m_autoHideScreenEdge && m_autoHideScreenEdge->isArmed();
+}
+
+bool VisibilityManager::screenEdgeRegistered() const
+{
+    return m_autoHideScreenEdge && m_autoHideScreenEdge->isRegistered();
+}
+
+bool VisibilityManager::compositorScreenEdgeSupported() const
+{
+    return m_autoHideScreenEdge && m_autoHideScreenEdge->isSupported();
+}
+
+void VisibilityManager::updateKWinEdgeState()
+{
+    const bool inCurrentLayout =
+        m_corona->layoutsManager()->memoryUsage() == MemoryUsage::SingleLayout
+        || (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::MultipleLayouts
+            && m_latteView->layout()
+            && !m_latteView->positioner()->inRelocationAnimation()
+            && m_latteView->layout()->isCurrent());
+    const bool usesCompositorAutoHide =
+        m_autoHideScreenEdge && m_autoHideScreenEdge->isSupported();
+
+    if (m_autoHideScreenEdge) {
+        const bool armed = inCurrentLayout
+            && usesCompositorAutoHide
+            && revealsOnScreenEdge(m_mode)
+            && m_isHidden
+            && !m_containsMouse;
+        m_autoHideScreenEdge->setArmed(armed);
+    }
+
+    if (!m_edgeGhostWindow) {
+        return;
+    }
+
+    bool active{false};
+    if (inCurrentLayout) {
+        if (m_mode == Latte::Types::WindowsCanCover) {
+            active = m_isBelowLayer && !m_containsMouse;
+        } else if (!usesCompositorAutoHide && revealsOnScreenEdge(m_mode)) {
+            active = m_isHidden && !windowContainsMouse();
         }
     }
+
+    m_wm->setActiveEdge(m_edgeGhostWindow, active);
 }
 
 void VisibilityManager::toggleHiddenState()
@@ -1151,7 +1199,9 @@ void VisibilityManager::dodgeActive()
         return;
     }
 
-    raiseView(!m_latteView->windowsTracker()->currentScreen()->activeWindowTouching());
+    const bool touching =
+        m_latteView->windowsTracker()->currentScreen()->activeWindowTouching();
+    raiseView(!touching);
 }
 
 void VisibilityManager::dodgeMaximized()
@@ -1224,6 +1274,7 @@ void VisibilityManager::setContainsMouse(bool contains)
     }
 
     m_containsMouse = contains;
+    updateKWinEdgeState();
     Q_EMIT containsMouseChanged();
 }
 
@@ -1295,6 +1346,7 @@ void VisibilityManager::setEnableKWinEdges(bool enable)
 void VisibilityManager::updateKWinEdgesSupport()
 {
     if (m_suspendedForRemoval) {
+        deleteAutoHideScreenEdge();
         deleteEdgeGhostWindow();
         return;
     }
@@ -1306,15 +1358,25 @@ void VisibilityManager::updateKWinEdgesSupport()
             && !m_latteView->byPassWM()) {
 
         if (m_enableKWinEdgesFromUser || m_latteView->behaveAsPlasmaPanel()) {
-            createEdgeGhostWindow();
+            createAutoHideScreenEdge();
+            if (m_autoHideScreenEdge->isSupported()) {
+                deleteEdgeGhostWindow();
+            } else {
+                createEdgeGhostWindow();
+            }
         } else if (!m_enableKWinEdgesFromUser) {
+            deleteAutoHideScreenEdge();
             deleteEdgeGhostWindow();
         }
     } else if (m_mode == Types::WindowsCanCover) {
+        deleteAutoHideScreenEdge();
         createEdgeGhostWindow();
     } else {
+        deleteAutoHideScreenEdge();
         deleteEdgeGhostWindow();
     }
+
+    updateKWinEdgeState();
 }
 
 void VisibilityManager::onIsFloatingGapWindowEnabledChanged()
@@ -1331,6 +1393,21 @@ void VisibilityManager::onIsFloatingGapWindowEnabledChanged()
     }
 }
 
+void VisibilityManager::createAutoHideScreenEdge()
+{
+    if (m_autoHideScreenEdge) {
+        return;
+    }
+
+    m_autoHideScreenEdge = new AutoHideScreenEdge(m_latteView, this);
+    connect(m_autoHideScreenEdge, &AutoHideScreenEdge::supportedChanged,
+            this, [this]() {
+        updateKWinEdgesSupport();
+        Q_EMIT supportsKWinEdgesChanged();
+    });
+    Q_EMIT supportsKWinEdgesChanged();
+}
+
 void VisibilityManager::createEdgeGhostWindow()
 {
     if (!m_edgeGhostWindow) {
@@ -1341,7 +1418,7 @@ void VisibilityManager::createEdgeGhostWindow()
                 raiseView(true);
             } else {
                 m_timerShow.stop();
-                updateGhostWindowState();
+                updateKWinEdgeState();
             }
         });
 
@@ -1351,24 +1428,20 @@ void VisibilityManager::createEdgeGhostWindow()
             }
         });
 
-        m_connectionsKWinEdges[0] = connect(m_wm, &WindowSystem::AbstractWindowInterface::currentActivityChanged,
-                                            this, [&]() {
-            bool inCurrentLayout = (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::SingleLayout ||
-                                    (m_corona->layoutsManager()->memoryUsage() == MemoryUsage::MultipleLayouts
-                                     && m_latteView->layout() && !m_latteView->positioner()->inRelocationAnimation()
-                                     && m_latteView->layout()->isCurrent()));
-
-            if (m_edgeGhostWindow) {
-                if (inCurrentLayout) {
-                    m_wm->setActiveEdge(m_edgeGhostWindow, m_isHidden);
-                } else {
-                    m_wm->setActiveEdge(m_edgeGhostWindow, false);
-                }
-            }
-        });
-
         Q_EMIT supportsKWinEdgesChanged();
     }
+}
+
+void VisibilityManager::deleteAutoHideScreenEdge()
+{
+    if (!m_autoHideScreenEdge) {
+        return;
+    }
+
+    m_autoHideScreenEdge->setArmed(false);
+    m_autoHideScreenEdge->deleteLater();
+    m_autoHideScreenEdge = nullptr;
+    Q_EMIT supportsKWinEdgesChanged();
 }
 
 void VisibilityManager::deleteEdgeGhostWindow()
@@ -1376,10 +1449,6 @@ void VisibilityManager::deleteEdgeGhostWindow()
     if (m_edgeGhostWindow) {
         m_edgeGhostWindow->deleteLater();
         m_edgeGhostWindow = nullptr;
-
-        for (auto &c : m_connectionsKWinEdges) {
-            disconnect(c);
-        }
 
         Q_EMIT supportsKWinEdgesChanged();
     }

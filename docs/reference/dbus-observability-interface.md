@@ -83,7 +83,7 @@ Landed before or during the 2026-07-16 stabilization session:
   placement is pending. Startup alone reports the target assignment before
   that snapshot exists. A global rearrange session therefore does not report
   unrelated docks as configuring applets.
-- `dockSystemData() -> s` (compact JSON object, schema version 10; added by C0
+- `dockSystemData() -> s` (compact JSON object, schema version 11; added by C0
   (the atomic dock-system observability snapshot)). This is the relational
   all-docks read. One synchronous call captures the global configuration mode,
   every current dock, and every active output-edge reservation group. Docks
@@ -93,7 +93,7 @@ Landed before or during the 2026-07-16 stabilization session:
   only after a complete coordinator projection transaction.
   ```json
   {
-    "schemaVersion": 10,
+    "schemaVersion": 11,
     "snapshotSequence": "14",
     "globalConfigureAppletsMode": true,
     "stacking": {
@@ -183,6 +183,11 @@ Landed before or during the 2026-07-16 stabilization session:
       "floatingGapConfigured": true,
       "screenEdgeMargin": 18,
       "presentedScreenEdgeGap": 7,
+      "screenEdgeBackend": "kwinAutoHide",
+      "screenEdgeArmed": false,
+      "screenEdgeRegistered": true,
+      "compositorScreenEdgeSupported": true,
+      "visibilityContainsMouse": true,
       "floatingPanelConfigured": true,
       "floatingPanelEligible": true,
       "attachOnWindowTouchConfigured": true,
@@ -322,6 +327,11 @@ Landed before or during the 2026-07-16 stabilization session:
   stable surface.
   Schema 10 adds `transitionAnimationDuration`, the controller's exact
   duration in milliseconds after the QML animation-speed policy is applied.
+  Schema 11 adds the screen-edge backend, its logical armed state, real-surface
+  registration state, compositor protocol support, and the visibility
+  manager's pointer state. These fields distinguish compositor-owned reveal
+  from the fallback client ghost and distinguish actual surface input from the
+  transition policy's `pointerInsideView` value.
 
   `transitionTarget`, `transitionProgress`, `transitionAnimationDuration`,
   `transitionPhase`,
@@ -395,7 +405,9 @@ Landed before or during the 2026-07-16 stabilization session:
   reservation publisher token.
   `attachOnWindowTouchConfigured` and
   `attachmentWaitsForPointerExitConfigured` are raw persistent preferences;
-  `pointerInsideView` is the raw per-view pointer state.
+  `pointerInsideView` is the floating-transition policy's raw per-view pointer
+  state. `visibilityContainsMouse` is the visibility manager's actual surface
+  enter/leave state; the two have different owners and are not aliases.
   `attachmentDeferredByPointer` is the controller-owned latch for a new
   attachment request. Entering an already attached view does not detach it.
   `dockGapHideRequested` is the separate Dock policy input.

@@ -134,6 +134,11 @@ in every visibility mode, including edge-revealed auto-hide and dodge modes,
 without gaining Panel transition geometry. That short internal motion uses
 Plasma's Kirigami long duration and cubic attachment curves; Latte's slower
 whole-Dock slide timing remains confined to hiding and revealing the surface.
+Auto Hide and Dodge modes register the real partial dock surface with KWin's
+screen-edge protocol, so compositor reveal follows the dock's exact span
+without a second interactive Wayland surface. The legacy client edge window is
+kept only as a compatibility fallback for compositors without that protocol;
+true fullscreen blocking follows KWin's panel policy.
 
 Legacy On All Screens members retain their derived-output behavior. A linked
 source stays protected from removal until its explicit members are removed, so
