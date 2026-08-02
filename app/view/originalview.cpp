@@ -22,6 +22,8 @@ namespace Latte {
 OriginalView::OriginalView(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
     : View(corona, targetScreen, byPassX11WM)
 {
+    connect(this, &View::inEditModeChanged, this, &OriginalView::updateLinkedEditHighlights);
+
     connect(this, &View::containmentChanged, this, [&]() {
         if (!this->containment()) {
             return;
@@ -123,6 +125,15 @@ void OriginalView::addClone(Latte::ClonedView *view)
     }
 
     m_clones << view;
+    connect(view, &View::inEditModeChanged, this, &OriginalView::updateLinkedEditHighlights);
+    //! A runtime root can be replaced while its old linked members are still
+    //! alive. QObject emits destroyed after this class's members are gone, so
+    //! this receiver-scoped connection clears each surviving member without
+    //! consulting the dismantled coordinator.
+    connect(this, &QObject::destroyed, view, [view]() {
+        view->setLinkedEditHighlight(false);
+    });
+    updateLinkedEditHighlights();
     Q_EMIT canRemoveChanged();
     if (view->linkPlacement() == Data::View::LinkPlacement::ScreenGroupDerived) {
         m_waitingCreation.removeAll(view->positioner()->currentScreenId());
@@ -131,12 +142,37 @@ void OriginalView::addClone(Latte::ClonedView *view)
 
 void OriginalView::forgetClone(Latte::ClonedView *view)
 {
+    if (view) {
+        disconnect(view, &View::inEditModeChanged, this, &OriginalView::updateLinkedEditHighlights);
+        view->setLinkedEditHighlight(false);
+    }
+
     const int previousCount = m_clones.count();
     m_clones.removeIf([view](const auto &clone) {
         return clone.isNull() || clone.data() == view;
     });
     if (m_clones.count() != previousCount) {
         Q_EMIT canRemoveChanged();
+    }
+    updateLinkedEditHighlights();
+}
+
+void OriginalView::updateLinkedEditHighlights()
+{
+    const bool hasLinkedMembers = std::any_of(
+        m_clones.cbegin(), m_clones.cend(), [](const auto &clone) {
+            return !clone.isNull();
+        });
+    const bool relationshipIsEditing = inEditMode()
+        || std::any_of(m_clones.cbegin(), m_clones.cend(), [](const auto &clone) {
+            return clone && clone->inEditMode();
+        });
+
+    setLinkedEditHighlight(hasLinkedMembers && relationshipIsEditing && !inEditMode());
+    for (const auto &clone : std::as_const(m_clones)) {
+        if (clone) {
+            clone->setLinkedEditHighlight(relationshipIsEditing && !clone->inEditMode());
+        }
     }
 }
 

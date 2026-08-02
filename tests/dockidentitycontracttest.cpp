@@ -68,6 +68,7 @@ private Q_SLOTS:
     void duplicateNormalizesRelationshipBeforeImport();
     void cloneEditRequestsResolveOneOriginalTarget();
     void cloneDestructionUnregistersMembership();
+    void linkedEditHighlightRemainsPassiveAndRelationshipScoped();
     void outputRetargetReplacesGeometryConnection();
     void relocationHandoffStopsOldRevealBeforeClaim();
     void relocationCompletionRejectsSupersededGeneration();
@@ -361,6 +362,72 @@ void DockIdentityContractTest::cloneDestructionUnregistersMembership()
     const int forget = removeClone.indexOf(QStringLiteral("forgetClone(view);"));
     const int removeContainment = removeClone.indexOf(QStringLiteral("view->layout()->removeView(view->data());"));
     QVERIFY(forget >= 0 && removeContainment > forget);
+}
+
+void DockIdentityContractTest::linkedEditHighlightRemainsPassiveAndRelationshipScoped()
+{
+    const QString viewHeader = normalized(readFile(QStringLiteral("app/view/view.h")));
+    const QString property = QStringLiteral(
+        "Q_PROPERTY(boollinkedEditHighlightREADlinkedEditHighlightNOTIFYlinkedEditHighlightChanged)");
+    const QRegularExpression propertyPattern(
+        QStringLiteral("Q_PROPERTY\\(boollinkedEditHighlight[^)]*\\)"));
+    const QRegularExpressionMatch propertyMatch = propertyPattern.match(viewHeader);
+    QVERIFY(propertyMatch.hasMatch());
+    QCOMPARE(propertyMatch.captured(), property);
+
+    const QString viewSource = readFile(QStringLiteral("app/view/view.cpp"));
+    const QString setter = normalized(functionBody(
+        viewSource, QStringLiteral("void View::setLinkedEditHighlight")));
+    const QString visibility = normalized(functionBody(
+        viewSource, QStringLiteral("void View::updateLinkedEditHighlightVisibilityBlocker")));
+    QVERIFY(setter.contains(QStringLiteral("Q_ASSERT(!highlighted||!inEditMode());")));
+    QVERIFY(setter.contains(QStringLiteral("updateLinkedEditHighlightVisibilityBlocker();")));
+    QVERIFY(visibility.contains(QStringLiteral("addBlockHidingEvent(BLOCKHIDINGLINKEDEDITHIGHLIGHTTYPE)")));
+    QVERIFY(visibility.contains(QStringLiteral("removeBlockHidingEvent(BLOCKHIDINGLINKEDEDITHIGHLIGHTTYPE)")));
+
+    const QString originalSource = readFile(QStringLiteral("app/view/originalview.cpp"));
+    const QString constructor = normalized(functionBody(
+        originalSource, QStringLiteral("OriginalView::OriginalView")));
+    const QString addClone = normalized(functionBody(
+        originalSource, QStringLiteral("void OriginalView::addClone")));
+    const QString forgetClone = normalized(functionBody(
+        originalSource, QStringLiteral("void OriginalView::forgetClone")));
+    const QString coordinate = normalized(functionBody(
+        originalSource, QStringLiteral("void OriginalView::updateLinkedEditHighlights")));
+    QVERIFY(constructor.contains(QStringLiteral(
+        "connect(this,&View::inEditModeChanged,this,&OriginalView::updateLinkedEditHighlights);")));
+    QVERIFY(addClone.contains(QStringLiteral(
+        "connect(view,&View::inEditModeChanged,this,&OriginalView::updateLinkedEditHighlights);")));
+    QVERIFY(addClone.contains(QStringLiteral("connect(this,&QObject::destroyed,view")));
+    QVERIFY(addClone.contains(QStringLiteral("updateLinkedEditHighlights();")));
+    QVERIFY(forgetClone.contains(QStringLiteral(
+        "disconnect(view,&View::inEditModeChanged,this,&OriginalView::updateLinkedEditHighlights);")));
+    QVERIFY(forgetClone.contains(QStringLiteral("view->setLinkedEditHighlight(false);")));
+    QVERIFY(forgetClone.contains(QStringLiteral("updateLinkedEditHighlights();")));
+    QVERIFY(coordinate.contains(QStringLiteral("hasLinkedMembers&&relationshipIsEditing&&!inEditMode()")));
+    QVERIFY(coordinate.contains(QStringLiteral("relationshipIsEditing&&!clone->inEditMode()")));
+
+    const QString passivePaths = setter + visibility + coordinate;
+    for (const QString &forbidden : {
+             QStringLiteral("setUserConfiguring"), QStringLiteral("showSettingsWindow"),
+             QStringLiteral("CanvasConfigView"), QStringLiteral("requestActivate"),
+             QStringLiteral("setKeyboardNavigation")}) {
+        QVERIFY2(!passivePaths.contains(forbidden), qPrintable(forbidden));
+    }
+
+    const QString containmentQml = normalized(readFile(
+        QStringLiteral("containment/package/contents/ui/main.qml")));
+    QVERIFY(containmentQml.contains(QStringLiteral(
+        "readonlypropertyboollinkedEditHighlight:latteView?latteView.linkedEditHighlight:false")));
+    QVERIFY(containmentQml.contains(QStringLiteral(
+        "z:root.linkedEditHighlight&&!root.editMode?1:-1")));
+    QVERIFY(containmentQml.contains(QStringLiteral(
+        "Math.max(Plasmoid.configuration.editBackgroundOpacity,0.35)")));
+
+    const QString configOverlay = normalized(readFile(
+        QStringLiteral("containment/package/contents/ui/editmode/ConfigOverlay.qml")));
+    QVERIFY(configOverlay.contains(QStringLiteral("visible:root.inConfigureAppletsMode")));
+    QVERIFY(!configOverlay.contains(QStringLiteral("linkedEditHighlight")));
 }
 
 void DockIdentityContractTest::outputRetargetReplacesGeometryConnection()
