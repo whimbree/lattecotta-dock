@@ -3,6 +3,28 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-08-02.
 
+## 2026-08-02: Linked peers receive a passive edit cue
+
+D265 (linked docks gave no passive edit cue) left a linked relationship
+invisible while one member was being edited. Activating edit mode on every
+member would have violated containment and configuration-window ownership, so
+the cue is deliberately separate from edit state.
+
+Commit `d48a2828f` makes `OriginalView` the sole coordinator of a read-only
+`View::linkedEditHighlight`. The cue reveals hidden peers through its own
+visibility blocker and reuses the non-interactive edit blueprint above the
+background and below applets. It never sets edit mode, applet-configuration
+mode, focus, or settings-window ownership. Add, removal, root destruction, edit
+exit, and runtime recreation recompute or clear the state. Commit `df7e53f41`
+adds the boolean to `viewsData` and the stable D-Bus references. Commit
+`7f3e4c49c` extends the nested dual-output linked-dock vehicle.
+
+The focused C++, D-Bus, QML compile, and qmllint checks pass. The nested vehicle
+proved that a hidden Auto Hide root reveals only while another linked member is
+edited, hides again afterward, and never acquires edit or configuration
+ownership. An independent duplicate never highlights, and recreation leaves no
+stale cue.
+
 ## 2026-08-02: Dodge Active follows current KWin window admission
 
 D264 (Dodge Active retained stale window eligibility) made the DP-2 left dock

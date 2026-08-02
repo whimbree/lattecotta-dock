@@ -5091,6 +5091,11 @@ prerequisites in the phases above are done.
       reconcile skip and ignore changes against an exhaustive transition, and
       retire the tracker row only when the compositor object is destroyed.
       Commits: 724b91c59, 575f04db6, d9956a4fc
+- [x] Fix D265 (linked docks gave no passive edit cue). Derive a read-only
+      relationship cue at the original view, reveal hidden linked peers without
+      granting edit or configuration ownership, and clear the cue across
+      removal, destruction, and runtime recreation.
+      Commits: d48a2828f, df7e53f41, 7f3e4c49c
 - [ ] Report D258 (KF6 device enumeration blocks the GUI thread on an
       unavailable hard NFS mount) upstream to KDE Solid/KIO. Preserve the traced
       Folder View call chain and keep the exact-path diagnostic isolation out
