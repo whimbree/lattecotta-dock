@@ -12,7 +12,7 @@ client Wayland window at the output edge and used it to request reveal. Plasma
 `kde_screen_edge_manager_v1`, allowing KWin to own concealment, edge pressure,
 the exact partial span, and fullscreen policy as one compositor lifecycle.
 
-Commits `40ccce057`, `006c6befa`, and `44e2e097f` port that boundary at the
+Commits `cac8efab0`, `1fc78b493`, and `29e1b3008` port that boundary at the
 protocol source and close its review findings. Auto Hide and the three Dodge
 modes prefer the real dock-surface registration and fall back to
 `ScreenEdgeGhostWindow` only when the compositor does not advertise the
@@ -35,8 +35,8 @@ concealment and the attached presentation endpoint are covered there.
 D263 (Windows Can Cover filtered out its own edge trigger) was an adjacent
 layer-shell regression. The July 7 port gated the client edge strip with the
 predicate for modes that slide offscreen. `WindowsCanCover` does not slide, but
-still needs that strip to raise its below-window surface. Commits `afa86840d`
-and `44e2e097f` add a separate exhaustive client-trigger classifier and keep
+still needs that strip to raise its below-window surface. Commits `28e1df850`
+and `29e1b3008` add a separate exhaustive client-trigger classifier and keep
 cleanup independent of the new mode. Auto Hide and Dodge use it only for the
 unsupported-compositor fallback; `WindowsCanCover` uses it for the existing
 front/back-layer transition.
