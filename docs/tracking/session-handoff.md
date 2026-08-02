@@ -27,8 +27,9 @@ Commit `5c32fcc0e` adds nested recipe 075. The exact parent build fails while
 the same skipped Konsole identity remains touching and keeps the dock hidden.
 The corrected build passes rejection, re-admission under the unchanged KWin
 identity, destruction during a queued rejection, and post-debounce convergence.
-The focused predicate, debounce, source-contract, and production-link checks
-pass.
+Commit `b1b8124c1` updates the ignored-window source contract to follow the
+const identity without weakening its owner requirement. The focused predicate,
+debounce, source-contract, identity-contract, and production-link checks pass.
 
 ## 2026-08-02: KWin now owns hidden dock edge reveal
 

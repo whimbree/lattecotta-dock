@@ -3218,7 +3218,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   hidden state all still true. The corrected build passes rejection and
   re-admission under one unchanged KWin internal ID, then destroys the client
   during a queued rejection without stale resurrection. The focused predicate,
-  debounce, source-contract, and production-link checks pass.
+  debounce, source-contract, identity-contract, and production-link checks
+  pass.
 - SEVERITY: beta blocker.
 
 ### D263 - Windows Can Cover filtered out its own edge trigger

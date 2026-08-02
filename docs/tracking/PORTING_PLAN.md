@@ -5090,7 +5090,7 @@ prerequisites in the phases above are done.
       object observation alive independently of current Latte admission,
       reconcile skip and ignore changes against an exhaustive transition, and
       retire the tracker row only when the compositor object is destroyed.
-      Commits: ac0b78e02, 5c32fcc0e
+      Commits: ac0b78e02, 5c32fcc0e, b1b8124c1
 - [ ] Report D258 (KF6 device enumeration blocks the GUI thread on an
       unavailable hard NFS mount) upstream to KDE Solid/KIO. Preserve the traced
       Folder View call chain and keep the exact-path diagnostic isolation out
