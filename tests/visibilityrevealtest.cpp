@@ -29,12 +29,13 @@ class VisibilityRevealTest : public QObject
 private Q_SLOTS:
     void revealsOnScreenEdge_revealingModes();
     void revealsOnScreenEdge_nonRevealingModes();
+    void usesClientScreenEdgeTrigger_includesLayerRaise();
 };
 
 void VisibilityRevealTest::revealsOnScreenEdge_revealingModes()
 {
-    //! These modes hide the dock and must re-reveal it when the pointer reaches the screen edge,
-    //! so WaylandInterface::setActiveEdge() arms the edge-ghost detector for them.
+    //! These modes slide the dock away and ask KWin to reveal its real surface.
+    //! The client trigger is only their unsupported-compositor fallback.
     QVERIFY(VisibilityManager::revealsOnScreenEdge(Latte::Types::AutoHide));
     QVERIFY(VisibilityManager::revealsOnScreenEdge(Latte::Types::DodgeActive));
     QVERIFY(VisibilityManager::revealsOnScreenEdge(Latte::Types::DodgeMaximized));
@@ -43,9 +44,8 @@ void VisibilityRevealTest::revealsOnScreenEdge_revealingModes()
 
 void VisibilityRevealTest::revealsOnScreenEdge_nonRevealingModes()
 {
-    //! AlwaysVisible never hides; the WindowsCanCover/GoBelow/AlwaysCover family uses a
-    //! stacking-layer mechanism rather than edge reveal; the Sidebar modes reveal on demand
-    //! (shortcut / explicit toggle). The edge detector must NOT be armed for any of these.
+    //! AlwaysVisible never hides; the cover family changes stacking rather
+    //! than sliding offscreen; Sidebar modes reveal on demand.
     QVERIFY(!VisibilityManager::revealsOnScreenEdge(Latte::Types::AlwaysVisible));
     QVERIFY(!VisibilityManager::revealsOnScreenEdge(Latte::Types::WindowsCanCover));
     QVERIFY(!VisibilityManager::revealsOnScreenEdge(Latte::Types::WindowsGoBelow));
@@ -54,6 +54,29 @@ void VisibilityRevealTest::revealsOnScreenEdge_nonRevealingModes()
     QVERIFY(!VisibilityManager::revealsOnScreenEdge(Latte::Types::SidebarAutoHide));
     QVERIFY(!VisibilityManager::revealsOnScreenEdge(Latte::Types::None));
     QVERIFY(!VisibilityManager::revealsOnScreenEdge(Latte::Types::NormalWindow));
+}
+
+void VisibilityRevealTest::usesClientScreenEdgeTrigger_includesLayerRaise()
+{
+    for (const auto mode : {
+             Latte::Types::AutoHide,
+             Latte::Types::DodgeActive,
+             Latte::Types::DodgeMaximized,
+             Latte::Types::DodgeAllWindows,
+             Latte::Types::WindowsCanCover}) {
+        QVERIFY(VisibilityManager::usesClientScreenEdgeTrigger(mode));
+    }
+
+    for (const auto mode : {
+             Latte::Types::AlwaysVisible,
+             Latte::Types::WindowsGoBelow,
+             Latte::Types::WindowsAlwaysCover,
+             Latte::Types::SidebarOnDemand,
+             Latte::Types::SidebarAutoHide,
+             Latte::Types::None,
+             Latte::Types::NormalWindow}) {
+        QVERIFY(!VisibilityManager::usesClientScreenEdgeTrigger(mode));
+    }
 }
 
 QTEST_MAIN(VisibilityRevealTest)
