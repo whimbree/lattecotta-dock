@@ -1,7 +1,33 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-08-01.
+Last updated 2026-08-02.
+
+## 2026-08-02: KWin now owns hidden dock edge reveal
+
+D262 (Auto Hide and Dodge reveal used a client ghost instead of KWin's dock
+surface) was a remaining Qt5 ownership assumption. Latte created a separate
+client Wayland window at the output edge and used it to request reveal. Plasma
+6 instead registers the real panel layer surface through
+`kde_screen_edge_manager_v1`, allowing KWin to own concealment, edge pressure,
+the exact partial span, and fullscreen policy as one compositor lifecycle.
+
+Commit `40ccce057` ports that boundary at the protocol source. Auto Hide and
+the three Dodge modes prefer the real dock-surface registration and fall back
+to `ScreenEdgeGhostWindow` only when the compositor does not advertise the
+protocol. `WindowsCanCover` retains the ghost as its distinct stacking trigger.
+The first live invariant pass caught an ordering defect where surface entry
+updated `containsMouse` without deactivating the edge; the setter now performs
+both changes synchronously before publishing the pointer notification.
+
+Schema 11 exposes `screenEdgeBackend`, `screenEdgeArmed`,
+`screenEdgeRegistered`, `compositorScreenEdgeSupported`, and
+`visibilityContainsMouse`. The C++ snapshot and source-mutation contracts pass,
+and the operation model passes all 31 tests. Nested recipe 071 drives
+maximized concealment, native edge reveal, pointer departure, and true
+fullscreen concealment through a real KWin surface. True fullscreen edge
+reveal remains blocked by KWin's panel policy; concealment and the attached
+presentation endpoint are covered there.
 
 ## 2026-08-01: revealed Docks now retain the attached presentation
 
