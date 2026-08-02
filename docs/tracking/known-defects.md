@@ -3192,7 +3192,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: known issue.
 
 ### D263 - Windows Can Cover filtered out its own edge trigger
-- STATUS: FIXED on `fix/d262-fullscreen-reveal` by `afa86840d`; pending PR.
+- STATUS: FIXED on `fix/d262-fullscreen-reveal` by `afa86840d` and
+  `44e2e097f`; pending PR.
 - FOUND: 2026-08-02, review of the native screen-edge fallback boundary.
 - SYMPTOM: a `WindowsCanCover` dock moves below application windows but cannot
   return to the front when the pointer reaches its screen edge.
@@ -3204,7 +3205,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FIX: classify client edge-trigger modes separately with an exhaustive
   `constexpr` function. Auto Hide and Dodge use that client path only as an
   unsupported-compositor fallback; `WindowsCanCover` uses it for the existing
-  front/back-layer transition.
+  front/back-layer transition. Activation checks the current mode, while
+  deactivation always removes a trigger that an earlier mode created.
 - EVIDENCE: the focused visibility test covers the full visibility enum and a
   source mutation replacing the corrected classifier with the old sliding
   predicate is rejected. The production dock target links with the corrected
@@ -3212,8 +3214,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D262 - Auto-hide and Dodge reveal used a client ghost instead of KWin's dock surface
-- STATUS: FIXED on `fix/d262-fullscreen-reveal` by `40ccce057` and `006c6befa`;
-  pending PR.
+- STATUS: FIXED on `fix/d262-fullscreen-reveal` by `40ccce057`, `006c6befa`,
+  and `44e2e097f`; pending PR.
 - FOUND: 2026-08-02, nested comparison with Plasma 6 screen-edge reveal.
 - SYMPTOM: Auto Hide and Dodge modes delegate edge activation to a second
   client window instead of registering the hidden dock surface with KWin.
@@ -3228,7 +3230,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   retain the client ghost only when the compositor lacks protocol support.
   `WindowsCanCover` keeps its separate stacking trigger. Schema 11 exposes the
   selected backend, support, registration, armed state, and actual surface
-  pointer state. Pointer entry synchronously deactivates the edge.
+  pointer state. Pointer entry synchronously deactivates the edge. Relocation
+  disarms edge ownership in both single-layout and multiple-layout modes.
 - EVIDENCE: the C++ snapshot and source-mutation contracts pass, and the
   deterministic operation model passes 31 tests. Nested recipe 071 drives a
   real KWin layer surface through maximized concealment, native edge reveal,
