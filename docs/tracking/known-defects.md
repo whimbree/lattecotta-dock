@@ -3191,6 +3191,31 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   presentation. No layout or configuration mutation was involved.
 - SEVERITY: known issue.
 
+### D262 - Auto-hide and Dodge reveal used a client ghost instead of KWin's dock surface
+- STATUS: FIXED on `fix/d262-fullscreen-reveal` by `40ccce057`; pending PR.
+- FOUND: 2026-08-02, nested comparison with Plasma 6 screen-edge reveal.
+- SYMPTOM: Auto Hide and Dodge modes delegate edge activation to a second
+  client window instead of registering the hidden dock surface with KWin.
+  Partial docks therefore depend on client-maintained input geometry and do
+  not share Plasma's compositor-owned reveal lifecycle.
+- ROOT: the Qt5-era `ScreenEdgeGhostWindow` remained the only screen-edge
+  backend after the Wayland port. Plasma 6 instead binds
+  `kde_screen_edge_manager_v1` and activates the panel's real Wayland surface.
+  Latte had not ported that ownership boundary.
+- FIX: bind the compositor protocol for Auto Hide and Dodge modes, arm the
+  actual dock surface only while it is logically hidden and pointer-free, and
+  retain the client ghost only when the compositor lacks protocol support.
+  `WindowsCanCover` keeps its separate stacking trigger. Schema 11 exposes the
+  selected backend, support, registration, armed state, and actual surface
+  pointer state. Pointer entry synchronously deactivates the edge.
+- EVIDENCE: the C++ snapshot and source-mutation contracts pass, and the
+  deterministic operation model passes 31 tests. Nested recipe 071 drives a
+  real KWin layer surface through maximized concealment, native edge reveal,
+  pointer departure, and true-fullscreen concealment. The settled snapshot
+  reports `kwinAutoHide`, supported and registered state, and no simultaneous
+  client ghost.
+- SEVERITY: beta blocker.
+
 ### D261 - Matrix pristine seed survived across nested vehicles
 - STATUS: FIXED on `main` by `d17a81367` (PR #139).
 - FOUND: 2026-08-01, nested reproduction of the revealed Dodge Active Dock.

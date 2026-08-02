@@ -5076,6 +5076,12 @@ prerequisites in the phases above are done.
       Store the seed in the per-vehicle runtime so a later recipe cannot reuse
       another run's layout through persistent artifact storage.
       Commits: d17a81367
+- [x] Fix D262 (Auto Hide and Dodge reveal used a client ghost instead of
+      KWin's dock surface). Register the real dock layer surface through the
+      Plasma 6 screen-edge protocol, keep the client ghost only as an
+      unsupported-compositor fallback, and expose the selected ownership path
+      in the atomic dock-system snapshot.
+      Commits: 40ccce057
 - [ ] Report D258 (KF6 device enumeration blocks the GUI thread on an
       unavailable hard NFS mount) upstream to KDE Solid/KIO. Preserve the traced
       Folder View call chain and keep the exact-path diagnostic isolation out
