@@ -3192,8 +3192,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: known issue.
 
 ### D265 - Linked docks gave no passive edit cue
-- STATUS: FIXED on branch by `d48a2828f`, `df7e53f41`, `7f3e4c49c`,
-  `f4359e62a`, and `5b4f03455`.
+- STATUS: FIXED on `main` by `08d2c3985`, `0f78b52b8`, `fb340286d`,
+  `23e30c4f0`, and `141fd0b5e` (PR #145).
 - FOUND: 2026-08-02, linked-dock edit presentation review.
 - SYMPTOM: entering edit mode on one linked dock gives no visual indication on
   its linked peers. Activating every peer would make the relationship visible
