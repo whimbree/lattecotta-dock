@@ -1149,6 +1149,23 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.normalThickness = view->normalThickness();
         record.maximumNormalThickness = view->maxNormalThickness();
         record.screenEdgeMargin = view->screenEdgeMargin();
+        const auto *const visibility = view->visibility();
+        switch (visibility->screenEdgeBackend()) {
+        case ViewPart::VisibilityManager::ScreenEdgeBackend::None:
+            record.screenEdgeBackend = QStringLiteral("none");
+            break;
+        case ViewPart::VisibilityManager::ScreenEdgeBackend::ClientGhost:
+            record.screenEdgeBackend = QStringLiteral("clientGhost");
+            break;
+        case ViewPart::VisibilityManager::ScreenEdgeBackend::KWinAutoHide:
+            record.screenEdgeBackend = QStringLiteral("kwinAutoHide");
+            break;
+        }
+        record.screenEdgeArmed = visibility->screenEdgeArmed();
+        record.screenEdgeRegistered = visibility->screenEdgeRegistered();
+        record.compositorScreenEdgeSupported =
+            visibility->compositorScreenEdgeSupported();
+        record.visibilityContainsMouse = visibility->containsMouse();
         record.windowGeometry = view->geometry();
         record.absoluteGeometry = view->absoluteGeometry();
         record.localGeometry = view->localGeometry();

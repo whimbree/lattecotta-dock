@@ -17,6 +17,7 @@ layout=""
 group_args=()
 kpid=0
 configured=0
+screen_edge_pointer_pid=0
 
 set_konsole_maximized() {
     local enabled="$1"
@@ -29,8 +30,52 @@ set_konsole_maximized() {
     }" 0.01
 }
 
+normalize_konsole_away_from_dock() {
+    e2e_kwin_js "for (const w of workspace.windowList()) {
+        if (w.resourceClass === 'org.kde.konsole' && w.caption.includes('LATTE FP2 STABLE CANVAS')) {
+            w.setMaximize(false, false);
+            const geometry = Object.assign({}, w.frameGeometry);
+            geometry.x = 180;
+            geometry.y = 100;
+            geometry.width = 900;
+            geometry.height = 540;
+            w.frameGeometry = geometry;
+            workspace.activeWindow = w;
+            print('@TAG@|' + w.internalId);
+        }
+    }" 0.05
+}
+
+set_konsole_fullscreen() {
+    local enabled="$1"
+    e2e_kwin_js "for (const w of workspace.windowList()) {
+        if (w.resourceClass === 'org.kde.konsole' && w.caption.includes('LATTE FP2 STABLE CANVAS')) {
+            workspace.activeWindow = w;
+            w.fullScreen = $enabled;
+            print('@TAG@|' + w.internalId);
+        }
+    }" 0.01
+}
+
 active_window_id() {
     e2e_kwin_js 'print("@TAG@|" + (workspace.activeWindow ? workspace.activeWindow.internalId : "none"));' | tail -1
+}
+
+cursor_position() {
+    e2e_kwin_js 'print("@TAG@|" + Math.round(workspace.cursorPos.x) + " " + Math.round(workspace.cursorPos.y));' 0.01 | tail -1
+}
+
+wait_for_cursor_position() {
+    local expected_x="$1" expected_y="$2" phase="$3"
+    local actual_x=unread actual_y=unread
+    for _ in $(seq 1 40); do
+        read -r actual_x actual_y <<< "$(cursor_position)"
+        if [[ "$actual_x" == "$expected_x" && "$actual_y" == "$expected_y" ]]; then
+            return 0
+        fi
+        sleep 0.025
+    done
+    e2e_fail "$phase left the nested KWin cursor at $actual_x,$actual_y; expected $expected_x,$expected_y"
 }
 
 dock_field() {
@@ -329,15 +374,120 @@ print(str(tracker["activeWindowMaximized"]).lower(), str(tracker["existsWindowMa
     e2e_fail "Dock maximized-gap policy did not settle (active=$active_maximized exists=$exists_maximized type=$view_type visibility=$visibility_mode floatingGapConfigured=$floating_gap_configured configuredPanel=$configured_panel panelEligible=$eligible_panel configuredHide=$configured_hide dockRequest=$dock_request target=$target phase=$phase running=$running progress=$progress duration=$transition_duration configuredGap=$configured_gap presentedGap=$presented_gap transitionGeometry=$transition_geometry panelGeometryAbsent=$panel_geometry_absent floatingPopups=$floating_popups)"
 }
 
+wait_for_dock_window_touch_policy() {
+    local expected_request="$1" expected_target="$2" expected_progress="$3"
+    local touching_count=-1 dock_request=unread target=unread phase=unread
+    local running=unread progress=-1 presented_gap=-1 configured_gap=-1
+    local touching_matches=false
+    for _ in $(seq 1 80); do
+        read -r touching_count dock_request target phase running progress \
+            configured_gap presented_gap \
+            <<< "$(dock_field '"%d %s %s %s %s %.9f %d %d" % (
+                v["touchingWindowCount"],
+                str(v["dockGapHideRequested"]).lower(),
+                v["transitionTarget"],
+                v["transitionPhase"],
+                str(v["transitionRunning"]).lower(),
+                v["transitionProgress"],
+                v["screenEdgeMargin"],
+                v["presentedScreenEdgeGap"],
+            )')"
+        touching_matches=false
+        if [[ "$expected_request" == true ]] && (( touching_count > 0 )); then
+            touching_matches=true
+        elif [[ "$expected_request" == false ]] && (( touching_count == 0 )); then
+            touching_matches=true
+        fi
+        if [[ "$touching_matches" == true
+              && "$dock_request" == "$expected_request"
+              && "$target" == "$expected_target"
+              && "$phase" == resting
+              && "$running" == false
+              && "$presented_gap" -eq "$((
+                  configured_gap * expected_progress
+              ))" ]] \
+                && awk -v actual="$progress" -v expected="$expected_progress" \
+                    'BEGIN { difference = actual - expected; if (difference < 0) difference = -difference; exit !(difference < 0.000001) }'; then
+            return 0
+        fi
+        sleep 0.05
+    done
+    e2e_fail "Dock window-touch policy did not settle (touching=$touching_count request=$dock_request target=$target phase=$phase running=$running progress=$progress configuredGap=$configured_gap presentedGap=$presented_gap)"
+}
+
 wait_for_hidden_state() {
-    local expected="$1" hidden=unread
+    local expected="$1" phase="$2" hidden=unread
     for _ in $(seq 1 100); do
         hidden="$(dock_field 'str(v["isHidden"]).lower()')" \
             || e2e_fail "could not read the Dodge Active hidden state"
         [[ "$hidden" == "$expected" ]] && return 0
         sleep 0.05
     done
-    e2e_fail "Dodge Active Dock hidden state stayed $hidden; expected $expected"
+    e2e_fail "$phase left the Dodge Active Dock hidden state at $hidden; expected $expected (cursor=$(cursor_position))"
+}
+
+wait_for_native_screen_edge_armed() {
+    local phase="$1" backend=unread armed=unread registered=unread
+    local supported=unread contains_mouse=unread
+    local snapshot="" unavailable_snapshots=0
+    for _ in $(seq 1 80); do
+        snapshot="$(e2e_json dockSystemData)"
+        if [[ "$snapshot" != \{* ]]; then
+            unavailable_snapshots=$((unavailable_snapshots + 1))
+            sleep 0.05
+            continue
+        fi
+        read -r backend armed registered supported contains_mouse <<< "$(
+            python3 -c "
+import json, sys
+state = json.load(sys.stdin)
+matches = [v for v in state['views'] if v['persistentDockId'] == $view]
+if len(matches) != 1:
+    sys.exit('expected exactly one edge-state record for containment $view')
+v = matches[0]
+print(v['screenEdgeBackend'],
+      str(v['screenEdgeArmed']).lower(),
+      str(v['screenEdgeRegistered']).lower(),
+      str(v['compositorScreenEdgeSupported']).lower(),
+      str(v['visibilityContainsMouse']).lower())
+" <<< "$snapshot"
+        )"
+        if [[ "$backend" == kwinAutoHide
+              && "$armed" == true
+              && "$registered" == true
+              && "$supported" == true
+              && "$contains_mouse" == false ]]; then
+            return 0
+        fi
+        sleep 0.05
+    done
+    e2e_fail "$phase did not establish compositor-owned edge reveal (backend=$backend armed=$armed registered=$registered supported=$supported containsMouse=$contains_mouse unavailableSnapshots=$unavailable_snapshots)"
+}
+
+start_kwin_screen_edge_round_trip() {
+    local x="$1" y="$2" departure_x="$3" departure_y="$4"
+    "$E2E_FAKEPOINTER" glide \
+        "$x" $((y - 80)) \
+        "$x" "$y" \
+        "$x" "$y" \
+        "$x" "$y" \
+        "$x" "$y" \
+        "$x" "$y" \
+        "$departure_x" "$departure_y" &
+    screen_edge_pointer_pid=$!
+
+    # Keep one input device alive for edge pressure, surface enter, and leave.
+    # KWin's fake-input backend can retain the first device's surface focus if
+    # a second short-lived client replaces it after the reveal. The repeated
+    # endpoint also exceeds KWin's ElectricBorderDelay while Latte slides in.
+}
+
+finish_kwin_screen_edge_round_trip() {
+    (( screen_edge_pointer_pid > 0 )) \
+        || e2e_fail "no Dodge Active screen-edge pointer gesture is running"
+    wait "$screen_edge_pointer_pid" \
+        || e2e_fail "could not complete the Dodge Active screen-edge pointer gesture"
+    screen_edge_pointer_pid=0
 }
 
 wait_for_revealed_attached_bottom_dock() {
@@ -507,7 +657,7 @@ for _ in $(seq 1 30); do
 done
 [[ -n "${konsole:-}" ]] || e2e_fail "Konsole stable-canvas fixture never mapped"
 
-fixture_id="$(set_konsole_maximized false)" || e2e_fail "KWin did not normalize the Konsole fixture"
+fixture_id="$(normalize_konsole_away_from_dock)" || e2e_fail "KWin did not normalize the Konsole fixture away from the dock"
 [[ -n "$fixture_id" && "$fixture_id" != *$'\n'* ]] || e2e_fail "KWin found multiple tagged Konsole fixtures"
 wait_for_tracker_and_target false floated 1
 assert_stable_contract "normalized floated state"
@@ -590,27 +740,53 @@ wait_for_dock_gap_policy windowsGoBelow true true attached 0
     || e2e_fail "KWin did not restore the client for the WindowsGoBelow Dock check"
 wait_for_dock_gap_policy windowsGoBelow false false floated 1
 
+"$E2E_FAKEPOINTER" move \
+    $((screen_x + screen_w / 2)) \
+    $((screen_y + screen_h / 2)) \
+    || e2e_fail "could not normalize the pointer away from the Dock edge"
+wait_for_cursor_position \
+    $((screen_x + screen_w / 2)) \
+    $((screen_y + screen_h / 2)) \
+    "Dodge Active pointer normalization"
 e2e_call setViewVisibilityMode us "$view" dodgeActive >/dev/null \
     || e2e_fail "could not set the floating Dock fixture to Dodge Active"
 wait_for_dock_gap_policy dodgeActive false false floated 1
-wait_for_hidden_state false
+wait_for_hidden_state false "initial Dodge Active state"
 [[ "$(set_konsole_maximized true)" == "$fixture_id" ]] \
     || e2e_fail "KWin did not maximize the client for the Dodge Active Dock check"
 wait_for_dock_gap_policy dodgeActive true true attached 0
-wait_for_hidden_state true
+wait_for_hidden_state true "maximized-window concealment"
+wait_for_native_screen_edge_armed "maximized-window concealment"
 
 read -r reveal_x reveal_y <<< "$(dock_field '"%d %d" % (
     v["absoluteGeometry"][0] + v["absoluteGeometry"][2] // 2,
     v["screenGeometry"][1] + v["screenGeometry"][3] - 1,
 )')"
-"$E2E_FAKEPOINTER" glide \
-    "$reveal_x" $((reveal_y - 80)) \
+start_kwin_screen_edge_round_trip \
     "$reveal_x" "$reveal_y" \
-    || e2e_fail "could not glide the pointer toward the Dodge Active screen edge"
+    $((screen_x + screen_w / 2)) \
+    $((screen_y + screen_h / 2))
 wait_for_revealed_attached_bottom_dock
+finish_kwin_screen_edge_round_trip
+wait_for_cursor_position \
+    $((screen_x + screen_w / 2)) \
+    $((screen_y + screen_h / 2)) \
+    "post-reveal pointer departure"
 
 [[ "$(set_konsole_maximized false)" == "$fixture_id" ]] \
     || e2e_fail "KWin did not restore the client after the Dodge Active Dock check"
 wait_for_dock_gap_policy dodgeActive false false floated 1
 
-echo "FP-2/FP-4A stable canvas held its maximum-depth reservation across qreal reversals; Always Visible, Windows Go Below, and edge-revealed Dodge Active Docks reached the correct window-touch endpoint"
+[[ "$(set_konsole_fullscreen true)" == "$fixture_id" ]] \
+    || e2e_fail "KWin did not fullscreen the client for the Dodge Active Dock check"
+wait_for_dock_window_touch_policy true attached 0
+wait_for_revealed_attached_bottom_dock
+wait_for_hidden_state true "fullscreen-window concealment"
+wait_for_native_screen_edge_armed "fullscreen-window concealment"
+
+[[ "$(set_konsole_fullscreen false)" == "$fixture_id" ]] \
+    || e2e_fail "KWin did not restore the fullscreen client after the Dodge Active Dock check"
+wait_for_dock_window_touch_policy false floated 1
+wait_for_hidden_state false "post-fullscreen reveal"
+
+echo "FP-2/FP-4A stable canvas held its maximum-depth reservation across qreal reversals; Always Visible, Windows Go Below, and Dodge Active Docks reached the correct maximized and fullscreen window-touch endpoints, with compositor edge reveal covered outside true fullscreen"

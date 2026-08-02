@@ -100,6 +100,16 @@ Popup placement uses the visible mask rather than the oversized QWindow. The
 containment also publishes the floating-applet hint so compact applet popups
 can animate their visual spacing with the panel.
 
+Plasma registers the real panel layer surface through
+`kde_screen_edge_manager_v1` when an Auto Hide or Dodge policy conceals it.
+KWin then hides and reveals that same surface and derives the activation span
+from its actual frame geometry. Lattecotta uses the same ownership path. A
+client ghost window remains only as a compatibility fallback when the
+compositor does not advertise the protocol, while `WindowsCanCover` retains
+its separate stacking-trigger contract. True fullscreen windows block KWin's
+window-backed screen edges by compositor policy; ordinary and maximized
+windows permit pointer-edge reveal.
+
 ## Corrected Lattecotta paths
 
 The stable-surface migration removed the earlier physical layer-surface

@@ -74,7 +74,7 @@ true with `isOffScreen`), what the compositor was told to reserve.
 call dockSystemData                    # s: compact schema-versioned JSON object
 ```
 
-Top level: `schemaVersion` (currently 10), `snapshotSequence` (decimal string,
+Top level: `schemaVersion` (currently 11), `snapshotSequence` (decimal string,
 process-local monotonic call identity), `globalConfigureAppletsMode`,
 `stacking`, `reservationStateGeneration` (decimal string),
 `reservationGroups`, and `views`. The complete view and reservation graph is
@@ -139,6 +139,19 @@ Per dock:
   is removed. External shadow paint does not reduce it. The animated
   presentation uses a separate `contentsMaxLength`; neither value is the raw
   containment `maxLength` or the configured ratio.
+- Screen-edge reveal: `screenEdgeBackend`
+  (`none|clientGhost|kwinAutoHide`), `screenEdgeArmed`,
+  `screenEdgeRegistered`, `compositorScreenEdgeSupported`, and
+  `visibilityContainsMouse`. `kwinAutoHide` means KWin owns reveal for the
+  dock's real layer surface through `kde_screen_edge_manager_v1`; the client
+  ghost is absent in that state. `clientGhost` is the fallback when the
+  compositor does not advertise that protocol, and remains the distinct
+  stacking mechanism for `WindowsCanCover`. `screenEdgeArmed` is Latte's
+  logical activation request. `screenEdgeRegistered` says that the real
+  surface has a protocol object, which may remain registered while deactivated.
+  `visibilityContainsMouse` is the visibility manager's actual surface pointer
+  state. It is intentionally separate from the floating transition's
+  `pointerInsideView` policy input.
 - Stable floating-panel transition: `floatingGapConfigured`,
   `floatingPanelConfigured`,
   `floatingPanelEligible`, `attachOnWindowTouchConfigured`,

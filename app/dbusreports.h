@@ -582,6 +582,11 @@ struct DockSystemViewRecord {
     int maximumNormalThickness{0};
     int screenEdgeMargin{0};
     std::optional<int> presentedScreenEdgeGap;
+    QString screenEdgeBackend{QStringLiteral("none")};
+    bool screenEdgeArmed{false};
+    bool screenEdgeRegistered{false};
+    bool compositorScreenEdgeSupported{false};
+    bool visibilityContainsMouse{false};
 
     QRect windowGeometry;
     QRect absoluteGeometry;
@@ -703,7 +708,7 @@ struct DockReservationGroupRecord
 };
 
 struct DockSystemSnapshot {
-    static constexpr int SchemaVersion = 10;
+    static constexpr int SchemaVersion = 11;
 
     quint64 snapshotSequence{0};
     bool globalConfigureAppletsMode{false};
@@ -1702,6 +1707,13 @@ inline QJsonObject serializeDockSystemViewRecord(const DockSystemViewRecord &rec
     json[QStringLiteral("screenEdgeMargin")] = record.screenEdgeMargin;
     json[QStringLiteral("presentedScreenEdgeGap")] =
         serializeOptionalInt(record.presentedScreenEdgeGap);
+    json[QStringLiteral("screenEdgeBackend")] = record.screenEdgeBackend;
+    json[QStringLiteral("screenEdgeArmed")] = record.screenEdgeArmed;
+    json[QStringLiteral("screenEdgeRegistered")] = record.screenEdgeRegistered;
+    json[QStringLiteral("compositorScreenEdgeSupported")] =
+        record.compositorScreenEdgeSupported;
+    json[QStringLiteral("visibilityContainsMouse")] =
+        record.visibilityContainsMouse;
 
     json[QStringLiteral("windowGeometry")] = serializeRect(record.windowGeometry);
     json[QStringLiteral("absoluteGeometry")] = serializeRect(record.absoluteGeometry);
@@ -1969,6 +1981,28 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
     }
 
     for (const auto &view : snapshot.views) {
+        const bool noScreenEdgeBackend =
+            view.screenEdgeBackend == QStringLiteral("none");
+        const bool clientGhostScreenEdgeBackend =
+            view.screenEdgeBackend == QStringLiteral("clientGhost");
+        const bool compositorScreenEdgeBackend =
+            view.screenEdgeBackend == QStringLiteral("kwinAutoHide");
+        if ((!noScreenEdgeBackend
+                && !clientGhostScreenEdgeBackend
+                && !compositorScreenEdgeBackend)
+                || view.compositorScreenEdgeSupported
+                    != compositorScreenEdgeBackend
+                || ((view.screenEdgeArmed
+                        || view.screenEdgeRegistered)
+                    && !compositorScreenEdgeBackend)
+                || (view.screenEdgeArmed
+                    && (!view.isHidden
+                        || view.visibilityContainsMouse
+                        || (view.inReadyState
+                            && !view.screenEdgeRegistered)))) {
+            return false;
+        }
+
         const QStringList canonicalBorders{
             QStringLiteral("top"),
             QStringLiteral("right"),

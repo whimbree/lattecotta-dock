@@ -29,6 +29,7 @@ namespace Latte {
 class Corona;
 class View;
 namespace ViewPart {
+class AutoHideScreenEdge;
 class FloatingGapWindow;
 class ScreenEdgeGhostWindow;
 }
@@ -69,14 +70,19 @@ class VisibilityManager : public QObject
     Q_PROPERTY(int strutsThickness READ strutsThickness WRITE setStrutsThickness NOTIFY strutsThicknessChanged)
 
 public:
+    enum class ScreenEdgeBackend {
+        None,
+        ClientGhost,
+        KWinAutoHide,
+    };
+
     static const QRect ISHIDDENMASK;
 
     //! Whether a dock in visibility mode @p mode reveals itself when the
-    //! pointer reaches the screen edge. These are the modes the edge-ghost
-    //! detector arms for, so its mouse detection can slide the hidden dock
-    //! back in: the three Dodge modes and AutoHide. AlwaysVisible never
-    //! hides; the cover modes use the stacking layer instead of edge reveal.
-    static bool revealsOnScreenEdge(Latte::Types::Visibility mode)
+    //! pointer reaches the screen edge. KWin owns that edge for the three
+    //! Dodge modes and AutoHide. AlwaysVisible never hides; the cover modes
+    //! use their stacking behavior instead of compositor auto-hide.
+    static constexpr bool revealsOnScreenEdge(Latte::Types::Visibility mode)
     {
         return mode == Latte::Types::DodgeActive
                 || mode == Latte::Types::DodgeMaximized
@@ -127,6 +133,10 @@ public:
     void setEnableKWinEdges(bool enable);
 
     bool supportsKWinEdges() const;
+    [[nodiscard]] ScreenEdgeBackend screenEdgeBackend() const;
+    [[nodiscard]] bool screenEdgeArmed() const;
+    [[nodiscard]] bool screenEdgeRegistered() const;
+    [[nodiscard]] bool compositorScreenEdgeSupported() const;
 
     //! Struts
     int strutsThickness() const;
@@ -220,9 +230,11 @@ private:
     void raiseViewTemporarily();
 
     //! KWin Edges Support functions
+    void createAutoHideScreenEdge();
     void createEdgeGhostWindow();
+    void deleteAutoHideScreenEdge();
     void deleteEdgeGhostWindow();
-    void updateGhostWindowState();
+    void updateKWinEdgeState();
 
     //! Floating Gap Support functions
     void createFloatingGapWindow();
@@ -305,7 +317,7 @@ private:
 
     //! KWin Edges
     bool m_enableKWinEdgesFromUser{true};
-    std::array<QMetaObject::Connection, 1> m_connectionsKWinEdges;
+    AutoHideScreenEdge *m_autoHideScreenEdge{nullptr};
     ScreenEdgeGhostWindow *m_edgeGhostWindow{nullptr};
 
     //! Floating Gap
