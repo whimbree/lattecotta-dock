@@ -1987,19 +1987,39 @@ inline bool dockTransitionRecordsAgree(const DockSystemSnapshot &snapshot)
             view.screenEdgeBackend == QStringLiteral("clientGhost");
         const bool compositorScreenEdgeBackend =
             view.screenEdgeBackend == QStringLiteral("kwinAutoHide");
+        const bool revealsOnScreenEdge =
+            view.visibilityMode == Types::AutoHide
+            || view.visibilityMode == Types::DodgeActive
+            || view.visibilityMode == Types::DodgeMaximized
+            || view.visibilityMode == Types::DodgeAllWindows;
+        const bool clientScreenEdgeMode =
+            revealsOnScreenEdge
+            || view.visibilityMode == Types::WindowsCanCover;
         if ((!noScreenEdgeBackend
                 && !clientGhostScreenEdgeBackend
                 && !compositorScreenEdgeBackend)
-                || view.compositorScreenEdgeSupported
-                    != compositorScreenEdgeBackend
-                || ((view.screenEdgeArmed
-                        || view.screenEdgeRegistered)
+                || (compositorScreenEdgeBackend
+                    && (!view.compositorScreenEdgeSupported
+                        || !revealsOnScreenEdge))
+                || (clientGhostScreenEdgeBackend
+                    && (!clientScreenEdgeMode
+                        || (revealsOnScreenEdge
+                            && view.compositorScreenEdgeSupported)))
+                || (view.screenEdgeRegistered
                     && !compositorScreenEdgeBackend)
                 || (view.screenEdgeArmed
+                    && noScreenEdgeBackend)
+                || (compositorScreenEdgeBackend
+                    && view.screenEdgeArmed
                     && (!view.isHidden
                         || view.visibilityContainsMouse
                         || (view.inReadyState
-                            && !view.screenEdgeRegistered)))) {
+                            && !view.screenEdgeRegistered)))
+                || (clientGhostScreenEdgeBackend
+                    && revealsOnScreenEdge
+                    && view.screenEdgeArmed
+                    && (!view.isHidden
+                        || view.visibilityContainsMouse))) {
             return false;
         }
 

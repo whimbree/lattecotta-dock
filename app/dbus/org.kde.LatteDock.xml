@@ -135,7 +135,12 @@
          input geometry while the stable QWindow and reservation remain
          unchanged. Schema 10 adds transitionAnimationDuration, the exact
          controller duration in milliseconds after the QML animation-speed
-         policy is applied. The dockSystemData schema version is 10.
+         policy is applied. Schema 11 adds screenEdgeBackend,
+         screenEdgeArmed, screenEdgeRegistered,
+         compositorScreenEdgeSupported, and visibilityContainsMouse. Protocol
+         capability is independent of the selected backend; registered state
+         applies only to the real dock surface. The dockSystemData schema
+         version is 11.
          The mandatory per-view transition geometry,
          surface publication, and layer-shell configure revisions are
          process-local monotonic decimal strings.

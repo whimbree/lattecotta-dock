@@ -147,11 +147,14 @@ Per dock:
   ghost is absent in that state. `clientGhost` is the fallback when the
   compositor does not advertise that protocol, and remains the distinct
   stacking mechanism for `WindowsCanCover`. `screenEdgeArmed` is Latte's
-  logical activation request. `screenEdgeRegistered` says that the real
-  surface has a protocol object, which may remain registered while deactivated.
-  `visibilityContainsMouse` is the visibility manager's actual surface pointer
-  state. It is intentionally separate from the floating transition's
-  `pointerInsideView` policy input.
+  logical activation request for the selected backend, including the client
+  trigger that raises a `WindowsCanCover` dock from its below-window layer.
+  `screenEdgeRegistered` says that the real surface has a protocol object,
+  which may remain registered while deactivated.
+  `compositorScreenEdgeSupported` reports protocol capability independently
+  of the current mode and backend. `visibilityContainsMouse` is the visibility
+  manager's actual surface pointer state. It is intentionally separate from
+  the floating transition's `pointerInsideView` policy input.
 - Stable floating-panel transition: `floatingGapConfigured`,
   `floatingPanelConfigured`,
   `floatingPanelEligible`, `attachOnWindowTouchConfigured`,

@@ -90,6 +90,16 @@ public:
                 || mode == Latte::Types::AutoHide;
     }
 
+    //! Whether the legacy client edge surface has work in @p mode. Sliding
+    //! modes use it only as a compositor-protocol fallback. WindowsCanCover
+    //! uses it to raise a below-layer dock without sliding the dock away.
+    static constexpr bool usesClientScreenEdgeTrigger(
+        Latte::Types::Visibility mode)
+    {
+        return revealsOnScreenEdge(mode)
+                || mode == Latte::Types::WindowsCanCover;
+    }
+
     explicit VisibilityManager(PlasmaQuick::ContainmentView *view);
     virtual ~VisibilityManager();
 
@@ -317,6 +327,7 @@ private:
 
     //! KWin Edges
     bool m_enableKWinEdgesFromUser{true};
+    bool m_edgeGhostWindowArmed{false};
     AutoHideScreenEdge *m_autoHideScreenEdge{nullptr};
     ScreenEdgeGhostWindow *m_edgeGhostWindow{nullptr};
 

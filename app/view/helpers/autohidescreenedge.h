@@ -36,10 +36,12 @@ public:
     ~AutoHideScreenEdge() override;
 
     [[nodiscard]] bool isArmed() const;
+    [[nodiscard]] bool isEnabled() const;
     [[nodiscard]] bool isRegistered() const;
     [[nodiscard]] bool isSupported() const;
 
     void setArmed(bool armed);
+    void setEnabled(bool enabled);
 
 Q_SIGNALS:
     void armedChanged();
@@ -58,6 +60,7 @@ private:
     std::unique_ptr<WaylandScreenEdgeManagerV1> m_manager;
     std::unique_ptr<WaylandAutoHideScreenEdgeV1> m_edge;
     bool m_armed{false};
+    bool m_enabled{false};
     bool m_reportedUnsupported{false};
 };
 

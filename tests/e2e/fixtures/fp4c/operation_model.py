@@ -1240,21 +1240,42 @@ def parse_snapshot(value: Any) -> dict[str, Any]:
         for key in VIEW_BOOL_KEYS:
             require_bool(view[key], f"views[{index}].{key}")
         compositor_backend = view["screenEdgeBackend"] == "kwinAutoHide"
+        client_backend = view["screenEdgeBackend"] == "clientGhost"
+        revealing_mode = view["visibilityMode"] in (
+            "autoHide",
+            "dodgeActive",
+            "dodgeMaximized",
+            "dodgeAllWindows",
+        )
+        client_mode = revealing_mode or view["visibilityMode"] == "windowsCanCover"
         if view["screenEdgeBackend"] not in (
             "none",
             "clientGhost",
             "kwinAutoHide",
         ):
             fail(f"views[{index}].screenEdgeBackend is invalid")
-        if view["compositorScreenEdgeSupported"] != compositor_backend:
-            fail(f"views[{index}] compositor screen-edge support disagrees with backend")
-        if (view["screenEdgeArmed"] or view["screenEdgeRegistered"]) and not compositor_backend:
-            fail(f"views[{index}] non-compositor backend owns compositor edge state")
-        if view["screenEdgeArmed"] and (
+        if compositor_backend and (
+            not view["compositorScreenEdgeSupported"] or not revealing_mode
+        ):
+            fail(f"views[{index}] compositor backend has no supported reveal mode")
+        if client_backend and (
+            not client_mode
+            or (revealing_mode and view["compositorScreenEdgeSupported"])
+        ):
+            fail(f"views[{index}] client backend conflicts with edge ownership")
+        if view["screenEdgeRegistered"] and not compositor_backend:
+            fail(f"views[{index}] non-compositor backend owns a registration")
+        if view["screenEdgeArmed"] and view["screenEdgeBackend"] == "none":
+            fail(f"views[{index}] missing backend owns an armed edge")
+        if compositor_backend and view["screenEdgeArmed"] and (
             not view["isHidden"] or view["visibilityContainsMouse"]
             or (view["inReadyState"] and not view["screenEdgeRegistered"])
         ):
             fail(f"views[{index}] armed screen edge has incompatible visibility state")
+        if client_backend and revealing_mode and view["screenEdgeArmed"] and (
+            not view["isHidden"] or view["visibilityContainsMouse"]
+        ):
+            fail(f"views[{index}] armed client edge has incompatible visibility state")
         for key in VIEW_NUMBER_KEYS:
             require_number(view[key], f"views[{index}].{key}")
         for key in VIEW_OPTIONAL_NUMBER_KEYS:
