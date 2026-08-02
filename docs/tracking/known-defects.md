@@ -3192,8 +3192,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: known issue.
 
 ### D263 - Windows Can Cover filtered out its own edge trigger
-- STATUS: FIXED on `fix/d262-fullscreen-reveal` by `afa86840d` and
-  `44e2e097f`; pending PR.
+- STATUS: FIXED on `main` by `28e1df850` and `29e1b3008` (PR #141).
 - FOUND: 2026-08-02, review of the native screen-edge fallback boundary.
 - SYMPTOM: a `WindowsCanCover` dock moves below application windows but cannot
   return to the front when the pointer reaches its screen edge.
@@ -3214,8 +3213,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D262 - Auto-hide and Dodge reveal used a client ghost instead of KWin's dock surface
-- STATUS: FIXED on `fix/d262-fullscreen-reveal` by `40ccce057`, `006c6befa`,
-  and `44e2e097f`; pending PR.
+- STATUS: FIXED on `main` by `cac8efab0`, `1fc78b493`, and `29e1b3008`
+  (PR #141).
 - FOUND: 2026-08-02, nested comparison with Plasma 6 screen-edge reveal.
 - SYMPTOM: Auto Hide and Dodge modes delegate edge activation to a second
   client window instead of registering the hidden dock surface with KWin.
