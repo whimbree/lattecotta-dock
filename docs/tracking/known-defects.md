@@ -4693,7 +4693,9 @@ carries its own detail or points into the plan and the reference docs.
   proves the mechanism instead. Observability: colorizerData now reports the
   resolved applyColor/textColor/backgroundColor + brightnesses; viewAppletsData
   reports per-applet colorizerActive + colorizerReason (applied / notEngaged /
-  splitter / selfColored / userBlocked / inlineFull / colorful). Guard:
+  splitter / selfColored / userBlocked). The original D21 landing also exposed
+  `inlineFull` and `colorful`; later ownership corrections retired both stale
+  outcomes. Guard:
   tests/e2e/110-colorizer-applet-contrast.sh. Found on the real dock 2026-07-18.
 
 ### D22 - main.xml omits the LayoutThemeColors enum choice (enum range out of sync)
