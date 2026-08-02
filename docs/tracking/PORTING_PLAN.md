@@ -5081,7 +5081,11 @@ prerequisites in the phases above are done.
       Plasma 6 screen-edge protocol, keep the client ghost only as an
       unsupported-compositor fallback, and expose the selected ownership path
       in the atomic dock-system snapshot.
-      Commits: 40ccce057
+      Commits: 40ccce057, 006c6befa
+- [x] Fix D263 (Windows Can Cover filtered out its own edge trigger). Separate
+      the client edge-strip classifier from the modes that slide offscreen so
+      the below-layer dock can return to the front.
+      Commits: afa86840d
 - [ ] Report D258 (KF6 device enumeration blocks the GUI thread on an
       unavailable hard NFS mount) upstream to KDE Solid/KIO. Preserve the traced
       Folder View call chain and keep the exact-path diagnostic isolation out
