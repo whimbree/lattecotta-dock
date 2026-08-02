@@ -3192,7 +3192,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: known issue.
 
 ### D266 - Inline Global Menu text ignored a light panel palette
-- STATUS: FIXED on branch by `111a46b47`.
+- STATUS: FIXED on `main` by `fa36143ad` (PR #147).
 - FOUND: 2026-08-02, light top-panel Global Menu acceptance.
 - SYMPTOM: Global Menu labels retained desktop text colors on a light panel,
   leaving the applet visibly inconsistent with the rest of the panel.
