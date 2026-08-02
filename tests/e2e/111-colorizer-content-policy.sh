@@ -9,10 +9,11 @@
 # Rectangle pixels, so a colorful fixed region must not veto palette response
 # elsewhere in the same applet.
 #
-# Three deterministic applets isolate the policy:
+# Four deterministic applets isolate the policy:
 # - responsive-only draws Kirigami.Theme.textColor;
 # - fixed-only draws the literal #d62976;
-# - mixed draws both controls side by side.
+# - mixed draws both controls side by side;
+# - inline-mixed draws the same pair from an inline full representation.
 #
 # The same applets are captured first with PlasmaThemeColors disengaged, then
 # with LightThemeColors applied. Per-control raw RGBA crops must show responsive
@@ -30,6 +31,7 @@ plugins=(
     org.kde.latte.d28-responsive
     org.kde.latte.d28-fixed
     org.kde.latte.d28-mixed
+    org.kde.latte.d28-inline-mixed
 )
 
 [[ -f "$fixture/D28.layout.latte" && -f "$theme" ]] \
@@ -181,6 +183,8 @@ emit("responsive", "org.kde.latte.d28-responsive")
 emit("fixed", "org.kde.latte.d28-fixed")
 emit("mixed-responsive", "org.kde.latte.d28-mixed", -18)
 emit("mixed-fixed", "org.kde.latte.d28-mixed", 18)
+emit("inline-responsive", "org.kde.latte.d28-inline-mixed", -18)
+emit("inline-fixed", "org.kde.latte.d28-inline-mixed", 18)
 PY
 )" || e2e_fail "could not resolve D28 $state per-control crop geometry"
 
@@ -261,6 +265,10 @@ assert_solid_rgba control fixed "#d62976" \
     || e2e_fail "control fixed-only content differs from its literal color"
 assert_solid_rgba control mixed-fixed "#d62976" \
     || e2e_fail "control mixed fixed content differs from its literal color"
+assert_solid_rgba control inline-responsive "$control_color" \
+    || e2e_fail "control inline responsive content does not match its inherited palette"
+assert_solid_rgba control inline-fixed "#d62976" \
+    || e2e_fail "control inline fixed content differs from its literal color"
 e2e_dock_stop || e2e_fail "could not stop the D28 control dock"
 
 # TREATMENT: LightThemeColors engages Latte's palette push. The removed probe
@@ -285,11 +293,18 @@ assert_solid_rgba treatment fixed "#d62976" \
     || e2e_fail "treatment fixed-only content differs from its literal color"
 assert_solid_rgba treatment mixed-fixed "#d62976" \
     || e2e_fail "treatment mixed fixed content differs from its literal color"
+assert_solid_rgba treatment inline-responsive "$treatment_color" \
+    || e2e_fail "treatment inline responsive content did not follow the panel palette"
+assert_solid_rgba treatment inline-fixed "#d62976" \
+    || e2e_fail "treatment inline fixed content differs from its literal color"
 
 assert_crops_differ control treatment responsive
 assert_crops_equal control treatment fixed
 assert_crops_differ control treatment mixed-responsive
 assert_crops_equal control treatment mixed-fixed
 echo "D28 MIXED ok: responsive bytes changed while fixed bytes stayed identical"
+assert_crops_differ control treatment inline-responsive
+assert_crops_equal control treatment inline-fixed
+echo "D28 INLINE ok: full-representation roles changed while fixed bytes stayed identical"
 
 echo "PASS: D28 control/treatment palette response and fixed-pixel stability"

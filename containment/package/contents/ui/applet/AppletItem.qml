@@ -93,15 +93,15 @@ Item {
 
     //! D21 (stock applet palette propagation): when the colorizer is engaged,
     //! this applet's OWN Kirigami.Theme color group is set to the decided
-    //! scheme (the _wrapper push below). Palette-responsive native content such
-    //! as the digital clock's Text.NativeRendering label and symbolic icons
-    //! gains the right contrast without the old layer-FBO ColorOverlay. Fixed
-    //! image, SVG, and Rectangle pixels do not consume palette roles, so they
-    //! remain unchanged and need no whole-applet exemption.
+    //! scheme (the _wrapper push below). Palette-responsive native content,
+    //! including the digital clock's Text.NativeRendering label, symbolic
+    //! icons, and the Global Menu's inline full representation, gains the right
+    //! contrast without the old layer-FBO ColorOverlay. Fixed image, SVG, and
+    //! Rectangle pixels do not consume palette roles, so they remain unchanged
+    //! and need no whole-applet exemption.
     readonly property bool colorizerPaletteActive: appletItem.colorizerHost.mustBeShown
                                                    && !appletItem.userBlocksColorizing
                                                    && !appletItem.isInternalViewSplitter
-                                                   && !appletItem.isShowingInlineFullRepresentation
 
     //! why the palette push is or is not applied to this applet - the
     //! viewAppletsData colorizer readback (observability-first). "applied" is
@@ -117,8 +117,6 @@ Item {
             return "selfColored";
         } else if (appletItem.userBlocksColorizing) {
             return "userBlocked";
-        } else if (appletItem.isShowingInlineFullRepresentation) {
-            return "inlineFull";
         }
 
         return "unknown";
@@ -130,15 +128,6 @@ Item {
                              && appletItem.applet.plasmoid.pluginName !== "org.kde.plasma.appmenu")
 
     property bool isExpanded: false
-
-    //! Plasma 6 inline representation switch: AppletQuickItem re-parents the
-    //! full representation item INTO ITSELF when the applet grows past
-    //! switchWidth/switchHeight (popup-expanded reps live in the popup
-    //! dialog's mainItem instead, and resting reps are parentless or in the
-    //! expander). The parent identity is therefore the exact inline signal.
-    readonly property bool isShowingInlineFullRepresentation: appletItem.applet
-                                                              && appletItem.applet.fullRepresentationItem
-                                                              && appletItem.applet.fullRepresentationItem.parent === appletItem.applet
 
     property bool isScheduledForDestruction: (appletItem.layoutManagerHost && appletItem.applet && appletItem.layoutManagerHost.appletsInScheduledDestruction.indexOf(appletItem.applet.plasmoid.id)>=0)
     property bool isHidden: (!appletItem.rootItem.inConfigureAppletsMode && ((appletItem.applet && appletItem.applet.plasmoid.status === PlasmaCore.Types.HiddenStatus ) || appletItem.isInternalViewSplitter)) || appletItem.isScheduledForDestruction

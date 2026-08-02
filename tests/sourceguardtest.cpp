@@ -50,6 +50,9 @@
 //     schema-10 state, and restores the pristine nested runtime on every exit
 //   * Theme-aware icon rendering: every view shares the registered singleton's
 //     QML engine and offscreen software teardown stays on the basic render loop
+//   * Applet palette ownership: inline full representations consume the same
+//     panel roles as compact applets while explicit and splitter exemptions stay
+//     authoritative
 //   * Dock-system reporting: persistent-id ordering and original/clone
 //     relationship classification stay on their pure seams
 //   * SC-T3 (the D29 narrow middle-click dispatch readback): the production QML
@@ -124,6 +127,46 @@ private:
         code.remove(QRegularExpression(QStringLiteral("//[^\\n]*")));
         code.remove(QRegularExpression(QStringLiteral("\\s+")));
         return code;
+    }
+
+    static bool matchesAppletPaletteOwnershipContract(const QString &source)
+    {
+        const QString activeMarker = QStringLiteral(
+            "readonly property bool colorizerPaletteActive:");
+        const QString reasonMarker = QStringLiteral(
+            "readonly property string colorizerExemptionReason:");
+        const QString nextPropertyMarker = QStringLiteral("property bool isActive:");
+        const qsizetype activeStart = source.indexOf(activeMarker);
+        const qsizetype reasonStart = source.indexOf(reasonMarker, activeStart);
+        const qsizetype nextPropertyStart = source.indexOf(nextPropertyMarker, reasonStart);
+
+        if (activeStart == -1 || reasonStart == -1 || nextPropertyStart == -1) {
+            return false;
+        }
+
+        const QString activeDecision = normalizedCode(
+            source.sliced(activeStart, reasonStart - activeStart));
+        const QString exemptionDecision = normalizedCode(
+            source.sliced(reasonStart, nextPropertyStart - reasonStart));
+        const QString expectedActiveDecision = QStringLiteral(
+            "readonlypropertyboolcolorizerPaletteActive:"
+            "appletItem.colorizerHost.mustBeShown"
+            "&&!appletItem.userBlocksColorizing"
+            "&&!appletItem.isInternalViewSplitter");
+        const QString expectedExemptionDecision = QStringLiteral(
+            "readonlypropertystringcolorizerExemptionReason:{"
+            "if(appletItem.colorizerPaletteActive){return\"applied\";}"
+            "elseif(!appletItem.colorizerHost.mustBeShown){return\"notEngaged\";}"
+            "elseif(appletItem.isInternalViewSplitter){return\"splitter\";}"
+            "elseif(appletItem.appletBlocksColorizing){return\"selfColored\";}"
+            "elseif(appletItem.userBlocksColorizing){return\"userBlocked\";}"
+            "return\"unknown\";}");
+        const QString code = normalizedCode(source);
+
+        return activeDecision == expectedActiveDecision
+            && exemptionDecision == expectedExemptionDecision
+            && !code.contains(QStringLiteral("isShowingInlineFullRepresentation"))
+            && !code.contains(QStringLiteral("\"inlineFull\""));
     }
 
     static bool matchesExactMiddleClickReporterForwarding(const QString &body)
@@ -2468,6 +2511,8 @@ private:
     }
 
 private Q_SLOTS:
+    void appletPaletteOwnership_keepsInlineRoleContent();
+    void appletPaletteOwnership_sourceGuardRejectsStaleOrDroppedExemptions();
     void visibilityManager_updateSidebarState_assignsState();
     void layoutsController_modeIsChanged_delegatesToModel();
     void windowsTrackerBinding_keepsRequesters();
@@ -2533,6 +2578,63 @@ private Q_SLOTS:
     void middleClickDispatch_keepsContainmentLifecycleScope();
     void middleClickDispatch_sourceGuardsRejectControlledMutations();
 };
+
+void SourceGuardTest::appletPaletteOwnership_keepsInlineRoleContent()
+{
+    const QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/applet/AppletItem.qml"));
+
+    QVERIFY2(matchesAppletPaletteOwnershipContract(source),
+             "AppletItem must push panel roles into inline full representations "
+             "without dropping explicit or splitter exemptions");
+}
+
+void SourceGuardTest::appletPaletteOwnership_sourceGuardRejectsStaleOrDroppedExemptions()
+{
+    const QString source = readFile(QStringLiteral(
+        "containment/package/contents/ui/applet/AppletItem.qml"));
+    const QString activeDecision = QStringLiteral(
+        "appletItem.colorizerHost.mustBeShown\n"
+        "                                                   && !appletItem.userBlocksColorizing\n"
+        "                                                   && !appletItem.isInternalViewSplitter");
+    QCOMPARE(source.count(activeDecision), 1);
+
+    QString staleInlineExemption = source;
+    staleInlineExemption.replace(
+        activeDecision,
+        activeDecision + QStringLiteral(
+            "\n                                                   "
+            "&& !appletItem.isShowingInlineFullRepresentation"));
+    QVERIFY2(!matchesAppletPaletteOwnershipContract(staleInlineExemption),
+             "restoring the stale inline-full exemption must fail the ownership guard");
+
+    QString withoutUserExemption = source;
+    withoutUserExemption.replace(
+        activeDecision,
+        QStringLiteral(
+            "appletItem.colorizerHost.mustBeShown\n"
+            "                                                   "
+            "&& !appletItem.isInternalViewSplitter"));
+    QVERIFY2(!matchesAppletPaletteOwnershipContract(withoutUserExemption),
+             "dropping the explicit applet colorizing opt-out must fail the ownership guard");
+
+    QString withoutSplitterExemption = source;
+    withoutSplitterExemption.replace(
+        activeDecision,
+        QStringLiteral(
+            "appletItem.colorizerHost.mustBeShown\n"
+            "                                                   "
+            "&& !appletItem.userBlocksColorizing"));
+    QVERIFY2(!matchesAppletPaletteOwnershipContract(withoutSplitterExemption),
+             "dropping the internal splitter exemption must fail the ownership guard");
+
+    QString withoutSelfColoredReason = source;
+    QCOMPARE(withoutSelfColoredReason.count(QStringLiteral("return \"selfColored\";")), 1);
+    withoutSelfColoredReason.replace(QStringLiteral("return \"selfColored\";"),
+                                     QStringLiteral("return \"unknown\";"));
+    QVERIFY2(!matchesAppletPaletteOwnershipContract(withoutSelfColoredReason),
+             "losing the self-colored reason must fail the observability guard");
+}
 
 void SourceGuardTest::visibilityManager_updateSidebarState_assignsState()
 {
