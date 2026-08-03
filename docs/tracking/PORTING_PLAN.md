@@ -5108,9 +5108,9 @@ prerequisites in the phases above are done.
       native QMenu remaining outside Latte's session, competing views,
       destruction, explicit exit, external focus loss, and coexistence in the
       nested vehicle.
-      Commits: 2393529c8 (focus lifecycle), d568483e1 (D-Bus readback),
-      1bee58c79 (nested regressions), b9e1a8ead (reference attribution),
-      905d6b34b (review regressions); merge hashes pending
+      Commits: f4e370775 (focus lifecycle), 85ff12b91 (D-Bus readback),
+      7d39e3eea (nested regressions), f0996ef2c (reference attribution),
+      1bbd33d72 (review regressions)
 - [ ] Resolve D268 (panel focus target may precede the committed layer
       activation). Add a nested harness that can hold and release the
       layer-shell keyboard-interactivity commit, prove the application active

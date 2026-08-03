@@ -23,11 +23,11 @@ status lifecycle at plasma-workspace commit
 `4c3ace3dfc7b06b3107b52b6e09508be14e73e8a`; Latte keyboard navigation is the
 additional reason layered onto that model.
 
-Branch commits `2393529c8` and `d568483e1` carry the lifecycle and D-Bus
-readback. Commit `1bee58c79` carries the nested regression family. Commit
-`b9e1a8ead` completes the Plasma source attribution, and `905d6b34b` carries the
-independent-review regressions. Merge hashes remain pending until GitHub
-rewrites the branch through the required rebase merge.
+Main commits `f4e370775` and `85ff12b91` carry the lifecycle and D-Bus
+readback. Commit `7d39e3eea` carries the nested regression family. Commit
+`f0996ef2c` completes the Plasma source attribution, and `1bbd33d72` carries the
+independent-review regressions. PR #149 landed the sequence through GitHub's
+required rebase merge.
 
 `viewsData` reports `containmentAcceptsInput` and `ownsPanelFocusSession` beside
 `keyboardNavigation`. Nested recipes 112 and 113 cover real QML Escape, D-Bus
