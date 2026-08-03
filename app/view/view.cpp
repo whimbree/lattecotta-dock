@@ -169,14 +169,26 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
     m_releaseGrabTimer.setSingleShot(true);
     connect(&m_releaseGrabTimer, &QTimer::timeout, this, &View::releaseGrab);
 
-    //! leaving keyboard navigation must be bulletproof: whenever the window
-    //! loses keyboard focus for ANY reason (another window activated, an
-    //! activated task taking focus, the compositor pulling focus), the mode
-    //! exits and the window returns to focus-refusing - a dock stuck
-    //! accepting focus breaks every fullscreen application
+    //! Keyboard navigation must end whenever the panel window loses focus.
+    //! Containment focus has a different Plasma-compatible lifecycle because
+    //! a transient applet QMenu legitimately deactivates the panel window.
     connect(this, &QWindow::activeChanged, this, [this]() {
-        if (m_keyboardNavigationIsActive && !isActive()) {
-            exitKeyboardNavigation();
+        //! A transient applet QMenu legitimately deactivates the panel window
+        //! while its containment remains AcceptingInput. Plasma preserves that
+        //! session. Keyboard navigation has no transient owner, so losing its
+        //! window focus still cancels every local focus reason.
+        if (m_ownsPanelFocusSession && m_keyboardNavigationIsActive && !isActive()) {
+            cancelPanelFocusSessionOnFocusLoss();
+        }
+    });
+
+    connect(this, &QQuickWindow::activeFocusItemChanged, this, [this]() {
+        //! Match Plasma PanelView: a containment-only session ends when its
+        //! focused QML item disappears. Keyboard navigation owns a separate
+        //! explicit lifecycle and is normalized by activeChanged instead.
+        if (m_containmentAcceptsInput && !m_keyboardNavigationIsActive
+                && !activeFocusItem() && containment()) {
+            containment()->setStatus(Plasma::Types::ActiveStatus);
         }
     });
 
@@ -258,6 +270,10 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
         }
 
         connect(this->containment(), SIGNAL(statusChanged(Plasma::Types::ItemStatus)), SLOT(statusChanged(Plasma::Types::ItemStatus)));
+        //! A recreated view can attach after the containment has already
+        //! entered a non-default status, so the initial value needs the same
+        //! transition path as later signals.
+        statusChanged(this->containment()->status());
 
         //! the containment's screen id lands asynchronously after a view
         //! relocation (reactToScreenChange -> corona screenForContainment),
@@ -1462,20 +1478,60 @@ void View::applyKeyboardFocusPolicy(bool takesFocus)
 
     if (m_layerShellConfigured) {
         LS::setFocusPolicy(this, takesFocus);
+        //! LayerShellQt applies keyboard interactivity with the next surface
+        //! commit. Schedule that commit before a QML item requests focus;
+        //! otherwise OnDemand remains unapplied and keys stay in the app.
+        requestUpdate();
     }
 }
 
 void View::statusChanged(Plasma::Types::ItemStatus status)
 {
+    //! Focus-session semantics follow Plasma PanelView's containment status
+    //! lifecycle, adapted to coexist with Latte keyboard navigation. Reference:
+    //! plasma-workspace shell/panelview.cpp at 4c3ace3dfc7b06b3107b52b6e09508be14e73e8a
+    //! (invent.kde.org/plasma/plasma-workspace).
     if (!containment()) {
         return;
     }
 
-    //! keyboard-navigation mode keeps the window focusable through any
-    //! containment status flap; its own three exit paths (Escape, the
-    //! global shortcut, focus loss) are the only ways the window returns
-    //! to focus-refusing while the mode is on
-    const bool takesFocus = (status == Plasma::Types::AcceptingInputStatus) || m_keyboardNavigationIsActive;
+    const bool wasAcceptingInput = m_containmentAcceptsInput;
+    m_containmentAcceptsInput = status == Plasma::Types::AcceptingInputStatus;
+
+    if (m_containmentAcceptsInput) {
+        if (!ensurePanelFocusSessionStarted()) {
+            qWarning() << "view: containment requested keyboard focus but another view owns the panel focus session"
+                       << containment()->id();
+            //! A view may not remain AcceptingInput without owning the
+            //! process-wide focus session. Clear the local reason before the
+            //! synchronous status signal reenters this method.
+            m_containmentAcceptsInput = false;
+            containment()->setStatus(Plasma::Types::ActiveStatus);
+            return;
+        }
+    } else if (wasAcceptingInput) {
+        if (panelFocusIsRequested()) {
+            if (status != Plasma::Types::PassiveStatus && m_ownsPanelFocusSession) {
+                if (status != Plasma::Types::ActiveStatus) {
+                    qWarning() << "view: containment left AcceptingInput with unexpected status"
+                               << status << "; invalidating the saved panel focus target";
+                }
+                //! Active means focus moved intentionally. Keyboard navigation
+                //! can keep this session alive, but its eventual explicit exit
+                //! must not reactivate the application saved before that move.
+                m_corona->forgetPanelFocusRestoreTarget(this);
+            }
+        } else {
+            if (status != Plasma::Types::PassiveStatus
+                    && status != Plasma::Types::ActiveStatus) {
+                qWarning() << "view: containment ended panel focus with unexpected status"
+                           << status << "; keeping the current application focus";
+            }
+            endPanelFocusSession(status == Plasma::Types::PassiveStatus
+                    ? PanelFocusSessionDisposition::RestoreApplication
+                    : PanelFocusSessionDisposition::KeepCurrentApplication);
+        }
+    }
 
     if (status == Plasma::Types::NeedsAttentionStatus || status == Plasma::Types::RequiresAttentionStatus) {
         m_visibility->addBlockHidingEvent(BLOCKHIDINGNEEDSATTENTIONTYPE);
@@ -1487,12 +1543,111 @@ void View::statusChanged(Plasma::Types::ItemStatus status)
         m_visibility->removeBlockHidingEvent(BLOCKHIDINGNEEDSATTENTIONTYPE);
     }
 
-    applyKeyboardFocusPolicy(takesFocus);
+    applyPanelFocusPolicy();
+
+    if (m_containmentAcceptsInput && m_ownsPanelFocusSession) {
+        QQuickItem *const nextItem = rootObject()
+                ? rootObject()->nextItemInFocusChain()
+                : nullptr;
+        if (nextItem) {
+            nextItem->forceActiveFocus(Qt::TabFocusReason);
+        } else {
+            containment()->setStatus(Plasma::Types::PassiveStatus);
+        }
+    }
+}
+
+bool View::panelFocusIsRequested() const
+{
+    return m_containmentAcceptsInput || m_keyboardNavigationIsActive;
+}
+
+bool View::ensurePanelFocusSessionStarted()
+{
+    Q_ASSERT(panelFocusIsRequested());
+
+    if (m_ownsPanelFocusSession) {
+        return true;
+    }
+
+    if (!m_corona->beginPanelFocusSession(this)) {
+        return false;
+    }
+
+    m_ownsPanelFocusSession = true;
+    return true;
+}
+
+void View::endPanelFocusSession(PanelFocusSessionDisposition disposition)
+{
+    Q_ASSERT(!panelFocusIsRequested());
+
+    if (!m_ownsPanelFocusSession) {
+        return;
+    }
+
+    //! Clear local ownership before requesting application activation. The
+    //! resulting activeChanged(false) is the expected completion of a restore,
+    //! not an external focus loss that should discard the target.
+    m_ownsPanelFocusSession = false;
+
+    switch (disposition) {
+    case PanelFocusSessionDisposition::RestoreApplication:
+        m_corona->restorePanelFocusSession(this);
+        break;
+    case PanelFocusSessionDisposition::KeepCurrentApplication:
+        m_corona->discardPanelFocusSession(this);
+        break;
+    }
+}
+
+void View::applyPanelFocusPolicy()
+{
+    applyKeyboardFocusPolicy(m_ownsPanelFocusSession && panelFocusIsRequested());
+}
+
+void View::cancelPanelFocusSessionOnFocusLoss()
+{
+    Q_ASSERT(m_ownsPanelFocusSession);
+
+    const bool keyboardNavigationWasActive = m_keyboardNavigationIsActive;
+    const bool containmentWasAcceptingInput = m_containmentAcceptsInput;
+
+    //! Clear both reasons before changing containment status. setStatus emits
+    //! statusChanged synchronously, and that reentry must not end this session
+    //! a second time or restore the application that just lost focus.
+    m_keyboardNavigationIsActive = false;
+    m_containmentAcceptsInput = false;
+    if (keyboardNavigationWasActive && m_visibility) {
+        m_visibility->removeBlockHidingEvent(BLOCKHIDINGKEYBOARDNAVIGATIONTYPE);
+    }
+
+    endPanelFocusSession(PanelFocusSessionDisposition::KeepCurrentApplication);
+    applyPanelFocusPolicy();
+
+    if (containmentWasAcceptingInput && containment()
+            && containment()->status() == Plasma::Types::AcceptingInputStatus) {
+        containment()->setStatus(Plasma::Types::ActiveStatus);
+    }
+
+    if (keyboardNavigationWasActive) {
+        Q_EMIT keyboardNavigationIsActiveChanged();
+    }
 }
 
 bool View::keyboardNavigationIsActive() const
 {
     return m_keyboardNavigationIsActive;
+}
+
+bool View::containmentAcceptsInput() const
+{
+    return m_containmentAcceptsInput;
+}
+
+bool View::ownsPanelFocusSession() const
+{
+    return m_ownsPanelFocusSession;
 }
 
 void View::enterKeyboardNavigation()
@@ -1510,17 +1665,30 @@ void View::enterKeyboardNavigation()
 
     m_keyboardNavigationIsActive = true;
 
+    //! Save before changing layer-shell interactivity or requesting focus.
+    //! Once the panel becomes active the compositor no longer exposes the
+    //! application that must receive focus on an explicit exit.
+    if (!ensurePanelFocusSessionStarted()) {
+        m_keyboardNavigationIsActive = false;
+        return;
+    }
+
     //! also reveals an auto-hidden dock (hidingIsBlockedChanged emits
     //! mustBeShown), the same mechanism the Meta press-and-hold path uses
     m_visibility->addBlockHidingEvent(BLOCKHIDINGKEYBOARDNAVIGATIONTYPE);
 
-    applyKeyboardFocusPolicy(true);
+    applyPanelFocusPolicy();
     requestActivate();
 
     Q_EMIT keyboardNavigationIsActiveChanged();
 }
 
 void View::exitKeyboardNavigation()
+{
+    leaveKeyboardNavigation();
+}
+
+void View::leaveKeyboardNavigation()
 {
     if (!m_keyboardNavigationIsActive) {
         return;
@@ -1529,9 +1697,11 @@ void View::exitKeyboardNavigation()
     m_keyboardNavigationIsActive = false;
     m_visibility->removeBlockHidingEvent(BLOCKHIDINGKEYBOARDNAVIGATIONTYPE);
 
-    //! back to the stance the containment status dictates; that is
-    //! focus-refusing unless something explicitly holds AcceptingInputStatus
-    applyKeyboardFocusPolicy(containment() && containment()->status() == Plasma::Types::AcceptingInputStatus);
+    if (!panelFocusIsRequested()) {
+        endPanelFocusSession(PanelFocusSessionDisposition::RestoreApplication);
+    }
+
+    applyPanelFocusPolicy();
 
     Q_EMIT keyboardNavigationIsActiveChanged();
 }
