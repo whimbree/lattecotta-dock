@@ -135,7 +135,7 @@ send_key_and_require_delivery() {
     e2e_fail "$boundary did not deliver $key to client $id"
 }
 
-send_key_and_require_panel_delivery() {
+send_key_and_require_saved_client_unchanged() {
     local client_id="$1" key="$2" boundary="$3" before after
     before="$(window_caption "$client_id")"
     "$E2E_FAKEPOINTER" key "$key" || e2e_fail "$boundary could not inject $key"
@@ -285,14 +285,15 @@ enter_keyboard_navigation "$source_cid" "focus-loss discard"
 # one real navigation key after the compositor grant instead of treating that
 # application-window property as a focus oracle.
 sleep 3
-send_key_and_require_panel_delivery "$client_a" Right "focus-loss grant"
+send_key_and_require_saved_client_unchanged "$client_a" Right "focus-loss grant"
 launch_client B
 client_b="$launched_client_id"
 activate_window "$client_b"
 wait_for_keyboard_navigation "$source_cid" false \
     || e2e_fail "external client focus did not discard keyboard navigation"
 send_key_and_require_delivery "$client_b" g "focus-loss winner"
-e2e_call setViewKeyboardNavigation ub "$source_cid" false >/dev/null
+e2e_call setViewKeyboardNavigation ub "$source_cid" false >/dev/null \
+    || e2e_fail "non-stealing idempotent exit call failed"
 send_key_and_require_delivery "$client_b" h "non-stealing idempotent exit"
 echo "ok: external focus loss ends the session without stealing focus back"
 stop_client B "$client_b"
@@ -301,7 +302,7 @@ activate_window "$client_a"
 send_key_and_require_delivery "$client_a" i "destroyed-target baseline"
 enter_keyboard_navigation "$source_cid" "destroyed saved target"
 sleep 3
-send_key_and_require_panel_delivery "$client_a" Left "destroyed-target grant"
+send_key_and_require_saved_client_unchanged "$client_a" Left "destroyed-target grant"
 stop_client A "$client_a"
 [[ "$(keyboard_navigation "$source_cid")" == true ]] \
     || e2e_fail "destroying the inactive saved target unexpectedly exited the dock mode"

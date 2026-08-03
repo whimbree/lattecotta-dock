@@ -6,8 +6,9 @@
 #
 # Plasma PanelView preserves the active application while a containment holds
 # AcceptingInputStatus. Drive the same contract through a deterministic test
-# applet: Passive restores, Active keeps the current focus, and the status and
-# keyboard-navigation reasons share one session without ending it early.
+# applet: external application focus ends without stealing focus back, Passive
+# restores, Active keeps the current focus, and the status and keyboard-
+# navigation reasons share one session without ending it early.
 set -uo pipefail
 
 source "${E2E_REPO:?run through scripts/run-e2e.sh}/tests/e2e/lib.sh"
@@ -158,6 +159,13 @@ wait_for_active_window() {
     return 1
 }
 
+activate_window_and_require() {
+    local id="$1" boundary="$2"
+    activate_window "$id"
+    wait_for_active_window "$id" \
+        || e2e_fail "$boundary application did not become active"
+}
+
 set_window_minimized() {
     local id="$1" minimized="$2"
     e2e_kwin_js 'for (const window of workspace.windowList()) {
@@ -202,7 +210,7 @@ send_key_and_require_delivery() {
     e2e_fail "$boundary did not deliver $key to client $id"
 }
 
-send_key_and_require_panel_delivery() {
+send_key_and_require_saved_client_unchanged() {
     local id="$1" key="$2" boundary="$3" before after
     before="$(window_caption "$id")"
     "$E2E_FAKEPOINTER" key "$key" || e2e_fail "$boundary could not inject $key"
@@ -263,7 +271,7 @@ views = json.load(sys.stdin)
 print(views[0]["containmentId"] if len(views) == 1 else "")')"
 [[ -n "$cid" ]] || e2e_fail "panel-focus fixture did not create exactly one view"
 
-read -r accepting_x target_y <<<"$({
+read -r accepting_x target_y approach_x approach_y <<<"$({
     e2e_json viewsData
     e2e_json viewAppletsData u "$cid"
 } | python3 -c "
@@ -276,23 +284,22 @@ origin_x = view['absoluteGeometry'][0] - view['localGeometry'][0]
 origin_y = view['absoluteGeometry'][1] - view['localGeometry'][1]
 x, y, width, height = applet['geometry']
 print(round(origin_x + x + width / 6),
-      round(origin_y + y + height / 2))
+      round(origin_y + y + height / 2),
+      view['screenGeometry'][0] + view['screenGeometry'][2] // 2,
+      view['screenGeometry'][1] + view['screenGeometry'][3] // 2)
 ")" || e2e_fail "could not resolve the AcceptingInput status region"
 
 click_accepting_input() {
+    "$E2E_FAKEPOINTER" move "$approach_x" "$approach_y" \
+        || e2e_fail "could not approach the AcceptingInput status region"
     "$E2E_FAKEPOINTER" click "$accepting_x" "$target_y" \
         || e2e_fail "could not click the AcceptingInput status region"
-    sleep 0.25
 }
 
 begin_accepting_input() {
     click_accepting_input
     wait_for_panel_focus_state "true false true" \
-        || e2e_fail "AcceptingInput did not acquire the panel focus session"
-    # The first click changes a currently focus-refusing surface to OnDemand.
-    # A second real click lets the compositor focus that already-OnDemand
-    # surface without adding a production-only activation request.
-    click_accepting_input
+        || e2e_fail "AcceptingInput did not acquire the panel focus session; state=$(panel_focus_state)"
 }
 
 set_status_from_focused_panel() {
@@ -309,22 +316,40 @@ set_status_from_focused_panel() {
 
 launch_client A
 client_a="$launched_client_id"
-activate_window "$client_a"
-send_key_and_require_delivery "$client_a" a "Passive baseline"
+launch_client B
+client_b="$launched_client_id"
+
+activate_window_and_require "$client_a" "external-focus baseline"
+send_key_and_require_delivery "$client_a" a "external-focus baseline"
 begin_accepting_input
-send_key_and_require_panel_delivery "$client_a" Right "AcceptingInput focus"
+send_key_and_require_saved_client_unchanged "$client_a" Right "external-focus grant"
+activate_window_and_require "$client_b" "external-focus winner"
+wait_for_panel_focus_state "false false false" \
+    || e2e_fail "external application focus did not discard the containment session"
+send_key_and_require_delivery "$client_b" b "external-focus winner"
+e2e_call setViewKeyboardNavigation ub "$cid" false >/dev/null \
+    || e2e_fail "non-stealing idempotent exit call failed"
+wait_for_panel_focus_state "false false false" \
+    || e2e_fail "idempotent exit changed the discarded containment session"
+send_key_and_require_delivery "$client_b" c "non-stealing idempotent exit"
+echo "ok: external application focus ended containment input without stealing focus back"
+
+activate_window_and_require "$client_a" "Passive baseline"
+send_key_and_require_delivery "$client_a" c "Passive baseline"
+begin_accepting_input
+send_key_and_require_saved_client_unchanged "$client_a" Right "AcceptingInput focus"
 set_status_from_focused_panel passive "Passive transition"
 wait_for_panel_focus_state "false false false" \
     || e2e_fail "Passive transition did not release the panel focus session"
 wait_for_active_window "$client_a" \
     || e2e_fail "Passive transition did not reactivate the saved application"
-send_key_and_require_delivery "$client_a" b "Passive restoration"
+send_key_and_require_delivery "$client_a" d "Passive restoration"
 echo "ok: AcceptingInput to Passive restored actual key delivery"
 
-activate_window "$client_a"
-send_key_and_require_delivery "$client_a" c "Active baseline"
+activate_window_and_require "$client_a" "Active baseline"
+send_key_and_require_delivery "$client_a" e "Active baseline"
 begin_accepting_input
-send_key_and_require_panel_delivery "$client_a" Left "Active focus precondition"
+send_key_and_require_saved_client_unchanged "$client_a" Left "Active focus precondition"
 set_window_minimized "$client_a" true
 set_status_from_focused_panel active "Active transition"
 wait_for_panel_focus_state "false false false" \
@@ -334,8 +359,8 @@ sleep 0.4
     || e2e_fail "AcceptingInput to Active reactivated the saved application"
 echo "ok: AcceptingInput to Active discarded the saved application target"
 
-activate_window "$client_a"
-send_key_and_require_delivery "$client_a" d "Passive coexistence baseline"
+activate_window_and_require "$client_a" "Passive coexistence baseline"
+send_key_and_require_delivery "$client_a" f "Passive coexistence baseline"
 begin_accepting_input
 set_keyboard_navigation true "Passive coexistence enter"
 set_status_from_focused_panel passive "Passive coexistence transition"
@@ -343,17 +368,17 @@ wait_for_panel_focus_state "false true true" \
     || e2e_fail "Passive ended the shared session before keyboard navigation"
 [[ "$(keyboard_navigation)" == true ]] \
     || e2e_fail "Passive status ended the independent keyboard-navigation reason"
-send_key_and_require_panel_delivery "$client_a" Down "Passive coexistence"
+send_key_and_require_saved_client_unchanged "$client_a" Down "Passive coexistence"
 set_keyboard_navigation false "Passive coexistence final exit"
 wait_for_panel_focus_state "false false false" \
     || e2e_fail "final keyboard exit did not release the shared session"
 wait_for_active_window "$client_a" \
     || e2e_fail "Passive coexistence exit did not reactivate the saved application"
-send_key_and_require_delivery "$client_a" e "Passive coexistence restoration"
+send_key_and_require_delivery "$client_a" g "Passive coexistence restoration"
 echo "ok: Passive preserved the shared target until keyboard navigation ended"
 
-activate_window "$client_a"
-send_key_and_require_delivery "$client_a" f "Active coexistence baseline"
+activate_window_and_require "$client_a" "Active coexistence baseline"
+send_key_and_require_delivery "$client_a" h "Active coexistence baseline"
 begin_accepting_input
 set_keyboard_navigation true "Active coexistence enter"
 set_window_minimized "$client_a" true
@@ -362,7 +387,7 @@ wait_for_panel_focus_state "false true true" \
     || e2e_fail "Active ended the shared session before keyboard navigation"
 [[ "$(keyboard_navigation)" == true ]] \
     || e2e_fail "Active status ended the independent keyboard-navigation reason"
-send_key_and_require_panel_delivery "$client_a" Up "Active coexistence"
+send_key_and_require_saved_client_unchanged "$client_a" Up "Active coexistence"
 set_keyboard_navigation false "Active coexistence final exit"
 wait_for_panel_focus_state "false false false" \
     || e2e_fail "final keyboard exit did not discard the shared session"
