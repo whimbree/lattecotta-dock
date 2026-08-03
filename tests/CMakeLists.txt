@@ -11,6 +11,16 @@ target_link_libraries(latte-test-notification-service PRIVATE
     Qt6::DBus
 )
 
+# Native Global Menu publisher for the nested panel-focus regression. It uses
+# Qt's real platform-theme integration and QMenu path so the test crosses the
+# Wayland appmenu address, com.canonical.dbusmenu, and transient focus boundary.
+add_executable(latte-test-panel-focus-menu-client
+    helpers/panelfocusmenuclient.cpp
+)
+target_link_libraries(latte-test-panel-focus-menu-client PRIVATE
+    Qt6::Widgets
+)
+
 # Behavioral tests drive the real compiled application code through the
 # lattedock-core object library - no mocks of Latte's own logic, per
 # docs/reference/TESTING.md. QT_QPA_PLATFORM=offscreen keeps them headless.

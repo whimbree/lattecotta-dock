@@ -108,6 +108,12 @@
           LATTE_VK_LAYER_PATH =
             "${pkgs.vulkan-validation-layers}/share/vulkan/explicit_layer.d";
 
+          # The Global Menu focus regression exposes exactly this platform
+          # theme plugin through a private QT_PLUGIN_PATH. A whole plugin root
+          # can shadow Latte's pinned Qt/KDE components and is not safe.
+          LATTE_PLASMA_PLATFORM_THEME_PLUGIN =
+            "${pkgs.kdePackages.plasma-integration}/lib/qt-6/plugins/platformthemes/KDEPlasmaPlatformTheme6.so";
+
           # The QML module search path for the headless QML checks and the
           # staged live runs (scripts/lib-qml-env.sh). mkShell does not run
           # the Qt env hooks, so nothing else exports these paths - and the
