@@ -97,7 +97,9 @@
     <method name="viewTemplatesData">
         <arg name="data" type="as" direction="out"/>
     </method>
-    <!-- JSON array of live view records. linkedEditHighlight is true only for
+    <!-- JSON array of live view records. containmentAcceptsInput reports the
+         containment focus reason, while ownsPanelFocusSession identifies the
+         sole view that saved the application focus target. linkedEditHighlight is true only for
          an inactive live linked member while another member of its direct-root
          relationship owns edit mode. It is a passive visibility cue and never
          implies editMode, a settings window, or a configuration canvas. -->

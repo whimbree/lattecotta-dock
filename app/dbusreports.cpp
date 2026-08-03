@@ -245,6 +245,8 @@ std::optional<ViewRecord> collectViewRecord(
     record.inConfigureAppletsMode = effectiveConfigureAppletsMode(record.editMode,
                                                                   globalConfigureAppletsMode);
     record.keyboardNavigation = view->keyboardNavigationIsActive();
+    record.containmentAcceptsInput = view->containmentAcceptsInput();
+    record.ownsPanelFocusSession = view->ownsPanelFocusSession();
 
     return record;
 }

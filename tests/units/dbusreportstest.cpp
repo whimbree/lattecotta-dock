@@ -511,6 +511,8 @@ void DbusReportsTest::recordSerialization()
     record.linkedEditHighlight = true;
     record.inConfigureAppletsMode = true;
     record.keyboardNavigation = true;
+    record.containmentAcceptsInput = true;
+    record.ownsPanelFocusSession = true;
 
     const QJsonObject json = serializeViewRecord(record);
 
@@ -546,6 +548,8 @@ void DbusReportsTest::recordSerialization()
     QCOMPARE(json.value(QStringLiteral("linkedEditHighlight")).toBool(), true);
     QCOMPARE(json.value(QStringLiteral("inConfigureAppletsMode")).toBool(), true);
     QCOMPARE(json.value(QStringLiteral("keyboardNavigation")).toBool(), true);
+    QCOMPARE(json.value(QStringLiteral("containmentAcceptsInput")).toBool(), true);
+    QCOMPARE(json.value(QStringLiteral("ownsPanelFocusSession")).toBool(), true);
 }
 
 void DbusReportsTest::viewRecordKeySet()
@@ -553,6 +557,7 @@ void DbusReportsTest::viewRecordKeySet()
     const QStringList expected{
         QStringLiteral("absoluteGeometry"), QStringLiteral("alignment"),
         QStringLiteral("appliedInputRegionRects"),
+        QStringLiteral("containmentAcceptsInput"),
         QStringLiteral("containmentId"), QStringLiteral("edge"),
         QStringLiteral("editMode"), QStringLiteral("inConfigureAppletsMode"),
         QStringLiteral("inStartup"), QStringLiteral("inputRegionRects"),
@@ -562,6 +567,7 @@ void DbusReportsTest::viewRecordKeySet()
         QStringLiteral("layout"), QStringLiteral("linkedEditHighlight"),
         QStringLiteral("localGeometry"),
         QStringLiteral("maskRect"), QStringLiteral("onPrimary"),
+        QStringLiteral("ownsPanelFocusSession"),
         QStringLiteral("publishedStruts"), QStringLiteral("screen"),
         QStringLiteral("screenGeometry"), QStringLiteral("strutsThickness"),
         QStringLiteral("type"), QStringLiteral("visibilityMode")};

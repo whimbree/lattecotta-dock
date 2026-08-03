@@ -57,9 +57,14 @@ sidebarOnDemand|sidebarAutoHide|normalWindow), `isHidden`,
 to `QWindow::setMask`, kept wide across a length shrink and collapsing
 back to `inputRegionRects` once the band settles - differs only
 mid-shrink), `editMode`, `linkedEditHighlight`, `inConfigureAppletsMode`,
-`keyboardNavigation`.
+`keyboardNavigation`, `containmentAcceptsInput`, `ownsPanelFocusSession`.
 `inConfigureAppletsMode` is effective for that view: it is true only when the
 view is in edit mode and the global rearrange toggle is on.
+`containmentAcceptsInput` reports the containment's current request for panel
+keyboard focus. `ownsPanelFocusSession` reports whether this view owns the
+process-wide session that saved the application focus target. The two values
+can differ while keyboard navigation remains active after containment focus
+ends.
 `linkedEditHighlight` is true only for an inactive live member of a linked-dock
 relationship while another member owns edit mode. The highlighted member is
 kept visible, but remains outside edit mode and does not own a settings window
@@ -533,7 +538,8 @@ call viewTemplatesData                 # as: name,id pairs flattened
 call setViewEditMode ub 1 true         # enter Edit Dock for view 1 (false = close chrome)
 call setViewVisibilityMode us 1 "dodgeActive"   # the settings combo; names as viewsData reports
 call setViewKeyboardNavigation ub 1 true        # enter/leave keyboard navigation (what Meta+Alt+D
-                                                # toggles); readback: viewsData keyboardNavigation.
+                                                # toggles); readback: viewsData keyboardNavigation and
+                                                # ownsPanelFocusSession.
                                                 # false is always safe: exits are idempotent
 call setViewConfiguringApplets ub 1 true        # enter/leave the applet-REARRANGE sub-mode (what the
                                                 # settings header rearrange button toggles); the ConfigOverlay
