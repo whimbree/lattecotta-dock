@@ -3211,8 +3211,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D267 - Panel interaction could strand keyboard focus on the dock
-- STATUS: FIXED on branch by `2393529c8`, `d568483e1`, `1bee58c79`,
-  `b9e1a8ead`, and `905d6b34b`; merge hashes pending.
+- STATUS: FIXED on `main` by `f4e370775`, `85ff12b91`, `7d39e3eea`,
+  `f0996ef2c`, and `1bbd33d72` (PR #149).
 - FOUND: 2026-08-02, panel applet and keyboard-navigation focus acceptance.
 - SYMPTOM: after a panel applet requested keyboard input, the panel could keep
   keyboard focus after the interaction ended. The previously active
