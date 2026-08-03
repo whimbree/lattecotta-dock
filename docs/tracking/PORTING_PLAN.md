@@ -5104,11 +5104,21 @@ prerequisites in the phases above are done.
       Give Corona one process-wide focus-return session, combine containment
       input and keyboard navigation as independent reasons, apply layer-shell
       interactivity on a committed surface, and restore only the application
-      saved by the view that owns the session. Cover native Global Menu QMenu,
-      competing views, destruction, explicit exit, external focus loss, and
-      coexistence in the nested vehicle.
+      saved by the view that owns the session. Cover the stock Global Menu
+      native QMenu remaining outside Latte's session, competing views,
+      destruction, explicit exit, external focus loss, and coexistence in the
+      nested vehicle.
       Commits: 2393529c8 (focus lifecycle), d568483e1 (D-Bus readback),
-      1bee58c79 (nested regressions); merge hashes pending
+      1bee58c79 (nested regressions), b9e1a8ead (reference attribution),
+      905d6b34b (review regressions); merge hashes pending
+- [ ] Resolve D268 (panel focus target may precede the committed layer
+      activation). Add a nested harness that can hold and release the
+      layer-shell keyboard-interactivity commit, prove the application active
+      when panel focus actually wins, then preserve that application as the
+      restore target. The ordinary A-to-B path does not reproduce this
+      post-status/pre-commit interval, so production ordering must not change
+      from code-reading alone.
+      Commits:
 - [ ] Report D258 (KF6 device enumeration blocks the GUI thread on an
       unavailable hard NFS mount) upstream to KDE Solid/KIO. Preserve the traced
       Folder View call chain and keep the exact-path diagnostic isolation out

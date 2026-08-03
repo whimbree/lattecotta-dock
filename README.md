@@ -229,8 +229,10 @@ phases, one commit-traceable checklist item per task. The coarse picture:
       the focus highlight, and Escape or the shortcut toggle returns input to
       the exact application that was active before navigation. An unrelated
       focus change cancels navigation without stealing focus back. Applet
-      containment focus uses the same single-owner handoff, so transient menus
-      can close without stranding keyboard focus on the panel. The core
+      containment focus uses the same single-owner handoff when an applet
+      explicitly requests input. The stock Global Menu native QMenu stays
+      outside that session and returns through Qt's transient-parent focus
+      path. The core
       surfaces carry Accessible
       semantics: tasks announce title, window count and badge values,
       applets their plasmoid title, the settings' custom controls and

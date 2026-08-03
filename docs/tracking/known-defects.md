@@ -3211,8 +3211,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: beta blocker.
 
 ### D267 - Panel interaction could strand keyboard focus on the dock
-- STATUS: FIXED on branch by `2393529c8`, `d568483e1`, and `1bee58c79`;
-  merge hashes pending.
+- STATUS: FIXED on branch by `2393529c8`, `d568483e1`, `1bee58c79`,
+  `b9e1a8ead`, and `905d6b34b`; merge hashes pending.
 - FOUND: 2026-08-02, panel applet and keyboard-navigation focus acceptance.
 - SYMPTOM: after a panel applet requested keyboard input, the panel could keep
   keyboard focus after the interaction ended. The previously active
@@ -3230,20 +3230,49 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FIX: Corona owns one process-wide focus session and the application target it
   saved. Each view combines containment input and keyboard navigation into two
   reasons for that one session. `PassiveStatus` restores the saved application,
-  `ActiveStatus` discards it, a transient QMenu does not cancel a
-  containment-only session, and a second view cannot replace or consume the
-  first view's target. Layer-shell policy changes now schedule a surface commit
-  before the first tab-focusable QML item receives focus. Destroyed views and
-  application windows clear their session state.
+  `ActiveStatus` discards it, and a second view cannot replace or consume the
+  first view's target. The stock Global Menu native QMenu remains outside this
+  containment focus session and returns through Qt's transient-parent focus
+  path. Layer-shell policy changes now schedule a surface commit before the
+  first tab-focusable QML item receives focus. Destroyed views and application
+  windows clear their session state.
 - EVIDENCE: the exact parent strands keyboard delivery after the real QML
   Escape path. Nested recipes 112 and 113 pass explicit, focus-loss,
   destruction, competing-view, containment-status, and two-reason coexistence
-  cases while asserting the live session owner through `viewsData`. Recipe 114
-  opens the stock Global Menu through a real pointer-driven QMenu, observes the
-  Wayland keyboard leave and enter, activates its child across
-  `com.canonical.dbusmenu`, and proves F12 reaches the exact application after
-  the menu closes.
+  cases while asserting the live session owner through `viewsData`. Recipe 113
+  also proves that application B ends containment input without a later
+  idempotent exit restoring application A. Recipe 114 opens the stock Global
+  Menu through a real pointer-driven QMenu, observes the Wayland keyboard leave
+  and enter, activates its child across `com.canonical.dbusmenu`, proves the
+  Latte session remains `false false` while the menu is open and after it
+  closes, and proves F12 reaches the exact application.
 - SEVERITY: beta blocker.
+
+### D268 - Panel focus target may precede the committed layer activation
+- STATUS: SUSPECTED (independent review code-reading; no deterministic driver
+  can currently hold the layer commit at the required boundary).
+- FOUND: 2026-08-02, D267 (panel interaction could strand keyboard focus on the
+  dock) independent review.
+- SYMPTOM: if application A is active when a containment requests input, then
+  application B becomes active after the status transition but before KWin
+  commits OnDemand interactivity and gives the panel keyboard focus, a later
+  Passive transition may restore A instead of B.
+- EVIDENCE: `View::statusChanged()` starts the Corona session and saves the
+  window-management backend's current application before it changes the
+  layer-shell policy and requests the surface commit. Wayland application
+  activation notifications are delivered through a queued connection. The
+  real nested A-to-B path did not reproduce the interval: B activation occurred
+  after the panel had acquired focus and correctly ended the session at
+  `false false false`. Synthetic seams that changed containment state could not
+  hold the layer commit, and queued delivery can collapse the intermediate
+  application transition before a test observes it.
+- FIX DIRECTION: preserve the application active at the instant the panel
+  actually wins keyboard focus, rather than merely clearing A when a later
+  application notification arrives. First add a nested harness that can hold
+  and release the layer-shell keyboard-interactivity commit, then drive A to
+  status request to B to committed panel activation deterministically. Do not
+  change production ordering without that proof.
+- SEVERITY: known issue.
 
 ### D265 - Linked docks gave no passive edit cue
 - STATUS: FIXED on `main` by `08d2c3985`, `0f78b52b8`, `fb340286d`,
