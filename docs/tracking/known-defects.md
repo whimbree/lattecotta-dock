@@ -3210,6 +3210,41 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   131-file QML compile gate pass.
 - SEVERITY: beta blocker.
 
+### D267 - Panel interaction could strand keyboard focus on the dock
+- STATUS: FIXED on branch by `2393529c8`, `d568483e1`, and `1bee58c79`;
+  merge hashes pending.
+- FOUND: 2026-08-02, panel applet and keyboard-navigation focus acceptance.
+- SYMPTOM: after a panel applet requested keyboard input, the panel could keep
+  keyboard focus after the interaction ended. The previously active
+  application's Global Menu then disappeared until that application was
+  activated again. Explicit Latte keyboard navigation had the same missing
+  restoration path.
+- ROOT: Latte changed the layer-shell keyboard-interactivity policy but did not
+  schedule the surface commit that applies it, did not focus the first eligible
+  QML item for `AcceptingInputStatus`, and did not save or restore the active
+  application. Containment input and Latte keyboard navigation also wrote the
+  policy independently, so one reason could end the other reason's lifecycle.
+  A generic popup-coordinator hypothesis was disproved: the controlled stock
+  Global Menu's native QMenu path already returned keyboard focus on the exact
+  parent build.
+- FIX: Corona owns one process-wide focus session and the application target it
+  saved. Each view combines containment input and keyboard navigation into two
+  reasons for that one session. `PassiveStatus` restores the saved application,
+  `ActiveStatus` discards it, a transient QMenu does not cancel a
+  containment-only session, and a second view cannot replace or consume the
+  first view's target. Layer-shell policy changes now schedule a surface commit
+  before the first tab-focusable QML item receives focus. Destroyed views and
+  application windows clear their session state.
+- EVIDENCE: the exact parent strands keyboard delivery after the real QML
+  Escape path. Nested recipes 112 and 113 pass explicit, focus-loss,
+  destruction, competing-view, containment-status, and two-reason coexistence
+  cases while asserting the live session owner through `viewsData`. Recipe 114
+  opens the stock Global Menu through a real pointer-driven QMenu, observes the
+  Wayland keyboard leave and enter, activates its child across
+  `com.canonical.dbusmenu`, and proves F12 reaches the exact application after
+  the menu closes.
+- SEVERITY: beta blocker.
+
 ### D265 - Linked docks gave no passive edit cue
 - STATUS: FIXED on `main` by `08d2c3985`, `0f78b52b8`, `fb340286d`,
   `23e30c4f0`, and `141fd0b5e` (PR #145).
