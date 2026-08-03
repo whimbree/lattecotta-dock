@@ -14,9 +14,11 @@
 #include "plasma/quick/configview.h"
 #include "layouts/storage.h"
 #include "view/panelshadows_p.h"
+#include "wm/windowid.h"
 
 // Qt
 #include <QObject>
+#include <QPointer>
 #include <QTimer>
 
 // Plasma
@@ -452,6 +454,15 @@ private:
     Layout::GenericLayout *layout(QString name) const;
     CentralLayout *centralLayout(QString name) const;
 
+    //! Containment AcceptingInput status and keyboard navigation temporarily
+    //! give a layer surface keyboard focus. Corona owns one process-wide
+    //! session so a second view cannot replace or consume the application
+    //! target saved by the view that acquired focus.
+    [[nodiscard]] bool beginPanelFocusSession(View *owner);
+    void forgetPanelFocusRestoreTarget(View *owner);
+    void restorePanelFocusSession(View *owner);
+    void discardPanelFocusSession(View *owner);
+
 private:
 
     bool m_activitiesStarting{true};
@@ -497,6 +508,9 @@ private:
     PlasmaExtended::Theme *m_themeExtended{nullptr};
 
     WindowSystem::AbstractWindowInterface *m_wm{nullptr};
+    QPointer<View> m_panelFocusOwner;
+    QMetaObject::Connection m_panelFocusOwnerDestroyedConnection;
+    WindowSystem::WindowId m_panelFocusRestoreTarget;
 
     PanelShadows *m_dialogShadows{nullptr};
 
@@ -505,6 +519,7 @@ private:
     friend class GlobalShortcuts;
     friend class Layouts::Manager;
     friend class Layouts::Storage;
+    friend class View;
 };
 
 }

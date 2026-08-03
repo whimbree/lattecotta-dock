@@ -214,6 +214,8 @@ public:
     //! upstream Qt5 Latte had no such mode; with the mode off the window
     //! stays focus-refusing exactly as before.
     bool keyboardNavigationIsActive() const;
+    [[nodiscard]] bool containmentAcceptsInput() const;
+    [[nodiscard]] bool ownsPanelFocusSession() const;
     Q_INVOKABLE void enterKeyboardNavigation();
     Q_INVOKABLE void exitKeyboardNavigation();
     Q_INVOKABLE void toggleKeyboardNavigation();
@@ -484,6 +486,12 @@ private Q_SLOTS:
     void saveConfig();
 
 private:
+    enum class PanelFocusSessionDisposition
+    {
+        RestoreApplication,
+        KeepCurrentApplication,
+    };
+
     enum class TemplateImportRelationship
     {
         Preserve,
@@ -510,6 +518,12 @@ private:
     //! keyboard interactivity) computed from the containment status and
     //! the keyboard-navigation mode; the single writer for both knobs
     void applyKeyboardFocusPolicy(bool takesFocus);
+    [[nodiscard]] bool panelFocusIsRequested() const;
+    [[nodiscard]] bool ensurePanelFocusSessionStarted();
+    void endPanelFocusSession(PanelFocusSessionDisposition disposition);
+    void applyPanelFocusPolicy();
+    void cancelPanelFocusSessionOnFocusLoss();
+    void leaveKeyboardNavigation();
 
     void setContainsDrag(bool contains);
     void setLinkedEditHighlight(bool highlighted);
@@ -526,6 +540,8 @@ private:
     bool m_inDelete{false};
     bool m_isPreferredForShortcuts{false};
     bool m_keyboardNavigationIsActive{false};
+    bool m_containmentAcceptsInput{false};
+    bool m_ownsPanelFocusSession{false};
     bool m_linkedEditHighlight{false};
     quint64 m_layerShellConfigureRequestRevision{0};
     bool m_onPrimary{true};

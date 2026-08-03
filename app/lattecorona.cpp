@@ -140,6 +140,14 @@ Corona::Corona(bool defaultLayoutOnStartup, QString layoutNameOnStartUp, QString
         qWarning() << "Latte is not running under wayland; window tracking will not work";
     }
     m_wm = new WindowSystem::WaylandInterface(this);
+    connect(m_wm,
+            &WindowSystem::AbstractWindowInterface::windowRemoved,
+            this,
+            [this](const WindowSystem::WindowId removedWindow) {
+                if (removedWindow == m_panelFocusRestoreTarget) {
+                    m_panelFocusRestoreTarget = {};
+                }
+            });
 
     setupWaylandIntegration();
 
@@ -587,6 +595,87 @@ ViewSettingsFactory *Corona::viewSettingsFactory() const
 WindowSystem::AbstractWindowInterface *Corona::wm() const
 {
     return m_wm;
+}
+
+bool Corona::beginPanelFocusSession(View *owner)
+{
+    if (!owner) {
+        qWarning() << "corona: panel focus session requires an owning view, refusing";
+        return false;
+    }
+
+    if (m_panelFocusOwner) {
+        if (m_panelFocusOwner == owner) {
+            return true;
+        }
+
+        qWarning() << "corona: panel focus session is already owned by view"
+                   << m_panelFocusOwner.data()
+                   << "; refusing view" << owner;
+        return false;
+    }
+
+    Q_ASSERT(!m_panelFocusOwnerDestroyedConnection);
+    Q_ASSERT(m_panelFocusRestoreTarget.isEmpty());
+
+    m_panelFocusOwner = owner;
+    m_panelFocusOwnerDestroyedConnection = connect(
+        owner,
+        &QObject::destroyed,
+        this,
+        [this]() {
+            m_panelFocusOwner.clear();
+            m_panelFocusRestoreTarget = {};
+            m_panelFocusOwnerDestroyedConnection = {};
+        });
+
+    m_panelFocusRestoreTarget = m_wm->activeWindow();
+    if (m_panelFocusRestoreTarget.isEmpty()) {
+        qWarning() << "corona: panel focus session could not save focus because no application window is active";
+    }
+
+    return true;
+}
+
+void Corona::forgetPanelFocusRestoreTarget(View *owner)
+{
+    if (!owner || m_panelFocusOwner != owner) {
+        qWarning() << "corona: panel focus target invalidation requested by a view that does not own the session, refusing";
+        return;
+    }
+
+    m_panelFocusRestoreTarget = {};
+}
+
+void Corona::restorePanelFocusSession(View *owner)
+{
+    if (!owner || m_panelFocusOwner != owner) {
+        qWarning() << "corona: panel focus restore requested by a view that does not own the session, refusing";
+        return;
+    }
+
+    const WindowSystem::WindowId target = m_panelFocusRestoreTarget;
+    disconnect(m_panelFocusOwnerDestroyedConnection);
+    m_panelFocusOwnerDestroyedConnection = {};
+    m_panelFocusOwner.clear();
+    m_panelFocusRestoreTarget = {};
+
+    if (!target.isEmpty()) {
+        m_wm->requestActivate(target);
+    }
+}
+
+void Corona::discardPanelFocusSession(View *owner)
+{
+    if (!owner || m_panelFocusOwner != owner) {
+        qWarning() << "corona: panel focus discard requested by a view that does not own the session, refusing";
+        return;
+    }
+
+    disconnect(m_panelFocusOwnerDestroyedConnection);
+    m_panelFocusOwnerDestroyedConnection = {};
+    m_panelFocusOwner.clear();
+    m_panelFocusRestoreTarget = {};
 }
 
 Indicator::Factory *Corona::indicatorFactory() const
