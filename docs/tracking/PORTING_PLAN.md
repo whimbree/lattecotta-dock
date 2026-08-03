@@ -5100,6 +5100,15 @@ prerequisites in the phases above are done.
       the panel's Kirigami roles to inline full representations while retaining
       explicit applet and splitter exemptions and leaving fixed pixels intact.
       Commits: fa36143ad
+- [x] Fix D267 (panel interaction could strand keyboard focus on the dock).
+      Give Corona one process-wide focus-return session, combine containment
+      input and keyboard navigation as independent reasons, apply layer-shell
+      interactivity on a committed surface, and restore only the application
+      saved by the view that owns the session. Cover native Global Menu QMenu,
+      competing views, destruction, explicit exit, external focus loss, and
+      coexistence in the nested vehicle.
+      Commits: 2393529c8 (focus lifecycle), d568483e1 (D-Bus readback),
+      1bee58c79 (nested regressions); merge hashes pending
 - [ ] Report D258 (KF6 device enumeration blocks the GUI thread on an
       unavailable hard NFS mount) upstream to KDE Solid/KIO. Preserve the traced
       Folder View call chain and keep the exact-path diagnostic isolation out

@@ -226,8 +226,12 @@ phases, one commit-traceable checklist item per task. The coarse picture:
       otherwise focus-refusing dock window take keyboard input -
       arrow-key traversal over the same entry space the Meta+number
       shortcuts address, Enter activates, the item indicators double as
-      the focus highlight, and Escape or any focus loss returns the
-      window to focus-refusing - and the core surfaces carry Accessible
+      the focus highlight, and Escape or the shortcut toggle returns input to
+      the exact application that was active before navigation. An unrelated
+      focus change cancels navigation without stealing focus back. Applet
+      containment focus uses the same single-owner handoff, so transient menus
+      can close without stranding keyboard focus on the panel. The core
+      surfaces carry Accessible
       semantics: tasks announce title, window count and badge values,
       applets their plasmoid title, the settings' custom controls and
       edit-mode chrome their visible labels, and every press action

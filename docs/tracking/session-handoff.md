@@ -3,6 +3,41 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-08-02.
 
+## 2026-08-02: Panel interaction restores application keyboard focus
+
+D267 (panel interaction could strand keyboard focus on the dock) was a missing
+focus lifecycle rather than a Global Menu-specific defect. Latte changed its
+Qt window flag and layer-shell keyboard-interactivity policy, but it did not
+commit the layer-shell change, focus the first eligible QML item, or save and
+restore the application that had focus before the panel interaction. The
+containment status and Latte keyboard navigation also controlled the same
+policy without a shared owner.
+
+Corona now owns one process-wide focus-return session. A view combines
+containment input and keyboard navigation as independent reasons for that
+session. `PassiveStatus` restores the saved application, `ActiveStatus`
+invalidates it, external focus loss does not steal focus back, and another view
+cannot replace or consume the saved target. View and application destruction
+clear the corresponding state. The containment path follows Plasma PanelView's
+status lifecycle at plasma-workspace commit
+`4c3ace3dfc7b06b3107b52b6e09508be14e73e8a`; Latte keyboard navigation is the
+additional reason layered onto that model.
+
+Branch commits `2393529c8` and `d568483e1` carry the lifecycle and D-Bus
+readback. Commit `1bee58c79` carries the nested regression family. Merge hashes
+remain pending until GitHub rewrites the branch through the required rebase
+merge.
+
+`viewsData` reports `containmentAcceptsInput` and `ownsPanelFocusSession` beside
+`keyboardNavigation`. Nested recipes 112 and 113 cover real QML Escape, D-Bus
+exit, competing views, destruction, external focus loss, Passive versus Active
+status, and coexistence. Recipe 114 is the exact stock Global Menu acceptance
+boundary: a real pointer-opened QMenu takes keyboard focus, activates a child
+across `com.canonical.dbusmenu`, closes, returns the Wayland keyboard to the
+same application, and F12 reaches that application. That path was already green
+on the exact parent, which disproved the earlier generic popup-coordinator
+hypothesis and kept the fix at the confirmed panel-focus boundary.
+
 ## 2026-08-02: Inline applets inherit the panel palette
 
 D266 (inline Global Menu text ignored a light panel palette) came from the
