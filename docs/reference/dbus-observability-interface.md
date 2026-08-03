@@ -68,7 +68,8 @@ Landed before or during the 2026-07-16 stabilization session:
     "maskRect": [x, y, w, h], "inputRegionRects": [[...], ...],
     "appliedInputRegionRects": [[...], ...],
     "editMode": false, "linkedEditHighlight": false,
-    "inConfigureAppletsMode": false
+    "inConfigureAppletsMode": false, "keyboardNavigation": false,
+    "containmentAcceptsInput": false, "ownsPanelFocusSession": false
   }
   ```
   This single call replaces the pixel-peeping used across the whole
@@ -889,6 +890,12 @@ the in-process KConfigPropertyMap caches).
   keyboard focus. The exit paths are asserted through this field
   (a stuck true means a dock stuck focusable - the exact defect the
   mode's design guards against).
+- viewsData also carries containmentAcceptsInput and ownsPanelFocusSession
+  (2026-08-02, D267 panel interaction could strand keyboard focus on the
+  dock). The first is the containment focus reason. The second identifies the
+  sole view that owns the process-wide saved-application target. They can
+  differ while keyboard navigation keeps the shared session alive after the
+  containment reason ends.
 - screensData (2026-07-18, C-I2/P1): the ScreenPool id<->connector
   mapping as its own read, so the multi-output vehicle DISCOVERS which
   connector is the secondary (isActive && !isPrimary) rather than

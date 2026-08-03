@@ -345,6 +345,8 @@ struct ViewRecord {
     bool linkedEditHighlight{false};
     bool inConfigureAppletsMode{false};
     bool keyboardNavigation{false};
+    bool containmentAcceptsInput{false};
+    bool ownsPanelFocusSession{false};
 };
 
 //! Applet rearrangement is process-global only while a particular dock is in
@@ -1553,6 +1555,8 @@ inline QJsonObject serializeViewRecord(const ViewRecord &record)
     json[QStringLiteral("linkedEditHighlight")] = record.linkedEditHighlight;
     json[QStringLiteral("inConfigureAppletsMode")] = record.inConfigureAppletsMode;
     json[QStringLiteral("keyboardNavigation")] = record.keyboardNavigation;
+    json[QStringLiteral("containmentAcceptsInput")] = record.containmentAcceptsInput;
+    json[QStringLiteral("ownsPanelFocusSession")] = record.ownsPanelFocusSession;
 
     return json;
 }
