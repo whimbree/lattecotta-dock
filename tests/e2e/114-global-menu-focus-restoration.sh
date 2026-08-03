@@ -6,7 +6,9 @@
 #
 # Open the imported Global Menu through its real QMenu path, activate a real
 # com.canonical.dbusmenu action, and require focus to return to the exact
-# application that owned it before the panel's transient menu took focus.
+# application that owned it before the panel's transient menu took focus. The
+# stock QMenu path remains outside Latte's containment focus session and lets
+# Qt restore its transient-parent focus directly.
 set -uo pipefail
 
 source "${E2E_REPO:?run through scripts/run-e2e.sh}/tests/e2e/lib.sh"
@@ -191,6 +193,16 @@ views = [view for view in json.load(sys.stdin)
 print(views[0]["containmentId"] if views else "")')"
 [[ -n "$cid" ]] || e2e_fail "Global Menu fixture has no horizontal panel"
 
+panel_focus_state() {
+    e2e_json viewsData | python3 -c 'import json,sys
+cid = int(sys.argv[1])
+view = next(view for view in json.load(sys.stdin)
+            if view["containmentId"] == cid)
+print("%s %s" % (
+    str(view["containmentAcceptsInput"]).lower(),
+    str(view["ownsPanelFocusSession"]).lower()))' "$cid"
+}
+
 read -r click_x click_y <<<"$({
     e2e_json viewsData
     e2e_json viewAppletsData u "$cid"
@@ -225,6 +237,8 @@ for _ in $(seq 1 80); do
 done
 (( $(wayland_keyboard_event_count leave) > keyboard_leaves_before )) \
     || e2e_fail "Global Menu QMenu never took keyboard focus from the application"
+[[ "$(panel_focus_state)" == "false false" ]] \
+    || e2e_fail "stock Global Menu QMenu unexpectedly entered Latte's panel focus session"
 
 # The top-panel fixture opens the imported QMenu directly below its File
 # delegate. Click the only child action through that real popup instead of
@@ -255,6 +269,8 @@ done
     || e2e_fail "Global Menu close did not return keyboard focus to the application"
 [[ "$(active_window_id)" == "$client_window_id" ]] \
     || e2e_fail "Global Menu close did not restore the exact application"
+[[ "$(panel_focus_state)" == "false false" ]] \
+    || e2e_fail "Global Menu close left Latte's panel focus session active"
 
 "$E2E_FAKEPOINTER" key F12 \
     || e2e_fail "could not inject the post-menu focus probe"
