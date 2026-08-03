@@ -24,9 +24,10 @@ status lifecycle at plasma-workspace commit
 additional reason layered onto that model.
 
 Branch commits `2393529c8` and `d568483e1` carry the lifecycle and D-Bus
-readback. Commit `1bee58c79` carries the nested regression family. Merge hashes
-remain pending until GitHub rewrites the branch through the required rebase
-merge.
+readback. Commit `1bee58c79` carries the nested regression family. Commit
+`b9e1a8ead` completes the Plasma source attribution, and `905d6b34b` carries the
+independent-review regressions. Merge hashes remain pending until GitHub
+rewrites the branch through the required rebase merge.
 
 `viewsData` reports `containmentAcceptsInput` and `ownsPanelFocusSession` beside
 `keyboardNavigation`. Nested recipes 112 and 113 cover real QML Escape, D-Bus
@@ -34,9 +35,23 @@ exit, competing views, destruction, external focus loss, Passive versus Active
 status, and coexistence. Recipe 114 is the exact stock Global Menu acceptance
 boundary: a real pointer-opened QMenu takes keyboard focus, activates a child
 across `com.canonical.dbusmenu`, closes, returns the Wayland keyboard to the
-same application, and F12 reaches that application. That path was already green
-on the exact parent, which disproved the earlier generic popup-coordinator
-hypothesis and kept the fix at the confirmed panel-focus boundary.
+same application, and F12 reaches that application. D-Bus remains
+`containmentAcceptsInput=false` and `ownsPanelFocusSession=false` both while the
+menu is open and after it closes. The stock native QMenu therefore remains
+outside Latte's session and returns through Qt's transient-parent focus path.
+That path was already green on the exact parent, which disproved the earlier
+generic popup-coordinator hypothesis and kept the fix at the confirmed
+panel-focus boundary.
+
+D268 (panel focus target may precede the committed layer activation) remains
+SUSPECTED from independent review. Corona saves application A when the
+containment status changes, before OnDemand interactivity reaches a committed
+layer surface. A theoretical A-to-B transition inside that interval should
+preserve B when panel focus actually wins. The ordinary nested path cannot hold
+the commit: B activation occurs after panel focus and correctly ends the
+session at `false false false`. A future nested seam must hold and release the
+layer commit before production ordering changes; queued window-management
+delivery can otherwise collapse the intermediate transition.
 
 ## 2026-08-02: Inline applets inherit the panel palette
 
