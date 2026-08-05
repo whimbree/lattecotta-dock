@@ -304,7 +304,7 @@ def assemble_dock_env(repo: Path, base_env: Mapping[str, str], args: Sequence[st
     # Latte's own staged C++ plugins are handed over as LATTE_EXTRA_PLUGIN_PATHS
     # (main.cpp feeds it into the process-local library paths), never as
     # QT_PLUGIN_PATH: the dock forwards its whole env to every app it launches, and
-    # a child of a different Qt build dlopening our pinned plugins is an ABI
+    # a child of a different Qt build dlopening the pinned plugins is an ABI
     # mismatch. The kwindowsystem leaf is appended when present.
     extra_plugin_paths = f"{stage}/lib/plugins"
     kwindowsystem = resolve_kwindowsystem_plugin_dir(build)
