@@ -387,6 +387,24 @@ def _pid_alive(pid: int) -> bool:
     return True
 
 
+def _reap_if_child(pid: int) -> bool:
+    """Reap ``pid`` when it is this process's exited child; True if reaped.
+
+    D275 (a recipe-started dock stays a zombie its parent never reaps):
+    bash auto-reaps background children, so ``kill -0`` there meant "still
+    running"; Python does not, so a SIGTERM'd child dock answers kill(0)
+    as a zombie forever and a liveness poll never sees it exit. The
+    waitpid(WNOHANG) probe reaps an exited child and reports it; a pid
+    that is not this process's child (the runner-started dock) raises
+    ChildProcessError and the kill(0) probe stays authoritative.
+    """
+    try:
+        reaped, _status = os.waitpid(pid, os.WNOHANG)
+    except ChildProcessError:
+        return False
+    return reaped == pid
+
+
 def dock_start(timeout: int = 60) -> bool:
     """e2e_dock_start: launch the staged dock into the vehicle, detached, and wait.
 
@@ -434,7 +452,7 @@ def dock_stop(timeout: int = 25) -> bool:
     with suppress(ProcessLookupError):
         os.kill(pid, 15)
     for _ in range(timeout * 5):
-        if not _pid_alive(pid):
+        if _reap_if_child(pid) or not _pid_alive(pid):
             return True
         time.sleep(0.2)
     print(f"dock (pid {pid}) survived SIGTERM for {timeout}s", file=sys.stderr, flush=True)

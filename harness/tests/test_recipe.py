@@ -13,6 +13,10 @@ seam and it is a thin argv wrapper.
 """
 
 import os
+import subprocess
+import sys
+import time
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -355,3 +359,19 @@ def test_env_module_leaves_no_state() -> None:
     # A sanity guard that the module reads os.environ live (not at import), so
     # monkeypatched env in the tests above is honored.
     assert "E2E_MODE" not in os.environ or isinstance(os.environ["E2E_MODE"], str)
+
+
+def test_dock_stop_reaps_a_child_dock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # D275 (a recipe-started dock stays a zombie its parent never reaps):
+    # dock_stop's kill(0) probe read a SIGTERM'd child as alive for the full
+    # timeout and returned a false shutdown failure. The reaping probe must
+    # see the exit promptly.
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    pidfile = tmp_path / "dock.pid"
+    pidfile.write_text(f"{child.pid}\n")
+    monkeypatch.setenv("E2E_MODE", "nested")
+    monkeypatch.setenv("E2E_DOCK_PIDFILE", str(pidfile))
+    started = time.monotonic()
+    assert recipe.dock_stop(timeout=20) is True
+    assert time.monotonic() - started < 5, "the zombie stalled the stop"
+    assert child.poll() is not None  # reaped, not left a zombie
