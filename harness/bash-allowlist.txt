@@ -81,7 +81,6 @@ tests/e2e/092-task-reorder.sh
 tests/e2e/093-widget-explorer-dnd.sh
 tests/e2e/100-applet-reorder.sh
 tests/e2e/110-colorizer-applet-contrast.sh
-tests/e2e/110-context-menu-normal-mode.sh
 tests/e2e/111-colorizer-content-policy.sh
 tests/e2e/112-keyboard-navigation-focus-restoration.sh
 tests/e2e/113-containment-focus-status-restoration.sh
