@@ -63,7 +63,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     try:
         env = resolve_qml_env(paths.root, os.environ)
     except MissingModulePathError:
-        refuse_without_devshell()
+        refuse_without_devshell(TOOL)
 
     # Reuse the compile gate's staging when it already ran this build; stage
     # otherwise. The compile gate stages unconditionally, so in the ctest

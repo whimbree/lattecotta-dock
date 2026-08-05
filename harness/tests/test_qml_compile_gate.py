@@ -26,7 +26,11 @@ from latte_harness.qml_compile_gate import (
     resolve_qml_env,
     scan_package_qml,
 )
-from latte_harness.qmlenv import MissingModulePathError, build_setup_script
+from latte_harness.qmlenv import (
+    NIXPKGS_SEED_VARS,
+    MissingModulePathError,
+    build_setup_script,
+)
 
 _KIRIGAMI = "/nix/store/cccc-kirigami-6.28.0/lib/qt-6/qml"
 _PACKAGED = "/nix/store/aaaa-latte-dock-0.11/lib/qt-6/qml"
@@ -274,13 +278,12 @@ def test_resolve_env_matches_build_setup_script(tmp_path: Path) -> None:
     module = tmp_path / "mod"
     module.mkdir()
     repo = tmp_path / "repo"
-    # Set BOTH seed vars so the drift net covers each: if qmlenv stops
-    # stripping one (or the local mirror falls out of sync), the export it
-    # emits will not match what child_env applied.
+    # Set EVERY canonical seed var (the public NIXPKGS_SEED_VARS list) so
+    # the net covers additions too: a var qmlenv starts stripping that the
+    # gate's child_env does not apply fails the per-var comparison below.
     raw = _env(
         module,
-        NIXPKGS_QT6_QML_IMPORT_PATH=f"{_KIRIGAMI}:{_PACKAGED}",
-        NIXPKGS_QML_SEARCH_PATHS=f"{_PACKAGED}:{_KIRIGAMI}",
+        **dict.fromkeys(NIXPKGS_SEED_VARS, f"{_KIRIGAMI}:{_PACKAGED}"),
     )
 
     env = resolve_qml_env(repo, raw)
@@ -292,7 +295,10 @@ def test_resolve_env_matches_build_setup_script(tmp_path: Path) -> None:
     assert list(env.imports) == parsed.imports
     # The env mutations the bridge produced match what child_env applied.
     assert parsed.unset == ["QML2_IMPORT_PATH", "QML_IMPORT_PATH"]
-    assert parsed.exports  # both seed vars produced an export line
+    # Every canonical seed var produced an export line, and each matches
+    # what child_env applied - additions to NIXPKGS_SEED_VARS are covered
+    # because raw sets the whole list.
+    assert set(parsed.exports) == set(NIXPKGS_SEED_VARS)
     for name, value in parsed.exports.items():
         assert env.child_env[name] == value
 
