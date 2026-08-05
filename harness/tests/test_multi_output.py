@@ -419,3 +419,33 @@ def test_assert_pin_resolved_accepts_the_secondary() -> None:
 def test_assert_pin_resolved_refusals(screens: list[Screen], message: str) -> None:
     with pytest.raises(MultiOutputError, match=message):
         multi_output._assert_pin_resolved(screens, 10, "DP-2")  # pyright: ignore[reportPrivateUsage]
+
+
+# ---- the topology-mutation safety gate (env-only refusal branches) ---------
+#
+# The gate is the primary barrier against kscreen-doctor reaching the real
+# session's outputs; these drive its first three refusals deterministically
+# (each branch raises before any socket or busctl touch, so no compositor is
+# needed).
+
+
+def test_mutation_gate_refuses_outside_nested_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("E2E_MODE", raising=False)
+    with pytest.raises(MultiOutputError, match="nested-only"):
+        multi_output._require_topology_mutation("gatetest")  # pyright: ignore[reportPrivateUsage]
+
+
+def test_mutation_gate_refuses_without_two_outputs(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("E2E_MODE", "nested")
+    monkeypatch.delenv("E2E_OUTPUT_COUNT", raising=False)
+    with pytest.raises(MultiOutputError, match="E2E_OUTPUT_COUNT=2"):
+        multi_output._require_topology_mutation("gatetest")  # pyright: ignore[reportPrivateUsage]
+
+
+def test_mutation_gate_refuses_foreign_runtime_dir(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("E2E_MODE", "nested")
+    monkeypatch.setenv("E2E_OUTPUT_COUNT", "2")
+    monkeypatch.setenv("E2E_RT", "/tmp/nested-rt")
+    monkeypatch.setenv("XDG_RUNTIME_DIR", "/run/user/1000")
+    with pytest.raises(MultiOutputError, match="private E2E_RT"):
+        multi_output._require_topology_mutation("gatetest")  # pyright: ignore[reportPrivateUsage]

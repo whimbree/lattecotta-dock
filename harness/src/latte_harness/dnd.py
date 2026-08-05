@@ -121,8 +121,12 @@ def _last_field(reply: str) -> str:
 
 
 def _is_int(text: str) -> bool:
-    """The bash ``[[ "$m" =~ ^-?[0-9]+$ ]]`` guard: a signed integer literal."""
-    return bool(text) and (text[1:] if text[0] in "+-" else text).isdigit()
+    """The bash ``[[ "$m" =~ ^-?[0-9]+$ ]]`` guard: a signed integer literal.
+
+    A leading ``+`` is rejected exactly as the bash regex rejects it; busctl
+    never emits one, and the guard stays byte-faithful rather than tolerant.
+    """
+    return bool(text) and (text[1:] if text[0] == "-" else text).isdigit()
 
 
 def drop_marker(cid: int) -> str:
