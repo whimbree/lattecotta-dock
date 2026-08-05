@@ -28,6 +28,8 @@
 #   NESTED_RT        private XDG_RUNTIME_DIR of the session
 #   NESTED_SOCK      the wayland socket name (inside $NESTED_RT)
 #   NESTED_KWIN_PID  the session leader pid (== the process-group id)
+#   NESTED_KWIN_STARTTIME  the leader's /proc starttime, the teardown identity
+#                    gate's input (bridge-owned; no consumer reads it)
 #   NESTED_KWIN_LOG  kwin's captured stdout+stderr ($NESTED_RT/kwin.log)
 #   NESTED_BUS       the session's private D-Bus address
 #
@@ -55,7 +57,8 @@ nested_kwin_prepare() {
 # nested_kwin_start <width> <height> <socket> [output-count]: bring up the
 # virtual compositor inside its own dbus-run-session and wait for its socket.
 # Returns non-zero (after the module prints kwin's log) if the socket never
-# appears. Sets NESTED_SOCK, NESTED_KWIN_PID and NESTED_BUS on success.
+# appears. Sets NESTED_SOCK, NESTED_KWIN_PID, NESTED_KWIN_STARTTIME and
+# NESTED_BUS on success.
 nested_kwin_start() {
     local width="$1" height="$2" socket="$3" outputs="${4:-1}"
     local -a _env_args=()
@@ -77,5 +80,6 @@ nested_kwin_start() {
 # Idempotent: a dead group and a missing dir succeed quietly.
 nested_kwin_cleanup() {
     uv run --locked --project "$_NESTED_KWIN_HARNESS" python -m latte_harness.vehicle stop \
-        --runtime-dir "${NESTED_RT:-}" --pgid "${NESTED_KWIN_PID:-}"
+        --runtime-dir "${NESTED_RT:-}" --pgid "${NESTED_KWIN_PID:-}" \
+        --starttime "${NESTED_KWIN_STARTTIME:-}"
 }

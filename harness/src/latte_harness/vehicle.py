@@ -135,6 +135,7 @@ class VehicleState(BaseModel):
     phase: str
     socket: str | None = None
     pgid: int | None = None
+    leader_starttime: str | None = None
     bus: str | None = None
     width: int | None = None
     height: int | None = None
@@ -150,6 +151,7 @@ class VehicleSession:
     pgid: int
     bus: str
     log: Path
+    leader_starttime: str | None = None
 
 
 class CompositorStartError(RuntimeError):
@@ -240,6 +242,29 @@ def parse_proc_state(stat_contents: str) -> str | None:
     return tokens[0] if tokens else None
 
 
+def parse_proc_starttime(stat_contents: str) -> str | None:
+    """Field 22 (starttime, clock ticks since boot) from ``/proc/<pid>/stat``.
+
+    A (pid, starttime) pair uniquely names one process incarnation: a recycled
+    pid never reproduces the original's starttime. Parsed after the last
+    ``") "`` like parse_proc_state (the comm field can hold spaces and parens);
+    starttime is the 20th token of the tail (field 22 overall).
+    """
+    _, sep, tail = stat_contents.rpartition(") ")
+    if not sep:
+        return None
+    tokens = tail.split()
+    return tokens[19] if len(tokens) >= 20 else None
+
+
+def leader_starttime(pid: int) -> str | None:
+    """The live starttime of ``pid``, or None when it has no /proc entry."""
+    try:
+        return parse_proc_starttime(Path(f"/proc/{pid}/stat").read_text())
+    except OSError:
+        return None
+
+
 # ---- runtime-dir lifecycle -------------------------------------------------
 
 
@@ -279,8 +304,8 @@ def _spawn_compositor(
     outputs: int,
     extra_env: Sequence[str],
     base_env: Mapping[str, str],
-) -> int:
-    """Launch the compositor session group; return its pgid (== leader pid).
+) -> tuple[int, str | None]:
+    """Launch the compositor session group; return (pgid, leader starttime).
 
     The child is its own session leader (SessionProcess / start_new_session),
     so the returned pid is the process-group id every teardown targets. Its
@@ -288,13 +313,18 @@ def _spawn_compositor(
     of any command-substitution pipe the bridge captured: the bridge's
     ``$(... start)`` sees EOF the instant this ``start`` process exits, even
     though the compositor keeps running.
+
+    The starttime is read here, while the leader is still this process's
+    child (even freshly dead it would be an unreaped zombie with a readable
+    /proc entry), so the identity the teardown gate compares against is
+    captured race-free.
     """
     argv = build_kwin_argv(runtime_dir, width, height, socket, outputs)
     session_env = build_session_env(base_env, runtime_dir, extra_env)
     log = log_path(runtime_dir)
     with log.open("w") as handle:
         proc = SessionProcess.spawn(argv, env=session_env, stdout=handle, stderr=subprocess.STDOUT)
-    return proc.pid
+    return proc.pid, leader_starttime(proc.pid)
 
 
 def _await_socket(runtime_dir: Path, socket: str, pgid: int) -> None:
@@ -337,15 +367,17 @@ def running_compositor(
     the process group and the runtime dir. This is the bash seed's
     ``trap nested_kwin_cleanup EXIT`` expressed as a context manager.
     """
-    pgid = _spawn_compositor(runtime_dir, width, height, socket, outputs, extra_env, base_env)
+    pgid, starttime = _spawn_compositor(
+        runtime_dir, width, height, socket, outputs, extra_env, base_env
+    )
     try:
         _await_socket(runtime_dir, socket, pgid)
         bus = read_bus_address(runtime_dir)
-        session = VehicleSession(runtime_dir, socket, pgid, bus, log_path(runtime_dir))
+        session = VehicleSession(runtime_dir, socket, pgid, bus, log_path(runtime_dir), starttime)
         _write_state(_running_state(session, width, height, outputs))
         yield session
     finally:
-        stop_compositor(runtime_dir, pgid)
+        stop_compositor(runtime_dir, pgid, starttime)
 
 
 def _running_state(session: VehicleSession, width: int, height: int, outputs: int) -> VehicleState:
@@ -355,6 +387,7 @@ def _running_state(session: VehicleSession, width: int, height: int, outputs: in
         phase="running",
         socket=session.socket,
         pgid=session.pgid,
+        leader_starttime=session.leader_starttime,
         bus=session.bus,
         width=width,
         height=height,
@@ -387,6 +420,45 @@ def _signal_group_or_leader(pgid: int, sig: signal.Signals) -> None:
     """
     if not _killpg(pgid, sig):
         _kill_leader(pgid, sig)
+
+
+def _leader_identity_intact(pgid: int, expected_starttime: str | None) -> bool:
+    """True when signalling ``pgid`` can only reach the group that was launched.
+
+    The kernel reserves a pid for reuse only while some process still
+    references it as pid, pgid, or sid. Cases:
+
+    - leader present with the recorded starttime: the launched group.
+    - leader present with a DIFFERENT starttime: the leader died, the group
+      emptied (freeing the id), and the kernel recycled the pid into an
+      unrelated process; signalling now could hit an innocent group. Refuse.
+    - leader absent: either the leaderless group still holds members (the
+      pgid stays reserved for exactly them, so killpg reaches only them) or
+      the whole group is gone (killpg is an ESRCH no-op). Both safe.
+
+    Bash never faced the recycled case: the compositor stayed the consumer
+    shell's unreaped child, so its pid was held (zombie) until cleanup's
+    wait. The reparent-to-init design gives that hold away - init reaps the
+    dead leader promptly - and this check is the replacement guarantee. A
+    None ``expected_starttime`` (no recorded identity: a pre-gate state or
+    a bash-owned group whose caller still holds the zombie) skips the check,
+    keeping the caller's original semantics.
+    """
+    if expected_starttime is None:
+        return True
+    current = leader_starttime(pgid)
+    return current is None or current == expected_starttime
+
+
+def _refuse_recycled_group(pgid: int, expected_starttime: str | None, tool: str) -> None:
+    print(
+        f"{tool}: cleanup: refusing to signal process group {pgid}: its leader's "
+        f"starttime {leader_starttime(pgid)!r} does not match the recorded "
+        f"{expected_starttime!r} (the launched group is gone and the pid was "
+        "recycled); skipping the kill, continuing the non-kill teardown",
+        file=sys.stderr,
+        flush=True,
+    )
 
 
 def _group_has_members(pgid: int) -> bool:
@@ -492,6 +564,7 @@ def stop_process_group(
     term_delay: float = STOP_GROUP_DEFAULT_DELAY,
     kill_attempts: int = STOP_GROUP_DEFAULT_ATTEMPTS,
     kill_delay: float = STOP_GROUP_DEFAULT_DELAY,
+    expected_starttime: str | None = None,
 ) -> int:
     """Zombie-aware bounded group teardown; 0 on success, 2 on failure/error.
 
@@ -500,7 +573,14 @@ def stop_process_group(
     leader-only SIGTERM+wait can never finish; the group transaction escalates
     to SIGKILL on a bound). Messages keep the bash prefix verbatim so the
     teardown reads identically until BP-4 unifies the helper.
+
+    A recycled-leader refusal returns 0: the recycle proves the launched
+    group already emptied, so the teardown goal is met and only the near-miss
+    is reported.
     """
+    if not _leader_identity_intact(pgid, expected_starttime):
+        _refuse_recycled_group(pgid, expected_starttime, _PKG_GATE_TOOL)
+        return 0
     initial = group_live_status(pgid)
     if initial == "gone":
         return 0
@@ -535,7 +615,7 @@ def stop_process_group(
 # ---- compositor teardown (nested_kwin_cleanup) -----------------------------
 
 
-def _terminate_compositor_group(pgid: int) -> None:
+def _terminate_compositor_group(pgid: int, expected_starttime: str | None = None) -> None:
     """SIGTERM the group, poll up to 5s, then SIGKILL - best-effort, always
     proceeds to the runtime-dir removal (the bash never re-verified after KILL).
 
@@ -543,6 +623,9 @@ def _terminate_compositor_group(pgid: int) -> None:
     dbus-run-session leader alone orphaned the kwin child often enough that a
     day of runs once left hundreds of virtual compositors alive.
     """
+    if not _leader_identity_intact(pgid, expected_starttime):
+        _refuse_recycled_group(pgid, expected_starttime, f"{TOOL} ")
+        return
     _signal_group_or_leader(pgid, signal.SIGTERM)
     for _ in range(CLEANUP_GROUP_POLL_ATTEMPTS):
         if not _group_has_members(pgid):
@@ -604,7 +687,9 @@ def _remove_runtime_dir(runtime_dir: Path) -> None:
         shutil.rmtree(runtime_dir, ignore_errors=True)
 
 
-def stop_compositor(runtime_dir: Path | None, pgid: int | None) -> None:
+def stop_compositor(
+    runtime_dir: Path | None, pgid: int | None, expected_starttime: str | None = None
+) -> None:
     """The nested_kwin_cleanup teardown, driven by the two governing inputs.
 
     The two halves are independent, exactly as the bash guarded them with
@@ -615,7 +700,7 @@ def stop_compositor(runtime_dir: Path | None, pgid: int | None) -> None:
     dir succeed quietly.
     """
     if pgid is not None:
-        _terminate_compositor_group(pgid)
+        _terminate_compositor_group(pgid, expected_starttime)
     if runtime_dir is not None:
         _remove_runtime_dir(runtime_dir)
 
@@ -628,9 +713,12 @@ def _emit_prepare_shell(runtime_dir: Path) -> None:
     print(f"NESTED_KWIN_LOG={shlex.quote(str(log_path(runtime_dir)))}")
 
 
-def _emit_start_shell(socket: str, pgid: int, bus: str) -> None:
+def _emit_start_shell(socket: str, pgid: int, bus: str, starttime: str | None) -> None:
     print(f"NESTED_SOCK={shlex.quote(socket)}")
     print(f"NESTED_KWIN_PID={pgid}")
+    # The teardown identity gate's input; the bridge owns it (no consumer
+    # reads it) and hands it back to stop as --starttime.
+    print(f"NESTED_KWIN_STARTTIME={shlex.quote(starttime or '')}")
     print(f"NESTED_BUS={shlex.quote(bus)}")
 
 
@@ -650,7 +738,7 @@ def _cmd_start(args: argparse.Namespace) -> None:
     runtime_dir = Path(args.runtime_dir)
     socket: str = args.socket
     extra_env: list[str] = list(args.env)
-    pgid = _spawn_compositor(
+    pgid, starttime = _spawn_compositor(
         runtime_dir, args.width, args.height, socket, args.outputs, extra_env, os.environ
     )
     try:
@@ -668,17 +756,17 @@ def _cmd_start(args: argparse.Namespace) -> None:
         with suppress(OSError):
             sys.stderr.write(err.log.read_text())
         sys.stderr.flush()
-        stop_compositor(runtime_dir, pgid)
+        stop_compositor(runtime_dir, pgid, starttime)
         raise SystemExit(EXIT_START_FAILED) from err
     except BaseException:
         # SIGINT/SIGTERM (SystemExit from the conventional-exit handler) or any
         # other fault mid-start: same no-leak guarantee, then propagate the
         # original exit code (130/143 stay intact).
-        stop_compositor(runtime_dir, pgid)
+        stop_compositor(runtime_dir, pgid, starttime)
         raise
-    session = VehicleSession(runtime_dir, socket, pgid, bus, log_path(runtime_dir))
+    session = VehicleSession(runtime_dir, socket, pgid, bus, log_path(runtime_dir), starttime)
     _write_state(_running_state(session, args.width, args.height, args.outputs))
-    _emit_start_shell(socket, pgid, bus)
+    _emit_start_shell(socket, pgid, bus, starttime)
 
 
 def _optional_pgid(value: str) -> int | None:
@@ -693,7 +781,7 @@ def _optional_pgid(value: str) -> int | None:
 def _cmd_stop(args: argparse.Namespace) -> None:
     runtime_dir = Path(args.runtime_dir) if args.runtime_dir else None
     pgid = _optional_pgid(args.pgid)
-    stop_compositor(runtime_dir, pgid)
+    stop_compositor(runtime_dir, pgid, args.starttime or None)
 
 
 def _cmd_stop_group(args: argparse.Namespace) -> None:
@@ -704,6 +792,7 @@ def _cmd_stop_group(args: argparse.Namespace) -> None:
         term_delay=args.term_delay,
         kill_attempts=args.kill_attempts,
         kill_delay=args.kill_delay,
+        expected_starttime=args.starttime or None,
     )
     raise SystemExit(code)
 
@@ -747,10 +836,12 @@ def _build_parser() -> argparse.ArgumentParser:
     stop = sub.add_parser("stop", help="the nested_kwin_cleanup teardown (idempotent)")
     stop.add_argument("--runtime-dir", default="")
     stop.add_argument("--pgid", default="")
+    stop.add_argument("--starttime", default="")
 
     stop_group = sub.add_parser("stop-group", help="zombie-aware bounded process-group teardown")
     stop_group.add_argument("pgid", type=int)
     stop_group.add_argument("--label", default="process group")
+    stop_group.add_argument("--starttime", default="")
     stop_group.add_argument("--term-attempts", type=int, default=STOP_GROUP_DEFAULT_ATTEMPTS)
     stop_group.add_argument("--term-delay", type=float, default=STOP_GROUP_DEFAULT_DELAY)
     stop_group.add_argument("--kill-attempts", type=int, default=STOP_GROUP_DEFAULT_ATTEMPTS)
