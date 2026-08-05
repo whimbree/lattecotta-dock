@@ -101,4 +101,33 @@ ENV LATTE_VULKAN_LAVAPIPE_ICD=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
 # naming already supports it - but that is not wired now.)
 ENV SCENEPROBE_TIER=tolerance
 
+# ---- BP-0c (bash-to-python migration): uv + baked harness deps -------------
+# The typed-Python gate leg (latte-harness-check: ruff, ruff-format,
+# basedpyright-strict, the harness unit tests, the retained-bash allowlist
+# ratchet) runs in-container via uv, invoked from ci/build-and-gate.sh's gate
+# stage. uv is Fedora's own `uv` package.
+#
+# A SEPARATE dnf layer (not folded into the big deps install above) keeps that
+# expensive, cacheable deps-only layer intact when only the harness toolchain
+# version changes.
+RUN dnf install -y --setopt=install_weak_deps=False uv && dnf clean all
+
+# The gate stage touches NO network (build-and-gate.sh runs the leg under
+# UV_OFFLINE=1), so the dependency set is BAKED here: copy the harness lock
+# inputs into a throwaway project dir and `uv sync` them. That warms the uv
+# cache (UV_CACHE_DIR) with every locked wheel and resolves the pinned 3.14
+# interpreter (the system python when it is 3.14, else a managed download
+# under UV_PYTHON_INSTALL_DIR) - both persist in the image, so at run time uv
+# resolves the same lock entirely offline. The venv itself is deliberately NOT
+# baked: /src is bind-mounted read-only at gate time, so the driver provides a
+# writable venv overlay in-tree (basedpyright's venvPath pins it to
+# <project>/.venv) and points UV_PROJECT_ENVIRONMENT there. --no-install-project
+# warms only the dependencies (the project source is not copied here); the
+# runtime build of the harness package itself uses uv's built-in uv_build
+# backend, so it needs no network either.
+ENV UV_CACHE_DIR=/opt/uv/cache \
+    UV_PYTHON_INSTALL_DIR=/opt/uv/python
+COPY harness/pyproject.toml harness/uv.lock harness/.python-version /opt/uv/warm/
+RUN cd /opt/uv/warm && uv sync --locked --no-install-project
+
 WORKDIR /src

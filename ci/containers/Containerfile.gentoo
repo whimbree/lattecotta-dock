@@ -197,4 +197,44 @@ ENV PATH="/usr/lib64/qt6/bin:/usr/libexec/qt6:${PATH}"
 # one knob, decoupled from the device.
 ENV SCENEPROBE_TIER=bitexact
 
+# ---- BP-0c (bash-to-python migration): uv + baked harness deps -------------
+# The typed-Python gate leg (latte-harness-check: ruff, ruff-format,
+# basedpyright-strict, the harness unit tests, the retained-bash allowlist
+# ratchet) runs in-container via uv, invoked from ci/build-and-gate.sh's gate
+# stage.
+#
+# uv: dev-python/uv exists in ::gentoo but is NOT in the 23.0 binhost snapshot
+# this image pulls from, so emerging it would trigger a multi-hundred-crate
+# Rust source build in the container. Install the PINNED upstream standalone
+# binary instead - the same 0.11.26 the nix devShell pins (flake.nix, kept in
+# lockstep with harness/pyproject.toml) - fetched at an exact release URL and
+# verified against its published SHA-256 (no unpinned curl|sh). wget is in
+# @system on the stage3 base (emerge-webrsync above already relies on it).
+RUN wget -q -O /tmp/uv.tar.gz \
+        https://github.com/astral-sh/uv/releases/download/0.11.26/uv-x86_64-unknown-linux-gnu.tar.gz \
+    && echo "6426a73c3837e6e2483ee344cbc00f36394d179afcba6183cb77437e67db4af0  /tmp/uv.tar.gz" \
+        | sha256sum -c - \
+    && tar -xzf /tmp/uv.tar.gz -C /tmp \
+    && install -m 0755 /tmp/uv-x86_64-unknown-linux-gnu/uv /usr/local/bin/uv \
+    && install -m 0755 /tmp/uv-x86_64-unknown-linux-gnu/uvx /usr/local/bin/uvx \
+    && rm -rf /tmp/uv.tar.gz /tmp/uv-x86_64-unknown-linux-gnu
+
+# The gate stage touches NO network (build-and-gate.sh runs the leg under
+# UV_OFFLINE=1), so the dependency set is BAKED here: copy the harness lock
+# inputs into a throwaway project dir and `uv sync` them. That warms the uv
+# cache (UV_CACHE_DIR) with every locked wheel and resolves the pinned 3.14
+# interpreter (the system python when it is 3.14, else a managed download
+# under UV_PYTHON_INSTALL_DIR) - both persist in the image, so at run time uv
+# resolves the same lock entirely offline. The venv itself is deliberately NOT
+# baked: /src is bind-mounted read-only at gate time, so the driver provides a
+# writable venv overlay in-tree (basedpyright's venvPath pins it to
+# <project>/.venv) and points UV_PROJECT_ENVIRONMENT there. --no-install-project
+# warms only the dependencies (the project source is not copied here); the
+# runtime build of the harness package itself uses uv's built-in uv_build
+# backend, so it needs no network either.
+ENV UV_CACHE_DIR=/opt/uv/cache \
+    UV_PYTHON_INSTALL_DIR=/opt/uv/python
+COPY harness/pyproject.toml harness/uv.lock harness/.python-version /opt/uv/warm/
+RUN cd /opt/uv/warm && uv sync --locked --no-install-project
+
 WORKDIR /src
