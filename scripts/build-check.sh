@@ -37,7 +37,16 @@ check() {
 # build variant were removed with the X11 backend, 2026-07-17).
 check build
 
-ctest --test-dir "$repo/build" --output-on-failure
+# Hermetic ctest env (D271, 2026-08-04): the ambient session exports
+# QML2_IMPORT_PATH for the staged dev loop, and that list ends in
+# build/_qmlstage - with the stage populated, QML-engine tests then
+# resolve org.kde.latte.* from disk on top of their own C++
+# registrations (themeawareicontest's namespace collision). nix develop
+# passes ambient vars through, so the re-exec above does not sanitize.
+# The import-path doctrine is explicit lists only; lib-qml-env strips
+# these same vars for the QML gates, and ctest gets the same discipline.
+env -u QML2_IMPORT_PATH -u QML_IMPORT_PATH \
+    ctest --test-dir "$repo/build" --output-on-failure
 
 # Structural coverage ratchet (docs/tracking/QML_EXTRACTION_PLAN.md section D):
 # unit-header/test pairing plus the committed ctest entry-list baseline.

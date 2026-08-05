@@ -3316,6 +3316,27 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   write under `LC_ALL=C`.
 - SEVERITY: annoyance (dirty diffs on baseline regeneration).
 
+### D271 - ctest inherits the ambient QML import path; stage shadows registrations
+- STATUS: FIXED by the build-check hermetic-ctest commit in PR #152.
+- FOUND: 2026-08-04, the D269 fix branch gate: themeawareicontest failed with
+  "Namespace 'org.kde.latte.core' has already been used for type
+  registration" on a branch touching no C++ or QML.
+- SYMPTOM: any QML-engine ctest entry inherits the invoking session's
+  QML2_IMPORT_PATH. The staged dev loop exports a list ending in
+  build/_qmlstage; whenever the qmllint stage is left populated (it is
+  restored on normal exits, so the window is intermittent), the engine loads
+  org.kde.latte.core from the stage on top of the test's own C++
+  registration and the view never reaches Ready.
+- EVIDENCE: nix develop passes the ambient variable through (measured), so
+  the devShell re-exec does not sanitize; the same ctest entry passes with
+  QML2_IMPORT_PATH/QML_IMPORT_PATH stripped and fails with them present
+  while the stage is populated. Same defect family as D8 (dev-loop shadow
+  via NIXPKGS_QT6_QML_IMPORT_PATH).
+- FIX: build-check.sh runs ctest under env -u QML2_IMPORT_PATH -u
+  QML_IMPORT_PATH, the same strip lib-qml-env already applies for the QML
+  gates (explicit import lists only).
+- SEVERITY: gate reliability (intermittent, invoking-shell-dependent).
+
 ### D265 - Linked docks gave no passive edit cue
 - STATUS: FIXED on `main` by `08d2c3985`, `0f78b52b8`, `fb340286d`,
   `23e30c4f0`, and `141fd0b5e` (PR #145).
