@@ -3,6 +3,30 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-08-05.
 
+## 2026-08-05: BP-2a landed - the typed vehicle underpins every gate leg
+
+PR #167 (BP-2a, the nested-vehicle and seed lifecycle port) is merged:
+latte_harness.vehicle (state-file-driven prepare/start/stop/stop-group,
+reparent-to-init) and latte_harness.seed behind sourced-interface bash
+bridges; consumers unchanged. The review cycle added a leader-identity
+teardown gate (the reparent drops bash's zombie-hold guarantee, so killpg
+is now starttime-gated against recycled pids; the double-death residual is
+recorded honestly in the docstring) and rerouted the installed package
+gate's compositor teardown through the gated stop-group. Verified by the
+full nested-suite A/B against the bash bridge (33/52 both sides, deltas
+vehicle-independent), driven SIGINT teardown parity, the seed-cleanup and
+run-matrix selftests, and the full gate (asan leg included) at merge.
+BP-2b (the e2e runner port) is in flight with the discovery fix (the bash
+find ran subdir libs and fixtures as recipes).
+
+ENVIRONMENT NOTE for future sessions: long-running BACKGROUND shell tasks
+in the agent environment get killed at random points (observed four times
+on full-gate runs, 24s to 4min in, "interrupted by user" from ninja);
+foreground synchronous runs complete reliably and warm builds fit the
+10-minute tool cap. Run gates in the foreground. Related: nohup-style
+backgrounding breaks the installed-package selftest's SIGINT control
+(bash SIG_IGN inheritance, BP-1e agent finding).
+
 ## 2026-08-05: BP-1 complete - the analyzer wave is fully typed Python
 
 All six BP-1 chunks are merged: BP-1a qmlenv (PR #156), BP-1b fixture
