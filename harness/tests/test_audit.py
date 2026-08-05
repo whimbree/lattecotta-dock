@@ -87,6 +87,18 @@ def test_snapshot_lines_preserves_int_vs_float() -> None:
     assert text == "f\t90.0\ni\t90\n"
 
 
+def test_snapshot_lines_preserve_int_vs_float_through_the_pydantic_boundary() -> None:
+    # End-to-end: a raw JSON string through the readback model into the
+    # snapshot formula. Locks that pydantic JsonValue keeps 90 and 90.0
+    # distinct (an == assert alone conflates them), so the on-disk snapshot
+    # stays byte-identical to the bash json.load path.
+    data = audit._ViewConfigData.model_validate_json(  # pyright: ignore[reportPrivateUsage]
+        '{"config":{"i":90,"f":90.0},"view":{}}'
+    )
+    text = audit._snapshot_lines(data.config)  # pyright: ignore[reportPrivateUsage]
+    assert text == "f\t90.0\ni\t90\n"
+
+
 # ---- the pydantic readback boundary ----------------------------------------
 
 
