@@ -53,7 +53,6 @@ tests/e2e/021-launcher-wheel.sh
 tests/e2e/022-configoverlay-wheel-threshold.sh
 tests/e2e/022-empty-area-window-actions.sh
 tests/e2e/023-task-middle-click-runtime.sh
-tests/e2e/030-wheel-ruler-maxlength.sh
 tests/e2e/031-ruler-slider-crossview.sh
 tests/e2e/032-behavior-live-reflect.sh
 tests/e2e/032-effects-config-readback.sh
