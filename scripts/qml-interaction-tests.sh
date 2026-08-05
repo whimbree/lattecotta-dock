@@ -1,28 +1,12 @@
 #!/usr/bin/env bash
 # Headless QML interaction harness (porting plan Phase 5, docs/reference/TESTING.md):
-# drives real Latte QML components offscreen through qmltestrunner. Tests
-# live in tests/qml/tst_*.qml and resolve Latte's modules through the staged
-# install, so module registration and type resolution are part of what every
-# test exercises.
-#
-# Runs inside the flake devShell (ctest invokes it there via build-check.sh).
+# drives real Latte QML components offscreen through qmltestrunner. Ported to
+# the typed harness in BP-1f (the bash-to-python migration's QML compile/
+# interaction gates chunk); the logic now lives in
+# harness/src/latte_harness/qml_interaction_tests.py. This .sh stays as the
+# stable entry point ctest (qmlinteraction bare, qmlcontracts with tests/
+# contracts) and muscle memory call; the optional test-directory argument is
+# forwarded verbatim.
 set -euo pipefail
-
 repo="$(cd "$(dirname "$0")/.." && pwd)"
-source "$repo/scripts/lib-qml-env.sh"
-
-qml_env_setup "$repo"
-
-# reuse the compile gate's staging when it already ran this build; stage
-# otherwise. The staged Latte tree lands under the distro's KDE_INSTALL_QMLDIR
-# ($qmldir, set by qml_env_setup: lib/qml on nixpkgs, lib/qt6/qml on Arch),
-# not a hardcoded lib/qml - else the guard always misses off-nix and re-stages.
-if [[ ! -d "$stage/$qmldir/org/kde/latte" ]]; then
-    qml_env_stage
-fi
-
-# optional argument selects a different test directory (used by the
-# qmlcontracts ctest entry for tests/contracts)
-inputdir="${1:-$repo/tests/qml}"
-
-QT_QPA_PLATFORM=offscreen qmltestrunner "${imports[@]}" -input "$inputdir"
+exec uv run --locked --project "$repo/harness" python -m latte_harness.qml_interaction_tests "$@"
