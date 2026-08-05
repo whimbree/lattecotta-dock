@@ -87,10 +87,10 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   workstream: ~16,000 lines of bash harness, gate, and test scripting move to
   strictly typed Python (uv, pydantic, basedpyright-strict, ruff) with a
   797-line 17-file retained-bash allowlist for the exit-code spine and
-  external contracts. BP-0a/0b (the devShell toolchain and the typed harness
-  package with its harness-check gate leg and shrink-only allowlist ratchet)
-  landed via PR #153; BP-0c (container uv) and the BP-1 analyzer fan-out are
-  next.
+  external contracts. BP-0 (foundation: devShell toolchain, typed harness
+  package, harness-check gate leg, shrink-only allowlist ratchet, offline
+  container uv provisioning) is COMPLETE; BP-1 (the analyzer ports) is 2 of
+  6 merged with the rest in flight.
 
 ## Registries and state
 

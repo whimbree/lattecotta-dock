@@ -3316,6 +3316,22 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   write under `LC_ALL=C`.
 - SEVERITY: annoyance (dirty diffs on baseline regeneration).
 
+### D272 - storagetest asserts permission-bit refusal that root bypasses
+- STATUS: OPEN.
+- FOUND: 2026-08-04, the BP-0c (container uv provisioning) end-to-end Arch
+  gate run: `storagetest::classifyLayoutPersistenceEndpoints` failed in the
+  container while green on the NixOS gate.
+- SYMPTOM: the subtest chmods a layout to 0444 and asserts
+  `!writableLayout.isWritable()`; every distro matrix container runs ctest as
+  root, and root bypasses permission bits, so the assertion is false there.
+  Landed `e57f8e929` (2026-07-26), after the last recorded in-container gate
+  run (2026-07-17), so every distro leg's gate stage fails until addressed.
+- FIX DIRECTION: guard the subtest under euid 0 (QSKIP, the common upstream
+  pattern) or run the container ctest unprivileged. Small standalone chunk,
+  outside the BP workstream.
+- SEVERITY: blocks the multi-distro gate stage (release CI matrix), not the
+  NixOS merge gate.
+
 ### D271 - ctest inherits the ambient QML import path; stage shadows registrations
 - STATUS: FIXED by the build-check hermetic-ctest commit in PR #152.
 - FOUND: 2026-08-04, the D269 fix branch gate: themeawareicontest failed with

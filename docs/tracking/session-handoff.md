@@ -31,9 +31,19 @@ inherited the ambient QML2_IMPORT_PATH and a populated qmllint stage shadowed
 org.kde.latte.core; build-check now strips the variables). D270 filed
 (--write-baseline locale ordering). Filed into BP-1a from the PR #153 second
 review: catch TimeoutExpired on the checker probe, cache per-tool resolution.
-Next: BP-0c (container uv provisioning + harness-check ctest entry + the
-D271 strip mirror in ci/build-and-gate.sh), then the BP-1 analyzer fan-out
-on Opus worktree agents.
+BP-0 COMPLETE: BP-0c landed via PR #157 (c061634d3 containers, 0a90bda65
+driver) with offline harness-check proven exit-0 in all 7 distro images
+(pinned sha256-verified standalone uv 0.11.26 on debian/neon/gentoo, distro
+packages elsewhere) and the D271 strip mirrored in ci/build-and-gate.sh.
+That run surfaced D272 (storagetest asserts permission-bit refusal that
+root bypasses), which blocks every distro gate stage; fix direction filed,
+outside BP. BP-1 wave: BP-1a (PR #156) and BP-1c (PR #155) merged; BP-1b
+(fixture promotion), BP-1d (qmllint with the D269 fingerprint diagnostics
+and D270 determinism), BP-1e (rule scanners), BP-1f (QML compile and
+interaction gates) in flight on Opus worktree agents. The full gate (asan
+included) ran at the PR #155 merge per the gate-leg contract, validating
+the reshaped pipeline end to end. Wave follow-ups are filed in the plan
+doc. After BP-1: the BP-2 vehicle spine, serial.
 
 ## 2026-08-02: Panel interaction restores application keyboard focus
 

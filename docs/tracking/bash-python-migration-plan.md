@@ -141,21 +141,30 @@ Phase BP-0, foundation (serial, lands first):
   (PR #153; the ctest wiring moved to BP-0c with the container uv
   provisioning, so a uv-requiring ctest entry never lands before containers
   can satisfy it; the gate-all leg covers the merge gate meanwhile)
-- [ ] BP-0c (container uv provisioning): uv + baked `uv sync --locked` in all
-  7 Containerfiles; ci/build-and-gate.sh gains the uv invocation plumbing,
-  the harness-check ctest entry, and the D271 (ambient QML import path)
-  env-strip mirrored onto its raw ctest calls (PR #152 review nit). Commits:
+- [x] BP-0c (container uv provisioning): uv + baked `uv sync --locked` in all
+  7 Containerfiles (distro package on arch/fedora/opensuse/void; pinned
+  sha256-verified standalone 0.11.26 on debian/neon/gentoo, none packaged);
+  ci/build-and-gate.sh runs the offline harness-check leg first and mirrors
+  the D271 (ambient QML import path) env-strip onto its raw ctest calls (PR
+  #152 review nit). The harness-check ctest entry stays deferred (the BP-0b
+  tick records why). Commits: c061634d3, 0a90bda65 (PR #157)
 
 Phase BP-1, analyzers (file-disjoint, parallel after BP-0):
 
-- [ ] BP-1a (QML env module): port lib-qml-env.sh to `latte_harness.qmlenv`
-  with a shell-eval export bridge for bash consumers. Carries two filed
-  check.py nits from the PR #153 second review: catch TimeoutExpired on the
-  checker probe as cannot-run, and cache the per-tool resolution. Commits:
+- [x] BP-1a (QML env module): port lib-qml-env.sh to `latte_harness.qmlenv`
+  with a shell-eval export bridge for bash consumers. Carried the two filed
+  check.py nits from the PR #153 second review (TimeoutExpired on the checker
+  probe counts as cannot-run; per-tool resolution cached). Byte-for-byte
+  import-list equivalence proven against the bash on the real tree. Commits:
+  967560f3e, 77351643f, 334988de6 (PR #156)
 - [ ] BP-1b (fixture promotion): promote fixture.py into the package, typed,
   pydantic KConfig models, unit-tested refusals; port matrix-fixture-check.
   Commits:
-- [ ] BP-1c (coverage ratchet): port coverage-ratchet.sh. Commits:
+- [x] BP-1c (coverage ratchet): port coverage-ratchet.sh; both refusal modes
+  driven as negative controls. The shim made build-check transitively require
+  uv, so its devShell re-exec guard now tests cmake and uv (the gate-all
+  stale-proxy lesson). Full gate (asan included) ran at merge per the
+  gate-leg contract. Commits: a5745eca7, f8520fd3b (PR #155)
 - [ ] BP-1d (qmllint ratchet): port qmllint-gate.sh, exact-count semantics.
   Commits:
 - [ ] BP-1e (rule scanners): port qml-effect-rules, qml-tooltip-rules,
@@ -210,6 +219,25 @@ Phase BP-5, tail:
   references, the orchestrator prompt, skills, README, ROADMAP; shrink the
   retained-bash allowlist to the final set; update the
   harness-scripting-typed-python memory. Commits:
+
+## Filed follow-ups (wave 1)
+
+- Matrix-runner chunk: pre-create the harness/.venv mountpoint on the host
+  (or a tracked .gitkeep carve-out) so the documented tmpfs overlay works on
+  a clean checkout (PR #157 review finding 3).
+- Widen harness/pyproject.toml's uv_build upper bound past 0.12 with a
+  recorded reason (stale bound flagged by the PR #157 review; benign today).
+- Run the coverage-ratchet driven refusal controls after the build so a cold
+  canonical gate exercises them (PR #155 review durability finding).
+- Rolling-distro uv versions drift ahead of the 0.11.26 lock writer; a lock
+  revision bump would fail --locked loudly on those legs (latent, PR #157
+  review finding 1).
+- Process note: PR #153 merged on a fast stamp although it touched
+  gate-all.sh; the PR #155 merge ran the full gate over the combined state,
+  covering it retroactively. Gate-leg PRs take the full merge gate.
+- D272 (storagetest fails as root in containers) blocks every distro gate
+  stage; fix direction is a euid-0 QSKIP guard or unprivileged container
+  ctest. Small standalone chunk, outside BP.
 
 ## Execution shape
 
