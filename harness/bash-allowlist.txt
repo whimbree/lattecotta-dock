@@ -71,7 +71,6 @@ tests/e2e/074-live-titlebar-window-touch.sh
 tests/e2e/075-wayland-window-admission.sh
 tests/e2e/080-add-applet.sh
 tests/e2e/090-golden-bridge-selftest.sh
-tests/e2e/090-remove-applet.sh
 tests/e2e/091-drop-marker.sh
 tests/e2e/092-task-reorder.sh
 tests/e2e/093-widget-explorer-dnd.sh
