@@ -51,6 +51,19 @@ check build
 # passes ambient vars through, so the re-exec above does not sanitize.
 # The import-path doctrine is explicit lists only; lib-qml-env strips
 # these same vars for the QML gates, and ctest gets the same discipline.
+#
+# Part two (D277, 2026-08-05): the nixpkgs Qt6 runtime patch also reads
+# NIXPKGS_QT6_QML_IMPORT_PATH/NIXPKGS_QML_SEARCH_PATHS independently of
+# QML2_IMPORT_PATH. With the packaged latte-dock installed in the system
+# profile those vars hand every in-process QML engine the package's
+# org.kde.latte.* on-disk modules - the same namespace collision, D8's
+# shadow in ctest form. Per the D8 doctrine only the packaged leaf is
+# stripped (the vars also carry KDE framework modules tests resolve), via
+# the same qmlenv helper the QML gates eval.
+# The assignment-then-eval split keeps set -e watching the uv exit code; a
+# bare eval "$(...)" would swallow a substitution failure into a no-op.
+seed_env="$(uv run --locked --project "$repo/harness" python -m latte_harness.qmlenv seed-env)"
+eval "$seed_env"
 env -u QML2_IMPORT_PATH -u QML_IMPORT_PATH \
     ctest --test-dir "$repo/build" --output-on-failure
 

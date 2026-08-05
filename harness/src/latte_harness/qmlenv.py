@@ -85,6 +85,25 @@ def strip_packaged_latte_dock(value: str) -> str:
     return ":".join(kept)
 
 
+def seed_var_exports(env: Mapping[str, str]) -> list[str]:
+    """Eval-able exports re-publishing the seed vars, packaged leaf stripped.
+
+    The D8 doctrine (strip only the packaged latte-dock store leaf, keep the
+    KDE framework modules the vars also carry) for every consumer that must
+    not resolve org.kde.latte.* from the system-installed package. D277
+    extends it to the ctest legs: with the packaged dock in the system
+    profile, a QML-engine test's in-process org.kde.latte.* registration
+    collides with the package's on-disk qmldir (themeawareicontest's
+    namespace refusal), so ctest evals these same exports before running.
+    """
+    lines: list[str] = []
+    for var in NIXPKGS_SEED_VARS:
+        current = env.get(var)
+        if current:
+            lines.append(f"export {var}={shlex.quote(strip_packaged_latte_dock(current))}")
+    return lines
+
+
 def parse_linked_store_prefixes(ldd_output: str) -> list[str]:
     """Sorted-unique /nix/store/<pkg> prefixes referenced in an ldd dump.
 
@@ -193,11 +212,8 @@ def build_setup_script(repo: Path, env: Mapping[str, str]) -> str:
         f"stage={shlex.quote(str(stage))}",
         f"qmldir={shlex.quote(qmldir)}",
         "unset QML2_IMPORT_PATH QML_IMPORT_PATH",
+        *seed_var_exports(env),
     ]
-    for var in NIXPKGS_SEED_VARS:
-        current = env.get(var)
-        if current:
-            lines.append(f"export {var}={shlex.quote(strip_packaged_latte_dock(current))}")
     tokens = " ".join(shlex.quote(token) for token in imports)
     lines.append(f"imports=({tokens})")
     return "\n".join(lines)
@@ -324,11 +340,20 @@ def main(argv: Sequence[str] | None = None) -> None:
     stage.add_argument("build", help="the build directory")
     stage.add_argument("stage", help="the stage directory (build/_qmlstage)")
 
+    sub.add_parser(
+        "seed-env",
+        help="emit eval-able seed-var exports with the packaged latte-dock leaf stripped",
+    )
+
     args = parser.parse_args(argv)
     command: str = args.command
     if command == "setup":
         repo: str = args.repo
         _emit_setup(Path(repo))
+    elif command == "seed-env":
+        exports = seed_var_exports(os.environ)
+        if exports:
+            print("\n".join(exports))
     else:  # "stage" (subparsers required=True rejects anything else)
         build_dir: str = args.build
         stage_dir: str = args.stage

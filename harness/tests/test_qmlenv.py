@@ -21,6 +21,7 @@ from latte_harness.qmlenv import (
     parse_linked_store_prefixes,
     preserved_install_manifest,
     resolve_install_qmldir,
+    seed_var_exports,
     strip_packaged_latte_dock,
 )
 
@@ -49,6 +50,25 @@ def test_strip_preserves_empty_components() -> None:
 
 def test_strip_of_only_the_leaf_yields_empty() -> None:
     assert strip_packaged_latte_dock(_PACKAGED) == ""
+
+
+def test_seed_var_exports_strip_the_leaf_from_each_var() -> None:
+    # The D277 ctest hermeticity surface: the packaged leaf is dropped, the
+    # framework modules stay, and a leaf-only var re-exports as empty (still
+    # masking the package) rather than disappearing.
+    env = {
+        "NIXPKGS_QT6_QML_IMPORT_PATH": f"{_KIRIGAMI}:{_PACKAGED}:{_LIBPLASMA}",
+        "NIXPKGS_QML_SEARCH_PATHS": _PACKAGED,
+    }
+    assert seed_var_exports(env) == [
+        f"export NIXPKGS_QT6_QML_IMPORT_PATH={_KIRIGAMI}:{_LIBPLASMA}",
+        "export NIXPKGS_QML_SEARCH_PATHS=''",
+    ]
+
+
+def test_seed_var_exports_skip_absent_and_empty_vars() -> None:
+    assert seed_var_exports({}) == []
+    assert seed_var_exports({"NIXPKGS_QT6_QML_IMPORT_PATH": ""}) == []
 
 
 def test_parse_ldd_prefixes_sorted_unique() -> None:
