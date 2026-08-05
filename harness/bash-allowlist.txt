@@ -10,7 +10,9 @@ containmentactions/contextmenu/Messages.sh
 formatter.sh
 indicators/Messages.sh
 install.sh
+packaging/debian/build-package
 packaging/rpm/make-snapshot-source.sh
+packaging/void/build-package
 plasmoid/Messages.sh
 scripts/asan-e2e-gate.sh
 scripts/build-check.sh

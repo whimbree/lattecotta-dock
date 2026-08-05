@@ -14,10 +14,12 @@ records:
   shrink the list in the same commit, keeping the ratchet honest (the
   same shrink discipline as the qmllint baseline).
 
-Bash is inventoried as every git-tracked ``*.sh`` file plus the tracked
-extensionless bash hooks named in EXTRA_BASH. Untracked scratch files
-are deliberately out of scope: the ratchet guards what lands in
-history, not a working tree's experiments.
+Bash is inventoried as every git-tracked ``*.sh`` file plus every
+tracked file whose first line is a sh/bash shebang (hooks, packaging
+helpers) - detection by content, not by a hand-maintained name list, so
+extensionless bash cannot escape the ratchet by construction. Untracked
+scratch files are deliberately out of scope: the ratchet guards what
+lands in history, not a working tree's experiments.
 """
 
 from __future__ import annotations
@@ -31,10 +33,9 @@ from latte_harness.proc import run
 
 TOOL = "bash-allowlist"
 
-# Bash without a .sh extension; extend when a new hook is committed.
-EXTRA_BASH = ("scripts/git-hooks/pre-push",)
-
 ALLOWLIST_NAME = "bash-allowlist.txt"
+
+_SHEBANG_SHELLS = (b"/bin/sh", b"/bin/bash", b"env sh", b"env bash")
 
 
 class AllowlistFormatError(ValueError):
@@ -77,13 +78,25 @@ def load_allowlist(path: Path) -> frozenset[str]:
     return frozenset(entries)
 
 
+def _is_shell_shebang(path: Path) -> bool:
+    try:
+        with path.open("rb") as handle:
+            first = handle.readline(160)
+    except OSError:
+        # Unreadable tracked entries (dangling symlinks) are not bash.
+        return False
+    return first.startswith(b"#!") and any(shell in first for shell in _SHEBANG_SHELLS)
+
+
 def tracked_bash(root: Path) -> frozenset[str]:
-    result = run(
-        ["git", "-C", str(root), "ls-files", "--", "*.sh", *EXTRA_BASH],
-        capture=True,
-        check=True,
-    )
-    return frozenset(line for line in result.stdout.splitlines() if line)
+    result = run(["git", "-C", str(root), "ls-files"], capture=True, check=True)
+    hits: set[str] = set()
+    for rel in result.stdout.splitlines():
+        if not rel:
+            continue
+        if rel.endswith(".sh") or _is_shell_shebang(root / rel):
+            hits.add(rel)
+    return frozenset(hits)
 
 
 def check(paths: RepoPaths) -> Violations:
