@@ -35,7 +35,7 @@ from latte_harness.qmllint_gate import (
     prepare_child_env,
     render_baseline,
     resolve_context,
-    sorted_like_find,
+    sorted_codepoint,
     write_fingerprint,
 )
 
@@ -365,7 +365,7 @@ def test_import_flags_stage_first_then_import_dirs() -> None:
     ]
 
 
-def test_sorted_like_find_is_locale_independent(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_sorted_codepoint_is_locale_independent(monkeypatch: pytest.MonkeyPatch) -> None:
     # The D269 fix contract: input order is codepoint sort no matter what
     # locale the invoking shell exports. A UTF-8 collation would interleave
     # 'appletabilities/' before 'AppletAbilities.qml'; codepoint order must
@@ -385,7 +385,7 @@ def test_sorted_like_find_is_locale_independent(monkeypatch: pytest.MonkeyPatch)
         monkeypatch.setenv("LC_ALL", env)
         monkeypatch.setenv("LC_COLLATE", env)
         monkeypatch.setenv("LANG", env)
-        assert [str(p) for p in sorted_like_find(paths)] == expected
+        assert [str(p) for p in sorted_codepoint(paths)] == expected
 
 
 def test_artifact_serialization_is_indented_json(tmp_path: Path) -> None:
