@@ -14,6 +14,7 @@ from latte_harness.bash_allowlist import (
     AllowlistFormatError,
     check,
     compare,
+    is_shell_shebang,
     load_allowlist,
     tracked_bash,
 )
@@ -57,6 +58,25 @@ def test_real_repo_is_currently_clean() -> None:
     # drifting branch fails at the earliest (unit-test) layer too.
     violations = check(RepoPaths.discover())
     assert violations.ok, f"unlisted={violations.unlisted} stale={violations.stale}"
+
+
+@pytest.mark.parametrize(
+    ("first_line", "expected"),
+    [
+        ("#!/bin/sh", True),
+        ("#!/bin/bash", True),
+        ("#!/usr/bin/env bash", True),
+        ("#!/usr/bin/env -S bash -eu", True),  # env flag form
+        ("#!/usr/bin/env shellcheck", False),  # 'sh' substring must not match
+        ("#!/usr/bin/env python3", False),
+        ("# not a shebang at all", False),
+        ("", False),
+    ],
+)
+def test_shebang_matcher_is_token_precise(tmp_path: Path, first_line: str, expected: bool) -> None:
+    probe = tmp_path / "probe"
+    probe.write_text(f"{first_line}\necho hi\n")
+    assert is_shell_shebang(probe) is expected
 
 
 def test_shebang_detection_catches_extensionless_bash() -> None:

@@ -5,7 +5,7 @@
 
 Bash may only exist at the repo paths listed in harness/bash-allowlist.txt.
 The list was seeded with the full pre-migration inventory and only ever
-shrinks, until it is exactly the 15-file retained set the BP plan
+shrinks, until it is exactly the 17-file retained set the BP plan
 records:
 
 - a tracked bash file missing from the list fails the gate: no new bash,
@@ -34,8 +34,6 @@ from latte_harness.proc import run
 TOOL = "bash-allowlist"
 
 ALLOWLIST_NAME = "bash-allowlist.txt"
-
-_SHEBANG_SHELLS = (b"/bin/sh", b"/bin/bash", b"env sh", b"env bash")
 
 
 class AllowlistFormatError(ValueError):
@@ -66,7 +64,9 @@ def load_allowlist(path: Path) -> frozenset[str]:
 
     Sorted-unique is required so diffs stay one-line-per-change and
     review stays trivial; violating the format is a loud failure, not a
-    silent normalization.
+    silent normalization. The order is Python's codepoint sort, which
+    equals ``LC_ALL=C sort`` - regenerate with that, never a bare
+    locale-aware ``sort`` (the D270 class of footgun).
     """
     entries = [
         line.strip()
@@ -78,14 +78,29 @@ def load_allowlist(path: Path) -> frozenset[str]:
     return frozenset(entries)
 
 
-def _is_shell_shebang(path: Path) -> bool:
+def is_shell_shebang(path: Path) -> bool:
     try:
         with path.open("rb") as handle:
             first = handle.readline(160)
     except OSError:
         # Unreadable tracked entries (dangling symlinks) are not bash.
         return False
-    return first.startswith(b"#!") and any(shell in first for shell in _SHEBANG_SHELLS)
+    if not first.startswith(b"#!"):
+        return False
+    # Token-wise, not substring: "env shellcheck" must not match "env sh",
+    # and the "env -S bash" flag form must match.
+    tokens = first[2:].decode("ascii", errors="replace").split()
+    if not tokens:
+        return False
+    interpreter = tokens[0]
+    if interpreter.endswith(("/sh", "/bash")):
+        return True
+    if interpreter.endswith("/env"):
+        for token in tokens[1:]:
+            if token.startswith("-"):
+                continue  # env flags (-S and friends) precede the command
+            return token in ("sh", "bash")
+    return False
 
 
 def tracked_bash(root: Path) -> frozenset[str]:
@@ -94,7 +109,7 @@ def tracked_bash(root: Path) -> frozenset[str]:
     for rel in result.stdout.splitlines():
         if not rel:
             continue
-        if rel.endswith(".sh") or _is_shell_shebang(root / rel):
+        if rel.endswith(".sh") or is_shell_shebang(root / rel):
             hits.add(rel)
     return frozenset(hits)
 
