@@ -11,8 +11,11 @@ seconds, not after the test run.
 
 from __future__ import annotations
 
+import functools
 import os
+import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 from latte_harness import bash_allowlist
@@ -22,8 +25,17 @@ from latte_harness.proc import run
 
 TOOL = "harness-check"
 
+# A version --version probe that raises either of these "cannot run here":
+# OSError is the foreign-glibc loader refusal on NixOS (FileNotFoundError for
+# the missing program interpreter); TimeoutExpired is a hung or pathologically
+# slow probe, no more trustworthy as the pinned checker than an outright
+# refusal. Named as a tuple so the except clause reads unambiguously (not the
+# Python-2 catch-and-bind form the bare comma spelling resembles).
+_PROBE_CANNOT_RUN: tuple[type[Exception], ...] = (OSError, subprocess.TimeoutExpired)
 
-def _tool_argv(binary: str) -> list[str]:
+
+@functools.cache
+def _tool_argv(binary: str) -> tuple[str, ...]:
     """Resolve a checker binary: the venv's pinned copy when it runs.
 
     The venv wheels of ruff and basedpyright carry the exact locked
@@ -35,24 +47,29 @@ def _tool_argv(binary: str) -> list[str]:
     pinned one when the pinned one works. When the venv copy cannot run
     (the NixOS case), the first PATH copy outside the venv wins; when
     nothing runs, the leg fails loudly rather than guessing.
+
+    Cached (functools.cache) so a tool used by two steps - ruff by both
+    the lint and format checks - is probed once, not twice; the returned
+    argv is an immutable tuple so a cache hit cannot be mutated by a
+    caller.
     """
     venv = Path(sys.prefix).resolve()
     venv_copy = venv / "bin" / binary
     if venv_copy.is_file() and os.access(venv_copy, os.X_OK):
         try:
             probe = run([str(venv_copy), "--version"], capture=True, timeout=60)
-        except OSError:
-            # The foreign-glibc loader refusal lands here on NixOS
-            # (FileNotFoundError for the missing program interpreter).
+        except _PROBE_CANNOT_RUN:
+            # Fall through to the PATH copy rather than trusting or blocking on
+            # a venv binary that cannot run here (see _PROBE_CANNOT_RUN).
             probe = None
         if probe is not None and probe.returncode == 0:
-            return [str(venv_copy)]
+            return (str(venv_copy),)
     for entry in os.get_exec_path():
         candidate = Path(entry) / binary
         if candidate.resolve().is_relative_to(venv):
             continue
         if candidate.is_file() and os.access(candidate, os.X_OK):
-            return [str(candidate)]
+            return (str(candidate),)
     fail(TOOL, f"no runnable {binary}: the venv copy cannot exec here and PATH has none")
 
 
@@ -60,7 +77,7 @@ def main() -> None:
     paths = RepoPaths.discover()
     harness = paths.harness
 
-    steps: list[tuple[str, list[str]]] = [
+    steps: list[tuple[str, Sequence[str]]] = [
         ("ruff lint", [*_tool_argv("ruff"), "check", "src", "tests"]),
         ("ruff format", [*_tool_argv("ruff"), "format", "--check", "src", "tests"]),
         ("basedpyright strict", _tool_argv("basedpyright")),
