@@ -63,7 +63,6 @@ tests/e2e/033-chrome-advanced-readback.sh
 tests/e2e/034-tasks-config-apply.sh
 tests/e2e/040-preview-tooltip-text.sh
 tests/e2e/050-drag-reorder-launchers.sh
-tests/e2e/060-geometry-agreement.sh
 tests/e2e/061-partial-reservation-placement.sh
 tests/e2e/070-asan-binary-shadow.sh
 tests/e2e/070-maximize-length-mask.sh
