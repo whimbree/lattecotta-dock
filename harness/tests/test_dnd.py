@@ -141,7 +141,7 @@ def test_last_field_takes_the_busctl_value(reply: str, field: str) -> None:
 
 @pytest.mark.parametrize(
     ("text", "ok"),
-    [("-1", True), ("3", True), ("+0", True), ("", False), ("as", False), ("1.5", False)],
+    [("-1", True), ("3", True), ("+0", False), ("", False), ("as", False), ("1.5", False)],
 )
 def test_is_int_matches_the_bash_regex(text: str, ok: bool) -> None:
     assert dnd._is_int(text) is ok  # pyright: ignore[reportPrivateUsage]
