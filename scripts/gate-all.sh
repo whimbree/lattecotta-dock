@@ -16,10 +16,16 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 
 # same pinned-toolchain guard as build-check: a bare system cmake poisons
-# builds, so re-exec into the devshell unless the pinned one is in PATH
-if ! command -v cmake >/dev/null 2>&1 || [[ "$(command -v cmake)" != /nix/store/* ]]; then
-    exec nix develop "$repo" -c "$0" "$@"
-fi
+# builds, so re-exec into the devshell unless the pinned one is in PATH.
+# uv joined the toolchain with the harness-check leg (BP-0b); a shell
+# entered before that flake change carries a store cmake but no uv, so
+# the guard checks both - cmake alone is a stale proxy for "the pinned
+# toolchain is present".
+for tool in cmake uv; do
+    if ! command -v "$tool" >/dev/null 2>&1 || [[ "$(command -v "$tool")" != /nix/store/* ]]; then
+        exec nix develop "$repo" -c "$0" "$@"
+    fi
+done
 
 # Pin-vs-system lockstep guard (the 2026-07-17 incident: a system rebuild
 # under a stale dev pin SIGSEGVs every NEW nested kwin_wayland at
@@ -47,6 +53,12 @@ else
     # rather than silently skipping.
     echo "gate-all: lockstep guard skipped: no /run/current-system on this host"
 fi
+
+# BP (bash-to-python migration): the typed-harness leg - ruff, format,
+# basedpyright-strict, the harness unit tests, and the retained-bash
+# allowlist ratchet. First because it is the cheapest leg, and the
+# allowlist refusal should precede anything that would exercise new bash.
+uv run --locked --project "$repo/harness" latte-harness-check
 
 "$repo/tests/installed-package-gate-selftest.sh" # fast native-package provenance/refusal controls;
                                                  # ci/build-and-gate.sh runs the package-installed runtime acceptance

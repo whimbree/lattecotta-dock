@@ -18,6 +18,10 @@ dependencies = [
     "pydantic>=2.12",
 ]
 
+[project.scripts]
+latte-harness-check = "latte_harness.check:main"
+latte-bash-allowlist = "latte_harness.bash_allowlist:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.4",
