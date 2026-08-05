@@ -294,3 +294,64 @@ def test_vehicle_session_is_frozen() -> None:
     session = VehicleSession(Path("/rt"), "sock", 1, "bus", Path("/rt/log"))
     with pytest.raises((AttributeError, TypeError)):
         session.pgid = 2  # pyright: ignore[reportAttributeAccessIssue]
+
+
+# ---- the teardown identity gate (the PR #167 review's major finding) --------
+
+
+def test_parse_proc_starttime_survives_hostile_comm() -> None:
+    # comm (field 2) may hold spaces and parens; starttime is field 22, the
+    # 20th token after the last ") ".
+    tail = "R 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 424242 21 22"
+    assert vehicle.parse_proc_starttime(f"123 (kwin) weird) {tail}") == "424242"
+    assert vehicle.parse_proc_starttime("garbage with no comm close") is None
+    assert vehicle.parse_proc_starttime("123 (x) R 1 2") is None  # tail too short
+
+
+def test_leader_starttime_reads_a_live_child() -> None:
+    proc = _leader("print('ready', flush=True)\nimport time; time.sleep(60)")
+    try:
+        started = vehicle.leader_starttime(proc.pid)
+        assert started is not None and started.isdigit()
+    finally:
+        os.killpg(proc.pid, signal.SIGKILL)
+        proc.wait(timeout=5)
+
+
+def test_stop_process_group_refuses_a_recycled_leader() -> None:
+    # A wrong recorded starttime models the recycled-pid case: the gate must
+    # refuse WITHOUT signalling (the innocent process survives) and return 0
+    # (the launched group is necessarily gone for a recycle to happen).
+    proc = _leader("print('ready', flush=True)\nimport time; time.sleep(60)")
+    try:
+        code = vehicle.stop_process_group(proc.pid, "probe", expected_starttime="1")
+        assert code == 0
+        assert proc.poll() is None, "the identity gate signalled an innocent group"
+    finally:
+        os.killpg(proc.pid, signal.SIGKILL)
+        proc.wait(timeout=5)
+
+
+def test_stop_process_group_proceeds_on_matching_starttime() -> None:
+    proc = _leader("print('ready', flush=True)\nimport time; time.sleep(60)")
+    recorded = vehicle.leader_starttime(proc.pid)
+    assert recorded is not None
+    code = vehicle.stop_process_group(proc.pid, "probe", expected_starttime=recorded)
+    assert code == 0
+    proc.wait(timeout=5)
+    assert proc.poll() is not None
+
+
+def test_stop_compositor_refusal_still_removes_the_runtime_dir(tmp_path: Path) -> None:
+    # The non-kill teardown halves must run even when the kill is refused:
+    # a stale runtime dir would poison the next run's isolation.
+    runtime_dir = tmp_path / "rt"
+    runtime_dir.mkdir()
+    proc = _leader("print('ready', flush=True)\nimport time; time.sleep(60)")
+    try:
+        vehicle.stop_compositor(runtime_dir, proc.pid, expected_starttime="1")
+        assert proc.poll() is None, "the refused kill still signalled the group"
+        assert not runtime_dir.is_dir()
+    finally:
+        os.killpg(proc.pid, signal.SIGKILL)
+        proc.wait(timeout=5)
