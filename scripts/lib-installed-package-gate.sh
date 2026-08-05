@@ -2,6 +2,17 @@
 # SPDX-FileCopyrightText: 2026 Latte Dock contributors
 # SPDX-FileCopyrightText: 2026 Bree Spektor
 # SPDX-License-Identifier: GPL-2.0-or-later
+#
+# BP-4a (the bash-to-python migration's package-gate engine chunk) ported the
+# engine consumers of this library to harness/src/latte_harness/
+# package_gate_audit.py and package_gate.py (with the process-group
+# transaction converged into latte_harness.vehicle in BP-2a). The bash
+# bodies below remain ONLY for the two consumers that still source this
+# file - tests/installed-package-gate-selftest.sh (which drives these
+# functions directly, including via bash function shadowing) and
+# scripts/lib-e2e-seed.sh - and retire with the selftest port (BP-4b).
+# Keep the diagnostics in lockstep with the typed modules: the message
+# text is the shared refusal taxonomy, matched verbatim on both sides.
 
 latte_package_gate_loader_variables=(
     LD_ASSUME_KERNEL
@@ -81,32 +92,6 @@ latte_package_gate_find_qt6_plugin_info() {
     fi
 
     latte_package_gate_choose_qt6_plugin_info "$output_name" "${candidates[@]}"
-}
-
-latte_package_gate_read_elf_search_paths() {
-    local file="$1" output_name="$2" readelf_output parsed_output path
-    local -n output_paths="$output_name"
-    output_paths=()
-
-    if ! readelf_output="$(LC_ALL=C readelf -d -- "$file" 2>/dev/null)"; then
-        echo "installed-package-gate: FAIL: readelf could not inspect dynamic metadata for $file" >&2
-        return 2
-    fi
-    if ! parsed_output="$(awk '
-        /\((RPATH|RUNPATH)\)/ {
-            value = $0
-            sub(/^[^[]*\[/, "", value)
-            sub(/\].*$/, "", value)
-            print value
-        }
-    ' <<<"$readelf_output")"; then
-        echo "installed-package-gate: FAIL: awk could not parse dynamic metadata for $file" >&2
-        return 2
-    fi
-    [[ -n "$parsed_output" ]] || return 0
-    while IFS= read -r path; do
-        output_paths+=("$path")
-    done <<<"$parsed_output"
 }
 
 # /proc/<pid>/maps has five whitespace-delimited fields before the optional
@@ -244,28 +229,6 @@ latte_package_gate_register_expected_mapping() {
         required_paths+=("$name")
     fi
     return 0
-}
-
-latte_package_gate_read_environment_value() {
-    local environment_file="$1" variable="$2" output_name="$3" parsed_value
-    local -n output_value="$output_name"
-
-    if ! parsed_value="$(tr '\0' '\n' <"$environment_file")"; then
-        echo "installed-package-gate: FAIL: cannot read process environment from $environment_file" >&2
-        return 2
-    fi
-    if ! output_value="$(awk -F= -v variable="$variable" '
-        $1 == variable {
-            sub(/^[^=]*=/, "")
-            print
-            found = 1
-            exit
-        }
-        END { if (!found) exit 3 }
-    ' <<<"$parsed_value")"; then
-        echo "installed-package-gate: FAIL: process environment has no $variable entry" >&2
-        return 2
-    fi
 }
 
 latte_package_gate_wait_until_process_exits() {
