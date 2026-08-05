@@ -95,17 +95,75 @@ source "$SRC/scripts/lib-e2e-seed.sh"
 #    allow-listed XDG_DATA_DIRS does not carry the conflicting schemes.
 CTEST_MATRIX_EXCLUDE='^(qmllintgate|schemesmodeltest)$'
 
+# D271 (ctest inherits the ambient QML import path; stage shadows type
+# registrations) strip, mirrored here from scripts/build-check.sh as
+# defense-in-depth (requested by the PR #152 review). A QML-engine ctest
+# entry inherits the invoking session's QML2_IMPORT_PATH/QML_IMPORT_PATH; a
+# populated staged QML tree on that list then resolves org.kde.latte.* from
+# disk on top of a test's own C++ registration (the themeawareicontest
+# namespace collision). No container image sets those vars today, so the
+# strip is a no-op in-container - but it costs nothing and keeps this driver
+# hermetic if a future base image or runner exports them.
+CTEST_STRIP_IMPORT_PATH=(env -u QML2_IMPORT_PATH -u QML_IMPORT_PATH)
+
 case "$STAGE" in
     build)
         echo "==> build stage complete"
         ;;
     test)
         echo "==> ctest (excluding NixOS-tier: $CTEST_MATRIX_EXCLUDE)"
-        ctest --test-dir "$BUILD" --output-on-failure -E "$CTEST_MATRIX_EXCLUDE"
+        "${CTEST_STRIP_IMPORT_PATH[@]}" \
+            ctest --test-dir "$BUILD" --output-on-failure -E "$CTEST_MATRIX_EXCLUDE"
         ;;
     gate)
+        # BP-0c (bash-to-python migration, container uv provisioning): the
+        # typed-Python harness gate leg - ruff, ruff-format, basedpyright at
+        # strict mode, the harness unit tests, and the retained-bash allowlist
+        # ratchet (latte-harness-check). First in the gate stage: it is the
+        # cheapest leg and independent of the C++ build, so a harness slip
+        # fails in seconds. It runs entirely OFFLINE - the container image
+        # baked `uv sync` at build time (see ci/containers/Containerfile.<distro>),
+        # so the uv cache is warm and UV_OFFLINE=1 makes a cold cache fail
+        # loudly rather than silently reach for the network.
+        #
+        # /src is bind-mounted READ-ONLY, so uv's default <project>/.venv is
+        # unwritable. The venv location is NOT free to move to $BUILD: the
+        # harness pins basedpyright's environment with venvPath="." / venv=
+        # ".venv" (harness/pyproject.toml [tool.basedpyright]), which resolves
+        # the type-checker's venv to <project>/.venv - so basedpyright looks
+        # for /src/harness/.venv specifically and errors if the venv lives
+        # elsewhere. The gate run therefore provides a WRITABLE overlay at that
+        # one path (e.g. `--tmpfs /src/harness/.venv`, or a small volume),
+        # leaving the rest of /src read-only, and UV_PROJECT_ENVIRONMENT points
+        # uv at the same path so uv and basedpyright agree. If the overlay is
+        # missing the mkdir fails on the read-only mount and the leg refuses
+        # loudly rather than letting uv detonate on an unwritable venv.
+        #   RUFF_CACHE_DIR keeps ruff's cache off the read-only tree (ruff
+        #     writes it in the project dir by default);
+        #   PYTEST_ADDOPTS disables pytest's cache plugin, whose default
+        #     .pytest_cache write also targets the read-only tree;
+        #   the allowlist ratchet runs `git ls-files`, and a read-only checkout
+        #     owned by another uid trips git's dubious-ownership guard, so
+        #     safe.directory is set via the config environment (no write to the
+        #     mount, no edit to the harness).
+        harness_venv="$SRC/harness/.venv"
+        if ! mkdir -p "$harness_venv" 2>/dev/null || [[ ! -w "$harness_venv" ]]; then
+            echo "gate: FAIL $harness_venv is not writable; mount a writable overlay" >&2
+            echo "  there (e.g. --tmpfs $harness_venv). basedpyright's venvPath" >&2
+            echo "  (harness/pyproject.toml) requires the venv at that in-tree path." >&2
+            exit 1
+        fi
+        echo "==> harness-check (typed-python gate leg, offline)"
+        env UV_OFFLINE=1 \
+            UV_PROJECT_ENVIRONMENT="$harness_venv" \
+            RUFF_CACHE_DIR="$BUILD/_ruff-cache" \
+            PYTEST_ADDOPTS="-p no:cacheprovider" \
+            GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
+            uv run --locked --project "$SRC/harness" latte-harness-check
+
         echo "==> ctest (excluding NixOS-tier: $CTEST_MATRIX_EXCLUDE)"
-        ctest --test-dir "$BUILD" --output-on-failure -E "$CTEST_MATRIX_EXCLUDE"
+        "${CTEST_STRIP_IMPORT_PATH[@]}" \
+            ctest --test-dir "$BUILD" --output-on-failure -E "$CTEST_MATRIX_EXCLUDE"
 
         # The container ENV must provide the distro framework QML tree. The
         # reused QML harnesses (run-e2e.sh, lib-qml-env.sh) re-exec into
