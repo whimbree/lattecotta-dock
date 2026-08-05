@@ -609,3 +609,13 @@ def test_appstream_allows_comments_prolog_and_cdata_inside_root() -> None:
         "  <!-- a comment -->\n  <name><![CDATA[Latte]]></name>",
     )
     assert validate_appstream_metadata(xml) is None
+
+
+def test_read_mapped_paths_survives_non_utf8_bytes(tmp_path: Path) -> None:
+    # The PR #177 review finding: bash/awk were byte-transparent; a legal
+    # non-UTF-8 byte in a mapped path must not crash the gate outside its
+    # exit-code contract. surrogateescape carries it through.
+    maps = tmp_path / "maps"
+    maps.write_bytes(b"7f0000000000-7f0000001000 r--p 00000000 00:00 1 /usr/lib/f\xe9ont.so\n")
+    paths = read_mapped_paths(str(maps))
+    assert any("ont.so" in p for p in paths)

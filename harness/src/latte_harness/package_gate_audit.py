@@ -248,7 +248,12 @@ def read_mapped_paths(maps_file: str) -> list[str]:
     """Parse the mapped pathnames of ``maps_file``, refusing unreadable input."""
     try:
         # newline="" keeps any stray \r bytes intact (awk read the file raw).
-        maps_text = Path(maps_file).read_text(newline="")
+        # surrogateescape keeps the read byte-transparent the way bash/awk/perl
+        # were: a legal non-UTF-8 byte in a mapped path (Linux paths are bytes)
+        # must flow into the refusal taxonomy, not crash the gate with a
+        # UnicodeDecodeError outside its exit-code contract (the PR #177
+        # review finding; read_environment_value already did this).
+        maps_text = Path(maps_file).read_text(newline="", errors="surrogateescape")
     except OSError as err:
         raise AuditError(f"cannot parse process mappings from {maps_file}") from err
     return parse_mapped_paths(maps_text)
