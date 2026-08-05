@@ -21,8 +21,11 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 
 # same pinned-toolchain guard as the other gates: re-exec into the devShell
-# unless the pinned kwin_wayland / QML env is already present
-if ! command -v kwin_wayland >/dev/null 2>&1 || [[ -z "${LATTE_QML_MODULE_PATH:-}" ]]; then
+# unless the pinned kwin_wayland / uv / QML env is already present (uv joined
+# the recipe toolchain with the harness matrix fixture module; run-e2e.sh
+# carries the full rationale)
+if ! command -v kwin_wayland >/dev/null 2>&1 || ! command -v uv >/dev/null 2>&1 \
+   || [[ -z "${LATTE_QML_MODULE_PATH:-}" ]]; then
     exec nix develop "$repo" -c "$0" "$@"
 fi
 

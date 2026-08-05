@@ -18,8 +18,11 @@ set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 
-# same pinned-toolchain guard as the other e2e front doors
-if ! command -v kwin_wayland >/dev/null 2>&1 || [[ -z "${LATTE_QML_MODULE_PATH:-}" ]]; then
+# same pinned-toolchain guard as the other e2e front doors (uv joined the
+# recipe toolchain with the harness matrix fixture module; run-e2e.sh carries
+# the full rationale)
+if ! command -v kwin_wayland >/dev/null 2>&1 || ! command -v uv >/dev/null 2>&1 \
+   || [[ -z "${LATTE_QML_MODULE_PATH:-}" ]]; then
     exec nix develop "$repo" -c "$0" "$@"
 fi
 
