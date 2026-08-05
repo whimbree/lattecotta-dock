@@ -3275,9 +3275,24 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: known issue.
 
 ### D269 - qmllint TaskItem curated count drifts under byte-identical inputs
-- STATUS: OPEN (the family); the immediate main-head gate breakage is FIXED by
-  the one-line baseline shrink in PR #152. Second occurrence of the family
-  first seen at `728d69a62` (chore(qml): restore the TaskItem lint ratchet).
+- STATUS: FIXED by the input-order pin in fix/d269-qmllint-input-order (the
+  D269 closure PR); the immediate 2026-08-04 main-head gate breakage was
+  bridged by the one-line baseline shrink in PR #152, and the per-warning
+  fingerprint diagnostic shipped with BP-1d (PR #161). Second occurrence of
+  the family first seen at `728d69a62` (chore(qml): restore the TaskItem
+  lint ratchet).
+- ROOT CAUSE (identified by the BP-1d port, 2026-08-04): qmllint's
+  unresolved-type resolution depends on the ORDER files are presented in,
+  and the shell gate fed them in coreutils sort order, which follows the
+  invoking shell's LC_COLLATE. TaskItem.qml counts 210 curated warnings
+  under this machine's UTF-8 collation order but 211 under C collation.
+  Every historical drift was a locale difference between gate invocations,
+  not a qmltypes or source change.
+- FIX: sorted_like_find pins the input order to codepoint (C-collation)
+  sort, locale-independent by construction; the committed baseline is
+  regenerated under that order in the same commit (TaskItem 210 to 211,
+  the only moved line). Verified: the gate exits 0 under both the ambient
+  UTF-8 locale and LC_ALL=C on the identical tree.
 - FOUND: 2026-08-04, BP-0 (the bash-to-python migration foundation) branch
   gate: qmllintgate failed on a branch that touches no QML.
 - SYMPTOM: TaskItem.qml's curated (unqualified) warning count reads 210
@@ -3302,8 +3317,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: gate reliability (blocks every code PR when it fires).
 
 ### D270 - qmllint-gate --write-baseline emits locale-dependent ordering
-- STATUS: OPEN; will be retired by BP-1d (the qmllint ratchet port to typed
-  Python), which sorts with an explicit key.
+- STATUS: FIXED by BP-1d (the qmllint ratchet port, PR #161, c113fc10e):
+  baseline serialization sorts by codepoint by construction, proven by a
+  shuffle-determinism unit test and a live --write-baseline reproducing the
+  committed baseline sha256-identical.
 - FOUND: 2026-08-04, while regenerating the baseline for the D269 (TaskItem
   count drift) shrink.
 - SYMPTOM: `tests/coverage/qmllint-gate.sh --write-baseline` on this shell
