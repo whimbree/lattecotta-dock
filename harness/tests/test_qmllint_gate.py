@@ -1,14 +1,15 @@
 # SPDX-FileCopyrightText: 2026 Bree Spektor
 # SPDX-FileCopyrightText: 2026 Latte Dock contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""The qmllint ratchet's pure logic: parse, filter, count, serialize.
+"""The qmllint ratchet's pure logic: parse, filter, count, serialize, diff.
 
 The negative controls carry the weight: a non-curated category must not be
 counted, a shuffled input must serialize identically (the D270 codepoint-order
-contract), a corrupt baseline must be refused, and the child env / context must
-stay locked to the qmlenv bridge.
+contract), a corrupt baseline must be refused, and the fingerprint delta must
+name the exact warning that appeared or vanished (the D269 diagnostic).
 """
 
+import json
 import shlex
 from pathlib import Path
 
@@ -18,22 +19,29 @@ from latte_harness import qmlenv
 from latte_harness.qmllint_gate import (
     BASELINE_HEADER,
     SEED_VARS,
+    FingerprintArtifact,
+    FingerprintRecord,
+    collect_fingerprints,
     curated_counts,
+    diverging_files,
+    fingerprint_delta,
     format_current,
     import_flags,
+    load_previous_fingerprint,
+    message_digest,
     parse_baseline,
     parse_report,
+    per_category_counts,
     prepare_child_env,
     render_baseline,
     resolve_context,
     sorted_like_find,
+    write_fingerprint,
 )
 
 
 def _report_json(files: dict[str, list[tuple[str, int, str]]]) -> str:
     """Build a qmllint --json blob. files maps filename -> [(id, line, message)]."""
-    import json
-
     return json.dumps(
         {
             "revision": 3,
@@ -61,6 +69,26 @@ def test_parse_report_validates_the_boundary() -> None:
     assert report.files[0].warnings[0].id == "unqualified"
 
 
+def test_collect_fingerprints_keeps_only_curated_and_strips_stage() -> None:
+    blob = _report_json(
+        {
+            "/stage/lib/qml/A.qml": [
+                ("unqualified", 5, "Unqualified access"),
+                ("import", 1, "not curated"),
+                ("missing-property", 2, "also not curated"),
+                ("deprecated", 9, "old syntax"),
+            ]
+        }
+    )
+    fps = collect_fingerprints(parse_report(blob), "/stage/")
+    # Only the two curated categories survive; the stage prefix is stripped; the
+    # records are sorted by (file, line, category), so line 5 precedes line 9.
+    assert [(f.file, f.category, f.line) for f in fps] == [
+        ("lib/qml/A.qml", "unqualified", 5),
+        ("lib/qml/A.qml", "deprecated", 9),
+    ]
+
+
 def test_curated_counts_omits_zero_and_totals_per_file() -> None:
     blob = _report_json(
         {
@@ -71,6 +99,14 @@ def test_curated_counts_omits_zero_and_totals_per_file() -> None:
     )
     counts = curated_counts(parse_report(blob), "/s/")
     assert counts == {"A.qml": 2, "C.qml": 1}  # B.qml (no curated) omitted
+
+
+def test_per_category_counts_breaks_down_by_category() -> None:
+    blob = _report_json(
+        {"/s/A.qml": [("unqualified", 1, "a"), ("unqualified", 2, "b"), ("deprecated", 3, "c")]}
+    )
+    table = per_category_counts(parse_report(blob), "/s/")
+    assert table == {"A.qml": {"unqualified": 2, "deprecated": 1}}
 
 
 # --- D270: codepoint-order serialization, locale-independent -----------------
@@ -136,6 +172,73 @@ def test_baseline_render_parse_round_trip() -> None:
     assert parse_baseline(render_baseline(counts)) == counts
 
 
+# --- divergence + fingerprint delta (D269) -----------------------------------
+
+
+def test_diverging_files_names_mismatches_and_one_sided() -> None:
+    baseline = {"A.qml": 3, "B.qml": 2, "C.qml": 1}
+    current = {"A.qml": 3, "B.qml": 5, "D.qml": 7}  # B changed, C gone, D new
+    assert diverging_files(baseline, current) == ["B.qml", "C.qml", "D.qml"]
+
+
+def _fp(file: str, category: str, line: int, message: str) -> FingerprintRecord:
+    return FingerprintRecord(
+        file=file, category=category, line=line, digest=message_digest(message), message=message
+    )
+
+
+def test_fingerprint_delta_names_appeared_and_vanished() -> None:
+    previous = [
+        _fp("A.qml", "unqualified", 5, "access to foo"),
+        _fp("A.qml", "unqualified", 9, "access to bar"),
+    ]
+    current = [
+        _fp("A.qml", "unqualified", 5, "access to foo"),  # unchanged
+        _fp("A.qml", "deprecated", 12, "old syntax"),  # appeared
+    ]
+    delta = fingerprint_delta(previous, current)
+    assert not delta.empty
+    assert [(r.line, r.category) for r in delta.appeared] == [(12, "deprecated")]
+    assert [(r.line, r.category) for r in delta.vanished] == [(9, "unqualified")]
+
+
+def test_fingerprint_delta_empty_when_identical() -> None:
+    fps = [_fp("A.qml", "unqualified", 5, "x")]
+    assert fingerprint_delta(fps, list(fps)).empty
+
+
+def test_fingerprint_digest_distinguishes_messages() -> None:
+    # Same file/category/line, different message text -> different identity, so a
+    # message-only change is nameable (the D269 "exact vanished warning" goal).
+    a = _fp("A.qml", "unqualified", 5, "access to foo")
+    b = _fp("A.qml", "unqualified", 5, "access to bar")
+    assert a.identity != b.identity
+
+
+# --- fingerprint artifact I/O ------------------------------------------------
+
+
+def test_fingerprint_artifact_round_trips(tmp_path: Path) -> None:
+    records = [_fp("A.qml", "unqualified", 5, "x"), _fp("B.qml", "deprecated", 2, "y")]
+    path = tmp_path / "_qmllint_fingerprint.json"
+    write_fingerprint(path, records)
+    loaded = load_previous_fingerprint(path)
+    assert loaded is not None
+    assert [r.identity for r in loaded] == [r.identity for r in records]
+
+
+def test_load_previous_fingerprint_absent_is_none(tmp_path: Path) -> None:
+    assert load_previous_fingerprint(tmp_path / "nope.json") is None
+
+
+def test_load_previous_fingerprint_corrupt_is_none_not_a_crash(tmp_path: Path) -> None:
+    # A corrupt artifact is diagnostic-only: it must degrade to "no prior data",
+    # never fail the gate (the verdict comes from counts vs the baseline).
+    path = tmp_path / "_qmllint_fingerprint.json"
+    path.write_text("{ this is not valid json")
+    assert load_previous_fingerprint(path) is None
+
+
 # --- child env + context: locked to the qmlenv bridge ------------------------
 
 _PACKAGED = "/nix/store/aaaa-latte-dock-0.11/lib/qt-6/qml"
@@ -197,8 +300,9 @@ def test_child_env_matches_the_qmlenv_bridge(tmp_path: Path) -> None:
     assert unset == {"QML2_IMPORT_PATH", "QML_IMPORT_PATH"}
     for var in unset:
         assert var not in child
-    # Every export the bridge emits, my child env reproduces, and no seed var I
-    # touch is missing from the bridge (both-directions drift guard).
+    # Every export the bridge emits, the child env reproduces, and no seed
+    # var the gate touches is missing from the bridge (both-directions drift
+    # guard).
     assert set(exports) == {v for v in SEED_VARS if env.get(v)}
     for var, value in exports.items():
         assert child[var] == value
@@ -261,9 +365,6 @@ def test_import_flags_stage_first_then_import_dirs() -> None:
     ]
 
 
-# --- file ordering (the OPEN D269 locale-dependence) -------------------------
-
-
 def test_sorted_like_find_uses_the_ambient_collation(monkeypatch: pytest.MonkeyPatch) -> None:
     # sorted_like_find must adopt the ambient LC_COLLATE (Python starts in C
     # regardless of the env), matching coreutils sort. Forced to C here for a
@@ -291,3 +392,12 @@ def test_sorted_like_find_uses_the_ambient_collation(monkeypatch: pytest.MonkeyP
         ]
     finally:
         locale.setlocale(locale.LC_COLLATE, saved)
+
+
+def test_artifact_serialization_is_indented_json(tmp_path: Path) -> None:
+    # A human-readable, diffable artifact (observability-first): valid JSON that
+    # round-trips through the model.
+    path = tmp_path / "fp.json"
+    write_fingerprint(path, [_fp("A.qml", "unqualified", 1, "x")])
+    parsed = FingerprintArtifact.model_validate_json(path.read_text())
+    assert parsed.warnings[0].file == "A.qml"
