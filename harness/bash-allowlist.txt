@@ -61,7 +61,6 @@ tests/e2e/071-maximized-window-length.sh
 tests/e2e/072-window-touch-transition.sh
 tests/e2e/073-window-touch-topology.sh
 tests/e2e/074-live-titlebar-window-touch.sh
-tests/e2e/075-wayland-window-admission.sh
 tests/e2e/090-golden-bridge-selftest.sh
 tests/e2e/091-drop-marker.sh
 tests/e2e/110-colorizer-applet-contrast.sh
