@@ -259,7 +259,7 @@ a success.
 
 - [x] **P0 Parametrized fixture generator + matrix harness + baseline
       backbone.** Blocks every scenario. (a) A generator
-      (`tests/e2e/matrix/fixture.py`) that, given `(viewType, edge, alignment,
+      (`harness/src/latte_harness/matrix_fixture.py`) that, given `(viewType, edge, alignment,
       display)`, derives a throwaway config from a proven-loadable seed with
       the view type, edge, alignment, and per-screen assignment
       (`screensGroup`/`onPrimary`/`explicitScreen`) set correctly. viewType is
@@ -362,7 +362,7 @@ a success.
       `viewAppletsOrder` now reports the splitter-free applet-instance-id order
       via the pure `DbusReports::appletIdOrder` helper (G1); XML, design doc,
       usage reference, `dbusreportstest` (appletIdOrder), and the
-      `tests/e2e/080-add-applet.sh` acceptance recipe (happy add + G1
+      `tests/e2e/080-add-applet.py` acceptance recipe (happy add + G1
       consistency + the HC3 bad-id rejection, PASS in the nested vehicle).
       Commits: (branch worktree-agent-a102bc9cfc620c8c0; final hashes at PR merge)
 - [x] **P4 `removeApplet` action + drop-marker/spacer readback.** Blocks F6/A1/A2.
@@ -396,7 +396,7 @@ a success.
       `DbusReports::dropMarkerIsLive` (index 0 = live leading marker, only
       negative = clean). XML, design doc, usage reference, `dbusreportstest`
       (dropMarkerIsLiveSeparatesLiveFromClean), and two acceptance recipes:
-      `tests/e2e/090-remove-applet.sh` (remove fires + both bad-id rejections)
+      `tests/e2e/090-remove-applet.py` (remove fires + both bad-id rejections)
       and `tests/e2e/091-drop-marker.sh` (marker clean at rest = post-abort
       baseline + bad-id refusal). The mid-drag live end-to-end drive rides on
       C-I9's DND driver (C-A1 asserts this readback); the live VALUE is proven
@@ -1307,8 +1307,8 @@ merge --rebase`, re-resolve hashes, fetch).
 
 ### Infra chunks (each ships the HC3 observes-a-rejection acceptance test)
 - [x] **C-I1 = P0** fixture generator + matrix harness + baseline backbone.
-      `tests/e2e/matrix/fixture.py`, `tests/e2e/matrix/matrix-lib.sh`,
-      `scripts/run-matrix.sh`, `tests/e2e/matrix-harness-selftest.sh` (HC3).
+      `harness/src/latte_harness/matrix_fixture.py`, `tests/e2e/matrix/matrix-lib.sh`,
+      `scripts/run-matrix.sh`, `tests/e2e/matrix-harness-selftest.py` (HC3).
       Commits: (C-I1 branch, hash at merge)
 - [x] **C-I2 = P1** multi-output vehicle. `scripts/lib-nested-kwin.sh` (output
       count), `scripts/run-e2e.sh` (`E2E_OUTPUT_COUNT`),

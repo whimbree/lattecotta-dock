@@ -3,6 +3,56 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-08-05.
 
+## 2026-08-05: post-crash resume - R4, D277, BP-3b landed; BP-3c in flight
+
+The orchestrator environment crashed mid-wave-3; this session
+reconstructed the in-flight state from the worktrees (git worktree prune
+released the dead /tmp registrations and freed `main`, which
+fast-forwarded 74 commits to origin). Three landings through the PR flow:
+
+- D277 (PR #181, 0d6cdffcc): the session environment exports
+  NIXPKGS_QT6_QML_IMPORT_PATH carrying the system-installed packaged
+  latte-dock, and every QML-engine ctest entry collided with its own
+  org.kde.latte.* C++ registration - D8 (the dev-loop packaged-dock
+  shadow) in ctest form; the D271 strip missed the seed vars.
+  Environments without the vars never exercised the collision, which is
+  why every pre-crash gate was green. Fixed per the D8 doctrine (the
+  qmlenv leaf-strip as the seed-env subcommand, evaled before both ctest
+  legs). The first review caught a real container regression (an
+  unguarded top-level uv run would abort the read-only build/test
+  matrix stages; the presence guard is load-bearing) - the gate-leg
+  full-merge-gate rule earned its keep, and the full gate (asan leg
+  included) ran at merge.
+- R4 (PR #183; 68e96bda4, f191ae33c, ac9a83cdf): the recipe batch the
+  crash interrupted, completed and landed. The retarget recipe's first
+  drive surfaced the placement-refusal equivalence (dbusreports refuses
+  viewsData while a view lacks an accepted placement; the bash polled
+  through the empty payload, a bare json.loads crashed) - mapped to the
+  pollable RecipeError at the two bash swallow sites. Follow-ups filed
+  in the BP plan: widen the typed View model; harden the typed
+  readbacks against the same refusal.
+- BP-3b (PR #182; 0752856d2, dea56987b, bbbcb89ac): the audit-lib chunk
+  resumed IN the crashed agent's worktree; the uncommitted WIP was
+  adopted after a critical read (its one defect: the selftest exec bit,
+  the D273 lesson again). All 13 crafted selftest controls plus the live
+  leg green in the nested vehicle; audit-lib.sh stays for its six bash
+  consumers.
+
+BP-3c (drivers) is in flight on a resumed worktree agent. Stale local
+branches from before the crash: the R1/R2 worktree-agent duplicates and
+the merged follow-up branches (fix/d275-dock-stop-reap,
+docs/bp-wave2-ticks, fix/shim-uv-self-heal, fix/d273-selftest-exec-bit,
+fix/pr163-review-corrections, fix/qmllint-taskitem-baseline-drift) are
+patch-equivalent to merged work and safe to delete;
+fix/d269-qmllint-input-order is a superseded earlier attempt (03c239ae2
+is the landed closure). The primary worktree sits on the July branch
+fix/vertical-autosize-animation-tracker with harness cache residue, not
+on main.
+
+ENVIRONMENT NOTE: any pre-D277 checkout gated from a desktop-session
+environment fails themeawareicontest with the namespace collision;
+rebase onto main before gating old branches.
+
 ## 2026-08-05: BP-2 complete, BP-3/BP-4 underway, the wave-2 landings
 
 Six PRs merged in the six-lane wave: BP-2d sceneprobe (PR #173, with the

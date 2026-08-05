@@ -91,9 +91,9 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   ratchet, gate leg, the e2e runner, the recipe API, and the daily-driver
   launcher run as typed latte_harness modules behind stable shims, with
   the D269/D270 qmllint drift family closed. BP-3 (recipes and their libs)
-  and BP-4 (the package gate) are underway: the matrix API and the
-  package-gate engine are merged, six recipes are typed, and the batches
-  continue.
+  and BP-4 (the package gate) are underway: the matrix API, the audit lib,
+  and the package-gate engine are merged, nine recipes are typed, and the
+  batches continue.
 
 ## Registries and state
 
