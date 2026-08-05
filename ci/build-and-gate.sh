@@ -106,6 +106,24 @@ CTEST_MATRIX_EXCLUDE='^(qmllintgate|schemesmodeltest)$'
 # hermetic if a future base image or runner exports them.
 CTEST_STRIP_IMPORT_PATH=(env -u QML2_IMPORT_PATH -u QML_IMPORT_PATH)
 
+# D277 mirror, same defense-in-depth: the nixpkgs Qt6 runtime patch also
+# reads NIXPKGS_QT6_QML_IMPORT_PATH/NIXPKGS_QML_SEARCH_PATHS, and a
+# system-installed packaged latte-dock on them collides with a test's
+# in-process org.kde.latte.* registration. The qmlenv seed-env eval strips
+# only the packaged leaf (the D8 doctrine). The presence guard is
+# load-bearing, not an optimization: uv run must materialize the harness
+# venv, and only the gate stage mounts the writable overlay it needs (see
+# the harness-check leg below) - an unguarded top-level uv call would abort
+# the read-only build/test stages. No container image sets these vars, so
+# in-container the guard skips uv entirely; the var names mirror
+# NIXPKGS_SEED_VARS in latte_harness.qmlenv, the single source of the strip
+# logic. The assignment-then-eval split keeps set -e watching the uv exit
+# code.
+if [[ -n "${NIXPKGS_QT6_QML_IMPORT_PATH:-}${NIXPKGS_QML_SEARCH_PATHS:-}" ]]; then
+    seed_env="$(uv run --locked --project "$SRC/harness" python -m latte_harness.qmlenv seed-env)"
+    eval "$seed_env"
+fi
+
 case "$STAGE" in
     build)
         echo "==> build stage complete"
