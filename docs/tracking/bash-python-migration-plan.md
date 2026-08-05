@@ -157,20 +157,30 @@ Phase BP-1, analyzers (file-disjoint, parallel after BP-0):
   probe counts as cannot-run; per-tool resolution cached). Byte-for-byte
   import-list equivalence proven against the bash on the real tree. Commits:
   967560f3e, 77351643f, 334988de6 (PR #156)
-- [ ] BP-1b (fixture promotion): promote fixture.py into the package, typed,
+- [x] BP-1b (fixture promotion): promote fixture.py into the package, typed,
   pydantic KConfig models, unit-tested refusals; port matrix-fixture-check.
-  Commits:
+  Golden byte-identity proven against the pre-delete original; the vehicle
+  front doors gained the uv guard. Commits: ed577b31e, 101141890, cab6b99f9
+  (PR #162)
 - [x] BP-1c (coverage ratchet): port coverage-ratchet.sh; both refusal modes
   driven as negative controls. The shim made build-check transitively require
   uv, so its devShell re-exec guard now tests cmake and uv (the gate-all
   stale-proxy lesson). Full gate (asan included) ran at merge per the
   gate-leg contract. Commits: a5745eca7, f8520fd3b (PR #155)
-- [ ] BP-1d (qmllint ratchet): port qmllint-gate.sh, exact-count semantics.
-  Commits:
-- [ ] BP-1e (rule scanners): port qml-effect-rules, qml-tooltip-rules,
-  preview-contract-rules. Commits:
-- [ ] BP-1f (QML compile/interaction gates): port qml-compile-gate,
-  qml-interaction-tests; ctest COMMAND entries switch to uv run. Commits:
+- [x] BP-1d (qmllint ratchet): port qmllint-gate.sh, exact-count semantics,
+  plus the D269 per-warning fingerprint diagnostics and the D270 codepoint
+  serialization. Root-caused D269 (locale-collated input order). Commits:
+  c113fc10e, e33a521a7 (PR #161); the D269 closure itself is 03c239ae2 with
+  corrections 28414b87b (PRs #163, #164)
+- [x] BP-1e (rule scanners): port qml-effect-rules, qml-tooltip-rules,
+  preview-contract-rules; 42 mutation-tested rules, byte-identical failure
+  messages. Commits: 415900ec9, 57beafa6b (PR #159)
+- [x] BP-1f (QML compile/interaction gates): port qml-compile-gate,
+  qml-interaction-tests behind shims (ctest COMMAND entries unchanged per the
+  shim policy; the direct-uv switch batches with the shim removal). The
+  seed-var list went public in qmlenv rather than mirrored (the PR #160
+  review's addition-blindness finding). Commits: 138d6108a, 89fbb01b7,
+  a19d0a7ef (PR #160)
 
 Phase BP-2, vehicle spine (serial):
 
@@ -221,6 +231,16 @@ Phase BP-5, tail:
   harness-scripting-typed-python memory. Commits:
 
 ## Filed follow-ups (wave 1)
+
+- Uniform shim self-heal: the eight BP-1 shims assume uv on PATH and die
+  with command-not-found from a bare shell; add the nix-develop re-exec
+  guard line to each (PR #162 review finding 1). Small standalone PR.
+- docs/tracking/e2e-interaction-test-plan.md still names the deleted
+  tests/e2e/matrix/fixture.py path at two sites (PR #162 review finding 2).
+- Backgrounded nohup gate runs break the installed-package selftest's
+  SIGINT control (bash SIG_IGN inheritance for async commands); the gate
+  runs foreground or under a harness that restores the disposition
+  (BP-1e agent finding, not a code defect).
 
 - Matrix-runner chunk: pre-create the harness/.venv mountpoint on the host
   (or a tracked .gitkeep carve-out) so the documented tmpfs overlay works on

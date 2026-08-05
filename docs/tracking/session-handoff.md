@@ -1,7 +1,32 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-08-04.
+Last updated 2026-08-05.
+
+## 2026-08-05: BP-1 complete - the analyzer wave is fully typed Python
+
+All six BP-1 chunks are merged: BP-1a qmlenv (PR #156), BP-1b fixture
+promotion (PR #162), BP-1c coverage ratchet (PR #155), BP-1d qmllint
+ratchet (PR #161), BP-1e rule scanners (PR #159), BP-1f QML compile and
+interaction gates (PR #160). Every analyzer now runs as a typed
+latte_harness module behind a thin exec shim; ctest and gate-all wiring
+stayed byte-stable per the shim policy, and call-site rewiring batches
+with the shim removal later. Two defects closed on the way: D270
+(--write-baseline locale ordering, fixed by BP-1d's codepoint
+serialization) and D269 (the qmllint count drift family) - BP-1d
+root-caused it to locale-collated find|sort input order changing
+qmllint's type resolution, and the closure (03c239ae2, corrections
+28414b87b, PRs #163/#164) pins the input order to codepoint sort with
+the baseline regenerated under it; the gate verdict is now provably
+identical under ambient UTF-8 and LC_ALL=C. Process note: PR #163's
+merge raced ahead of its amended push (the push ran in the wrong
+worktree and printed up-to-date, which went unread), so the corrections
+landed as the follow-up PR #164; the merge preflight now requires the
+remote PR head to equal the gated local head before gh pr merge. Wave
+follow-ups (uniform shim self-heal, stale fixture.py doc references,
+the nohup-gate SIGINT gotcha) are filed in the plan. Next: BP-2, the
+vehicle spine (nested-kwin lifecycle, seed, e2e runner, recipe API,
+sceneprobe, staged run), serial with the strictest equivalence bars.
 
 ## 2026-08-04: Bash-to-Python migration (BP) approved and started
 
