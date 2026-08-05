@@ -5,7 +5,8 @@
 #
 # Front door for the e2e interaction MATRIX (P0 / C-I1). The reusable driver
 # and the abort backbone live in tests/e2e/matrix/matrix-lib.sh; the fixture
-# generator in tests/e2e/matrix/fixture.py; scenarios are ordinary e2e recipes
+# generator in latte_harness.matrix_fixture (harness/, run via uv);
+# scenarios are ordinary e2e recipes
 # (tests/e2e/*.sh) that source matrix-lib.sh and call matrix_scenario_commit /
 # matrix_scenario_abort. This script only guarantees a CLEAN hermetic seed and
 # hands the recipes to scripts/run-e2e.sh, which owns the one nested-vehicle

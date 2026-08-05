@@ -17,7 +17,8 @@
 # queryable surface.
 
 # The id every 2out fixture pins its secondary view's lastScreen to. ScreenPool
-# reads the [ScreenConnectors] group (fixture.py seeds "<id>=<secondary-name>")
+# reads the [ScreenConnectors] group (the matrix fixture generator seeds
+# "<id>=<secondary-name>")
 # BEFORE it enumerates live outputs, so this id resolves to the secondary
 # connector and the primary is assigned the next free id. A FIXED id keeps the
 # pin queryable and stable across dock restarts regardless of the compositor's
