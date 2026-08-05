@@ -3274,6 +3274,48 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   change production ordering without that proof.
 - SEVERITY: known issue.
 
+### D269 - qmllint TaskItem curated count drifts under byte-identical inputs
+- STATUS: OPEN (the family); the immediate main-head gate breakage is FIXED by
+  the one-line baseline shrink in PR #152. Second occurrence of the family
+  first seen at `728d69a62` (chore(qml): restore the TaskItem lint ratchet).
+- FOUND: 2026-08-04, BP-0 (the bash-to-python migration foundation) branch
+  gate: qmllintgate failed on a branch that touches no QML.
+- SYMPTOM: TaskItem.qml's curated (unqualified) warning count reads 210
+  against the committed 211 baseline, with TaskItem.qml, both imported
+  qmltypes files, the lint script, and the baseline all unchanged since the
+  last baseline write (`0322214c1`). At `728d69a62` the same class appeared in
+  the opposite direction (211 counted as 212, fixed then by converting an
+  implicit Connections handler).
+- EVIDENCE: reproduced on the identical tree and build under BOTH the
+  pre-BP devShell (main's flake at `14ab4abc1`) and the BP devShell, so the
+  BP-0a toolchain addition is exonerated; the two shells' LATTE_QML_MODULE_PATH
+  is byte-identical. Category counts from build/_qmlstage/_qmllint_gate.json:
+  unqualified 210, missing-property 46, import 5, unused-imports 2,
+  incompatible-type 1; only unqualified moved.
+- SUSPECTED ROOT: qmllint's warning set is sensitive to staged-qmltypes
+  visibility (one unqualified-access warning stops firing when a type becomes
+  resolvable), so a build-dir difference that changes which qmltypes stage
+  can move the count without any source change. Not yet isolated to the
+  specific qmltypes input; the BP-1d port of the gate should record the
+  per-warning fingerprint, not only counts, so the next drift names the exact
+  vanished warning.
+- SEVERITY: gate reliability (blocks every code PR when it fires).
+
+### D270 - qmllint-gate --write-baseline emits locale-dependent ordering
+- STATUS: OPEN; will be retired by BP-1d (the qmllint ratchet port to typed
+  Python), which sorts with an explicit key.
+- FOUND: 2026-08-04, while regenerating the baseline for the D269 (TaskItem
+  count drift) shrink.
+- SYMPTOM: `tests/coverage/qmllint-gate.sh --write-baseline` on this shell
+  reorders 38 unchanged lines (case ordering: `appletabilities/` sorting
+  before `AppletAbilities.qml`), because the emitted order follows the ambient
+  locale's collation while the committed baseline is C-collated. The gate's
+  compare path normalizes order, so verdicts are unaffected; only the
+  regeneration diff is polluted.
+- WORKAROUND: hand-edit the changed line instead of regenerating, or run the
+  write under `LC_ALL=C`.
+- SEVERITY: annoyance (dirty diffs on baseline regeneration).
+
 ### D265 - Linked docks gave no passive edit cue
 - STATUS: FIXED on `main` by `08d2c3985`, `0f78b52b8`, `fb340286d`,
   `23e30c4f0`, and `141fd0b5e` (PR #145).

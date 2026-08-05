@@ -118,7 +118,7 @@
 30	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/ProgressOverlay.qml
 43	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/SubWindows.qml
 78	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskIcon.qml
-211	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskItem.qml
+210	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskItem.qml
 181	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskMouseArea.qml
 8	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/animations/ClickedAnimation.qml
 32	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/animations/LauncherAnimation.qml
