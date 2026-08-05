@@ -3,11 +3,15 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # Shared nested kwin_wayland bring-up/teardown for the out-of-session
-# harnesses: the sceneprobe render gate (tests/sceneprobe/run_in_kwin.sh)
-# and the e2e recipe driver (scripts/run-e2e.sh). Extracted from
-# run_in_kwin.sh so the two cannot drift apart on the hard-won cleanup
-# discipline (process-group kill, FUSE unmount, X11 stripping - each
-# comment below records the incident that earned it).
+# harnesses: the sceneprobe render gate (tests/sceneprobe/run_in_kwin.sh),
+# the e2e recipe driver (scripts/run-e2e.sh), the installed-package gate and
+# the default-config seeder.
+#
+# THIN BRIDGE (BP-2a): the hard-won lifecycle (process-group kill, FUSE
+# unmount, X11 stripping, the one private dbus-run-session bus) lives in the
+# typed latte_harness.vehicle module now; each incident that earned a step is
+# recorded there. This file keeps the SAME sourced interface the consumers rely
+# on so they need no change.
 #
 # Usage (bash, nounset-safe):
 #   source scripts/lib-nested-kwin.sh
@@ -16,123 +20,62 @@
 #   nested_kwin_start <width> <height> <socket> [output-count]
 #   trap nested_kwin_cleanup EXIT INT TERM  # caller owns the trap
 #
-# output-count defaults to 1 (a single <width>x<height> virtual output; the
-# byte-identical historical command line). >1 asks kwin_wayland for that many
-# virtual outputs (`--virtual --output-count N`, verified on the pinned kwin
-# 6.7.3), which the multi-output e2e vehicle (C-I2/P1) uses to prove per-screen
-# view placement. The outputs' connector NAMES are assigned by the compositor
-# and discovered at runtime (org.kde.LatteDock screensData / a KWin script),
-# never hardcoded.
+# output-count defaults to 1 (a single <width>x<height> virtual output). >1 asks
+# kwin_wayland for that many virtual outputs (--virtual --output-count N), which
+# the multi-output e2e vehicle uses to prove per-screen view placement.
 #
 # After nested_kwin_start:
 #   NESTED_RT        private XDG_RUNTIME_DIR of the session
 #   NESTED_SOCK      the wayland socket name (inside $NESTED_RT)
-#   NESTED_KWIN_PID  the session leader pid (dbus-run-session's group)
+#   NESTED_KWIN_PID  the session leader pid (== the process-group id)
 #   NESTED_KWIN_LOG  kwin's captured stdout+stderr ($NESTED_RT/kwin.log)
 #   NESTED_BUS       the session's private D-Bus address
 #
 # The whole nested session lives on ONE private dbus-run-session bus and
-# NESTED_BUS hands that address to further clients. This is load-bearing
-# for anything that mutates KWin over D-Bus: a probe on a different bus
-# talks to a different (or no) KWin and every scripting call silently
-# no-ops - the e2e vehicle's v2 prototype lost a day to exactly that.
+# NESTED_BUS hands that address to further clients. This is load-bearing for
+# anything that mutates KWin over D-Bus: a probe on a different bus talks to a
+# different (or no) KWin and every scripting call silently no-ops.
 
-# nested_kwin_prepare: create the private runtime dir, so callers can
-# stage session-scoped state (config homes, logs) before kwin starts.
+# Resolve the harness from this file's own location so the bridge works from any
+# consumer cwd (run-e2e sources it by $repo path, run_in_kwin.sh by a relative
+# path). All consumers re-exec into the flake devShell before sourcing, so `uv`
+# is on PATH, matching scripts/lib-qml-env.sh.
+_NESTED_KWIN_HARNESS="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/harness"
+
+# nested_kwin_prepare: create the private runtime dir and initialise the
+# session env array, so callers can stage session-scoped state before kwin
+# starts. Sets NESTED_RT and NESTED_KWIN_LOG via the module's emitted shell.
 nested_kwin_prepare() {
-    NESTED_RT="$(mktemp -d /tmp/nested-kwin-xdg.XXXXXX)"
-    chmod 700 "$NESTED_RT"
-    NESTED_KWIN_LOG="$NESTED_RT/kwin.log"
+    local _out
+    _out="$(uv run --locked --project "$_NESTED_KWIN_HARNESS" python -m latte_harness.vehicle prepare)" || return
+    eval "$_out"
     nested_kwin_env=()
 }
 
-# nested_kwin_start <width> <height> <socket>: bring up the virtual
-# compositor inside its own dbus-run-session and wait for its socket.
-# Returns non-zero (after printing kwin's log) if the socket never appears.
+# nested_kwin_start <width> <height> <socket> [output-count]: bring up the
+# virtual compositor inside its own dbus-run-session and wait for its socket.
+# Returns non-zero (after the module prints kwin's log) if the socket never
+# appears. Sets NESTED_SOCK, NESTED_KWIN_PID and NESTED_BUS on success.
 nested_kwin_start() {
     local width="$1" height="$2" socket="$3" outputs="${4:-1}"
-    NESTED_SOCK="$socket"
-
-    # DISPLAY/XAUTHORITY are STRIPPED for the whole nested session: nothing in
-    # it needs the real X server, and leaving them inherited let every
-    # dbus-activated service (xdg-desktop-portal, ksecretd - one set PER RUN)
-    # open connections to the session Xwayland that never closed. A night of
-    # runs saturated the X client limit (254/256, "Maximum number of clients
-    # reached") and took down both the desk session's headroom and this gate.
-    #
-    # The sh -c wrapper publishes the private bus address to $NESTED_RT before
-    # exec'ing kwin (pid and process shape unchanged), so callers can put more
-    # clients on the same bus - see the one-bus note in the header. The
-    # single-output branch ($5 <= 1) is the byte-identical historical command;
-    # only a multi-output request ($5 > 1) adds --output-count, so no existing
-    # single-output recipe changes.
-    setsid env -u DISPLAY -u XAUTHORITY \
-        XDG_RUNTIME_DIR="$NESTED_RT" KWIN_WAYLAND_NO_PERMISSION_CHECKS=1 \
-        "${nested_kwin_env[@]}" \
-        dbus-run-session -- sh -c \
-        'printf %s "$DBUS_SESSION_BUS_ADDRESS" >"$1/bus-address";
-         if [ "$5" -gt 1 ]; then
-             exec kwin_wayland --virtual --output-count "$5" --width "$2" --height "$3" --no-lockscreen --socket "$4";
-         else
-             exec kwin_wayland --virtual --width "$2" --height "$3" --no-lockscreen --socket "$4";
-         fi' \
-        sh "$NESTED_RT" "$width" "$height" "$socket" "$outputs" >"$NESTED_KWIN_LOG" 2>&1 &
-    NESTED_KWIN_PID=$!
-
-    local _i
-    for _i in $(seq 1 150); do
-        [ -S "$NESTED_RT/$NESTED_SOCK" ] && break
-        kill -0 "$NESTED_KWIN_PID" 2>/dev/null || break
-        sleep 0.1
-    done
-    if [ ! -S "$NESTED_RT/$NESTED_SOCK" ]; then
-        echo "nested kwin_wayland never brought up its socket; its log:" >&2
-        cat "$NESTED_KWIN_LOG" >&2
-        return 2
+    local -a _env_args=()
+    if ((${#nested_kwin_env[@]})); then
+        _env_args=(--env "${nested_kwin_env[@]}")
     fi
-    NESTED_BUS="$(cat "$NESTED_RT/bus-address")"
+    local _out
+    _out="$(uv run --locked --project "$_NESTED_KWIN_HARNESS" python -m latte_harness.vehicle start \
+        --runtime-dir "$NESTED_RT" --width "$width" --height "$height" \
+        --socket "$socket" --outputs "$outputs" \
+        ${_env_args[@]+"${_env_args[@]}"})" || return
+    eval "$_out"
 }
 
+# nested_kwin_cleanup: the module's `stop` teardown, driven by the two live
+# shell variables the bash version read - an empty NESTED_KWIN_PID skips the
+# group kill (the installed-package gate clears it after stopping the group
+# itself), an empty NESTED_RT skips the FUSE unmount and runtime-dir removal.
+# Idempotent: a dead group and a missing dir succeed quietly.
 nested_kwin_cleanup() {
-    # kill the whole process GROUP, not just dbus-run-session: killing the
-    # wrapper pid alone orphans the kwin child often enough that a day of
-    # runs left 315 virtual compositors alive (the setsid above gives the
-    # session its own pgid so the negative-pid kill has a precise target)
-    if [ -n "${NESTED_KWIN_PID:-}" ]; then
-        kill -- "-$NESTED_KWIN_PID" 2>/dev/null || kill "$NESTED_KWIN_PID" 2>/dev/null
-        wait "$NESTED_KWIN_PID" 2>/dev/null
-        # ... and wait for the WHOLE group to be gone before removing its
-        # runtime dir: waiting on the session leader alone races the members'
-        # exit paths - kwin and kded flush their config on SIGTERM and
-        # recreated XDG dirs inside $NESTED_RT after the rm below had run
-        # (leftover /tmp/nested-kwin-xdg.* dirs holding a fresh
-        # kwinoutputconfig.json, caught on the e2e driver's first day)
-        local _i
-        for _i in $(seq 1 50); do
-            pgrep -g "$NESTED_KWIN_PID" >/dev/null 2>&1 || break
-            sleep 0.1
-        done
-        if pgrep -g "$NESTED_KWIN_PID" >/dev/null 2>&1; then
-            kill -KILL -- "-$NESTED_KWIN_PID" 2>/dev/null
-            sleep 0.2
-        fi
-    fi
-    # the xdg-desktop-portal the nested bus activates FUSE-mounts $RT/doc;
-    # unmount before removing or the rm leaves the mountpoint behind
-    [ -n "${NESTED_RT:-}" ] && {
-        fusermount3 -u "$NESTED_RT/doc" 2>/dev/null || fusermount -u "$NESTED_RT/doc" 2>/dev/null || true
-        rm -rf "$NESTED_RT" 2>/dev/null || true
-        # contract check: nothing may outlive the session and recreate state
-        # in here (seen once even after the group wait: a leftover dir with a
-        # fresh kwinoutputconfig.json). If the dir reappears, NAME the writer
-        # loudly - a silent survivor holds a live config path and pollutes
-        # the next run's isolation - then remove again.
-        sleep 0.3
-        if [ -d "$NESTED_RT" ]; then
-            echo "nested-kwin cleanup: $NESTED_RT was recreated after removal; survivors referencing it:" >&2
-            pgrep -af "$NESTED_RT" >&2 || echo "  (none found by cmdline; an env-only reference)" >&2
-            find "$NESTED_RT" -type f >&2 2>/dev/null || true
-            rm -rf "$NESTED_RT" 2>/dev/null || true
-        fi
-    }
+    uv run --locked --project "$_NESTED_KWIN_HARNESS" python -m latte_harness.vehicle stop \
+        --runtime-dir "${NESTED_RT:-}" --pgid "${NESTED_KWIN_PID:-}"
 }
