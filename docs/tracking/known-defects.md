@@ -3307,13 +3307,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   is byte-identical. Category counts from build/_qmlstage/_qmllint_gate.json:
   unqualified 210, missing-property 46, import 5, unused-imports 2,
   incompatible-type 1; only unqualified moved.
-- SUSPECTED ROOT: qmllint's warning set is sensitive to staged-qmltypes
-  visibility (one unqualified-access warning stops firing when a type becomes
-  resolvable), so a build-dir difference that changes which qmltypes stage
-  can move the count without any source change. Not yet isolated to the
-  specific qmltypes input; the BP-1d port of the gate should record the
-  per-warning fingerprint, not only counts, so the next drift names the exact
-  vanished warning.
+- SUPERSEDED HYPOTHESIS (recorded 2026-08-04, disproven the same day): a
+  staged-qmltypes visibility difference. The BP-1d port isolated the real
+  variable instead: the file input order under the invoking shell's
+  collation (the ROOT CAUSE above). Kept for the record per the
+  disproven-hypotheses discipline.
 - SEVERITY: gate reliability (blocks every code PR when it fires).
 
 ### D270 - qmllint-gate --write-baseline emits locale-dependent ordering

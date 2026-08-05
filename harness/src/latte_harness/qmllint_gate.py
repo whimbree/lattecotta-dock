@@ -28,8 +28,9 @@ Two defect dispositions ride in this port (docs/tracking/known-defects.md):
   baseline is serialized in codepoint (C-collation) order by construction
   (Python's default str sort), independent of the ambient locale, so a
   regeneration on an unchanged tree reproduces the committed file byte-for-byte.
-- D269 (the curated count drifts under byte-identical inputs) stays OPEN as a
-  family, but this port ships the diagnostic the registry asked for: every run
+- D269 (the curated count drifts under byte-identical inputs) is CLOSED: the
+  root cause was locale-collated input order, and the input order is pinned to
+  codepoint sort (see sorted_codepoint). The diagnostic surface stays: every run
   persists a per-warning fingerprint artifact (file, category, line, a stable
   message digest) beside the stage, and on a count divergence the failure output
   names the per-file per-category breakdown and, when a prior fingerprint
@@ -393,8 +394,11 @@ def _resolve_pinned_qmllint() -> str:
     return lint
 
 
-def sorted_like_find(paths: Iterable[Path]) -> list[Path]:
+def sorted_codepoint(paths: Iterable[Path]) -> list[Path]:
     """Order paths deterministically: full-path codepoint (C-collation) sort.
+
+    Named for what it does; the shell ancestor sorted "like find", i.e. in
+    the ambient locale, which is exactly the D269 behavior this replaces.
 
     qmllint's unresolved-type resolution is sensitive to the order files are
     presented in (the D269 drift family: the shell gate fed files in
@@ -421,7 +425,7 @@ def _scan_files(stage: Path) -> tuple[list[Path], int, int]:
         base = stage / root
         if base.is_dir():
             found += base.rglob("*.qml")
-    found = sorted_like_find(found)
+    found = sorted_codepoint(found)
     if not found:
         print(f"no staged QML found under {stage}", flush=True)
         raise SystemExit(2)
