@@ -48,7 +48,6 @@ tests/coverage/coverage-ratchet.sh
 tests/coverage/qmllint-gate.sh
 tests/e2e-seed-cleanup-selftest.sh
 tests/e2e/010-wheel-desktops.sh
-tests/e2e/020-wheel-task-cycle.sh
 tests/e2e/021-launcher-wheel.sh
 tests/e2e/022-configoverlay-wheel-threshold.sh
 tests/e2e/022-empty-area-window-actions.sh
