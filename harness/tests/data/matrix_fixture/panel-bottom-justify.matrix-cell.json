@@ -1,0 +1,16 @@
+{
+  "cell": "panel-bottom-justify-1out",
+  "viewType": "panel",
+  "edge": "bottom",
+  "alignment": "justify",
+  "display": "1out",
+  "screen": "",
+  "screenId": 999,
+  "screenGeometry": "",
+  "layout": "My Layout.layout.latte",
+  "expect": {
+    "type": "panel",
+    "edge": "bottom",
+    "alignment": "justify"
+  }
+}
