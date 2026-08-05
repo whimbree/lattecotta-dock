@@ -82,7 +82,6 @@ tests/e2e/114-global-menu-focus-restoration.sh
 tests/e2e/audit-harness-selftest.sh
 tests/e2e/audit/audit-lib.sh
 tests/e2e/create-linked-dock.sh
-tests/e2e/dock-edit-retarget-cancel.sh
 tests/e2e/duplicate-dock-independent.sh
 tests/e2e/duplicate-view-idremap.sh
 tests/e2e/fixtures/sc-w1/launcher.sh
