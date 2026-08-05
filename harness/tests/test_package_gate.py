@@ -10,11 +10,13 @@ packager consume.
 """
 
 import os
+import re
 from pathlib import Path
 
 import pytest
 
 from latte_harness.package_gate import (
+    VALIDATION_COMMANDS,
     GateArguments,
     GateContext,
     GateRefusal,
@@ -27,6 +29,7 @@ from latte_harness.package_gate import (
     resolve_package_namespace_path,
 )
 from latte_harness.package_gate_audit import shell_wait_status
+from latte_harness.paths import find_repo_root
 
 # ---- argument contract -------------------------------------------------------
 
@@ -271,3 +274,16 @@ def test_shell_wait_status_mirrors_shell_wait() -> None:
     assert shell_wait_status(-6) == 134  # SIGABRT, the selftest's pinned example
     assert shell_wait_status(-9) == 137  # SIGKILL, how bash saw a --kill-after timeout
     assert shell_wait_status(-15) == 143  # SIGTERM
+
+
+# ---- shim lockstep -----------------------------------------------------------
+
+
+def test_shim_preflight_list_matches_the_module() -> None:
+    """The exec shim carries a bash copy of VALIDATION_COMMANDS because it
+    must refuse before any interpreter is resolvable (the selftest's
+    restricted-PATH controls); this test is the drift guard for that copy."""
+    shim = find_repo_root() / "scripts" / "installed-package-gate.sh"
+    match = re.search(r"^for required_command in ([a-z0-9 ]+); do$", shim.read_text(), re.MULTILINE)
+    assert match is not None, "the shim's validation-command preflight loop is missing"
+    assert tuple(match.group(1).split()) == VALIDATION_COMMANDS
