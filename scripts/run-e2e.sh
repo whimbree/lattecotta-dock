@@ -213,8 +213,15 @@ if [[ "${1:-}" == "--live" ]]; then
 fi
 
 # both modes want the devshell (pinned kwin_wayland for the vehicle;
-# python3/magick for recipe helpers)
-if ! command -v kwin_wayland >/dev/null 2>&1 || [[ -z "${LATTE_QML_MODULE_PATH:-}" ]]; then
+# python3/magick for recipe helpers). uv joined the recipe toolchain when the
+# matrix fixture generator moved into the harness package (BP-1b, the
+# bash-to-python migration's fixture chunk): matrix-lib and the FP-4C recipe
+# invoke `uv run`, and recipes inherit THIS process's PATH - so the guard must
+# check uv too. kwin_wayland alone is a stale proxy: a shell entered before uv
+# joined the devShell carries a store kwin but no uv (the exact gap gate-all's
+# cmake+uv guard already closes), and the vehicle then fails every staging call.
+if ! command -v kwin_wayland >/dev/null 2>&1 || ! command -v uv >/dev/null 2>&1 \
+   || [[ -z "${LATTE_QML_MODULE_PATH:-}" ]]; then
     exec nix develop "$repo" -c "$0" $([[ "$MODE" == live ]] && echo --live) "$@"
 fi
 
