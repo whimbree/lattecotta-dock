@@ -500,25 +500,30 @@ def test_build_descriptor_2out_secondary_without_an_id_refuses(
     assert excinfo.value.code == 2
 
 
-# ---- the reaping dock stop (recipe.dock_stop cannot reap a recipe child) -----
+# ---- the quiet dock-stop wrapper (reaping lives in recipe.dock_stop, D275) ---
 
 
 def test_stop_dock_returns_false_without_a_recorded_pid(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("E2E_MODE", "nested")
     monkeypatch.setattr(recipe, "dock_pid", _returns_pid(None))
     assert matrix.stop_dock() is False
 
 
-def test_stop_dock_reaps_a_recipe_started_child(monkeypatch: pytest.MonkeyPatch) -> None:
-    # recipe.dock_start launches the dock as a Popen CHILD of the recipe; stop_dock
-    # must SIGTERM AND reap it (os.waitpid), not merely poll kill(0) which a zombie
-    # answers "alive". A real short-lived child stands in for the dock.
+def test_stop_dock_delegates_and_stays_quiet(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The wrapper's whole contract since the D275 fix moved reaping into
+    # recipe.dock_stop: delegate the stop (the child gets reaped there) and
+    # suppress the stop's stderr chatter (the bash matrix_stage's
+    # ``e2e_dock_stop >/dev/null 2>&1 || true``). A real child stands in.
     child = subprocess.Popen(["sleep", "60"])
     try:
+        monkeypatch.setenv("E2E_MODE", "nested")
         monkeypatch.setattr(recipe, "dock_pid", _returns_pid(child.pid))
         assert matrix.stop_dock(timeout=5) is True
+        assert child.poll() is not None  # reaped through recipe.dock_stop
+        assert capsys.readouterr().err == ""  # the quiet half of the contract
     finally:
-        # stop_dock already reaped it; SIGKILL+reap defensively if the assert
-        # failed, then quiet Popen.__del__ (it must not re-reap a gone pid).
         with suppress(ProcessLookupError, ChildProcessError):
             os.kill(child.pid, signal.SIGKILL)
             _ = os.waitpid(child.pid, 0)

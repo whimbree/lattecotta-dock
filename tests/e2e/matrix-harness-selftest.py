@@ -54,8 +54,9 @@ def restore_base() -> None:
         pristine = matrix.pristine_seed_dir()
         if not pristine.is_dir():
             return
-        # matrix.stop_dock reaps the recipe-started dock (recipe.dock_stop cannot,
-        # so it would leave a zombie that races the runner's teardown).
+        # matrix.stop_dock wraps recipe.dock_stop (which reaps a
+        # recipe-started child since the D275 fix) with the matrix
+        # contract: quiet, best-effort, never fails the scenario.
         _ = matrix.stop_dock()
         config_home = Path(os.environ["E2E_CONFIG_HOME"])
         if config_home.exists():

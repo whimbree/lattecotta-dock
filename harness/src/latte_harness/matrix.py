@@ -50,16 +50,16 @@ UNASSERTABLE surface, never silently a clean pass.
 from __future__ import annotations
 
 import difflib
+import io
 import json
 import os
 import re
 import shutil
-import signal
 import subprocess
 import sys
 import time
 from collections.abc import Callable
-from contextlib import suppress
+from contextlib import redirect_stderr, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NoReturn
@@ -451,40 +451,18 @@ def init() -> int:
 
 
 def stop_dock(timeout: int = 25) -> bool:
-    """SIGTERM the staged dock and wait for a CLEAN exit, REAPING it.
+    """SIGTERM the staged dock, best-effort and quiet (the matrix contract).
 
-    Why not recipe.dock_stop here: recipe.dock_start launches the dock as a Popen
-    CHILD of this recipe process (run-staged.sh execs the binary, so the launcher
-    pid IS the dock pid). recipe.dock_stop polls kill(0), which a SIGTERM'd child
-    answers "alive" until it is reaped - so in the matrix stage->stop->stage loop
-    it would time out ``timeout`` seconds on every stop and leave a zombie that
-    races the runner's teardown. This reaps the child (os.waitpid) so the exit is
-    confirmed promptly. A dock that is NOT our child (the FIRST dock the runner
-    started and reparented to init) is handled by the kill(0) fallback, exactly as
-    recipe.dock_stop does. No SIGKILL escalation: a dock that survives SIGTERM is a
-    shutdown defect the caller must see (the lib.sh contract). Best-effort like the
-    bash matrix_stage's ``e2e_dock_stop || true``; returns True on a confirmed exit.
+    recipe.dock_stop reaps a recipe-started child since the D275 fix (a
+    recipe-started dock stayed a zombie its parent never reaped), so the
+    local reaping loop this function carried as a workaround is gone; what
+    remains is the matrix-specific contract the bash matrix_stage had with
+    ``e2e_dock_stop >/dev/null 2>&1 || true``: suppress the stop's chatter
+    and report the outcome without failing the scenario.
     """
-    pid = recipe.dock_pid()
-    if pid is None:
-        return False
-    with suppress(ProcessLookupError):
-        os.kill(pid, signal.SIGTERM)
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        try:
-            waited, _ = os.waitpid(pid, os.WNOHANG)
-        except ChildProcessError:
-            # not (or no longer) our child: fall back to the signal-0 liveness poll
-            try:
-                os.kill(pid, 0)
-            except ProcessLookupError:
-                return True
-            waited = 0
-        if waited == pid:
-            return True
-        time.sleep(0.1)
-    return False
+    sink = io.StringIO()
+    with redirect_stderr(sink):
+        return recipe.dock_stop(timeout=timeout)
 
 
 def _print_dock_log_tail(lines: int = 20) -> None:
