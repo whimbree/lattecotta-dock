@@ -83,6 +83,11 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   the floating-panel parity plan; the edit-mode tooltip click-through fix
   landed with one sibling ruler hint still owed; four-edge coverage remains
   part of the parity acceptance matrix.
+- [Bash-to-Python migration](bash-python-migration-plan.md) - the BP
+  workstream: ~16,000 lines of bash harness, gate, and test scripting move to
+  strictly typed Python (uv, pydantic, basedpyright-strict, ruff) with a
+  613-line retained-bash allowlist for the exit-code spine and external
+  contracts. Approved 2026-08-04; BP-0 (foundation) in progress.
 
 ## Registries and state
 
