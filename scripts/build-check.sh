@@ -17,10 +17,16 @@ set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 
-case "$(command -v cmake || true)" in
-    /nix/store/*) ;;
-    *) exec nix develop "$repo" -c "$0" "$@";;
-esac
+# The ratchet leg is a uv shim since BP-1c (the coverage-ratchet port),
+# so the pinned-toolchain test covers uv as well as cmake - the same
+# stale-proxy lesson gate-all.sh learned when the harness leg landed: a
+# pre-BP shell carries a store cmake but no uv.
+for tool in cmake uv; do
+    case "$(command -v "$tool" || true)" in
+        /nix/store/*) ;;
+        *) exec nix develop "$repo" -c "$0" "$@";;
+    esac
+done
 
 fresh=0
 [[ "${1:-}" == "--fresh" ]] && fresh=1
