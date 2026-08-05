@@ -365,33 +365,27 @@ def test_import_flags_stage_first_then_import_dirs() -> None:
     ]
 
 
-def test_sorted_like_find_uses_the_ambient_collation(monkeypatch: pytest.MonkeyPatch) -> None:
-    # sorted_like_find must adopt the ambient LC_COLLATE (Python starts in C
-    # regardless of the env), matching coreutils sort. Forced to C here for a
-    # deterministic assertion: C collation is codepoint order, so uppercase 'A'
-    # precedes lowercase 'a'. This is the deliberate locale-dependence at the
-    # heart of the OPEN D269 family (see the function's docstring).
-    import locale
-
-    monkeypatch.setenv("LC_ALL", "C")
-    monkeypatch.setenv("LC_COLLATE", "C")
-    monkeypatch.setenv("LANG", "C")
-    saved = locale.setlocale(locale.LC_COLLATE)
-    try:
-        paths = [
-            Path("b/appletabilities/x.qml"),
-            Path("b/AppletAbilities.qml"),
-            Path("a/Z.qml"),
-        ]
-        ordered = sorted_like_find(paths)
-        assert ordered == sorted(paths, key=str)  # C == codepoint
-        assert [str(p) for p in ordered] == [
-            "a/Z.qml",
-            "b/AppletAbilities.qml",
-            "b/appletabilities/x.qml",
-        ]
-    finally:
-        locale.setlocale(locale.LC_COLLATE, saved)
+def test_sorted_like_find_is_locale_independent(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The D269 fix contract: input order is codepoint sort no matter what
+    # locale the invoking shell exports. A UTF-8 collation would interleave
+    # 'appletabilities/' before 'AppletAbilities.qml'; codepoint order must
+    # hold under both environments, so the qmllint warning set cannot vary
+    # with the invoking shell (see the function's docstring).
+    paths = [
+        Path("b/appletabilities/x.qml"),
+        Path("b/AppletAbilities.qml"),
+        Path("a/Z.qml"),
+    ]
+    expected = [
+        "a/Z.qml",
+        "b/AppletAbilities.qml",
+        "b/appletabilities/x.qml",
+    ]
+    for env in ("C", "en_US.UTF-8"):
+        monkeypatch.setenv("LC_ALL", env)
+        monkeypatch.setenv("LC_COLLATE", env)
+        monkeypatch.setenv("LANG", env)
+        assert [str(p) for p in sorted_like_find(paths)] == expected
 
 
 def test_artifact_serialization_is_indented_json(tmp_path: Path) -> None:

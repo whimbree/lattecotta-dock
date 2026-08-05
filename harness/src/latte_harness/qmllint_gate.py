@@ -46,7 +46,6 @@ from __future__ import annotations
 import argparse
 import difflib
 import hashlib
-import locale
 import os
 import re
 import shutil
@@ -395,26 +394,20 @@ def _resolve_pinned_qmllint() -> str:
 
 
 def sorted_like_find(paths: Iterable[Path]) -> list[Path]:
-    """Order paths as ``find ... | sort`` does: full-path ambient-locale collation.
+    """Order paths deterministically: full-path codepoint (C-collation) sort.
 
-    This is deliberately locale-dependent, and it is the crux of the OPEN D269
-    family. qmllint's unresolved-type resolution is sensitive to the order the
-    files are presented in, and the shell gate fed them in coreutils ``sort``
-    order, which follows LC_COLLATE. The committed baseline was written under
-    this machine's ambient UTF-8 locale; measured on the current tree,
-    TaskItem.qml counts 210 curated warnings in that order but 211 under C
-    collation (codepoint), where one type stops resolving and an unresolved-type
-    fires. The port reproduces the shell's locale order to stay byte-equivalent
-    against the untouched baseline. It does NOT substitute a deterministic order:
-    that would kill the fragility but only against a baseline regenerated under a
-    pinned locale, which is the deferred real fix for D269 and outside this port
-    (the fingerprint diagnostic below is what this port adds so the next drift
-    names the exact warning). Python starts in the C locale regardless of the
-    environment, so LC_COLLATE must be adopted explicitly for strxfrm to match
-    coreutils sort.
+    qmllint's unresolved-type resolution is sensitive to the order files are
+    presented in (the D269 drift family: the shell gate fed files in
+    coreutils ``sort`` order, which follows the ambient LC_COLLATE, so the
+    curated count changed with the invoking shell's locale - TaskItem.qml
+    measured 210 under this machine's UTF-8 collation but 211 under C
+    collation, one unresolved-type firing only in the latter order). The
+    input order is now pinned to codepoint sort, locale-independent by
+    construction, and the committed baseline was regenerated under this
+    order in the same commit. "Simplifying" this back to a locale-aware
+    sort reintroduces a verdict that changes with the invoking shell.
     """
-    locale.setlocale(locale.LC_COLLATE, "")
-    return sorted(paths, key=lambda p: locale.strxfrm(str(p)))
+    return sorted(paths, key=str)
 
 
 def _scan_files(stage: Path) -> tuple[list[Path], int, int]:
