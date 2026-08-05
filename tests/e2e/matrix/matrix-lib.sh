@@ -92,7 +92,6 @@
 
 # --- configuration ----------------------------------------------------------
 MATRIX_DIR="${E2E_REPO:?matrix-lib must run through run-e2e/run-matrix}/tests/e2e/matrix"
-MATRIX_FIXTURE="$MATRIX_DIR/fixture.py"
 
 # The render-golden bridge (P2 / C-I6): e2e_golden_compare (tier-aware pixel
 # compare) backs the abort backbone's visual-residue hook below, and
@@ -160,7 +159,7 @@ matrix_gen() {
                   --screen-id "${E2E_MO_SECONDARY_ID:?multi-output-lib sets this alongside E2E_MO_SECONDARY}"
                   --screen-geometry "${E2E_MO_SECONDARY_GEOM:-}")
     fi
-    python3 "$MATRIX_FIXTURE" \
+    uv run --locked --project "$E2E_REPO/harness" python -m latte_harness.matrix_fixture \
         --seed-dir "$MATRIX_PRISTINE" --out-dir "$out" \
         --view-type "$MATRIX_VT" --edge "$MATRIX_EDGE" \
         --alignment "$MATRIX_ALIGN" --display "$MATRIX_DISPLAY" \

@@ -11,7 +11,7 @@ set -uo pipefail
 source "${E2E_REPO:?run through scripts/run-multi-output-e2e.sh}/tests/e2e/lib.sh"
 
 readonly MODEL="$E2E_REPO/tests/e2e/fixtures/fp4c/operation_model.py"
-readonly FIXTURE_GENERATOR="$E2E_REPO/tests/e2e/matrix/fixture.py"
+readonly FIXTURE_GENERATOR="$E2E_REPO/harness/src/latte_harness/matrix_fixture.py"
 readonly requested_seed="${LATTE_LINKED_STRESS_SEED:-127934575}"
 readonly supplied_plan="${LATTE_LINKED_STRESS_PLAN:-}"
 
@@ -790,7 +790,7 @@ diff -qr --no-dereference "$E2E_CONFIG_HOME" "$backup_dir" \
     || e2e_fail "the pristine whole-configuration backup differs after copy"
 backup_ready=true
 
-python3 "$FIXTURE_GENERATOR" \
+uv run --locked --project "$E2E_REPO/harness" python -m latte_harness.matrix_fixture \
     --seed-dir "$backup_dir" \
     --out-dir "$fixture_dir" \
     --view-type panel \
