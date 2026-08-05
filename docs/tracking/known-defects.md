@@ -3342,6 +3342,48 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FIX: git mode 100755, one line; the recipe rejoins the suite.
 - SEVERITY: test-coverage gap (a selftest silently absent from the net).
 
+### D274 - maximize-length input region stays full width after an edit shrink
+- STATUS: OPEN.
+- FOUND: 2026-08-05, the BP-3 R2 batch's A/B verification: the
+  070-maximize-length-mask recipe fails identically as bash and as its
+  faithful Python port in the nested vehicle.
+- SYMPTOM: at rest applied == input == 874; after an edit-mode length shrink
+  to maxLength 52 the input band reads 814 but the applied window input
+  region stays the full screen width 1600, so the recipe's applied == input
+  assertion fails. Either the maximize-length settle collapse regressed or
+  the edit-mode input region is full-canvas in this state.
+- SEVERITY: input-region correctness (a too-wide input region eats clicks
+  beside the dock); recipe kept as bash until the defect is resolved.
+
+### D275 - a recipe-started dock stays a zombie its parent never reaps
+- STATUS: FIXED by the dock_stop reaping probe in the PR that files this
+  entry.
+- FOUND: 2026-08-05, twice independently: the BP-3 R1 batch (010's
+  mid-recipe restart failed py-only until a reaping stop was swapped in,
+  proven bidirectionally) and the BP-3a matrix pilot (25s stalls per stage
+  plus an intermittent teardown race).
+- SYMPTOM: recipe.dock_start launches the dock as the recipe process's
+  child; bash auto-reaped its background children, Python does not, so a
+  SIGTERM'd child dock stays a zombie and dock_stop's kill(0) liveness
+  probe reads it as alive for the full 25s timeout, returning a false
+  "dock survived SIGTERM".
+- FIX: dock_stop's poll first tries waitpid(WNOHANG) - reaping and
+  reporting an exited child - and falls back to kill(0) for docks that are
+  not this process's child (the runner-started case). Driven regression
+  test pins the prompt reap.
+- SEVERITY: harness correctness (three R1 recipes were blocked on it).
+
+### D276 - the 040 preview-tooltip golden no longer matches this machine
+- STATUS: OPEN.
+- FOUND: 2026-08-05, the BP-3 R1 batch: bash 040.sh and its faithful port
+  fail byte-identically (89261 px differ, 68.44%, max delta 245) against
+  the committed host-rendered golden.
+- SYMPTOM: the committed golden predates some rendering change on this
+  machine; the recipe cannot pass here in either language. Needs a
+  re-bless decision (and a check of what changed the rendering), not a
+  port fix.
+- SEVERITY: test-coverage gap (the recipe is dead weight until re-blessed).
+
 ### D272 - storagetest asserts permission-bit refusal that root bypasses
 - STATUS: OPEN.
 - FOUND: 2026-08-04, the BP-0c (container uv provisioning) end-to-end Arch
