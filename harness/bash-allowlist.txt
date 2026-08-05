@@ -107,7 +107,6 @@ tests/e2e/matrix/task-reorder-lib.sh
 tests/e2e/multi-output-selftest.sh
 tests/e2e/parabolic-hover-preview.sh
 tests/e2e/presentation-coverage-selftest.sh
-tests/e2e/settings-window-onscreen.sh
 tests/installed-package-gate-runtime-test.sh
 tests/installed-package-gate-selftest.sh
 tests/multioutputstatecontracttest.sh
