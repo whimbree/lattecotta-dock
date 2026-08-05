@@ -1,0 +1,1 @@
+{"cell": "dock-bottom-center-2out", "viewType": "dock", "edge": "bottom", "alignment": "center", "display": "2out", "screen": "HDMI-A-2", "screenId": 11, "screenGeometry": "1600,0 1600x1000", "layout": "My Layout.layout.latte", "expect": {"type": "dock", "edge": "bottom", "alignment": "center"}}
