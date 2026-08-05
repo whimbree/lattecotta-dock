@@ -37,7 +37,7 @@
 #                                                           #     hold one value
 # Every assert returns 0 PASS, 1 FAIL (loud on stderr), 2 REFUSED (bad input).
 # HC3: audit_assert_only_keys FAILS on a stray/missing key, audit_assert_applies
-# FAILS on a no-change - proven in tests/e2e/audit-harness-selftest.sh and in the
+# FAILS on a no-change - proven in tests/e2e/audit-harness-selftest.py and in the
 # C++ harness tests/settingswiringharnesstest.cpp. A harness that only passes the
 # happy path cannot find the suspected-broken controls.
 #

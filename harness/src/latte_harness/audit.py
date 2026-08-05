@@ -90,7 +90,13 @@ def _require_env(name: str) -> str:
 
 
 class _Stop(Exception):  # a control-flow verdict, not an error condition
-    """An audit verdict: the exit code plus the exact stderr line to print."""
+    """An audit verdict: the exit code plus the exact stderr line to print.
+
+    Private on purpose: only the _to_status wrappers catch it. External callers
+    use the assert_* wrappers, which translate it to the 0/1/2 status contract;
+    a helper that can raise it (changed_keys on a missing snapshot) is not part
+    of the direct-call surface.
+    """
 
     def __init__(self, code: int, line: str = "") -> None:
         super().__init__(line)
@@ -268,6 +274,10 @@ def assert_applies(before: Path, after: Path, key: str) -> int:
 
 def _assert_only_keys(before: Path, after: Path, keys: tuple[str, ...]) -> None:
     changed = changed_keys(before, after)
+    # sorted() is code-point order on BOTH sides, a deliberate cleanup of the
+    # bash, which compared code-point-sorted `changed` against locale-collated
+    # `sort -u` output for `expected` (unobservable for the camelCase config
+    # keys, but the D269 lesson is that locale collation is not a verdict input).
     expected = sorted({key for key in keys if key})
     if changed == expected:
         return
