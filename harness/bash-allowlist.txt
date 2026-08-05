@@ -93,7 +93,6 @@ tests/e2e/keyboard-navigation-mode.sh
 tests/e2e/lib.sh
 tests/e2e/linked-dock-operation-stress.sh
 tests/e2e/linked-dock-removal-undo.sh
-tests/e2e/matrix-harness-selftest.sh
 tests/e2e/matrix/applet-reorder-driver.sh
 tests/e2e/matrix/dnd-lib.sh
 tests/e2e/matrix/golden-bridge.sh
