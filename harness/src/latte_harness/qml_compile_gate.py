@@ -46,6 +46,7 @@ from latte_harness.proc import (
     terminating,
 )
 from latte_harness.qmlenv import (
+    NIXPKGS_SEED_VARS,
     MissingModulePathError,
     assemble_imports,
     resolve_install_qmldir,
@@ -54,13 +55,6 @@ from latte_harness.qmlenv import (
 )
 
 TOOL = "qmlcompilegate"
-
-# The nixpkgs Qt6 runtime seed vars, re-exported with the packaged latte-dock
-# leaf stripped. The canonical list is qmlenv's own _NIXPKGS_SEED_VARS; it is
-# mirrored here because basedpyright-strict forbids importing that private
-# constant, and pinned to it by test_resolve_env_matches_build_setup_script
-# (the drift net: the exports build_setup_script emits must match these).
-_NIXPKGS_SEED_VARS = ("NIXPKGS_QT6_QML_IMPORT_PATH", "NIXPKGS_QML_SEARCH_PATHS")
 
 # The packaged QML trees the gate compiles, relative to the stage prefix. A
 # single sorted sweep across all four (the bash ``find <roots> ... | sort``).
@@ -112,7 +106,7 @@ def _offscreen_child_env(env: Mapping[str, str]) -> dict[str, str]:
     child = dict(env)
     child.pop("QML2_IMPORT_PATH", None)
     child.pop("QML_IMPORT_PATH", None)
-    for var in _NIXPKGS_SEED_VARS:
+    for var in NIXPKGS_SEED_VARS:
         current = env.get(var)
         if current:
             child[var] = strip_packaged_latte_dock(current)
@@ -157,10 +151,14 @@ def run_qmltestrunner(
         return proc.wait()
 
 
-def refuse_without_devshell() -> NoReturn:
-    """The shared MissingModulePathError refusal both gates make (never returns)."""
+def refuse_without_devshell(tool: str = TOOL) -> NoReturn:
+    """The shared MissingModulePathError refusal both gates make (never returns).
+
+    Callers pass their own tool prefix so the refusal names the gate that
+    actually refused, not this module.
+    """
     fail(
-        TOOL,
+        tool,
         "LATTE_QML_MODULE_PATH is unset; run inside the flake devShell (nix develop provides it)",
     )
 

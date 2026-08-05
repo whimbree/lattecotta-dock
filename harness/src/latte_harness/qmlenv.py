@@ -67,8 +67,11 @@ _LDD_NIX_STORE = re.compile(r"=> (/nix/store/[^/]+)/")
 _LINKED_BINARIES = ("bin/latte-dock", "bin/liblattetasksplugin.so")
 
 # The nixpkgs Qt6 runtime seed vars, read from the ambient env and re-exported
-# with the packaged latte-dock leaf stripped.
-_NIXPKGS_SEED_VARS = ("NIXPKGS_QT6_QML_IMPORT_PATH", "NIXPKGS_QML_SEARCH_PATHS")
+# with the packaged latte-dock leaf stripped. Public: the QML gate modules
+# import this canonical list rather than mirroring it (a mirror is a drift
+# class no test can fully pin; the PR #160 review proved the addition
+# blindness concretely).
+NIXPKGS_SEED_VARS = ("NIXPKGS_QT6_QML_IMPORT_PATH", "NIXPKGS_QML_SEARCH_PATHS")
 
 
 def strip_packaged_latte_dock(value: str) -> str:
@@ -191,7 +194,7 @@ def build_setup_script(repo: Path, env: Mapping[str, str]) -> str:
         f"qmldir={shlex.quote(qmldir)}",
         "unset QML2_IMPORT_PATH QML_IMPORT_PATH",
     ]
-    for var in _NIXPKGS_SEED_VARS:
+    for var in NIXPKGS_SEED_VARS:
         current = env.get(var)
         if current:
             lines.append(f"export {var}={shlex.quote(strip_packaged_latte_dock(current))}")
