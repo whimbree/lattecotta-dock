@@ -3374,7 +3374,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: harness correctness (three R1 recipes were blocked on it).
 
 ### D277 - ctest resolves org.kde.latte.* from the system-installed package
-- STATUS: FIXED by the seed-var leaf strip in the PR that files this entry.
+- STATUS: FIXED: PR #181 (0d6cdffcc, the seed-var leaf strip).
 - FOUND: 2026-08-05, the BP-3 R4 batch gate (the plain-recipe wave of the
   bash-to-python migration): themeawareicontest failed 3 of 6 cases with
   "Namespace 'org.kde.latte.core' has already been used for type

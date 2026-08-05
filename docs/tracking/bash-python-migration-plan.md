@@ -234,7 +234,18 @@ batches are file-disjoint and parallel):
   controls. Found viewsData.screen is a connector-name string (caught by
   pydantic live) and the D275 zombie independently. Commits: ac4562eac,
   f58f29d9b, 8adb843b2 (PR #178)
-- [ ] BP-3b (audit lib): port audit-lib.sh. Commits:
+- [x] BP-3b (audit lib): port audit-lib.sh to latte_harness.audit, the
+  typed edit-mode settings-audit driver, composing over the matrix and
+  recipe modules (the BP-2c fresh-module design). Byte-identical
+  snapshot/assert formulas with the bash 0/1/2 status contract; the
+  selftest cutover to .py ran all 13 crafted controls plus the live leg
+  green in the nested vehicle (exec bit kept - the D273 lesson);
+  audit-lib.sh itself stays for its six unported bash consumers.
+  Recorded deviations: bool-returning drive helpers, a loud refusal on
+  unset E2E_FAKEPOINTER, the code-point sort unification (the D269
+  locale lesson). Resumed from a crashed agent's uncommitted worktree
+  WIP, adopted after a critical read. Commits: 0752856d2, dea56987b,
+  bbbcb89ac (PR #182)
 - [ ] BP-3c (drivers): port dnd-lib, task-reorder-lib, multi-output-lib,
   applet-reorder-driver. Commits:
 - [ ] BP-3d..3i (recipe batches): ~47 recipes in ~6 file-disjoint batches,
@@ -249,7 +260,15 @@ batches are file-disjoint and parallel):
   recipe-started dock stays a zombie; fixed), 070 is blocked on D274 (the
   maximize-length input-region defect), 040 on D276 (the stale golden),
   061 on the dual-output vehicle. Commits: 8e8675a01, 804502cc4,
-  1fd16143e (PR #175); d2e550ad2, 734c04ee1, db34f5809 (PR #176)
+  1fd16143e (PR #175); d2e550ad2, 734c04ee1, db34f5809 (PR #176).
+  R4 (090-remove-applet, 080-add-applet, dock-edit-retarget-cancel;
+  completed after the environment crash interrupted the batch): the
+  retarget port's first drive surfaced an equivalence the bash hid -
+  dbusreports refuses the whole viewsData reply while a view lacks an
+  accepted placement (transient during an edit-mode enter), the bash
+  polled through the empty payload, a bare json.loads crashed - mapped
+  to the pollable RecipeError at the two bash swallow sites. Commits:
+  68e96bda4, f191ae33c, ac9a83cdf (PR #183)
 
 Phase BP-4, package gate (serial pair, independent of BP-3; needs BP-2a):
 
@@ -282,9 +301,24 @@ Phase BP-5, tail:
 
 - Uniform shim self-heal: the eight BP-1 shims assume uv on PATH and die
   with command-not-found from a bare shell; add the nix-develop re-exec
-  guard line to each (PR #162 review finding 1). Small standalone PR.
+  guard line to each (PR #162 review finding 1). LANDED: 411ba164f
+  (PR #166).
 - docs/tracking/e2e-interaction-test-plan.md still names the deleted
   tests/e2e/matrix/fixture.py path at two sites (PR #162 review finding 2).
+  FIXED in the R4/BP-3b docs pass, together with its stale
+  080/090-recipe .sh and matrix-selftest .sh names (PR #183 review
+  finding).
+- Widen the typed View model with editMode/isCloned/isClonedFrom so
+  dock-edit-retarget-cancel rides the typed boundary instead of raw JSON
+  dicts (PR #183 review nit; the View docstring already anticipates the
+  editMode widening).
+- Typed-readback refusal hardening: recipe.views()/view_applets() and the
+  raw json_payload consumers crash with JSONDecodeError or a pydantic
+  ValidationError when dbusreports refuses a reply (a view without an
+  accepted placement, transient during edit-mode transitions);
+  dock-edit-retarget-cancel maps the refusal to RecipeError locally, the
+  shared API does not (found during the R4 retarget port). Decide the
+  central mapping and port the local handling onto it.
 - Backgrounded nohup gate runs break the installed-package selftest's
   SIGINT control (bash SIG_IGN inheritance for async commands); the gate
   runs foreground or under a harness that restores the disposition
