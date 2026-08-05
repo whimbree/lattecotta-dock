@@ -184,9 +184,14 @@ Phase BP-1, analyzers (file-disjoint, parallel after BP-0):
 
 Phase BP-2, vehicle spine (serial):
 
-- [ ] BP-2a (vehicle + seed): port lib-nested-kwin.sh and lib-e2e-seed.sh to
+- [x] BP-2a (vehicle + seed): port lib-nested-kwin.sh and lib-e2e-seed.sh to
   `latte_harness.vehicle` / `.seed` with exit-code and cleanup parity.
-  Commits:
+  State-file-driven subcommands; the reparent-to-init design gained a
+  leader-identity teardown gate (starttime-checked killpg; the review's
+  zombie-hold finding) and the package gate's teardown reroutes through it.
+  Full suite A/B against the bash bridge (33/52 both sides, deltas
+  vehicle-independent); full gate at merge. Commits: d97842980, f78816f19,
+  f4ea48984, 64394d8a6, 477bc19de (PR #167)
 - [ ] BP-2b (e2e runner): port run-e2e.sh; mixed .sh/.py recipe discovery,
   bit-identical classification matrix plus self-test; front doors become
   subcommands behind thin shims. Commits:
