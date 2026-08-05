@@ -212,29 +212,57 @@ Phase BP-2, vehicle spine (serial):
   runner's _dock_pid (returns None on an unset E2E_DOCK_PIDFILE) with
   lib.sh's refuse-loudly contract, which recipe.py matches. Commits:
   28ca27bf0, 9ec9f3015, 49fe5176b (PR #171)
-- [ ] BP-2d (sceneprobe): port sceneprobe-gate.sh and run_in_kwin.sh.
-  Commits:
-- [ ] BP-2e (staged run): port run-staged.sh; restart-staged.sh execs the
-  Python entry. Commits:
+- [x] BP-2d (sceneprobe): port sceneprobe-gate.sh and run_in_kwin.sh onto
+  the vehicle library; all 14 scenes green through the shims with a driven
+  golden-corruption control. The review's lifecycle finding (the compositor
+  log path read after teardown was dead diagnostic code) fixed at the
+  origin: CompositorStartError captures the log text at raise time for
+  every caller. Commits: 8a4c04b03, 2009cf1df, 06c30a6e2 (PR #173)
+- [x] BP-2e (staged run): port run-staged.sh; restart-staged.sh execs the
+  Python entry. Empty env diff across 212 variables on both argv paths; the
+  shim execs the venv interpreter directly because uv run forks a wrapper
+  child that would break the launcher-pid-is-dock-pid contract; delivered
+  live with a verified single-instance pid==sid restart. Commits:
+  abc7aa1ad, 6d1ed9696 (PR #174)
 
 Phase BP-3, recipe libs then recipes (libs serialize before their batches;
 batches are file-disjoint and parallel):
 
-- [ ] BP-3a (matrix lib + golden bridge): port matrix-lib.sh,
-  golden-bridge.sh. Commits:
+- [x] BP-3a (matrix lib + golden bridge): typed twins
+  latte_harness.matrix + matrix_golden per the BP-2c fresh-module design;
+  byte-identical parity captures; the selftest pilot ported with all ten
+  controls. Found viewsData.screen is a connector-name string (caught by
+  pydantic live) and the D275 zombie independently. Commits: ac4562eac,
+  f58f29d9b, 8adb843b2 (PR #178)
 - [ ] BP-3b (audit lib): port audit-lib.sh. Commits:
 - [ ] BP-3c (drivers): port dnd-lib, task-reorder-lib, multi-output-lib,
   applet-reorder-driver. Commits:
 - [ ] BP-3d..3i (recipe batches): ~47 recipes in ~6 file-disjoint batches,
   grouped by lib dependency (plain-lib recipes start after BP-2c; matrix and
   audit recipes after BP-3a/3b; driver recipes after BP-3c); bash libs are
-  deleted by the batch that ports their last consumer. Commits:
+  deleted by the batch that ports their last consumer. Landed so far:
+  R2 (110-context-menu-normal-mode, settings-window-onscreen,
+  080-key-escape-cancels-move; PR #175) and R1 (060-geometry-agreement,
+  030-wheel-ruler-maxlength, 020-wheel-task-cycle; PR #176) - both batches
+  honestly reduced: four R2 recipes were matrix-dependent (mis-slotted,
+  they join the matrix batch), three R1 recipes were blocked on D275 (a
+  recipe-started dock stays a zombie; fixed), 070 is blocked on D274 (the
+  maximize-length input-region defect), 040 on D276 (the stale golden),
+  061 on the dual-output vehicle. Commits: 8e8675a01, 804502cc4,
+  1fd16143e (PR #175); d2e550ad2, 734c04ee1, db34f5809 (PR #176)
 
 Phase BP-4, package gate (serial pair, independent of BP-3; needs BP-2a):
 
-- [ ] BP-4a (gate engine): port lib-installed-package-gate.sh,
-  installed-package-gate.sh, installed-package-gate-runtime-test.sh.
-  Commits:
+- [x] BP-4a (gate engine): port lib-installed-package-gate.sh and
+  installed-package-gate.sh (the runtime-test stays untouched as the
+  container acceptance - a deliberate re-scope from this item's original
+  three-file wording). The unmodified 91-control selftest is the
+  equivalence net; process-group teardown converged onto
+  vehicle.stop_process_group with the identity gate; the review's
+  byte-transparency finding fixed (surrogateescape at the read borders).
+  The lib .sh sheds only engine-only helpers until BP-4b (the selftest
+  fault-injects by sourcing it). Full gate at merge. Commits: 5f6ea2554,
+  d1e9874af, 77cb743a9, 24a7fc49e (PR #177)
 - [ ] BP-4b (gate selftest): port installed-package-gate-selftest.sh with its
   signal-handling and refusal controls intact. Commits:
 

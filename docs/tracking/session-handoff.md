@@ -3,6 +3,32 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-08-05.
 
+## 2026-08-05: BP-2 complete, BP-3/BP-4 underway, the wave-2 landings
+
+Six PRs merged in the six-lane wave: BP-2d sceneprobe (PR #173, with the
+compositor-log capture fix), BP-2e staged-run (PR #174, empty 212-variable
+env diff; the shim execs the venv python directly to preserve the
+launcher-pid-is-dock-pid contract), the R2 and R1 recipe batches (PRs #175,
+#176, six recipes typed, each batch honestly reduced with its blockers
+filed), BP-3a matrix+golden (PR #178, byte-identical parity), and BP-4a
+package-gate engine (PR #177, the 91-control selftest as the unmodified
+equivalence net, full gate at merge). BP-2 is COMPLETE: every gate leg,
+the runner, the recipe API, and the daily-driver launcher run typed
+Python. Defects: D274 (maximize-length input region stays full width
+after an edit shrink, OPEN, found by R2's A/B), D275 (recipe-started dock
+zombie, FIXED with the reaping probe, found twice independently), D276
+(the 040 preview-tooltip golden no longer matches this machine, OPEN).
+
+LIVE DELIVERY incident and result: the first live restart through the
+new launcher was killed by the orchestrator's own tool timeout while uv
+sync stalled on agent cache contention - the real dock was down about
+four minutes until a detached retry recovered it. Live deliveries now
+run detached from tool lifetimes (setsid, disown, poll after). The
+delivered dock verified: single instance, pid == sid (the identity
+contract holds live), fresh binary, viewsData answering. The service
+name is org.kde.lattedock (lowercase; the interface is
+org.kde.LatteDock) - a wrong-name query reads as not-activatable.
+
 ## 2026-08-05: BP-2a landed - the typed vehicle underpins every gate leg
 
 PR #167 (BP-2a, the nested-vehicle and seed lifecycle port) is merged:
