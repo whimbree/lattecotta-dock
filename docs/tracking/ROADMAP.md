@@ -87,10 +87,13 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   workstream: ~16,000 lines of bash harness, gate, and test scripting move to
   strictly typed Python (uv, pydantic, basedpyright-strict, ruff) with a
   797-line 17-file retained-bash allowlist for the exit-code spine and
-  external contracts. BP-0 (foundation) and BP-1 (all six analyzer ports)
-  are COMPLETE: every analyzer and ratchet runs as a typed latte_harness
-  module behind a stable shim, and the D269/D270 qmllint drift family is
-  closed with a locale-independent verdict. Next: BP-2, the vehicle spine.
+  external contracts. BP-0, BP-1, and BP-2 are COMPLETE: every analyzer,
+  ratchet, gate leg, the e2e runner, the recipe API, and the daily-driver
+  launcher run as typed latte_harness modules behind stable shims, with
+  the D269/D270 qmllint drift family closed. BP-3 (recipes and their libs)
+  and BP-4 (the package gate) are underway: the matrix API and the
+  package-gate engine are merged, six recipes are typed, and the batches
+  continue.
 
 ## Registries and state
 
