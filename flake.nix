@@ -96,7 +96,29 @@
             # QPA. Process-level tool only - its QML/plugin trees are never
             # added to any *_PATH (the import-path doctrine below).
             kdePackages.kwin # kwin_wayland --virtual
+
+            # BP (bash-to-python migration, docs/tracking/
+            # bash-python-migration-plan.md): the typed-Python harness
+            # toolchain. python3 was always assumed by the harness scripts'
+            # `exec nix develop` re-execs but never declared here; declaring
+            # it closes that latent gap. ruff and basedpyright come from
+            # nixpkgs (not the harness venv) because their PyPI wheels ship
+            # foreign-glibc standalone executables (ruff's binary,
+            # basedpyright's bundled node) that NixOS cannot run unpatched;
+            # harness/pyproject.toml pins the SAME versions for off-nix use,
+            # so both worlds check with identical tools. Keep the two pins in
+            # lockstep when either side moves.
+            python3
+            uv
+            ruff
+            basedpyright
           ];
+
+          # uv must never substitute a foreign-glibc managed interpreter
+          # inside the devShell: the harness venv builds on the pinned nix
+          # python above. Off-nix, harness/.python-version makes uv provision
+          # a managed 3.14 instead (the portability half of the BP contract).
+          UV_PYTHON_PREFERENCE = "only-system";
 
           # Pure-CPU Vulkan pieces for the sceneprobe render gate, from the
           # flake pin so goldens are blessed against the exact Mesa and
