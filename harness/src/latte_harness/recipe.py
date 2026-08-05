@@ -1,0 +1,933 @@
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-License-Identifier: GPL-2.0-or-later
+"""The typed recipe-side API: the port of tests/e2e/lib.sh (BP-2c).
+
+This is the harness brain the e2e recipes talk to. It mirrors every helper in
+tests/e2e/lib.sh one-for-one, keeping the SAME busctl invocations (identical
+service/object/interface/method argv), the SAME bounded wait loops and their
+messages, the SAME dock lifecycle over the E2E_* environment the runner
+exports, and the SAME geometry assertions and failure wording - so a recipe
+ported from bash behaves identically.
+
+Where the bash returned raw JSON text for a recipe to pipe through python, this
+module VALIDATES the readback at the boundary with pydantic (the migration's
+core promise: every D-Bus readback is typed where it enters the harness). The
+models carry the fields the lib.sh helpers and the ported recipes actually
+assert on; a dock-side field addition is tolerated (extra keys are ignored),
+never a break. busctl stays the transport, exactly as the bash used it - no
+python D-Bus binding.
+
+lib.sh itself stays in place: the ~47 bash recipes keep sourcing it until the
+BP-3 batches port and delete them, so this module and lib.sh coexist. It exists
+so the .py recipes have a typed API to import; the pilot tests/e2e/000-smoke.py
+is the first consumer and the template for the batches.
+
+Failure discipline (matching lib.sh and the failures-and-root-cause rule):
+
+- ``fail(msg)`` is e2e_fail: print ``FAIL: <msg>`` to stderr and exit 1.
+- The wait/assert predicates return a bool and print their loud diagnostic to
+  stderr on the failure path, exactly like the bash helpers' return status and
+  ``>&2`` message, so a recipe composes ``if not r.wait_running(): r.fail(...)``.
+- The resolve/coverage helpers that cannot proceed raise ``RecipeError`` with
+  the bash message verbatim; ``run()`` turns an escaped RecipeError into that
+  message on stderr and a nonzero exit (no traceback), matching the bash
+  ``sys.exit(msg)`` those helpers used.
+- A malformed readback surfaces as a pydantic ``ValidationError`` naming the
+  offending field - loud, at the boundary, never a silently wrong value.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import subprocess
+import sys
+import tempfile
+import time
+from collections.abc import Callable, Sequence
+from contextlib import suppress
+from dataclasses import dataclass
+from pathlib import Path
+from typing import NoReturn
+
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
+
+# The addressing triple every lattedock read/action uses (the bash e2e_call).
+_LATTE_OBJECT = ("org.kde.lattedock", "/Latte", "org.kde.LatteDock")
+
+# busctl renders a string return as `s "..."`; lifecycleState compares field 2
+# INCLUDING the quotes, exactly as the bash `awk '{print $2}'` kept them.
+_LIFECYCLE_RUNNING = '"running"'
+
+# The empty-views reply as busctl prints it (the wait_settled "still starting"
+# sentinel), and the escaped inStartup flag as it appears in the raw reply
+# (busctl escapes the JSON quote to \", so the needle carries that backslash -
+# the same literal the bash `grep 'inStartup\\":true'` matched).
+_EMPTY_VIEWS_REPLY = 's "[]"'
+_IN_STARTUP_TRUE = 'inStartup\\":true'
+
+# The tasks applet plugin id, grepped in the raw viewAppletsData reply to find
+# the tasks-carrying view (kept as a raw-text scan, matching e2e_tasks_view).
+_TASKS_PLUGIN = '"org.kde.latte.plasmoid"'
+
+
+class RecipeError(RuntimeError):
+    """A helper cannot proceed; carries the bash message verbatim.
+
+    ``run()`` prints the message to stderr and exits 1, reproducing the bash
+    ``sys.exit(msg)`` those resolve/coverage helpers used (loud, nonzero, no
+    traceback).
+    """
+
+
+# ---- readback models (pydantic validates every reply at the boundary) -------
+#
+# Rect is the [x,y,w,h] quad every geometry field is; typing it as a 4-tuple
+# asserts that shape at the boundary (a short or long array fails loudly here,
+# not three subsystems away where the bash `x,y,w,h = rect` unpack would).
+Rect = tuple[int, int, int, int]
+
+
+class _Readback(BaseModel):
+    """Base for every D-Bus readback model.
+
+    ``extra="ignore"`` is the explicit tolerance: a field the dock adds later is
+    dropped, never a validation break, so recipes keep working across dock-side
+    additions. ``frozen`` makes each reply an immutable value; ``populate_by_name``
+    lets tests build a model by field name as well as by JSON alias.
+    """
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True, frozen=True)
+
+
+class View(_Readback):
+    """One entry of viewsData - the fields the lib.sh helpers assert on.
+
+    BP-3 batches widen this with the extra viewsData fields their recipes need
+    (visibilityMode, editMode, alignment, ...); this set is exactly what the
+    ported lib.sh helpers and the pilot read.
+    """
+
+    containment_id: int = Field(alias="containmentId")
+    edge: str
+    is_hidden: bool = Field(alias="isHidden")
+    in_startup: bool = Field(alias="inStartup")
+    absolute_geometry: Rect = Field(alias="absoluteGeometry")
+    local_geometry: Rect = Field(alias="localGeometry")
+    screen_geometry: Rect = Field(alias="screenGeometry")
+
+
+class Applet(_Readback):
+    """One entry of viewAppletsData - the presentation/pointer-math fields."""
+
+    id: int
+    plugin: str
+    geometry: Rect
+    in_scheduled_destruction: bool = Field(alias="inScheduledDestruction")
+
+
+class Task(_Readback):
+    """One entry of viewTasksData - appId is the stable per-window identity."""
+
+    app_id: str = Field(alias="appId")
+
+
+class DockView(_Readback):
+    """One dockSystemData view - the presentation-coverage oracle's inputs."""
+
+    persistent_dock_id: int = Field(alias="persistentDockId")
+    is_hidden: bool = Field(alias="isHidden")
+    orientation: str
+    effects_rect: Rect = Field(alias="effectsRect")
+    canvas_geometry: Rect = Field(alias="canvasGeometry")
+
+
+class DockSystemData(_Readback):
+    """The dockSystemData snapshot - only the view array the oracle joins."""
+
+    views: list[DockView]
+
+
+_VIEWS = TypeAdapter(list[View])
+_APPLETS = TypeAdapter(list[Applet])
+_TASKS = TypeAdapter(list[Task])
+
+
+# ---- busctl transport (identical argv to the bash) -------------------------
+
+
+def _run_busctl(args: Sequence[str], *, forward_stderr: bool) -> subprocess.CompletedProcess[str]:
+    """`busctl --user call <args>`; forward busctl's stderr like the bash terminal.
+
+    The polling probes pass ``forward_stderr=False`` for the bash ``2>/dev/null``
+    that hides the not-up-yet errors; everything else forwards it.
+    """
+    result = subprocess.run(
+        ["busctl", "--user", "call", *args], capture_output=True, text=True, check=False
+    )
+    if forward_stderr and result.stderr:
+        sys.stderr.write(result.stderr)
+    return result
+
+
+def call(*args: str) -> str:
+    """e2e_call: a lattedock method's raw busctl stdout (trailing newline kept).
+
+    The low-level escape hatch; recipes want ``json_payload`` or the typed
+    readbacks. stderr is forwarded, matching the bash e2e_call | ... terminal.
+    """
+    return _run_busctl([*_LATTE_OBJECT, *args], forward_stderr=True).stdout
+
+
+def _call_quiet(*args: str) -> str:
+    """e2e_call with busctl stderr suppressed (the polling probes' `2>/dev/null`)."""
+    return _run_busctl([*_LATTE_OBJECT, *args], forward_stderr=False).stdout
+
+
+def _unescape_busctl_json(busctl_stdout: str) -> str:
+    """The e2e_json sed: strip the `s "` wrapper and unescape `\\"` to `"`.
+
+    busctl prints a returned JSON string as one line `s "<escaped json>"`; the
+    bash `sed 's/^s "//; s/"$//; s/\\"/"/g'` unwraps it, and command substitution
+    strips the trailing newline. This reproduces all of that, byte for byte.
+    """
+    line = busctl_stdout.rstrip("\n")
+    if line.startswith('s "'):
+        line = line[len('s "') :]
+    if line.endswith('"'):
+        line = line[:-1]
+    return line.replace('\\"', '"')
+
+
+def json_payload(method: str, *args: str) -> str:
+    """e2e_json: a read surface's payload as plain JSON text (byte-identical)."""
+    return _unescape_busctl_json(call(method, *args))
+
+
+# ---- typed readbacks (the pydantic boundary) -------------------------------
+
+
+def views() -> list[View]:
+    """viewsData, validated into typed View records."""
+    return _VIEWS.validate_json(json_payload("viewsData"))
+
+
+def view_applets(containment_id: int) -> list[Applet]:
+    """viewAppletsData for a view, validated into typed Applet records."""
+    return _APPLETS.validate_json(json_payload("viewAppletsData", "u", str(containment_id)))
+
+
+def view_tasks(containment_id: int) -> list[Task]:
+    """viewTasksData for a view, validated into typed Task records."""
+    return _TASKS.validate_json(json_payload("viewTasksData", "u", str(containment_id)))
+
+
+def dock_system_data() -> DockSystemData:
+    """dockSystemData, validated into the typed snapshot."""
+    return DockSystemData.model_validate_json(json_payload("dockSystemData"))
+
+
+def _find_view(containment_id: int) -> View | None:
+    return next((v for v in views() if v.containment_id == containment_id), None)
+
+
+def view(containment_id: int) -> View:
+    """e2e_view_field's lookup as typed access: the View, or a loud refusal.
+
+    e2e_view_field evaluated a python expression over the view dict; the typed
+    replacement is this record, whose fields a recipe reads directly. Absence is
+    the bash ``sys.exit('no view with containmentId <id>')``.
+    """
+    found = _find_view(containment_id)
+    if found is None:
+        raise RecipeError(f"no view with containmentId {containment_id}")
+    return found
+
+
+# ---- loud failure and the recipe entry wrapper -----------------------------
+
+
+def fail(message: str) -> NoReturn:
+    """e2e_fail: `FAIL: <message>` to stderr, exit 1."""
+    print(f"FAIL: {message}", file=sys.stderr, flush=True)
+    raise SystemExit(1)
+
+
+def run(body: Callable[[], None]) -> NoReturn:
+    """Run a recipe body; translate an escaped RecipeError to a loud exit.
+
+    A RecipeError becomes its message on stderr and exit 1 (the bash
+    ``sys.exit(msg)`` shape); ``fail()``'s SystemExit passes through unchanged; a
+    clean return exits 0. This is the template every .py recipe uses.
+    """
+    try:
+        body()
+    except RecipeError as err:
+        print(str(err), file=sys.stderr, flush=True)
+        raise SystemExit(1) from err
+    raise SystemExit(0)
+
+
+# ---- environment contract (the E2E_* the runner exports) -------------------
+
+
+def _require_env(name: str) -> str:
+    """The bash ``${VAR:?}``: return the value, or refuse loudly naming the var."""
+    value = os.environ.get(name)
+    if not value:
+        raise RecipeError(f"e2e: required environment variable {name} is unset")
+    return value
+
+
+def _require_nested(helper: str) -> None:
+    """_e2e_require_nested: a nested-only helper refuses loudly outside nested mode.
+
+    The bash returned 2; here a wrong-mode call is a programming error (a
+    nested-only helper reached in live mode), so it raises RecipeError with the
+    same message rather than silently touching the live session.
+    """
+    mode = os.environ.get("E2E_MODE")
+    if mode != "nested":
+        raise RecipeError(
+            f"e2e: {helper} is nested-only (it manages the vehicle dock / nested kwin); "
+            f"refusing in mode '{mode or 'unset'}'"
+        )
+
+
+# ---- bounded wait loops (pure cores + the live probes) ---------------------
+
+
+def _wait_running_loop(
+    probe: Callable[[], str], timeout: int, sleep: Callable[[float], None]
+) -> tuple[bool, str]:
+    """e2e_wait_running: poll lifecycleState ``timeout`` times at 1s, never blind.
+
+    Pure over an injected probe and sleep so the bound (timeout iterations) and
+    the timeout message are unit-testable without a live dock.
+    """
+    state = ""
+    for _ in range(timeout):
+        state = probe()
+        if state == _LIFECYCLE_RUNNING:
+            return True, ""
+        sleep(1)
+    return False, (
+        f"dock never reached lifecycleState running in {timeout}s (last: {state or 'no reply'})"
+    )
+
+
+def _wait_settled_loop(
+    probe_raw: Callable[[], str], timeout: int, sleep: Callable[[float], None]
+) -> tuple[bool, str]:
+    """e2e_wait_settled: views must EXIST, be out of inStartup, and STOP MOVING.
+
+    The existence check is load-bearing (lifecycleState flips to running before
+    any view is created), and the equal-to-previous check is the animation gate
+    (startup-zoom coordinates sampled mid-animation misaim pointer math). Pure
+    over an injected raw-reply probe and sleep.
+    """
+    previous = ""
+    for _ in range(timeout):
+        payload = probe_raw()
+        if payload and payload != _EMPTY_VIEWS_REPLY and _IN_STARTUP_TRUE not in payload:
+            if payload == previous:
+                return True, ""
+            previous = payload
+        sleep(1)
+    return False, f"views still absent, inStartup, or animating after {timeout}s"
+
+
+def _probe_lifecycle_state() -> str:
+    """Field 2 of the lifecycleState reply, or '' when the dock is unreachable."""
+    fields = _call_quiet("lifecycleState").split()
+    return fields[1] if len(fields) >= 2 else ""
+
+
+def _probe_views_reply() -> str:
+    """The raw viewsData reply, trailing newline stripped (command-sub semantics)."""
+    return _call_quiet("viewsData").rstrip("\n")
+
+
+def wait_running(timeout: int = 60) -> bool:
+    """Poll lifecycleState until running; True on success, False (loud) on timeout."""
+    ok, message = _wait_running_loop(_probe_lifecycle_state, timeout, time.sleep)
+    if not ok:
+        print(message, file=sys.stderr, flush=True)
+    return ok
+
+
+def wait_settled(timeout: int = 60) -> bool:
+    """Poll viewsData until views exist, leave inStartup, and stop animating."""
+    ok, message = _wait_settled_loop(_probe_views_reply, timeout, time.sleep)
+    if not ok:
+        print(message, file=sys.stderr, flush=True)
+    return ok
+
+
+# ---- dock lifecycle (nested-only) ------------------------------------------
+
+
+def dock_pid() -> int | None:
+    """e2e_dock_pid: the recorded vehicle-dock pid, or None when unrecorded."""
+    pidfile = _require_env("E2E_DOCK_PIDFILE")
+    try:
+        text = Path(pidfile).read_text().strip()
+    except OSError:
+        return None
+    return int(text) if text.isdigit() else None
+
+
+def _pid_alive(pid: int) -> bool:
+    """The bash ``kill -0``: alive iff a signal could be delivered."""
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def dock_start(timeout: int = 60) -> bool:
+    """e2e_dock_start: launch the staged dock into the vehicle, detached, and wait.
+
+    run-staged.sh execs the binary, so the launcher pid IS the dock pid. The
+    child is its own session (setsid), so it survives this call - the recipe
+    process exiting reparents it to init, exactly as the bash ``setsid ... &``
+    left it running. QT_FORCE_STDERR_LOGGING keeps the dock's qCDebug/qWarning
+    in E2E_DOCK_LOG (NixOS Qt otherwise routes to journald off a tty).
+    """
+    _require_nested("e2e_dock_start")
+    repo = _require_env("E2E_REPO")
+    log = _require_env("E2E_DOCK_LOG")
+    pidfile = _require_env("E2E_DOCK_PIDFILE")
+    env = dict(os.environ)
+    env["LATTE_CONFIG_HOME"] = _require_env("E2E_CONFIG_HOME")
+    env["BUILD"] = _require_env("E2E_BUILD")
+    env["LATTE_DEBUG_DBUS"] = "1"
+    env["QT_FORCE_STDERR_LOGGING"] = "1"
+    with open(log, "a") as handle:
+        proc = subprocess.Popen(
+            [str(Path(repo) / "scripts" / "run-staged.sh"), "-d"],
+            env=env,
+            stdout=handle,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    Path(pidfile).write_text(f"{proc.pid}\n")
+    return wait_running(timeout) and wait_settled(timeout)
+
+
+def dock_stop(timeout: int = 25) -> bool:
+    """e2e_dock_stop: SIGTERM the dock and wait for a CLEAN exit (no SIGKILL).
+
+    A dock that survives SIGTERM is a shutdown defect the caller must see, so
+    there is deliberately no escalation - the bash contract carried over.
+    """
+    _require_nested("e2e_dock_stop")
+    pid = dock_pid()
+    if pid is None:
+        print("e2e_dock_stop: no dock pid recorded", file=sys.stderr, flush=True)
+        return False
+    if not _pid_alive(pid):
+        print(f"e2e_dock_stop: dock (pid {pid}) already gone", file=sys.stderr, flush=True)
+        return False
+    with suppress(ProcessLookupError):
+        os.kill(pid, 15)
+    for _ in range(timeout * 5):
+        if not _pid_alive(pid):
+            return True
+        time.sleep(0.2)
+    print(f"dock (pid {pid}) survived SIGTERM for {timeout}s", file=sys.stderr, flush=True)
+    return False
+
+
+# ---- kwin scripting and window dumps ---------------------------------------
+
+_DUMPWINS_JS = (
+    "for (const w of workspace.windowList()) {\n"
+    '        print("@TAG@|DUMPWIN|" + w.resourceClass + "|" + w.caption + "|" '
+    '+ w.frameGeometry.x + "," + w.frameGeometry.y + " " + w.frameGeometry.width '
+    '+ "x" + w.frameGeometry.height + "|" + (w.output ? w.output.name : "?") '
+    '+ "|layer=" + w.layer);\n'
+    "    }"
+)
+
+
+def _busctl_bg(args: Sequence[str], *, quiet: bool) -> None:
+    """Run a busctl call for effect (run/stop/unload); best-effort when quiet."""
+    stderr = subprocess.DEVNULL if quiet else None
+    subprocess.run(
+        ["busctl", "--user", "call", *args], stdout=subprocess.DEVNULL, stderr=stderr, check=False
+    )
+
+
+def _kwin_load_script(js: str, tag: str) -> str:
+    """loadScript, returning the script number (busctl reply field 2), or ''."""
+    result = subprocess.run(
+        [
+            "busctl",
+            "--user",
+            "call",
+            "org.kde.KWin",
+            "/Scripting",
+            "org.kde.kwin.Scripting",
+            "loadScript",
+            "ss",
+            js,
+            tag,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.stderr:
+        sys.stderr.write(result.stderr)
+    fields = result.stdout.split()
+    return fields[1] if len(fields) >= 2 else ""
+
+
+def _tag_lines(text: str, tag: str) -> str:
+    """grep the tagged lines and strip through the LAST `<tag>|` (the sed greedy)."""
+    needle = f"{tag}|"
+    out: list[str] = []
+    for line in text.splitlines():
+        if needle in line:
+            out.append(line[line.rfind(needle) + len(needle) :])
+    return "\n".join(out)
+
+
+def _journal_tag_lines(since_epoch: float, tag: str) -> str:
+    """The live-session log read: journalctl since ``mark``, tagged lines only.
+
+    The live counterpart of the nested E2E_KWIN_LOG grep. Ported by inspection;
+    the maintained, tested path is the nested one (the vehicle), so this is never
+    driven from a harness worktree (the same discipline as the runner's live leg).
+    """
+    result = subprocess.run(
+        [
+            "journalctl",
+            "--user",
+            "-u",
+            "plasma-kwin_wayland",
+            "--since",
+            f"@{since_epoch}",
+            "--no-pager",
+            "-o",
+            "cat",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return _tag_lines(result.stdout, tag)
+
+
+def kwin_js(body: str, collection_delay: float = 0.5) -> str:
+    """e2e_kwin_js: run a transient KWin script and return its tagged print output.
+
+    @TAG@ in ``body`` is replaced with a unique run tag so a previous/concurrent
+    run cannot bleed into the result; the 0.5s default delay lets the script
+    flush before it is stopped. Nested reads the vehicle kwin's captured log;
+    live reads the session journal (the mode branch the bash carried).
+    """
+    mode = os.environ.get("E2E_MODE", "")
+    tag = f"E2EJS-{os.getpid()}-{time.time_ns()}"
+    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as handle:
+        handle.write(body.replace("@TAG@", tag) + "\n")
+        js = handle.name
+    mark = time.time()
+    try:
+        num = _kwin_load_script(js, tag)
+        if not num:
+            print("e2e_kwin_js: loadScript failed", file=sys.stderr, flush=True)
+            return ""
+        _busctl_bg(
+            ["org.kde.KWin", f"/Scripting/Script{num}", "org.kde.kwin.Script", "run"], quiet=False
+        )
+        time.sleep(collection_delay)
+        _busctl_bg(
+            ["org.kde.KWin", f"/Scripting/Script{num}", "org.kde.kwin.Script", "stop"], quiet=True
+        )
+        _busctl_bg(
+            ["org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "unloadScript", "s", tag],
+            quiet=True,
+        )
+    finally:
+        with suppress(OSError):
+            os.unlink(js)
+    if mode == "nested":
+        return _tag_lines(Path(_require_env("E2E_KWIN_LOG")).read_text(errors="replace"), tag)
+    return _journal_tag_lines(mark, tag)
+
+
+@dataclass(frozen=True, slots=True)
+class Window:
+    """One parsed e2e_dumpwins record."""
+
+    resource_class: str
+    caption: str
+    geometry_field: str
+    x: int
+    y: int
+    width: int
+    height: int
+    output: str
+    layer: int
+
+
+def parse_dumpwins(text: str) -> list[Window]:
+    """Parse DUMPWIN lines into typed records (the awk field layout, exactly).
+
+    Split on '|' at the fixed positions the e2e_view_window_x awk used ($2 class,
+    $4 geometry, $6 layer), so a typed consumer and the ported view_window_x pick
+    the same fields. A caption is assumed free of '|' (the dock's is), the same
+    assumption the awk made; a line that does not parse to that shape is skipped.
+    """
+    windows: list[Window] = []
+    for line in text.splitlines():
+        parts = line.split("|")
+        if len(parts) < 6 or parts[0] != "DUMPWIN":
+            continue
+        position, _, size = parts[3].partition(" ")
+        x_text, _, y_text = position.partition(",")
+        w_text, _, h_text = size.partition("x")
+        layer_text = parts[5].removeprefix("layer=")
+        if not (x_text and y_text and w_text and h_text and layer_text):
+            continue
+        try:
+            windows.append(
+                Window(
+                    resource_class=parts[1],
+                    caption=parts[2],
+                    geometry_field=parts[3],
+                    x=int(x_text),
+                    y=int(y_text),
+                    width=int(w_text),
+                    height=int(h_text),
+                    output=parts[4],
+                    layer=int(layer_text),
+                )
+            )
+        except ValueError:
+            continue
+    return windows
+
+
+def dumpwins() -> str:
+    """e2e_dumpwins: all windows as DUMPWIN|class|caption|x,y WxH|output|layer=N."""
+    return kwin_js(_DUMPWINS_JS)
+
+
+def windows() -> list[Window]:
+    """The parsed window dump (typed twin of e2e_dumpwins for recipe use)."""
+    return parse_dumpwins(dumpwins())
+
+
+# ---- geometry helpers ------------------------------------------------------
+
+
+def _select_view_window_x(
+    dump: Sequence[Window], edge: str, screen_w: int, screen_h: int
+) -> int | None:
+    """The e2e_view_window_x awk predicate: the latte-dock layer-3 window's x.
+
+    The screen-width layer-3 latte-dock window whose anchored edge touches the
+    screen (bottom edge at screen_h, or top edge at 0); its x, or None. Pure so
+    the selection logic is unit-testable without a compositor.
+    """
+    for w in dump:
+        if "latte-dock" not in w.resource_class or w.layer != 3:
+            continue
+        if w.width != screen_w:
+            continue
+        if edge == "bottom" and w.y + w.height == screen_h:
+            return w.x
+        if edge == "top" and w.y == 0:
+            return w.x
+    return None
+
+
+def view_window_x(containment_id: int) -> int | None:
+    """e2e_view_window_x: the TRUE screen x of a horizontal view's window.
+
+    Reads what the compositor actually shows (the window dump) rather than
+    trusting viewsData's reported origin, so a future state/render divergence
+    cannot silently misaim a recipe. None for a view whose window it cannot
+    locate (non-horizontal, non-screen-width, or still settling).
+    """
+    found = _find_view(containment_id)
+    if found is None:
+        return None
+    return _select_view_window_x(
+        windows(), found.edge, found.screen_geometry[2], found.screen_geometry[3]
+    )
+
+
+def geometry_drift(containment_id: int) -> int | None:
+    """e2e_geometry_drift: rendered_x - (absoluteGeometry.x - localGeometry.x).
+
+    Zero means the compositor draws the dock exactly where viewsData claims;
+    nonzero is the state/render divergence the D-Bus assertions are blind to.
+    None for a view whose window cannot be located.
+    """
+    winx = view_window_x(containment_id)
+    if winx is None:
+        return None
+    found = _find_view(containment_id)
+    if found is None:
+        return None
+    reported_x = found.absolute_geometry[0] - found.local_geometry[0]
+    return winx - reported_x
+
+
+def assert_geometry_agrees(tolerance: int = 2) -> bool:
+    """e2e_assert_geometry_agrees: every locatable view renders within tolerance.
+
+    Names each divergent view on stderr; a run where NOTHING was measurable also
+    fails, so a broken dump can never look like agreement. Returns True on
+    agreement, matching the bash exit status the recipes compose with `|| fail`.
+    """
+    bad = False
+    measured = 0
+    for record in views():
+        drift = geometry_drift(record.containment_id)
+        if drift is None:
+            continue
+        measured += 1
+        if drift < -tolerance or drift > tolerance:
+            print(
+                f"e2e_assert_geometry_agrees: view {record.containment_id} renders {drift}px "
+                f"off its reported origin (tolerance {tolerance}px)",
+                file=sys.stderr,
+                flush=True,
+            )
+            bad = True
+    if measured == 0:
+        print(
+            "e2e_assert_geometry_agrees: no view geometry was measurable - "
+            "refusing to report agreement",
+            file=sys.stderr,
+            flush=True,
+        )
+        return False
+    return not bad
+
+
+# ---- task pointer math -----------------------------------------------------
+
+
+def tasks_view() -> int:
+    """e2e_tasks_view: the widest horizontal view that carries a tasks applet.
+
+    The canonical target for task-interaction recipes, independent of any
+    config's ids: bottom/top, not hidden, widest first, bottom beating top on
+    ties. Raises when no horizontal view carries the tasks applet.
+    """
+    candidates = [v for v in views() if v.edge in ("bottom", "top") and not v.is_hidden]
+    candidates.sort(key=lambda v: (-v.absolute_geometry[2], v.edge != "bottom"))
+    for candidate in candidates:
+        if _TASKS_PLUGIN in json_payload("viewAppletsData", "u", str(candidate.containment_id)):
+            return candidate.containment_id
+    raise RecipeError("e2e_tasks_view: no horizontal view carries a tasks applet")
+
+
+def task_center(containment_id: int, app_id: str) -> tuple[int, int]:
+    """e2e_task_center: the SCREEN center of a task icon, computed arithmetically.
+
+    The tasks applet geometry is view-local; viewsData's absolute/local pair
+    gives the window origin (x from the compositor's true window position when
+    locatable, so the parabolic zoom cannot distort it), and icons split the
+    applet evenly at rest. Callers must approach the returned point from OUTSIDE
+    the dock (published task geometries are unusable mid-zoom).
+    """
+    target = view(containment_id)
+    ax, ay, _aw, _ah = target.absolute_geometry
+    lx, ly = target.local_geometry[0], target.local_geometry[1]
+    winx = view_window_x(containment_id)
+    origin_x = winx if winx is not None else ax - lx
+    origin_y = ay - ly
+
+    applet = next(
+        (a for a in view_applets(containment_id) if a.plugin == "org.kde.latte.plasmoid"), None
+    )
+    if applet is None:
+        raise RecipeError(f"e2e_task_center: view {containment_id} carries no tasks applet")
+    px, py, pw, ph = applet.geometry
+
+    tasks = view_tasks(containment_id)
+    index = next((i for i, t in enumerate(tasks) if t.app_id == app_id), None)
+    if index is None:
+        raise RecipeError(f"e2e_task_center: no task with appId {app_id} in view {containment_id}")
+    count = len(tasks)
+
+    if target.edge in ("bottom", "top"):
+        center_x = origin_x + px + (index + 0.5) * pw / count
+        center_y = origin_y + py + ph / 2
+    else:
+        center_x = (ax - lx) + px + pw / 2
+        center_y = origin_y + py + (index + 0.5) * ph / count
+    return int(center_x), int(center_y)
+
+
+# ---- screenshots (nested-only) ---------------------------------------------
+
+
+def _reply_uint(reply: str, key: str) -> int | None:
+    """The `"<key>" u <n>` uint out of a busctl vardict reply (the bash grep -oE)."""
+    match = re.search(rf'"{key}" u ([0-9]+)', reply)
+    return int(match.group(1)) if match is not None else None
+
+
+def screenshot(out: str, *options: str) -> None:
+    """e2e_screenshot: capture the vehicle workspace via KWin ScreenShot2.
+
+    The image arrives RAW over a passed fd (the reply vardict carries
+    width/height/stride/format); native-resolution is always on, and extra
+    ``key type value`` triples forward verbatim into CaptureWorkspace's option
+    dict (the golden bridge passes ``include-cursor b false``). Refuses loudly on
+    a non-(A)RGB32 or padded-stride layout rather than guessing the converter.
+    """
+    _require_nested("e2e_screenshot")
+    opts = ["native-resolution", "b", "true", *options]
+    if len(opts) % 3 != 0:
+        given = " ".join(options)
+        raise RecipeError(
+            f"e2e_screenshot: option args must be (key type value) triples, got: {given}"
+        )
+    count = len(opts) // 3
+    raw_fd, raw = tempfile.mkstemp(suffix=".raw")
+    os.close(raw_fd)
+    try:
+        with open(raw, "wb") as sink:
+            fdnum = sink.fileno()
+            reply = subprocess.run(
+                [
+                    "busctl",
+                    "--user",
+                    "call",
+                    "org.kde.KWin",
+                    "/org/kde/KWin/ScreenShot2",
+                    "org.kde.KWin.ScreenShot2",
+                    "CaptureWorkspace",
+                    "a{sv}h",
+                    str(count),
+                    *opts,
+                    str(fdnum),
+                ],
+                stdout=subprocess.PIPE,
+                text=True,
+                pass_fds=(fdnum,),
+                check=False,
+            )
+        if reply.returncode != 0:
+            raise RecipeError("e2e_screenshot: CaptureWorkspace failed")
+        width = _reply_uint(reply.stdout, "width")
+        height = _reply_uint(reply.stdout, "height")
+        stride = _reply_uint(reply.stdout, "stride")
+        image_format = _reply_uint(reply.stdout, "format")
+        # QImage formats 5/6 are (A)RGB32: BGRA byte order on little-endian.
+        # Anything else, or a padded stride, needs new handling, not guessing.
+        if (
+            width is None
+            or height is None
+            or stride is None
+            or image_format not in (5, 6)
+            or stride != width * 4
+        ):
+            raise RecipeError(
+                f"e2e_screenshot: unexpected raw layout "
+                f"(format={image_format} stride={stride} width={width}) - extend the converter"
+            )
+        convert = subprocess.run(
+            ["magick", "-size", f"{width}x{height}", "-depth", "8", f"bgra:{raw}", out], check=False
+        )
+        if convert.returncode != 0:
+            raise RecipeError(f"e2e_screenshot: magick conversion failed ({convert.returncode})")
+    finally:
+        with suppress(OSError):
+            os.unlink(raw)
+
+
+# ---- presentation-coverage oracle ------------------------------------------
+
+
+def _assert_presentation_coverage(
+    snapshot: DockSystemData, applets: Sequence[Applet], containment_id: int, tolerance: int
+) -> str:
+    """Join dockSystemData's painted rectangle with the QML item rectangles.
+
+    dockSystemData owns the painted background/effects rectangle; viewAppletsData
+    owns the applet rectangles. This catches a coherent internal geometry whose
+    rendered applets escape either the dock background or the output-owned canvas
+    (the D150 shape - a hovered applet row escaping its resting background).
+    Returns the coverage line on success; raises RecipeError on a violation, with
+    the bash message verbatim.
+    """
+    matches = [v for v in snapshot.views if v.persistent_dock_id == containment_id]
+    if len(matches) != 1:
+        raise RecipeError(
+            f"presentation coverage: expected one view {containment_id}, got {len(matches)}"
+        )
+    target = matches[0]
+    if target.is_hidden:
+        raise RecipeError(
+            f"presentation coverage: view {containment_id} is hidden; no painted background exists"
+        )
+
+    live = [
+        a
+        for a in applets
+        if not a.in_scheduled_destruction and a.geometry[2] > 0 and a.geometry[3] > 0
+    ]
+    if not live:
+        raise RecipeError(
+            f"presentation coverage: view {containment_id} reports no live applet geometry"
+        )
+
+    horizontal = target.orientation == "horizontal"
+    origin_index = 0 if horizontal else 1
+    length_index = 2 if horizontal else 3
+
+    def interval(rect: Rect) -> tuple[int, int]:
+        start = rect[origin_index]
+        return start, start + rect[length_index]
+
+    background_start, background_end = interval(target.effects_rect)
+    content = [interval(a.geometry) for a in live]
+    content_start = min(start for start, _ in content)
+    content_end = max(end for _, end in content)
+    canvas_end = target.canvas_geometry[length_index]
+
+    failures: list[str] = []
+    if content_start < background_start - tolerance:
+        failures.append(f"content starts at {content_start}, before background {background_start}")
+    if content_end > background_end + tolerance:
+        failures.append(f"content ends at {content_end}, after background {background_end}")
+    if content_start < -tolerance:
+        failures.append(f"content starts at {content_start}, before canvas 0")
+    if content_end > canvas_end + tolerance:
+        failures.append(f"content ends at {content_end}, after canvas {canvas_end}")
+
+    tail = (
+        f"content=[{content_start},{content_end}] "
+        f"background=[{background_start},{background_end}] canvas=[0,{canvas_end}]"
+    )
+    if failures:
+        raise RecipeError(
+            f"presentation coverage: view {containment_id} {'; '.join(failures)}; {tail}"
+        )
+    return f"presentation coverage: view {containment_id} {tail}"
+
+
+def assert_applets_covered_by_background(containment_id: int, tolerance: int = 2) -> str:
+    """e2e_assert_applets_covered_by_background: the full-dock composition oracle.
+
+    Call it at rest and after every driven parabolic transition; on failure the
+    caller should preserve a screenshot. Prints and returns the coverage line on
+    success; raises RecipeError on a violation.
+    """
+    snapshot = dock_system_data()
+    applets = view_applets(containment_id)
+    line = _assert_presentation_coverage(snapshot, applets, containment_id, tolerance)
+    print(line, flush=True)
+    return line
