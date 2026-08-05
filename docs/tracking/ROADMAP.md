@@ -86,8 +86,11 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
 - [Bash-to-Python migration](bash-python-migration-plan.md) - the BP
   workstream: ~16,000 lines of bash harness, gate, and test scripting move to
   strictly typed Python (uv, pydantic, basedpyright-strict, ruff) with a
-  613-line retained-bash allowlist for the exit-code spine and external
-  contracts. Approved 2026-08-04; BP-0 (foundation) in progress.
+  797-line 17-file retained-bash allowlist for the exit-code spine and
+  external contracts. BP-0a/0b (the devShell toolchain and the typed harness
+  package with its harness-check gate leg and shrink-only allowlist ratchet)
+  landed via PR #153; BP-0c (container uv) and the BP-1 analyzer fan-out are
+  next.
 
 ## Registries and state
 
