@@ -15,6 +15,7 @@ from latte_harness.bash_allowlist import (
     check,
     compare,
     load_allowlist,
+    tracked_bash,
 )
 from latte_harness.paths import RepoPaths
 
@@ -56,3 +57,17 @@ def test_real_repo_is_currently_clean() -> None:
     # drifting branch fails at the earliest (unit-test) layer too.
     violations = check(RepoPaths.discover())
     assert violations.ok, f"unlisted={violations.unlisted} stale={violations.stale}"
+
+
+def test_shebang_detection_catches_extensionless_bash() -> None:
+    # The inventory is by content, not name: these tracked files carry no
+    # .sh extension and were exactly the gap a name-based inventory left
+    # open (found during the PR #153 review pass). If any of them leaves
+    # the tree, replace it with another extensionless tracked hook.
+    inventory = tracked_bash(RepoPaths.discover().root)
+    for extensionless in (
+        "packaging/debian/build-package",
+        "packaging/void/build-package",
+        "scripts/git-hooks/pre-push",
+    ):
+        assert extensionless in inventory, f"{extensionless} escaped the shebang inventory"
