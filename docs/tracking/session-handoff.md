@@ -1,7 +1,28 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-08-02.
+Last updated 2026-08-04.
+
+## 2026-08-04: Bash-to-Python migration (BP) approved and started
+
+The 2026-07-18 typed-Python harness decision entered execution as the BP
+workstream: `docs/tracking/bash-python-migration-plan.md` is the tracking
+source of truth (chunks BP-0..BP-5, ~20-24 PRs). Approved 2026-08-04 with
+three dispositions: basedpyright at strict mode as the checker (hermetic uv
+install off-nix), a 613-line 15-file retained-bash set (the gate/push
+exit-code spine, the daily-driver dock restart dance, the Messages.sh
+translation contract, two sc-w1 fixtures, the RPM snapshot helper) enforced
+by a shrink-only allowlist ratchet, and deletion of the legacy
+install.sh/uninstall.sh/formatter.sh trio (BP-5b). The July carve-out was
+refined: the nested-vehicle lifecycle moves to Python with exit-code parity;
+only the restart dance and exit-code sequencing stay bash. Review contract
+for BP PRs: Opus worktree implementation, independent cold-context Fable
+reviews. The uv project lands at `harness/` (package `latte_harness`,
+Python 3.14, pydantic as the only runtime dependency); the pinned nixpkgs
+already carries uv 0.11.26, ruff 0.15.20, basedpyright 1.39.8. Next: BP-0a/0b
+(devShell toolchain + harness skeleton + harness-check gate leg + allowlist
+ratchet), then BP-0c (container uv provisioning), then the BP-1 analyzer
+fan-out.
 
 ## 2026-08-02: Panel interaction restores application keyboard focus
 
