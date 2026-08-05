@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The BP (bash-to-python migration) harness project; the plan of record
+# is docs/tracking/bash-python-migration-plan.md.
+
+[project]
+name = "latte-harness"
+version = "0.1.0"
+description = "Typed test/gate harness for the latte-dock Plasma 6 port"
+requires-python = ">=3.14"
+license = "GPL-2.0-or-later"
+dependencies = [
+    # The only runtime dependency, deliberately (minimal-deps contract):
+    # pydantic validates every D-Bus/config JSON boundary at runtime.
+    # busctl remains the D-Bus transport, via subprocess.
+    "pydantic>=2.12",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4",
+    # Pinned to the exact versions the devShell provides from nixpkgs, so
+    # the NixOS gate (nix binaries) and off-nix contributors (these
+    # wheels) run identical checks. Keep in lockstep with flake.nix.
+    "ruff==0.15.20",
+    "basedpyright==1.39.8",
+]
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF"]
+
+[tool.basedpyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.14"
+include = ["src", "tests"]
+# The devShell runs the nixpkgs basedpyright binary; pointing it at the
+# uv-managed venv makes third-party types (pydantic) resolve identically
+# on and off nix.
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
