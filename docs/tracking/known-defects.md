@@ -3331,6 +3331,17 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   write under `LC_ALL=C`.
 - SEVERITY: annoyance (dirty diffs on baseline regeneration).
 
+### D273 - audit-harness-selftest.sh checked in without its executable bit
+- STATUS: FIXED by the mode-bit commit in the PR that files this entry.
+- FOUND: 2026-08-05, the BP-2b (e2e runner port) discovery measurement: the
+  recipe refuses as missing-or-non-executable in both the old and new
+  drivers (git mode 100644 where every sibling recipe is 100755).
+- SYMPTOM: the audit-harness selftest never runs in a full-suite pass; the
+  refusal counted as a FAIL, masking the recipe's actual verdict since the
+  day it landed.
+- FIX: git mode 100755, one line; the recipe rejoins the suite.
+- SEVERITY: test-coverage gap (a selftest silently absent from the net).
+
 ### D272 - storagetest asserts permission-bit refusal that root bypasses
 - STATUS: OPEN.
 - FOUND: 2026-08-04, the BP-0c (container uv provisioning) end-to-end Arch

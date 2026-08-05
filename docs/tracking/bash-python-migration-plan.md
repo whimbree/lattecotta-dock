@@ -192,9 +192,16 @@ Phase BP-2, vehicle spine (serial):
   Full suite A/B against the bash bridge (33/52 both sides, deltas
   vehicle-independent); full gate at merge. Commits: d97842980, f78816f19,
   f4ea48984, 64394d8a6, 477bc19de (PR #167)
-- [ ] BP-2b (e2e runner): port run-e2e.sh; mixed .sh/.py recipe discovery,
-  bit-identical classification matrix plus self-test; front doors become
-  subcommands behind thin shims. Commits:
+- [x] BP-2b (e2e runner): port run-e2e.sh; mixed .sh/.py recipe discovery,
+  bit-identical classification matrix plus self-test (byte-identical verdict
+  messages); the front doors stayed unchanged behind the run-e2e shim
+  instead of becoming subcommands (less churn, same contract). Recorded
+  deviation: discovery takes top-level recipes only - the bash find ran nine
+  subdir libs and fixtures as guaranteed-failure recipes. The four
+  measurement flips against the BP-2a baseline were named and re-driven 4/4
+  PASS (three missing-build-artifact, one front-door-seed). Full asan gate
+  at merge through the ported driver. Commits: 559a9af37, 234309b42,
+  6d1b5e285 (PR #169)
 - [ ] BP-2c (recipe API): port tests/e2e/lib.sh to the typed recipe API with
   pydantic readback models. Commits:
 - [ ] BP-2d (sceneprobe): port sceneprobe-gate.sh and run_in_kwin.sh.
