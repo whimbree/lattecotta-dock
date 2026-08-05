@@ -38,7 +38,16 @@ fast-forwarded 74 commits to origin). Three landings through the PR flow:
   leg green in the nested vehicle; audit-lib.sh stays for its six bash
   consumers.
 
-BP-3c (drivers) is in flight on a resumed worktree agent. Stale local
+BP-3c (drivers) LANDED the same day (PR #185; b6461ecdd, 5343501a8,
+ef7df4d68, e72360208, 5d3c74e33): dnd and task_reorder adopted from the
+crashed agent's WIP, applet_reorder and multi_output written fresh;
+parity driven in the nested vehicle (a real Wayland DnD, a real task
+reorder, byte-identical readbacks); the review added env-only negative
+controls for the topology-mutation safety gate. The dual-output live
+transactions stay owed to the dual-output vehicle (filed in the BP
+plan). With BP-3b and BP-3c in, every BP-3 lib is typed; the remaining
+BP work is the recipe batches (BP-3d..3i), BP-4b (the gate selftest),
+and the BP-5 tail. Stale local
 branches from before the crash: the R1/R2 worktree-agent duplicates and
 the merged follow-up branches (fix/d275-dock-stop-reap,
 docs/bp-wave2-ticks, fix/shim-uv-self-heal, fix/d273-selftest-exec-bit,
