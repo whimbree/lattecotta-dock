@@ -3373,6 +3373,32 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   test pins the prompt reap.
 - SEVERITY: harness correctness (three R1 recipes were blocked on it).
 
+### D277 - ctest resolves org.kde.latte.* from the system-installed package
+- STATUS: FIXED by the seed-var leaf strip in the PR that files this entry.
+- FOUND: 2026-08-05, the BP-3 R4 batch gate (the plain-recipe wave of the
+  bash-to-python migration): themeawareicontest failed 3 of 6 cases with
+  "Namespace 'org.kde.latte.core' has already been used for type
+  registration"; QML_IMPORT_TRACE pinned the resolution to the packaged
+  0.10.77 store path.
+- SYMPTOM: the nixpkgs qtdeclarative patch reads
+  NIXPKGS_QT6_QML_IMPORT_PATH/NIXPKGS_QML_SEARCH_PATHS independently of
+  QML2_IMPORT_PATH, so with the packaged latte-dock installed in the
+  system profile every in-process QML engine sees the package's on-disk
+  org.kde.latte.* modules on top of a test's own C++ registration. D8
+  (the dev-loop packaged-dock shadow) in ctest form; the D271 strip
+  covered only
+  QML2_IMPORT_PATH/QML_IMPORT_PATH. Surfaces only in an environment
+  exporting the seed vars (a desktop session); gate runs in environments
+  without them never exercised the collision.
+- FIX: the D8 doctrine applied at the ctest legs: the existing qmlenv
+  leaf-strip extracted into seed_var_exports, published as the seed-env
+  subcommand, and evaled before ctest in scripts/build-check.sh and the
+  ci/build-and-gate.sh mirror (an in-container no-op today). Driven
+  control: build-check 126/126 under the poisoned ambient env after the
+  fix; the pre-fix gate failure is the negative control.
+- SEVERITY: gate correctness (every QML-engine ctest entry fails in an
+  affected environment; blocked the R4 batch gate).
+
 ### D276 - the 040 preview-tooltip golden no longer matches this machine
 - STATUS: OPEN.
 - FOUND: 2026-08-05, the BP-3 R1 batch: bash 040.sh and its faithful port
