@@ -155,7 +155,14 @@ class VehicleSession:
 
 
 class CompositorStartError(RuntimeError):
-    """kwin never brought up its wayland socket within the bounded wait."""
+    """kwin never brought up its wayland socket within the bounded wait.
+
+    The kwin log's TEXT is captured eagerly at raise time: running_compositor
+    tears the runtime dir (and the log file in it) down in its finally BEFORE
+    the exception reaches any caller, so a caller reading the ``log`` path
+    gets nothing - the PR #173 review found exactly that dead diagnostic.
+    Callers print ``log_text``; the path stays for identification only.
+    """
 
     def __init__(self, runtime_dir: Path, socket: str, log: Path) -> None:
         super().__init__(
@@ -164,6 +171,10 @@ class CompositorStartError(RuntimeError):
         self.runtime_dir = runtime_dir
         self.socket = socket
         self.log = log
+        try:
+            self.log_text: str = log.read_text()
+        except OSError:
+            self.log_text = ""
 
 
 class MalformedEnvError(ValueError):
@@ -770,8 +781,7 @@ def _cmd_start(args: argparse.Namespace) -> None:
             file=sys.stderr,
             flush=True,
         )
-        with suppress(OSError):
-            sys.stderr.write(err.log.read_text())
+        sys.stderr.write(err.log_text)
         sys.stderr.flush()
         stop_compositor(runtime_dir, pgid, starttime)
         raise SystemExit(EXIT_START_FAILED) from err

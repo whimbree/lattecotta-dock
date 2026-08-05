@@ -355,3 +355,17 @@ def test_stop_compositor_refusal_still_removes_the_runtime_dir(tmp_path: Path) -
     finally:
         os.killpg(proc.pid, signal.SIGKILL)
         proc.wait(timeout=5)
+
+
+def test_compositor_start_error_captures_log_before_teardown(tmp_path: Path) -> None:
+    # The PR #173 review's dead-diagnostic finding: running_compositor tears
+    # the runtime dir down in its finally before the exception reaches any
+    # caller, so the log PATH is unreadable there - the TEXT must have been
+    # captured at raise time.
+    log = tmp_path / "kwin.log"
+    log.write_text("the compositor said something important\n")
+    err = vehicle.CompositorStartError(tmp_path, "sock", log)
+    log.unlink()  # models the finally-teardown deleting the runtime dir
+    assert err.log_text == "the compositor said something important\n"
+    absent = vehicle.CompositorStartError(tmp_path, "sock", tmp_path / "never-existed")
+    assert absent.log_text == ""

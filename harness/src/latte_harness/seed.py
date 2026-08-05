@@ -244,8 +244,7 @@ def seed_default_config(repo: Path, build: Path, seeddir: Path) -> None:
             file=sys.stderr,
             flush=True,
         )
-        with suppress(OSError):
-            sys.stderr.write(err.log.read_text())
+        sys.stderr.write(err.log_text)
         sys.stderr.flush()
         raise SystemExit(EXIT_SEED_FAILED) from err
 

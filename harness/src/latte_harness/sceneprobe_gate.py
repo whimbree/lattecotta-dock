@@ -233,10 +233,7 @@ def _compositor_failure_text(err: vehicle.CompositorStartError) -> str:
     the ``start`` subcommand's stderr: the header plus kwin's captured log.
     """
     header = f"{vehicle.TOOL}: nested kwin_wayland never brought up its socket; its log:\n"
-    try:
-        return header + err.log.read_text()
-    except OSError:
-        return header
+    return header + err.log_text
 
 
 def _run_command(

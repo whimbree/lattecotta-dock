@@ -602,8 +602,7 @@ def _drive_nested(repo: Path, recipes: list[Path]) -> int:
             file=sys.stderr,
             flush=True,
         )
-        with suppress(OSError):
-            sys.stderr.write(err.log.read_text())
+        sys.stderr.write(err.log_text)
         sys.stderr.flush()
         return EXIT_PRECONDITION
 
