@@ -202,8 +202,16 @@ Phase BP-2, vehicle spine (serial):
   PASS (three missing-build-artifact, one front-door-seed). Full asan gate
   at merge through the ported driver. Commits: 559a9af37, 234309b42,
   6d1b5e285 (PR #169)
-- [ ] BP-2c (recipe API): port tests/e2e/lib.sh to the typed recipe API with
-  pydantic readback models. Commits:
+- [x] BP-2c (recipe API): the typed recipe API with pydantic readback
+  models (latte_harness.recipe), delivered as a fresh module rather than a
+  bridge: per-call subprocess bridging would add interpreter startup to
+  every helper call, so lib.sh stays for the bash recipes until the BP-3
+  batches delete them. 15/15 helper parity proven live (byte-identical
+  screenshots and dumpwins); the pilot 000-smoke.py replaced 000-smoke.sh
+  (the first true retained-bash shrink). Follow-up filed: reconcile the
+  runner's _dock_pid (returns None on an unset E2E_DOCK_PIDFILE) with
+  lib.sh's refuse-loudly contract, which recipe.py matches. Commits:
+  28ca27bf0, 9ec9f3015, 49fe5176b (PR #171)
 - [ ] BP-2d (sceneprobe): port sceneprobe-gate.sh and run_in_kwin.sh.
   Commits:
 - [ ] BP-2e (staged run): port run-staged.sh; restart-staged.sh execs the
