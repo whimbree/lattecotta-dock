@@ -606,7 +606,7 @@ def require_plugin_metadata(qt_plugin_info: str, contract: PluginContract, plugi
 
 def require_appstream_metadata(metadata_path: str) -> None:
     try:
-        xml = Path(metadata_path).read_text()
+        xml = Path(metadata_path).read_text(errors="surrogateescape")
     except OSError as err:
         # The perl validator died with its open error; carry the same shape.
         fail(
@@ -721,7 +721,7 @@ def _read_manifest_entries(manifest_raw: str) -> list[str]:
     try:
         # newline="" disables universal-newline translation: a \r\n line must
         # surface its carriage return to the CR refusal, as bash mapfile did.
-        content = Path(manifest_raw).read_text(newline="")
+        content = Path(manifest_raw).read_text(newline="", errors="surrogateescape")
     except OSError:
         fail(f"package manifest could not be read completely: {manifest_raw}")
     if content == "":
