@@ -9,20 +9,31 @@ The 2026-07-18 typed-Python harness decision entered execution as the BP
 workstream: `docs/tracking/bash-python-migration-plan.md` is the tracking
 source of truth (chunks BP-0..BP-5, ~20-24 PRs). Approved 2026-08-04 with
 three dispositions: basedpyright at strict mode as the checker (hermetic uv
-install off-nix), a 613-line 15-file retained-bash set (the gate/push
-exit-code spine, the daily-driver dock restart dance, the Messages.sh
-translation contract, two sc-w1 fixtures, the RPM snapshot helper) enforced
-by a shrink-only allowlist ratchet, and deletion of the legacy
-install.sh/uninstall.sh/formatter.sh trio (BP-5b). The July carve-out was
-refined: the nested-vehicle lifecycle moves to Python with exit-code parity;
-only the restart dance and exit-code sequencing stay bash. Review contract
-for BP PRs: Opus worktree implementation, independent cold-context Fable
-reviews. The uv project lands at `harness/` (package `latte_harness`,
-Python 3.14, pydantic as the only runtime dependency); the pinned nixpkgs
-already carries uv 0.11.26, ruff 0.15.20, basedpyright 1.39.8. Next: BP-0a/0b
-(devShell toolchain + harness skeleton + harness-check gate leg + allowlist
-ratchet), then BP-0c (container uv provisioning), then the BP-1 analyzer
-fan-out.
+install off-nix), a retained-bash set enforced by a shrink-only allowlist
+ratchet (797 lines across 17 files after the shebang inventory surfaced the
+two extensionless packaging build-package helpers; the original enumeration
+was 613/15), and deletion of the legacy install.sh/uninstall.sh/formatter.sh
+trio (BP-5b). The July carve-out was refined: the nested-vehicle lifecycle
+moves to Python with exit-code parity; only the restart dance and exit-code
+sequencing stay bash. Review contract for BP PRs (revised same day):
+orchestrator quick context-aware read plus independent cold-context lean-Opus
+review.
+
+BP-0a/0b LANDED via PR #153 (a9166e140 toolchain, ce10b759b package core,
+976b74810 gate leg + allowlist ratchet, ab813a23f shebang inventory,
+b7d4fb54f probe-first checker resolution): the `harness/` uv project
+(package `latte_harness`, Python 3.14, pydantic the only runtime
+dependency), the harness-check gate leg first in gate-all, and the ratchet.
+The BP-0 branch gate surfaced two pre-existing main defects, fixed first via
+PR #152: D269 (qmllint TaskItem curated count drifted 211 to 210 under
+byte-identical inputs; baseline shrunk, family OPEN) and D271 (ctest
+inherited the ambient QML2_IMPORT_PATH and a populated qmllint stage shadowed
+org.kde.latte.core; build-check now strips the variables). D270 filed
+(--write-baseline locale ordering). Filed into BP-1a from the PR #153 second
+review: catch TimeoutExpired on the checker probe, cache per-tool resolution.
+Next: BP-0c (container uv provisioning + harness-check ctest entry + the
+D271 strip mirror in ci/build-and-gate.sh), then the BP-1 analyzer fan-out
+on Opus worktree agents.
 
 ## 2026-08-02: Panel interaction restores application keyboard focus
 

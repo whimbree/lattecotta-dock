@@ -24,10 +24,11 @@ with a Commits: line, same traceability contract as the porting plan.
   vehicle lifecycle moves to Python because the harness that owns it becomes
   Python and a two-language seam inside one process tree is worse than a
   careful port.
-- Review contract for this workstream (direction, 2026-08-04): implementation
-  farms to Opus worktree subagents; every PR gets an independent cold-context
-  review by a Fable subagent. This supersedes the lean-Opus review default for
-  BP PRs only.
+- Review contract for this workstream (direction, 2026-08-04; review model
+  revised to Opus the same day): implementation farms to Opus worktree
+  subagents; every PR gets a quick context-aware read by the orchestrator (a
+  garbage-or-good sanity pass) plus an independent cold-context lean-Opus
+  review, per the standing CLAUDE.md default.
 
 ## Target architecture
 
@@ -87,7 +88,9 @@ fixture.py):
 | Dev tools | scripts/tools/dumpwins.sh, scripts/tools/watch-dock-presentation.sh | JSON/KWin-script processing; watch-dock-presentation sources the e2e lib, which is Python after BP-2c |
 
 Bash retained (sequencing and exit-code plumbing, external contracts,
-fixtures; 613 lines across 15 files, approved 2026-08-04):
+fixtures; 797 lines across 17 files, approved 2026-08-04 as the 15-file
+613-line enumeration and corrected 2026-08-04 when the shebang inventory
+surfaced the two extensionless packaging helpers):
 
 | Script | Why bash stays |
 | --- | --- |
@@ -99,6 +102,7 @@ fixtures; 613 lines across 15 files, approved 2026-08-04):
 | Messages.sh (x5) | KDE translation-infrastructure contract (scripty invokes by name and convention); an external interface, not this repo's harness |
 | tests/e2e/fixtures/sc-w1/launcher.sh, rate-launcher.sh | Test fixtures simulating launched desktop apps; being tiny shell executables is the point |
 | packaging/rpm/make-snapshot-source.sh | Packaging-side tarball helper invoked from the RPM spec context |
+| packaging/debian/build-package, packaging/void/build-package | Same packaging-context family (extensionless; run where the harness venv does not exist); surfaced by the shebang inventory |
 
 Upstream-inherited, decided 2026-08-04: install.sh, uninstall.sh, and
 formatter.sh are DELETED (BP-5b). The CMake/Nix flow and the native packages
@@ -125,22 +129,29 @@ superseded them; git history preserves them.
 
 Phase BP-0, foundation (serial, lands first):
 
-- [ ] BP-0a (devShell toolchain): add python3, uv, ruff, basedpyright to the
+- [x] BP-0a (devShell toolchain): add python3, uv, ruff, basedpyright to the
   devShell from the existing pin; wire uv interpreter preference. Commits:
+  a9166e140 (PR #153)
 - [ ] BP-0b (harness package skeleton): `harness/` uv project, pyproject,
   uv.lock, ruff + basedpyright strict configs, `latte_harness` core modules
   (process control, repo paths, logging), pytest wiring; the harness-check
   gate leg (ruff check + format check, typecheck, pytest) added to
   build-check and ctest; the retained-bash allowlist ratchet seeded with the
-  full current inventory. Commits:
+  full current inventory. Commits: ce10b759b, 976b74810, ab813a23f, b7d4fb54f
+  (PR #153; the ctest wiring moved to BP-0c with the container uv
+  provisioning, so a uv-requiring ctest entry never lands before containers
+  can satisfy it; the gate-all leg covers the merge gate meanwhile)
 - [ ] BP-0c (container uv provisioning): uv + baked `uv sync --locked` in all
-  7 Containerfiles; ci/build-and-gate.sh gains the uv invocation plumbing.
-  Commits:
+  7 Containerfiles; ci/build-and-gate.sh gains the uv invocation plumbing,
+  the harness-check ctest entry, and the D271 (ambient QML import path)
+  env-strip mirrored onto its raw ctest calls (PR #152 review nit). Commits:
 
 Phase BP-1, analyzers (file-disjoint, parallel after BP-0):
 
 - [ ] BP-1a (QML env module): port lib-qml-env.sh to `latte_harness.qmlenv`
-  with a shell-eval export bridge for bash consumers. Commits:
+  with a shell-eval export bridge for bash consumers. Carries two filed
+  check.py nits from the PR #153 second review: catch TimeoutExpired on the
+  checker probe as cannot-run, and cache the per-tool resolution. Commits:
 - [ ] BP-1b (fixture promotion): promote fixture.py into the package, typed,
   pydantic KConfig models, unit-tested refusals; port matrix-fixture-check.
   Commits:
@@ -204,8 +215,9 @@ Phase BP-5, tail:
 
 Per the orchestrator prompt's core loop: decompose (this plan), farm each
 chunk to an Opus worktree subagent (Template A, adapted to name this plan and
-the equivalence contract), review every PR through an independent cold-context
-Fable subagent (Template B; Fable per the 2026-08-04 direction), merge
+the equivalence contract), review every PR through the orchestrator's
+quick context-aware read plus an independent cold-context lean-Opus subagent
+(Template B; revised 2026-08-04), merge
 serially through `gh pr merge --rebase` with re-rebase and re-gate as main
 moves, orchestrator owns plan ticks, defect filing, and session-handoff.
 Concurrency around 4; BP-2 chunks serialize; BP-4 runs alongside BP-3.
