@@ -92,8 +92,8 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   launcher run as typed latte_harness modules behind stable shims, with
   the D269/D270 qmllint drift family closed. BP-3 (recipes and their libs)
   and BP-4 (the package gate) are underway: the matrix API, the audit lib,
-  and the package-gate engine are merged, nine recipes are typed, and the
-  batches continue.
+  all four interaction-driver libs, and the package-gate engine are
+  merged, nine recipes are typed, and the recipe batches continue.
 
 ## Registries and state
 

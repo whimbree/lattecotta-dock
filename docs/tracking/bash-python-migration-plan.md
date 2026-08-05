@@ -246,8 +246,21 @@ batches are file-disjoint and parallel):
   locale lesson). Resumed from a crashed agent's uncommitted worktree
   WIP, adopted after a critical read. Commits: 0752856d2, dea56987b,
   bbbcb89ac (PR #182)
-- [ ] BP-3c (drivers): port dnd-lib, task-reorder-lib, multi-output-lib,
-  applet-reorder-driver. Commits:
+- [x] BP-3c (drivers): port dnd-lib, task-reorder-lib, multi-output-lib,
+  applet-reorder-driver to typed twins (one commit per lib; the bash libs
+  stay for their unported recipe consumers 092/093/100 and the
+  multi-output selftest). Parity driven in the nested vehicle:
+  byte-identical readbacks on every comparable surface, a real
+  explorer-to-containment Wayland DnD, a real task reorder, the
+  rearrange lifecycle, and the topology-mutation gate's single-output
+  refusal as the negative control. One recorded delta: applet_reorder_z
+  returns float 0.0 where bash echoed JSON-collapsed 0 (z is a C++
+  double; every consumer compares numerically). The review added
+  env-only negative controls for the mutation safety gate and the
+  bash-faithful minus-only int guard. Resumed from a crashed agent's
+  worktree: dnd and task_reorder adopted from its uncommitted WIP,
+  applet_reorder and multi_output written fresh. Commits: b6461ecdd,
+  5343501a8, ef7df4d68, e72360208, 5d3c74e33 (PR #185)
 - [ ] BP-3d..3i (recipe batches): ~47 recipes in ~6 file-disjoint batches,
   grouped by lib dependency (plain-lib recipes start after BP-2c; matrix and
   audit recipes after BP-3a/3b; driver recipes after BP-3c); bash libs are
@@ -312,6 +325,12 @@ Phase BP-5, tail:
   dock-edit-retarget-cancel rides the typed boundary instead of raw JSON
   dicts (PR #183 review nit; the View docstring already anticipates the
   editMode widening).
+- BP-3c dual-output residual: multi_output's live transactions
+  (mo_discover_outputs, capture/restore topology,
+  place-secondary-for-topology, pin resolution) need the dual-output
+  vehicle (E2E_OUTPUT_COUNT=2 via run-multi-output-e2e.sh); their pure
+  cores are unit-covered including all refusal paths, the live
+  dual-output drive is owed when that vehicle next runs (PR #185).
 - Typed-readback refusal hardening: recipe.views()/view_applets() and the
   raw json_payload consumers crash with JSONDecodeError or a pydantic
   ValidationError when dbusreports refuses a reply (a view without an
