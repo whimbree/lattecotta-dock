@@ -324,7 +324,19 @@ def _spawn_compositor(
     log = log_path(runtime_dir)
     with log.open("w") as handle:
         proc = SessionProcess.spawn(argv, env=session_env, stdout=handle, stderr=subprocess.STDOUT)
-    return proc.pid, leader_starttime(proc.pid)
+    starttime = leader_starttime(proc.pid)
+    if starttime is None:
+        # Cannot happen while the leader is this process's unreaped child; a
+        # None here means /proc itself misbehaved. Warn loudly instead of
+        # silently running the whole session without the teardown identity
+        # gate (degenerate values are symptoms, not things to swallow).
+        print(
+            f"{TOOL}: WARNING: no starttime readable for leader {proc.pid}; "
+            "the teardown identity gate is OFF for this session",
+            file=sys.stderr,
+            flush=True,
+        )
+    return proc.pid, starttime
 
 
 def _await_socket(runtime_dir: Path, socket: str, pgid: int) -> None:
@@ -434,7 +446,12 @@ def _leader_identity_intact(pgid: int, expected_starttime: str | None) -> bool:
       unrelated process; signalling now could hit an innocent group. Refuse.
     - leader absent: either the leaderless group still holds members (the
       pgid stays reserved for exactly them, so killpg reaches only them) or
-      the whole group is gone (killpg is an ESRCH no-op). Both safe.
+      the whole group is gone (killpg is an ESRCH no-op). Safe for the
+      single-recycle case; the honest residual is the double-death corner
+      (the recycled leader ALSO dies and is reaped while its children keep
+      the group alive), which a single leader starttime cannot discriminate.
+      Closing that fully needs per-member identity; the corner is accepted
+      as astronomically rare and recorded here rather than papered over.
 
     Bash never faced the recycled case: the compositor stayed the consumer
     shell's unreaped child, so its pid was held (zombie) until cleanup's
@@ -624,7 +641,7 @@ def _terminate_compositor_group(pgid: int, expected_starttime: str | None = None
     day of runs once left hundreds of virtual compositors alive.
     """
     if not _leader_identity_intact(pgid, expected_starttime):
-        _refuse_recycled_group(pgid, expected_starttime, f"{TOOL} ")
+        _refuse_recycled_group(pgid, expected_starttime, TOOL)
         return
     _signal_group_or_leader(pgid, signal.SIGTERM)
     for _ in range(CLEANUP_GROUP_POLL_ATTEMPTS):

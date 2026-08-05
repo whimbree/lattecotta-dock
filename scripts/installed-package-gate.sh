@@ -849,8 +849,14 @@ dock_pid=""
 cleanup_nested_vehicle() {
     local cleanup_status=0
     if [[ -n "${NESTED_KWIN_PID:-}" ]]; then
-        latte_package_gate_stop_process_group "$NESTED_KWIN_PID" \
-            "nested KWin process group $NESTED_KWIN_PID" || cleanup_status=2
+        # The typed stop-group carries the leader-identity gate: since the
+        # bridged nested_kwin_start reparents the compositor to init (BP-2a),
+        # a bare kill-by-number here could reach a recycled pid after a
+        # mid-run compositor crash; --starttime refuses that case (the PR
+        # #167 second review's threading-gap finding).
+        uv run --locked --project "$_NESTED_KWIN_HARNESS" python -m latte_harness.vehicle \
+            stop-group "$NESTED_KWIN_PID" --starttime "${NESTED_KWIN_STARTTIME:-}" \
+            --label "nested KWin process group $NESTED_KWIN_PID" || cleanup_status=2
         # Process cleanup is bounded above. Clear the handle so the shared
         # helper performs only its FUSE and runtime-directory cleanup.
         NESTED_KWIN_PID=""
