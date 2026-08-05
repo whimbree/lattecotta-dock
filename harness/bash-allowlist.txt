@@ -1,8 +1,10 @@
 # The retained-bash allowlist ratchet (BP-0b): every git-tracked bash
-# file must be listed here; the list only shrinks as the BP migration
-# deletes bash, until it is exactly the 15-file retained set in
-# docs/tracking/bash-python-migration-plan.md. Checked by
-# latte_harness.bash_allowlist as part of the harness-check gate leg.
+# file (*.sh or shell-shebang) must be listed here; the list only
+# shrinks as the BP migration deletes bash, until it is exactly the
+# 17-file retained set in docs/tracking/bash-python-migration-plan.md.
+# Checked by latte_harness.bash_allowlist in the harness-check gate
+# leg. Keep entries in LC_ALL=C sort order (codepoint order), never a
+# locale-aware sort.
 Messages.sh
 ci/build-and-gate.sh
 containment/Messages.sh

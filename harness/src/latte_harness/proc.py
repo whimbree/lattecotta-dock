@@ -113,6 +113,12 @@ class SessionProcess:
         SIGKILL (kernel-stuck) raises TimeoutExpired loudly rather than
         hanging or pretending success.
         """
+        already = self._popen.poll()
+        if already is not None:
+            # Reaped already: signalling the stale pgid could reach a
+            # recycled process group, so teardown just reports the
+            # known status (idempotent, like the vanished-group case).
+            return already
         self._signal_group(signal.SIGTERM)
         try:
             return self._popen.wait(timeout=grace)
