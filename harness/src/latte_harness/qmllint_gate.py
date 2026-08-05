@@ -22,10 +22,20 @@ inherited files. Files that cannot reach zero for a structural reason are named
 with their reason in docs/tracking/QML_EXTRACTION_PLAN.md (section D); this file
 is regenerated wholesale, so the durable record lives there.
 
-D270 (--write-baseline emitted locale-dependent ordering) is RETIRED here: the
-baseline is serialized in codepoint (C-collation) order by construction (Python's
-default str sort), independent of the ambient locale, so a regeneration on an
-unchanged tree reproduces the committed file byte-for-byte.
+Two defect dispositions ride in this port (docs/tracking/known-defects.md):
+
+- D270 (--write-baseline emitted locale-dependent ordering) is RETIRED here: the
+  baseline is serialized in codepoint (C-collation) order by construction
+  (Python's default str sort), independent of the ambient locale, so a
+  regeneration on an unchanged tree reproduces the committed file byte-for-byte.
+- D269 (the curated count drifts under byte-identical inputs) stays OPEN as a
+  family, but this port ships the diagnostic the registry asked for: every run
+  persists a per-warning fingerprint artifact (file, category, line, a stable
+  message digest) beside the stage, and on a count divergence the failure output
+  names the per-file per-category breakdown and, when a prior fingerprint
+  exists, the exact warnings that appeared or vanished since the last run. The
+  committed baseline format does NOT change (counts stay the contract); the
+  fingerprint is diagnostic only.
 
 The staging and import assembly go through latte_harness.qmlenv (the BP-1a typed
 module), not the bash bridge.
@@ -35,6 +45,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import hashlib
 import locale
 import os
 import re
@@ -44,9 +55,9 @@ from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 
-from latte_harness.log import fail, info
+from latte_harness.log import fail, info, warn
 from latte_harness.paths import RepoPaths
 from latte_harness.proc import run
 from latte_harness.qmlenv import (
@@ -107,6 +118,12 @@ BASELINE_HEADER = (
     "# the durable record lives there.\n"
 )
 
+# The fingerprint artifact lives beside the stage but OUTSIDE it: the staging
+# rsync runs with --delete on the stage dir, so a file under stage/ would be
+# wiped before the next run could read it. build/_qmllint_fingerprint.json
+# survives staging and lets one run diff against the previous run's warnings.
+_FINGERPRINT_NAME = "_qmllint_fingerprint.json"
+
 
 # --- the qmllint --json boundary, validated with pydantic --------------------
 
@@ -134,6 +151,35 @@ class QmllintReport(BaseModel):
     files: list[QmllintFile] = []
 
 
+# --- the per-warning fingerprint (D269 diagnostic) ---------------------------
+
+
+class FingerprintRecord(BaseModel):
+    """One curated warning, identified stably across byte-identical runs."""
+
+    file: str
+    category: str
+    line: int
+    digest: str
+    message: str
+
+    @property
+    def identity(self) -> tuple[str, str, int, str]:
+        """The tuple that decides whether two runs saw the same warning."""
+        return (self.file, self.category, self.line, self.digest)
+
+
+class FingerprintArtifact(BaseModel):
+    """The persisted set of curated warnings from one run."""
+
+    warnings: list[FingerprintRecord] = []
+
+
+def message_digest(message: str) -> str:
+    """A short, stable digest of a warning's message text."""
+    return hashlib.sha256(message.encode("utf-8")).hexdigest()[:12]
+
+
 # --- pure logic: parse, filter, count, serialize -----------------------------
 
 
@@ -157,7 +203,11 @@ def _iter_curated(report: QmllintReport, stage_prefix: str) -> Iterator[tuple[st
 
 
 def curated_counts(report: QmllintReport, stage_prefix: str) -> dict[str, int]:
-    """Per-file curated warning totals, files with no findings omitted."""
+    """Per-file curated warning totals, files with no findings omitted.
+
+    This is the verdict path: counts derive straight from the report, not from
+    the D269 fingerprint layer, so the ratchet does not depend on the diagnostic.
+    """
     counts: dict[str, int] = defaultdict(int)
     for rel, _w in _iter_curated(report, stage_prefix):
         counts[rel] += 1
@@ -202,6 +252,70 @@ def parse_baseline(text: str) -> dict[str, int]:
             raise ValueError(f"malformed baseline line: {raw!r}")
         counts[rel] = int(count_str)
     return counts
+
+
+# --- the divergence diagnostics (D269) ---------------------------------------
+
+
+def collect_fingerprints(report: QmllintReport, stage_prefix: str) -> list[FingerprintRecord]:
+    """Every curated warning as a stable fingerprint, deterministically ordered.
+
+    Sorted by (file, line, category, digest) so the persisted artifact is itself
+    stable and diffable across byte-identical runs.
+    """
+    records = [
+        FingerprintRecord(
+            file=rel,
+            category=w.id,
+            line=w.line,
+            digest=message_digest(w.message),
+            message=w.message,
+        )
+        for rel, w in _iter_curated(report, stage_prefix)
+    ]
+    records.sort(key=lambda r: (r.file, r.line, r.category, r.digest))
+    return records
+
+
+def per_category_counts(report: QmllintReport, stage_prefix: str) -> dict[str, dict[str, int]]:
+    """Per-file, per-category curated warning counts (the divergence breakdown)."""
+    table: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    for rel, w in _iter_curated(report, stage_prefix):
+        table[rel][w.id] += 1
+    return {file: dict(cats) for file, cats in table.items()}
+
+
+@dataclass(frozen=True, slots=True)
+class FingerprintDelta:
+    appeared: list[FingerprintRecord]
+    vanished: list[FingerprintRecord]
+
+    @property
+    def empty(self) -> bool:
+        return not self.appeared and not self.vanished
+
+
+def fingerprint_delta(
+    previous: Sequence[FingerprintRecord], current: Sequence[FingerprintRecord]
+) -> FingerprintDelta:
+    """The warnings that appeared or vanished between two runs, by identity."""
+    prev_ids = {r.identity for r in previous}
+    curr_ids = {r.identity for r in current}
+    appeared = sorted(
+        (r for r in current if r.identity not in prev_ids),
+        key=lambda r: (r.file, r.line, r.category),
+    )
+    vanished = sorted(
+        (r for r in previous if r.identity not in curr_ids),
+        key=lambda r: (r.file, r.line, r.category),
+    )
+    return FingerprintDelta(appeared=appeared, vanished=vanished)
+
+
+def diverging_files(baseline: Mapping[str, int], current: Mapping[str, int]) -> list[str]:
+    """Every rel whose count differs (present-in-one or count-mismatch), sorted."""
+    rels = set(baseline) | set(current)
+    return sorted(rel for rel in rels if baseline.get(rel, 0) != current.get(rel, 0))
 
 
 # --- the gate context: staging, imports, and the child env -------------------
@@ -293,9 +407,11 @@ def sorted_like_find(paths: Iterable[Path]) -> list[Path]:
     fires. The port reproduces the shell's locale order to stay byte-equivalent
     against the untouched baseline. It does NOT substitute a deterministic order:
     that would kill the fragility but only against a baseline regenerated under a
-    pinned locale, which is the deferred real fix for D269 and outside this port.
-    Python starts in the C locale regardless of the environment, so LC_COLLATE
-    must be adopted explicitly for strxfrm to match coreutils sort.
+    pinned locale, which is the deferred real fix for D269 and outside this port
+    (the fingerprint diagnostic below is what this port adds so the next drift
+    names the exact warning). Python starts in the C locale regardless of the
+    environment, so LC_COLLATE must be adopted explicitly for strxfrm to match
+    coreutils sort.
     """
     locale.setlocale(locale.LC_COLLATE, "")
     return sorted(paths, key=lambda p: locale.strxfrm(str(p)))
@@ -346,11 +462,39 @@ def run_qmllint(ctx: GateContext, files: Sequence[Path]) -> QmllintReport:
     return parse_report(out.read_text())
 
 
+# --- fingerprint artifact I/O ------------------------------------------------
+
+
+def load_previous_fingerprint(path: Path) -> list[FingerprintRecord] | None:
+    """The prior run's fingerprints, or None when absent or unreadable.
+
+    A corrupt or old-format artifact is diagnostic-only, never the verdict: warn
+    and proceed without the cross-run diff rather than failing the gate on it.
+    """
+    if not path.is_file():
+        return None
+    try:
+        return FingerprintArtifact.model_validate_json(path.read_text()).warnings
+    except (OSError, ValidationError) as exc:
+        warn(TOOL, f"ignoring unreadable fingerprint artifact {path}: {exc}")
+        return None
+
+
+def write_fingerprint(path: Path, records: Sequence[FingerprintRecord]) -> None:
+    """Persist this run's fingerprints for the next run to diff against."""
+    path.write_text(FingerprintArtifact(warnings=list(records)).model_dump_json(indent=2) + "\n")
+
+
 # --- verdict reporting -------------------------------------------------------
 
 
-def _report_divergence(baseline: Mapping[str, int], current: Mapping[str, int]) -> None:
-    """Print the FAIL diagnostics: the unified count diff and the ratchet hint."""
+def _report_divergence(
+    baseline: Mapping[str, int],
+    current: Mapping[str, int],
+    per_category: Mapping[str, dict[str, int]],
+    delta: FingerprintDelta | None,
+) -> None:
+    """Print the FAIL diagnostics: the count diff, per-category breakdown, delta."""
     print(
         f"{TOOL}: FAIL per-file curated warning counts diverge from "
         "tests/coverage/qmllint-baseline:",
@@ -362,6 +506,33 @@ def _report_divergence(baseline: Mapping[str, int], current: Mapping[str, int]) 
         expected_lines, current_lines, fromfile="baseline", tofile="current", lineterm=""
     ):
         print(line, flush=True)
+
+    print(f"{TOOL}: per-file curated category breakdown for the diverging files:", flush=True)
+    for rel in diverging_files(baseline, current):
+        want = baseline.get(rel, 0)
+        have = current.get(rel, 0)
+        cats = per_category.get(rel, {})
+        breakdown = ", ".join(f"{cat}={cats[cat]}" for cat in sorted(cats)) or "(none)"
+        line = f"  {rel}: baseline {want} -> current {have} ({have - want:+d}); {breakdown}"
+        print(line, flush=True)
+
+    if delta is None:
+        print(
+            f"{TOOL}: no prior fingerprint to diff; the artifact from this run is "
+            "written for the next one to name the exact warning that moves",
+            flush=True,
+        )
+    elif delta.empty:
+        print(f"{TOOL}: no per-warning change since the last run's fingerprint", flush=True)
+    else:
+        if delta.appeared:
+            print(f"{TOOL}: curated warnings that appeared since the last run:", flush=True)
+            for r in delta.appeared:
+                print(f"  {r.file}:{r.line} [{r.category}] {r.message}", flush=True)
+        if delta.vanished:
+            print(f"{TOOL}: curated warnings that vanished since the last run:", flush=True)
+            for r in delta.vanished:
+                print(f"  {r.file}:{r.line} [{r.category}] {r.message}", flush=True)
 
     print(f"{TOOL}: an increase is a regression to fix; an improvement lands", flush=True)
     print(f"{TOOL}: with the baseline shrink in the same commit (--write-baseline).", flush=True)
@@ -403,8 +574,17 @@ def _gate(repo: Path, env: Mapping[str, str], *, write_baseline: bool) -> None:
     except ValueError as exc:
         fail(TOOL, f"corrupt baseline at tests/coverage/qmllint-baseline: {exc}")
 
+    # D269 diagnostic: read the prior fingerprint BEFORE overwriting it, so a
+    # divergence can name the warning that moved. The artifact lives outside the
+    # stage (the staging --delete would otherwise wipe it before this read).
+    fingerprints = collect_fingerprints(report, stage_prefix)
+    fingerprint_path = ctx.build / _FINGERPRINT_NAME
+    previous = load_previous_fingerprint(fingerprint_path)
+    write_fingerprint(fingerprint_path, fingerprints)
+
     if counts != baseline:
-        _report_divergence(baseline, counts)
+        delta = fingerprint_delta(previous, fingerprints) if previous is not None else None
+        _report_divergence(baseline, counts, per_category_counts(report, stage_prefix), delta)
         raise SystemExit(1)
 
     total = sum(counts.values())
