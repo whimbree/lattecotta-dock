@@ -291,6 +291,15 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
 
         connect(this->containment(), &Plasma::Containment::destroyedChanged, this, [&]() {
             m_inDelete = containment()->destroyed();
+
+            //! A removed view must hand its panel focus session back the instant
+            //! it is marked destroyed. Otherwise the corona releases ownership
+            //! only on this View's QObject::destroyed, which libplasma defers for
+            //! the whole removal-undo window (~60s) - during which no other dock
+            //! can acquire keyboard focus, breaking every fullscreen application.
+            if (m_inDelete) {
+                relinquishPanelFocusSessionOnRemoval();
+            }
         });
 
         if (m_corona->viewSettingsFactory()->hasOrphanSettings()
@@ -1705,6 +1714,31 @@ void View::leaveKeyboardNavigation()
     applyPanelFocusPolicy();
 
     Q_EMIT keyboardNavigationIsActiveChanged();
+}
+
+void View::relinquishPanelFocusSessionOnRemoval()
+{
+    if (!m_ownsPanelFocusSession) {
+        return;
+    }
+
+    //! Drop BOTH focus reasons before ending the session: endPanelFocusSession
+    //! asserts panelFocusIsRequested() is already false, and a removed view has
+    //! no status machinery left to clear them the ordinary way. RestoreApplication
+    //! hands focus back to the application the dock displaced, exactly as an
+    //! explicit keyboard-navigation exit would.
+    const bool wasKeyboardNavigating = m_keyboardNavigationIsActive;
+    m_keyboardNavigationIsActive = false;
+    m_containmentAcceptsInput = false;
+    if (m_visibility) {
+        m_visibility->removeBlockHidingEvent(BLOCKHIDINGKEYBOARDNAVIGATIONTYPE);
+    }
+
+    endPanelFocusSession(PanelFocusSessionDisposition::RestoreApplication);
+
+    if (wasKeyboardNavigating) {
+        Q_EMIT keyboardNavigationIsActiveChanged();
+    }
 }
 
 void View::toggleKeyboardNavigation()

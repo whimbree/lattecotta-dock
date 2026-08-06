@@ -3331,6 +3331,45 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   write under `LC_ALL=C`.
 - SEVERITY: annoyance (dirty diffs on baseline regeneration).
 
+### D280 - removing a keyboard-focus dock strands the panel focus session for the undo window
+- STATUS: FIXED by the view-removal session-release commit in the PR that
+  files this entry (app/view/view.cpp, app/view/view.h).
+- FOUND: 2026-08-06, the BP-3 R9 batch (the bash-to-python migration's
+  focus-restoration recipe wave): the 112 port failed ~50% at
+  "post-owner-destruction session did not enter keyboard navigation" with
+  viewsData showing only the surviving source view, all focus flags false,
+  yet setViewKeyboardNavigation(source, true) refused for the full retry
+  window. A standalone instrumented repro (steps 6-8 with a real client)
+  measured the stranded interval directly: after removeView the removed
+  view left viewsData at t=0.00s, but source could not acquire the session
+  until t=60.5s in the failing runs (t=0.1s in the winning runs) - the
+  classic Plasma removal-undo grace.
+- SYMPTOM: Corona::beginPanelFocusSession clears m_panelFocusOwner only on
+  the owning View's QObject::destroyed (a QPointer destroyed-connection).
+  When a view that owns the panel focus session is REMOVED, libplasma keeps
+  the containment/View alive for the removal-undo window (~60s) before that
+  destroyed signal fires, so the corona keeps the removed view registered as
+  the focus owner the whole time. During that window every other dock's
+  setViewKeyboardNavigation and every containment AcceptingInput request is
+  refused ("another view owns the panel focus session") - a real user-facing
+  break: remove a dock that held keyboard focus and no dock can take keyboard
+  focus, so no fullscreen application gets it either, for up to a minute.
+- FIX: release the session the instant the view is marked destroyed rather
+  than on the deferred QObject::destroyed. The View::destroyedChanged handler
+  (the same one that sets m_inDelete) now calls
+  relinquishPanelFocusSessionOnRemoval(), which drops both focus reasons and
+  ends the session with RestoreApplication (handing focus back to the
+  application the dock displaced, exactly as an explicit keyboard-navigation
+  exit would). endPanelFocusSession's restore path disconnects the corona's
+  destroyed-connection and clears m_panelFocusOwner, so the eventual real
+  destruction is a no-op and no double-clear can occur.
+- SEVERITY: dock defect (keyboard focus stranded across every dock for the
+  removal-undo window; latent, masked in the bash 112 recipe by its slower
+  poll cadence winning the release race most of the time).
+- REGRESSION TEST: tests/e2e/112-keyboard-navigation-focus-restoration.py
+  (its "destroying the owning dock ends its focus session" leg), reliable
+  3/3 as .py and 3/3 as the pre-port .sh once the fix landed.
+
 ### D279 - fixed-count poll loops lose their wall-clock horizon in ported recipes
 - STATUS: FIXED (for the 074 port) by the deadline-sampler change in the
   074 landing commit; future recipe ports must check their future-event
