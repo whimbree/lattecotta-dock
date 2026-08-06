@@ -3370,6 +3370,26 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   (its "destroying the owning dock ends its focus session" leg), reliable
   3/3 as .py and 3/3 as the pre-port .sh once the fix landed.
 
+### D281 - 112 QML-Escape leg raced the compositor keyboard-focus grant in the port
+- STATUS: FIXED by the grant-settle in the 112 port commit.
+- FOUND: 2026-08-06, the BP-3 R9 batch (the bash-to-python migration's
+  focus-restoration recipe wave): the 112 port intermittently failed at
+  "real QML Escape did not exit keyboard navigation" - the injected Escape
+  reached the client, not the dock's KeyboardNavigationHandler.
+- SYMPTOM: after entering keyboard navigation the compositor grant of
+  keyboard focus to the dock's layer surface is Qt-level (QWindow::active)
+  and unobservable over D-Bus/KWin scripting. The bash won this by burning
+  wall-clock in enter_keyboard_navigation's per-iteration python3-spawn
+  polls; the typed port's ~3 ms busctl probes return from the enter before
+  the grant lands, so the immediate Escape races it (the D279 poll-horizon
+  class, applied to a compositor grant rather than a scheduled event).
+- FIX: settle 3 s for the grant before the QML-Escape injection, matching
+  this recipe's own focus-loss and destroyed-target legs (which already
+  sleep before their grant-dependent key injection) and the
+  keyboard-navigation-mode precedent.
+- SEVERITY: port correctness (an intermittent false failure in the 112
+  port; no dock defect).
+
 ### D279 - fixed-count poll loops lose their wall-clock horizon in ported recipes
 - STATUS: FIXED (for the 074 port) by the deadline-sampler change in the
   074 landing commit; future recipe ports must check their future-event
