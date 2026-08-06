@@ -42,50 +42,51 @@ from collections.abc import Callable
 from contextlib import redirect_stderr, suppress
 from pathlib import Path
 
-from latte_harness import audit, recipe
 from pydantic import ValidationError
+
+from latte_harness import audit, recipe
 
 # Every tasks-page control seeded to a NON-DEFAULT value (the comment is its
 # main.xml default). The seed writes each and the readback asserts each, from one
 # list so the two sets stay identical (the 30 values the D10 proof depends on).
 SEEDS: list[tuple[str, str]] = [
     # AU-5b Badges (91-95)
-    ("showInfoBadge", "false"),                    # default true
-    ("showProgressBadge", "false"),                # default true
-    ("showAudioBadge", "false"),                   # default true
-    ("audioBadgeActionsEnabled", "false"),         # default true
-    ("infoBadgeProminentColorEnabled", "true"),    # default false
+    ("showInfoBadge", "false"),  # default true
+    ("showProgressBadge", "false"),  # default true
+    ("showAudioBadge", "false"),  # default true
+    ("audioBadgeActionsEnabled", "false"),  # default true
+    ("infoBadgeProminentColorEnabled", "true"),  # default false
     # AU-5b Interaction (96-99)
-    ("isPreferredForDroppedLaunchers", "false"),   # default true
-    ("showWindowActions", "true"),                 # default false
-    ("previewWindowAsPopup", "true"),              # default false
+    ("isPreferredForDroppedLaunchers", "false"),  # default true
+    ("showWindowActions", "true"),  # default false
+    ("previewWindowAsPopup", "true"),  # default false
     # AU-5b Filters (100-105)
-    ("showOnlyCurrentScreen", "true"),             # default false
-    ("showOnlyCurrentDesktop", "true"),            # default false
-    ("showOnlyCurrentActivity", "false"),          # default true
-    ("showWindowsOnlyFromLaunchers", "true"),      # default false
-    ("hideAllTasks", "true"),                      # default false
-    ("groupTasksByDefault", "false"),              # default true
+    ("showOnlyCurrentScreen", "true"),  # default false
+    ("showOnlyCurrentDesktop", "true"),  # default false
+    ("showOnlyCurrentActivity", "false"),  # default true
+    ("showWindowsOnlyFromLaunchers", "true"),  # default false
+    ("hideAllTasks", "true"),  # default false
+    ("groupTasksByDefault", "false"),  # default true
     # AU-5c Animations (106-110)
-    ("animationLauncherBouncing", "false"),        # default true
-    ("animationWindowInAttention", "false"),       # default true
-    ("animationNewWindowSliding", "false"),        # default true
-    ("animationWindowAddedInGroup", "false"),      # default true
+    ("animationLauncherBouncing", "false"),  # default true
+    ("animationWindowInAttention", "false"),  # default true
+    ("animationNewWindowSliding", "false"),  # default true
+    ("animationWindowAddedInGroup", "false"),  # default true
     ("animationWindowRemovedFromGroup", "false"),  # default true
     # AU-5c Launchers (111-113): 2 = Global (default 0 = Unique)
     ("launchersGroup", "2"),
     # AU-5c Scrolling (114-116)
-    ("scrollTasksEnabled", "true"),                # default false
-    ("autoScrollTasksEnabled", "false"),           # default true
-    ("manualScrollTasksType", "2"),                # default 1
+    ("scrollTasksEnabled", "true"),  # default false
+    ("autoScrollTasksEnabled", "false"),  # default true
+    ("manualScrollTasksType", "2"),  # default 1
     # AU-5c Actions (117-121): each seeded to a different offered enum value
-    ("leftClickAction", "7"),                      # default 6 (PresentWindows) -> 7 (Preview)
-    ("middleClickAction", "1"),                    # default 2 (NewInstance) -> 1 (Close)
-    ("hoverAction", "2"),                          # default 9 (Preview+Highlight) -> 2 (Highlight)
-    ("taskScrollAction", "2"),                     # default 1 (ScrollTasks) -> 2 (ScrollToggleMin)
-    ("modifierClickAction", "1"),                  # default 0 (None) -> 1 (Close)
-    ("modifier", "3"),                             # default 1 (Ctrl) -> 3 (Meta)
-    ("modifierClick", "2"),                        # default 0 (LeftClick) -> 2 (RightClick)
+    ("leftClickAction", "7"),  # default 6 (PresentWindows) -> 7 (Preview)
+    ("middleClickAction", "1"),  # default 2 (NewInstance) -> 1 (Close)
+    ("hoverAction", "2"),  # default 9 (Preview+Highlight) -> 2 (Highlight)
+    ("taskScrollAction", "2"),  # default 1 (ScrollTasks) -> 2 (ScrollToggleMin)
+    ("modifierClickAction", "1"),  # default 0 (None) -> 1 (Close)
+    ("modifier", "3"),  # default 1 (Ctrl) -> 3 (Meta)
+    ("modifierClick", "2"),  # default 0 (LeftClick) -> 2 (RightClick)
 ]
 
 
@@ -101,11 +102,24 @@ def _tcfg(layout: str, view: int, applet: int, key: str, value: str) -> None:
     home of the tasks.plasmoid.configuration.<key> map."""
     subprocess.run(
         [
-            "kwriteconfig6", "--file", layout,
-            "--group", "Containments", "--group", str(view),
-            "--group", "Applets", "--group", str(applet),
-            "--group", "Configuration", "--group", "General",
-            "--key", key, value,
+            "kwriteconfig6",
+            "--file",
+            layout,
+            "--group",
+            "Containments",
+            "--group",
+            str(view),
+            "--group",
+            "Applets",
+            "--group",
+            str(applet),
+            "--group",
+            "Configuration",
+            "--group",
+            "General",
+            "--key",
+            key,
+            value,
         ],
         check=False,
     )

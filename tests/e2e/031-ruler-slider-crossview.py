@@ -47,8 +47,9 @@ import time
 from contextlib import redirect_stderr, suppress
 from pathlib import Path
 
-from latte_harness import audit, recipe
 from pydantic import ValidationError
+
+from latte_harness import audit, recipe
 
 
 def _quiet_dock_stop() -> None:
@@ -114,9 +115,7 @@ def main() -> None:
         except ValueError:
             pinned = False
         if not pinned:
-            recipe.fail(
-                f"slider drag did not pin maxLength below the 30 rail (got {clobbered})"
-            )
+            recipe.fail(f"slider drag did not pin maxLength below the 30 rail (got {clobbered})")
         print(f"clobbered the Maximum slider: maxLength {orig} -> {clobbered}")
 
         # the ruler lives on the bottom canvas (screen-wide, thin), driven at its
@@ -183,9 +182,7 @@ def main() -> None:
             return
 
         if not golden.is_file():
-            recipe.fail(
-                f"no golden at {golden} (run once with E2E_BLESS=1, verify by eye, commit)"
-            )
+            recipe.fail(f"no golden at {golden} (run once with E2E_BLESS=1, verify by eye, commit)")
 
         # tolerant tier: same host renders bit-close, the value label is AA text; the
         # handle is a solid disc, so delta 8 / 2% budget separates a stuck handle
@@ -193,8 +190,15 @@ def main() -> None:
         diff_out = Path(os.environ["E2E_ARTIFACTS"]) / "ruler-slider-crossview.diff.png"
         verdict = subprocess.run(
             [
-                str(imgdiff), str(crop), str(golden),
-                "--delta", "8", "--budget", "0.02", "--out", str(diff_out),
+                str(imgdiff),
+                str(crop),
+                str(golden),
+                "--delta",
+                "8",
+                "--budget",
+                "0.02",
+                "--out",
+                str(diff_out),
             ],
             check=False,
         )
@@ -209,9 +213,18 @@ def main() -> None:
         _quiet_dock_stop()
         subprocess.run(
             [
-                "kwriteconfig6", "--file", os.environ["E2E_LAYOUT"],
-                "--group", "Containments", "--group", str(view), "--group", "General",
-                "--key", "maxLength", orig or "100",
+                "kwriteconfig6",
+                "--file",
+                os.environ["E2E_LAYOUT"],
+                "--group",
+                "Containments",
+                "--group",
+                str(view),
+                "--group",
+                "General",
+                "--key",
+                "maxLength",
+                orig or "100",
             ],
             check=False,
         )

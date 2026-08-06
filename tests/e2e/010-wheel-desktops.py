@@ -57,9 +57,7 @@ def _kread(*args: str) -> str:
 
 
 def _kwrite(*args: str) -> None:
-    subprocess.run(
-        ["kwriteconfig6", "--file", os.environ["E2E_LAYOUT"], *args], check=False
-    )
+    subprocess.run(["kwriteconfig6", "--file", os.environ["E2E_LAYOUT"], *args], check=False)
 
 
 @contextlib.contextmanager
@@ -129,8 +127,7 @@ def _empty_area_point(view: int) -> tuple[int, int] | None:
     drift = ox - (ax - lx)
     ax += drift
     spans = sorted(
-        (ox + a.geometry[0], ox + a.geometry[0] + a.geometry[2])
-        for a in recipe.view_applets(view)
+        (ox + a.geometry[0], ox + a.geometry[0] + a.geometry[2]) for a in recipe.view_applets(view)
     )
     gaps: list[tuple[int, int]] = []
     cursor = ax
@@ -142,9 +139,7 @@ def _empty_area_point(view: int) -> tuple[int, int] | None:
         gaps.append((cursor, ax + aw))
     best = max(gaps, key=lambda g: g[1] - g[0], default=(0, 0))
     if best[1] - best[0] < 6:
-        print(
-            f"widest empty-area gap is under 6px: {gaps}", file=sys.stderr, flush=True
-        )
+        print(f"widest empty-area gap is under 6px: {gaps}", file=sys.stderr, flush=True)
         return None
     return int((best[0] + best[1]) / 2), int(ay + ah / 2)
 
@@ -214,13 +209,9 @@ def main() -> None:
                         break
                 if now != from_:
                     if now != to:
-                        recipe.fail(
-                            f"detent {detent} overshot: {from_} -> {now} (expected {to})"
-                        )
+                        recipe.fail(f"detent {detent} overshot: {from_} -> {now} (expected {to})")
                     return
-                print(
-                    f"  (detent {detent} not delivered on attempt {attempt}, retrying)"
-                )
+                print(f"  (detent {detent} not delivered on attempt {attempt}, retrying)")
             recipe.fail(
                 f"detent {detent} never delivered after 4 attempts "
                 "(vehicle input-delivery limitation exceeded)"

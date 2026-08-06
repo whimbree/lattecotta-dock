@@ -156,7 +156,10 @@ def _run(work: str) -> None:
     golden_match = f"{work}/match.png"
     shutil.copyfile(actual, golden_match)  # identical
     wrong = f"{work}/wrong.png"  # painted-over band
-    if _magick(actual, "-fill", "#ff00ff", "-draw", f"rectangle 0,0 {cw // 2},{ch // 2}", wrong) != 0:
+    if (
+        _magick(actual, "-fill", "#ff00ff", "-draw", f"rectangle 0,0 {cw // 2},{ch // 2}", wrong)
+        != 0
+    ):
         recipe.fail("could not synthesize the wrong golden")
     tiny = f"{work}/tiny.png"  # <=Tolerance +1 shift
     if _magick(actual, "-evaluate", "Add", "0.3%", tiny) != 0:
@@ -164,17 +167,23 @@ def _run(work: str) -> None:
 
     print("== 1. a MATCH (identical golden) passes the compare ==")
     tally.check_rc(
-        0, "match-passes", lambda: matrix_golden.golden_compare(actual, golden_match, f"{work}/match.diff.png")
+        0,
+        "match-passes",
+        lambda: matrix_golden.golden_compare(actual, golden_match, f"{work}/match.diff.png"),
     )
 
     print("== 2. HC3: a WRONG golden (painted-over band) is REJECTED as FAIL ==")
     tally.check_rc(
-        1, "wrong-fails", lambda: matrix_golden.golden_compare(actual, wrong, f"{work}/wrong.diff.png")
+        1,
+        "wrong-fails",
+        lambda: matrix_golden.golden_compare(actual, wrong, f"{work}/wrong.diff.png"),
     )
 
     print("== 3. a MISSING required golden is a hard FAIL, not a silent pass ==")
     tally.check_rc(
-        1, "missing-fails", lambda: matrix_golden.golden_compare(actual, f"{work}/does-not-exist.png")
+        1,
+        "missing-fails",
+        lambda: matrix_golden.golden_compare(actual, f"{work}/does-not-exist.png"),
     )
 
     print("== 4. the tier axis is real: a +1 (<=Tolerance) shift PASSES at tolerance... ==")
@@ -184,7 +193,9 @@ def _run(work: str) -> None:
     tally.check_rc(1, "tiny-bitexact-fails", lambda: _compare_at_tier("bitexact", actual, tiny))
 
     print("== 6. an unknown tier is REFUSED loudly (setup error 2), never a wrong rigor ==")
-    tally.check_rc(2, "unknown-tier-refused", lambda: _compare_at_tier("lenient", actual, golden_match))
+    tally.check_rc(
+        2, "unknown-tier-refused", lambda: _compare_at_tier("lenient", actual, golden_match)
+    )
 
     print("== 7. e2e_assert_golden: a MISSING committed golden is refused as FAIL ==")
     # a throwaway golden dir so the self-test never reads or writes the committed
@@ -215,7 +226,9 @@ def _run(work: str) -> None:
 
     print(f"golden-bridge-selftest: {tally.passed} ok, {tally.failed} failed")
     if tally.failed != 0:
-        recipe.fail("the golden bridge did not behave as a trustworthy comparator (see failures above)")
+        recipe.fail(
+            "the golden bridge did not behave as a trustworthy comparator (see failures above)"
+        )
     print("PASS: 090-golden-bridge-selftest (the bridge observes rejections, not just matches)")
 
 

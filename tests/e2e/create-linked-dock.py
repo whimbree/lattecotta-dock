@@ -71,9 +71,7 @@ def _call(fail_message: str, *args: str) -> None:
 def _kscreen(*args: str) -> bool:
     """kscreen-doctor <setters>; True on success (the bash `kscreen-doctor ... >/dev/null`)."""
     return (
-        subprocess.run(
-            ["kscreen-doctor", *args], stdout=subprocess.DEVNULL, check=False
-        ).returncode
+        subprocess.run(["kscreen-doctor", *args], stdout=subprocess.DEVNULL, check=False).returncode
         == 0
     )
 
@@ -165,9 +163,7 @@ def _applets(view: int) -> list[dict[str, Any]]:
 
 
 def _applet_config(view: int, applet: int) -> dict[str, Any]:
-    return json.loads(
-        recipe.json_payload("appletConfigData", "uu", str(view), str(applet))
-    )
+    return json.loads(recipe.json_payload("appletConfigData", "uu", str(view), str(applet)))
 
 
 def _view_plugins(view: int) -> str:
@@ -197,9 +193,7 @@ def _tasks_launchers_config(view: int) -> str:
     """tasks_launchers_config: the tasks applet's launchers* config keys, canonical JSON."""
     applet = _tasks_applet_id(view)
     config = _applet_config(view, applet)["config"]
-    values = {
-        key: value for key, value in config.items() if key.startswith("launchers")
-    }
+    values = {key: value for key, value in config.items() if key.startswith("launchers")}
     return json.dumps(values, sort_keys=True, separators=(",", ":"))
 
 
@@ -255,9 +249,7 @@ def _view_content_fingerprint(view: int) -> str:
 
 
 def _scenario(layout: str) -> None:
-    active = [
-        s for s in json.loads(recipe.json_payload("screensData")) if s["isActive"]
-    ]
+    active = [s for s in json.loads(recipe.json_payload("screensData")) if s["isActive"]]
     primary_list = [s for s in active if s["isPrimary"]]
     secondary_list = [s for s in active if not s["isPrimary"]]
     if len(primary_list) != 1 or len(secondary_list) != 1:
@@ -344,8 +336,7 @@ def _scenario(layout: str) -> None:
             and remote[0]["logicalDockId"] == root_id
             and remote[0]["screenId"] == secondary_id
             and remote[0]["edge"] == "left"
-            and ",".join(str(x) for x in remote[0]["screenGeometry"])
-            == secondary_geometry
+            and ",".join(str(x) for x in remote[0]["screenGeometry"]) == secondary_geometry
         )
 
     remote_state = _wait_for_snapshot(
@@ -370,9 +361,7 @@ def _scenario(layout: str) -> None:
     metrics_state = _wait_for_snapshot(
         metrics_pred, "linked member sizing authorities did not become live"
     )
-    metrics_view = next(
-        v for v in metrics_state["views"] if v["persistentDockId"] == remote_id
-    )
+    metrics_view = next(v for v in metrics_state["views"] if v["persistentDockId"] == remote_id)
     before_remote_metrics = " ".join(
         str(value)
         for value in (
@@ -383,9 +372,7 @@ def _scenario(layout: str) -> None:
     )
     before_remote_local_length = _stable_tasks_local_length(remote_id)
     if before_remote_local_length is None:
-        recipe.fail(
-            "remote member applet length did not settle before the alignment test"
-        )
+        recipe.fail("remote member applet length did not settle before the alignment test")
 
     # Exact cross-dock sizing reproducer: changing the root bottom dock to start
     # alignment must not alter the separate vertical member's sizing inputs.
@@ -419,9 +406,7 @@ def _scenario(layout: str) -> None:
         "root alignment changed the remote linked member sizing or placement",
     )
     if _stable_tasks_local_length(remote_id) != before_remote_local_length:
-        recipe.fail(
-            "root alignment copied applet-local length into the remote linked member"
-        )
+        recipe.fail("root alignment copied applet-local length into the remote linked member")
 
     # Relocate the explicit member through both axes and outputs. The semantic end
     # alignment (2) normalizes to bottom on a vertical edge, while the root and the
@@ -448,9 +433,7 @@ def _scenario(layout: str) -> None:
             and views[same_edge_id]["edge"] == "bottom"
         )
 
-    _wait_for_snapshot(
-        member_right_pred, "explicit member relocation leaked into another dock"
-    )
+    _wait_for_snapshot(member_right_pred, "explicit member relocation leaked into another dock")
 
     _call(
         "explicit member relocation back to secondary/left failed",
@@ -464,15 +447,9 @@ def _scenario(layout: str) -> None:
 
     def member_back_pred(state: _State) -> bool:
         v = next(v for v in state["views"] if v["persistentDockId"] == remote_id)
-        return (
-            v["screenId"] == secondary_id
-            and v["edge"] == "left"
-            and v["alignment"] == "top"
-        )
+        return v["screenId"] == secondary_id and v["edge"] == "left" and v["alignment"] == "top"
 
-    _wait_for_snapshot(
-        member_back_pred, "explicit member did not return to the portrait output"
-    )
+    _wait_for_snapshot(member_back_pred, "explicit member did not return to the portrait output")
 
     # Visibility and edit presentation are local to explicit members.
     old_member_mode = next(
@@ -505,9 +482,7 @@ def _scenario(layout: str) -> None:
         root = next(v for v in views if v["containmentId"] == root_id)
         return root["isHidden"]
 
-    _wait_for_views_data(
-        root_hidden_pred, "Auto Hide root did not hide before peer editing"
-    )
+    _wait_for_views_data(root_hidden_pred, "Auto Hide root did not hide before peer editing")
 
     _call(
         "could not enter the linked member edit presentation",
@@ -520,12 +495,8 @@ def _scenario(layout: str) -> None:
     def edit_highlight_pred(views: _Views) -> bool:
         editing = {v["containmentId"] for v in views if v["editMode"]}
         highlighted = {v["containmentId"] for v in views if v["linkedEditHighlight"]}
-        visible_highlights = all(
-            not v["isHidden"] for v in views if v["linkedEditHighlight"]
-        )
-        passive = all(
-            not v["inConfigureAppletsMode"] for v in views if v["linkedEditHighlight"]
-        )
+        visible_highlights = all(not v["isHidden"] for v in views if v["linkedEditHighlight"])
+        passive = all(not v["inConfigureAppletsMode"] for v in views if v["linkedEditHighlight"])
         keyboard_clear = all(not v["keyboardNavigation"] for v in views)
         return (
             editing == {remote_id}
@@ -571,8 +542,7 @@ def _scenario(layout: str) -> None:
     def edit_closed_pred(views: _Views) -> bool:
         root = next(v for v in views if v["containmentId"] == root_id)
         return (
-            not any(v["editMode"] or v["linkedEditHighlight"] for v in views)
-            and root["isHidden"]
+            not any(v["editMode"] or v["linkedEditHighlight"] for v in views) and root["isHidden"]
         )
 
     _wait_for_views_data(
@@ -646,9 +616,7 @@ def _scenario(layout: str) -> None:
             break
         time.sleep(0.25)
     if not config_sync:
-        recipe.fail(
-            "member-originated applet config did not converge across the linked group"
-        )
+        recipe.fail("member-originated applet config did not converge across the linked group")
     if _stable_tasks_local_length(remote_id) != before_remote_local_length:
         recipe.fail(
             "shared launcher configuration overwrote the remote member's local applet length"
@@ -687,9 +655,7 @@ def _scenario(layout: str) -> None:
         )
         recipe.fail("applet addition did not synchronize across linked members")
 
-    all_ids_text = " ".join(
-        _view_applet_ids(cid) for cid in (root_id, same_edge_id, remote_id)
-    )
+    all_ids_text = " ".join(_view_applet_ids(cid) for cid in (root_id, same_edge_id, remote_id))
     ids = [int(value) for value in all_ids_text.split()]
     if len(ids) != len(set(ids)):
         recipe.fail("linked members reused mutable applet identities")
@@ -720,9 +686,7 @@ def _scenario(layout: str) -> None:
             file=sys.stderr,
             flush=True,
         )
-        recipe.fail(
-            "member-originated applet order did not converge across the linked group"
-        )
+        recipe.fail("member-originated applet order did not converge across the linked group")
 
     # Disconnect the explicit member's output while the root stays live, mutate
     # the root, then reconnect. The persistent member must remain present on disk
@@ -793,9 +757,7 @@ def _scenario(layout: str) -> None:
             file=sys.stderr,
             flush=True,
         )
-        recipe.fail(
-            "live member content differed from the root during the output disconnect"
-        )
+        recipe.fail("live member content differed from the root during the output disconnect")
 
     if not _kscreen(
         f"output.{secondary_name}.enable",
@@ -830,9 +792,7 @@ def _scenario(layout: str) -> None:
     if not reconnect_sync:
         recipe.fail("reconnected member did not reconcile exact root applet content")
     if _stable_tasks_local_length(remote_id) != before_remote_local_length:
-        recipe.fail(
-            "output reconnection overwrote the remote member's local applet length"
-        )
+        recipe.fail("output reconnection overwrote the remote member's local applet length")
 
     # Return the member to the already occupied edge. The relationship and content
     # operations above must not rewrite placement ownership.
@@ -854,15 +814,12 @@ def _scenario(layout: str) -> None:
             and views[root_id]["edge"] == "bottom"
         )
 
-    _wait_for_snapshot(
-        member_occupied_pred, "linked member did not return to the occupied edge"
-    )
+    _wait_for_snapshot(member_occupied_pred, "linked member did not return to the occupied edge")
 
     # Duplicate the explicit member. The result must be independent and must not be
     # added to the root's linkedDockIds.
     before_ids = {
-        v["persistentDockId"]
-        for v in json.loads(recipe.json_payload("dockSystemData"))["views"]
+        v["persistentDockId"] for v in json.loads(recipe.json_payload("dockSystemData"))["views"]
     }
     _call(
         "Duplicate Dock failed from an explicit linked member",
@@ -943,8 +900,7 @@ def _scenario(layout: str) -> None:
                 views[identity]["runtimeViewId"] != before_reload_runtime[identity]
                 for identity in group
             )
-            and views[duplicate_id]["runtimeViewId"]
-            == before_reload_runtime[duplicate_id]
+            and views[duplicate_id]["runtimeViewId"] == before_reload_runtime[duplicate_id]
             and all(
                 views[identity]["originalDockId"] == root_id
                 for identity in [same_edge_id, remote_id]
@@ -969,9 +925,7 @@ def _scenario(layout: str) -> None:
     def post_recreate_pred(views: _Views) -> bool:
         editing = {v["containmentId"] for v in views if v["editMode"]}
         highlighted = {v["containmentId"] for v in views if v["linkedEditHighlight"]}
-        visible_highlights = all(
-            not v["isHidden"] for v in views if v["linkedEditHighlight"]
-        )
+        visible_highlights = all(not v["isHidden"] for v in views if v["linkedEditHighlight"])
         return (
             editing == {remote_id}
             and highlighted == {root_id, same_edge_id}
@@ -995,8 +949,7 @@ def _scenario(layout: str) -> None:
         root = next(v for v in views if v["containmentId"] == root_id)
         return (
             not any(
-                v["editMode"] or v["linkedEditHighlight"] or v["keyboardNavigation"]
-                for v in views
+                v["editMode"] or v["linkedEditHighlight"] or v["keyboardNavigation"] for v in views
             )
             and root["isHidden"]
         )
@@ -1016,13 +969,9 @@ def _scenario(layout: str) -> None:
             break
         time.sleep(0.25)
     if not recreate_sync:
-        recipe.fail(
-            "linked content changed or failed to converge after root recreation"
-        )
+        recipe.fail("linked content changed or failed to converge after root recreation")
     if _stable_tasks_local_length(remote_id) != before_remote_local_length:
-        recipe.fail(
-            "root runtime recreation overwrote the remote member's local applet length"
-        )
+        recipe.fail("root runtime recreation overwrote the remote member's local applet length")
 
     # Pin the unrelated duplicate to the primary output, move the root to the
     # secondary output, then disconnect the root output. All linked runtimes must
@@ -1070,8 +1019,7 @@ def _scenario(layout: str) -> None:
         "views did not settle before the root-output disconnect",
     )
     before_root_disconnect_runtime = {
-        v["persistentDockId"]: v["runtimeViewId"]
-        for v in root_disconnect_ready["views"]
+        v["persistentDockId"]: v["runtimeViewId"] for v in root_disconnect_ready["views"]
     }
 
     if not _kscreen(f"output.{secondary_name}.disable"):
@@ -1106,12 +1054,10 @@ def _scenario(layout: str) -> None:
         return (
             set(views) == {root_id, same_edge_id, remote_id, duplicate_id}
             and all(
-                views[identity]["runtimeViewId"]
-                != before_root_disconnect_runtime[identity]
+                views[identity]["runtimeViewId"] != before_root_disconnect_runtime[identity]
                 for identity in group
             )
-            and views[duplicate_id]["runtimeViewId"]
-            == before_root_disconnect_runtime[duplicate_id]
+            and views[duplicate_id]["runtimeViewId"] == before_root_disconnect_runtime[duplicate_id]
             and all(
                 views[identity]["originalDockId"] == root_id
                 for identity in [same_edge_id, remote_id]
@@ -1133,9 +1079,7 @@ def _scenario(layout: str) -> None:
             break
         time.sleep(0.25)
     if not root_reconnect_sync:
-        recipe.fail(
-            "linked content failed to converge after the root output reconnected"
-        )
+        recipe.fail("linked content failed to converge after the root output reconnected")
 
     # Restore the intended final placement before the process-reload assertion.
     _call(
@@ -1203,9 +1147,7 @@ def _scenario(layout: str) -> None:
             )
             != "1"
         ):
-            recipe.fail(
-                f"linked member {cid} lost explicit placement ownership on disk"
-            )
+            recipe.fail(f"linked member {cid} lost explicit placement ownership on disk")
     if (
         _kread(
             "--file",
@@ -1231,33 +1173,23 @@ def _scenario(layout: str) -> None:
         actual = {v["persistentDockId"] for v in views}
         root = next((v for v in views if v["persistentDockId"] == root_id), None)
         members = [v for v in views if v["relationship"] == "linkedMember"]
-        independent = next(
-            (v for v in views if v["persistentDockId"] == duplicate_id), None
-        )
+        independent = next((v for v in views if v["persistentDockId"] == duplicate_id), None)
         return bool(
             actual == expected_ids
             and root
             and root["linkedDockIds"] == sorted([same_edge_id, remote_id])
             and len(members) == 2
             and all(
-                v["originalDockId"] == root_id
-                and v["linkPlacement"] == "explicitTarget"
+                v["originalDockId"] == root_id and v["linkPlacement"] == "explicitTarget"
                 for v in members
             )
-            and next(v for v in members if v["persistentDockId"] == same_edge_id)[
-                "screenId"
-            ]
+            and next(v for v in members if v["persistentDockId"] == same_edge_id)["screenId"]
             == primary_id
-            and next(v for v in members if v["persistentDockId"] == same_edge_id)[
-                "edge"
-            ]
+            and next(v for v in members if v["persistentDockId"] == same_edge_id)["edge"]
             == "bottom"
-            and next(v for v in members if v["persistentDockId"] == remote_id)[
-                "screenId"
-            ]
+            and next(v for v in members if v["persistentDockId"] == remote_id)["screenId"]
             == secondary_id
-            and next(v for v in members if v["persistentDockId"] == remote_id)["edge"]
-            == "left"
+            and next(v for v in members if v["persistentDockId"] == remote_id)["edge"] == "left"
             and independent
             and independent["relationship"] == "independent"
             and not any(v["editMode"] for v in views)
@@ -1271,9 +1203,7 @@ def _scenario(layout: str) -> None:
     views = reloaded["views"]
     runtime_ids = [v["runtimeViewId"] for v in views]
     containments = [v["persistentDockId"] for v in views]
-    if len(runtime_ids) != len(set(runtime_ids)) or len(containments) != len(
-        set(containments)
-    ):
+    if len(runtime_ids) != len(set(runtime_ids)) or len(containments) != len(set(containments)):
         recipe.fail("runtime ownership was shared after reload")
     for key in (
         "view",

@@ -47,9 +47,7 @@ from latte_harness import proc, recipe
 _KONSOLE_CLASS = "|org.kde.konsole|"
 # A genuine latte-dock preview dialog: an empty-caption latte-dock window at
 # layer=6 (the double pipe is the empty caption field).
-_PREVIEW_RE = re.compile(
-    r"\|latte-dock\|\|[0-9.,-]+ [0-9]+x[0-9]+\|[^|]+\|layer=6"
-)
+_PREVIEW_RE = re.compile(r"\|latte-dock\|\|[0-9.,-]+ [0-9]+x[0-9]+\|[^|]+\|layer=6")
 
 
 class _State:
@@ -103,7 +101,10 @@ def _body() -> None:
     #! konsole is part of the pinned environment (the vehicle proof's client).
     if not _konsole_mapped():
         _S.konsole = subprocess.Popen(
-            ["konsole"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True
+            ["konsole"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
         )
         for _ in range(30):
             if _konsole_mapped():
@@ -183,7 +184,9 @@ def _body() -> None:
         time.sleep(1.1)  #! previewsDelay (throwaway default 650ms) + build + margin
         if _PREVIEW_RE.search(recipe.dumpwins()):
             _assert_covered(
-                tasks_view, "hover", "the hovered applet row escapes its background or output canvas"
+                tasks_view,
+                "hover",
+                "the hovered applet row escapes its background or output canvas",
             )
             mapped = True
             break
@@ -197,7 +200,9 @@ def _body() -> None:
     #! stale hover generation that fails to restore the composition.
     if not recipe.view(tasks_view).is_hidden:
         _assert_covered(
-            tasks_view, "restored", "the restored applet row escapes its background or output canvas"
+            tasks_view,
+            "restored",
+            "the restored applet row escapes its background or output canvas",
         )
 
     if mapped:

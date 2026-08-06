@@ -11,9 +11,9 @@ import argparse
 import json
 import math
 import sys
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, NoReturn
-
+from typing import Any, NoReturn
 
 STACKING_REASON = (
     "Inward same-edge stacking is unsupported; stable-span overlap is not yet rejected."
@@ -28,7 +28,7 @@ class Rect:
     height: float
 
     @classmethod
-    def from_json(cls, value: list[float]) -> "Rect":
+    def from_json(cls, value: Sequence[float]) -> Rect:
         if len(value) != 4:
             fail(f"rectangle needs four coordinates, got {value}")
         rect = cls(*value)
@@ -46,10 +46,9 @@ class Rect:
     def bottom(self) -> float:
         return self.y + self.height
 
-    def intersects(self, other: "Rect") -> bool:
-        return (
-            max(self.x, other.x) < min(self.right, other.right)
-            and max(self.y, other.y) < min(self.bottom, other.bottom)
+    def intersects(self, other: Rect) -> bool:
+        return max(self.x, other.x) < min(self.right, other.right) and max(self.y, other.y) < min(
+            self.bottom, other.bottom
         )
 
     def outward_aligned(self) -> list[int]:
@@ -62,7 +61,7 @@ class Rect:
             math.ceil(self.bottom) - top,
         ]
 
-    def translated(self, dx: float, dy: float) -> "Rect":
+    def translated(self, dx: float, dy: float) -> Rect:
         return Rect(self.x + dx, self.y + dy, self.width, self.height)
 
 
@@ -100,9 +99,7 @@ def classify_rectangles(first: Rect, second: Rect) -> str:
     horizontal_seam = first.right == second.x or second.right == first.x
     vertical_seam = first.bottom == second.y or second.bottom == first.y
     if horizontal_seam:
-        overlap = max(
-            0.0, min(first.bottom, second.bottom) - max(first.y, second.y)
-        )
+        overlap = max(0.0, min(first.bottom, second.bottom) - max(first.y, second.y))
         shorter = min(first.height, second.height)
     elif vertical_seam:
         overlap = max(0.0, min(first.right, second.right) - max(first.x, second.x))
@@ -243,9 +240,7 @@ def assert_popup_primary_geometry(
     orientation: str,
 ) -> None:
     paint_start, paint_length = primary_start_and_length(stable_paint, orientation)
-    _, measurement_length = primary_start_and_length(
-        stable_measurement, orientation
-    )
+    _, measurement_length = primary_start_and_length(stable_measurement, orientation)
     anchor_start, anchor_length = primary_start_and_length(anchor, orientation)
     if paint_length != measurement_length:
         fail(
@@ -263,10 +258,7 @@ def assert_popup_primary_geometry(
             f"popup primary span {anchor_length} does not match stable "
             f"available length {available_primary_length}"
         )
-    if (
-        anchor_start < paint_start
-        or anchor_start + anchor_length > paint_start + paint_length
-    ):
+    if anchor_start < paint_start or anchor_start + anchor_length > paint_start + paint_length:
         fail(
             "popup primary geometry escapes the stable paint span: "
             f"anchor=({anchor_start},{anchor_length}) "
@@ -308,15 +300,9 @@ def assert_presentation(view: dict[str, Any]) -> None:
         view["orientation"],
     )
     if view["orientation"] == "horizontal":
-        secondary_matches = (
-            anchor.y == paint_rect.y
-            and anchor.height == paint_rect.height
-        )
+        secondary_matches = anchor.y == paint_rect.y and anchor.height == paint_rect.height
     else:
-        secondary_matches = (
-            anchor.x == paint_rect.x
-            and anchor.width == paint_rect.width
-        )
+        secondary_matches = anchor.x == paint_rect.x and anchor.width == paint_rect.width
     if not secondary_matches:
         fail(
             f"view {dock_id} popup anchor does not preserve the primary span "
@@ -378,9 +364,7 @@ def assert_regions_remain_separated(first: Rect, second: Rect, label: str) -> No
         fail(f"{label} were widened into a continuous strip")
 
 
-def assert_separated_bottom_spans(
-    first: dict[str, Any], second: dict[str, Any]
-) -> None:
+def assert_separated_bottom_spans(first: dict[str, Any], second: dict[str, Any]) -> None:
     first_trigger = Rect.from_json(first["stableTriggerGeometry"])
     second_trigger = Rect.from_json(second["stableTriggerGeometry"])
     if (
@@ -391,21 +375,15 @@ def assert_separated_bottom_spans(
         or second["alignment"] != "right"
     ):
         fail("A and B are not start/end partial panels on one primary bottom edge")
-    assert_regions_remain_separated(
-        first_trigger, second_trigger, "A and B stable triggers"
-    )
+    assert_regions_remain_separated(first_trigger, second_trigger, "A and B stable triggers")
     for view in (first, second):
         canvas = Rect.from_json(view["stableCanvasGeometry"])
         screen = Rect.from_json(view["screenGeometry"])
         if canvas.bottom != screen.bottom:
-            fail(
-                f"view {view['persistentDockId']} canvas left the physical bottom edge"
-            )
+            fail(f"view {view['persistentDockId']} canvas left the physical bottom edge")
     first_input = global_rect(first, "inputMask")
     second_input = global_rect(second, "inputMask")
-    assert_regions_remain_separated(
-        first_input, second_input, "A and B exact input regions"
-    )
+    assert_regions_remain_separated(first_input, second_input, "A and B exact input regions")
 
 
 def assert_fixture_placements(
@@ -451,7 +429,9 @@ def assert_group_mirror(view: dict[str, Any], group: dict[str, Any]) -> None:
         "reservationLayerShellExclusiveEdge": "layerShellExclusiveEdge",
         "reservationLayerShellExclusiveZone": "layerShellExclusiveZone",
     }
-    mismatches = {
+    # Variable-length tuple values: the mirrored fields hold pairs, the publisher
+    # entry below holds a four-item tuple (basic-mode reportArgumentType).
+    mismatches: dict[str, tuple[object, ...]] = {
         view_key: (view[view_key], group[group_key])
         for view_key, group_key in mirrored.items()
         if view[view_key] != group[group_key]
@@ -511,8 +491,7 @@ def assert_reservations(
     assert_group_mirror(second, ab_group)
     assert_group_mirror(third, c_group)
     if (
-        first["objects"]["reservationPublisher"]
-        != second["objects"]["reservationPublisher"]
+        first["objects"]["reservationPublisher"] != second["objects"]["reservationPublisher"]
         or first["objects"]["reservationPublisher"] != ab_group["publisher"]
     ):
         fail("A and B do not share their primary-bottom reservation publisher")
@@ -739,21 +718,18 @@ def client_plan(ids: tuple[int, int, int], case: str) -> None:
     snapshot = read_json()
     first, second, third = select_views(snapshot, ids)
     primary = Rect.from_json(first["screenGeometry"])
-    triggers = [
-        Rect.from_json(view["stableTriggerGeometry"])
-        for view in (first, second, third)
-    ]
+    triggers = [Rect.from_json(view["stableTriggerGeometry"]) for view in (first, second, third)]
     height = 100
     width = 120
 
     if case == "parked":
-        rect = Rect(primary.x + primary.width / 2 - width / 2, primary.y + 20,
-                    width, height)
+        rect = Rect(primary.x + primary.width / 2 - width / 2, primary.y + 20, width, height)
     elif case in ("a-only", "gap-only", "full-primary"):
         bottom = triggers[0].y + 1
         if case == "a-only":
-            rect = Rect(triggers[0].x + triggers[0].width / 2 - width / 2,
-                        bottom - height, width, height)
+            rect = Rect(
+                triggers[0].x + triggers[0].width / 2 - width / 2, bottom - height, width, height
+            )
         elif case == "gap-only":
             gap_start = triggers[0].right
             gap_end = triggers[1].x
@@ -761,8 +737,7 @@ def client_plan(ids: tuple[int, int, int], case: str) -> None:
             if gap_width <= 4:
                 fail(f"separated panels have no usable gap: {gap_width}")
             width = min(width, gap_width - 2)
-            rect = Rect(gap_start + (gap_width - width) / 2, bottom - height,
-                        width, height)
+            rect = Rect(gap_start + (gap_width - width) / 2, bottom - height, width, height)
         else:
             rect = Rect(primary.x, bottom - height, primary.width, height)
     elif case == "c-only":
@@ -802,21 +777,12 @@ def assert_client(
         if frame.intersects(Rect.from_json(view["stableTriggerGeometry"]))
     }
     expected = (
-        set()
-        if expected_raw == "none"
-        else {int(value) for value in expected_raw.split(",")}
+        set() if expected_raw == "none" else {int(value) for value in expected_raw.split(",")}
     )
     if actual_touched != expected:
-        fail(
-            f"actual KWin frame intersects {sorted(actual_touched)}, "
-            f"expected {sorted(expected)}"
-        )
+        fail(f"actual KWin frame intersects {sorted(actual_touched)}, expected {sorted(expected)}")
     for view in views:
-        expected_count = (
-            0
-            if minimized
-            else int(view["persistentDockId"] in actual_touched)
-        )
+        expected_count = 0 if minimized else int(view["persistentDockId"] in actual_touched)
         assert_endpoint(view, expected_count)
         assert_presentation(view)
         if view["windowTouchGeometryRoleType"] != "QRect":

@@ -33,8 +33,9 @@ from __future__ import annotations
 
 import time
 
-from latte_harness import audit, recipe
 from pydantic import ValidationError
+
+from latte_harness import audit, recipe
 
 
 def _view_field(view: int, key: str) -> str:
@@ -142,8 +143,7 @@ def main() -> None:
 
     _ = audit.exit_editmode(view)
     print(
-        "AU-6b: the CL-6 universalSettings readback answers live "
-        "and the Advanced switch drives it"
+        "AU-6b: the CL-6 universalSettings readback answers live and the Advanced switch drives it"
     )
 
 

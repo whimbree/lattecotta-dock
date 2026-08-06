@@ -209,7 +209,7 @@ def _configured_length_independent_snapshot() -> str:
 def _assert_stable_physical_snapshot(boundary: str, expected: str) -> None:
     try:
         actual = _stable_physical_snapshot()
-    except (recipe.RecipeError, KeyError, IndexError):
+    except recipe.RecipeError, KeyError, IndexError:
         recipe.fail(f"could not read the {boundary} physical contract")
     if actual != expected:
         recipe.fail(
@@ -626,25 +626,96 @@ def _configure_case(cell: str) -> None:
     except matrix.MatrixProbeError:
         recipe.fail(f"could not resolve {cell}")
     layout = os.environ["E2E_LAYOUT"]
-    group = ("--file", layout, "--group", "Containments", "--group", str(_S.view), "--group", "General")
+    group = (
+        "--file",
+        layout,
+        "--group",
+        "Containments",
+        "--group",
+        str(_S.view),
+        "--group",
+        "General",
+    )
 
     if not recipe.dock_stop():
         recipe.fail(f"dock did not stop before configuring {cell}")
-    _kwrite(f"could not set the partial primary span for {cell}", *group, "--key", "maxLength", "60")
-    _kwrite(f"could not keep the partial Panel span static for {cell}", *group, "--key", "minLength", "60")
+    _kwrite(
+        f"could not set the partial primary span for {cell}", *group, "--key", "maxLength", "60"
+    )
+    _kwrite(
+        f"could not keep the partial Panel span static for {cell}",
+        *group,
+        "--key",
+        "minLength",
+        "60",
+    )
     if cell.startswith("dock-"):
-        _kwrite(f"could not disable automatic sizing for {cell}", *group, "--key", "autoSizeEnabled", "false")
-        _kwrite(f"could not retain Dock presentation for {cell}", *group, "--key", "backgroundRadius", "50")
-        _kwrite(f"could not enable live maximize-length presentation for {cell}", *group, "--key", "maximizeWhenMaximized", "true")
+        _kwrite(
+            f"could not disable automatic sizing for {cell}",
+            *group,
+            "--key",
+            "autoSizeEnabled",
+            "false",
+        )
+        _kwrite(
+            f"could not retain Dock presentation for {cell}",
+            *group,
+            "--key",
+            "backgroundRadius",
+            "50",
+        )
+        _kwrite(
+            f"could not enable live maximize-length presentation for {cell}",
+            *group,
+            "--key",
+            "maximizeWhenMaximized",
+            "true",
+        )
     else:
-        _kwrite(f"could not keep the partial Panel span stable for {cell}", *group, "--key", "maximizeWhenMaximized", "false")
-    _kwrite(f"could not enable live attachment for {cell}", *group, "--key", "hideFloatingGapForMaximized", "true")
-    _kwrite(f"could not disable the independent pointer-deferral policy for {cell}", *group, "--key", "floatingGapHidingWaitsMouse", "false")
-    _kwrite(f"could not configure the floating gap for {cell}", *group, "--key", "screenEdgeMargin", "18")
-    _kwrite(f"could not retain one floating surface for {cell}", *group, "--key", "floatingInternalGapIsForced", "false")
+        _kwrite(
+            f"could not keep the partial Panel span stable for {cell}",
+            *group,
+            "--key",
+            "maximizeWhenMaximized",
+            "false",
+        )
+    _kwrite(
+        f"could not enable live attachment for {cell}",
+        *group,
+        "--key",
+        "hideFloatingGapForMaximized",
+        "true",
+    )
+    _kwrite(
+        f"could not disable the independent pointer-deferral policy for {cell}",
+        *group,
+        "--key",
+        "floatingGapHidingWaitsMouse",
+        "false",
+    )
+    _kwrite(
+        f"could not configure the floating gap for {cell}",
+        *group,
+        "--key",
+        "screenEdgeMargin",
+        "18",
+    )
+    _kwrite(
+        f"could not retain one floating surface for {cell}",
+        *group,
+        "--key",
+        "floatingInternalGapIsForced",
+        "false",
+    )
     if not recipe.dock_start(90):
         recipe.fail(f"dock did not restart for {cell}")
-    _latte_call_or_fail(f"could not set {cell} to alwaysVisible", "setViewVisibilityMode", "us", str(_S.view), "alwaysVisible")
+    _latte_call_or_fail(
+        f"could not set {cell} to alwaysVisible",
+        "setViewVisibilityMode",
+        "us",
+        str(_S.view),
+        "alwaysVisible",
+    )
 
     for _ in range(40):
         with suppress(recipe.RecipeError):
@@ -737,7 +808,7 @@ def _exercise_held_drag(
 
     try:
         base_snapshot = _stable_physical_snapshot()
-    except (recipe.RecipeError, KeyError, IndexError):
+    except recipe.RecipeError, KeyError, IndexError:
         recipe.fail(f"could not capture the stable {expected_type} surface")
     (
         _progress,
@@ -859,18 +930,16 @@ def _find_new_edit_canvas(
 def _exercise_attached_maximum_length_change() -> None:
     try:
         auto_size_disabled = json.dumps(_view_config()["autoSizeEnabled"]) == "false"
-    except (recipe.RecipeError, json.JSONDecodeError, KeyError):
+    except recipe.RecipeError, json.JSONDecodeError, KeyError:
         auto_size_disabled = False
     if not auto_size_disabled:
         recipe.fail("attached length-mutation fixture did not disable automatic sizing")
     try:
         initial_maximum = _view_config()["maxLength"]
-    except (recipe.RecipeError, KeyError):
+    except recipe.RecipeError, KeyError:
         recipe.fail("could not read the initial configured maximum length")
     if str(initial_maximum) != "60":
-        recipe.fail(
-            f"attached length-mutation fixture began at {initial_maximum}% instead of 60%"
-        )
+        recipe.fail(f"attached length-mutation fixture began at {initial_maximum}% instead of 60%")
     initial_maximum = int(initial_maximum)
 
     v = _dock_record()
@@ -882,8 +951,7 @@ def _exercise_attached_maximum_length_change() -> None:
     expected_initial_width = screen_width * initial_maximum // 100
     expected_initial_x = screen_x + (screen_width - expected_initial_width) // 2
     if not (
-        (initial_absolute_x, initial_absolute_width)
-        == (expected_initial_x, expected_initial_width)
+        (initial_absolute_x, initial_absolute_width) == (expected_initial_x, expected_initial_width)
         and initial_trigger_width == expected_initial_width
         and expected_initial_x - 1 <= initial_trigger_x <= expected_initial_x + 1
     ):
@@ -936,7 +1004,7 @@ def _exercise_attached_maximum_length_change() -> None:
 
     try:
         stable_before = _configured_length_independent_snapshot()
-    except (recipe.RecipeError, KeyError, IndexError):
+    except recipe.RecipeError, KeyError, IndexError:
         recipe.fail("could not capture stable state before the attached length mutation")
 
     ruler_x = screen_x + screen_width // 2
@@ -950,7 +1018,7 @@ def _exercise_attached_maximum_length_change() -> None:
             time.sleep(0.5)
             try:
                 changed_maximum = int(_view_config()["maxLength"])
-            except (recipe.RecipeError, KeyError, ValueError):
+            except recipe.RecipeError, KeyError, ValueError:
                 continue
             if changed_maximum != initial_maximum:
                 changed = True
@@ -994,12 +1062,12 @@ def _exercise_attached_maximum_length_change() -> None:
             trigger_width = v["stableTriggerGeometry"][2]
             paint_x = v["windowGeometry"][0] + v["effectsRect"][0]
             paint_width = v["effectsRect"][2]
-        except (recipe.RecipeError, KeyError, IndexError, TypeError):
+        except recipe.RecipeError, KeyError, IndexError, TypeError:
             time.sleep(0.05)
             continue
         try:
             stable_after = _configured_length_independent_snapshot()
-        except (recipe.RecipeError, KeyError, IndexError):
+        except recipe.RecipeError, KeyError, IndexError:
             time.sleep(0.05)
             continue
         if _converged():
@@ -1078,9 +1146,7 @@ def _cleanup() -> bool:
         except OSError:
             cleanup_failed = True
         pid = recipe.dock_pid()
-        if pid is not None and _pid_alive(pid):
-            cleanup_failed = True
-        elif not _muted_dock_start(90):
+        if (pid is not None and _pid_alive(pid)) or not _muted_dock_start(90):
             cleanup_failed = True
     if cleanup_failed:
         print(

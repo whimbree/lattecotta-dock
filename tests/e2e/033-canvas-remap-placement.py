@@ -60,7 +60,7 @@ def _snapshot_views() -> list[dict[str, Any]]:
     payload = recipe.json_payload("dockSystemData")
     try:
         return json.loads(payload)["views"]
-    except (json.JSONDecodeError, KeyError, TypeError):
+    except json.JSONDecodeError, KeyError, TypeError:
         raise recipe.RecipeError(
             "dockSystemData refused or returned no JSON (view placement not accepted)"
         ) from None

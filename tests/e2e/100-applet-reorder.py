@@ -31,6 +31,7 @@ viewsData / viewAppletsData as raw JSON, the same boundary the bash python
 one-liners used (recipe.Applet does not surface z).
 """
 
+import contextlib
 import json
 from typing import Any
 
@@ -92,7 +93,7 @@ def assert_no_lifted_applet(view: int, where: str) -> None:
     """
     applets = _view_applets_raw(view)
     stuck = [(a["id"], a["z"]) for a in applets if a["z"] >= APPLET_LIFT_Z]
-    bad = ";".join("%d@z%s" % (i, z) for i, z in stuck)
+    bad = ";".join(f"{i}@z{z}" for i, z in stuck)
     if bad:
         recipe.fail(f"G2: applet(s) stranded over chrome at {where}: {bad}")
 
@@ -102,7 +103,7 @@ def assert_z_all_zero(view: int, where: str) -> None:
     layout default z 0."""
     applets = _view_applets_raw(view)
     nz = [(a["id"], a["z"]) for a in applets if a["z"] != 0]
-    bad = ";".join("%d@z%s" % (i, z) for i, z in nz)
+    bad = ";".join(f"{i}@z{z}" for i, z in nz)
     if bad:
         recipe.fail(f"G2: applet(s) not at rest z 0 at {where}: {bad}")
 
@@ -171,7 +172,9 @@ def run_axis_checks(view: int, label: str) -> None:
     # back) leaves the order UNCHANGED and no applet stranded over chrome
     rc = applet_reorder.applet_reorder_attempt(view, "origin", frm, to)
     if rc != 3:
-        recipe.fail(f"{label}: release-at-origin abort reported rc={rc}, expected 3 (order restored)")
+        recipe.fail(
+            f"{label}: release-at-origin abort reported rc={rc}, expected 3 (order restored)"
+        )
     after = _order(view, label)
     if after != base2:
         recipe.fail(f"{label}: release-at-origin abort left residue ([{base2}] -> [{after}])")
@@ -187,14 +190,10 @@ def run_axis_checks(view: int, label: str) -> None:
         applet_reorder.applet_reorder_enter(view)
     except applet_reorder.AppletReorderError:
         recipe.fail(f"{label}: could not enter rearrange for the escape observation")
-    try:
+    with contextlib.suppress(applet_reorder.AppletReorderError):
         applet_reorder.applet_reorder_glide(view, "escape", frm, to)
-    except applet_reorder.AppletReorderError:
-        pass
-    try:
+    with contextlib.suppress(applet_reorder.AppletReorderError):
         applet_reorder.applet_reorder_exit(view)
-    except applet_reorder.AppletReorderError:
-        pass
     if not recipe.wait_running(15):
         recipe.fail(f"{label}: dock did not survive the DR-6 escape-in-held-drag")
     epost = _order(view, label)
@@ -202,11 +201,14 @@ def run_axis_checks(view: int, label: str) -> None:
     applets = _view_applets_raw(view)
     if any(a["z"] >= APPLET_LIFT_Z for a in applets):
         ez = "STRANDED " + ",".join(
-            "%d@z%s" % (a["id"], a["z"]) for a in applets if a["z"] >= APPLET_LIFT_Z
+            f"{a['id']}@z{a['z']}" for a in applets if a["z"] >= APPLET_LIFT_Z
         )
     else:
         ez = "no-strand"
-    print(f"  DR-6 escape observed: order [{pre}] -> [{epost}], editMode={emode}, z-residue={ez} (dock alive)")
+    print(
+        f"  DR-6 escape observed: order [{pre}] -> [{epost}], "
+        f"editMode={emode}, z-residue={ez} (dock alive)"
+    )
 
 
 def main() -> None:
