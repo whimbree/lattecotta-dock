@@ -52,7 +52,6 @@ tests/e2e/021-launcher-wheel.sh
 tests/e2e/022-configoverlay-wheel-threshold.sh
 tests/e2e/022-empty-area-window-actions.sh
 tests/e2e/023-task-middle-click-runtime.sh
-tests/e2e/031-ruler-slider-crossview.sh
 tests/e2e/033-canvas-remap-placement.sh
 tests/e2e/040-preview-tooltip-text.sh
 tests/e2e/050-drag-reorder-launchers.sh
@@ -74,7 +73,6 @@ tests/e2e/111-colorizer-content-policy.sh
 tests/e2e/112-keyboard-navigation-focus-restoration.sh
 tests/e2e/113-containment-focus-status-restoration.sh
 tests/e2e/114-global-menu-focus-restoration.sh
-tests/e2e/audit/audit-lib.sh
 tests/e2e/create-linked-dock.sh
 tests/e2e/duplicate-dock-independent.sh
 tests/e2e/duplicate-view-idremap.sh
