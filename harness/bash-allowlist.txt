@@ -66,7 +66,6 @@ tests/e2e/113-containment-focus-status-restoration.sh
 tests/e2e/114-global-menu-focus-restoration.sh
 tests/e2e/create-linked-dock.sh
 tests/e2e/duplicate-dock-independent.sh
-tests/e2e/duplicate-view-idremap.sh
 tests/e2e/fixtures/sc-w1/launcher.sh
 tests/e2e/fixtures/sc-w1/rate-launcher.sh
 tests/e2e/keyboard-navigation-mode.sh
