@@ -18,6 +18,7 @@ view=""
 layout=""
 group_args=()
 kpid=0
+departure_pid=0
 configured=0
 base_stable_snapshot=""
 base_revisions=""
@@ -318,6 +319,10 @@ wait_for_maximize_mode() {
 cleanup() {
     local body_status=$? cleanup_failed=0 dock_pid
     trap - EXIT
+    if (( departure_pid != 0 )); then
+        kill "$departure_pid" 2>/dev/null || true
+        wait "$departure_pid" 2>/dev/null || true
+    fi
     if (( kpid != 0 )); then
         kill "$kpid" 2>/dev/null || true
         wait "$kpid" 2>/dev/null || true
@@ -537,9 +542,14 @@ wait_for_policy false false 0 floated 1 \
 #! the reserved edge. MaximizeMode 3 proves KWin accepted both axes.
 [[ "$(set_konsole_maximized true)" == "$fixture_id" ]] \
     || e2e_fail "KWin did not identify the owned client for committed maximize"
-wait_for_maximize_mode 3
+#! Sample the fractional frame FIRST: the D259 200 ms transition (cd74a9244)
+#! starts while set_konsole_maximized's script applies, and one
+#! wait_for_maximize_mode kwin_js round trip costs more than the whole
+#! animation. MaximizeMode 3 is verified after the capture; the endpoint
+#! policy still proves the attached target.
 capture_fractional_policy false false 1 attached attaching \
     "committed maximize attachment"
+wait_for_maximize_mode 3
 wait_for_policy false false 1 attached 0 \
     "committed maximize attachment"
 
@@ -561,9 +571,11 @@ wait_for_policy true false 1 attached 0 \
 
 [[ "$(set_konsole_maximized false)" == "$fixture_id" ]] \
     || e2e_fail "KWin did not identify the owned client for pointer-held touch loss"
-wait_for_maximize_mode 0
+#! Same sampling order as the committed maximize: fractional frame first,
+#! MaximizeMode 0 verified after the capture.
 capture_fractional_policy true false 0 floated floating \
     "pointer-held touch loss"
+wait_for_maximize_mode 0
 wait_for_policy true false 0 floated 1 \
     "pointer-held touch loss"
 
@@ -573,10 +585,21 @@ wait_for_maximize_mode 3
 wait_for_policy true true 1 floated 1 \
     "pointer-present attachment deferral"
 
-fp glide "$pointer_x" "$pointer_y" 20 20 \
-    || e2e_fail "could not move the pointer out of the panel"
+#! D259 (cd74a9244) gave the deferral-release attachment Plasma's 200 ms
+#! Kirigami long duration, so the whole animation now completes inside the
+#! departure glide's own tail: sampling after fp returns can only observe the
+#! attached endpoint. Sample DURING the departure with the glide in the
+#! background - the one-live-input-device pattern of the screen-edge round
+#! trip in 071, which also keeps the device alive so the panel's pointer
+#! leave cannot be lost to a device swap - then reap the gesture before
+#! asserting the endpoint.
+fp glide "$pointer_x" "$pointer_y" 20 20 &
+departure_pid=$!
 capture_fractional_policy false false 1 attached attaching \
     "pointer deferral release"
+wait "$departure_pid" \
+    || e2e_fail "could not move the pointer out of the panel"
+departure_pid=0
 wait_for_policy false false 1 attached 0 \
     "pointer deferral release"
 
