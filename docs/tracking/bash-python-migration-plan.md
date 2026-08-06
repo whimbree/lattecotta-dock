@@ -322,7 +322,44 @@ batches are file-disjoint and parallel):
   every commit. 073-window-touch-topology stays bash with its allowlist
   line (dual-output, the same block as 061 and create-linked-dock).
   Commits: 69432f316, 87ba9800e, 2dbfeaa86, 02e6e62f5, a296feacf
-  (PR #190)
+  (PR #190).
+  R10 (091-drop-marker, duplicate-view-idremap, 033-canvas-remap-placement,
+  linked-dock-removal-undo - the lifecycle batch; the removal-undo drive
+  was the first successful dual-output vehicle exercise in this
+  environment): duplicate-dock-independent stayed bash after its drive
+  exposed D283 (the legacy AllScreensGroup clone path no longer reuses
+  its persisted replica on reload - a dock regression, not test
+  staleness; approach decision owed), and linked-dock-operation-stress
+  stayed bash pending the sourceguard mock-harness redesign (follow-up
+  below). Commits: 308ca9a32, 83a208e7f, af7a61a70, dc19fb460, 2594dd96f
+  (PR #194).
+  R8 (010-wheel-desktops, 050-drag-reorder-launchers, 021-launcher-wheel,
+  022-empty-area-window-actions, 023-task-middle-click-runtime - the
+  input/wheel batch): all five arrived green with byte-identical control
+  runs; the review caught the recurring cleanup-outside-finally class in
+  022 (fixed with the finally plus conventional signal exits, second
+  review clean). Commits: 9db39c62c, 8001d1060, e0a795f04, a36ff9d8a,
+  dbae48b66, b46a3a090 (PR #195).
+  R9 (112/113/114 focus restoration, keyboard-navigation-mode, 110/111
+  colorizers): landed WITH the D280 dock fix first (removing a view that
+  owned the panel focus session stranded keyboard focus for the whole
+  removal-undo window; released at destroyedChanged now), plus the D281
+  and D282 recorded port-timing accommodations; 110 proven through the
+  colorizer front door; full gate (asan) at merge for the dock C++.
+  Commits: 9463c1cee, bc0a1fe0e, 8c8426b0d, 75936b869, 522e74e56,
+  c854f5f14, 94ced6365, 1637d2ff1, 6330aeda0 (PR #196).
+  R11 (presentation-coverage-selftest, 070-asan-binary-shadow,
+  090-golden-bridge-selftest - the gate-adjacent batch): the asan gate
+  driven 4/4 over the extension-swapped set as the decisive evidence;
+  golden-bridge.sh RETAINED (matrix-lib.sh still sources it - the
+  last-consumer premise was wrong and the grep proof corrected it); full
+  gate at merge. Commits: d6a4b521f, a6cb5e8a0, d5c1dec76 (PR #197).
+  Remaining bash after wave 4: one PORTABLE recipe
+  (parabolic-hover-preview - unassigned in the wave composition, queued
+  below), the deferred stress recipe, the blocked set (040 on D276,
+  070-maximize on D274, duplicate-dock-independent on D283; 061, 073,
+  create-linked-dock, multi-output-selftest on the dual-output vehicle),
+  lib.sh, and the five retained matrix libs.
 
 Phase BP-4, package gate (serial pair, independent of BP-3; needs BP-2a):
 
@@ -376,6 +413,14 @@ Phase BP-5, tail:
   dock-edit-retarget-cancel rides the typed boundary instead of raw JSON
   dicts (PR #183 review nit; the View docstring already anticipates the
   editMode widening).
+- linked-dock-operation-stress port: requires redesigning the
+  bash-coupled sourceguardtest net first (its contract matcher
+  eval-executes the bash cleanup function bodies in a mock harness; no
+  direct Python analog). Its own focused PR, not a batch rider
+  (PR #194 finding).
+- parabolic-hover-preview port: the one plain recipe the wave-4
+  composition missed; a single-recipe batch or a rider on the stress
+  PR.
 - Committed seed variants for the richer-precondition recipes: 092 needs
   three or more launchers and 100 a vertical view with an ordinary
   applet; the clean default seed cannot satisfy them (the bash refused

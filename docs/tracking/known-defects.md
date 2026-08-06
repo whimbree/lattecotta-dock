@@ -3331,6 +3331,24 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   write under `LC_ALL=C`.
 - SEVERITY: annoyance (dirty diffs on baseline regeneration).
 
+### D283 - the legacy AllScreensGroup clone path drops its persisted replica on reload
+- STATUS: OPEN. Approach decision owed: fix the legacy path or record it
+  deprecated in favor of explicit linked docks and rework the recipe.
+- FOUND: 2026-08-06, the BP-3 R10 batch (the lifecycle recipe wave of the
+  bash-to-python migration): duplicate-dock-independent failed
+  deterministically twice - expected containments [1, 12, 13, 14], got
+  [1, 13, 14, 15]; "independent duplicates did not survive reload".
+- SYMPTOM: the D77 dual-output acceptance drives the LEGACY
+  AllScreensGroup path (screensGroup=1/isCloned); on reload the persisted
+  replica (containment 12, isClonedFrom=original) is not reused - a fresh
+  clone (15) replaces it. The D77 evidence records this recipe preserving
+  all four identities at the PR #109 merge (defaa0c7ad), so the reuse
+  regressed inside the explicit-linked-dock rework that followed (~30
+  commits later). A dock-side regression in a superseded-but-shipped
+  path, not test staleness; the recipe stays bash until the decision.
+- SEVERITY: legacy-path correctness (identity churn on every reload for
+  AllScreensGroup clones; explicit linked docks unaffected).
+
 ### D280 - removing a keyboard-focus dock strands the panel focus session for the undo window
 - STATUS: FIXED by the view-removal session-release commit in the PR that
   files this entry (app/view/view.cpp, app/view/view.h).

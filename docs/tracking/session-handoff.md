@@ -3,6 +3,41 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-08-06.
 
+## 2026-08-06: wave 4 - R8/R9/R10/R11 landed; the plain tail is typed
+
+Four PRs merged through the standard review flow; two majors caught and
+fixed with second reviews (both the recurring cleanup-outside-finally
+class), one real dock defect fixed, one dock regression found and filed:
+
+- R10 (PR #194; 308ca9a32, 83a208e7f, af7a61a70, dc19fb460, 2594dd96f):
+  four lifecycle recipes, incl. the first successful dual-output vehicle
+  exercise (linked-dock-removal-undo) - the dual-output-blocked set is
+  now unblocked in principle. duplicate-dock-independent exposed D283
+  (the legacy AllScreensGroup clone path drops its persisted replica on
+  reload; OPEN, approach decision owed) and stays bash;
+  linked-dock-operation-stress deferred to its own PR (sourceguard
+  mock-harness redesign).
+- R8 (PR #195; 9db39c62c..b46a3a090): five input/wheel recipes,
+  byte-identical control runs; the 022 cleanup-finally fix after review.
+- R9 (PR #196; 9463c1cee..6330aeda0): six focus/colorizer recipes plus
+  the D280 dock fix landing first - removing a view that owned the panel
+  focus session stranded keyboard focus for the whole removal-undo
+  window (up to ~60s; ~0.09s after); released at destroyedChanged. D281
+  and D282 filed as recorded port-timing accommodations. Full gate at
+  merge (dock C++). THE LIVE DOCK PREDATES D280 - a redelivery is
+  offered and pending the owner's word.
+- R11 (PR #197; d6a4b521f, a6cb5e8a0, d5c1dec76): the gate-adjacent
+  batch; the asan gate driven 4/4 over the extension-swapped set;
+  golden-bridge.sh retained (matrix-lib.sh still sources it - the
+  last-consumer premise was corrected by grep proof).
+
+41 recipes are typed. Remaining bash: parabolic-hover-preview (portable,
+missed in the wave composition), the stress recipe, the blocked set
+(D274/D276/D283 + dual-output), lib.sh, five matrix libs. Owner
+decisions still open: the D283 approach, the swept-files history
+excision, the containment-12 config residue cleanup, the D280
+redelivery.
+
 ## 2026-08-06: wave 3 - R5/R6/R7 and BP-4b landed; BP-4 complete
 
 Four PRs merged through the standard review flow (every one an
