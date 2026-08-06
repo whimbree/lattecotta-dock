@@ -60,8 +60,13 @@ fi
 # allowlist refusal should precede anything that would exercise new bash.
 uv run --locked --project "$repo/harness" latte-harness-check
 
-"$repo/tests/installed-package-gate-selftest.sh" # fast native-package provenance/refusal controls;
-                                                 # ci/build-and-gate.sh runs the package-installed runtime acceptance
+# BP-4b (the bash-to-python migration's package-gate selftest chunk): fast
+# native-package provenance/refusal controls as a marker-gated pytest leg
+# (deselected from the harness-check pytest run above by the pyproject
+# addopts; the CLI -m overrides it here). ci/build-and-gate.sh runs the
+# package-installed runtime acceptance.
+uv run --locked --project "$repo/harness" python -m pytest -m package_gate_selftest \
+    "$repo/harness/tests/test_package_gate_selftest.py"
 "$repo/scripts/build-check.sh"        # full build + full ctest + coverage ratchet
 "$repo/tests/coverage/qmllint-gate.sh"       # baseline only shrinks
 "$repo/scripts/sceneprobe-gate.sh"    # real-pixel scene gate incl. self-test
