@@ -387,7 +387,10 @@ def _build_descriptor(cell: str, parsed: ParsedCell) -> matrix_fixture.CellDescr
         screen = secondary
         secondary_id = os.environ.get("E2E_MO_SECONDARY_ID")
         if not secondary_id:
-            _refuse("multi-output-lib must set E2E_MO_SECONDARY_ID alongside E2E_MO_SECONDARY")
+            _refuse(
+                "multi_output.mo_discover_outputs must set E2E_MO_SECONDARY_ID"
+                " alongside E2E_MO_SECONDARY"
+            )
         screen_id = int(secondary_id)
         screen_geometry = os.environ.get("E2E_MO_SECONDARY_GEOM", "")
     return matrix_fixture.CellDescriptor(

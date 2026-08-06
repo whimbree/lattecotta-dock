@@ -592,15 +592,6 @@ set_tests_properties(sourceguardtest PROPERTIES
 target_compile_definitions(sourceguardtest PRIVATE
     REPO_ROOT="${CMAKE_SOURCE_DIR}")
 
-# Pure transaction-contract proof for the FP-4B multi-output helper. It pins
-# priority baseline classification and projection, accepts semantic JSON
-# reordering, and rejects controlled drift in writable, mode, priority,
-# capability, unknown output, and top-level KScreen state.
-add_test(NAME multioutputstatecontracttest
-    COMMAND bash ${CMAKE_SOURCE_DIR}/tests/multioutputstatecontracttest.sh)
-set_tests_properties(multioutputstatecontracttest PROPERTIES
-    ENVIRONMENT "REPO_ROOT=${CMAKE_SOURCE_DIR}")
-
 # FP-4C (the deterministic linked-view operation storm): the pure typed model
 # validates its canonical seeded plan, schema-11 checkpoints, lineage graph,
 # stable-span isolation, maximum-depth reservations, edit ownership, runtime

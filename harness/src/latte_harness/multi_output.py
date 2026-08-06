@@ -14,9 +14,12 @@ fixed, documented ScreenPool id so a per-screen fixture lands the view
 deterministically, and it VERIFIES the pin held by the same queryable surface.
 
 Migration shape (the BP-2c/BP-3a fresh-module precedent): a fresh module, not a
-bridge. multi-output-lib.sh stays in place for the bash multi-output-selftest
-recipe until the BP-3 driver batch ports and deletes it, so this module and the
-bash lib coexist. The discovery/topology/pin math (_discover_from_screens,
+bridge. This module owns the semantics outright: the bash lib and its contract
+test were deleted by cleanup BW-3 (the multi-output bash closed loop - bash whose
+only consumer was a bash test of itself), and the transaction drivers'
+fake-doctor contracts are pinned behaviorally in
+harness/tests/test_multi_output_transactions.py. The discovery/topology/pin math
+(_discover_from_screens,
 _project_output_state, _classify_output_priorities, _compare_output_state_semantically,
 mo_classify_rectangles, _read_rectangles_from, _placement_target, _assert_pin_resolved)
 is pure so it is unit-testable without a dual-output vehicle.
