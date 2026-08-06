@@ -26,9 +26,9 @@ The exit-code contract is preserved verbatim from the bash:
 - ``golden_compare`` returns 0 MATCH / 1 MISMATCH or MISSING expected / 2 setup.
 - ``assert_golden`` returns 0 PASS (or blessed) / 1 FAIL / 2 error.
 
-Like recipe.py and lib.sh, golden-bridge.sh itself stays in place for the bash
-matrix recipes until the BP-3 batches port and delete them; this module and the
-bash bridge coexist during the transition.
+golden-bridge.sh was retired with matrix-lib.sh (its only consumer) once the 073
+topology port removed the last bash matrix recipe; this module is now the sole
+render-golden bridge.
 """
 
 from __future__ import annotations
