@@ -3331,6 +3331,43 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   write under `LC_ALL=C`.
 - SEVERITY: annoyance (dirty diffs on baseline regeneration).
 
+### D284 - 073's axis-change phase-2 windowGeometry check races the settle
+- STATUS: FIXED by the phase-2 sampling change in the PR that files this
+  entry (the BP-3 073 topology port).
+- FOUND: 2026-08-06, the BP-3 073 topology port (the bash-to-python
+  migration's deferred dual-output topology recipe): the port's first drive
+  in the two-output vehicle failed deterministically at the axis-change
+  assertion; the unmodified bash recipe, re-driven as the causation control,
+  failed identically at the same site (2/2), so the port faithfully
+  reproduces the bash. 073 had never been driven in this environment before
+  (it was on the dual-output block until R12/R13 unblocked the vehicle).
+- SYMPTOM: after view_c's vertical-to-horizontal axis change on the
+  secondary output, assert_axis_change_publishes_once phase 2 samples
+  windowGeometry == surfaceGeometry once, at a fixed 800 ms after the first
+  complete publication. The axis-change settle runs past 800 ms in this
+  nested virtual-output vehicle, so the sample catches a mid-settle transient
+  where the QWindow has drifted from the applied surface
+  (geometrySettled == False), even though the placement published exactly
+  once (surfaceGeometryPublicationRevision == before_revision + 1, no
+  redundant coalescer fire) and reconverges within milliseconds - the dumped
+  fp4b-axis-change-extra-publication.json shows windowGeometry ==
+  surfaceGeometry. It fails "QWindow and applied surface diverged after
+  publication".
+- FIX: drop the windowGeometry == surfaceGeometry assertion from phase 2.
+  Phase 2's unique contract is the post-coalescer-deadline no-extra-publication
+  check (revision == before_revision + 1) and the no-drift check, both
+  retained; QWindow-surface convergence is already polled to settlement by
+  phase 3 (which requires windowGeometry == surfaceGeometry AND
+  geometrySettled), so no coverage is lost. Same class as D278/D279 (a
+  nested-vehicle recipe-timing race, no dock defect). Fixed on the bash first,
+  proven green both ways, then ported.
+- SEVERITY: test correctness (a deterministic always-fail in a nested
+  dual-output recipe once driven in this environment; the dock publishes
+  once and settles correctly).
+- EVIDENCE: bash 2/2 fail before the fix, bash 1/1 pass after (all three
+  output arrangements, seven client cases each, restart persistence, the
+  controlled negative oracles); the Python port passes the same drive.
+
 ### D283 - the legacy AllScreensGroup clone path drops its persisted replica on reload
 - STATUS: OPEN. Approach decision owed: fix the legacy path or record it
   deprecated in favor of explicit linked docks and rework the recipe.
