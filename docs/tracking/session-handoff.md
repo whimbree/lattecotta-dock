@@ -3,6 +3,39 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-08-06.
 
+## 2026-08-06: wave 5 - R12/R13, BP-5a/5b landed; only tracked blocks remain
+
+Five PRs merged through the standard review flow:
+
+- BP-5a (PR #199; 7a74c370c, 08c098f76, 54c6ef81d): dumpwins and
+  watch-dock-presentation as typed modules behind their shim paths; two
+  additive recipe.py helpers (try_json_payload, is_running). Process
+  note: the dumpwins live comparison ran the read-only tool against the
+  session kwin (the bash original is journal-bound); recorded, and the
+  nested-only boundary gets restated in future agent briefs.
+- BP-5b (PR #201; 16a59e364): the legacy installer trio deleted per the
+  2026-08-04 disposition; INSTALLATION.md names the direct cmake flow;
+  astylerc orphan and the Qt5-era prerequisite lists queued for BP-5c.
+- R12 (PR #200; 5dcf8373a, ebe40fb2e, 0be2c357b): the dual-output wave,
+  2 of 4 - the multi-output selftest paid the PR #185 residual with the
+  first live mutating-transaction drives; create-linked-dock retired
+  task-reorder-lib and applet-reorder-driver. 061 stays on D209, 073 on
+  the sourceguard coupling.
+- R13 (PR #202; 4fa2031cd, c3c3395f8, 69748a733): the storm landed with
+  the sourceguard cleanup-net redesign (bash-eval test -> typed pure
+  core latte_harness.storm_cleanup + pytest mutation controls + the
+  matcher pinning the wiring incl. both safety predicates); parabolic
+  landed with its both-languages glide flake recorded. Full gate at
+  merge (C++ test code).
+
+45 recipes typed. tests/e2e carries NINE bash files: lib.sh, three
+matrix libs, and five recipes, every one blocked on a tracked item
+(D209, D274, D276, D283, the 073 mechanical follow-up). BP remaining:
+those unblocks + BP-5c. Owner decisions still open: D283 approach,
+history excision, containment-12 residue, D280 redelivery (the live
+dock still predates the D280 focus fix and now also the D283-adjacent
+waves).
+
 ## 2026-08-06: wave 4 - R8/R9/R10/R11 landed; the plain tail is typed
 
 Four PRs merged through the standard review flow; two majors caught and
