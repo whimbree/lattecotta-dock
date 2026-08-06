@@ -23,8 +23,9 @@ pointer is inside, so a rest-center computed cold must be reached by a glide fro
 outside, never a teleport onto a zoomed layout - the 050 lesson).
 
 Migration shape (the BP-2c/BP-3a fresh-module precedent): a fresh module, not a
-bridge. task-reorder-lib.sh stays in place for the bash task-reorder recipe (092)
-until the BP-3 driver batch ports and deletes it. The order/launcher readbacks go
+bridge. task-reorder-lib.sh stays in place for its remaining bash consumer, the
+dual-output create-linked-dock recipe (blocked on the dual-output vehicle; the
+092 recipe port replaced the other consumer). The order/launcher readbacks go
 through recipe.py's typed viewTasksData boundary (recipe.view_tasks for appId; a
 launcherUrl-carrying twin here since recipe.Task does not surface it), and the
 rest-center math is recipe.task_center - one implementation, shared with the bash
