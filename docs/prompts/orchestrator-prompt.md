@@ -201,6 +201,12 @@ and the serial-merge steps.
   sha.
 
 ## Coordination and pitfalls (hard-won)
+- FREE-SPACE PREFLIGHT before farming any build wave: N parallel cold
+  builds cost ~8G each, worktree builds live on the snapshotted home
+  dataset, and hourly snapshots pin every deleted build tree until
+  retention rotates - four cold builds on 2026-08-05 filled the pool and
+  stalled every agent mid-wave. Check `df -h /home` first; want at least
+  ~15G per planned cold build, and stagger waves when tight.
 - Serial-merge-moves-main: budget a re-rebase + re-gate per PR after the first.
   File-disjoint chunks reduce this; batch their reviews in parallel, merge in
   any order.

@@ -1,7 +1,59 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-08-05.
+Last updated 2026-08-06.
+
+## 2026-08-06: wave 3 - R5/R6/R7 and BP-4b landed; BP-4 complete
+
+Four PRs merged through the standard review flow (every one an
+independent cold-context Opus review; two majors caught and fixed with
+second reviews where required):
+
+- R5 (PR #188; c1cb4ead4..5f9d852f6): the six audit recipes, retiring
+  audit-lib.sh. Two recipes arrived broken and were repaired bash-first
+  (031's stale light-palette golden re-blessed - the D276 class; the
+  032-wheel aim moved to the canvas grid band after the edit-canvas
+  layout drifted under it).
+- R7 (PR #187; a4458ab1f, 752c2ccee, 1e5065ce5, 486d051c1): four driver
+  recipes incl. the 022 status-57 XFAIL observed live; dnd-lib.sh
+  retired; the review caught a cleanup-outside-finally lifecycle gap in
+  022 (an unexpected exit stranded the vehicle dock on the fixture
+  config), fixed with a finally plus conventional signal exits.
+- BP-4b (PR #189; fac2595f3, 2555e62ac, 6a13e32fd): the 91-control
+  package-gate selftest as a marker-gated pytest gate leg (70 ported +
+  19 reconciled to named unit tests + 2 recorded bash-only); the lib
+  shed to its one live helper; full gate at merge. BP-4 is COMPLETE.
+- R6 (PR #190; 69432f316, 87ba9800e, 2dbfeaa86, 02e6e62f5, a296feacf):
+  the window-touch batch. Two defects found and root-caused: D278 (072's
+  fractional captures race the D259 200 ms transition, latent since
+  cd74a9244; fixed bash-first with trigger-adjacent sampling) and D279
+  (fixed-count poll loops lose their wall-clock horizon when ~100 ms
+  bash probes become ~3 ms busctl probes; 074's samplers now poll to a
+  10 s monotonic deadline). The sourceguard matchers retargeted to the
+  python per landing commit. 073 stays bash (dual-output).
+
+Mid-wave incident: the four parallel cold builds filled the pool
+(hourly snapshots had been pinning every deleted build tree; ~460G
+reclaimed by pruning the snapshot tail and the July hourlies). All four
+agents stood down cleanly on order, preserved their uncommitted state,
+and resumed to completion after the reclaim. Prevention items are filed
+in the BP plan's follow-ups and the orchestrator prompt now carries a
+free-space preflight for build waves.
+
+Live delivery: main (3581b3f3d at the time) built in the primary tree
+and started against the real config via start-dock.sh, detached from
+tool lifetimes. Verified: single instance, pid == sid, all four real
+dock containments up and rendering, screenshot recorded. One loud
+refusal in the log is benign and by design: [Containments][12] exists
+in the real config only as orphaned applet subgroups (a stale residue),
+and the addView storage validation refused to build a view from the
+invalid record. Offered cleanup of the six stale lines; awaiting the
+owner's word. The primary worktree now sits on main.
+
+BP remaining after this wave: the plain-recipe tail (~13 recipes), the
+dual-output-blocked set (061, 073, create-linked-dock, the multi-output
+selftest - all waiting on the dual-output vehicle), 070 (D274) and 040
+(D276), then BP-5a/5b/5c.
 
 ## 2026-08-05: post-crash resume - R4, D277, BP-3b landed; BP-3c in flight
 

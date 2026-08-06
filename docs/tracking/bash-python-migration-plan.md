@@ -240,7 +240,8 @@ batches are file-disjoint and parallel):
   snapshot/assert formulas with the bash 0/1/2 status contract; the
   selftest cutover to .py ran all 13 crafted controls plus the live leg
   green in the nested vehicle (exec bit kept - the D273 lesson);
-  audit-lib.sh itself stays for its six unported bash consumers.
+  audit-lib.sh itself stayed for its six bash consumers until the R5
+  batch ported them and retired it.
   Recorded deviations: bool-returning drive helpers, a loud refusal on
   unset E2E_FAKEPOINTER, the code-point sort unification (the D269
   locale lesson). Resumed from a crashed agent's uncommitted worktree
@@ -248,8 +249,11 @@ batches are file-disjoint and parallel):
   bbbcb89ac (PR #182)
 - [x] BP-3c (drivers): port dnd-lib, task-reorder-lib, multi-output-lib,
   applet-reorder-driver to typed twins (one commit per lib; the bash libs
-  stay for their unported recipe consumers 092/093/100 and the
-  multi-output selftest). Parity driven in the nested vehicle:
+  stayed for their then-unported recipe consumers - the R7 batch later
+  ported 092/093/100/022 and deleted dnd-lib.sh, so only
+  create-linked-dock.sh and the multi-output selftest, both dual-output
+  blocked, keep task-reorder-lib, applet-reorder-driver and
+  multi-output-lib alive). Parity driven in the nested vehicle:
   byte-identical readbacks on every comparable surface, a real
   explorer-to-containment Wayland DnD, a real task reorder, the
   rearrange lifecycle, and the topology-mutation gate's single-output
@@ -281,7 +285,44 @@ batches are file-disjoint and parallel):
   accepted placement (transient during an edit-mode enter), the bash
   polled through the empty payload, a bare json.loads crashed - mapped
   to the pollable RecipeError at the two bash swallow sites. Commits:
-  68e96bda4, f191ae33c, ac9a83cdf (PR #183)
+  68e96bda4, f191ae33c, ac9a83cdf (PR #183).
+  R5 (031-ruler-slider-crossview, 032-behavior-live-reflect,
+  032-effects-config-readback, 032-wheel-editbackground-opacity,
+  033-chrome-advanced-readback, 034-tasks-config-apply - the audit
+  batch, retiring audit-lib.sh with its last consumers): two recipes
+  arrived BROKEN and were repaired on the bash first, proven PASS, then
+  ported - 031's committed golden was stale (the D276 host-palette
+  class; re-blessed through the recipe's own E2E_BLESS flow with by-eye
+  verification) and 032-wheel's aim premise was stale (the edit canvas
+  layout moved the grid band to the upper quarter; the aim now derives
+  from canvas geometry). Commits: c1cb4ead4, bbea96959, 3935e1f81,
+  21330b676, 35e770c64, 4520ebb8f, 22e90c968, 5f9d852f6 (PR #188).
+  R7 (092-task-reorder, 093-widget-explorer-dnd, 100-applet-reorder,
+  022-configoverlay-wheel-threshold - the driver batch, deleting
+  dnd-lib.sh with 093, its last consumer): 022's status-57 XFAIL
+  contract observed in the driven run; the review's lifecycle finding
+  (cleanup outside a finally stranded the vehicle dock on the fixture
+  config on unexpected exits) fixed with the finally plus conventional
+  signal exits before merge; create-linked-dock stays bash on the
+  dual-output block. Commits: a4458ab1f, 752c2ccee, 1e5065ce5,
+  486d051c1 (PR #187).
+  R6 (075-wayland-window-admission, 072-window-touch-transition,
+  071-maximized-window-length, 074-live-titlebar-window-touch - the
+  window-touch batch): the 072 port drive surfaced D278 (072's
+  fractional captures race the D259 200 ms transition, latent since
+  cd74a9244) - root-caused with an unmodified-bash control run, fixed
+  on the bash recipe first (background departure glide,
+  trigger-adjacent maximize captures), proven green both ways, then
+  ported; the 074 port drive surfaced D279 (fixed-count poll loops lose
+  their wall-clock horizon in ported recipes - ~3 ms busctl probes
+  shrink a bash 100-iteration loop from ~10 s to ~1.3 s; 074's five
+  drag-choreography samplers now poll to a 10 s monotonic deadline).
+  The sourceguard contract net that reads these recipes' text
+  retargeted per landing commit, so sourceguardtest stayed green at
+  every commit. 073-window-touch-topology stays bash with its allowlist
+  line (dual-output, the same block as 061 and create-linked-dock).
+  Commits: 69432f316, 87ba9800e, 2dbfeaa86, 02e6e62f5, a296feacf
+  (PR #190)
 
 Phase BP-4, package gate (serial pair, independent of BP-3; needs BP-2a):
 
@@ -295,8 +336,18 @@ Phase BP-4, package gate (serial pair, independent of BP-3; needs BP-2a):
   The lib .sh sheds only engine-only helpers until BP-4b (the selftest
   fault-injects by sourcing it). Full gate at merge. Commits: 5f6ea2554,
   d1e9874af, 77cb743a9, 24a7fc49e (PR #177)
-- [ ] BP-4b (gate selftest): port installed-package-gate-selftest.sh with its
-  signal-handling and refusal controls intact. Commits:
+- [x] BP-4b (gate selftest): port installed-package-gate-selftest.sh with its
+  signal-handling and refusal controls intact. Landed as a marker-gated
+  pytest module run as its own gate-all leg (deselected from the default
+  harness-check run, so the offline leg stays toolchain-free); the 91
+  bash controls reconcile as 70 ported (every refusal a driven negative
+  asserting the exact diagnostic), 19 pinned by named existing unit
+  tests, 2 structurally bash-only and recorded. The bash selftest ran
+  exit 0 on the same tree before deletion (the reference verdict);
+  lib-installed-package-gate.sh shed to its one live helper (the
+  e2e-seed-cleanup consumer); SIGINT/SIGTERM 130/143 driven through
+  cleanup foreground. Full gate (asan leg) at merge per the gate-leg
+  contract. Commits: fac2595f3, 2555e62ac, 6a13e32fd (PR #189)
 
 Phase BP-5, tail:
 
@@ -325,6 +376,27 @@ Phase BP-5, tail:
   dock-edit-retarget-cancel rides the typed boundary instead of raw JSON
   dicts (PR #183 review nit; the View docstring already anticipates the
   editMode widening).
+- Committed seed variants for the richer-precondition recipes: 092 needs
+  three or more launchers and 100 a vertical view with an ordinary
+  applet; the clean default seed cannot satisfy them (the bash refused
+  identically), so the R7 drives used scratch E2E_CONFIG_BASE seeds. A
+  committed variant would make them drivable from a clean checkout
+  (PR #187 finding).
+- Periodic full-suite manual drive: no gate drives the wheel/audit
+  recipes (the asan core is the no-input set), so 031's stale golden and
+  032-wheel's stale aim sat invisible until the R5 batch's manual full
+  drive found both. A recurring plan item to drive the whole suite
+  catches this class (PR #188 finding).
+- The shared fakepointer binary at the canonical ~/.local/bin location
+  can go stale silently: the 2026-08-05 disk-recovery revert left a
+  Jul 23 build predating the draghold verb and 074 could not drive at
+  all until it was rebuilt from current source. Consider a version/verb
+  probe in the vehicle preflight (PR #190 finding).
+- Infra: worktree build trees live on the snapshotted home dataset, so
+  hourly snapshots pin every deleted multi-GB build until retention
+  rotates - the 2026-08-05 pool exhaustion was this compounding.
+  Options: a non-snapshotted scratch dataset for builds (lake has
+  headroom) or shorter hourly retention.
 - BP-3c dual-output residual: multi_output's live transactions
   (mo_discover_outputs, capture/restore topology,
   place-secondary-for-topology, pin resolution) need the dual-output

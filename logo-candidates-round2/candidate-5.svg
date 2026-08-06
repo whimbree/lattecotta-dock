@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    SPDX-FileCopyrightText: 2026 Bree Spektor <whimbree@pm.me>
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-License-Identifier: GPL-2.0-or-later
+
+    Candidate 5: poured heart in a hand-thrown bowl. Top-down latte in a
+    cream ceramic bowl with a wheel-thrown wobble in both rims, peach
+    crema, a properly poured milk heart with the drag-tail droop, and a
+    rosy kiln glow warming the bowl's base edge.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="bowlCeramic" x1="24" y1="4.8" x2="24" y2="44.2" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fdf0dd"/>
+      <stop offset="0.72" stop-color="#f4d9b8"/>
+      <stop offset="1" stop-color="#f0c9a4"/>
+    </linearGradient>
+    <linearGradient id="cremaPeach" x1="24" y1="9.9" x2="24" y2="39.9" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f2b678"/>
+      <stop offset="1" stop-color="#c58547"/>
+    </linearGradient>
+    <linearGradient id="milkCream" x1="24" y1="33.8" x2="24" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f7e3c6"/>
+      <stop offset="1" stop-color="#fff9ef"/>
+    </linearGradient>
+    <radialGradient id="kilnBaseGlow" cx="21" cy="45" r="26" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff9d7a"/>
+      <stop offset="0.55" stop-color="#ff9d7a" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ff9d7a" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="bowlClip">
+      <path d="M 24,4.8 C 34.6,4.9 43.8,13.7 43.9,24.4 C 44.0,35.2 34.4,44.2 23.6,44.1 C 13.0,44.0 4.3,34.6 4.4,23.9 C 4.5,13.3 13.5,4.7 24,4.8 Z"/>
+    </clipPath>
+  </defs>
+  <path id="bowl" fill="url(#bowlCeramic)"
+        d="M 24,4.8 C 34.6,4.9 43.8,13.7 43.9,24.4 C 44.0,35.2 34.4,44.2 23.6,44.1 C 13.0,44.0 4.3,34.6 4.4,23.9 C 4.5,13.3 13.5,4.7 24,4.8 Z"/>
+  <path id="crema" fill="url(#cremaPeach)"
+        d="M 24.3,9.9 C 32.5,10.0 39.5,16.7 39.5,24.9 C 39.5,33.2 32.2,40.1 24.0,39.9 C 15.9,39.7 9.3,33.0 9.4,24.8 C 9.5,16.6 16.2,9.8 24.3,9.9 Z"/>
+  <path id="baseGlow" clip-path="url(#bowlClip)" fill="url(#kilnBaseGlow)" opacity="0.55"
+        d="M 4,4 H 44 V 44 H 4 Z"/>
+  <g id="heartPour" transform="rotate(-6 24 23)">
+    <circle id="pourDot" cx="23.5" cy="12.9" r="1.35" fill="url(#milkCream)"/>
+    <path id="heart" fill="url(#milkCream)"
+          d="M 25.0,33.8 C 21.5,29.5 15.8,25.8 15.3,20.6 C 15.0,17.2 17.2,15.0 19.9,15.2 C 21.8,15.35 23.2,16.6 23.9,18.3 C 24.8,16.3 26.5,14.9 28.5,15.0 C 31.2,15.15 33.2,17.5 32.7,20.8 C 32.0,25.6 27.6,29.3 25.0,33.8 Z"/>
+  </g>
+</svg>

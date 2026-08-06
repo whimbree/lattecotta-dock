@@ -3459,6 +3459,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D276 - the 040 preview-tooltip golden no longer matches this machine
 - STATUS: OPEN.
+- ADDENDUM (2026-08-06): 031-ruler-slider-crossview's golden was the same
+  class (a light-palette golden against the current dark render, 96.48%
+  mismatch) and was re-blessed dark through the recipe's own E2E_BLESS
+  flow with by-eye verification during the R5 batch (c1cb4ead4, PR
+  #188); 040's re-bless decision stays owed.
 - FOUND: 2026-08-05, the BP-3 R1 batch: bash 040.sh and its faithful port
   fail byte-identically (89261 px differ, 68.44%, max delta 245) against
   the committed host-rendered golden.
