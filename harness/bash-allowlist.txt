@@ -49,17 +49,14 @@ tests/e2e/040-preview-tooltip-text.sh
 tests/e2e/061-partial-reservation-placement.sh
 tests/e2e/070-maximize-length-mask.sh
 tests/e2e/073-window-touch-topology.sh
-tests/e2e/create-linked-dock.sh
 tests/e2e/duplicate-dock-independent.sh
 tests/e2e/fixtures/sc-w1/launcher.sh
 tests/e2e/fixtures/sc-w1/rate-launcher.sh
 tests/e2e/lib.sh
 tests/e2e/linked-dock-operation-stress.sh
-tests/e2e/matrix/applet-reorder-driver.sh
 tests/e2e/matrix/golden-bridge.sh
 tests/e2e/matrix/matrix-lib.sh
 tests/e2e/matrix/multi-output-lib.sh
-tests/e2e/matrix/task-reorder-lib.sh
 tests/e2e/parabolic-hover-preview.sh
 tests/installed-package-gate-runtime-test.sh
 tests/multioutputstatecontracttest.sh
