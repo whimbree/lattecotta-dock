@@ -21,8 +21,9 @@
 // It is a pure QJsonObject -> answer core so it can be pinned deterministically
 // under ASan+UBSan (configsnapshotdifftest.cpp) and re-used by the QML-handler
 // wiring harness (settingswiringharnesstest.cpp) that drives real handlers
-// against a stub config map. The live shell harness (tests/e2e/audit/audit-lib.sh)
-// mirrors these exact semantics in python over the same snapshots.
+// against a stub config map. The live harness (latte_harness.audit in
+// harness/src) mirrors these exact semantics in typed python over the same
+// snapshots.
 //
 // DEFAULT-DELETION SAFETY: a key present on EXACTLY ONE side counts as changed
 // (a diff), never silently ignored. viewConfigData reads the in-process config

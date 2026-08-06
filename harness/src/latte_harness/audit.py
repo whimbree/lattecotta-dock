@@ -14,9 +14,9 @@ config-value snapshot/diff and the settings-window drive helpers.
 
 Migration shape (the BP-2c/BP-3a fresh-module precedent): this is a fresh module,
 not a bridge. Every readback is validated with pydantic at the boundary; the
-recipe/matrix transport and probes are reused where they overlap; audit-lib.sh
-itself stays in place for the remaining bash audit recipes until the BP-3d
-batches port and delete them, so this module and the bash lib coexist.
+recipe/matrix transport and probes are reused where they overlap. The bash lib
+this ports was deleted with its last consumer when the BP-3 audit-recipe batch
+ported the six audit recipes to .py; this module is the only audit harness.
 
 The observable contract is preserved exactly (the never-swallow rule):
 
