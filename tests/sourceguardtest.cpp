@@ -1024,18 +1024,18 @@ private:
         const QString &source)
     {
         const QString code = normalizedCode(source);
-        const qsizetype cleanupTrap =
-            code.indexOf(QStringLiteral("trapcleanupEXIT"));
-        const qsizetype fixtureStage =
-            code.indexOf(QStringLiteral(
-                "matrix_stagepanel-bottom-justify-1out"));
 
-        return cleanupTrap >= 0
-            && fixtureStage > cleanupTrap
+        return code.contains(QStringLiteral(
+                   "ifmatrix.init()!=0:recipe.fail("
+                   "\"couldnotcapturethepristinenestedconfiguration\")"
+                   "_S.configured=True"
+                   "ifmatrix.stage(\"panel-bottom-justify-1out\")!=0:"))
             && code.contains(QStringLiteral(
-                   "--keyfloatingInternalGapIsForcedfalse"))
+                   "if_cleanup()andstatus==0:status=1"))
             && code.contains(QStringLiteral(
-                   "snapshot['schemaVersion']!=11"))
+                   ",\"--key\",\"floatingInternalGapIsForced\",\"false\")"))
+            && code.contains(QStringLiteral(
+                   "snapshot[\"schemaVersion\"]!=11"))
             && code.contains(QStringLiteral(
                    "v[\"attachOnWindowTouchConfigured\"]"))
             && code.contains(QStringLiteral(
@@ -1045,47 +1045,44 @@ private:
             && code.contains(QStringLiteral(
                    "v[\"attachmentDeferredByPointer\"]"))
             && code.contains(QStringLiteral(
-                   "v[\"floatingGapConfigured\"]"))
+                   "_lower(record[\"floatingGapConfigured\"])"))
             && code.contains(QStringLiteral(
                    "v[\"touchingWindowCount\"]"))
             && code.contains(QStringLiteral(
-                   "v[\"windowTouchGeometryRoleType\"]"))
+                   "_dock_record()[\"windowTouchGeometryRoleType\"]"))
             && code.contains(QStringLiteral(
-                   "*v[\"appletsLayoutGeometry\"],"
-                   "math.floor(v[\"computedPaintMaskGeometry\"][1]),"
-                   "math.ceil(v[\"computedPaintMaskGeometry\"][1]"
-                   "+v[\"computedPaintMaskGeometry\"][3])"
-                   "-math.floor(v[\"computedPaintMaskGeometry\"][1])"))
+                   "paint_y=math.floor(paint[1])"
+                   "paint_height=math.ceil(paint[1]+paint[3])"
+                   "-math.floor(paint[1])"))
             && code.contains(QStringLiteral(
-                   "[[\"$x$width\"=="
-                   "\"$base_popup_primary_x$base_popup_primary_width\"]]"))
+                   "if(x,width)!="
+                   "(_S.base_popup_primary_x,_S.base_popup_primary_width):"))
             && code.contains(QStringLiteral(
-                   "[[\"$y$height\"==\"$paint_y$paint_height\"]]"))
+                   "if(y,height)!=(paint_y,paint_height):"))
             && code.contains(QStringLiteral(
-                   "\"windowTouchTracker\":v[\"objects\"]"
-                   "[\"windowTouchTracker\"]"))
+                   "\"windowTouchTracker\":obj[\"windowTouchTracker\"],"))
             && !code.contains(QStringLiteral(
                    "Qt.rect("))
             && code.contains(QStringLiteral(
-                   "constgeometry=Object.assign({},w.frameGeometry);"
-                   "geometry.x=$x;"
-                   "geometry.y=$y;"
-                   "geometry.width=$width;"
-                   "geometry.height=$height;"
+                   "constgeometry=Object.assign({{}},w.frameGeometry);"
+                   "geometry.x={x};"
+                   "geometry.y={y};"
+                   "geometry.width={width};"
+                   "geometry.height={height};"
                    "w.frameGeometry=geometry;"))
             && code.contains(QStringLiteral(
-                   "org.kde.kglobalaccel.Component"
-                   "invokeShortcuts\"WindowMove\""))
+                   "\"org.kde.kglobalaccel.Component\","
+                   "\"invokeShortcut\",\"s\",\"WindowMove\","))
             && code.contains(QStringLiteral(
-                   "nudge_verticalDown\"$touch_nudges\""))
+                   "_nudge_vertical(\"Down\",touch_nudges)"))
             && code.contains(QStringLiteral(
-                   "nudge_verticalUp\"$touch_nudges\""))
+                   "_nudge_vertical(\"Up\",touch_nudges)"))
             && code.count(QStringLiteral(
-                   "capture_fractional_policyfalsefalse1attachedattaching"))
-                   >= 3
+                   "_capture_fractional_policy(\"false\",\"false\",1,"
+                   "\"attached\",\"attaching\",")) >= 3
             && code.count(QStringLiteral(
-                   "capture_fractional_policyfalsefalse0floatedfloating"))
-                   >= 3
+                   "_capture_fractional_policy(\"false\",\"false\",0,"
+                   "\"floated\",\"floating\",")) >= 3
             && code.contains(QStringLiteral(
                    "\"fractionalfloating-to-attachingreversal\""))
             && code.contains(QStringLiteral(
@@ -1095,60 +1092,54 @@ private:
             && code.contains(QStringLiteral(
                    "\"interactivedragintostabletrigger\""))
             && code.contains(QStringLiteral(
-                   "fpkeyEscape"))
+                   "\"key\",\"Escape\")"))
             && code.contains(QStringLiteral(
-                   "wait_for_konsole_geometry"))
+                   "_wait_for_konsole_geometry"
+                   "(baseline_x,baseline_y,client_width,client_height)"))
             && code.contains(QStringLiteral(
-                   "\"$baseline_x\""))
+                   "_set_konsole_maximized(False)"))
             && code.contains(QStringLiteral(
-                   "\"$baseline_y\""))
+                   "_wait_for_maximize_mode(\"0\")"))
             && code.contains(QStringLiteral(
-                   "\"$client_width\""))
+                   "_set_konsole_maximized(True)"))
             && code.contains(QStringLiteral(
-                   "\"$client_height\""))
+                   "_wait_for_maximize_mode(\"3\")"))
             && code.contains(QStringLiteral(
-                   "set_konsole_maximizedfalse"))
+                   "ifgeometry_role_type!=\"QRect\":"))
             && code.contains(QStringLiteral(
-                   "wait_for_maximize_mode0"))
+                   "_wait_for_policy(\"true\",\"false\",1,\"attached\",0,"))
             && code.contains(QStringLiteral(
-                   "set_konsole_maximizedtrue"))
+                   "_capture_fractional_policy(\"true\",\"false\",0,"
+                   "\"floated\",\"floating\","))
             && code.contains(QStringLiteral(
-                   "wait_for_maximize_mode3"))
+                   "_wait_for_policy(\"true\",\"false\",0,\"floated\",1,"))
             && code.contains(QStringLiteral(
-                   "[[\"$geometry_role_type\"==QRect]]"))
+                   "_wait_for_policy(\"true\",\"true\",1,\"floated\",1,"))
             && code.contains(QStringLiteral(
-                   "wait_for_policytruefalse1attached0"))
+                   "\"glide\",\"20\",\"20\","
+                   "str(pointer_x),str(pointer_y))"))
             && code.contains(QStringLiteral(
-                   "capture_fractional_policytruefalse0floatedfloating"))
-            && code.contains(QStringLiteral(
-                   "wait_for_policytruefalse0floated1"))
-            && code.contains(QStringLiteral(
-                   "wait_for_policytruetrue1floated1"))
-            && code.contains(QStringLiteral(
-                   "capture_fractional_policyfalsefalse1attachedattaching"))
-            && code.contains(QStringLiteral(
-                   "fpglide2020\"$pointer_x\"\"$pointer_y\""))
-            && code.contains(QStringLiteral(
-                   "fpglide\"$pointer_x\"\"$pointer_y\"2020"))
+                   "[os.environ[\"E2E_FAKEPOINTER\"],\"glide\","
+                   "str(pointer_x),str(pointer_y),\"20\",\"20\"]"))
             && code.contains(QStringLiteral(
                    "\"pointer-presentattachmentdeferral\""))
             && code.count(QStringLiteral(
-                   "wait_for_policyfalsefalse0floated1")) >= 2
+                   "_wait_for_policy(\"false\",\"false\",0,\"floated\",1,"))
+                   >= 2
             && code.contains(QStringLiteral(
-                   "kill\"$kpid\""))
+                   "os.kill(konsole.pid,signal.SIGTERM)"))
             && code.contains(QStringLiteral(
                    "\"couldnotdestroythesinglewindow-touchclient\""))
             && code.count(QStringLiteral(
-                   "assert_stable_contract")) >= 4
+                   "_assert_stable_contract(")) >= 4
             && code.contains(QStringLiteral(
                    "\"reservationStateGeneration\":"
                    "snapshot[\"reservationStateGeneration\"]"))
             && code.contains(QStringLiteral(
-                   "v[\"transitionGeometryRevision\"],"
-                   "v[\"surfaceGeometryPublicationRevision\"],"
-                   "v[\"layerShellConfigureRequestRevision\"]"))
+                   "f\"{v['surfaceGeometryPublicationRevision']}\""
+                   "f\"{v['layerShellConfigureRequestRevision']}\""))
             && code.contains(QStringLiteral(
-                   "\"$transition_token\"!=\"$tracker_token\""));
+                   "transition_token!=tracker_token"));
     }
 
     static bool matchesLiveTitlebarWindowTouchE2eContract(
@@ -3734,7 +3725,7 @@ void SourceGuardTest::windowTouchE2e_drivesOneStableTriggerClient()
 {
     QVERIFY2(
         matchesWindowTouchE2eContract(readFile(QStringLiteral(
-            "tests/e2e/072-window-touch-transition.sh"))),
+            "tests/e2e/072-window-touch-transition.py"))),
         "recipe 072 must drive one real non-maximized client across the"
         " stable trigger through interactive reversals, Escape restoration,"
         " committed maximize, pointer deferral, and destruction while"
