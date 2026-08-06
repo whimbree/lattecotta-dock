@@ -22,7 +22,6 @@ scripts/git-hooks/pre-push
 scripts/installed-package-gate.sh
 scripts/lib-e2e-seed.sh
 scripts/lib-installed-package-gate.sh
-scripts/lib-qml-env.sh
 scripts/matrix-fixture-check.sh
 scripts/preview-contract-rules.sh
 scripts/qml-compile-gate.sh

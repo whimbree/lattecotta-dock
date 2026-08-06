@@ -48,7 +48,7 @@ set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
 
 include(KDEInstallDirs)
 
-# The headless QML gates (scripts/lib-qml-env.sh) stage the built modules to a
+# The headless QML gates (latte_harness.qmlenv) stage the built modules to a
 # throwaway prefix and must add the staged qml subdir to the import path
 # BEFORE that prefix is installed, so they cannot probe the filesystem for it.
 # KDE_INSTALL_QMLDIR is the authoritative subdir but varies by distro Qt6

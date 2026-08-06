@@ -95,8 +95,11 @@ Adopt latte-dock-qt6's three-piece shape, adapted rather than copied:
     `tests/qml/tst_*.qml` through qmltestrunner against the staged
     Latte modules, so module registration and type resolution are part
     of every test. First occupant: `tst_shadoweditem.qml`.
-  Both source `scripts/lib-qml-env.sh` (a thin bridge over `latte_harness.qmlenv`), which assembles the import
-  path from the devShell's pinned module set - the user profile's
+  Both resolve their QML env through the compile gate's `resolve_qml_env`
+  (shared with the interaction tests), which assembles the import path via
+  `latte_harness.qmlenv.assemble_imports` (test-pinned against the canonical
+  `build_setup_script`) and stages via `stage_qml_modules`, all from the
+  devShell's pinned module set - the user profile's
   QML2_IMPORT_PATH and the engine's ambient defaults resolve modules
   from foreign Qt builds on this host and must not leak in.
 - **Live-run script** - `scripts/run-staged.sh` starts the staged dock

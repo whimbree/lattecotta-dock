@@ -854,8 +854,8 @@ def _assemble_qml_import_path(ctx: GateContext, package_qml: str) -> str:
             )
         if resolved not in qml_imports and resolved != package_qml:
             qml_imports.append(resolved)
-    # The package's Latte modules are last, matching lib-qml-env.sh's precedence:
-    # later entries win and no dependency root can shadow org.kde.latte.*.
+    # The package's Latte modules are last, matching qmlenv.assemble_imports's
+    # precedence: later entries win and no dependency root can shadow org.kde.latte.*.
     qml_imports.append(package_qml)
     return ":".join(qml_imports)
 

@@ -76,13 +76,13 @@ RUN zypper --non-interactive --gpg-auto-import-keys refresh \
 RUN setcap -r /usr/bin/kwin_wayland 2>/dev/null || true
 
 # The nested-kwin compositor bring-up (latte_harness.vehicle via the sceneprobe
-# and e2e drivers) and lib-qml-env.sh read these to find the DISTRO's lavapipe
+# and e2e drivers) and latte_harness.qmlenv read these to find the DISTRO's lavapipe
 # ICD, Vulkan validation layers and framework QML tree instead of the nix
 # devShell's:
 #   - Tumbleweed's lavapipe ICD manifest is arch-suffixed
 #     (lvp_icd.x86_64.json), where Arch ships lvp_icd.json.
 #   - The framework QML modules live under lib64 (Tumbleweed is a lib64
-#     multilib distro), where Arch/nix use lib. lib-qml-env.sh needs
+#     multilib distro), where Arch/nix use lib. latte_harness.qmlenv needs
 #     LATTE_QML_MODULE_PATH so scenes importing org.kde.* resolve.
 ENV LATTE_VULKAN_LAVAPIPE_ICD=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
     LATTE_VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d \

@@ -67,7 +67,7 @@ dead *.5.2[0-5].qml version-ladder variants, and reports both skip counts.
 
 ## Staging model
 
-`qml_env_stage` in scripts/lib-qml-env.sh runs
+`stage_qml_modules` in latte_harness.qmlenv runs
 `cmake --install build --prefix build/_qmlstage` into a fresh stage on every
 run. Binaries stay in build/bin; the stage holds the installed QML packages,
 shell, indicators and Latte's C++ plugins under build/_qmlstage/lib/plugins.
@@ -120,7 +120,7 @@ launcher flattens the same order into QML2_IMPORT_PATH):
    time from the PINNED dependency set (the makeSearchPath list in flake.nix)
    and is the only trustworthy source of QML module paths. mkShell does not
    run the Qt env hooks, so nothing else exports correct paths.
-2. ldd-derived pins: lib-qml-env.sh walks the /nix/store paths that
+2. ldd-derived pins: latte_harness.qmlenv walks the /nix/store paths that
    build/bin/latte-dock and liblattetasksplugin.so actually link and imports
    their qml dirs. These outrank the list, guaranteeing modules resolve from
    the exact packages the binaries link even if a second copy exists.
@@ -130,8 +130,9 @@ launcher flattens the same order into QML2_IMPORT_PATH):
 The desktop session's own variables (QML2_IMPORT_PATH, QML_IMPORT_PATH,
 NIXPKGS_QT6_QML_IMPORT_PATH, NIXPKGS_QML_SEARCH_PATHS) leak differently
 pinned Qt5 and Plasma paths whose plugins fail to dlopen here (private-API
-symbol versioning). lib-qml-env.sh unsets the first two and deliberately
-ignores the rest. Keep it that way.
+symbol versioning). latte_harness.qmlenv unsets the first two and re-exports
+the last two with only the packaged latte-dock leaf stripped (the D8/D271
+doctrine). Keep it that way.
 
 NEVER append the system or session QML root to any of these paths. A foreign
 Qt copy of a module Latte also resolves is a silent shadow: a broad append of

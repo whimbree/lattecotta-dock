@@ -3,18 +3,23 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """QML environment assembly for the headless QML checks and staged runs.
 
-The typed port of scripts/lib-qml-env.sh (BP-1a). Two jobs, exposed as two
-subcommands the bash bridge eval-s / execs:
+The typed port of scripts/lib-qml-env.sh (BP-1a). The bash bridge that eval-ed
+this module's setup/stage subcommands is gone (BW-1): every consumer is a Python
+gate now (qml_compile_gate, qmllint_gate, qml_interaction_tests, sceneprobe_gate,
+staged_run) that calls the two library entries directly. What remains:
 
-- ``setup`` builds the ``-import`` list (the pinned QML module search path)
-  and emits the eval-able shell the five bash consumers read: the ``imports``
-  array, the ``build``/``stage``/``qmldir`` variables, and the env mutations
-  (unset the profile's QML2_IMPORT_PATH / QML_IMPORT_PATH, re-export the
-  nixpkgs Qt6 seed vars with only the packaged latte-dock store leaf stripped);
-- ``stage`` installs the built modules into ``build/_qmlstage`` with the
-  install-manifest preserved across the throwaway install, restored on every
+- ``build_setup_script`` assembles the ``-import`` list (the pinned QML module
+  search path) and the env mutations (unset the profile's QML2_IMPORT_PATH /
+  QML_IMPORT_PATH, re-export the nixpkgs Qt6 seed vars with only the packaged
+  latte-dock store leaf stripped). The compile and qmllint gates lock their own
+  env recompute against it byte-for-byte so the two cannot drift.
+- ``stage_qml_modules`` installs the built modules into ``build/_qmlstage`` with
+  the install-manifest preserved across the throwaway install, restored on every
   exit path including SIGINT/SIGTERM (the bash trap-EXIT idiom as a context
   manager).
+- the ``seed-env`` subcommand emits just the filtered seed-var exports for the
+  two bash gates that still eval them (scripts/build-check.sh and
+  ci/build-and-gate.sh) so their ctest legs mask the packaged dock the same way.
 
 The import-path doctrine is Qt5-faithful and deliberate. The user profile's
 QML2_IMPORT_PATH carries Qt 5 and differently-pinned Qt 6 builds whose plugins
@@ -37,14 +42,12 @@ import re
 import shlex
 import shutil
 import subprocess
-import sys
 from collections.abc import Generator, Mapping, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 
 from latte_harness.proc import (
     SessionProcess,
-    install_conventional_signal_exits,
     run,
     terminating,
 )
@@ -219,21 +222,6 @@ def build_setup_script(repo: Path, env: Mapping[str, str]) -> str:
     return "\n".join(lines)
 
 
-def _emit_setup(repo: Path) -> None:
-    try:
-        print(build_setup_script(repo, os.environ))
-    except MissingModulePathError:
-        # Loud refusal, not a silent default: the QML gates cannot run outside
-        # the flake devShell that exports the module search path.
-        print(
-            f"{TOOL}: FAIL LATTE_QML_MODULE_PATH is unset; run inside the flake "
-            "devShell (nix develop provides it)",
-            file=sys.stderr,
-            flush=True,
-        )
-        raise SystemExit(1) from None
-
-
 def _manifest_mentions_stage(manifest: Path, stage: Path) -> bool:
     """True if the manifest references the stage prefix (bash ``grep -q``)."""
     return str(stage) in manifest.read_text()
@@ -333,32 +321,18 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="latte_harness.qmlenv", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    setup = sub.add_parser("setup", help="emit eval-able shell env for the bash bridge")
-    setup.add_argument("repo", help="the repo root (absolute path)")
-
-    stage = sub.add_parser("stage", help="stage the built QML modules into the stage dir")
-    stage.add_argument("build", help="the build directory")
-    stage.add_argument("stage", help="the stage directory (build/_qmlstage)")
-
+    # setup and stage are library calls now (build_setup_script / stage_qml_modules,
+    # which the Python QML gates import); seed-env is the one remaining subcommand,
+    # eval-ed by scripts/build-check.sh and ci/build-and-gate.sh for their ctest legs.
     sub.add_parser(
         "seed-env",
         help="emit eval-able seed-var exports with the packaged latte-dock leaf stripped",
     )
 
-    args = parser.parse_args(argv)
-    command: str = args.command
-    if command == "setup":
-        repo: str = args.repo
-        _emit_setup(Path(repo))
-    elif command == "seed-env":
-        exports = seed_var_exports(os.environ)
-        if exports:
-            print("\n".join(exports))
-    else:  # "stage" (subparsers required=True rejects anything else)
-        build_dir: str = args.build
-        stage_dir: str = args.stage
-        install_conventional_signal_exits()
-        stage_qml_modules(Path(build_dir), Path(stage_dir))
+    parser.parse_args(argv)  # only "seed-env"; subparsers required=True rejects anything else
+    exports = seed_var_exports(os.environ)
+    if exports:
+        print("\n".join(exports))
 
 
 if __name__ == "__main__":

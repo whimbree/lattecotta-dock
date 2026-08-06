@@ -137,7 +137,7 @@
             "${pkgs.kdePackages.plasma-integration}/lib/qt-6/plugins/platformthemes/KDEPlasmaPlatformTheme6.so";
 
           # The QML module search path for the headless QML checks and the
-          # staged live runs (scripts/lib-qml-env.sh). mkShell does not run
+          # staged live runs (latte_harness.qmlenv). mkShell does not run
           # the Qt env hooks, so nothing else exports these paths - and the
           # desktop session leaks its own (differently pinned) Plasma paths
           # into the environment, which must never win. Derived from the

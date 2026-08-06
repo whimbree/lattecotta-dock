@@ -47,8 +47,9 @@ RUN setcap -r /usr/bin/kwin_wayland 2>/dev/null || true
 #
 # LATTE_QML_MODULE_PATH is the distro's framework QML tree (the nix devShell
 # exports the same variable). It is a CONTAINER CONTRACT the gate driver and
-# the reused QML harnesses depend on: scripts/run-e2e.sh and lib-qml-env.sh
-# re-exec into `nix develop` when it is unset, and there is no nix here, so an
+# the reused QML harnesses depend on: scripts/run-e2e.sh and the latte_harness
+# QML gates re-exec into `nix develop` when it is unset, and there is no nix
+# here, so an
 # unset value would detonate the gate rather than run it. Arch installs the
 # framework QML modules under lib/qt6/qml (nixpkgs uses lib/qml).
 #
