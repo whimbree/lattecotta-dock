@@ -20,10 +20,14 @@ that leaves residue turns a would-be success into a failure. Every assertion,
 poll bound, retry count and failure message is byte-identical, the SPDX header is
 preserved, and the exec bit stays 100755 (D273).
 
-Two structurally-unreachable bash guards are dropped as dead in Python: the
+One structurally-unreachable bash guard is dropped as dead in Python: the
 "empty-area point is incomplete" check (empty_area_point returns two ints or
-None), and read_fixture_count's status/numeric refusals (recipe.dumpwins yields
-text and already prints its own loud diagnostic on a KWin-script failure).
+None). read_fixture_count's status/numeric refusals are dropped on a weaker
+footing: a KWin loadScript failure IS reachable and reads as count 0 (fixture
+absent) here, mitigated by recipe.kwin_js printing its own loud
+"e2e_kwin_js: loadScript failed" diagnostic at the shared boundary every
+recipe inherits - a loud symptom, not a loud refusal, recorded as the
+deviation it is.
 """
 
 from __future__ import annotations
@@ -43,7 +47,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from latte_harness import recipe
+from latte_harness import proc, recipe
 
 
 @dataclass
@@ -644,17 +648,27 @@ def _setup() -> None:
 
 
 def main() -> int:
+    # The cleanup sits in a finally so it runs on EVERY exit path, like the
+    # bash `trap cleanup EXIT`: the caught verdict exits, an unexpected
+    # exception (an unguarded readback decode after the layout is already
+    # modified), and the conventional signal exits installed below. Without
+    # it, an unintended exit strands the konsole fixture and leaves the
+    # modified E2E_LAYOUT unrestored, poisoning following recipes through
+    # the runner's dock reuse.
+    proc.install_conventional_signal_exits()
     _setup()
     status = 0
     try:
-        _body()
-    except SystemExit as exc:
-        status = exc.code if isinstance(exc.code, int) else 1
-    except recipe.RecipeError as exc:
-        print(str(exc), file=sys.stderr, flush=True)
-        status = 1
-    if _cleanup() and status == 0:
-        status = 1
+        try:
+            _body()
+        except SystemExit as exc:
+            status = exc.code if isinstance(exc.code, int) else 1
+        except recipe.RecipeError as exc:
+            print(str(exc), file=sys.stderr, flush=True)
+            status = 1
+    finally:
+        if _cleanup() and status == 0:
+            status = 1
     return status
 
 
