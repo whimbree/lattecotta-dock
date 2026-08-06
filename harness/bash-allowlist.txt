@@ -61,7 +61,6 @@ tests/e2e/create-linked-dock.sh
 tests/e2e/duplicate-dock-independent.sh
 tests/e2e/fixtures/sc-w1/launcher.sh
 tests/e2e/fixtures/sc-w1/rate-launcher.sh
-tests/e2e/keyboard-navigation-mode.sh
 tests/e2e/lib.sh
 tests/e2e/linked-dock-operation-stress.sh
 tests/e2e/matrix/applet-reorder-driver.sh
