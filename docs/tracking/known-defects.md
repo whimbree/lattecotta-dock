@@ -3331,6 +3331,34 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   write under `LC_ALL=C`.
 - SEVERITY: annoyance (dirty diffs on baseline regeneration).
 
+### D278 - 072's fractional captures race the D259 200 ms transition
+- STATUS: FIXED by the trigger-adjacent sampling commit in the PR that
+  files this entry.
+- FOUND: 2026-08-05, the BP-3 R6 batch (the bash-to-python migration's
+  window-touch recipe wave): the 072 port failed deterministically at
+  "pointer deferral release" with the transition already resting at the
+  attached endpoint; the unmodified bash recipe, re-driven as the causation
+  control, failed at the same site (one control run additionally showed
+  pointerInside stuck true - the panel's pointer leave lost across a
+  fake-input device swap), and a follow-up run failed at "committed
+  maximize attachment" instead - three earlier runs had won that race.
+- SYMPTOM: cd74a9244 (the D259 floating-attachment timing fix) cut the
+  per-view transition from 389 ms to 200 ms, so any fractional sampler
+  separated from its trigger by synchronous overhead misses the whole
+  animation: the departure glide's own ~400 ms tail at "pointer deferral
+  release" (deterministic), and one wait_for_maximize_mode kwin_js round
+  trip at the two maximize-driven captures (~3-of-4 flaky). Latent since
+  2026-08-01 - 072 was not re-driven after cd74a9244 (cac8efab0's evidence
+  names recipe 071).
+- FIX: sample fractional frames immediately after their trigger - the
+  departure glide runs in the background and is sampled mid-flight (the
+  one-live-input-device pattern of 071's screen-edge round trip, which
+  also keeps the device alive so the pointer leave cannot be lost to a
+  device swap), and the two maximize-driven captures move before their
+  wait_for_maximize_mode verification.
+- SEVERITY: test correctness (a latent always-fail plus two flaky races in
+  a nested window-touch recipe; no dock defect).
+
 ### D273 - audit-harness-selftest.sh checked in without its executable bit
 - STATUS: FIXED by the mode-bit commit in the PR that files this entry.
 - FOUND: 2026-08-05, the BP-2b (e2e runner port) discovery measurement: the
