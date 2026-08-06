@@ -3,6 +3,27 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-08-06.
 
+## 2026-08-06: the 073 port and BP-5c - the bash-to-python migration is COMPLETE
+
+PR #204 (76dab2b0d, b7068d117, a0b8eafdf) landed the last mechanical
+recipe: 073 via the R13 methodology, arriving broken (D284, the fixed
+800 ms axis-change sample racing the settle - A/B proved the bash failed
+identically 2/2; fixed bash-first, no coverage lost, phase 3 polls the
+same property to settlement) and retiring matrix-lib.sh and
+golden-bridge.sh grep-proven. The BP-5c closeout swept TESTING.md, the
+README (the timeless typed-harness line), INSTALLATION.md (Qt5-era
+dependency lists replaced with packaging/ pointers), and deleted the
+orphaned astylerc.
+
+FINAL STATE: 46 recipes and every lib, gate leg, analyzer, dev tool and
+selftest run as typed latte_harness modules. tests/e2e holds SIX bash
+files - lib.sh, multi-output-lib.sh, and four recipes each blocked on a
+tracked defect (040/D276, 061/D209, 070-maximize/D274,
+duplicate-dock-independent/D283). Unblocking those closes the last
+allowlist lines; nothing else in BP remains. Owner decisions still
+open: D283 approach, history excision, containment-12 residue, D280
+redelivery (the live dock predates D280 and everything after).
+
 ## 2026-08-06: wave 5 - R12/R13, BP-5a/5b landed; only tracked blocks remain
 
 Five PRs merged through the standard review flow:

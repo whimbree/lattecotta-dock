@@ -430,10 +430,21 @@ Phase BP-5, tail:
   the orphaned astylerc (formatter.sh was its only consumer) and the
   Qt5-era INSTALLATION.md prerequisite lists. Commits: 16a59e364
   (PR #201)
-- [ ] BP-5c (docs sweep + closeout): update TESTING.md, CLAUDE.md script
-  references, the orchestrator prompt, skills, README, ROADMAP; shrink the
-  retained-bash allowlist to the final set; update the
-  harness-scripting-typed-python memory. Commits:
+- [x] BP-5c (docs sweep + closeout): TESTING.md's entry-point references
+  now name the typed modules behind the shims/bridges; the README
+  carries the timeless typed-harness line; INSTALLATION.md's Qt5-era
+  dependency lists replaced with the packaging/ and ci/containers/
+  pointers; the orphaned astylerc deleted (formatter.sh was its only
+  consumer, the PR #201 review's grep). CLAUDE.md, the orchestrator
+  prompt and the skills swept clean already (no stale script
+  references). The allowlist floor is deliberate, not final-set: six
+  bash files remain in tests/e2e, every recipe among them blocked on a
+  tracked defect (040/D276, 061/D209, 070-maximize/D274,
+  duplicate-dock-independent/D283) plus lib.sh and multi-output-lib.sh
+  for those consumers; the retained-bash spine and external contracts
+  hold per the disposition table. The harness-scripting-typed-python
+  memory updated with the completion state. Commits: (this docs PR's
+  hash at merge)
 
 ## Filed follow-ups (wave 1)
 
@@ -457,13 +468,14 @@ Phase BP-5, tail:
   parabolic hover ~1/3 of runs for the bash and the port alike (A/B
   proven, identical coords and velocity); a vehicle-side stabilization
   or a retry-with-budget is the fix direction, not a recipe change.
-- 073-window-touch-topology port: mechanical follow-up per the R13
-  redesign (extract its topology-restore decision into its own pure
-  core, pytest it, retarget matchesWindowTouchTopologyE2eContract,
-  delete the eval test); dual-output drive; grep-prove the
-  last-consumer claims before retiring matrix-lib.sh, golden-bridge.sh
-  and multi-output-lib.sh (tests/multioutputstatecontracttest.sh also
-  consumes multi-output-lib.sh).
+- 073-window-touch-topology port: LANDED (PR #204; 76dab2b0d,
+  b7068d117, a0b8eafdf) via the R13 methodology
+  (latte_harness.topology_cleanup, pytest mutation controls, the
+  matcher pinning every load-bearing wire). 073 arrived broken - D284
+  (the fixed 800 ms axis-change sample raced the settle; A/B proved the
+  bash failed identically), fixed bash-first with no coverage lost.
+  matrix-lib.sh and golden-bridge.sh retired grep-proven;
+  multi-output-lib.sh stays for tests/multioutputstatecontracttest.sh.
 - Committed seed variants for the richer-precondition recipes: 092 needs
   three or more launchers and 100 a vertical view with an ordinary
   applet; the clean default seed cannot satisfy them (the bash refused
