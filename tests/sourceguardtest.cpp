@@ -618,7 +618,7 @@ private:
             && code.contains(QStringLiteral(
                    "if_cleanup()andstatus==0:status=1"))
             && code.contains(QStringLiteral(
-                   ",*group,\"--key\",\"maximizeWhenMaximized\",\"false\")"))
+                   ",*group,\"--key\",\"maximizeWhenMaximized\",\"false\",)"))
             && code.contains(QStringLiteral(
                    ",*group,\"--key\",\"maxLength\",\"60\")"))
             && code.contains(QStringLiteral(
@@ -679,7 +679,7 @@ private:
             && code.contains(QStringLiteral(
                    "_assert_stable_contract(\"rapidreversalstorm\")"))
             && code.contains(QStringLiteral(
-                   ",*group,\"--key\",\"screenEdgeMargin\",\"0\")"))
+                   ",*group,\"--key\",\"screenEdgeMargin\",\"0\",)"))
             && code.contains(QStringLiteral(
                    "_wait_for_zero_gap_floated_snapshot()"))
             && code.contains(QStringLiteral(
@@ -716,13 +716,13 @@ private:
                    "(\"alwaysVisible\",\"true\",\"true\",\"attached\",0)"))
             && code.contains(QStringLiteral(
                    "\"setViewVisibilityMode\",\"us\","
-                   "str(_S.view),\"windowsGoBelow\")"))
+                   "str(_S.view),\"windowsGoBelow\",)"))
             && code.contains(QStringLiteral(
                    "_wait_for_dock_gap_policy"
                    "(\"windowsGoBelow\",\"true\",\"true\",\"attached\",0)"))
             && code.contains(QStringLiteral(
                    "\"setViewVisibilityMode\",\"us\","
-                   "str(_S.view),\"dodgeActive\")"))
+                   "str(_S.view),\"dodgeActive\",)"))
             && code.contains(QStringLiteral(
                    "_wait_for_dock_gap_policy"
                    "(\"dodgeActive\",\"true\",\"true\",\"attached\",0)"))
@@ -1033,7 +1033,7 @@ private:
             && code.contains(QStringLiteral(
                    "if_cleanup()andstatus==0:status=1"))
             && code.contains(QStringLiteral(
-                   ",\"--key\",\"floatingInternalGapIsForced\",\"false\")"))
+                   ",\"--key\",\"floatingInternalGapIsForced\",\"false\",)"))
             && code.contains(QStringLiteral(
                    "snapshot[\"schemaVersion\"]!=11"))
             && code.contains(QStringLiteral(
@@ -1117,7 +1117,7 @@ private:
                    "_wait_for_policy(\"true\",\"true\",1,\"floated\",1,"))
             && code.contains(QStringLiteral(
                    "\"glide\",\"20\",\"20\","
-                   "str(pointer_x),str(pointer_y))"))
+                   "str(pointer_x),str(pointer_y),)"))
             && code.contains(QStringLiteral(
                    "[os.environ[\"E2E_FAKEPOINTER\"],\"glide\","
                    "str(pointer_x),str(pointer_y),\"20\",\"20\"]"))
@@ -1172,9 +1172,9 @@ private:
             && code.contains(QStringLiteral(
                    "snapshot[\"schemaVersion\"]!=11"))
             && code.contains(QStringLiteral(
-                   ",\"--key\",\"floatingGapHidingWaitsMouse\",\"false\")"))
+                   ",\"--key\",\"floatingGapHidingWaitsMouse\",\"false\",)"))
             && code.contains(QStringLiteral(
-                   ",\"--key\",\"maximizeWhenMaximized\",\"true\")"))
+                   ",\"--key\",\"maximizeWhenMaximized\",\"true\",)"))
             && code.contains(QStringLiteral(
                    "\"draghold\",\"2000\","))
             && code.contains(QStringLiteral(
@@ -1528,8 +1528,8 @@ private:
             && recipe.contains(QStringLiteral(
                    "_wait_for_visual_window_ownership"))
             && recipe.contains(QStringLiteral(
-                   "ifreload_this_steporrestart_this_step"
-                   "orremoved_this_step:"))
+                   "if(reload_this_steporrestart_this_step"
+                   "orremoved_this_step)and("))
             && visualOwnership.contains(QStringLiteral(
                    "_model(\"assert-visual-window-ownership\""))
             && visualOwnership.contains(QStringLiteral(
@@ -1578,8 +1578,8 @@ private:
             && model.contains(QStringLiteral(
                    "ifoperation.kindisOperationKind.MOVE_LAYOUT"))
             && model.contains(QStringLiteral(
-                   "expected_delta=(1ifoperation.kindis"
-                   "OperationKind.MOVE_LAYOUTelse0)"))
+                   "expected_delta=1ifoperation.kindis"
+                   "OperationKind.MOVE_LAYOUTelse0"))
             && model.contains(QStringLiteral(
                    "observed_delta!=expected_delta"))
             && model.contains(QStringLiteral(
