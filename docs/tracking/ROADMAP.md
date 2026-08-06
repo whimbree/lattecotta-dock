@@ -90,10 +90,13 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   external contracts. BP-0, BP-1, and BP-2 are COMPLETE: every analyzer,
   ratchet, gate leg, the e2e runner, the recipe API, and the daily-driver
   launcher run as typed latte_harness modules behind stable shims, with
-  the D269/D270 qmllint drift family closed. BP-3 (recipes and their libs)
-  and BP-4 (the package gate) are underway: the matrix API, the audit lib,
-  all four interaction-driver libs, and the package-gate engine are
-  merged, nine recipes are typed, and the recipe batches continue.
+  the D269/D270 qmllint drift family closed. BP-4 (the package gate) is
+  COMPLETE: the engine and the 91-control selftest both run typed. In
+  BP-3, every recipe lib is typed (matrix, audit, all four interaction
+  drivers), 23 recipes are ported, and what remains is the plain-recipe
+  tail, the dual-output-blocked set (061, 073, create-linked-dock, the
+  multi-output selftest), the defect-blocked pair (070 on D274, 040 on
+  D276), and then the BP-5 tail.
 
 ## Registries and state
 

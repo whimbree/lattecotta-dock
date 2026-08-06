@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    SPDX-FileCopyrightText: 2026 Bree Spektor <whimbree@pm.me>
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-License-Identifier: GPL-2.0-or-later
+
+    Candidate 4: dock and cup fused, cup as the kiln. A terracotta cup
+    with fire rising from inside floats above a charcoal dock bar with
+    ember indicator dots.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="flameOuter" x1="24" y1="5.6" x2="24" y2="18.5" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f4652e"/>
+      <stop offset="1" stop-color="#ffb04d"/>
+    </linearGradient>
+    <linearGradient id="cupClay" x1="24" y1="18.5" x2="24" y2="35.5" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d97a4f"/>
+      <stop offset="1" stop-color="#b0512e"/>
+    </linearGradient>
+    <linearGradient id="glaze" x1="24" y1="24" x2="24" y2="27" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff3e0"/>
+      <stop offset="1" stop-color="#f0dcba"/>
+    </linearGradient>
+    <linearGradient id="dockBar" x1="24" y1="38.5" x2="24" y2="44.5" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3f4449"/>
+      <stop offset="1" stop-color="#2a2e32"/>
+    </linearGradient>
+    <linearGradient id="barShadowFade" x1="20" y1="38.5" x2="40" y2="44.5" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#000000"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="barClip">
+      <rect x="6.5" y="38.5" width="35" height="6" rx="3"/>
+    </clipPath>
+    <clipPath id="aboveRimClip">
+      <rect x="0" y="0" width="48" height="18.5"/>
+    </clipPath>
+  </defs>
+  <g id="cup" transform="translate(-1,0)">
+    <path id="handle" fill="none" stroke="#b8542f" stroke-width="2.7" stroke-linecap="round"
+          d="M 32.6,21.5 C 38.3,21 38.9,29.5 32.1,29.8"/>
+    <path id="cupBody" fill="url(#cupClay)"
+          d="M 14.8,18.5 H 33.2 L 31.7,33.5 Q 31.5,35.5 29.3,35.5 H 18.7 Q 16.5,35.5 16.3,33.5 Z"/>
+    <path id="cupInterior" fill="#3b241c" d="M 14.8,18.5 H 33.2 L 33.05,20.2 H 14.95 Z"/>
+    <g id="fire" clip-path="url(#aboveRimClip)">
+      <path id="flame" fill="url(#flameOuter)"
+            d="M 24,5.6 C 27.7,9.5 30.2,11.9 30.2,14.8 A 6.2,6.2 0 0 1 17.8,14.8 C 17.8,11.9 20.5,9.5 24,5.6 Z"/>
+      <path id="flameCore" fill="#ffe0a3"
+            d="M 24,10.4 C 26.1,12.7 27.6,14 27.6,15.7 A 3.6,3.6 0 0 1 20.4,15.7 C 20.4,14 21.9,12.7 24,10.4 Z"/>
+    </g>
+    <path id="glazeBand" fill="url(#glaze)"
+          d="M 15.35,24 H 32.65 L 32.35,27 H 15.65 Z"/>
+  </g>
+  <rect id="bar" x="6.5" y="38.5" width="35" height="6" rx="3" fill="url(#dockBar)"/>
+  <path id="cupShadowOnBar" clip-path="url(#barClip)" opacity="0.25" fill="url(#barShadowFade)"
+        d="M 19.3,38.5 L 25.3,44.5 H 41.5 V 38.5 Z"/>
+  <g id="indicatorDots" fill="#ff9d45">
+    <circle cx="16" cy="41.5" r="1.6"/>
+    <circle cx="24" cy="41.5" r="1.6"/>
+    <circle cx="32" cy="41.5" r="1.6"/>
+  </g>
+</svg>

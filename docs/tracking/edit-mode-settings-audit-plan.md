@@ -500,7 +500,9 @@ Ticked with post-rebase hashes at merge time. Grouped by cluster.
 - [x] **AU-0b** Tasks-config readback `appletConfigData(u,u) -> s` for
       `tasks.plasmoid.configuration.*` (and any plain applet). Commits: 931b900fe
 - [x] **AU-0c** Config-snapshot-diff harness (tests/units/configsnapshotdiff.h +
-      tests/e2e/audit/audit-lib.sh): snapshot all keys, drive, snapshot, assert
+      tests/e2e/audit/audit-lib.sh, since retired by the bash-to-python
+      migration's R5 batch for latte_harness.audit): snapshot all keys,
+      drive, snapshot, assert
       exact key delta. HC3 proven - a wrong-key, a stray coupled write (D15
       shape) and a no-op (D10 shape) each report FAIL; a default-deleted key is a
       loud change, never a silent pass. Commits: ad00dba0c
