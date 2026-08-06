@@ -39,9 +39,15 @@ sudo zypper install cmake extra-cmake-modules gcc-c++ gcc xcb-util-devel git get
 
 ### Building and Installing
 
-**Now you can run the installation script.**
+Build and install with CMake directly (the legacy install.sh wrapper was
+removed; it only wrapped these commands):
 
 ```
-sh install.sh
+cmake -B build -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+sudo cmake --install build
 ```
+
+On Nix, `nix build` / the flake's package output replaces this flow
+entirely, and native distro packages live under `packaging/`.
 
