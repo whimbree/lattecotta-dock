@@ -55,3 +55,11 @@ venv = ".venv"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The package-gate selftest compiles ELF/Qt-plugin fixtures and spawns the
+# gate ~50 times; it is its own gate-all leg (run with
+# `pytest -m package_gate_selftest`, whose CLI -m overrides this one), not
+# part of the harness-check unit-test run.
+addopts = "-m 'not package_gate_selftest'"
+markers = [
+    "package_gate_selftest: installed-package-gate selftest controls (BP-4b); its own gate-all leg, deselected from harness-check",
+]
