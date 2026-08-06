@@ -13,10 +13,11 @@ docker/verify-install.sh at 9c12a79aaf9350e73059da5b293c931218419c05
 (github.com/ruizhi-lab/latte-dock-ng); this implementation is original.
 
 The refusal taxonomy is a contract: every FAIL diagnostic and exit code
-is preserved verbatim from the bash engine because the unported selftest
-(tests/installed-package-gate-selftest.sh, BP-4b) matches them, and they
-are what a packager acts on. Exit codes: 0 pass, 2 refusal, 130/143 on
-SIGINT/SIGTERM, with cleanup running on every exit path.
+is preserved verbatim from the bash engine because the selftest
+(harness/tests/test_package_gate_selftest.py, the BP-4b port) matches
+them, and they are what a packager acts on. Exit codes: 0 pass, 2
+refusal, 130/143 on SIGINT/SIGTERM, with cleanup running on every exit
+path.
 
 The nested-runtime half rides latte_harness.vehicle (the BP-2a port of
 the compositor lifecycle): the dock and the compositor each run in their
@@ -67,11 +68,13 @@ the corresponding data roots (default: /usr/local/share:/usr/share).
 
 # The validation-phase tool contract, checked before anything else (even
 # argument parsing, matching the bash order). awk/jq/perl stay required
-# although parsing moved into Python: the list is the documented tool
-# contract for packagers and the selftest drives its refusals; shrinking
-# it is a BP-4b decision. The exec shim (scripts/installed-package-gate.sh)
-# carries a bash copy of this list for the interpreter-less refusal path;
-# a unit test pins the two in lockstep.
+# although parsing moved into Python (BP-4b decision: the list is the
+# documented tool contract for packagers, and the selftest drives its
+# refusals through the shim's interpreter-less preflight, so shrinking it
+# would change a published contract for zero gain). The exec shim
+# (scripts/installed-package-gate.sh) carries a bash copy of this list
+# for the interpreter-less refusal path; a unit test pins the two in
+# lockstep.
 VALIDATION_COMMANDS: tuple[str, ...] = (
     "awk",
     "cat",
