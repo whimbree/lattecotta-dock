@@ -12,9 +12,9 @@ AppStream standalone-application validator that lived as an inline perl
 program in scripts/installed-package-gate.sh.
 
 Every diagnostic here is part of the gate's refusal taxonomy: the
-unported selftest (tests/installed-package-gate-selftest.sh, BP-4b) and
-the unit suite both match these messages verbatim, so the exact text is
-a contract, not styling. Parsers are pure functions over captured text
+selftest (harness/tests/test_package_gate_selftest.py, the BP-4b port)
+and the unit suite both match these messages verbatim, so the exact text
+is a contract, not styling. Parsers are pure functions over captured text
 wherever possible so hostile inputs can be unit-tested without
 subprocesses; the bash lib's remaining process-group helpers converged
 into latte_harness.vehicle in BP-2a and are consumed from there by the

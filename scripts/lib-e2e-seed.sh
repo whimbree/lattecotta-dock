@@ -32,11 +32,12 @@ e2e_seed_default_config() {
 # STOPPED, so a leader-only SIGTERM+wait can never finish; the group transaction
 # escalates to SIGKILL on a bound.
 #
-# lib-installed-package-gate.sh is still sourced here so its
-# latte_package_gate_* helpers stay defined in the caller's shell (the
-# e2e-seed-cleanup selftest verifies teardown with
-# latte_package_gate_process_group_has_live_members right after calling this).
-# That bash helper is ported in BP-4.
+# lib-installed-package-gate.sh is still sourced here so
+# latte_package_gate_process_group_has_live_members stays defined in the
+# caller's shell: the e2e-seed-cleanup selftest verifies teardown with it
+# right after calling this. That liveness poll is the lib's ONE remaining
+# function (BP-4b shed the rest with the selftest port); it retires when
+# that selftest is ported.
 _e2e_seed_stop_dock_process_group() {
     local repo="$1" process_group="$2"
     local term_attempts="${3:-25}" term_delay="${4:-0.2}"

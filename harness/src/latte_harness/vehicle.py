@@ -28,11 +28,11 @@ must hand the same variables back to the consumers that read them:
   and the recreation contract check. Idempotent: a dead group or a missing dir
   succeed quietly (the trap idiom).
 - ``stop-group`` is the zombie-aware, bounded process-group transaction that
-  the seed reuses for its throwaway dock. It mirrors the bash
-  latte_package_gate_stop_process_group (which the seed reused via
-  scripts/lib-installed-package-gate.sh); that bash helper is ported in BP-4,
-  and its output prefix is preserved verbatim here so the seed's teardown reads
-  identically until then.
+  the seed reuses for its throwaway dock. It is the port of the bash
+  latte_package_gate_stop_process_group (retired from
+  scripts/lib-installed-package-gate.sh in BP-4b, the package-gate selftest
+  port); its output prefix is preserved verbatim so the seed's teardown reads
+  identically across the migration.
 - ``status`` reads the state file and reports the recorded fields plus group
   liveness (the observability surface; not consumed by the bridge).
 
@@ -94,9 +94,11 @@ STOP_GROUP_DEFAULT_ATTEMPTS = 25
 STOP_GROUP_DEFAULT_DELAY = 0.2
 
 # stop-group is the typed twin of latte_package_gate_stop_process_group, which
-# lived in scripts/lib-installed-package-gate.sh. Its diagnostics kept the
-# "installed-package-gate:" tool prefix; preserve it verbatim so the seed's
-# teardown reads identically until BP-4 ports and unifies that helper.
+# lived in scripts/lib-installed-package-gate.sh until BP-4b retired it. Its
+# diagnostics kept the "installed-package-gate:" tool prefix; preserve it
+# verbatim so the seed's teardown reads identically across the migration (and
+# in lockstep with the lib's one remaining bash function, the liveness poll
+# the e2e-seed cleanup selftest still sources).
 _PKG_GATE_TOOL = "installed-package-gate"
 
 EXIT_START_FAILED = 2  # socket never appeared (bash nested_kwin_start `return 2`)
