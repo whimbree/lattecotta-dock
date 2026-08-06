@@ -1269,93 +1269,113 @@ private:
                    "expected_normal=maximum"));
     }
 
+    // The FP-4B topology recipe was ported to Python (BP-3); its needles read
+    // the normalized Python. The cleanup DECISION (status preservation and the
+    // restore-output / stop / restore-config-before-restart safety ordering)
+    // moved to latte_harness.topology_cleanup and is driven behaviorally by
+    // harness/tests/test_topology_cleanup.py (the redesign of the deleted
+    // cleanup-EVAL test); this matcher pins the recipe's transactional
+    // structure and its cleanup WIRING (the restore body, every Deps wire incl.
+    // the two safety predicates, and the status-preserving finally), plus the
+    // unchanged fp4b oracle.
     static bool matchesWindowTouchTopologyE2eContract(
         const QString &recipeSource,
         const QString &oracleSource)
     {
         const QString recipe = normalizedCode(recipeSource);
-        const QString cleanup = normalizedCode(functionBody(
-            recipeSource, QStringLiteral("cleanup()")));
+        const QString restore = normalizedCode(pythonFunctionBody(
+            recipeSource, QStringLiteral("def _restore_config(")));
+        const QString wiring = normalizedCode(pythonFunctionBody(
+            recipeSource, QStringLiteral("def _live_cleanup_deps(")));
         const QString oracle = normalizedCode(oracleSource);
+
         const qsizetype pristineCapture =
-            recipe.indexOf(QStringLiteral("matrix_init"));
+            recipe.indexOf(QStringLiteral("matrix.init()"));
         const qsizetype transactionActivation =
-            recipe.indexOf(QStringLiteral("fixture_transaction_active=1"));
-        const qsizetype cleanupTrap =
-            recipe.indexOf(QStringLiteral("trapcleanupEXIT"));
+            recipe.indexOf(QStringLiteral("_S.fixture_transaction_active=True"));
+        const qsizetype topologyCapture =
+            recipe.indexOf(QStringLiteral(
+                "_S.original_topology=multi_output.mo_capture_output_topology()"));
+        const qsizetype topologyFlag =
+            recipe.indexOf(QStringLiteral("_S.topology_captured=True"));
         const qsizetype fixtureStage =
             recipe.indexOf(QStringLiteral(
-                "matrix_stagepanel-bottom-justify-1out"));
-        const qsizetype topologyRestore =
-            cleanup.indexOf(QStringLiteral(
-                "mo_restore_output_topology\"$original_topology\""));
-        const qsizetype transactionGuard =
-            cleanup.indexOf(QStringLiteral(
-                "if((fixture_transaction_active==1));then"));
-        const qsizetype pristineRemoval =
-            cleanup.indexOf(QStringLiteral(
-                "rm-rf\"${E2E_CONFIG_HOME:?}\""), transactionGuard);
-        const qsizetype pristineRestore =
-            cleanup.indexOf(QStringLiteral(
-                "cp-r\"$MATRIX_PRISTINE\"\"$E2E_CONFIG_HOME\""),
-                pristineRemoval);
-        const qsizetype dockRestart =
-            cleanup.indexOf(QStringLiteral(
-                "elif!e2e_dock_start90;then"), pristineRestore);
+                "matrix.stage(\"panel-bottom-justify-1out\")"));
+        const qsizetype cleanupRemove =
+            restore.indexOf(QStringLiteral(
+                "shutil.rmtree(config_home,ignore_errors=True)"));
+        const qsizetype cleanupRestore =
+            restore.indexOf(QStringLiteral(
+                "shutil.copytree(matrix.pristine_seed_dir(),config_home)"),
+                cleanupRemove);
 
-        return recipe.contains(QStringLiteral(
-                   "fixture_transaction_active=0"))
-            && pristineCapture >= 0
+        return pristineCapture >= 0
             && transactionActivation > pristineCapture
-            && cleanupTrap >= 0
-            && fixtureStage > cleanupTrap
+            && topologyCapture > transactionActivation
+            && topologyFlag > topologyCapture
+            && fixtureStage > topologyFlag
             && fixtureStage > transactionActivation
-            && topologyRestore >= 0
-            && transactionGuard > topologyRestore
-            && pristineRemoval > transactionGuard
-            && pristineRestore > pristineRemoval
-            && dockRestart > pristineRestore
-            && cleanup.contains(QStringLiteral(
-                   "((body_status==0))&&body_status=1"))
-            && cleanup.contains(QStringLiteral("exit\"$body_status\""))
-            && recipe.count(QStringLiteral("duplicate_independently")) >= 3
+            && wiring.contains(QStringLiteral(
+                   "restore_output_topology=_restore_output_topology"))
+            && wiring.contains(QStringLiteral("stop_dock=recipe.dock_stop"))
+            && wiring.contains(QStringLiteral("restore_config=_restore_config"))
+            // The two safety predicates are the belt behind the stop_dock
+            // suspenders: an unpinned running_dock_pid mis-wired to None (or a
+            // start_dock hard-wired True) would let the restart resurrect a
+            // still-live dock and still pass the pytest (which drives a fake pid)
+            // and the happy-path run (the PR #202 belt-and-suspenders lesson:
+            // pin every Deps wire, not just the big three).
+            && wiring.contains(QStringLiteral(
+                   "running_dock_pid=_running_dock_pid"))
+            && wiring.contains(QStringLiteral(
+                   "start_dock=lambda:recipe.dock_start(90)"))
+            && recipe.contains(QStringLiteral("status=_cleanup(status)"))
+            && cleanupRemove >= 0
+            && cleanupRestore > cleanupRemove
+            && recipe.count(QStringLiteral("_duplicate_independently")) >= 3
             && recipe.contains(QStringLiteral(
-                   "setViewPlacementuiii\"$view_a\"\"$primary_id\"41"))
+                   "\"setViewPlacement\",\"uiii\",str(_S.view_a),"
+                   "str(primary_id),\"4\",\"1\""))
             && recipe.contains(QStringLiteral(
-                   "setViewPlacementuiii\"$view_b\"\"$primary_id\"42"))
+                   "\"setViewPlacement\",\"uiii\",str(_S.view_b),"
+                   "str(primary_id),\"4\",\"2\""))
             && recipe.contains(QStringLiteral(
-                   "setViewPlacementuiii\"$view_c\"\"$secondary_id\"50"))
+                   "\"setViewPlacement\",\"uiii\",str(_S.view_c),"
+                   "str(secondary_id),\"5\",\"0\""))
             && recipe.contains(QStringLiteral(
-                   "before_axis_revision=\"$(snapshot|python3-c'"))
+                   "_publication_revision(_S.view_c,"))
             && recipe.contains(QStringLiteral(
-                   "setViewPlacementuiii\"$view_c\"\"$secondary_id\"30"))
+                   "\"setViewPlacement\",\"uiii\",str(_S.view_c),"
+                   "str(secondary_id),\"3\",\"0\""))
             && recipe.contains(QStringLiteral(
-                   "assert_axis_change_publishes_once"
-                   "\"$view_c\"\"$secondary_id\"topcenter"
-                   "\"$before_axis_revision\""))
+                   "_assert_axis_change_publishes_once(_S.view_c,"
+                   "secondary_id,\"top\",\"center\",before_axis_revision)"))
             && recipe.contains(QStringLiteral(
                    "int(view[\"surfaceGeometryPublicationRevision\"])"
-                   "<=int(sys.argv[5])"))
+                   "<=before_revision"))
             && recipe.contains(QStringLiteral(
                    "int(view[\"surfaceGeometryPublicationRevision\"])"
                    "!=before_revision+1"))
-            && recipe.contains(QStringLiteral("sleep0.8"))
+            && recipe.contains(QStringLiteral("time.sleep(0.8)"))
             && recipe.contains(QStringLiteral(
                    "geometryvalidatorrepublishedacompletedplacement"))
             && recipe.contains(QStringLiteral(
                    "axis-changingplacementdidnotsettle"))
             && recipe.count(QStringLiteral(
-                   "mo_place_secondary_for_topology")) == 3
+                   "multi_output.mo_place_secondary_for_topology(")) == 3
             && recipe.contains(QStringLiteral(
-                   "drive_client_casegap-onlynone"))
+                   "_drive_client_case(\"gap-only\",\"none\")"))
             && recipe.contains(QStringLiteral(
-                   "drive_client_casefull-primary\"$view_a,$view_b\""))
+                   "_drive_client_case(\"full-primary\","
+                   "f\"{_S.view_a},{_S.view_b}\")"))
             && recipe.contains(QStringLiteral(
-                   "drive_client_casespanning\"$view_b,$view_c\""))
+                   "_drive_client_case(\"spanning\","
+                   "f\"{_S.view_b},{_S.view_c}\")"))
             && recipe.contains(QStringLiteral(
-                   "drive_client_caseminimized\"$view_b,$view_c\"true"))
+                   "_drive_client_case(\"minimized\","
+                   "f\"{_S.view_b},{_S.view_c}\",\"true\")"))
             && recipe.contains(QStringLiteral(
-                   "[[\"$after_restart\"==\"$before_restart\"]]"))
+                   "ifafter_restart!=before_restart:"))
             && oracle.contains(QStringLiteral(
                    "ifsnapshot.get(\"schemaVersion\")!=11:"))
             && oracle.contains(QStringLiteral(
@@ -3777,7 +3797,7 @@ void SourceGuardTest::windowTouchTopologyE2e_keepsIndependentRegionsAndOutputs()
     QVERIFY2(
         matchesWindowTouchTopologyE2eContract(
             readFile(QStringLiteral(
-                "tests/e2e/073-window-touch-topology.sh")),
+                "tests/e2e/073-window-touch-topology.py")),
             readFile(QStringLiteral(
                 "tests/e2e/fixtures/fp4b/oracle.py"))),
         "recipe 073 must preserve independent partial-panel authorities,"
@@ -3818,65 +3838,83 @@ void SourceGuardTest::relocationReveal_reusesCompletedPlacement()
 
 void SourceGuardTest::windowTouchTopologyE2e_cleanupGuardRejectsControlledMutations()
 {
-    const QString recipeSource = readFile(QStringLiteral(
-        "tests/e2e/073-window-touch-topology.sh"));
-    const QString recipe = normalizedCode(recipeSource);
+    // The mutations run on the RAW Python source: the matcher normalizes and
+    // extracts the pythonFunctionBody wiring internally, so it needs the newlines
+    // the def-boundary scan depends on. The cleanup-gate behavioral mutations
+    // (status masking, restart-before-restore) target the DECISION, which now
+    // lives in latte_harness.topology_cleanup and is driven by
+    // harness/tests/test_topology_cleanup.py's mutation controls. What stays
+    // pinnable in the recipe source is the transactional structure and the
+    // cleanup WIRING.
+    const QString recipe = readFile(QStringLiteral(
+        "tests/e2e/073-window-touch-topology.py"));
     const QString oracle = readFile(QStringLiteral(
         "tests/e2e/fixtures/fp4b/oracle.py"));
     QVERIFY(matchesWindowTouchTopologyE2eContract(recipe, oracle));
 
+    // Arming the cleanup transaction AFTER matrix_stage would leave the staged
+    // three-panel fixture un-torn-down on an early exit.
     QString lateActivation = recipe;
     const QString activation =
-        QStringLiteral("fixture_transaction_active=1");
+        QStringLiteral("_S.fixture_transaction_active = True");
     QCOMPARE(lateActivation.count(activation), 1);
     lateActivation.remove(activation);
-    const QString stageFailure = QStringLiteral(
-        "matrix_stagepanel-bottom-justify-1out"
-        "\\"
-        "||e2e_fail\"couldnotstagetheFP-4Bpanelseed\"");
-    QCOMPARE(lateActivation.count(stageFailure), 1);
-    lateActivation.replace(stageFailure, stageFailure + activation);
+    const QString stageFail = QStringLiteral(
+        "recipe.fail(\"could not stage the FP-4B panel seed\")");
+    QCOMPARE(lateActivation.count(stageFail), 1);
+    lateActivation.replace(stageFail, stageFail + QStringLiteral("\n    ") + activation);
     QVERIFY2(!matchesWindowTouchTopologyE2eContract(
                  lateActivation, oracle),
              "arming restoration after matrix_stage must fail the lifecycle guard");
 
+    // Removing the pristine-config copy would leave the mutated fixture in place.
     QString missingRestore = recipe;
     const QString restore = QStringLiteral(
-        "cp-r\"$MATRIX_PRISTINE\"\"$E2E_CONFIG_HOME\""
-        "\\"
-        "||cleanup_failed=1");
+        "_ = shutil.copytree(matrix.pristine_seed_dir(), config_home)");
     QCOMPARE(missingRestore.count(restore), 1);
     missingRestore.remove(restore);
     QVERIFY2(!matchesWindowTouchTopologyE2eContract(
                  missingRestore, oracle),
              "removing pristine-config restoration must fail the lifecycle guard");
 
+    // Hard-wiring the restart to always succeed drops the real dock_start.
     QString missingRestart = recipe;
     const QString restart =
-        QStringLiteral("elif!e2e_dock_start90;then");
+        QStringLiteral("start_dock=lambda: recipe.dock_start(90)");
     QCOMPARE(missingRestart.count(restart), 1);
-    missingRestart.replace(restart, QStringLiteral("eliftrue;then"));
+    missingRestart.replace(restart, QStringLiteral("start_dock=lambda: True"));
     QVERIFY2(!matchesWindowTouchTopologyE2eContract(
                  missingRestart, oracle),
              "removing the pristine nested-dock restart must fail the lifecycle guard");
 
+    // Mis-wiring the running-dock-pid safety predicate to a constant None would
+    // let cleanup restart a still-live dock (the belt-and-suspenders finding).
+    QString misWiredPidGuard = recipe;
+    const QString pidGuard =
+        QStringLiteral("running_dock_pid=_running_dock_pid");
+    QCOMPARE(misWiredPidGuard.count(pidGuard), 1);
+    misWiredPidGuard.replace(pidGuard, QStringLiteral("running_dock_pid=lambda: None"));
+    QVERIFY2(!matchesWindowTouchTopologyE2eContract(
+                 misWiredPidGuard, oracle),
+             "unpinning the running-dock-pid safety predicate must fail the guard");
+
+    // Sampling before the old coalescer deadline could miss an extra publication.
     QString shortPublicationDeadline = recipe;
     const QString publicationDeadline =
-        QStringLiteral("sleep0.8");
+        QStringLiteral("time.sleep(0.8)");
     QCOMPARE(shortPublicationDeadline.count(
                  publicationDeadline), 1);
     shortPublicationDeadline.replace(
         publicationDeadline,
-        QStringLiteral("sleep0.05"));
+        QStringLiteral("time.sleep(0.05)"));
     QVERIFY2(!matchesWindowTouchTopologyE2eContract(
                  shortPublicationDeadline, oracle),
              "sampling before the old coalescer deadline must fail the publication guard");
 
+    // Dropping the exact pre-mutation revision delta loosens the republish check.
     QString missingPriorRevision = recipe;
     const QString priorRevisionComparison =
-        QStringLiteral(
-            "int(view[\"surfaceGeometryPublicationRevision\"])"
-            "!=before_revision+1");
+        QStringLiteral("!= before_revision + 1");
     QCOMPARE(missingPriorRevision.count(
                  priorRevisionComparison), 1);
     missingPriorRevision.remove(
@@ -3884,81 +3922,19 @@ void SourceGuardTest::windowTouchTopologyE2e_cleanupGuardRejectsControlledMutati
     QVERIFY2(!matchesWindowTouchTopologyE2eContract(
                  missingPriorRevision, oracle),
              "removing the exact pre-mutation revision delta must fail the publication guard");
-
-    const QString cleanupBody = functionBody(
-        recipeSource, QStringLiteral("cleanup()"));
-    QVERIFY2(!cleanupBody.isEmpty(), "production cleanup function not found");
-
-    QTemporaryDir temporary;
-    QVERIFY(temporary.isValid());
-    const QString harness = QStringLiteral(R"SH(
-cleanup_body=$1
-test_root=$2
-MATRIX_PRISTINE=$test_root/pristine
-E2E_CONFIG_HOME=$test_root/config
-CALL_LOG=$test_root/calls.log
-mkdir -p "$MATRIX_PRISTINE"
-printf 'pristine\n' > "$MATRIX_PRISTINE/state"
-
-run_cleanup_case() {
-    body_status=$1
-    DOCK_START_STATUS=$2
-    expected_status=$3
-    rm -rf "$E2E_CONFIG_HOME"
-    mkdir -p "$E2E_CONFIG_HOME"
-    printf 'staged\n' > "$E2E_CONFIG_HOME/state"
-    : > "$CALL_LOG"
-    (
-        eval "cleanup() $cleanup_body"
-        client_pid=0
-        fixture_transaction_active=1
-        topology_captured=1
-        original_topology=captured-topology
-        mo_restore_output_topology() {
-            printf 'topology:%s\n' "$1" >> "$CALL_LOG"
-        }
-        e2e_dock_stop() {
-            printf 'stop\n' >> "$CALL_LOG"
-        }
-        e2e_dock_pid() {
-            printf 'pid\n' >> "$CALL_LOG"
-        }
-        e2e_dock_start() {
-            printf 'start:%s\n' "$1" >> "$CALL_LOG"
-            return "$DOCK_START_STATUS"
-        }
-        return_status() {
-            return "$1"
-        }
-        return_status "$body_status"
-        cleanup
-    )
-    actual_status=$?
-    [[ "$actual_status" -eq "$expected_status" ]] || return 1
-    [[ "$(cat "$E2E_CONFIG_HOME/state")" == pristine ]] || return 1
 }
 
-run_cleanup_case 37 0 37 || exit 1
-[[ "$(cat "$CALL_LOG")" == $'topology:captured-topology\nstop\npid\nstart:90' ]] \
-    || exit 1
-run_cleanup_case 0 1 1 || exit 1
-)SH");
-    QProcess process;
-    process.start(
-        QStringLiteral("bash"),
-        {QStringLiteral("-c"),
-         harness,
-         QStringLiteral("fp4b-cleanup-test"),
-         cleanupBody,
-         temporary.path()});
-    QVERIFY(process.waitForStarted());
-    QVERIFY(process.waitForFinished());
-    const QByteArray processError = process.readAllStandardError();
-    QVERIFY2(
-        process.exitStatus() == QProcess::NormalExit
-            && process.exitCode() == 0,
-        processError.constData());
-}
+// The FP-4B cleanup-safety contract (cleanup runs on every path, preserves the
+// body's failure status, never masks it with a cleanup success, and keeps the
+// restore-output / stop / restore-config-before-restart teardown ordering) was
+// pinned in bash by extracting the cleanup() body and eval-executing it in a
+// mock harness. The recipe is now Python, whose bodies are not eval-executable
+// text, so that BEHAVIORAL proof moved to harness/tests/test_topology_cleanup.py:
+// it imports the extracted decision
+// (latte_harness.topology_cleanup.perform_topology_cleanup) and drives the same
+// cases in-process with mocks plus two driven mutation controls (a status-masking
+// mutant and a restart-before-restore mutant). The matcher above still pins the
+// recipe's cleanup WIRING.
 
 void SourceGuardTest::linkedOperationStormE2e_keepsTransactionalReplayContract()
 {
