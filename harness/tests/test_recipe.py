@@ -375,3 +375,49 @@ def test_dock_stop_reaps_a_child_dock(tmp_path: Path, monkeypatch: pytest.Monkey
     assert recipe.dock_stop(timeout=20) is True
     assert time.monotonic() - started < 5, "the zombie stalled the stop"
     assert child.poll() is not None  # reaped, not left a zombie
+
+
+# ---- try_json_payload / is_running: the live-tool boundary helpers ----------
+
+
+def test_try_json_payload_returns_none_on_a_busctl_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The bash `views="$(e2e_json ...)" || { ...query failed... }`: a non-zero
+    # busctl exit is the transport failure the caller must react to.
+    def failed(args: list[str], *, forward_stderr: bool) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(args, 1, "", "call failed")
+
+    monkeypatch.setattr(recipe, "_run_busctl", failed)
+    assert recipe.try_json_payload("dockSystemData") is None
+
+
+def test_try_json_payload_unescapes_a_delivered_reply(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: dict[str, object] = {}
+
+    def fake(args: list[str], *, forward_stderr: bool) -> subprocess.CompletedProcess[str]:
+        seen["args"] = args
+        return subprocess.CompletedProcess(args, 0, 's "[{\\"a\\":1}]"\n', "")
+
+    monkeypatch.setattr(recipe, "_run_busctl", fake)
+    assert recipe.try_json_payload("viewAppletsData", "u", "16") == '[{"a":1}]'
+    # The addressing triple plus the method and its signature args, in order.
+    assert seen["args"] == [
+        "org.kde.lattedock",
+        "/Latte",
+        "org.kde.LatteDock",
+        "viewAppletsData",
+        "u",
+        "16",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("state", "expected"),
+    [('"running"', True), ('"stopped"', False), ("", False)],
+)
+def test_is_running_reflects_the_one_shot_lifecycle_probe(
+    monkeypatch: pytest.MonkeyPatch, state: str, expected: bool
+) -> None:
+    monkeypatch.setattr(recipe, "_probe_lifecycle_state", lambda: state)
+    assert recipe.is_running() is expected
