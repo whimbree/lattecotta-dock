@@ -1,5 +1,0 @@
-I am noticing a couple issues with how Panels (specifically on top of monitor - IDK if this applies to bottom panels) work:
-1. The floating gap feature just doesn't work, if I enable floating gap when the panel is at the top I expect the floating gap to be between the top of screen and panel - but instead it looks like it adds height to the top bar (I see the bluebrint in edit mode get lower (taking up more of screen)) but I don't see a proper floating gap.
-2. When I click on icons in the system tray, the applet slides in from the top as expected, but it slides in on top of the panel instead of under the panel. This makes it so that if I click the volume button - I can't click it to close the dropdown, I instead have to move my cursor and click outside of the panel/dropdown.
-3. When I go into edit mode and there is very little space, clicking the "Rearrange..." button is hard since the darn tooltip I see stops the click from going through.
-4. There might be other things off, not sure? We need to create proper unit/smoke/render/regression/e2e tests for latte panels, not just docs. On all 4 sides of the screen.
