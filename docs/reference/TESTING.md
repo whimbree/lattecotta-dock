@@ -56,7 +56,7 @@ the unit's ledger entry at landing. Their tests run under ASan+UBSan
 (`latte_add_unit_test` in tests/units/CMakeLists.txt; a `.cpp` core is
 compiled into the sanitized test binary, never linked from an
 unsanitized object library). A sanitizer trip is a real bug to fix at
-origin, never suppress. QML-side, `tests/coverage/qmllint-gate.sh` ratchets
+origin, never suppress. QML-side, `tests/coverage/qmllint-gate.sh` (a shim into the typed `latte_harness` gate since the bash-to-python migration) ratchets
 five curated warning categories against `tests/coverage/qmllint-baseline`
 (exact match; the baseline only shrinks - with ONE documented exception: an
 irreducible per-feature warning that cannot be qualified away, e.g. an `i18nc`
@@ -95,7 +95,7 @@ Adopt latte-dock-qt6's three-piece shape, adapted rather than copied:
     `tests/qml/tst_*.qml` through qmltestrunner against the staged
     Latte modules, so module registration and type resolution are part
     of every test. First occupant: `tst_shadoweditem.qml`.
-  Both source `scripts/lib-qml-env.sh`, which assembles the import
+  Both source `scripts/lib-qml-env.sh` (a thin bridge over `latte_harness.qmlenv`), which assembles the import
   path from the devShell's pinned module set - the user profile's
   QML2_IMPORT_PATH and the engine's ambient defaults resolve modules
   from foreign Qt builds on this host and must not leak in.
@@ -114,8 +114,8 @@ Adopt latte-dock-qt6's three-piece shape, adapted rather than copied:
   `tests/e2e/goldens/`); `--live` runs against the real session for
   recipes that genuinely need it (`# e2e-mode:` markers select). The
   kwin bring-up/teardown is shared with the sceneprobe gate
-  (`scripts/lib-nested-kwin.sh`); recipe helpers live in
-  `tests/e2e/lib.sh`. Assertions are D-Bus state first (lifecycleState,
+  (`scripts/lib-nested-kwin.sh`, the bridge over `latte_harness.vehicle`); typed recipe helpers live in `latte_harness.recipe`;
+  `tests/e2e/lib.sh` remains only for the defect-blocked bash recipes. Assertions are D-Bus state first (lifecycleState,
   viewsData and friends); pixels only where pixels are the thing under
   test. The ONE thing D-Bus state cannot see is state/render
   divergence - the dock believing the right geometry while the
