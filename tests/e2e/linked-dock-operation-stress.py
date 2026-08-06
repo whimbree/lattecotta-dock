@@ -21,9 +21,9 @@ bash predicate exiting non-zero.
 The cleanup safety net (cleanup runs on every exit path, preserves the body's
 failure status, never masks it with a cleanup success, and enforces the teardown
 ordering - stop the dock before replacing config, restore fully before restart)
-is factored into the pure, importable ``_perform_cleanup_transaction`` decision
+is factored into the pure, importable ``perform_cleanup_transaction`` decision
 core so it can be driven in-process with mocks. The behavioral proof lives in
-harness/tests/test_linked_operation_stress_cleanup.py (the redesign of the bash
+harness/tests/test_storm_cleanup.py (the redesign of the bash
 cleanup-EVAL sourceguard test, which eval-executed the shell function bodies in a
 mock harness and has no direct Python analog); the transactional-replay structure
 is still pinned by sourceguardtest's matchesLinkedOperationStormE2eContract,

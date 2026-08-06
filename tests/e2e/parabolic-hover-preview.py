@@ -26,8 +26,8 @@ the bash-to-python migration's last plain recipe). The dumpwins scan, the
 viewsData geometry, the task-center pointer math and the presentation-coverage
 oracle ride recipe.py's typed boundary; the konsole fixture and the fakepointer
 glide are the same subprocess drives the bash used. Every assertion, poll bound,
-retry count, sleep and failure message is byte-identical; the SPDX header is
-preserved and the exec bit stays 100755 (D273). The GLIDE stays a glide (small
+retry count, sleep and failure message is byte-identical; an SPDX header is
+added (the bash had none) and the exec bit stays 100755 (D273). The GLIDE stays a glide (small
 steps that cross konsole's boundary), never a jump - a warped pointer that lands
 inside the icon never re-fires onEntered.
 """

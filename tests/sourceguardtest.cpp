@@ -1470,6 +1470,15 @@ private:
                    "restore_config=_restore_config_exactly"))
             && wiring.contains(QStringLiteral(
                    "start_dock=lambda:recipe.dock_start(90)"))
+            // The two safety predicates are the belt behind the stop_dock
+            // suspenders: an unpinned running_dock_pid mis-wired to None
+            // would let the restore proceed under a live dock and still
+            // pass the pytest (which drives a fake pid) and the happy-path
+            // run (PR #202 review finding).
+            && wiring.contains(QStringLiteral(
+                   "running_dock_pid=_running_dock_pid"))
+            && wiring.contains(QStringLiteral(
+                   "dock_is_running=_dock_is_running"))
             && recipe.contains(QStringLiteral(
                    "status=_cleanup(status)"))
             && cleanupRemove >= 0
