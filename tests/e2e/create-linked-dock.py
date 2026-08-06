@@ -1322,16 +1322,20 @@ def main() -> None:
     except OSError:
         recipe.fail("could not preserve the pre-scenario layout")
 
+    # The layout restore sits in a finally so it runs on EVERY exit path (the
+    # wave's converged trap-EXIT shape), including an unexpected exception,
+    # which still propagates after the restore and exits nonzero.
     body_exit = 0
     try:
-        _scenario(layout)
-    except SystemExit as exit_error:
-        body_exit = exit_error.code if isinstance(exit_error.code, int) else 1
-    except recipe.RecipeError as recipe_error:
-        print(str(recipe_error), file=sys.stderr, flush=True)
-        body_exit = 1
-
-    _restore_original_layout(layout, original_layout)
+        try:
+            _scenario(layout)
+        except SystemExit as exit_error:
+            body_exit = exit_error.code if isinstance(exit_error.code, int) else 1
+        except recipe.RecipeError as recipe_error:
+            print(str(recipe_error), file=sys.stderr, flush=True)
+            body_exit = 1
+    finally:
+        _restore_original_layout(layout, original_layout)
     raise SystemExit(body_exit)
 
 
