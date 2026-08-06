@@ -333,14 +333,20 @@ def main() -> None:
             "run via scripts/run-multi-output-e2e.sh"
         )
 
+    # The restore sits in a finally so it runs on EVERY exit path (the wave's
+    # converged trap-EXIT shape): the caught verdicts, the conventional signal
+    # exits, and an unexpected exception, which still propagates after the
+    # restore and exits nonzero.
     captured = {"topology": ""}
     body_exit = 0
+    cleanup_status = 0
     try:
-        _selftest_body(captured)
-    except SystemExit as exit_error:
-        body_exit = exit_error.code if isinstance(exit_error.code, int) else 1
-
-    cleanup_status = _restore_vehicle(captured["topology"])
+        try:
+            _selftest_body(captured)
+        except SystemExit as exit_error:
+            body_exit = exit_error.code if isinstance(exit_error.code, int) else 1
+    finally:
+        cleanup_status = _restore_vehicle(captured["topology"])
     raise SystemExit(body_exit if body_exit != 0 else cleanup_status)
 
 
