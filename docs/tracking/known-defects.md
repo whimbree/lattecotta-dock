@@ -3370,6 +3370,29 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   (its "destroying the owning dock ends its focus session" leg), reliable
   3/3 as .py and 3/3 as the pre-port .sh once the fix landed.
 
+### D282 - 113's single pointer click on the zooming dock intermittently missed the status region
+- STATUS: FIXED by the idempotent click-retry in the 113 port commit.
+- FOUND: 2026-08-06, the BP-3 R9 batch (the bash-to-python migration's
+  focus-restoration recipe wave): the 113 port failed ~50% at "AcceptingInput
+  did not acquire the panel focus session; state=false false false" - once at
+  a later begin_accepting_input, once at the very first - so the single click
+  itself is racy, not just the un-hover.
+- SYMPTOM: begin_accepting_input drives one fakepointer click at the panel-
+  focus fixture applet's resting AcceptingInput region. The click's own warp
+  onto the dock starts the parabolic hover zoom, and between legs the pointer
+  lingers inside the already-zoomed dock from the previous click, so the fixed
+  resting-geometry target intermittently lands on a mid-zoom applet position
+  and misses the status MouseArea. The bash drove one click and won the race by
+  timing luck.
+- FIX: the fixture's blue region is an idempotent SET to AcceptingInputStatus
+  (tests/e2e/fixtures/panel-focus/.../main.qml), never a toggle, so the port
+  un-hovers, settles, and re-clicks until the containment acquires the session
+  (bounded 20 s); a stray click that lands on Passive/Active only re-asserts a
+  non-acquiring status that the next rest-state click corrects. The final
+  refusal keeps the bash message verbatim.
+- SEVERITY: port correctness (an intermittent false failure in the 113 port;
+  a latent flakiness in the bash recipe, no dock defect).
+
 ### D281 - 112 QML-Escape leg raced the compositor keyboard-focus grant in the port
 - STATUS: FIXED by the grant-settle in the 112 port commit.
 - FOUND: 2026-08-06, the BP-3 R9 batch (the bash-to-python migration's
