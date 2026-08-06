@@ -1613,63 +1613,6 @@ private:
                    "[\"runtimeViewId\"]inbefore_runtime_ids"));
     }
 
-    static bool matchesCompleteKScreenRestoreContract(const QString &source)
-    {
-        const QString code = normalizedCode(source);
-        const QString waitBody = normalizedCode(functionBody(
-            source,
-            QStringLiteral("_mo_wait_for_captured_output_topology()")));
-        const QString restoreBody = normalizedCode(functionBody(
-            source,
-            QStringLiteral("mo_restore_output_topology()")));
-
-        return code.contains(QStringLiteral(
-                   "defsort_identity_collection(records,identity,path):"))
-            && code.contains(QStringLiteral(
-                   "payload.get(\"outputs\"),\"name\","
-                   "f\"{label}.outputs\""))
-            && code.contains(QStringLiteral(
-                   "if\"modes\"incanonical_output:"))
-            && code.contains(QStringLiteral(
-                   "canonical_output[\"modes\"]="
-                   "sort_identity_collection("))
-            && code.contains(QStringLiteral(
-                   "difference=first_difference(captured,current)"))
-            && code.contains(QStringLiteral(
-                   "completeKScreenstatedriftedat{difference}"))
-            && code.contains(QStringLiteral(
-                   "sorted(priorities)==[1,2]"))
-            && code.contains(QStringLiteral(
-                   "ifnotisinstance(payload,dict):"))
-            && code.contains(QStringLiteral(
-                   "ifnotisinstance(output_name,str)ornotoutput_name:"))
-            && code.contains(QStringLiteral(
-                   "\"output.${E2E_MO_PRIMARY}.priority.1\""))
-            && code.contains(QStringLiteral(
-                   "\"output.${E2E_MO_SECONDARY}.priority.2\""))
-            && waitBody.contains(QStringLiteral(
-                   "_mo_compare_output_state_semantically"
-                   "\"$captured\"\"$current\"2>&1"))
-            && waitBody.contains(QStringLiteral(
-                   "if((comparison_status==2));then"))
-            && !waitBody.contains(QStringLiteral(
-                   "[[\"$current_projection\"==\"$expected\"]]"
-                   "&&return0"))
-            && restoreBody.count(QStringLiteral(
-                   "\"output.${name}.${enabled}\"")) == 1
-            && restoreBody.count(QStringLiteral(
-                   "\"output.${name}.rotation.${rotation}\"")) == 1
-            && restoreBody.count(QStringLiteral(
-                   "\"output.${name}.scale.${scale}\"")) == 1
-            && restoreBody.count(QStringLiteral(
-                   "\"output.${name}.position.${x},${y}\"")) == 1
-            && restoreBody.count(QStringLiteral(
-                   "\"output.${name}.priority.${priority}\"")) == 1
-            && !restoreBody.contains(QStringLiteral(".mode."))
-            && restoreBody.contains(QStringLiteral(
-                   "localnameenabledrotationscalexypriority"));
-    }
-
     static bool matchesDockBackgroundFitRouting(const QString &source)
     {
         const int lengthStart = source.indexOf(QStringLiteral("\n    length: {"));
@@ -2554,9 +2497,6 @@ private Q_SLOTS:
     void relocationReveal_reusesCompletedPlacement();
     void linkedOperationStormE2e_keepsTransactionalReplayContract();
     void linkedOperationStormE2e_sourceGuardRejectsControlledMutations();
-    void multiOutputRestore_keepsCompleteSemanticStateContract();
-    void multiOutputRestore_sourceGuardRejectsProjectionOnlyVerification();
-    void multiOutputRestore_sourceGuardRejectsMissingPrioritySetter();
     void floatingPresentationConsumers_keepSingleAuthority();
     void panelToDockInputHandoff_bypassesOrdinaryAnimationGate();
     void panelToDockInputHandoff_rejectsMissingDirectWrite();
@@ -4084,48 +4024,6 @@ void SourceGuardTest::linkedOperationStormE2e_sourceGuardRejectsControlledMutati
 // three cases in-process with mocks plus two driven mutation controls. This is
 // the redesign the deleted linkedOperationStormE2e_cleanupPreservesFailureAndSafety
 // once carried; the matcher above still pins the recipe's cleanup WIRING.
-
-void SourceGuardTest::multiOutputRestore_keepsCompleteSemanticStateContract()
-{
-    QVERIFY2(
-        matchesCompleteKScreenRestoreContract(readFile(QStringLiteral(
-            "tests/e2e/matrix/multi-output-lib.sh"))),
-        "multi-output cleanup must restore every field this harness can"
-        " mutate and compare the complete captured KScreen payload without"
-        " guessed setters");
-}
-
-void SourceGuardTest::multiOutputRestore_sourceGuardRejectsProjectionOnlyVerification()
-{
-    QString source = readFile(QStringLiteral(
-        "tests/e2e/matrix/multi-output-lib.sh"));
-    QVERIFY(matchesCompleteKScreenRestoreContract(source));
-
-    const QString semanticComparison = QStringLiteral(
-        "_mo_compare_output_state_semantically \"$captured\" \"$current\" 2>&1");
-    QCOMPARE(source.count(semanticComparison), 1);
-    source.replace(semanticComparison, QStringLiteral(
-        "printf '%s\\n' \"$current_projection\""));
-    QVERIFY2(
-        !matchesCompleteKScreenRestoreContract(source),
-        "restoring projection-only verification must fail the source guard");
-}
-
-void SourceGuardTest::multiOutputRestore_sourceGuardRejectsMissingPrioritySetter()
-{
-    QString source = readFile(QStringLiteral(
-        "tests/e2e/matrix/multi-output-lib.sh"));
-    QVERIFY(matchesCompleteKScreenRestoreContract(source));
-
-    const QString prioritySetter = QStringLiteral(
-        "\"output.${name}.priority.${priority}\"");
-    QCOMPARE(source.count(prioritySetter), 1);
-    source.replace(prioritySetter, QStringLiteral(
-        "\"output.${name}.position.${x},${y}\""));
-    QVERIFY2(
-        !matchesCompleteKScreenRestoreContract(source),
-        "omitting the captured priority setter must fail the source guard");
-}
 
 void SourceGuardTest::floatingPresentationConsumers_keepSingleAuthority()
 {

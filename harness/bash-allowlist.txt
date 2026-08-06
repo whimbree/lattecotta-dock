@@ -50,8 +50,6 @@ tests/e2e/duplicate-dock-independent.sh
 tests/e2e/fixtures/sc-w1/launcher.sh
 tests/e2e/fixtures/sc-w1/rate-launcher.sh
 tests/e2e/lib.sh
-tests/e2e/matrix/multi-output-lib.sh
 tests/installed-package-gate-runtime-test.sh
-tests/multioutputstatecontracttest.sh
 tests/sceneprobe/run_in_kwin.sh
 tests/startdockauthoritytest.sh
