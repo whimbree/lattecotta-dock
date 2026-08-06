@@ -17,7 +17,7 @@ every target, and v0.20.0 is tagged. Written 2026-07-17.
    the distro set, the phased A-G checklist, the packaging workstream,
    and the open DECISIONs.
 3. Skim the harness you are containerizing: `scripts/sceneprobe-gate.sh`,
-   `scripts/lib-nested-kwin.sh`, `tests/sceneprobe/run_in_kwin.sh`,
+   `harness/src/latte_harness/vehicle.py`, `tests/sceneprobe/run_in_kwin.sh`,
    `tests/sceneprobe/imagecompare.h` + `main.cpp` (the three compare
    tiers), `tests/e2e/` (numbered recipes + `lib.sh`).
    `docs/tracking/session-handoff.md` carries the latest state.

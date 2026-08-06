@@ -105,8 +105,8 @@ RUN xbps-install -Suy \
 # present on Void's kwin build (getcap showed cap_sys_nice=ep before strip).
 RUN setcap -r /usr/bin/kwin_wayland 2>/dev/null || true
 
-# The nested-kwin harness (scripts/lib-nested-kwin.sh via the sceneprobe and
-# e2e drivers) and lib-qml-env.sh read these to find the DISTRO's lavapipe
+# The nested-kwin compositor bring-up (latte_harness.vehicle via the sceneprobe
+# and e2e drivers) and lib-qml-env.sh read these to find the DISTRO's lavapipe
 # ICD, Vulkan validation layers and framework QML tree instead of the nix
 # devShell's:
 #   - Void's lavapipe ICD manifest is arch-suffixed (lvp_icd.x86_64.json),
