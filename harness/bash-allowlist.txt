@@ -53,7 +53,6 @@ tests/e2e/070-asan-binary-shadow.sh
 tests/e2e/070-maximize-length-mask.sh
 tests/e2e/073-window-touch-topology.sh
 tests/e2e/090-golden-bridge-selftest.sh
-tests/e2e/111-colorizer-content-policy.sh
 tests/e2e/114-global-menu-focus-restoration.sh
 tests/e2e/create-linked-dock.sh
 tests/e2e/duplicate-dock-independent.sh
