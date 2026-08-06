@@ -113,6 +113,19 @@ private:
         return src.mid(brace, i - brace);
     }
 
+    static QString pythonFunctionBody(const QString &src, const QString &sig)
+    {
+        // The python twin of functionBody: from the def line to the next
+        // module-level "def " (or the end of the file). The recipe modules
+        // keep every function at module level, so this bound is exact.
+        const int s = src.indexOf(sig);
+        if (s == -1) {
+            return QString();
+        }
+        const int next = src.indexOf(QStringLiteral("\ndef "), s + sig.size());
+        return next == -1 ? src.mid(s) : src.mid(s, next - s);
+    }
+
     static QString stripped(const QString &body)
     {
         QString s = body;
@@ -1133,103 +1146,96 @@ private:
         const QString &source)
     {
         const QString code = normalizedCode(source);
-        const qsizetype cleanupTrap =
-            code.indexOf(QStringLiteral("trapcleanupEXIT"));
         const qsizetype panelCase =
             code.indexOf(QStringLiteral(
-                "configure_casepanel-top-center-1out"));
+                "_configure_case(\"panel-top-center-1out\")"));
         const qsizetype dockCase =
             code.indexOf(QStringLiteral(
-                "configure_casedock-top-center-1out"));
+                "_configure_case(\"dock-top-center-1out\")"));
         const qsizetype justifyDockCase =
             code.indexOf(QStringLiteral(
-                "configure_casedock-top-justify-1out"));
-        const QString heldPolicy = normalizedCode(functionBody(
-            source, QStringLiteral("wait_for_policy_while_held()")));
-        const QString heldFraction = normalizedCode(functionBody(
+                "_configure_case(\"dock-top-justify-1out\")"));
+        const QString heldPolicy = normalizedCode(pythonFunctionBody(
+            source, QStringLiteral("def _wait_for_policy_while_held(")));
+        const QString heldFraction = normalizedCode(pythonFunctionBody(
             source,
-            QStringLiteral("wait_for_fractional_progress_while_held()")));
+            QStringLiteral("def _wait_for_fractional_progress_while_held(")));
         const QString heldProof = QStringLiteral(
-            "kill-0\"$drag_pid\"2>/dev/null"
-            "\\||e2e_fail\"$boundaryappearedonlyafterbuttonrelease\"");
+            "ifnot_drag_held():"
+            "recipe.fail(f\"{boundary}appearedonlyafterbuttonrelease\")");
 
-        return cleanupTrap >= 0
-            && panelCase > cleanupTrap
+        return code.contains(QStringLiteral(
+                   "if_cleanup()andstatus==0:status=1"))
+            && panelCase >= 0
             && dockCase > panelCase
             && justifyDockCase > dockCase
             && code.contains(QStringLiteral(
-                   "snapshot['schemaVersion']!=11"))
+                   "snapshot[\"schemaVersion\"]!=11"))
             && code.contains(QStringLiteral(
-                   "--keyfloatingGapHidingWaitsMousefalse"))
+                   ",\"--key\",\"floatingGapHidingWaitsMouse\",\"false\")"))
             && code.contains(QStringLiteral(
-                   "--keymaximizeWhenMaximizedtrue"))
+                   ",\"--key\",\"maximizeWhenMaximized\",\"true\")"))
             && code.contains(QStringLiteral(
-                   "fpdraghold2000"))
+                   "\"draghold\",\"2000\","))
             && code.contains(QStringLiteral(
-                   "\"$start_x\"\"$touching_y\""))
+                   "str(start_x),str(touching_y),"))
             && code.contains(QStringLiteral(
-                   "\"$start_x\"\"$start_y\"&"
-                   "drag_pid=$!"))
+                   "_S.drag=subprocess.Popen("))
             && code.count(QStringLiteral(
-                   "kill-0\"$drag_pid\"")) >= 2
+                   "ifnot_drag_held():")) >= 2
             && heldPolicy.contains(heldProof)
             && heldFraction.contains(heldProof)
             && heldFraction.contains(QStringLiteral(
-                   "fractional_presentation_probe"))
+                   ")=_fractional_presentation_probe()"))
             && !heldFraction.contains(QStringLiteral(
-                   "<<<\"$(presentation_probe)\""))
+                   ")=_presentation_probe()"))
             && code.contains(QStringLiteral(
-                   "exercise_held_dragpaneltruefalseattached"))
+                   "_exercise_held_drag"
+                   "(\"panel\",\"true\",\"false\",\"attached\")"))
             && code.contains(QStringLiteral(
-                   "exercise_held_dragdockfalsetrueattached"))
+                   "_exercise_held_drag"
+                   "(\"dock\",\"false\",\"true\",\"attached\")"))
             && code.contains(QStringLiteral(
-                   "exercise_held_dragdockfalsetrueattachedtrue"))
+                   "_exercise_held_drag"
+                   "(\"dock\",\"false\",\"true\",\"attached\",True)"))
             && code.contains(QStringLiteral(
-                   "assert_partial_dock_presentation"
-                   "\\"
-                   "\"$expected_typeliveattachment\""
-                   "\\"
-                   "\"$base_presented_x\""
-                   "\"$base_presented_length\""))
+                   "_assert_partial_dock_presentation"
+                   "(f\"{expected_type}liveattachment\","
+                   "base_presented_x,base_presented_length)"))
             && code.contains(QStringLiteral(
-                   "wait_for_partial_panel_attached_presentation"
-                   "\\"
-                   "\"$base_presented_x\""
-                   "\"$base_presented_length\""))
+                   "_wait_for_partial_panel_attached_presentation"
+                   "(base_presented_x,base_presented_length)"))
             && code.contains(QStringLiteral(
-                   "\"$borders\"==bottom,left,right"))
+                   "andborders==\"bottom,left,right\""))
             && code.count(QStringLiteral(
-                   "wait_for_policy_while_held")) >= 4
+                   "_wait_for_policy_while_held(")) >= 4
             && code.count(QStringLiteral(
-                   "wait_for_fractional_progress_while_held")) >= 3
+                   "_wait_for_fractional_progress_while_held(")) >= 3
             && code.contains(QStringLiteral(
-                   "presented_gap_matches_progress"))
+                   "_presented_gap_matches_progress"))
             && code.contains(QStringLiteral(
-                   "dock_length_matches_progress"))
+                   "_dock_length_matches_progress"))
             && code.contains(QStringLiteral(
                    "v[\"windowGeometry\"][0]+v[\"effectsRect\"][0]"))
             && code.contains(QStringLiteral(
                    "v[\"effectsRect\"][2]"))
             && code.count(QStringLiteral(
-                   "wait_for_dock_attached_presentation_while_held")) >= 2
+                   "_wait_for_dock_attached_presentation_while_held(")) >= 2
             && code.contains(QStringLiteral(
-                   "\"$presented_x\"-eq\"$output_x\""
-                   "&&\"$presented_length\"-eq\"$output_length\""
-                   "&&\"$borders\"==bottom"))
+                   "andpresented_x==output_x"
+                   "andpresented_length==output_length"
+                   "andborders==\"bottom\""))
             && code.contains(QStringLiteral(
-                   "wait_for_dock_floated_presentation"
-                   "\\"
-                   "\"$base_presented_x\"\"$base_presented_length\""))
+                   "_wait_for_dock_floated_presentation"
+                   "(base_presented_x,base_presented_length)"))
             && code.contains(QStringLiteral(
-                   "\"$borders\"==bottom"))
-            && code.contains(QStringLiteral(
-                   "\"$borders\"==bottom,left,right,top"))
+                   "borders==\"bottom,left,right,top\""))
             && code.contains(QStringLiteral(
                    "v[\"presentedScreenEdgeGap\"]"))
             && code.count(QStringLiteral(
-                   "assert_stable_physical_snapshot")) >= 4
+                   "_assert_stable_physical_snapshot(")) >= 4
             && code.contains(QStringLiteral(
-                   "actual=\"$(stable_physical_snapshot)\""))
+                   "actual=_stable_physical_snapshot()"))
             && code.contains(QStringLiteral(
                    "\"stableTriggerGeometry\":"
                    "v[\"stableTriggerGeometry\"]"))
@@ -1257,11 +1263,10 @@ private:
                    "\"availablePrimaryLength\":"
                    "v[\"availablePrimaryLength\"]"))
             && code.contains(QStringLiteral(
-                   "\"$trigger_height\""
-                   "-eq\"$expected_envelope_depth\""))
+                   "andtrigger_height==expected_envelope_depth"))
             && code.contains(QStringLiteral(
-                   "expected_envelope_depth=$((normal+gap))"
-                   "expected_normal=\"$maximum\""));
+                   "expected_envelope_depth=normal+gap"
+                   "expected_normal=maximum"));
     }
 
     static bool matchesWindowTouchTopologyE2eContract(
@@ -3725,7 +3730,7 @@ void SourceGuardTest::
     QVERIFY2(
         matchesLiveTitlebarWindowTouchE2eContract(
             readFile(QStringLiteral(
-                "tests/e2e/074-live-titlebar-window-touch.sh"))),
+                "tests/e2e/074-live-titlebar-window-touch.py"))),
         "recipe 074 must cross and reverse Panel, partial Center Dock, and"
         " expanding Justify Dock triggers during a button-held titlebar"
         " drag without changing physical surface or reservation state");
@@ -3735,13 +3740,13 @@ void SourceGuardTest::
     liveTitlebarWindowTouchE2e_rejectsMissingHeldProof()
 {
     QString recipe = readFile(QStringLiteral(
-        "tests/e2e/074-live-titlebar-window-touch.sh"));
+        "tests/e2e/074-live-titlebar-window-touch.py"));
     QVERIFY(matchesLiveTitlebarWindowTouchE2eContract(recipe));
 
     const QString heldProof = QStringLiteral(
-        "                kill -0 \"$drag_pid\" 2>/dev/null \\\n"
-        "                    || e2e_fail \"$boundary appeared only after "
-        "button release\"\n");
+        "                if not _drag_held():\n"
+        "                    recipe.fail(f\"{boundary} appeared only after "
+        "button release\")\n");
     QCOMPARE(recipe.count(heldProof), 1);
     recipe.remove(heldProof);
     QVERIFY2(
@@ -3750,16 +3755,14 @@ void SourceGuardTest::
         " button-held attachment");
 
     QString partialEndpoint = readFile(QStringLiteral(
-        "tests/e2e/074-live-titlebar-window-touch.sh"));
+        "tests/e2e/074-live-titlebar-window-touch.py"));
     const QString fullSpan = QStringLiteral(
-        "              && \"$presented_length\" -eq "
-        "\"$output_length\"\n");
+        "            and presented_length == output_length\n");
     QCOMPARE(partialEndpoint.count(fullSpan), 1);
     partialEndpoint.replace(
         fullSpan,
         QStringLiteral(
-            "              && \"$presented_length\" -lt "
-            "\"$output_length\"\n"));
+            "            and presented_length < output_length\n"));
     QVERIFY2(!matchesLiveTitlebarWindowTouchE2eContract(partialEndpoint),
              "live attachment must prove the complete output span, not"
              " merely a wider partial presentation");

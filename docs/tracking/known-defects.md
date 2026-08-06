@@ -3331,6 +3331,30 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   write under `LC_ALL=C`.
 - SEVERITY: annoyance (dirty diffs on baseline regeneration).
 
+### D279 - fixed-count poll loops lose their wall-clock horizon in ported recipes
+- STATUS: FIXED (for the 074 port) by the deadline-sampler change in the
+  074 landing commit; future recipe ports must check their future-event
+  loops for the same class.
+- FOUND: 2026-08-05, the BP-3 R6 batch (the bash-to-python migration's
+  window-touch recipe wave): the 074 port's first drive expired its
+  outward-crossing sampler while the held drag's first dwell was still
+  running (final sample count=1/attached/resting), and measurement
+  confirmed the mechanism: a bash 100-iteration loop probing through
+  busctl-plus-python one-liners (~100 ms each) spans ~10 s of wall clock,
+  while the port's bare-busctl probes cost ~3 ms (measured against the
+  live dock), so the same 100 iterations span ~1.3 s - shorter than the
+  draghold's scheduled 2 s dwell plus reversal leg.
+- SYMPTOM: any ported poll loop that must span a SCHEDULED FUTURE EVENT
+  (a drag choreography, a background gesture) silently inherits an
+  iteration count whose implicit wall-clock meaning shrank ~10x in the
+  port. Loops that await settling states are unaffected - denser sampling
+  only tightens them.
+- FIX: the five drag-choreography samplers in the 074 port poll to a
+  monotonic 10 s deadline at the bash 0.01 s cadence, restoring the bash
+  wall-clock span.
+- SEVERITY: port correctness (a deterministic false failure in the 074
+  port; a recurring hazard class for the remaining BP-3 batches).
+
 ### D278 - 072's fractional captures race the D259 200 ms transition
 - STATUS: FIXED by the trigger-adjacent sampling commit in the PR that
   files this entry.
@@ -3358,6 +3382,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   wait_for_maximize_mode verification.
 - SEVERITY: test correctness (a latent always-fail plus two flaky races in
   a nested window-touch recipe; no dock defect).
+- ADDENDUM (same day): the same class flaked the bash 074 - its dock live
+  inward fractional capture missed the whole 200 ms window at bash's
+  ~9-samples-per-second probe cadence (control run; the final sample showed
+  the correct post-release rest, so only the running frames were missed).
+  The 074 port's ~75-samples-per-second cadence covers those windows; no
+  bash-side fix, the .sh is deleted by the port.
 
 ### D273 - audit-harness-selftest.sh checked in without its executable bit
 - STATUS: FIXED by the mode-bit commit in the PR that files this entry.
