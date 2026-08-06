@@ -19,10 +19,10 @@ the per-applet geometry viewAppletsData reports is stable and drag aiming needs 
 pixel calibration - the icon-shift trap 050 fights does not apply here.
 
 Migration shape (the BP-2c/BP-3a fresh-module precedent): a fresh module, not a
-bridge. applet-reorder-driver.sh stays in place for its remaining bash consumer,
-the dual-output create-linked-dock recipe (blocked on the dual-output vehicle;
-the 100 and 022 recipe ports replaced the other consumers), so this module and
-the bash lib coexist. The coordinate math (_compute_points) is pure so it is
+bridge. applet-reorder-driver.sh was retired in the R12 batch when
+create-linked-dock (its last bash consumer) was ported onto this module; the 100
+and 022 recipe ports had already replaced the earlier consumers. The coordinate
+math (_compute_points) is pure so it is
 unit-testable without a compositor; the order/flag/z readbacks go through
 recipe.py's typed viewsData/viewAppletsData boundary (a local model for the
 rearrange flags and the stacking z, which recipe.View/recipe.Applet do not
