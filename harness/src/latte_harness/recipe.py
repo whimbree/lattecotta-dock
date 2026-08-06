@@ -205,6 +205,25 @@ def json_payload(method: str, *args: str) -> str:
     return _unescape_busctl_json(call(method, *args))
 
 
+def try_json_payload(method: str, *args: str) -> str | None:
+    """e2e_json under `set -o pipefail`: the payload, or None when busctl fails.
+
+    The bash `views="$(e2e_json ...)" || { ...query failed... }` distinguishes a
+    failed D-Bus call (busctl exits non-zero, the `||` branch fires) from a
+    delivered-but-malformed reply (which flows on to the JSON parse and crashes
+    there). Callers that must react to the TRANSPORT failure specifically - the
+    presentation watcher's per-surface "query failed" diagnostics - need that
+    boundary, which json_payload collapses to an empty string. This exposes it:
+    None means the call itself failed; a returned string is unescaped exactly as
+    json_payload does, malformed content and all, so the parse stays the loud
+    layer for garbage.
+    """
+    result = _run_busctl([*_LATTE_OBJECT, method, *args], forward_stderr=True)
+    if result.returncode != 0:
+        return None
+    return _unescape_busctl_json(result.stdout)
+
+
 # ---- typed readbacks (the pydantic boundary) -------------------------------
 
 
@@ -355,6 +374,17 @@ def wait_running(timeout: int = 60) -> bool:
     if not ok:
         print(message, file=sys.stderr, flush=True)
     return ok
+
+
+def is_running() -> bool:
+    """One-shot lifecycleState probe: True iff the dock answers "running".
+
+    wait_running polls up to a timeout; this is the single non-blocking check
+    the live tools do to refuse fast when no dock is up (the presentation
+    watcher's `busctl ... lifecycleState | grep -q '"running"'` guard, which
+    exits at once rather than waiting).
+    """
+    return _probe_lifecycle_state() == _LIFECYCLE_RUNNING
 
 
 def wait_settled(timeout: int = 60) -> bool:
