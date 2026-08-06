@@ -596,28 +596,23 @@ private:
     static bool matchesStableFloatingPanelE2eContract(const QString &source)
     {
         const QString code = normalizedCode(source);
-        const qsizetype cleanupTrap = code.indexOf(QStringLiteral("trapcleanupEXIT"));
-        const qsizetype fixtureStage = code.indexOf(QStringLiteral(
-            "matrix_stagepanel-bottom-justify-1out"));
 
-        return cleanupTrap >= 0
-            && fixtureStage > cleanupTrap
+        return code.contains(QStringLiteral(
+                   "ifmatrix.init()!=0:recipe.fail("
+                   "\"couldnotcapturethepristinenestedconfiguration\")"
+                   "_S.configured=True"
+                   "ifmatrix.stage(\"panel-bottom-justify-1out\")!=0:"))
             && code.contains(QStringLiteral(
-                   "matrix_init||e2e_fail"
-                   "\"couldnotcapturethepristinenestedconfiguration\""
-                   "configured=1"
-                   "matrix_stagepanel-bottom-justify-1out"))
+                   "if_cleanup()andstatus==0:status=1"))
             && code.contains(QStringLiteral(
-                   "kwriteconfig6\"${group_args[@]}\"--key"
-                   "maximizeWhenMaximizedfalse"))
+                   ",*group,\"--key\",\"maximizeWhenMaximized\",\"false\")"))
             && code.contains(QStringLiteral(
-                   "kwriteconfig6\"${group_args[@]}\"--keymaxLength60"))
+                   ",*group,\"--key\",\"maxLength\",\"60\")"))
             && code.contains(QStringLiteral(
-                   "kwriteconfig6\"${group_args[@]}\"--keyalignment10"))
+                   ",*group,\"--key\",\"alignment\",\"10\")"))
             && code.contains(QStringLiteral(
-                   "snapshot=json.load(sys.stdin)"
-                   "match=[vforvinsnapshot['views']"
-                   "ifv['persistentDockId']==$view]"))
+                   "matches=[rforrinsnapshot[\"views\"]"
+                   "ifr[\"persistentDockId\"]==_S.view]"))
             && code.contains(QStringLiteral(
                    "\"windowGeometry\",\"absoluteGeometry\","
                    "\"surfaceGeometry\",\"canvasGeometry\","
@@ -634,129 +629,121 @@ private:
                    "\"reservationGeometry\",\"layerShellMargins\","
                    "\"layerShellAnchors\",\"layerShellExclusiveEdge\","))
             && code.contains(QStringLiteral(
-                   "\"transitionController\":v[\"objects\"]"
-                   "[\"transitionController\"]"))
+                   "\"transitionController\":obj[\"transitionController\"],"
+                   "\"reservationPublisher\":obj[\"reservationPublisher\"],"))
             && code.contains(QStringLiteral(
-                   "\"reservationPublisher\":v[\"objects\"]"
-                   "[\"reservationPublisher\"]"))
+                   "f\"{v['surfaceGeometryPublicationRevision']}\""
+                   "f\"{v['layerShellConfigureRequestRevision']}\""))
             && code.contains(QStringLiteral(
-                   "v[\"surfaceGeometryPublicationRevision\"],"
-                   "v[\"layerShellConfigureRequestRevision\"]"))
+                   "paint_y=math.floor(paint[1])"
+                   "paint_height=math.ceil(paint[1]+paint[3])"
+                   "-math.floor(paint[1])"))
             && code.contains(QStringLiteral(
-                   "*v[\"appletsLayoutGeometry\"],"
-                   "math.floor(v[\"computedPaintMaskGeometry\"][1]),"
-                   "math.ceil(v[\"computedPaintMaskGeometry\"][1]"
-                   "+v[\"computedPaintMaskGeometry\"][3])"
-                   "-math.floor(v[\"computedPaintMaskGeometry\"][1])"))
+                   "if(x,width)!="
+                   "(_S.base_popup_primary_x,_S.base_popup_primary_width):"))
             && code.contains(QStringLiteral(
-                   "[[\"$x$width\"=="
-                   "\"$base_popup_primary_x$base_popup_primary_width\"]]"))
+                   "if(y,height)!=(paint_y,paint_height):"))
             && code.contains(QStringLiteral(
-                   "[[\"$y$height\"==\"$paint_y$paint_height\"]]"))
+                   "_capture_progress_only_transition"
+                   "(\"attached\",\"attaching\")"))
             && code.contains(QStringLiteral(
-                   "capture_progress_only_transitionattachedattaching"))
+                   "_capture_progress_only_transition"
+                   "(\"floated\",\"floating\")"))
             && code.contains(QStringLiteral(
-                   "capture_progress_only_transitionfloatedfloating"))
+                   "formaximizedin"
+                   "(True,False,True,False,True,False,True,False):"))
             && code.contains(QStringLiteral(
-                   "formaximizedintruefalsetruefalsetruefalsetruefalse;do"))
+                   "if(target==expected_target"
+                   "andphase==expected_phase"
+                   "andrunning==\"true\""
+                   "and0.0<progress<1.0):"))
             && code.contains(QStringLiteral(
-                   "if[[\"$target\"==\"$expected_target\""
-                   "&&\"$phase\"==\"$expected_phase\""
-                   "&&\"$running\"==true]]"
-                   "\\&&awk-vprogress=\"$progress\""
-                   "'BEGIN{exit!(progress>0.0&&progress<1.0)}'"))
+                   "iff\"{geometry_revision}{surface_revision}"
+                   "{layer_revision}\"!=_S.base_revisions:"))
             && code.contains(QStringLiteral(
-                   "[[\"$geometry_revision$surface_revision$layer_revision\""
-                   "==\"$base_revisions\"]]"))
+                   "_wait_for_in_flight_target"
+                   "(expected_target,expected_phase)"))
             && code.contains(QStringLiteral(
-                   "wait_for_in_flight_target"
-                   "\"$expected_target\"\"$expected_phase\""))
+                   "_assert_stable_contract(\"rapidreversalstorm\")"))
             && code.contains(QStringLiteral(
-                   "assert_stable_contract\"rapidreversalstorm\""))
+                   ",*group,\"--key\",\"screenEdgeMargin\",\"0\")"))
             && code.contains(QStringLiteral(
-                   "kwriteconfig6\"${group_args[@]}\""
-                   "--keyscreenEdgeMargin0"))
+                   "_wait_for_zero_gap_floated_snapshot()"))
             && code.contains(QStringLiteral(
-                   "if[[\"$view_type\"==panel"
-                   "&&\"$visibility_mode\"==alwaysVisible"
-                   "&&\"$configured_panel\"==false"
-                   "&&\"$eligible_panel\"==false"
-                   "&&\"$target\"==floated"
-                   "&&\"$phase\"==resting"
-                   "&&\"$running\"==false]]"
-                   "\\&&awk-vactual=\"$progress\""))
+                   "if(view_type==\"panel\""
+                   "andvisibility_mode==\"alwaysVisible\""
+                   "andconfigured_panel==\"false\""
+                   "andeligible_panel==\"false\""
+                   "andtarget==\"floated\""
+                   "andphase==\"resting\""
+                   "andrunning==\"false\""
+                   "andabs(progress-1.0)<0.000001):"))
             && code.contains(QStringLiteral(
-                   "wait_for_zero_gap_floated_snapshot"))
+                   "matrix.stage(\"dock-bottom-center-1out\")"))
             && code.contains(QStringLiteral(
-                   "matrix_stagedock-bottom-center-1out"))
+                   "_lower(v[\"dockGapHideRequested\"])"))
             && code.contains(QStringLiteral(
-                   "str(v[\"dockGapHideRequested\"]).lower()"))
+                   "_lower(v[\"floatingGapConfigured\"])"))
             && code.contains(QStringLiteral(
-                   "str(v[\"floatingGapConfigured\"]).lower()"))
+                   "if(active_maximized==expected_maximized"
+                   "andexists_maximized==expected_maximized"
+                   "andview_type==\"dock\""
+                   "andvisibility_mode==expected_visibility"
+                   "andfloating_gap_configured==\"true\""
+                   "andconfigured_panel==\"false\""
+                   "andeligible_panel==\"false\""
+                   "andconfigured_hide==\"true\""
+                   "anddock_request==expected_request"))
             && code.contains(QStringLiteral(
-                   "if[[\"$active_maximized\"==\"$expected_maximized\""
-                   "&&\"$exists_maximized\"==\"$expected_maximized\""
-                   "&&\"$view_type\"==dock"
-                   "&&\"$visibility_mode\"==\"$expected_visibility\""
-                   "&&\"$floating_gap_configured\"==true"
-                   "&&\"$configured_panel\"==false"
-                   "&&\"$eligible_panel\"==false"
-                   "&&\"$configured_hide\"==true"
-                   "&&\"$dock_request\"==\"$expected_request\""))
+                   "andtransition_geometry==\"false\""
+                   "andpanel_geometry_absent==\"true\""
+                   "andfloating_popups==\"false\""))
             && code.contains(QStringLiteral(
-                   "&&\"$transition_geometry\"==false"
-                   "&&\"$panel_geometry_absent\"==true"
-                   "&&\"$floating_popups\"==false"))
+                   "_wait_for_dock_gap_policy"
+                   "(\"alwaysVisible\",\"true\",\"true\",\"attached\",0)"))
             && code.contains(QStringLiteral(
-                   "wait_for_dock_gap_policy"
-                   "alwaysVisibletruetrueattached0"))
+                   "\"setViewVisibilityMode\",\"us\","
+                   "str(_S.view),\"windowsGoBelow\")"))
             && code.contains(QStringLiteral(
-                   "setViewVisibilityModeus\"$view\"windowsGoBelow"))
+                   "_wait_for_dock_gap_policy"
+                   "(\"windowsGoBelow\",\"true\",\"true\",\"attached\",0)"))
             && code.contains(QStringLiteral(
-                   "wait_for_dock_gap_policy"
-                   "windowsGoBelowtruetrueattached0"))
+                   "\"setViewVisibilityMode\",\"us\","
+                   "str(_S.view),\"dodgeActive\")"))
             && code.contains(QStringLiteral(
-                   "setViewVisibilityModeus\"$view\"dodgeActive"))
+                   "_wait_for_dock_gap_policy"
+                   "(\"dodgeActive\",\"true\",\"true\",\"attached\",0)"))
             && code.contains(QStringLiteral(
-                   "wait_for_dock_gap_policy"
-                   "dodgeActivetruetrueattached0"))
+                   "_wait_for_hidden_state(\"true\""))
             && code.contains(QStringLiteral(
-                   "wait_for_hidden_statetrue"))
+                   "\"glide\",str(x),str(y-80),str(x),str(y),"))
             && code.contains(QStringLiteral(
-                   "\"$E2E_FAKEPOINTER\"glide"
-                   "\\"
-                   "\"$x\"$((y-80))"
-                   "\\"
-                   "\"$x\"\"$y\""))
+                   "_start_kwin_screen_edge_round_trip(reveal_x,reveal_y,"))
             && code.contains(QStringLiteral(
-                   "start_kwin_screen_edge_round_trip"
-                   "\\"
-                   "\"$reveal_x\"\"$reveal_y\""))
+                   "_finish_kwin_screen_edge_round_trip()"))
             && code.contains(QStringLiteral(
-                   "finish_kwin_screen_edge_round_trip"))
+                   "_wait_for_revealed_attached_bottom_dock()"))
             && code.contains(QStringLiteral(
-                   "wait_for_revealed_attached_bottom_dock"))
+                   "_set_konsole_fullscreen(True)"))
             && code.contains(QStringLiteral(
-                   "set_konsole_fullscreentrue"))
+                   "_wait_for_dock_window_touch_policy"
+                   "(\"true\",\"attached\",0)"))
             && code.contains(QStringLiteral(
-                   "wait_for_dock_window_touch_policytrueattached0"))
+                   "_wait_for_hidden_state"
+                   "(\"true\",\"fullscreen-windowconcealment\")"))
             && code.contains(QStringLiteral(
-                   "wait_for_hidden_statetrue"
-                   "\"fullscreen-windowconcealment\""))
+                   "backend=v[\"screenEdgeBackend\"]"
+                   "armed=_lower(v[\"screenEdgeArmed\"])"
+                   "registered=_lower(v[\"screenEdgeRegistered\"])"
+                   "supported=_lower(v[\"compositorScreenEdgeSupported\"])"
+                   "contains_mouse=_lower(v[\"visibilityContainsMouse\"])"))
             && code.contains(QStringLiteral(
-                   "print(v['screenEdgeBackend'],"
-                   "str(v['screenEdgeArmed']).lower(),"
-                   "str(v['screenEdgeRegistered']).lower(),"
-                   "str(v['compositorScreenEdgeSupported']).lower(),"
-                   "str(v['visibilityContainsMouse']).lower())"))
+                   "unavailable_snapshots+=1"))
             && code.contains(QStringLiteral(
-                   "unavailable_snapshots="
-                   "$((unavailable_snapshots+1))"))
+                   "_wait_for_native_screen_edge_armed"
+                   "(\"maximized-windowconcealment\")"))
             && code.contains(QStringLiteral(
-                   "wait_for_native_screen_edge_armed"
-                   "\"maximized-windowconcealment\""))
-            && code.contains(QStringLiteral(
-                   "str(\"bottom\"inv[\"enabledBorders\"]).lower()"))
+                   "_lower(\"bottom\"inv[\"enabledBorders\"])"))
             && code.contains(QStringLiteral(
                    "v[\"surfaceGeometry\"][1]"
                    "+v[\"effectsRect\"][1]"
@@ -764,7 +751,7 @@ private:
             && code.contains(QStringLiteral(
                    "v[\"presentedScreenEdgeGap\"]"))
             && code.contains(QStringLiteral(
-                   "expected_h=$((screen_h-stable_reservation_depth))"))
+                   "expected_h=_S.screen_h-_S.stable_reservation_depth"))
             && !code.contains(QStringLiteral("max_strut<base_strut"))
             && !code.contains(QStringLiteral("reservation_ms"));
     }
@@ -837,8 +824,8 @@ private:
             && dbusXml.contains(QStringLiteral(
                    "compositorScreenEdgeSupported"))
             && e2e.contains(QStringLiteral(
-                   "wait_for_native_screen_edge_armed"
-                   "\"post-revealpointerdeparture\""));
+                   "_wait_for_native_screen_edge_armed"
+                   "(\"post-revealpointerdeparture\")"));
     }
 
     static bool matchesWindowTouchAuthorityContract(
@@ -3509,7 +3496,7 @@ void SourceGuardTest::stablePanelPopupAnchor_rejectsLegacyAnimationFreeze()
 void SourceGuardTest::stableFloatingPanelE2e_keepsCanvasAndRevisionsFixed()
 {
     const QString source = readFile(QStringLiteral(
-        "tests/e2e/071-maximized-window-length.sh"));
+        "tests/e2e/071-maximized-window-length.py"));
     QVERIFY2(matchesStableFloatingPanelE2eContract(source),
              "recipe 071 must keep the partial QWindow, applet measurements,"
              " maximum-depth reservation, and physical-publication revisions"
@@ -3528,7 +3515,7 @@ void SourceGuardTest::compositorScreenEdge_ownsRealLayerSurface()
     const QString dbusXml = readFile(QStringLiteral(
         "app/dbus/org.kde.LatteDock.xml"));
     const QString e2e = readFile(QStringLiteral(
-        "tests/e2e/071-maximized-window-length.sh"));
+        "tests/e2e/071-maximized-window-length.py"));
 
     QVERIFY2(matchesCompositorScreenEdgeContract(
                  cmake, helper, visibility, wayland, dbusXml, e2e),
