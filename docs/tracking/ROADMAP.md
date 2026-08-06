@@ -92,11 +92,15 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   launcher run as typed latte_harness modules behind stable shims, with
   the D269/D270 qmllint drift family closed. BP-4 (the package gate) is
   COMPLETE: the engine and the 91-control selftest both run typed. In
-  BP-3, every recipe lib is typed (matrix, audit, all four interaction
-  drivers), 23 recipes are ported, and what remains is the plain-recipe
-  tail, the dual-output-blocked set (061, 073, create-linked-dock, the
-  multi-output selftest), the defect-blocked pair (070 on D274, 040 on
-  D276), and then the BP-5 tail.
+  BP-3, every recipe lib is typed and 41 recipes are ported, including
+  the whole plain tail and the asan gate's own driven set; what remains
+  is one portable recipe (parabolic-hover-preview), the stress recipe
+  pending its sourceguard-harness redesign, the dual-output-blocked set
+  (061, 073, create-linked-dock, the multi-output selftest), the
+  defect-blocked recipes (070 on D274, 040 on D276,
+  duplicate-dock-independent on D283), and then the BP-5 tail. The wave
+  also fixed D280, a real focus-lifecycle dock defect its recipe drive
+  exposed.
 
 ## Registries and state
 

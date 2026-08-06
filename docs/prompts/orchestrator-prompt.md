@@ -201,6 +201,11 @@ and the serial-merge steps.
   sha.
 
 ## Coordination and pitfalls (hard-won)
+- A pgrep -f WATCHER MUST NOT SELF-MATCH: a fallback watcher polling
+  `pgrep -f "<worktree-id>.*(gate|ninja)"` matches its own command line
+  (it contains the id and the words) and spins forever. Bracket-class one
+  character of the pattern (`a480227[2]...`) so the regex matches the
+  target but not its own literal text.
 - FREE-SPACE PREFLIGHT before farming any build wave: N parallel cold
   builds cost ~8G each, worktree builds live on the snapshotted home
   dataset, and hourly snapshots pin every deleted build tree until
