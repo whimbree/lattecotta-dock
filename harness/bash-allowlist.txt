@@ -9,9 +9,7 @@ Messages.sh
 ci/build-and-gate.sh
 containment/Messages.sh
 containmentactions/contextmenu/Messages.sh
-formatter.sh
 indicators/Messages.sh
-install.sh
 packaging/debian/build-package
 packaging/rpm/make-snapshot-source.sh
 packaging/void/build-package
@@ -68,4 +66,3 @@ tests/installed-package-gate-runtime-test.sh
 tests/multioutputstatecontracttest.sh
 tests/sceneprobe/run_in_kwin.sh
 tests/startdockauthoritytest.sh
-uninstall.sh
