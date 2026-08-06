@@ -74,7 +74,7 @@ def parse_args(argv: Sequence[str]) -> WatchArgs:
     empty positional falls back the same way.
     """
     duration_text = (argv[0] if len(argv) >= 1 else "") or "30"
-    if not duration_text.isdigit():
+    if not duration_text.isdecimal():
         raise ArgError(f"duration must be a positive integer, got '{duration_text}'")
     duration = int(duration_text)
     if duration <= 0:
@@ -88,7 +88,7 @@ def parse_args(argv: Sequence[str]) -> WatchArgs:
     interval = float(interval_text)
 
     target = argv[2] if len(argv) >= 3 else ""
-    if target and not target.isdigit():
+    if target and not target.isdecimal():
         raise ArgError(f"dock id must be an unsigned integer, got '{target}'")
     if target and int(target) == 0:
         raise ArgError("dock id must be greater than zero")

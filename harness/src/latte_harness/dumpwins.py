@@ -11,7 +11,8 @@ bash original:
 
     DUMPWIN|<class>|<caption>|<x>,<y> <w>x<h>|<output>|layer=<N>
 
-The whole dump is `recipe.e2e_dumpwins` already: the transient-script
+The whole dump is `recipe.dumpwins()` already (lib.sh's bash twin is named
+e2e_dumpwins): the transient-script
 load/run/stop/unload dance, the run-tag isolation, and the mode branch (the
 nested vehicle reads E2E_KWIN_LOG, a live session reads the journal) all live
 there and are proven byte-identical against lib.sh's e2e_dumpwins. This tool is
