@@ -56,7 +56,6 @@ tests/e2e/lib.sh
 tests/e2e/matrix/golden-bridge.sh
 tests/e2e/matrix/matrix-lib.sh
 tests/e2e/matrix/multi-output-lib.sh
-tests/e2e/parabolic-hover-preview.sh
 tests/installed-package-gate-runtime-test.sh
 tests/multioutputstatecontracttest.sh
 tests/sceneprobe/run_in_kwin.sh
