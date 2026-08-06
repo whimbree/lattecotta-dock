@@ -22,8 +22,8 @@ drag with a gentle ~40ms poll cadence lands cleanly and the marker is caught
 live. So the watched drag polls with a sleep, never a spin.
 
 Migration shape (the BP-2c/BP-3a fresh-module precedent): this is a fresh module,
-not a bridge. dnd-lib.sh stays in place for the bash DnD recipe (093) until the
-BP-3 driver batch ports and deletes it, so this module and the bash lib coexist.
+not a bridge. The bash lib it ports (tests/e2e/matrix/dnd-lib.sh) was deleted with
+its last consumer, the 093 recipe port, in the BP-3 driver batch.
 Every readback is validated at the boundary through recipe.py's typed helpers
 (recipe.view_applets, recipe.view, recipe.views, recipe.windows), busctl stays
 the transport for the two non-JSON surfaces recipe does not expose
