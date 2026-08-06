@@ -95,7 +95,9 @@ def _tracker_probe(view: int) -> tuple[str, str, str, str, str]:
     )
 
 
-def _wait_for_dodge_state(view: int, expected_touching: str, expected_hidden: str, phase: str) -> None:
+def _wait_for_dodge_state(
+    view: int, expected_touching: str, expected_hidden: str, phase: str
+) -> None:
     active_touching = active_edge = "unread"
     exists_touching = exists_edge = exists_active = "unread"
     hidden = "unread"
@@ -205,7 +207,13 @@ def _body(state: _State, view_box: list[int]) -> None:
         recipe.fail("could not resolve the D264 left-dock fixture")
     view_box[0] = view
 
-    _latte_call("could not set the left dock to Dodge Active", "setViewVisibilityMode", "us", str(view), "dodgeActive")
+    _latte_call(
+        "could not set the left dock to Dodge Active",
+        "setViewVisibilityMode",
+        "us",
+        str(view),
+        "dodgeActive",
+    )
     for _ in range(40):
         with suppress(recipe.RecipeError):
             if _dock_record(view)["visibilityMode"] == "dodgeActive":
@@ -220,7 +228,7 @@ def _body(state: _State, view_box: list[int]) -> None:
 
     record = _dock_record(view)
     screen_x, screen_y, screen_width, screen_height = record["screenGeometry"]
-    dock_x, dock_y, dock_width, dock_height = record["absoluteGeometry"]
+    _, dock_y, _, dock_height = record["absoluteGeometry"]
 
     if (
         subprocess.run(
@@ -329,9 +337,7 @@ def _cleanup(state: _State) -> bool:
         except OSError:
             cleanup_failed = True
         pid = recipe.dock_pid()
-        if pid is not None and _pid_alive(pid):
-            cleanup_failed = True
-        elif not _muted_dock_start(90):
+        if (pid is not None and _pid_alive(pid)) or not _muted_dock_start(90):
             cleanup_failed = True
     if cleanup_failed:
         print(

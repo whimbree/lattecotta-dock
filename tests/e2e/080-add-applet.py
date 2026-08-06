@@ -45,7 +45,9 @@ def _applet_order(cid: int) -> list[int]:
     """The same ids via the viewAppletsOrder method (busctl `as N "id" ...`); the
     G1 fix strips justify-splitter sentinels so this must equal _applet_ids on
     every alignment (the bash applet_order)."""
-    return [int(m) for m in re.findall(r'"(-?\d+)"', recipe.call("viewAppletsOrder", "u", str(cid)))]
+    return [
+        int(m) for m in re.findall(r'"(-?\d+)"', recipe.call("viewAppletsOrder", "u", str(cid)))
+    ]
 
 
 def _plugin_of(cid: int, applet_id: int) -> str:
@@ -133,12 +135,17 @@ def main() -> None:
         )
     missing = set(before) - set(after)
     if missing:
-        recipe.fail(f"add dropped pre-existing applet ids: {' '.join(str(i) for i in sorted(missing))}")
+        recipe.fail(
+            f"add dropped pre-existing applet ids: {' '.join(str(i) for i in sorted(missing))}"
+        )
     new_id = next(iter(new_ids))
     new_plugin = _plugin_of(target, new_id)
     if new_plugin != src_plugin:
         recipe.fail(f"new applet {new_id} is '{new_plugin}', expected '{src_plugin}'")
-    print(f"added one new instance id {new_id} (plugin {new_plugin}), distinct from {before_n} existing")
+    print(
+        f"added one new instance id {new_id} "
+        f"(plugin {new_plugin}), distinct from {before_n} existing"
+    )
 
     #! G1 consistency: the cheap viewAppletsOrder method must report the SAME
     #! ordered ids as viewAppletsData (both splitter-free) - the fix that retires
@@ -171,8 +178,12 @@ def main() -> None:
     #! id must appear in the dock log lines produced by THIS call
     if not _new_log_has(mark, f"addApplet requested for containment {bad_cid} which has no view"):
         _dump_new_log(mark)
-        recipe.fail(f"no addApplet refusal qWarning for bad containment id {bad_cid} in the dock log")
-    print(f"rejection observed: bad containment id {bad_cid} refused (qWarning + 0 applets created)")
+        recipe.fail(
+            f"no addApplet refusal qWarning for bad containment id {bad_cid} in the dock log"
+        )
+    print(
+        f"rejection observed: bad containment id {bad_cid} refused (qWarning + 0 applets created)"
+    )
 
     print("PASS: addApplet appends one, G1 order is consistent, and a bad id is refused")
 

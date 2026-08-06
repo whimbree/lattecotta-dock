@@ -222,7 +222,7 @@ def _assert_popup_anchor_contract(boundary: str) -> None:
 def _assert_stable_contract(boundary: str) -> None:
     try:
         current = _stable_snapshot()
-    except (recipe.RecipeError, json.JSONDecodeError, KeyError, IndexError):
+    except recipe.RecipeError, json.JSONDecodeError, KeyError, IndexError:
         recipe.fail(f"{boundary} could not read the stable window-touch contract")
     if current != _S.base_stable_snapshot:
         recipe.fail(
@@ -411,7 +411,13 @@ def _wait_for_konsole_geometry(x: int, y: int, width: int, height: int) -> None:
     actual: tuple[int, int, int, int, str] | None = None
     for _ in range(60):
         actual = _konsole_geometry()
-        if actual is not None and actual[0] == x and actual[1] == y and actual[2] == width and actual[3] == height:
+        if (
+            actual is not None
+            and actual[0] == x
+            and actual[1] == y
+            and actual[2] == width
+            and actual[3] == height
+        ):
             return
         time.sleep(0.05)
     got = actual if actual is not None else ("unread", "unread", "unread", "unread")
@@ -516,21 +522,62 @@ def _body() -> None:
         recipe.fail("could not resolve the stable window-touch fixture")
     view = _S.view
     layout = os.environ["E2E_LAYOUT"]
-    group = ("--file", layout, "--group", "Containments", "--group", str(view), "--group", "General")
+    group = (
+        "--file",
+        layout,
+        "--group",
+        "Containments",
+        "--group",
+        str(view),
+        "--group",
+        "General",
+    )
 
     if not recipe.dock_stop():
         recipe.fail("dock did not stop before window-touch fixture configuration")
-    _kwrite("could not disable maximize-driven panel length", *group, "--key", "maximizeWhenMaximized", "false")
+    _kwrite(
+        "could not disable maximize-driven panel length",
+        *group,
+        "--key",
+        "maximizeWhenMaximized",
+        "false",
+    )
     _kwrite("could not configure a partial panel length", *group, "--key", "maxLength", "60")
-    _kwrite("could not configure attachment on stable window touch", *group, "--key", "hideFloatingGapForMaximized", "true")
-    _kwrite("could not configure pointer deferral", *group, "--key", "floatingGapHidingWaitsMouse", "true")
+    _kwrite(
+        "could not configure attachment on stable window touch",
+        *group,
+        "--key",
+        "hideFloatingGapForMaximized",
+        "true",
+    )
+    _kwrite(
+        "could not configure pointer deferral",
+        *group,
+        "--key",
+        "floatingGapHidingWaitsMouse",
+        "true",
+    )
     _kwrite("could not configure the floating gap", *group, "--key", "screenEdgeMargin", "18")
-    _kwrite("could not keep the floating gap under panel-surface ownership", *group, "--key", "floatingInternalGapIsForced", "false")
+    _kwrite(
+        "could not keep the floating gap under panel-surface ownership",
+        *group,
+        "--key",
+        "floatingInternalGapIsForced",
+        "false",
+    )
     _kwrite("could not configure Justify alignment", *group, "--key", "alignment", "10")
-    _kwrite("could not mark Justify alignment as upgraded", *group, "--key", "alignmentUpgraded", "true")
+    _kwrite(
+        "could not mark Justify alignment as upgraded", *group, "--key", "alignmentUpgraded", "true"
+    )
     if not _muted_dock_start(90):
         recipe.fail("dock did not restart with the window-touch fixture")
-    _latte_call_or_fail("could not set the fixture view to alwaysVisible", "setViewVisibilityMode", "us", str(view), "alwaysVisible")
+    _latte_call_or_fail(
+        "could not set the fixture view to alwaysVisible",
+        "setViewVisibilityMode",
+        "us",
+        str(view),
+        "alwaysVisible",
+    )
     for _ in range(40):
         with suppress(recipe.RecipeError):
             if _view_field()["visibilityMode"] == "alwaysVisible":
@@ -571,7 +618,7 @@ def _body() -> None:
 
     record = _dock_record()
     trigger_x, trigger_y, trigger_width, trigger_height = record["stableTriggerGeometry"]
-    screen_x, screen_y, screen_width, screen_height = record["screenGeometry"]
+    screen_x, _, screen_width, _ = record["screenGeometry"]
     if not (trigger_width > 0 and trigger_height > 0):
         recipe.fail(
             f"stable trigger is invalid: {trigger_x},{trigger_y} {trigger_width}x{trigger_height}"
@@ -579,7 +626,7 @@ def _body() -> None:
 
     try:
         _S.base_stable_snapshot = _stable_snapshot()
-    except (json.JSONDecodeError, KeyError, IndexError):
+    except json.JSONDecodeError, KeyError, IndexError:
         recipe.fail("could not capture the base stable window-touch contract")
     try:
         _S.base_revisions = _revision_snapshot()
@@ -621,7 +668,8 @@ def _body() -> None:
         time.sleep(0.05)
     if geometry_role_type != "QRect":
         recipe.fail(
-            f"the live TasksModel Geometry role was not observed as QRect (type={geometry_role_type})"
+            f"the live TasksModel Geometry role was not observed "
+            f"as QRect (type={geometry_role_type})"
         )
 
     fixture_id = _set_konsole_maximized(False)
@@ -675,13 +723,21 @@ def _body() -> None:
         recipe.fail("could not start KWin interactive move")
     time.sleep(0.2)
     _nudge_vertical("Down", touch_nudges)
-    _capture_fractional_policy("false", "false", 1, "attached", "attaching", "interactive drag into stable trigger")
+    _capture_fractional_policy(
+        "false", "false", 1, "attached", "attaching", "interactive drag into stable trigger"
+    )
     _nudge_vertical("Up", touch_nudges)
-    _capture_fractional_policy("false", "false", 0, "floated", "floating", "fractional attaching-to-floating reversal")
+    _capture_fractional_policy(
+        "false", "false", 0, "floated", "floating", "fractional attaching-to-floating reversal"
+    )
     _nudge_vertical("Down", touch_nudges)
-    _capture_fractional_policy("false", "false", 1, "attached", "attaching", "fractional floating-to-attaching reversal")
+    _capture_fractional_policy(
+        "false", "false", 1, "attached", "attaching", "fractional floating-to-attaching reversal"
+    )
     _nudge_vertical("Up", touch_nudges)
-    _capture_fractional_policy("false", "false", 0, "floated", "floating", "interactive drag back out")
+    _capture_fractional_policy(
+        "false", "false", 0, "floated", "floating", "interactive drag back out"
+    )
     _fp_or_fail("could not commit the interactive move outside the trigger", "key", "Return")
     _wait_for_konsole_geometry(baseline_x, baseline_y, client_width, client_height)
     _wait_for_policy("false", "false", 0, "floated", 1, "interactive out-of-trigger commit")
@@ -691,7 +747,9 @@ def _body() -> None:
         recipe.fail("could not start the cancelable KWin interactive move")
     time.sleep(0.2)
     _nudge_vertical("Down", touch_nudges)
-    _capture_fractional_policy("false", "false", 1, "attached", "attaching", "cancel trial trigger crossing")
+    _capture_fractional_policy(
+        "false", "false", 1, "attached", "attaching", "cancel trial trigger crossing"
+    )
     _fp_or_fail("could not cancel the in-flight move with Escape", "key", "Escape")
     _wait_for_konsole_geometry(baseline_x, baseline_y, client_width, client_height)
     _wait_for_policy("false", "false", 0, "floated", 1, "Escape geometry and policy restoration")
@@ -705,7 +763,9 @@ def _body() -> None:
     # wait_for_maximize_mode kwin_js round trip costs more than the whole
     # animation. MaximizeMode 3 is verified after the capture; the endpoint
     # policy still proves the attached target.
-    _capture_fractional_policy("false", "false", 1, "attached", "attaching", "committed maximize attachment")
+    _capture_fractional_policy(
+        "false", "false", 1, "attached", "attaching", "committed maximize attachment"
+    )
     _wait_for_maximize_mode("3")
     _wait_for_policy("false", "false", 1, "attached", 0, "committed maximize attachment")
 
@@ -718,8 +778,17 @@ def _body() -> None:
     visible_height = record["currentVisibleGeometry"][3]
     pointer_x = canvas_x + visible_x + visible_width // 2
     pointer_y = canvas_y + visible_y + visible_height // 2
-    _fp_or_fail("could not move the pointer inside the attached panel", "glide", "20", "20", str(pointer_x), str(pointer_y))
-    _wait_for_policy("true", "false", 1, "attached", 0, "pointer entry preserves the existing attachment")
+    _fp_or_fail(
+        "could not move the pointer inside the attached panel",
+        "glide",
+        "20",
+        "20",
+        str(pointer_x),
+        str(pointer_y),
+    )
+    _wait_for_policy(
+        "true", "false", 1, "attached", 0, "pointer entry preserves the existing attachment"
+    )
 
     if _set_konsole_maximized(False) != fixture_id:
         recipe.fail("KWin did not identify the owned client for pointer-held touch loss")
@@ -745,7 +814,9 @@ def _body() -> None:
     _S.departure = subprocess.Popen(
         [os.environ["E2E_FAKEPOINTER"], "glide", str(pointer_x), str(pointer_y), "20", "20"]
     )
-    _capture_fractional_policy("false", "false", 1, "attached", "attaching", "pointer deferral release")
+    _capture_fractional_policy(
+        "false", "false", 1, "attached", "attaching", "pointer deferral release"
+    )
     departure = _S.departure
     if departure.wait() != 0:
         recipe.fail("could not move the pointer out of the panel")
@@ -759,7 +830,9 @@ def _body() -> None:
         os.kill(konsole.pid, signal.SIGTERM)
     except ProcessLookupError:
         recipe.fail("could not destroy the single window-touch client")
-    _capture_fractional_policy("false", "false", 0, "floated", "floating", "client destruction reset")
+    _capture_fractional_policy(
+        "false", "false", 0, "floated", "floating", "client destruction reset"
+    )
     with suppress(Exception):
         konsole.wait()
     _S.konsole = None
@@ -802,9 +875,7 @@ def _cleanup() -> bool:
         except OSError:
             cleanup_failed = True
         pid = recipe.dock_pid()
-        if pid is not None and _pid_alive(pid):
-            cleanup_failed = True
-        elif not _muted_dock_start(90):
+        if (pid is not None and _pid_alive(pid)) or not _muted_dock_start(90):
             cleanup_failed = True
     if cleanup_failed:
         print(

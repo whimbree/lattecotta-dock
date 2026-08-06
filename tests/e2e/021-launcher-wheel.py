@@ -47,9 +47,7 @@ def _fakepointer(*args: str) -> None:
 
 
 def _kwrite(*args: str) -> None:
-    subprocess.run(
-        ["kwriteconfig6", "--file", os.environ["E2E_LAYOUT"], *args], check=False
-    )
+    subprocess.run(["kwriteconfig6", "--file", os.environ["E2E_LAYOUT"], *args], check=False)
 
 
 @contextlib.contextmanager
@@ -175,9 +173,7 @@ def main() -> None:
         recipe.fail("fixture desktop-service cache failed")
 
     def window_count() -> int:
-        return sum(
-            f"|{WINDOW_TITLE}|" in line for line in recipe.dumpwins().splitlines()
-        )
+        return sum(f"|{WINDOW_TITLE}|" in line for line in recipe.dumpwins().splitlines())
 
     def active_window_title() -> str:
         lines = recipe.kwin_js(
@@ -254,9 +250,7 @@ def main() -> None:
         nonlocal launcher_span
         pid = recipe.dock_pid()
         if pid is not None and _pid_alive(pid) and not recipe.dock_stop():
-            recipe.fail(
-                f"could not stop dock for task-wheel mode {action}/{scrolling}/{manual}"
-            )
+            recipe.fail(f"could not stop dock for task-wheel mode {action}/{scrolling}/{manual}")
         _kwrite(*general, "--key", launchers_key, launcher_url)
         _kwrite(*general, "--key", "hoverAction", "0")
         _kwrite(*general, "--key", "animationLauncherBouncing", "false")
@@ -272,9 +266,7 @@ def main() -> None:
             "--key", "alignmentUpgraded", "true",
         )  # fmt: skip
         if not recipe.dock_start():
-            recipe.fail(
-                f"dock did not settle for task-wheel mode {action}/{scrolling}/{manual}"
-            )
+            recipe.fail(f"dock did not settle for task-wheel mode {action}/{scrolling}/{manual}")
         config = json.loads(
             recipe.json_payload("appletConfigData", "uu", str(view), str(tasks_applet))
         )["config"]
@@ -293,9 +285,7 @@ def main() -> None:
         if not launcher_span:
             launcher_span = applet_width
         if scrolling == "true" and applet_width < launcher_span:
-            recipe.fail(
-                "manual-scroll fixture shrank the one-item tasks viewport into overflow"
-            )
+            recipe.fail("manual-scroll fixture shrank the one-item tasks viewport into overflow")
 
     def settle_pointer() -> None:
         nonlocal wheel_x, wheel_y
@@ -303,7 +293,7 @@ def main() -> None:
         try:
             target = recipe.view(view)
             applet = next(a for a in recipe.view_applets(view) if a.id == tasks_applet)
-        except (recipe.RecipeError, StopIteration):
+        except recipe.RecipeError, StopIteration:
             recipe.fail("could not locate the live launcher row")
         ax, ay = target.absolute_geometry[0], target.absolute_geometry[1]
         lx, ly = target.local_geometry[0], target.local_geometry[1]
@@ -336,9 +326,7 @@ def main() -> None:
                     break
                 time.sleep(0.25)
             if count > expected:
-                recipe.fail(
-                    f"{label} produced {count} launches, expected exactly {expected}"
-                )
+                recipe.fail(f"{label} produced {count} launches, expected exactly {expected}")
             if count == expected:
                 break
             settle_pointer()
@@ -380,9 +368,7 @@ def main() -> None:
         if count != expected:
             recipe.fail(f"rate fixture recorded {count} launches, expected {expected}")
         if rate_process_count() != expected:
-            recipe.fail(
-                f"rate fixture process count disagrees with launch count {expected}"
-            )
+            recipe.fail(f"rate fixture process count disagrees with launch count {expected}")
         assert_pure_launcher()
 
     def drive_rate_to_count(expected: int, detents: int, gap: int) -> None:
@@ -395,9 +381,7 @@ def main() -> None:
                     break
                 time.sleep(0.25)
             if count > expected:
-                recipe.fail(
-                    f"rate fixture recorded {count} launches, expected {expected}"
-                )
+                recipe.fail(f"rate fixture recorded {count} launches, expected {expected}")
             if count == expected:
                 break
             settle_pointer()
@@ -417,9 +401,7 @@ def main() -> None:
             "-1",
             "0",
         )
-        expect_launch(
-            "ScrollTasks positive wheel", "scroll", str(wheel_x), str(wheel_y), "1", "0"
-        )
+        expect_launch("ScrollTasks positive wheel", "scroll", str(wheel_x), str(wheel_y), "1", "0")
         stop_fixture_app()
 
         configure_mode(2, "false", 0)
@@ -470,13 +452,12 @@ def main() -> None:
         configure_mode(1, "false", 0)
         settle_pointer()
         drive_rate_to_count(1, 2, 50)
-        print(
-            "ok: first detent launched one pure-launcher process; second at 50 ms was suppressed"
-        )
+        print("ok: first detent launched one pure-launcher process; second at 50 ms was suppressed")
         time.sleep(0.6)
         drive_rate_to_count(2, 1, 0)
         print(
-            "ok: post-cooldown detent launched a second process while the row stayed a pure launcher"
+            "ok: post-cooldown detent launched a second process "
+            "while the row stayed a pure launcher"
         )
 
         print("PASS: SC-W1 launcher wheel production path")

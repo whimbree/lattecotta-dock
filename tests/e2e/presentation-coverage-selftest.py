@@ -91,7 +91,9 @@ def main() -> None:
     if "content ends at 2499, after background 2335" not in message:
         recipe.fail("the negative control did not observe the escaped tail")
 
-    print("PASS: presentation coverage accepts complete chrome and rejects the D150 escaped-row shape")
+    print(
+        "PASS: presentation coverage accepts complete chrome and rejects the D150 escaped-row shape"
+    )
 
 
 if __name__ == "__main__":

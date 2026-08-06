@@ -50,6 +50,7 @@ from latte_harness.storm_cleanup import CleanupDeps, perform_cleanup_transaction
 def _warn(message: str) -> None:
     print(message, file=sys.stderr, flush=True)
 
+
 E2E_REPO = os.environ["E2E_REPO"]
 MODEL = f"{E2E_REPO}/tests/e2e/fixtures/fp4c/operation_model.py"
 FIXTURE_GENERATOR = f"{E2E_REPO}/harness/src/latte_harness/matrix_fixture.py"
@@ -121,7 +122,16 @@ def _latte_call(fail_message: str, method: str, *args: str) -> None:
     """``e2e_call ... >/dev/null || e2e_fail``: run a lattedock action, forward
     busctl stderr, and fail loudly on a D-Bus error."""
     result = subprocess.run(
-        ["busctl", "--user", "call", "org.kde.lattedock", "/Latte", "org.kde.LatteDock", method, *args],
+        [
+            "busctl",
+            "--user",
+            "call",
+            "org.kde.lattedock",
+            "/Latte",
+            "org.kde.LatteDock",
+            method,
+            *args,
+        ],
         capture_output=True,
         text=True,
         check=False,
@@ -426,7 +436,9 @@ def _capture_layer3_latte_windows(destination: str) -> bool:
     return True
 
 
-def _assert_visual_window_ownership(snapshot_file: str, windows_file: str, output_file: str) -> bool:
+def _assert_visual_window_ownership(
+    snapshot_file: str, windows_file: str, output_file: str
+) -> bool:
     """Feed {snapshot, outputs, windows} through assert-visual-window-ownership."""
     payload = _compact(
         {
@@ -485,7 +497,9 @@ def _assert_latest_intent_probe(before_file: str, after_file: str) -> bool:
         not after_view["geometrySettled"]
         or after_view["relocationGeneration"] != after_view["appliedRelocationGeneration"]
     ):
-        print("latest-intent probe did not settle its newest generation", file=sys.stderr, flush=True)
+        print(
+            "latest-intent probe did not settle its newest generation", file=sys.stderr, flush=True
+        )
         return False
     return True
 
@@ -496,7 +510,11 @@ def _assert_latest_intent_probe(before_file: str, after_file: str) -> bool:
 def _wait_for_checkpoint(through: int, current_file: str, attempts: int = 240) -> bool:
     for _ in range(attempts):
         if not _dock_is_running():
-            print(f"FAIL: fixture dock exited before FP-4C checkpoint {through}", file=sys.stderr, flush=True)
+            print(
+                f"FAIL: fixture dock exited before FP-4C checkpoint {through}",
+                file=sys.stderr,
+                flush=True,
+            )
             return False
         _capture_snapshot(current_file)
         if os.path.exists(current_file) and os.path.getsize(current_file) > 0:
@@ -514,7 +532,9 @@ def _wait_for_quiescent_projection(output_file: str, snapshot_file: str) -> bool
     repeats = 0
     for _ in range(240):
         if not _dock_is_running():
-            print("FAIL: fixture dock exited before its state quiesced", file=sys.stderr, flush=True)
+            print(
+                "FAIL: fixture dock exited before its state quiesced", file=sys.stderr, flush=True
+            )
             return False
         _capture_snapshot(snapshot_file)
         result = _model("quiescent-projection", stdin=_read_or_empty(snapshot_file), quiet=True)
@@ -532,10 +552,16 @@ def _wait_for_quiescent_projection(output_file: str, snapshot_file: str) -> bool
     return _model("quiescent-projection", stdin=_read_or_empty(snapshot_file)).returncode == 0
 
 
-def _wait_for_bound_result(step_file: str, before_file: str, after_file: str, result_file: str) -> bool:
+def _wait_for_bound_result(
+    step_file: str, before_file: str, after_file: str, result_file: str
+) -> bool:
     for _ in range(240):
         if not _dock_is_running():
-            print("FAIL: fixture dock exited before an operation result bound", file=sys.stderr, flush=True)
+            print(
+                "FAIL: fixture dock exited before an operation result bound",
+                file=sys.stderr,
+                flush=True,
+            )
             return False
         _capture_snapshot(after_file)
         if os.path.exists(after_file) and os.path.getsize(after_file) > 0:
@@ -552,10 +578,14 @@ def _wait_for_bound_result(step_file: str, before_file: str, after_file: str, re
     return _model("bind-result", stdin=payload).returncode == 0
 
 
-def _wait_for_edit_outcome(target: str, editing: bool, configuring: bool, current_file: str) -> bool:
+def _wait_for_edit_outcome(
+    target: str, editing: bool, configuring: bool, current_file: str
+) -> bool:
     for _ in range(240):
         if not _dock_is_running():
-            print("FAIL: fixture dock exited during an edit transition", file=sys.stderr, flush=True)
+            print(
+                "FAIL: fixture dock exited during an edit transition", file=sys.stderr, flush=True
+            )
             return False
         _capture_snapshot(current_file)
         if os.path.exists(current_file) and os.path.getsize(current_file) > 0:
@@ -585,7 +615,11 @@ def _wait_for_runtime_reload(before_file: str, after_file: str, resolved_file: s
 def _wait_for_visual_window_ownership(through: int, snapshot_file: str, windows_file: str) -> bool:
     for _ in range(120):
         if not _dock_is_running():
-            print("FAIL: fixture dock exited before visual ownership settled", file=sys.stderr, flush=True)
+            print(
+                "FAIL: fixture dock exited before visual ownership settled",
+                file=sys.stderr,
+                flush=True,
+            )
             return False
         _capture_snapshot(snapshot_file)
         if os.path.exists(snapshot_file) and os.path.getsize(snapshot_file) > 0:
@@ -651,21 +685,37 @@ def _reverify_restored_baseline() -> bool:
     projection = f"{_S.artifact_dir}/cleanup-baseline.projection.json"
     payload = _snapshot()
     if not payload:
-        print("FAIL: FP-4C cleanup could not capture the restored runtime baseline", file=sys.stderr, flush=True)
+        print(
+            "FAIL: FP-4C cleanup could not capture the restored runtime baseline",
+            file=sys.stderr,
+            flush=True,
+        )
         return False
     with open(baseline, "w", encoding="utf-8") as stream:
         stream.write(payload)
     if _model("assert-baseline", stdin=_read(baseline)).returncode != 0:
-        print("FAIL: FP-4C cleanup did not restore the pristine runtime baseline", file=sys.stderr, flush=True)
+        print(
+            "FAIL: FP-4C cleanup did not restore the pristine runtime baseline",
+            file=sys.stderr,
+            flush=True,
+        )
         return False
     projected = _model("durable-projection", stdin=_read(baseline))
     if projected.returncode != 0:
-        print("FAIL: FP-4C cleanup could not project the restored runtime baseline", file=sys.stderr, flush=True)
+        print(
+            "FAIL: FP-4C cleanup could not project the restored runtime baseline",
+            file=sys.stderr,
+            flush=True,
+        )
         return False
     with open(projection, "w", encoding="utf-8") as stream:
         stream.write(projected.stdout)
     if _read(projection) != _read(_S.baseline_projection_file):
-        print("FAIL: FP-4C cleanup runtime baseline differs after exact config restore", file=sys.stderr, flush=True)
+        print(
+            "FAIL: FP-4C cleanup runtime baseline differs after exact config restore",
+            file=sys.stderr,
+            flush=True,
+        )
         return False
     return True
 
@@ -751,7 +801,8 @@ def _body() -> None:
         recipe.fail("the validated FP-4C plan seed is not an unsigned integer")
 
     _S.artifact_dir = tempfile.mkdtemp(
-        prefix=f"linked-dock-operation-stress.seed-{stress_seed}.run-", dir=os.environ["E2E_ARTIFACTS"]
+        prefix=f"linked-dock-operation-stress.seed-{stress_seed}.run-",
+        dir=os.environ["E2E_ARTIFACTS"],
     )
     _S.transaction_dir = tempfile.mkdtemp(prefix="fp4c-operation-stress.", dir=_S.rt)
     if not _path_is_within(_S.transaction_dir, _S.rt):
@@ -802,15 +853,28 @@ def _body() -> None:
 
     fixture = subprocess.run(
         [
-            "uv", "run", "--locked", "--project", f"{E2E_REPO}/harness",
-            "python", "-m", "latte_harness.matrix_fixture",
-            "--seed-dir", _S.backup_dir,
-            "--out-dir", _S.fixture_dir,
-            "--view-type", "panel",
-            "--edge", "bottom",
-            "--alignment", "justify",
-            "--display", "1out",
-            "--cell", "fp4c-partial-floating-panel",
+            "uv",
+            "run",
+            "--locked",
+            "--project",
+            f"{E2E_REPO}/harness",
+            "python",
+            "-m",
+            "latte_harness.matrix_fixture",
+            "--seed-dir",
+            _S.backup_dir,
+            "--out-dir",
+            _S.fixture_dir,
+            "--view-type",
+            "panel",
+            "--edge",
+            "bottom",
+            "--alignment",
+            "justify",
+            "--display",
+            "1out",
+            "--cell",
+            "fp4c-partial-floating-panel",
         ],
         stdout=subprocess.DEVNULL,
         check=False,
@@ -838,38 +902,116 @@ def _body() -> None:
 
     if not recipe.dock_stop():
         recipe.fail("could not stop the generated panel before deterministic configuration")
-    panel_group = ["--file", _S.layout, "--group", "Containments", "--group", root_id, "--group", "General"]
-    _kwrite_or_fail("could not set the FP-4C panel minimum length", *panel_group, "--key", "minLength", "45")
-    _kwrite_or_fail("could not set the FP-4C panel maximum length", *panel_group, "--key", "maxLength", "45")
-    _kwrite_or_fail("could not pin the FP-4C panel length", *panel_group, "--key", "maximizeWhenMaximized", "false")
-    _kwrite_or_fail("could not enable FP-4C window-touch attachment", *panel_group, "--key", "hideFloatingGapForMaximized", "true")
-    _kwrite_or_fail("could not disable FP-4C pointer deferral", *panel_group, "--key", "floatingGapHidingWaitsMouse", "false")
-    _kwrite_or_fail("could not set the positive FP-4C floating gap", *panel_group, "--key", "screenEdgeMargin", "18")
-    _kwrite_or_fail("could not retain the panel-owned FP-4C gap", *panel_group, "--key", "floatingInternalGapIsForced", "false")
-    _kwrite_or_fail("could not disable FP-4C parabolic zoom", *panel_group, "--key", "zoomLevel", "0")
-    _kwrite_or_fail("could not retain FP-4C theme-panel behavior", *panel_group, "--key", "useThemePanel", "true")
-    _kwrite_or_fail("could not retain the FP-4C panel background thickness", *panel_group, "--key", "panelSize", "100")
+    panel_group = [
+        "--file",
+        _S.layout,
+        "--group",
+        "Containments",
+        "--group",
+        root_id,
+        "--group",
+        "General",
+    ]
+    _kwrite_or_fail(
+        "could not set the FP-4C panel minimum length", *panel_group, "--key", "minLength", "45"
+    )
+    _kwrite_or_fail(
+        "could not set the FP-4C panel maximum length", *panel_group, "--key", "maxLength", "45"
+    )
+    _kwrite_or_fail(
+        "could not pin the FP-4C panel length",
+        *panel_group,
+        "--key",
+        "maximizeWhenMaximized",
+        "false",
+    )
+    _kwrite_or_fail(
+        "could not enable FP-4C window-touch attachment",
+        *panel_group,
+        "--key",
+        "hideFloatingGapForMaximized",
+        "true",
+    )
+    _kwrite_or_fail(
+        "could not disable FP-4C pointer deferral",
+        *panel_group,
+        "--key",
+        "floatingGapHidingWaitsMouse",
+        "false",
+    )
+    _kwrite_or_fail(
+        "could not set the positive FP-4C floating gap",
+        *panel_group,
+        "--key",
+        "screenEdgeMargin",
+        "18",
+    )
+    _kwrite_or_fail(
+        "could not retain the panel-owned FP-4C gap",
+        *panel_group,
+        "--key",
+        "floatingInternalGapIsForced",
+        "false",
+    )
+    _kwrite_or_fail(
+        "could not disable FP-4C parabolic zoom", *panel_group, "--key", "zoomLevel", "0"
+    )
+    _kwrite_or_fail(
+        "could not retain FP-4C theme-panel behavior",
+        *panel_group,
+        "--key",
+        "useThemePanel",
+        "true",
+    )
+    _kwrite_or_fail(
+        "could not retain the FP-4C panel background thickness",
+        *panel_group,
+        "--key",
+        "panelSize",
+        "100",
+    )
 
     origin_layout_name = os.path.basename(_S.layout).removesuffix(".layout.latte")
     destination_layout_name = "FP4C Destination"
     layouts_directory = os.path.dirname(_S.layout)
     destination_layout = f"{layouts_directory}/{destination_layout_name}.layout.latte"
     hidden_layout = f"{layouts_directory}/.multiple-layouts_hidden.layout.latte"
-    shutil.copyfile(f"{E2E_REPO}/shell/package/contents/templates/Empty.layout.latte", destination_layout)
     shutil.copyfile(
-        f"{E2E_REPO}/shell/package/contents/templates/.multiple-layouts_hidden.layout.latte", hidden_layout
+        f"{E2E_REPO}/shell/package/contents/templates/Empty.layout.latte", destination_layout
+    )
+    shutil.copyfile(
+        f"{E2E_REPO}/shell/package/contents/templates/.multiple-layouts_hidden.layout.latte",
+        hidden_layout,
     )
     _kwrite_or_fail(
         "could not activate the FP-4C origin on all activities",
-        "--file", _S.layout, "--group", "LayoutSettings", "--key", "activities", "{0}",
+        "--file",
+        _S.layout,
+        "--group",
+        "LayoutSettings",
+        "--key",
+        "activities",
+        "{0}",
     )
     _kwrite_or_fail(
         "could not activate the FP-4C destination on all activities",
-        "--file", destination_layout, "--group", "LayoutSettings", "--key", "activities", "{0}",
+        "--file",
+        destination_layout,
+        "--group",
+        "LayoutSettings",
+        "--key",
+        "activities",
+        "{0}",
     )
     _kwrite_or_fail(
         "could not enable FP-4C multiple-layout mode",
-        "--file", f"{_S.config_home}/lattedockrc", "--group", "UniversalSettings", "--key", "memoryUsage", "1",
+        "--file",
+        f"{_S.config_home}/lattedockrc",
+        "--group",
+        "UniversalSettings",
+        "--key",
+        "memoryUsage",
+        "1",
     )
 
     if not recipe.dock_start(90):
@@ -886,7 +1028,13 @@ def _body() -> None:
         stream.write(recipe.json_payload("viewsData"))
     root_id = _resolve_remapped_root(runtime_views_file, origin_layout_name)
 
-    _latte_call("could not set the FP-4C root to Always Visible", "setViewVisibilityMode", "us", root_id, "alwaysVisible")
+    _latte_call(
+        "could not set the FP-4C root to Always Visible",
+        "setViewVisibilityMode",
+        "us",
+        root_id,
+        "alwaysVisible",
+    )
     for _ in range(40):
         with open(runtime_views_file, "w", encoding="utf-8") as stream:
             stream.write(recipe.json_payload("viewsData"))
@@ -903,7 +1051,7 @@ def _body() -> None:
         stream.write(recipe.json_payload("screensData"))
     _resolve_two_outputs(screens_file)
     with open(_S.bindings_file, "w", encoding="utf-8") as stream:
-        stream.write('{"root":%s}\n' % root_id)
+        stream.write(f'{{"root":{root_id}}}\n')
 
     if _model("validate-plan", stdin=_read(_S.plan_file)).returncode != 0:
         recipe.fail("the artifact FP-4C operation plan failed revalidation")
@@ -927,7 +1075,9 @@ def _resolve_two_active_layouts(active_layouts_file: str, origin: str, destinati
     if state.get("memoryUsage") != "multiple":
         _warn("FP-4C did not enter multiple-layout mode")
         recipe.fail(fail)
-    active = {layout["name"]: layout for layout in state.get("layouts", []) if layout.get("isActive")}
+    active = {
+        layout["name"]: layout for layout in state.get("layouts", []) if layout.get("isActive")
+    }
     expected = {origin, destination}
     if set(active) != expected:
         _warn(f"expected active layouts {sorted(expected)}, got {sorted(active)}")
@@ -976,7 +1126,9 @@ def _resolve_two_outputs(screens_file: str) -> None:
 
     with open(_S.outputs_file, "w", encoding="utf-8") as stream:
         stream.write(
-            _compact({"primary": output_record(primary[0]), "secondary": output_record(secondary[0])})
+            _compact(
+                {"primary": output_record(primary[0]), "secondary": output_record(secondary[0])}
+            )
         )
         stream.write("\n")
 
@@ -1021,7 +1173,9 @@ def _drive_operations(latest_intent_final_seq: int) -> None:
         operation_kind = _scalar(operation_row["operation"]["kind"])
         checkpoint = bool(operation_row["checkpoint"])
         if not _assert_no_pending_view_move(view_move_before_file):
-            recipe.fail(f"FP-4C operation {step_number} started with an invalid durable move lifecycle")
+            recipe.fail(
+                f"FP-4C operation {step_number} started with an invalid durable move lifecycle"
+            )
 
         if not pending_before_file:
             payload = _snapshot()
@@ -1055,12 +1209,16 @@ def _drive_operations(latest_intent_final_seq: int) -> None:
                     recipe.fail(f"state before reload operation {step_number} did not quiesce")
                 projected = _model("durable-projection", stdin=_read(before_file))
                 if projected.returncode != 0:
-                    recipe.fail(f"could not project durable state before reload operation {step_number}")
+                    recipe.fail(
+                        f"could not project durable state before reload operation {step_number}"
+                    )
                 with open(before_reload_projection, "w", encoding="utf-8") as stream:
                     stream.write(projected.stdout)
             _latte_call(
                 f"D-Bus transport failed for FP-4C operation {step_number} ({method})",
-                method, signature, *action_args,
+                method,
+                signature,
+                *action_args,
             )
 
             if method == "removeView":
@@ -1082,8 +1240,12 @@ def _drive_operations(latest_intent_final_seq: int) -> None:
                 elif operation_kind == "endEdit":
                     expected_editing, expected_configuring = False, False
                 else:
-                    recipe.fail(f"operation {step_number} maps an invalid edit kind '{operation_kind}'")
-                if not _wait_for_edit_outcome(edit_target, expected_editing, expected_configuring, after_file):
+                    recipe.fail(
+                        f"operation {step_number} maps an invalid edit kind '{operation_kind}'"
+                    )
+                if not _wait_for_edit_outcome(
+                    edit_target, expected_editing, expected_configuring, after_file
+                ):
                     recipe.fail(f"edit ownership did not match FP-4C operation {step_number}")
         elif action_kind == "restart":
             restart_this_step = True
@@ -1097,22 +1259,28 @@ def _drive_operations(latest_intent_final_seq: int) -> None:
                 recipe.fail(f"state before restart operation {step_number} did not quiesce")
             projected = _model("durable-projection", stdin=_read(before_file))
             if projected.returncode != 0:
-                recipe.fail(f"could not project durable state before restart operation {step_number}")
+                recipe.fail(
+                    f"could not project durable state before restart operation {step_number}"
+                )
             with open(before_restart_projection, "w", encoding="utf-8") as stream:
                 stream.write(projected.stdout)
             if not recipe.dock_stop():
                 recipe.fail(f"dock did not stop for FP-4C restart operation {step_number}")
-            if pending_tombstone_id:
-                if not _assert_tombstone_on_disk(pending_tombstone_id):
-                    recipe.fail(f"the stopped layout resurrected removed view {pending_tombstone_id}")
+            if pending_tombstone_id and not _assert_tombstone_on_disk(pending_tombstone_id):
+                recipe.fail(f"the stopped layout resurrected removed view {pending_tombstone_id}")
             if not recipe.dock_start(90):
                 recipe.fail(f"dock did not start for FP-4C restart operation {step_number}")
             if pending_tombstone_id:
                 removal_elapsed_ms = (time.time_ns() - removal_started_ns) // 1000000
                 if not removal_elapsed_ms < 60000:
-                    recipe.fail(f"removal restart missed the 60-second Undo interval ({removal_elapsed_ms}ms)")
+                    recipe.fail(
+                        f"removal restart missed the 60-second Undo interval "
+                        f"({removal_elapsed_ms}ms)"
+                    )
         else:
-            recipe.fail(f"FP-4C operation {step_number} resolved unsupported action '{action_kind}'")
+            recipe.fail(
+                f"FP-4C operation {step_number} resolved unsupported action '{action_kind}'"
+            )
 
         pending_steps.append(step_file)
         pending_resolved.append(resolved_file)
@@ -1123,31 +1291,44 @@ def _drive_operations(latest_intent_final_seq: int) -> None:
                 if operation_kind not in ("createLinked", "duplicateIndependent"):
                     recipe.fail(f"operation {step_number} cannot defer its semantic checkpoint")
                 _append_record_field(resolved_file, "record")
-                if not _wait_for_bound_result(step_file, pending_before_file, after_file, result_file):
+                if not _wait_for_bound_result(
+                    step_file, pending_before_file, after_file, result_file
+                ):
                     recipe.fail(f"snapshot did not bind FP-4C operation {step_number}")
                 pending_steps = []
                 pending_resolved = []
                 pending_before_file = ""
             if not _assert_no_pending_view_move(view_move_after_file):
-                recipe.fail(f"unchecked FP-4C operation {step_number} retained a durable move transaction")
-            if not _assert_view_move_lifecycle(step_file, view_move_before_file, view_move_after_file):
-                recipe.fail(f"unchecked FP-4C operation {step_number} changed the durable move lifecycle")
+                recipe.fail(
+                    f"unchecked FP-4C operation {step_number} retained a durable move transaction"
+                )
+            if not _assert_view_move_lifecycle(
+                step_file, view_move_before_file, view_move_after_file
+            ):
+                recipe.fail(
+                    f"unchecked FP-4C operation {step_number} changed the durable move lifecycle"
+                )
             continue
 
         # Reaching here means checkpoint is True: the bash re-asserted
         # `[[ "$checkpoint" == true ]]` to catch a malformed non-true/non-false
         # string, structurally impossible once the model emits a JSON bool.
-        if reload_this_step:
-            if not _wait_for_runtime_reload(pending_before_file, after_file, resolved_file):
-                recipe.fail("linked-root runtime reload did not rotate exactly its affected views")
+        if reload_this_step and not _wait_for_runtime_reload(
+            pending_before_file, after_file, resolved_file
+        ):
+            recipe.fail("linked-root runtime reload did not rotate exactly its affected views")
 
         for pending_step, pending_resolve in zip(pending_steps, pending_resolved, strict=True):
             pending_sequence = _load(pending_step)["seq"]
             pending_after = f"{step_dir}/{pending_sequence:03d}.after.json"
             pending_result = f"{step_dir}/{pending_sequence:03d}.result.json"
             _append_record_field(pending_resolve, "record")
-            if not _wait_for_bound_result(pending_step, pending_before_file, pending_after, pending_result):
-                recipe.fail(f"snapshot did not prove the result of FP-4C operation {pending_sequence}")
+            if not _wait_for_bound_result(
+                pending_step, pending_before_file, pending_after, pending_result
+            ):
+                recipe.fail(
+                    f"snapshot did not prove the result of FP-4C operation {pending_sequence}"
+                )
 
         last_checkpoint_file = f"{step_dir}/{step_tag}.checkpoint.json"
         checkpoint_attempts = 240
@@ -1158,19 +1339,27 @@ def _drive_operations(latest_intent_final_seq: int) -> None:
         if not _wait_for_checkpoint(step_number, last_checkpoint_file, checkpoint_attempts):
             recipe.fail(f"FP-4C operation checkpoint {step_number} did not converge")
         if not _assert_no_pending_view_move(view_move_after_file):
-            recipe.fail(f"FP-4C operation checkpoint {step_number} retained a durable move transaction")
+            recipe.fail(
+                f"FP-4C operation checkpoint {step_number} retained a durable move transaction"
+            )
         if not _assert_view_move_lifecycle(step_file, view_move_before_file, view_move_after_file):
-            recipe.fail(f"FP-4C operation checkpoint {step_number} has an incomplete durable move lifecycle")
-        if step_number == latest_intent_final_seq:
-            if not _assert_latest_intent_probe(pending_before_file, last_checkpoint_file):
-                recipe.fail("rapid return-to-origin did not preserve the newest complete placement intent")
-        if reload_this_step or restart_this_step or removed_this_step:
-            if not _wait_for_visual_window_ownership(
+            recipe.fail(
+                f"FP-4C operation checkpoint {step_number} has an incomplete durable move lifecycle"
+            )
+        if step_number == latest_intent_final_seq and not _assert_latest_intent_probe(
+            pending_before_file, last_checkpoint_file
+        ):
+            recipe.fail(
+                "rapid return-to-origin did not preserve the newest complete placement intent"
+            )
+        if (reload_this_step or restart_this_step or removed_this_step) and (
+            not _wait_for_visual_window_ownership(
                 step_number,
                 f"{step_dir}/{step_tag}.visual-snapshot.json",
                 f"{step_dir}/{step_tag}.layer3-windows.json",
-            ):
-                recipe.fail(f"FP-4C checkpoint {step_number} has leaked or duplicate visual QWindows")
+            )
+        ):
+            recipe.fail(f"FP-4C checkpoint {step_number} has leaked or duplicate visual QWindows")
 
         if reload_this_step:
             if not _wait_for_quiescent_projection(after_reload_quiescent, last_checkpoint_file):
@@ -1199,7 +1388,9 @@ def _drive_operations(latest_intent_final_seq: int) -> None:
                 recipe.fail(f"state after restart operation {step_number} did not quiesce")
             projected = _model("durable-projection", stdin=_read(last_checkpoint_file))
             if projected.returncode != 0:
-                recipe.fail(f"could not project durable state after restart operation {step_number}")
+                recipe.fail(
+                    f"could not project durable state after restart operation {step_number}"
+                )
             with open(after_restart_projection, "w", encoding="utf-8") as stream:
                 stream.write(projected.stdout)
             if _read(before_restart_projection) != _read(after_restart_projection):
@@ -1218,7 +1409,13 @@ def _drive_operations(latest_intent_final_seq: int) -> None:
     final_quiescent = f"{_S.artifact_dir}/final.quiescent.json"
     if not _wait_for_quiescent_projection(final_quiescent, final_snapshot):
         recipe.fail("the final FP-4C operation state did not remain quiescent")
-    if _model("assert-checkpoint", stdin=_build_checkpoint_input(last_step_number or 0, final_snapshot)).returncode != 0:
+    if (
+        _model(
+            "assert-checkpoint",
+            stdin=_build_checkpoint_input(last_step_number or 0, final_snapshot),
+        ).returncode
+        != 0
+    ):
         recipe.fail("the final quiescent FP-4C state diverged from the typed plan")
     if not _assert_no_pending_view_move(f"{_S.artifact_dir}/final.view-move-transactions.json"):
         recipe.fail("the final FP-4C state retained a durable move transaction")
@@ -1228,7 +1425,10 @@ def _drive_operations(latest_intent_final_seq: int) -> None:
         f"{_S.artifact_dir}/final.layer3-windows.json",
     ):
         recipe.fail("the final FP-4C state has leaked or duplicate visual QWindows")
-    if _model("validate-replay", "--plan", _S.plan_file, "--replay", _S.replay_file).returncode != 0:
+    if (
+        _model("validate-replay", "--plan", _S.plan_file, "--replay", _S.replay_file).returncode
+        != 0
+    ):
         recipe.fail("the resolved FP-4C replay is incomplete or inconsistent")
 
     _S.acceptance_completed = True

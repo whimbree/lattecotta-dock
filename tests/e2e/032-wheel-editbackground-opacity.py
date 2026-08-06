@@ -36,8 +36,9 @@ import time
 from contextlib import redirect_stderr, suppress
 from pathlib import Path
 
-from latte_harness import audit, recipe
 from pydantic import ValidationError
+
+from latte_harness import audit, recipe
 
 
 def _quiet_dock_stop() -> None:
@@ -186,9 +187,18 @@ def main() -> None:
         _quiet_dock_stop()
         subprocess.run(
             [
-                "kwriteconfig6", "--file", layout,
-                "--group", "Containments", "--group", str(view), "--group", "General",
-                "--key", "editBackgroundOpacity", orig or "0.2",
+                "kwriteconfig6",
+                "--file",
+                layout,
+                "--group",
+                "Containments",
+                "--group",
+                str(view),
+                "--group",
+                "General",
+                "--key",
+                "editBackgroundOpacity",
+                orig or "0.2",
             ],
             check=False,
         )

@@ -92,7 +92,8 @@ def main() -> None:
     victim_sched = _sched_of(target, victim)
     if victim_sched != "False":
         recipe.fail(
-            f"target applet {victim} is already inScheduledDestruction={victim_sched} before removal"
+            f"target applet {victim} is already "
+            f"inScheduledDestruction={victim_sched} before removal"
         )
     print(f"target view {target} has {before_n} applets; removing instance {victim}")
 
@@ -143,7 +144,9 @@ def main() -> None:
         )
     if not _new_log_has(mark, f"removeApplet found no applet {bad_applet} on containment {target}"):
         _dump_new_log(mark)
-        recipe.fail(f"no removeApplet refusal qWarning for bad applet id {bad_applet} in the dock log")
+        recipe.fail(
+            f"no removeApplet refusal qWarning for bad applet id {bad_applet} in the dock log"
+        )
     print(f"rejection observed: bad applet id {bad_applet} refused (qWarning + nothing removed)")
 
     # HC3b: a bad CONTAINMENT id is REFUSED (qWarning + no removal).
@@ -158,9 +161,12 @@ def main() -> None:
     post_total = _applet_total()
     if post_total != pre_total:
         recipe.fail(
-            f"REJECTION LEAK: applet total changed {pre_total} -> {post_total} on a bad containment id"
+            f"REJECTION LEAK: applet total changed "
+            f"{pre_total} -> {post_total} on a bad containment id"
         )
-    if not _new_log_has(mark, f"removeApplet requested for containment {bad_cid} which has no view"):
+    if not _new_log_has(
+        mark, f"removeApplet requested for containment {bad_cid} which has no view"
+    ):
         _dump_new_log(mark)
         recipe.fail(
             f"no removeApplet refusal qWarning for bad containment id {bad_cid} in the dock log"

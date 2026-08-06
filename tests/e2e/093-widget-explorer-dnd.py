@@ -79,14 +79,16 @@ def main() -> None:
     time.sleep(1)
     if _dumpwin_count() != winmark:
         recipe.fail(
-            f"REJECTION LEAK: a window appeared for showWidgetExplorer on bad containment id {bad_cid}"
+            f"REJECTION LEAK: a window appeared for showWidgetExplorer "
+            f"on bad containment id {bad_cid}"
         )
     if not _new_log_has(
         logmark, f"showWidgetExplorer requested for containment {bad_cid} which has no view"
     ):
         _dump_new_log(logmark)
         recipe.fail(
-            f"no showWidgetExplorer refusal qWarning for bad containment id {bad_cid} in the dock log"
+            f"no showWidgetExplorer refusal qWarning for bad containment id "
+            f"{bad_cid} in the dock log"
         )
     print(f"rejection observed: bad containment id {bad_cid} refused (qWarning + no window)")
 
@@ -104,7 +106,10 @@ def main() -> None:
     print(f"widget explorer open: window {rect}")
     center = dnd.view_center(view)
     empty = dnd.empty_point()
-    print(f"drop target (commit): {center[0]} {center[1]} ; off-dock target (abort): {empty[0]} {empty[1]}")
+    print(
+        f"drop target (commit): {center[0]} {center[1]} ; "
+        f"off-dock target (abort): {empty[0]} {empty[1]}"
+    )
 
     # ---- leg 1: COMMIT proves a real drop adds EXACTLY ONE (positive tripwire) ---
 
@@ -142,7 +147,16 @@ def main() -> None:
     before = dnd.applet_count(view)
     # hover the dock (spacer opens) THEN release over empty space
     peak = dnd.drag_widget_watched(
-        rect, view, center[0], center[1], center[0], center[1], empty[0], empty[1], empty[0], empty[1]
+        rect,
+        view,
+        center[0],
+        center[1],
+        center[0],
+        center[1],
+        empty[0],
+        empty[1],
+        empty[0],
+        empty[1],
     )
     after = dnd.applet_count(view)
     marker = dnd.drop_marker(view)
@@ -194,7 +208,10 @@ def main() -> None:
             f"ABORT straight-off left a live marker ({marker}) - a phantom insert from the "
             "distance fallback"
         )
-    print("rejection observed: an off-dock release that never entered the dock added ZERO (no phantom insert)")
+    print(
+        "rejection observed: an off-dock release that never entered "
+        "the dock added ZERO (no phantom insert)"
+    )
 
     print(
         "PASS: explorer DnD adds exactly one on a drop, ZERO on a release over nothing, and the "

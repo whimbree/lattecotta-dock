@@ -10,14 +10,15 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import itertools
 import json
 import math
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from enum import Enum, IntEnum
 from pathlib import Path
-from typing import Any, Iterable, NoReturn
-
+from typing import Any, NoReturn
 
 SCHEMA_VERSION = 11
 PLAN_FORMAT = "lattecotta.fp4c.operation-plan"
@@ -128,12 +129,18 @@ def require_id_array(value: Any, label: str) -> list[int]:
     return result
 
 
-class OutputRole(str, Enum):
+# These three model enums stay (str, Enum), not StrEnum (the UP042 suggestion):
+# the model serializes members through explicit .value and json.dumps (both str
+# subclasses serialize to the value identically), but StrEnum also changes a
+# member's str()/f-string output from "OperationKind.MOVE" to "move" on 3.12+.
+# That output is observable (e.g. the "unhandled operation kind {operation.kind}"
+# refusal), so the switch would alter behavior; keep the base class deliberately.
+class OutputRole(str, Enum):  # noqa: UP042
     PRIMARY = "primary"
     SECONDARY = "secondary"
 
 
-class LayoutRole(str, Enum):
+class LayoutRole(str, Enum):  # noqa: UP042
     ORIGIN = "origin"
     DESTINATION = "destination"
 
@@ -185,7 +192,7 @@ class Alignment(IntEnum):
         }[self]
 
 
-class OperationKind(str, Enum):
+class OperationKind(str, Enum):  # noqa: UP042
     MOVE = "move"
     MOVE_LAYOUT = "moveLayout"
     CREATE_LINKED = "createLinked"
@@ -203,14 +210,14 @@ class OperationKind(str, Enum):
 class SplitMix64:
     state: int
 
-    def next(self) -> tuple["SplitMix64", int]:
+    def next(self) -> tuple[SplitMix64, int]:
         state = (self.state + 0x9E3779B97F4A7C15) & 0xFFFFFFFFFFFFFFFF
         value = state
         value = ((value ^ (value >> 30)) * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF
         value = ((value ^ (value >> 27)) * 0x94D049BB133111EB) & 0xFFFFFFFFFFFFFFFF
         return SplitMix64(state), (value ^ (value >> 31)) & 0xFFFFFFFFFFFFFFFF
 
-    def bounded(self, upper: int) -> tuple["SplitMix64", int]:
+    def bounded(self, upper: int) -> tuple[SplitMix64, int]:
         if upper <= 0:
             fail(f"SplitMix64 bound must be positive, got {upper}")
         generator, value = self.next()
@@ -293,9 +300,7 @@ def placements_overlap(left: Placement, right: Placement) -> bool:
     return max(left_start, right_start) < min(left_end, right_end)
 
 
-def safe_placement(
-    placements: dict[str, Placement], target: str, candidate: Placement
-) -> bool:
+def safe_placement(placements: dict[str, Placement], target: str, candidate: Placement) -> bool:
     return all(
         handle == target or not placements_overlap(candidate, placement)
         for handle, placement in placements.items()
@@ -493,9 +498,7 @@ def generate_plan(seed: int, *, validate: bool = True) -> dict[str, Any]:
 
     burst_target = "root"
     for index in range(3):
-        generator, placement = choose_safe_placement(
-            generator, placements, burst_target
-        )
+        generator, placement = choose_safe_placement(generator, placements, burst_target)
         move(burst_target, placement, checkpoint=index == 2)
 
     linked_group = ("root", "member-b", "member-c")
@@ -514,9 +517,7 @@ def generate_plan(seed: int, *, validate: bool = True) -> dict[str, Any]:
         "seed": str(seed),
         "initial": {
             "handle": "root",
-            "placement": Placement(
-                OutputRole.PRIMARY, Edge.BOTTOM, Alignment.JUSTIFY
-            ).to_json(),
+            "placement": Placement(OutputRole.PRIMARY, Edge.BOTTOM, Alignment.JUSTIFY).to_json(),
         },
         "latestIntentProbe": {
             "target": latest_intent_target,
@@ -541,9 +542,7 @@ def parse_placement(value: Any, label: str) -> Placement:
     try:
         output = OutputRole(require_string(payload["output"], f"{label}.output"))
         edge = Edge(require_int(payload["edgeValue"], f"{label}.edgeValue"))
-        alignment = Alignment(
-            require_int(payload["alignmentValue"], f"{label}.alignmentValue")
-        )
+        alignment = Alignment(require_int(payload["alignmentValue"], f"{label}.alignmentValue"))
     except ValueError as error:
         fail(f"{label} has an unsupported enum value: {error}")
     if payload["edge"] != edge.label:
@@ -714,11 +713,7 @@ def apply_operation(state: ModelState, operation: Operation) -> ModelState:
         return replace(
             state,
             views=tuple(sorted(views.values(), key=lambda item: item.handle)),
-            config_owner=(
-                None
-                if state.config_owner == removed.handle
-                else state.config_owner
-            ),
+            config_owner=(None if state.config_owner == removed.handle else state.config_owner),
             destroyed=destroyed,
         )
     elif operation.kind is OperationKind.RELOAD:
@@ -726,9 +721,7 @@ def apply_operation(state: ModelState, operation: Operation) -> ModelState:
         root = target.root or target.handle
         expected = tuple(
             sorted(
-                view.handle
-                for view in views.values()
-                if view.handle == root or view.root == root
+                view.handle for view in views.values() if view.handle == root or view.root == root
             )
         )
         if tuple(sorted(operation.affected)) != expected:
@@ -749,10 +742,7 @@ def apply_operation(state: ModelState, operation: Operation) -> ModelState:
 def state_through(plan: dict[str, Any], through: int) -> ModelState:
     validate_plan(plan, recurse=False, verify_generator=False)
     if through < 0 or through > len(plan["operations"]):
-        fail(
-            f"checkpoint sequence {through} is outside "
-            f"0..{len(plan['operations'])}"
-        )
+        fail(f"checkpoint sequence {through} is outside 0..{len(plan['operations'])}")
     initial = parse_placement(plan["initial"]["placement"], "initial.placement")
     state = ModelState(
         (
@@ -860,8 +850,7 @@ def validate_plan(
             or kinds.count(OperationKind.REMOVE) != 1
             or kinds.count(OperationKind.RELOAD) != 1
             or kinds.count(OperationKind.RESTART) != 2
-            or layout_moves
-            != [LayoutRole.DESTINATION, LayoutRole.ORIGIN]
+            or layout_moves != [LayoutRole.DESTINATION, LayoutRole.ORIGIN]
             or edit_rounds != 7
             or kinds.count(OperationKind.END_EDIT) != edit_rounds
             or kinds.count(OperationKind.CONFIGURE_ON) != edit_rounds
@@ -870,11 +859,9 @@ def validate_plan(
             fail("plan does not structurally cover the FP-4C lifecycle")
         assert all(placement is not None for placement in placements)
         if (
-            {placement.output for placement in placements if placement}
-            != set(OutputRole)
+            {placement.output for placement in placements if placement} != set(OutputRole)
             or {placement.edge for placement in placements if placement} != set(Edge)
-            or {placement.alignment for placement in placements if placement}
-            != set(Alignment)
+            or {placement.alignment for placement in placements if placement} != set(Alignment)
         ):
             fail("plan does not cover both outputs, all edges, and all alignments")
         if final_state.editing is not None or final_state.configuring:
@@ -1188,9 +1175,7 @@ def parse_snapshot(value: Any) -> dict[str, Any]:
     reservation_state_generation = require_decimal(
         snapshot["reservationStateGeneration"], "reservationStateGeneration"
     )
-    require_bool(
-        snapshot["globalConfigureAppletsMode"], "globalConfigureAppletsMode"
-    )
+    require_bool(snapshot["globalConfigureAppletsMode"], "globalConfigureAppletsMode")
     if snapshot["stacking"] != {
         "available": False,
         "reason": STACKING_REASON,
@@ -1209,13 +1194,9 @@ def parse_snapshot(value: Any) -> dict[str, Any]:
         )
         require_int(view["logicalDockId"], f"views[{index}].logicalDockId", 1)
         if view["originalDockId"] is not None:
-            require_int(
-                view["originalDockId"], f"views[{index}].originalDockId", 1
-            )
+            require_int(view["originalDockId"], f"views[{index}].originalDockId", 1)
         if view["linkPlacement"] is not None:
-            require_string(
-                view["linkPlacement"], f"views[{index}].linkPlacement"
-            )
+            require_string(view["linkPlacement"], f"views[{index}].linkPlacement")
         for key in VIEW_STRING_KEYS:
             require_string(
                 view[key],
@@ -1254,13 +1235,10 @@ def parse_snapshot(value: Any) -> dict[str, Any]:
             "kwinAutoHide",
         ):
             fail(f"views[{index}].screenEdgeBackend is invalid")
-        if compositor_backend and (
-            not view["compositorScreenEdgeSupported"] or not revealing_mode
-        ):
+        if compositor_backend and (not view["compositorScreenEdgeSupported"] or not revealing_mode):
             fail(f"views[{index}] compositor backend has no supported reveal mode")
         if client_backend and (
-            not client_mode
-            or (revealing_mode and view["compositorScreenEdgeSupported"])
+            not client_mode or (revealing_mode and view["compositorScreenEdgeSupported"])
         ):
             fail(f"views[{index}] client backend conflicts with edge ownership")
         if view["screenEdgeRegistered"] and not compositor_backend:
@@ -1269,13 +1247,21 @@ def parse_snapshot(value: Any) -> dict[str, Any]:
             fail(f"views[{index}] missing backend owns an armed edge")
         if view["screenEdgeArmed"] and view["inRelocationAnimation"]:
             fail(f"views[{index}] relocating view owns an armed edge")
-        if compositor_backend and view["screenEdgeArmed"] and (
-            not view["isHidden"] or view["visibilityContainsMouse"]
-            or (view["inReadyState"] and not view["screenEdgeRegistered"])
+        if (
+            compositor_backend
+            and view["screenEdgeArmed"]
+            and (
+                not view["isHidden"]
+                or view["visibilityContainsMouse"]
+                or (view["inReadyState"] and not view["screenEdgeRegistered"])
+            )
         ):
             fail(f"views[{index}] armed screen edge has incompatible visibility state")
-        if client_backend and revealing_mode and view["screenEdgeArmed"] and (
-            not view["isHidden"] or view["visibilityContainsMouse"]
+        if (
+            client_backend
+            and revealing_mode
+            and view["screenEdgeArmed"]
+            and (not view["isHidden"] or view["visibilityContainsMouse"])
         ):
             fail(f"views[{index}] armed client edge has incompatible visibility state")
         for key in VIEW_NUMBER_KEYS:
@@ -1299,9 +1285,7 @@ def parse_snapshot(value: Any) -> dict[str, Any]:
                 f"views[{index}].contentTranslation",
                 2,
             )
-        require_string_array(
-            view["enabledBorders"], f"views[{index}].enabledBorders"
-        )
+        require_string_array(view["enabledBorders"], f"views[{index}].enabledBorders")
         if view["shadowEnabledBorders"] is not None:
             require_string_array(
                 view["shadowEnabledBorders"],
@@ -1313,12 +1297,8 @@ def parse_snapshot(value: Any) -> dict[str, Any]:
                 f"views[{index}].shadowPaddingOffsets",
                 4,
             )
-        require_string_array(
-            view["layerShellAnchors"], f"views[{index}].layerShellAnchors"
-        )
-        require_number_array(
-            view["layerShellMargins"], f"views[{index}].layerShellMargins", 4
-        )
+        require_string_array(view["layerShellAnchors"], f"views[{index}].layerShellAnchors")
+        require_number_array(view["layerShellMargins"], f"views[{index}].layerShellMargins", 4)
         require_string_array(
             view["reservationLayerShellAnchors"],
             f"views[{index}].reservationLayerShellAnchors",
@@ -1350,9 +1330,7 @@ def parse_snapshot(value: Any) -> dict[str, Any]:
         require_keys(group, GROUP_REQUIRED_KEYS, f"reservationGroups[{index}]")
         require_int(group["outputId"], f"reservationGroups[{index}].outputId", 0)
         require_string(group["edge"], f"reservationGroups[{index}].edge")
-        generation = require_decimal(
-            group["generation"], f"reservationGroups[{index}].generation"
-        )
+        generation = require_decimal(group["generation"], f"reservationGroups[{index}].generation")
         if generation == 0 or generation > reservation_state_generation:
             fail(
                 f"reservationGroups[{index}].generation is outside "
@@ -1367,12 +1345,8 @@ def parse_snapshot(value: Any) -> dict[str, Any]:
             group["contributorDockIds"],
             f"reservationGroups[{index}].contributorDockIds",
         )
-        require_int(
-            group["memberCount"], f"reservationGroups[{index}].memberCount", 1
-        )
-        require_number_array(
-            group["geometry"], f"reservationGroups[{index}].geometry", 4
-        )
+        require_int(group["memberCount"], f"reservationGroups[{index}].memberCount", 1)
+        require_number_array(group["geometry"], f"reservationGroups[{index}].geometry", 4)
         require_number_array(
             group["windowGeometry"],
             f"reservationGroups[{index}].windowGeometry",
@@ -1400,9 +1374,7 @@ def parse_snapshot(value: Any) -> dict[str, Any]:
             f"reservationGroups[{index}].layerShellExclusiveZone",
             1,
         )
-        require_string(
-            group["publisher"], f"reservationGroups[{index}].publisher"
-        )
+        require_string(group["publisher"], f"reservationGroups[{index}].publisher")
     return snapshot
 
 
@@ -1428,9 +1400,7 @@ def parse_outputs(value: Any) -> dict[str, OutputSnapshot]:
         record = require_object(outputs[role.value], label)
         if set(record) != {"id", "name", "geometry"}:
             fail(f"{label} must contain exactly id, name, and geometry")
-        raw_geometry = require_number_array(
-            record["geometry"], f"{label}.geometry", 4
-        )
+        raw_geometry = require_number_array(record["geometry"], f"{label}.geometry", 4)
         if any(
             not isinstance(component, int) or isinstance(component, bool)
             for component in raw_geometry
@@ -1515,25 +1485,15 @@ def assert_view_move_lifecycle(payload_value: Any) -> dict[str, Any]:
         "view move lifecycle after",
     )
     if before["transactions"]:
-        fail(
-            f"operation {operation.seq} started with a pending durable move"
-        )
+        fail(f"operation {operation.seq} started with a pending durable move")
     if after["transactions"]:
-        fail(
-            f"operation {operation.seq} retained a pending durable move"
-        )
+        fail(f"operation {operation.seq} retained a pending durable move")
 
     if operation.kind is OperationKind.RESTART:
         if any(after[key] != 0 for key in VIEW_MOVE_LIFECYCLE_GENERATIONS):
-            fail(
-                f"operation {operation.seq} restarted with stale lifecycle generations"
-            )
+            fail(f"operation {operation.seq} restarted with stale lifecycle generations")
     else:
-        expected_delta = (
-            1
-            if operation.kind is OperationKind.MOVE_LAYOUT
-            else 0
-        )
+        expected_delta = 1 if operation.kind is OperationKind.MOVE_LAYOUT else 0
         for key in VIEW_MOVE_LIFECYCLE_GENERATIONS:
             observed_delta = after[key] - before[key]
             if observed_delta != expected_delta:
@@ -1546,10 +1506,7 @@ def assert_view_move_lifecycle(payload_value: Any) -> dict[str, Any]:
         "ok": True,
         "seq": operation.seq,
         "kind": operation.kind.value,
-        "generations": {
-            key: after[key]
-            for key in VIEW_MOVE_LIFECYCLE_GENERATIONS
-        },
+        "generations": {key: after[key] for key in VIEW_MOVE_LIFECYCLE_GENERATIONS},
     }
 
 
@@ -1586,9 +1543,7 @@ def expected_reservation_depths(
     for persistent_id, view in views.items():
         depth = view["requestedReservationDepth"]
         if not isinstance(depth, int) or isinstance(depth, bool) or depth <= 0:
-            fail(
-                f"view {persistent_id} has no positive integral requested reservation depth"
-            )
+            fail(f"view {persistent_id} has no positive integral requested reservation depth")
         key = (view["screenId"], view["edge"])
         depths[key] = max(depths.get(key, 0), depth)
     return depths
@@ -1646,9 +1601,7 @@ def expected_reservation_window_geometry(
     bottom = depths.get((output.identity, Edge.BOTTOM.label), 0)
     available_height = height - top - bottom
     if available_height <= 0:
-        fail(
-            f"output {output.identity} has no vertical reservation publisher span"
-        )
+        fail(f"output {output.identity} has no vertical reservation publisher span")
     return [0, 0, 1, available_height]
 
 
@@ -1672,9 +1625,7 @@ def expected_global_reservation_window_geometry(
     if edge is Edge.BOTTOM:
         return [x, y + height - 1, width, 1]
     top = depths.get((output.identity, Edge.TOP.label), 0)
-    available_height = expected_reservation_window_geometry(
-        output, edge, depths
-    )[3]
+    available_height = expected_reservation_window_geometry(output, edge, depths)[3]
     if edge is Edge.LEFT:
         return [x, y + top, 1, available_height]
     return [x + width - 1, y + top, 1, available_height]
@@ -1682,9 +1633,7 @@ def expected_global_reservation_window_geometry(
 
 def assert_visual_window_ownership(payload_value: Any) -> dict[str, Any]:
     payload = require_object(payload_value, "visual ownership input")
-    require_keys(
-        payload, ("snapshot", "outputs", "windows"), "visual ownership input"
-    )
+    require_keys(payload, ("snapshot", "outputs", "windows"), "visual ownership input")
     snapshot = parse_snapshot(payload["snapshot"])
     outputs = parse_outputs(payload["outputs"])
     raw_windows = require_array(payload["windows"], "visual windows")
@@ -1696,42 +1645,36 @@ def assert_visual_window_ownership(payload_value: Any) -> dict[str, Any]:
         window = require_object(raw_window, label)
         if set(window) != set(VISUAL_WINDOW_REQUIRED_KEYS):
             fail(f"{label} has missing or surplus fields")
-        caption = require_string(
-            window["caption"], f"{label}.caption", nonempty=False
-        )
+        caption = require_string(window["caption"], f"{label}.caption", nonempty=False)
         window_id = require_string(window["id"], f"{label}.id")
         output = require_string(window["output"], f"{label}.output")
-        geometry = require_number_array(
-            window["geometry"], f"{label}.geometry", 4
-        )
+        geometry = require_number_array(window["geometry"], f"{label}.geometry", 4)
         if any(
-            not isinstance(component, int) or isinstance(component, bool)
-            for component in geometry
+            not isinstance(component, int) or isinstance(component, bool) for component in geometry
         ):
             fail(f"{label}.geometry must contain integers")
         if geometry[2] <= 0 or geometry[3] <= 0:
             fail(f"{label}.geometry must have positive dimensions")
         if window_id in window_ids:
             fail(f"visual ownership contains duplicate window id {window_id}")
-        windows.append({
-            "caption": caption,
-            "geometry": tuple(geometry),
-            "id": window_id,
-            "output": output,
-        })
+        windows.append(
+            {
+                "caption": caption,
+                "geometry": tuple(geometry),
+                "id": window_id,
+                "output": output,
+            }
+        )
         window_ids.add(window_id)
 
     unmatched = list(windows)
     for view in snapshot["views"]:
         persistent_id = view["persistentDockId"]
-        expected_geometry = tuple(
-            int(round(component)) for component in view["stableCanvasGeometry"]
-        )
+        expected_geometry = tuple(round(component) for component in view["stableCanvasGeometry"])
         candidates = [
             window
             for window in unmatched
-            if window["geometry"] == expected_geometry
-            and window["output"] == view["screen"]
+            if window["geometry"] == expected_geometry and window["output"] == view["screen"]
         ]
         if len(candidates) != 1:
             fail(
@@ -1748,17 +1691,12 @@ def assert_visual_window_ownership(payload_value: Any) -> dict[str, Any]:
         edge = edge_from_label(group["edge"])
         output = outputs_by_id.get(output_id)
         if output is None:
-            fail(
-                f"reservation group {output_id}/{group['edge']} has no independent output"
-            )
-        expected_geometry = expected_global_reservation_window_geometry(
-            output, edge, depths
-        )
+            fail(f"reservation group {output_id}/{group['edge']} has no independent output")
+        expected_geometry = expected_global_reservation_window_geometry(output, edge, depths)
         candidates = [
             window
             for window in unmatched
-            if list(window["geometry"]) == expected_geometry
-            and window["output"] == output.name
+            if list(window["geometry"]) == expected_geometry and window["output"] == output.name
         ]
         if len(candidates) != 1:
             fail(
@@ -1806,9 +1744,7 @@ def assert_lineage(
                 [],
             )
         else:
-            relationship = (
-                "linkedRoot" if linked_by_root.get(expected.handle) else "independent"
-            )
+            relationship = "linkedRoot" if linked_by_root.get(expected.handle) else "independent"
             wanted = (
                 relationship,
                 persistent_id,
@@ -1859,10 +1795,7 @@ def assert_placement(
         )
         if actual != wanted:
             fail(f"view {expected.handle} placement is {actual}, expected {wanted}")
-        if (
-            expected.follows_primary is not None
-            and view["onPrimary"] != expected.follows_primary
-        ):
+        if expected.follows_primary is not None and view["onPrimary"] != expected.follows_primary:
             fail(f"view {expected.handle} primary-output flag is stale")
 
 
@@ -1891,7 +1824,7 @@ def assert_stable_spans(views: dict[int, dict[str, Any]]) -> None:
         )
     for key, members in intervals.items():
         ordered = sorted(members)
-        for left, right in zip(ordered, ordered[1:]):
+        for left, right in itertools.pairwise(ordered):
             if left[1] > right[0]:
                 fail(
                     f"output-edge {key} has overlapping stable spans "
@@ -1931,14 +1864,11 @@ def assert_runtime_ownership(
                 f"expected {expected_layout!r}"
             )
     if any(
-        len(tokens) != 1
-        or any(not isinstance(token, str) or not token for token in tokens)
+        len(tokens) != 1 or any(not isinstance(token, str) or not token for token in tokens)
         for tokens in layout_objects.values()
     ):
         fail("views in one persistent layout do not share exactly one layout authority")
-    flattened_layout_objects = {
-        next(iter(tokens)) for tokens in layout_objects.values()
-    }
+    flattened_layout_objects = {next(iter(tokens)) for tokens in layout_objects.values()}
     if len(flattened_layout_objects) != len(layout_objects):
         fail("distinct persistent layouts share one runtime layout authority")
 
@@ -1948,29 +1878,17 @@ def assert_applet_geometry(view: dict[str, Any]) -> None:
     horizontal = view["orientation"] == "horizontal"
 
     def primary(rectangle: list[Any]) -> tuple[float, float]:
-        return (
-            (rectangle[0], rectangle[2])
-            if horizontal
-            else (rectangle[1], rectangle[3])
-        )
+        return (rectangle[0], rectangle[2]) if horizontal else (rectangle[1], rectangle[3])
 
     def secondary(rectangle: list[Any]) -> tuple[float, float]:
-        return (
-            (rectangle[1], rectangle[3])
-            if horizontal
-            else (rectangle[0], rectangle[2])
-        )
+        return (rectangle[1], rectangle[3]) if horizontal else (rectangle[0], rectangle[2])
 
     paint = view["computedPaintMaskGeometry"]
     stable_paint = view["floatedPresentationGeometry"]
     measurement = view["stableAppletMeasurementBounds"]
     applets = view["appletsLayoutGeometry"]
     available = view["availablePrimaryLength"]
-    if (
-        not isinstance(available, int)
-        or isinstance(available, bool)
-        or available <= 0
-    ):
+    if not isinstance(available, int) or isinstance(available, bool) or available <= 0:
         fail(f"view {persistent_id} has no positive integral applet budget")
     paint_start, paint_length = primary(stable_paint)
     measurement_start, measurement_length = primary(measurement)
@@ -1982,10 +1900,7 @@ def assert_applet_geometry(view: dict[str, Any]) -> None:
         or applet_start + applet_length > paint_start + paint_length
         or secondary(applets) != secondary(paint)
     ):
-        fail(
-            f"view {persistent_id} applet and popup geometry escaped "
-            "the stable resting layout"
-        )
+        fail(f"view {persistent_id} applet and popup geometry escaped the stable resting layout")
 
 
 def assert_transition_and_lifecycle(view: dict[str, Any]) -> None:
@@ -1996,8 +1911,7 @@ def assert_transition_and_lifecycle(view: dict[str, Any]) -> None:
         else view["publishedStruts"][2]
     )
     shadow_contract_matches = (
-        view["shadowEnabledBorders"] is None
-        and view["shadowPaddingOffsets"] is None
+        view["shadowEnabledBorders"] is None and view["shadowPaddingOffsets"] is None
     ) or (
         view["shadowEnabledBorders"] == view["enabledBorders"]
         and view["shadowPaddingOffsets"] is not None
@@ -2013,15 +1927,9 @@ def assert_transition_and_lifecycle(view: dict[str, Any]) -> None:
         "layerShellPresent",
         "reservationSurfacePresent",
     )
-    missing_true_fields = [
-        field for field in required_true_fields
-        if view[field] is not True
-    ]
+    missing_true_fields = [field for field in required_true_fields if view[field] is not True]
     if missing_true_fields:
-        fail(
-            f"view {persistent_id} has false floating-panel authorities: "
-            f"{missing_true_fields}"
-        )
+        fail(f"view {persistent_id} has false floating-panel authorities: {missing_true_fields}")
     if (
         view["type"] != "panel"
         or view["visibilityMode"] != "alwaysVisible"
@@ -2089,13 +1997,14 @@ def assert_transition_and_lifecycle(view: dict[str, Any]) -> None:
         "surfaceGeometryPublicationRevision",
         "layerShellConfigureRequestRevision",
     ):
-        if require_decimal(
-            view[revision],
-            f"view {persistent_id}.{revision}",
-        ) == 0:
-            fail(
-                f"view {persistent_id} did not publish required {revision}"
+        if (
+            require_decimal(
+                view[revision],
+                f"view {persistent_id}.{revision}",
             )
+            == 0
+        ):
+            fail(f"view {persistent_id} did not publish required {revision}")
     for geometry in (
         "stableCanvasGeometry",
         "attachedPresentationGeometry",
@@ -2123,16 +2032,10 @@ def assert_reservations(
     views: dict[int, dict[str, Any]],
     outputs: dict[str, OutputSnapshot],
 ) -> None:
-    group_keys = [
-        (group["outputId"], group["edge"])
-        for group in snapshot["reservationGroups"]
-    ]
+    group_keys = [(group["outputId"], group["edge"]) for group in snapshot["reservationGroups"]]
     if len(group_keys) != len(set(group_keys)):
         fail("reservation groups contain a duplicate output-edge key")
-    groups = {
-        (group["outputId"], group["edge"]): group
-        for group in snapshot["reservationGroups"]
-    }
+    groups = {(group["outputId"], group["edge"]): group for group in snapshot["reservationGroups"]}
     expected_keys = {(view["screenId"], view["edge"]) for view in views.values()}
     if set(groups) != expected_keys:
         fail(f"reservation groups {sorted(groups)} do not equal {sorted(expected_keys)}")
@@ -2150,17 +2053,13 @@ def assert_reservations(
             if (view["screenId"], view["edge"]) == key
         )
         contribution_depths = [
-            views[persistent_id]["reservationContributionDepth"]
-            for persistent_id in members
+            views[persistent_id]["reservationContributionDepth"] for persistent_id in members
         ]
         requested_depths = [
-            views[persistent_id]["requestedReservationDepth"]
-            for persistent_id in members
+            views[persistent_id]["requestedReservationDepth"] for persistent_id in members
         ]
         expected_depth = expected_depths[key]
-        expected_geometry = expected_reservation_geometry(
-            output, edge, expected_depth
-        )
+        expected_geometry = expected_reservation_geometry(output, edge, expected_depth)
         expected_window_geometry = expected_reservation_window_geometry(
             output, edge, expected_depths
         )
@@ -2169,9 +2068,7 @@ def assert_reservations(
             group["contributorDockIds"] != members
             or group["memberCount"] != len(members)
             or any(
-                not isinstance(depth, int)
-                or isinstance(depth, bool)
-                or depth <= 0
+                not isinstance(depth, int) or isinstance(depth, bool) or depth <= 0
                 for depth in contribution_depths
             )
             or contribution_depths != requested_depths
@@ -2217,10 +2114,7 @@ def assert_reservations(
                 or view["strutsThickness"] != depth
                 or view["reservationContributionDepth"] != depth
                 or view["publishedStruts"] != expected_strut
-                or any(
-                    view[left] != group[right]
-                    for left, right in mirror.items()
-                )
+                or any(view[left] != group[right] for left, right in mirror.items())
                 or view["objects"]["reservationPublisher"] != group["publisher"]
             ):
                 fail(f"view {persistent_id} reservation mirror diverged")
@@ -2234,9 +2128,7 @@ def assert_edit(
     bindings: dict[str, int],
 ) -> None:
     expected_id = bindings[state.editing] if state.editing else None
-    expected_config_owner = (
-        bindings[state.config_owner] if state.config_owner else None
-    )
+    expected_config_owner = bindings[state.config_owner] if state.config_owner else None
     if snapshot["globalConfigureAppletsMode"] != state.configuring:
         fail("global rearrange ownership does not match the model")
     for view in snapshot["views"]:
@@ -2244,19 +2136,14 @@ def assert_edit(
         if (
             view["editMode"] != editing
             or view["settingsWindowShown"] != editing
-            or view["effectiveConfigureAppletsMode"]
-            != (editing and state.configuring)
+            or view["effectiveConfigureAppletsMode"] != (editing and state.configuring)
         ):
             fail(f"edit presentation escaped to view {view['persistentDockId']}")
         if editing and not view["objects"]["configWindow"]:
             fail(f"editing view {view['persistentDockId']} has no config window owner")
-        owns_config_window = (
-            view["persistentDockId"] == expected_config_owner
-        )
+        owns_config_window = view["persistentDockId"] == expected_config_owner
         if bool(view["objects"]["configWindow"]) != owns_config_window:
-            fail(
-                f"view {view['persistentDockId']} has the wrong config window owner state"
-            )
+            fail(f"view {view['persistentDockId']} has the wrong config window owner state")
 
 
 def assert_snapshot(
@@ -2435,24 +2322,15 @@ def resolve_operation(payload_value: Any) -> dict[str, Any]:
 
 def bind_result(payload_value: Any) -> dict[str, Any]:
     payload = require_object(payload_value, "result input")
-    require_keys(
-        payload, ("step", "bindings", "before", "after"), "result input"
-    )
+    require_keys(payload, ("step", "bindings", "before", "after"), "result input")
     step = require_object(payload["step"], "step")
     operation = parse_operation(step, require_int(step.get("seq"), "step.seq", 1))
     bindings = parse_bindings(payload["bindings"])
     before = parse_snapshot(payload["before"])
     after = parse_snapshot(payload["after"])
-    after_sequence = require_decimal(
-        after["snapshotSequence"], "after.snapshotSequence"
-    )
-    before_sequence = require_decimal(
-        before["snapshotSequence"], "before.snapshotSequence"
-    )
-    if (
-        operation.kind is not OperationKind.RESTART
-        and after_sequence <= before_sequence
-    ):
+    after_sequence = require_decimal(after["snapshotSequence"], "after.snapshotSequence")
+    before_sequence = require_decimal(before["snapshotSequence"], "before.snapshotSequence")
+    if operation.kind is not OperationKind.RESTART and after_sequence <= before_sequence:
         fail(f"operation {operation.seq} did not advance the snapshot sequence")
     before_ids = snapshot_view_ids(before)
     after_ids = snapshot_view_ids(after)
@@ -2622,37 +2500,27 @@ def durable_projection(snapshot_value: Any) -> dict[str, Any]:
         ],
         "views": [
             {key: view[key] for key in DURABLE_VIEW_KEYS}
-            for view in sorted(
-                snapshot["views"], key=lambda item: item["persistentDockId"]
-            )
+            for view in sorted(snapshot["views"], key=lambda item: item["persistentDockId"])
         ],
     }
 
 
 def assert_runtime_reload(payload_value: Any) -> dict[str, bool]:
     payload = require_object(payload_value, "runtime reload input")
-    require_keys(
-        payload, ("before", "after", "bindings", "affected"), "runtime reload input"
-    )
+    require_keys(payload, ("before", "after", "bindings", "affected"), "runtime reload input")
     before = parse_snapshot(payload["before"])
     after = parse_snapshot(payload["after"])
     bindings = parse_bindings(payload["bindings"])
     affected = payload["affected"]
-    if not isinstance(affected, list) or any(
-        handle not in bindings for handle in affected
-    ):
+    if not isinstance(affected, list) or any(handle not in bindings for handle in affected):
         fail("runtime reload affected handles are invalid")
     before_views = view_map(before)
     after_views = view_map(after)
     if set(before_views) != set(after_views):
         fail("runtime reload changed persistent dock identities")
     affected_ids = {bindings[handle] for handle in affected}
-    before_runtime_ids = {
-        view["runtimeViewId"] for view in before_views.values()
-    }
-    after_runtime_ids = [
-        view["runtimeViewId"] for view in after_views.values()
-    ]
+    before_runtime_ids = {view["runtimeViewId"] for view in before_views.values()}
+    after_runtime_ids = [view["runtimeViewId"] for view in after_views.values()]
     if len(after_runtime_ids) != len(set(after_runtime_ids)):
         fail("runtime reload produced duplicate runtime identities")
     for persistent_id in before_views:
@@ -2661,17 +2529,12 @@ def assert_runtime_reload(payload_value: Any) -> dict[str, bool]:
             != after_views[persistent_id]["runtimeViewId"]
         )
         if changed != (persistent_id in affected_ids):
-            fail(
-                f"runtime reload ownership is wrong for persistent dock {persistent_id}"
-            )
+            fail(f"runtime reload ownership is wrong for persistent dock {persistent_id}")
         if (
             persistent_id in affected_ids
             and after_views[persistent_id]["runtimeViewId"] in before_runtime_ids
         ):
-            fail(
-                f"runtime reload reused a retired identity for "
-                f"persistent dock {persistent_id}"
-            )
+            fail(f"runtime reload reused a retired identity for persistent dock {persistent_id}")
     return {"ok": True}
 
 

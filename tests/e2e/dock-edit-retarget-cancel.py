@@ -56,7 +56,9 @@ def _views() -> list[dict[str, Any]]:
     try:
         return json.loads(payload)
     except json.JSONDecodeError:
-        raise recipe.RecipeError("viewsData refused or returned no JSON (view placement not accepted)") from None
+        raise recipe.RecipeError(
+            "viewsData refused or returned no JSON (view placement not accepted)"
+        ) from None
 
 
 def _view_edit_mode(view: int) -> str:
@@ -92,7 +94,9 @@ def main() -> None:
         raise recipe.RecipeError(f"expected one original view, saw {len(originals)}")
     view_a = int(originals[0]["containmentId"])
 
-    _latte_call(f"duplicateView failed for original containment {view_a}", "duplicateView", "u", str(view_a))
+    _latte_call(
+        f"duplicateView failed for original containment {view_a}", "duplicateView", "u", str(view_a)
+    )
 
     before_ids = {v["containmentId"] for v in before}
     view_b = None
@@ -109,13 +113,31 @@ def main() -> None:
     if view_b is None:
         recipe.fail("independent duplicate did not reach viewsData")
 
-    _latte_call(f"could not enter edit mode on containment {view_a}", "setViewEditMode", "ub", str(view_a), "true")
+    _latte_call(
+        f"could not enter edit mode on containment {view_a}",
+        "setViewEditMode",
+        "ub",
+        str(view_a),
+        "true",
+    )
     if not _wait_for_edit_mode(view_a, "true"):
         recipe.fail(f"containment {view_a} never entered edit mode")
 
     start_ns = time.monotonic_ns()
-    _latte_call(f"could not request edit mode on containment {view_b}", "setViewEditMode", "ub", str(view_b), "true")
-    _latte_call(f"could not cancel pending edit mode on containment {view_b}", "setViewEditMode", "ub", str(view_b), "false")
+    _latte_call(
+        f"could not request edit mode on containment {view_b}",
+        "setViewEditMode",
+        "ub",
+        str(view_b),
+        "true",
+    )
+    _latte_call(
+        f"could not cancel pending edit mode on containment {view_b}",
+        "setViewEditMode",
+        "ub",
+        str(view_b),
+        "false",
+    )
     end_ns = time.monotonic_ns()
     elapsed_ms = (end_ns - start_ns) // 1_000_000
     if elapsed_ms >= 400:
@@ -128,10 +150,22 @@ def main() -> None:
             recipe.fail(f"pending containment {view_b} entered edit mode after its exit")
         time.sleep(0.1)
 
-    _latte_call(f"ordinary edit enter failed for containment {view_b}", "setViewEditMode", "ub", str(view_b), "true")
+    _latte_call(
+        f"ordinary edit enter failed for containment {view_b}",
+        "setViewEditMode",
+        "ub",
+        str(view_b),
+        "true",
+    )
     if not _wait_for_edit_mode(view_b, "true"):
         recipe.fail(f"containment {view_b} never entered edit mode after cancellation")
-    _latte_call(f"ordinary edit exit failed for containment {view_b}", "setViewEditMode", "ub", str(view_b), "false")
+    _latte_call(
+        f"ordinary edit exit failed for containment {view_b}",
+        "setViewEditMode",
+        "ub",
+        str(view_b),
+        "false",
+    )
     if not _wait_for_edit_mode(view_b, "false"):
         recipe.fail(f"containment {view_b} stayed in edit mode after ordinary exit")
 

@@ -152,9 +152,7 @@ def _fixture_state_js() -> str:
 def _read_fixture_state(label: str) -> None:
     state = recipe.kwin_js(_fixture_state_js())
     if not state or "\n" in state:
-        recipe.fail(
-            f"{label}: expected exactly one fixture state, got '{state or 'none'}'"
-        )
+        recipe.fail(f"{label}: expected exactly one fixture state, got '{state or 'none'}'")
     _S.current_id, _S.minimized, _S.active = state.split("|")
 
 
@@ -164,13 +162,11 @@ def _read_tracker_state(label: str) -> None:
         tracker = json.loads(payload)
         _S.tracker_enabled = str(tracker["enabled"]).lower()
         _S.tracker_present = str(tracker["lastActiveWindowPresent"]).lower()
-    except (json.JSONDecodeError, KeyError):
+    except json.JSONDecodeError, KeyError:
         recipe.fail(f"{label}: invalid trackerData payload: {payload}")
 
 
-def _wait_tracker_state(
-    expected_enabled: str, expected_present: str, label: str
-) -> None:
+def _wait_tracker_state(expected_enabled: str, expected_present: str, label: str) -> None:
     enabled = present = ""
     for _ in range(40):
         _read_tracker_state(label)
@@ -194,9 +190,7 @@ def _wait_visibility_mode(expected: str) -> None:
         if actual == expected:
             return
         time.sleep(0.25)
-    recipe.fail(
-        f"view {_S.view} stayed in visibility mode {actual}; expected {expected}"
-    )
+    recipe.fail(f"view {_S.view} stayed in visibility mode {actual}; expected {expected}")
 
 
 def _write_config_key(key: str, value: str, label: str) -> None:
@@ -252,9 +246,7 @@ def _configure_mode(
         and cfg["screenEdgeMargin"] == -1
         and cfg["hideFloatingGapForMaximized"] is False
     ):
-        recipe.fail(
-            f"{label}: in-process config does not match the neutral requester fixture"
-        )
+        recipe.fail(f"{label}: in-process config does not match the neutral requester fixture")
     _wait_tracker_state(expected_tracker, "false", f"{label} without a target")
 
 
@@ -287,9 +279,7 @@ def _empty_area_point() -> tuple[int, int] | None:
         gaps.append((cursor, ax + aw))
     best = max(gaps, key=lambda g: g[1] - g[0], default=(0, 0))
     if best[1] - best[0] < 8:
-        print(
-            f"widest empty-area gap is under 8px: {gaps}", file=sys.stderr, flush=True
-        )
+        print(f"widest empty-area gap is under 8px: {gaps}", file=sys.stderr, flush=True)
         return None
     return int((best[0] + best[1]) / 2), int(ay + ah / 2)
 
@@ -334,9 +324,7 @@ def _spawn_fixture(title: str) -> None:
     _S.fixture_id = ""
     _read_fixture_count()
     if _S.fixture_count_value != 0:
-        recipe.fail(
-            f"{title}: {_S.fixture_count_value} stale fixture window(s) already mapped"
-        )
+        recipe.fail(f"{title}: {_S.fixture_count_value} stale fixture window(s) already mapped")
     _S.fixture_proc = subprocess.Popen(
         ["konsole", "-p", f"LocalTabTitleFormat={title}"],
         stdout=subprocess.DEVNULL,
@@ -349,15 +337,11 @@ def _spawn_fixture(title: str) -> None:
             break
         time.sleep(0.25)
     if _S.fixture_count_value != 1:
-        recipe.fail(
-            f"{title}: fixture window count reached {_S.fixture_count_value} instead of 1"
-        )
+        recipe.fail(f"{title}: fixture window count reached {_S.fixture_count_value} instead of 1")
 
     activation_js = (
         "for (const w of workspace.windowList()) {\n"
-        "    if (w.resourceClass === 'org.kde.konsole' && w.caption.includes('"
-        + title
-        + "')) {\n"
+        "    if (w.resourceClass === 'org.kde.konsole' && w.caption.includes('" + title + "')) {\n"
         "        w.minimized = false;\n"
         "        w.setMaximize(false, false);\n"
         "        workspace.activeWindow = w;\n"
@@ -371,11 +355,7 @@ def _spawn_fixture(title: str) -> None:
 
     for _ in range(40):
         _read_fixture_state(f"{title} activation wait")
-        if (
-            _S.current_id == _S.fixture_id
-            and _S.minimized == "false"
-            and _S.active == "true"
-        ):
+        if _S.current_id == _S.fixture_id and _S.minimized == "false" and _S.active == "true":
             return
         time.sleep(0.25)
     recipe.fail(
@@ -395,9 +375,7 @@ def _terminate_fixture(label: str) -> None:
         with contextlib.suppress(Exception):
             proc.wait()
         rc = proc.returncode
-        wait_status = (
-            128 - rc if rc is not None and rc < 0 else (rc if rc is not None else 0)
-        )
+        wait_status = 128 - rc if rc is not None and rc < 0 else (rc if rc is not None else 0)
         if wait_status not in (0, 143):
             recipe.fail(
                 f"{label}: fixture pid {proc.pid} exited unexpectedly with status {wait_status}"
@@ -424,9 +402,7 @@ def _drive_close_until_absent() -> None:
                 return
             time.sleep(0.25)
         print(f"  (middle click not delivered on attempt {attempt}, retrying)")
-    recipe.fail(
-        f"close-only middle click left {_S.fixture_count_value} fixture window(s) mapped"
-    )
+    recipe.fail(f"close-only middle click left {_S.fixture_count_value} fixture window(s) mapped")
 
 
 def _drive_minimize_until_observed() -> None:
@@ -478,9 +454,7 @@ def _body() -> None:
     _spawn_fixture("LATTE SC-WT1 DISABLED")
     _wait_tracker_state("false", "false", "disabled close/minimize with active window")
     _settle_empty_pointer()
-    _inject(
-        "disabled close control", "middleclick", str(_S.pointer_x), str(_S.pointer_y)
-    )
+    _inject("disabled close control", "middleclick", str(_S.pointer_x), str(_S.pointer_y))
     time.sleep(0.8)
     _assert_fixture_normal("disabled close")
     _inject(
@@ -494,9 +468,7 @@ def _body() -> None:
     time.sleep(0.8)
     _assert_fixture_normal("disabled minimize-toggle")
     _wait_tracker_state("false", "false", "disabled controls after input")
-    print(
-        "ok: disabled close and minimize-toggle kept tracker off and left the window normal"
-    )
+    print("ok: disabled close and minimize-toggle kept tracker off and left the window normal")
     _terminate_fixture("disabled fixture")
 
     # Close-only: enabling the setting alone must enable tracking. The first click
@@ -571,9 +543,7 @@ def _cleanup() -> bool:
             with contextlib.suppress(Exception):
                 proc.wait()
             rc = proc.returncode
-            wait_status = (
-                128 - rc if rc is not None and rc < 0 else (rc if rc is not None else 0)
-            )
+            wait_status = 128 - rc if rc is not None and rc < 0 else (rc if rc is not None else 0)
             if wait_status not in (0, 143) or _pid_alive(proc.pid):
                 print(
                     f"FAIL: cleanup fixture pid {proc.pid} did not terminate cleanly "
@@ -618,9 +588,7 @@ def _cleanup() -> bool:
     try:
         os.unlink(_S.backup)
     except OSError:
-        print(
-            f"FAIL: cleanup could not remove {_S.backup}", file=sys.stderr, flush=True
-        )
+        print(f"FAIL: cleanup could not remove {_S.backup}", file=sys.stderr, flush=True)
         cleanup_failed = True
     if cleanup_failed:
         print("FAIL: SC-WT1 recipe cleanup left residue", file=sys.stderr, flush=True)

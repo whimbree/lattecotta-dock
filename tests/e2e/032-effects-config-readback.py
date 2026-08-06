@@ -43,8 +43,9 @@ from collections.abc import Callable
 from contextlib import redirect_stderr, suppress
 from pathlib import Path
 
-from latte_harness import audit, recipe
 from pydantic import ValidationError
+
+from latte_harness import audit, recipe
 
 
 def _quiet_dock_stop() -> None:
@@ -57,9 +58,18 @@ def _kwrite(layout: str, group: str, key: str, value: str, view: int) -> None:
     """kwriteconfig6 into [Containments][view][<group>]: the gen()/ind() writers."""
     subprocess.run(
         [
-            "kwriteconfig6", "--file", layout,
-            "--group", "Containments", "--group", str(view),
-            "--group", group, "--key", key, value,
+            "kwriteconfig6",
+            "--file",
+            layout,
+            "--group",
+            "Containments",
+            "--group",
+            str(view),
+            "--group",
+            group,
+            "--key",
+            key,
+            value,
         ],
         check=False,
     )
@@ -104,12 +114,12 @@ def main() -> None:
         _quiet_dock_stop()
 
         _kwrite(layout, "General", "appletShadowsEnabled", "false", view)  # default true
-        _kwrite(layout, "General", "shadowSize", "55", view)               # default 30
-        _kwrite(layout, "General", "shadowOpacity", "40", view)            # default 70
-        _kwrite(layout, "General", "shadowColorType", "2", view)           # default 0; 2 = User
-        _kwrite(layout, "General", "animationsEnabled", "false", view)     # default true
-        _kwrite(layout, "General", "durationTime", "1", view)             # default 2; 1 = "faster"
-        _kwrite(layout, "Indicator", "enabled", "false", view)             # default true
+        _kwrite(layout, "General", "shadowSize", "55", view)  # default 30
+        _kwrite(layout, "General", "shadowOpacity", "40", view)  # default 70
+        _kwrite(layout, "General", "shadowColorType", "2", view)  # default 0; 2 = User
+        _kwrite(layout, "General", "animationsEnabled", "false", view)  # default true
+        _kwrite(layout, "General", "durationTime", "1", view)  # default 2; 1 = "faster"
+        _kwrite(layout, "Indicator", "enabled", "false", view)  # default true
         _kwrite(layout, "Indicator", "type", "org.kde.latte.plasma", view)  # default .default
 
         if not recipe.dock_start(90):

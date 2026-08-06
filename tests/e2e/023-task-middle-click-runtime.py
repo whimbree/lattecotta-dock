@@ -48,6 +48,7 @@ import traceback
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from latte_harness import recipe
 
@@ -176,10 +177,8 @@ def _recorded_processes() -> str:
         identity = (int(pid), start_time)
         assert identity not in seen, f"duplicate process identity {identity}"
         seen.add(identity)
-        records.append(
-            {"pid": int(pid), "startTime": start_time, "executable": executable}
-        )
-    records.sort(key=lambda record: record["pid"])
+        records.append({"pid": int(pid), "startTime": start_time, "executable": executable})
+    records.sort(key=lambda record: cast("int", record["pid"]))
     return json.dumps(records, separators=(",", ":"), sort_keys=True)
 
 
@@ -202,7 +201,8 @@ def _live_identity(record: dict[str, object]) -> dict[str, object] | None:
     except FileNotFoundError:
         return None
     assert record["startTime"] == start_time, (
-        f"pid {record['pid']} start time mismatch: recorded {record['startTime']}, live {start_time}"
+        f"pid {record['pid']} start time mismatch: "
+        f"recorded {record['startTime']}, live {start_time}"
     )
     assert record["executable"] == _S.fixture_binary
     assert executable == _S.fixture_binary, (
@@ -215,9 +215,7 @@ def _live_identity(record: dict[str, object]) -> dict[str, object] | None:
 def _fixture_processes() -> str:
     """fixture_processes: the recorded identities still live in /proc, sorted-keys JSON."""
     live = [
-        ident
-        for record in json.loads(_recorded_processes())
-        if (ident := _live_identity(record))
+        ident for record in json.loads(_recorded_processes()) if (ident := _live_identity(record))
     ]
     return json.dumps(live, separators=(",", ":"), sort_keys=True)
 
@@ -330,9 +328,7 @@ def _compile_fixture() -> None:
 def _stage_desktop() -> None:
     Path(_S.fixture_desktop).parent.mkdir(parents=True, exist_ok=True)
     try:
-        source = (Path(_S.fixture) / "applications" / DESKTOP_ID).read_text(
-            encoding="utf-8"
-        )
+        source = (Path(_S.fixture) / "applications" / DESKTOP_ID).read_text(encoding="utf-8")
         Path(_S.fixture_desktop).write_text(
             source.replace("@BINARY@", _S.fixture_binary), encoding="utf-8"
         )
@@ -357,9 +353,7 @@ def _discover_task_fixture() -> None:
         recipe.fail("no tasks view")
     try:
         _S.tasks_applet = next(
-            a.id
-            for a in recipe.view_applets(_S.view)
-            if a.plugin == "org.kde.latte.plasmoid"
+            a.id for a in recipe.view_applets(_S.view) if a.plugin == "org.kde.latte.plasmoid"
         )
     except StopIteration:
         recipe.fail(f"could not resolve the tasks applet in view {_S.view}")
@@ -397,9 +391,7 @@ def _read_dispatch() -> str:
 
 def _running_config_snapshot() -> str:
     cfg = json.loads(
-        recipe.json_payload(
-            "appletConfigData", "uu", str(_S.view), str(_S.tasks_applet)
-        )
+        recipe.json_payload("appletConfigData", "uu", str(_S.view), str(_S.tasks_applet))
     )["config"]
     return json.dumps(
         {
@@ -437,15 +429,10 @@ def _configure_action(action: int, label: str) -> None:
     _write_task_key("showWindowsOnlyFromLaunchers", "true", label)
     general = ["kwriteconfig6", "--file", os.environ["E2E_LAYOUT"], "--group", "Containments",
                "--group", str(_S.view), "--group", "General"]  # fmt: skip
-    if (
-        subprocess.run([*general, "--key", "alignment", "1"], check=False).returncode
-        != 0
-    ):
+    if subprocess.run([*general, "--key", "alignment", "1"], check=False).returncode != 0:
         recipe.fail(f"{label}: could not set center alignment")
     if (
-        subprocess.run(
-            [*general, "--key", "alignmentUpgraded", "true"], check=False
-        ).returncode
+        subprocess.run([*general, "--key", "alignmentUpgraded", "true"], check=False).returncode
         != 0
     ):
         recipe.fail(f"{label}: could not mark alignment upgraded")
@@ -501,9 +488,7 @@ def _runtime_snapshot_matches(
     if not (len(w) == len({x["id"] for x in w}) == expected_windows):
         return False
     if not (
-        len(p)
-        == len({(x["pid"], x["startTime"], x["executable"]) for x in p})
-        == expected_windows
+        len(p) == len({(x["pid"], x["startTime"], x["executable"]) for x in p}) == expected_windows
     ):
         return False
     if sum(1 for x in w if x["active"]) != (1 if expected_windows else 0):
@@ -522,9 +507,7 @@ def _wait_for_effect(expected_windows: int, kind: str, label: str) -> None:
         if (
             len(json.loads(windows)) == expected_windows
             and len(json.loads(processes)) == expected_windows
-            and _runtime_snapshot_matches(
-                windows, processes, tasks, expected_windows, kind
-            )
+            and _runtime_snapshot_matches(windows, processes, tasks, expected_windows, kind)
         ):
             _S.effect_windows, _S.effect_processes, _S.effect_tasks = (
                 windows,
@@ -557,14 +540,10 @@ def _phase_two_relation_matches(
         return False
     if not (len(w) == len({x["id"] for x in w}) == 2):
         return False
-    if not (
-        len(p) == len({(x["pid"], x["startTime"], x["executable"]) for x in p}) == 2
-    ):
+    if not (len(p) == len({(x["pid"], x["startTime"], x["executable"]) for x in p}) == 2):
         return False
     original_window = ow[0]
-    if not (
-        original_window["active"] is True and original_window["minimized"] is False
-    ):
+    if not (original_window["active"] is True and original_window["minimized"] is False):
         return False
     windows_by_id = {x["id"]: x for x in w}
     if original_window["id"] not in windows_by_id:
@@ -599,9 +578,7 @@ def _phase_two_relation_matches(
     return new_processes[0]["executable"] == _S.fixture_binary
 
 
-def _wait_for_phase_two_effect(
-    original_windows: str, original_processes: str, label: str
-) -> None:
+def _wait_for_phase_two_effect(original_windows: str, original_processes: str, label: str) -> None:
     windows = processes = tasks = ""
     for _ in range(60):
         windows = _fixture_windows()
@@ -767,21 +744,15 @@ def _drive_one_middle_click(
             recipe.fail(
                 f"{label}: sequence changed by more than one ({previous_sequence} -> {sequence})"
             )
-        if not _assert_dispatch(
-            payload, row_kind, action, operation, expected_sequence
-        ):
-            recipe.fail(
-                f"{label}: unexpected dispatch after the one delivered click: {payload}"
-            )
+        if not _assert_dispatch(payload, row_kind, action, operation, expected_sequence):
+            recipe.fail(f"{label}: unexpected dispatch after the one delivered click: {payload}")
         _S.observed_dispatch = payload
         _S.observed_sequence = sequence
         return
     recipe.fail(f"{label} produced no dispatch after one status-0 middle click")
 
 
-def _assert_dispatch_unchanged(
-    expected_payload: str, expected_sequence: int, label: str
-) -> None:
+def _assert_dispatch_unchanged(expected_payload: str, expected_sequence: int, label: str) -> None:
     payload = _read_dispatch()
     sequence = _dispatch_sequence(payload)
     if not (payload == expected_payload and sequence == expected_sequence):
@@ -796,9 +767,7 @@ def _assert_containment_isolation() -> None:
             continue
         payload = recipe.json_payload("taskMiddleClickDispatchData", "u", str(other))
         if payload != "{}":
-            recipe.fail(
-                f"target-view dispatch leaked into containment {other}: {payload}"
-            )
+            recipe.fail(f"target-view dispatch leaked into containment {other}: {payload}")
         valid_controls += 1
     payload = recipe.json_payload("taskMiddleClickDispatchData", "u", "4294967295")
     if payload != "{}":
@@ -836,8 +805,7 @@ def _assert_no_effect_interval(
             json.loads(expected_windows) == json.loads(windows)
             and json.loads(expected_processes) == json.loads(processes)
             and len(before_tasks) == len(after_tasks) == 1
-            and {f: before_tasks[0][f] for f in fields}
-            == {f: after_tasks[0][f] for f in fields}
+            and {f: before_tasks[0][f] for f in fields} == {f: after_tasks[0][f] for f in fields}
         ):
             recipe.fail(f"{label} changed KWin, process, or task state")
     _S.no_effect_windows, _S.no_effect_processes, _S.no_effect_tasks = (
@@ -855,22 +823,16 @@ def _body() -> None:
     _configure_action(2, "new-instance positive path")
     initial_tasks = _read_tasks()
     if not _model_matches(initial_tasks, "launcher"):
-        recipe.fail(
-            f"initial viewTasksData is not one pure fixture launcher: {initial_tasks}"
-        )
+        recipe.fail(f"initial viewTasksData is not one pure fixture launcher: {initial_tasks}")
     initial_windows = _fixture_windows()
     initial_processes = _fixture_processes()
     if len(json.loads(initial_windows)) != 0:
         recipe.fail(f"fixture window exists before launcher input: {initial_windows}")
     if len(json.loads(initial_processes)) != 0:
-        recipe.fail(
-            f"fixture process exists before launcher input: {initial_processes}"
-        )
+        recipe.fail(f"fixture process exists before launcher input: {initial_processes}")
     initial_dispatch = _read_dispatch()
     if initial_dispatch != "{}":
-        recipe.fail(
-            f"fresh dock already has a middle-click dispatch: {initial_dispatch}"
-        )
+        recipe.fail(f"fresh dock already has a middle-click dispatch: {initial_dispatch}")
     print(
         f"SC_T5_OBSERVATION|phase=initial|windows={initial_windows}"
         f"|processes={initial_processes}|tasks={initial_tasks}"
@@ -939,12 +901,8 @@ def _body() -> None:
     negative_before_tasks = _S.effect_tasks
     initial_dispatch = _read_dispatch()
     if initial_dispatch != "{}":
-        recipe.fail(
-            f"restarted dock did not reset to no-event state: {initial_dispatch}"
-        )
-    _drive_one_middle_click(
-        "offered-none middle click", 0, "task", "none", "none", "group", 2
-    )
+        recipe.fail(f"restarted dock did not reset to no-event state: {initial_dispatch}")
+    _drive_one_middle_click("offered-none middle click", 0, "task", "none", "none", "group", 2)
     negative_dispatch = _S.observed_dispatch
     if _S.observed_sequence != 1:
         recipe.fail(f"offered None sequence is not exactly 1: {_S.observed_sequence}")
@@ -974,9 +932,7 @@ def _cleanup(original_status: int) -> int:
         print("FAIL: cleanup could not query the dock pid", file=sys.stderr, flush=True)
         cleanup_failed = True
     elif _pid_alive(pid) and not recipe.dock_stop():
-        print(
-            f"FAIL: cleanup could not stop dock pid {pid}", file=sys.stderr, flush=True
-        )
+        print(f"FAIL: cleanup could not stop dock pid {pid}", file=sys.stderr, flush=True)
         cleanup_failed = True
     if pid is not None and _pid_alive(pid):
         print(f"FAIL: cleanup left dock pid {pid} running", file=sys.stderr, flush=True)
@@ -1008,10 +964,7 @@ def _cleanup(original_status: int) -> int:
     if _S.backup_ready:
         try:
             shutil.copyfile(_S.backup, os.environ["E2E_LAYOUT"])
-            restored = (
-                Path(_S.backup).read_bytes()
-                == Path(os.environ["E2E_LAYOUT"]).read_bytes()
-            )
+            restored = Path(_S.backup).read_bytes() == Path(os.environ["E2E_LAYOUT"]).read_bytes()
         except OSError:
             restored = False
         if not restored:
@@ -1038,9 +991,7 @@ def _cleanup(original_status: int) -> int:
         _S.fixture_data,
     ):
         if os.path.exists(path):
-            print(
-                f"FAIL: cleanup left fixture path {path}", file=sys.stderr, flush=True
-            )
+            print(f"FAIL: cleanup left fixture path {path}", file=sys.stderr, flush=True)
             cleanup_failed = True
     for path in Path(os.path.dirname(_S.backup_prefix)).glob(
         os.path.basename(_S.backup_prefix) + "*"
@@ -1078,9 +1029,7 @@ def _cleanup(original_status: int) -> int:
 
 def _init_paths_and_env() -> None:
     rt = os.environ["E2E_RT"]
-    _S.fixture = str(
-        Path(os.environ["E2E_REPO"]) / "tests" / "e2e" / "fixtures" / "sc-t5"
-    )
+    _S.fixture = str(Path(os.environ["E2E_REPO"]) / "tests" / "e2e" / "fixtures" / "sc-t5")
     _S.fixture_data = f"{rt}/sc-t5-data"
     _S.fixture_binary = f"{_S.fixture_data}/bin/latte-sc-t5"
     _S.fixture_desktop = f"{_S.fixture_data}/applications/{DESKTOP_ID}"

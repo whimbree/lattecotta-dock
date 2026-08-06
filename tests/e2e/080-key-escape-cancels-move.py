@@ -46,13 +46,13 @@ from latte_harness import proc, recipe
 #! updates frameGeometry live during an interactive move, so this reads the
 #! in-flight position too). recipe.kwin_js has already stripped the run tag.
 _KONSOLE_GEO_JS = (
-    'for (const w of workspace.windowList()) {\n'
+    "for (const w of workspace.windowList()) {\n"
     '    if (w.resourceClass == "org.kde.konsole") {\n'
     '        print("@TAG@|" + w.internalId + "|" + Math.round(w.frameGeometry.x) + "|" '
     '+ Math.round(w.frameGeometry.y) + "|" + Math.round(w.frameGeometry.width) + "|" '
-    '+ Math.round(w.frameGeometry.height));\n'
-    '    }\n'
-    '}'
+    "+ Math.round(w.frameGeometry.height));\n"
+    "    }\n"
+    "}"
 )
 _ACTIVE_ID_JS = (
     'print("@TAG@|" + (workspace.activeWindow ? workspace.activeWindow.internalId : "none"));'

@@ -158,7 +158,9 @@ def main() -> None:
                 f"HC3: a zero-cross hold-noop MOVED a task ({baseline} -> {noop_after}) - "
                 "the driver would false-report a reorder"
             )
-        print("leg 2 PASS (HC3): zero-cross hold-noop reported AS no reorder (order byte-unchanged)")
+        print(
+            "leg 2 PASS (HC3): zero-cross hold-noop reported AS no reorder (order byte-unchanged)"
+        )
 
         #! and it stranded NO config residue: flush the key with a clean stop and read
         #! it back byte-identical to the original (the launchers-key residue surface)
@@ -215,12 +217,19 @@ def main() -> None:
         if escape_order != baseline:
             d1_disposition = "no-revert"
             print("leg 3 D1 EVIDENCE: a task move committed mid-drag SURVIVED Escape (order is")
-            print(f"                  {escape_order}, not the baseline) - Escape cancels the compositor")
+            print(
+                f"                  {escape_order}, not the baseline) "
+                f"- Escape cancels the compositor"
+            )
             print("                  drag but does NOT revert the already-applied tasksModel.move")
         else:
             d1_disposition = "reverts"
-            print("leg 3 D1 EVIDENCE: with the geometry the control just crossed, Escape restored the")
-            print("                  baseline order across 4 attempts - a genuine cancel-and-revert")
+            print(
+                "leg 3 D1 EVIDENCE: with the geometry the control just crossed, Escape restored the"
+            )
+            print(
+                "                  baseline order across 4 attempts - a genuine cancel-and-revert"
+            )
         print(f"D1 disposition observed: {d1_disposition}")
         if not reset_to_baseline():
             recipe.fail("could not reset after the D1 leg")
@@ -243,16 +252,20 @@ def main() -> None:
                 recipe.fail("could not reset during the reverse-jitter leg")
         if jitter_after == baseline:
             recipe.fail("leg 4: reverse-jitter never crossed a neighbour (calibration) - re-run")
-        print("leg 4 D1 EVIDENCE: a reverse-jitter returned to the exact origin still left the task")
-        print(f"                  moved (order {jitter_after}, not baseline) - release-back does not revert")
+        print(
+            "leg 4 D1 EVIDENCE: a reverse-jitter returned to the exact origin still left the task"
+        )
+        print(
+            f"                  moved (order {jitter_after}, not baseline) "
+            f"- release-back does not revert"
+        )
         if not reset_to_baseline():
             recipe.fail("could not reset after leg 4")
 
+        print("ALL LEGS PASS: the driver observes a reorder (leg 1) AND its refusal (leg 2, HC3);")
         print(
-            "ALL LEGS PASS: the driver observes a reorder (leg 1) AND its refusal (leg 2, HC3);"
-        )
-        print(
-            f"D1 = {d1_disposition} (Escape and release-back both leave a committed task move in place)"
+            f"D1 = {d1_disposition} (Escape and release-back "
+            f"both leave a committed task move in place)"
         )
     finally:
         restore_config()

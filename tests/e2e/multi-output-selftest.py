@@ -164,9 +164,7 @@ def _selftest_body(captured: dict[str, str]) -> None:
     )
     for requested_topology in ("full-touching", "partial-touching", "disconnected"):
         try:
-            accepted_geometry = multi_output.mo_place_secondary_for_topology(
-                requested_topology
-            )
+            accepted_geometry = multi_output.mo_place_secondary_for_topology(requested_topology)
             ok(f"{requested_topology} topology accepted at {accepted_geometry}")
         except multi_output.MultiOutputError:
             recipe.fail(f"could not realize exact {requested_topology} output geometry")
@@ -196,9 +194,7 @@ def _selftest_body(captured: dict[str, str]) -> None:
     try:
         multi_output.mo_restore_output_topology(captured["topology"])
     except multi_output.MultiOutputError:
-        recipe.fail(
-            "could not restore the original output topology after classifier proof"
-        )
+        recipe.fail("could not restore the original output topology after classifier proof")
     try:
         _ = multi_output.mo_discover_outputs()
     except multi_output.MultiOutputError:
@@ -219,9 +215,7 @@ def _selftest_body(captured: dict[str, str]) -> None:
         check_rc(
             0,
             "view-on-secondary (readback)",
-            lambda: multi_output.mo_assert_view_on(
-                view, os.environ["E2E_MO_SECONDARY"]
-            ),
+            lambda: multi_output.mo_assert_view_on(view, os.environ["E2E_MO_SECONDARY"]),
         )
         # the pin is queryable and resolved as declared (ScreenPool id/name/primary)
         check_rc(

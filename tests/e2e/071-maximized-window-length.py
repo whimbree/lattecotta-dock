@@ -300,7 +300,7 @@ def _assert_popup_anchor_contract(phase: str) -> None:
 def _assert_stable_contract(phase: str) -> None:
     try:
         current = _stable_snapshot()
-    except (recipe.RecipeError, json.JSONDecodeError, KeyError, IndexError):
+    except recipe.RecipeError, json.JSONDecodeError, KeyError, IndexError:
         recipe.fail(f"{phase} could not read the stable geometry snapshot")
     if current != _S.base_stable_snapshot:
         recipe.fail(
@@ -360,9 +360,15 @@ def _capture_progress_only_transition(expected_target: str, expected_phase: str)
     progress = -1.0
     for _ in range(100):
         try:
-            target, phase, running, progress, geometry_revision, surface_revision, layer_revision = (
-                _transition_probe()
-            )
+            (
+                target,
+                phase,
+                running,
+                progress,
+                geometry_revision,
+                surface_revision,
+                layer_revision,
+            ) = _transition_probe()
         except recipe.RecipeError:
             time.sleep(0.01)
             continue
@@ -391,9 +397,15 @@ def _wait_for_in_flight_target(expected_target: str, expected_phase: str) -> Non
     progress = -1.0
     for _ in range(80):
         try:
-            target, phase, running, progress, geometry_revision, surface_revision, layer_revision = (
-                _transition_probe()
-            )
+            (
+                target,
+                phase,
+                running,
+                progress,
+                geometry_revision,
+                surface_revision,
+                layer_revision,
+            ) = _transition_probe()
         except recipe.RecipeError:
             time.sleep(0.01)
             continue
@@ -657,7 +669,7 @@ def _wait_for_native_screen_edge_armed(phase: str) -> None:
             registered = _lower(v["screenEdgeRegistered"])
             supported = _lower(v["compositorScreenEdgeSupported"])
             contains_mouse = _lower(v["visibilityContainsMouse"])
-        except (json.JSONDecodeError, KeyError):
+        except json.JSONDecodeError, KeyError:
             time.sleep(0.05)
             continue
         if (
@@ -676,9 +688,7 @@ def _wait_for_native_screen_edge_armed(phase: str) -> None:
     )
 
 
-def _start_kwin_screen_edge_round_trip(
-    x: int, y: int, departure_x: int, departure_y: int
-) -> None:
+def _start_kwin_screen_edge_round_trip(x: int, y: int, departure_x: int, departure_y: int) -> None:
     # Keep one input device alive for edge pressure, surface enter, and leave.
     # KWin's fake-input backend can retain the first device's surface focus if
     # a second short-lived client replaces it after the reveal. The repeated
@@ -796,10 +806,7 @@ def _assert_konsole_work_area(phase: str) -> None:
     expected_x = _S.screen_x
     expected_w = _S.screen_w
     expected_h = _S.screen_h - _S.stable_reservation_depth
-    if _S.edge == "top":
-        expected_y = _S.screen_y + _S.stable_reservation_depth
-    else:
-        expected_y = _S.screen_y
+    expected_y = _S.screen_y + _S.stable_reservation_depth if _S.edge == "top" else _S.screen_y
     if not (kx == expected_x and ky == expected_y and kw == expected_w and kh == expected_h):
         recipe.fail(
             f"{phase} maximize has frame {kx},{ky} {kw}x{kh}; expected exact {_S.edge} "
@@ -835,20 +842,59 @@ def _body() -> None:
     except matrix.MatrixProbeError:
         recipe.fail("could not resolve the floating-panel fixture")
     layout = os.environ["E2E_LAYOUT"]
-    group = ("--file", layout, "--group", "Containments", "--group", str(_S.view), "--group", "General")
+    group = (
+        "--file",
+        layout,
+        "--group",
+        "Containments",
+        "--group",
+        str(_S.view),
+        "--group",
+        "General",
+    )
 
     if not recipe.dock_stop():
         recipe.fail("dock did not stop before fixture configuration")
-    _kwrite("could not disable maximize-driven panel length", *group, "--key", "maximizeWhenMaximized", "false")
+    _kwrite(
+        "could not disable maximize-driven panel length",
+        *group,
+        "--key",
+        "maximizeWhenMaximized",
+        "false",
+    )
     _kwrite("could not configure a partial panel length", *group, "--key", "maxLength", "60")
-    _kwrite("could not configure floating-gap attachment", *group, "--key", "hideFloatingGapForMaximized", "true")
+    _kwrite(
+        "could not configure floating-gap attachment",
+        *group,
+        "--key",
+        "hideFloatingGapForMaximized",
+        "true",
+    )
     _kwrite("could not configure the floating gap", *group, "--key", "screenEdgeMargin", "18")
-    _kwrite("could not keep the floating gap under panel-surface ownership", *group, "--key", "floatingInternalGapIsForced", "false")
+    _kwrite(
+        "could not keep the floating gap under panel-surface ownership",
+        *group,
+        "--key",
+        "floatingInternalGapIsForced",
+        "false",
+    )
     _kwrite("could not configure Justify alignment", *group, "--key", "alignment", "10")
-    _kwrite("could not mark the Justify alignment as upgraded", *group, "--key", "alignmentUpgraded", "true")
+    _kwrite(
+        "could not mark the Justify alignment as upgraded",
+        *group,
+        "--key",
+        "alignmentUpgraded",
+        "true",
+    )
     if not recipe.dock_start(90):
         recipe.fail("dock did not restart with the stable-canvas fixture")
-    _latte_call_or_fail("could not set the fixture view to alwaysVisible", "setViewVisibilityMode", "us", str(_S.view), "alwaysVisible")
+    _latte_call_or_fail(
+        "could not set the fixture view to alwaysVisible",
+        "setViewVisibilityMode",
+        "us",
+        str(_S.view),
+        "alwaysVisible",
+    )
     for _ in range(40):
         with suppress(recipe.RecipeError):
             if _view_field()["visibilityMode"] == "alwaysVisible":
@@ -867,7 +913,9 @@ def _body() -> None:
     geometry_present = _lower(record["transitionGeometryPresent"])
     alignment = record["alignment"]
     if not (configured_panel == "true" and eligible_panel == "true" and geometry_present == "true"):
-        recipe.fail(f"view {_S.view} did not expose an eligible configured floating-panel controller")
+        recipe.fail(
+            f"view {_S.view} did not expose an eligible configured floating-panel controller"
+        )
     if alignment != "justify":
         recipe.fail(f"view {_S.view} did not retain Justify alignment")
     _wait_for_resting_target("floated", 1)
@@ -881,14 +929,19 @@ def _body() -> None:
     contribution_depth = record["reservationContributionDepth"]
     requested_depth = record["requestedReservationDepth"]
     if not (_S.screen_w > 0 and _S.screen_h > 0):
-        recipe.fail(f"view {_S.view} reported invalid output dimensions {_S.screen_w}x{_S.screen_h}")
+        recipe.fail(
+            f"view {_S.view} reported invalid output dimensions {_S.screen_w}x{_S.screen_h}"
+        )
     if not _S.screen:
         recipe.fail(f"view {_S.view} did not report its output name")
     if not base_window_width * 100 < _S.screen_w * 90:
-        recipe.fail(f"fixture view {_S.view} is not partial ({base_window_width} of {_S.screen_w}px)")
+        recipe.fail(
+            f"fixture view {_S.view} is not partial ({base_window_width} of {_S.screen_w}px)"
+        )
     if requested_depth != contribution_depth:
         recipe.fail(
-            f"requested depth {requested_depth} differs from the view contribution {contribution_depth}"
+            f"requested depth {requested_depth} differs "
+            f"from the view contribution {contribution_depth}"
         )
     if not (_S.stable_reservation_depth >= contribution_depth and contribution_depth > 0):
         recipe.fail(
@@ -898,7 +951,7 @@ def _body() -> None:
 
     try:
         _S.base_stable_snapshot = _stable_snapshot()
-    except (recipe.RecipeError, json.JSONDecodeError, KeyError, IndexError):
+    except recipe.RecipeError, json.JSONDecodeError, KeyError, IndexError:
         recipe.fail("could not capture the base stable geometry contract")
     try:
         _S.base_revisions = _revision_snapshot()
@@ -962,7 +1015,13 @@ def _body() -> None:
 
     if not recipe.dock_stop():
         recipe.fail("dock did not stop before the zero-gap boundary check")
-    _kwrite("could not configure the legal zero-pixel floating gap", *group, "--key", "screenEdgeMargin", "0")
+    _kwrite(
+        "could not configure the legal zero-pixel floating gap",
+        *group,
+        "--key",
+        "screenEdgeMargin",
+        "0",
+    )
     if not recipe.dock_start(90):
         recipe.fail("dock did not restart for the zero-gap boundary check")
     _wait_for_zero_gap_floated_snapshot()
@@ -973,18 +1032,57 @@ def _body() -> None:
         _S.view = matrix.view_id()
     except matrix.MatrixProbeError:
         recipe.fail("could not resolve the legacy floating-Dock fixture")
-    group = ("--file", layout, "--group", "Containments", "--group", str(_S.view), "--group", "General")
+    group = (
+        "--file",
+        layout,
+        "--group",
+        "Containments",
+        "--group",
+        str(_S.view),
+        "--group",
+        "General",
+    )
 
     if not recipe.dock_stop():
         recipe.fail("dock did not stop before legacy Dock policy configuration")
-    _kwrite("could not configure legacy Dock maximized-gap hiding", *group, "--key", "hideFloatingGapForMaximized", "true")
-    _kwrite("could not configure the legacy Dock floating gap", *group, "--key", "screenEdgeMargin", "18")
-    _kwrite("could not keep the legacy Dock gap under transition ownership", *group, "--key", "floatingInternalGapIsForced", "false")
-    _kwrite("could not configure immediate Dock attachment under the pointer", *group, "--key", "floatingGapHidingWaitsMouse", "false")
+    _kwrite(
+        "could not configure legacy Dock maximized-gap hiding",
+        *group,
+        "--key",
+        "hideFloatingGapForMaximized",
+        "true",
+    )
+    _kwrite(
+        "could not configure the legacy Dock floating gap",
+        *group,
+        "--key",
+        "screenEdgeMargin",
+        "18",
+    )
+    _kwrite(
+        "could not keep the legacy Dock gap under transition ownership",
+        *group,
+        "--key",
+        "floatingInternalGapIsForced",
+        "false",
+    )
+    _kwrite(
+        "could not configure immediate Dock attachment under the pointer",
+        *group,
+        "--key",
+        "floatingGapHidingWaitsMouse",
+        "false",
+    )
     _kwrite("could not configure normal animation speed", *group, "--key", "durationTime", "2")
     if not recipe.dock_start(90):
         recipe.fail("dock did not restart with the legacy floating-Dock fixture")
-    _latte_call_or_fail("could not set the legacy Dock fixture to alwaysVisible", "setViewVisibilityMode", "us", str(_S.view), "alwaysVisible")
+    _latte_call_or_fail(
+        "could not set the legacy Dock fixture to alwaysVisible",
+        "setViewVisibilityMode",
+        "us",
+        str(_S.view),
+        "alwaysVisible",
+    )
 
     if _set_konsole_maximized(False) != fixture_id:
         recipe.fail("KWin did not normalize the client for the legacy Dock check")
@@ -996,7 +1094,13 @@ def _body() -> None:
         recipe.fail("KWin did not restore the client for the legacy Dock check")
     _wait_for_dock_gap_policy("alwaysVisible", "false", "false", "floated", 1)
 
-    _latte_call_or_fail("could not set the legacy Dock fixture to windowsGoBelow", "setViewVisibilityMode", "us", str(_S.view), "windowsGoBelow")
+    _latte_call_or_fail(
+        "could not set the legacy Dock fixture to windowsGoBelow",
+        "setViewVisibilityMode",
+        "us",
+        str(_S.view),
+        "windowsGoBelow",
+    )
     _wait_for_dock_gap_policy("windowsGoBelow", "false", "false", "floated", 1)
     if _set_konsole_maximized(True) != fixture_id:
         recipe.fail("KWin did not maximize the client for the WindowsGoBelow Dock check")
@@ -1016,7 +1120,13 @@ def _body() -> None:
         _S.screen_y + _S.screen_h // 2,
         "Dodge Active pointer normalization",
     )
-    _latte_call_or_fail("could not set the floating Dock fixture to Dodge Active", "setViewVisibilityMode", "us", str(_S.view), "dodgeActive")
+    _latte_call_or_fail(
+        "could not set the floating Dock fixture to Dodge Active",
+        "setViewVisibilityMode",
+        "us",
+        str(_S.view),
+        "dodgeActive",
+    )
     _wait_for_dock_gap_policy("dodgeActive", "false", "false", "floated", 1)
     _wait_for_hidden_state("false", "initial Dodge Active state")
     if _set_konsole_maximized(True) != fixture_id:
@@ -1087,9 +1197,7 @@ def _cleanup() -> bool:
         except OSError:
             cleanup_failed = True
         pid = recipe.dock_pid()
-        if pid is not None and _pid_alive(pid):
-            cleanup_failed = True
-        elif not _muted_dock_start(90):
+        if (pid is not None and _pid_alive(pid)) or not _muted_dock_start(90):
             cleanup_failed = True
     if cleanup_failed:
         print(

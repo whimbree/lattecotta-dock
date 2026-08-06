@@ -8,19 +8,20 @@
 from __future__ import annotations
 
 import copy
-import json
 import sys
 import tempfile
 import unittest
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
-
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import operation_model as model  # noqa: E402
+import operation_model as model
 
-
-SnapshotMutation = Callable[[dict[str, Any]], None]
+# Return type is object, not None: mutations edit the snapshot in place and
+# mutated() discards whatever they return, so lambdas that chain two edits via a
+# (a, b) tuple expression are valid mutations (basic-mode reportArgumentType).
+SnapshotMutation = Callable[[dict[str, Any]], object]
 
 
 class OperationModelTest(unittest.TestCase):
@@ -42,8 +43,7 @@ class OperationModelTest(unittest.TestCase):
             )
         }
         self.bindings = {
-            view.handle: self.historical_bindings[view.handle]
-            for view in self.final_state.views
+            view.handle: self.historical_bindings[view.handle] for view in self.final_state.views
         }
         self.outputs = {
             "primary": {
@@ -61,13 +61,9 @@ class OperationModelTest(unittest.TestCase):
             "origin": "My Layout",
             "destination": "Other Layout",
         }
-        self.snapshot = self.make_snapshot(
-            self.final_state, self.bindings, self.outputs
-        )
+        self.snapshot = self.make_snapshot(self.final_state, self.bindings, self.outputs)
 
-    def assert_refused(
-        self, action: Callable[[], object], message: str | None = None
-    ) -> None:
+    def assert_refused(self, action: Callable[[], object], message: str | None = None) -> None:
         if message is None:
             with self.assertRaises(SystemExit):
                 action()
@@ -89,9 +85,7 @@ class OperationModelTest(unittest.TestCase):
     ) -> tuple[int, int]:
         x, y, width, height = outputs[placement.output.value]["geometry"]
         axis_start = x if placement.edge.orientation == "horizontal" else y
-        axis_length = (
-            width if placement.edge.orientation == "horizontal" else height
-        )
+        axis_length = width if placement.edge.orientation == "horizontal" else height
         if placement.alignment is model.Alignment.START:
             start_ratio = 0.0
         elif placement.alignment is model.Alignment.END:
@@ -171,11 +165,7 @@ class OperationModelTest(unittest.TestCase):
         members = sorted(group["contributorDockIds"])
         editing = expected.handle == state.editing
         owns_config_window = expected.handle == state.config_owner
-        member_handles = sorted(
-            view.handle
-            for view in state.views
-            if view.root == expected.handle
-        )
+        member_handles = sorted(view.handle for view in state.views if view.root == expected.handle)
         if expected.relationship == "linkedMember":
             assert expected.root is not None
             logical_id = bindings[expected.root]
@@ -199,11 +189,7 @@ class OperationModelTest(unittest.TestCase):
             "layoutController": f"layout-controller-{persistent_id}",
             "geometryController": f"geometry-controller-{persistent_id}",
             "editController": f"edit-controller-{persistent_id}",
-            "configWindow": (
-                f"config-window-{persistent_id}"
-                if owns_config_window
-                else None
-            ),
+            "configWindow": (f"config-window-{persistent_id}" if owns_config_window else None),
             "reservationPublisher": group["publisher"],
             "transitionController": f"transition-controller-{persistent_id}",
             "windowTouchTracker": f"window-touch-tracker-{persistent_id}",
@@ -306,12 +292,8 @@ class OperationModelTest(unittest.TestCase):
             "reservationWindowGeometry": reservation_window,
             "reservationLayerShellAnchors": reservation_anchors,
             "reservationLayerShellMargins": reservation_margins,
-            "reservationLayerShellExclusiveEdge": group[
-                "layerShellExclusiveEdge"
-            ],
-            "reservationLayerShellExclusiveZone": group[
-                "layerShellExclusiveZone"
-            ],
+            "reservationLayerShellExclusiveEdge": group["layerShellExclusiveEdge"],
+            "reservationLayerShellExclusiveZone": group["layerShellExclusiveZone"],
             "floatingGapConfigured": True,
             "floatingPanelConfigured": True,
             "floatingPanelEligible": True,
@@ -372,22 +354,18 @@ class OperationModelTest(unittest.TestCase):
         for expected in state.views:
             self.assertIsNotNone(expected.placement)
             assert expected.placement is not None
-            expected_groups.setdefault(
-                self.group_key(expected.placement, outputs), []
-            ).append(expected)
+            expected_groups.setdefault(self.group_key(expected.placement, outputs), []).append(
+                expected
+            )
 
         depths_by_key = {
             key: max(40 + bindings[view.handle] for view in contributors)
             for key, contributors in expected_groups.items()
         }
-        output_by_id = {
-            output["id"]: output for output in outputs.values()
-        }
+        output_by_id = {output["id"]: output for output in outputs.values()}
         groups: list[dict[str, Any]] = []
         groups_by_key: dict[tuple[int, str], dict[str, Any]] = {}
-        for generation, (key, contributors) in enumerate(
-            sorted(expected_groups.items()), 1
-        ):
+        for generation, (key, contributors) in enumerate(sorted(expected_groups.items()), 1):
             contributor_ids = sorted(bindings[view.handle] for view in contributors)
             depths = [40 + persistent_id for persistent_id in contributor_ids]
             edge = key[1]
@@ -405,11 +383,7 @@ class OperationModelTest(unittest.TestCase):
             bottom_depth = depths_by_key.get((key[0], "bottom"), 0)
             publisher_height = height - top_depth - bottom_depth
             self.assertGreater(publisher_height, 0)
-            window_geometry = (
-                [0, 0, width, 1]
-                if horizontal
-                else [0, 0, 1, publisher_height]
-            )
+            window_geometry = [0, 0, width, 1] if horizontal else [0, 0, 1, publisher_height]
             anchors = {
                 "top": ["top", "left", "right"],
                 "bottom": ["bottom", "left", "right"],
@@ -473,18 +447,14 @@ class OperationModelTest(unittest.TestCase):
             }
             for view in snapshot["views"]
         ]
-        output_by_id = {
-            output["id"]: output for output in outputs.values()
-        }
+        output_by_id = {output["id"]: output for output in outputs.values()}
         depths = {
             (group["outputId"], group["edge"]): group["publishedDepth"]
             for group in snapshot["reservationGroups"]
         }
         for group in snapshot["reservationGroups"]:
             output = output_by_id[group["outputId"]]
-            screen_x, screen_y, screen_width, screen_height = output[
-                "geometry"
-            ]
+            screen_x, screen_y, screen_width, screen_height = output["geometry"]
             edge = model.Edge[group["edge"].upper()]
             top_depth = depths.get((group["outputId"], "top"), 0)
             bottom_depth = depths.get((group["outputId"], "bottom"), 0)
@@ -512,12 +482,9 @@ class OperationModelTest(unittest.TestCase):
             }[edge]
             result.append(
                 {
-                    "id": (
-                        f"reservation-{group['outputId']}-{group['edge']}"
-                    ),
+                    "id": (f"reservation-{group['outputId']}-{group['edge']}"),
                     "caption": (
-                        "#screen-space-reservation"
-                        f"#output={group['outputId']}#edge={int(edge)}"
+                        f"#screen-space-reservation#output={group['outputId']}#edge={int(edge)}"
                     ),
                     "geometry": geometry,
                     "output": output["name"],
@@ -562,28 +529,19 @@ class OperationModelTest(unittest.TestCase):
                 self.plan,
                 through,
             )
-            if any(
-                view.placement is None
-                for view in state.views
-            ):
+            if any(view.placement is None for view in state.views):
                 continue
             expected = next(
                 (
                     view
                     for view in state.views
-                    if view.placement is not None
-                    and view.placement.edge is edge
+                    if view.placement is not None and view.placement.edge is edge
                 ),
                 None,
             )
             if expected is None:
                 continue
-            bindings = {
-                view.handle: self.historical_bindings[
-                    view.handle
-                ]
-                for view in state.views
-            }
+            bindings = {view.handle: self.historical_bindings[view.handle] for view in state.views}
             assert expected.placement is not None
             return (
                 through,
@@ -611,31 +569,20 @@ class OperationModelTest(unittest.TestCase):
         mirror_fields = {
             "outputId": "reservationOutputId",
             "edge": "reservationEdge",
-            "publishedDepth":
-                "reservationPublishedDepth",
-            "contributorDockIds":
-                "reservationContributorDockIds",
-            "memberCount":
-                "reservationGroupMemberCount",
-            "generation":
-                "reservationGroupGeneration",
+            "publishedDepth": "reservationPublishedDepth",
+            "contributorDockIds": "reservationContributorDockIds",
+            "memberCount": "reservationGroupMemberCount",
+            "generation": "reservationGroupGeneration",
             "geometry": "reservationGeometry",
-            "windowGeometry":
-                "reservationWindowGeometry",
-            "layerShellAnchors":
-                "reservationLayerShellAnchors",
-            "layerShellMargins":
-                "reservationLayerShellMargins",
-            "layerShellExclusiveEdge":
-                "reservationLayerShellExclusiveEdge",
-            "layerShellExclusiveZone":
-                "reservationLayerShellExclusiveZone",
+            "windowGeometry": "reservationWindowGeometry",
+            "layerShellAnchors": "reservationLayerShellAnchors",
+            "layerShellMargins": "reservationLayerShellMargins",
+            "layerShellExclusiveEdge": "reservationLayerShellExclusiveEdge",
+            "layerShellExclusiveZone": "reservationLayerShellExclusiveZone",
         }
         group = next(
             candidate
-            for candidate in snapshot[
-                "reservationGroups"
-            ]
+            for candidate in snapshot["reservationGroups"]
             if (
                 candidate["outputId"],
                 candidate["edge"],
@@ -656,9 +603,7 @@ class OperationModelTest(unittest.TestCase):
         identity_bindings: dict[str, int] | None = None,
     ) -> list[dict[str, Any]]:
         recorded_identities = (
-            self.historical_bindings
-            if identity_bindings is None
-            else identity_bindings
+            self.historical_bindings if identity_bindings is None else identity_bindings
         )
         records = [
             model.replay_header(
@@ -685,9 +630,7 @@ class OperationModelTest(unittest.TestCase):
                 )["record"]
             )
             snapshot_sequence = (
-                1
-                if operation.kind is model.OperationKind.RESTART
-                else snapshot_sequence + 1
+                1 if operation.kind is model.OperationKind.RESTART else snapshot_sequence + 1
             )
             result = {
                 "record": "result",
@@ -708,9 +651,7 @@ class OperationModelTest(unittest.TestCase):
             records.append(result)
         return records
 
-    def validate_replay_records(
-        self, records: list[dict[str, Any]]
-    ) -> dict[str, Any]:
+    def validate_replay_records(self, records: list[dict[str, Any]]) -> dict[str, Any]:
         with tempfile.TemporaryDirectory() as directory:
             replay_path = Path(directory) / "replay.jsonl"
             replay_path.write_text(
@@ -723,9 +664,7 @@ class OperationModelTest(unittest.TestCase):
         same = model.generate_plan(model.DEFAULT_SEED)
         other = model.generate_plan(model.DEFAULT_SEED + 1)
         self.assertEqual(self.plan, same)
-        self.assertEqual(
-            self.plan["planSha256"], model.operation_payload_digest(self.plan)
-        )
+        self.assertEqual(self.plan["planSha256"], model.operation_payload_digest(self.plan))
         self.assertNotEqual(self.plan["planSha256"], other["planSha256"])
         self.assertIs(model.validate_plan(self.plan), self.plan)
 
@@ -745,9 +684,7 @@ class OperationModelTest(unittest.TestCase):
         )
         for index, raw in enumerate(self.plan["operations"], 1):
             state = model.apply_operation(state, model.parse_operation(raw, index))
-            placements = [
-                view.placement for view in state.views if view.placement is not None
-            ]
+            placements = [view.placement for view in state.views if view.placement is not None]
             for left_index, left in enumerate(placements):
                 for right in placements[left_index + 1 :]:
                     self.assertFalse(model.placements_overlap(left, right))
@@ -756,8 +693,7 @@ class OperationModelTest(unittest.TestCase):
         layout_steps = [
             raw
             for raw in self.plan["operations"]
-            if raw["operation"]["kind"]
-            == model.OperationKind.MOVE_LAYOUT.value
+            if raw["operation"]["kind"] == model.OperationKind.MOVE_LAYOUT.value
         ]
         self.assertEqual(len(self.plan["operations"]), 78)
         self.assertEqual(
@@ -807,8 +743,7 @@ class OperationModelTest(unittest.TestCase):
         destination_step = next(
             raw
             for raw in self.plan["operations"]
-            if raw["operation"].get("layout")
-            == model.LayoutRole.DESTINATION.value
+            if raw["operation"].get("layout") == model.LayoutRole.DESTINATION.value
         )
         resolved = model.resolve_operation(
             {
@@ -851,8 +786,7 @@ class OperationModelTest(unittest.TestCase):
         destination_step = next(
             raw
             for raw in self.plan["operations"]
-            if raw["operation"].get("layout")
-            == model.LayoutRole.DESTINATION.value
+            if raw["operation"].get("layout") == model.LayoutRole.DESTINATION.value
         )
         verdict = model.assert_view_move_lifecycle(
             {
@@ -912,8 +846,7 @@ class OperationModelTest(unittest.TestCase):
         restart_step = next(
             raw
             for raw in self.plan["operations"]
-            if raw["operation"]["kind"]
-            == model.OperationKind.RESTART.value
+            if raw["operation"]["kind"] == model.OperationKind.RESTART.value
         )
         model.assert_view_move_lifecycle(
             {
@@ -1003,9 +936,7 @@ class OperationModelTest(unittest.TestCase):
                 result="following-copy",
             ),
         )
-        self.assertTrue(
-            duplicated_while_following.by_handle()["following-copy"].follows_primary
-        )
+        self.assertTrue(duplicated_while_following.by_handle()["following-copy"].follows_primary)
 
         linked = model.apply_operation(
             moved,
@@ -1032,9 +963,7 @@ class OperationModelTest(unittest.TestCase):
                 result="pinned-copy",
             ),
         )
-        self.assertFalse(
-            duplicated_while_pinned.by_handle()["pinned-copy"].follows_primary
-        )
+        self.assertFalse(duplicated_while_pinned.by_handle()["pinned-copy"].follows_primary)
 
     def test_plan_digest_use_after_destroy_and_overlap_are_refused(self) -> None:
         bad_digest = copy.deepcopy(self.plan)
@@ -1060,12 +989,8 @@ class OperationModelTest(unittest.TestCase):
                 ).to_json(),
             },
         }
-        use_after_destroy["planSha256"] = model.operation_payload_digest(
-            use_after_destroy
-        )
-        self.assert_refused(
-            lambda: model.validate_plan(use_after_destroy), "non-live"
-        )
+        use_after_destroy["planSha256"] = model.operation_payload_digest(use_after_destroy)
+        self.assert_refused(lambda: model.validate_plan(use_after_destroy), "non-live")
 
         state = model.ModelState(
             (
@@ -1101,42 +1026,30 @@ class OperationModelTest(unittest.TestCase):
                 model.Alignment.START,
             ),
         )
-        self.assert_refused(
-            lambda: model.apply_operation(state, overlap), "overlap"
-        )
+        self.assert_refused(lambda: model.apply_operation(state, overlap), "overlap")
 
     def test_recomputed_digest_does_not_authorize_a_noncanonical_plan(self) -> None:
         mutated = copy.deepcopy(self.plan)
-        mutated["operations"][0]["checkpoint"] = not mutated["operations"][0][
-            "checkpoint"
-        ]
+        mutated["operations"][0]["checkpoint"] = not mutated["operations"][0]["checkpoint"]
         mutated["planSha256"] = model.operation_payload_digest(mutated)
-        self.assertEqual(
-            mutated["planSha256"], model.operation_payload_digest(mutated)
-        )
+        self.assertEqual(mutated["planSha256"], model.operation_payload_digest(mutated))
         self.assert_refused(
             lambda: model.validate_plan(mutated),
             "canonical splitmix64-v1",
         )
 
     def test_schema_and_presentation_geometry_are_strict(self) -> None:
-        malformed = self.mutated(
-            lambda snapshot: snapshot.__setitem__("schemaVersion", 6)
-        )
+        malformed = self.mutated(lambda snapshot: snapshot.__setitem__("schemaVersion", 6))
         self.assert_refused(lambda: model.parse_snapshot(malformed), "schema 11")
 
-        missing_margin = self.mutated(
-            lambda snapshot: snapshot["views"][0].pop("screenEdgeMargin")
-        )
+        missing_margin = self.mutated(lambda snapshot: snapshot["views"][0].pop("screenEdgeMargin"))
         self.assert_refused(
             lambda: model.parse_snapshot(missing_margin),
             "screenEdgeMargin",
         )
 
         wrong_margin_type = self.mutated(
-            lambda snapshot: snapshot["views"][0].__setitem__(
-                "screenEdgeMargin", "18"
-            )
+            lambda snapshot: snapshot["views"][0].__setitem__("screenEdgeMargin", "18")
         )
         self.assert_refused(
             lambda: model.parse_snapshot(wrong_margin_type),
@@ -1227,9 +1140,7 @@ class OperationModelTest(unittest.TestCase):
         )
 
         missing_presented_gap = self.mutated(
-            lambda snapshot: snapshot["views"][0].pop(
-                "presentedScreenEdgeGap"
-            )
+            lambda snapshot: snapshot["views"][0].pop("presentedScreenEdgeGap")
         )
         self.assert_refused(
             lambda: model.parse_snapshot(missing_presented_gap),
@@ -1237,9 +1148,7 @@ class OperationModelTest(unittest.TestCase):
         )
 
         wrong_presented_gap_type = self.mutated(
-            lambda snapshot: snapshot["views"][0].__setitem__(
-                "presentedScreenEdgeGap", "18"
-            )
+            lambda snapshot: snapshot["views"][0].__setitem__("presentedScreenEdgeGap", "18")
         )
         self.assert_refused(
             lambda: model.parse_snapshot(wrong_presented_gap_type),
@@ -1266,12 +1175,8 @@ class OperationModelTest(unittest.TestCase):
             "reservation mirror diverged",
         )
 
-        missing = self.mutated(
-            lambda snapshot: snapshot["views"][0].pop("currentVisibleGeometry")
-        )
-        self.assert_refused(
-            lambda: model.parse_snapshot(missing), "currentVisibleGeometry"
-        )
+        missing = self.mutated(lambda snapshot: snapshot["views"][0].pop("currentVisibleGeometry"))
+        self.assert_refused(lambda: model.parse_snapshot(missing), "currentVisibleGeometry")
 
         renamed = self.mutated(
             lambda snapshot: (
@@ -1283,9 +1188,7 @@ class OperationModelTest(unittest.TestCase):
             )
         )
         self.assertIn("visibleGeometry", renamed["views"][0])
-        self.assert_refused(
-            lambda: model.parse_snapshot(renamed), "currentVisibleGeometry"
-        )
+        self.assert_refused(lambda: model.parse_snapshot(renamed), "currentVisibleGeometry")
 
     def test_visual_ownership_matches_global_output_edge_geometry(self) -> None:
         windows = self.make_visual_windows(self.snapshot, self.outputs)
@@ -1358,9 +1261,7 @@ class OperationModelTest(unittest.TestCase):
     ) -> None:
         exercised: set[model.Edge] = set()
         for edge in model.Edge:
-            through, _, bindings, snapshot, key = (
-                self.first_checkpoint_for_edge(edge)
-            )
+            through, _, bindings, snapshot, key = self.first_checkpoint_for_edge(edge)
             self.assertEqual(
                 model.assert_snapshot(
                     self.plan,
@@ -1376,9 +1277,7 @@ class OperationModelTest(unittest.TestCase):
             )
             group = next(
                 candidate
-                for candidate in snapshot[
-                    "reservationGroups"
-                ]
+                for candidate in snapshot["reservationGroups"]
                 if (
                     candidate["outputId"],
                     candidate["edge"],
@@ -1394,7 +1293,7 @@ class OperationModelTest(unittest.TestCase):
                 wrong_geometry,
             )
             self.assert_refused(
-                lambda: model.assert_snapshot(
+                lambda through=through, bindings=bindings, snapshot=snapshot: model.assert_snapshot(
                     self.plan,
                     through,
                     bindings,
@@ -1411,32 +1310,22 @@ class OperationModelTest(unittest.TestCase):
     ) -> None:
         exercised: set[model.Edge] = set()
         for edge in model.Edge:
-            _, _, _, snapshot, key = (
-                self.first_checkpoint_for_edge(edge)
-            )
+            _, _, _, snapshot, key = self.first_checkpoint_for_edge(edge)
             windows = self.make_visual_windows(
                 snapshot,
                 self.outputs,
             )
             group = next(
                 candidate
-                for candidate in snapshot[
-                    "reservationGroups"
-                ]
+                for candidate in snapshot["reservationGroups"]
                 if (
                     candidate["outputId"],
                     candidate["edge"],
                 )
                 == key
             )
-            wrong_window_geometry = list(
-                group["windowGeometry"]
-            )
-            length_index = (
-                2
-                if edge.orientation == "horizontal"
-                else 3
-            )
+            wrong_window_geometry = list(group["windowGeometry"])
+            length_index = 2 if edge.orientation == "horizontal" else 3
             wrong_window_geometry[length_index] -= 1
             self.assertGreater(
                 wrong_window_geometry[length_index],
@@ -1452,15 +1341,11 @@ class OperationModelTest(unittest.TestCase):
                 window
                 for window in windows
                 if window["caption"]
-                == (
-                    "#screen-space-reservation"
-                    f"#output={key[0]}"
-                    f"#edge={int(edge)}"
-                )
+                == (f"#screen-space-reservation#output={key[0]}#edge={int(edge)}")
             )
             publisher["geometry"][length_index] -= 1
             self.assert_refused(
-                lambda: model.assert_visual_window_ownership(
+                lambda snapshot=snapshot, windows=windows: model.assert_visual_window_ownership(
                     {
                         "snapshot": snapshot,
                         "outputs": self.outputs,
@@ -1474,11 +1359,7 @@ class OperationModelTest(unittest.TestCase):
 
     def test_reservation_oracle_rejects_coherent_metadata_drift(self) -> None:
         shared_group = next(
-            group
-            for group in self.snapshot[
-                "reservationGroups"
-            ]
-            if group["memberCount"] > 1
+            group for group in self.snapshot["reservationGroups"] if group["memberCount"] > 1
         )
         key = (
             shared_group["outputId"],
@@ -1496,17 +1377,12 @@ class OperationModelTest(unittest.TestCase):
             ),
             "exclusive zone": (
                 "layerShellExclusiveZone",
-                shared_group[
-                    "layerShellExclusiveZone"
-                ]
-                + 1,
+                shared_group["layerShellExclusiveZone"] + 1,
             ),
         }
         for name, (field, value) in mutations.items():
             with self.subTest(name=name):
-                snapshot = copy.deepcopy(
-                    self.snapshot
-                )
+                snapshot = copy.deepcopy(self.snapshot)
                 self.set_group_field_and_mirrors(
                     snapshot,
                     key,
@@ -1514,7 +1390,7 @@ class OperationModelTest(unittest.TestCase):
                     value,
                 )
                 self.assert_refused(
-                    lambda: model.assert_snapshot(
+                    lambda snapshot=snapshot: model.assert_snapshot(
                         self.plan,
                         self.final_seq,
                         self.bindings,
@@ -1526,11 +1402,7 @@ class OperationModelTest(unittest.TestCase):
 
         depth_snapshot = copy.deepcopy(self.snapshot)
         wrong_depth = shared_group["publishedDepth"] + 1
-        output = next(
-            candidate
-            for candidate in self.outputs.values()
-            if candidate["id"] == key[0]
-        )
+        output = next(candidate for candidate in self.outputs.values() if candidate["id"] == key[0])
         edge = model.Edge[key[1].upper()]
         x, y, width, height = output["geometry"]
         wrong_geometry = {
@@ -1581,67 +1453,39 @@ class OperationModelTest(unittest.TestCase):
             "maximum-depth ownership",
         )
 
-        bounded_snapshot = copy.deepcopy(
-            self.snapshot
-        )
+        bounded_snapshot = copy.deepcopy(self.snapshot)
         member_views = [
             view
             for view in bounded_snapshot["views"]
-            if view["persistentDockId"]
-            in set(shared_group["contributorDockIds"])
+            if view["persistentDockId"] in set(shared_group["contributorDockIds"])
         ]
         axis_start = (
-            output["geometry"][0]
-            if edge.orientation == "horizontal"
-            else output["geometry"][1]
+            output["geometry"][0] if edge.orientation == "horizontal" else output["geometry"][1]
         )
         axis_length = (
-            output["geometry"][2]
-            if edge.orientation == "horizontal"
-            else output["geometry"][3]
+            output["geometry"][2] if edge.orientation == "horizontal" else output["geometry"][3]
         )
         partial_length = round(axis_length * 0.2)
         for index, view in enumerate(
             sorted(
                 member_views,
-                key=lambda candidate:
-                    candidate["persistentDockId"],
+                key=lambda candidate: candidate["persistentDockId"],
             )
         ):
-            partial_start = (
-                axis_start
-                + round(
-                    axis_length
-                    * (0.1 + index * 0.5)
-                )
-            )
-            view["stablePrimaryAxisStart"] = (
-                partial_start
-            )
-            view["stablePrimaryAxisLength"] = (
-                partial_length
-            )
-            trigger = view[
-                "stableTriggerGeometry"
-            ]
+            partial_start = axis_start + round(axis_length * (0.1 + index * 0.5))
+            view["stablePrimaryAxisStart"] = partial_start
+            view["stablePrimaryAxisLength"] = partial_length
+            trigger = view["stableTriggerGeometry"]
             if edge.orientation == "horizontal":
                 trigger[0] = partial_start
                 trigger[2] = partial_length
-                view["publishedStruts"][0] = (
-                    partial_start
-                )
-                view["publishedStruts"][2] = (
-                    partial_length
-                )
+                view["publishedStruts"][0] = partial_start
+                view["publishedStruts"][2] = partial_length
             else:
                 trigger[1] = partial_start
                 trigger[3] = partial_length
-                view["publishedStruts"][1] = (
-                    partial_start
-                )
-                view["publishedStruts"][3] = (
-                    partial_length
-                )
+                view["publishedStruts"][1] = partial_start
+                view["publishedStruts"][3] = partial_length
         self.assertEqual(
             model.assert_snapshot(
                 self.plan,
@@ -1652,28 +1496,18 @@ class OperationModelTest(unittest.TestCase):
             ),
             self.final_state,
         )
-        starts = [
-            view["stablePrimaryAxisStart"]
-            for view in member_views
-        ]
+        starts = [view["stablePrimaryAxisStart"] for view in member_views]
         ends = [
-            view["stablePrimaryAxisStart"]
-            + view["stablePrimaryAxisLength"]
+            view["stablePrimaryAxisStart"] + view["stablePrimaryAxisLength"]
             for view in member_views
         ]
-        bounded_geometry = list(
-            shared_group["geometry"]
-        )
+        bounded_geometry = list(shared_group["geometry"])
         if edge.orientation == "horizontal":
             bounded_geometry[0] = min(starts)
-            bounded_geometry[2] = (
-                max(ends) - min(starts)
-            )
+            bounded_geometry[2] = max(ends) - min(starts)
         else:
             bounded_geometry[1] = min(starts)
-            bounded_geometry[3] = (
-                max(ends) - min(starts)
-            )
+            bounded_geometry[3] = max(ends) - min(starts)
         self.set_group_field_and_mirrors(
             bounded_snapshot,
             key,
@@ -1694,9 +1528,7 @@ class OperationModelTest(unittest.TestCase):
     def test_reservation_membership_comes_from_live_placement(self) -> None:
         missing = copy.deepcopy(self.snapshot)
         missing.pop("reservationGroups")
-        missing["reservationGroups"] = copy.deepcopy(
-            self.snapshot["reservationGroups"][1:]
-        )
+        missing["reservationGroups"] = copy.deepcopy(self.snapshot["reservationGroups"][1:])
         self.assert_refused(
             lambda: model.assert_snapshot(
                 self.plan,
@@ -1709,29 +1541,18 @@ class OperationModelTest(unittest.TestCase):
         )
 
         stale = copy.deepcopy(self.snapshot)
-        existing_keys = {
-            (group["outputId"], group["edge"])
-            for group in stale["reservationGroups"]
-        }
+        existing_keys = {(group["outputId"], group["edge"]) for group in stale["reservationGroups"]}
         stale_key = next(
             (output["id"], edge.label)
             for output in self.outputs.values()
             for edge in model.Edge
-            if (output["id"], edge.label)
-            not in existing_keys
+            if (output["id"], edge.label) not in existing_keys
         )
-        stale_group = copy.deepcopy(
-            stale["reservationGroups"][0]
-        )
+        stale_group = copy.deepcopy(stale["reservationGroups"][0])
         stale_group["outputId"] = stale_key[0]
         stale_group["edge"] = stale_key[1]
-        stale_group["publisher"] = (
-            f"stale-{stale_key[0]}-"
-            f"{stale_key[1]}"
-        )
-        stale["reservationGroups"].append(
-            stale_group
-        )
+        stale_group["publisher"] = f"stale-{stale_key[0]}-{stale_key[1]}"
+        stale["reservationGroups"].append(stale_group)
         self.assert_refused(
             lambda: model.assert_snapshot(
                 self.plan,
@@ -1750,9 +1571,7 @@ class OperationModelTest(unittest.TestCase):
             group["edge"],
         )
         other_output = next(
-            output
-            for output in self.outputs.values()
-            if output["id"] != old_key[0]
+            output for output in self.outputs.values() if output["id"] != old_key[0]
         )
         self.set_group_field_and_mirrors(
             swapped,
@@ -1821,12 +1640,8 @@ class OperationModelTest(unittest.TestCase):
         def overlap_stable_spans(snapshot: dict[str, Any]) -> None:
             by_edge: dict[tuple[int, str], list[dict[str, Any]]] = {}
             for view in snapshot["views"]:
-                by_edge.setdefault((view["screenId"], view["edge"]), []).append(
-                    view
-                )
-            left, right = next(
-                views for views in by_edge.values() if len(views) >= 2
-            )[:2]
+                by_edge.setdefault((view["screenId"], view["edge"]), []).append(view)
+            left, right = next(views for views in by_edge.values() if len(views) >= 2)[:2]
             right["stablePrimaryAxisStart"] = left["stablePrimaryAxisStart"]
             right["stablePrimaryAxisLength"] = left["stablePrimaryAxisLength"]
             trigger = right["stableTriggerGeometry"]
@@ -1845,9 +1660,7 @@ class OperationModelTest(unittest.TestCase):
     def test_checkpoint_rejects_hardened_authority_drift(self) -> None:
         mutations: dict[str, tuple[SnapshotMutation, str]] = {
             "multi-screen lineage": (
-                lambda snapshot: snapshot["views"][0].__setitem__(
-                    "screensGroup", "all"
-                ),
+                lambda snapshot: snapshot["views"][0].__setitem__("screensGroup", "all"),
                 "lineage",
             ),
             "duplicate reservation key": (
@@ -1870,9 +1683,7 @@ class OperationModelTest(unittest.TestCase):
                 "applet and popup geometry",
             ),
             "zero reservation width": (
-                lambda snapshot: snapshot["reservationGroups"][0]["geometry"].__setitem__(
-                    2, 0
-                ),
+                lambda snapshot: snapshot["reservationGroups"][0]["geometry"].__setitem__(2, 0),
                 "maximum-depth ownership",
             ),
             "missing reservation anchor": (
@@ -1910,16 +1721,13 @@ class OperationModelTest(unittest.TestCase):
             if view["relationship"] == "linkedMember"
         )
         self.assert_checkpoint_refuses(
-            lambda snapshot: snapshot["views"][member_index].__setitem__(
-                "originalDockId", None
-            )
+            lambda snapshot: snapshot["views"][member_index].__setitem__("originalDockId", None)
         )
         self.assert_checkpoint_refuses(
             lambda snapshot: snapshot["views"][0].__setitem__(
                 "screenId",
                 self.outputs["secondary"]["id"]
-                if snapshot["views"][0]["screenId"]
-                == self.outputs["primary"]["id"]
+                if snapshot["views"][0]["screenId"] == self.outputs["primary"]["id"]
                 else self.outputs["primary"]["id"],
             )
         )
@@ -1930,22 +1738,15 @@ class OperationModelTest(unittest.TestCase):
             )
         )
         self.assert_checkpoint_refuses(
-            lambda snapshot: snapshot["views"][0][
-                "screenGeometry"
-            ].__setitem__(
+            lambda snapshot: snapshot["views"][0]["screenGeometry"].__setitem__(
                 0,
-                snapshot["views"][0][
-                    "screenGeometry"
-                ][0]
-                + 1,
+                snapshot["views"][0]["screenGeometry"][0] + 1,
             )
         )
         self.assert_checkpoint_refuses(
             lambda snapshot: snapshot["views"][0].__setitem__(
                 "orientation",
-                "vertical"
-                if snapshot["views"][0]["orientation"] == "horizontal"
-                else "horizontal",
+                "vertical" if snapshot["views"][0]["orientation"] == "horizontal" else "horizontal",
             )
         )
         destroyed_id = max(self.historical_bindings.values()) + 100
@@ -1955,9 +1756,7 @@ class OperationModelTest(unittest.TestCase):
             if view["relationship"] == "linkedRoot"
         )
         self.assert_checkpoint_refuses(
-            lambda snapshot: snapshot["views"][root_index][
-                "linkedDockIds"
-            ].append(destroyed_id)
+            lambda snapshot: snapshot["views"][root_index]["linkedDockIds"].append(destroyed_id)
         )
 
     def test_reservation_max_orphan_and_residue_are_refused(self) -> None:
@@ -1979,9 +1778,7 @@ class OperationModelTest(unittest.TestCase):
         destroyed_id = max(self.historical_bindings.values()) + 100
 
         def add_destroyed_residue(snapshot: dict[str, Any]) -> None:
-            snapshot["reservationGroups"][0]["contributorDockIds"].append(
-                destroyed_id
-            )
+            snapshot["reservationGroups"][0]["contributorDockIds"].append(destroyed_id)
             snapshot["reservationGroups"][0]["contributorDockIds"].sort()
             snapshot["reservationGroups"][0]["memberCount"] += 1
 
@@ -1995,14 +1792,9 @@ class OperationModelTest(unittest.TestCase):
         )
         state = model.state_through(self.plan, begin_index)
         handles = {view.handle for view in state.views}
-        bindings = {
-            handle: self.historical_bindings[handle]
-            for handle in handles
-        }
+        bindings = {handle: self.historical_bindings[handle] for handle in handles}
         snapshot = self.make_snapshot(state, bindings, self.outputs)
-        model.assert_snapshot(
-            self.plan, begin_index, bindings, self.outputs, snapshot
-        )
+        model.assert_snapshot(self.plan, begin_index, bindings, self.outputs, snapshot)
 
         unrelated = next(
             view
@@ -2030,10 +1822,7 @@ class OperationModelTest(unittest.TestCase):
         )
         ended_state = model.state_through(self.plan, end_index)
         ended_handles = {view.handle for view in ended_state.views}
-        ended_bindings = {
-            handle: self.historical_bindings[handle]
-            for handle in ended_handles
-        }
+        ended_bindings = {handle: self.historical_bindings[handle] for handle in ended_handles}
         ended_snapshot = self.make_snapshot(
             ended_state,
             ended_bindings,
@@ -2048,14 +1837,10 @@ class OperationModelTest(unittest.TestCase):
         )
         config_owner_id = ended_bindings[ended_state.config_owner or ""]
         owner = next(
-            view
-            for view in ended_snapshot["views"]
-            if view["persistentDockId"] == config_owner_id
+            view for view in ended_snapshot["views"] if view["persistentDockId"] == config_owner_id
         )
         unrelated = next(
-            view
-            for view in ended_snapshot["views"]
-            if view["persistentDockId"] != config_owner_id
+            view for view in ended_snapshot["views"] if view["persistentDockId"] != config_owner_id
         )
         unrelated["objects"]["configWindow"] = owner["objects"]["configWindow"]
         owner["objects"]["configWindow"] = None
@@ -2072,9 +1857,7 @@ class OperationModelTest(unittest.TestCase):
 
     def test_transition_endpoint_and_running_state_are_refused(self) -> None:
         self.assert_checkpoint_refuses(
-            lambda snapshot: snapshot["views"][0].__setitem__(
-                "transitionProgress", 0.5
-            )
+            lambda snapshot: snapshot["views"][0].__setitem__("transitionProgress", 0.5)
         )
 
         def leave_running(snapshot: dict[str, Any]) -> None:
@@ -2090,24 +1873,18 @@ class OperationModelTest(unittest.TestCase):
         ):
             with self.subTest(revision=revision):
                 self.assert_checkpoint_refuses(
-                    lambda snapshot, field=revision: snapshot["views"][
-                        0
-                    ].__setitem__(field, "0")
+                    lambda snapshot, field=revision: snapshot["views"][0].__setitem__(field, "0")
                 )
 
     def test_quiescent_and_durable_projections_detect_the_right_drift(self) -> None:
         quiescent = model.quiescent_projection(self.snapshot)
         sequence_only = copy.deepcopy(self.snapshot)
         sequence_only["snapshotSequence"] = "42"
-        self.assertEqual(
-            quiescent, model.quiescent_projection(sequence_only)
-        )
+        self.assertEqual(quiescent, model.quiescent_projection(sequence_only))
 
         runtime_drift = copy.deepcopy(self.snapshot)
         runtime_drift["views"][0]["runtimeViewId"] = "999"
-        self.assertNotEqual(
-            quiescent, model.quiescent_projection(runtime_drift)
-        )
+        self.assertNotEqual(quiescent, model.quiescent_projection(runtime_drift))
         self.assertEqual(
             model.durable_projection(self.snapshot),
             model.durable_projection(runtime_drift),
@@ -2145,9 +1922,7 @@ class OperationModelTest(unittest.TestCase):
 
         not_rotated = copy.deepcopy(after)
         target = next(
-            view
-            for view in not_rotated["views"]
-            if view["persistentDockId"] in affected_ids
+            view for view in not_rotated["views"] if view["persistentDockId"] in affected_ids
         )
         original = next(
             view
@@ -2169,29 +1944,22 @@ class OperationModelTest(unittest.TestCase):
         )
         unrelated["runtimeViewId"] = str(int(unrelated["runtimeViewId"]) + 1000)
         self.assert_refused(
-            lambda: model.assert_runtime_reload(
-                {**request, "after": rotated_unrelated}
-            ),
+            lambda: model.assert_runtime_reload({**request, "after": rotated_unrelated}),
             "runtime reload ownership",
         )
 
         swapped_retired = copy.deepcopy(after)
         affected_views = [
-            view
-            for view in swapped_retired["views"]
-            if view["persistentDockId"] in affected_ids
+            view for view in swapped_retired["views"] if view["persistentDockId"] in affected_ids
         ]
         before_runtime = {
-            view["persistentDockId"]: view["runtimeViewId"]
-            for view in before["views"]
+            view["persistentDockId"]: view["runtimeViewId"] for view in before["views"]
         }
         first, second = affected_views[:2]
         first["runtimeViewId"] = before_runtime[second["persistentDockId"]]
         second["runtimeViewId"] = before_runtime[first["persistentDockId"]]
         self.assert_refused(
-            lambda: model.assert_runtime_reload(
-                {**request, "after": swapped_retired}
-            ),
+            lambda: model.assert_runtime_reload({**request, "after": swapped_retired}),
             "reused a retired identity",
         )
 
@@ -2230,16 +1998,12 @@ class OperationModelTest(unittest.TestCase):
             ),
             "missing created id": (
                 lambda records: next(
-                    record
-                    for record in records
-                    if "createdPersistentDockId" in record
+                    record for record in records if "createdPersistentDockId" in record
                 ).pop("createdPersistentDockId"),
                 "createdPersistentDockId",
             ),
             "zero snapshot sequence": (
-                lambda records: records[2].__setitem__(
-                    "snapshotSequence", "0"
-                ),
+                lambda records: records[2].__setitem__("snapshotSequence", "0"),
                 "pair 1 diverges",
             ),
         }
@@ -2248,7 +2012,7 @@ class OperationModelTest(unittest.TestCase):
                 records = self.make_replay_records()
                 mutation(records)
                 self.assert_refused(
-                    lambda: self.validate_replay_records(records),
+                    lambda records=records: self.validate_replay_records(records),
                     message,
                 )
 
@@ -2303,8 +2067,7 @@ class OperationModelTest(unittest.TestCase):
 
         before_remove_state = model.state_through(self.plan, remove["seq"] - 1)
         before_remove_bindings = {
-            view.handle: self.historical_bindings[view.handle]
-            for view in before_remove_state.views
+            view.handle: self.historical_bindings[view.handle] for view in before_remove_state.views
         }
         before_remove = self.make_snapshot(
             before_remove_state,
@@ -2313,8 +2076,7 @@ class OperationModelTest(unittest.TestCase):
         )
         after_remove_state = model.state_through(self.plan, remove["seq"])
         after_remove_bindings = {
-            view.handle: self.historical_bindings[view.handle]
-            for view in after_remove_state.views
+            view.handle: self.historical_bindings[view.handle] for view in after_remove_state.views
         }
         after_remove = self.make_snapshot(
             after_remove_state,
@@ -2369,9 +2131,7 @@ class OperationModelTest(unittest.TestCase):
         replay_identities = dict(self.historical_bindings)
         replay_identities[created_handle] = reused_id
         self.assertEqual(
-            self.validate_replay_records(
-                self.make_replay_records(replay_identities)
-            ),
+            self.validate_replay_records(self.make_replay_records(replay_identities)),
             {"ok": True, "operationCount": self.final_seq},
         )
 

@@ -37,12 +37,19 @@ from collections.abc import Callable
 from contextlib import suppress
 from typing import Any
 
-from latte_harness import audit, recipe
 from pydantic import ValidationError
+
+from latte_harness import audit, recipe
 
 # LatteCore.Types Alignment (declarativeimports/coretypes.h.in).
 _ALIGNMENT_NAMES = {
-    -1: "none", 0: "center", 1: "left", 2: "right", 3: "top", 4: "bottom", 10: "justify",
+    -1: "none",
+    0: "center",
+    1: "left",
+    2: "right",
+    3: "top",
+    4: "bottom",
+    10: "justify",
 }
 
 
@@ -155,8 +162,11 @@ def main() -> None:
 
     # --- AU-3b/3c: the "view" half answers every C++-property field, sanely ------
     for boolfield in (
-        "byPassWM", "isPreferredForShortcuts", "visibilityEnableKWinEdges",
-        "visibilityRaiseOnDesktop", "visibilityRaiseOnActivity",
+        "byPassWM",
+        "isPreferredForShortcuts",
+        "visibilityEnableKWinEdges",
+        "visibilityRaiseOnDesktop",
+        "visibilityRaiseOnActivity",
     ):
         value = view_map.get(boolfield, "")
         if value not in ("true", "false"):

@@ -72,9 +72,7 @@ def main() -> None:
         if cx >= sx and cy >= sy and cx + cw <= sx + sw and cy + ch <= sy + sh:
             result = "ONSCREEN"
         else:
-            result = (
-                f"OFFSCREEN config={cx},{cy} {cw}x{ch} screen={sx},{sy} {sw}x{sh}"
-            )
+            result = f"OFFSCREEN config={cx},{cy} {cw}x{ch} screen={sx},{sy} {sw}x{sh}"
 
     #! close the settings again: focus-loss click at screen center first (the
     #! Qt5-faithful path), then the deterministic D-Bus close for every view -

@@ -53,9 +53,7 @@ def _kread(*args: str) -> str:
 
 
 def _kwrite(*args: str) -> None:
-    subprocess.run(
-        ["kwriteconfig6", "--file", os.environ["E2E_LAYOUT"], *args], check=False
-    )
+    subprocess.run(["kwriteconfig6", "--file", os.environ["E2E_LAYOUT"], *args], check=False)
 
 
 @contextlib.contextmanager
@@ -99,17 +97,13 @@ def _model(view: int) -> tuple[int, int]:
     ay = target.absolute_geometry[1]
     ly = target.local_geometry[1]
     oy = ay - ly
-    applet = next(
-        a for a in recipe.view_applets(view) if a.plugin == "org.kde.latte.plasmoid"
-    )
+    applet = next(a for a in recipe.view_applets(view) if a.plugin == "org.kde.latte.plasmoid")
     _px, py, pw, ph = applet.geometry
     n = len(recipe.view_tasks(view))
     return int(oy + py + ph / 2), int(pw / n)
 
 
-def _calibrate(
-    shot: str, cy: int, slot: int, spotify_idx: int
-) -> tuple[int, int] | None:
+def _calibrate(shot: str, cy: int, slot: int, spotify_idx: int) -> tuple[int, int] | None:
     """The launcher-2 and launcher-3 screen x from spotify's real green center.
 
     A screenshot row through the icon centers gives spotify's REAL center (a
@@ -127,13 +121,9 @@ def _calibrate(
     greens = [
         int(m.group(1))
         for m in (
-            re.match(r"(\d+),0: \((\d+),(\d+),(\d+)", line)
-            for line in crop.stdout.splitlines()
+            re.match(r"(\d+),0: \((\d+),(\d+),(\d+)", line) for line in crop.stdout.splitlines()
         )
-        if m
-        and int(m.group(3)) > 150
-        and int(m.group(2)) < 120
-        and int(m.group(4)) < 140
+        if m and int(m.group(3)) > 150 and int(m.group(2)) < 120 and int(m.group(4)) < 140
     ]
     if not greens or max(greens) - min(greens) > 80:
         print(
@@ -143,9 +133,7 @@ def _calibrate(
         )
         return None
     spotify = (min(greens) + max(greens)) / 2
-    return int(spotify + (1 - spotify_idx) * slot), int(
-        spotify + (2 - spotify_idx) * slot
-    )
+    return int(spotify + (1 - spotify_idx) * slot), int(spotify + (2 - spotify_idx) * slot)
 
 
 def main() -> None:
@@ -212,11 +200,7 @@ def main() -> None:
         #! saturated green disc unique in the bar, so a screenshot row through the
         #! icon centers gives its REAL center (see attempt_drag)
         spotify_idx = next(
-            (
-                i
-                for i, t in enumerate(recipe.view_tasks(view))
-                if t.app_id == "spotify.desktop"
-            ),
+            (i for i, t in enumerate(recipe.view_tasks(view)) if t.app_id == "spotify.desktop"),
             None,
         )
         if spotify_idx is None:
@@ -286,18 +270,14 @@ def main() -> None:
             if after != before:
                 #! an adjacent pair moved, just not the intended one: the press
                 #! landed a slot over on stale geometry - reset and re-aim
-                print(
-                    f"  (attempt {attempt} reordered the wrong pair: {after} - resetting)"
-                )
+                print(f"  (attempt {attempt} reordered the wrong pair: {after} - resetting)")
                 if not reset_order():
                     recipe.fail("could not reset the launcher order between attempts")
             else:
                 print(f"  (attempt {attempt} did not reorder anything, retrying)")
         print(f"after:  {after}")
         if after != expected:
-            recipe.fail(
-                f"drag did not swap launchers 2 and 3 in 3 attempts (expected: {expected})"
-            )
+            recipe.fail(f"drag did not swap launchers 2 and 3 in 3 attempts (expected: {expected})")
         print("live order flipped (launcher 2 dropped past launcher 3)")
 
         #! the config witness needs the flush a clean stop guarantees
@@ -306,9 +286,7 @@ def main() -> None:
         persisted = _kread(*general, "--key", launchers_key)
         persisted_ids = persisted.replace(",", " ")
         if persisted_ids != expected:
-            recipe.fail(
-                f"config order after stop: '{persisted}' (expected '{expected}')"
-            )
+            recipe.fail(f"config order after stop: '{persisted}' (expected '{expected}')")
         print(f"config entry {launchers_key} carries the new order")
 
         #! and the new order must survive a restart

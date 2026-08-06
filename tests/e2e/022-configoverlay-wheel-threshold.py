@@ -152,9 +152,7 @@ def _expect_invalid_wheel(value: str) -> None:
             f"{status}: {output}"
         )
     if "invalid angle-delta" not in output:
-        recipe.fail(
-            f"fakepointer rejected '{value}' without the angle-delta diagnostic: {output}"
-        )
+        recipe.fail(f"fakepointer rejected '{value}' without the angle-delta diagnostic: {output}")
 
 
 def _select_fixture_layout(path: str) -> None:
@@ -175,7 +173,7 @@ def _select_fixture_layout(path: str) -> None:
         config.set("UniversalSettings", "memoryUsage", "0")
         with open(path, "w") as output:
             config.write(output, space_around_delimiters=False)
-    except (OSError, configparser.Error):
+    except OSError, configparser.Error:
         recipe.fail("could not select the SC-CW1 fixture layout")
 
 
@@ -196,9 +194,26 @@ def _stage_axis(axis: str, fixture: str, config_home: str) -> None:
         formfactor, location = "2", "3"
     else:
         formfactor, location = "3", "5"
-    if _kwrite_file(destination, "--group", "Containments", "--group", "1", "--key", "formfactor", formfactor) != 0:
+    if (
+        _kwrite_file(
+            destination,
+            "--group",
+            "Containments",
+            "--group",
+            "1",
+            "--key",
+            "formfactor",
+            formfactor,
+        )
+        != 0
+    ):
         recipe.fail(f"{axis}: could not set the fixture form factor")
-    if _kwrite_file(destination, "--group", "Containments", "--group", "1", "--key", "location", location) != 0:
+    if (
+        _kwrite_file(
+            destination, "--group", "Containments", "--group", "1", "--key", "location", location
+        )
+        != 0
+    ):
         recipe.fail(f"{axis}: could not set the fixture edge")
 
 
@@ -212,7 +227,9 @@ def _record_case(
     inherited_delta: int,
     counters: dict[str, int],
 ) -> None:
-    before = _applet_length(view, view_axis, f"{view_axis} {label}: initial applet-length query failed")
+    before = _applet_length(
+        view, view_axis, f"{view_axis} {label}: initial applet-length query failed"
+    )
     observed = 0
     after = before
     for attempt in (1, 2, 3):
@@ -228,14 +245,18 @@ def _record_case(
                 recipe.fail(f"{view_axis} {label}: vertical wheel injection failed")
         for _poll in range(6):
             time.sleep(0.2)
-            after = _applet_length(view, view_axis, f"{view_axis} {label}: applet-length poll failed")
+            after = _applet_length(
+                view, view_axis, f"{view_axis} {label}: applet-length poll failed"
+            )
             observed = after - before
             if observed != 0:
                 break
         if observed != 0 or inherited_delta == 0:
             break
         print(f"  ({view_axis} {label} was not delivered on attempt {attempt}, retrying)")
-    after = _applet_length(view, view_axis, f"{view_axis} {label}: final applet-length query failed")
+    after = _applet_length(
+        view, view_axis, f"{view_axis} {label}: final applet-length query failed"
+    )
     observed = after - before
     print(
         f"OBS|view={view_axis}|event={label}|angleDelta={delta}|length={before}->{after}|"
@@ -269,7 +290,9 @@ def _run_axis(axis: str, fixture: str, config_home: str, counters: dict[str, int
     after = _applet_length(view, axis, f"{axis}: normal-mode final applet-length query failed")
     print(f"CONTROL|view={axis}|mode=normal|angleDelta=(0,120)|length={before}->{after}")
     if after != before:
-        recipe.fail(f"{axis}: normal-mode wheel changed fixture length before ConfigOverlay was active")
+        recipe.fail(
+            f"{axis}: normal-mode wheel changed fixture length before ConfigOverlay was active"
+        )
 
     try:
         applet_reorder.applet_reorder_enter(view)
@@ -295,7 +318,9 @@ def _run_axis(axis: str, fixture: str, config_home: str, counters: dict[str, int
         recipe.fail(f"{axis}: dock did not stop cleanly after the matrix")
 
 
-def _finalize_recipe(config_home: str, fixture_data: str, backup: str, state: dict[str, bool]) -> None:
+def _finalize_recipe(
+    config_home: str, fixture_data: str, backup: str, state: dict[str, bool]
+) -> None:
     try:
         pid = recipe.dock_pid()
     except recipe.RecipeError:
@@ -373,7 +398,9 @@ def _cleanup(config_home: str, fixture_data: str, backup: str, state: dict[str, 
     return cleanup_failed
 
 
-def _body(fixture: str, config_home: str, fixture_data: str, backup: str, state: dict[str, bool]) -> int:
+def _body(
+    fixture: str, config_home: str, fixture_data: str, backup: str, state: dict[str, bool]
+) -> int:
     if not (
         os.path.isfile(f"{fixture}/SC-CW1.layout.latte")
         and os.path.isfile(f"{fixture}/plasmoids/{_PLUGIN}/metadata.json")
@@ -423,7 +450,8 @@ def _body(fixture: str, config_home: str, fixture_data: str, backup: str, state:
     if counters["spec_failures"] == 0:
         _finalize_recipe(config_home, fixture_data, backup, state)
         print(
-            "D57 corrected signature observed on both view axes; promote SC-CW1 to a regression guard"
+            "D57 corrected signature observed on both view axes; "
+            "promote SC-CW1 to a regression guard"
         )
         return 0
     recipe.fail(

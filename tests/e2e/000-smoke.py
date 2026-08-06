@@ -32,8 +32,7 @@ def main() -> None:
         _x, _y, width, height = view.absolute_geometry
         if width <= 0 or height <= 0:
             recipe.fail(
-                f"view {view.containment_id} has degenerate geometry "
-                f"{list(view.absolute_geometry)}"
+                f"view {view.containment_id} has degenerate geometry {list(view.absolute_geometry)}"
             )
     print(f"{len(settled)} views settled")
     views_before = len(settled)

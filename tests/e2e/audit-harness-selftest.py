@@ -90,7 +90,9 @@ def _leg_crafted(work: Path) -> None:
 
     # correct: only maxLength moved -> P1 applies, P2 exact
     after_good = _snap(work / "after_good", "maxLength\t90", "minLength\t100", "offset\t0")
-    expect_pass("maxLength drive applies", lambda: audit.assert_applies(before, after_good, "maxLength"))
+    expect_pass(
+        "maxLength drive applies", lambda: audit.assert_applies(before, after_good, "maxLength")
+    )
     expect_pass(
         "maxLength drive changed only maxLength",
         lambda: audit.assert_only_keys(before, after_good, "maxLength"),
@@ -104,7 +106,9 @@ def _leg_crafted(work: Path) -> None:
     )
 
     # D10 shape: nothing changed -> P1 must FAIL
-    expect_fail("no-op control is caught", lambda: audit.assert_applies(before, before, "maxLength"))
+    expect_fail(
+        "no-op control is caught", lambda: audit.assert_applies(before, before, "maxLength")
+    )
 
     # wrong-key: offset moved when maxLength was expected -> P1 for maxLength FAILS,
     # P2 for {maxLength} FAILS
@@ -134,12 +138,15 @@ def _leg_crafted(work: Path) -> None:
 
     # P3 reflect-state: value present passes, wrong/absent value fails
     expect_pass(
-        "reflect matches the stored value", lambda: audit.assert_reflects(before, "maxLength", "100")
+        "reflect matches the stored value",
+        lambda: audit.assert_reflects(before, "maxLength", "100"),
     )
     expect_fail(
         "reflect rejects a wrong value", lambda: audit.assert_reflects(before, "maxLength", "999")
     )
-    expect_fail("reflect rejects an absent key", lambda: audit.assert_reflects(before, "iconSize", "48"))
+    expect_fail(
+        "reflect rejects an absent key", lambda: audit.assert_reflects(before, "iconSize", "48")
+    )
 
     # P4 cross-view agreement: same value agrees, different disagrees
     surface_a = _snap(work / "surfaceA", "maxLength\t90")

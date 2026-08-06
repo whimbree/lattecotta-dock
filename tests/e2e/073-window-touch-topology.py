@@ -166,10 +166,9 @@ def _created_view_id(before: str) -> str:
         created = [
             view
             for view in json.loads(payload)["views"]
-            if view["persistentDockId"] not in before_ids
-            and view["relationship"] == "independent"
+            if view["persistentDockId"] not in before_ids and view["relationship"] == "independent"
         ]
-    except (json.JSONDecodeError, KeyError, ValueError):
+    except json.JSONDecodeError, KeyError, ValueError:
         return ""
     return str(created[0]["persistentDockId"]) if len(created) == 1 else ""
 
@@ -293,7 +292,7 @@ def _fixture_placement_settled(primary_id: int, secondary_id: int) -> bool:
             actual = (view["screenId"], view["edge"], view["alignment"])
             if actual != placement or not view["geometrySettled"]:
                 return False
-    except (json.JSONDecodeError, KeyError, ValueError, IndexError):
+    except json.JSONDecodeError, KeyError, ValueError, IndexError:
         return False
     return True
 
@@ -331,7 +330,7 @@ def _axis_first_publication_reached(
             or view["windowGeometry"] != view["surfaceGeometry"]
         ):
             return False
-    except (json.JSONDecodeError, KeyError, ValueError):
+    except json.JSONDecodeError, KeyError, ValueError:
         return False
     return True
 
@@ -372,7 +371,7 @@ def _axis_settled(dock_id: int, expected: tuple[int, str, str]) -> bool:
             or view["windowGeometry"] != view["surfaceGeometry"]
         ):
             return False
-    except (json.JSONDecodeError, KeyError, ValueError):
+    except json.JSONDecodeError, KeyError, ValueError:
         return False
     return view["geometrySettled"]
 
@@ -390,9 +389,7 @@ def _assert_axis_change_publishes_once(
             break
         time.sleep(0.02)
     if not published:
-        recipe.fail(
-            "axis-changing placement never reached its first complete publication"
-        )
+        recipe.fail("axis-changing placement never reached its first complete publication")
 
     # Old coalescers could fire at 150 ms directly or at 650 ms after the
     # validator. Compare with the pre-mutation revision after both deadlines;
@@ -411,9 +408,7 @@ def _assert_axis_change_publishes_once(
             f"{artifacts}/fp4b-axis-change-before-revision.txt", "w", encoding="utf-8"
         ) as stream:
             stream.write(f"{before_revision}\n")
-        recipe.fail(
-            "axis-changing placement scheduled a redundant geometry publication"
-        )
+        recipe.fail("axis-changing placement scheduled a redundant geometry publication")
 
     # Settlement also includes longer-lived presentation bookkeeping and may
     # include a later content-driven publication. Wait for convergence without
@@ -422,9 +417,7 @@ def _assert_axis_change_publishes_once(
         if _axis_settled(view, expected):
             return
         time.sleep(0.25)
-    with open(
-        f"{artifacts}/fp4b-axis-change-unsettled.json", "w", encoding="utf-8"
-    ) as stream:
+    with open(f"{artifacts}/fp4b-axis-change-unsettled.json", "w", encoding="utf-8") as stream:
         stream.write(_snapshot())
     recipe.fail("axis-changing placement did not settle")
 
@@ -481,9 +474,7 @@ def _assert_structure() -> tuple[int, str]:
 
 def _stable_projection(*, quiet: bool = False) -> str | None:
     """stable_projection: the oracle's stable projection, or None when it refuses."""
-    result = _oracle(
-        "stable-projection", "--ids", _S.view_ids_csv, stdin=_snapshot(), quiet=quiet
-    )
+    result = _oracle("stable-projection", "--ids", _S.view_ids_csv, stdin=_snapshot(), quiet=quiet)
     return result.stdout if result.returncode == 0 else None
 
 
@@ -493,9 +484,7 @@ def _stable_matches_client_baseline() -> bool:
 
 
 def _persistent_projection(fail_message: str) -> str:
-    result = _oracle(
-        "persistent-projection", "--ids", _S.view_ids_csv, stdin=_snapshot()
-    )
+    result = _oracle("persistent-projection", "--ids", _S.view_ids_csv, stdin=_snapshot())
     if result.returncode != 0:
         recipe.fail(fail_message)
     return result.stdout
@@ -530,9 +519,7 @@ def _wait_for_stable_topology(expected: str) -> None:
         time.sleep(0.25)
     if structure_error:
         _warn(f"last unsettled structure: {structure_error}")
-    recipe.fail(
-        f"{expected} output mutation did not converge to two identical stable snapshots"
-    )
+    recipe.fail(f"{expected} output mutation did not converge to two identical stable snapshots")
 
 
 def _print_stable_diff(baseline_json: str, current_json: str) -> None:
@@ -551,15 +538,15 @@ def _print_stable_diff(baseline_json: str, current_json: str) -> None:
                 elif key not in right_dict:
                     yield f"{path}.{key}: removed {left_dict[key]!r}"
                 else:
-                    yield from differences(
-                        left_dict[key], right_dict[key], f"{path}.{key}"
-                    )
+                    yield from differences(left_dict[key], right_dict[key], f"{path}.{key}")
         elif isinstance(left, list):
             left_list = cast("list[Any]", left)
             right_list = cast("list[Any]", right)
             if len(left_list) != len(right_list):
                 yield f"{path}: length {len(left_list)} -> {len(right_list)}"
-            for index, (before, after) in enumerate(zip(left_list, right_list)):
+            # strict=False deliberately: the length mismatch is reported just
+            # above and the common prefix is still compared (not an error here).
+            for index, (before, after) in enumerate(zip(left_list, right_list, strict=False)):
                 yield from differences(before, after, f"{path}[{index}]")
         elif left != right:
             yield f"{path}: {left!r} -> {right!r}"
@@ -568,15 +555,13 @@ def _print_stable_diff(baseline_json: str, current_json: str) -> None:
         _warn(line)
 
 
-def _assert_anchor_revisions_monotonic(
-    previous: str, current: str, fail_message: str
-) -> None:
+def _assert_anchor_revisions_monotonic(previous: str, current: str, fail_message: str) -> None:
     previous_values = [int(value) for value in previous.split()]
     current_values = [int(value) for value in current.split()]
     if len(previous_values) != 3 or len(current_values) != 3:
         _warn("expected three popup-anchor revisions")
         recipe.fail(fail_message)
-    if any(after < before for before, after in zip(previous_values, current_values)):
+    if any(after < before for before, after in zip(previous_values, current_values, strict=True)):
         _warn("popup-anchor revision moved backwards")
         recipe.fail(fail_message)
 
@@ -652,9 +637,7 @@ def _place_client(x: str, y: str, width: str, height: str, minimized: str) -> st
     )
     if not result or "\n" in result:
         recipe.fail("KWin targeted an invalid number of topology fixture windows")
-    actual_id = actual_x = actual_y = actual_width = actual_height = (
-        actual_minimized
-    ) = ""
+    actual_id = actual_x = actual_y = actual_width = actual_height = actual_minimized = ""
     for _ in range(80):
         lines = _client_rows().splitlines()
         parts = lines[0].split() if lines else []
@@ -684,9 +667,7 @@ def _place_client(x: str, y: str, width: str, height: str, minimized: str) -> st
     )
 
 
-def _wait_for_client_policy(
-    frame: str, expected: str, minimized: str, boundary: str
-) -> None:
+def _wait_for_client_policy(frame: str, expected: str, minimized: str, boundary: str) -> None:
     frame_args = frame.split()
     extra = ["--minimized"] if minimized == "true" else []
     for _ in range(120):
@@ -723,9 +704,7 @@ def _wait_for_client_policy(
 
 
 def _drive_client_case(case: str, expected: str, minimized: str = "false") -> None:
-    plan = _oracle(
-        "client-plan", "--ids", _S.view_ids_csv, "--case", case, stdin=_snapshot()
-    )
+    plan = _oracle("client-plan", "--ids", _S.view_ids_csv, "--case", case, stdin=_snapshot())
     if plan.returncode != 0:
         recipe.fail(f"could not plan the {case} client geometry from live triggers")
     fields = plan.stdout.split()
@@ -742,12 +721,7 @@ def _wait_for_no_client() -> None:
             _assert_stable_after_client_change("client teardown")
             return
         time.sleep(0.1)
-    if (
-        _oracle(
-            "assert-no-client", "--ids", _S.view_ids_csv, stdin=_snapshot()
-        ).returncode
-        != 0
-    ):
+    if _oracle("assert-no-client", "--ids", _S.view_ids_csv, stdin=_snapshot()).returncode != 0:
         recipe.fail("destroyed client remained in the per-view touch policy")
     _assert_stable_after_client_change("client teardown")
 
@@ -858,10 +832,7 @@ def _body() -> None:
     if os.environ.get("E2E_OUTPUT_COUNT", "1") != "2":
         recipe.fail("FP-4B topology acceptance requires exactly two nested outputs")
 
-    if (
-        subprocess.run(["python3", ORACLE, "negative-probes"], check=False).returncode
-        != 0
-    ):
+    if subprocess.run(["python3", ORACLE, "negative-probes"], check=False).returncode != 0:
         recipe.fail("controlled geometry and ownership negatives did not reject")
 
     if matrix.init() != 0:
@@ -984,28 +955,19 @@ def _body() -> None:
         recipe.fail("could not realize the disconnected output topology")
     _drive_topology_cases("disconnected")
 
-    before_restart = _persistent_projection(
-        "could not capture pre-restart persistent topology"
-    )
+    before_restart = _persistent_projection("could not capture pre-restart persistent topology")
     if not recipe.dock_stop():
         recipe.fail("dock did not stop for disconnected-topology persistence reload")
     if not recipe.dock_start(90):
         recipe.fail("dock did not restart for disconnected-topology persistence reload")
     _wait_for_stable_topology("disconnected")
-    after_restart = _persistent_projection(
-        "could not capture post-restart persistent topology"
-    )
+    after_restart = _persistent_projection("could not capture post-restart persistent topology")
     if after_restart != before_restart:
         recipe.fail(
             "restart changed persistent identities, placement, stable spans, depths,"
             " or reservation groups"
         )
-    if (
-        _oracle(
-            "assert-no-client", "--ids", _S.view_ids_csv, stdin=_snapshot()
-        ).returncode
-        != 0
-    ):
+    if _oracle("assert-no-client", "--ids", _S.view_ids_csv, stdin=_snapshot()).returncode != 0:
         recipe.fail("restart created an unexpected window-touch participant")
 
     print(

@@ -117,9 +117,7 @@ def main() -> None:
                 "- the sanitized binary was shadowed by an uninstrumented one; "
                 "the UB gate would catch nothing"
             )
-        asan = next(
-            (line.split()[-1] for line in maps.splitlines() if "libasan.so" in line), ""
-        )
+        asan = next((line.split()[-1] for line in maps.splitlines() if "libasan.so" in line), "")
         print(f"  sanitized: libasan mapped ({asan})")
     else:
         print("  (E2E_EXPECT_ASAN unset: skipping the libasan check - normal non-sanitized run)")
