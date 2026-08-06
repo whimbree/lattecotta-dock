@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
-# Dump all KWin windows (caption, geometry, output) via a transient KWin script.
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# Thin exec shim (BP-5a): the KWin window dump now lives in the typed harness at
+# latte_harness.dumpwins; this stable path keeps the latte-live-verification
+# skill, the e2e recipes, and muscle memory working. The DUMPWIN|... line format
+# is unchanged. See docs/tracking/bash-python-migration-plan.md.
 set -euo pipefail
-js=$(mktemp --suffix=.js)
-cat > "$js" <<'EOF'
-for (const w of workspace.windowList()) {
-    print("DUMPWIN|" + w.resourceClass + "|" + w.caption + "|" + w.frameGeometry.x + "," + w.frameGeometry.y + " " + w.frameGeometry.width + "x" + w.frameGeometry.height + "|" + (w.output ? w.output.name : "?") + "|layer=" + w.layer);
-}
-EOF
-mark=$(date +%s.%N)
-num=$(busctl --user call org.kde.KWin /Scripting org.kde.kwin.Scripting loadScript ss "$js" "dumpwins$$" | awk '{print $2}')
-busctl --user call org.kde.KWin /Scripting/Script$num org.kde.kwin.Script run >/dev/null
-sleep 0.5
-busctl --user call org.kde.KWin /Scripting/Script$num org.kde.kwin.Script stop >/dev/null
-busctl --user call org.kde.KWin /Scripting org.kde.kwin.Scripting unloadScript s "dumpwins$$" >/dev/null 2>&1 || true
-journalctl --user -u plasma-kwin_wayland --since "@$mark" --no-pager -o cat | grep "DUMPWIN|" || echo "no output captured"
-rm -f "$js"
+repo="$(cd "$(dirname "$0")/../.." && pwd)"
+# uv self-heal: a direct call from a bare or pre-BP shell has no uv on PATH, so
+# re-exec into the flake devShell instead of dying with command-not-found (the
+# same guard the BP-1 shims carry; PR #162 review finding 1).
+command -v uv >/dev/null 2>&1 || exec nix develop "$repo" -c "$0" "$@"
+exec uv run --locked --project "$repo/harness" python -m latte_harness.dumpwins
