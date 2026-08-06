@@ -53,7 +53,6 @@ tests/e2e/022-configoverlay-wheel-threshold.sh
 tests/e2e/022-empty-area-window-actions.sh
 tests/e2e/023-task-middle-click-runtime.sh
 tests/e2e/031-ruler-slider-crossview.sh
-tests/e2e/032-wheel-editbackground-opacity.sh
 tests/e2e/033-canvas-remap-placement.sh
 tests/e2e/040-preview-tooltip-text.sh
 tests/e2e/050-drag-reorder-launchers.sh
