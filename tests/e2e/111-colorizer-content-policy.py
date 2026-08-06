@@ -250,15 +250,26 @@ def main() -> None:
                 alpha = int(match.group(2), 16) if match.group(2) else 255
                 rgba = (*bytes.fromhex(match.group(1)), alpha)
                 pixels.append(rgba)
+        # These two legs print the detail and return False so the solid()
+        # caller adds its own FAIL line - the bash sub-python sys.exit(msg)
+        # followed by the caller's `|| e2e_fail "<desc>"`, reproduced.
         if len(pixels) != 144:
-            _fail_raw(f"D28 {state}-{label} crop yielded {len(pixels)} pixels, expected 144")
+            print(
+                f"D28 {state}-{label} crop yielded {len(pixels)} pixels, expected 144",
+                file=sys.stderr,
+                flush=True,
+            )
+            return False
         mismatches = [pixel for pixel in pixels if pixel != expected]
         if mismatches:
             observed = sorted(set(mismatches))[:8]
-            _fail_raw(
+            print(
                 f"D28 {state}-{label} pixels differ from {expected}: "
-                f"{len(mismatches)}/144 mismatches, observed {observed}"
+                f"{len(mismatches)}/144 mismatches, observed {observed}",
+                file=sys.stderr,
+                flush=True,
             )
+            return False
         print(f"D28 RENDER ok: {state}-{label} is byte-exact {expected_hex}")
         return True
 
