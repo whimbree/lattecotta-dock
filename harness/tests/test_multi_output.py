@@ -184,6 +184,14 @@ def test_classify_priorities_uncanonical_needs_normalization() -> None:
     assert multi_output._classify_output_priorities(state, "DP-1", "DP-2") == 1  # pyright: ignore[reportPrivateUsage]
 
 
+def test_classify_priorities_reversed_valid_pair_is_canonical() -> None:
+    # Reversed but unique 2,1 is still the canonical set (sorted == [1,2]); it is
+    # preserved as captured, never renormalized (the deleted bash contract test's
+    # reversed-priorities control).
+    state = _kscreen([_output("DP-1", priority=2), _output("DP-2", priority=1)])
+    assert multi_output._classify_output_priorities(state, "DP-1", "DP-2") == 0  # pyright: ignore[reportPrivateUsage]
+
+
 @pytest.mark.parametrize(
     "state",
     [
@@ -249,6 +257,27 @@ def test_compare_reports_a_type_change_as_drift() -> None:
     status, message = multi_output._compare_output_state_semantically(captured, current)  # pyright: ignore[reportPrivateUsage]
     assert status == 1
     assert "type changed" in message
+
+
+def test_compare_reports_drift_nested_inside_modes() -> None:
+    # A mode's refresh rate has no restore setter and sits two levels deep; the
+    # identity-keyed canonicalization must still surface it (the deleted bash
+    # contract test's mode-refresh control).
+    captured = _kscreen(
+        [
+            _output("DP-1", priority=1, extra={"modes": [{"id": "m1", "refreshRate": 60}]}),
+            _output("DP-2", priority=2),
+        ]
+    )
+    current = _kscreen(
+        [
+            _output("DP-1", priority=1, extra={"modes": [{"id": "m1", "refreshRate": 59.94}]}),
+            _output("DP-2", priority=2),
+        ]
+    )
+    status, message = multi_output._compare_output_state_semantically(captured, current)  # pyright: ignore[reportPrivateUsage]
+    assert status == 1
+    assert "refreshRate" in message
 
 
 def test_compare_malformed_input_is_status_two() -> None:
