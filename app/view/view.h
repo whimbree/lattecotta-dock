@@ -521,6 +521,7 @@ private:
     [[nodiscard]] bool panelFocusIsRequested() const;
     [[nodiscard]] bool ensurePanelFocusSessionStarted();
     void endPanelFocusSession(PanelFocusSessionDisposition disposition);
+    void relinquishPanelFocusSessionOnRemoval();
     void applyPanelFocusPolicy();
     void cancelPanelFocusSessionOnFocusLoss();
     void leaveKeyboardNavigation();
