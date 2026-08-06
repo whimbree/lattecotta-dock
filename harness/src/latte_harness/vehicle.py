@@ -4,54 +4,46 @@
 """Nested kwin_wayland compositor lifecycle: the out-of-session vehicle.
 
 The typed port of scripts/lib-nested-kwin.sh (BP-2a). The bash version was
-sourced into a caller's shell and kept its lifecycle in shell variables that
-persisted across the whole run; teardown was the caller's own
-``trap nested_kwin_cleanup EXIT INT TERM``. This module instead exposes the
-lifecycle as state-file-driven subcommands, because the bridge (still bash)
-must hand the same variables back to the consumers that read them:
+sourced into a caller's shell, kept its lifecycle in shell variables, and tore
+down through the caller's own ``trap nested_kwin_cleanup EXIT INT TERM``. Every
+one of those sourcers is a Python consumer now (the seed, the sceneprobe render
+gate, the e2e runner, the installed-package gate), so the bash bridge and its
+prepare/start/stop subcommands are gone (BW-1); this module is the library those
+consumers call directly, plus two standalone subcommands.
 
-- ``prepare`` mktemps a private ``XDG_RUNTIME_DIR`` (mode 0700), writes the
-  initial state file under it, and emits the eval-able shell the bridge sources
-  (``NESTED_RT`` and ``NESTED_KWIN_LOG``).
-- ``start`` brings up ``kwin_wayland --virtual`` inside its own
-  ``dbus-run-session`` and its own session/process group, waits for the wayland
-  socket, publishes the private bus address, records pid/pgid/socket/bus in the
-  state file, and emits ``NESTED_SOCK`` / ``NESTED_KWIN_PID`` / ``NESTED_BUS``.
-  It exits 2 (after printing kwin's log) if the socket never appears. On any
-  interruption or failure BEFORE it reports the pid, it tears the compositor it
-  spawned back down: the bash caller could clean up on a mid-start failure only
-  because ``NESTED_KWIN_PID=$!`` was set in its own shell before the socket
-  wait; the bridge cannot see that pid until start emits it, so start owns the
-  no-leak guarantee for its own start window.
-- ``stop`` is the exact nested_kwin_cleanup teardown: whole-group TERM then a
-  bounded escalation to KILL, FUSE unmount of ``RT/doc``, runtime-dir removal,
-  and the recreation contract check. Idempotent: a dead group or a missing dir
-  succeed quietly (the trap idiom).
+The library entry is ``running_compositor`` (a context manager): it brings up
+``kwin_wayland --virtual`` inside its own ``dbus-run-session`` and its own
+session/process group, waits for the wayland socket, publishes the private bus
+address, yields a ``VehicleSession``, and guarantees teardown on every exit path
+(the ``trap nested_kwin_cleanup EXIT`` idiom as a ``finally``). ``stop_compositor``
+is that teardown as a plain call: whole-group TERM then a bounded escalation to
+KILL, FUSE unmount of ``RT/doc``, runtime-dir removal, and the recreation
+contract check; idempotent, so a dead group or a missing dir succeed quietly.
+
+Two subcommands remain, neither a bridge:
+
 - ``stop-group`` is the zombie-aware, bounded process-group transaction that
-  the seed reuses for its throwaway dock. It is the port of the bash
-  latte_package_gate_stop_process_group (retired from
+  the seed reuses for its throwaway dock (scripts/lib-e2e-seed.sh execs it). It
+  is the port of the bash latte_package_gate_stop_process_group (retired from
   scripts/lib-installed-package-gate.sh in BP-4b, the package-gate selftest
   port); its output prefix is preserved verbatim so the seed's teardown reads
   identically across the migration.
 - ``status`` reads the state file and reports the recorded fields plus group
-  liveness (the observability surface; not consumed by the bridge).
+  liveness (the observability surface).
 
-Why the port owns the process group and not the launching shell: bash launched
+Why the vehicle owns the process group and not a launching shell: bash launched
 the compositor with ``setsid ... &`` in the caller's shell, so it stayed a child
-of that shell and ``wait`` reaped it. Here ``start`` launches it in its own
-session (SessionProcess / start_new_session) and then EXITS, so the compositor
-reparents to init. Every teardown therefore works by process GROUP id
-(``killpg`` / ``pgrep -g``), never by a parent-child ``wait`` that no longer
-holds. The observable is identical (the group is gone), and killing by pgid is
-independent of who the parent is, which is exactly what the installed-package
-gate relies on when it stops the compositor by ``NESTED_KWIN_PID`` itself.
+of that shell and ``wait`` reaped it. Here the compositor is spawned in its own
+session (SessionProcess / start_new_session), so teardown works by process GROUP
+id (``killpg`` / ``pgrep -g``), never by a parent-child ``wait``. Killing by pgid
+is independent of who the parent is, which is exactly what the installed-package
+gate relies on when it stops the compositor by its recorded pgid itself.
 """
 
 from __future__ import annotations
 
 import argparse
 import os
-import shlex
 import shutil
 import signal
 import subprocess
@@ -65,7 +57,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from latte_harness.proc import SessionProcess, install_conventional_signal_exits
+from latte_harness.proc import SessionProcess
 
 TOOL = "nested-kwin"
 
@@ -101,7 +93,6 @@ STOP_GROUP_DEFAULT_DELAY = 0.2
 # the e2e-seed cleanup selftest still sources).
 _PKG_GATE_TOOL = "installed-package-gate"
 
-EXIT_START_FAILED = 2  # socket never appeared (bash nested_kwin_start `return 2`)
 EXIT_STOP_GROUP_FAILED = 2  # the group outlived a bounded SIGKILL, or a poll error
 
 STATE_FILENAME = "vehicle-state.json"
@@ -735,82 +726,7 @@ def stop_compositor(
         _remove_runtime_dir(runtime_dir)
 
 
-# ---- shell emission for the bridge -----------------------------------------
-
-
-def _emit_prepare_shell(runtime_dir: Path) -> None:
-    print(f"NESTED_RT={shlex.quote(str(runtime_dir))}")
-    print(f"NESTED_KWIN_LOG={shlex.quote(str(log_path(runtime_dir)))}")
-
-
-def _emit_start_shell(socket: str, pgid: int, bus: str, starttime: str | None) -> None:
-    print(f"NESTED_SOCK={shlex.quote(socket)}")
-    print(f"NESTED_KWIN_PID={pgid}")
-    # The teardown identity gate's input; the bridge owns it (no consumer
-    # reads it) and hands it back to stop as --starttime.
-    print(f"NESTED_KWIN_STARTTIME={shlex.quote(starttime or '')}")
-    print(f"NESTED_BUS={shlex.quote(bus)}")
-
-
 # ---- subcommands -----------------------------------------------------------
-
-
-def _cmd_prepare() -> None:
-    runtime_dir = prepare_runtime_dir()
-    _write_state(
-        VehicleState(runtime_dir=str(runtime_dir), log=str(log_path(runtime_dir)), phase="prepared")
-    )
-    _emit_prepare_shell(runtime_dir)
-
-
-def _cmd_start(args: argparse.Namespace) -> None:
-    install_conventional_signal_exits()
-    runtime_dir = Path(args.runtime_dir)
-    socket: str = args.socket
-    extra_env: list[str] = list(args.env)
-    pgid, starttime = _spawn_compositor(
-        runtime_dir, args.width, args.height, socket, args.outputs, extra_env, os.environ
-    )
-    try:
-        _await_socket(runtime_dir, socket, pgid)
-        bus = read_bus_address(runtime_dir)
-    except CompositorStartError as err:
-        # Tear down the compositor this start spawned before reporting: the
-        # bridge has no pid to clean up with until start emits it (see module
-        # docstring), so the no-leak guarantee for the start window lives here.
-        print(
-            f"{TOOL}: nested kwin_wayland never brought up its socket; its log:",
-            file=sys.stderr,
-            flush=True,
-        )
-        sys.stderr.write(err.log_text)
-        sys.stderr.flush()
-        stop_compositor(runtime_dir, pgid, starttime)
-        raise SystemExit(EXIT_START_FAILED) from err
-    except BaseException:
-        # SIGINT/SIGTERM (SystemExit from the conventional-exit handler) or any
-        # other fault mid-start: same no-leak guarantee, then propagate the
-        # original exit code (130/143 stay intact).
-        stop_compositor(runtime_dir, pgid, starttime)
-        raise
-    session = VehicleSession(runtime_dir, socket, pgid, bus, log_path(runtime_dir), starttime)
-    _write_state(_running_state(session, args.width, args.height, args.outputs))
-    _emit_start_shell(socket, pgid, bus, starttime)
-
-
-def _optional_pgid(value: str) -> int | None:
-    if not value:
-        return None
-    if not value.lstrip("-").isdigit():
-        print(f"{TOOL}: FAIL --pgid must be an integer, got {value!r}", file=sys.stderr, flush=True)
-        raise SystemExit(1)
-    return int(value)
-
-
-def _cmd_stop(args: argparse.Namespace) -> None:
-    runtime_dir = Path(args.runtime_dir) if args.runtime_dir else None
-    pgid = _optional_pgid(args.pgid)
-    stop_compositor(runtime_dir, pgid, args.starttime or None)
 
 
 def _cmd_stop_group(args: argparse.Namespace) -> None:
@@ -850,23 +766,6 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="latte_harness.vehicle", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("prepare", help="mktemp the runtime dir; emit NESTED_RT / NESTED_KWIN_LOG")
-
-    start = sub.add_parser("start", help="bring up the compositor; emit NESTED_SOCK/PID/BUS")
-    start.add_argument("--runtime-dir", required=True)
-    start.add_argument("--width", type=int, required=True)
-    start.add_argument("--height", type=int, required=True)
-    start.add_argument("--socket", required=True)
-    start.add_argument("--outputs", type=int, default=1)
-    # nargs="*" so the bash `--env VAR=VAL VAR2=VAL2` array append maps straight
-    # through; it must be the last flag or it would swallow later positionals.
-    start.add_argument("--env", nargs="*", default=[])
-
-    stop = sub.add_parser("stop", help="the nested_kwin_cleanup teardown (idempotent)")
-    stop.add_argument("--runtime-dir", default="")
-    stop.add_argument("--pgid", default="")
-    stop.add_argument("--starttime", default="")
-
     stop_group = sub.add_parser("stop-group", help="zombie-aware bounded process-group teardown")
     stop_group.add_argument("pgid", type=int)
     stop_group.add_argument("--label", default="process group")
@@ -885,13 +784,7 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> None:
     args = _build_parser().parse_args(argv)
     command: str = args.command
-    if command == "prepare":
-        _cmd_prepare()
-    elif command == "start":
-        _cmd_start(args)
-    elif command == "stop":
-        _cmd_stop(args)
-    elif command == "stop-group":
+    if command == "stop-group":
         _cmd_stop_group(args)
     else:  # "status" (subparsers required=True rejects anything else)
         _cmd_status(args)

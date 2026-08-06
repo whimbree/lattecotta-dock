@@ -114,7 +114,7 @@ Adopt latte-dock-qt6's three-piece shape, adapted rather than copied:
   `tests/e2e/goldens/`); `--live` runs against the real session for
   recipes that genuinely need it (`# e2e-mode:` markers select). The
   kwin bring-up/teardown is shared with the sceneprobe gate
-  (`scripts/lib-nested-kwin.sh`, the bridge over `latte_harness.vehicle`); typed recipe helpers live in `latte_harness.recipe`;
+  (`latte_harness.vehicle`, whose `running_compositor` context manager the runner drives directly); typed recipe helpers live in `latte_harness.recipe`;
   `tests/e2e/lib.sh` remains only for the defect-blocked bash recipes. Assertions are D-Bus state first (lifecycleState,
   viewsData and friends); pixels only where pixels are the thing under
   test. The ONE thing D-Bus state cannot see is state/render
