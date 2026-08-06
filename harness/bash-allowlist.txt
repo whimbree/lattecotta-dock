@@ -65,7 +65,6 @@ tests/e2e/074-live-titlebar-window-touch.sh
 tests/e2e/075-wayland-window-admission.sh
 tests/e2e/090-golden-bridge-selftest.sh
 tests/e2e/091-drop-marker.sh
-tests/e2e/093-widget-explorer-dnd.sh
 tests/e2e/100-applet-reorder.sh
 tests/e2e/110-colorizer-applet-contrast.sh
 tests/e2e/111-colorizer-content-policy.sh
@@ -82,7 +81,6 @@ tests/e2e/lib.sh
 tests/e2e/linked-dock-operation-stress.sh
 tests/e2e/linked-dock-removal-undo.sh
 tests/e2e/matrix/applet-reorder-driver.sh
-tests/e2e/matrix/dnd-lib.sh
 tests/e2e/matrix/golden-bridge.sh
 tests/e2e/matrix/matrix-lib.sh
 tests/e2e/matrix/multi-output-lib.sh
