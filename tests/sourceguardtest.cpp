@@ -1384,71 +1384,75 @@ private:
                    "\"popupprimaryoriginoutsidestablepaint\""));
     }
 
+    // The FP-4C storm recipe was ported to Python (BP-3); its needles read the
+    // normalized Python. The cleanup DECISION (status preservation and the
+    // stop-before-replace / restore-before-restart safety ordering) moved to
+    // latte_harness.storm_cleanup and is driven behaviorally by
+    // harness/tests/test_storm_cleanup.py (the redesign of the deleted
+    // cleanup-EVAL test); this matcher pins the recipe's transactional-replay
+    // structure and its cleanup WIRING (the restore body, the deps wiring, and
+    // the status-preserving finally), plus the unchanged operation_model.py.
     static bool matchesLinkedOperationStormE2eContract(
         const QString &recipeSource,
         const QString &modelSource)
     {
         const QString recipe = normalizedCode(recipeSource);
-        const QString cleanup = normalizedCode(functionBody(
-            recipeSource, QStringLiteral("cleanup()")));
-        const QString restore = normalizedCode(functionBody(
-            recipeSource, QStringLiteral("restore_config_exactly()")));
-        const QString visualOwnership = normalizedCode(functionBody(
+        const QString restore = normalizedCode(pythonFunctionBody(
+            recipeSource, QStringLiteral("def _restore_config_exactly(")));
+        const QString wiring = normalizedCode(pythonFunctionBody(
+            recipeSource, QStringLiteral("def _live_cleanup_deps(")));
+        const QString visualOwnership = normalizedCode(pythonFunctionBody(
             recipeSource,
-            QStringLiteral("assert_visual_window_ownership()")));
-        const QString durableMoveReadback = normalizedCode(functionBody(
+            QStringLiteral("def _assert_visual_window_ownership(")));
+        const QString durableMoveReadback = normalizedCode(pythonFunctionBody(
             recipeSource,
-            QStringLiteral("assert_no_pending_view_move()")));
-        const QString durableMoveLifecycle = normalizedCode(functionBody(
+            QStringLiteral("def _assert_no_pending_view_move(")));
+        const QString durableMoveLifecycle = normalizedCode(pythonFunctionBody(
             recipeSource,
-            QStringLiteral("assert_view_move_lifecycle()")));
+            QStringLiteral("def _assert_view_move_lifecycle(")));
         const QString model = normalizedCode(modelSource);
 
         const qsizetype privateSessionGuard =
             recipe.lastIndexOf(QStringLiteral(
-                "require_private_nested_session"));
+                "_require_private_nested_session"));
         const qsizetype privatePlanStage =
             recipe.indexOf(QStringLiteral(
-                "candidate_plan=\"$(mktemp"
-                "\"$E2E_RT/fp4c-operation-plan.XXXXXX\")\""));
+                "tempfile.mkstemp(prefix=\"fp4c-operation-plan.\",dir=_S.rt)"));
         const qsizetype suppliedPlanValidation =
             recipe.indexOf(QStringLiteral(
-                "python3\"$MODEL\"validate-plan"
-                "<\"$plan_source\">/dev/null"));
+                "_model(\"validate-plan\",stdin=_read(plan_source))"));
         const qsizetype privatePlanCopy =
             recipe.indexOf(QStringLiteral(
-                "cp--\"$plan_source\"\"$candidate_plan\""));
+                "shutil.copyfile(plan_source,_S.candidate_plan)"));
         const qsizetype cleanupTrap =
-            recipe.indexOf(QStringLiteral("trapcleanupEXIT"));
+            recipe.indexOf(QStringLiteral("_S.transaction_started=True"));
         const qsizetype baselineCapture =
             recipe.indexOf(QStringLiteral(
-                "snapshot>\"$baseline_snapshot_file\""));
+                "recipe.fail(\"couldnotcapturethepristineFP-4Cbaseline\")"));
         const qsizetype pristineStop =
             recipe.indexOf(QStringLiteral(
-                "stop_dock_if_running"), baselineCapture);
+                "recipe.fail(\"couldnotstopthepristinedock"
+                "beforeitsconfigurationbackup\")"), baselineCapture);
         const qsizetype pristineBackup =
             recipe.indexOf(QStringLiteral(
-                "cp-a--\"$E2E_CONFIG_HOME/.\"\"$backup_dir/\""));
+                "shutil.copytree(_S.config_home,_S.backup_dir,"
+                "dirs_exist_ok=True)"));
         const qsizetype configReplacement =
             recipe.indexOf(QStringLiteral(
-                "rm-rf--\"$E2E_CONFIG_HOME\""), pristineBackup);
-        const qsizetype cleanupStop =
-            cleanup.indexOf(QStringLiteral("stop_dock_if_running"));
+                "shutil.rmtree(_S.config_home,ignore_errors=True)"),
+                pristineBackup);
         const qsizetype cleanupRemove =
             restore.indexOf(QStringLiteral(
-                "rm-rf--\"$E2E_CONFIG_HOME\""));
+                "shutil.rmtree(_S.config_home,ignore_errors=True)"));
         const qsizetype cleanupRestore =
             restore.indexOf(QStringLiteral(
-                "cp-a--\"$backup_dir/.\"\"$E2E_CONFIG_HOME/\""),
+                "shutil.copytree(_S.backup_dir,_S.config_home,"
+                "dirs_exist_ok=True)"),
                 cleanupRemove);
         const qsizetype cleanupCompare =
             restore.indexOf(QStringLiteral(
-                "diff-qr--no-dereference"
-                "\"$backup_dir\"\"$E2E_CONFIG_HOME\""),
+                "return_diff_identical(_S.backup_dir,_S.config_home)"),
                 cleanupRestore);
-        const qsizetype cleanupRestart =
-            cleanup.indexOf(QStringLiteral(
-                "e2e_dock_start90"));
 
         constexpr qsizetype minimumPlanValidationCount = 3;
         return privateSessionGuard >= 0
@@ -1460,58 +1464,49 @@ private:
             && pristineStop > baselineCapture
             && pristineBackup > pristineStop
             && configReplacement > pristineBackup
-            && cleanupStop >= 0
-            && cleanup.contains(QStringLiteral(
-                   "if[[\"$backup_ready\"==true"
-                   "&&\"$dock_stopped\"==true]];then"))
-            && cleanup.contains(QStringLiteral(
-                   "restore_config_exactly"))
-            && cleanup.count(QStringLiteral(
-                   "&&\"$config_safe_to_start\"==true")) == 2
+            && wiring.contains(QStringLiteral(
+                   "stop_dock=_stop_dock_if_running"))
+            && wiring.contains(QStringLiteral(
+                   "restore_config=_restore_config_exactly"))
+            && wiring.contains(QStringLiteral(
+                   "start_dock=lambda:recipe.dock_start(90)"))
+            && recipe.contains(QStringLiteral(
+                   "status=_cleanup(status)"))
             && cleanupRemove >= 0
             && cleanupRestore > cleanupRemove
             && cleanupCompare > cleanupRestore
-            && cleanupRestart > cleanupStop
             && recipe.count(QStringLiteral(
-                   "python3\"$MODEL\"validate-plan"))
+                   "_model(\"validate-plan\""))
                 >= minimumPlanValidationCount
             && recipe.contains(QStringLiteral(
-                   "kwriteconfig6\"${panel_group[@]}\""
-                   "--keyminLength45"))
+                   "*panel_group,\"--key\",\"minLength\",\"45\""))
             && recipe.contains(QStringLiteral(
-                   "kwriteconfig6\"${panel_group[@]}\""
-                   "--keymaxLength45"))
+                   "*panel_group,\"--key\",\"maxLength\",\"45\""))
             && recipe.contains(QStringLiteral(
-                   "kwriteconfig6\"${panel_group[@]}\""
-                   "--keyscreenEdgeMargin18"))
+                   "*panel_group,\"--key\",\"screenEdgeMargin\",\"18\""))
             && recipe.contains(QStringLiteral(
-                   "assert_tombstone_on_disk"
-                   "\"$removed_this_step\""))
+                   "_assert_tombstone_on_disk(removed_this_step)"))
             && recipe.contains(QStringLiteral(
                    "removal_elapsed_ms<60000"))
             && recipe.contains(QStringLiteral(
-                   "build_replay_header_input"
-                   "|python3\"$MODEL\"replay-header"
-                   ">\"$replay_file\""))
+                   "_model(\"replay-header\","
+                   "stdin=_build_replay_header_input())"))
             && recipe.contains(QStringLiteral(
-                   "python3\"$MODEL\"validate-replay"))
+                   "_model(\"validate-replay\",\"--plan\",_S.plan_file,"
+                   "\"--replay\",_S.replay_file)"))
             && recipe.contains(QStringLiteral(
-                   "--plan\"$plan_file\""))
+                   "_wait_for_quiescent_projection"))
             && recipe.contains(QStringLiteral(
-                   "--replay\"$replay_file\""))
+                   "_wait_for_visual_window_ownership"))
             && recipe.contains(QStringLiteral(
-                   "wait_for_quiescent_projection"))
-            && recipe.contains(QStringLiteral(
-                   "wait_for_visual_window_ownership"))
-            && recipe.contains(QStringLiteral(
-                   "||-n\"$removed_this_step\""))
+                   "ifreload_this_steporrestart_this_step"
+                   "orremoved_this_step:"))
             && visualOwnership.contains(QStringLiteral(
-                   "python3\"$MODEL\""
-                   "assert-visual-window-ownership"))
+                   "_model(\"assert-visual-window-ownership\""))
             && visualOwnership.contains(QStringLiteral(
-                   "\"outputs\":outputs"))
+                   "\"outputs\":_load(output_file)"))
             && durableMoveReadback.contains(QStringLiteral(
-                   "e2e_jsonviewMoveTransactionsData"))
+                   "recipe.json_payload(\"viewMoveTransactionsData\")"))
             && durableMoveReadback.contains(QStringLiteral(
                    "\"journalCreatedGeneration\""))
             && durableMoveReadback.contains(QStringLiteral(
@@ -1523,20 +1518,21 @@ private:
             && durableMoveReadback.contains(QStringLiteral(
                    "state[\"transactions\"]!=[]"))
             && durableMoveLifecycle.contains(QStringLiteral(
-                   "python3\"$MODEL\"assert-view-move-lifecycle"))
+                   "_model(\"assert-view-move-lifecycle\""))
             && recipe.count(QStringLiteral(
-                   "assert_no_pending_view_move"))
+                   "_assert_no_pending_view_move"))
                 == 5
             && recipe.contains(QStringLiteral(
-                   "$step_tag.view-move.before.json"))
+                   ".view-move.before.json"))
             && recipe.contains(QStringLiteral(
-                   "$step_tag.view-move.after.json"))
+                   ".view-move.after.json"))
             && recipe.contains(QStringLiteral(
                    "final.view-move-transactions.json"))
             && recipe.contains(QStringLiteral(
-                   "--groupUniversalSettings--keymemoryUsage1"))
+                   "\"--group\",\"UniversalSettings\","
+                   "\"--key\",\"memoryUsage\",\"1\""))
             && recipe.contains(QStringLiteral(
-                   "e2e_jsonlayoutsData"))
+                   "recipe.json_payload(\"layoutsData\")"))
             && recipe.contains(QStringLiteral(
                    "\"name\":screen[\"name\"]"))
             && recipe.contains(QStringLiteral(
@@ -2529,7 +2525,6 @@ private Q_SLOTS:
     void relocationReveal_reusesCompletedPlacement();
     void linkedOperationStormE2e_keepsTransactionalReplayContract();
     void linkedOperationStormE2e_sourceGuardRejectsControlledMutations();
-    void linkedOperationStormE2e_cleanupPreservesFailureAndSafety();
     void multiOutputRestore_keepsCompleteSemanticStateContract();
     void multiOutputRestore_sourceGuardRejectsProjectionOnlyVerification();
     void multiOutputRestore_sourceGuardRejectsMissingPrioritySetter();
@@ -3961,7 +3956,7 @@ void SourceGuardTest::linkedOperationStormE2e_keepsTransactionalReplayContract()
     QVERIFY2(
         matchesLinkedOperationStormE2eContract(
             readFile(QStringLiteral(
-                "tests/e2e/linked-dock-operation-stress.sh")),
+                "tests/e2e/linked-dock-operation-stress.py")),
             readFile(QStringLiteral(
                 "tests/e2e/fixtures/fp4c/operation_model.py"))),
         "the FP-4C operation storm must validate its typed plan before a"
@@ -3973,21 +3968,21 @@ void SourceGuardTest::linkedOperationStormE2e_keepsTransactionalReplayContract()
 void SourceGuardTest::linkedOperationStormE2e_sourceGuardRejectsControlledMutations()
 {
     const QString recipe = readFile(QStringLiteral(
-        "tests/e2e/linked-dock-operation-stress.sh"));
+        "tests/e2e/linked-dock-operation-stress.py"));
     const QString model = readFile(QStringLiteral(
         "tests/e2e/fixtures/fp4c/operation_model.py"));
     QVERIFY(matchesLinkedOperationStormE2eContract(recipe, model));
 
     QString missingDurableMoveReadback = recipe;
     const QString durableMoveReadback =
-        QStringLiteral("viewMoveTransactionsData");
+        QStringLiteral("recipe.json_payload(\"viewMoveTransactionsData\")");
     QCOMPARE(
         missingDurableMoveReadback.count(
             durableMoveReadback),
         1);
     missingDurableMoveReadback.replace(
         durableMoveReadback,
-        QStringLiteral("dockSystemData"));
+        QStringLiteral("recipe.json_payload(\"dockSystemData\")"));
     QVERIFY2(
         !matchesLinkedOperationStormE2eContract(
             missingDurableMoveReadback,
@@ -4010,11 +4005,11 @@ void SourceGuardTest::linkedOperationStormE2e_sourceGuardRejectsControlledMutati
     QString missingLifecycleVerdict = recipe;
     const QString lifecycleVerdict =
         QStringLiteral(
-            "python3 \"$MODEL\" assert-view-move-lifecycle");
+            "_model(\"assert-view-move-lifecycle\"");
     QCOMPARE(missingLifecycleVerdict.count(lifecycleVerdict), 1);
     missingLifecycleVerdict.replace(
         lifecycleVerdict,
-        QStringLiteral("python3 \"$MODEL\" assert-checkpoint"));
+        QStringLiteral("_model(\"assert-checkpoint\""));
     QVERIFY2(
         !matchesLinkedOperationStormE2eContract(
             missingLifecycleVerdict,
@@ -4022,32 +4017,28 @@ void SourceGuardTest::linkedOperationStormE2e_sourceGuardRejectsControlledMutati
         "removing durable move lifecycle deltas must fail the FP-4C guard");
 
     QString missingTrap = recipe;
-    const QString trap = QStringLiteral("trap cleanup EXIT");
+    const QString trap = QStringLiteral("_S.transaction_started = True");
     QCOMPARE(missingTrap.count(trap), 1);
     missingTrap.remove(trap);
     QVERIFY2(
         !matchesLinkedOperationStormE2eContract(missingTrap, model),
-        "removing pre-mutation cleanup arming must fail the FP-4C guard");
+        "removing the cleanup-transaction arming must fail the FP-4C guard");
 
-    QString liveRestore = recipe;
-    const QString stoppedGate = QStringLiteral(
-        "[[ \"$backup_ready\" == true && \"$dock_stopped\" == true ]]");
-    QCOMPARE(liveRestore.count(stoppedGate), 1);
-    liveRestore.replace(
-        stoppedGate,
-        QStringLiteral("[[ \"$backup_ready\" == true ]]"));
+    // The cleanup-gate mutations (live-dock replacement, partial-restore
+    // restart) target the DECISION, which now lives in storm_cleanup.py and is
+    // driven by harness/tests/test_storm_cleanup.py's mutation controls. What
+    // stays pinnable in the recipe source is the status-preserving finally that
+    // makes the cleanup verdict the recipe's exit code.
+    QString maskedStatus = recipe;
+    const QString statusPreservation =
+        QStringLiteral("status = _cleanup(status)");
+    QCOMPARE(maskedStatus.count(statusPreservation), 1);
+    maskedStatus.replace(
+        statusPreservation,
+        QStringLiteral("_cleanup(status)"));
     QVERIFY2(
-        !matchesLinkedOperationStormE2eContract(liveRestore, model),
-        "allowing config replacement under a live dock must fail the FP-4C guard");
-
-    QString partialRestoreStart = recipe;
-    const QString restoredGate =
-        QStringLiteral("&& \"$config_safe_to_start\" == true");
-    QCOMPARE(partialRestoreStart.count(restoredGate), 2);
-    partialRestoreStart.remove(restoredGate);
-    QVERIFY2(
-        !matchesLinkedOperationStormE2eContract(partialRestoreStart, model),
-        "starting against a partial restore must fail the FP-4C guard");
+        !matchesLinkedOperationStormE2eContract(maskedStatus, model),
+        "dropping the cleanup status preservation must fail the FP-4C guard");
 
     QString incompleteWindowSet = model;
     const QString exactWindowSet =
@@ -4069,11 +4060,9 @@ void SourceGuardTest::linkedOperationStormE2e_sourceGuardRejectsControlledMutati
 
     QString missingExternalOutputs = recipe;
     const QString visualInput = QStringLiteral(
-        "{\"snapshot\": snapshot, \"outputs\": outputs, \"windows\": windows}");
+        "\"outputs\": _load(output_file),");
     QCOMPARE(missingExternalOutputs.count(visualInput), 1);
-    missingExternalOutputs.replace(
-        visualInput,
-        QStringLiteral("{\"snapshot\": snapshot, \"windows\": windows}"));
+    missingExternalOutputs.remove(visualInput);
     QVERIFY2(
         !matchesLinkedOperationStormE2eContract(
             missingExternalOutputs,
@@ -4099,111 +4088,17 @@ void SourceGuardTest::linkedOperationStormE2e_sourceGuardRejectsControlledMutati
         "reservation publishers must be derived from external output geometry");
 }
 
-void SourceGuardTest::linkedOperationStormE2e_cleanupPreservesFailureAndSafety()
-{
-    const QString recipe = readFile(QStringLiteral(
-        "tests/e2e/linked-dock-operation-stress.sh"));
-    const QString cleanupBody = functionBody(
-        recipe, QStringLiteral("cleanup()"));
-    const QString restoreBody = functionBody(
-        recipe, QStringLiteral("restore_config_exactly()"));
-    QVERIFY2(!cleanupBody.isEmpty(), "FP-4C cleanup function not found");
-    QVERIFY2(!restoreBody.isEmpty(), "FP-4C restore function not found");
-
-    QTemporaryDir temporary;
-    QVERIFY(temporary.isValid());
-    const QString harness = QStringLiteral(R"SH(
-cleanup_body=$1
-restore_body=$2
-test_root=$3
-E2E_RT=$test_root/runtime
-E2E_CONFIG_HOME=$E2E_RT/config
-backup_dir=$E2E_RT/backup
-mkdir -p "$E2E_CONFIG_HOME" "$backup_dir"
-printf 'staged\n' > "$E2E_CONFIG_HOME/state"
-printf 'pristine\n' > "$backup_dir/state"
-
-path_is_within() {
-    return 0
-}
-eval "restore_config_exactly() $restore_body"
-backup_ready=true
-restore_config_exactly || exit 10
-[[ "$(cat "$E2E_CONFIG_HOME/state")" == pristine ]] || exit 11
-
-eval "cleanup() $cleanup_body"
-run_cleanup_case() {
-    case_name=$1
-    original_status=$2
-    stop_status=$3
-    pid_live=$4
-    restore_status=$5
-    expected_status=$6
-    expected_log=$7
-    case_log=$test_root/$case_name.log
-    : > "$case_log"
-    (
-        transaction_started=true
-        backup_ready=true
-        acceptance_completed=true
-        cleanup_failed=0
-        artifact_dir=$test_root
-        baseline_projection_file=$test_root/baseline
-        stop_dock_if_running() {
-            printf 'stop\n' >> "$case_log"
-            return "$stop_status"
-        }
-        e2e_dock_pid() {
-            [[ "$pid_live" == true ]] || return 1
-            printf '%s\n' "$$"
-        }
-        restore_config_exactly() {
-            printf 'restore\n' >> "$case_log"
-            return "$restore_status"
-        }
-        dock_is_running() {
-            return 1
-        }
-        e2e_dock_start() {
-            printf 'start\n' >> "$case_log"
-            return 0
-        }
-        snapshot() {
-            return 1
-        }
-        return_status() {
-            return "$1"
-        }
-        return_status "$original_status"
-        cleanup
-    )
-    actual_status=$?
-    [[ "$actual_status" -eq "$expected_status" ]] || exit 20
-    [[ "$(cat "$case_log")" == "$expected_log" ]] || exit 21
-}
-
-run_cleanup_case success 37 0 false 0 37 $'stop\nrestore\nstart' || exit $?
-run_cleanup_case live-dock 0 1 true 0 1 $'stop' || exit $?
-run_cleanup_case partial-restore 0 0 false 1 1 $'stop\nrestore' || exit $?
-)SH");
-
-    QProcess process;
-    process.start(
-        QStringLiteral("bash"),
-        {QStringLiteral("-c"),
-         harness,
-         QStringLiteral("fp4c-cleanup-test"),
-         cleanupBody,
-         restoreBody,
-         temporary.path()});
-    QVERIFY(process.waitForStarted());
-    QVERIFY(process.waitForFinished());
-    const QByteArray processError = process.readAllStandardError();
-    QVERIFY2(
-        process.exitStatus() == QProcess::NormalExit
-            && process.exitCode() == 0,
-        processError.constData());
-}
+// The FP-4C cleanup-safety contract (cleanup runs on every path, preserves the
+// body's failure status, never masks it with a cleanup success, and keeps the
+// stop-before-replace / restore-before-restart teardown ordering) was pinned in
+// bash by extracting the cleanup()/restore_config_exactly() function bodies and
+// eval-executing them in a mock harness. The recipe is now Python, whose bodies
+// are not eval-executable text, so that BEHAVIORAL proof moved to
+// harness/tests/test_storm_cleanup.py: it imports the extracted decision
+// (latte_harness.storm_cleanup.perform_cleanup_transaction) and drives the same
+// three cases in-process with mocks plus two driven mutation controls. This is
+// the redesign the deleted linkedOperationStormE2e_cleanupPreservesFailureAndSafety
+// once carried; the matcher above still pins the recipe's cleanup WIRING.
 
 void SourceGuardTest::multiOutputRestore_keepsCompleteSemanticStateContract()
 {
