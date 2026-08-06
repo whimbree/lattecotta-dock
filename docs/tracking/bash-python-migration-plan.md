@@ -360,6 +360,31 @@ batches are file-disjoint and parallel):
   070-maximize on D274, duplicate-dock-independent on D283; 061, 073,
   create-linked-dock, multi-output-selftest on the dual-output vehicle),
   lib.sh, and the five retained matrix libs.
+  R12 (multi-output-selftest, create-linked-dock - the dual-output wave,
+  2 of 4 ported): the selftest's 15/15 controls paid the PR #185
+  residual with the first LIVE drives of multi_output's mutating
+  transactions (discover, capture/restore, place full/partial/
+  disconnected, pin, view-on tripwires); create-linked-dock retired
+  task-reorder-lib.sh and applet-reorder-driver.sh (grep-proven last
+  consumer). 061 stays bash (D209, the missing three-view fixture -
+  the bash refuses identically) and 073 stays bash (the same
+  bash-eval sourceguard coupling as the stress recipe; the R13
+  redesign documents its mechanical follow-up). The review-response
+  commit moved both restores into the converged finally shape.
+  Commits: 5dcf8373a, ebe40fb2e, 0be2c357b (PR #200).
+  R13 (linked-dock-operation-stress + parabolic-hover-preview, with
+  the sourceguard cleanup-net REDESIGN): the bash-eval cleanup test
+  became a typed injectable pure core (latte_harness.storm_cleanup)
+  driven in-process by pytest mutation controls (status-masking and
+  live-dock-replacement mutants caught), with the contract matcher
+  retargeted to pin the recipe's wiring incl. the two safety
+  predicates (the review's seam finding); the storm drove PASS at
+  seed 127934575 in the dual-output vehicle with iteration counts
+  byte-identical; parabolic drove PASS with the synthetic-glide race
+  recorded as flaky for BOTH languages (~1/3 vehicle runs, a
+  follow-up below, not a port defect). The redesign generalizes to
+  073's twin test; each recipe extracts its own decision core.
+  Commits: 4fa2031cd, c3c3395f8, 69748a733 (PR #202)
 
 Phase BP-4, package gate (serial pair, independent of BP-3; needs BP-2a):
 
@@ -388,11 +413,23 @@ Phase BP-4, package gate (serial pair, independent of BP-3; needs BP-2a):
 
 Phase BP-5, tail:
 
-- [ ] BP-5a (dev tools): port dumpwins.sh and watch-dock-presentation.sh.
-  Commits:
-- [ ] BP-5b (upstream-inherited disposition): delete install.sh, uninstall.sh,
+- [x] BP-5a (dev tools): port dumpwins.sh and watch-dock-presentation.sh
+  to latte_harness modules behind thin shims at their existing paths
+  (the DUMPWIN output contract byte-identical; the watcher on the typed
+  recipe API with two additive shared helpers, try_json_payload and
+  is_running). The dumpwins live comparison ran the read-only tool
+  against the session kwin because the bash original is journal-bound
+  and cannot run nested (recorded honestly; the nested reference is the
+  maintained lib twin). Commits: 7a74c370c, 08c098f76, 54c6ef81d
+  (PR #199)
+- [x] BP-5b (upstream-inherited disposition): delete install.sh, uninstall.sh,
   formatter.sh per the 2026-08-04 decision; record Messages.sh retention.
-  Commits:
+  INSTALLATION.md now names the cmake commands the wrapper ran plus the
+  Nix and packaging/ routes; the review confirmed the dropped l10n and
+  ENABLE_MAKE_UNIQUE branches were already dead. Follow-up for BP-5c:
+  the orphaned astylerc (formatter.sh was its only consumer) and the
+  Qt5-era INSTALLATION.md prerequisite lists. Commits: 16a59e364
+  (PR #201)
 - [ ] BP-5c (docs sweep + closeout): update TESTING.md, CLAUDE.md script
   references, the orchestrator prompt, skills, README, ROADMAP; shrink the
   retained-bash allowlist to the final set; update the
@@ -413,14 +450,20 @@ Phase BP-5, tail:
   dock-edit-retarget-cancel rides the typed boundary instead of raw JSON
   dicts (PR #183 review nit; the View docstring already anticipates the
   editMode widening).
-- linked-dock-operation-stress port: requires redesigning the
-  bash-coupled sourceguardtest net first (its contract matcher
-  eval-executes the bash cleanup function bodies in a mock harness; no
-  direct Python analog). Its own focused PR, not a batch rider
-  (PR #194 finding).
-- parabolic-hover-preview port: the one plain recipe the wave-4
-  composition missed; a single-recipe batch or a rider on the stress
-  PR.
+- linked-dock-operation-stress port: LANDED with the sourceguard
+  redesign (PR #202; the R13 entry above).
+- parabolic-hover-preview port: LANDED (PR #202). Its synthetic-glide
+  race stays a follow-up: the vehicle's injected glide misses the
+  parabolic hover ~1/3 of runs for the bash and the port alike (A/B
+  proven, identical coords and velocity); a vehicle-side stabilization
+  or a retry-with-budget is the fix direction, not a recipe change.
+- 073-window-touch-topology port: mechanical follow-up per the R13
+  redesign (extract its topology-restore decision into its own pure
+  core, pytest it, retarget matchesWindowTouchTopologyE2eContract,
+  delete the eval test); dual-output drive; grep-prove the
+  last-consumer claims before retiring matrix-lib.sh, golden-bridge.sh
+  and multi-output-lib.sh (tests/multioutputstatecontracttest.sh also
+  consumes multi-output-lib.sh).
 - Committed seed variants for the richer-precondition recipes: 092 needs
   three or more launchers and 100 a vertical view with an ordinary
   applet; the clean default seed cannot satisfy them (the bash refused

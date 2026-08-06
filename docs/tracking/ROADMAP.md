@@ -91,16 +91,18 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   ratchet, gate leg, the e2e runner, the recipe API, and the daily-driver
   launcher run as typed latte_harness modules behind stable shims, with
   the D269/D270 qmllint drift family closed. BP-4 (the package gate) is
-  COMPLETE: the engine and the 91-control selftest both run typed. In
-  BP-3, every recipe lib is typed and 41 recipes are ported, including
-  the whole plain tail and the asan gate's own driven set; what remains
-  is one portable recipe (parabolic-hover-preview), the stress recipe
-  pending its sourceguard-harness redesign, the dual-output-blocked set
-  (061, 073, create-linked-dock, the multi-output selftest), the
-  defect-blocked recipes (070 on D274, 040 on D276,
-  duplicate-dock-independent on D283), and then the BP-5 tail. The wave
-  also fixed D280, a real focus-lifecycle dock defect its recipe drive
-  exposed.
+  COMPLETE and BP-5a/5b are landed (the dev tools run typed; the legacy
+  installer trio is deleted). In BP-3, 45 recipes are ported including
+  the storm (whose bash-eval sourceguard net became a typed pure core
+  with pytest mutation controls), the dual-output selftest, and the
+  asan gate's own driven set; task-reorder-lib, applet-reorder-driver,
+  dnd-lib and audit-lib are retired. EVERY remaining bash recipe is
+  blocked on a tracked item: 040 (D276), 061 (D209), 070-maximize
+  (D274), duplicate-dock-independent (D283), and 073 (the mechanical
+  sourceguard follow-up that also gates the last three matrix libs).
+  What remains of BP is those unblocks plus BP-5c (the docs sweep and
+  closeout). The waves also fixed D280, a real focus-lifecycle dock
+  defect a recipe drive exposed.
 
 ## Registries and state
 
