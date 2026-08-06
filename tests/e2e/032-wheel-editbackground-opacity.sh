@@ -59,9 +59,13 @@ canvas="$(e2e_dumpwins | awk -F'|' -v scw="$scw" '
 read -r cx cy cw ch <<< "$canvas"
 
 #! screen-centre horizontally (clear of the left-end rearrange toggle), canvas
-#! vertical middle (below the ~13px ruler at the canvas top)
+#! upper quarter: the editBackMouseArea band sits between the ~13px ruler at
+#! the canvas top and the dock items area below. The canvas' vertical MIDDLE
+#! lands inside the items area on the current tree (probed 2026-08-05: the
+#! responsive band is roughly canvas-relative 36..51 of 146, mid 73 is dead),
+#! so aim at ch/4, mid-band, and let the retry loop absorb the flake.
 wx=$(( scx + scw / 2 ))
-wy=$(( cy + ch / 2 ))
+wy=$(( cy + ch / 4 ))
 
 start_op="$(cfg_op)"
 [[ -n "$start_op" ]] || e2e_fail "could not read editBackgroundOpacity"
