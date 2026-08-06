@@ -1,0 +1,31 @@
+// SPDX-FileCopyrightText: 2026 Bree Spektor
+// SPDX-FileCopyrightText: 2026 Latte Dock contributors
+// SPDX-License-Identifier: GPL-2.0-or-later
+//
+// The e2e recipes' basedpyright config, driven by the harness-check gate leg
+// (latte_harness.check). It is deliberately SEPARATE from harness/pyproject.toml
+// rather than a competing ruleset: basedpyright's typeCheckingMode preset only
+// re-expands at the top level, so the harness (strict) and the recipes (basic)
+// cannot share one run - an executionEnvironment override does NOT re-expand the
+// preset. The harness/pyproject.toml [tool.basedpyright] stays the authoritative
+// strict config for the package; this file only carries the recipes' delta.
+//
+// BASIC is a commented ratchet START, not a silent weakening. The recipes read
+// raw D-Bus/config JSON that is Any until the recipe model-widening chunk types
+// it, so strict drowns them in ~885 unknown-type propagation errors
+// (reportUnknownMemberType/VariableType/ArgumentType/LambdaType) that say nothing
+// about the recipes' own correctness. Basic drops that family while keeping the
+// real checks live (reportArgumentType, missing imports, dead code), so genuine
+// bugs are still caught. Strict lands with the model-widening chunk.
+{
+  "typeCheckingMode": "basic",
+  "pythonVersion": "3.14",
+  // Resolve the harness package (latte_harness) and its third-party types
+  // (pydantic) from the harness's uv-managed venv, identically on and off nix.
+  "venvPath": "../../harness",
+  "venv": ".venv",
+  "include": ["."],
+  // The fp4c fixture imports its sibling operation_model via a runtime
+  // sys.path.insert basedpyright cannot follow, so put that dir on the path.
+  "extraPaths": ["fixtures/fp4c"]
+}
