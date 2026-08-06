@@ -14,7 +14,7 @@ Two reasons this guard exists:
     session leaked NIXPKGS_QT6_QML_IMPORT_PATH carrying the SYSTEM-INSTALLED
     packaged latte-dock, whose org.kde.latte.private.containment plugin then
     shadowed the staged one - so every containment/plugin change "landed but
-    never ran". lib-qml-env.sh now strips that leaf; this recipe is the
+    never ran". latte_harness.qmlenv now strips that leaf; this recipe is the
     standing guard that it stays stripped, in any nested run.
  2. The sanitized gate (docs/tracking/ub-catching-plan.md A3): a driven ASan/UBSan gate
     that ran a shadowed, NON-instrumented binary would catch no UB and pass

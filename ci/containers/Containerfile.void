@@ -106,7 +106,7 @@ RUN xbps-install -Suy \
 RUN setcap -r /usr/bin/kwin_wayland 2>/dev/null || true
 
 # The nested-kwin compositor bring-up (latte_harness.vehicle via the sceneprobe
-# and e2e drivers) and lib-qml-env.sh read these to find the DISTRO's lavapipe
+# and e2e drivers) and latte_harness.qmlenv read these to find the DISTRO's lavapipe
 # ICD, Vulkan validation layers and framework QML tree instead of the nix
 # devShell's:
 #   - Void's lavapipe ICD manifest is arch-suffixed (lvp_icd.x86_64.json),
@@ -114,7 +114,7 @@ RUN setcap -r /usr/bin/kwin_wayland 2>/dev/null || true
 #   - /usr/lib64 is a symlink to lib on Void x86_64, so the framework QML
 #     modules (kf6-kirigami etc.) resolve under the canonical
 #     /usr/lib/qt6/qml (Arch-style non-multiarch layout), NOT lib64.
-#     lib-qml-env.sh needs LATTE_QML_MODULE_PATH so scenes importing
+#     latte_harness.qmlenv needs LATTE_QML_MODULE_PATH so scenes importing
 #     org.kde.* resolve.
 ENV LATTE_VULKAN_LAVAPIPE_ICD=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
     LATTE_VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d \

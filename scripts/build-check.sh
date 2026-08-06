@@ -49,8 +49,8 @@ check build
 # resolve org.kde.latte.* from disk on top of their own C++
 # registrations (themeawareicontest's namespace collision). nix develop
 # passes ambient vars through, so the re-exec above does not sanitize.
-# The import-path doctrine is explicit lists only; lib-qml-env strips
-# these same vars for the QML gates, and ctest gets the same discipline.
+# The import-path doctrine is explicit lists only; latte_harness.qmlenv
+# strips these same vars for the QML gates, and ctest gets the same discipline.
 #
 # Part two (D277, 2026-08-05): the nixpkgs Qt6 runtime patch also reads
 # NIXPKGS_QT6_QML_IMPORT_PATH/NIXPKGS_QML_SEARCH_PATHS independently of

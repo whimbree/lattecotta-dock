@@ -164,9 +164,10 @@ RUN setcap -r /usr/bin/kwin_wayland 2>/dev/null || true; \
 # standard vulkan explicit_layer.d. All three paths confirmed by ls
 # in-container.
 #
-# LATTE_QML_MODULE_PATH is a CONTAINER CONTRACT: scripts/run-e2e.sh and
-# lib-qml-env.sh re-exec into `nix develop` when it is unset, and there is no
-# nix here, so an unset value would detonate the gate rather than run it.
+# LATTE_QML_MODULE_PATH is a CONTAINER CONTRACT: scripts/run-e2e.sh and the
+# latte_harness QML gates re-exec into `nix develop` when it is unset, and
+# there is no nix here, so an unset value would detonate the gate rather than
+# run it.
 # LATTE_FAKEINPUT_PROTOCOL points at the fake-input Wayland protocol XML the
 # e2e fakepointer injector is generated from (plasma-wayland-protocols ships it
 # and also a .pc, so pkg-config wins in build-and-gate.sh; the ENV is the

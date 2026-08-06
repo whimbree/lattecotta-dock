@@ -184,8 +184,9 @@ case "$STAGE" in
             ctest --test-dir "$BUILD" --output-on-failure -E "$CTEST_MATRIX_EXCLUDE"
 
         # The container ENV must provide the distro framework QML tree. The
-        # reused QML harnesses (run-e2e.sh, lib-qml-env.sh) re-exec into
-        # `nix develop` when it is unset; there is no nix in-container, so
+        # reused QML harnesses (run-e2e.sh and the latte_harness QML gates)
+        # re-exec into `nix develop` when it is unset; there is no nix
+        # in-container, so
         # refuse loudly rather than let a downstream harness detonate mid-run.
         # This is a container contract, not something to default here.
         : "${LATTE_QML_MODULE_PATH:?the container image must export LATTE_QML_MODULE_PATH (the distro framework qml tree); see ci/containers/Containerfile.<distro>}"

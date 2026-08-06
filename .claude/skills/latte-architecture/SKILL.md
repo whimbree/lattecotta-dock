@@ -46,7 +46,7 @@ for recurring bug classes, latte-fork-sync for reference-fork review).
   `restart-staged.sh` the desk lifecycle, `start-dock.sh` the
   daily-driver shorthand, `qml-compile-gate.sh`, `qmllint-gate.sh`,
   `qml-interaction-tests.sh`, `sceneprobe-gate.sh`, `run-e2e.sh`,
-  `coverage-ratchet.sh`, `lib-qml-env.sh`). latte-build-env and
+  `coverage-ratchet.sh`). latte-build-env and
   latte-live-verification document how to use these.
 - `tests/` - the test tree, tiered: `units/` (sanitized pure-core
   suites via latte_add_unit_test: ASan+UBSan+QT_FORCE_ASSERTS),
