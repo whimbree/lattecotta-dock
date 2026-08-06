@@ -66,7 +66,6 @@ tests/e2e/matrix/multi-output-lib.sh
 tests/e2e/matrix/task-reorder-lib.sh
 tests/e2e/multi-output-selftest.sh
 tests/e2e/parabolic-hover-preview.sh
-tests/e2e/presentation-coverage-selftest.sh
 tests/installed-package-gate-runtime-test.sh
 tests/multioutputstatecontracttest.sh
 tests/sceneprobe/run_in_kwin.sh
