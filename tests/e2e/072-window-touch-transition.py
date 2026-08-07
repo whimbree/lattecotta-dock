@@ -14,9 +14,10 @@ Ported from tests/e2e/072-window-touch-transition.sh to latte_harness.recipe
 and latte_harness.matrix (BP-3, the bash-to-python migration's window-touch
 recipe batch R6). dockSystemData carries the whole stable-canvas and transition
 surface (dozens of fields no typed model models), so the snapshot is read as raw
-JSON at the same boundary the bash python one-liners used; a refused reply raises
-the pollable RecipeError, the same empty-command-substitution channel every bash
-poller swallowed (the dock-edit-retarget-cancel precedent). The stable-contract
+JSON via recipe.read_json at the same boundary the bash python one-liners used;
+a refused reply raises the pollable DbusUnavailableError, the same
+empty-command-substitution channel every bash poller swallowed (the
+dock-edit-retarget-cancel precedent). The stable-contract
 comparison is byte-for-byte the bash json.dumps(sort_keys=True). The coarse
 setViewVisibilityMode action stays a busctl call that fails loudly on a D-Bus
 error, matching the bash `e2e_call ... || e2e_fail`.
@@ -129,14 +130,11 @@ def _kwin_tagged_last(body: str, collection_delay: float = 0.5) -> str:
 def _dock_record() -> dict[str, Any]:
     """dock_field's context: the single dockSystemData record for the view.
 
-    schema-11 and exactly-one guards mirror the bash; a refused/empty reply
-    raises the pollable RecipeError (the bash empty command substitution).
+    schema-11 and exactly-one guards mirror the bash; a refused/failed reply
+    raises recipe.read_json's pollable DbusUnavailableError (the bash empty
+    command substitution).
     """
-    payload = recipe.json_payload("dockSystemData")
-    try:
-        snapshot = json.loads(payload)
-    except json.JSONDecodeError:
-        raise recipe.RecipeError("dockSystemData refused or returned no JSON") from None
+    snapshot = recipe.read_json("dockSystemData")
     if snapshot["schemaVersion"] != 11:
         raise recipe.RecipeError("expected dockSystemData schema 11")
     matches = [r for r in snapshot["views"] if r["persistentDockId"] == _S.view]
@@ -147,7 +145,7 @@ def _dock_record() -> dict[str, Any]:
 
 def _view_field() -> dict[str, Any]:
     """e2e_view_field's context: the viewsData record for the view (raw JSON)."""
-    views = json.loads(recipe.json_payload("viewsData"))
+    views = recipe.read_json("viewsData")
     match = [v for v in views if v["containmentId"] == _S.view]
     if not match:
         raise recipe.RecipeError(f"no view with containmentId {_S.view}")
@@ -162,8 +160,7 @@ def _lower(value: bool) -> str:
 
 
 def _stable_snapshot() -> str:
-    payload = recipe.json_payload("dockSystemData")
-    snapshot = json.loads(payload)
+    snapshot = recipe.read_json("dockSystemData")
     matches = [r for r in snapshot["views"] if r["persistentDockId"] == _S.view]
     v = matches[0]
     obj = v["objects"]
@@ -222,7 +219,7 @@ def _assert_popup_anchor_contract(boundary: str) -> None:
 def _assert_stable_contract(boundary: str) -> None:
     try:
         current = _stable_snapshot()
-    except recipe.RecipeError, json.JSONDecodeError, KeyError, IndexError:
+    except recipe.RecipeError, KeyError, IndexError:
         recipe.fail(f"{boundary} could not read the stable window-touch contract")
     if current != _S.base_stable_snapshot:
         recipe.fail(
@@ -626,7 +623,7 @@ def _body() -> None:
 
     try:
         _S.base_stable_snapshot = _stable_snapshot()
-    except json.JSONDecodeError, KeyError, IndexError:
+    except recipe.DbusUnavailableError, KeyError, IndexError:
         recipe.fail("could not capture the base stable window-touch contract")
     try:
         _S.base_revisions = _revision_snapshot()

@@ -11,11 +11,12 @@ reservation, layer-shell publication, and tracker authority remain stable.
 Ported from tests/e2e/074-live-titlebar-window-touch.sh to latte_harness.recipe
 and latte_harness.matrix (BP-3, the bash-to-python migration's window-touch
 recipe batch R6). dockSystemData carries the whole live-presentation surface
-(dozens of fields no typed model models), so the snapshot is read as raw JSON at
-the same boundary the bash python one-liners used; a refused reply raises the
-pollable RecipeError, the same empty-command-substitution channel every bash
-poller swallowed (the dock-edit-retarget-cancel precedent). The stable-contract
-comparison is byte-for-byte the bash json.dumps(sort_keys=True). The bash
+(dozens of fields no typed model models), so the snapshot is read as raw JSON
+via recipe.read_json at the same boundary the bash python one-liners used; a
+refused reply raises the pollable DbusUnavailableError, the same
+empty-command-substitution channel every bash poller swallowed (the
+dock-edit-retarget-cancel precedent). The stable-contract comparison is
+byte-for-byte the bash json.dumps(sort_keys=True). The bash
 compared %.9f-formatted progress endpoints as strings; the port keeps that exact
 rounding semantics through the same formatting. The held-drag liveness check
 maps the bash `kill -0 $drag_pid` onto Popen.poll().
@@ -95,14 +96,11 @@ def _kwrite(fail_message: str, *args: str) -> None:
 def _dock_record() -> dict[str, Any]:
     """dock_field's context: the single dockSystemData record for the view.
 
-    schema-11 and exactly-one guards mirror the bash; a refused/empty reply
-    raises the pollable RecipeError (the bash empty command substitution).
+    schema-11 and exactly-one guards mirror the bash; a refused/failed reply
+    raises recipe.read_json's pollable DbusUnavailableError (the bash empty
+    command substitution).
     """
-    payload = recipe.json_payload("dockSystemData")
-    try:
-        snapshot = json.loads(payload)
-    except json.JSONDecodeError:
-        raise recipe.RecipeError("dockSystemData refused or returned no JSON") from None
+    snapshot = recipe.read_json("dockSystemData")
     if snapshot["schemaVersion"] != 11:
         raise recipe.RecipeError("expected dockSystemData schema 11")
     matches = [r for r in snapshot["views"] if r["persistentDockId"] == _S.view]
@@ -114,11 +112,7 @@ def _dock_record() -> dict[str, Any]:
 def _dock_snapshot_and_record() -> tuple[dict[str, Any], dict[str, Any]]:
     """The whole dockSystemData snapshot plus the view record (for the fields the
     bash read off ``snapshot`` alongside ``v``)."""
-    payload = recipe.json_payload("dockSystemData")
-    try:
-        snapshot = json.loads(payload)
-    except json.JSONDecodeError:
-        raise recipe.RecipeError("dockSystemData refused or returned no JSON") from None
+    snapshot = recipe.read_json("dockSystemData")
     if snapshot["schemaVersion"] != 11:
         raise recipe.RecipeError("expected dockSystemData schema 11")
     matches = [r for r in snapshot["views"] if r["persistentDockId"] == _S.view]
@@ -129,8 +123,7 @@ def _dock_snapshot_and_record() -> tuple[dict[str, Any], dict[str, Any]]:
 
 def _view_config() -> dict[str, Any]:
     """view_config_field's context: viewConfigData's config subtree (raw JSON)."""
-    payload = json.loads(recipe.json_payload("viewConfigData", "u", str(_S.view)))
-    return payload["config"]
+    return recipe.read_json("viewConfigData", "u", str(_S.view))["config"]
 
 
 def _lower(value: bool) -> str:
@@ -930,7 +923,7 @@ def _find_new_edit_canvas(
 def _exercise_attached_maximum_length_change() -> None:
     try:
         auto_size_disabled = json.dumps(_view_config()["autoSizeEnabled"]) == "false"
-    except recipe.RecipeError, json.JSONDecodeError, KeyError:
+    except recipe.RecipeError, KeyError:
         auto_size_disabled = False
     if not auto_size_disabled:
         recipe.fail("attached length-mutation fixture did not disable automatic sizing")

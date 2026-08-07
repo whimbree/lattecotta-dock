@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import contextlib
 import io
-import json
 import os
 import shutil
 import signal
@@ -115,11 +114,12 @@ def _view_field(field_name: str) -> Any:
     """e2e_view_field: a field of this view's viewsData record, or a loud refusal.
 
     The typed View model does not carry visibilityMode, so viewsData is read as
-    raw JSON (the same boundary the bash python one-liner used); a refused reply
-    or a missing view raises RecipeError, which the wait loop maps to the bash's
-    loud readback-failure message.
+    raw JSON via recipe.read_json (the same boundary the bash python one-liner
+    used); a refused reply (DbusUnavailableError) or a missing view raises
+    RecipeError, which the wait loop maps to the bash's loud readback-failure
+    message.
     """
-    views = json.loads(recipe.json_payload("viewsData"))
+    views = recipe.read_json("viewsData")
     record = next((v for v in views if v["containmentId"] == _S.view), None)
     if record is None:
         raise recipe.RecipeError(f"no view with containmentId {_S.view}")
@@ -157,13 +157,12 @@ def _read_fixture_state(label: str) -> None:
 
 
 def _read_tracker_state(label: str) -> None:
-    payload = recipe.json_payload("trackerData", "u", str(_S.view))
     try:
-        tracker = json.loads(payload)
+        tracker = recipe.read_json("trackerData", "u", str(_S.view))
         _S.tracker_enabled = str(tracker["enabled"]).lower()
         _S.tracker_present = str(tracker["lastActiveWindowPresent"]).lower()
-    except json.JSONDecodeError, KeyError:
-        recipe.fail(f"{label}: invalid trackerData payload: {payload}")
+    except (recipe.DbusUnavailableError, KeyError) as exc:
+        recipe.fail(f"{label}: invalid trackerData readback: {exc}")
 
 
 def _wait_tracker_state(expected_enabled: str, expected_present: str, label: str) -> None:
@@ -234,7 +233,7 @@ def _configure_mode(
         "alwaysVisible",
     )
     _wait_visibility_mode("alwaysVisible")
-    cfg = json.loads(recipe.json_payload("viewConfigData", "u", str(_S.view)))["config"]
+    cfg = recipe.read_json("viewConfigData", "u", str(_S.view))["config"]
     if not (
         cfg["dragActiveWindowEnabled"] is False
         and cfg["closeActiveWindowEnabled"] == (close_enabled == "true")

@@ -13,16 +13,15 @@ Ported from tests/e2e/075-wayland-window-admission.sh to latte_harness.recipe
 and latte_harness.matrix (BP-3, the bash-to-python migration's window-touch
 recipe batch R6). dockSystemData carries the whole window-touch surface (dozens
 of fields none of the typed models model), so the snapshot is read as raw JSON
-at the same boundary the bash python one-liners used; a refused reply raises the
-pollable RecipeError, exactly the empty-command-substitution channel every bash
-poller swallowed. trackerData reads the same way. The coarse
-setViewVisibilityMode action stays a busctl call that fails loudly on a D-Bus
-error, matching the bash `e2e_call ... || e2e_fail`.
+via recipe.read_json at the same boundary the bash python one-liners used; a
+refused reply raises the pollable DbusUnavailableError, exactly the
+empty-command-substitution channel every bash poller swallowed. trackerData
+reads the same way. The coarse setViewVisibilityMode action stays a busctl call
+that fails loudly on a D-Bus error, matching the bash `e2e_call ... || e2e_fail`.
 """
 
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import signal
@@ -64,14 +63,11 @@ def _dock_record(view: int) -> dict[str, Any]:
     """dock_field's context: the single dockSystemData record for ``view``.
 
     Mirrors the bash python one-liner (schema-11 guard, exactly-one guard); a
-    refused/empty reply raises the pollable RecipeError, the same transient
-    non-answer every bash poller read as an empty command substitution.
+    refused/failed reply raises recipe.read_json's pollable
+    DbusUnavailableError, the same transient non-answer every bash poller read
+    as an empty command substitution.
     """
-    payload = recipe.json_payload("dockSystemData")
-    try:
-        snapshot = json.loads(payload)
-    except json.JSONDecodeError:
-        raise recipe.RecipeError("dockSystemData refused or returned no JSON") from None
+    snapshot = recipe.read_json("dockSystemData")
     if snapshot["schemaVersion"] != 11:
         raise recipe.RecipeError("expected dockSystemData schema 11")
     matches = [record for record in snapshot["views"] if record["persistentDockId"] == view]
@@ -85,7 +81,7 @@ def _lower(value: bool) -> str:
 
 
 def _tracker_probe(view: int) -> tuple[str, str, str, str, str]:
-    tracker = json.loads(recipe.json_payload("trackerData", "u", str(view)))
+    tracker = recipe.read_json("trackerData", "u", str(view))
     return (
         _lower(tracker["activeWindowTouching"]),
         _lower(tracker["activeWindowTouchingEdge"]),
