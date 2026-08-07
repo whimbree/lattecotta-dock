@@ -40,6 +40,8 @@ spec and fx thresholds.
 """
 
 import configparser
+import contextlib
+import io
 import json
 import os
 import subprocess
@@ -47,6 +49,7 @@ import sys
 from pathlib import Path
 
 from latte_harness import proc, recipe
+from latte_harness.config_restore import ConfigHomeSnapshot
 
 
 def _fail_raw(message: str) -> None:
@@ -73,8 +76,7 @@ def _seed_layout(config_home: Path) -> None:
         config.write(output, space_around_delimiters=False)
 
 
-def main() -> None:
-    proc.install_conventional_signal_exits()
+def _body() -> None:
     repo = Path(os.environ["E2E_REPO"])
     config_home = Path(os.environ["E2E_CONFIG_HOME"])
     artifacts = Path(os.environ["E2E_ARTIFACTS"])
@@ -192,5 +194,66 @@ def main() -> None:
     print("PASS: D21 Light-colors applet contrast (state + render)")
 
 
+def _stop_dock_for_cleanup() -> bool:
+    """Stop the reused vehicle dock before the restore; True when it is down.
+
+    Cleanup stops the dock BEFORE restoring the config so the dock's SIGTERM
+    config flush lands first, not on top of the restored files (the 022/034
+    stop-then-restore order). Only the dock_stop() call itself is muted (its
+    "already gone" chatter, the 022 shape); a dock that SURVIVES SIGTERM is
+    reported loudly and fails the cleanup - dock_stop deliberately never
+    escalates to SIGKILL, and a surviving dock's eventual config flush would
+    overwrite the restored files, resurrecting the leak under a PASS.
+    """
+    pid = recipe.dock_pid()
+    if pid is None:
+        return True
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return True
+    with contextlib.redirect_stderr(io.StringIO()):
+        stopped = recipe.dock_stop()
+    if not stopped:
+        print(f"FAIL: cleanup could not stop dock pid {pid}", file=sys.stderr, flush=True)
+    return stopped
+
+
+def main() -> int:
+    # The cleanup sits in a finally so it runs on EVERY exit path: the caught
+    # verdict (recipe.fail's SystemExit), an unexpected exception after the
+    # config home is already mutated, and the conventional signal exits installed
+    # below. 110 overwrites the SHARED throwaway config home's kdeglobals, edits
+    # its lattedockrc, and swaps its latte/ layout set for the D21 fixture; the
+    # runner reuses that one config home (and the vehicle dock) across every
+    # recipe of an invocation, so an un-restored mutation strands the D21 dark
+    # theme and fixture layout into the next recipe - recipe order becomes a
+    # hidden coupling. The deleted bash original leaked exactly this way (no trap
+    # cleanup); the snapshot-and-restore closes it. A cleanup failure - a dock
+    # surviving SIGTERM, or a surface that did not restore byte-identically -
+    # worsens a would-be success (the 022 cleanup-status contract).
+    proc.install_conventional_signal_exits()
+    config_home = Path(os.environ["E2E_CONFIG_HOME"])
+    snapshot = ConfigHomeSnapshot()
+    snapshot.snapshot_file(config_home / "kdeglobals")
+    snapshot.snapshot_file(config_home / "lattedockrc")
+    snapshot.snapshot_dir(config_home / "latte")
+    status = 0
+    try:
+        try:
+            _body()
+        except SystemExit as exc:
+            status = exc.code if isinstance(exc.code, int) else 1
+        except recipe.RecipeError as exc:
+            print(str(exc), file=sys.stderr, flush=True)
+            status = 1
+    finally:
+        dock_stopped = _stop_dock_for_cleanup()
+        restored = snapshot.restore()
+        if not (dock_stopped and restored) and status == 0:
+            status = 1
+    return status
+
+
 if __name__ == "__main__":
-    recipe.run(main)
+    sys.exit(main())

@@ -31,6 +31,8 @@ pixel comparison, and cross-state cmp is preserved.
 """
 
 import configparser
+import contextlib
+import io
 import json
 import os
 import re
@@ -40,6 +42,7 @@ import time
 from pathlib import Path
 
 from latte_harness import proc, recipe
+from latte_harness.config_restore import ConfigHomeSnapshot
 
 _PLUGINS = [
     "org.kde.latte.d28-responsive",
@@ -76,8 +79,7 @@ def _horizontal_view_id() -> int | None:
     return None
 
 
-def main() -> None:
-    proc.install_conventional_signal_exits()
+def _body() -> None:
     repo = Path(os.environ["E2E_REPO"])
     rt = Path(os.environ["E2E_RT"])
     config_home = Path(os.environ["E2E_CONFIG_HOME"])
@@ -432,5 +434,63 @@ def main() -> None:
     print("PASS: D28 control/treatment palette response and fixed-pixel stability")
 
 
+def _stop_dock_quietly() -> None:
+    """Stop the reused vehicle dock if it is up, its diagnostics muted.
+
+    Cleanup stops the dock BEFORE restoring the config so the dock's SIGTERM
+    config flush lands first, not on top of the restored files (the 022/034
+    stop-then-restore order). A dock already gone is fine; dock_stop's own
+    "already gone" chatter is muted like 022's cleanup stop.
+    """
+    with contextlib.suppress(recipe.RecipeError), contextlib.redirect_stderr(io.StringIO()):
+        pid = recipe.dock_pid()
+        if pid is None:
+            return
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return
+        recipe.dock_stop()
+
+
+def main() -> int:
+    # The cleanup sits in a finally so it runs on EVERY exit path: the caught
+    # verdict (recipe.fail's SystemExit), an unexpected exception after the
+    # config home is already mutated, and the conventional signal exits installed
+    # below. 111 overwrites the SHARED throwaway config home's kdeglobals, edits
+    # its lattedockrc, and swaps its latte/ layout set (stage_fixture_layout),
+    # and populates an XDG_DATA_HOME scratch tree at E2E_RT/d28-data with the D28
+    # test plasmoids. The runner reuses that one config home (and the vehicle
+    # dock) across every recipe of an invocation, so an un-restored mutation
+    # strands the D28 dark theme and fixture layout into the next recipe - recipe
+    # order becomes a hidden coupling. The deleted bash original leaked exactly
+    # this way (no trap cleanup); the snapshot-and-restore closes it. The
+    # d28-data tree was absent before the recipe, so restore removes it; the
+    # in-process XDG_DATA_HOME export is discarded when this recipe process exits
+    # and the runner restarts the next recipe's dock from its own ambient env.
+    proc.install_conventional_signal_exits()
+    config_home = Path(os.environ["E2E_CONFIG_HOME"])
+    rt = Path(os.environ["E2E_RT"])
+    snapshot = ConfigHomeSnapshot()
+    snapshot.snapshot_file(config_home / "kdeglobals")
+    snapshot.snapshot_file(config_home / "lattedockrc")
+    snapshot.snapshot_dir(config_home / "latte")
+    snapshot.snapshot_dir(rt / "d28-data")
+    status = 0
+    try:
+        try:
+            _body()
+        except SystemExit as exc:
+            status = exc.code if isinstance(exc.code, int) else 1
+        except recipe.RecipeError as exc:
+            print(str(exc), file=sys.stderr, flush=True)
+            status = 1
+    finally:
+        _stop_dock_quietly()
+        if snapshot.restore() and status == 0:
+            status = 1
+    return status
+
+
 if __name__ == "__main__":
-    recipe.run(main)
+    sys.exit(main())
