@@ -22,12 +22,12 @@ contract check; idempotent, so a dead group or a missing dir succeed quietly.
 
 Two subcommands remain, neither a bridge:
 
-- ``stop-group`` is the zombie-aware, bounded process-group transaction that
-  the seed reuses for its throwaway dock (scripts/lib-e2e-seed.sh execs it). It
-  is the port of the bash latte_package_gate_stop_process_group (retired from
-  scripts/lib-installed-package-gate.sh in BP-4b, the package-gate selftest
-  port); its output prefix is preserved verbatim so the seed's teardown reads
-  identically across the migration.
+- ``stop-group`` is the zombie-aware, bounded process-group transaction on the
+  CLI. The seed reuses the underlying ``stop_process_group`` directly as a
+  library call (latte_harness.seed) for its throwaway dock. It is the typed
+  port of the bash latte_package_gate_stop_process_group; its output prefix is
+  preserved verbatim so the seed's teardown reads identically across the
+  migration.
 - ``status`` reads the state file and reports the recorded fields plus group
   liveness (the observability surface).
 
@@ -85,12 +85,10 @@ CLEANUP_RECREATE_SETTLE = 0.3
 STOP_GROUP_DEFAULT_ATTEMPTS = 25
 STOP_GROUP_DEFAULT_DELAY = 0.2
 
-# stop-group is the typed twin of latte_package_gate_stop_process_group, which
-# lived in scripts/lib-installed-package-gate.sh until BP-4b retired it. Its
-# diagnostics kept the "installed-package-gate:" tool prefix; preserve it
-# verbatim so the seed's teardown reads identically across the migration (and
-# in lockstep with the lib's one remaining bash function, the liveness poll
-# the e2e-seed cleanup selftest still sources).
+# stop-group is the typed twin of the bash latte_package_gate_stop_process_group
+# (scripts/lib-installed-package-gate.sh, deleted in BW-2). Its diagnostics kept
+# the "installed-package-gate:" tool prefix; preserve it verbatim so the seed's
+# teardown reads identically across the migration.
 _PKG_GATE_TOOL = "installed-package-gate"
 
 EXIT_STOP_GROUP_FAILED = 2  # the group outlived a bounded SIGKILL, or a poll error
@@ -503,12 +501,13 @@ def _read_proc_state(pid: int) -> str | None:
 def group_live_status(pgid: int) -> str:
     """'live' | 'gone' | 'error', the zombie-AWARE poll for stop-group.
 
-    Mirrors latte_package_gate_process_group_has_live_members exactly: a member
-    in state Z (zombie) or X (dead) does not count as live, any other uppercase
-    state does, and a member that vanishes between the pgrep and the procfs read
-    is skipped. Anything the bash would have FAILed on (a pgrep transport error,
-    an unreadable/unparseable live member) is reported as 'error', so a genuine
-    fault is loud instead of masquerading as 'gone'.
+    A member in state Z (zombie) or X (dead) does not count as live; any other
+    uppercase state does; a member that vanishes between the pgrep and the procfs
+    read is skipped. A pgrep transport error or an unreadable/unparseable live
+    member is reported as 'error', so a genuine fault is loud instead of
+    masquerading as 'gone'. (Ported from the bash liveness poll
+    latte_package_gate_process_group_has_live_members, deleted in BW-2 with its
+    last consumer, tests/e2e-seed-cleanup-selftest.sh.)
     """
     result = subprocess.run(["pgrep", "-g", str(pgid)], capture_output=True, text=True, check=False)
     if result.returncode == 1:
@@ -567,8 +566,9 @@ def group_live_status(pgid: int) -> str:
 def _wait_group_exits(pgid: int, attempts: int, delay: float) -> str:
     """Poll group_live_status until 'gone'/'error' or the bounded tries run out.
 
-    Mirrors latte_package_gate_wait_until_process_group_exits: it checks, sleeps
-    only while 'live', and returns the final status (which may still be 'live').
+    Checks first, sleeps only while 'live', and returns the final status (which
+    may still be 'live'). (Ported from the bash
+    latte_package_gate_wait_until_process_group_exits, retired with its lib.)
     """
     for _ in range(attempts):
         status = group_live_status(pgid)
@@ -589,11 +589,12 @@ def stop_process_group(
 ) -> int:
     """Zombie-aware bounded group teardown; 0 on success, 2 on failure/error.
 
-    The typed twin of latte_package_gate_stop_process_group, which the seed
-    reused for its throwaway dock (a KCrash can leave the leader STOPPED, so a
-    leader-only SIGTERM+wait can never finish; the group transaction escalates
-    to SIGKILL on a bound). Messages keep the bash prefix verbatim so the
-    teardown reads identically until BP-4 unifies the helper.
+    The seed uses this for its throwaway dock: a KCrash can leave the leader
+    STOPPED, so a leader-only SIGTERM+wait can never finish; the group
+    transaction escalates to SIGKILL on a bound. Messages keep the
+    "installed-package-gate:" prefix verbatim so the teardown reads identically
+    across the migration. (Ported from the bash
+    latte_package_gate_stop_process_group, retired with its lib in BW-2.)
 
     A recycled-leader refusal returns 0: the recycle proves the launched
     group already emptied, so the teardown goal is met and only the near-miss
