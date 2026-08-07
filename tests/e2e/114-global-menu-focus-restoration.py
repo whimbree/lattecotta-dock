@@ -19,7 +19,6 @@ dbus-monitor logs are grepped exactly as the bash did.
 """
 
 import configparser
-import json
 import os
 import re
 import subprocess
@@ -60,9 +59,11 @@ def _fp(*args: object) -> bool:
 
 
 def _views_raw() -> list[dict[str, Any]]:
+    """viewsData as raw JSON, or [] on a refused/failed reply (the wait loops'
+    non-match sentinel)."""
     try:
-        return json.loads(recipe.json_payload("viewsData"))
-    except json.JSONDecodeError:
+        return recipe.read_json("viewsData")
+    except recipe.DbusUnavailableError:
         return []
 
 

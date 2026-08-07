@@ -12,16 +12,16 @@ leave stale focus state.
 Ported from tests/e2e/112-keyboard-navigation-focus-restoration.sh to
 latte_harness.recipe (BP-3, the bash-to-python migration's recipe batch R9).
 keyboardNavigation / ownsPanelFocusSession are not in the typed View model, so
-viewsData is read as raw JSON (the same boundary the bash python one-liners
-used); a reply dbusreports refuses transiently while a freshly duplicated view
-lacks an accepted placement maps to the pollable empty-string sentinel, exactly
+viewsData is read as raw JSON via recipe.read_json (the same boundary the bash
+python one-liners used); a reply dbusreports refuses transiently while a
+freshly duplicated view lacks an accepted placement raises the pollable
+DbusUnavailableError, the channel the polling callers read as a non-match just
 as the bash command substitution swallowed the crashed one-liner's empty output.
 The coarse setViewKeyboardNavigation / duplicateView / removeView actions stay
 busctl calls that fail loudly on a D-Bus error, matching the bash
 ``e2e_call ... || e2e_fail``.
 """
 
-import json
 import os
 import shutil
 import subprocess
@@ -94,22 +94,14 @@ def _latte_call_quiet(*args: str) -> None:
 
 
 def _views_raw() -> list[dict[str, Any]]:
-    """viewsData as raw JSON; a refused reply raises the pollable RecipeError.
+    """viewsData as raw JSON; a refused reply raises the pollable DbusUnavailableError.
 
-    dbusreports refuses the whole viewsData reply while any view lacks an
-    accepted placement, which happens transiently while a duplicated view is
-    still being placed. The bash one-liners exited on that empty payload and
-    every command substitution read the empty output as a non-match, so the
-    refusal maps to RecipeError, the same transient-non-answer channel the
-    polling callers here already catch.
+    keyboardNavigation / ownsPanelFocusSession are not in the typed View model,
+    so this reads recipe.read_json: a transient dbusreports refusal (a
+    duplicated view still being placed) raises DbusUnavailableError, the
+    RecipeError subclass the polling callers here already catch.
     """
-    payload = recipe.json_payload("viewsData")
-    try:
-        return json.loads(payload)
-    except json.JSONDecodeError:
-        raise recipe.RecipeError(
-            "viewsData refused or returned no JSON (view placement not accepted)"
-        ) from None
+    return recipe.read_json("viewsData")
 
 
 def _lifecycle_running() -> bool:
