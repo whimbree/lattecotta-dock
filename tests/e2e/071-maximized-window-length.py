@@ -12,10 +12,11 @@ Ported from tests/e2e/071-maximized-window-length.sh to latte_harness.recipe
 and latte_harness.matrix (BP-3, the bash-to-python migration's window-touch
 recipe batch R6). dockSystemData carries the whole stable-canvas, gap-policy
 and screen-edge surface (dozens of fields no typed model models), so the
-snapshot is read as raw JSON at the same boundary the bash python one-liners
-used; a refused reply raises the pollable RecipeError, the same
-empty-command-substitution channel every bash poller swallowed (the
-dock-edit-retarget-cancel precedent). The stable-contract comparison is
+snapshot is read as raw JSON via recipe.read_json at the same boundary the
+bash python one-liners used; a refused reply raises the pollable
+DbusUnavailableError, the same empty-command-substitution channel every bash
+poller swallowed (the dock-edit-retarget-cancel precedent). The
+stable-contract comparison is
 byte-for-byte the bash json.dumps(sort_keys=True). The coarse
 setViewVisibilityMode action stays a busctl call that fails loudly on a D-Bus
 error, matching the bash `e2e_call ... || e2e_fail`.
@@ -103,14 +104,11 @@ def _kwin_tagged_last(body: str, collection_delay: float = 0.5) -> str:
 def _dock_record() -> dict[str, Any]:
     """dock_field's context: the single dockSystemData record for the view.
 
-    The exactly-one guard mirrors the bash; a refused/empty reply raises the
-    pollable RecipeError (the bash empty command substitution).
+    The exactly-one guard mirrors the bash; a refused/failed reply raises
+    recipe.read_json's pollable DbusUnavailableError (the bash empty command
+    substitution).
     """
-    payload = recipe.json_payload("dockSystemData")
-    try:
-        snapshot = json.loads(payload)
-    except json.JSONDecodeError:
-        raise recipe.RecipeError("dockSystemData refused or returned no JSON") from None
+    snapshot = recipe.read_json("dockSystemData")
     matches = [r for r in snapshot["views"] if r["persistentDockId"] == _S.view]
     if len(matches) != 1:
         raise recipe.RecipeError(
@@ -121,7 +119,7 @@ def _dock_record() -> dict[str, Any]:
 
 def _view_field() -> dict[str, Any]:
     """e2e_view_field's context: the viewsData record for the view (raw JSON)."""
-    views = json.loads(recipe.json_payload("viewsData"))
+    views = recipe.read_json("viewsData")
     match = [v for v in views if v["containmentId"] == _S.view]
     if not match:
         raise recipe.RecipeError(f"no view with containmentId {_S.view}")
@@ -300,7 +298,7 @@ def _assert_popup_anchor_contract(phase: str) -> None:
 def _assert_stable_contract(phase: str) -> None:
     try:
         current = _stable_snapshot()
-    except recipe.RecipeError, json.JSONDecodeError, KeyError, IndexError:
+    except recipe.RecipeError, KeyError, IndexError:
         recipe.fail(f"{phase} could not read the stable geometry snapshot")
     if current != _S.base_stable_snapshot:
         recipe.fail(
@@ -429,7 +427,7 @@ def _wait_for_in_flight_target(expected_target: str, expected_phase: str) -> Non
 
 
 def _tracker_maximized_probe() -> tuple[str, str]:
-    tracker = json.loads(recipe.json_payload("trackerData", "u", str(_S.view)))
+    tracker = recipe.read_json("trackerData", "u", str(_S.view))
     return _lower(tracker["activeWindowMaximized"]), _lower(tracker["existsWindowMaximized"])
 
 
@@ -652,13 +650,13 @@ def _wait_for_native_screen_edge_armed(phase: str) -> None:
     supported = contains_mouse = "unread"
     unavailable_snapshots = 0
     for _ in range(80):
-        payload = recipe.json_payload("dockSystemData")
-        if not payload.startswith("{"):
+        try:
+            state = recipe.read_json("dockSystemData")
+        except recipe.DbusUnavailableError:
             unavailable_snapshots += 1
             time.sleep(0.05)
             continue
         try:
-            state = json.loads(payload)
             matches = [v for v in state["views"] if v["persistentDockId"] == _S.view]
             if len(matches) != 1:
                 time.sleep(0.05)
@@ -669,7 +667,7 @@ def _wait_for_native_screen_edge_armed(phase: str) -> None:
             registered = _lower(v["screenEdgeRegistered"])
             supported = _lower(v["compositorScreenEdgeSupported"])
             contains_mouse = _lower(v["visibilityContainsMouse"])
-        except json.JSONDecodeError, KeyError:
+        except KeyError:
             time.sleep(0.05)
             continue
         if (
@@ -951,7 +949,7 @@ def _body() -> None:
 
     try:
         _S.base_stable_snapshot = _stable_snapshot()
-    except recipe.RecipeError, json.JSONDecodeError, KeyError, IndexError:
+    except recipe.RecipeError, KeyError, IndexError:
         recipe.fail("could not capture the base stable geometry contract")
     try:
         _S.base_revisions = _revision_snapshot()

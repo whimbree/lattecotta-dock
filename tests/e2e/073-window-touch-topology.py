@@ -20,8 +20,10 @@ drive is NOT trimmed. The typed rectangle oracle
 ``python3 <oracle> <subcommand>`` argv and stdin/stdout as the bash), so the
 oracle half of the contract is untouched. dockSystemData / screensData carry
 fields the typed models do not, so the recipe reads them as raw JSON at the same
-boundary the bash python one-liners used; a refused or malformed reply during a
-poll reads as a non-match, exactly like the bash predicate exiting non-zero.
+boundary the bash python one-liners used - recipe.read_json where the recipe
+parses (a refusal raises the pollable DbusUnavailableError, read as a non-match
+exactly like the bash predicate exiting non-zero), recipe.json_payload where the
+delivered text itself is the artifact (oracle stdin, failure snapshots).
 
 The cleanup safety net (cleanup runs on every exit path, preserves the body's
 failure status, never masks it with a cleanup success, and enforces the teardown
@@ -90,12 +92,19 @@ _S = _State()
 
 
 def _snapshot() -> str:
-    """dockSystemData as plain JSON text (the bash ``snapshot``)."""
+    """dockSystemData as plain JSON text (the bash ``snapshot``).
+
+    Deliberately raw: the text feeds the oracle's stdin and the failure
+    artifacts, where the delivered bytes ARE the evidence; a refusal flows on
+    as empty input, the established non-answer the oracle already refuses.
+    Sites that parse in-recipe use recipe.read_json instead.
+    """
     return recipe.json_payload("dockSystemData")
 
 
 def _screens_json() -> str:
-    """screensData as plain JSON text (the bash ``mo_screens_json``)."""
+    """screensData as plain JSON text (the bash ``mo_screens_json``); raw for
+    the same oracle-stdin reason as _snapshot."""
     return recipe.json_payload("screensData")
 
 
@@ -151,24 +160,21 @@ def _kwriteconfig(*args: str) -> bool:
 
 def _view_ids() -> str:
     """view_ids: the space-joined persistentDockId of every view."""
-    views = json.loads(_snapshot())["views"]
+    views = recipe.read_json("dockSystemData")["views"]
     return " ".join(str(view["persistentDockId"]) for view in views)
 
 
 def _created_view_id(before: str) -> str:
     """created_view_id: the single independent view not present in ``before``, or
     "" when zero or many appeared (or the snapshot was refused/malformed)."""
-    payload = recipe.try_json_payload("dockSystemData")
-    if not payload:
-        return ""
     try:
         before_ids = {int(value) for value in before.split()}
         created = [
             view
-            for view in json.loads(payload)["views"]
+            for view in recipe.read_json("dockSystemData")["views"]
             if view["persistentDockId"] not in before_ids and view["relationship"] == "independent"
         ]
-    except json.JSONDecodeError, KeyError, ValueError:
+    except recipe.DbusUnavailableError, KeyError, ValueError:
         return ""
     return str(created[0]["persistentDockId"]) if len(created) == 1 else ""
 
@@ -260,7 +266,7 @@ def _resolve_screen_id(name: str, fail_message: str) -> int:
     ``name`` (the bash inner diagnostic, then the caller's loud refusal)."""
     matches = [
         screen
-        for screen in json.loads(_screens_json())
+        for screen in recipe.read_json("screensData")
         if screen["isActive"] and screen["name"] == name
     ]
     if len(matches) != 1:
@@ -272,14 +278,16 @@ def _resolve_screen_id(name: str, fail_message: str) -> int:
 # ---- placement and publication waiters -------------------------------------
 
 
-def _views_by_dock_id(payload: str) -> dict[int, dict[str, Any]]:
-    return {view["persistentDockId"]: view for view in json.loads(payload)["views"]}
+def _views_by_dock_id() -> dict[int, dict[str, Any]]:
+    """The live dockSystemData views keyed by persistentDockId (read_json, so a
+    refusal raises the pollable DbusUnavailableError the callers below catch)."""
+    return {view["persistentDockId"]: view for view in recipe.read_json("dockSystemData")["views"]}
 
 
 def _fixture_placement_settled(primary_id: int, secondary_id: int) -> bool:
     try:
         ids = [int(value) for value in _S.view_ids_csv.split(",")]
-        views = _views_by_dock_id(_snapshot())
+        views = _views_by_dock_id()
         expected = {
             ids[0]: (primary_id, "bottom", "left"),
             ids[1]: (primary_id, "bottom", "right"),
@@ -292,7 +300,7 @@ def _fixture_placement_settled(primary_id: int, secondary_id: int) -> bool:
             actual = (view["screenId"], view["edge"], view["alignment"])
             if actual != placement or not view["geometrySettled"]:
                 return False
-    except json.JSONDecodeError, KeyError, ValueError, IndexError:
+    except recipe.DbusUnavailableError, KeyError, ValueError, IndexError:
         return False
     return True
 
@@ -309,7 +317,7 @@ def _wait_for_fixture_placement(primary_id: int, secondary_id: int) -> None:
 
 def _publication_revision(dock_id: int, fail_message: str) -> int:
     """before_axis_revision: the view's current surfaceGeometryPublicationRevision."""
-    view = _views_by_dock_id(_snapshot()).get(dock_id)
+    view = _views_by_dock_id().get(dock_id)
     if not view:
         recipe.fail(fail_message)
     return int(view["surfaceGeometryPublicationRevision"])
@@ -319,7 +327,7 @@ def _axis_first_publication_reached(
     dock_id: int, expected: tuple[int, str, str], before_revision: int
 ) -> bool:
     try:
-        view = _views_by_dock_id(_snapshot()).get(dock_id)
+        view = _views_by_dock_id().get(dock_id)
         if not view:
             return False
         actual = (view["screenId"], view["edge"], view["alignment"])
@@ -330,7 +338,7 @@ def _axis_first_publication_reached(
             or view["windowGeometry"] != view["surfaceGeometry"]
         ):
             return False
-    except json.JSONDecodeError, KeyError, ValueError:
+    except recipe.DbusUnavailableError, KeyError, ValueError:
         return False
     return True
 
@@ -348,7 +356,7 @@ def _axis_extra_publication_diagnostic(
     phase 2 keeps only its unique contract - no extra publication after the
     coalescer deadline, and no placement drift. Fixed bash-first, then ported.
     """
-    view = _views_by_dock_id(_snapshot()).get(dock_id)
+    view = _views_by_dock_id().get(dock_id)
     if not view:
         return "axis-changing panel disappeared"
     actual = (view["screenId"], view["edge"], view["alignment"])
@@ -361,7 +369,7 @@ def _axis_extra_publication_diagnostic(
 
 def _axis_settled(dock_id: int, expected: tuple[int, str, str]) -> bool:
     try:
-        view = _views_by_dock_id(_snapshot()).get(dock_id)
+        view = _views_by_dock_id().get(dock_id)
         if not view:
             return False
         actual = (view["screenId"], view["edge"], view["alignment"])
@@ -371,7 +379,7 @@ def _axis_settled(dock_id: int, expected: tuple[int, str, str]) -> bool:
             or view["windowGeometry"] != view["surfaceGeometry"]
         ):
             return False
-    except json.JSONDecodeError, KeyError, ValueError:
+    except recipe.DbusUnavailableError, KeyError, ValueError:
         return False
     return view["geometrySettled"]
 
