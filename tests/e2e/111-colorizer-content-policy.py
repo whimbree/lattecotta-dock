@@ -434,23 +434,29 @@ def _body() -> None:
     print("PASS: D28 control/treatment palette response and fixed-pixel stability")
 
 
-def _stop_dock_quietly() -> None:
-    """Stop the reused vehicle dock if it is up, its diagnostics muted.
+def _stop_dock_for_cleanup() -> bool:
+    """Stop the reused vehicle dock before the restore; True when it is down.
 
     Cleanup stops the dock BEFORE restoring the config so the dock's SIGTERM
     config flush lands first, not on top of the restored files (the 022/034
-    stop-then-restore order). A dock already gone is fine; dock_stop's own
-    "already gone" chatter is muted like 022's cleanup stop.
+    stop-then-restore order). Only the dock_stop() call itself is muted (its
+    "already gone" chatter, the 022 shape); a dock that SURVIVES SIGTERM is
+    reported loudly and fails the cleanup - dock_stop deliberately never
+    escalates to SIGKILL, and a surviving dock's eventual config flush would
+    overwrite the restored files, resurrecting the leak under a PASS.
     """
-    with contextlib.suppress(recipe.RecipeError), contextlib.redirect_stderr(io.StringIO()):
-        pid = recipe.dock_pid()
-        if pid is None:
-            return
-        try:
-            os.kill(pid, 0)
-        except OSError:
-            return
-        recipe.dock_stop()
+    pid = recipe.dock_pid()
+    if pid is None:
+        return True
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return True
+    with contextlib.redirect_stderr(io.StringIO()):
+        stopped = recipe.dock_stop()
+    if not stopped:
+        print(f"FAIL: cleanup could not stop dock pid {pid}", file=sys.stderr, flush=True)
+    return stopped
 
 
 def main() -> int:
@@ -468,6 +474,9 @@ def main() -> int:
     # d28-data tree was absent before the recipe, so restore removes it; the
     # in-process XDG_DATA_HOME export is discarded when this recipe process exits
     # and the runner restarts the next recipe's dock from its own ambient env.
+    # A cleanup failure - a dock surviving SIGTERM, or a surface that did not
+    # restore byte-identically - worsens a would-be success (the 022
+    # cleanup-status contract).
     proc.install_conventional_signal_exits()
     config_home = Path(os.environ["E2E_CONFIG_HOME"])
     rt = Path(os.environ["E2E_RT"])
@@ -486,8 +495,9 @@ def main() -> int:
             print(str(exc), file=sys.stderr, flush=True)
             status = 1
     finally:
-        _stop_dock_quietly()
-        if snapshot.restore() and status == 0:
+        dock_stopped = _stop_dock_for_cleanup()
+        restored = snapshot.restore()
+        if not (dock_stopped and restored) and status == 0:
             status = 1
     return status
 
