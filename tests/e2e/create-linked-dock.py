@@ -15,10 +15,11 @@ migration's R12 dual-output recipe batch); it is the last consumer of
 task-reorder-lib.sh and applet-reorder-driver.sh, retired with this port.
 dockSystemData / viewsData / viewAppletsData / appletConfigData carry many fields
 the typed models do not (relationship, linkedDockIds, runtimeViewId, per-view
-objects, applet config), so they are read as raw JSON - the same boundary the bash
-python one-liners used; a polling waiter reads a refused or malformed reply (or a
-predicate lookup miss) as a non-match, exactly like the bash predicate exiting
-non-zero. The coarse createLinkedView / setViewPlacement / addApplet / duplicateView
+objects, applet config), so they are read as raw JSON via recipe.read_json - the
+same boundary the bash python one-liners used; a polling waiter reads a refused
+reply (the pollable DbusUnavailableError) or a predicate lookup miss as a
+non-match, exactly like the bash predicate exiting non-zero. The coarse
+createLinkedView / setViewPlacement / addApplet / duplicateView
 / reloadView actions stay busctl calls that fail loudly on a D-Bus error, matching
 the bash `e2e_call ... || e2e_fail`. KWin owns the output topology, driven with raw
 kscreen-doctor exactly as the bash did (this recipe never routed through the
@@ -88,34 +89,42 @@ def _kread(*args: str) -> str:
 
 def _wait_for_snapshot(predicate: Callable[[_State], bool], label: str) -> _State:
     """wait_for_snapshot: poll dockSystemData 120x0.25s until ``predicate`` holds;
-    return the matching snapshot. A refused/malformed reply or a lookup miss counts
-    as a non-match, exactly like the bash predicate exiting non-zero. On timeout,
-    print the last reply and fail with ``label``."""
-    current = ""
+    return the matching snapshot. A refused reply (DbusUnavailableError) or a
+    lookup miss counts as a non-match, exactly like the bash predicate exiting
+    non-zero. On timeout, print the last attempt and fail with ``label``."""
+    last_reply = "<no reply>"
     for _ in range(120):
-        current = recipe.json_payload("dockSystemData")
-        with contextlib.suppress(
-            json.JSONDecodeError, KeyError, StopIteration, TypeError, ValueError
-        ):
-            if predicate(json.loads(current)):
-                return json.loads(current)
+        try:
+            snapshot = recipe.read_json("dockSystemData")
+        except recipe.DbusUnavailableError as exc:
+            last_reply = f"<{exc}>"
+            time.sleep(0.25)
+            continue
+        last_reply = json.dumps(snapshot)
+        with contextlib.suppress(KeyError, StopIteration, TypeError, ValueError):
+            if predicate(snapshot):
+                return snapshot
         time.sleep(0.25)
-    print(f"last dockSystemData: {current}", file=sys.stderr, flush=True)
+    print(f"last dockSystemData: {last_reply}", file=sys.stderr, flush=True)
     recipe.fail(label)
 
 
 def _wait_for_views_data(predicate: Callable[[_Views], bool], label: str) -> _Views:
     """wait_for_views_data: poll viewsData 120x0.25s until ``predicate`` holds."""
-    current = ""
+    last_reply = "<no reply>"
     for _ in range(120):
-        current = recipe.json_payload("viewsData")
-        with contextlib.suppress(
-            json.JSONDecodeError, KeyError, StopIteration, TypeError, ValueError
-        ):
-            if predicate(json.loads(current)):
-                return json.loads(current)
+        try:
+            views = recipe.read_json("viewsData")
+        except recipe.DbusUnavailableError as exc:
+            last_reply = f"<{exc}>"
+            time.sleep(0.25)
+            continue
+        last_reply = json.dumps(views)
+        with contextlib.suppress(KeyError, StopIteration, TypeError, ValueError):
+            if predicate(views):
+                return views
         time.sleep(0.25)
-    print(f"last viewsData: {current}", file=sys.stderr, flush=True)
+    print(f"last viewsData: {last_reply}", file=sys.stderr, flush=True)
     recipe.fail(label)
 
 
@@ -124,11 +133,10 @@ def _wait_for_topology() -> _State | None:
     offset, separated from the primary. Returns the screensData match, or None on
     timeout (the bash return 1)."""
     for _ in range(120):
-        current = recipe.json_payload("screensData")
         with contextlib.suppress(
-            json.JSONDecodeError, KeyError, StopIteration, TypeError, ValueError
+            recipe.DbusUnavailableError, KeyError, StopIteration, TypeError, ValueError
         ):
-            screens = json.loads(current)
+            screens = recipe.read_json("screensData")
             active = [s for s in screens if s["isActive"]]
             if len(active) == 2:
                 primary = next(s for s in active if s["isPrimary"])
@@ -146,9 +154,8 @@ def _wait_for_active_output_count(expected: int) -> bool:
     """wait_for_active_output_count: poll screensData until ``expected`` outputs are
     active. Returns True on match, False on timeout (the bash return 1)."""
     for _ in range(120):
-        current = recipe.json_payload("screensData")
-        with contextlib.suppress(json.JSONDecodeError, KeyError, TypeError, ValueError):
-            active = [screen for screen in json.loads(current) if screen["isActive"]]
+        with contextlib.suppress(recipe.DbusUnavailableError, KeyError, TypeError, ValueError):
+            active = [s for s in recipe.read_json("screensData") if s["isActive"]]
             if len(active) == expected:
                 return True
         time.sleep(0.25)
@@ -159,11 +166,11 @@ def _wait_for_active_output_count(expected: int) -> bool:
 
 
 def _applets(view: int) -> list[dict[str, Any]]:
-    return json.loads(recipe.json_payload("viewAppletsData", "u", str(view)))
+    return recipe.read_json("viewAppletsData", "u", str(view))
 
 
 def _applet_config(view: int, applet: int) -> dict[str, Any]:
-    return json.loads(recipe.json_payload("appletConfigData", "uu", str(view), str(applet)))
+    return recipe.read_json("appletConfigData", "uu", str(view), str(applet))
 
 
 def _view_plugins(view: int) -> str:
@@ -249,7 +256,7 @@ def _view_content_fingerprint(view: int) -> str:
 
 
 def _scenario(layout: str) -> None:
-    active = [s for s in json.loads(recipe.json_payload("screensData")) if s["isActive"]]
+    active = [s for s in recipe.read_json("screensData") if s["isActive"]]
     primary_list = [s for s in active if s["isPrimary"]]
     secondary_list = [s for s in active if not s["isPrimary"]]
     if len(primary_list) != 1 or len(secondary_list) != 1:
@@ -258,7 +265,7 @@ def _scenario(layout: str) -> None:
     secondary_id = secondary_list[0]["id"]
     secondary_name = secondary_list[0]["name"]
 
-    seed_views = json.loads(recipe.json_payload("dockSystemData"))["views"]
+    seed_views = recipe.read_json("dockSystemData")["views"]
     if len(seed_views) != 1 or seed_views[0]["relationship"] != "independent":
         recipe.fail("could not identify the independent seed dock")
     root_id = seed_views[0]["persistentDockId"]
@@ -275,9 +282,7 @@ def _scenario(layout: str) -> None:
         recipe.fail("Latte did not observe the separated portrait topology")
 
     secondary_screen = next(
-        s
-        for s in json.loads(recipe.json_payload("screensData"))
-        if s["id"] == secondary_id and s["isActive"]
+        s for s in recipe.read_json("screensData") if s["id"] == secondary_id and s["isActive"]
     )
     secondary_geometry = ",".join(str(v) for v in secondary_screen["geometry"])
 
@@ -453,9 +458,7 @@ def _scenario(layout: str) -> None:
 
     # Visibility and edit presentation are local to explicit members.
     old_member_mode = next(
-        v
-        for v in json.loads(recipe.json_payload("dockSystemData"))["views"]
-        if v["persistentDockId"] == remote_id
+        v for v in recipe.read_json("dockSystemData")["views"] if v["persistentDockId"] == remote_id
     )["visibilityMode"]
     new_root_mode = "autoHide"
     _call(
@@ -818,9 +821,7 @@ def _scenario(layout: str) -> None:
 
     # Duplicate the explicit member. The result must be independent and must not be
     # added to the root's linkedDockIds.
-    before_ids = {
-        v["persistentDockId"] for v in json.loads(recipe.json_payload("dockSystemData"))["views"]
-    }
+    before_ids = {v["persistentDockId"] for v in recipe.read_json("dockSystemData")["views"]}
     _call(
         "Duplicate Dock failed from an explicit linked member",
         "duplicateView",
@@ -883,7 +884,7 @@ def _scenario(layout: str) -> None:
     # The independent duplicate must remain untouched.
     before_reload_runtime = {
         v["persistentDockId"]: v["runtimeViewId"]
-        for v in json.loads(recipe.json_payload("dockSystemData"))["views"]
+        for v in recipe.read_json("dockSystemData")["views"]
     }
     before_reload_content = _view_content_fingerprint(root_id)
     _call("could not request root runtime recreation", "reloadView", "u", str(root_id))
