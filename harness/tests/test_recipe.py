@@ -460,6 +460,83 @@ def test_typed_readbacks_still_validate_parsed_garbage_loudly(
         recipe.views()
 
 
+# ---- kwin_js transport failures (harness audit A2) --------------------------
+
+
+def _fake_kwin_transport(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    loadscript: subprocess.CompletedProcess[str],
+    run_returncode: int = 0,
+) -> list[list[str]]:
+    """Fake subprocess.run for the kwin_js call sequence; returns the argv log."""
+    calls: list[list[str]] = []
+
+    def fake(argv: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(list(argv))
+        if "loadScript" in argv:
+            return loadscript
+        if any(part == "run" for part in argv):
+            return subprocess.CompletedProcess(argv, run_returncode, "", "")
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(recipe.subprocess, "run", fake)
+    return calls
+
+
+def test_kwin_js_raises_when_loadscript_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Mutation-grade A2 negative: a loadScript transport failure must raise,
+    # never read as the ""-empty ran-and-printed-nothing result.
+    _fake_kwin_transport(
+        monkeypatch,
+        loadscript=subprocess.CompletedProcess([], 1, "", "Failed to connect to bus"),
+    )
+    with pytest.raises(recipe.KwinScriptError):
+        recipe.kwin_js("print('@TAG@|x');", 0.0)
+
+
+def test_kwin_js_raises_when_the_reply_carries_no_script_number(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _fake_kwin_transport(monkeypatch, loadscript=subprocess.CompletedProcess([], 0, "", ""))
+    with pytest.raises(recipe.KwinScriptError):
+        recipe.kwin_js("print('@TAG@|x');", 0.0)
+
+
+def test_kwin_js_raises_when_the_run_call_is_refused_and_still_unloads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A loaded script whose run call is refused never executed: raise, and
+    # still stop/unload so the refused script does not leak into kwin.
+    calls = _fake_kwin_transport(
+        monkeypatch,
+        loadscript=subprocess.CompletedProcess([], 0, "i 7\n", ""),
+        run_returncode=1,
+    )
+    with pytest.raises(recipe.KwinScriptError):
+        recipe.kwin_js("print('@TAG@|x');", 0.0)
+    assert any("unloadScript" in argv for argv in calls)
+
+
+def test_kwin_js_empty_capture_stays_a_legitimate_result(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # The other half of the A2 contract: a script that ran and printed nothing
+    # still returns "", so match-nothing queries keep their meaning.
+    kwin_log = tmp_path / "kwin.log"
+    kwin_log.write_text("unrelated line\n")
+    monkeypatch.setenv("E2E_MODE", "nested")
+    monkeypatch.setenv("E2E_KWIN_LOG", str(kwin_log))
+    _fake_kwin_transport(monkeypatch, loadscript=subprocess.CompletedProcess([], 0, "i 7\n", ""))
+    assert recipe.kwin_js("print('@TAG@|x');", 0.0) == ""
+
+
+def test_kwin_script_error_is_a_recipe_error_so_pollers_poll_through() -> None:
+    # A poller's broad `except RecipeError` must treat the transport failure
+    # as its transient non-match, mirroring the old ""-as-non-match shape.
+    assert issubclass(recipe.KwinScriptError, recipe.RecipeError)
+
+
 # ---- try_json_payload / is_running: the live-tool boundary helpers ----------
 
 

@@ -35,3 +35,20 @@ def test_empty_dump_prints_the_bash_fallback(
     monkeypatch.setattr(recipe, "dumpwins", lambda: "")
     dumpwins.main()
     assert capsys.readouterr().out == "no output captured\n"
+
+
+def test_transport_failure_exits_loudly_instead_of_faking_an_empty_dump(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A2 (kwin_js swallowed loadScript failures into ""): the tool must exit 1
+    # with the error on stderr, never print the ran-and-captured-nothing line.
+    def unreachable() -> str:
+        raise recipe.KwinScriptError("e2e_kwin_js: loadScript failed")
+
+    monkeypatch.setattr(recipe, "dumpwins", unreachable)
+    with pytest.raises(SystemExit) as excinfo:
+        dumpwins.main()
+    assert excinfo.value.code == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "loadScript failed" in captured.err
