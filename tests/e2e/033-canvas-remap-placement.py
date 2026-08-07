@@ -17,18 +17,18 @@ Ported from tests/e2e/033-canvas-remap-placement.sh to latte_harness.recipe
 (BP-3, the bash-to-python migration's R10 dock-lifecycle recipe batch).
 dockSystemData carries fields the typed DockView model does not (screenId,
 edge, alignment, editMode, geometrySettled, type, relationship), so it is read
-as raw JSON - the same boundary the bash python one-liners used. A dbusreports
-refusal (a view without an accepted placement, transient during an edit-mode
-enter) maps to the pollable RecipeError, exactly as the retarget-cancel port
-did; the polling callers read it as a non-match, the settled-point callers let
-it surface. The coarse duplicateView / setViewEditMode / setViewPlacement
+as raw JSON via recipe.read_json - the same boundary the bash python
+one-liners used. A dbusreports refusal (a view without an accepted placement,
+transient during an edit-mode enter) raises the pollable DbusUnavailableError,
+exactly as the retarget-cancel port's refusal channel; the polling callers
+read it as a non-match, the settled-point callers let it surface. The coarse
+duplicateView / setViewEditMode / setViewPlacement
 actions stay busctl calls; the compositor canvas window is read through
 recipe.kwin_js, the same transient KWin script the bash e2e_kwin_js ran.
 """
 
 import contextlib
 import io
-import json
 import time
 from collections.abc import Iterator
 from typing import Any
@@ -56,14 +56,12 @@ _ALIGNMENT_VALUES = {
 
 def _snapshot_views() -> list[dict[str, Any]]:
     """dockSystemData's view list as raw JSON; a refused reply raises the pollable
-    RecipeError (the retarget-cancel refusal channel)."""
-    payload = recipe.json_payload("dockSystemData")
+    DbusUnavailableError (recipe.read_json's one refusal channel), and a parsed
+    snapshot without a view list the same pollable RecipeError shape."""
     try:
-        return json.loads(payload)["views"]
-    except json.JSONDecodeError, KeyError, TypeError:
-        raise recipe.RecipeError(
-            "dockSystemData refused or returned no JSON (view placement not accepted)"
-        ) from None
+        return recipe.read_json("dockSystemData")["views"]
+    except KeyError, TypeError:
+        raise recipe.RecipeError("dockSystemData snapshot carries no view list") from None
 
 
 def _edge_value(edge: str) -> int:

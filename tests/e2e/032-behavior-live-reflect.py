@@ -30,7 +30,6 @@ the editMode re-read maps to the empty-non-answer the bash swallowed.
 
 from __future__ import annotations
 
-import json
 import re
 import sys
 from collections.abc import Callable
@@ -82,8 +81,8 @@ def _or_absent(value: str) -> str:
 def _view_record_or_fail(view: int) -> dict[str, Any]:
     """The viewsData record for `view`, or the bash e2e_fail on absence / a
     refused reply (the terminal `|| e2e_fail "could not read viewsData ..."`)."""
-    with suppress(json.JSONDecodeError, KeyError, TypeError):
-        records: list[dict[str, Any]] = json.loads(recipe.json_payload("viewsData"))
+    with suppress(recipe.DbusUnavailableError, KeyError, TypeError):
+        records: list[dict[str, Any]] = recipe.read_json("viewsData")
         for record in records:
             if record["containmentId"] == view:
                 return record
@@ -95,8 +94,8 @@ def _edit_mode_now(view: int) -> str:
     refused or the view is absent (the bash lenient one-liner: a missing view is
     an empty dict, str('').lower() == '')."""
     try:
-        records: list[dict[str, Any]] = json.loads(recipe.json_payload("viewsData"))
-    except json.JSONDecodeError:
+        records: list[dict[str, Any]] = recipe.read_json("viewsData")
+    except recipe.DbusUnavailableError:
         return ""
     record = next((r for r in records if r.get("containmentId") == view), None)
     if record is None:

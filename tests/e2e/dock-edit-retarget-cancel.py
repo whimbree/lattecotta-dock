@@ -17,7 +17,6 @@ duplicateView / setViewEditMode actions stay busctl calls that fail loudly on a
 D-Bus error, matching the bash `e2e_call ... || e2e_fail`.
 """
 
-import json
 import subprocess
 import sys
 import time
@@ -43,22 +42,14 @@ def _latte_call(fail_message: str, *args: str) -> None:
 
 
 def _views() -> list[dict[str, Any]]:
-    """viewsData as raw JSON; a refused reply raises the pollable RecipeError.
+    """viewsData as raw JSON; a refused reply raises the pollable DbusUnavailableError.
 
-    dbusreports refuses the whole viewsData reply while any view lacks an
-    accepted placement (app/dbusreports.cpp, its qCritical boundary), which
-    happens transiently during an edit-mode enter. The bash one-liners exited
-    on that empty payload and every polling caller read the empty command
-    substitution as a non-match, so the refusal maps to RecipeError, the same
-    transient-non-answer channel the pollers here already catch.
+    editMode / isCloned / isClonedFrom are not in the typed View model, so this
+    reads recipe.read_json: a transient dbusreports refusal during an edit-mode
+    enter raises DbusUnavailableError, the RecipeError subclass the polling
+    callers here already catch.
     """
-    payload = recipe.json_payload("viewsData")
-    try:
-        return json.loads(payload)
-    except json.JSONDecodeError:
-        raise recipe.RecipeError(
-            "viewsData refused or returned no JSON (view placement not accepted)"
-        ) from None
+    return recipe.read_json("viewsData")
 
 
 def _view_edit_mode(view: int) -> str:
