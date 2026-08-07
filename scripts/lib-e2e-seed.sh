@@ -24,33 +24,3 @@ e2e_seed_default_config() {
     uv run --locked --project "$repo/harness" python -m latte_harness.seed default-config \
         "$repo" "$build" "$seeddir"
 }
-
-# _e2e_seed_stop_dock_process_group <repo> <group> [term attempts/delay]
-# [kill attempts/delay]: bounded, zombie-aware teardown for the setsid seed
-# dock, via the vehicle module's stop_process_group (the typed twin of the
-# package gate's transaction the bash reused). KCrash can leave the leader
-# STOPPED, so a leader-only SIGTERM+wait can never finish; the group transaction
-# escalates to SIGKILL on a bound.
-#
-# lib-installed-package-gate.sh is still sourced here so
-# latte_package_gate_process_group_has_live_members stays defined in the
-# caller's shell: the e2e-seed-cleanup selftest verifies teardown with it
-# right after calling this. That liveness poll is the lib's ONE remaining
-# function (BP-4b shed the rest with the selftest port); it retires when
-# that selftest is ported.
-_e2e_seed_stop_dock_process_group() {
-    local repo="$1" process_group="$2"
-    local term_attempts="${3:-25}" term_delay="${4:-0.2}"
-    local kill_attempts="${5:-25}" kill_delay="${6:-0.2}"
-
-    [[ "$process_group" =~ ^[1-9][0-9]*$ ]] || {
-        echo "e2e_seed_default_config: FAIL invalid seed dock process group '$process_group'" >&2
-        return 2
-    }
-    source "$repo/scripts/lib-installed-package-gate.sh" || return 2
-    uv run --locked --project "$repo/harness" python -m latte_harness.vehicle stop-group \
-        "$process_group" \
-        --term-attempts "$term_attempts" --term-delay "$term_delay" \
-        --kill-attempts "$kill_attempts" --kill-delay "$kill_delay" \
-        --label "nested seed dock process group"
-}

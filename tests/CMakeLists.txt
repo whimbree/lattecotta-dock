@@ -602,15 +602,6 @@ add_test(NAME linkedoperationstormmodeltest
         python3
         ${CMAKE_SOURCE_DIR}/tests/e2e/fixtures/fp4c/test_operation_model.py)
 
-# D233 (nested seed cleanup waited forever on a crash-stopped dock): reproduce
-# KCrash's stopped leader and require the shared seeder to escalate the entire
-# setsid group within a fixed deadline.
-add_test(NAME e2eseedcleanupselftest
-    COMMAND bash ${CMAKE_SOURCE_DIR}/tests/e2e-seed-cleanup-selftest.sh)
-set_tests_properties(e2eseedcleanupselftest PROPERTIES
-    ENVIRONMENT "REPO_ROOT=${CMAKE_SOURCE_DIR}"
-    TIMEOUT 10)
-
 # Dock identity and edit-session boundary wiring. The value-only action policy
 # and retarget generations have sanitized unit tests; this pins their use by
 # the runtime objects that need a complete Plasma shell to construct.

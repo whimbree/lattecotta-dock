@@ -19,6 +19,7 @@ import stat
 import subprocess
 import sys
 import time
+from contextlib import suppress
 from pathlib import Path
 
 import pytest
@@ -184,6 +185,24 @@ def _a_reaped_pgid() -> int:
     return proc.pid
 
 
+def _await_proc_state(pid: int, target: str, attempts: int = 500, delay: float = 0.01) -> None:
+    """Poll /proc/<pid>/stat until it reports `target`, or fail (bash's 'T' wait).
+
+    The retired selftest confirmed the fixture had truly reached the STOPPED
+    state before tearing it down, so the teardown was proven against a genuinely
+    stopped group and not a still-running one that merely ignores SIGTERM.
+    """
+    for _ in range(attempts):
+        try:
+            state = parse_proc_state(Path(f"/proc/{pid}/stat").read_text())
+        except OSError:
+            state = None
+        if state == target:
+            return
+        time.sleep(delay)
+    pytest.fail(f"process {pid} never reached state {target!r}")
+
+
 def test_group_live_status_live_then_gone() -> None:
     proc = _leader("print('ready', flush=True)\nimport time; time.sleep(60)")
     try:
@@ -221,28 +240,48 @@ def test_stop_process_group_terminates_on_sigterm() -> None:
 
 
 def test_stop_process_group_escalates_to_kill_on_stopped_term_ignoring_leader() -> None:
-    # The exact e2e-seed-cleanup-selftest scenario: a KCrash-style leader that
-    # ignores SIGTERM and is SIGSTOPped, so only the bounded SIGKILL clears it.
-    proc = _leader(
-        "import os, signal, time\n"
-        "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
-        "print('ready', flush=True)\n"
-        "os.kill(os.getpid(), signal.SIGSTOP)\n"
-        "time.sleep(60)\n"
+    # The typed port of the retired tests/e2e-seed-cleanup-selftest.sh (D233:
+    # the nested seed cleanup once waited forever on a KCrash-stopped dock). A
+    # setsid leader that ignores SIGTERM and SIGSTOPs itself is the crash-stopped
+    # process group; a leader-only SIGTERM+wait can never finish it, so only the
+    # bounded group transaction's escalation to SIGKILL clears it. Properties
+    # carried from the bash selftest (bash assertion -> pytest assertion):
+    #   fixture reaches state T (STOPPED)         -> _await_proc_state(pid, "T")
+    #   bounded teardown succeeds within deadline -> code == 0 and elapsed < 10
+    #   liveness poll then reports the group gone -> group_live_status == "gone"
+    # The child is a real process group in its own session (setsid), never the
+    # pytest process itself. Confirming state T first is what the earlier probe
+    # lacked: reading 'ready' printed BEFORE the SIGSTOP could race the teardown
+    # ahead of the stop, letting it pass against a still-running leader.
+    proc = subprocess.Popen(
+        [
+            sys.executable,
+            "-c",
+            "import os, signal, time\n"
+            "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
+            "os.kill(os.getpid(), signal.SIGSTOP)\n"
+            "time.sleep(60)\n",
+        ],
+        start_new_session=True,
     )
-    started = time.monotonic()
-    code = stop_process_group(
-        proc.pid,
-        "stopped group",
-        term_attempts=1,
-        term_delay=0.01,
-        kill_attempts=100,
-        kill_delay=0.01,
-    )
-    proc.wait()
-    assert code == 0
-    assert time.monotonic() - started < 10
-    assert group_live_status(proc.pid) == "gone"
+    try:
+        _await_proc_state(proc.pid, "T")
+        started = time.monotonic()
+        code = stop_process_group(
+            proc.pid,
+            "stopped seed dock group",
+            term_attempts=1,
+            term_delay=0.01,
+            kill_attempts=100,
+            kill_delay=0.01,
+        )
+        assert code == 0
+        assert time.monotonic() - started < 10
+        assert group_live_status(proc.pid) == "gone"
+    finally:
+        with suppress(ProcessLookupError):
+            os.killpg(proc.pid, signal.SIGKILL)
+        proc.wait(timeout=5)
 
 
 # ---- socket wait -----------------------------------------------------------
