@@ -13,16 +13,16 @@ Ported from tests/e2e/113-containment-focus-status-restoration.sh to
 latte_harness.recipe (BP-3, the bash-to-python migration's focus-restoration
 recipe wave R9). containmentAcceptsInput / keyboardNavigation /
 ownsPanelFocusSession are not in the typed View model, so viewsData is read as
-raw JSON, the same boundary the bash python one-liners used; a view that has
-transiently left a refused reply reads as the empty-string sentinel the wait
-loops treat as a non-match, exactly as the bash command substitution swallowed
-the crashed one-liner's empty output. The config backup/restore and the
+raw JSON via recipe.read_json, the same boundary the bash python one-liners
+used; a refused reply (recipe.DbusUnavailableError) reads as the empty
+sentinel the wait loops treat as a non-match, exactly as the bash command
+substitution swallowed the crashed one-liner's empty output. The config
+backup/restore and the
 fixture staging keep the byte-for-byte cp -a / diff -qr contract (subprocess),
 and the coarse setViewKeyboardNavigation action fails loudly on a D-Bus error.
 """
 
 import configparser
-import json
 import os
 import subprocess
 import sys
@@ -82,11 +82,11 @@ def _latte_call(fail_message: str, *args: str) -> None:
 
 
 def _views_raw() -> list[dict[str, Any]]:
-    """viewsData as raw JSON, or [] on a refused/empty reply (the bash crash-to-
+    """viewsData as raw JSON, or [] on a refused/failed reply (the bash crash-to-
     empty sentinel that the wait loops read as a non-match)."""
     try:
-        return json.loads(recipe.json_payload("viewsData"))
-    except json.JSONDecodeError:
+        return recipe.read_json("viewsData")
+    except recipe.DbusUnavailableError:
         return []
 
 
