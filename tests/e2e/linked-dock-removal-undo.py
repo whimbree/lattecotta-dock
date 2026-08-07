@@ -11,9 +11,10 @@ Ported from tests/e2e/linked-dock-removal-undo.sh to latte_harness.recipe
 (BP-3, the bash-to-python migration's R10 dock-lifecycle recipe batch).
 dockSystemData / viewAppletsData carry fields the typed models do not
 (relationship, originalDockId, linkedDockIds, runtimeViewId, inDelete, applet
-z), so they are read as raw JSON - the same boundary the bash python one-liners
-used; a polling waiter reads a refused or malformed reply as a non-match,
-exactly like the bash predicate exiting non-zero. The notification test service
+z), so they are read as raw JSON via recipe.read_json - the same boundary the
+bash python one-liners used; a polling waiter reads a refused reply (the
+pollable DbusUnavailableError) as a non-match, exactly like the bash predicate
+exiting non-zero. The notification test service
 is a real subprocess owning org.freedesktop.Notifications on the nested session
 bus; its DeliveryCount / LastActions / InvokeUndo methods are driven through
 gdbus, identical argv to the bash. The coarse
@@ -80,28 +81,33 @@ def _latte_call(fail_message: str, *args: str) -> None:
 
 def _snapshot() -> dict[str, Any]:
     """dockSystemData as a raw JSON dict (the bash snapshot)."""
-    return json.loads(recipe.json_payload("dockSystemData"))
+    return recipe.read_json("dockSystemData")
 
 
 def _applets(view: int) -> list[dict[str, Any]]:
     """viewAppletsData for a view as raw JSON (carries the applet z field)."""
-    return json.loads(recipe.json_payload("viewAppletsData", "u", str(view)))
+    return recipe.read_json("viewAppletsData", "u", str(view))
 
 
 def _wait_for_state(predicate: Callable[[dict[str, Any]], bool], label: str) -> dict[str, Any]:
     """Poll dockSystemData 160x0.25s until ``predicate`` holds; return the
-    matching snapshot. A refused or malformed reply (or a predicate lookup miss)
-    counts as a non-match, exactly like the bash python predicate exiting
-    non-zero. On timeout, print the last reply and fail with ``label``."""
-    current = ""
+    matching snapshot. A refused reply (DbusUnavailableError) or a predicate
+    lookup miss counts as a non-match, exactly like the bash python predicate
+    exiting non-zero. On timeout, print the last attempt and fail with ``label``."""
+    last_reply = "<no reply>"
     for _ in range(160):
-        current = recipe.json_payload("dockSystemData")
-        with contextlib.suppress(json.JSONDecodeError, KeyError, StopIteration, TypeError):
-            state = json.loads(current)
+        try:
+            state = _snapshot()
+        except recipe.DbusUnavailableError as exc:
+            last_reply = f"<{exc}>"
+            time.sleep(0.25)
+            continue
+        last_reply = json.dumps(state)
+        with contextlib.suppress(KeyError, StopIteration, TypeError):
             if predicate(state):
                 return state
         time.sleep(0.25)
-    print(f"last dockSystemData: {current}", file=sys.stderr, flush=True)
+    print(f"last dockSystemData: {last_reply}", file=sys.stderr, flush=True)
     recipe.fail(label)
 
 
@@ -231,7 +237,7 @@ def main() -> None:
             )
 
         state = _snapshot()
-        screens = json.loads(recipe.json_payload("screensData"))
+        screens = recipe.read_json("screensData")
         views = state["views"]
         secondary = next((s for s in screens if s["isActive"] and not s["isPrimary"]), None)
         if len(views) != 1 or views[0]["relationship"] != "independent" or secondary is None:
