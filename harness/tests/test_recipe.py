@@ -377,6 +377,89 @@ def test_dock_stop_reaps_a_child_dock(tmp_path: Path, monkeypatch: pytest.Monkey
     assert child.poll() is not None  # reaped, not left a zombie
 
 
+# ---- read_json: the one refusal channel (harness audit A4) ------------------
+
+
+def _busctl_reply(
+    monkeypatch: pytest.MonkeyPatch, returncode: int, stdout: str
+) -> dict[str, object]:
+    """Fake the busctl transport with a fixed reply; returns the argv capture."""
+    seen: dict[str, object] = {}
+
+    def fake(args: list[str], *, forward_stderr: bool) -> subprocess.CompletedProcess[str]:
+        seen["args"] = args
+        return subprocess.CompletedProcess(args, returncode, stdout, "")
+
+    monkeypatch.setattr(recipe, "_run_busctl", fake)
+    return seen
+
+
+def test_read_json_parses_a_delivered_reply(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen = _busctl_reply(monkeypatch, 0, 's "[{\\"a\\":1}]"\n')
+    assert recipe.read_json("viewAppletsData", "u", "16") == [{"a": 1}]
+    # The addressing triple plus the method and its signature args, in order.
+    assert seen["args"] == [
+        "org.kde.lattedock",
+        "/Latte",
+        "org.kde.LatteDock",
+        "viewAppletsData",
+        "u",
+        "16",
+    ]
+
+
+def test_read_json_raises_unavailable_on_a_busctl_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _busctl_reply(monkeypatch, 1, "")
+    with pytest.raises(recipe.DbusUnavailableError):
+        recipe.read_json("viewsData")
+
+
+def test_read_json_raises_unavailable_on_a_refused_empty_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The dbusreports refusal arrives as `s ""`: busctl succeeds, the payload
+    # is empty. That is the SAME event as a failed call to a recipe.
+    _busctl_reply(monkeypatch, 0, 's ""\n')
+    with pytest.raises(recipe.DbusUnavailableError, match="refused or returned no JSON"):
+        recipe.read_json("viewsData")
+
+
+def test_read_json_names_a_nonempty_unparseable_reply(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Garbage that actually arrived is named in the message, never silently
+    # classified as a mere refusal.
+    _busctl_reply(monkeypatch, 0, 's "not-json"\n')
+    with pytest.raises(recipe.DbusUnavailableError, match="not-json"):
+        recipe.read_json("viewsData")
+
+
+def test_dbus_unavailable_is_a_recipe_error_so_pollers_poll_through() -> None:
+    # Existing `except RecipeError` pollers must treat the refusal as their
+    # transient non-answer channel without any edit.
+    assert issubclass(recipe.DbusUnavailableError, recipe.RecipeError)
+
+
+def test_a_refused_reply_never_reaches_the_typed_validators(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Mutation-grade A4 negative: views() on a refused reply must raise the
+    # refusal error, NOT a misleading pydantic ValidationError about "".
+    _busctl_reply(monkeypatch, 0, 's ""\n')
+    with pytest.raises(recipe.DbusUnavailableError):
+        recipe.views()
+
+
+def test_typed_readbacks_still_validate_parsed_garbage_loudly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Malformed-but-parsed content is not a refusal: pydantic stays the loud
+    # layer and names the offending field.
+    _busctl_reply(monkeypatch, 0, 's "[{\\"containmentId\\":\\"x\\"}]"\n')
+    with pytest.raises(ValidationError):
+        recipe.views()
+
+
 # ---- try_json_payload / is_running: the live-tool boundary helpers ----------
 
 
@@ -389,6 +472,15 @@ def test_try_json_payload_returns_none_on_a_busctl_failure(
         return subprocess.CompletedProcess(args, 1, "", "call failed")
 
     monkeypatch.setattr(recipe, "_run_busctl", failed)
+    assert recipe.try_json_payload("dockSystemData") is None
+
+
+def test_try_json_payload_returns_none_on_a_refused_empty_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The refusal arm mirrors read_json's DbusUnavailableError: an empty reply
+    # is a non-answer, so it can never reach a validator as "".
+    _busctl_reply(monkeypatch, 0, 's ""\n')
     assert recipe.try_json_payload("dockSystemData") is None
 
 

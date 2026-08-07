@@ -33,12 +33,17 @@ Failure discipline (matching lib.sh and the failures-and-root-cause rule):
   the bash message verbatim; ``run()`` turns an escaped RecipeError into that
   message on stderr and a nonzero exit (no traceback), matching the bash
   ``sys.exit(msg)`` those helpers used.
+- A read the dock refuses or fails raises ``DbusUnavailableError`` - the ONE
+  refusal channel (``read_json`` and the typed readbacks route through it), a
+  RecipeError subclass so pollers treat it as "no answer yet" and strict sites
+  fail loudly through ``run()``.
 - A malformed readback surfaces as a pydantic ``ValidationError`` naming the
   offending field - loud, at the boundary, never a silently wrong value.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -49,7 +54,7 @@ from collections.abc import Callable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import NoReturn
+from typing import Any, NoReturn
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
@@ -78,6 +83,30 @@ class RecipeError(RuntimeError):
     ``run()`` prints the message to stderr and exits 1, reproducing the bash
     ``sys.exit(msg)`` those resolve/coverage helpers used (loud, nonzero, no
     traceback).
+    """
+
+
+class DbusUnavailableError(RecipeError):
+    """A lattedock read surface gave no answer that can be parsed.
+
+    The ONE refusal channel (harness audit A4: the same dock-side event
+    previously surfaced four different ways). Two arms, one meaning -
+    "nothing can be read right now":
+
+    - the busctl call itself failed (dock not up, mid-restart, bus name
+      unowned);
+    - the reply carries no JSON: dbusreports refuses a WHOLE reply while its
+      data is not trustworthy - e.g. viewsData while any view lacks an
+      accepted placement (app/dbusreports.cpp, its qCritical boundary), a
+      transient state during startup, edit-mode enters and view duplication -
+      and that refusal arrives as an empty payload.
+
+    Subclasses RecipeError deliberately: a poller that treats "no answer yet"
+    as a non-match catches it exactly where it caught RecipeError and keeps
+    polling; a strict site lets it escape to ``run()``, which reports it
+    loudly. Content that PARSED but has the wrong shape is never this error -
+    it reaches the typed validators (pydantic) or the caller's own shape
+    checks, the loud layer for garbage.
     """
 
 
@@ -201,50 +230,89 @@ def _unescape_busctl_json(busctl_stdout: str) -> str:
 
 
 def json_payload(method: str, *args: str) -> str:
-    """e2e_json: a read surface's payload as plain JSON text (byte-identical)."""
+    """e2e_json: a read surface's payload as plain JSON text (byte-identical).
+
+    The raw-text escape hatch: a failed or refused call collapses to "".
+    Recipes want ``read_json`` (the one loud refusal channel) or the typed
+    readbacks; this stays for the sites that need the payload TEXT itself -
+    artifact writers preserving the delivered bytes, raw diagnostic dumps, and
+    oracle stdin feeds whose empty input is the established non-answer the
+    oracle already refuses.
+    """
     return _unescape_busctl_json(call(method, *args))
 
 
 def try_json_payload(method: str, *args: str) -> str | None:
-    """e2e_json under `set -o pipefail`: the payload, or None when busctl fails.
+    """The delivered payload text, or None when no answer arrived.
 
-    The bash `views="$(e2e_json ...)" || { ...query failed... }` distinguishes a
-    failed D-Bus call (busctl exits non-zero, the `||` branch fires) from a
-    delivered-but-malformed reply (which flows on to the JSON parse and crashes
-    there). Callers that must react to the TRANSPORT failure specifically - the
-    presentation watcher's per-surface "query failed" diagnostics - need that
-    boundary, which json_payload collapses to an empty string. This exposes it:
-    None means the call itself failed; a returned string is unescaped exactly as
-    json_payload does, malformed content and all, so the parse stays the loud
+    The optional-style twin of ``read_json`` for callers that must preserve
+    the DELIVERED BYTES (the presentation watcher writes the failing payload
+    as an artifact, so a re-serialization would not be evidence). None covers
+    both no-answer arms read_json raises DbusUnavailableError for - a failed
+    busctl call and the refused, empty reply - so a refusal can never reach a
+    JSON parse or a validator as "". Delivered text is unescaped exactly as
+    json_payload does, malformed content and all; the parse stays the loud
     layer for garbage.
     """
     result = _run_busctl([*_LATTE_OBJECT, method, *args], forward_stderr=True)
     if result.returncode != 0:
         return None
-    return _unescape_busctl_json(result.stdout)
+    payload = _unescape_busctl_json(result.stdout)
+    return payload or None
+
+
+def read_json(method: str, *args: str) -> Any:
+    """Read a lattedock JSON surface into parsed Python data.
+
+    The recipe-facing read: raises DbusUnavailableError (the one refusal
+    channel - its docstring carries the dbusreports mechanism, documented
+    once) when busctl fails or the reply carries no parseable JSON; returns
+    the ``json.loads`` result otherwise. Returns ``Any`` on purpose: this is
+    the raw boundary for fields the typed readbacks do not model, and callers
+    index the result exactly as they would a json.loads result. Prefer the
+    typed readbacks where the fields exist.
+    """
+    result = _run_busctl([*_LATTE_OBJECT, method, *args], forward_stderr=True)
+    if result.returncode != 0:
+        raise DbusUnavailableError(f"{method}: busctl call failed (dock unreachable?)")
+    payload = _unescape_busctl_json(result.stdout)
+    try:
+        return json.loads(payload)
+    except json.JSONDecodeError:
+        # A refusal prints nothing, so this arm is normally the empty reply; a
+        # NON-empty unparseable reply is named in the message rather than
+        # silently classified (never swallow what actually arrived).
+        detail = f" (unparseable reply: {payload!r})" if payload else ""
+        raise DbusUnavailableError(f"{method} refused or returned no JSON{detail}") from None
 
 
 # ---- typed readbacks (the pydantic boundary) -------------------------------
 
 
 def views() -> list[View]:
-    """viewsData, validated into typed View records."""
-    return _VIEWS.validate_json(json_payload("viewsData"))
+    """viewsData, validated into typed View records.
+
+    Every typed readback routes through ``read_json``: a refused or failed
+    read raises DbusUnavailableError - never a misleading ValidationError
+    about "" - while a delivered-but-misshapen reply still fails pydantic
+    validation loudly, naming the offending field.
+    """
+    return _VIEWS.validate_python(read_json("viewsData"))
 
 
 def view_applets(containment_id: int) -> list[Applet]:
     """viewAppletsData for a view, validated into typed Applet records."""
-    return _APPLETS.validate_json(json_payload("viewAppletsData", "u", str(containment_id)))
+    return _APPLETS.validate_python(read_json("viewAppletsData", "u", str(containment_id)))
 
 
 def view_tasks(containment_id: int) -> list[Task]:
     """viewTasksData for a view, validated into typed Task records."""
-    return _TASKS.validate_json(json_payload("viewTasksData", "u", str(containment_id)))
+    return _TASKS.validate_python(read_json("viewTasksData", "u", str(containment_id)))
 
 
 def dock_system_data() -> DockSystemData:
     """dockSystemData, validated into the typed snapshot."""
-    return DockSystemData.model_validate_json(json_payload("dockSystemData"))
+    return DockSystemData.model_validate(read_json("dockSystemData"))
 
 
 def _find_view(containment_id: int) -> View | None:

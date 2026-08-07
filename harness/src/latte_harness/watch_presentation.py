@@ -190,9 +190,10 @@ def _sample_view(
     """One view's coverage state, or None after preserving a failure (exit 1).
 
     Queries this view's applets, runs the composition oracle, and returns the
-    coverage line. A transport failure or an escaped applet preserves the exact
-    failing payloads and diagnostic (the bash's two per-view failure branches)
-    and returns None to signal the caller to stop with EXIT_INVARIANT.
+    coverage line. A failed or refused query (try_json_payload's None) or an
+    escaped applet preserves the exact failing payloads and diagnostic (the
+    bash's two per-view failure branches) and returns None to signal the
+    caller to stop with EXIT_INVARIANT.
     """
     applets_json = recipe.try_json_payload("viewAppletsData", "u", str(view_id))
     if applets_json is None:
@@ -212,8 +213,10 @@ def watch(args: WatchArgs, repo: Path) -> int:
     """Sample the live dock for ``args.duration`` seconds; return the exit verdict.
 
     Reuses the typed recipe API for every live read: the lifecycle guard, the
-    per-surface query (transport failure distinguished by try_json_payload), and
-    the composition oracle. The pure decision logic (view selection, transition
+    per-surface query (a failed or refused read is try_json_payload's None, so
+    a dbusreports refusal exits as "query failed", never a ValidationError
+    about an empty payload), and the composition oracle. The pure decision
+    logic (view selection, transition
     counting) is delegated to the tested helpers above; this function is the I/O
     wiring the nested vehicle and the live session exercise.
     """
