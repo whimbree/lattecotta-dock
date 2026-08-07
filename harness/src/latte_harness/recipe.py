@@ -559,6 +559,23 @@ def dock_stop(timeout: int = 25) -> bool:
 
 # ---- kwin scripting and window dumps ---------------------------------------
 
+
+class KwinScriptError(RecipeError):
+    """The transient-KWin-script transport failed; no script output exists.
+
+    Raised when loadScript or the script run call is refused (harness audit
+    A2: this failure previously collapsed into "", the same value as "script
+    ran and printed nothing", and empty-check consumers passed vacuously -
+    a missing-fixture precondition or a gone-after-teardown wait would
+    "succeed" with the compositor unreachable). "" from kwin_js stays the
+    legitimate ran-and-printed-nothing result; this error means the script
+    never executed, so nothing about compositor state can be concluded.
+    Subclasses RecipeError so run() reports it loudly at strict sites and
+    an existing poller's broad catch keeps polling (the old ""-as-non-match
+    shape) rather than gaining a new crash channel.
+    """
+
+
 _DUMPWINS_JS = (
     "for (const w of workspace.windowList()) {\n"
     '        print("@TAG@|DUMPWIN|" + w.resourceClass + "|" + w.caption + "|" '
@@ -569,16 +586,27 @@ _DUMPWINS_JS = (
 )
 
 
-def _busctl_bg(args: Sequence[str], *, quiet: bool) -> None:
-    """Run a busctl call for effect (run/stop/unload); best-effort when quiet."""
-    stderr = subprocess.DEVNULL if quiet else None
+def _busctl_bg(args: Sequence[str]) -> None:
+    """Run a best-effort busctl call for effect (the stop/unload cleanups).
+
+    Deliberately quiet and unchecked: these run after collection, so a failure
+    here cannot fake or lose script output; the checked calls (loadScript, run)
+    have their own raising helpers above.
+    """
     subprocess.run(
-        ["busctl", "--user", "call", *args], stdout=subprocess.DEVNULL, stderr=stderr, check=False
+        ["busctl", "--user", "call", *args],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
     )
 
 
 def _kwin_load_script(js: str, tag: str) -> str:
-    """loadScript, returning the script number (busctl reply field 2), or ''."""
+    """loadScript, returning the script number (busctl reply field 2).
+
+    Raises KwinScriptError when the call fails or the reply carries no script
+    number, so an unloaded script can never read as an empty capture.
+    """
     result = subprocess.run(
         [
             "busctl",
@@ -599,7 +627,30 @@ def _kwin_load_script(js: str, tag: str) -> str:
     if result.stderr:
         sys.stderr.write(result.stderr)
     fields = result.stdout.split()
-    return fields[1] if len(fields) >= 2 else ""
+    if result.returncode != 0 or len(fields) < 2:
+        raise KwinScriptError("e2e_kwin_js: loadScript failed")
+    return fields[1]
+
+
+def _kwin_run_script(number: str) -> None:
+    """The script's run call; raises KwinScriptError on refusal (a script that
+    never ran must not read as ran-and-printed-nothing). stderr is forwarded,
+    as the old best-effort call inherited it."""
+    result = subprocess.run(
+        [
+            "busctl",
+            "--user",
+            "call",
+            "org.kde.KWin",
+            f"/Scripting/Script{number}",
+            "org.kde.kwin.Script",
+            "run",
+        ],
+        stdout=subprocess.DEVNULL,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise KwinScriptError("e2e_kwin_js: script run call failed")
 
 
 def _tag_lines(text: str, tag: str) -> str:
@@ -645,6 +696,12 @@ def kwin_js(body: str, collection_delay: float = 0.5) -> str:
     run cannot bleed into the result; the 0.5s default delay lets the script
     flush before it is stopped. Nested reads the vehicle kwin's captured log;
     live reads the session journal (the mode branch the bash carried).
+
+    A loadScript/run transport failure raises KwinScriptError instead of
+    returning "" (harness audit A2): "" is reserved for the legitimate
+    ran-and-printed-nothing result, so an empty-check consumer can trust it
+    means "the script ran and matched no window", never "the compositor
+    scripting surface was unreachable".
     """
     mode = os.environ.get("E2E_MODE", "")
     tag = f"E2EJS-{os.getpid()}-{time.time_ns()}"
@@ -654,20 +711,16 @@ def kwin_js(body: str, collection_delay: float = 0.5) -> str:
     mark = time.time()
     try:
         num = _kwin_load_script(js, tag)
-        if not num:
-            print("e2e_kwin_js: loadScript failed", file=sys.stderr, flush=True)
-            return ""
-        _busctl_bg(
-            ["org.kde.KWin", f"/Scripting/Script{num}", "org.kde.kwin.Script", "run"], quiet=False
-        )
-        time.sleep(collection_delay)
-        _busctl_bg(
-            ["org.kde.KWin", f"/Scripting/Script{num}", "org.kde.kwin.Script", "stop"], quiet=True
-        )
-        _busctl_bg(
-            ["org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "unloadScript", "s", tag],
-            quiet=True,
-        )
+        try:
+            _kwin_run_script(num)
+            time.sleep(collection_delay)
+        finally:
+            # Stop/unload stay best-effort AND run even when the run call
+            # raised: a loaded-but-refused script must not leak into kwin.
+            _busctl_bg(["org.kde.KWin", f"/Scripting/Script{num}", "org.kde.kwin.Script", "stop"])
+            _busctl_bg(
+                ["org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "unloadScript", "s", tag]
+            )
     finally:
         with suppress(OSError):
             os.unlink(js)

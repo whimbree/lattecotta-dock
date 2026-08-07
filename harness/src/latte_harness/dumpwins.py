@@ -21,6 +21,8 @@ the thin front door that adds only the bash's empty-result fallback.
 
 from __future__ import annotations
 
+import sys
+
 from latte_harness import recipe
 
 
@@ -32,8 +34,18 @@ def main() -> None:
     matched. recipe.dumpwins() returns those same lines joined (no trailing
     newline) or "" when none were captured, so print() reproduces both the
     populated dump and the fallback exactly.
+
+    Since kwin_js raises on a loadScript/run transport failure (harness audit
+    A2), the fallback line now genuinely means "the script ran and nothing was
+    captured" - zero mapped windows, or output not yet flushed to the log; an
+    unreachable compositor scripting surface exits loudly below instead of
+    masquerading as an empty dump.
     """
-    dump = recipe.dumpwins()
+    try:
+        dump = recipe.dumpwins()
+    except recipe.RecipeError as err:
+        print(str(err), file=sys.stderr, flush=True)
+        raise SystemExit(1) from err
     print(dump if dump else "no output captured")
 
 

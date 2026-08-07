@@ -22,12 +22,12 @@ preserved, and the exec bit stays 100755 (D273).
 
 One structurally-unreachable bash guard is dropped as dead in Python: the
 "empty-area point is incomplete" check (empty_area_point returns two ints or
-None). read_fixture_count's status/numeric refusals are dropped on a weaker
-footing: a KWin loadScript failure IS reachable and reads as count 0 (fixture
-absent) here, mitigated by recipe.kwin_js printing its own loud
-"e2e_kwin_js: loadScript failed" diagnostic at the shared boundary every
-recipe inherits - a loud symptom, not a loud refusal, recorded as the
-deviation it is.
+None). read_fixture_count's status/numeric refusals are dropped for good: a
+KWin loadScript/run failure raises recipe.KwinScriptError at the shared
+boundary (harness audit A2), so a count of 0 can only mean the fixture window
+is genuinely absent, never an unreachable compositor scripting surface - the
+loud-symptom-not-loud-refusal deviation this paragraph used to record is
+retired.
 """
 
 from __future__ import annotations
