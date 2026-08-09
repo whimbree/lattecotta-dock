@@ -811,8 +811,7 @@ void Effects::updateEffects()
         } else if (m_panelBackgroundSvg) {
             const QVariant maskProperty =
                 m_panelBackgroundSvg->property("mask");
-            if (static_cast<QMetaType::Type>(maskProperty.type())
-                == QMetaType::QRegion) {
+            if (maskProperty.typeId() == QMetaType::QRegion) {
                 localShape = maskProperty.value<QRegion>();
             }
         }
