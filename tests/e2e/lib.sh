@@ -2,8 +2,13 @@
 # SPDX-FileCopyrightText: 2026 Bree Spektor
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# Recipe helper library for the e2e suite. Sourced by tests/e2e/*.sh AND by
-# scripts/run-e2e.sh itself (single implementation of the dock lifecycle).
+# Recipe helper library for the e2e suite. Sourced by the four defect-blocked
+# bash recipes (040-preview-tooltip-text, 061-partial-reservation-placement,
+# 070-maximize-length-mask, duplicate-dock-independent) AND by the typed runner
+# latte_harness.e2e_runner, whose _lib_sh_call runs the dock-lifecycle helpers
+# (e2e_dock_start/e2e_dock_stop) in a bash subprocess - one shared
+# implementation of the dock lifecycle. The bulk of the suite is typed Python
+# recipes now; the typed twin of every helper here lives in latte_harness.recipe.
 #
 # Contract: the driver exports the E2E_* variables and, in nested mode, has
 # already switched the AMBIENT environment onto the nested session (private

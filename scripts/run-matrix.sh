@@ -3,14 +3,13 @@
 # SPDX-FileCopyrightText: 2026 Bree Spektor
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# Front door for the e2e interaction MATRIX (P0 / C-I1). The reusable driver
-# and the abort backbone live in tests/e2e/matrix/matrix-lib.sh; the fixture
-# generator in latte_harness.matrix_fixture (harness/, run via uv);
-# scenarios are ordinary e2e recipes
-# (tests/e2e/*.sh) that source matrix-lib.sh and call matrix_scenario_commit /
-# matrix_scenario_abort. This script only guarantees a CLEAN hermetic seed and
-# hands the recipes to scripts/run-e2e.sh, which owns the one nested-vehicle
-# bring-up - there is no second compositor implementation here.
+# Front door for the e2e interaction MATRIX (P0 / C-I1). The reusable driver,
+# the abort backbone and the fixture generator now live in the typed harness
+# (latte_harness.matrix and latte_harness.matrix_fixture, harness/, run via uv);
+# scenarios are typed e2e recipes (tests/e2e/*.py) that call the matrix
+# scenario_commit / scenario_abort API. This script only guarantees a CLEAN
+# hermetic seed and hands the recipes to scripts/run-e2e.sh, which owns the one
+# nested-vehicle bring-up - there is no second compositor implementation here.
 #
 #   scripts/run-matrix.sh                       # run the harness self-test
 #   scripts/run-matrix.sh <recipe> [recipe...]  # run named matrix recipes
