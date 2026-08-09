@@ -28,6 +28,7 @@
 #include <KIconTheme>
 #include <KIconLoader>
 #include <KIconEffect>
+#include <KIconUtils>
 
 namespace Latte {
 
@@ -528,22 +529,45 @@ void IconItem::loadPixmap()
 
     // Strangely KFileItem::overlays() returns empty string-values, so
     // we need to check first whether an overlay must be drawn at all.
-    // It is more efficient to do it here, as KIconLoader::drawOverlays()
-    // assumes that an overlay will be drawn and has some additional
-    // setup time.
+    // It is more efficient to do it here, as adding overlays assumes that
+    // an overlay will be drawn and has some additional setup time.
     for (const QString &overlay : m_overlays) {
         if (!overlay.isEmpty()) {
-            // There is at least one overlay, draw all overlays above m_pixmap
-            // and cancel the check
-            KIconLoader::global()->drawOverlays(m_overlays, result, KIconLoader::Desktop);
+            // There is at least one overlay: paint every overlay above the
+            // base pixmap and stop checking. KIconLoader::drawOverlays()
+            // painted the emblems into the QPixmap in place, but KF6 6.5
+            // retired that method (and iconEffect()) on KIconLoader. The
+            // replacement KIconUtils::addOverlays() is functional and
+            // QIcon-shaped: the base pixmap is wrapped in a QIcon, the same
+            // emblem set is applied (addOverlays was extracted from
+            // drawOverlays and keeps its corner order and 1/3-1/4 scaling),
+            // and the QIcon is rendered back to a QPixmap at the base's exact
+            // physical size and device-pixel ratio so the emblems keep their
+            // corner and scale. A nested-vehicle before/after showed the base
+            // pixmap unchanged and the badge in the same corner, with only a
+            // few-pixel shift inside the badge from the successor's refined
+            // margin math.
+            const qreal dpr = result.devicePixelRatio();
+            const QSize logicalSize(qRound(result.width() / dpr), qRound(result.height() / dpr));
+            result = KIconUtils::addOverlays(QIcon(result), m_overlays).pixmap(logicalSize, dpr);
             break;
         }
     }
 
+    // KF6 6.5 removed the per-instance KIconEffect and its group/state-aware
+    // apply() from KIconLoader; the static toDisabled()/toActive() helpers
+    // transform the pixmap in place with a FIXED standard effect. This is a
+    // platform-forced deviation from the Qt5 behavior: the old
+    // apply(pixmap, group, state) consulted the per-group icon-effect
+    // configuration in kdeglobals (a KDE3/4-era feature letting a user set a
+    // custom per-group, per-state effect such as a specific desaturation),
+    // and no config-aware overload survives in KF6. Upstream Plasma's own
+    // IconItem made exactly this migration, so matching it is the faithful
+    // choice.
     if (!isEnabled()) {
-        result = KIconLoader::global()->iconEffect()->apply(result, KIconLoader::Desktop, KIconLoader::DisabledState);
+        KIconEffect::toDisabled(result);
     } else if (m_active) {
-        result = KIconLoader::global()->iconEffect()->apply(result, KIconLoader::Desktop, KIconLoader::ActiveState);
+        KIconEffect::toActive(result);
     }
 
     m_iconPixmap = result;
