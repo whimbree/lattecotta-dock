@@ -320,7 +320,7 @@ void ContextMenuLayerQuickItem::mousePressEvent(QMouseEvent *event)
     //in .exec before oxygen can polish it and set the following attribute
     desktopMenu->setAttribute(Qt::WA_TranslucentBackground);
     //end workaround
-    QPoint globalPos = event->globalPos();
+    QPoint globalPos = event->globalPosition().toPoint();
     desktopMenu->adjustSize();
 
     QRect popUpRect(globalPos.x(), globalPos.y(), desktopMenu->width(), desktopMenu->height());

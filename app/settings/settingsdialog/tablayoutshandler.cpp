@@ -831,7 +831,7 @@ void TabLayouts::onCurrentPageChanged()
 
 void TabLayouts::onDragEnterEvent(QDragEnterEvent *event)
 {
-    if (!isHoveringLayoutsTable(event->pos())) {
+    if (!isHoveringLayoutsTable(event->position().toPoint())) {
         return;
     }
 
@@ -846,7 +846,7 @@ void TabLayouts::onDragLeaveEvent(QDragLeaveEvent *event)
 
 void TabLayouts::onDragMoveEvent(QDragMoveEvent *event)
 {
-    if (!isHoveringLayoutsTable(event->pos())) {
+    if (!isHoveringLayoutsTable(event->position().toPoint())) {
         event->ignore();
         m_ui->layoutsView->dragLeft();
         return;
@@ -857,7 +857,7 @@ void TabLayouts::onDragMoveEvent(QDragMoveEvent *event)
 
 void TabLayouts::onDropEvent(QDropEvent *event)
 {
-    if (!isHoveringLayoutsTable(event->pos())) {
+    if (!isHoveringLayoutsTable(event->position().toPoint())) {
         event->ignore();
         m_ui->layoutsView->dragLeft();
         return;
