@@ -375,11 +375,13 @@ void DropClassifierTest::dragMoveRouting_table_data()
     //! unreachable for external drags until something sets ignoredItem;
     //! hover clears on dragLeave instead
     QTest::newRow("external drag over empty space suppresses (null==null)")
-            << Snapshot{.aboveIsIgnored = true, .positionInTarget = {10, 0}, .itemStep = 24}
+            << Snapshot{.dragSource = std::nullopt, .above = std::nullopt, .aboveIsIgnored = true,
+                        .positionInTarget = {10, 0}, .itemStep = 24}
             << Action::SuppressRepeatTarget;
 
     QTest::newRow("external drag still over the ignored item suppresses")
-            << Snapshot{.above = item(2, false), .hasIgnoredItem = true, .aboveIsIgnored = true,
+            << Snapshot{.dragSource = std::nullopt, .above = item(2, false),
+                        .hasIgnoredItem = true, .aboveIsIgnored = true,
                         .positionInTarget = {50, 0}, .itemStep = 24}
             << Action::SuppressRepeatTarget;
 
@@ -409,7 +411,7 @@ void DropClassifierTest::dragMoveRouting_table_data()
                         //! above == ignoredItem is false: above is null, ignored... also null?
                         //! no - this row has an internal drag, branch (A) needs !dragSource;
                         //! aboveIsIgnored true (both null) is consistent AND reachable
-                        .aboveIsIgnored = true, .sortIsManual = true,
+                        .above = std::nullopt, .aboveIsIgnored = true, .sortIsManual = true,
                         .positionInTarget = {100, 0}, .itemStep = 24}
             << Action::ReorderDragSource;
 
@@ -420,8 +422,9 @@ void DropClassifierTest::dragMoveRouting_table_data()
 
     //! insertAt resolves to the source's own index -> no move
     QTest::newRow("stripe answer equal to own index keeps order")
-            << Snapshot{.dragSource = internalDrag(4, false, false), .aboveIsIgnored = true,
-                        .sortIsManual = true, .positionInTarget = {100, 0}, .itemStep = 24}
+            << Snapshot{.dragSource = internalDrag(4, false, false), .above = std::nullopt,
+                        .aboveIsIgnored = true, .sortIsManual = true,
+                        .positionInTarget = {100, 0}, .itemStep = 24}
             << Action::KeepOrder;
 
     //! ignore bookkeeping present: the reorder branch is gated off and
@@ -438,11 +441,12 @@ void DropClassifierTest::dragMoveRouting_table_data()
             << Action::None;
 
     QTest::newRow("external drag entering a new item hovers it")
-            << Snapshot{.above = item(2, false), .positionInTarget = {50, 0}, .itemStep = 24}
+            << Snapshot{.dragSource = std::nullopt, .above = item(2, false),
+                        .positionInTarget = {50, 0}, .itemStep = 24}
             << Action::HoverAbove;
 
     QTest::newRow("external drag still over the hovered item idles")
-            << Snapshot{.above = item(2, false), .aboveIsHovered = true,
+            << Snapshot{.dragSource = std::nullopt, .above = item(2, false), .aboveIsHovered = true,
                         .positionInTarget = {50, 0}, .itemStep = 24}
             << Action::None;
 
@@ -450,7 +454,8 @@ void DropClassifierTest::dragMoveRouting_table_data()
     //! (dragSource just cleared mid-gesture) while the pointer sits over
     //! empty space that is NOT the ignored item
     QTest::newRow("stale ignore bookkeeping over empty space clears hover")
-            << Snapshot{.hasIgnoredItem = true, .positionInTarget = {10, 0}, .itemStep = 24}
+            << Snapshot{.dragSource = std::nullopt, .above = std::nullopt, .hasIgnoredItem = true,
+                        .positionInTarget = {10, 0}, .itemStep = 24}
             << Action::ClearHover;
 }
 
@@ -481,7 +486,7 @@ void DropClassifierTest::dragMoveRouting_reorderAlwaysCarriesTarget()
 
     const DropClassifier::TasksDragMoveSnapshot empty{
         .dragSource = DropClassifier::DragSourceState{.itemIndex = 0},
-        .aboveIsIgnored = true, .sortIsManual = true,
+        .above = std::nullopt, .aboveIsIgnored = true, .sortIsManual = true,
         .positionInTarget = {100, 0}, .itemStep = 24};
     //! ceil(100/24)-1 == 4
     const auto emptyMove = DropClassifier::decideTasksDragMove(empty).moveTo;
