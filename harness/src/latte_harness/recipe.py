@@ -44,6 +44,7 @@ Failure discipline (matching lib.sh and the failures-and-root-cause rule):
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import re
@@ -52,12 +53,14 @@ import sys
 import tempfile
 import time
 from collections.abc import Callable, Sequence
-from contextlib import suppress
+from contextlib import redirect_stderr, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, NoReturn
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
+
+from latte_harness import proc
 
 # The addressing triple every lattedock read/action uses (the bash e2e_call).
 _LATTE_OBJECT = ("org.kde.lattedock", "/Latte", "org.kde.LatteDock")
@@ -443,14 +446,93 @@ def run(body: Callable[[], None]) -> NoReturn:
     raise SystemExit(0)
 
 
+def worsen_status_on_cleanup_failure(status: int, cleanup_failed: bool) -> int:
+    """The common teardown-status rule: a failed cleanup worsens a SUCCESS, never masks a failure.
+
+    A recipe whose success status is 0 folds its cleanup outcome into the exit code
+    with this: a body that succeeded (status 0) but left residue fails (1); a body
+    that already failed (nonzero) keeps its own code - a cleanup success must never
+    hide it, and a second failure must not relabel it. This is the never-swallow
+    rule applied to teardown: a stranded fixture fails a passing recipe, and a real
+    body failure keeps its own code. The pure storm/topology cleanup cores apply
+    the identical rule internally (they also own an acceptance/ordering decision),
+    so they are handed to ``run_with_cleanup`` directly rather than through this
+    helper; a recipe whose success status is NONZERO (an xfail signature) also
+    cannot use this and states its own policy in its cleanup callable.
+    """
+    if cleanup_failed and status == 0:
+        return 1
+    return status
+
+
+def run_with_cleanup(
+    body: Callable[[], int | None],
+    cleanup: Callable[[int], int],
+    *,
+    install_signal_exits: bool = True,
+) -> NoReturn:
+    """Run a recipe ``body`` under the shared teardown lifecycle, run ``cleanup``, and exit.
+
+    This owns the main()/cleanup boilerplate every teardown-carrying recipe copied
+    by hand (harness audit B2: the exact install-signals / try-body / translate /
+    finally-cleanup / worsen-status shape appeared in ~10 recipes). The contract:
+
+    - the body's clean return is status 0, or the int it returns - an xfail recipe
+      returns its signature code (e.g. 57);
+    - ``fail()``'s SystemExit and the signal exits (SIGINT 130 / SIGTERM 143)
+      become that exit code, so the distinguished codes survive an interrupt;
+    - a ``RecipeError`` that escapes the body prints its message to stderr and
+      becomes status 1 (the bash ``sys.exit(msg)`` shape, no traceback);
+    - an UNEXPECTED exception is NOT swallowed: cleanup still runs (the finally),
+      then the exception propagates and the process dies loudly nonzero, exactly
+      as the hand-rolled mains let an unguarded decode escape after cleanup;
+    - cleanup runs on EVERY path (the bash ``trap cleanup EXIT``) and OWNS the
+      final status. It receives the body's resolved status and returns the exit
+      code, so it wraps - never replaces - the recipe's own teardown ordering
+      (stop-dock-before-restore) and status policy. Most recipes fold their
+      outcome in via ``worsen_status_on_cleanup_failure``; the pure
+      storm/topology cores return their own computed status. ``run_with_cleanup``
+      does not second-guess that return.
+
+    ``install_signal_exits`` defaults on; a recipe that runs strandable setup
+    BEFORE the body (its temp fixtures need the same signal-driven teardown)
+    installs the handlers itself first and passes ``False`` here.
+    """
+    if install_signal_exits:
+        proc.install_conventional_signal_exits()
+    status = 0
+    try:
+        try:
+            result = body()
+            if isinstance(result, int):
+                status = result
+        except SystemExit as exc:
+            status = exc.code if isinstance(exc.code, int) else 1
+        except RecipeError as exc:
+            print(str(exc), file=sys.stderr, flush=True)
+            status = 1
+    finally:
+        status = cleanup(status)
+    raise SystemExit(status)
+
+
 # ---- environment contract (the E2E_* the runner exports) -------------------
 
 
-def _require_env(name: str) -> str:
-    """The bash ``${VAR:?}``: return the value, or refuse loudly naming the var."""
+def require_env(name: str, *, prefix: str = "e2e", error: type[Exception] = RecipeError) -> str:
+    """The bash ``${VAR:?}``: return the value, or refuse loudly naming the var.
+
+    The one shared env accessor the recipe modules each re-declared (harness audit
+    B3, ~8 copies each raising its own exception). ``prefix`` names the refusing
+    module in the message and ``error`` is the exception it raises, so a caller
+    keeps its exact wording and its own error type - a multi_output caller still
+    gets a MultiOutputError its pollers catch. The default is this module's
+    ``e2e:``/RecipeError. An empty value counts as unset, exactly as the bash
+    ``:?`` treated the empty string.
+    """
     value = os.environ.get(name)
     if not value:
-        raise RecipeError(f"e2e: required environment variable {name} is unset")
+        raise error(f"{prefix}: required environment variable {name} is unset")
     return value
 
 
@@ -467,6 +549,93 @@ def _require_nested(helper: str) -> None:
             f"e2e: {helper} is nested-only (it manages the vehicle dock / nested kwin); "
             f"refusing in mode '{mode or 'unset'}'"
         )
+
+
+def screen_dims() -> tuple[int, int]:
+    """E2E_SCREEN_W/H as ints (the bash ``${E2E_SCREEN_W:?} ${E2E_SCREEN_H:?}`` staging math).
+
+    The shared form of the per-module ``_screen_dims`` copies (harness audit B3);
+    an unset dimension refuses loudly through ``require_env``.
+    """
+    return int(require_env("E2E_SCREEN_W")), int(require_env("E2E_SCREEN_H"))
+
+
+# ---- shared recipe utilities (the micro-copy tier, harness audit B3) --------
+
+
+def muted_stderr() -> redirect_stderr[io.StringIO]:
+    """A `2>/dev/null` for stderr: swallow diagnostics from a best-effort call.
+
+    The shared form of the ~8 per-recipe ``_muted_stderr`` context managers
+    (harness audit B3): ``with recipe.muted_stderr():`` wraps a cleanup dock-stop
+    (or any noisy best-effort step) so its "already gone" chatter stays off the
+    recipe output. Returns the redirect context manager directly (stdout is
+    untouched - only the wrapped call's stderr is redirected).
+    """
+    return redirect_stderr(io.StringIO())
+
+
+def fakepointer(*args: object) -> int:
+    """Fire one E2E_FAKEPOINTER pointer/keyboard injection, returning its exit status.
+
+    The shared form of the ~13 per-recipe pointer wrappers (harness audit B3):
+    resolve the fixture-injected tool, run it with the args stringified, and return
+    the process status (``check=False`` - the ``... || fail`` sites branch on it).
+    Callers that only fire ignore the return; a bool test is ``== 0``; a caller
+    that asserts an exact status reads it directly - the three shapes the copies
+    split into. E2E_FAKEPOINTER unset refuses loudly (require_env) rather than a
+    bare command-not-found (the never-swallow rule).
+    """
+    return subprocess.run(
+        [require_env("E2E_FAKEPOINTER"), *(str(a) for a in args)], check=False
+    ).returncode
+
+
+def kwriteconfig(*args: str) -> int:
+    """Run one ``kwriteconfig6`` write, returning its exit status.
+
+    The shared core of the ~14 per-recipe kwriteconfig wrappers (harness audit B3).
+    It writes exactly the args given (the caller supplies --file/--group/--key and
+    the value), so it fits every wrapper shape: fire-and-forget (ignore the
+    return), a bool ``== 0``, or the fail-loud twin below.
+    """
+    return subprocess.run(["kwriteconfig6", *args], check=False).returncode
+
+
+def kwriteconfig_or_fail(fail_message: str, *args: str) -> None:
+    """Write a kwriteconfig6 key, failing LOUDLY (``fail``) on a nonzero status.
+
+    The fail-loud twin of ``kwriteconfig`` (the ``_kwrite(fail_message, *args)``
+    copies): the coarse config write whose only interesting outcome is
+    success-or-fail.
+    """
+    if kwriteconfig(*args) != 0:
+        fail(fail_message)
+
+
+def dock_log_lines() -> list[str]:
+    """The vehicle dock's captured log (E2E_DOCK_LOG) as lines - the bash grep source.
+
+    The shared form of the DnD recipes' ``_dock_log_lines`` copies (harness audit
+    B3); an unset E2E_DOCK_LOG refuses loudly through ``require_env``.
+    """
+    return Path(require_env("E2E_DOCK_LOG")).read_text(errors="replace").splitlines()
+
+
+def new_dock_log_has(mark: int, needle: str) -> bool:
+    """True iff a dock-log line added since ``mark`` carries ``needle``.
+
+    ``mark`` is a line count captured before the action (``len(dock_log_lines())``);
+    this is the bash ``tail -n +$((mark+1)) | grep -q``.
+    """
+    return any(needle in line for line in dock_log_lines()[mark:])
+
+
+def dump_new_dock_log(mark: int) -> None:
+    """Print every dock-log line added since ``mark`` to stderr (the failure-path dump)."""
+    print("---- new dock-log lines ----", file=sys.stderr, flush=True)
+    for line in dock_log_lines()[mark:]:
+        print(line, file=sys.stderr, flush=True)
 
 
 # ---- bounded wait loops (pure cores + the live probes) ---------------------
@@ -555,7 +724,7 @@ def wait_settled(timeout: int = 60) -> bool:
 
 def dock_pid() -> int | None:
     """e2e_dock_pid: the recorded vehicle-dock pid, or None when unrecorded."""
-    pidfile = _require_env("E2E_DOCK_PIDFILE")
+    pidfile = require_env("E2E_DOCK_PIDFILE")
     try:
         text = Path(pidfile).read_text().strip()
     except OSError:
@@ -563,7 +732,7 @@ def dock_pid() -> int | None:
     return int(text) if text.isdigit() else None
 
 
-def _pid_alive(pid: int) -> bool:
+def pid_alive(pid: int) -> bool:
     """The bash ``kill -0``: alive iff a signal could be delivered."""
     try:
         os.kill(pid, 0)
@@ -600,12 +769,12 @@ def dock_start(timeout: int = 60) -> bool:
     in E2E_DOCK_LOG (NixOS Qt otherwise routes to journald off a tty).
     """
     _require_nested("e2e_dock_start")
-    repo = _require_env("E2E_REPO")
-    log = _require_env("E2E_DOCK_LOG")
-    pidfile = _require_env("E2E_DOCK_PIDFILE")
+    repo = require_env("E2E_REPO")
+    log = require_env("E2E_DOCK_LOG")
+    pidfile = require_env("E2E_DOCK_PIDFILE")
     env = dict(os.environ)
-    env["LATTE_CONFIG_HOME"] = _require_env("E2E_CONFIG_HOME")
-    env["BUILD"] = _require_env("E2E_BUILD")
+    env["LATTE_CONFIG_HOME"] = require_env("E2E_CONFIG_HOME")
+    env["BUILD"] = require_env("E2E_BUILD")
     env["LATTE_DEBUG_DBUS"] = "1"
     env["QT_FORCE_STDERR_LOGGING"] = "1"
     with open(log, "a") as handle:
@@ -631,13 +800,13 @@ def dock_stop(timeout: int = 25) -> bool:
     if pid is None:
         print("e2e_dock_stop: no dock pid recorded", file=sys.stderr, flush=True)
         return False
-    if not _pid_alive(pid):
+    if not pid_alive(pid):
         print(f"e2e_dock_stop: dock (pid {pid}) already gone", file=sys.stderr, flush=True)
         return False
     with suppress(ProcessLookupError):
         os.kill(pid, 15)
     for _ in range(timeout * 5):
-        if _reap_if_child(pid) or not _pid_alive(pid):
+        if _reap_if_child(pid) or not pid_alive(pid):
             return True
         time.sleep(0.2)
     print(f"dock (pid {pid}) survived SIGTERM for {timeout}s", file=sys.stderr, flush=True)
@@ -812,7 +981,7 @@ def kwin_js(body: str, collection_delay: float = 0.5) -> str:
         with suppress(OSError):
             os.unlink(js)
     if mode == "nested":
-        return _tag_lines(Path(_require_env("E2E_KWIN_LOG")).read_text(errors="replace"), tag)
+        return _tag_lines(Path(require_env("E2E_KWIN_LOG")).read_text(errors="replace"), tag)
     return _journal_tag_lines(mark, tag)
 
 

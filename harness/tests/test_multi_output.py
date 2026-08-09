@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 
 import pytest
-from pydantic import ValidationError
+from pydantic import JsonValue, ValidationError
 
 from latte_harness import multi_output, recipe
 from latte_harness.multi_output import MultiOutputError, OutputState, Screen
@@ -285,6 +285,31 @@ def test_compare_tolerates_int_vs_float_numbers() -> None:
     captured = _kscreen([_output("DP-1", scale=1, priority=1), _output("DP-2", priority=2)])
     current = _kscreen([_output("DP-1", scale=1.0, priority=1), _output("DP-2", priority=2)])
     assert multi_output._compare_output_state_semantically(captured, current) == (0, "")  # pyright: ignore[reportPrivateUsage]
+
+
+def test_walk_differences_yields_every_difference_in_order() -> None:
+    # The diagnostic view of the walker (the window-touch topology recipe consumes
+    # the whole stream); a container-level change stops the descent into it.
+    left: JsonValue = {"a": 1, "b": [1, 2], "c": "x", "d": {"k": 1}}
+    right: JsonValue = {"a": 1, "b": [1, 9], "c": "y", "d": {"k": 2}}
+    assert list(multi_output.walk_differences(left, right)) == [
+        "$.b[1]: changed from 2 to 9",
+        "$.c: changed from 'x' to 'y'",
+        "$.d.k: changed from 1 to 2",
+    ]
+
+
+def test_first_difference_is_the_head_of_walk_differences() -> None:
+    # _first_difference (the drift oracle) is exactly the first yielded item, and
+    # None when the two payloads are equal (int==float tolerated).
+    left: JsonValue = {"a": 1, "b": [1, 2]}
+    right: JsonValue = {"a": 1, "b": [1, 9]}
+    equal_int: JsonValue = {"a": 1}
+    equal_float: JsonValue = {"a": 1.0}
+    assert multi_output._first_difference(left, right) == next(  # pyright: ignore[reportPrivateUsage]
+        iter(multi_output.walk_differences(left, right))
+    )
+    assert multi_output._first_difference(equal_int, equal_float) is None  # pyright: ignore[reportPrivateUsage]
 
 
 def test_compare_reports_a_changed_scalar_as_drift() -> None:

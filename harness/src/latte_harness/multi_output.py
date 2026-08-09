@@ -44,6 +44,7 @@ import os
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TypeIs
@@ -482,38 +483,51 @@ def _canonicalize(payload: dict[str, JsonValue], label: str) -> dict[str, JsonVa
     return canonical
 
 
-def _first_difference(left: JsonValue, right: JsonValue, path: str = "$") -> str | None:
-    """The first semantic difference between two canonicalized payloads, or None.
+def walk_differences(left: JsonValue, right: JsonValue, path: str = "$") -> Iterator[str]:
+    """Yield every semantic difference between two canonicalized payloads, in order.
 
     No value or field is excluded: a removed/added field, a type change, a list
     length change, or a changed scalar all surface. Integer-vs-float numeric
-    equality is tolerated (1 == 1.0), matching the bash comparator."""
+    equality is tolerated (1 == 1.0), matching the bash comparator. The FIRST item
+    this yields is ``_first_difference`` (the drift oracle); a diagnostic caller
+    consumes the stream (e.g. the window-touch topology recipe caps it at 30 lines)
+    - the two views of one walker the harness previously kept as separate copies
+    (audit B3). A branch that finds a container-level difference (type, key set,
+    list length) reports it and does NOT descend, exactly as the recursive
+    first-difference did.
+    """
     if _numbers_equal(left, right):
-        return None
+        return
     if type(left) is not type(right):
-        return f"{path}: type changed from {type(left).__name__} to {type(right).__name__}"
+        yield f"{path}: type changed from {type(left).__name__} to {type(right).__name__}"
+        return
     if isinstance(left, dict) and isinstance(right, dict):
         left_keys, right_keys = set(left), set(right)
         if left_keys != right_keys:
             removed = sorted(left_keys - right_keys)
             added = sorted(right_keys - left_keys)
-            return f"{path}: fields removed={removed!r} added={added!r}"
+            yield f"{path}: fields removed={removed!r} added={added!r}"
+            return
         for key in sorted(left):
-            difference = _first_difference(left[key], right[key], f"{path}.{key}")
-            if difference is not None:
-                return difference
-        return None
+            yield from walk_differences(left[key], right[key], f"{path}.{key}")
+        return
     if isinstance(left, list) and isinstance(right, list):
         if len(left) != len(right):
-            return f"{path}: list length changed from {len(left)} to {len(right)}"
+            yield f"{path}: list length changed from {len(left)} to {len(right)}"
+            return
         for index, (captured_value, current_value) in enumerate(zip(left, right, strict=True)):
-            difference = _first_difference(captured_value, current_value, f"{path}[{index}]")
-            if difference is not None:
-                return difference
-        return None
+            yield from walk_differences(captured_value, current_value, f"{path}[{index}]")
+        return
     if left != right:
-        return f"{path}: changed from {left!r} to {right!r}"
-    return None
+        yield f"{path}: changed from {left!r} to {right!r}"
+
+
+def _first_difference(left: JsonValue, right: JsonValue, path: str = "$") -> str | None:
+    """The first semantic difference between two canonicalized payloads, or None.
+
+    The head of ``walk_differences`` (the drift oracle used by the semantic
+    KScreen comparator); None when the two payloads are equal."""
+    return next(walk_differences(left, right, path), None)
 
 
 def _compare_output_state_semantically(captured_json: str, current_json: str) -> tuple[int, str]:

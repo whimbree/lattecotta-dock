@@ -18,6 +18,7 @@ import os
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -461,6 +462,257 @@ def test_run_passes_a_fail_exit_through(capsys: pytest.CaptureFixture[str]) -> N
         recipe.run(lambda: recipe.fail("boom"))
     assert excinfo.value.code == 1
     assert "FAIL: boom" in capsys.readouterr().err
+
+
+# ---- run_with_cleanup: the shared teardown lifecycle contract (audit B2) ----
+
+
+def _record_cleanup(calls: list[int]) -> Callable[[int], int]:
+    """A cleanup callable that records the status it was handed and returns it."""
+
+    def _cleanup(status: int) -> int:
+        calls.append(status)
+        return status
+
+    return _cleanup
+
+
+def test_worsen_status_on_cleanup_failure_rules() -> None:
+    # A failed cleanup worsens a success (0 -> 1) and never masks a body failure.
+    assert recipe.worsen_status_on_cleanup_failure(0, cleanup_failed=False) == 0
+    assert recipe.worsen_status_on_cleanup_failure(0, cleanup_failed=True) == 1
+    assert recipe.worsen_status_on_cleanup_failure(5, cleanup_failed=True) == 5
+    assert recipe.worsen_status_on_cleanup_failure(5, cleanup_failed=False) == 5
+
+
+def test_run_with_cleanup_runs_cleanup_on_a_clean_body() -> None:
+    calls: list[int] = []
+    with pytest.raises(SystemExit) as excinfo:
+        recipe.run_with_cleanup(lambda: None, _record_cleanup(calls), install_signal_exits=False)
+    assert excinfo.value.code == 0
+    assert calls == [0]
+
+
+def test_run_with_cleanup_passes_an_xfail_signature_status_through() -> None:
+    # A recipe whose success code is nonzero (the D57 status-57 signature) returns
+    # it from the body; the helper carries it to cleanup and out as the exit code.
+    calls: list[int] = []
+    with pytest.raises(SystemExit) as excinfo:
+        recipe.run_with_cleanup(lambda: 57, _record_cleanup(calls), install_signal_exits=False)
+    assert excinfo.value.code == 57
+    assert calls == [57]
+
+
+def test_run_with_cleanup_runs_cleanup_on_recipe_fail(capsys: pytest.CaptureFixture[str]) -> None:
+    calls: list[int] = []
+    with pytest.raises(SystemExit) as excinfo:
+        recipe.run_with_cleanup(
+            lambda: recipe.fail("boom"), _record_cleanup(calls), install_signal_exits=False
+        )
+    assert excinfo.value.code == 1
+    assert calls == [1]
+    assert "FAIL: boom" in capsys.readouterr().err
+
+
+def test_run_with_cleanup_translates_a_recipe_error(capsys: pytest.CaptureFixture[str]) -> None:
+    def body() -> None:
+        raise RecipeError("no horizontal view carries a tasks applet")
+
+    calls: list[int] = []
+    with pytest.raises(SystemExit) as excinfo:
+        recipe.run_with_cleanup(body, _record_cleanup(calls), install_signal_exits=False)
+    assert excinfo.value.code == 1
+    assert calls == [1]
+    assert "no horizontal view carries a tasks applet" in capsys.readouterr().err
+
+
+def test_run_with_cleanup_passes_a_signal_exit_code_through() -> None:
+    # The installed SIGTERM handler raises SystemExit(143); the body path catches
+    # it and hands 143 to cleanup, preserving the distinguished interrupt code.
+    def body() -> None:
+        raise SystemExit(143)
+
+    calls: list[int] = []
+    with pytest.raises(SystemExit) as excinfo:
+        recipe.run_with_cleanup(body, _record_cleanup(calls), install_signal_exits=False)
+    assert excinfo.value.code == 143
+    assert calls == [143]
+
+
+def test_run_with_cleanup_runs_cleanup_then_propagates_an_unexpected_exception() -> None:
+    # An unguarded decode (ValueError) is NOT swallowed: cleanup still runs, then
+    # the exception propagates so the process dies loudly nonzero (no SystemExit).
+    def body() -> None:
+        raise ValueError("malformed reply mid-matrix")
+
+    calls: list[int] = []
+    with pytest.raises(ValueError, match="malformed reply mid-matrix"):
+        recipe.run_with_cleanup(body, _record_cleanup(calls), install_signal_exits=False)
+    assert calls == [0]
+
+
+def test_run_with_cleanup_cleanup_failure_worsens_a_success() -> None:
+    def cleanup(status: int) -> int:
+        return recipe.worsen_status_on_cleanup_failure(status, cleanup_failed=True)
+
+    with pytest.raises(SystemExit) as excinfo:
+        recipe.run_with_cleanup(lambda: None, cleanup, install_signal_exits=False)
+    assert excinfo.value.code == 1
+
+
+def test_run_with_cleanup_cleanup_failure_never_masks_a_body_failure() -> None:
+    # A real body failure with a failing cleanup keeps the body's own code.
+    def cleanup(status: int) -> int:
+        return recipe.worsen_status_on_cleanup_failure(status, cleanup_failed=True)
+
+    def body() -> int:
+        return 37
+
+    with pytest.raises(SystemExit) as excinfo:
+        recipe.run_with_cleanup(body, cleanup, install_signal_exits=False)
+    assert excinfo.value.code == 37
+
+
+def test_run_with_cleanup_uses_the_cleanup_return_verbatim() -> None:
+    # The pure storm/topology cores return their own computed status; the helper
+    # uses it as the exit code without re-worsening.
+    with pytest.raises(SystemExit) as excinfo:
+        recipe.run_with_cleanup(lambda: None, lambda status: 42, install_signal_exits=False)
+    assert excinfo.value.code == 42
+
+
+def test_run_with_cleanup_installs_signal_exits_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    installed: list[bool] = []
+    monkeypatch.setattr(
+        recipe.proc, "install_conventional_signal_exits", lambda: installed.append(True)
+    )
+    with pytest.raises(SystemExit):
+        recipe.run_with_cleanup(lambda: None, lambda status: status)
+    assert installed == [True]
+
+
+def test_run_with_cleanup_skips_signal_install_when_asked(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    installed: list[bool] = []
+    monkeypatch.setattr(
+        recipe.proc, "install_conventional_signal_exits", lambda: installed.append(True)
+    )
+    with pytest.raises(SystemExit):
+        recipe.run_with_cleanup(lambda: None, lambda status: status, install_signal_exits=False)
+    assert installed == []
+
+
+# ---- the micro-copy utility tier (audit B3) --------------------------------
+
+
+def test_require_env_returns_the_value(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("E2E_THING", "value")
+    assert recipe.require_env("E2E_THING") == "value"
+
+
+def test_require_env_refuses_unset_with_the_default_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("E2E_THING", raising=False)
+    with pytest.raises(RecipeError, match="e2e: required environment variable E2E_THING is unset"):
+        recipe.require_env("E2E_THING")
+
+
+def test_require_env_uses_the_given_prefix_and_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("E2E_THING", raising=False)
+
+    class _CustomError(Exception):
+        pass
+
+    with pytest.raises(_CustomError, match="mod: required environment variable E2E_THING is unset"):
+        recipe.require_env("E2E_THING", prefix="mod", error=_CustomError)
+
+
+def test_require_env_treats_empty_as_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("E2E_THING", "")
+    with pytest.raises(RecipeError):
+        recipe.require_env("E2E_THING")
+
+
+def test_pid_alive_true_for_this_process() -> None:
+    assert recipe.pid_alive(os.getpid())
+
+
+def test_pid_alive_false_for_an_absent_pid() -> None:
+    # kill(pid, 0) on a pid that owns no process raises OSError -> not alive.
+    assert not recipe.pid_alive(2**31 - 1)
+
+
+def test_screen_dims_reads_the_ints(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("E2E_SCREEN_W", "1920")
+    monkeypatch.setenv("E2E_SCREEN_H", "1080")
+    assert recipe.screen_dims() == (1920, 1080)
+
+
+def test_fakepointer_runs_the_tool_and_returns_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("E2E_FAKEPOINTER", "/fake/fp")
+    captured: dict[str, object] = {}
+
+    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        captured["argv"] = argv
+        captured["check"] = kwargs.get("check")
+        return subprocess.CompletedProcess(argv, 3)
+
+    monkeypatch.setattr(recipe.subprocess, "run", fake_run)
+    assert recipe.fakepointer("move", 10, 20) == 3
+    assert captured["argv"] == ["/fake/fp", "move", "10", "20"]
+    assert captured["check"] is False
+
+
+def test_kwriteconfig_runs_the_write_and_returns_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        captured["argv"] = argv
+        return subprocess.CompletedProcess(argv, 0)
+
+    monkeypatch.setattr(recipe.subprocess, "run", fake_run)
+    assert recipe.kwriteconfig("--file", "layout", "--key", "k", "v") == 0
+    assert captured["argv"] == ["kwriteconfig6", "--file", "layout", "--key", "k", "v"]
+
+
+def test_kwriteconfig_or_fail_fails_loudly_on_nonzero(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, 1)
+
+    monkeypatch.setattr(recipe.subprocess, "run", fake_run)
+    with pytest.raises(SystemExit) as excinfo:
+        recipe.kwriteconfig_or_fail("could not write k", "--key", "k", "v")
+    assert excinfo.value.code == 1
+    assert "FAIL: could not write k" in capsys.readouterr().err
+
+
+def test_new_dock_log_has_scans_only_lines_after_the_mark(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = tmp_path / "dock.log"
+    log.write_text("old marker\n")
+    monkeypatch.setenv("E2E_DOCK_LOG", str(log))
+    mark = len(recipe.dock_log_lines())
+    log.write_text("old marker\nnew marker\n")
+    assert recipe.new_dock_log_has(mark, "new marker")
+    assert not recipe.new_dock_log_has(mark, "old marker")
+
+
+def test_muted_stderr_swallows_only_the_wrapped_stderr(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with recipe.muted_stderr():
+        print("hidden", file=sys.stderr, flush=True)
+    print("shown", file=sys.stderr, flush=True)
+    err = capsys.readouterr().err
+    assert "hidden" not in err
+    assert "shown" in err
 
 
 def test_env_module_leaves_no_state() -> None:
