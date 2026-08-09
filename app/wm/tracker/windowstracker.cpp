@@ -229,9 +229,9 @@ void Windows::updateRelevantLayouts()
     QList<Latte::Layout::GenericLayout*> orphanedLayouts;
 
     //! REMOVE Orphaned Relevant layouts that have been removed or they don't contain any Views anymore
-    for (QHash<Latte::Layout::GenericLayout *, TrackedLayoutInfo *>::iterator i=m_layouts.begin(); i!=m_layouts.end(); ++i) {
+    for (auto i = m_layouts.constBegin(); i != m_layouts.constEnd(); ++i) {
         bool hasView{false};
-        for (QHash<Latte::View *, TrackedViewInfo *>::iterator j=m_views.begin(); j!=m_views.end(); ++j) {
+        for (auto j = m_views.constBegin(); j != m_views.constEnd(); ++j) {
             if (j.key() && i.key() && i.key() == j.key()->layout()) {
                 hasView = true;
                 break;
@@ -251,9 +251,9 @@ void Windows::updateRelevantLayouts()
     }
 
     //! UPDATE Enabled layout window tracking based on the Views that are requesting windows tracking
-    for (QHash<Latte::Layout::GenericLayout *, TrackedLayoutInfo *>::iterator i=m_layouts.begin(); i!=m_layouts.end(); ++i) {
+    for (auto i = m_layouts.constBegin(); i != m_layouts.constEnd(); ++i) {
         bool hasViewEnabled{false};
-        for (QHash<Latte::View *, TrackedViewInfo *>::iterator j=m_views.begin(); j!=m_views.end(); ++j) {
+        for (auto j = m_views.constBegin(); j != m_views.constEnd(); ++j) {
             if (i.key() == j.key()->layout() && j.value()->enabled()) {
                 hasViewEnabled = true;
                 break;
