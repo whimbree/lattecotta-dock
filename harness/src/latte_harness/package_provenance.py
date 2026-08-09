@@ -62,7 +62,7 @@ LOADER_INJECTION_VARIABLES: tuple[str, ...] = (
 )
 
 
-class AuditError(Exception):
+class ProvenanceError(Exception):
     """A lib-level audit failure; the message is the exact bash diagnostic
     (without the "installed-package-gate: FAIL: " prefix the engine adds)."""
 
@@ -206,7 +206,7 @@ def parse_elf_search_paths(readelf_output: str) -> list[str]:
 def read_elf_search_paths(elf: str) -> list[str]:
     """Run readelf -d on ``elf`` and parse its loader search paths.
 
-    Raises AuditError when readelf cannot inspect the file; the engine
+    Raises ProvenanceError when readelf cannot inspect the file; the engine
     prints this diagnostic and then its own could-not-be-read-completely
     refusal, matching the bash lib+engine two-line failure.
     """
@@ -218,7 +218,7 @@ def read_elf_search_paths(elf: str) -> list[str]:
         check=False,
     )
     if result.returncode != 0:
-        raise AuditError(f"readelf could not inspect dynamic metadata for {elf}")
+        raise ProvenanceError(f"readelf could not inspect dynamic metadata for {elf}")
     return parse_elf_search_paths(drop_nul_bytes(result.stdout))
 
 
@@ -255,7 +255,7 @@ def read_mapped_paths(maps_file: str) -> list[str]:
         # review finding; read_environment_value already did this).
         maps_text = Path(maps_file).read_text(newline="", errors="surrogateescape")
     except OSError as err:
-        raise AuditError(f"cannot parse process mappings from {maps_file}") from err
+        raise ProvenanceError(f"cannot parse process mappings from {maps_file}") from err
     return parse_mapped_paths(maps_text)
 
 
@@ -337,7 +337,7 @@ class ExpectedMappingRegistry(BaseModel):
         """
         name = path.rsplit("/", 1)[-1]
         if name in self.expected:
-            raise AuditError(
+            raise ProvenanceError(
                 f"installed {label} has mapped-artifact basename '{name}', "
                 f"already used by {self.expected[name]}"
             )
@@ -415,7 +415,7 @@ def audit_mapped_paths(
 
     try:
         mapped_paths = read_mapped_paths(maps_file)
-    except AuditError as err:
+    except ProvenanceError as err:
         return violated(MappedPathViolationKind.UNREADABLE_MAPS, str(err))
 
     examined: set[str] = set()
@@ -494,20 +494,20 @@ def read_environment_value(environment_file: str, variable: str) -> str:
 
     Mirrors the bash tr-to-newlines pipeline exactly, including its
     treatment of NUL and newline as equivalent separators; surrogateescape
-    keeps arbitrary environment bytes round-trippable. Raises AuditError
+    keeps arbitrary environment bytes round-trippable. Raises ProvenanceError
     with the read-failure or the no-entry diagnostic.
     """
     try:
         raw = Path(environment_file).read_bytes()
     except OSError as err:
-        raise AuditError(f"cannot read process environment from {environment_file}") from err
+        raise ProvenanceError(f"cannot read process environment from {environment_file}") from err
     text = raw.decode("utf-8", errors="surrogateescape").replace("\0", "\n")
     for entry in text.split("\n"):
         name, separator, value = entry.partition("=")
         if name == variable:
             # An entry without '=' matched whole; bash printed it unchanged.
             return value if separator else entry
-    raise AuditError(f"process environment has no {variable} entry")
+    raise ProvenanceError(f"process environment has no {variable} entry")
 
 
 # ---- Qt plugin metadata contracts --------------------------------------------

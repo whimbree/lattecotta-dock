@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Latte Dock contributors
 # SPDX-FileCopyrightText: 2026 Bree Spektor
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""The package-gate audit core's contracts: ELF search-path parsing,
+"""The package-provenance core's contracts: ELF search-path parsing,
 /proc/maps parsing, the mapped-path provenance classification, the
 expected-mapping registry forms, the qtplugininfo version probe, the
 process-environment readback, the plugin metadata contracts, and the
@@ -15,10 +15,10 @@ from pathlib import Path
 import pytest
 from pydantic import JsonValue
 
-from latte_harness.package_gate_audit import (
-    AuditError,
+from latte_harness.package_provenance import (
     ExpectedMappingRegistry,
     MappedPathViolationKind,
+    ProvenanceError,
     audit_mapped_paths,
     declares_containment_actions_contract,
     declares_indicator_structure_contract,
@@ -145,7 +145,7 @@ def test_parse_mapped_paths_preserves_spaces_in_pathnames() -> None:
 
 def test_read_mapped_paths_refuses_unreadable_maps(tmp_path: Path) -> None:
     missing = tmp_path / "no-such.maps"
-    with pytest.raises(AuditError) as refusal:
+    with pytest.raises(ProvenanceError) as refusal:
         read_mapped_paths(str(missing))
     assert str(refusal.value) == f"cannot parse process mappings from {missing}"
 
@@ -223,7 +223,7 @@ def test_registry_register_keeps_required_order_and_optional_out() -> None:
 def test_registry_refuses_basename_collision() -> None:
     registry = ExpectedMappingRegistry()
     registry.register("binary", "/pkg/usr/bin/latte-dock", True)
-    with pytest.raises(AuditError) as refusal:
+    with pytest.raises(ProvenanceError) as refusal:
         registry.register("stale binary", "/other/bin/latte-dock", False)
     assert str(refusal.value) == (
         "installed stale binary has mapped-artifact basename 'latte-dock', "
@@ -415,14 +415,14 @@ def test_read_environment_value_extracts_nul_separated_entries(tmp_path: Path) -
 def test_read_environment_value_refuses_missing_entry(tmp_path: Path) -> None:
     environ = tmp_path / "environ"
     environ.write_bytes(b"PATH=/bin\0")
-    with pytest.raises(AuditError) as refusal:
+    with pytest.raises(ProvenanceError) as refusal:
         read_environment_value(str(environ), "QML2_IMPORT_PATH")
     assert str(refusal.value) == "process environment has no QML2_IMPORT_PATH entry"
 
 
 def test_read_environment_value_refuses_unreadable_file(tmp_path: Path) -> None:
     missing = tmp_path / "no-environ"
-    with pytest.raises(AuditError) as refusal:
+    with pytest.raises(ProvenanceError) as refusal:
         read_environment_value(str(missing), "PATH")
     assert str(refusal.value) == f"cannot read process environment from {missing}"
 
