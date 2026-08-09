@@ -57,19 +57,16 @@ QString filterDebugLogFile;
 
 int main(int argc, char **argv)
 {
-    //Plasma scales itself to font DPI
-    //on X, where we don't have compositor scaling, this generally works fine.
-    //also there are bugs on older Qt, especially when it comes to fractional scaling
-    //there's advantages to disabling, and (other than small context menu icons) few advantages in enabling
-
-    //On wayland, it's different. Everything is simpler as all coordinates are in the same coordinate system
-    //we don't have fractional scaling on the client so don't hit most the remaining bugs and
-    //even if we don't use Qt scaling the compositor will try to scale us anyway so we have no choice
+    //Qt5-era high-dpi policy, retired: Plasma disabled Qt scaling to follow
+    //font DPI unless PLASMA_USE_QT_SCALING was set
+    //(Qt::AA_DisableHighDpiScaling), else enabled high-dpi pixmaps
+    //(Qt::AA_UseHighDpiPixmaps). Qt6 documents both attributes as no-ops
+    //("This attribute no longer has any effect": high-dpi scaling and
+    //high-dpi pixmaps are always on), so both calls are removed. The
+    //QT_DEVICE_PIXEL_RATIO unset stays: it scrubs the Qt5-only variable
+    //from the environment child processes inherit.
     if (!qEnvironmentVariableIsSet("PLASMA_USE_QT_SCALING")) {
         qunsetenv("QT_DEVICE_PIXEL_RATIO");
-        QCoreApplication::setAttribute(Qt::AA_DisableHighDpiScaling);
-    } else {
-        QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
     }
 
     QQuickWindow::setDefaultAlphaBuffer(true);
