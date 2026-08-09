@@ -617,7 +617,7 @@ void LastActiveWindow::requestMove(Latte::View *fromView, int localX, int localY
     m_wm->requestActivate(m_currentWinId);
 
     m_wm->requestMoveWindow(m_currentWinId, globalPoint);
-    fromView->unblockMouse(localX, localY);
+    fromView->unblockMouse();
 }
 
 void LastActiveWindow::requestToggleIsOnAllDesktops()

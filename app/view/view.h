@@ -345,7 +345,7 @@ public:
 
 
     //! release grab and restore mouse state
-    void unblockMouse(int x, int y);
+    void unblockMouse();
 
     virtual void reconsiderScreen();
 
@@ -590,8 +590,6 @@ private:
     QTimer m_visibleHackTimer2;
 
     QTimer m_releaseGrabTimer;
-    int m_releaseGrab_x;
-    int m_releaseGrab_y;
     bool m_floatingEventProjectionPending{false};
 
     Layout::GenericLayout *m_layout{nullptr};
