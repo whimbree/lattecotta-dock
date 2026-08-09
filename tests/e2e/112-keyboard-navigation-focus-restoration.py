@@ -25,7 +25,6 @@ busctl calls that fail loudly on a D-Bus error, matching the bash
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 import time
 from contextlib import suppress
@@ -64,32 +63,6 @@ def _fp(*args: object) -> bool:
             [os.environ["E2E_FAKEPOINTER"], *(str(a) for a in args)], check=False
         ).returncode
         == 0
-    )
-
-
-def _latte_call(fail_message: str, *args: str) -> None:
-    """`e2e_call ... >/dev/null || e2e_fail "<fail_message>"`: run a lattedock
-    action, discard stdout, forward busctl stderr, and fail loudly on a D-Bus
-    error."""
-    result = subprocess.run(
-        ["busctl", "--user", "call", "org.kde.lattedock", "/Latte", "org.kde.LatteDock", *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        if result.stderr:
-            sys.stderr.write(result.stderr)
-        recipe.fail(fail_message)
-
-
-def _latte_call_quiet(*args: str) -> None:
-    """`e2e_call ... >/dev/null 2>&1 || true`: a cleanup action, errors ignored."""
-    subprocess.run(
-        ["busctl", "--user", "call", "org.kde.lattedock", "/Latte", "org.kde.LatteDock", *args],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
     )
 
 
@@ -200,7 +173,7 @@ def _wait_for_panel_focus_session_owner(cid: int, expected: str) -> bool:
 
 
 def _enter_keyboard_navigation(cid: int, boundary: str) -> None:
-    _latte_call(
+    recipe.call_or_fail(
         f"{boundary} enter call failed", "setViewKeyboardNavigation", "ub", str(cid), "true"
     )
     if not _wait_for_keyboard_navigation(cid, "true"):
@@ -210,7 +183,7 @@ def _enter_keyboard_navigation(cid: int, boundary: str) -> None:
 
 
 def _exit_keyboard_navigation(cid: int, boundary: str) -> None:
-    _latte_call(
+    recipe.call_or_fail(
         f"{boundary} exit call failed", "setViewKeyboardNavigation", "ub", str(cid), "false"
     )
     if not _wait_for_keyboard_navigation(cid, "false"):
@@ -343,7 +316,7 @@ def main() -> None:
         print("ok: D-Bus toggle-off restored actual key delivery")
 
         before_ids = {view.containment_id for view in _views()}
-        _latte_call(
+        recipe.call_or_fail(
             "second-view focus-session duplicate call failed",
             "duplicateView",
             "u",
@@ -367,7 +340,7 @@ def main() -> None:
 
         _activate_window(client_a)
         _enter_keyboard_navigation(source_cid, "first focus-session owner")
-        _latte_call(
+        recipe.call_or_fail(
             "competing-owner call failed at D-Bus",
             "setViewKeyboardNavigation",
             "ub",
@@ -389,7 +362,7 @@ def main() -> None:
 
         _activate_window(client_a)
         _enter_keyboard_navigation(duplicate_cid, "destroyed focus-session owner")
-        _latte_call(
+        recipe.call_or_fail(
             "could not remove the dock that owned keyboard focus",
             "removeView",
             "u",
@@ -421,7 +394,7 @@ def main() -> None:
         if not _wait_for_keyboard_navigation(source_cid, "false"):
             recipe.fail("external client focus did not discard keyboard navigation")
         _send_key_and_require_delivery(client_b, "g", "focus-loss winner")
-        _latte_call(
+        recipe.call_or_fail(
             "non-stealing idempotent exit call failed",
             "setViewKeyboardNavigation",
             "ub",
@@ -452,8 +425,10 @@ def main() -> None:
     finally:
         clients.kill_all()
         if duplicate_cid is not None:
-            _latte_call_quiet("setViewKeyboardNavigation", "ub", str(duplicate_cid), "false")
-            _latte_call_quiet("removeView", "u", str(duplicate_cid))
+            _ = recipe.call_status(
+                "setViewKeyboardNavigation", "ub", str(duplicate_cid), "false", quiet=True
+            )
+            _ = recipe.call_status("removeView", "u", str(duplicate_cid), quiet=True)
         shutil.rmtree(scratch, ignore_errors=True)
 
 

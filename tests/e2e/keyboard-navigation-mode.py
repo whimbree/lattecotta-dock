@@ -44,16 +44,6 @@ _FOCUS_TAKER_QML = (
 )
 
 
-def _call_quiet(*args: str) -> None:
-    """`call ... >/dev/null 2>&1`: run a lattedock method, discarding all output."""
-    subprocess.run(
-        ["busctl", "--user", "call", "org.kde.lattedock", "/Latte", "org.kde.LatteDock", *args],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-
-
 def _views() -> list[recipe.View]:
     """viewsData as typed View records (W3, widen the readback models):
     containmentId / keyboardNavigation ride the typed recipe.View."""
@@ -102,7 +92,7 @@ def main() -> None:
         passed("baseline false (mode off is the default)")
 
         #! unknown id is refused loudly, dock stays alive, real view untouched
-        _call_quiet("setViewKeyboardNavigation", "ub", "999999", "true")
+        _ = recipe.call_status("setViewKeyboardNavigation", "ub", "999999", "true", quiet=True)
         time.sleep(1)
         if not _lifecycle_running():
             fail("dock died on unknown-id refusal")
@@ -110,7 +100,7 @@ def main() -> None:
             fail("unknown-id call changed the real view's state")
         passed("unknown containment id refused, dock alive")
 
-        _call_quiet("setViewKeyboardNavigation", "ub", str(cid), "true")
+        _ = recipe.call_status("setViewKeyboardNavigation", "ub", str(cid), "true", quiet=True)
         got = ""
         for _ in range(10):
             got = kbnav(cid)
@@ -121,7 +111,7 @@ def main() -> None:
             fail("enter did not read back keyboardNavigation true")
         passed("enter over D-Bus: keyboardNavigation true")
 
-        _call_quiet("setViewKeyboardNavigation", "ub", str(cid), "false")
+        _ = recipe.call_status("setViewKeyboardNavigation", "ub", str(cid), "false", quiet=True)
         got = ""
         for _ in range(10):
             got = kbnav(cid)
@@ -133,7 +123,7 @@ def main() -> None:
         passed("exit over D-Bus: keyboardNavigation false")
 
         #! the focus-loss exit
-        _call_quiet("setViewKeyboardNavigation", "ub", str(cid), "true")
+        _ = recipe.call_status("setViewKeyboardNavigation", "ub", str(cid), "true", quiet=True)
         for _ in range(10):
             if kbnav(cid) == "true":
                 break
@@ -176,7 +166,7 @@ def main() -> None:
         passed("focus loss exits the mode on its own")
 
         #! exit is idempotent
-        _call_quiet("setViewKeyboardNavigation", "ub", str(cid), "false")
+        _ = recipe.call_status("setViewKeyboardNavigation", "ub", str(cid), "false", quiet=True)
         time.sleep(1)
         if not _lifecycle_running():
             fail("dock died on idempotent exit")
