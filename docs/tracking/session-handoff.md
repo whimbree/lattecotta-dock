@@ -123,13 +123,30 @@ bodies and PR #224 per the immutable-history rule. The category was already ON
 tree-wide as a warning via ECM's KDECompilerSettings, so each phase's real change
 is the `-Werror=` promotion, not the flag's introduction.
 
-Remaining: phase 3 (the 129 `-Wdeprecated-declarations` Qt/KF6 API-migration
-sites - the largest and most behavior-sensitive, landing as several grouped PRs;
-a read-only scout is cataloguing them by API and classifying each replacement
-mechanical vs behavior-sensitive, and the behavior-sensitive ones get surfaced
-to the maintainer before any code is written) and phase 4 (flip to a blanket
-`-Werror` and decide the packaged/distro-build treatment). After phase 2 the only
-warning category the full build still emits is those 129 deprecated-declarations.
+Phase 3 (the 129 `-Wdeprecated-declarations` Qt/KF6 API-migration sites) is
+UNDERWAY, landing as grouped PRs. A read-only scout catalogued all 129 into 19
+distinct APIs across 21 files (zero in vendored code, every one migratable, no
+forced pragma). The mechanical bulk has LANDED: PR #225 (4789448eb) migrated the
+72 `QQmlPropertyMap(QObject*)` test sites to the `create()` factory (unique_ptr +
+reference binding), and PR #226 (63fcc7fbb) migrated the 49 app-code Qt renames
+in four themed commits (event accessors windowPos/posF/etc; QCheckBox
+checkStateChanged; QString::size; QVariant::typeId; key-sequence `+`->`|`;
+QKeyCombination::keyboardModifiers; and the inert high-dpi AA_* attribute removal
+at startup). That leaves exactly 8 BEHAVIOR-SENSITIVE sites, whose approach the
+maintainer decided (2026-08-09): Q1 QHoverEvent in `View::releaseGrab()` -> REMOVE
+the Qt5 mouse-grab-release workaround entirely (following latte-dock-ng
+26242af47), not port the deprecated ctor; Q2 `KLocalizedContext` (infoview,
+subconfigview) -> `KLocalizedQmlContext` via the `KLocalization::setupLocalizedContext`
+helper (adds a `KF6::I18nQml` link), preserving the `latte-dock` translation
+domain; Q3 `KIconLoader`/`KIconEffect` (iconitem.cpp, task-icon disabled/active
+effects + overlay badges) -> MIGRATE to the KF6 static API (`toDisabled`/`toActive`/
+`KIconUtils::addOverlays`, adds a `KF6::GuiAddons` link), accepting the
+platform-forced loss of per-group kdeglobals icon-effect config (matching upstream
+Plasma IconItem), with before/after nested-vehicle renders produced for the
+maintainer to review before merge. P6 (Q1) and P7 (Q2) are in flight; P8 (Q3, the
+icon renders) follows. The FINAL phase-3 PR promotes `-Werror=deprecated-declarations`
+only after all 8 sites migrate and the census hits zero. Then phase 4 (flip to a
+blanket `-Werror` and decide the packaged/distro-build treatment).
 
 Owner decisions still open (carried forward): the D283 approach (fix the legacy
 clone path vs deprecate), history excision of the swept maintainer-local files,
