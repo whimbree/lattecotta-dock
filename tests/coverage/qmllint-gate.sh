@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
 # qmllint ratchet gate (docs/tracking/QML_EXTRACTION_PLAN.md step 2.5 point 6;
 # docs/reference/TESTING.md).
 #

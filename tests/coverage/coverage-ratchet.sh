@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
 # Coverage ratchet: unit-header/test pairing plus the committed ctest
 # entry-list baseline (docs/tracking/QML_EXTRACTION_PLAN.md section D). Ported
 # to the typed harness in BP-1c; the logic and rationale now live in

@@ -1,3 +1,9 @@
+/*
+    SPDX-FileCopyrightText: 2026 Bree Spektor
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-License-Identifier: GPL-2.0-or-later
+*/
+
 // Equality-harness generator for EX-02: drives the REAL containment chain
 // (definition ParabolicEffect hub + real ParabolicArea deciders + real
 // ParabolicEdgeSpacer) over a synthetic 8-position row and prints the

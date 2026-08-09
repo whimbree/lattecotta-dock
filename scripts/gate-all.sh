@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
 # The single canonical gate runner. Runs EVERY merge gate and stamps the
 # exact HEAD it validated; scripts/git-hooks/pre-push refuses to push any
 # code commit without a matching stamp.

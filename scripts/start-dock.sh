@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
 # Start (or restart) the staged dock against MY REAL user config - the
 # daily-driver entry point. Wraps restart-staged.sh, which kills any
 # stale instance safely (including SIGSTOPped orphans), restages QML,
