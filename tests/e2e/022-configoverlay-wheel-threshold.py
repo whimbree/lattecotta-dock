@@ -27,13 +27,12 @@
 # of the bash cleanup discipline.
 """SC-CW1 ConfigOverlay wheel-threshold reproduction (the D57 status-57 recipe)."""
 
-import json
 import os
 import shutil
 import subprocess
 import sys
 import time
-from typing import Any, NoReturn
+from typing import NoReturn
 
 from latte_harness import applet_reorder, proc, recipe
 
@@ -79,49 +78,39 @@ def _kwrite_file(dest: str, *args: str) -> int:
     return subprocess.run(["kwriteconfig6", "--file", dest, *args], check=False).returncode
 
 
-# ---- readbacks (raw JSON, the same boundary the bash python one-liners used) --
-
-
-def _views_raw() -> list[dict[str, Any]]:
-    return json.loads(recipe.json_payload("viewsData"))
-
-
-def _applets_raw(view: int) -> list[dict[str, Any]]:
-    return json.loads(recipe.json_payload("viewAppletsData", "u", str(view)))
+# ---- readbacks (the widened typed models, W3 - widen the readback models) -----
 
 
 def _fixture_view(axis: str, fail_msg: str) -> int:
     edges = ("top", "bottom") if axis == "horizontal" else ("left", "right")
-    views = [v for v in _views_raw() if v["edge"] in edges]
+    views = [v for v in recipe.views() if v.edge in edges]
     if len(views) != 1:
         recipe.fail(fail_msg)
-    return views[0]["containmentId"]
+    return views[0].containment_id
 
 
 def _applet_length(view: int, axis: str, fail_msg: str) -> int:
-    applets = [a for a in _applets_raw(view) if a["plugin"] == _PLUGIN]
+    applets = [a for a in recipe.view_applets(view) if a.plugin == _PLUGIN]
     if len(applets) != 1:
         recipe.fail(fail_msg)
-    return applets[0]["geometry"][2 if axis == "horizontal" else 3]
+    return applets[0].geometry[2 if axis == "horizontal" else 3]
 
 
 def _resolve_points(view: int, axis: str) -> tuple[int, int, int, int]:
     """The live ConfigOverlay target center and the outside-the-band park point."""
-    views = _views_raw()
-    applets = _applets_raw(view)
-    v = next((x for x in views if x["containmentId"] == int(view)), None)
-    applet = next((a for a in applets if a["plugin"] == _PLUGIN), None)
+    v = next((x for x in recipe.views() if x.containment_id == view), None)
+    applet = next((a for a in recipe.view_applets(view) if a.plugin == _PLUGIN), None)
     if v is None or applet is None:
         recipe.fail(f"{axis}: could not resolve the live ConfigOverlay target")
-    origin_x = v["absoluteGeometry"][0] - v["localGeometry"][0]
-    origin_y = v["absoluteGeometry"][1] - v["localGeometry"][1]
-    x, y, width, height = applet["geometry"]
+    origin_x = v.absolute_geometry[0] - v.local_geometry[0]
+    origin_y = v.absolute_geometry[1] - v.local_geometry[1]
+    x, y, width, height = applet.geometry
     target_x = round(origin_x + x + width / 2)
     target_y = round(origin_y + y + height / 2)
     if axis == "horizontal":
-        park_x, park_y = target_x, v["screenGeometry"][1] + v["screenGeometry"][3] // 2
+        park_x, park_y = target_x, v.screen_geometry[1] + v.screen_geometry[3] // 2
     else:
-        park_x, park_y = v["screenGeometry"][0] + v["screenGeometry"][2] // 2, target_y
+        park_x, park_y = v.screen_geometry[0] + v.screen_geometry[2] // 2, target_y
     return target_x, target_y, park_x, park_y
 
 

@@ -32,13 +32,14 @@ Ported from tests/e2e/100-applet-reorder.sh to latte_harness.recipe /
 latte_harness.applet_reorder (BP-3, the bash-to-python migration's driver-recipe
 batch). The reorder lifecycle/order/attempt readbacks ride the typed
 applet_reorder driver; the axis/pair discovery and the G2 z-residue scans read
-viewsData / viewAppletsData as raw JSON, the same boundary the bash python
-one-liners used (recipe.Applet does not surface z).
+viewsData / viewAppletsData ride the widened typed models (W3, widen the readback
+models): recipe.Applet now carries z (the G2 stacking readback) and recipe.View
+carries isCloned, so both read through the typed recipe.view_applets() /
+recipe.views() readers, and a refused reply raises the pollable
+DbusUnavailableError instead of the old json.loads crash on "".
 """
 
 import contextlib
-import json
-from typing import Any
 
 from latte_harness import applet_reorder, recipe
 
@@ -53,28 +54,18 @@ _WIDE = {
 }
 
 
-def _view_applets_raw(view: int) -> list[dict[str, Any]]:
-    """viewAppletsData as raw JSON dicts (z is not on recipe.Applet)."""
-    return json.loads(recipe.json_payload("viewAppletsData", "u", str(view)))
-
-
 def discover_axis_view(orient: str) -> int | None:
     """The widest/tallest non-hidden, non-cloned view on that orientation carrying
     at least two applets. orientation is "horizontal" (bottom/top) or "vertical"
     (left/right)."""
     edges = ("bottom", "top") if orient == "horizontal" else ("left", "right")
-    views = [
-        v
-        for v in json.loads(recipe.json_payload("viewsData"))
-        if v["edge"] in edges and not v["isHidden"] and not v.get("isCloned")
-    ]
+    views = [v for v in recipe.views() if v.edge in edges and not v.is_hidden and not v.is_cloned]
     # widest (horizontal) / tallest (vertical) first, deterministic
     axis = 2 if orient == "horizontal" else 3
-    views.sort(key=lambda v: -v["absoluteGeometry"][axis])
+    views.sort(key=lambda v: -v.absolute_geometry[axis])
     for v in views:
-        cid = v["containmentId"]
-        if len(recipe.view_applets(cid)) >= 2:
-            return cid
+        if len(recipe.view_applets(v.containment_id)) >= 2:
+            return v.containment_id
     return None
 
 
@@ -83,9 +74,9 @@ def simple_adjacent_pair(view: int) -> tuple[int, int] | None:
     ordinary single-slot widgets (not the wide tasks plasmoid or a systemtray
     container), returned as (i, j). Keeps the drag geometry simple and the reorder
     unambiguous. None if the view carries no such pair."""
-    applets = _view_applets_raw(view)
+    applets = recipe.view_applets(view)
     for i in range(len(applets) - 1):
-        if applets[i]["plugin"] not in _WIDE and applets[i + 1]["plugin"] not in _WIDE:
+        if applets[i].plugin not in _WIDE and applets[i + 1].plugin not in _WIDE:
             return i, i + 1
     return None
 
@@ -96,8 +87,7 @@ def assert_no_lifted_applet(view: int, where: str) -> None:
     (ConfigOverlay's onReleased resets the dropped applet to 1), both far below the
     lift; a strand would read ~900, which THIS readback surfaces instead of a golden.
     """
-    applets = _view_applets_raw(view)
-    stuck = [(a["id"], a["z"]) for a in applets if a["z"] >= APPLET_LIFT_Z]
+    stuck = [(a.id, a.z) for a in recipe.view_applets(view) if a.z >= APPLET_LIFT_Z]
     bad = ";".join(f"{i}@z{z}" for i, z in stuck)
     if bad:
         recipe.fail(f"G2: applet(s) stranded over chrome at {where}: {bad}")
@@ -106,8 +96,7 @@ def assert_no_lifted_applet(view: int, where: str) -> None:
 def assert_z_all_zero(view: int, where: str) -> None:
     """The clean at-rest baseline (before any drag) reports every applet at the
     layout default z 0."""
-    applets = _view_applets_raw(view)
-    nz = [(a["id"], a["z"]) for a in applets if a["z"] != 0]
+    nz = [(a.id, a.z) for a in recipe.view_applets(view) if a.z != 0]
     bad = ";".join(f"{i}@z{z}" for i, z in nz)
     if bad:
         recipe.fail(f"G2: applet(s) not at rest z 0 at {where}: {bad}")
@@ -208,11 +197,9 @@ def run_axis_checks(view: int, label: str) -> None:
         recipe.fail(f"{label}: dock did not survive the DR-6 escape-in-held-drag")
     epost = _order(view, label)
     emode = "true" if applet_reorder.applet_reorder_edit_mode(view) else "false"
-    applets = _view_applets_raw(view)
-    if any(a["z"] >= APPLET_LIFT_Z for a in applets):
-        ez = "STRANDED " + ",".join(
-            f"{a['id']}@z{a['z']}" for a in applets if a["z"] >= APPLET_LIFT_Z
-        )
+    applets = recipe.view_applets(view)
+    if any(a.z >= APPLET_LIFT_Z for a in applets):
+        ez = "STRANDED " + ",".join(f"{a.id}@z{a.z}" for a in applets if a.z >= APPLET_LIFT_Z)
     else:
         ez = "no-strand"
     print(

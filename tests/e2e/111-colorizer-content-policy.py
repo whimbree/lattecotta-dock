@@ -61,21 +61,16 @@ def _fail_raw(message: str) -> None:
     raise SystemExit(1)
 
 
-def _views_raw() -> list[dict[str, object]]:
-    return json.loads(recipe.json_payload("viewsData"))
-
-
-def _applets_by_plugin(cid: int) -> dict[str, dict[str, object]]:
-    applets = json.loads(recipe.json_payload("viewAppletsData", "u", str(cid)))
-    return {a["plugin"]: a for a in applets}
+def _applets_by_plugin(cid: int) -> dict[str, recipe.Applet]:
+    # W3 (widen the readback models): colorizerActive / colorizerReason ride the
+    # typed recipe.Applet, so this indexes the typed records by plugin.
+    return {a.plugin: a for a in recipe.view_applets(cid)}
 
 
 def _horizontal_view_id() -> int | None:
-    for view in _views_raw():
-        if view["edge"] in ("top", "bottom"):
-            cid = view["containmentId"]
-            assert isinstance(cid, int)
-            return cid
+    for view in recipe.views():
+        if view.edge in ("top", "bottom"):
+            return view.containment_id
     return None
 
 
@@ -161,14 +156,14 @@ def _body() -> None:
             bad = [
                 (
                     plugin,
-                    applets[plugin].get("colorizerActive"),
-                    applets[plugin].get("colorizerReason"),
+                    applets[plugin].colorizer_active,
+                    applets[plugin].colorizer_reason,
                 )
                 for plugin in _PLUGINS
                 if plugin in applets
                 and not (
-                    applets[plugin].get("colorizerActive") is expected_active
-                    and applets[plugin].get("colorizerReason") == reason
+                    applets[plugin].colorizer_active is expected_active
+                    and applets[plugin].colorizer_reason == reason
                 )
             ]
             if missing or bad:
