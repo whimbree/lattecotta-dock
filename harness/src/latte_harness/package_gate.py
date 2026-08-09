@@ -42,7 +42,7 @@ from typing import NoReturn
 
 from pydantic import JsonValue
 
-from latte_harness import package_gate_audit as audit
+from latte_harness import package_provenance as provenance
 from latte_harness import vehicle
 from latte_harness.paths import find_repo_root
 from latte_harness.proc import SessionProcess, install_conventional_signal_exits
@@ -255,7 +255,7 @@ def resolve_package_namespace_path(ctx: GateContext, label: str, raw: str) -> st
     normalized = normalize_lexically(raw)
     if normalized is None:
         fail(f"{label} cannot be normalized in the package namespace: {raw}")
-    if not audit.path_is_within(normalized, ctx.package_root):
+    if not provenance.path_is_within(normalized, ctx.package_root):
         fail(f"{label} escapes the package root: {raw}")
 
     def pending_of(namespace_path: str) -> str:
@@ -285,7 +285,7 @@ def resolve_package_namespace_path(ctx: GateContext, label: str, raw: str) -> st
             normalized = normalize_lexically(candidate)
             if normalized is None:
                 fail(f"{label} cannot normalize a chained symlink target: {candidate}")
-            if not audit.path_is_within(normalized, ctx.package_root):
+            if not provenance.path_is_within(normalized, ctx.package_root):
                 fail(f"{label} escapes the package root through a symlink: {normalized}")
             pending = pending_of(normalized)
             resolved = ctx.package_root
@@ -336,7 +336,7 @@ def require_package_file(ctx: GateContext, label: str, path: str, allowed_tree: 
     )
     if not os.path.isfile(resolved):
         fail(f"installed {label} does not resolve to a regular file: {resolved}")
-    if not audit.path_is_within(resolved, allowed_tree):
+    if not provenance.path_is_within(resolved, allowed_tree):
         fail(
             f"installed {label} resolves outside its allowed package tree "
             f"{allowed_tree}: {resolved}"
@@ -382,7 +382,7 @@ def audit_package_tree(ctx: GateContext, label: str, tree: str) -> None:
     if not os.path.isdir(tree):
         fail(f"package is incomplete: missing {label} at {tree}")
     tree_resolved = resolve_native_path(ctx, f"installed {label}", tree)
-    if not audit.path_is_within(tree_resolved, ctx.artifact_prefix):
+    if not provenance.path_is_within(tree_resolved, ctx.artifact_prefix):
         fail(f"installed {label} resolves outside the package prefix: {tree_resolved}")
 
     entries = collect_find_results(
@@ -407,7 +407,7 @@ def audit_package_tree(ctx: GateContext, label: str, tree: str) -> None:
         target_normalized = normalize_lexically(target_candidate)
         if target_normalized is None:
             fail(f"{label} symlink target cannot be normalized: {link} -> {target}")
-        if not audit.path_is_within(target_normalized, ctx.package_root):
+        if not provenance.path_is_within(target_normalized, ctx.package_root):
             fail(
                 f"{label} contains a symlink target escaping the package root: "
                 f"{link} -> {target_normalized}"
@@ -439,7 +439,7 @@ def audit_package_tree(ctx: GateContext, label: str, tree: str) -> None:
         # An isolated package root is the provenance boundary already proved
         # above. Markers on its external ancestors describe the staging host,
         # not the installed content. A live --root / check still walks to /.
-        while audit.path_is_within(provider_dir, ctx.package_root):
+        while provenance.path_is_within(provider_dir, ctx.package_root):
             if os.path.exists(f"{provider_dir}/.git") or os.path.isfile(
                 f"{provider_dir}/CMakeLists.txt"
             ):
@@ -456,7 +456,7 @@ def audit_package_tree(ctx: GateContext, label: str, tree: str) -> None:
             if provider_dir == ctx.package_root:
                 break
             provider_dir = os.path.dirname(provider_dir)
-        if not audit.path_is_within(link_resolved, tree_resolved):
+        if not provenance.path_is_within(link_resolved, tree_resolved):
             fail(
                 f"{label} contains a symlink escaping its installed runtime tree: "
                 f"{link} -> {link_resolved}"
@@ -481,8 +481,8 @@ def audit_elf_search_paths(
         fail(f"{label} is not a valid ELF artifact: {elf}")
 
     try:
-        search_paths = audit.read_elf_search_paths(elf)
-    except audit.AuditError as err:
+        search_paths = provenance.read_elf_search_paths(elf)
+    except provenance.ProvenanceError as err:
         _fail_after(str(err), f"{label} ELF search metadata could not be read completely")
     origin = os.path.dirname(elf)
     for search_path in search_paths:
@@ -521,7 +521,7 @@ def audit_elf_search_paths(
                     f"{label} ELF RUNPATH/RPATH entry is not an installed directory: "
                     f"{entry} -> {resolved}"
                 )
-            if not audit.path_is_within(resolved, ctx.artifact_prefix):
+            if not provenance.path_is_within(resolved, ctx.artifact_prefix):
                 fail(
                     f"{label} ELF RUNPATH/RPATH entry escapes the package prefix: "
                     f"{entry} -> {resolved}"
@@ -553,9 +553,9 @@ def require_loadable_plugin(label: str, plugin: str) -> None:
     )
     if result.returncode == 0:
         return
-    if audit.shell_wait_status(result.returncode) in (124, 137):
+    if provenance.shell_wait_status(result.returncode) in (124, 137):
         fail(f"{label} loader timed out for installed artifact {plugin}")
-    loader_output = audit.drop_nul_bytes(result.stdout).rstrip("\n")
+    loader_output = provenance.drop_nul_bytes(result.stdout).rstrip("\n")
     fail(f"{label} cannot be loaded from the installed artifact {plugin}: {loader_output}")
 
 
@@ -587,12 +587,12 @@ def require_plugin_metadata(qt_plugin_info: str, contract: PluginContract, plugi
         text=True,
         check=False,
     )
-    metadata_output = audit.drop_nul_bytes(result.stdout).rstrip("\n")
+    metadata_output = provenance.drop_nul_bytes(result.stdout).rstrip("\n")
     if result.returncode != 0:
-        if audit.shell_wait_status(result.returncode) in (124, 137):
+        if provenance.shell_wait_status(result.returncode) in (124, 137):
             fail(f"{contract.label} metadata inspection timed out for {plugin}")
         fail(f"{contract.label} has no valid Qt plugin metadata at {plugin}: {metadata_output}")
-    metadata = audit.load_plugin_metadata_json(metadata_output)
+    metadata = provenance.load_plugin_metadata_json(metadata_output)
     iid = metadata.get("IID") if isinstance(metadata, dict) else None
     if not isinstance(iid, str):
         fail(f"{contract.label} metadata has no string IID at {plugin}")
@@ -616,7 +616,7 @@ def require_appstream_metadata(metadata_path: str) -> None:
             "installed AppStream metadata violates the standalone application "
             f"contract: cannot open {metadata_path}: {err.strerror}"
         )
-    diagnostic = audit.validate_appstream_metadata(xml)
+    diagnostic = provenance.validate_appstream_metadata(xml)
     if diagnostic is not None:
         fail(
             f"installed AppStream metadata violates the standalone application "
@@ -654,14 +654,14 @@ PLUGIN_CONTRACTS: tuple[PluginContract, ...] = (
         "Latte containment-actions plugin",
         "org.kde.KPluginFactory",
         "MenuFactory",
-        audit.declares_containment_actions_contract,
+        provenance.declares_containment_actions_contract,
         "the org.kde.latte.contextmenu Plasma/ContainmentActions type",
     ),
     PluginContract(
         "Latte indicator package-structure plugin",
         "org.kde.KPluginFactory",
         "latte_packagestructure_indicator_factory",
-        audit.declares_indicator_structure_contract,
+        provenance.declares_indicator_structure_contract,
         "the Latte/Indicator package-structure type for org.kde.latte-dock",
     ),
 )
@@ -760,7 +760,7 @@ def enforce_manifest_ownership_set(ctx: GateContext, arguments: GateArguments) -
         normalized_host_path = normalize_lexically(manifest_host_path)
         if normalized_host_path is None:
             fail(f"package manifest entry cannot be normalized: {manifest_entry}")
-        if not audit.path_is_within(normalized_host_path, ctx.artifact_prefix):
+        if not provenance.path_is_within(normalized_host_path, ctx.artifact_prefix):
             fail(f"package manifest entry is outside the package prefix: {manifest_entry}")
         if normalized_host_path in ctx.manifest_paths:
             fail(f"package manifest contains a duplicate entry: {manifest_entry}")
@@ -805,7 +805,7 @@ def _resolve_package_roots(ctx: GateContext, arguments: GateArguments) -> None:
     else:
         prefix_path = f"{ctx.package_root}/{arguments.prefix[1:]}"
     ctx.artifact_prefix = resolve_native_path(ctx, "package prefix", prefix_path)
-    if not audit.path_is_within(ctx.artifact_prefix, ctx.package_root):
+    if not provenance.path_is_within(ctx.artifact_prefix, ctx.package_root):
         fail(
             f"package prefix escapes package root: {ctx.artifact_prefix} is "
             f"outside {ctx.package_root}"
@@ -818,7 +818,7 @@ def _discover_library_roots(ctx: GateContext) -> list[str]:
         if not os.path.isdir(candidate):
             continue
         resolved = resolve_native_path(ctx, "package library root", candidate)
-        if not audit.path_is_within(resolved, ctx.artifact_prefix):
+        if not provenance.path_is_within(resolved, ctx.artifact_prefix):
             fail(f"package library root escapes the package prefix: {resolved}")
         if resolved not in library_roots:
             library_roots.append(resolved)
@@ -936,7 +936,7 @@ def validate_installed_package(
     qml_manifest = require_one_match("org.kde.latte.core/qmldir", qml_manifests)
     package_qml = qml_manifest.removesuffix("/org/kde/latte/core/qmldir")
     package_qml = resolve_native_path(ctx, "installed Latte QML root", package_qml)
-    if not audit.path_is_within(package_qml, ctx.artifact_prefix):
+    if not provenance.path_is_within(package_qml, ctx.artifact_prefix):
         fail(f"installed Latte QML root escapes the package prefix: {package_qml}")
     require_package_file(
         ctx, "core QML module metadata", qml_manifest, f"{package_qml}/org/kde/latte/core"
@@ -995,7 +995,7 @@ def validate_installed_package(
         "/plasma/containmentactions/org.kde.latte.contextmenu.so"
     )
     package_plugins = resolve_native_path(ctx, "installed Latte plugin root", package_plugins)
-    if not audit.path_is_within(package_plugins, ctx.artifact_prefix):
+    if not provenance.path_is_within(package_plugins, ctx.artifact_prefix):
         fail(f"installed Latte plugin root escapes the package prefix: {package_plugins}")
     action_plugin = require_package_file(
         ctx,
@@ -1013,7 +1013,7 @@ def validate_installed_package(
     package_data = resolve_native_path(
         ctx, "installed Latte data root", f"{ctx.artifact_prefix}/share"
     )
-    if not audit.path_is_within(package_data, ctx.artifact_prefix):
+    if not provenance.path_is_within(package_data, ctx.artifact_prefix):
         fail(f"installed Latte data root escapes the package prefix: {package_data}")
     shell_package = f"{package_data}/plasma/shells/org.kde.latte.shell"
     containment_package = f"{package_data}/plasma/plasmoids/org.kde.latte.containment"
@@ -1199,7 +1199,7 @@ def _build_dock_environment(package: ValidatedPackage, runtime_dir: Path) -> dic
     """The installed dock's launch environment: loader-injection and ambient
     QML/plugin variables removed, the validated allow-lists forced."""
     dock_env = dict(os.environ)
-    for variable in audit.LOADER_INJECTION_VARIABLES:
+    for variable in provenance.LOADER_INJECTION_VARIABLES:
         dock_env.pop(variable, None)
     for variable in (
         "QML_IMPORT_PATH",
@@ -1250,7 +1250,7 @@ def _query_dbus_readback(method: str) -> str:
     )
     if result.returncode != 0:
         return ""
-    return audit.drop_nul_bytes(result.stdout).rstrip("\n")
+    return provenance.drop_nul_bytes(result.stdout).rstrip("\n")
 
 
 def _await_settled_dock(dock: SessionProcess, dock_log: Path) -> None:
@@ -1299,12 +1299,12 @@ def _require_running_identity(dock_pid: int, binary: str) -> None:
 def _require_scrubbed_environment(dock_pid: int, package: ValidatedPackage) -> None:
     environ_file = f"/proc/{dock_pid}/environ"
     try:
-        actual_qml = audit.read_environment_value(environ_file, "QML2_IMPORT_PATH")
-    except audit.AuditError as err:
+        actual_qml = provenance.read_environment_value(environ_file, "QML2_IMPORT_PATH")
+    except provenance.ProvenanceError as err:
         _fail_after(str(err), "cannot verify the running dock's QML2_IMPORT_PATH")
     try:
-        actual_plugins = audit.read_environment_value(environ_file, "LATTE_EXTRA_PLUGIN_PATHS")
-    except audit.AuditError as err:
+        actual_plugins = provenance.read_environment_value(environ_file, "LATTE_EXTRA_PLUGIN_PATHS")
+    except provenance.ProvenanceError as err:
         _fail_after(str(err), "cannot verify the running dock's LATTE_EXTRA_PLUGIN_PATHS")
     if actual_qml != package.qml_import_path:
         fail(
@@ -1329,7 +1329,7 @@ def _require_scrubbed_environment(dock_pid: int, package: ValidatedPackage) -> N
         "NIXPKGS_QT6_QML_IMPORT_PATH",
         "NIXPKGS_QML_SEARCH_PATHS",
         "QT_PLUGIN_PATH",
-        *audit.LOADER_INJECTION_VARIABLES,
+        *provenance.LOADER_INJECTION_VARIABLES,
     ):
         if process_env.startswith(f"{forbidden}=") or f"\n{forbidden}=" in process_env:
             fail(f"forbidden ambient variable {forbidden} leaked into the installed dock")
@@ -1344,7 +1344,7 @@ def _resolve_plugin_for_mapping(label: str, path: str) -> str:
 
 def _build_expected_mapping_registry(
     package: ValidatedPackage,
-) -> audit.ExpectedMappingRegistry:
+) -> provenance.ExpectedMappingRegistry:
     core, containment, tasks, action, indicator = package.plugin_paths
     registrations = (
         # The binary is already the fully resolved installed artifact.
@@ -1372,11 +1372,11 @@ def _build_expected_mapping_registry(
             False,
         ),
     )
-    registry = audit.ExpectedMappingRegistry()
+    registry = provenance.ExpectedMappingRegistry()
     for label, resolved, required in registrations:
         try:
             registry.register(label, resolved, required)
-        except audit.AuditError as err:
+        except provenance.ProvenanceError as err:
             fail(str(err))
     return registry
 
@@ -1408,7 +1408,7 @@ def _shut_down_dock(state: RuntimeCleanupState) -> None:
         )
     # KSignalHandler turns SIGTERM into qGuiApp->quit(), so a clean installed
     # shutdown returns from the event loop with status zero rather than 143.
-    actual_status = audit.shell_wait_status(dock.wait())
+    actual_status = provenance.shell_wait_status(dock.wait())
     if actual_status != 0:
         fail(f"installed dock after SIGTERM exited with status {actual_status}, expected 0")
     state.dock = None
@@ -1444,7 +1444,7 @@ def run_nested_runtime_phase(
     _require_scrubbed_environment(dock.pid, package)
 
     registry = _build_expected_mapping_registry(package)
-    result = audit.audit_mapped_paths(
+    result = provenance.audit_mapped_paths(
         f"/proc/{dock.pid}/maps", ctx.artifact_prefix, ctx.repo, registry
     )
     for verified in result.verified_paths:
@@ -1460,7 +1460,7 @@ def run_nested_runtime_phase(
 
 def _run_gate(argv: Sequence[str], state: RuntimeCleanupState) -> None:
     require_commands("validation", VALIDATION_COMMANDS)
-    qt_plugin_info = audit.find_qt6_plugin_info()
+    qt_plugin_info = provenance.find_qt6_plugin_info()
     if qt_plugin_info is None:
         fail(
             "required Qt 6 validation command 'qtplugininfo' is missing or "
@@ -1484,7 +1484,7 @@ def _run_gate(argv: Sequence[str], state: RuntimeCleanupState) -> None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     install_conventional_signal_exits()
-    for variable in audit.LOADER_INJECTION_VARIABLES:
+    for variable in provenance.LOADER_INJECTION_VARIABLES:
         os.environ.pop(variable, None)
     state = RuntimeCleanupState()
     status = 0

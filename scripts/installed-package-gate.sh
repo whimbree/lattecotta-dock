@@ -7,7 +7,7 @@
 # the typed harness in BP-4a (the bash-to-python migration's package-gate
 # engine chunk); the engine lives in
 # harness/src/latte_harness/package_gate.py with the ELF/maps provenance
-# core in package_gate_audit.py. This .sh stays as the stable entry point
+# core in package_provenance.py. This .sh stays as the stable entry point
 # (tests/installed-package-gate-runtime-test.sh, ci/build-and-gate.sh, the
 # selftest's refusal controls); THE MODULE'S EXIT CODE IS THE VERDICT.
 #

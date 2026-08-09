@@ -22,7 +22,7 @@ plugin fixtures, symlink trees, live-root manifests), the signal and
 cleanup contracts (exit 130/143 through cleanup), the process-group
 teardown gaps, and the shutdown wait-status taxonomy. Controls whose
 decision logic is already pinned by test_package_gate.py,
-test_package_gate_audit.py, test_vehicle.py or test_proc.py are not
+test_package_provenance.py, test_vehicle.py or test_proc.py are not
 re-ported; the BP-4b commit body carries the full 91-control
 reconciliation.
 
@@ -59,7 +59,7 @@ from latte_harness.package_gate import (
     RuntimeCleanupState,
     ValidatedPackage,
 )
-from latte_harness.package_gate_audit import (
+from latte_harness.package_provenance import (
     LOADER_INJECTION_VARIABLES,
     choose_qt6_plugin_info,
     find_qt6_plugin_info,
@@ -619,7 +619,7 @@ def test_invalid_appstream_metadata_is_refused_with_the_wrapped_diagnostic(
     # One representative through the full gate pins the engine's
     # violates-the-contract wrapping; the other nine bash variants are the
     # validator's own taxonomy, pinned per-diagnostic by
-    # test_package_gate_audit.test_appstream_rejects_contract_violations.
+    # test_package_provenance.test_appstream_rejects_contract_violations.
     root = pkg.copy_good("appstream-wrong-component-type")
     _write_appstream_metadata(root, component_type="addon")
     _expect_refusal(
@@ -1071,7 +1071,7 @@ def test_valid_containment_actions_plugin_with_the_wrong_class_is_refused(
 def test_containment_actions_plugin_with_the_wrong_category_is_refused(pkg: GateFixture) -> None:
     # The category refusal through real qtplugininfo output; the string/array
     # metadata-typing variants are pinned by the declares_* predicate tests in
-    # test_package_gate_audit.py (same decision point, same diagnostics).
+    # test_package_provenance.py (same decision point, same diagnostics).
     root = pkg.copy_good("wrong-category-action-plugin")
     _build_qt_plugin(
         pkg.toolchain,

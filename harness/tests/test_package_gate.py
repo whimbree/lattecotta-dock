@@ -28,7 +28,7 @@ from latte_harness.package_gate import (
     resolve_following_symlinks,
     resolve_package_namespace_path,
 )
-from latte_harness.package_gate_audit import shell_wait_status
+from latte_harness.package_provenance import shell_wait_status
 from latte_harness.paths import find_repo_root
 
 # ---- argument contract -------------------------------------------------------
