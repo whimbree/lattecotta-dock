@@ -78,11 +78,8 @@ def _fakepointer(*args: str) -> None:
 
 
 def _require_env(name: str) -> str:
-    """The bash ``${VAR:?}``: return the value, or refuse loudly naming the var."""
-    value = os.environ.get(name)
-    if not value:
-        raise AppletReorderError(f"applet_reorder: required environment variable {name} is unset")
-    return value
+    """This module's env accessor: recipe.require_env with the applet_reorder prefix/error."""
+    return recipe.require_env(name, prefix="applet_reorder", error=AppletReorderError)
 
 
 def _flatten(*points: tuple[int, int]) -> list[str]:

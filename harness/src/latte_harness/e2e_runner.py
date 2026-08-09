@@ -64,6 +64,7 @@ from typing import assert_never
 from latte_harness import vehicle
 from latte_harness.paths import RepoPaths
 from latte_harness.proc import install_conventional_signal_exits
+from latte_harness.recipe import pid_alive
 
 TOOL = "run-e2e"
 
@@ -464,15 +465,6 @@ def _dock_pid() -> int | None:
     return int(text) if text.isdigit() else None
 
 
-def _pid_alive(pid: int) -> bool:
-    """The bash ``kill -0``: alive iff a signal could be delivered."""
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
-
-
 def _print_log_tail(log: Path, lines: int) -> None:
     """The bash ``tail -N`` (to stdout) of a log that may be absent."""
     if not log.is_file():
@@ -610,7 +602,7 @@ def _drive_nested(repo: Path, recipes: list[Path]) -> int:
 def _teardown_nested_dock(counters: Counters) -> None:
     """The final e2e_dock_stop, doubling as a clean-shutdown check (bash teardown)."""
     pid = _dock_pid()
-    if pid is not None and _pid_alive(pid) and _lib_sh_call("e2e_dock_stop") != 0:
+    if pid is not None and pid_alive(pid) and _lib_sh_call("e2e_dock_stop") != 0:
         print(
             f"{TOOL}: FAIL the vehicle dock did not exit cleanly on SIGTERM at teardown",
             flush=True,
@@ -753,7 +745,7 @@ def _ensure_vehicle_dock(name: str, counters: Counters) -> bool:
     recipe (failed++, skip it) and returns False.
     """
     pid = _dock_pid()
-    if pid is not None and _pid_alive(pid):
+    if pid is not None and pid_alive(pid):
         return True
     print(f"{TOOL}: (re)starting the vehicle dock for {name}...", flush=True)
     if _lib_sh_call("e2e_dock_start", str(DOCK_START_TIMEOUT)) != 0:

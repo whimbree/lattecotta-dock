@@ -29,31 +29,12 @@ last-field parse); the bad-id rejection greps E2E_DOCK_LOG directly, as the
 bash did.
 """
 
-import os
-import sys
-from pathlib import Path
-
 from latte_harness import dnd, recipe
 
 
 def _all_view_ids() -> list[int]:
     """all_view_ids: every current containment id (the bash viewsData scan)."""
     return [v.containment_id for v in recipe.views()]
-
-
-def _dock_log_lines() -> list[str]:
-    return Path(os.environ["E2E_DOCK_LOG"]).read_text(errors="replace").splitlines()
-
-
-def _new_log_has(mark: int, needle: str) -> bool:
-    """The bash ``tail -n +$((mark+1)) | grep -q``: a new dock-log line carries needle."""
-    return any(needle in line for line in _dock_log_lines()[mark:])
-
-
-def _dump_new_log(mark: int) -> None:
-    print("---- new dock-log lines ----", file=sys.stderr, flush=True)
-    for line in _dock_log_lines()[mark:]:
-        print(line, file=sys.stderr, flush=True)
 
 
 def main() -> None:
@@ -78,16 +59,16 @@ def main() -> None:
     if bad_cid in _all_view_ids():
         recipe.fail(f"test bug: {bad_cid} is a real view id, pick another")
 
-    logmark = len(_dock_log_lines())
+    logmark = len(recipe.dock_log_lines())
     idx = dnd.drop_marker(bad_cid)
     if idx != "-1":
         recipe.fail(
             f"viewDropMarkerIndex on a bad containment id returned {idx}; expected the -1 sentinel"
         )
-    if not _new_log_has(
+    if not recipe.new_dock_log_has(
         logmark, f"viewDropMarkerIndex queried for containment {bad_cid} which has no view"
     ):
-        _dump_new_log(logmark)
+        recipe.dump_new_dock_log(logmark)
         recipe.fail(
             f"no viewDropMarkerIndex refusal qWarning for bad containment id {bad_cid} "
             "in the dock log"

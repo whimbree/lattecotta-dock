@@ -19,18 +19,15 @@ wins the vehicle's enter race - measured 6/6 deliveries in calibration) with a
 retry loop for the occasional loss.
 """
 
-import contextlib
-import io
 import os
 import subprocess
 import time
-from collections.abc import Iterator
 
 from latte_harness import recipe
 
 
 def _fakepointer(*args: str) -> None:
-    subprocess.run([os.environ["E2E_FAKEPOINTER"], *args], check=False)
+    _ = recipe.fakepointer(*args)
 
 
 def _kread(*args: str) -> str:
@@ -44,14 +41,7 @@ def _kread(*args: str) -> str:
 
 
 def _kwrite(*args: str) -> None:
-    subprocess.run(["kwriteconfig6", "--file", os.environ["E2E_LAYOUT"], *args], check=False)
-
-
-@contextlib.contextmanager
-def _muted_stderr() -> Iterator[None]:
-    """The cleanup dock stop's `>/dev/null 2>&1`: keep its diagnostics off the recipe output."""
-    with contextlib.redirect_stderr(io.StringIO()):
-        yield
+    _ = recipe.kwriteconfig("--file", os.environ["E2E_LAYOUT"], *args)
 
 
 def _latte_lines() -> list[str]:
@@ -80,7 +70,7 @@ def main() -> None:
     orig = _kread(*general, "--key", "maxLength")
 
     def restore_config() -> None:
-        with _muted_stderr():
+        with recipe.muted_stderr():
             recipe.dock_stop()
         if orig:
             _kwrite(*general, "--key", "maxLength", orig)

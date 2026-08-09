@@ -40,15 +40,6 @@ from pathlib import Path
 from latte_harness import recipe
 
 
-def _pid_alive(pid: int) -> bool:
-    """The bash ``kill -0``: alive iff a signal could be delivered."""
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
-
-
 def _last_field_paths(maps: str, needle: str) -> list[str]:
     """awk '/<needle>/ {print $NF}' | sort -u: the mapped paths matching needle."""
     return sorted({line.split()[-1] for line in maps.splitlines() if needle in line})
@@ -66,7 +57,7 @@ def main() -> None:
     pid = recipe.dock_pid()
     if pid is None:
         recipe.fail("no dock pid recorded")
-    if not _pid_alive(pid):
+    if not recipe.pid_alive(pid):
         recipe.fail(f"dock (pid {pid}) is not alive")
     maps_path = f"/proc/{pid}/maps"
     try:

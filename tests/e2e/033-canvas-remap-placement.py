@@ -28,20 +28,10 @@ recipe.kwin_js, the same transient KWin script the bash e2e_kwin_js ran.
 """
 
 import contextlib
-import io
 import time
-from collections.abc import Iterator
 from typing import Any
 
 from latte_harness import recipe
-
-
-@contextlib.contextmanager
-def _muted_stderr() -> Iterator[None]:
-    """The restore dock stop's `>/dev/null 2>&1`: keep its diagnostics off output."""
-    with contextlib.redirect_stderr(io.StringIO()):
-        yield
-
 
 _EDGE_VALUES = {"top": 3, "bottom": 4, "left": 5, "right": 6}
 _ALIGNMENT_VALUES = {
@@ -191,7 +181,7 @@ def _restore(
         removed = True
     if removed:
         time.sleep(1)
-    with _muted_stderr():
+    with recipe.muted_stderr():
         recipe.dock_stop()
 
 

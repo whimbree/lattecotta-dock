@@ -58,7 +58,7 @@ _S = _State()
 
 
 def _fakepointer(*args: object) -> None:
-    subprocess.run([os.environ["E2E_FAKEPOINTER"], *[str(a) for a in args]], check=False)
+    _ = recipe.fakepointer(*args)
 
 
 def _konsole_mapped() -> bool:

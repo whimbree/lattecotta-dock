@@ -34,7 +34,6 @@ byte-identical refusal wording.
 
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 import time
@@ -62,16 +61,8 @@ class DndError(Exception):
 
 
 def _require_env(name: str) -> str:
-    """The bash ``${VAR:?}``: return the value, or refuse loudly naming the var."""
-    value = os.environ.get(name)
-    if not value:
-        raise DndError(f"dnd: required environment variable {name} is unset")
-    return value
-
-
-def _screen_dims() -> tuple[int, int]:
-    """E2E_SCREEN_W/H (the bash ``${E2E_SCREEN_W:?} ${E2E_SCREEN_H:?}``)."""
-    return int(_require_env("E2E_SCREEN_W")), int(_require_env("E2E_SCREEN_H"))
+    """This module's env accessor: recipe.require_env with the dnd prefix/error."""
+    return recipe.require_env(name, prefix="dnd", error=DndError)
 
 
 def _fakepointer_run(*args: str) -> subprocess.CompletedProcess[bytes]:
@@ -147,7 +138,7 @@ def _select_explorer_rect(windows: Sequence[recipe.Window], sw: int, sh: int) ->
 
 def explorer_rect() -> str | None:
     """dnd_explorer_rect: the widget-explorer window rect, or None if none is open."""
-    sw, sh = _screen_dims()
+    sw, sh = recipe.screen_dims()
     return _select_explorer_rect(recipe.windows(), sw, sh)
 
 
@@ -250,7 +241,7 @@ def empty_point() -> tuple[int, int]:
     abort releases over. Refuses loudly if every candidate is covered (a degenerate
     full-screen config the caller must target explicitly), never returns a point
     silently on top of a view."""
-    w, h = _screen_dims()
+    w, h = recipe.screen_dims()
     point = _empty_point_from([v.absolute_geometry for v in recipe.views()], w, h)
     if point is None:
         raise DndError(

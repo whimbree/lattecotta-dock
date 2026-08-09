@@ -33,7 +33,6 @@ retired.
 from __future__ import annotations
 
 import contextlib
-import io
 import os
 import shutil
 import signal
@@ -41,7 +40,6 @@ import subprocess
 import sys
 import tempfile
 import time
-from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -69,22 +67,6 @@ class _State:
 
 
 _S = _State()
-
-
-@contextlib.contextmanager
-def _muted_stderr() -> Iterator[None]:
-    """The cleanup dock stop's `>/dev/null 2>&1`: keep its diagnostics off the recipe output."""
-    with contextlib.redirect_stderr(io.StringIO()):
-        yield
-
-
-def _pid_alive(pid: int) -> bool:
-    """The bash ``kill -0``: alive iff a signal could be delivered."""
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
 
 
 def _view_visibility_mode() -> str:
@@ -168,15 +150,12 @@ def _wait_visibility_mode(expected: str) -> None:
 
 
 def _write_config_key(key: str, value: str, label: str) -> None:
-    rc = subprocess.run(
-        ["kwriteconfig6", *_S.group_args, "--key", key, "--", value], check=False
-    ).returncode
-    if rc != 0:
+    if recipe.kwriteconfig(*_S.group_args, "--key", key, "--", value) != 0:
         recipe.fail(f"{label}: could not write {key}={value}")
 
 
 def _inject(label: str, *args: str) -> None:
-    rc = subprocess.run([os.environ["E2E_FAKEPOINTER"], *args], check=False).returncode
+    rc = recipe.fakepointer(*args)
     if rc != 0:
         recipe.fail(f"{label}: fakepointer '{' '.join(args)}' failed with status {rc}")
 
@@ -185,7 +164,7 @@ def _configure_mode(
     close_enabled: str, scroll_action: str, expected_tracker: str, label: str
 ) -> None:
     pid = recipe.dock_pid()
-    if pid is not None and _pid_alive(pid) and not recipe.dock_stop():
+    if pid is not None and recipe.pid_alive(pid) and not recipe.dock_stop():
         recipe.fail(f"{label}: could not stop the dock for configuration")
 
     _write_config_key("dragActiveWindowEnabled", "false", label)
@@ -341,7 +320,7 @@ def _spawn_fixture(title: str) -> None:
 def _terminate_fixture(label: str) -> None:
     proc = _S.fixture_proc
     if proc is not None:
-        if _pid_alive(proc.pid):
+        if recipe.pid_alive(proc.pid):
             try:
                 os.kill(proc.pid, signal.SIGTERM)
             except ProcessLookupError:
@@ -354,7 +333,7 @@ def _terminate_fixture(label: str) -> None:
             recipe.fail(
                 f"{label}: fixture pid {proc.pid} exited unexpectedly with status {wait_status}"
             )
-        if _pid_alive(proc.pid):
+        if recipe.pid_alive(proc.pid):
             recipe.fail(f"{label}: fixture pid {proc.pid} survived termination")
     _wait_fixture_absent(f"{label} absence check")
     _S.fixture_proc = None
@@ -408,7 +387,7 @@ def _finalize_recipe() -> None:
     if _S.fixture_count_value != 0:
         recipe.fail(f"finalization left {_S.fixture_count_value} fixture window(s)")
     pid = recipe.dock_pid()
-    if pid is None or not _pid_alive(pid):
+    if pid is None or not recipe.pid_alive(pid):
         recipe.fail("finalization found no running dock to stop")
     if not recipe.dock_stop():
         recipe.fail(f"finalization could not stop dock pid {pid}")
@@ -504,7 +483,7 @@ def _cleanup() -> bool:
     if not _S.recipe_finalized:
         proc = _S.fixture_proc
         if proc is not None:
-            if _pid_alive(proc.pid):
+            if recipe.pid_alive(proc.pid):
                 try:
                     os.kill(proc.pid, signal.SIGTERM)
                 except ProcessLookupError:
@@ -518,7 +497,7 @@ def _cleanup() -> bool:
                 proc.wait()
             rc = proc.returncode
             wait_status = 128 - rc if rc is not None and rc < 0 else (rc if rc is not None else 0)
-            if wait_status not in (0, 143) or _pid_alive(proc.pid):
+            if wait_status not in (0, 143) or recipe.pid_alive(proc.pid):
                 print(
                     f"FAIL: cleanup fixture pid {proc.pid} did not terminate cleanly "
                     f"(wait={wait_status})",
@@ -537,8 +516,8 @@ def _cleanup() -> bool:
                 )
                 cleanup_failed = True
         pid = recipe.dock_pid()
-        if pid is not None and _pid_alive(pid):
-            with _muted_stderr():
+        if pid is not None and recipe.pid_alive(pid):
+            with recipe.muted_stderr():
                 stopped = recipe.dock_stop()
             if not stopped:
                 print(

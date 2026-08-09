@@ -28,23 +28,13 @@ launchers config KEY is discovered and round-tripped through kreadconfig6 /
 kwriteconfig6 over E2E_LAYOUT, exactly as the bash did.
 """
 
-import contextlib
-import io
 import os
 import re
 import subprocess
 import sys
-from collections.abc import Iterator
 from pathlib import Path
 
 from latte_harness import recipe, task_reorder
-
-
-@contextlib.contextmanager
-def _muted_stderr() -> Iterator[None]:
-    """The cleanup dock stop's `>/dev/null 2>&1`: keep its diagnostics off output."""
-    with contextlib.redirect_stderr(io.StringIO()):
-        yield
 
 
 def main() -> None:
@@ -103,7 +93,7 @@ def main() -> None:
     orig_launchers = read_launchers_key()
 
     def restore_config() -> None:
-        with _muted_stderr():
+        with recipe.muted_stderr():
             recipe.dock_stop()
         write_launchers_key(orig_launchers)
 
@@ -305,7 +295,7 @@ def _kread(layout: str, *args: str) -> str:
 
 
 def _kwrite(layout: str, *args: str) -> None:
-    subprocess.run(["kwriteconfig6", "--file", layout, *args], check=False)
+    _ = recipe.kwriteconfig("--file", layout, *args)
 
 
 if __name__ == "__main__":

@@ -22,7 +22,6 @@ message is byte-identical, the SPDX header is preserved, and the exec bit stays
 """
 
 import contextlib
-import io
 import json
 import os
 import re
@@ -32,7 +31,6 @@ import subprocess
 import sys
 import tempfile
 import time
-from collections.abc import Iterator
 from pathlib import Path
 
 from latte_harness import recipe
@@ -43,27 +41,11 @@ WINDOW_TITLE = "latte-sc-w1-launcher"
 
 
 def _fakepointer(*args: str) -> None:
-    subprocess.run([os.environ["E2E_FAKEPOINTER"], *args], check=False)
+    _ = recipe.fakepointer(*args)
 
 
 def _kwrite(*args: str) -> None:
-    subprocess.run(["kwriteconfig6", "--file", os.environ["E2E_LAYOUT"], *args], check=False)
-
-
-@contextlib.contextmanager
-def _muted_stderr() -> Iterator[None]:
-    """The cleanup dock stop's `>/dev/null 2>&1`: keep its diagnostics off the recipe output."""
-    with contextlib.redirect_stderr(io.StringIO()):
-        yield
-
-
-def _pid_alive(pid: int) -> bool:
-    """The bash ``kill -0``: alive iff a signal could be delivered."""
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
+    _ = recipe.kwriteconfig("--file", os.environ["E2E_LAYOUT"], *args)
 
 
 def _tail1(path: str) -> str:
@@ -236,7 +218,7 @@ def main() -> None:
             for line in p.read_text().splitlines():
                 with contextlib.suppress(ProcessLookupError, ValueError):
                     os.kill(int(line), signal.SIGTERM)
-        with _muted_stderr():
+        with recipe.muted_stderr():
             recipe.dock_stop()
         shutil.copyfile(backup, layout)
         with contextlib.suppress(OSError):
@@ -245,7 +227,7 @@ def main() -> None:
     def configure_mode(action: int, scrolling: str, manual: int) -> None:
         nonlocal launcher_span
         pid = recipe.dock_pid()
-        if pid is not None and _pid_alive(pid) and not recipe.dock_stop():
+        if pid is not None and recipe.pid_alive(pid) and not recipe.dock_stop():
             recipe.fail(f"could not stop dock for task-wheel mode {action}/{scrolling}/{manual}")
         _kwrite(*general, "--key", launchers_key, launcher_url)
         _kwrite(*general, "--key", "hoverAction", "0")
@@ -333,7 +315,7 @@ def main() -> None:
         if not wait_for_state("active"):
             recipe.fail(f"{label} did not activate the task-model window")
         pid = _tail1(pid_log)
-        if not (pid and _pid_alive(int(pid))):
+        if not (pid and recipe.pid_alive(int(pid))):
             recipe.fail(f"{label} launch process {pid} is not alive")
         if window_count() != 1:
             recipe.fail(f"{label} did not create exactly one fixture window")
@@ -350,7 +332,7 @@ def main() -> None:
         count = 0
         for line in p.read_text().splitlines():
             with contextlib.suppress(ValueError):
-                if _pid_alive(int(line)):
+                if recipe.pid_alive(int(line)):
                     count += 1
         return count
 
