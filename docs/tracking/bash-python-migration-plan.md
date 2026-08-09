@@ -88,9 +88,17 @@ fixture.py):
 | Dev tools | scripts/tools/dumpwins.sh, scripts/tools/watch-dock-presentation.sh | JSON/KWin-script processing; watch-dock-presentation sources the e2e lib, which is Python after BP-2c |
 
 Bash retained (sequencing and exit-code plumbing, external contracts,
-fixtures; 797 lines across 17 files, approved 2026-08-04 as the 15-file
-613-line enumeration and corrected 2026-08-04 when the shebang inventory
-surfaced the two extensionless packaging helpers):
+fixtures). The 2026-08-04 approval projected a 15-file / 613-line
+enumeration, corrected the same day to 17 files / 797 lines when the
+shebang inventory surfaced the two extensionless packaging helpers. The
+migration completed 2026-08-06 at a wider floor - 46 files - because the
+thin entry-point shims fronting the typed harness (the run-*, qml-*, gate
+and vehicle front doors dispositioned in the Python table above) and the
+defect-blocked e2e recipes stayed bash rather than being deleted (the
+"allowlist floor is deliberate, not final-set" note in the BP-5c tick).
+The table below enumerates the retained spine, external contracts,
+fixtures, and the two launcher-authorization helpers; the shims carry
+their disposition in the Python-migration table above:
 
 | Script | Why bash stays |
 | --- | --- |
@@ -99,6 +107,8 @@ surfaced the two extensionless packaging helpers):
 | scripts/git-hooks/pre-push | Git hook, sha compare; must work on a fresh clone before uv exists |
 | ci/build-and-gate.sh | Container-side sequencer across 7 distros; bash is the one universally present tool there |
 | scripts/restart-staged.sh, start-dock.sh, start-dock-sanitized.sh | The daily-driver kill/setsid/detach dance; high blast radius, stable, no logic |
+| scripts/ensure-dev-wayland-interfaces.sh | The Wayland-authorization step of that same launcher path: restart-staged.sh calls it to write the KService desktop entry naming the exact dev binary and refresh kbuildsycoca6, so KWin grants the dev dock the privileged window-management protocols. Session-cache mutation on the real desktop, high blast radius, no logic worth typing in a second language |
+| tests/startdockauthoritytest.sh | The co-located ctest selftest (add_test startdockauthority) for that launcher-authorization bash: drives restart-staged.sh and ensure-dev-wayland-interfaces.sh as subprocesses under a faked PATH (kbuildsycoca6/pgrep/setsid) and asserts the desktop-entry contents, the unchanged-entry cache refresh, the exec-path and missing-binary refusals, and the insufficient-interface refusal. Testing retained bash through a foreign harness adds an interpreter for zero equivalence gain; the test stays in the language of what it guards |
 | Messages.sh (x5) | KDE translation-infrastructure contract (scripty invokes by name and convention); an external interface, not this repo's harness |
 | tests/e2e/fixtures/sc-w1/launcher.sh, rate-launcher.sh | Test fixtures simulating launched desktop apps; being tiny shell executables is the point |
 | packaging/rpm/make-snapshot-source.sh | Packaging-side tarball helper invoked from the RPM spec context |

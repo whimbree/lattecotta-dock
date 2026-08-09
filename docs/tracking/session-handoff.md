@@ -365,10 +365,12 @@ workstream: `docs/tracking/bash-python-migration-plan.md` is the tracking
 source of truth (chunks BP-0..BP-5, ~20-24 PRs). Approved 2026-08-04 with
 three dispositions: basedpyright at strict mode as the checker (hermetic uv
 install off-nix), a retained-bash set enforced by a shrink-only allowlist
-ratchet (797 lines across 17 files after the shebang inventory surfaced the
-two extensionless packaging build-package helpers; the original enumeration
-was 613/15), and deletion of the legacy install.sh/uninstall.sh/formatter.sh
-trio (BP-5b). The July carve-out was refined: the nested-vehicle lifecycle
+ratchet (approved that day as 797 lines across 17 files after the shebang
+inventory surfaced the two extensionless packaging build-package helpers, up
+from the original 613/15 enumeration; the completed migration later settled
+at a wider 46-file floor as the harness front-door shims and defect-blocked
+recipes stayed bash - see the BP plan's retained-set section), and deletion
+of the legacy install.sh/uninstall.sh/formatter.sh trio (BP-5b). The July carve-out was refined: the nested-vehicle lifecycle
 moves to Python with exit-code parity; only the restart dance and exit-code
 sequencing stay bash. Review contract for BP PRs (revised same day):
 orchestrator quick context-aware read plus independent cold-context lean-Opus
