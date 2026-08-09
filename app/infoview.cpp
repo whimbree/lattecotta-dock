@@ -21,7 +21,7 @@
 #include <QScreen>
 
 // KDE
-#include <KLocalizedContext>
+#include <KLocalizedQmlContext>
 #include <KWindowSystem>
 
 // Plasma
@@ -70,10 +70,18 @@ void InfoView::init()
     rootContext()->setContextProperty(QStringLiteral("infoWindow"), this);
 
     //! KDeclarative's engine setup is gone in KF6; the piece Latte needs from
-    //! it is the i18n() context for the QML side
-    auto *localizedContext = new KLocalizedContext(engine());
-    localizedContext->setTranslationDomain(QStringLiteral("latte-dock"));
+    //! it is the i18n() context for the QML side. KF6 6.8 deprecated
+    //! KLocalizedContext for KLocalizedQmlContext (moved to the KF6::I18nQml
+    //! module). The domain is bound explicitly here rather than through
+    //! KLocalization::setupLocalizedContext(): that helper only sets a domain
+    //! when the TRANSLATION_DOMAIN macro is defined for the translation unit,
+    //! and app/ defines no such macro (it sets its catalog at runtime via
+    //! main.cpp's KLocalizedString::setApplicationDomain). Binding latte-dock
+    //! on the context keeps this window's strings on the latte-dock catalog.
+    auto *localizedContext = new KLocalizedQmlContext(engine());
     engine()->rootContext()->setContextObject(localizedContext);
+    QQmlEngine::setContextForObject(localizedContext, engine()->rootContext());
+    localizedContext->setTranslationDomain(QStringLiteral("latte-dock"));
 
     auto source = QUrl::fromLocalFile(m_corona->kPackage().filePath("infoviewui"));
     setSource(source);

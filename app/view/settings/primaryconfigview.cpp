@@ -33,7 +33,6 @@
 #include <QScreen>
 
 // KDE
-#include <KLocalizedContext>
 #include <KWindowEffects>
 #include <KWindowSystem>
 

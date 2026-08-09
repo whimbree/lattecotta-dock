@@ -95,6 +95,14 @@ target_link_libraries(lattedock-core PUBLIC
     KF6::GuiAddons
     KF6::GlobalAccel
     KF6::I18n
+    # KLocalizedQmlContext (the KF6 6.8 replacement for the deprecated
+    # KLocalizedContext) lives in the KF6::I18nQml library. That imported
+    # target is exported by the KF6I18n config package already found at the
+    # top level (COMPONENTS I18n), the same package that provides KF6::I18n -
+    # there is no standalone KF6I18nQml package to find_package, so linking
+    # the target is all that is needed here. infoview and the per-view config
+    # windows use it to bind the latte-dock i18n catalog into their QML engines.
+    KF6::I18nQml
     KF6::IconThemes
     KF6::IconWidgets
     KF6::KIOWidgets
