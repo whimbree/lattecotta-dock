@@ -71,7 +71,9 @@ def main() -> None:
     # ---- leg 0: showWidgetExplorer refuses a bad containment id -----------------
 
     bad_cid = 987654
-    if f'"containmentId":{bad_cid}' in recipe.json_payload("viewsData"):
+    # W3 (widen the readback models): the bad-id guard reads the typed recipe.views()
+    # instead of scanning the raw viewsData text for the containmentId substring.
+    if any(v.containment_id == bad_cid for v in recipe.views()):
         recipe.fail(f"test bug: {bad_cid} is a real view id, pick another")
     logmark = len(_dock_log_lines())
     winmark = _dumpwin_count()

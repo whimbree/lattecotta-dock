@@ -44,7 +44,6 @@ import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 from latte_harness import proc, recipe
 
@@ -110,20 +109,18 @@ def _latte_call(fail_message: str, *args: str) -> None:
         recipe.fail(fail_message)
 
 
-def _view_field(field_name: str) -> Any:
-    """e2e_view_field: a field of this view's viewsData record, or a loud refusal.
+def _view_visibility_mode() -> str:
+    """e2e_view_field visibilityMode: this view's visibility mode, or a loud refusal.
 
-    The typed View model does not carry visibilityMode, so viewsData is read as
-    raw JSON via recipe.read_json (the same boundary the bash python one-liner
-    used); a refused reply (DbusUnavailableError) or a missing view raises
-    RecipeError, which the wait loop maps to the bash's loud readback-failure
-    message.
+    W3 (widen the readback models): visibilityMode rides the typed recipe.View, so
+    this reads recipe.views(); a refused reply (DbusUnavailableError) or a missing
+    view raises RecipeError, which the wait loop maps to the bash's loud
+    readback-failure message.
     """
-    views = recipe.read_json("viewsData")
-    record = next((v for v in views if v["containmentId"] == _S.view), None)
+    record = next((v for v in recipe.views() if v.containment_id == _S.view), None)
     if record is None:
         raise recipe.RecipeError(f"no view with containmentId {_S.view}")
-    return record[field_name]
+    return record.visibility_mode
 
 
 def _fixture_count() -> int:
@@ -183,7 +180,7 @@ def _wait_visibility_mode(expected: str) -> None:
     actual = ""
     for _ in range(40):
         try:
-            actual = str(_view_field("visibilityMode"))
+            actual = _view_visibility_mode()
         except recipe.RecipeError:
             recipe.fail(f"visibility-mode readback failed for view {_S.view}")
         if actual == expected:

@@ -117,10 +117,12 @@ def _dock_record() -> dict[str, Any]:
     return matches[0]
 
 
-def _view_field() -> dict[str, Any]:
-    """e2e_view_field's context: the viewsData record for the view (raw JSON)."""
-    views = recipe.read_json("viewsData")
-    match = [v for v in views if v["containmentId"] == _S.view]
+def _view_field() -> recipe.View:
+    """e2e_view_field's context: the typed viewsData record for the view.
+
+    W3 (widen the readback models): visibilityMode rides the typed recipe.View, so
+    this reads recipe.views() instead of raw JSON."""
+    match = [v for v in recipe.views() if v.containment_id == _S.view]
     if not match:
         raise recipe.RecipeError(f"no view with containmentId {_S.view}")
     return match[0]
@@ -895,11 +897,11 @@ def _body() -> None:
     )
     for _ in range(40):
         with suppress(recipe.RecipeError):
-            if _view_field()["visibilityMode"] == "alwaysVisible":
+            if _view_field().visibility_mode == "alwaysVisible":
                 break
         time.sleep(0.25)
     try:
-        settled = _view_field()["visibilityMode"] == "alwaysVisible"
+        settled = _view_field().visibility_mode == "alwaysVisible"
     except recipe.RecipeError:
         settled = False
     if not settled:

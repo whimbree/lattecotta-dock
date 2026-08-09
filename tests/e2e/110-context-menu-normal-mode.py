@@ -94,11 +94,13 @@ def main() -> None:
         recipe.fail("views did not settle")
 
     # The guard: every view, in normal mode, exposes the full always-shown set.
+    # W3 (widen the readback models): containmentId / editMode ride the typed
+    # recipe.views().
     checked = 0
-    for view in json.loads(recipe.json_payload("viewsData")):
-        cid = view["containmentId"]
+    for view in recipe.views():
+        cid = view.containment_id
         #! normal mode is the whole point: edit mode would mask an emptied list
-        editmode = view["editMode"]
+        editmode = view.edit_mode
         if editmode is not False:
             recipe.fail(
                 f"view {cid} reports editMode={editmode}; "

@@ -12,11 +12,11 @@ navigation reasons share one session without ending it early.
 Ported from tests/e2e/113-containment-focus-status-restoration.sh to
 latte_harness.recipe (BP-3, the bash-to-python migration's focus-restoration
 recipe wave R9). containmentAcceptsInput / keyboardNavigation /
-ownsPanelFocusSession are not in the typed View model, so viewsData is read as
-raw JSON via recipe.read_json, the same boundary the bash python one-liners
-used; a refused reply (recipe.DbusUnavailableError) reads as the empty
-sentinel the wait loops treat as a non-match, exactly as the bash command
-substitution swallowed the crashed one-liner's empty output. The config
+ownsPanelFocusSession ride the widened typed View model (W3, widen the readback
+models), so viewsData is read through recipe.views(); a refused reply
+(recipe.DbusUnavailableError) reads as the empty sentinel the wait loops treat
+as a non-match, exactly as the bash command substitution swallowed the crashed
+one-liner's empty output. The config
 backup/restore and the
 fixture staging keep the byte-for-byte cp -a / diff -qr contract (subprocess),
 and the coarse setViewKeyboardNavigation action fails loudly on a D-Bus error.
@@ -30,7 +30,7 @@ import tempfile
 import time
 from contextlib import suppress
 from pathlib import Path
-from typing import IO, Any
+from typing import IO
 
 from latte_harness import proc, recipe
 
@@ -81,11 +81,14 @@ def _latte_call(fail_message: str, *args: str) -> None:
         recipe.fail(fail_message)
 
 
-def _views_raw() -> list[dict[str, Any]]:
-    """viewsData as raw JSON, or [] on a refused/failed reply (the bash crash-to-
-    empty sentinel that the wait loops read as a non-match)."""
+def _views() -> list[recipe.View]:
+    """viewsData as typed View records, or [] on a refused/failed reply (the bash
+    crash-to-empty sentinel the wait loops read as a non-match).
+
+    W3 (widen the readback models): containmentAcceptsInput / keyboardNavigation /
+    ownsPanelFocusSession ride the typed recipe.View, so this reads recipe.views()."""
     try:
-        return recipe.read_json("viewsData")
+        return recipe.views()
     except recipe.DbusUnavailableError:
         return []
 
@@ -172,9 +175,9 @@ def _window_is_minimized(window_id: str) -> str:
 
 
 def _keyboard_navigation(cid: int) -> str:
-    for view in _views_raw():
-        if view["containmentId"] == cid:
-            return "true" if view["keyboardNavigation"] else "false"
+    for view in _views():
+        if view.containment_id == cid:
+            return "true" if view.keyboard_navigation else "false"
     return ""
 
 
@@ -187,11 +190,11 @@ def _wait_for_keyboard_navigation(cid: int, expected: str) -> bool:
 
 
 def _panel_focus_state(cid: int) -> str:
-    for view in _views_raw():
-        if view["containmentId"] == cid:
-            accepts = str(view["containmentAcceptsInput"]).lower()
-            keyboard = str(view["keyboardNavigation"]).lower()
-            owns = str(view["ownsPanelFocusSession"]).lower()
+    for view in _views():
+        if view.containment_id == cid:
+            accepts = str(view.containment_accepts_input).lower()
+            keyboard = str(view.keyboard_navigation).lower()
+            owns = str(view.owns_panel_focus_session).lower()
             return f"{accepts} {keyboard} {owns}"
     return ""
 
@@ -361,21 +364,21 @@ def main() -> None:
 
         if not recipe.dock_start(90):
             recipe.fail("dock did not settle with the panel-focus fixture")
-        views = _views_raw()
-        cid = int(views[0]["containmentId"]) if len(views) == 1 else None
+        views = _views()
+        cid = views[0].containment_id if len(views) == 1 else None
         if cid is None:
             recipe.fail("panel-focus fixture did not create exactly one view")
         assert cid is not None
 
-        view = next(v for v in _views_raw() if v["containmentId"] == cid)
+        view = next(v for v in _views() if v.containment_id == cid)
         applet = next(a for a in recipe.view_applets(cid) if a.plugin == _PLUGIN)
-        origin_x = view["absoluteGeometry"][0] - view["localGeometry"][0]
-        origin_y = view["absoluteGeometry"][1] - view["localGeometry"][1]
+        origin_x = view.absolute_geometry[0] - view.local_geometry[0]
+        origin_y = view.absolute_geometry[1] - view.local_geometry[1]
         ax, ay, aw, ah = applet.geometry
         accepting_x = round(origin_x + ax + aw / 6)
         target_y = round(origin_y + ay + ah / 2)
-        approach_x = view["screenGeometry"][0] + view["screenGeometry"][2] // 2
-        approach_y = view["screenGeometry"][1] + view["screenGeometry"][3] // 2
+        approach_x = view.screen_geometry[0] + view.screen_geometry[2] // 2
+        approach_y = view.screen_geometry[1] + view.screen_geometry[3] // 2
 
         def click_accepting_input() -> None:
             if not _fp("move", approach_x, approach_y):

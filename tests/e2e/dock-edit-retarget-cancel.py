@@ -11,16 +11,17 @@ did not disable the target.
 
 Ported from tests/e2e/dock-edit-retarget-cancel.sh to latte_harness.recipe
 (BP-3, the bash-to-python migration's recipe batch). editMode / isCloned /
-isClonedFrom are not in the typed View model, so viewsData is read as raw JSON
-(the same boundary the bash python one-liners used); the coarse
-duplicateView / setViewEditMode actions stay busctl calls that fail loudly on a
-D-Bus error, matching the bash `e2e_call ... || e2e_fail`.
+isClonedFrom now ride the widened typed View model (W3, widen the readback
+models), so viewsData is read through recipe.views() instead of raw JSON - a
+transient dbusreports refusal still raises the pollable DbusUnavailableError the
+polling callers here catch. The coarse duplicateView / setViewEditMode actions
+stay busctl calls that fail loudly on a D-Bus error, matching the bash
+`e2e_call ... || e2e_fail`.
 """
 
 import subprocess
 import sys
 import time
-from typing import Any
 
 from latte_harness import recipe
 
@@ -41,24 +42,16 @@ def _latte_call(fail_message: str, *args: str) -> None:
         recipe.fail(fail_message)
 
 
-def _views() -> list[dict[str, Any]]:
-    """viewsData as raw JSON; a refused reply raises the pollable DbusUnavailableError.
-
-    editMode / isCloned / isClonedFrom are not in the typed View model, so this
-    reads recipe.read_json: a transient dbusreports refusal during an edit-mode
-    enter raises DbusUnavailableError, the RecipeError subclass the polling
-    callers here already catch.
-    """
-    return recipe.read_json("viewsData")
-
-
 def _view_edit_mode(view: int) -> str:
     """'true'/'false' for a view's editMode, or a loud disappearance (the bash
-    view_edit_mode, whose sys.exit maps to a RecipeError here)."""
-    record = next((v for v in _views() if v["containmentId"] == view), None)
+    view_edit_mode, whose sys.exit maps to a RecipeError here).
+
+    A refused viewsData reply raises the pollable DbusUnavailableError from
+    recipe.views(), the RecipeError subclass the polling callers here catch."""
+    record = next((v for v in recipe.views() if v.containment_id == view), None)
     if record is None:
         raise recipe.RecipeError(f"view {view} disappeared")
-    return "true" if record["editMode"] else "false"
+    return "true" if record.edit_mode else "false"
 
 
 def _wait_for_edit_mode(view: int, expected: str) -> bool:
@@ -79,26 +72,26 @@ def _wait_for_edit_mode(view: int, expected: str) -> bool:
 
 
 def main() -> None:
-    before = _views()
-    originals = [v for v in before if not v["isCloned"]]
+    before = recipe.views()
+    originals = [v for v in before if not v.is_cloned]
     if len(originals) != 1:
         raise recipe.RecipeError(f"expected one original view, saw {len(originals)}")
-    view_a = int(originals[0]["containmentId"])
+    view_a = originals[0].containment_id
 
     _latte_call(
         f"duplicateView failed for original containment {view_a}", "duplicateView", "u", str(view_a)
     )
 
-    before_ids = {v["containmentId"] for v in before}
+    before_ids = {v.containment_id for v in before}
     view_b = None
     for _ in range(100):
         try:
-            candidates = _views()
+            candidates = recipe.views()
         except recipe.RecipeError:
             candidates = []
-        created = [v for v in candidates if v["containmentId"] not in before_ids]
-        if len(created) == 1 and not created[0]["isCloned"] and created[0]["isClonedFrom"] == -1:
-            view_b = int(created[0]["containmentId"])
+        created = [v for v in candidates if v.containment_id not in before_ids]
+        if len(created) == 1 and not created[0].is_cloned and created[0].is_cloned_from == -1:
+            view_b = created[0].containment_id
             break
         time.sleep(0.2)
     if view_b is None:

@@ -34,7 +34,6 @@ import re
 import sys
 from collections.abc import Callable
 from contextlib import suppress
-from typing import Any
 
 from pydantic import ValidationError
 
@@ -78,13 +77,16 @@ def _or_absent(value: str) -> str:
     return value if value else "<absent>"
 
 
-def _view_record_or_fail(view: int) -> dict[str, Any]:
+def _view_record_or_fail(view: int) -> recipe.View:
     """The viewsData record for `view`, or the bash e2e_fail on absence / a
-    refused reply (the terminal `|| e2e_fail "could not read viewsData ..."`)."""
-    with suppress(recipe.DbusUnavailableError, KeyError, TypeError):
-        records: list[dict[str, Any]] = recipe.read_json("viewsData")
-        for record in records:
-            if record["containmentId"] == view:
+    refused reply (the terminal `|| e2e_fail "could not read viewsData ..."`).
+
+    W3 (widen the readback models): edge / alignment / screen / visibilityMode /
+    editMode ride the typed recipe.View, so this reads recipe.views(); a refused
+    reply raises DbusUnavailableError, suppressed here into the same loud e2e_fail."""
+    with suppress(recipe.DbusUnavailableError):
+        for record in recipe.views():
+            if record.containment_id == view:
                 return record
     recipe.fail(f"could not read viewsData for view {view}")
 
@@ -94,13 +96,13 @@ def _edit_mode_now(view: int) -> str:
     refused or the view is absent (the bash lenient one-liner: a missing view is
     an empty dict, str('').lower() == '')."""
     try:
-        records: list[dict[str, Any]] = recipe.read_json("viewsData")
+        records = recipe.views()
     except recipe.DbusUnavailableError:
         return ""
-    record = next((r for r in records if r.get("containmentId") == view), None)
+    record = next((r for r in records if r.containment_id == view), None)
     if record is None:
         return ""
-    return str(record.get("editMode", "")).lower()
+    return str(record.edit_mode).lower()
 
 
 def main() -> None:
@@ -112,10 +114,10 @@ def main() -> None:
 
     # --- viewsData readback: the Location/Alignment/Screen/Visibility surface ---
     record = _view_record_or_fail(view)
-    vd_edge = str(record.get("edge", ""))
-    vd_alignment = str(record.get("alignment", ""))
-    vd_vismode = str(record.get("visibilityMode", ""))
-    vd_screen = str(record.get("screen", ""))
+    vd_edge = record.edge
+    vd_alignment = record.alignment
+    vd_vismode = record.visibility_mode
+    vd_screen = record.screen
 
     if not vd_edge or vd_edge == "None":
         recipe.fail(f"viewsData carries no edge for view {view}")
