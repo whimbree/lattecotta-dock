@@ -61,6 +61,8 @@
 #include <QTest>
 #include <QVariant>
 
+#include <memory>
+
 #include "configsnapshotdiff.h"
 
 using namespace Latte::AuditHarness;
@@ -258,7 +260,8 @@ EffectsHandlerAuditTest::runIndicatorHandler(QQmlPropertyMap &config,
 //! flips only appletShadowsEnabled.
 void EffectsHandlerAuditTest::shadowToggleWritesOnlyAppletShadowsEnabled()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("appletShadowsEnabled"), true},
                   {QStringLiteral("shadowSize"), 30}, {QStringLiteral("shadowOpacity"), 70}});
 
@@ -276,7 +279,8 @@ void EffectsHandlerAuditTest::shadowToggleWritesOnlyAppletShadowsEnabled()
 //! writes only shadowSize.
 void EffectsHandlerAuditTest::shadowSizeSliderWritesOnlyShadowSize()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("shadowSize"), 30}, {QStringLiteral("shadowOpacity"), 70},
                   {QStringLiteral("appletShadowsEnabled"), true}});
 
@@ -295,7 +299,8 @@ void EffectsHandlerAuditTest::shadowSizeSliderWritesOnlyShadowSize()
 //! control 77, shadowOpacitySlider.updateShadowOpacity: writes only shadowOpacity.
 void EffectsHandlerAuditTest::shadowOpacitySliderWritesOnlyShadowOpacity()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("shadowOpacity"), 70}, {QStringLiteral("shadowSize"), 30},
                   {QStringLiteral("appletShadowsEnabled"), true}});
 
@@ -325,7 +330,8 @@ void EffectsHandlerAuditTest::shadowColorButtonsWriteOnlyShadowColorType()
 {
     QFETCH(int, type);
 
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     //! start at a different type so every case is a real change
     seed(config, {{QStringLiteral("shadowColorType"), (type == 0) ? 1 : 0},
                   {QStringLiteral("shadowColor"), QStringLiteral("080808")}});
@@ -345,7 +351,8 @@ void EffectsHandlerAuditTest::shadowColorButtonsWriteOnlyShadowColorType()
 //! swatch click, control 80 above). Two writes at two moments, each single-key.
 void EffectsHandlerAuditTest::userShadowColorDialogWritesOnlyShadowColor()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("shadowColor"), QStringLiteral("080808")},
                   {QStringLiteral("shadowColorType"), 2}});
 
@@ -368,7 +375,8 @@ void EffectsHandlerAuditTest::userShadowColorDialogWritesOnlyShadowColor()
 //! only animationsEnabled.
 void EffectsHandlerAuditTest::animationsToggleWritesOnlyAnimationsEnabled()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("animationsEnabled"), true},
                   {QStringLiteral("durationTime"), 2}});
 
@@ -399,7 +407,8 @@ void EffectsHandlerAuditTest::durationButtonsWriteOnlyDurationTime()
 {
     QFETCH(int, stored);
 
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     //! start at None (0) so every button press is a real change
     seed(config, {{QStringLiteral("durationTime"), 0},
                   {QStringLiteral("animationsEnabled"), true}});
@@ -456,7 +465,8 @@ void EffectsHandlerAuditTest::durationButtonMappingIsCorrectSense()
 //! [Indicator] config group in C++, not the containment General map).
 void EffectsHandlerAuditTest::indicatorSwitchTogglesEnabledNotConfig()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     //! a representative General key present so "no General write" is a real check
     seed(config, {{QStringLiteral("animationsEnabled"), true}});
 
@@ -488,7 +498,8 @@ void EffectsHandlerAuditTest::indicatorTabsSetTypeNotConfig()
 {
     QFETCH(QString, pluginId);
 
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("animationsEnabled"), true}});
 
     //! start at a different type so the write is a real change in every row

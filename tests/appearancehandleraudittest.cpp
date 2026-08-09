@@ -50,6 +50,8 @@
 #include <QVariant>
 #include <QXmlStreamReader>
 
+#include <memory>
+
 #include "configsnapshotdiff.h"
 #include "types.h"
 
@@ -204,7 +206,8 @@ QStringList AppearanceHandlerAuditTest::enumChoiceOrder(const QString &xmlPath, 
 //! config write). Only iconSize moves.
 void AppearanceHandlerAuditTest::iconSizeSliderWritesOnlyIconSize()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("iconSize"), 48}, {QStringLiteral("proportionIconSize"), -1.0},
                   {QStringLiteral("zoomLevel"), 16}});
 
@@ -224,7 +227,8 @@ void AppearanceHandlerAuditTest::iconSizeSliderWritesOnlyIconSize()
 //! future "simplify the binding" cannot silently start storing odd sizes.
 void AppearanceHandlerAuditTest::iconSizeDisplaySnapsOddToEven()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("iconSize"), 49}});
 
     const QJsonObject before = snapshot(config);
@@ -252,7 +256,8 @@ void AppearanceHandlerAuditTest::proportionIconSizeCollapsesUnityToDisabledSenti
         "}\n");
 
     {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("proportionIconSize"), 5.0}, {QStringLiteral("iconSize"), 48}});
         const QJsonObject before = snapshot(config);
         QCOMPARE(runHandler(config, QStringLiteral("var value = 1;\n") + kBody), QString());
@@ -261,7 +266,8 @@ void AppearanceHandlerAuditTest::proportionIconSizeCollapsesUnityToDisabledSenti
         QVERIFY(valueReflects(after, QStringLiteral("proportionIconSize"), -1));  // unity -> disabled sentinel
     }
     {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("proportionIconSize"), -1.0}, {QStringLiteral("iconSize"), 48}});
         const QJsonObject before = snapshot(config);
         QCOMPARE(runHandler(config, QStringLiteral("var value = 5;\n") + kBody), QString());
@@ -306,7 +312,8 @@ void AppearanceHandlerAuditTest::zoomLevelStoresRoundedInverseFactor()
         "configuration.zoomLevel = result;\n");
 
     {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("zoomLevel"), 16}, {QStringLiteral("iconSize"), 48}});
         const QJsonObject before = snapshot(config);
         QCOMPARE(runHandler(config, QStringLiteral("var value = 1.5;\n") + kBody), QString());
@@ -315,7 +322,8 @@ void AppearanceHandlerAuditTest::zoomLevelStoresRoundedInverseFactor()
         QVERIFY(valueReflects(after, QStringLiteral("zoomLevel"), 10));
     }
     {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("zoomLevel"), 16}, {QStringLiteral("iconSize"), 48}});
         const QJsonObject before = snapshot(config);
         QCOMPARE(runHandler(config, QStringLiteral("var value = 2.25;\n") + kBody), QString());
@@ -341,7 +349,8 @@ void AppearanceHandlerAuditTest::marginSlidersEachWriteOnlyTheirOwnKey()
     };
 
     for (const Case &c : cases) {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("lengthExtMargin"), 0}, {QStringLiteral("thickMargin"), 6},
                       {QStringLiteral("screenEdgeMargin"), -1}});
 
@@ -363,7 +372,8 @@ void AppearanceHandlerAuditTest::marginSlidersEachWriteOnlyTheirOwnKey()
 //! themeColors moves - no stray write to a neighbouring colour key.
 void AppearanceHandlerAuditTest::paletteComboWritesOnlyThemeColors()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("themeColors"), int(Types::PlasmaThemeColors)},
                   {QStringLiteral("windowColors"), int(Types::NoneWindowColors)}});
 
@@ -500,7 +510,8 @@ void AppearanceHandlerAuditTest::fromWindowComboRoundTripsAndWritesOnlyWindowCol
     };
 
     for (int stored : everyValue) {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("windowColors"), stored},
                       {QStringLiteral("themeColors"), int(Types::PlasmaThemeColors)}});
 
@@ -517,7 +528,8 @@ void AppearanceHandlerAuditTest::fromWindowComboRoundTripsAndWritesOnlyWindowCol
     }
 
     //! and a genuine selection change writes only windowColors
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("windowColors"), int(Types::NoneWindowColors)},
                   {QStringLiteral("themeColors"), int(Types::PlasmaThemeColors)}});
     const QJsonObject before = snapshot(config);
@@ -545,7 +557,8 @@ void AppearanceHandlerAuditTest::backgroundSlidersEachWriteOnlyTheirOwnKey()
     };
 
     for (const Case &c : cases) {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("panelSize"), 4}, {QStringLiteral("panelTransparency"), -1},
                       {QStringLiteral("backgroundRadius"), -1}, {QStringLiteral("backgroundShadowSize"), -1},
                       {QStringLiteral("useThemePanel"), true}});
@@ -579,7 +592,8 @@ void AppearanceHandlerAuditTest::backgroundTogglesEachWriteOnlyTheirOwnKey()
 
     for (const QString &key : invertKeys) {
         for (bool start : {false, true}) {
-            QQmlPropertyMap config;
+            std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+            QQmlPropertyMap &config = *configOwner;
             seed(config, {{QStringLiteral("useThemePanel"), true},
                           {QStringLiteral("solidBackgroundForMaximized"), false},
                           {QStringLiteral("backgroundOnlyOnMaximized"), false},
@@ -607,7 +621,8 @@ void AppearanceHandlerAuditTest::backgroundTogglesEachWriteOnlyTheirOwnKey()
     };
 
     for (const QString &key : checkedKeys) {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("blurEnabled"), false}, {QStringLiteral("panelShadows"), true},
                       {QStringLiteral("panelOutline"), false}, {QStringLiteral("backgroundAllCorners"), false},
                       {QStringLiteral("useThemePanel"), true}});

@@ -35,6 +35,8 @@
 #include <QTest>
 #include <QVariant>
 
+#include <memory>
+
 #include "configsnapshotdiff.h"
 
 using namespace Latte::AuditHarness;
@@ -180,7 +182,8 @@ QJsonObject SettingsWiringHarnessTest::snapshot(const QQmlPropertyMap &config)
 //! write (P1) and confirms no stray key moved (P2).
 void SettingsWiringHarnessTest::harnessSeesACorrectWrite()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("maxLength"), 100}, {QStringLiteral("minLength"), 30}, {QStringLiteral("offset"), 0}});
 
     const QJsonObject before = snapshot(config);
@@ -193,7 +196,8 @@ void SettingsWiringHarnessTest::harnessSeesACorrectWrite()
 
 void SettingsWiringHarnessTest::reflectReadsBackTheWrittenValue()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("iconSize"), 48}});
 
     QCOMPARE(runHandler(config, QStringLiteral("configuration.iconSize = 64")), QString());
@@ -205,7 +209,8 @@ void SettingsWiringHarnessTest::reflectReadsBackTheWrittenValue()
 //! map unchanged; the harness must FAIL P1, not pass because "nothing broke".
 void SettingsWiringHarnessTest::harnessCatchesNoOpHandler()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("titleTooltips"), false}, {QStringLiteral("maxLength"), 100}});
 
     const QJsonObject before = snapshot(config);
@@ -224,7 +229,8 @@ void SettingsWiringHarnessTest::harnessCatchesNoOpHandler()
 //! and P2 (a key outside the expected set moved).
 void SettingsWiringHarnessTest::harnessCatchesWrongKeyWrite()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("maxLength"), 100}, {QStringLiteral("offset"), 0}});
 
     const QJsonObject before = snapshot(config);
@@ -244,7 +250,8 @@ void SettingsWiringHarnessTest::harnessCatchesWrongKeyWrite()
 //! stray coupled key.
 void SettingsWiringHarnessTest::harnessCatchesStrayCoupledWrite()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("maxLength"), 100}, {QStringLiteral("minLength"), 100}, {QStringLiteral("offset"), 0}});
 
     const QJsonObject before = snapshot(config);
@@ -266,7 +273,8 @@ void SettingsWiringHarnessTest::harnessCatchesStrayCoupledWrite()
 //! panelTransparency so a rewire would show as a stray changed key and FAIL P2.
 void SettingsWiringHarnessTest::editBackgroundWheelWritesOnlyEditBackgroundOpacity()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("editBackgroundOpacity"), 0.5},
                   {QStringLiteral("panelTransparency"), 40},
                   {QStringLiteral("offset"), 0}});
@@ -294,7 +302,8 @@ void SettingsWiringHarnessTest::editBackgroundWheelClampsWithinUnitRangeNeverPan
 {
     //! up-detent at the ceiling: 0.95 + 0.1 clamps to exactly 1.0
     {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("editBackgroundOpacity"), 0.95},
                       {QStringLiteral("panelTransparency"), 40}});
         const QJsonObject before = snapshot(config);
@@ -309,7 +318,8 @@ void SettingsWiringHarnessTest::editBackgroundWheelClampsWithinUnitRangeNeverPan
 
     //! down-detent at the floor: 0.05 - 0.1 clamps to exactly 0.0
     {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("editBackgroundOpacity"), 0.05},
                       {QStringLiteral("panelTransparency"), 40}});
         const QJsonObject before = snapshot(config);
@@ -328,7 +338,8 @@ void SettingsWiringHarnessTest::editBackgroundWheelClampsWithinUnitRangeNeverPan
 //! config write and is covered by the live drive).
 void SettingsWiringHarnessTest::pinButtonWritesOnlyConfigurationSticker()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("configurationSticker"), false},
                   {QStringLiteral("panelTransparency"), 40}});
 
@@ -345,7 +356,8 @@ void SettingsWiringHarnessTest::pinButtonWritesOnlyConfigurationSticker()
 //! isStickedOnTopEdge and touches nothing else (never the sibling bottom key).
 void SettingsWiringHarnessTest::stickOnTopWritesOnlyIsStickedOnTopEdge()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("isStickedOnTopEdge"), false},
                   {QStringLiteral("isStickedOnBottomEdge"), false}});
 
@@ -362,7 +374,8 @@ void SettingsWiringHarnessTest::stickOnTopWritesOnlyIsStickedOnTopEdge()
 //! CL-6 AU-6a control 5: Stick On Bottom (HeaderSettings.qml:143-147) - the mirror.
 void SettingsWiringHarnessTest::stickOnBottomWritesOnlyIsStickedOnBottomEdge()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("isStickedOnTopEdge"), false},
                   {QStringLiteral("isStickedOnBottomEdge"), false}});
 
@@ -382,10 +395,12 @@ void SettingsWiringHarnessTest::stickOnBottomWritesOnlyIsStickedOnBottomEdge()
 //! us flag flips.
 void SettingsWiringHarnessTest::rearrangeToggleWritesUniversalSettingsNotConfig()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("editBackgroundOpacity"), 0.5},
                   {QStringLiteral("panelTransparency"), 40}});
-    QQmlPropertyMap universal;
+    std::unique_ptr<QQmlPropertyMap> universalOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &universal = *universalOwner;
     universal.insert(QStringLiteral("inConfigureAppletsMode"), false);
 
     const QJsonObject before = snapshot(config);
@@ -403,10 +418,12 @@ void SettingsWiringHarnessTest::rearrangeToggleWritesUniversalSettingsNotConfig(
 //! writes universalSettings.inAdvancedModeForEditSettings, no config key.
 void SettingsWiringHarnessTest::advancedToggleWritesUniversalSettingsNotConfig()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("editBackgroundOpacity"), 0.5},
                   {QStringLiteral("panelTransparency"), 40}});
-    QQmlPropertyMap universal;
+    std::unique_ptr<QQmlPropertyMap> universalOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &universal = *universalOwner;
     universal.insert(QStringLiteral("inAdvancedModeForEditSettings"), false);
 
     const QJsonObject before = snapshot(config);
