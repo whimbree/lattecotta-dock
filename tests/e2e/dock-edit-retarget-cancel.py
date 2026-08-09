@@ -19,27 +19,9 @@ stay busctl calls that fail loudly on a D-Bus error, matching the bash
 `e2e_call ... || e2e_fail`.
 """
 
-import subprocess
-import sys
 import time
 
 from latte_harness import recipe
-
-
-def _latte_call(fail_message: str, *args: str) -> None:
-    """`e2e_call ... >/dev/null || e2e_fail "<fail_message>"`: run a lattedock
-    action, discard stdout, forward busctl stderr, and fail loudly on a D-Bus
-    error."""
-    result = subprocess.run(
-        ["busctl", "--user", "call", "org.kde.lattedock", "/Latte", "org.kde.LatteDock", *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        if result.stderr:
-            sys.stderr.write(result.stderr)
-        recipe.fail(fail_message)
 
 
 def _view_edit_mode(view: int) -> str:
@@ -78,7 +60,7 @@ def main() -> None:
         raise recipe.RecipeError(f"expected one original view, saw {len(originals)}")
     view_a = originals[0].containment_id
 
-    _latte_call(
+    recipe.call_or_fail(
         f"duplicateView failed for original containment {view_a}", "duplicateView", "u", str(view_a)
     )
 
@@ -97,7 +79,7 @@ def main() -> None:
     if view_b is None:
         recipe.fail("independent duplicate did not reach viewsData")
 
-    _latte_call(
+    recipe.call_or_fail(
         f"could not enter edit mode on containment {view_a}",
         "setViewEditMode",
         "ub",
@@ -108,14 +90,14 @@ def main() -> None:
         recipe.fail(f"containment {view_a} never entered edit mode")
 
     start_ns = time.monotonic_ns()
-    _latte_call(
+    recipe.call_or_fail(
         f"could not request edit mode on containment {view_b}",
         "setViewEditMode",
         "ub",
         str(view_b),
         "true",
     )
-    _latte_call(
+    recipe.call_or_fail(
         f"could not cancel pending edit mode on containment {view_b}",
         "setViewEditMode",
         "ub",
@@ -134,7 +116,7 @@ def main() -> None:
             recipe.fail(f"pending containment {view_b} entered edit mode after its exit")
         time.sleep(0.1)
 
-    _latte_call(
+    recipe.call_or_fail(
         f"ordinary edit enter failed for containment {view_b}",
         "setViewEditMode",
         "ub",
@@ -143,7 +125,7 @@ def main() -> None:
     )
     if not _wait_for_edit_mode(view_b, "true"):
         recipe.fail(f"containment {view_b} never entered edit mode after cancellation")
-    _latte_call(
+    recipe.call_or_fail(
         f"ordinary edit exit failed for containment {view_b}",
         "setViewEditMode",
         "ub",

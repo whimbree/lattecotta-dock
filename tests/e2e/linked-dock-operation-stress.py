@@ -118,30 +118,6 @@ def _kwrite_or_fail(fail_message: str, *args: str) -> None:
         recipe.fail(fail_message)
 
 
-def _latte_call(fail_message: str, method: str, *args: str) -> None:
-    """``e2e_call ... >/dev/null || e2e_fail``: run a lattedock action, forward
-    busctl stderr, and fail loudly on a D-Bus error."""
-    result = subprocess.run(
-        [
-            "busctl",
-            "--user",
-            "call",
-            "org.kde.lattedock",
-            "/Latte",
-            "org.kde.LatteDock",
-            method,
-            *args,
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        if result.stderr:
-            sys.stderr.write(result.stderr)
-        recipe.fail(fail_message)
-
-
 def _snapshot() -> str:
     """dockSystemData as plain JSON text (the bash ``snapshot``)."""
     return recipe.json_payload("dockSystemData")
@@ -1028,7 +1004,7 @@ def _body() -> None:
         stream.write(recipe.json_payload("viewsData"))
     root_id = _resolve_remapped_root(runtime_views_file, origin_layout_name)
 
-    _latte_call(
+    recipe.call_or_fail(
         "could not set the FP-4C root to Always Visible",
         "setViewVisibilityMode",
         "us",
@@ -1214,7 +1190,7 @@ def _drive_operations(latest_intent_final_seq: int) -> None:
                     )
                 with open(before_reload_projection, "w", encoding="utf-8") as stream:
                     stream.write(projected.stdout)
-            _latte_call(
+            recipe.call_or_fail(
                 f"D-Bus transport failed for FP-4C operation {step_number} ({method})",
                 method,
                 signature,
