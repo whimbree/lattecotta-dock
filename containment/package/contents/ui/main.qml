@@ -321,7 +321,7 @@ ContainmentItem {
         if (root.isHorizontal) {
             return width * (Plasmoid.configuration.offset/100);
         } else {
-            height * (Plasmoid.configuration.offset/100)
+            return height * (Plasmoid.configuration.offset/100);
         }
     }
 
