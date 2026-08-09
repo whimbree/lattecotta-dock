@@ -14,7 +14,6 @@ taskScrollAction defaults to ScrollTasks.
 
 import contextlib
 import io
-import json
 import os
 import subprocess
 import time
@@ -137,10 +136,10 @@ def main() -> None:
             recipe.fail("two konsole windows never mapped")
         time.sleep(2)  #! let the grouped task settle into the bar
 
-        rows = json.loads(recipe.json_payload("viewTasksData", "u", str(view)))
-        konsole_rows = [x for x in rows if x["appId"] == "org.kde.konsole.desktop"]
+        rows = recipe.view_tasks(view)
+        konsole_rows = [x for x in rows if x.app_id == "org.kde.konsole.desktop"]
         grouped = (
-            bool(konsole_rows[0]["isGrouped"] and konsole_rows[0]["childCount"] == 2)
+            bool(konsole_rows[0].is_grouped and konsole_rows[0].child_count == 2)
             if konsole_rows
             else False
         )

@@ -126,11 +126,14 @@ def _tcfg(layout: str, view: int, applet: int, key: str, value: str) -> None:
 
 
 def _tasks_launcher_count(view: int) -> int:
-    """tasks_launcher_count: the launcher rows the tasks plasmoid currently shows,
-    counted from the raw viewTasksData reply (the bash grep -o | wc -l over the
-    compact JSON). The typed Task model does not carry isLauncher, so this scans
-    the raw payload, exactly as the bash did."""
-    return recipe.json_payload("viewTasksData", "u", str(view)).count('"isLauncher":true')
+    """tasks_launcher_count: the launcher rows the tasks plasmoid currently shows.
+
+    W3 (widen the readback models): isLauncher rides the typed recipe.Task, so this
+    counts the typed rows instead of grepping ``"isLauncher":true`` over the raw
+    payload. That also fixes a silent swallow the bash carried: the raw grep over a
+    REFUSED (empty) reply counted 0, reading a refusal as "no launchers"; the typed
+    read raises the loud DbusUnavailableError instead (the never-swallow rule)."""
+    return sum(1 for t in recipe.view_tasks(view) if t.is_launcher)
 
 
 def _snapshot_or_fail(produce: Callable[[], str], fail_message: str) -> str:
