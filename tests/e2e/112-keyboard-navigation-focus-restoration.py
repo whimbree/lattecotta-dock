@@ -11,12 +11,12 @@ leave stale focus state.
 
 Ported from tests/e2e/112-keyboard-navigation-focus-restoration.sh to
 latte_harness.recipe (BP-3, the bash-to-python migration's recipe batch R9).
-keyboardNavigation / ownsPanelFocusSession are not in the typed View model, so
-viewsData is read as raw JSON via recipe.read_json (the same boundary the bash
-python one-liners used); a reply dbusreports refuses transiently while a
-freshly duplicated view lacks an accepted placement raises the pollable
-DbusUnavailableError, the channel the polling callers read as a non-match just
-as the bash command substitution swallowed the crashed one-liner's empty output.
+keyboardNavigation / ownsPanelFocusSession ride the widened typed View model
+(W3, widen the readback models), so viewsData is read through recipe.views(); a
+reply dbusreports refuses transiently while a freshly duplicated view lacks an
+accepted placement raises the pollable DbusUnavailableError, the channel the
+polling callers read as a non-match just as the bash command substitution
+swallowed the crashed one-liner's empty output.
 The coarse setViewKeyboardNavigation / duplicateView / removeView actions stay
 busctl calls that fail loudly on a D-Bus error, matching the bash
 ``e2e_call ... || e2e_fail``.
@@ -30,7 +30,7 @@ import tempfile
 import time
 from contextlib import suppress
 from pathlib import Path
-from typing import IO, Any
+from typing import IO
 
 from latte_harness import proc, recipe
 
@@ -93,15 +93,16 @@ def _latte_call_quiet(*args: str) -> None:
     )
 
 
-def _views_raw() -> list[dict[str, Any]]:
-    """viewsData as raw JSON; a refused reply raises the pollable DbusUnavailableError.
+def _views() -> list[recipe.View]:
+    """viewsData as typed View records; a refused reply raises the pollable
+    DbusUnavailableError.
 
-    keyboardNavigation / ownsPanelFocusSession are not in the typed View model,
-    so this reads recipe.read_json: a transient dbusreports refusal (a
-    duplicated view still being placed) raises DbusUnavailableError, the
-    RecipeError subclass the polling callers here already catch.
+    W3 (widen the readback models): keyboardNavigation / ownsPanelFocusSession ride
+    the typed recipe.View, so this reads recipe.views(); a transient dbusreports
+    refusal (a duplicated view still being placed) raises DbusUnavailableError, the
+    RecipeError subclass the polling callers here catch.
     """
-    return recipe.read_json("viewsData")
+    return recipe.views()
 
 
 def _lifecycle_running() -> bool:
@@ -163,11 +164,11 @@ def _activate_window(window_id: str) -> None:
 def _keyboard_navigation(cid: int) -> str:
     """'missing'/'true'/'false' for the view's keyboardNavigation, '' if refused."""
     try:
-        views = _views_raw()
+        views = _views()
     except recipe.RecipeError:
         return ""
-    matches = [view for view in views if view["containmentId"] == cid]
-    return "missing" if not matches else ("true" if matches[0]["keyboardNavigation"] else "false")
+    matches = [view for view in views if view.containment_id == cid]
+    return "missing" if not matches else ("true" if matches[0].keyboard_navigation else "false")
 
 
 def _wait_for_keyboard_navigation(cid: int, expected: str) -> bool:
@@ -181,12 +182,12 @@ def _wait_for_keyboard_navigation(cid: int, expected: str) -> bool:
 def _panel_focus_session_owner(cid: int) -> str:
     """'missing'/'true'/'false' for ownsPanelFocusSession, '' if refused."""
     try:
-        views = _views_raw()
+        views = _views()
     except recipe.RecipeError:
         return ""
-    matches = [view for view in views if view["containmentId"] == cid]
+    matches = [view for view in views if view.containment_id == cid]
     return (
-        "missing" if not matches else ("true" if matches[0]["ownsPanelFocusSession"] else "false")
+        "missing" if not matches else ("true" if matches[0].owns_panel_focus_session else "false")
     )
 
 
@@ -305,10 +306,10 @@ def main() -> None:
     try:
         if not recipe.wait_settled(60):
             recipe.fail("vehicle dock never settled")
-        views = _views_raw()
+        views = _views()
         if not views:
             recipe.fail("vehicle has no dock view")
-        source_cid = int(views[0]["containmentId"])
+        source_cid = views[0].containment_id
 
         client_a = clients.launch("A")
         _activate_window(client_a)
@@ -341,7 +342,7 @@ def main() -> None:
         _send_key_and_require_delivery(client_a, "d", "D-Bus restoration")
         print("ok: D-Bus toggle-off restored actual key delivery")
 
-        before_ids = {int(view["containmentId"]) for view in _views_raw()}
+        before_ids = {view.containment_id for view in _views()}
         _latte_call(
             "second-view focus-session duplicate call failed",
             "duplicateView",
@@ -351,9 +352,9 @@ def main() -> None:
         for _ in range(120):
             try:
                 created = [
-                    int(view["containmentId"])
-                    for view in _views_raw()
-                    if int(view["containmentId"]) not in before_ids
+                    view.containment_id
+                    for view in _views()
+                    if view.containment_id not in before_ids
                 ]
             except recipe.RecipeError:
                 created = []

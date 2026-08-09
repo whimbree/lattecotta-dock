@@ -29,14 +29,12 @@
 # keyboardNavigation is not in the typed View model, so viewsData is read as
 # raw JSON (the same boundary the bash jq pipeline used).
 
-import json
 import shutil
 import subprocess
 import tempfile
 import time
 from contextlib import suppress
 from pathlib import Path
-from typing import Any
 
 from latte_harness import proc, recipe
 
@@ -56,9 +54,10 @@ def _call_quiet(*args: str) -> None:
     )
 
 
-def _views_raw() -> list[dict[str, Any]]:
-    """viewsjson: viewsData as raw JSON (the bash call | sed unescape | jq)."""
-    return json.loads(recipe.json_payload("viewsData"))
+def _views() -> list[recipe.View]:
+    """viewsData as typed View records (W3, widen the readback models):
+    containmentId / keyboardNavigation ride the typed recipe.View."""
+    return recipe.views()
 
 
 def _lifecycle_running() -> bool:
@@ -81,9 +80,9 @@ def main() -> None:
         print(f"ok: {message}")
 
     def kbnav(cid: int) -> str:
-        for view in _views_raw():
-            if view["containmentId"] == cid:
-                return "true" if view["keyboardNavigation"] else "false"
+        for view in _views():
+            if view.containment_id == cid:
+                return "true" if view.keyboard_navigation else "false"
         return ""
 
     try:
@@ -91,8 +90,8 @@ def main() -> None:
             fail("vehicle dock never settled")
         passed("driver dock running and settled")
 
-        views = _views_raw()
-        cid = int(views[0]["containmentId"]) if views else None
+        views = _views()
+        cid = views[0].containment_id if views else None
         if cid is None:
             fail("no containment id in viewsData")
         assert cid is not None

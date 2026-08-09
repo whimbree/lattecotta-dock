@@ -11,9 +11,9 @@ Qt restore its transient-parent focus directly.
 
 Ported from tests/e2e/114-global-menu-focus-restoration.sh to
 latte_harness.recipe (BP-3, the bash-to-python migration's focus-restoration
-recipe wave R9). containmentAcceptsInput / ownsPanelFocusSession are not in the
-typed View model, so viewsData is read as raw JSON, the same boundary the bash
-python one-liners used; the config backup/restore keeps the byte-for-byte
+recipe wave R9). containmentAcceptsInput / ownsPanelFocusSession ride the widened
+typed View model (W3, widen the readback models), so viewsData is read through
+recipe.views(); the config backup/restore keeps the byte-for-byte
 cp -a / diff -qr contract (subprocess), and the WAYLAND_DEBUG=client and
 dbus-monitor logs are grepped exactly as the bash did.
 """
@@ -27,7 +27,7 @@ import tempfile
 import time
 from contextlib import suppress
 from pathlib import Path
-from typing import IO, Any
+from typing import IO
 
 from latte_harness import proc, recipe
 
@@ -58,11 +58,14 @@ def _fp(*args: object) -> bool:
     )
 
 
-def _views_raw() -> list[dict[str, Any]]:
-    """viewsData as raw JSON, or [] on a refused/failed reply (the wait loops'
-    non-match sentinel)."""
+def _views() -> list[recipe.View]:
+    """viewsData as typed View records, or [] on a refused/failed reply (the wait
+    loops' non-match sentinel).
+
+    W3 (widen the readback models): containmentAcceptsInput / ownsPanelFocusSession
+    ride the typed recipe.View, so this reads recipe.views()."""
     try:
-        return recipe.read_json("viewsData")
+        return recipe.views()
     except recipe.DbusUnavailableError:
         return []
 
@@ -98,10 +101,10 @@ def _activate_client() -> str:
 
 
 def _panel_focus_state(cid: int) -> str:
-    for view in _views_raw():
-        if view["containmentId"] == cid:
-            accepts = str(view["containmentAcceptsInput"]).lower()
-            owns = str(view["ownsPanelFocusSession"]).lower()
+    for view in _views():
+        if view.containment_id == cid:
+            accepts = str(view.containment_accepts_input).lower()
+            owns = str(view.owns_panel_focus_session).lower()
             return f"{accepts} {owns}"
     return ""
 
@@ -259,9 +262,7 @@ def main() -> None:
         if not published_line:
             recipe.fail("Qt did not publish the controlled menu on its Wayland surface")
 
-        cid = next(
-            (v["containmentId"] for v in _views_raw() if v["edge"] in ("top", "bottom")), None
-        )
+        cid = next((v.containment_id for v in _views() if v.edge in ("top", "bottom")), None)
         if cid is None:
             recipe.fail("Global Menu fixture has no horizontal panel")
         assert cid is not None
