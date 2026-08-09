@@ -15,10 +15,15 @@ y-drag - the historically-buggy path) axes, that the driver:
      neighbour is reported as "no reorder" (the driver's own rc), NOT success;
   3. observes an ABORTED reorder (release-at-origin: motion, a neighbour
      crossed, then released back) as leaving the order UNCHANGED;
-  4. and drives the DR-6 escape-in-held-drag path, OBSERVING Escape's REAL
-     effect (the ConfigOverlay MouseArea has no Keys handler, so Escape is NOT
-     a given cancel - see the plan's ESCAPE-vs-RELEASE finding), never
-     assuming it cancels.
+  4. drives the DR-6 escape-in-held-drag path, OBSERVING Escape's REAL effect
+     (the ConfigOverlay MouseArea has no Keys handler, so Escape is NOT a given
+     cancel - see the plan's ESCAPE-vs-RELEASE finding), never assuming it
+     cancels, and now HARD-ASSERTS no applet is stranded over the chrome after
+     the escape edit-exit (the D2 edit-exit-mid-drag stranding, closed by the
+     same onCanceled restore the D285 fix adds);
+  5. and drives the D285 right-click-during-drag path (a right-button click
+     chorded while the left drag button is held), asserting the grab-lost drag
+     leaves no stranded applet and restores the order.
 The G2 stacking readback carries the "stuck over chrome" residue check: every
 applet sits at the layout default z (0) at rest, and no drag may leave an
 applet stranded at the lift z (>= 900) - the 480ae30e3 class made queryable.
@@ -182,9 +187,14 @@ def run_axis_checks(view: int, label: str) -> None:
     print("  HC3: aborted reorder (release-at-origin) restored baseline, no strand")
 
     # (4) DR-6: drive the escape-in-held-drag and OBSERVE Escape's real effect
-    # (never assumed to cancel). Report order + z + editMode; the only hard
-    # assertion is that the dock survives it. If Escape stranded an applet over
-    # chrome, the G2 readback below SEES it - a live demonstration of the readback.
+    # (never assumed to cancel) - Escape here exits edit mode, hiding the
+    # ConfigOverlay MouseArea mid-press. Report order + z + editMode diagnostically,
+    # THEN hard-assert no applet is stranded over the chrome. Escape's edit-exit used
+    # to leave the dragged applet at the lift z (900) parented to root (D2, the
+    # edit-exit-mid-drag stranding) - hiding the grabbing MouseArea fires its
+    # onCanceled, which the D285 fix now handles, so the applet un-strands on this
+    # path too. This is the invariant that would have caught the stranding class
+    # months ago; it is now enforced, not merely observed.
     pre = _order(view, label)
     try:
         applet_reorder.applet_reorder_enter(view)
@@ -209,6 +219,36 @@ def run_axis_checks(view: int, label: str) -> None:
         f"  DR-6 escape observed: order [{pre}] -> [{epost}], "
         f"editMode={emode}, z-residue={ez} (dock alive)"
     )
+    assert_no_lifted_applet(view, f"{label} after DR-6 escape edit-exit")
+    print("  DR-6: no applet stranded over chrome after the escape edit-exit")
+
+    # (5) D285 (the drag-cancel stranding): RIGHT-CLICK during a held drag. The
+    # right-click opens the containment context menu, which steals the pointer grab,
+    # so Qt fires the ConfigOverlay MouseArea's onCanceled instead of onReleased.
+    # Before the onCanceled restore landed, the dragged applet stayed parented to root
+    # at the lift z (900), stranded outside the dock over the edit chrome. The chord
+    # nudges INSIDE the origin slot (never crossing a neighbour), so a correct restore
+    # returns the applet to its origin: the order is UNCHANGED and nothing is stranded.
+    # This leg fails against the pre-fix QML (the strand survives) and passes after it.
+    base3 = _order(view, label)
+    try:
+        applet_reorder.applet_reorder_enter(view)
+    except applet_reorder.AppletReorderError:
+        recipe.fail(f"{label}: could not enter rearrange for the right-click-during-drag leg")
+    with contextlib.suppress(applet_reorder.AppletReorderError):
+        applet_reorder.applet_reorder_glide(view, "rightclick", frm, to)
+    with contextlib.suppress(applet_reorder.AppletReorderError):
+        applet_reorder.applet_reorder_exit(view)
+    if not recipe.wait_running(15):
+        recipe.fail(f"{label}: dock did not survive the D285 right-click-during-drag")
+    assert_no_lifted_applet(view, f"{label} after D285 right-click-during-drag")
+    rc_after = _order(view, label)
+    if rc_after != base3:
+        recipe.fail(
+            f"{label}: right-click-during-drag changed the order ([{base3}] -> [{rc_after}]); "
+            "a grab-lost drag that never crossed a neighbour must restore the origin"
+        )
+    print("  D285: right-click-during-drag left no strand and restored the order")
 
 
 def main() -> None:
