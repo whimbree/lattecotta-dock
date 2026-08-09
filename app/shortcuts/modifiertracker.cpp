@@ -100,7 +100,7 @@ bool ModifierTracker::sequenceModifierPressed(const QKeySequence &seq)
         return false;
     }
 
-    int mod = seq[seq.count() - 1] & Qt::KeyboardModifierMask;
+    const Qt::KeyboardModifiers mod = seq[seq.count() - 1].keyboardModifiers();
 
     if ( ((mod & Qt::SHIFT) && m_pressed[Qt::Key_Shift])
          || ((mod & Qt::CTRL) && m_pressed[Qt::Key_Control])

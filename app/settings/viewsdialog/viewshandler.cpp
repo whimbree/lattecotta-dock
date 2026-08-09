@@ -188,12 +188,12 @@ void ViewsHandler::initViewExportSubMenu()
 
     QAction *exportforbackup = m_viewExportSubMenu->addAction(i18nc("export for backup","&Export For Backup..."));
     exportforbackup->setIcon(QIcon::fromTheme("document-export"));
-    exportforbackup->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT  + Qt::Key_E));
+    exportforbackup->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_E));
     connect(exportforbackup, &QAction::triggered, this, &ViewsHandler::exportViewForBackup);
 
     QAction *exportastemplate = m_viewExportSubMenu->addAction(i18nc("export as template","Export As &Template..."));
     exportastemplate->setIcon(QIcon::fromTheme("document-export"));
-    exportastemplate->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT  + Qt::Key_T));
+    exportastemplate->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_T));
     connect(exportastemplate, &QAction::triggered, this, &ViewsHandler::exportViewAsTemplate);
 }
 
