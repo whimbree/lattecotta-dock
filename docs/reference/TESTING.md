@@ -122,8 +122,8 @@ Adopt latte-dock-qt6's three-piece shape, adapted rather than copied:
   viewsData and friends); pixels only where pixels are the thing under
   test. The ONE thing D-Bus state cannot see is state/render
   divergence - the dock believing the right geometry while the
-  compositor draws it elsewhere - so `e2e_assert_geometry_agrees`
-  (`060-geometry-agreement.sh`) compares each view's reported origin
+  compositor draws it elsewhere - so `recipe.assert_geometry_agrees`
+  (`060-geometry-agreement.py`) compares each view's reported origin
   against its true rendered surface position as a standing guard for
   exactly that class. A known-open bug recipe should reserve one nonzero
   status and declare `# e2e-expect: status N`, where N is 1 through 255.
