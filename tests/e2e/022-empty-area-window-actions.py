@@ -87,28 +87,6 @@ def _pid_alive(pid: int) -> bool:
     return True
 
 
-def _latte_call(fail_message: str, *args: str) -> None:
-    """`e2e_call ... >/dev/null || e2e_fail`: a lattedock action that fails loudly."""
-    result = subprocess.run(
-        [
-            "busctl",
-            "--user",
-            "call",
-            "org.kde.lattedock",
-            "/Latte",
-            "org.kde.LatteDock",
-            *args,
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        if result.stderr:
-            sys.stderr.write(result.stderr)
-        recipe.fail(fail_message)
-
-
 def _view_visibility_mode() -> str:
     """e2e_view_field visibilityMode: this view's visibility mode, or a loud refusal.
 
@@ -222,7 +200,7 @@ def _configure_mode(
 
     if not recipe.dock_start(90):
         recipe.fail(f"{label}: dock did not restart")
-    _latte_call(
+    recipe.call_or_fail(
         f"{label}: could not select alwaysVisible",
         "setViewVisibilityMode",
         "us",

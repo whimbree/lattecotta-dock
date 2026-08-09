@@ -75,19 +75,6 @@ def _fp_or_fail(fail_message: str, *args: str) -> None:
         recipe.fail(fail_message)
 
 
-def _latte_call_or_fail(fail_message: str, *args: str) -> None:
-    result = subprocess.run(
-        ["busctl", "--user", "call", "org.kde.lattedock", "/Latte", "org.kde.LatteDock", *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        if result.stderr:
-            sys.stderr.write(result.stderr)
-        recipe.fail(fail_message)
-
-
 def _kwrite(fail_message: str, *args: str) -> None:
     if subprocess.run(["kwriteconfig6", *args], check=False).returncode != 0:
         recipe.fail(fail_message)
@@ -702,7 +689,7 @@ def _configure_case(cell: str) -> None:
     )
     if not recipe.dock_start(90):
         recipe.fail(f"dock did not restart for {cell}")
-    _latte_call_or_fail(
+    recipe.call_or_fail(
         f"could not set {cell} to alwaysVisible",
         "setViewVisibilityMode",
         "us",
@@ -980,7 +967,7 @@ def _exercise_attached_maximum_length_change() -> None:
         str(screen_x + screen_width // 2),
         str(screen_y + screen_height // 2),
     )
-    _latte_call_or_fail(
+    recipe.call_or_fail(
         "could not enter edit mode for the attached length mutation",
         "setViewEditMode",
         "ub",
@@ -1076,7 +1063,7 @@ def _exercise_attached_maximum_length_change() -> None:
             f"stableAfter={stable_after})"
         )
 
-    _latte_call_or_fail(
+    recipe.call_or_fail(
         "could not leave edit mode after the attached length mutation",
         "setViewEditMode",
         "ub",

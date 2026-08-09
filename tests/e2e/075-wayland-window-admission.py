@@ -44,21 +44,6 @@ class _State:
         self.configured = False
 
 
-def _latte_call(fail_message: str, *args: str) -> None:
-    """`e2e_call ... >/dev/null || e2e_fail`: run a lattedock action, discard
-    stdout, and fail loudly on a D-Bus error."""
-    result = subprocess.run(
-        ["busctl", "--user", "call", "org.kde.lattedock", "/Latte", "org.kde.LatteDock", *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        if result.stderr:
-            sys.stderr.write(result.stderr)
-        recipe.fail(fail_message)
-
-
 def _dock_record(view: int) -> dict[str, Any]:
     """dock_field's context: the single dockSystemData record for ``view``.
 
@@ -203,7 +188,7 @@ def _body(state: _State, view_box: list[int]) -> None:
         recipe.fail("could not resolve the D264 left-dock fixture")
     view_box[0] = view
 
-    _latte_call(
+    recipe.call_or_fail(
         "could not set the left dock to Dodge Active",
         "setViewVisibilityMode",
         "us",

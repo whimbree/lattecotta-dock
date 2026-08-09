@@ -78,19 +78,6 @@ def _fp_or_fail(fail_message: str, *args: str) -> None:
         recipe.fail(fail_message)
 
 
-def _latte_call_or_fail(fail_message: str, *args: str) -> None:
-    result = subprocess.run(
-        ["busctl", "--user", "call", "org.kde.lattedock", "/Latte", "org.kde.LatteDock", *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        if result.stderr:
-            sys.stderr.write(result.stderr)
-        recipe.fail(fail_message)
-
-
 def _kwrite(fail_message: str, *args: str) -> None:
     if subprocess.run(["kwriteconfig6", *args], check=False).returncode != 0:
         recipe.fail(fail_message)
@@ -888,7 +875,7 @@ def _body() -> None:
     )
     if not recipe.dock_start(90):
         recipe.fail("dock did not restart with the stable-canvas fixture")
-    _latte_call_or_fail(
+    recipe.call_or_fail(
         "could not set the fixture view to alwaysVisible",
         "setViewVisibilityMode",
         "us",
@@ -1076,7 +1063,7 @@ def _body() -> None:
     _kwrite("could not configure normal animation speed", *group, "--key", "durationTime", "2")
     if not recipe.dock_start(90):
         recipe.fail("dock did not restart with the legacy floating-Dock fixture")
-    _latte_call_or_fail(
+    recipe.call_or_fail(
         "could not set the legacy Dock fixture to alwaysVisible",
         "setViewVisibilityMode",
         "us",
@@ -1094,7 +1081,7 @@ def _body() -> None:
         recipe.fail("KWin did not restore the client for the legacy Dock check")
     _wait_for_dock_gap_policy("alwaysVisible", "false", "false", "floated", 1)
 
-    _latte_call_or_fail(
+    recipe.call_or_fail(
         "could not set the legacy Dock fixture to windowsGoBelow",
         "setViewVisibilityMode",
         "us",
@@ -1120,7 +1107,7 @@ def _body() -> None:
         _S.screen_y + _S.screen_h // 2,
         "Dodge Active pointer normalization",
     )
-    _latte_call_or_fail(
+    recipe.call_or_fail(
         "could not set the floating Dock fixture to Dodge Active",
         "setViewVisibilityMode",
         "us",

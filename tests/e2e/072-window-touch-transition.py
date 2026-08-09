@@ -104,19 +104,6 @@ def _fp_or_fail(fail_message: str, *args: str) -> None:
         recipe.fail(fail_message)
 
 
-def _latte_call_or_fail(fail_message: str, *args: str) -> None:
-    result = subprocess.run(
-        ["busctl", "--user", "call", "org.kde.lattedock", "/Latte", "org.kde.LatteDock", *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        if result.stderr:
-            sys.stderr.write(result.stderr)
-        recipe.fail(fail_message)
-
-
 def _kwrite(fail_message: str, *args: str) -> None:
     if subprocess.run(["kwriteconfig6", *args], check=False).returncode != 0:
         recipe.fail(fail_message)
@@ -570,7 +557,7 @@ def _body() -> None:
     )
     if not _muted_dock_start(90):
         recipe.fail("dock did not restart with the window-touch fixture")
-    _latte_call_or_fail(
+    recipe.call_or_fail(
         "could not set the fixture view to alwaysVisible",
         "setViewVisibilityMode",
         "us",
