@@ -865,41 +865,36 @@ QString collectViewsData(const QList<Latte::View *> &views, bool globalConfigure
     return serializeViewRecords(records);
 }
 
-std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
-    const QList<Latte::View *> &views,
-    bool globalConfigureAppletsMode,
-    quint64 snapshotSequence,
-    RuntimeObjectIdentityRegistry *identities,
-    const ViewPart::ScreenSpaceReservationCoordinator
-        *reservationCoordinator)
+namespace {
+
+//! One dock's place in a committed reservation group: the owning group snapshot
+//! and this dock's requested contribution depth. Hoisted to file scope so the
+//! group-indexing pass and the per-view agreement check share one type.
+struct ReservationMembership
 {
-    Q_ASSERT(identities);
-    if (!reservationCoordinator) {
-        qCritical() << "dbusreports: refusing dock-system snapshot without a reservation coordinator";
-        return std::nullopt;
-    }
-    const auto reservationSnapshot =
-        reservationCoordinator->snapshot();
-    if (!reservationSnapshot) {
-        qCritical() << "dbusreports: refusing dock-system snapshot with inconsistent reservation ownership";
-        return std::nullopt;
-    }
+    const ViewPart::ScreenSpaceReservationGroupSnapshot *group;
+    int contributionDepth;
+};
 
-    DockSystemSnapshot snapshot;
-    snapshot.snapshotSequence = snapshotSequence;
-    snapshot.globalConfigureAppletsMode = globalConfigureAppletsMode;
-    snapshot.reservationStateGeneration =
-        reservationSnapshot->stateGeneration;
-    snapshot.views.reserve(views.count());
-
-    struct Membership
-    {
-        const ViewPart::ScreenSpaceReservationGroupSnapshot *group;
-        int contributionDepth;
-    };
-    QHash<uint, Membership> reservationMemberships;
+//! Validate every committed reservation group and index each contributing dock
+//! to its owning group. Returns nullopt (after logging the offending group or
+//! contributor) when a group is malformed, a contributor is malformed, or a
+//! contributor appears in more than one group, so the collector refuses the
+//! whole snapshot. On success every dock that owns exclusive-zone struts maps
+//! to its group and requested depth.
+//!
+//! The guarded reservationOutput read lives here (sourceguardtest's
+//! matchesReservationOutputAuthorityRoute follows this function by name):
+//! LayerShellQt's explicit screen is the output committed by the reservation
+//! transaction, so validation must not fall back to the possibly-stale
+//! QWindow::screen().
+std::optional<QHash<uint, ReservationMembership>>
+indexReservationGroupMemberships(
+    const ViewPart::ScreenSpaceReservationSnapshot &reservationSnapshot)
+{
+    QHash<uint, ReservationMembership> reservationMemberships;
     QSet<QPair<int, int>> reservationGroupKeys;
-    for (const auto &group : reservationSnapshot->groups) {
+    for (const auto &group : reservationSnapshot.groups) {
         const auto *const reservation = group.publisher;
         const auto *const layerShell =
             reservation ? reservation->layerShellWindow() : nullptr;
@@ -963,11 +958,385 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
             }
             reservationMemberships.insert(
                 persistentDockId,
-                Membership{
+                ReservationMembership{
                     &group,
                     contribution.contributionDepth});
         }
     }
+    return reservationMemberships;
+}
+
+//! Resolve one record's screens-group policy. A screen-group-derived linked
+//! member inherits the policy from the root that owns its logical dock;
+//! independent and explicitly placed members report SingleScreenGroup locally;
+//! a root reports its own live policy. Returns false (refuse the whole snapshot)
+//! when a validated linked member has lost the root authority it needs.
+bool resolveRecordScreensGroup(
+    DockSystemViewRecord &record,
+    const Latte::View *view,
+    const QHash<uint, Types::ScreensGroup> &rootScreensGroups)
+{
+    const bool derivesScreenGroup = record.linkPlacement
+            == Data::View::LinkPlacement::ScreenGroupDerived;
+    if (record.relationship == DockRelationship::LinkedMember && derivesScreenGroup) {
+        const auto group = rootScreensGroups.constFind(record.logicalDockId);
+        if (group == rootScreensGroups.constEnd()) {
+            qCritical() << "dbusreports: validated linked member" << record.persistentDockId
+                        << "lost root screen-group authority" << record.logicalDockId;
+            Q_ASSERT(group != rootScreensGroups.constEnd());
+            return false;
+        }
+        record.screensGroup = group.value();
+    } else if (record.relationship == DockRelationship::Independent
+               || record.relationship == DockRelationship::LinkedMember) {
+        record.screensGroup = Types::SingleScreenGroup;
+    } else {
+        record.screensGroup = view->screensGroup();
+    }
+    return true;
+}
+
+//! Read the containment's configured icon size into the record when the
+//! configuration map exposes it; warn (but keep collecting) when it does not.
+void applyConfiguredIconSize(
+    DockSystemViewRecord &record,
+    const QQmlPropertyMap *configuration)
+{
+    if (!configuration) {
+        return;
+    }
+    const QVariant configuredIconSize = configuration->value(QStringLiteral("iconSize"));
+    if (configuredIconSize.isValid()) {
+        record.configuredIconSize = configuredIconSize.toInt();
+    } else {
+        qWarning() << "dbusreports: containment" << record.persistentDockId
+                   << "configuration exposes no iconSize";
+    }
+}
+
+//! Copy the live effective icon size, available primary length and presented
+//! screen-edge gap from the view's metrics object. A settled metrics object is
+//! expected to expose availablePrimaryLength and presentedScreenEdgeGap; their
+//! absence is logged, never silently defaulted.
+void applyLiveMetricsFields(
+    DockSystemViewRecord &record,
+    const Latte::View *view)
+{
+    const auto *const metrics = view->metrics();
+    if (!metrics) {
+        return;
+    }
+    const QVariant effectiveIconSize = readLiveProperty(metrics, "iconSize");
+    if (effectiveIconSize.isValid()) {
+        record.effectiveIconSize = effectiveIconSize.toInt();
+    }
+
+    const QVariant availableLength = readLiveProperty(metrics, "availablePrimaryLength");
+    if (availableLength.isValid()) {
+        record.availablePrimaryLength = availableLength.toInt();
+    } else {
+        qWarning() << "dbusreports: containment" << record.persistentDockId
+                   << "metrics exposes no availablePrimaryLength";
+    }
+
+    const QVariant presentedGap =
+        readLiveProperty(
+            metrics,
+            "presentedScreenEdgeGap");
+    if (!presentedGap.isValid()) {
+        qCritical()
+            << "dbusreports: containment"
+            << record.persistentDockId
+            << "metrics exposes no presentedScreenEdgeGap";
+    } else {
+        record.presentedScreenEdgeGap =
+            presentedGap.toInt();
+    }
+}
+
+//! Translate the visibility manager's screen-edge backend enum to its stable
+//! string name and copy the screen-edge arming, registration, compositor-
+//! support and contains-mouse state into the record.
+void applyScreenEdgeVisibilityFields(
+    DockSystemViewRecord &record,
+    const Latte::View *view)
+{
+    const auto *const visibility = view->visibility();
+    switch (visibility->screenEdgeBackend()) {
+    case ViewPart::VisibilityManager::ScreenEdgeBackend::None:
+        record.screenEdgeBackend = QStringLiteral("none");
+        break;
+    case ViewPart::VisibilityManager::ScreenEdgeBackend::ClientGhost:
+        record.screenEdgeBackend = QStringLiteral("clientGhost");
+        break;
+    case ViewPart::VisibilityManager::ScreenEdgeBackend::KWinAutoHide:
+        record.screenEdgeBackend = QStringLiteral("kwinAutoHide");
+        break;
+    }
+    record.screenEdgeArmed = visibility->screenEdgeArmed();
+    record.screenEdgeRegistered = visibility->screenEdgeRegistered();
+    record.compositorScreenEdgeSupported =
+        visibility->compositorScreenEdgeSupported();
+    record.visibilityContainsMouse = visibility->containsMouse();
+}
+
+//! Copy the view's live layer-shell placement (anchors, margins, exclusive edge
+//! and zone) into the record. A settled view with no layer-shell surface is
+//! unexpected and logged; a starting view legitimately has none yet.
+void applyLayerShellPlacementFields(
+    DockSystemViewRecord &record,
+    const Latte::View *view)
+{
+    if (const auto *const layerShell = view->layerShellWindow()) {
+        record.layerShellPresent = true;
+        record.layerShellAnchors = layerShellAnchorNames(layerShell->anchors());
+        record.layerShellMargins = layerShell->margins();
+        record.layerShellExclusiveEdge =
+            layerShellAnchorName(layerShell->exclusiveEdge());
+        record.layerShellExclusiveZone = layerShell->exclusionZone();
+    } else if (!view->positioner()->inStartup()) {
+        qWarning() << "dbusreports: settled containment"
+                   << record.persistentDockId
+                   << "has no layer-shell placement state";
+    }
+}
+
+//! Cross-check one view against the reservation group that owns it and copy the
+//! agreed reservation facts into the record. Returns nullopt (refuse the whole
+//! snapshot) when the view and its group disagree on output, edge, published
+//! struts, contribution depth or exclusion zone, or when the view publishes
+//! struts while owning no group. On success the returned pointer is the owning
+//! group (nullptr when the view contributes to none), which the caller
+//! attributes as the reservation-publisher identity.
+std::optional<const ViewPart::ScreenSpaceReservationGroupSnapshot *>
+applyReservationMembershipFields(
+    DockSystemViewRecord &record,
+    const QHash<uint, ReservationMembership> &reservationMemberships)
+{
+    const auto reservationMembership =
+        reservationMemberships.constFind(
+            record.persistentDockId);
+    if (reservationMembership == reservationMemberships.constEnd()) {
+        if (!record.publishedStruts.isEmpty()) {
+            qCritical() << "dbusreports: refusing containment that publishes struts without group ownership"
+                        << record.persistentDockId;
+            return std::nullopt;
+        }
+        return static_cast<
+            const ViewPart::ScreenSpaceReservationGroupSnapshot *>(nullptr);
+    }
+
+    const ViewPart::ScreenSpaceReservationGroupSnapshot *const reservationGroup =
+        reservationMembership->group;
+    const auto *const reservation =
+        reservationGroup->publisher;
+    const auto *const reservationLayerShell =
+        reservation->layerShellWindow();
+    if (record.screenId
+                != reservationGroup->outputId
+            || record.edge
+                != reservationGroup->edge
+            || record.publishedStruts.isEmpty()
+            || WindowSystem::LayerShell::exclusiveZoneFor(
+                record.publishedStruts,
+                reservationGroup->edge)
+                != reservationMembership->contributionDepth
+            || !reservationLayerShell
+            || reservationLayerShell->exclusionZone()
+                != reservationGroup->publishedDepth) {
+        qCritical() << "dbusreports: refusing view/group reservation disagreement"
+                    << record.persistentDockId
+                    << record.screenId
+                    << reservationGroup->outputId
+                    << static_cast<int>(record.edge)
+                    << static_cast<int>(reservationGroup->edge)
+                    << record.publishedStruts
+                    << reservationMembership->contributionDepth;
+        return std::nullopt;
+    }
+
+    record.reservationSurfacePresent = true;
+    record.reservationOutputId =
+        reservationGroup->outputId;
+    record.reservationEdge =
+        reservationGroup->edge;
+    record.reservationContributionDepth =
+        reservationMembership->contributionDepth;
+    record.reservationPublishedDepth =
+        reservationGroup->publishedDepth;
+    record.reservationGroupMemberCount =
+        static_cast<int>(
+            reservationGroup->contributions.size());
+    record.reservationGroupGeneration =
+        reservationGroup->generation;
+    record.reservationContributorDockIds.reserve(
+        static_cast<qsizetype>(
+            reservationGroup->contributions.size()));
+    std::ranges::transform(
+        reservationGroup->contributions,
+        std::back_inserter(
+            record.reservationContributorDockIds),
+        [](const auto &contribution) {
+            return static_cast<uint>(
+                contribution.persistentDockId);
+        });
+    record.reservationGeometry = reservation->publishedGeometry();
+    record.reservationWindowGeometry = reservation->geometry();
+    record.reservationLayerShellAnchors =
+        layerShellAnchorNames(
+            reservationLayerShell->anchors());
+    record.reservationLayerShellMargins =
+        reservationLayerShell->margins();
+    record.reservationLayerShellExclusiveEdge =
+        layerShellAnchorName(
+            reservationLayerShell->exclusiveEdge());
+    record.reservationLayerShellExclusiveZone =
+        reservationLayerShell->exclusionZone();
+    return reservationGroup;
+}
+
+//! Copy the view's live visibility, startup, relocation, delete/ready, edit and
+//! settings-window state into the record.
+void applyViewStateFlags(
+    DockSystemViewRecord &record,
+    const Latte::View *view)
+{
+    record.visibilityMode = view->visibility()->mode();
+    record.isHidden = view->visibility()->isHidden();
+    record.inStartup = view->positioner()->inStartup();
+    record.isOffScreen = view->positioner()->isOffScreen();
+    record.inRelocationAnimation = view->positioner()->inRelocationAnimation();
+    record.inRelocationShowing = view->positioner()->inRelocationShowing();
+    record.geometrySettled = view->positioner()->geometryIsSettled();
+    record.relocationGeneration = view->positioner()->relocationGeneration();
+    record.appliedRelocationGeneration = view->positioner()->appliedRelocationGeneration();
+    record.inDelete = view->inDelete();
+    record.inReadyState = view->inReadyState();
+    record.editMode = view->inEditMode();
+    record.settingsWindowShown = view->settingsWindowIsShown();
+}
+
+//! Every dock that contributes to a reservation group must also appear as a
+//! live dock record. A contributor without one means the collection and
+//! reservation views disagree, so the whole snapshot is refused.
+bool everyReservationContributorHasRecord(
+    const DockSystemSnapshot &snapshot,
+    const QHash<uint, ReservationMembership> &reservationMemberships)
+{
+    QSet<uint> reportedDockIds;
+    for (const auto &view : snapshot.views) {
+        reportedDockIds.insert(view.persistentDockId);
+    }
+    for (auto membership = reservationMemberships.cbegin();
+            membership != reservationMemberships.cend();
+            ++membership) {
+        if (!reportedDockIds.contains(membership.key())) {
+            qCritical() << "dbusreports: refusing reservation contributor without a live dock record"
+                        << membership.key();
+            return false;
+        }
+    }
+    return true;
+}
+
+//! Build the per-group reservation records (the reservationGroups array) from
+//! the coordinator snapshot. Every group's publisher must carry a stable
+//! identity token; a missing token refuses the whole snapshot.
+bool collectReservationGroupRecords(
+    DockSystemSnapshot &snapshot,
+    const ViewPart::ScreenSpaceReservationSnapshot &reservationSnapshot,
+    RuntimeObjectIdentityRegistry *identities)
+{
+    snapshot.reservationGroups.reserve(
+        static_cast<qsizetype>(
+            reservationSnapshot.groups.size()));
+    for (const auto &group : reservationSnapshot.groups) {
+        const auto *const reservation = group.publisher;
+        const auto *const layerShell =
+            reservation->layerShellWindow();
+
+        DockReservationGroupRecord record;
+        record.outputId = group.outputId;
+        record.edge = group.edge;
+        record.generation = group.generation;
+        record.publishedDepth =
+            group.publishedDepth;
+        record.contributorDockIds.reserve(
+            static_cast<qsizetype>(
+                group.contributions.size()));
+        std::ranges::transform(
+            group.contributions,
+            std::back_inserter(
+                record.contributorDockIds),
+            [](const auto &contribution) {
+                return static_cast<uint>(
+                    contribution.persistentDockId);
+            });
+        record.geometry =
+            reservation->publishedGeometry();
+        record.windowGeometry =
+            reservation->geometry();
+        record.layerShellPresent = true;
+        record.layerShellAnchors =
+            layerShellAnchorNames(
+                layerShell->anchors());
+        record.layerShellMargins =
+            layerShell->margins();
+        record.layerShellExclusiveEdge =
+            layerShellAnchorName(
+                layerShell->exclusiveEdge());
+        record.layerShellExclusiveZone =
+            layerShell->exclusionZone();
+        record.publisher =
+            identities->tokenFor(reservation);
+        if (record.publisher.isEmpty()) {
+            qCritical() << "dbusreports: refusing reservation group without publisher identity"
+                        << record.outputId
+                        << static_cast<int>(record.edge);
+            return false;
+        }
+        snapshot.reservationGroups.append(
+            std::move(record));
+    }
+    return true;
+}
+
+} // namespace
+
+std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
+    const QList<Latte::View *> &views,
+    bool globalConfigureAppletsMode,
+    quint64 snapshotSequence,
+    RuntimeObjectIdentityRegistry *identities,
+    const ViewPart::ScreenSpaceReservationCoordinator
+        *reservationCoordinator)
+{
+    Q_ASSERT(identities);
+    if (!reservationCoordinator) {
+        qCritical() << "dbusreports: refusing dock-system snapshot without a reservation coordinator";
+        return std::nullopt;
+    }
+    const auto reservationSnapshot =
+        reservationCoordinator->snapshot();
+    if (!reservationSnapshot) {
+        qCritical() << "dbusreports: refusing dock-system snapshot with inconsistent reservation ownership";
+        return std::nullopt;
+    }
+
+    DockSystemSnapshot snapshot;
+    snapshot.snapshotSequence = snapshotSequence;
+    snapshot.globalConfigureAppletsMode = globalConfigureAppletsMode;
+    snapshot.reservationStateGeneration =
+        reservationSnapshot->stateGeneration;
+    snapshot.views.reserve(views.count());
+
+    const std::optional<QHash<uint, ReservationMembership>> reservationMembershipsOr =
+        indexReservationGroupMemberships(*reservationSnapshot);
+    if (!reservationMembershipsOr) {
+        return std::nullopt;
+    }
+    const QHash<uint, ReservationMembership> &reservationMemberships =
+        *reservationMembershipsOr;
 
     //! Synchronizer stores current views in a QHash-derived container. Resolve
     //! the persistent containment order before the first registry lookup, so
@@ -1045,22 +1414,8 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.relationship = relationship.relationship;
         record.linkPlacement = relationship.linkPlacement;
 
-        const bool derivesScreenGroup = record.linkPlacement
-                == Data::View::LinkPlacement::ScreenGroupDerived;
-        if (record.relationship == DockRelationship::LinkedMember && derivesScreenGroup) {
-            const auto group = rootScreensGroups.constFind(record.logicalDockId);
-            if (group == rootScreensGroups.constEnd()) {
-                qCritical() << "dbusreports: validated linked member" << record.persistentDockId
-                            << "lost root screen-group authority" << record.logicalDockId;
-                Q_ASSERT(group != rootScreensGroups.constEnd());
-                return std::nullopt;
-            }
-            record.screensGroup = group.value();
-        } else if (record.relationship == DockRelationship::Independent
-                   || record.relationship == DockRelationship::LinkedMember) {
-            record.screensGroup = Types::SingleScreenGroup;
-        } else {
-            record.screensGroup = view->screensGroup();
+        if (!resolveRecordScreensGroup(record, view, rootScreensGroups)) {
+            return std::nullopt;
         }
 
         record.runtimeViewId = identities->idFor(view);
@@ -1108,67 +1463,16 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.offsetRatio = view->offset();
 
         const auto *const configuration = configurationMapFor(view->containment());
-        if (configuration) {
-            const QVariant configuredIconSize = configuration->value(QStringLiteral("iconSize"));
-            if (configuredIconSize.isValid()) {
-                record.configuredIconSize = configuredIconSize.toInt();
-            } else {
-                qWarning() << "dbusreports: containment" << record.persistentDockId
-                           << "configuration exposes no iconSize";
-            }
-        }
-
-        if (const auto *metrics = view->metrics()) {
-            const QVariant effectiveIconSize = readLiveProperty(metrics, "iconSize");
-            if (effectiveIconSize.isValid()) {
-                record.effectiveIconSize = effectiveIconSize.toInt();
-            }
-
-            const QVariant availableLength = readLiveProperty(metrics, "availablePrimaryLength");
-            if (availableLength.isValid()) {
-                record.availablePrimaryLength = availableLength.toInt();
-            } else {
-                qWarning() << "dbusreports: containment" << record.persistentDockId
-                           << "metrics exposes no availablePrimaryLength";
-            }
-
-            const QVariant presentedGap =
-                readLiveProperty(
-                    metrics,
-                    "presentedScreenEdgeGap");
-            if (!presentedGap.isValid()) {
-                qCritical()
-                    << "dbusreports: containment"
-                    << record.persistentDockId
-                    << "metrics exposes no presentedScreenEdgeGap";
-            } else {
-                record.presentedScreenEdgeGap =
-                    presentedGap.toInt();
-            }
-        }
+        applyConfiguredIconSize(record, configuration);
+        applyLiveMetricsFields(record, view);
 
         const auto *const editController = view->rootObject();
 
         record.normalThickness = view->normalThickness();
         record.maximumNormalThickness = view->maxNormalThickness();
         record.screenEdgeMargin = view->screenEdgeMargin();
-        const auto *const visibility = view->visibility();
-        switch (visibility->screenEdgeBackend()) {
-        case ViewPart::VisibilityManager::ScreenEdgeBackend::None:
-            record.screenEdgeBackend = QStringLiteral("none");
-            break;
-        case ViewPart::VisibilityManager::ScreenEdgeBackend::ClientGhost:
-            record.screenEdgeBackend = QStringLiteral("clientGhost");
-            break;
-        case ViewPart::VisibilityManager::ScreenEdgeBackend::KWinAutoHide:
-            record.screenEdgeBackend = QStringLiteral("kwinAutoHide");
-            break;
-        }
-        record.screenEdgeArmed = visibility->screenEdgeArmed();
-        record.screenEdgeRegistered = visibility->screenEdgeRegistered();
-        record.compositorScreenEdgeSupported =
-            visibility->compositorScreenEdgeSupported();
-        record.visibilityContainsMouse = visibility->containsMouse();
+        applyScreenEdgeVisibilityFields(record, view);
+
         record.windowGeometry = view->geometry();
         record.absoluteGeometry = view->absoluteGeometry();
         record.localGeometry = view->localGeometry();
@@ -1203,97 +1507,17 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         record.strutsThickness = view->visibility()->strutsThickness();
         record.publishedStruts = view->visibility()->publishedStruts();
 
-        if (const auto *const layerShell = view->layerShellWindow()) {
-            record.layerShellPresent = true;
-            record.layerShellAnchors = layerShellAnchorNames(layerShell->anchors());
-            record.layerShellMargins = layerShell->margins();
-            record.layerShellExclusiveEdge =
-                layerShellAnchorName(layerShell->exclusiveEdge());
-            record.layerShellExclusiveZone = layerShell->exclusionZone();
-        } else if (!view->positioner()->inStartup()) {
-            qWarning() << "dbusreports: settled containment"
-                       << record.persistentDockId
-                       << "has no layer-shell placement state";
-        }
+        applyLayerShellPlacementFields(record, view);
 
-        const auto reservationMembership =
-            reservationMemberships.constFind(
-                record.persistentDockId);
-        const ViewPart::ScreenSpaceReservationGroupSnapshot
-            *reservationGroup = nullptr;
-        if (reservationMembership
-                != reservationMemberships.constEnd()) {
-            reservationGroup =
-                reservationMembership->group;
-            const auto *const reservation =
-                reservationGroup->publisher;
-            const auto *const reservationLayerShell =
-                reservation->layerShellWindow();
-            if (record.screenId
-                        != reservationGroup->outputId
-                    || record.edge
-                        != reservationGroup->edge
-                    || record.publishedStruts.isEmpty()
-                    || WindowSystem::LayerShell::exclusiveZoneFor(
-                        record.publishedStruts,
-                        reservationGroup->edge)
-                        != reservationMembership->contributionDepth
-                    || !reservationLayerShell
-                    || reservationLayerShell->exclusionZone()
-                        != reservationGroup->publishedDepth) {
-                qCritical() << "dbusreports: refusing view/group reservation disagreement"
-                            << record.persistentDockId
-                            << record.screenId
-                            << reservationGroup->outputId
-                            << static_cast<int>(record.edge)
-                            << static_cast<int>(reservationGroup->edge)
-                            << record.publishedStruts
-                            << reservationMembership->contributionDepth;
-                return std::nullopt;
-            }
-
-            record.reservationSurfacePresent = true;
-            record.reservationOutputId =
-                reservationGroup->outputId;
-            record.reservationEdge =
-                reservationGroup->edge;
-            record.reservationContributionDepth =
-                reservationMembership->contributionDepth;
-            record.reservationPublishedDepth =
-                reservationGroup->publishedDepth;
-            record.reservationGroupMemberCount =
-                static_cast<int>(
-                    reservationGroup->contributions.size());
-            record.reservationGroupGeneration =
-                reservationGroup->generation;
-            record.reservationContributorDockIds.reserve(
-                static_cast<qsizetype>(
-                    reservationGroup->contributions.size()));
-            std::ranges::transform(
-                reservationGroup->contributions,
-                std::back_inserter(
-                    record.reservationContributorDockIds),
-                [](const auto &contribution) {
-                    return static_cast<uint>(
-                        contribution.persistentDockId);
-                });
-            record.reservationGeometry = reservation->publishedGeometry();
-            record.reservationWindowGeometry = reservation->geometry();
-            record.reservationLayerShellAnchors =
-                layerShellAnchorNames(
-                    reservationLayerShell->anchors());
-            record.reservationLayerShellMargins =
-                reservationLayerShell->margins();
-            record.reservationLayerShellExclusiveEdge =
-                layerShellAnchorName(
-                    reservationLayerShell->exclusiveEdge());
-            record.reservationLayerShellExclusiveZone =
-                reservationLayerShell->exclusionZone();
-        } else if (!record.publishedStruts.isEmpty()) {
-            qCritical() << "dbusreports: refusing containment that publishes struts without group ownership"
-                        << record.persistentDockId;
+        const auto reservationGroupOr =
+            applyReservationMembershipFields(
+                record,
+                reservationMemberships);
+        if (!reservationGroupOr) {
             return std::nullopt;
         }
+        const ViewPart::ScreenSpaceReservationGroupSnapshot
+            *const reservationGroup = *reservationGroupOr;
 
         record.floatingGapConfigured =
             view->floatingGapConfigured();
@@ -1407,19 +1631,7 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
                 transition->stableReservationDepth();
         }
 
-        record.visibilityMode = view->visibility()->mode();
-        record.isHidden = view->visibility()->isHidden();
-        record.inStartup = view->positioner()->inStartup();
-        record.isOffScreen = view->positioner()->isOffScreen();
-        record.inRelocationAnimation = view->positioner()->inRelocationAnimation();
-        record.inRelocationShowing = view->positioner()->inRelocationShowing();
-        record.geometrySettled = view->positioner()->geometryIsSettled();
-        record.relocationGeneration = view->positioner()->relocationGeneration();
-        record.appliedRelocationGeneration = view->positioner()->appliedRelocationGeneration();
-        record.inDelete = view->inDelete();
-        record.inReadyState = view->inReadyState();
-        record.editMode = view->inEditMode();
-        record.settingsWindowShown = view->settingsWindowIsShown();
+        applyViewStateFlags(record, view);
 
         record.objects.view = identities->tokenFor(view);
         record.objects.containment = identities->tokenFor(view->containment());
@@ -1442,70 +1654,12 @@ std::optional<DockSystemSnapshot> collectDockSystemSnapshot(
         snapshot.views.append(record);
     }
 
-    QSet<uint> reportedDockIds;
-    for (const auto &view : snapshot.views) {
-        reportedDockIds.insert(view.persistentDockId);
-    }
-    for (auto membership = reservationMemberships.cbegin();
-            membership != reservationMemberships.cend();
-            ++membership) {
-        if (!reportedDockIds.contains(membership.key())) {
-            qCritical() << "dbusreports: refusing reservation contributor without a live dock record"
-                        << membership.key();
-            return std::nullopt;
-        }
+    if (!everyReservationContributorHasRecord(snapshot, reservationMemberships)) {
+        return std::nullopt;
     }
 
-    snapshot.reservationGroups.reserve(
-        static_cast<qsizetype>(
-            reservationSnapshot->groups.size()));
-    for (const auto &group : reservationSnapshot->groups) {
-        const auto *const reservation = group.publisher;
-        const auto *const layerShell =
-            reservation->layerShellWindow();
-
-        DockReservationGroupRecord record;
-        record.outputId = group.outputId;
-        record.edge = group.edge;
-        record.generation = group.generation;
-        record.publishedDepth =
-            group.publishedDepth;
-        record.contributorDockIds.reserve(
-            static_cast<qsizetype>(
-                group.contributions.size()));
-        std::ranges::transform(
-            group.contributions,
-            std::back_inserter(
-                record.contributorDockIds),
-            [](const auto &contribution) {
-                return static_cast<uint>(
-                    contribution.persistentDockId);
-            });
-        record.geometry =
-            reservation->publishedGeometry();
-        record.windowGeometry =
-            reservation->geometry();
-        record.layerShellPresent = true;
-        record.layerShellAnchors =
-            layerShellAnchorNames(
-                layerShell->anchors());
-        record.layerShellMargins =
-            layerShell->margins();
-        record.layerShellExclusiveEdge =
-            layerShellAnchorName(
-                layerShell->exclusiveEdge());
-        record.layerShellExclusiveZone =
-            layerShell->exclusionZone();
-        record.publisher =
-            identities->tokenFor(reservation);
-        if (record.publisher.isEmpty()) {
-            qCritical() << "dbusreports: refusing reservation group without publisher identity"
-                        << record.outputId
-                        << static_cast<int>(record.edge);
-            return std::nullopt;
-        }
-        snapshot.reservationGroups.append(
-            std::move(record));
+    if (!collectReservationGroupRecords(snapshot, *reservationSnapshot, identities)) {
+        return std::nullopt;
     }
 
     if (!dockReservationRecordsAgree(snapshot)) {
