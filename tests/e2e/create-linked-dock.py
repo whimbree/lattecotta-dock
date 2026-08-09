@@ -1232,21 +1232,17 @@ def main() -> None:
     except OSError:
         recipe.fail("could not preserve the pre-scenario layout")
 
-    # The layout restore sits in a finally so it runs on EVERY exit path (the
-    # wave's converged trap-EXIT shape), including an unexpected exception,
-    # which still propagates after the restore and exits nonzero.
-    body_exit = 0
-    try:
-        try:
-            _scenario(layout)
-        except SystemExit as exit_error:
-            body_exit = exit_error.code if isinstance(exit_error.code, int) else 1
-        except recipe.RecipeError as recipe_error:
-            print(str(recipe_error), file=sys.stderr, flush=True)
-            body_exit = 1
-    finally:
+    def cleanup(status: int) -> int:
+        # The layout restore runs on every exit path but does not fold into the
+        # status (the bash raised SystemExit(body_exit) unchanged); the body's
+        # code stands.
         _restore_original_layout(layout, original_layout)
-    raise SystemExit(body_exit)
+        return status
+
+    # run_with_cleanup owns the install-signals / try-body / finally-restore shape
+    # this recipe hand-rolled (the signal exits are armed above, before the layout
+    # backup, so install_signal_exits=False here).
+    recipe.run_with_cleanup(lambda: _scenario(layout), cleanup, install_signal_exits=False)
 
 
 if __name__ == "__main__":
