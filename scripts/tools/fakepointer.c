@@ -41,6 +41,16 @@
  *          drag - e.g. the tasks-applet reorder, whose tasksModel.move is
  *          already applied live before the key ever arrives, DR-6 in
  *          docs/tracking/e2e-interaction-test-plan.md.)
+ *        fakepointer dragbutton <left|right|middle> <x1> <y1> <x2> <y2> [...]
+ *          (left-press at the first point, glide through every waypoint WITH THE
+ *          LEFT BUTTON STILL HELD, click <button> at the last waypoint while left
+ *          is still down, then release left - all on ONE connection so the left
+ *          grab spans the second button. The mid-drag button-chord primitive: a
+ *          plain `drag` then `rightclick` cannot reach an in-flight drag because
+ *          `drag` has already released the left button by the time the second
+ *          process runs. Reproduces a right-click DURING a held ConfigOverlay
+ *          applet drag, whose grab-steal fires the drag MouseArea's onCanceled -
+ *          the D285 drag-cancel stranding.)
  *
  * Why keysyms, not scancodes (the keymap question): the fake_input keyboard
  * axis offers two requests. keyboard_key(button,state) carries a Linux evdev
@@ -190,6 +200,7 @@ int main(int argc, char **argv)
     int isaxisstop = (argc > 1) && (strcmp(argv[1], "axisstop") == 0);
     int iskey = (argc > 1) && (strcmp(argv[1], "key") == 0);
     int isdragkey = (argc > 1) && (strcmp(argv[1], "dragkey") == 0);
+    int isdragbutton = (argc > 1) && (strcmp(argv[1], "dragbutton") == 0);
 
     if (iskey) {
         if (argc != 3 && argc != 4) {
@@ -203,6 +214,17 @@ int main(int argc, char **argv)
             fprintf(stderr, "usage: %s dragkey <keysym> <x1> <y1> <x2> <y2> [x3 y3 ...]\n"
                             "  press at (x1,y1), glide through the waypoints with the button held,\n"
                             "  tap <keysym> at the last waypoint, then release - one held-drag session\n",
+                    argv[0]);
+            return 2;
+        }
+    } else if (isdragbutton) {
+        //! dragbutton <button> <x1> <y1> <x2> <y2> [...]: a button name then >=2
+        //! coord pairs, so argc is odd and at least 7 (prog dragbutton right x1 y1 x2 y2)
+        if (argc < 7 || (argc % 2) == 0) {
+            fprintf(stderr, "usage: %s dragbutton <left|right|middle> <x1> <y1> <x2> <y2> [x3 y3 ...]\n"
+                            "  left-press at (x1,y1), glide through the waypoints with the LEFT button held,\n"
+                            "  click <button> at the last waypoint WHILE left is still held, then release left\n"
+                            "  - one held-drag session (the mid-drag button chord, e.g. a right-click during a drag)\n",
                     argv[0]);
             return 2;
         }
@@ -220,13 +242,14 @@ int main(int argc, char **argv)
         || (isaxisstop && argc != 4 && argc != 5)
         || (!isdrag && !isglide && !isscroll && !iswheel && !isaxisstop
             && (argc != 4 || (strcmp(argv[1], "move") && strcmp(argv[1], "click") && strcmp(argv[1], "middleclick") && strcmp(argv[1], "rightclick"))))) {
-        fprintf(stderr, "usage: %s move|click|middleclick|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s draghold <milliseconds 1..5000> <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>  |  %s wheel <x> <y> <integer-angle-delta> [horizontal]  |  %s axisstop <x> <y> [horizontal]  |  %s key <keysym> [down|up|press]  |  %s dragkey <keysym> <x1> <y1> <x2> <y2> [x3 y3 ...]\n"
+        fprintf(stderr, "usage: %s move|click|middleclick|rightclick <x> <y>  |  %s drag|glide <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s draghold <milliseconds 1..5000> <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s scroll <x> <y> <detents> <ms-gap>  |  %s wheel <x> <y> <integer-angle-delta> [horizontal]  |  %s axisstop <x> <y> [horizontal]  |  %s key <keysym> [down|up|press]  |  %s dragkey <keysym> <x1> <y1> <x2> <y2> [x3 y3 ...]  |  %s dragbutton <left|right|middle> <x1> <y1> <x2> <y2> [x3 y3 ...]\n"
                         "  scroll: positive detents scroll up, negative down; one detent = one wheel click\n"
                         "  wheel:  nonzero signed integer Qt angleDelta for one axis event; vertical unless 'horizontal' is supplied\n"
                         "  axisstop: send a zero-axis Wayland stop, which produces no Qt wheel event\n"
                         "  key:    <keysym> is an XKB name (Escape, Up, Return, space) or a numeric literal; state defaults to press (down then up)\n"
-                        "  dragkey: press, glide (button held), tap <keysym> at the last point, release - one held-drag session\n",
-                argv[0], argv[0], argv[0], argv[0], argv[0], argv[0], argv[0], argv[0]);
+                        "  dragkey: press, glide (button held), tap <keysym> at the last point, release - one held-drag session\n"
+                        "  dragbutton: left-press, glide (left held), click <button> at the last point while left is held, release left - the mid-drag chord\n",
+                argv[0], argv[0], argv[0], argv[0], argv[0], argv[0], argv[0], argv[0], argv[0]);
         return 2;
     }
 
@@ -385,6 +408,74 @@ int main(int argc, char **argv)
         wl_display_roundtrip(display);
         usleep(20000);
         org_kde_kwin_fake_input_keyboard_keysym(fake_input, keysym, WL_KEYBOARD_KEY_STATE_RELEASED);
+        wl_display_roundtrip(display);
+        usleep(120000);
+
+        org_kde_kwin_fake_input_button(fake_input, BTN_LEFT, 0);
+        wl_display_roundtrip(display);
+
+        wl_display_disconnect(display);
+        return 0;
+    }
+
+    if (isdragbutton) {
+        //! the mid-drag button chord: hold LEFT through the glide, then click the
+        //! named button at the last waypoint WITH LEFT STILL DOWN, then release LEFT.
+        //! The whole chord rides ONE connection so the left grab spans the second
+        //! button - a separate `drag` then `rightclick` cannot reproduce it because
+        //! `drag` has already released the left button by the time the second process
+        //! runs. Reproduces a right-click DURING a held ConfigOverlay applet drag
+        //! (D285): the second button steals the pointer grab (the containment context
+        //! menu opens), so Qt fires the drag MouseArea's onCanceled, not onReleased.
+        uint32_t chord_btn = BTN_RIGHT;
+        if (strcmp(argv[2], "left") == 0) {
+            chord_btn = BTN_LEFT;
+        } else if (strcmp(argv[2], "right") == 0) {
+            chord_btn = BTN_RIGHT;
+        } else if (strcmp(argv[2], "middle") == 0) {
+            chord_btn = BTN_MIDDLE;
+        } else {
+            fprintf(stderr, "unknown dragbutton button '%s' (want left, right, or middle)\n", argv[2]);
+            wl_display_disconnect(display);
+            return 2;
+        }
+
+        const int steps = 24;
+        double x = atof(argv[3]);
+        double y = atof(argv[4]);
+
+        //! left-press at the first point, then hold it through every glide and the
+        //! chord click - the whole point is that the left grab outlives the chord.
+        org_kde_kwin_fake_input_pointer_motion_absolute(fake_input,
+            wl_fixed_from_double(x), wl_fixed_from_double(y));
+        wl_display_roundtrip(display);
+        usleep(100000);
+        org_kde_kwin_fake_input_button(fake_input, BTN_LEFT, 1);
+        wl_display_roundtrip(display);
+        usleep(150000);
+
+        double cx = x, cy = y;
+        for (int w = 5; w + 1 < argc; w += 2) {
+            double wx = atof(argv[w]);
+            double wy = atof(argv[w + 1]);
+            for (int i = 1; i <= steps; ++i) {
+                double sx = cx + (wx - cx) * i / steps;
+                double sy = cy + (wy - cy) * i / steps;
+                org_kde_kwin_fake_input_pointer_motion_absolute(fake_input,
+                    wl_fixed_from_double(sx), wl_fixed_from_double(sy));
+                wl_display_roundtrip(display);
+                usleep(12000);
+            }
+            cx = wx;
+            cy = wy;
+        }
+
+        //! click the chord button at the target with LEFT still down
+        usleep(120000);
+        org_kde_kwin_fake_input_button(fake_input, chord_btn, 1);
+        wl_display_roundtrip(display);
+        usleep(50000);
+        org_kde_kwin_fake_input_button(fake_input, chord_btn, 0);
         wl_display_roundtrip(display);
         usleep(120000);
 

@@ -246,6 +246,7 @@ def test_glide_arms_currentapplet_before_the_drag(monkeypatch: pytest.MonkeyPatc
         ("noop", ("drag", "120", "920", "130", "920", "120", "920")),
         ("jitter", ("drag", "120", "920", "234", "920", "120", "920", "234", "920")),
         ("escape", ("dragkey", "Escape", "120", "920", "170", "920", "234", "920")),
+        ("rightclick", ("dragbutton", "right", "120", "920", "130", "920")),
     ],
 )
 def test_glide_mode_dispatch(

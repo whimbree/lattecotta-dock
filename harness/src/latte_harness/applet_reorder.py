@@ -131,6 +131,15 @@ def _dragkey(key: str, *points: tuple[int, int]) -> None:
     _fakepointer("dragkey", key, *_flatten(*points))
 
 
+def _dragbutton(button: str, *points: tuple[int, int]) -> None:
+    """fakepointer ``dragbutton <button>`` across the given waypoints: a LEFT press
+    held through the glide, then a click of ``button`` (right/middle/left) at the last
+    waypoint WHILE left is still held - the mid-drag button chord. The whole chord
+    rides one fakepointer connection so the left grab spans the second button; a plain
+    ``drag`` then ``rightclick`` cannot reproduce it (``drag`` releases left first)."""
+    _fakepointer("dragbutton", button, *_flatten(*points))
+
+
 # ---- readback models (a local twin for the fields recipe does not surface) --
 
 
@@ -457,6 +466,17 @@ def applet_reorder_glide(view: int, mode: str, frm: int, to: int) -> None:
             # Escape's real effect on the ConfigOverlay reorder is observed by the
             # caller (the MouseArea has no Keys handler), never assumed to cancel.
             _dragkey("Escape", pts.s, pts.m, pts.cross)
+        case "rightclick":
+            # D285 (the drag-cancel stranding): RIGHT-CLICK while the left button is
+            # held mid-drag (dragbutton). The right-click steals the pointer grab (the
+            # containment context menu opens), so Qt fires the ConfigOverlay
+            # MouseArea's onCanceled, not onReleased. The applet is LIFTED to the strand
+            # z (900) on press regardless of motion, so the nudge stays INSIDE the origin
+            # slot (pts.n, never crossing a neighbour): the placeHolder never moves, so
+            # the onCanceled restore returns the applet to its origin and the order is
+            # RESTORED - letting the leg assert both "no strand" AND "order unchanged".
+            # Without the onCanceled fix the applet stays stranded at z 900.
+            _dragbutton("right", pts.s, pts.n)
         case _:
             _raise(f"applet_reorder_glide: unknown mode '{mode}'")
 
