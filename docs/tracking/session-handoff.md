@@ -109,11 +109,27 @@ dangling-reference. The unused-result fixes surfaced two real latent defects,
 now filed and fixed: D287 (a dropped raw-layout import toasted success after
 writing nothing) and D288 (an unwritable `--log-file` silently dropped every
 message); the review also found pre-existing D289 (a duplicate spinbox
-connection, OPEN). Remaining: phase 2 (the 151 `-Wzero-as-null-pointer-constant`
-sites - a `0` -> `nullptr` sweep plus moc/vendored suppression), phase 3 (the 129
-`-Wdeprecated-declarations` Qt/KF6 API-migration sites, several PRs, the largest
-and most behavior-sensitive), and phase 4 (flip to a blanket `-Werror` and decide
-the packaged/distro-build treatment).
+connection, OPEN). Phase 2 LANDED (PR #224; 2beccaf05 the sweep, 9f6332846 the
+promotion): `-Wzero-as-null-pointer-constant`, whose 151 baseline warning lines
+deduplicate to 14 hand-written `app/` sites (12 `QObject`/`QWindow *parent = 0`
+default args, one local `Plasma::Applet *applet = 0`, one `0` for
+`KMessageBox::createKMessageBox`'s `bool *checkboxReturn`), each fixed `0` ->
+`nullptr` and the flag promoted. Buckets moc/generated and vendored (plasmoid
+backend/smartlauncher, core extras) were both EMPTY - the green `-Werror` build
+proves zero residual sites tree-wide. Record correction: the phase-1 CMake commit
+body (bb339281c, immutable) wrongly located these in "moc-generated and vendored"
+headers; they are all hand-written `app/` sites, corrected in the phase-2 commit
+bodies and PR #224 per the immutable-history rule. The category was already ON
+tree-wide as a warning via ECM's KDECompilerSettings, so each phase's real change
+is the `-Werror=` promotion, not the flag's introduction.
+
+Remaining: phase 3 (the 129 `-Wdeprecated-declarations` Qt/KF6 API-migration
+sites - the largest and most behavior-sensitive, landing as several grouped PRs;
+a read-only scout is cataloguing them by API and classifying each replacement
+mechanical vs behavior-sensitive, and the behavior-sensitive ones get surfaced
+to the maintainer before any code is written) and phase 4 (flip to a blanket
+`-Werror` and decide the packaged/distro-build treatment). After phase 2 the only
+warning category the full build still emits is those 129 deprecated-declarations.
 
 Owner decisions still open (carried forward): the D283 approach (fix the legacy
 clone path vs deprecate), history excision of the swept maintainer-local files,
