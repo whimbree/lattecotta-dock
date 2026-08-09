@@ -46,13 +46,11 @@ import shutil
 import subprocess
 import sys
 import time
-from collections.abc import Iterator
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
 from latte_harness import matrix, multi_output, recipe
-from latte_harness.proc import install_conventional_signal_exits
 from latte_harness.topology_cleanup import (
     TopologyCleanupDeps,
     perform_topology_cleanup,
@@ -508,35 +506,15 @@ def _wait_for_stable_topology(expected: str) -> None:
 
 
 def _print_stable_diff(baseline_json: str, current_json: str) -> None:
+    # Route the failure-path diagnostic diff through the unit-tested library
+    # walker (multi_output.walk_differences) instead of a second inline
+    # generator (audit B3). Diagnostic-only: the pass/fail decision upstream is
+    # the exact string compare of the stable projections, so this reports the
+    # first 30 differences for a human and its wording/number-tolerance are not
+    # load-bearing. Capped at 30 lines exactly as the retired generator was.
     baseline = json.loads(baseline_json)
     current = json.loads(current_json)
-
-    def differences(left: Any, right: Any, path: str = "$") -> Iterator[str]:
-        if type(left) is not type(right):
-            yield f"{path}: type {type(left).__name__} -> {type(right).__name__}"
-        elif isinstance(left, dict):
-            left_dict = cast("dict[str, Any]", left)
-            right_dict = cast("dict[str, Any]", right)
-            for key in sorted(set(left_dict) | set(right_dict)):
-                if key not in left_dict:
-                    yield f"{path}.{key}: added {right_dict[key]!r}"
-                elif key not in right_dict:
-                    yield f"{path}.{key}: removed {left_dict[key]!r}"
-                else:
-                    yield from differences(left_dict[key], right_dict[key], f"{path}.{key}")
-        elif isinstance(left, list):
-            left_list = cast("list[Any]", left)
-            right_list = cast("list[Any]", right)
-            if len(left_list) != len(right_list):
-                yield f"{path}: length {len(left_list)} -> {len(right_list)}"
-            # strict=False deliberately: the length mismatch is reported just
-            # above and the common prefix is still compared (not an error here).
-            for index, (before, after) in enumerate(zip(left_list, right_list, strict=False)):
-                yield from differences(before, after, f"{path}[{index}]")
-        elif left != right:
-            yield f"{path}: {left!r} -> {right!r}"
-
-    for line in list(differences(baseline, current))[:30]:
+    for line in list(multi_output.walk_differences(baseline, current))[:30]:
         _warn(line)
 
 
@@ -963,21 +941,12 @@ def _body() -> None:
     )
 
 
-def main() -> int:
-    install_conventional_signal_exits()
-    status = 0
-    try:
-        try:
-            _body()
-        except SystemExit as exc:
-            status = exc.code if isinstance(exc.code, int) else 1
-        except recipe.RecipeError as exc:
-            print(str(exc), file=sys.stderr, flush=True)
-            status = 1
-    finally:
-        status = _cleanup(status)
-    return status
+def main() -> None:
+    # run_with_cleanup owns the install-signals / try-body / finally shape; the
+    # pure perform_topology_cleanup core (wired in _cleanup) OWNS the final status,
+    # so it is handed in directly rather than through the worsen-success helper.
+    recipe.run_with_cleanup(_body, _cleanup)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

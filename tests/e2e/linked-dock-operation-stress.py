@@ -1418,20 +1418,15 @@ def _print_projection_diff(before: str, after: str) -> None:
     subprocess.run(["diff", "-u", before, after], check=False)
 
 
-def main() -> int:
-    status = 0
-    try:
-        try:
-            _body()
-        except SystemExit as exc:
-            status = exc.code if isinstance(exc.code, int) else 1
-        except recipe.RecipeError as exc:
-            print(str(exc), file=sys.stderr, flush=True)
-            status = 1
-    finally:
-        status = _cleanup(status)
-    return status
+def main() -> None:
+    # run_with_cleanup owns the try-body / finally shape; the pure
+    # perform_cleanup_transaction core (wired in _cleanup) OWNS the final status.
+    # install_signal_exits=False is deliberate: this recipe arms the signal exits
+    # itself INSIDE _body (at _S.transaction_started), so no command that can stop
+    # the pristine dock or replace its configuration runs while an interrupt would
+    # route through cleanup - the exact signal-arming ordering the bash kept.
+    recipe.run_with_cleanup(_body, _cleanup, install_signal_exits=False)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

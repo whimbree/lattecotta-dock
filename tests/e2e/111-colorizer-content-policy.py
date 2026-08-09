@@ -454,11 +454,11 @@ def _stop_dock_for_cleanup() -> bool:
     return stopped
 
 
-def main() -> int:
-    # The cleanup sits in a finally so it runs on EVERY exit path: the caught
-    # verdict (recipe.fail's SystemExit), an unexpected exception after the
-    # config home is already mutated, and the conventional signal exits installed
-    # below. 111 overwrites the SHARED throwaway config home's kdeglobals, edits
+def main() -> None:
+    # The cleanup runs on EVERY exit path (run_with_cleanup, the bash trap cleanup
+    # EXIT): the caught verdict (recipe.fail's SystemExit), an unexpected exception
+    # after the config home is already mutated, and the conventional signal exits
+    # installed below. 111 overwrites the SHARED throwaway config home's kdeglobals, edits
     # its lattedockrc, and swaps its latte/ layout set (stage_fixture_layout),
     # and populates an XDG_DATA_HOME scratch tree at E2E_RT/d28-data with the D28
     # test plasmoids. The runner reuses that one config home (and the vehicle
@@ -480,22 +480,20 @@ def main() -> int:
     snapshot.snapshot_file(config_home / "lattedockrc")
     snapshot.snapshot_dir(config_home / "latte")
     snapshot.snapshot_dir(rt / "d28-data")
-    status = 0
-    try:
-        try:
-            _body()
-        except SystemExit as exc:
-            status = exc.code if isinstance(exc.code, int) else 1
-        except recipe.RecipeError as exc:
-            print(str(exc), file=sys.stderr, flush=True)
-            status = 1
-    finally:
+
+    def cleanup(status: int) -> int:
+        # Stop the dock BEFORE restoring, then fold the outcome in: a dock that
+        # survived SIGTERM or a surface that did not restore byte-identically
+        # worsens a would-be success (the 022 cleanup-status contract).
         dock_stopped = _stop_dock_for_cleanup()
         restored = snapshot.restore()
-        if not (dock_stopped and restored) and status == 0:
-            status = 1
-    return status
+        return recipe.worsen_status_on_cleanup_failure(status, not (dock_stopped and restored))
+
+    # run_with_cleanup owns the try-body / finally-cleanup shape; cleanup runs on
+    # EVERY exit path (the bash trap cleanup EXIT). The signal exits are armed
+    # above, before the snapshot is taken, so install_signal_exits=False here.
+    recipe.run_with_cleanup(_body, cleanup, install_signal_exits=False)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

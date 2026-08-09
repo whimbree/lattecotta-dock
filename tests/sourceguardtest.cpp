@@ -1329,7 +1329,8 @@ private:
                    "running_dock_pid=_running_dock_pid"))
             && wiring.contains(QStringLiteral(
                    "start_dock=lambda:recipe.dock_start(90)"))
-            && recipe.contains(QStringLiteral("status=_cleanup(status)"))
+            && recipe.contains(QStringLiteral(
+                   "recipe.run_with_cleanup(_body,_cleanup)"))
             && cleanupRemove >= 0
             && cleanupRestore > cleanupRemove
             && recipe.count(QStringLiteral("_duplicate_independently")) >= 3
@@ -1411,7 +1412,8 @@ private:
     // harness/tests/test_storm_cleanup.py (the redesign of the deleted
     // cleanup-EVAL test); this matcher pins the recipe's transactional-replay
     // structure and its cleanup WIRING (the restore body, the deps wiring, and
-    // the status-preserving finally), plus the unchanged operation_model.py.
+    // the status-preserving run_with_cleanup call whose _cleanup return is the
+    // recipe's exit code), plus the unchanged operation_model.py.
     static bool matchesLinkedOperationStormE2eContract(
         const QString &recipeSource,
         const QString &modelSource)
@@ -1500,7 +1502,8 @@ private:
             && wiring.contains(QStringLiteral(
                    "dock_is_running=_dock_is_running"))
             && recipe.contains(QStringLiteral(
-                   "status=_cleanup(status)"))
+                   "recipe.run_with_cleanup(_body,_cleanup,"
+                   "install_signal_exits=False)"))
             && cleanupRemove >= 0
             && cleanupRestore > cleanupRemove
             && cleanupCompare > cleanupRestore
@@ -3952,15 +3955,17 @@ void SourceGuardTest::linkedOperationStormE2e_sourceGuardRejectsControlledMutati
     // The cleanup-gate mutations (live-dock replacement, partial-restore
     // restart) target the DECISION, which now lives in storm_cleanup.py and is
     // driven by harness/tests/test_storm_cleanup.py's mutation controls. What
-    // stays pinnable in the recipe source is the status-preserving finally that
-    // makes the cleanup verdict the recipe's exit code.
+    // stays pinnable in the recipe source is the run_with_cleanup wiring that
+    // hands the recipe's own _cleanup (whose return the shared runner uses as the
+    // exit code) the body's status - the status-preserving teardown. Dropping
+    // that wiring for the plain runner (no cleanup) must fail the guard.
     QString maskedStatus = recipe;
-    const QString statusPreservation =
-        QStringLiteral("status = _cleanup(status)");
+    const QString statusPreservation = QStringLiteral(
+        "recipe.run_with_cleanup(_body, _cleanup, install_signal_exits=False)");
     QCOMPARE(maskedStatus.count(statusPreservation), 1);
     maskedStatus.replace(
         statusPreservation,
-        QStringLiteral("_cleanup(status)"));
+        QStringLiteral("recipe.run(_body)"));
     QVERIFY2(
         !matchesLinkedOperationStormE2eContract(maskedStatus, model),
         "dropping the cleanup status preservation must fail the FP-4C guard");

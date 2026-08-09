@@ -42,7 +42,7 @@ import subprocess
 import sys
 import time
 
-from latte_harness import proc, recipe
+from latte_harness import recipe
 
 _KONSOLE_CLASS = "|org.kde.konsole|"
 # A genuine latte-dock preview dialog: an empty-caption latte-dock window at
@@ -213,21 +213,18 @@ def _body() -> None:
     )
 
 
-def main() -> int:
-    proc.install_conventional_signal_exits()
-    status = 0
-    try:
-        try:
-            _body()
-        except SystemExit as exc:
-            status = exc.code if isinstance(exc.code, int) else 1
-        except recipe.RecipeError as exc:
-            print(str(exc), file=sys.stderr, flush=True)
-            status = 1
-    finally:
-        _cleanup_konsole()
+def _cleanup(status: int) -> int:
+    """Tear down the recipe-launched konsole on every exit path; the body's status
+    stands (this teardown has nothing that can fail the run)."""
+    _cleanup_konsole()
     return status
 
 
+def main() -> None:
+    # run_with_cleanup owns the install-signals / try-body / finally-cleanup shape
+    # this recipe hand-rolled; _cleanup runs on every exit path (the bash trap).
+    recipe.run_with_cleanup(_body, _cleanup)
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

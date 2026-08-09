@@ -450,7 +450,18 @@ def _body(
     )
 
 
-def run() -> int:
+def _mkdtemp() -> str:
+    import tempfile
+
+    return tempfile.mkdtemp()
+
+
+def main() -> NoReturn:
+    # SIGINT/SIGTERM become SystemExit(130/143), so they route through the shared
+    # cleanup and preserve the distinguished exit codes the equivalence contract
+    # names (the bash trap fired on those too). The signal exits are armed here
+    # first, before the backup is allocated, so install_signal_exits=False below.
+    proc.install_conventional_signal_exits()
     fixture = f"{os.environ['E2E_REPO']}/tests/e2e/fixtures/sc-cw1"
     config_home = os.environ["E2E_CONFIG_HOME"]
     fixture_data = f"{os.environ['E2E_RT']}/sc-cw1-data"
@@ -460,39 +471,22 @@ def run() -> int:
         recipe.fail("could not allocate the SC-CW1 config backup")
     state: dict[str, bool] = {"backup_ready": False, "recipe_finalized": False}
 
-    # The cleanup sits in a finally so it runs on EVERY exit path, like the
-    # bash `trap cleanup EXIT`: not just the caught fail/verdict exits but
-    # also an unexpected exception (a malformed busctl reply mid-matrix, an
-    # OSError) and the conventional signal exits main() installs. Without
-    # it, an unintended exit strands the vehicle dock on the SC-CW1 fixture
-    # config and the runner's dock-reuse poisons every following recipe.
-    body_status = 0
-    try:
-        try:
-            body_status = _body(fixture, config_home, fixture_data, backup, state)
-        except SystemExit as exc:
-            body_status = exc.code if isinstance(exc.code, int) else 1
-        except recipe.RecipeError as exc:
-            print(str(exc), file=sys.stderr, flush=True)
-            body_status = 1
-    finally:
-        if _cleanup(config_home, fixture_data, backup, state):
-            body_status = 1
-    return body_status
+    def body() -> int:
+        return _body(fixture, config_home, fixture_data, backup, state)
 
+    def cleanup(status: int) -> int:
+        # This recipe's success status is the D57 signature (57) OR the corrected
+        # 0; a cleanup that left residue must fail the run either way, so it forces
+        # 1 rather than the worsen-0-only policy - which would let 57 leak past a
+        # failed cleanup as a pass under the `# e2e-expect: status 57` marker. Not
+        # a bug, a distinct status policy this recipe deliberately keeps.
+        return 1 if _cleanup(config_home, fixture_data, backup, state) else status
 
-def _mkdtemp() -> str:
-    import tempfile
-
-    return tempfile.mkdtemp()
-
-
-def main() -> NoReturn:
-    # SIGINT/SIGTERM become SystemExit(130/143), so they route through the
-    # cleanup finally and preserve the distinguished exit codes the
-    # equivalence contract names (the bash trap fired on those too).
-    proc.install_conventional_signal_exits()
-    raise SystemExit(run())
+    # run_with_cleanup owns the try-body / finally-cleanup shape: cleanup runs on
+    # EVERY exit path (the bash trap cleanup EXIT), so an unintended exit never
+    # strands the vehicle dock on the SC-CW1 fixture config to poison the
+    # following recipe through the runner's dock reuse.
+    recipe.run_with_cleanup(body, cleanup, install_signal_exits=False)
 
 
 if __name__ == "__main__":
