@@ -128,29 +128,6 @@ def _oracle(
     return result
 
 
-def _call(fail_message: str, *args: str) -> None:
-    """``e2e_call ... >/dev/null || e2e_fail``: run a lattedock action, forward
-    busctl stderr, and fail loudly on a D-Bus error."""
-    result = subprocess.run(
-        [
-            "busctl",
-            "--user",
-            "call",
-            "org.kde.lattedock",
-            "/Latte",
-            "org.kde.LatteDock",
-            *args,
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        if result.stderr:
-            sys.stderr.write(result.stderr)
-        recipe.fail(fail_message)
-
-
 def _kwriteconfig(*args: str) -> bool:
     return subprocess.run(["kwriteconfig6", *args], check=False).returncode == 0
 
@@ -183,7 +160,7 @@ def _duplicate_independently(source: int, boundary: str) -> int:
     """duplicate_independently: duplicate ``source`` and resolve the one new
     independent dock, polling 80x0.25s for it to appear."""
     before = _view_ids()
-    _call(f"{boundary} duplicateView call failed", "duplicateView", "u", str(source))
+    recipe.call_or_fail(f"{boundary} duplicateView call failed", "duplicateView", "u", str(source))
     candidate = ""
     for _ in range(80):
         candidate = _created_view_id(before)
@@ -882,7 +859,7 @@ def _body() -> None:
         os.environ["E2E_MO_SECONDARY"],
         "could not resolve the secondary Latte output id",
     )
-    _call(
+    recipe.call_or_fail(
         "could not place A at primary bottom start",
         "setViewPlacement",
         "uiii",
@@ -891,7 +868,7 @@ def _body() -> None:
         "4",
         "1",
     )
-    _call(
+    recipe.call_or_fail(
         "could not place B at primary bottom end",
         "setViewPlacement",
         "uiii",
@@ -900,7 +877,7 @@ def _body() -> None:
         "4",
         "2",
     )
-    _call(
+    recipe.call_or_fail(
         "could not place C at secondary left center",
         "setViewPlacement",
         "uiii",
@@ -910,7 +887,7 @@ def _body() -> None:
         "0",
     )
     for view in (_S.view_a, _S.view_b, _S.view_c):
-        _call(
+        recipe.call_or_fail(
             f"could not set panel {view} to Always Visible",
             "setViewVisibilityMode",
             "us",
@@ -922,7 +899,7 @@ def _body() -> None:
     before_axis_revision = _publication_revision(
         _S.view_c, "could not capture C publication revision before its axis change"
     )
-    _call(
+    recipe.call_or_fail(
         "could not exercise C across vertical-to-horizontal placement",
         "setViewPlacement",
         "uiii",
@@ -934,7 +911,7 @@ def _body() -> None:
     _assert_axis_change_publishes_once(
         _S.view_c, secondary_id, "top", "center", before_axis_revision
     )
-    _call(
+    recipe.call_or_fail(
         "could not restore C to secondary left center",
         "setViewPlacement",
         "uiii",
