@@ -68,19 +68,6 @@ def _fp(*args: object) -> bool:
     )
 
 
-def _latte_call(fail_message: str, *args: str) -> None:
-    result = subprocess.run(
-        ["busctl", "--user", "call", "org.kde.lattedock", "/Latte", "org.kde.LatteDock", *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        if result.stderr:
-            sys.stderr.write(result.stderr)
-        recipe.fail(fail_message)
-
-
 def _views() -> list[recipe.View]:
     """viewsData as typed View records, or [] on a refused/failed reply (the bash
     crash-to-empty sentinel the wait loops read as a non-match).
@@ -208,7 +195,7 @@ def _wait_for_panel_focus_state(cid: int, expected: str) -> bool:
 
 
 def _set_keyboard_navigation(cid: int, enabled: str, boundary: str) -> None:
-    _latte_call(
+    recipe.call_or_fail(
         f"{boundary} D-Bus call failed", "setViewKeyboardNavigation", "ub", str(cid), enabled
     )
     if not _wait_for_keyboard_navigation(cid, enabled):
@@ -433,7 +420,7 @@ def main() -> None:
         if not _wait_for_panel_focus_state(cid, "false false false"):
             recipe.fail("external application focus did not discard the containment session")
         _send_key_and_require_delivery(client_b, "b", "external-focus winner")
-        _latte_call(
+        recipe.call_or_fail(
             "non-stealing idempotent exit call failed",
             "setViewKeyboardNavigation",
             "ub",
