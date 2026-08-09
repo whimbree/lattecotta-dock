@@ -255,7 +255,10 @@ major findings. Authoring and approving inside one context is not review.
 file is the single source; skills stay procedural, never duplicate
 agreements.)
 
-Types: feat, fix, docs, test, build, ci, chore, stub. Scope names the
+Types: feat, fix, docs, test, build, ci, chore, stub, refactor (refactor
+added 2026-08-09 - already established on main for behavior-preserving
+restructures, e.g. the W4/W5 transport and cleanup-runner commits; the list
+had drifted behind practice). Scope names the
 subsystem: `fix(wm):`, `build(flake):`. The subject states the
 user-visible outcome, not the internals (good: "fix(components): stop
 writing ComboBox.pressed so popups open again on Qt6"; bad: "fix:
