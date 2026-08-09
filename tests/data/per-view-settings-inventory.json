@@ -366,7 +366,7 @@
   ],
   "sourceCoverage": {
     "siteFields": ["selector","covers"],
-    "measured": {"files":59,"candidates":742,"qmlObjects":241,"qmlMembers":359,"qmlModelElements":57,"qmlCalls":57,"cppConstructions":16,"cppCalls":12},
+    "measured": {"files":59,"candidates":744,"qmlObjects":241,"qmlMembers":361,"qmlModelElements":57,"qmlCalls":57,"cppConstructions":16,"cppCalls":12},
     "files": [
       {"path":"app/view/settings/indicatoruimanager.cpp","sites":[
       ],"representatives":[
@@ -392,6 +392,7 @@
       ]},
       {"path":"containment/package/contents/ui/editmode/ConfigOverlay.qml","sites":[
         ["qml-object|id:configurationArea",["overlay.applet.reorder"]],
+        ["qml-member|id:configurationArea|name:acceptedButtons",["overlay.applet.reorder"]],
         ["qml-member|id:configurationArea|name:onHeightChanged",["exempt.overlay.tooltip-wrapper"]],
         ["qml-member|id:configurationArea|name:onWidthChanged",["exempt.overlay.tooltip-wrapper"]],
         ["qml-member|id:configurationArea|name:onPositionChanged",["overlay.applet.reorder"]],
@@ -399,6 +400,7 @@
         ["qml-member|id:configurationArea|name:onCurrentAppletChanged",["exempt.overlay.tooltip-wrapper"]],
         ["qml-member|id:configurationArea|name:onPressed",["overlay.applet.reorder"]],
         ["qml-member|id:configurationArea|name:onReleased",["overlay.applet.reorder"]],
+        ["qml-member|id:configurationArea|name:onCanceled",["overlay.applet.reorder"]],
         ["qml-member|id:configurationArea|name:onWheel",["overlay.applet.length-wheel"]],
         ["qml-member|id:configurationArea/type:Connections#sha256:0ec7ccbcd51b1994410ad7c79c2d56a3b6a099af4dbde210c7558bf31828fbd8|name:onWidthChanged",["overlay.applet.reorder"]],
         ["qml-member|id:configurationArea/type:Connections#sha256:0ec7ccbcd51b1994410ad7c79c2d56a3b6a099af4dbde210c7558bf31828fbd8|name:onHeightChanged",["overlay.applet.reorder"]],

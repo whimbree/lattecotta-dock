@@ -49,8 +49,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   timer expires.
 
 ### D2 - ConfigOverlay applet stranded over chrome on edit-exit mid-drag
-- STATUS: OPEN (reproduced live 2026-07-18 by the C-I7 escape-in-held-drag
-  driver + the G2 z readback; was SUSPECTED from adversarial code-reading).
+- STATUS: FIXED by the ConfigOverlay onCanceled restore in the PR that files the
+  D285 fix (the drag-cancel stranding), PR #212 - the SAME shared restore closes
+  both D2 and D285. Reproduced live 2026-07-18 by the C-I7 escape-in-held-drag
+  driver + the G2 z readback; was SUSPECTED from adversarial code-reading.
 - FOUND: 2026-07-18, adversarial abort design (PR #31); CONFIRMED live 2026-07-18
   (C-I7/P6, the applet-reorder driver).
 - SYMPTOM: leaving edit mode WHILE an applet is mid-drag (here: Escape reaches
@@ -69,9 +71,23 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   save() to run, and this edit-exit path never calls it (onReleased does not
   fire). The G2 z field in viewAppletsData now makes the strand queryable
   (previously it would have been golden-only).
-- DISPOSITION: the C-A2b marquee target (T4c). The fix rescues the ConfigOverlay
-  currentApplet/placeHolder in main.qml onEditModeChanged, mirroring the dndSpacer
-  rescue already there; out of scope for the C-I7 driver chunk that found it.
+- FIX: the ConfigOverlay MouseArea's new onCanceled restore (restoreDraggedApplet(),
+  the same shared un-lift/re-home the onReleased drop runs), NOT the main.qml
+  onEditModeChanged rescue the original disposition predicted. Exiting edit mode
+  mid-drag flips inConfigureAppletsMode false, which hides the grabbing
+  configurationArea MouseArea; Qt then delivers onCanceled to it - the identical
+  grab loss a right-click mid-drag causes (D285, the drag-cancel stranding) - and
+  the shared restore un-lifts the applet at the exact handler that lifted it.
+  Fixing it at the drag layer is more correct than a separate parent rescue: the
+  un-lift lives next to the lift, and one restore covers every mid-drag grab loss
+  (edit-exit, right-click, any future one). SUPERSEDES the earlier C-A2b/T4c
+  prediction of a main.qml onEditModeChanged rescue mirroring the dndSpacer rescue.
+- REGRESSION TEST: tests/e2e/100-applet-reorder.py leg 4 (the DR-6
+  escape-in-held-drag path) now hard-asserts assert_no_lifted_applet after the
+  escape edit-exit on both axes. With the onCanceled restore reverted to the
+  origin/main QML the leg fails "applet(s) stranded over chrome ... 3@z900"; it
+  passes with the restore in place (the same RED-then-GREEN mutation control the
+  D285 entry records).
 
 ### D3 - Phantom ScreenConnectors entry on dropped-back cross-screen move
 - STATUS: SUSPECTED (adversarial code-reading; C-A4 + the hardened residue
@@ -3330,6 +3346,59 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - WORKAROUND: hand-edit the changed line instead of regenerating, or run the
   write under `LC_ALL=C`.
 - SEVERITY: annoyance (dirty diffs on baseline regeneration).
+
+### D285 - a right-click during an edit-mode applet drag strands the applet outside the dock
+- STATUS: FIXED by the ConfigOverlay onCanceled restore in the PR that files
+  this entry (the D285 drag-cancel stranding fix).
+- FOUND: 2026-08-08, live on the real session: edit mode, a RIGHT-edge vertical
+  dock on output DP-2; dragging an applet toward a different slot and then
+  right-clicking mid-drag broke the move and left the applet stranded OUTSIDE
+  the dock boundary, floating over the edit chrome at the lift z.
+- SYMPTOM: the dragged applet does not return to the layout. It stays parented
+  to root at the lift z (900), drawn outside the dock where onPressed had lifted
+  it, and only a fresh drag or an edit-mode round-trip clears it.
+- MECHANISM: containment/package/contents/ui/editmode/ConfigOverlay.qml onPressed
+  LIFTS the applet (reparents it to root, sets z 900) at the start of a drag, and
+  onReleased was the ONLY handler that reversed the lift (re-inserts the
+  placeHolder, reparents it back, z back to 1, re-runs justify, saves). The drag
+  MouseArea accepts LeftButton only and had no onCanceled. A right-click during a
+  held left-drag opens the containment context menu, which STEALS the pointer
+  grab; Qt then delivers onCanceled to the MouseArea, NOT onReleased, so the
+  un-lift never ran. Any mid-drag grab loss reproduces it: hiding the MouseArea
+  by exiting edit mode (Escape) mid-drag fires the same onCanceled.
+- FIX: extract the un-lift/re-home into a shared restoreDraggedApplet() and call
+  it from BOTH onReleased and a new onCanceled (guarded like onReleased). Only
+  the un-lift/re-home lives in the shared function; the release-specific
+  resize-length commit and the isResizing flag reset stay in onReleased so a
+  canceled gesture commits nothing it never intended. acceptedButtons stays
+  LeftButton: the goal is that the applet un-strands, not that right-click stops
+  opening the containment menu (the grab-steal is what fires onCanceled).
+- QT5/FORK CROSS-CHECK: KDE upstream Qt5 latte-dock ConfigOverlay.qml (ref=master)
+  sets no acceptedButtons and has no onCanceled; the CaptSilver Qt6 port
+  (latte-dock-qt6) likewise has onPressed/onReleased with no acceptedButtons and
+  no onCanceled; latte-dock-ng handles the drag in AppletItem.qml with no
+  onCanceled anywhere in the containment. So the stranding is latent in every
+  known port; the onCanceled restore is a platform-forced addition for Qt6's
+  grab-steal behavior, and acceptedButtons=LeftButton is Qt5-faithful (made
+  explicit only for the comment).
+- TEST GAPS EXPOSED (both now closed): (1) tests/e2e/100-applet-reorder.py had NO
+  chorded/right-click cancel leg, so no test drove a grab loss during a drag; a
+  new leg drives the chord (fakepointer dragbutton, a right-button click injected
+  while the left drag button is held, on one connection so the left grab spans
+  the second button) and asserts no strand and an unchanged order. (2) the DR-6
+  escape-in-held-drag leg only checked the dock survived; it now HARD-ASSERTS
+  assert_no_lifted_applet after the escape edit-exit, the invariant that would
+  have caught this class months ago.
+- EVIDENCE (nested vehicle, a bottom dock plus a RIGHT-edge vertical dock
+  mirroring the live repro): with the fix, 100-applet-reorder passes on both
+  axes, the D285 chord leg and the DR-6 escape hard-assert both green (exit 0).
+  Mutation control with the onCanceled restore reverted to the origin/main QML:
+  the full recipe fails at the DR-6 escape hard-assert
+  ("applet(s) stranded over chrome ... 3@z900"), and an isolated right-click-chord
+  probe fails "STRANDED after chord: [(3, 900)]" on the horizontal dock and passes
+  after restoring the fix, on both axes.
+- SEVERITY: user-facing edit-mode correctness (a stranded applet on a routine
+  right-click during a reorder; reproduced live on the real session).
 
 ### D284 - 073's axis-change phase-2 windowGeometry check races the settle
 - STATUS: FIXED by the phase-2 sampling change in the PR that files this

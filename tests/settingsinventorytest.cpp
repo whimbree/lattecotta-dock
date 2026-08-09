@@ -65,7 +65,7 @@ struct ParsedInventory
     int coverageRelations{0};
 };
 
-constexpr int ExpectedCoverageRelations = 1274;
+constexpr int ExpectedCoverageRelations = 1276;
 
 struct ValidationResult
 {
@@ -1176,9 +1176,9 @@ void SettingsInventoryTest::validatesInventory()
     QCOMPARE(result.inventory.representatives, 16);
     QCOMPARE(result.inventory.coverageRelations, ExpectedCoverageRelations);
     QCOMPARE(result.inventory.measured.value(QStringLiteral("files")).toInt(), 59);
-    QCOMPARE(result.inventory.measured.value(QStringLiteral("candidates")).toInt(), 742);
+    QCOMPARE(result.inventory.measured.value(QStringLiteral("candidates")).toInt(), 744);
     QCOMPARE(result.inventory.measured.value(QStringLiteral("qmlObjects")).toInt(), 241);
-    QCOMPARE(result.inventory.measured.value(QStringLiteral("qmlMembers")).toInt(), 359);
+    QCOMPARE(result.inventory.measured.value(QStringLiteral("qmlMembers")).toInt(), 361);
     QCOMPARE(result.inventory.measured.value(QStringLiteral("qmlModelElements")).toInt(), 57);
     QCOMPARE(result.inventory.measured.value(QStringLiteral("qmlCalls")).toInt(), 57);
     QCOMPARE(result.inventory.measured.value(QStringLiteral("cppConstructions")).toInt(), 16);
@@ -1484,7 +1484,7 @@ void SettingsInventoryTest::rejectsCoverageRelationCountDrift()
 {
     const QJsonObject mutation = addCoverageRelation(inventoryObject(), QStringLiteral("canvas.maximum-length.wheel"));
     const QString errors = validateInventory(mutation).errors.join(QLatin1Char('\n'));
-    QVERIFY2(errors.contains(QStringLiteral("coverage relation count is stale: expected 1274, ledger has 1275")),
+    QVERIFY2(errors.contains(QStringLiteral("coverage relation count is stale: expected 1276, ledger has 1277")),
              qPrintable(errors));
 }
 

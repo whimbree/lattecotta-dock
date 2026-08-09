@@ -27,6 +27,16 @@ MouseArea {
     visible: root.inConfigureAppletsMode
     hoverEnabled: root.inConfigureAppletsMode
 
+    //! LeftButton only (the MouseArea default, made explicit - Qt5 upstream and
+    //! the CaptSilver Qt6 port both set no acceptedButtons here either). The drag
+    //! gesture is a left-press; a right-click mid-drag must still fall through to
+    //! the containment context menu rather than being swallowed here. That
+    //! right-click steals the pointer grab, which is exactly what fires onCanceled,
+    //! where the dragged applet is un-stranded (see restoreDraggedApplet / D285).
+    //! The goal is that the applet un-strands, NOT that right-click stops opening a
+    //! menu, so this stays left-only.
+    acceptedButtons: Qt.LeftButton
+
     focus: true
     cursorShape: {
         if (currentApplet && tooltip.visible && currentApplet.latteStyleApplet) {
@@ -179,6 +189,31 @@ MouseArea {
         colorizingButton.checked = !currentApplet.userBlocksColorizing;
     }
 
+    //! Un-lift and re-home the dragged applet, reversing the onPressed lift: the
+    //! applet returns from root (z 900, the lift) into the layout at the placeHolder
+    //! slot, the placeHolder goes back to configurationArea, justify re-runs when it
+    //! is the alignment, the order is saved, and the fill applets re-fit the settled
+    //! layout. Shared by onReleased (the normal drop) and onCanceled (the grab-lost
+    //! abort). Without the onCanceled path this restore ran ONLY on release, so a
+    //! right-click mid-drag - which opens the containment context menu and steals the
+    //! pointer grab, making Qt fire canceled instead of released - left the applet
+    //! parented to root at z 900, stranded outside the dock over the edit chrome
+    //! (D285, the drag-cancel stranding). Only the un-lift/re-home lives here; the
+    //! resize-length commit and the gesture-flag reset stay in onReleased so a
+    //! canceled gesture commits nothing it never intended.
+    function restoreDraggedApplet() {
+        fastLayoutManager.insertBefore(placeHolder, currentApplet);
+        placeHolder.parent = configurationArea;
+        currentApplet.z = 1;
+
+        if (root.myView.alignment === LatteCore.Types.Justify) {
+            fastLayoutManager.moveAppletsBasedOnJustifyAlignment();
+        }
+
+        fastLayoutManager.save();
+        layouter.updateSizeForAppletsInFill();
+    }
+
     onPressed: (mouse) => {
         if (!root.dragOverlay.currentApplet) {
             return;
@@ -208,6 +243,9 @@ MouseArea {
             return;
         }
 
+        //! release-specific: commit the resize length the drop settled on, then
+        //! clear the resize gesture flags. These do NOT belong in the shared restore -
+        //! a canceled gesture (onCanceled) must not commit a length it never intended.
         if(currentApplet && currentApplet.applet){
             if (Plasmoid.formFactor === PlasmaCore.Types.Vertical) {
                 currentApplet.applet.plasmoid.configuration.length = handle.height;
@@ -219,16 +257,25 @@ MouseArea {
         configurationArea.isResizingLeft = false;
         configurationArea.isResizingRight = false;
 
-        fastLayoutManager.insertBefore(placeHolder, currentApplet);
-        placeHolder.parent = configurationArea;
-        currentApplet.z = 1;
+        restoreDraggedApplet();
+    }
 
-        if (root.myView.alignment === LatteCore.Types.Justify) {
-            fastLayoutManager.moveAppletsBasedOnJustifyAlignment();
+    //! The grab-lost abort (D285, the drag-cancel stranding): a right-click during a
+    //! held drag opens the containment context menu, which steals the pointer grab,
+    //! so Qt fires canceled instead of released and onReleased never runs. Qt5 Latte
+    //! had no onCanceled here (verified against KDE upstream ConfigOverlay.qml at
+    //! ref=master); this handler is the platform-forced addition for Qt6's grab-steal
+    //! behavior. Restore the applet exactly as a drop would, minus the resize commit a
+    //! cancel never intended. Guarded like onReleased: no dragged applet, nothing to do.
+    onCanceled: {
+        //! the same "no dragged applet, nothing to restore" guard onReleased makes:
+        //! root.dragOverlay is this configurationArea, so root.dragOverlay.currentApplet
+        //! IS the local currentApplet (onReleased's body reads it the same bare way).
+        if (!currentApplet) {
+            return;
         }
 
-        fastLayoutManager.save();
-        layouter.updateSizeForAppletsInFill();
+        restoreDraggedApplet();
     }
 
     onWheel: (wheel) => {
