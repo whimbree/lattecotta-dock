@@ -250,12 +250,12 @@ void TabLayouts::initExportLayoutSubMenu()
 
     QAction *exportForBackup = m_layoutExportSubMenu->addAction(i18nc("export for backup","&Export For Backup..."));
     exportForBackup->setIcon(QIcon::fromTheme("document-export"));
-    exportForBackup->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT  + Qt::Key_E));
+    exportForBackup->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_E));
     connect(exportForBackup, &QAction::triggered, this, &TabLayouts::exportLayoutForBackup);
 
     QAction *exportAsTemplate = m_layoutExportSubMenu->addAction(i18nc("export as template","Export As &Template..."));
     exportAsTemplate->setIcon(QIcon::fromTheme("document-export"));
-    exportAsTemplate->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT  + Qt::Key_T));
+    exportAsTemplate->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_T));
     connect(exportAsTemplate, &QAction::triggered, this, &TabLayouts::exportLayoutAsTemplate);
 }
 
