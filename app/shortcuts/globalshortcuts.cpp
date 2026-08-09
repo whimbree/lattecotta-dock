@@ -353,7 +353,7 @@ bool GlobalShortcuts::activateEntryForView(Latte::View *view, int index, Qt::Key
 //! Activate task manager entry
 void GlobalShortcuts::activateEntry(int index, Qt::Key modifier)
 {
-    m_lastInvokedAction = dynamic_cast<QAction *>(sender());
+    m_lastInvokedAction = qobject_cast<QAction *>(sender());
 
     QList<Latte::View *> sortedViews = m_corona->layoutsManager()->synchronizer()->sortedCurrentViews();
 
@@ -424,7 +424,7 @@ void GlobalShortcuts::updateViewItemBadge(QString identifier, QString value)
 
 void GlobalShortcuts::showViews()
 {
-    m_lastInvokedAction = dynamic_cast<QAction *>(sender());
+    m_lastInvokedAction = qobject_cast<QAction *>(sender());
     if (!m_lastInvokedAction) {
         // when holding Meta
         m_lastInvokedAction = m_singleMetaAction;
