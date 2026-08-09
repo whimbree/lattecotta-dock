@@ -37,7 +37,8 @@ from latte_harness.matrix import (
 
 # Typed stand-ins for monkeypatch.setattr (a bare lambda is untyped under strict).
 def _returns_status(code: int, stdout: str) -> Callable[..., tuple[int, str]]:
-    def fake(*_args: object) -> tuple[int, str]:
+    # **kwargs so the fake stands in for recipe.call_status(*args, quiet=...).
+    def fake(*_args: object, **_kwargs: object) -> tuple[int, str]:
         return code, stdout
 
     return fake
@@ -310,8 +311,8 @@ def test_kconfig_snapshot_refuses_a_missing_file(tmp_path: Path) -> None:
 
 def test_probe_applets_order_returns_a_validated_as_array(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        matrix,
-        "_call_status",
+        recipe,
+        "call_status",
         _returns_status(0, 'as 2 "org.kde.latte.plasmoid" "org.kde.plasma.marginsseparator"\n'),
     )
     assert (
@@ -322,13 +323,13 @@ def test_probe_applets_order_returns_a_validated_as_array(monkeypatch: pytest.Mo
 
 def test_probe_applets_order_refuses_a_dbus_call_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     # A call error must NOT read as the same empty order on both sides (false PASS).
-    monkeypatch.setattr(matrix, "_call_status", _returns_status(1, ""))
+    monkeypatch.setattr(recipe, "call_status", _returns_status(1, ""))
     with pytest.raises(MatrixProbeError):
         _ = matrix.probe_applets_order(16)
 
 
 def test_probe_applets_order_refuses_a_non_array_reply(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(matrix, "_call_status", _returns_status(0, "b true\n"))
+    monkeypatch.setattr(recipe, "call_status", _returns_status(0, "b true\n"))
     with pytest.raises(MatrixProbeError):
         _ = matrix.probe_applets_order(16)
 
@@ -432,12 +433,12 @@ def test_verb_probe_refuses_an_unknown_verb() -> None:
 
 
 def test_drive_action_accepts_a_successful_call(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(matrix, "_call_status", _returns_status(0, ""))
+    monkeypatch.setattr(recipe, "call_status", _returns_status(0, ""))
     matrix.drive_action("setViewEditMode", "ub", "16", "true")  # no raise
 
 
 def test_drive_action_refuses_to_swallow_a_dbus_failure(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(matrix, "_call_status", _returns_status(1, ""))
+    monkeypatch.setattr(recipe, "call_status", _returns_status(1, ""))
     with pytest.raises(MatrixDriveError):
         matrix.drive_action("setViewEditMode", "ub", "16", "true")
 

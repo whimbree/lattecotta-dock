@@ -55,7 +55,6 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import sys
 import time
 from collections.abc import Callable
@@ -78,10 +77,6 @@ from latte_harness.matrix_fixture import (
     ViewType,
 )
 from latte_harness.recipe import Rect
-
-# The lattedock addressing triple (mirrors recipe._LATTE_OBJECT). matrix needs a
-# status-aware call recipe.call does not expose, so the triple lives here too.
-_LATTE_OBJECT = ("org.kde.lattedock", "/Latte", "org.kde.LatteDock")
 
 # The default matrix_stage settle budget (bash MATRIX_STAGE_TIMEOUT default).
 _DEFAULT_STAGE_TIMEOUT = 90
@@ -210,28 +205,6 @@ def _matrix_baseline_dir() -> Path:
 
 def _stage_timeout() -> int:
     return int(os.environ.get("MATRIX_STAGE_TIMEOUT") or _DEFAULT_STAGE_TIMEOUT)
-
-
-# ---- status-aware D-Bus transport ------------------------------------------
-
-
-def _call_status(method: str, *args: str) -> tuple[int, str]:
-    """``busctl --user call`` for a lattedock method, returning (exit code, stdout).
-
-    Unlike recipe.call (which forwards stderr and swallows the status), this keeps
-    the exit code so a D-Bus failure is distinguishable from an empty reply - the
-    never-swallow contract the applets-order probe and the edit-mode driver depend
-    on. busctl's own stderr is forwarded, matching the bash e2e_call terminal.
-    """
-    result = subprocess.run(
-        ["busctl", "--user", "call", *_LATTE_OBJECT, method, *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.stderr:
-        _ = sys.stderr.write(result.stderr)
-    return result.returncode, result.stdout
 
 
 # ---- the view readback (pydantic at the boundary) --------------------------
@@ -580,7 +553,7 @@ def probe_applets_order(view: int) -> str:
     validated as an ``as`` array and any error surfaces loudly (MatrixProbeError),
     so the backbone treats it as unassertable, never clean.
     """
-    code, stdout = _call_status("viewAppletsOrder", "u", str(view))
+    code, stdout = recipe.call_status("viewAppletsOrder", "u", str(view))
     if code != 0:
         print(
             f"matrix: viewAppletsOrder call FAILED for view {view} "
@@ -863,7 +836,7 @@ def drive_action(method: str, *args: str) -> None:
     failure: a nonzero call raises MatrixDriveError, which the scenario translates
     to a refusal. Verb drivers use this instead of a status-blind call.
     """
-    code, _ = _call_status(method, *args)
+    code, _ = recipe.call_status(method, *args)
     if code != 0:
         raise MatrixDriveError(f"D-Bus action {method} failed")
 

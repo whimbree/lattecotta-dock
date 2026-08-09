@@ -46,12 +46,6 @@ from latte_harness import matrix, recipe
 from latte_harness.matrix import MatrixDriveError, MatrixProbeError
 from latte_harness.recipe import Rect
 
-# The lattedock addressing triple (mirrors recipe._LATTE_OBJECT / matrix). The
-# viewAppletsOrder reply and the edit/rearrange actions need the exit code
-# recipe.call swallows, so their raw busctl calls live here (the same way matrix
-# carries its own status-aware call).
-_LATTE_OBJECT = ("org.kde.lattedock", "/Latte", "org.kde.LatteDock")
-
 # The default visual pair the appletreorder matrix verb swaps (bash
 # APPLET_REORDER_FROM / APPLET_REORDER_TO, defaulting to the leading pair).
 _DEFAULT_FROM = "0"
@@ -75,25 +69,6 @@ def _raise(message: str) -> NoReturn:
 
 
 # ---- low-level transport ---------------------------------------------------
-
-
-def _call_status(method: str, *args: str, quiet: bool = False) -> tuple[int, str]:
-    """``busctl --user call`` for a lattedock method, returning (exit code, stdout).
-
-    Keeps the exit code (unlike recipe.call, which swallows it) so a D-Bus failure
-    is distinguishable from an empty reply - the never-swallow contract the order
-    readback and the edit/rearrange drivers depend on. busctl's own stderr is
-    forwarded unless ``quiet`` (the exit's best-effort ``2>&1`` suppression).
-    """
-    result = subprocess.run(
-        ["busctl", "--user", "call", *_LATTE_OBJECT, method, *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.stderr and not quiet:
-        _ = sys.stderr.write(result.stderr)
-    return result.returncode, result.stdout
 
 
 def _fakepointer(*args: str) -> None:
@@ -160,7 +135,7 @@ def applet_reorder_order(view: int) -> str:
     A D-Bus failure surfaces loudly (never a plausible-but-empty order that would
     read "unchanged" on both sides of an abort - the never-swallow rule).
     """
-    code, stdout = _call_status("viewAppletsOrder", "u", str(view))
+    code, stdout = recipe.call_status("viewAppletsOrder", "u", str(view))
     if code != 0:
         _raise(f"applet_reorder_order: viewAppletsOrder call FAILED for view {view}")
     reply = stdout.rstrip("\n")
@@ -214,7 +189,7 @@ def applet_reorder_configuring(view: int) -> bool:
 def _drive_action(method: str, *args: str) -> None:
     """Fire a lattedock action, refusing to swallow a failure (the enter path's
     ``e2e_call ... || return 1``)."""
-    code, _ = _call_status(method, *args)
+    code, _ = recipe.call_status(method, *args)
     if code != 0:
         _raise(f"applet_reorder: D-Bus action {method} failed for the reorder driver")
 
@@ -256,8 +231,8 @@ def applet_reorder_exit(view: int) -> None:
     """applet_reorder_exit: leave rearrange, then edit, and settle back to the
     non-edit baseline geometry. Best-effort on each flag flip (main.qml also resets
     inConfigureAppletsMode on edit exit), but edit mode must actually clear."""
-    _ = _call_status("setViewConfiguringApplets", "ub", str(view), "false", quiet=True)
-    _ = _call_status("setViewEditMode", "ub", str(view), "false", quiet=True)
+    _ = recipe.call_status("setViewConfiguringApplets", "ub", str(view), "false", quiet=True)
+    _ = recipe.call_status("setViewEditMode", "ub", str(view), "false", quiet=True)
     _ = _poll_until(lambda: applet_reorder_edit_mode(view), False)
     _ = recipe.wait_settled(15)
     if applet_reorder_edit_mode(view):
