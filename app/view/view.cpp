@@ -270,7 +270,7 @@ View::View(Plasma::Corona *corona, QScreen *targetScreen, bool byPassX11WM)
             m_positioner->immediateSyncGeometry();
         }
 
-        connect(this->containment(), SIGNAL(statusChanged(Plasma::Types::ItemStatus)), SLOT(statusChanged(Plasma::Types::ItemStatus)));
+        connect(this->containment(), &Plasma::Containment::statusChanged, this, &View::statusChanged);
         //! A recreated view can attach after the containment has already
         //! entered a non-default status, so the initial value needs the same
         //! transition path as later signals.
@@ -348,7 +348,7 @@ View::~View()
     }
 
     disconnectSensitiveSignals();
-    disconnect(containment(), SIGNAL(statusChanged(Plasma::Types::ItemStatus)), this, SLOT(statusChanged(Plasma::Types::ItemStatus)));
+    disconnect(containment(), &Plasma::Containment::statusChanged, this, &View::statusChanged);
 
     qDebug() << "dock view deleting...";
 
