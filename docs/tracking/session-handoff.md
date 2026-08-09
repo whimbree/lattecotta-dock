@@ -76,15 +76,23 @@ presentation-coverage oracle, findings recorded in the W6 agent report) and a
 one-line SPDX header for scripts/git-hooks/pre-push (extensionless, out of
 BW-5's scope).
 
-Audit backlog still unfarmed: C++ CHUNK-1 (decompose the 687-line
-collectDockSystemSnapshot), CHUNK-2 (persistViewMoveSnapshot plus .clang-format),
-CHUNK-3 (idiom sweep: string-based connects, mutable iterators, dynamic_cast),
-CHUNK-4 (comment hygiene, the synchronizer.cpp dead null-check), CHUNK-5
-(lattecorona.cpp startDetached QString injection, needs a live drive), CHUNK-6
-(m_connections array bounds); QML C2 (button-row precedence, three sites), C3
-(colorsToIndex missing default return), C4 (indicator null-guard inconsistency),
-C6 (redundant anchor write), plus the dead Plasma-5 version gates and a Qt5
-import sweep.
+Audit backlog: the maintainer chose the C++ readability refactors
+(CHUNK-1/2/3) first. CHUNK-1 (decompose the 687-line collectDockSystemSnapshot
+into ten named helpers) LANDED at 67ae65a5b (PR #221), behavior-preserving with
+the three dock-system source-guards kept green. It filed a guard-hardening
+follow-up: the reservation-output guard now scans only the extracted
+indexReservationGroupMemberships helper, so a stale-screen read NEWLY introduced
+in applyReservationMembershipFields / collectReservationGroupRecords would not
+trip it - an optional anti-pattern sweep over those two helper bodies would
+restore the wider coverage the monolith incidentally had. CHUNK-3 (idiom sweep:
+string-based connects -> function-pointer, dynamic_cast -> qobject_cast, mutable
+iterators) and CHUNK-2 (persistViewMoveSnapshot plus the ambiguous .clang-format
+item) are next in that batch. Still unfarmed after: CHUNK-4 (comment hygiene, the
+synchronizer.cpp dead null-check), CHUNK-5 (lattecorona.cpp startDetached QString
+injection, needs a live drive), CHUNK-6 (m_connections array bounds); QML C2
+(button-row precedence, three sites, needs re-identification), C3 (colorsToIndex
+missing default return), C4 (indicator null-guard inconsistency), C6 (redundant
+anchor write), plus the dead Plasma-5 version gates and a Qt5 import sweep.
 
 Owner decisions still open (carried forward): the D283 approach (fix the legacy
 clone path vs deprecate), history excision of the swept maintainer-local files,
