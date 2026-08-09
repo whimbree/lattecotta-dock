@@ -1,7 +1,87 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-08-06.
+Last updated 2026-08-09.
+
+## 2026-08-09: the quality cleanup wave and the model-vs-truth drift net
+
+With the bash-to-python migration (BP) complete, a quality cleanup wave swept the
+now-typed harness for naming, idiom, pythonic boundaries and observability, and a
+maintainer-requested drift net closed the last gap between the readback models and
+the C++ serializer that feeds them. Everything landed through the standard review
+flow (orchestrator quick-read plus one independent Fable or Opus review; a major
+finding took the required second review). Subagents authored the code in isolated
+worktrees; the orchestrator kept the merge tail.
+
+Cleanup chunks merged (lead hashes on main):
+- BW-1 (bash bridge burial: delete the qml-env and nested-kwin bash bridges):
+  3c34530d0, 1fbd2d769.
+- BW-3 (remove the multi-output bash closed loop): 7154e13da, d582cb2f0.
+- W1 (bring every recipe to zero under the new lint and type gate): 08c7d5de0,
+  07898532c.
+- BW-2 (retire the e2e-seed-cleanup bash selftest into the vehicle port):
+  815b08c76.
+- C5 (restore the shared config home after the colorizer recipes): 177d066f1,
+  731c978b6.
+- W2 (D-Bus refusal unification: one typed DbusUnavailableError channel):
+  0d6216fb7, then the four recipe moves ef7a137f7 / 31935fc45 / 71601b27e /
+  b4618b9df.
+- W3 (widen the typed readback models and read every surface through them):
+  ba3a2eb81, 5afb7024d, 3862f7b28, 502fa00fd.
+- BW-4 (lib.sh diet: drop the dead geometry/presentation tail, refresh stale
+  prose): fd67e5ab9, 5b9b17d26.
+- W4 (shared status-carrying transport: recipe.call_status / call_or_fail):
+  657818720, 94b5c2c22, 3a83f4260, 1a7ea9735, cc0ca62d0.
+- W5 (shared recipe cleanup runner run_with_cleanup, structurally ending the
+  cleanup-outside-finally bug class): 65f6d7f0b, fa348f22d, 3db99ab99,
+  409547b3c.
+
+Defects: D285 (right-click during an applet drag in edit mode breaks the move
+and strands the applet outside the dock boundary) fixed at f5f4d1936 with its
+RED-proven cancel recipe 948ee02c5 (PR #212); the shared onCanceled restore also
+closes D2 (edit-exit-mid-drag strand). D286 (the QML audit's suspected
+vertical-offset zero-return) proved a FALSE POSITIVE under ECMAScript
+completion-value semantics and is filed ACCEPTED at 8ca99bc24 (PR #218), not a
+bug. The matrix drag tests missed D285 because they drove drag-and-drop but never
+a right-click-during-drag cancel; the new recipe closes that hole.
+
+The model-vs-truth drift net (PR #214; a5d56e3fb Part 1, 33c25a8d1 Part 2,
+f9aa8f0b5 README) pins recipe.View / Applet / Task to app/dbusreports.h's
+serialize*Record. Part 1 (latte_harness.dbus_schema_pin plus its pytest) extracts
+the emitted JSON keys straight from the header and asserts, per surface,
+emitted == model aliases | UNMODELED in both directions with no dock; it runs in
+the harness-check leg of every gate and is the workhorse. UNMODELED is a
+key -> justification map, so silencing a red pin structurally requires typing why
+a key stays unmodeled instead of widening the model. Part 2 (the
+001-dbus-readback-schema recipe, now wired into the asan-e2e and ci-agnostic
+gates) round-trips a real captured payload against the same accounting as the
+backstop for a runtime- or helper-emitted key the static parse cannot see. The
+extractor's completeness guard refuses any bare json token outside its three
+recognized forms, so a future shared-builder refactor cannot make Part 1 go
+false-green. The initial review found the Part 2 recipe wired into no gate
+(major); the fix wired it into both gates and a second independent review
+confirmed MERGE.
+
+Held so main stopped moving under the drift-net rebase, now releasable in order:
+W6 (the naming wave: applet_reorder_attempt -> attempt, package_gate_audit ->
+package_provenance / ProvenanceError, de-string the geometry returns, publicize
+the presentation-coverage oracle) and BW-5 (the asan-gate two-tool guard, the
+unreachable end-state prose in three places, two undispositioned bash files, an
+SPDX batch).
+
+Audit backlog still unfarmed: C++ CHUNK-1 (decompose the 687-line
+collectDockSystemSnapshot), CHUNK-2 (persistViewMoveSnapshot plus .clang-format),
+CHUNK-3 (idiom sweep: string-based connects, mutable iterators, dynamic_cast),
+CHUNK-4 (comment hygiene, the synchronizer.cpp dead null-check), CHUNK-5
+(lattecorona.cpp startDetached QString injection, needs a live drive), CHUNK-6
+(m_connections array bounds); QML C2 (button-row precedence, three sites), C3
+(colorsToIndex missing default return), C4 (indicator null-guard inconsistency),
+C6 (redundant anchor write), plus the dead Plasma-5 version gates and a Qt5
+import sweep.
+
+Owner decisions still open (carried forward): the D283 approach (fix the legacy
+clone path vs deprecate), history excision of the swept maintainer-local files,
+the containment config residue cleanup, and the D280-era live redelivery cadence.
 
 ## 2026-08-06: the 073 port and BP-5c - the bash-to-python migration is COMPLETE
 
