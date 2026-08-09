@@ -249,7 +249,9 @@ void ParabolicRouterTest::client_receivesLiveStackAsReceived_walkStops()
     compareScales(sim, 4, {1.0, 1.15, 1.45, 1.0, 1.0, 1.0});
 
     QCOMPARE(sim.clientStacks[5].size(), 1);
-    const auto &stack = sim.clientStacks[5].first();
+    //! value, not reference: const QHash::operator[] returns a temporary
+    //! container, so a reference into it dangles past the full expression
+    const auto stack = sim.clientStacks[5].first();
     const ScaleStacks ref = computeScales(0.5, kSpreadSteps, kZoom, false);
     QCOMPARE(stack, ref.right);
 }
