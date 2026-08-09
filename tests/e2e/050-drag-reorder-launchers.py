@@ -25,7 +25,6 @@ byte-identical to the bash.
 
 import contextlib
 import io
-import json
 import os
 import re
 import subprocess
@@ -145,15 +144,19 @@ def main() -> None:
     layout = os.environ["E2E_LAYOUT"]
 
     def order() -> str:
-        tasks = json.loads(recipe.json_payload("viewTasksData", "u", str(view)))
-        return " ".join(t["launcherUrl"] for t in tasks)
+        # W3 (widen the readback models): launcherUrl rides the typed recipe.Task,
+        # so the launcher order reads the typed rows instead of raw JSON.
+        return " ".join(t.launcher_url for t in recipe.view_tasks(view))
 
     #! preconditions: pure launchers (a window task would reflow mid-drag),
     #! at least three of them
     launchers = order().split()
     if len(launchers) < 3:
         recipe.fail(f"need >=3 pinned launchers, have {len(launchers)}")
-    if '"isLauncher":false' in recipe.json_payload("viewTasksData", "u", str(view)):
+    # isLauncher rides recipe.Task too; the typed read also fixes the bash swallow
+    # where a refused reply's empty text made the ``"isLauncher":false`` substring
+    # scan miss and the launchers-only precondition pass vacuously.
+    if any(not t.is_launcher for t in recipe.view_tasks(view)):
         recipe.fail("window tasks present; this recipe needs a launchers-only bar")
 
     #! the launchers config entry (key name carries the synced-group id, so it

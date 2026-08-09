@@ -60,7 +60,11 @@ def main() -> None:
     #! unambiguous. The driver is identity-based (appId), no per-icon pixel
     #! calibration - the arithmetic even-slot center (recipe.task_center) rides the
     #! compositor-true window x, accurate within a few px at the default zoom.
-    if '"isLauncher":false' in recipe.json_payload("viewTasksData", "u", str(view)):
+    # W3 (widen the readback models): isLauncher rides the typed recipe.Task, so
+    # the launchers-only precondition reads the typed rows. The typed read also
+    # fixes the bash swallow where a refused reply's empty text made the substring
+    # scan miss and the precondition pass vacuously.
+    if any(not t.is_launcher for t in recipe.view_tasks(view)):
         recipe.fail("window tasks present; this recipe needs a launchers-only bar")
     apps = task_reorder.taskdrag_order(view).split()
     if len(apps) < 3:

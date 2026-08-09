@@ -639,8 +639,8 @@ def _locate_target_point(kind: str, expected_windows: int) -> tuple[int, int] | 
         return None
     target = recipe.view(_S.view)
     applet = next(a for a in recipe.view_applets(_S.view) if a.id == _S.tasks_applet)
-    task_list = json.loads(recipe.json_payload("viewTasksData", "u", str(_S.view)))
-    matches = [i for i, t in enumerate(task_list) if t["launcherUrl"] == LAUNCHER_URL]
+    task_list = recipe.view_tasks(_S.view)
+    matches = [i for i, t in enumerate(task_list) if t.launcher_url == LAUNCHER_URL]
     if not (len(task_list) == 1 and matches == [0]):
         return None
     ay = target.absolute_geometry[1]
@@ -760,9 +760,9 @@ def _assert_dispatch_unchanged(expected_payload: str, expected_sequence: int, la
 
 
 def _assert_containment_isolation() -> None:
-    views = json.loads(recipe.json_payload("viewsData"))
+    # W3 (widen the readback models): the containment ids ride the typed recipe.views().
     valid_controls = 0
-    for other in (v["containmentId"] for v in views):
+    for other in (v.containment_id for v in recipe.views()):
         if other == _S.view:
             continue
         payload = recipe.json_payload("taskMiddleClickDispatchData", "u", str(other))

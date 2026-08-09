@@ -182,14 +182,10 @@ def main() -> None:
         return lines[-1] if lines else ""
 
     def target_state() -> str:
-        rows = [
-            r
-            for r in json.loads(recipe.json_payload("viewTasksData", "u", str(view)))
-            if r["launcherUrl"] == launcher_url
-        ]
-        if any(not r["isLauncher"] and r["isActive"] for r in rows):
+        rows = [t for t in recipe.view_tasks(view) if t.launcher_url == launcher_url]
+        if any(not t.is_launcher and t.is_active for t in rows):
             return "active"
-        if any(not r["isLauncher"] for r in rows):
+        if any(not t.is_launcher for t in rows):
             return "window"
         if rows:
             return "launcher"
@@ -212,9 +208,9 @@ def main() -> None:
         return False
 
     def assert_pure_launcher() -> None:
-        rows = json.loads(recipe.json_payload("viewTasksData", "u", str(view)))
-        target = [r for r in rows if r["launcherUrl"] == launcher_url]
-        if not (len(rows) == 1 and len(target) == 1 and target[0]["isLauncher"]):
+        rows = recipe.view_tasks(view)
+        target = [t for t in rows if t.launcher_url == launcher_url]
+        if not (len(rows) == 1 and len(target) == 1 and target[0].is_launcher):
             recipe.fail("target is not the only pure launcher")
         if window_count() != 0:
             recipe.fail("fixture window exists before activation")
