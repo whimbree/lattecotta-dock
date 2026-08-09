@@ -787,6 +787,14 @@ void TabLayouts::onLayoutFilesDropped(const QStringList &paths)
 void TabLayouts::onRawLayoutDropped(const QString &rawLayout)
 {
     Latte::Data::Layout importedlayout = m_layoutsController->addLayoutByText(rawLayout);
+
+    if (importedlayout.isEmpty()) {
+        showInlineMessage(i18nc("settings:dropped layout import failed","Dropped layout import <b>failed</b>..."),
+                          KMessageWidget::Error,
+                          true);
+        return;
+    }
+
     showInlineMessage(i18nc("settings:layout imported successfully","Layout <b>%1</b> imported successfully...", importedlayout.name),
                       KMessageWidget::Positive);
 }

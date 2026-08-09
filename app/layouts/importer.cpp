@@ -300,9 +300,9 @@ bool Importer::importOldConfiguration(QString oldConfigPath, QString newName)
     }
 
     KTar archive(oldConfigPath, QStringLiteral("application/x-tar"));
-    archive.open(QIODevice::ReadOnly);
 
-    if (!archive.isOpen()) {
+    if (!archive.open(QIODevice::ReadOnly)) {
+        qWarning() << "old configuration import: could not open as a tar archive :" << oldConfigPath;
         return false;
     }
 
@@ -442,10 +442,9 @@ Importer::LatteFileVersion Importer::fileVersion(QString file)
     }
 
     KTar archive(file, QStringLiteral("application/x-tar"));
-    archive.open(QIODevice::ReadOnly);
 
     //! if the file isnt a tar archive
-    if (!archive.isOpen()) {
+    if (!archive.open(QIODevice::ReadOnly)) {
         return Importer::UnknownFileType;
     }
 
@@ -516,9 +515,9 @@ bool Importer::importHelper(QString fileName)
     }
 
     KTar archive(fileName, QStringLiteral("application/x-tar"));
-    archive.open(QIODevice::ReadOnly);
 
-    if (!archive.isOpen()) {
+    if (!archive.open(QIODevice::ReadOnly)) {
+        qWarning() << "layout import: could not open as a tar archive :" << fileName;
         return false;
     }
 
