@@ -62,12 +62,19 @@ false-green. The initial review found the Part 2 recipe wired into no gate
 (major); the fix wired it into both gates and a second independent review
 confirmed MERGE.
 
-Held so main stopped moving under the drift-net rebase, now releasable in order:
-W6 (the naming wave: applet_reorder_attempt -> attempt, package_gate_audit ->
-package_provenance / ProvenanceError, de-string the geometry returns, publicize
-the presentation-coverage oracle) and BW-5 (the asan-gate two-tool guard, the
-unreachable end-state prose in three places, two undispositioned bash files, an
-SPDX batch).
+W6 and BW-5 landed after the drift net cleared main, completing the cleanup
+wave. W6 (the naming wave; PR #219) renamed applet_reorder_attempt -> attempt
+(460d5667b) and the package-gate audit core -> package_provenance /
+ProvenanceError (e321fa1f6); its de-string-geometry and publicize-the-oracle
+items were split off to a W7 follow-up with a recorded investigation. BW-5 (the
+asan-gate guard and allowlist-hygiene wave; PR #220) fixed the asan gate to
+re-exec when uv is unpinned, not just cmake (341ba1557), corrected the stale
+"17-file end state" prose to the real 46-file retained set and dispositioned the
+launcher-authority pair (bc047e2f9), and added SPDX headers to 14 files
+(e0c170606). Follow-ups filed: W7 (geometry de-stringing plus publicizing the
+presentation-coverage oracle, findings recorded in the W6 agent report) and a
+one-line SPDX header for scripts/git-hooks/pre-push (extensionless, out of
+BW-5's scope).
 
 Audit backlog still unfarmed: C++ CHUNK-1 (decompose the 687-line
 collectDockSystemSnapshot), CHUNK-2 (persistViewMoveSnapshot plus .clang-format),
