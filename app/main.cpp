@@ -15,6 +15,7 @@
 // C++
 #include <memory>
 #include <csignal>
+#include <cstdio>
 
 // Qt
 #include <QApplication>
@@ -594,7 +595,16 @@ inline void filterDebugMessageOutput(QtMsgType type, const QMessageLogContext &c
                            << CICYAN << " - " << CNORMAL << msg;
     } else {
         QFile logfile(filterDebugLogFile);
-        logfile.open(QIODevice::WriteOnly | QIODevice::Append);
+
+        if (!logfile.open(QIODevice::WriteOnly | QIODevice::Append)) {
+            //! a message handler must not drop messages silently, and cannot
+            //! recurse into the logging it implements; the message and the
+            //! reason the log file is unwritable both go to stderr instead
+            fprintf(stderr, "latte-dock: log file '%s' is unwritable (%s), message: %s\n",
+                    qPrintable(filterDebugLogFile), qPrintable(logfile.errorString()), qPrintable(msg));
+            return;
+        }
+
         QTextStream logts(&logfile);
         logts << "[" << typeStr.toStdString().c_str() << " : " << QTime::currentTime().toString("h:mm:ss.zz").toStdString().c_str() << "]"
               <<  " - " << msg << Qt::endl;
