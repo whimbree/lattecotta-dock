@@ -1,3 +1,9 @@
+/*
+    SPDX-FileCopyrightText: 2026 Bree Spektor
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-License-Identifier: GPL-2.0-or-later
+*/
+
 // Mock scope around the REAL ParabolicEdgeSpacer.qml (same context-chain
 // technique as MockApplet). directRenderingEnabled=true on the hub keeps
 // the length Behavior disabled so reads are immediate.

@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
 # THE DESK LIFECYCLE ENTRY POINT: safely kill any existing instance, then
 # launch the staged dock detached from this terminal. Environment
 # construction itself lives in run-staged.sh (the foreground env core this

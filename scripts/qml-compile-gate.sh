@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
 # Headless compile-check for every QML file in the shell, containment,
 # plasmoid and indicator packages (porting plan Phase 5). Ported to the typed
 # harness in BP-1f (the bash-to-python migration's QML compile/interaction
