@@ -37,6 +37,8 @@
 #include <QTest>
 #include <QVariant>
 
+#include <memory>
+
 #include "configsnapshotdiff.h"
 #include "lengthoffsetclampbridge.h"
 
@@ -162,7 +164,8 @@ QJsonObject LengthHandlerAuditTest::snapshot(const QQmlPropertyMap &config)
 //! measured against.
 void LengthHandlerAuditTest::rulerAwayFromBoundaryMovesOnlyMaximum()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("maxLength"), 100}, {QStringLiteral("minLength"), 30},
                   {QStringLiteral("offset"), 0}, {QStringLiteral("alignment"), 0}}); // Center
 
@@ -185,7 +188,8 @@ void LengthHandlerAuditTest::rulerAwayFromBoundaryMovesOnlyMaximum()
 //! DOCUMENTS the coupling rather than a bug the audit fails on.
 void LengthHandlerAuditTest::rulerAtCoupledBoundaryAlsoMovesMinimum()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("maxLength"), 100}, {QStringLiteral("minLength"), 100},
                   {QStringLiteral("offset"), 0}, {QStringLiteral("alignment"), 0}}); // Center
 
@@ -209,7 +213,8 @@ void LengthHandlerAuditTest::rulerAtCoupledBoundaryAlsoMovesMinimum()
 //! mechanisms the plan (section 1, D15) folds together in prose.
 void LengthHandlerAuditTest::rulerFloorCatchMovesOnlyMaximumNotCoupling()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("maxLength"), 45}, {QStringLiteral("minLength"), 40},
                   {QStringLiteral("offset"), 0}, {QStringLiteral("alignment"), 1}}); // Left / Edge
 
@@ -232,7 +237,8 @@ void LengthHandlerAuditTest::rulerFloorCatchMovesOnlyMaximumNotCoupling()
 //! the plain binding is wrong, not as a target state.
 void LengthHandlerAuditTest::plainValueBindingDesyncsAfterClobber()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("maxLength"), 100}});
 
     QQmlEngine engine;
@@ -275,7 +281,8 @@ void LengthHandlerAuditTest::plainValueBindingDesyncsAfterClobber()
 //! whenever config changes, except while pressed so a live drag owns the value.
 void LengthHandlerAuditTest::proxyResyncReTracksAfterClobber()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("maxLength"), 100}});
 
     QQmlEngine engine;
@@ -324,7 +331,8 @@ void LengthHandlerAuditTest::proxyResyncReTracksAfterClobber()
 //! default value cannot overwrite KConfig while hidden edit chrome initializes.
 void LengthHandlerAuditTest::programmaticHandleSyncDoesNotWriteConfiguration()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("maxLength"), 45}});
     QSignalSpy writes(&config, &QQmlPropertyMap::valueChanged);
 
@@ -403,7 +411,8 @@ static const QString kOffsetResyncBody = QStringLiteral(
 //! audit checks.
 void LengthHandlerAuditTest::offsetWritePathWritesOnlyOffsetWhenInRange()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("maxLength"), 80}, {QStringLiteral("minLength"), 30},
                   {QStringLiteral("offset"), 200}, {QStringLiteral("alignment"), 0}}); // Center
 
@@ -425,7 +434,8 @@ void LengthHandlerAuditTest::offsetWritePathWritesOnlyOffsetWhenInRange()
 //! side effect: it fires only when the stored maxLength is already invalid.
 void LengthHandlerAuditTest::offsetWritePathHealsMaxLengthOnlyWhenCorrupt()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("maxLength"), 150}, {QStringLiteral("minLength"), 30},
                   {QStringLiteral("offset"), 0}, {QStringLiteral("alignment"), 0}}); // Center, corrupt max
 
@@ -449,7 +459,8 @@ void LengthHandlerAuditTest::offsetWritePathHealsMaxLengthOnlyWhenCorrupt()
 //! the fine value does not.
 void LengthHandlerAuditTest::maxLengthCtrlWheelWritesOnlyMaximumEvenWhenCoupled()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("maxLength"), 90}, {QStringLiteral("minLength"), 90},
                   {QStringLiteral("offset"), 0}, {QStringLiteral("alignment"), 0}}); // coupled at 90
 
@@ -470,7 +481,8 @@ void LengthHandlerAuditTest::maxLengthCtrlWheelWritesOnlyMaximumEvenWhenCoupled(
 //! whole percent and writes only maxLength (P2 + P3).
 void LengthHandlerAuditTest::maxLengthClickRoundsOnlyMaximum()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("maxLength"), 90.4}, {QStringLiteral("minLength"), 30},
                   {QStringLiteral("offset"), 0}, {QStringLiteral("alignment"), 0}});
 
@@ -488,7 +500,8 @@ void LengthHandlerAuditTest::maxLengthClickRoundsOnlyMaximum()
 void LengthHandlerAuditTest::minAndOffsetFineRowsWriteOnlyTheirOwnKey()
 {
     {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("maxLength"), 100}, {QStringLiteral("minLength"), 30},
                       {QStringLiteral("offset"), 0}, {QStringLiteral("alignment"), 0}});
         const QJsonObject before = snapshot(config);
@@ -499,7 +512,8 @@ void LengthHandlerAuditTest::minAndOffsetFineRowsWriteOnlyTheirOwnKey()
         QVERIFY(onlyExpectedKeysChanged(before, after, {QStringLiteral("minLength")}));
     }
     {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("maxLength"), 100}, {QStringLiteral("minLength"), 30},
                       {QStringLiteral("offset"), 5.4}, {QStringLiteral("alignment"), 0}});
         const QJsonObject before = snapshot(config);

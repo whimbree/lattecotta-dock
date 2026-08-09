@@ -57,6 +57,8 @@
 #include <QTest>
 #include <QVariant>
 
+#include <memory>
+
 #include "configsnapshotdiff.h"
 
 using namespace Latte::AuditHarness;
@@ -242,7 +244,8 @@ bool BehaviorWiringAuditTest::evalCheckedBinding(QObject *source, const QString 
 //! write as live and its key as one the audit reports schema-absent.
 void BehaviorWiringAuditTest::solidPanelDeadKeyWriteIsLiveButSchemaAbsent()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     //! a General group WITHOUT solidPanel (it has no schema entry to seed from)
     seed(config, {{QStringLiteral("useThemePanel"), true}, {QStringLiteral("panelSize"), 5}});
 
@@ -263,7 +266,8 @@ void BehaviorWiringAuditTest::solidPanelDeadKeyWriteIsLiveButSchemaAbsent()
 //! Same shape - a live write to a key nothing defines or reads.
 void BehaviorWiringAuditTest::colorizeTransparentPanelsDeadKeyWriteIsLiveButSchemaAbsent()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("useThemePanel"), true}, {QStringLiteral("panelSize"), 5}});
 
     const QJsonObject before = snapshot(config);
@@ -290,7 +294,8 @@ void BehaviorWiringAuditTest::colorizeTransparentPanelsDeadKeyWriteIsLiveButSche
 //! keeps them is the live tests/e2e/032 question.
 void BehaviorWiringAuditTest::dockPresetWritesSchemaKeysPlusTheTwoDeadKeys()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     //! seeded values all differ from the Dock preset's writes so every schema
     //! key flips (999 / opposite bool are sentinels no preset write uses)
     seed(config, {
@@ -361,7 +366,8 @@ void BehaviorWiringAuditTest::dockPresetWritesSchemaKeysPlusTheTwoDeadKeys()
 //! writes beyond the schema set.
 void BehaviorWiringAuditTest::panelPresetWritesSchemaKeysPlusTheTwoDeadKeys()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {
         {QStringLiteral("alignment"), 99},
         {QStringLiteral("useThemePanel"), false},
@@ -448,7 +454,8 @@ void BehaviorWiringAuditTest::actionCheckboxesEachWriteOnlyTheirOwnKey()
     for (const QString &key : cfgCheckboxKeys) {
         //! a full General group with every cfg-checkbox key present (the schema
         //! shape), all false; the neighbours must stay put when one is toggled
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         for (const QString &k : cfgCheckboxKeys) {
             config.insert(k, false);
         }
@@ -487,7 +494,8 @@ void BehaviorWiringAuditTest::activeWindowFilterComboAppliesAndRoundTripsIdentit
 
     //! APPLY: stored 0, user picks row 1 -> writes 1, only activeWindowFilter
     {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("activeWindowFilter"), kActiveInCurrentScreen},
                       {QStringLiteral("scrollAction"), kScrollNone}});
         const QJsonObject before = snapshot(config);
@@ -502,7 +510,8 @@ void BehaviorWiringAuditTest::activeWindowFilterComboAppliesAndRoundTripsIdentit
 
     //! IDENTITY: stored 1, currentIndex re-fires at 1 (external change) -> no-op
     {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("activeWindowFilter"), kActiveFromAllScreens},
                       {QStringLiteral("scrollAction"), kScrollNone}});
         const QJsonObject before = snapshot(config);
@@ -533,7 +542,8 @@ void BehaviorWiringAuditTest::scrollActionComboAppliesAndRoundTripsIdentity()
     //! APPLY every row from a distinct start so each transition is exercised
     for (int row = kScrollNone; row <= kScrollToggleMinimized; ++row) {
         const int start = (row == kScrollNone) ? kScrollToggleMinimized : kScrollNone;
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("scrollAction"), start},
                       {QStringLiteral("activeWindowFilter"), kActiveInCurrentScreen}});
         const QJsonObject before = snapshot(config);
@@ -547,7 +557,8 @@ void BehaviorWiringAuditTest::scrollActionComboAppliesAndRoundTripsIdentity()
 
     //! IDENTITY: re-firing on the stored value is a no-op for every row
     for (int row = kScrollNone; row <= kScrollToggleMinimized; ++row) {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("scrollAction"), row},
                       {QStringLiteral("activeWindowFilter"), kActiveInCurrentScreen}});
         const QJsonObject before = snapshot(config);
@@ -590,7 +601,8 @@ void BehaviorWiringAuditTest::locationButtonCheckedReflectsLiveLocation()
 //! pure binding as the rest.
 void BehaviorWiringAuditTest::alignmentButtonCheckedReflectsConfigAlignment()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("alignment"), kAlignCenter}});
 
     const QString justifyBtn = QStringLiteral("configuration.alignment === %1").arg(kAlignJustify);

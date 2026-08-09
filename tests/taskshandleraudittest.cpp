@@ -58,6 +58,8 @@
 #include <QTest>
 #include <QVariant>
 
+#include <memory>
+
 #include "configsnapshotdiff.h"
 
 //! the Tasks plasmoid's TaskAction / TaskScrollAction enums, the real source the
@@ -252,7 +254,8 @@ void TasksHandlerAuditTest::assertToggleCheckboxesWriteOnlyOwnKey(const QStringL
     for (const QString &key : keys) {
         //! a full group with every checkbox key present (the schema shape), all
         //! false; the neighbours must stay put when one is toggled
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         for (const QString &k : keys) {
             config.insert(k, false);
         }
@@ -341,7 +344,8 @@ void TasksHandlerAuditTest::launcherGroupButtonsWriteOnlyLaunchersGroup()
 {
     QFETCH(int, group);
 
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     //! start at a different group so every case is a real change
     seed(config, {{QStringLiteral("launchersGroup"),
                    (group == kUniqueLaunchers) ? kGlobalLaunchers : kUniqueLaunchers}});
@@ -362,7 +366,8 @@ void TasksHandlerAuditTest::launcherGroupButtonsWriteOnlyLaunchersGroup()
 //! flips only scrollTasksEnabled.
 void TasksHandlerAuditTest::scrollingEnableSwitchWritesOnlyScrollTasksEnabled()
 {
-    QQmlPropertyMap config;
+    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+    QQmlPropertyMap &config = *configOwner;
     seed(config, {{QStringLiteral("scrollTasksEnabled"), false},
                   {QStringLiteral("manualScrollTasksType"), 0},
                   {QStringLiteral("autoScrollTasksEnabled"), false}});
@@ -386,7 +391,8 @@ void TasksHandlerAuditTest::manualScrollComboAppliesAndRoundTripsIdentity()
     //! APPLY every row from a distinct start so each transition is exercised
     for (int row = 0; row <= 2; ++row) {
         const int start = (row == 0) ? 2 : 0;
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("manualScrollTasksType"), start},
                       {QStringLiteral("scrollTasksEnabled"), true}});
         const QJsonObject before = snapshot(config);
@@ -400,7 +406,8 @@ void TasksHandlerAuditTest::manualScrollComboAppliesAndRoundTripsIdentity()
 
     //! IDENTITY: re-firing on the stored value writes the same value - no change
     for (int row = 0; row <= 2; ++row) {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("manualScrollTasksType"), row},
                       {QStringLiteral("scrollTasksEnabled"), true}});
         const QJsonObject before = snapshot(config);
@@ -425,7 +432,8 @@ void TasksHandlerAuditTest::autoScrollComboAppliesAndRoundTripsIdentity()
 
     //! APPLY: stored false, user picks row 1 -> writes true, only its key
     {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("autoScrollTasksEnabled"), false},
                       {QStringLiteral("scrollTasksEnabled"), true}});
         const QJsonObject before = snapshot(config);
@@ -440,7 +448,8 @@ void TasksHandlerAuditTest::autoScrollComboAppliesAndRoundTripsIdentity()
     //! index 0, each a no-op (the index the currentIndex binding re-derives from
     //! the stored bool feeds the same value back)
     for (bool stored : {false, true}) {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("autoScrollTasksEnabled"), stored},
                       {QStringLiteral("scrollTasksEnabled"), true}});
         const int index = stored ? 1 : 0;
@@ -483,7 +492,8 @@ void TasksHandlerAuditTest::identityActionCombosApplyAndRoundTripIdentity()
     //! a real change
     for (int row = 0; row <= maxIndex; ++row) {
         const int start = (row == 0) ? maxIndex : 0;
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{key, start}});
         const QJsonObject before = snapshot(config);
         QCOMPARE(runHandler(config,
@@ -496,7 +506,8 @@ void TasksHandlerAuditTest::identityActionCombosApplyAndRoundTripIdentity()
 
     //! IDENTITY: re-firing on the stored value is a no-op across the range
     for (int row = 0; row <= maxIndex; ++row) {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{key, row}});
         const QJsonObject before = snapshot(config);
         QCOMPARE(runHandler(config,
@@ -531,7 +542,8 @@ void TasksHandlerAuditTest::leftClickComboAppliesAndRoundTripsIdentity()
     //! the mapped enum and nothing else
     for (int row = 0; row <= 2; ++row) {
         const int startEnum = leftClickEnumForIndex((row + 1) % 3); // a different offered value
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("leftClickAction"), startEnum}});
         const QJsonObject before = snapshot(config);
         QCOMPARE(runHandler(config,
@@ -545,7 +557,8 @@ void TasksHandlerAuditTest::leftClickComboAppliesAndRoundTripsIdentity()
 
     //! IDENTITY: stored enum -> re-derived index -> write switch -> same enum
     for (int stored : {LatteTasks::PresentWindows, LatteTasks::CycleThroughTasks, LatteTasks::PreviewWindows}) {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("leftClickAction"), stored}});
         const int reDerivedIndex = leftClickIndexForEnum(stored);
         const QJsonObject before = snapshot(config);
@@ -576,7 +589,8 @@ void TasksHandlerAuditTest::hoverComboAppliesAndRoundTripsIdentity()
 
     for (int row = 0; row <= 3; ++row) {
         const int startEnum = hoverEnumForIndex((row + 1) % 4);
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("hoverAction"), startEnum}});
         const QJsonObject before = snapshot(config);
         QCOMPARE(runHandler(config,
@@ -590,7 +604,8 @@ void TasksHandlerAuditTest::hoverComboAppliesAndRoundTripsIdentity()
 
     for (int stored : {LatteTasks::NoneAction, LatteTasks::PreviewWindows,
                        LatteTasks::HighlightWindows, LatteTasks::PreviewAndHighlightWindows}) {
-        QQmlPropertyMap config;
+        std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
+        QQmlPropertyMap &config = *configOwner;
         seed(config, {{QStringLiteral("hoverAction"), stored}});
         const int reDerivedIndex = hoverIndexForEnum(stored);
         const QJsonObject before = snapshot(config);
