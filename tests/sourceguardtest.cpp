@@ -4989,7 +4989,13 @@ void SourceGuardTest::dockSystemCollection_keepsPureRouting()
              "dock-system collection must order persistent ids before every identity lookup");
     QVERIFY2(matchesDockRelationshipClassifierRoute(systemCollector),
              "dock-system collection must route lineage through the tested classifier");
-    QVERIFY2(matchesReservationOutputAuthorityRoute(systemCollector),
+    //! The reservation-output authority read moved into the extracted
+    //! indexReservationGroupMemberships() helper; the guard follows
+    //! it there so the same invariant is enforced on the same code.
+    const QString membershipIndexer = functionBody(
+        source, QStringLiteral("indexReservationGroupMemberships("));
+    QVERIFY2(!membershipIndexer.isEmpty(), "indexReservationGroupMemberships not found");
+    QVERIFY2(matchesReservationOutputAuthorityRoute(membershipIndexer),
              "reservation validation must use the synchronously committed layer-shell output");
 }
 
@@ -5016,8 +5022,14 @@ void SourceGuardTest::dockSystemCollection_sourceGuardsRejectControlledMutations
     QVERIFY2(!matchesDockRelationshipClassifierRoute(directRelationship),
              "bypassing whole-graph relationship validation must fail the collector guard");
 
-    QVERIFY(matchesReservationOutputAuthorityRoute(systemCollector));
-    QString staleOutput = normalizedCode(systemCollector);
+    //! The reservation-output authority read lives in the extracted
+    //! indexReservationGroupMemberships() helper; the negative control
+    //! mutates that helper body so restoring the stale QWindow output is still
+    //! detected as a real bypass.
+    const QString membershipIndexer = functionBody(
+        source, QStringLiteral("indexReservationGroupMemberships("));
+    QVERIFY(matchesReservationOutputAuthorityRoute(membershipIndexer));
+    QString staleOutput = normalizedCode(membershipIndexer);
     QCOMPARE(staleOutput.count(QStringLiteral(
         "layerShell->screen()")), 1);
     staleOutput.replace(
