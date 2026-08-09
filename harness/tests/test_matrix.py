@@ -148,17 +148,26 @@ def test_to_status_reprints_nothing_for_an_already_reported_stop(
 
 # ---- the residue-view snapshot (byte-identical to the bash formula) --------
 
+# A COMPLETE viewsData record: the residue-relevant fields the snapshot serializes
+# PLUS the rest of the shared recipe.View surface MatrixView now inherits (W3), so a
+# dropped key exercises a real malformed reply, not a lazy fixture.
 _RAW_VIEW: dict[str, object] = {
     "containmentId": 16,
     "isCloned": False,
+    "isClonedFrom": -1,
     "type": "dock",
     "edge": "bottom",
     "alignment": "center",
     "screen": "Virtual-0",
     "onPrimary": True,
+    "visibilityMode": "alwaysVisible",
     "editMode": False,
     "inConfigureAppletsMode": False,
+    "keyboardNavigation": False,
+    "containmentAcceptsInput": True,
+    "ownsPanelFocusSession": False,
     "isHidden": False,
+    "inStartup": False,
     "isOffScreen": False,
     "strutsThickness": 100,
     "publishedStruts": [0, 0, 0, 100],
@@ -206,6 +215,26 @@ def test_matrix_view_rejects_a_malformed_geometry_length() -> None:
 
     with pytest.raises(ValidationError):
         _ = MatrixView.model_validate({**_RAW_VIEW, "absoluteGeometry": [0, 900, 1600]})
+
+
+def test_matrix_view_builds_on_the_shared_recipe_view() -> None:
+    # W3 fold: MatrixView extends recipe.View instead of re-declaring the viewsData
+    # surface, so it IS a View and inherits the shared fields (edit_mode, is_hidden,
+    # ...) while adding its residue-only geometry (struts/mask/input region).
+    parsed = MatrixView.model_validate(_RAW_VIEW)
+    assert isinstance(parsed, recipe.View)
+    assert parsed.edit_mode is False
+    assert parsed.struts_thickness == 100
+
+
+def test_matrix_view_rejects_a_missing_inherited_field() -> None:
+    from pydantic import ValidationError
+
+    # A shared field now inherited from recipe.View is required: dropping it is a
+    # malformed reply that must fail at the boundary, not silently default.
+    incomplete = {k: v for k, v in _RAW_VIEW.items() if k != "editMode"}
+    with pytest.raises(ValidationError):
+        _ = MatrixView.model_validate(incomplete)
 
 
 # ---- the KConfig snapshot (residue detection over injected states) ---------
@@ -438,6 +467,9 @@ def test_applet_config_group_names_the_single_matching_applet(
             "plugin": "org.kde.latte.plasmoid",
             "geometry": [0, 0, 10, 10],
             "inScheduledDestruction": False,
+            "z": 0.0,
+            "colorizerActive": False,
+            "colorizerReason": "",
         }
     )
     monkeypatch.setattr(recipe, "view_applets", _returns_applets([applet]))

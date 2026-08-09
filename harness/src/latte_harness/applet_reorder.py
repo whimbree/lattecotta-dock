@@ -42,8 +42,6 @@ from contextlib import suppress
 from dataclasses import dataclass
 from typing import NoReturn
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
-
 from latte_harness import matrix, recipe
 from latte_harness.matrix import MatrixDriveError, MatrixProbeError
 from latte_harness.recipe import Rect
@@ -140,41 +138,6 @@ def _dragbutton(button: str, *points: tuple[int, int]) -> None:
     _fakepointer("dragbutton", button, *_flatten(*points))
 
 
-# ---- readback models (a local twin for the fields recipe does not surface) --
-
-
-class _AppletZ(BaseModel):
-    """One viewAppletsData entry with the G2 stacking readback.
-
-    recipe.Applet carries id/plugin/geometry but not z (the delegate's stacking
-    order, lifted to ~900 over the edit chrome during a drag). extra="ignore"
-    tolerates a dock-side field addition, like every readback model.
-    """
-
-    model_config = ConfigDict(extra="ignore", populate_by_name=True, frozen=True)
-
-    id: int
-    z: float
-
-
-class _ReorderFlags(BaseModel):
-    """One viewsData entry with the rearrange-lifecycle flags.
-
-    recipe.View does not carry editMode / inConfigureAppletsMode; a local model
-    reads exactly those two plus the identity, validated at the boundary.
-    """
-
-    model_config = ConfigDict(extra="ignore", populate_by_name=True, frozen=True)
-
-    containment_id: int = Field(alias="containmentId")
-    edit_mode: bool = Field(alias="editMode")
-    in_configure_applets_mode: bool = Field(alias="inConfigureAppletsMode")
-
-
-_APPLET_ZS = TypeAdapter(list[_AppletZ])
-_REORDER_FLAGS = TypeAdapter(list[_ReorderFlags])
-
-
 # ---- readbacks -------------------------------------------------------------
 
 
@@ -211,9 +174,12 @@ def applet_reorder_z(view: int, applet_id: int) -> float:
 
     Used to prove an abort left no applet stranded over chrome. An applet absent
     from the view is a symptom to surface, never papered over with a plausible 0.
+
+    W3 (widen the readback models): z now rides recipe.Applet, so this reads the
+    typed recipe.view_applets() instead of a re-declared _AppletZ twin - a refused
+    reply raises the pollable DbusUnavailableError, a misshapen one a ValidationError.
     """
-    applets = _APPLET_ZS.validate_json(recipe.json_payload("viewAppletsData", "u", str(view)))
-    found = next((a for a in applets if a.id == applet_id), None)
+    found = next((a for a in recipe.view_applets(view) if a.id == applet_id), None)
     if found is None:
         _raise(f"applet_reorder_z: applet {applet_id} not present in view {view}")
     return found.z
@@ -222,10 +188,14 @@ def applet_reorder_z(view: int, applet_id: int) -> float:
 # ---- rearrange lifecycle ---------------------------------------------------
 
 
-def _reorder_flags(view: int) -> _ReorderFlags:
-    """The view's editMode / inConfigureAppletsMode flags, or a loud refusal."""
-    flags = _REORDER_FLAGS.validate_json(recipe.json_payload("viewsData"))
-    found = next((v for v in flags if v.containment_id == view), None)
+def _reorder_flags(view: int) -> recipe.View:
+    """The view's editMode / inConfigureAppletsMode flags, or a loud refusal.
+
+    W3 (widen the readback models): editMode and inConfigureAppletsMode now ride
+    recipe.View, so this reads the typed recipe.views() instead of a re-declared
+    _ReorderFlags twin - a refused reply raises the pollable DbusUnavailableError.
+    """
+    found = next((v for v in recipe.views() if v.containment_id == view), None)
     if found is None:
         _raise(f"applet_reorder: view {view} gone")
     return found

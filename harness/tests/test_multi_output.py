@@ -18,7 +18,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from latte_harness import multi_output
+from latte_harness import multi_output, recipe
 from latte_harness.multi_output import MultiOutputError, OutputState, Screen
 
 # ---- readback models (the pydantic boundary) -------------------------------
@@ -50,6 +50,62 @@ def test_screen_rejects_a_short_geometry_array() -> None:
         _ = Screen.model_validate(
             {"id": 1, "name": "DP-1", "geometry": [0, 0, 1920], "isActive": True, "isPrimary": True}
         )
+
+
+# ---- the view->screen readback (the W3 fold onto recipe.View) --------------
+#
+# mo_view_screen / _primary_view_screen read the connector name and clone flag off
+# viewsData. W3 retired this module's _MoView twin (screen and isCloned now ride
+# recipe.View), so both read recipe.views(); the kscreen-doctor JsonValue boundary
+# stays separate by design. These inject typed recipe.View records.
+
+
+def _view(cid: int, *, screen: str, cloned: bool) -> recipe.View:
+    """A complete recipe.View with only the connector name and clone flag varied."""
+    return recipe.View.model_validate(
+        {
+            "containmentId": cid,
+            "isCloned": cloned,
+            "isClonedFrom": cid if cloned else -1,
+            "edge": "bottom",
+            "alignment": "center",
+            "screen": screen,
+            "visibilityMode": "alwaysVisible",
+            "isHidden": False,
+            "inStartup": False,
+            "editMode": False,
+            "inConfigureAppletsMode": False,
+            "keyboardNavigation": False,
+            "containmentAcceptsInput": True,
+            "ownsPanelFocusSession": False,
+            "absoluteGeometry": [0, 900, 1600, 100],
+            "localGeometry": [0, 0, 1600, 100],
+            "screenGeometry": [0, 0, 1600, 1000],
+        }
+    )
+
+
+def test_mo_view_screen_reads_the_connector_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    views = [_view(16, screen="DP-1", cloned=False), _view(17, screen="DP-2", cloned=True)]
+    monkeypatch.setattr(recipe, "views", lambda: views)
+    assert multi_output.mo_view_screen(17) == "DP-2"
+
+
+def test_mo_view_screen_refuses_an_absent_view(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(recipe, "views", lambda: [_view(16, screen="DP-1", cloned=False)])
+    with pytest.raises(MultiOutputError, match="view 99 not present"):
+        _ = multi_output.mo_view_screen(99)
+
+
+def test_primary_view_screen_takes_the_first_non_cloned(monkeypatch: pytest.MonkeyPatch) -> None:
+    views = [_view(17, screen="DP-2", cloned=True), _view(16, screen="DP-1", cloned=False)]
+    monkeypatch.setattr(recipe, "views", lambda: views)
+    assert multi_output._primary_view_screen() == "DP-1"  # pyright: ignore[reportPrivateUsage]
+
+
+def test_primary_view_screen_is_empty_when_all_cloned(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(recipe, "views", lambda: [_view(17, screen="DP-2", cloned=True)])
+    assert multi_output._primary_view_screen() == ""  # pyright: ignore[reportPrivateUsage]
 
 
 # ---- discovery -------------------------------------------------------------

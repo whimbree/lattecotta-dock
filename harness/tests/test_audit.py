@@ -403,6 +403,9 @@ def _applet(applet_id: int, plugin: str) -> recipe.Applet:
             "plugin": plugin,
             "geometry": [0, 0, 10, 10],
             "inScheduledDestruction": False,
+            "z": 0.0,
+            "colorizerActive": False,
+            "colorizerReason": "",
         }
     )
 

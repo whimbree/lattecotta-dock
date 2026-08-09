@@ -43,9 +43,9 @@ _VIEWS_BAD: dict[str, object] = {
     "canvasGeometry": [1440, 1643, 2560, 222],
 }
 # The applet rectangles as viewAppletsData reports them. The oracle reads only
-# inScheduledDestruction and geometry; id/plugin are synthesized to satisfy the
-# typed Applet model (the bash raw-dict fixtures omitted them, and the assertion
-# is identical either way - the oracle never looks at them).
+# inScheduledDestruction and geometry; id/plugin/z/colorizer* are synthesized to
+# satisfy the typed Applet model (the bash raw-dict fixtures omitted them, and the
+# assertion is identical either way - the oracle never looks at them).
 _APPLET_GEOMETRIES = [
     [54, 241, 165, 106],
     [235, 220, 1906, 164],
@@ -60,7 +60,15 @@ def _snapshot(view: dict[str, object]) -> DockSystemData:
 def _applets() -> list[Applet]:
     return [
         Applet.model_validate(
-            {"id": i, "plugin": "p", "geometry": geometry, "inScheduledDestruction": False}
+            {
+                "id": i,
+                "plugin": "p",
+                "geometry": geometry,
+                "inScheduledDestruction": False,
+                "z": 0.0,
+                "colorizerActive": False,
+                "colorizerReason": "",
+            }
         )
         for i, geometry in enumerate(_APPLET_GEOMETRIES)
     ]

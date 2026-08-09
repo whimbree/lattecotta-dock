@@ -64,7 +64,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NoReturn
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
+from pydantic import Field, TypeAdapter
 
 from latte_harness import matrix_fixture, matrix_golden, recipe
 from latte_harness.matrix_fixture import (
@@ -236,10 +236,12 @@ def _call_status(method: str, *args: str) -> tuple[int, str]:
 
 # ---- the view readback (pydantic at the boundary) --------------------------
 #
-# The residue snapshot needs many more fields than recipe.View carries, so this
-# is a fresh model; it validates the whole viewsData reply at the boundary
-# (extra="ignore", so a dock-side field addition never breaks a recipe) and
-# serializes exactly the residue fields for byte-comparison.
+# The residue snapshot needs a few residue-GEOMETRY fields (struts/mask/input
+# region, onPrimary, isOffScreen) that no other consumer reads, so MatrixView
+# extends recipe.View (the shared viewsData surface) with exactly those; it
+# validates the whole viewsData reply at the boundary (extra="ignore", inherited,
+# so a dock-side field addition never breaks a recipe) and serializes exactly the
+# residue fields for byte-comparison.
 
 # The residue-relevant view fields, in the same set the bash matrix_probe_view
 # snapshotted. json.dumps(..., sort_keys=True) makes the serialization
@@ -264,34 +266,26 @@ _VIEW_RESIDUE_KEYS = (
 )
 
 
-class MatrixView(BaseModel):
-    """A viewsData record with the residue-relevant fields typed at the boundary.
+class MatrixView(recipe.View):
+    """A viewsData record widened with the residue-only fields, built on recipe.View.
 
-    Reuses recipe's Rect quad. The 16 residue fields plus the identity/clone flags
-    the harness selects a view by; a malformed reply (a short geometry array, a
-    non-bool flag) fails loudly here, never three subsystems away.
+    W3 (widen the readback models): the identity, placement, and mode fields the
+    residue snapshot shares with the rest of the harness (containmentId, type/edge/
+    alignment/screen, editMode, isHidden, ...) now live on the shared recipe.View,
+    which this extends rather than re-declares. Only the residue-GEOMETRY fields no
+    recipe outside the abort-residue check reads (the struts/mask/input-region quads,
+    onPrimary, isOffScreen) are declared here. A malformed reply (a short geometry
+    array, a non-bool flag) still fails loudly at the boundary, and extra="ignore"
+    (inherited from recipe.View) still tolerates a dock-side field addition.
     """
 
-    model_config = ConfigDict(extra="ignore", frozen=True, populate_by_name=True)
-
-    containment_id: int = Field(alias="containmentId")
-    is_cloned: bool = Field(alias="isCloned")
     view_type: str = Field(alias="type")
-    edge: str
-    alignment: str
-    screen: str  # the connector NAME (e.g. "Virtual-0"), not a numeric id
     on_primary: bool = Field(alias="onPrimary")
-    edit_mode: bool = Field(alias="editMode")
-    in_configure_applets_mode: bool = Field(alias="inConfigureAppletsMode")
-    is_hidden: bool = Field(alias="isHidden")
     is_off_screen: bool = Field(alias="isOffScreen")
     struts_thickness: int = Field(alias="strutsThickness")
     published_struts: Rect = Field(alias="publishedStruts")
     mask_rect: Rect = Field(alias="maskRect")
     input_region_rects: list[Rect] = Field(alias="inputRegionRects")
-    absolute_geometry: Rect = Field(alias="absoluteGeometry")
-    local_geometry: Rect = Field(alias="localGeometry")
-    screen_geometry: Rect = Field(alias="screenGeometry")
 
     def residue_snapshot(self) -> str:
         """The deterministic residue snapshot for byte-comparison across an abort.
@@ -325,8 +319,14 @@ _MATRIX_VIEWS = TypeAdapter(list[MatrixView])
 
 
 def _matrix_views() -> list[MatrixView]:
-    """viewsData, validated into typed MatrixView records."""
-    return _MATRIX_VIEWS.validate_json(recipe.json_payload("viewsData"))
+    """viewsData, validated into typed MatrixView records.
+
+    Routes through recipe.read_json so a refused reply raises the pollable
+    DbusUnavailableError (the one W2 refusal channel) rather than a misleading
+    ValidationError about "" - a delivered-but-misshapen reply still fails pydantic
+    validation loudly, naming the offending field.
+    """
+    return _MATRIX_VIEWS.validate_python(recipe.read_json("viewsData"))
 
 
 def _find_view(view: int) -> MatrixView | None:

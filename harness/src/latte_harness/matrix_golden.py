@@ -41,8 +41,6 @@ import tempfile
 from contextlib import suppress
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
-
 from latte_harness import recipe
 from latte_harness.recipe import Rect
 
@@ -86,19 +84,6 @@ def golden_tier() -> str:
 # ---- the crop rect ---------------------------------------------------------
 
 
-class _GoldenView(BaseModel):
-    """The viewsData fields the crop rect needs: identity, clone flag, geometry."""
-
-    model_config = ConfigDict(extra="ignore", frozen=True, populate_by_name=True)
-
-    containment_id: int = Field(alias="containmentId")
-    is_cloned: bool = Field(alias="isCloned")
-    absolute_geometry: Rect = Field(alias="absoluteGeometry")
-
-
-_GOLDEN_VIEWS = TypeAdapter(list[_GoldenView])
-
-
 def crop_rect_of(geometry: Rect) -> str:
     """The ImageMagick ``WxH+X+Y`` crop string for a view's absoluteGeometry.
 
@@ -118,8 +103,13 @@ def view_crop_rect(view_id: int | None = None) -> str:
     A named ``view_id`` selects that view; otherwise the single non-cloned view
     (the matrix fixture seeds exactly one). The bare view rect is the plan's
     default golden crop; a scenario needing the edit-chrome union refines it.
+
+    W3 (widen the readback models): the crop needs only the identity, clone flag,
+    and absolute geometry, all now on the shared recipe.View, so this reads the
+    typed recipe.views() instead of a re-declared _GoldenView twin - a refused
+    reply raises the pollable DbusUnavailableError, a misshapen one a ValidationError.
     """
-    views = _GOLDEN_VIEWS.validate_json(recipe.json_payload("viewsData"))
+    views = recipe.views()
     if view_id is not None:
         found = next((v for v in views if v.containment_id == view_id), None)
         if found is None:

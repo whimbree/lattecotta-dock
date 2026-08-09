@@ -113,9 +113,19 @@ def test_empty_point_refuses_loudly_when_all_covered(monkeypatch: pytest.MonkeyP
             recipe.View.model_validate(
                 {
                     "containmentId": 1,
+                    "isCloned": False,
+                    "isClonedFrom": -1,
                     "edge": "bottom",
+                    "alignment": "center",
+                    "screen": "Virtual-0",
+                    "visibilityMode": "alwaysVisible",
                     "isHidden": False,
                     "inStartup": False,
+                    "editMode": False,
+                    "inConfigureAppletsMode": False,
+                    "keyboardNavigation": False,
+                    "containmentAcceptsInput": True,
+                    "ownsPanelFocusSession": False,
                     "absoluteGeometry": [0, 0, 1600, 1000],
                     "localGeometry": [0, 0, 1600, 1000],
                     "screenGeometry": [0, 0, 1600, 1000],
@@ -158,7 +168,15 @@ def test_addwidget_probe_reports_the_applet_count(monkeypatch: pytest.MonkeyPatc
     def three_applets(_cid: int) -> list[recipe.Applet]:
         return [
             recipe.Applet.model_validate(
-                {"id": i, "plugin": "p", "geometry": [0, 0, 1, 1], "inScheduledDestruction": False}
+                {
+                    "id": i,
+                    "plugin": "p",
+                    "geometry": [0, 0, 1, 1],
+                    "inScheduledDestruction": False,
+                    "z": 0.0,
+                    "colorizerActive": False,
+                    "colorizerReason": "",
+                }
             )
             for i in range(3)
         ]

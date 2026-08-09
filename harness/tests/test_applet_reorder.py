@@ -13,7 +13,6 @@ math or a monkeypatched readback, testable without a compositor.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Callable, Iterator
 
 import pytest
@@ -28,13 +27,6 @@ from latte_harness.matrix import MatrixDriveError, MatrixProbeError
 def _returns_status(result: tuple[int, str]) -> Callable[..., tuple[int, str]]:
     def fake(*_args: object) -> tuple[int, str]:
         return result
-
-    return fake
-
-
-def _returns_str(value: str) -> Callable[..., str]:
-    def fake(*_args: object) -> str:
-        return value
 
     return fake
 
@@ -166,35 +158,89 @@ def test_compute_points_rounds_a_half_pixel_centre_to_even() -> None:
     assert pts.s == (120, 920)
 
 
-# ---- the z and flag readbacks (pydantic boundary) --------------------------
+# ---- the z and flag readbacks (the shared typed boundary) ------------------
+#
+# W3 fold: applet_reorder_z reads recipe.view_applets() (z now on recipe.Applet)
+# and the rearrange flags read recipe.views() (editMode / inConfigureAppletsMode
+# now on recipe.View), so the tests inject typed records - the boundary parse
+# itself is covered in test_recipe.py.
 
 
-def _applets_payload(entries: list[dict[str, object]]) -> str:
-    return json.dumps(entries)
+def _applet(applet_id: int, z: float) -> recipe.Applet:
+    """A complete recipe.Applet with only id/z varied (the rest neutral)."""
+    return recipe.Applet.model_validate(
+        {
+            "id": applet_id,
+            "plugin": "org.kde.latte.plasmoid",
+            "geometry": [0, 0, 40, 40],
+            "inScheduledDestruction": False,
+            "z": z,
+            "colorizerActive": False,
+            "colorizerReason": "",
+        }
+    )
+
+
+def _view(cid: int, *, edit_mode: bool, configuring: bool) -> recipe.View:
+    """A complete recipe.View with only the rearrange flags varied."""
+    return recipe.View.model_validate(
+        {
+            "containmentId": cid,
+            "isCloned": False,
+            "isClonedFrom": -1,
+            "edge": "bottom",
+            "alignment": "center",
+            "screen": "Virtual-0",
+            "visibilityMode": "alwaysVisible",
+            "isHidden": False,
+            "inStartup": False,
+            "editMode": edit_mode,
+            "inConfigureAppletsMode": configuring,
+            "keyboardNavigation": False,
+            "containmentAcceptsInput": True,
+            "ownsPanelFocusSession": False,
+            "absoluteGeometry": [0, 900, 1600, 100],
+            "localGeometry": [0, 0, 1600, 100],
+            "screenGeometry": [0, 0, 1600, 1000],
+        }
+    )
+
+
+def _returns_applets(applets: list[recipe.Applet]) -> Callable[..., list[recipe.Applet]]:
+    def fake(*_args: object) -> list[recipe.Applet]:
+        return applets
+
+    return fake
+
+
+def _returns_views(views: list[recipe.View]) -> Callable[..., list[recipe.View]]:
+    def fake(*_args: object) -> list[recipe.View]:
+        return views
+
+    return fake
 
 
 def test_applet_reorder_z_reads_the_stacking_z(monkeypatch: pytest.MonkeyPatch) -> None:
-    payload = _applets_payload([{"id": 10, "z": 0.0}, {"id": 11, "z": 900.0}])
-    monkeypatch.setattr(recipe, "json_payload", _returns_str(payload))
+    applets = [_applet(10, 0.0), _applet(11, 900.0)]
+    monkeypatch.setattr(recipe, "view_applets", _returns_applets(applets))
     assert applet_reorder.applet_reorder_z(16, 11) == 900.0
 
 
 def test_applet_reorder_z_refuses_an_absent_applet(monkeypatch: pytest.MonkeyPatch) -> None:
-    payload = _applets_payload([{"id": 10, "z": 0.0}])
-    monkeypatch.setattr(recipe, "json_payload", _returns_str(payload))
+    monkeypatch.setattr(recipe, "view_applets", _returns_applets([_applet(10, 0.0)]))
     with pytest.raises(AppletReorderError, match="applet 99 not present"):
         _ = applet_reorder.applet_reorder_z(16, 99)
 
 
 def test_reorder_flags_read_edit_and_configure(monkeypatch: pytest.MonkeyPatch) -> None:
-    payload = json.dumps([{"containmentId": 16, "editMode": True, "inConfigureAppletsMode": False}])
-    monkeypatch.setattr(recipe, "json_payload", _returns_str(payload))
+    views = [_view(16, edit_mode=True, configuring=False)]
+    monkeypatch.setattr(recipe, "views", _returns_views(views))
     assert applet_reorder.applet_reorder_edit_mode(16) is True
     assert applet_reorder.applet_reorder_configuring(16) is False
 
 
 def test_reorder_flags_refuse_a_gone_view(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(recipe, "json_payload", _returns_str("[]"))
+    monkeypatch.setattr(recipe, "views", _returns_views([]))
     with pytest.raises(AppletReorderError, match="view 16 gone"):
         _ = applet_reorder.applet_reorder_edit_mode(16)
 
