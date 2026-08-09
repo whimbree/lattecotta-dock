@@ -25,7 +25,8 @@ from latte_harness.matrix import MatrixDriveError, MatrixProbeError
 
 
 def _returns_status(result: tuple[int, str]) -> Callable[..., tuple[int, str]]:
-    def fake(*_args: object) -> tuple[int, str]:
+    # **kwargs so the fake stands in for recipe.call_status(*args, quiet=...).
+    def fake(*_args: object, **_kwargs: object) -> tuple[int, str]:
         return result
 
     return fake
@@ -74,12 +75,12 @@ def test_parse_applets_order_drops_the_signature_and_count(reply: str, order: st
 
 
 def test_applet_reorder_order_parses_a_live_reply(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(applet_reorder, "_call_status", _returns_status((0, 'as 2 "10" "11"\n')))
+    monkeypatch.setattr(recipe, "call_status", _returns_status((0, 'as 2 "10" "11"\n')))
     assert applet_reorder.applet_reorder_order(16) == '"10" "11"'
 
 
 def test_applet_reorder_order_refuses_a_failed_call(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(applet_reorder, "_call_status", _returns_status((1, "")))
+    monkeypatch.setattr(recipe, "call_status", _returns_status((1, "")))
     with pytest.raises(AppletReorderError, match="viewAppletsOrder call FAILED"):
         _ = applet_reorder.applet_reorder_order(16)
 
@@ -87,7 +88,7 @@ def test_applet_reorder_order_refuses_a_failed_call(monkeypatch: pytest.MonkeyPa
 def test_applet_reorder_order_refuses_a_non_array_reply(monkeypatch: pytest.MonkeyPatch) -> None:
     # A D-Bus error reply is not an 'as' array; a plausible-but-empty order that
     # read "unchanged" on both sides of an abort would be a false PASS.
-    monkeypatch.setattr(applet_reorder, "_call_status", _returns_status((0, "s something\n")))
+    monkeypatch.setattr(recipe, "call_status", _returns_status((0, "s something\n")))
     with pytest.raises(AppletReorderError, match="not an 'as' array"):
         _ = applet_reorder.applet_reorder_order(16)
 

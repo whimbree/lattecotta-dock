@@ -44,13 +44,6 @@ from latte_harness import matrix, recipe
 from latte_harness.matrix import MatrixDriveError
 from latte_harness.recipe import Rect
 
-# The lattedock addressing triple (mirrors recipe._LATTE_OBJECT / matrix). The
-# two DnD surfaces (the viewDropMarkerIndex int readback, quieted during the
-# watched poll, and the status-aware showWidgetExplorer action) are not among
-# recipe's typed helpers, so their raw busctl calls live here, the same way
-# matrix carries its own status-aware call.
-_LATTE_OBJECT = ("org.kde.lattedock", "/Latte", "org.kde.LatteDock")
-
 # The gentle poll cadence the watched drag uses (see the CADENCE TRAP header): a
 # tight spin disrupts the compositor's DnD grab, a ~40ms sleep does not.
 _WATCH_POLL_SECONDS = 0.04
@@ -91,14 +84,12 @@ def _marker_reply_quiet(cid: int) -> str:
 
     The bash ``dnd_drop_marker "$cid" 2>/dev/null`` in the watched poll loop quiets
     busctl's not-up-yet chatter; the standalone drop_marker keeps stderr (it goes
-    through recipe.call), so only this poll-side transport suppresses it.
+    through recipe.call), so only this poll-side transport suppresses it - the
+    shared recipe.call_status with quiet=True, dropping the status the poll does
+    not read.
     """
-    return subprocess.run(
-        ["busctl", "--user", "call", *_LATTE_OBJECT, "viewDropMarkerIndex", "u", str(cid)],
-        capture_output=True,
-        text=True,
-        check=False,
-    ).stdout
+    _code, stdout = recipe.call_status("viewDropMarkerIndex", "u", str(cid), quiet=True)
+    return stdout
 
 
 # ---- readbacks -------------------------------------------------------------
@@ -172,14 +163,11 @@ def open_explorer(cid: int) -> str:
     # showWidgetExplorer is a void action; a transport failure is the bash
     # ``|| return 1``. The dock qWarns and maps no window for a bad id, which the
     # poll-then-refuse below turns into the same loud failure the bash produced.
-    if (
-        subprocess.run(
-            ["busctl", "--user", "call", *_LATTE_OBJECT, "showWidgetExplorer", "u", str(cid)],
-            stdout=subprocess.DEVNULL,
-            check=False,
-        ).returncode
-        != 0
-    ):
+    # DndError (not recipe.call_or_fail's recipe.fail) is deliberate: the addwidget
+    # verb driver translates a DndError into a MatrixDriveError, so this uses the
+    # status-carrying call and keeps its own raise.
+    code, _ = recipe.call_status("showWidgetExplorer", "u", str(cid))
+    if code != 0:
         raise DndError(f"dnd_open_explorer: showWidgetExplorer call failed for containment {cid}")
 
     rect: str | None = None
