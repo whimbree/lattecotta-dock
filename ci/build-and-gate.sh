@@ -226,8 +226,11 @@ case "$STAGE" in
         #     libplasma removal-flush divergence still to root-cause on Arch.
         # konsole/imagemagick stay in the image so these recipes drop straight
         # in once the app_id/fixture/flush items land.
+        # 001-dbus-readback-schema validates the D-Bus readback schema itself, so
+        # it asserts pure dock state and is agnostic to the app_id/launcher
+        # resolution the enumerated integration recipes need.
         e2e_agnostic=(
-            000-smoke 010-wheel-desktops 030-wheel-ruler-maxlength
+            000-smoke 001-dbus-readback-schema 010-wheel-desktops 030-wheel-ruler-maxlength
             060-geometry-agreement keyboard-navigation-mode settings-window-onscreen
         )
         echo "==> e2e behavioral recipes (environment-agnostic subset)"

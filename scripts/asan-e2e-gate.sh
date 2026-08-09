@@ -46,8 +46,11 @@ fi
 
 asan_build="$repo/build-asan"
 seed="$asan_build/_asan-seedconfig"
-recipes=(000-smoke presentation-coverage-selftest 060-geometry-agreement
-         070-asan-binary-shadow)
+# 001-dbus-readback-schema is read-only (no fakepointer input), so it fits this
+# gate's no-input core; it drives the readback-model drift net's Part 2
+# round-trip against the sanitized dock's real bytes on every merge gate.
+recipes=(000-smoke 001-dbus-readback-schema presentation-coverage-selftest
+         060-geometry-agreement 070-asan-binary-shadow)
 
 echo "asan-e2e-gate: configuring + building the sanitized tree ($asan_build)"
 cmake -S "$repo" -B "$asan_build" -G Ninja \
