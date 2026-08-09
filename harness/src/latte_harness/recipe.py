@@ -13,10 +13,11 @@ ported from bash behaves identically.
 Where the bash returned raw JSON text for a recipe to pipe through python, this
 module VALIDATES the readback at the boundary with pydantic (the migration's
 core promise: every D-Bus readback is typed where it enters the harness). The
-models carry the fields the lib.sh helpers and the ported recipes actually
-assert on; a dock-side field addition is tolerated (extra keys are ignored),
-never a break. busctl stays the transport, exactly as the bash used it - no
-python D-Bus binding.
+models carry the fields the ported recipes actually assert on - widened by W3
+(widen the readback models) to the surface the recipes read, so the parallel
+per-recipe viewsData/appletsData/tasksData twins fold onto these; a dock-side
+field addition is tolerated (extra keys are ignored), never a break. busctl
+stays the transport, exactly as the bash used it - no python D-Bus binding.
 
 lib.sh itself stays in place: the ~47 bash recipes keep sourcing it until the
 BP-3 batches port and delete them, so this module and lib.sh coexist. It exists
@@ -131,35 +132,82 @@ class _Readback(BaseModel):
 
 
 class View(_Readback):
-    """One entry of viewsData - the fields the lib.sh helpers assert on.
+    """One entry of viewsData - the always-emitted per-view surface, typed.
 
-    BP-3 batches widen this with the extra viewsData fields their recipes need
-    (visibilityMode, editMode, alignment, ...); this set is exactly what the
-    ported lib.sh helpers and the pilot read.
+    Every field here is written for every view by dbusreports' serializeViewRecord
+    (app/dbusreports.h), so a reply that OMITS one is a real breakage, not a
+    tolerated absence - the required fields make that loud at the boundary, exactly
+    as the geometry quads already do. The enum-like fields (edge, alignment,
+    visibility_mode, screen, and MatrixView's view_type) are the dock's own string
+    names (edgeName / alignmentName / visibilityModeName / the connector name), kept
+    as ``str`` because recipes compare them against those exact strings and the dock
+    owns the set - a Python enum here would only add a second spelling to keep in
+    sync (the same call the existing ``edge: str`` field already made).
+
+    W3 (widen the readback models) grew this from the seven fields the first ported
+    lib.sh helpers needed to the surface the recipes actually read. MatrixView now
+    extends it, and the retired _MoView / _GoldenView / _ReorderFlags twins folded
+    onto it, instead of re-declaring the same viewsData fields five times over.
     """
 
     containment_id: int = Field(alias="containmentId")
+    is_cloned: bool = Field(alias="isCloned")
+    #! the clone's original containment id; -1 for an original (dbusreports maps
+    #! isCloned ? groupId() : -1), so an == -1 test reads "this is not a clone".
+    is_cloned_from: int = Field(alias="isClonedFrom")
     edge: str
+    alignment: str
+    screen: str  # the connector NAME (e.g. "Virtual-0"), not a numeric id
+    visibility_mode: str = Field(alias="visibilityMode")
     is_hidden: bool = Field(alias="isHidden")
     in_startup: bool = Field(alias="inStartup")
+    edit_mode: bool = Field(alias="editMode")
+    in_configure_applets_mode: bool = Field(alias="inConfigureAppletsMode")
+    #! the keyboard-focus session trio the 112/113/114 focus recipes assert on.
+    keyboard_navigation: bool = Field(alias="keyboardNavigation")
+    containment_accepts_input: bool = Field(alias="containmentAcceptsInput")
+    owns_panel_focus_session: bool = Field(alias="ownsPanelFocusSession")
     absolute_geometry: Rect = Field(alias="absoluteGeometry")
     local_geometry: Rect = Field(alias="localGeometry")
     screen_geometry: Rect = Field(alias="screenGeometry")
 
 
 class Applet(_Readback):
-    """One entry of viewAppletsData - the presentation/pointer-math fields."""
+    """One entry of viewAppletsData - the presentation/pointer-math fields plus
+    the stacking and colorizer readbacks.
+
+    ``z`` is the AppletItem delegate's stacking order (lifted to ~900 over the edit
+    chrome during an applet-reorder drag, the G2 readback); colorizer_active /
+    colorizer_reason are the per-applet colorizer decision (D21/D28). All are
+    written for every applet by serializeAppletRecord, so all are required - a
+    reply missing one is malformed, never a silent default.
+    """
 
     id: int
     plugin: str
     geometry: Rect
     in_scheduled_destruction: bool = Field(alias="inScheduledDestruction")
+    z: float
+    colorizer_active: bool = Field(alias="colorizerActive")
+    colorizer_reason: str = Field(alias="colorizerReason")
 
 
 class Task(_Readback):
-    """One entry of viewTasksData - appId is the stable per-window identity."""
+    """One entry of viewTasksData - the stable per-row identity and kind.
+
+    ``app_id`` is the per-window identity a reorder permutes; ``launcher_url``
+    persists to the tasks-applet ``launchers`` config key (empty for a window task,
+    kept in place so the row order still matches the bar); is_launcher / is_grouped
+    / child_count / is_active are the row's kind, grouping, and activation. All are
+    written for every row by serializeTaskRecord, so all are required.
+    """
 
     app_id: str = Field(alias="appId")
+    launcher_url: str = Field(alias="launcherUrl")
+    is_launcher: bool = Field(alias="isLauncher")
+    is_grouped: bool = Field(alias="isGrouped")
+    child_count: int = Field(alias="childCount")
+    is_active: bool = Field(alias="isActive")
 
 
 class DockView(_Readback):

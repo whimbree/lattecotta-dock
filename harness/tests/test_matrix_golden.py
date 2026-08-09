@@ -15,15 +15,6 @@ import pytest
 from latte_harness import matrix_golden, recipe
 from latte_harness.matrix_golden import MatrixGoldenError
 
-
-# A typed stand-in for monkeypatch.setattr (a bare lambda is untyped under strict).
-def _returns_str(value: str) -> Callable[..., str]:
-    def fake(*_args: object) -> str:
-        return value
-
-    return fake
-
-
 # ---- the compare tier (pure over the environment) --------------------------
 
 
@@ -67,26 +58,64 @@ def test_crop_rect_of_refuses_a_degenerate_rect(geometry: tuple[int, int, int, i
         _ = matrix_golden.crop_rect_of(geometry)
 
 
-# ---- view_crop_rect over a parsed viewsData payload ------------------------
+# ---- view_crop_rect over the typed recipe.views() surface ------------------
+#
+# W3 fold: view_crop_rect reads recipe.views() (the shared typed viewsData
+# reader) instead of a re-declared _GoldenView twin, so the tests inject typed
+# recipe.View records - the boundary parse itself is tested in test_recipe.py.
 
-_TWO_VIEWS = (
-    '[{"containmentId":16,"isCloned":false,"absoluteGeometry":[0,900,1600,100]},'
-    '{"containmentId":17,"isCloned":true,"absoluteGeometry":[0,0,1600,100]}]'
-)
+
+def _view(cid: int, *, cloned: bool, geometry: tuple[int, int, int, int]) -> recipe.View:
+    """A complete recipe.View with only the crop-relevant fields varied; the rest
+    take neutral always-emitted values so the record is a valid viewsData reply."""
+    return recipe.View.model_validate(
+        {
+            "containmentId": cid,
+            "isCloned": cloned,
+            "isClonedFrom": cid if cloned else -1,
+            "edge": "bottom",
+            "alignment": "center",
+            "screen": "Virtual-0",
+            "visibilityMode": "alwaysVisible",
+            "isHidden": False,
+            "inStartup": False,
+            "editMode": False,
+            "inConfigureAppletsMode": False,
+            "keyboardNavigation": False,
+            "containmentAcceptsInput": True,
+            "ownsPanelFocusSession": False,
+            "absoluteGeometry": list(geometry),
+            "localGeometry": [0, 0, geometry[2], geometry[3]],
+            "screenGeometry": [0, 0, 1600, 1000],
+        }
+    )
+
+
+def _returns_views(views: list[recipe.View]) -> Callable[..., list[recipe.View]]:
+    def fake(*_args: object) -> list[recipe.View]:
+        return views
+
+    return fake
+
+
+_TWO_VIEWS = [
+    _view(16, cloned=False, geometry=(0, 900, 1600, 100)),
+    _view(17, cloned=True, geometry=(0, 0, 1600, 100)),
+]
 
 
 def test_view_crop_rect_picks_the_single_non_cloned_view(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(recipe, "json_payload", _returns_str(_TWO_VIEWS))
+    monkeypatch.setattr(recipe, "views", _returns_views(_TWO_VIEWS))
     assert matrix_golden.view_crop_rect() == "1600x100+0+900"
 
 
 def test_view_crop_rect_selects_a_named_view(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(recipe, "json_payload", _returns_str(_TWO_VIEWS))
+    monkeypatch.setattr(recipe, "views", _returns_views(_TWO_VIEWS))
     assert matrix_golden.view_crop_rect(17) == "1600x100+0+0"
 
 
 def test_view_crop_rect_refuses_an_unknown_named_view(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(recipe, "json_payload", _returns_str(_TWO_VIEWS))
+    monkeypatch.setattr(recipe, "views", _returns_views(_TWO_VIEWS))
     with pytest.raises(MatrixGoldenError, match="no view 99"):
         _ = matrix_golden.view_crop_rect(99)
 
@@ -94,10 +123,10 @@ def test_view_crop_rect_refuses_an_unknown_named_view(monkeypatch: pytest.Monkey
 def test_view_crop_rect_refuses_when_the_non_cloned_count_is_not_one(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    payload = (
-        '[{"containmentId":16,"isCloned":false,"absoluteGeometry":[0,900,1600,100]},'
-        '{"containmentId":17,"isCloned":false,"absoluteGeometry":[0,0,1600,100]}]'
-    )
-    monkeypatch.setattr(recipe, "json_payload", _returns_str(payload))
+    two_non_cloned = [
+        _view(16, cloned=False, geometry=(0, 900, 1600, 100)),
+        _view(17, cloned=False, geometry=(0, 0, 1600, 100)),
+    ]
+    monkeypatch.setattr(recipe, "views", _returns_views(two_non_cloned))
     with pytest.raises(MatrixGoldenError, match="expected exactly one non-cloned view, saw 2"):
         _ = matrix_golden.view_crop_rect()

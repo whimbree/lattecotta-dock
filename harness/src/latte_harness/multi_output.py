@@ -27,7 +27,9 @@ is pure so it is unit-testable without a dual-output vehicle.
 Two readback boundaries, two validation styles, deliberately:
 
 - The dock's own D-Bus surfaces (screensData, viewsData) are pydantic-validated
-  into typed records (Screen, _MoView), the harness's normal boundary contract.
+  into typed records (Screen here for screensData; recipe.View for viewsData, read
+  through recipe.views() - W3 folded this module's old _MoView twin onto the shared
+  model), the harness's normal boundary contract.
 - kscreen-doctor's -j output is the EXTERNAL tool's opaque JSON. It is parsed at
   the boundary with pydantic's JsonValue (so a non-JSON reply fails loudly) but
   kept as the raw recursive structure, because the semantic cleanup verifier's
@@ -104,19 +106,7 @@ class Screen(BaseModel):
     is_primary: bool = Field(alias="isPrimary")
 
 
-class _MoView(BaseModel):
-    """One viewsData entry with the fields the placement checks read: the identity,
-    the connector NAME it sits on, and the clone flag."""
-
-    model_config = ConfigDict(extra="ignore", populate_by_name=True, frozen=True)
-
-    containment_id: int = Field(alias="containmentId")
-    screen: str
-    is_cloned: bool = Field(alias="isCloned")
-
-
 _SCREENS = TypeAdapter(list[Screen])
-_MO_VIEWS = TypeAdapter(list[_MoView])
 
 
 @dataclass(frozen=True, slots=True)
@@ -231,9 +221,15 @@ def _kscreen_set(*args: str) -> bool:
 
 def mo_view_screen(view: int) -> str:
     """mo_view_screen: the connector NAME the view currently sits on
-    (viewsData.screen)."""
-    views = _MO_VIEWS.validate_json(recipe.json_payload("viewsData"))
-    found = next((v for v in views if v.containment_id == view), None)
+    (viewsData.screen).
+
+    W3 (widen the readback models): screen and isCloned ride recipe.View, so this
+    reads the typed recipe.views() instead of a re-declared _MoView twin (the
+    module keeps its own JsonValue path for kscreen-doctor's external opaque JSON,
+    which is a deliberately separate boundary - only the viewsData twin folds). A
+    refused reply raises the pollable DbusUnavailableError; a misshapen one a
+    ValidationError."""
+    found = next((v for v in recipe.views() if v.containment_id == view), None)
     if found is None:
         raise MultiOutputError(f"mo_view_screen: view {view} not present")
     return found.screen
@@ -242,8 +238,7 @@ def mo_view_screen(view: int) -> str:
 def _primary_view_screen() -> str:
     """The connector the first non-cloned view landed on - the ground-truth anchor
     for "which output is primary" (empty when no non-cloned view exists yet)."""
-    views = _MO_VIEWS.validate_json(recipe.json_payload("viewsData"))
-    non_cloned = [v for v in views if not v.is_cloned]
+    non_cloned = [v for v in recipe.views() if not v.is_cloned]
     return non_cloned[0].screen if non_cloned else ""
 
 

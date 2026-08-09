@@ -26,10 +26,10 @@ Migration shape (the BP-2c/BP-3a fresh-module precedent): a fresh module, not a
 bridge. task-reorder-lib.sh was retired in the R12 batch when create-linked-dock
 (its last bash consumer) was ported onto this module; the 092 recipe port had
 already replaced the earlier consumer. The order/launcher readbacks go
-through recipe.py's typed viewTasksData boundary (recipe.view_tasks for appId; a
-launcherUrl-carrying twin here since recipe.Task does not surface it), and the
-rest-center math is recipe.task_center - one implementation, shared with the bash
-via lib.sh's e2e_task_center formula.
+through recipe.py's typed viewTasksData boundary (recipe.view_tasks - W3 widened
+recipe.Task with launcherUrl, retiring the launcherUrl-carrying twin this module
+used to declare), and the rest-center math is recipe.task_center - one
+implementation, shared with the bash via lib.sh's e2e_task_center formula.
 """
 
 from __future__ import annotations
@@ -38,28 +38,7 @@ import os
 import subprocess
 import time
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
-
 from latte_harness import recipe
-
-
-class _LauncherTask(BaseModel):
-    """One viewTasksData entry with the launcher sub-model identity.
-
-    recipe.Task carries only appId (the order identity); the launcher order also
-    reads launcherUrl, which persists to the tasks-applet ``launchers`` config key.
-    Window tasks have an empty launcherUrl, kept in place so the list length still
-    matches the bar (the bash comment). extra="ignore" tolerates a dock-side field
-    addition, like every readback model.
-    """
-
-    model_config = ConfigDict(extra="ignore", populate_by_name=True, frozen=True)
-
-    app_id: str = Field(alias="appId")
-    launcher_url: str = Field(alias="launcherUrl")
-
-
-_LAUNCHER_TASKS = TypeAdapter(list[_LauncherTask])
 
 
 def _require_env(name: str) -> str:
@@ -97,9 +76,14 @@ def taskdrag_launcher_order(view: int) -> str:
     """taskdrag_launcher_order: the launcherUrl list in model order - the launcher
     sub-model identity, which also persists to the ``launchers`` config key. Empty
     entries (window tasks have no launcherUrl) are kept in place so the list length
-    still matches the bar."""
-    tasks = _LAUNCHER_TASKS.validate_json(recipe.json_payload("viewTasksData", "u", str(view)))
-    return " ".join(t.launcher_url for t in tasks)
+    still matches the bar.
+
+    W3 (widen the readback models): launcherUrl now rides recipe.Task, so this reads
+    the typed recipe.view_tasks() instead of a re-declared _LauncherTask twin - a
+    refused reply raises the pollable DbusUnavailableError, a misshapen one a
+    ValidationError. The twin existed only because recipe.Task surfaced appId alone
+    (its commit body, 5343501a8); W3 supplies the field, so the twin folds away."""
+    return " ".join(t.launcher_url for t in recipe.view_tasks(view))
 
 
 # ---- the cold rest center and the outside-the-bar approach -----------------

@@ -11,7 +11,6 @@ compositor.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Callable
 
 import pytest
@@ -19,52 +18,53 @@ import pytest
 from latte_harness import recipe, task_reorder
 
 
-def _tasks(entries: list[dict[str, object]]) -> str:
-    return json.dumps(entries)
+def _task(app_id: str, launcher_url: str) -> recipe.Task:
+    """A complete recipe.Task with only appId/launcherUrl varied (the rest neutral)."""
+    return recipe.Task.model_validate(
+        {
+            "appId": app_id,
+            "launcherUrl": launcher_url,
+            "isLauncher": bool(launcher_url),
+            "isGrouped": False,
+            "childCount": 0,
+            "isActive": False,
+        }
+    )
 
 
-def _returns_payload(payload: str) -> Callable[..., str]:
-    def fake(*_args: str) -> str:
-        return payload
+def _returns_tasks(tasks: list[recipe.Task]) -> Callable[..., list[recipe.Task]]:
+    def fake(*_args: object) -> list[recipe.Task]:
+        return tasks
 
     return fake
 
 
 # ---- the order readbacks (appId and launcherUrl joins) ---------------------
+#
+# W3 fold: taskdrag_launcher_order reads recipe.view_tasks() (launcherUrl now on
+# recipe.Task) instead of a re-declared _LauncherTask twin; both order joins now
+# ride the one shared viewTasksData boundary, tested here with typed records.
 
 
 def test_taskdrag_order_joins_app_ids_in_model_order(monkeypatch: pytest.MonkeyPatch) -> None:
-    def three(_view: int) -> list[recipe.Task]:
-        return [recipe.Task.model_validate({"appId": a}) for a in ("firefox", "kate", "dolphin")]
-
-    monkeypatch.setattr(recipe, "view_tasks", three)
+    tasks = [_task(a, f"applications:{a}.desktop") for a in ("firefox", "kate", "dolphin")]
+    monkeypatch.setattr(recipe, "view_tasks", _returns_tasks(tasks))
     assert task_reorder.taskdrag_order(16) == "firefox kate dolphin"
 
 
 def test_launcher_order_keeps_empty_window_task_slots(monkeypatch: pytest.MonkeyPatch) -> None:
     # A window task has an empty launcherUrl, kept in place so the list length still
     # matches the bar (the bash contract).
-    payload = _tasks(
-        [
-            {"appId": "firefox", "launcherUrl": "applications:firefox.desktop"},
-            {"appId": "win", "launcherUrl": ""},
-            {"appId": "kate", "launcherUrl": "applications:kate.desktop"},
-        ]
-    )
-    monkeypatch.setattr(recipe, "json_payload", _returns_payload(payload))
+    tasks = [
+        _task("firefox", "applications:firefox.desktop"),
+        _task("win", ""),
+        _task("kate", "applications:kate.desktop"),
+    ]
+    monkeypatch.setattr(recipe, "view_tasks", _returns_tasks(tasks))
     assert (
         task_reorder.taskdrag_launcher_order(16)
         == "applications:firefox.desktop  applications:kate.desktop"
     )
-
-
-def test_launcher_task_rejects_a_missing_launcher_url() -> None:
-    from pydantic import ValidationError
-
-    # launcherUrl is always present in viewTasksData (empty for window tasks); a
-    # reply without the key is malformed and must fail at the boundary, loudly.
-    with pytest.raises(ValidationError):
-        _ = task_reorder._LAUNCHER_TASKS.validate_python([{"appId": "x"}])  # pyright: ignore[reportPrivateUsage]
 
 
 # ---- the outside-the-bar approach point (edge -> staging) ------------------

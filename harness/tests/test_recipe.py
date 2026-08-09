@@ -34,15 +34,65 @@ from latte_harness.recipe import (
 
 # ---- readback models: valid / invalid / extra-field tolerated --------------
 
-_VIEW_JSON = (
-    '[{"containmentId":16,"edge":"bottom","isHidden":false,"inStartup":false,'
-    '"absoluteGeometry":[0,900,1600,100],"localGeometry":[0,0,1600,100],'
-    '"screenGeometry":[0,0,1600,1000]}]'
-)
+
+def _one_view_dict() -> dict[str, object]:
+    """A COMPLETE viewsData record - the always-emitted serializeViewRecord surface.
+
+    Every field the dock writes for every view, so a test that drops one is
+    exercising a real "malformed reply", not a lazy fixture (W3 widened recipe.View
+    to require this whole surface).
+    """
+    return {
+        "containmentId": 16,
+        "isCloned": False,
+        "isClonedFrom": -1,
+        "edge": "bottom",
+        "alignment": "center",
+        "screen": "Virtual-0",
+        "visibilityMode": "alwaysVisible",
+        "isHidden": False,
+        "inStartup": False,
+        "editMode": False,
+        "inConfigureAppletsMode": False,
+        "keyboardNavigation": False,
+        "containmentAcceptsInput": True,
+        "ownsPanelFocusSession": False,
+        "absoluteGeometry": [0, 900, 1600, 100],
+        "localGeometry": [0, 0, 1600, 100],
+        "screenGeometry": [0, 0, 1600, 1000],
+    }
+
+
+def _one_applet_dict() -> dict[str, object]:
+    """A COMPLETE viewAppletsData record - the always-emitted serializeAppletRecord
+    surface recipe.Applet requires (W3 added z / colorizerActive / colorizerReason)."""
+    return {
+        "id": 4,
+        "plugin": "org.kde.latte.plasmoid",
+        "geometry": [10, 0, 200, 100],
+        "inScheduledDestruction": False,
+        "z": 0.0,
+        "colorizerActive": False,
+        "colorizerReason": "",
+    }
+
+
+def _one_task_dict() -> dict[str, object]:
+    """A COMPLETE viewTasksData record - the always-emitted serializeTaskRecord
+    surface recipe.Task requires (W3 added launcherUrl / isLauncher / isGrouped /
+    childCount / isActive)."""
+    return {
+        "appId": "org.kde.konsole.desktop",
+        "launcherUrl": "applications:org.kde.konsole.desktop",
+        "isLauncher": True,
+        "isGrouped": False,
+        "childCount": 0,
+        "isActive": False,
+    }
 
 
 def test_view_model_parses_a_real_payload() -> None:
-    parsed = recipe._VIEWS.validate_json(_VIEW_JSON)  # pyright: ignore[reportPrivateUsage]
+    parsed = recipe._VIEWS.validate_python([_one_view_dict()])  # pyright: ignore[reportPrivateUsage]
     assert len(parsed) == 1
     view = parsed[0]
     assert view.containment_id == 16
@@ -51,10 +101,42 @@ def test_view_model_parses_a_real_payload() -> None:
     assert view.screen_geometry[2] == 1600
 
 
+def test_view_model_carries_the_w3_widened_fields() -> None:
+    # The fields W3 added for the ported recipes: lineage, placement strings,
+    # mode flags, and the focus-session trio. A recipe reads them by attribute
+    # instead of indexing a raw dict.
+    view = View.model_validate(
+        {
+            **_one_view_dict(),
+            "isCloned": True,
+            "isClonedFrom": 16,
+            "alignment": "left",
+            "screen": "Virtual-1",
+            "visibilityMode": "autoHide",
+            "editMode": True,
+            "inConfigureAppletsMode": True,
+            "keyboardNavigation": True,
+            "containmentAcceptsInput": False,
+            "ownsPanelFocusSession": True,
+        }
+    )
+    assert view.is_cloned is True
+    assert view.is_cloned_from == 16
+    assert view.alignment == "left"
+    assert view.screen == "Virtual-1"
+    assert view.visibility_mode == "autoHide"
+    assert view.edit_mode is True
+    assert view.in_configure_applets_mode is True
+    assert view.keyboard_navigation is True
+    assert view.containment_accepts_input is False
+    assert view.owns_panel_focus_session is True
+
+
 def test_view_model_tolerates_a_dock_side_field_addition() -> None:
     # A field the dock adds later must not break an existing recipe (extra=ignore).
-    payload = _VIEW_JSON.replace('"edge":"bottom"', '"edge":"bottom","futureField":42')
-    parsed = recipe._VIEWS.validate_json(payload)  # pyright: ignore[reportPrivateUsage]
+    parsed = recipe._VIEWS.validate_python(  # pyright: ignore[reportPrivateUsage]
+        [{**_one_view_dict(), "futureField": 42}]
+    )
     assert parsed[0].containment_id == 16
     assert not hasattr(parsed[0], "futureField")
 
@@ -62,6 +144,14 @@ def test_view_model_tolerates_a_dock_side_field_addition() -> None:
 def test_view_model_rejects_a_wrong_typed_field() -> None:
     with pytest.raises(ValidationError):
         View.model_validate({**_one_view_dict(), "containmentId": "not-a-number"})
+
+
+def test_view_model_rejects_a_missing_widened_field() -> None:
+    # A widened field is REQUIRED: the dock always emits editMode, so a reply
+    # without it is malformed and must fail loudly at the boundary, never default.
+    incomplete = {k: v for k, v in _one_view_dict().items() if k != "editMode"}
+    with pytest.raises(ValidationError):
+        View.model_validate(incomplete)
 
 
 def test_view_model_rejects_a_malformed_geometry_length() -> None:
@@ -74,31 +164,31 @@ def test_view_model_rejects_a_fractional_pixel() -> None:
         View.model_validate({**_one_view_dict(), "absoluteGeometry": [0, 900.5, 1600, 100]})
 
 
-def _one_view_dict() -> dict[str, object]:
-    return {
-        "containmentId": 16,
-        "edge": "bottom",
-        "isHidden": False,
-        "inStartup": False,
-        "absoluteGeometry": [0, 900, 1600, 100],
-        "localGeometry": [0, 0, 1600, 100],
-        "screenGeometry": [0, 0, 1600, 1000],
-    }
-
-
 def test_applet_and_task_models_parse() -> None:
-    applet = Applet.model_validate(
-        {
-            "id": 4,
-            "plugin": "org.kde.latte.plasmoid",
-            "geometry": [10, 0, 200, 100],
-            "inScheduledDestruction": False,
-        }
-    )
+    applet = Applet.model_validate(_one_applet_dict())
     assert applet.plugin == "org.kde.latte.plasmoid"
     assert applet.geometry[2] == 200
-    task = Task.model_validate({"appId": "org.kde.konsole.desktop"})
+    assert applet.z == 0.0
+    assert applet.colorizer_active is False
+    assert applet.colorizer_reason == ""
+    task = Task.model_validate(_one_task_dict())
     assert task.app_id == "org.kde.konsole.desktop"
+    assert task.launcher_url == "applications:org.kde.konsole.desktop"
+    assert task.is_launcher is True
+
+
+def test_applet_model_carries_the_stacking_z() -> None:
+    applet = Applet.model_validate({**_one_applet_dict(), "z": 900.0, "colorizerActive": True})
+    assert applet.z == 900.0
+    assert applet.colorizer_active is True
+
+
+def test_task_model_rejects_a_missing_widened_field() -> None:
+    # launcherUrl is always present in viewTasksData (empty for a window task); a
+    # reply without the key is malformed and must fail at the boundary.
+    incomplete = {k: v for k, v in _one_task_dict().items() if k != "launcherUrl"}
+    with pytest.raises(ValidationError):
+        Task.model_validate(incomplete)
 
 
 # ---- the busctl-reply unescape (byte-identical to the e2e_json sed) ---------
@@ -239,7 +329,15 @@ def _snapshot(effects: list[int], canvas: list[int], *, hidden: bool = False) ->
 
 def _applet(x: int, w: int) -> Applet:
     return Applet.model_validate(
-        {"id": 1, "plugin": "p", "geometry": [x, 0, w, 100], "inScheduledDestruction": False}
+        {
+            "id": 1,
+            "plugin": "p",
+            "geometry": [x, 0, w, 100],
+            "inScheduledDestruction": False,
+            "z": 0.0,
+            "colorizerActive": False,
+            "colorizerReason": "",
+        }
     )
 
 
@@ -271,7 +369,15 @@ def test_presentation_coverage_refuses_a_hidden_view() -> None:
 
 def test_presentation_coverage_refuses_when_no_live_applet() -> None:
     dead = Applet.model_validate(
-        {"id": 1, "plugin": "p", "geometry": [0, 0, 0, 0], "inScheduledDestruction": True}
+        {
+            "id": 1,
+            "plugin": "p",
+            "geometry": [0, 0, 0, 0],
+            "inScheduledDestruction": True,
+            "z": 0.0,
+            "colorizerActive": False,
+            "colorizerReason": "",
+        }
     )
     with pytest.raises(RecipeError, match="no live applet geometry"):
         recipe._assert_presentation_coverage(  # pyright: ignore[reportPrivateUsage]
