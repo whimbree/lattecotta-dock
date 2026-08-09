@@ -318,21 +318,21 @@ def main() -> None:
             "run via scripts/run-multi-output-e2e.sh"
         )
 
-    # The restore sits in a finally so it runs on EVERY exit path (the wave's
-    # converged trap-EXIT shape): the caught verdicts, the conventional signal
-    # exits, and an unexpected exception, which still propagates after the
-    # restore and exits nonzero.
     captured = {"topology": ""}
-    body_exit = 0
-    cleanup_status = 0
-    try:
-        try:
-            _selftest_body(captured)
-        except SystemExit as exit_error:
-            body_exit = exit_error.code if isinstance(exit_error.code, int) else 1
-    finally:
+
+    def cleanup(status: int) -> int:
+        # The restore worsens a would-be success (body 0 -> its own status) but
+        # never masks a body failure (a nonzero body_exit stands) - the same
+        # `body_exit if body_exit != 0 else cleanup_status` combine the bash used.
         cleanup_status = _restore_vehicle(captured["topology"])
-    raise SystemExit(body_exit if body_exit != 0 else cleanup_status)
+        return status if status != 0 else cleanup_status
+
+    # run_with_cleanup owns the try-body / finally-restore shape this recipe
+    # hand-rolled; the restore runs on EVERY exit path (the wave's trap-EXIT). It
+    # also adds the RecipeError -> clean exit-1 translation the hand-rolled main
+    # lacked (it caught only SystemExit, so a RecipeError would have tracebacked),
+    # matching every other recipe's loud-but-clean failure.
+    recipe.run_with_cleanup(lambda: _selftest_body(captured), cleanup, install_signal_exits=False)
 
 
 if __name__ == "__main__":
