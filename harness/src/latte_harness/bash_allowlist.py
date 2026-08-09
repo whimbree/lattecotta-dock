@@ -5,8 +5,12 @@
 
 Bash may only exist at the repo paths listed in harness/bash-allowlist.txt.
 The list was seeded with the full pre-migration inventory and only ever
-shrinks, until it is exactly the 17-file retained set the BP plan
-records:
+shrinks. It reached its floor when the migration completed (2026-08-06):
+the 46-file retained set the BP plan records - the exit-code gate spine,
+the thin entry-point shims fronting the typed harness, the external
+Messages.sh and packaging contracts, and the defect-blocked e2e recipes.
+The ratchet stays shrink-only, so a defect-blocked recipe may still leave
+as its blocker clears. Its two failure modes:
 
 - a tracked bash file missing from the list fails the gate: no new bash,
   no silent re-accretion;
