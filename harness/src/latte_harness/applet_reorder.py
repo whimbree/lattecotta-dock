@@ -56,7 +56,7 @@ class AppletReorderError(Exception):
     """An applet-reorder driver step could not proceed (order readback failed,
     rearrange never armed, points out of range, an unknown glide mode). The
     diagnostic is printed at the raise site (matching the bash ``echo ... >&2;
-    return 1``); ``applet_reorder_attempt`` translates it to its driver-error code
+    return 1``); ``attempt`` translates it to its driver-error code
     and the appletreorder verb translates it to a matrix refusal, so a failed
     interaction is never silently a clean pass (the never-swallow rule).
     """
@@ -448,8 +448,8 @@ def applet_reorder_glide_to(
 # ---- the whole self-contained attempt --------------------------------------
 
 
-def applet_reorder_attempt(view: int, mode: str, frm: int, to: int) -> int:
-    """applet_reorder_attempt: the whole self-contained cycle - enter rearrange,
+def attempt(view: int, mode: str, frm: int, to: int) -> int:
+    """attempt: the whole self-contained cycle - enter rearrange,
     drive one attempt, leave rearrange, settle - and classify the outcome by whether
     the applet-id order actually changed. Returns:
       0  the attempt COMMITTED a reorder (order changed)
@@ -490,10 +490,10 @@ def verb_appletreorder_drive(view: int, outcome: str) -> None:
     frm = int(os.environ.get("APPLET_REORDER_FROM") or _DEFAULT_FROM)
     to = int(os.environ.get("APPLET_REORDER_TO") or _DEFAULT_TO)
     if outcome == "commit":
-        if applet_reorder_attempt(view, "commit", frm, to) != 0:
+        if attempt(view, "commit", frm, to) != 0:
             raise MatrixDriveError("appletreorder commit did not change the order")
     elif outcome == "abort":
-        if applet_reorder_attempt(view, "origin", frm, to) not in (0, 3):
+        if attempt(view, "origin", frm, to) not in (0, 3):
             raise MatrixDriveError("appletreorder abort was a driver error")
     else:
         raise MatrixDriveError(f"appletreorder: unknown outcome '{outcome}'")
