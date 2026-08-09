@@ -183,14 +183,16 @@ string(REPLACE "-Wunused-parameter" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 #add format security check
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wformat -Werror=format-security")
 
-# Warnings-as-errors, phase 1: every category promoted here had all of its
-# instances in this tree fixed, and the promotion keeps that state
-# self-verifying - a reintroduced instance fails the build instead of
-# scrolling past as a warning. -Werror=deprecated covers C++ LANGUAGE
-# deprecations (e.g. the C++20 implicit `this` capture in [=] lambdas) and is
-# deliberately distinct from -Wdeprecated-declarations (the Qt/KF6 API
-# lifecycle warnings), which stays warning-only until that migration lands.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=missing-field-initializers -Werror=unused-result -Werror=pedantic -Werror=deprecated -Werror=dangling-reference")
+# Warnings-as-errors, promoted per phase of the -Werror campaign: every
+# category promoted here had all of its instances in this tree fixed, and the
+# promotion keeps that state self-verifying - a reintroduced instance fails
+# the build instead of scrolling past as a warning. -Werror=deprecated covers
+# C++ LANGUAGE deprecations (e.g. the C++20 implicit `this` capture in [=]
+# lambdas) and is deliberately distinct from -Wdeprecated-declarations (the
+# Qt/KF6 API lifecycle warnings), which stays warning-only until that
+# migration lands. -Werror=zero-as-null-pointer-constant (phase 2) rejects a
+# literal 0 where a null pointer is meant; nullptr is the typed spelling.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=missing-field-initializers -Werror=unused-result -Werror=pedantic -Werror=deprecated -Werror=dangling-reference -Werror=zero-as-null-pointer-constant")
 
 message(STATUS "COMPILER FLAGS : ${CMAKE_CXX_FLAGS}")
 
