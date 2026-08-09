@@ -211,7 +211,7 @@ void ContextMenuLayerQuickItem::mousePressEvent(QMouseEvent *event)
             return;
         }*/
     //FIXME: very inefficient appletAt() implementation
-    Plasma::Applet *applet = 0;
+    Plasma::Applet *applet = nullptr;
 
     //! Applet resolution is only meaningful when this layer lives in the
     //! view's own window: appletContainsPos expects containment-root
