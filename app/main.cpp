@@ -40,13 +40,13 @@
 #include <KWindowSystem>
 
 //! COLORS
-#define CNORMAL  "\e[0m"
-#define CIGREEN  "\e[1;32m"
-#define CGREEN   "\e[0;32m"
-#define CICYAN   "\e[1;36m"
-#define CCYAN    "\e[0;36m"
-#define CIRED    "\e[1;31m"
-#define CRED     "\e[0;31m"
+#define CNORMAL  "\033[0m"
+#define CIGREEN  "\033[1;32m"
+#define CGREEN   "\033[0;32m"
+#define CICYAN   "\033[1;36m"
+#define CCYAN    "\033[0;36m"
+#define CIRED    "\033[1;31m"
+#define CRED     "\033[0;31m"
 
 inline void configureAboutData();
 inline void detectPlatform(int argc, char **argv);
