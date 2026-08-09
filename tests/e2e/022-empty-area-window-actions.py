@@ -589,30 +589,26 @@ def _setup() -> None:
     shutil.copyfile(_S.layout, _S.backup)
 
 
-def main() -> int:
-    # The cleanup sits in a finally so it runs on EVERY exit path, like the
-    # bash `trap cleanup EXIT`: the caught verdict exits, an unexpected
-    # exception (an unguarded readback decode after the layout is already
-    # modified), and the conventional signal exits installed below. Without
-    # it, an unintended exit strands the konsole fixture and leaves the
-    # modified E2E_LAYOUT unrestored, poisoning following recipes through
-    # the runner's dock reuse.
+def _cleanup_status(status: int) -> int:
+    """Run the teardown and fold its outcome into the exit code: a cleanup that
+    left residue worsens a would-be success but never masks a body failure (the
+    022 cleanup-status contract)."""
+    return recipe.worsen_status_on_cleanup_failure(status, _cleanup())
+
+
+def main() -> None:
+    # run_with_cleanup owns the try-body / finally-cleanup shape this recipe
+    # hand-rolled: _cleanup runs on EVERY exit path (the bash trap cleanup EXIT) -
+    # the caught verdict, an unguarded readback decode after the layout is already
+    # modified, and the signal exits - so an unintended exit never strands the
+    # konsole fixture or leaves the modified E2E_LAYOUT unrestored to poison the
+    # following recipe through the runner's dock reuse. The signal exits are armed
+    # here first (install_signal_exits=False below), before _setup takes the
+    # layout backup, so an interrupt during setup unwinds the same way.
     proc.install_conventional_signal_exits()
     _setup()
-    status = 0
-    try:
-        try:
-            _body()
-        except SystemExit as exc:
-            status = exc.code if isinstance(exc.code, int) else 1
-        except recipe.RecipeError as exc:
-            print(str(exc), file=sys.stderr, flush=True)
-            status = 1
-    finally:
-        if _cleanup() and status == 0:
-            status = 1
-    return status
+    recipe.run_with_cleanup(_body, _cleanup_status, install_signal_exits=False)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
