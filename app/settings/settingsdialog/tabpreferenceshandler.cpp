@@ -55,7 +55,7 @@ void TabPreferences::initUi()
 
     //! signals
     connect(m_parabolicSpreadButtons, &QButtonGroup::idToggled,
-            [ = ](int id, bool checked) {
+            [this](int id, bool checked) {
         if (checked) {
             m_preferences.parabolicSpread = id;
             Q_EMIT dataChanged();
@@ -63,14 +63,14 @@ void TabPreferences::initUi()
     });
 
     connect(m_thicknessMarginInfluenceButtons, &QButtonGroup::idToggled,
-            [ = ](int id, bool checked) {
+            [this](int id, bool checked) {
         if (checked) {
             m_preferences.thicknessMarginInfluence = (id / 100.0f);
             Q_EMIT dataChanged();
         }
     });
 
-    connect(m_ui->screenTrackerSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [ = ](int i) {
+    connect(m_ui->screenTrackerSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [this](int i) {
         m_preferences.screensDelay = m_ui->screenTrackerSpinBox->value();
         Q_EMIT dataChanged();
     });
@@ -90,7 +90,7 @@ void TabPreferences::initUi()
         Q_EMIT dataChanged();
     });
 
-    connect(m_ui->screenTrackerSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [ = ](int i) {
+    connect(m_ui->screenTrackerSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [this](int i) {
         m_preferences.screensDelay = m_ui->screenTrackerSpinBox->value();
         Q_EMIT dataChanged();
     });

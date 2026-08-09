@@ -74,7 +74,7 @@ void DetailsHandler::init()
     m_ui->patternClearBtn->setFixedHeight(m_ui->backgroundBtn->height()+2);
 
     connect(m_backButtonsGroup, &QButtonGroup::idToggled,
-            [ = ](int id, bool checked) {
+            [this](int id, bool checked) {
 
         if (checked) {
             setBackgroundStyle(static_cast<Latte::Layout::BackgroundStyle>(id));

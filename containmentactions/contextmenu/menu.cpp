@@ -164,7 +164,7 @@ void Menu::restore(const KConfigGroup &config)
 
     //! Duplicate Action
     m_actions[Latte::Data::ContextMenu::DUPLICATEVIEWACTION] = new QAction(QIcon::fromTheme("edit-copy"), "Duplicate Dock as Template", this);
-    connect(m_actions[Latte::Data::ContextMenu::DUPLICATEVIEWACTION], &QAction::triggered, [=](){
+    connect(m_actions[Latte::Data::ContextMenu::DUPLICATEVIEWACTION], &QAction::triggered, [this](){
         QDBusInterface iface("org.kde.lattedock", "/Latte", "", QDBusConnection::sessionBus());
 
         if (iface.isValid()) {
@@ -175,7 +175,7 @@ void Menu::restore(const KConfigGroup &config)
 
     //! Export View Template Action
     m_actions[Latte::Data::ContextMenu::EXPORTVIEWTEMPLATEACTION] = new QAction(QIcon::fromTheme("document-export"), "Export as Template...", this);
-    connect(m_actions[Latte::Data::ContextMenu::EXPORTVIEWTEMPLATEACTION], &QAction::triggered, [=](){
+    connect(m_actions[Latte::Data::ContextMenu::EXPORTVIEWTEMPLATEACTION], &QAction::triggered, [this](){
         QDBusInterface iface("org.kde.lattedock", "/Latte", "", QDBusConnection::sessionBus());
 
         if (iface.isValid()) {
@@ -186,7 +186,7 @@ void Menu::restore(const KConfigGroup &config)
 
     //! Remove Action
     m_actions[Latte::Data::ContextMenu::REMOVEVIEWACTION] = new QAction(QIcon::fromTheme("delete"), "Remove Dock", this);
-    connect(m_actions[Latte::Data::ContextMenu::REMOVEVIEWACTION], &QAction::triggered, [=](){
+    connect(m_actions[Latte::Data::ContextMenu::REMOVEVIEWACTION], &QAction::triggered, [this](){
         QDBusInterface iface("org.kde.lattedock", "/Latte", "", QDBusConnection::sessionBus());
 
         if (iface.isValid()) {
@@ -196,7 +196,7 @@ void Menu::restore(const KConfigGroup &config)
     this->containment()->setInternalAction(Latte::Data::ContextMenu::REMOVEVIEWACTION, m_actions[Latte::Data::ContextMenu::REMOVEVIEWACTION]);
 
     //! Signals
-    connect(this->containment(), &Plasma::Containment::userConfiguringChanged, [=](){
+    connect(this->containment(), &Plasma::Containment::userConfiguringChanged, [this](){
         updateVisibleActions();
     });
 }
