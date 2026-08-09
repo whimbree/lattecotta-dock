@@ -2782,29 +2782,30 @@ void View::releaseConfigView()
 }
 
 //! release grab and restore mouse state
-void View::unblockMouse(int x, int y)
+void View::unblockMouse()
 {
     setMouseGrabEnabled(false);
-
-    m_releaseGrab_x = x;
-    m_releaseGrab_y = y;
     m_releaseGrabTimer.start();
 }
 
 void View::releaseGrab()
 {
-    //! ungrab mouse
+    //! Ungrab the QtQuick scene-graph mouse grabber so it stops receiving
+    //! synthetic move events. On Qt6 this ungrab is the entire job.
+    //!
+    //! Two Qt5-era workarounds that used to follow it were removed:
+    //!  - a setMouseGrabEnabled(true/false) toggle, which on Qt6 only emitted
+    //!    "cannot grab mouse: no event is currently being delivered" warnings;
+    //!  - a fabricated QEvent::Leave hover event (built with the deprecated
+    //!    QHoverEvent two-position constructor) sent to force applets to
+    //!    de-hover.
+    //! On Wayland the applet de-hover no longer needs faking: this path runs
+    //! when a window drag hands off to KWin's interactive move, which takes
+    //! the seat pointer, so the dock receives a real wl_pointer.leave
+    //! (QEvent::Leave) and the applets un-hover on their own.
     if (mouseGrabberItem()) {
         mouseGrabberItem()->ungrabMouse();
     }
-
-    //! properly release grabbed mouse in order to inform all views
-    setMouseGrabEnabled(true);
-    setMouseGrabEnabled(false);
-
-    //! Send a fake QEvent::Leave to inform applets for mouse leaving the view
-    QHoverEvent e(QEvent::Leave, QPoint(-5,-5),  QPoint(m_releaseGrab_x, m_releaseGrab_y));
-    QCoreApplication::instance()->sendEvent(this, &e);
 }
 
 QAction *View::action(const QString &name)
