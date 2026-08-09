@@ -30,20 +30,17 @@ transport the bash vdm() helper used); the empty-strip geometry and the
 viewsData/viewAppletsData join ride recipe.py's typed boundary.
 """
 
-import contextlib
-import io
 import os
 import re
 import subprocess
 import sys
 import time
-from collections.abc import Iterator
 
 from latte_harness import recipe
 
 
 def _fakepointer(*args: str) -> None:
-    subprocess.run([os.environ["E2E_FAKEPOINTER"], *args], check=False)
+    _ = recipe.fakepointer(*args)
 
 
 def _kread(*args: str) -> str:
@@ -57,14 +54,7 @@ def _kread(*args: str) -> str:
 
 
 def _kwrite(*args: str) -> None:
-    subprocess.run(["kwriteconfig6", "--file", os.environ["E2E_LAYOUT"], *args], check=False)
-
-
-@contextlib.contextmanager
-def _muted_stderr() -> Iterator[None]:
-    """The cleanup dock stop's `>/dev/null 2>&1`: keep its diagnostics off the recipe output."""
-    with contextlib.redirect_stderr(io.StringIO()):
-        yield
+    _ = recipe.kwriteconfig("--file", os.environ["E2E_LAYOUT"], *args)
 
 
 def _vdm(verb: str, *args: str, quiet: bool = False) -> str:
@@ -166,7 +156,7 @@ def main() -> None:
     orig_scroll = _kread(*general, "--key", "scrollAction")
 
     def cleanup() -> None:
-        with _muted_stderr():
+        with recipe.muted_stderr():
             recipe.dock_stop()
         if orig_scroll:
             _kwrite(*general, "--key", "scrollAction", orig_scroll)

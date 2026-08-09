@@ -26,10 +26,7 @@ recipe API (viewsData/viewAppletsData); the dock log the rejection legs grep is
 E2E_DOCK_LOG, read directly as the bash did.
 """
 
-import os
-import sys
 import time
-from pathlib import Path
 
 from latte_harness import recipe
 
@@ -55,22 +52,6 @@ def _applet_total() -> int:
     """Applets summed across ALL views - the 'nothing changed anywhere' witness
     a rejection asserts stays byte-identical (the bash applet_total)."""
     return sum(len(_applet_ids(cid)) for cid in _all_view_ids())
-
-
-def _dock_log_lines() -> list[str]:
-    return Path(os.environ["E2E_DOCK_LOG"]).read_text(errors="replace").splitlines()
-
-
-def _new_log_has(mark: int, needle: str) -> bool:
-    """True iff a dock-log line added since ``mark`` carries ``needle`` (the bash
-    ``tail -n +$((mark+1)) | grep -q``)."""
-    return any(needle in line for line in _dock_log_lines()[mark:])
-
-
-def _dump_new_log(mark: int) -> None:
-    print("---- new dock-log lines ----", file=sys.stderr, flush=True)
-    for line in _dock_log_lines()[mark:]:
-        print(line, file=sys.stderr, flush=True)
 
 
 def main() -> None:
@@ -134,7 +115,7 @@ def main() -> None:
             recipe.fail(f"test bug: {bad_applet} is a real applet id, pick another")
 
     pre_total = _applet_total()
-    mark = len(_dock_log_lines())
+    mark = len(recipe.dock_log_lines())
     recipe.call("removeApplet", "uu", str(target), str(bad_applet))
     time.sleep(2)
     post_total = _applet_total()
@@ -142,8 +123,9 @@ def main() -> None:
         recipe.fail(
             f"REJECTION LEAK: applet total changed {pre_total} -> {post_total} on a bad applet id"
         )
-    if not _new_log_has(mark, f"removeApplet found no applet {bad_applet} on containment {target}"):
-        _dump_new_log(mark)
+    needle = f"removeApplet found no applet {bad_applet} on containment {target}"
+    if not recipe.new_dock_log_has(mark, needle):
+        recipe.dump_new_dock_log(mark)
         recipe.fail(
             f"no removeApplet refusal qWarning for bad applet id {bad_applet} in the dock log"
         )
@@ -155,7 +137,7 @@ def main() -> None:
         recipe.fail(f"test bug: {bad_cid} is a real view id, pick another")
 
     pre_total = _applet_total()
-    mark = len(_dock_log_lines())
+    mark = len(recipe.dock_log_lines())
     recipe.call("removeApplet", "uu", str(bad_cid), str(victim))
     time.sleep(2)
     post_total = _applet_total()
@@ -164,10 +146,10 @@ def main() -> None:
             f"REJECTION LEAK: applet total changed "
             f"{pre_total} -> {post_total} on a bad containment id"
         )
-    if not _new_log_has(
+    if not recipe.new_dock_log_has(
         mark, f"removeApplet requested for containment {bad_cid} which has no view"
     ):
-        _dump_new_log(mark)
+        recipe.dump_new_dock_log(mark)
         recipe.fail(
             f"no removeApplet refusal qWarning for bad containment id {bad_cid} in the dock log"
         )

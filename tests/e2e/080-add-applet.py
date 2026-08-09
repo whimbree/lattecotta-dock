@@ -21,11 +21,8 @@ quoted ids exactly as the bash did, and the rejection leg greps E2E_DOCK_LOG
 directly.
 """
 
-import os
 import re
-import sys
 import time
-from pathlib import Path
 
 from latte_harness import recipe
 
@@ -61,20 +58,6 @@ def _applet_total() -> int:
     return sum(len(_applet_ids(cid)) for cid in _all_view_ids())
 
 
-def _dock_log_lines() -> list[str]:
-    return Path(os.environ["E2E_DOCK_LOG"]).read_text(errors="replace").splitlines()
-
-
-def _new_log_has(mark: int, needle: str) -> bool:
-    return any(needle in line for line in _dock_log_lines()[mark:])
-
-
-def _dump_new_log(mark: int) -> None:
-    print("---- new dock-log lines ----", file=sys.stderr, flush=True)
-    for line in _dock_log_lines()[mark:]:
-        print(line, file=sys.stderr, flush=True)
-
-
 def main() -> None:
     # target: the view with the most applets, and a safe source plugin.
     view_ids = _all_view_ids()
@@ -102,14 +85,16 @@ def main() -> None:
     after: list[int] = before
     for cand in candidates:
         print(f"target view {target} has {before_n} applets; trying to add '{cand}'")
-        mark = len(_dock_log_lines())
+        mark = len(recipe.dock_log_lines())
         recipe.call("addApplet", "us", str(target), cand)
         for _ in range(15):
             time.sleep(1)
             after = _applet_ids(target)
             if len(after) > before_n:
                 break
-            if _new_log_has(mark, "found no installed plasmoid named") and _new_log_has(mark, cand):
+            if recipe.new_dock_log_has(
+                mark, "found no installed plasmoid named"
+            ) and recipe.new_dock_log_has(mark, cand):
                 break
         if len(after) > before_n:
             src_plugin = cand
@@ -164,7 +149,7 @@ def main() -> None:
         recipe.fail(f"test bug: {bad_cid} is a real view id, pick another")
 
     before_total = _applet_total()
-    mark = len(_dock_log_lines())
+    mark = len(recipe.dock_log_lines())
     recipe.call("addApplet", "us", str(bad_cid), src_plugin)
     time.sleep(2)
     after_total = _applet_total()
@@ -176,8 +161,9 @@ def main() -> None:
 
     #! the refusal must be LOUD, not a silent no-op: the qWarning naming the bad
     #! id must appear in the dock log lines produced by THIS call
-    if not _new_log_has(mark, f"addApplet requested for containment {bad_cid} which has no view"):
-        _dump_new_log(mark)
+    needle = f"addApplet requested for containment {bad_cid} which has no view"
+    if not recipe.new_dock_log_has(mark, needle):
+        recipe.dump_new_dock_log(mark)
         recipe.fail(
             f"no addApplet refusal qWarning for bad containment id {bad_cid} in the dock log"
         )

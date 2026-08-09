@@ -50,12 +50,7 @@ def _kill(procs: dict[str, subprocess.Popen[bytes] | None], name: str) -> None:
 
 
 def _fp(*args: object) -> bool:
-    return (
-        subprocess.run(
-            [os.environ["E2E_FAKEPOINTER"], *(str(a) for a in args)], check=False
-        ).returncode
-        == 0
-    )
+    return recipe.fakepointer(*args) == 0
 
 
 def _views() -> list[recipe.View]:

@@ -36,7 +36,6 @@ proc.SessionProcess/terminating (the setsid + trap-EXIT lifecycle as one typed
 object, no leaks).
 """
 
-import os
 import subprocess
 import time
 
@@ -66,7 +65,7 @@ TOL = 2  #! rounding only; the move math is integer
 
 def _fp(*args: object) -> None:
     """`"$E2E_FAKEPOINTER" "$@"`: drive the vehicle pointer/keyboard."""
-    subprocess.run([os.environ["E2E_FAKEPOINTER"], *(str(a) for a in args)], check=False)
+    _ = recipe.fakepointer(*args)
 
 
 def _konsole_geo() -> list[str]:

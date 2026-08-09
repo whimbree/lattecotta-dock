@@ -138,11 +138,8 @@ class OutputState:
 
 
 def _require_env(name: str) -> str:
-    """The bash ``${VAR:?}``: return the value, or refuse loudly naming the var."""
-    value = os.environ.get(name)
-    if not value:
-        raise MultiOutputError(f"multi_output: required environment variable {name} is unset")
-    return value
+    """This module's env accessor: recipe.require_env with the multi_output prefix/error."""
+    return recipe.require_env(name, prefix="multi_output", error=MultiOutputError)
 
 
 def _require_nested(helper: str) -> None:

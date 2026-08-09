@@ -51,15 +51,6 @@ from latte_harness import matrix, multi_output, recipe
 from latte_harness.proc import install_conventional_signal_exits
 
 
-def _pid_alive(pid: int) -> bool:
-    """The bash ``kill -0``: alive iff a signal could be delivered."""
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
-
-
 def _status(action: Callable[[], object]) -> int:
     """Run a multi_output action, returning 0 on success or 1 when it refuses -
     the check_rc bridge from the typed raise-on-failure helpers to the bash mo_*
@@ -78,7 +69,7 @@ def _restore_base() -> bool:
     if not pristine.is_dir():
         return True
     pid = recipe.dock_pid()
-    if pid is not None and _pid_alive(pid) and not matrix.stop_dock():
+    if pid is not None and recipe.pid_alive(pid) and not matrix.stop_dock():
         return False
     config_home = Path(os.environ["E2E_CONFIG_HOME"])
     if config_home.exists():

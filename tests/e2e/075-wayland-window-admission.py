@@ -163,14 +163,6 @@ def _konsole_identity() -> str:
     )
 
 
-def _pid_alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
-
-
 def _muted_dock_start(timeout: int) -> bool:
     with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
         return recipe.dock_start(timeout)
@@ -212,15 +204,11 @@ def _body(state: _State, view_box: list[int]) -> None:
     _, dock_y, _, dock_height = record["absoluteGeometry"]
 
     if (
-        subprocess.run(
-            [
-                os.environ["E2E_FAKEPOINTER"],
-                "move",
-                str(screen_x + screen_width - 20),
-                str(screen_y + screen_height // 2),
-            ],
-            check=False,
-        ).returncode
+        recipe.fakepointer(
+            "move",
+            str(screen_x + screen_width - 20),
+            str(screen_y + screen_height // 2),
+        )
         != 0
     ):
         recipe.fail("could not park the nested pointer away from the left dock")
@@ -318,7 +306,7 @@ def _cleanup(state: _State) -> bool:
         except OSError:
             cleanup_failed = True
         pid = recipe.dock_pid()
-        if (pid is not None and _pid_alive(pid)) or not _muted_dock_start(90):
+        if (pid is not None and recipe.pid_alive(pid)) or not _muted_dock_start(90):
             cleanup_failed = True
     if cleanup_failed:
         print(

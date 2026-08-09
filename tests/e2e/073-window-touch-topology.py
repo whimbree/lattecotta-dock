@@ -127,7 +127,7 @@ def _oracle(
 
 
 def _kwriteconfig(*args: str) -> bool:
-    return subprocess.run(["kwriteconfig6", *args], check=False).returncode == 0
+    return recipe.kwriteconfig(*args) == 0
 
 
 # ---- view identity and duplication -----------------------------------------
@@ -745,18 +745,10 @@ def _restore_config() -> bool:
     return True
 
 
-def _pid_alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
-
-
 def _running_dock_pid() -> int | None:
     """The recorded pid iff it is still alive (the bash e2e_dock_pid + kill -0)."""
     pid = recipe.dock_pid()
-    if pid is not None and _pid_alive(pid):
+    if pid is not None and recipe.pid_alive(pid):
         return pid
     return None
 

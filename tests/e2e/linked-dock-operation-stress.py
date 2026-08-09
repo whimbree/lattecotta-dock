@@ -110,7 +110,7 @@ def _model(
 
 
 def _kwriteconfig(*args: str) -> bool:
-    return subprocess.run(["kwriteconfig6", *args], check=False).returncode == 0
+    return recipe.kwriteconfig(*args) == 0
 
 
 def _kwrite_or_fail(fail_message: str, *args: str) -> None:
@@ -135,17 +135,9 @@ def _compact(value: Any) -> str:
 # ---- dock lifecycle predicates (the bash helpers) --------------------------
 
 
-def _pid_alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
-
-
 def _dock_is_running() -> bool:
     pid = recipe.dock_pid()
-    return pid is not None and _pid_alive(pid)
+    return pid is not None and recipe.pid_alive(pid)
 
 
 def _stop_dock_if_running() -> bool:
@@ -699,7 +691,7 @@ def _reverify_restored_baseline() -> bool:
 def _running_dock_pid() -> int | None:
     """The recorded pid iff it is still alive (the bash e2e_dock_pid + kill -0)."""
     pid = recipe.dock_pid()
-    if pid is not None and _pid_alive(pid):
+    if pid is not None and recipe.pid_alive(pid):
         return pid
     return None
 

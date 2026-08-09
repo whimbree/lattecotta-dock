@@ -60,7 +60,7 @@ def _quiet_dock_stop() -> None:
 
 def _fakepointer(*args: str) -> None:
     """$E2E_FAKEPOINTER <args>: inject a pointer event, fire-and-forget."""
-    subprocess.run([os.environ["E2E_FAKEPOINTER"], *args], check=False)
+    _ = recipe.fakepointer(*args)
 
 
 def _cfg_max(view: int) -> str:

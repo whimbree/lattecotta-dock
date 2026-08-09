@@ -42,15 +42,7 @@ _PLUGIN = "org.kde.latte.separator"
 def _fakepointer(*args: str) -> int:
     """Fire one fakepointer invocation, returning its exit status (the bash
     ``... || e2e_fail`` sites gate on this)."""
-    return subprocess.run([os.environ["E2E_FAKEPOINTER"], *args], check=False).returncode
-
-
-def _pid_alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
+    return recipe.fakepointer(*args)
 
 
 def _copytree_contents(src: str, dst: str) -> None:
@@ -75,7 +67,7 @@ def _diff_qr(a: str, b: str) -> bool:
 
 
 def _kwrite_file(dest: str, *args: str) -> int:
-    return subprocess.run(["kwriteconfig6", "--file", dest, *args], check=False).returncode
+    return recipe.kwriteconfig("--file", dest, *args)
 
 
 # ---- readbacks (the widened typed models, W3 - widen the readback models) -----
@@ -316,7 +308,7 @@ def _finalize_recipe(
         recipe.fail("finalization could not read the dock pid")
     if pid is None:
         recipe.fail("finalization found no recorded dock pid")
-    if _pid_alive(pid):
+    if recipe.pid_alive(pid):
         recipe.fail(f"finalization found dock pid {pid} still running")
     try:
         shutil.rmtree(config_home, ignore_errors=False)
@@ -348,7 +340,7 @@ def _cleanup(config_home: str, fixture_data: str, backup: str, state: dict[str, 
             pid = recipe.dock_pid()
         except recipe.RecipeError:
             pid = None
-        if pid is not None and _pid_alive(pid):
+        if pid is not None and recipe.pid_alive(pid):
             try:
                 stopped = recipe.dock_stop()
             except recipe.RecipeError:

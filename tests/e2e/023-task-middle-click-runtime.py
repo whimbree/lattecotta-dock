@@ -34,7 +34,6 @@ bash guards (the read-*-failed status branches over recipe.py readbacks, the
 from __future__ import annotations
 
 import contextlib
-import io
 import json
 import os
 import re
@@ -45,7 +44,6 @@ import sys
 import tempfile
 import time
 import traceback
-from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
@@ -91,22 +89,6 @@ class _State:
 _S = _State()
 
 
-@contextlib.contextmanager
-def _muted_stderr() -> Iterator[None]:
-    """Keep a dock stop's `>/dev/null 2>&1` diagnostics off the recipe output."""
-    with contextlib.redirect_stderr(io.StringIO()):
-        yield
-
-
-def _pid_alive(pid: int) -> bool:
-    """The bash ``kill -0``: alive iff a signal could be delivered."""
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
-
-
 def _find_launchers_key(layout: str, view: int, applet: int) -> str:
     """The launcher-list config KEY name in the tasks applet's General group."""
     header = f"[Containments][{view}][Applets][{applet}][Configuration][General]"
@@ -135,7 +117,7 @@ def _read_dock_pid() -> int | None:
 
 
 def _inject(label: str, *args: str) -> None:
-    rc = subprocess.run([os.environ["E2E_FAKEPOINTER"], *args], check=False).returncode
+    rc = recipe.fakepointer(*args)
     if rc != 0:
         recipe.fail(f"{label}: fakepointer '{' '.join(args)}' failed with status {rc}")
 
@@ -408,11 +390,11 @@ def _configure_action(action: int, label: str) -> None:
     pid = _read_dock_pid()
     if pid is None:
         recipe.fail(f"{label}: dock pid query failed")
-    if not _pid_alive(pid):
+    if not recipe.pid_alive(pid):
         recipe.fail(f"{label}: dock pid {pid} is not running before configuration")
     if not recipe.dock_stop():
         recipe.fail(f"{label}: could not stop dock pid {pid} for configuration")
-    if _pid_alive(pid):
+    if recipe.pid_alive(pid):
         recipe.fail(f"{label}: dock pid {pid} survived configuration stop")
 
     _write_task_key(_S.launchers_key, LAUNCHER_URL, label)
@@ -440,7 +422,7 @@ def _configure_action(action: int, label: str) -> None:
     if not recipe.dock_start(90):
         recipe.fail(f"{label}: dock did not settle")
     pid = _read_dock_pid()
-    if pid is None or not _pid_alive(pid):
+    if pid is None or not recipe.pid_alive(pid):
         recipe.fail(f"{label}: restarted dock pid is unavailable")
     config = _running_config_snapshot()
     if json.loads(config) != {
@@ -931,10 +913,10 @@ def _cleanup(original_status: int) -> int:
     if pid is None:
         print("FAIL: cleanup could not query the dock pid", file=sys.stderr, flush=True)
         cleanup_failed = True
-    elif _pid_alive(pid) and not recipe.dock_stop():
+    elif recipe.pid_alive(pid) and not recipe.dock_stop():
         print(f"FAIL: cleanup could not stop dock pid {pid}", file=sys.stderr, flush=True)
         cleanup_failed = True
-    if pid is not None and _pid_alive(pid):
+    if pid is not None and recipe.pid_alive(pid):
         print(f"FAIL: cleanup left dock pid {pid} running", file=sys.stderr, flush=True)
         cleanup_failed = True
 

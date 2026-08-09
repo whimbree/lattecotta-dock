@@ -67,7 +67,7 @@ _S = _State()
 
 
 def _fp(*args: str) -> int:
-    return subprocess.run([os.environ["E2E_FAKEPOINTER"], *args], check=False).returncode
+    return recipe.fakepointer(*args)
 
 
 def _fp_or_fail(fail_message: str, *args: str) -> None:
@@ -76,8 +76,7 @@ def _fp_or_fail(fail_message: str, *args: str) -> None:
 
 
 def _kwrite(fail_message: str, *args: str) -> None:
-    if subprocess.run(["kwriteconfig6", *args], check=False).returncode != 0:
-        recipe.fail(fail_message)
+    recipe.kwriteconfig_or_fail(fail_message, *args)
 
 
 def _dock_record() -> dict[str, Any]:
@@ -1126,7 +1125,7 @@ def _cleanup() -> bool:
         except OSError:
             cleanup_failed = True
         pid = recipe.dock_pid()
-        if (pid is not None and _pid_alive(pid)) or not _muted_dock_start(90):
+        if (pid is not None and recipe.pid_alive(pid)) or not _muted_dock_start(90):
             cleanup_failed = True
     if cleanup_failed:
         print(
@@ -1135,14 +1134,6 @@ def _cleanup() -> bool:
             flush=True,
         )
     return cleanup_failed
-
-
-def _pid_alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
 
 
 def _muted_dock_start(timeout: int) -> bool:

@@ -61,11 +61,8 @@ class MatrixGoldenError(Exception):
 
 
 def _require_env(name: str) -> str:
-    """The bash ``${VAR:?}``: return the value, or refuse loudly naming the var."""
-    value = os.environ.get(name)
-    if not value:
-        raise MatrixGoldenError(f"e2e: required environment variable {name} is unset")
-    return value
+    """This module's env accessor: recipe.require_env with the matrix_golden error."""
+    return recipe.require_env(name, prefix="e2e", error=MatrixGoldenError)
 
 
 # ---- the compare tier ------------------------------------------------------

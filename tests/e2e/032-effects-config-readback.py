@@ -36,7 +36,6 @@ import io
 import os
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 from collections.abc import Callable
@@ -56,22 +55,18 @@ def _quiet_dock_stop() -> None:
 
 def _kwrite(layout: str, group: str, key: str, value: str, view: int) -> None:
     """kwriteconfig6 into [Containments][view][<group>]: the gen()/ind() writers."""
-    subprocess.run(
-        [
-            "kwriteconfig6",
-            "--file",
-            layout,
-            "--group",
-            "Containments",
-            "--group",
-            str(view),
-            "--group",
-            group,
-            "--key",
-            key,
-            value,
-        ],
-        check=False,
+    _ = recipe.kwriteconfig(
+        "--file",
+        layout,
+        "--group",
+        "Containments",
+        "--group",
+        str(view),
+        "--group",
+        group,
+        "--key",
+        key,
+        value,
     )
 
 

@@ -34,10 +34,8 @@ The DnD drive rides the typed dnd driver; the leg-0 rejection greps E2E_DOCK_LOG
 directly, as the bash did.
 """
 
-import os
 import sys
 import time
-from pathlib import Path
 
 from latte_harness import dnd, recipe
 
@@ -47,17 +45,8 @@ def _dumpwin_count() -> int:
     return sum("DUMPWIN" in line for line in recipe.dumpwins().splitlines())
 
 
-def _dock_log_lines() -> list[str]:
-    return Path(os.environ["E2E_DOCK_LOG"]).read_text(errors="replace").splitlines()
-
-
-def _new_log_has(mark: int, needle: str) -> bool:
-    """The bash ``tail -n +$((mark+1)) | grep -q``: a new dock-log line carries needle."""
-    return any(needle in line for line in _dock_log_lines()[mark:])
-
-
 def _dump_new_log(mark: int) -> None:
-    for line in _dock_log_lines()[mark:]:
+    for line in recipe.dock_log_lines()[mark:]:
         print(line, file=sys.stderr, flush=True)
 
 
@@ -75,7 +64,7 @@ def main() -> None:
     # instead of scanning the raw viewsData text for the containmentId substring.
     if any(v.containment_id == bad_cid for v in recipe.views()):
         recipe.fail(f"test bug: {bad_cid} is a real view id, pick another")
-    logmark = len(_dock_log_lines())
+    logmark = len(recipe.dock_log_lines())
     winmark = _dumpwin_count()
     recipe.call("showWidgetExplorer", "u", str(bad_cid))
     time.sleep(1)
@@ -84,7 +73,7 @@ def main() -> None:
             f"REJECTION LEAK: a window appeared for showWidgetExplorer "
             f"on bad containment id {bad_cid}"
         )
-    if not _new_log_has(
+    if not recipe.new_dock_log_has(
         logmark, f"showWidgetExplorer requested for containment {bad_cid} which has no view"
     ):
         _dump_new_log(logmark)

@@ -13,17 +13,15 @@ taskScrollAction defaults to ScrollTasks.
 """
 
 import contextlib
-import io
 import os
 import subprocess
 import time
-from collections.abc import Iterator
 
 from latte_harness import proc, recipe
 
 
 def _fakepointer(*args: str) -> None:
-    subprocess.run([os.environ["E2E_FAKEPOINTER"], *args], check=False)
+    _ = recipe.fakepointer(*args)
 
 
 def _kread(*args: str) -> str:
@@ -37,14 +35,7 @@ def _kread(*args: str) -> str:
 
 
 def _kwrite(*args: str) -> None:
-    subprocess.run(["kwriteconfig6", "--file", os.environ["E2E_LAYOUT"], *args], check=False)
-
-
-@contextlib.contextmanager
-def _muted_stderr() -> Iterator[None]:
-    """The cleanup dock stop's `>/dev/null 2>&1`: keep its diagnostics off the recipe output."""
-    with contextlib.redirect_stderr(io.StringIO()):
-        yield
+    _ = recipe.kwriteconfig("--file", os.environ["E2E_LAYOUT"], *args)
 
 
 def _konsole_windows() -> int:
@@ -100,7 +91,7 @@ def main() -> None:
     _kwrite(*applet_general, "--key", "hoverAction", "0")
 
     def restore_config() -> None:
-        with _muted_stderr():
+        with recipe.muted_stderr():
             recipe.dock_stop()
         if orig_hover:
             _kwrite(*applet_general, "--key", "hoverAction", orig_hover)

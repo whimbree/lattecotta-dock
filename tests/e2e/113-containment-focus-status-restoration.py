@@ -60,12 +60,7 @@ _PLUGIN = "org.kde.latte.panel-focus-fixture"
 
 
 def _fp(*args: object) -> bool:
-    return (
-        subprocess.run(
-            [os.environ["E2E_FAKEPOINTER"], *(str(a) for a in args)], check=False
-        ).returncode
-        == 0
-    )
+    return recipe.fakepointer(*args) == 0
 
 
 def _views() -> list[recipe.View]:

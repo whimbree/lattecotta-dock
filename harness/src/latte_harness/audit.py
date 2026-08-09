@@ -41,7 +41,6 @@ from __future__ import annotations
 
 import difflib
 import json
-import os
 import subprocess
 import sys
 import time
@@ -67,17 +66,13 @@ class AuditError(RuntimeError):
 
 
 def _require_env(name: str) -> str:
-    """The bash ``$VAR``: return the value, or refuse loudly naming the var.
+    """This module's env accessor: recipe.require_env with the audit prefix/error.
 
-    The per-module env accessor idiom (recipe.py, matrix.py, matrix_golden.py each
-    carry one). Only the settings-window drive reaches for E2E_FAKEPOINTER; the bash
-    used it unguarded, so an unset var is surfaced here instead of a bare
+    Only the settings-window drive reaches for E2E_FAKEPOINTER; the bash used it
+    unguarded, so an unset var is surfaced here (AuditError) instead of a bare
     command-not-found three lines later.
     """
-    value = os.environ.get(name)
-    if not value:
-        raise AuditError(f"audit: required environment variable {name} is unset")
-    return value
+    return recipe.require_env(name, prefix="audit", error=AuditError)
 
 
 # ---- the verdict boundary (assert 0 PASS / 1 FAIL / 2 REFUSED) --------------

@@ -34,7 +34,6 @@ implementation, shared with the bash via lib.sh's e2e_task_center formula.
 
 from __future__ import annotations
 
-import os
 import subprocess
 import time
 
@@ -42,16 +41,8 @@ from latte_harness import recipe
 
 
 def _require_env(name: str) -> str:
-    """The bash ``${VAR:?}``: return the value, or refuse loudly naming the var."""
-    value = os.environ.get(name)
-    if not value:
-        raise recipe.RecipeError(f"task_reorder: required environment variable {name} is unset")
-    return value
-
-
-def _screen_dims() -> tuple[int, int]:
-    """E2E_SCREEN_W/H (the bash ``$(( E2E_SCREEN_W / 2 ))`` staging math)."""
-    return int(_require_env("E2E_SCREEN_W")), int(_require_env("E2E_SCREEN_H"))
+    """This module's env accessor: recipe.require_env with the task_reorder prefix."""
+    return recipe.require_env(name, prefix="task_reorder")
 
 
 def _fakepointer(*args: str) -> None:
@@ -110,7 +101,7 @@ def _approach_point(edge: str, cx: int, cy: int, screen_w: int, screen_h: int) -
 
 def _taskdrag_approach(view: int, cx: int, cy: int) -> tuple[int, int]:
     """_taskdrag_approach: the outside-the-bar staging point for this view's edge."""
-    screen_w, screen_h = _screen_dims()
+    screen_w, screen_h = recipe.screen_dims()
     return _approach_point(recipe.view(view).edge, cx, cy, screen_w, screen_h)
 
 
@@ -236,7 +227,7 @@ def taskdrag_out_of_applet(view: int, app: str) -> None:
     cx, cy = _taskdrag_center(view, app)
     ax, ay = _taskdrag_approach(view, cx, cy)
     edge = recipe.view(view).edge
-    screen_w, screen_h = _screen_dims()
+    screen_w, screen_h = recipe.screen_dims()
     ox, oy = _out_of_applet_point(edge, cx, cy, screen_w, screen_h)
     _fakepointer("move", str(ax), str(ay))
     time.sleep(0.3)

@@ -22,7 +22,6 @@ busctl calls that fail loudly on a D-Bus error, matching the bash
 ``e2e_call ... || e2e_fail``.
 """
 
-import os
 import shutil
 import subprocess
 import tempfile
@@ -58,12 +57,7 @@ Window {
 
 def _fp(*args: object) -> bool:
     """`"$E2E_FAKEPOINTER" "$@"`: drive the vehicle pointer/keyboard; True on ok."""
-    return (
-        subprocess.run(
-            [os.environ["E2E_FAKEPOINTER"], *(str(a) for a in args)], check=False
-        ).returncode
-        == 0
-    )
+    return recipe.fakepointer(*args) == 0
 
 
 def _views() -> list[recipe.View]:
