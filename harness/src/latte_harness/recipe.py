@@ -262,6 +262,45 @@ def _call_quiet(*args: str) -> str:
     return _run_busctl([*_LATTE_OBJECT, *args], forward_stderr=False).stdout
 
 
+def call_status(*args: str, quiet: bool = False) -> tuple[int, str]:
+    """A lattedock method's ``(exit status, raw busctl stdout)`` - the status ``call`` drops.
+
+    ``call`` forwards busctl's stderr and returns only stdout, swallowing the exit
+    code. A caller that must tell a real D-Bus FAILURE (dock down, unknown method,
+    bad args) from a method that legitimately returned an empty reply needs that
+    code, so this is the one missing primitive the module and recipe copies each
+    reimplemented (their comments all said exactly "recipe.call swallows the
+    status"). The status contract is the shell's: ``0`` is success, nonzero is a
+    transport/method failure, and returning the pair lets the caller branch -
+    validate the reply, or raise its own domain error - instead of guessing from
+    an empty string (the never-swallow rule). ``quiet`` suppresses busctl's own
+    stderr for the ``2>/dev/null`` sites (a best-effort cleanup, or a not-up-yet
+    poll); the default forwards it exactly as ``call`` does, so a real error still
+    reaches the terminal. Reuses the single ``_run_busctl``/``_LATTE_OBJECT``
+    transport - there is no second busctl path.
+    """
+    result = _run_busctl([*_LATTE_OBJECT, *args], forward_stderr=not quiet)
+    return result.returncode, result.stdout
+
+
+def call_or_fail(fail_message: str, *args: str) -> None:
+    """Fire a lattedock action (a void mutating method), failing LOUDLY on a D-Bus error.
+
+    The fail-loud twin of a coarse action call and the shared form of the ~13
+    per-recipe ``_latte_call``/``_call`` helpers: run the method, and if the busctl
+    call returns nonzero print ``FAIL: <fail_message>`` and exit 1 (``fail``).
+    busctl's stderr - its error diagnostic - is forwarded first by ``call_status``;
+    busctl is silent on stderr for a successful call, so nothing prints on the
+    success path and this matches the copies' forward-on-failure exactly. Returns
+    nothing: this is for void actions whose only interesting outcome is
+    success-or-fail; a caller that needs the reply text, or wants to branch on the
+    code itself, uses ``call_status``.
+    """
+    code, _ = call_status(*args)
+    if code != 0:
+        fail(fail_message)
+
+
 def _unescape_busctl_json(busctl_stdout: str) -> str:
     """The e2e_json sed: strip the `s "` wrapper and unescape `\\"` to `"`.
 

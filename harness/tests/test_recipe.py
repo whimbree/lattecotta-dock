@@ -8,8 +8,10 @@ catches the D150 escape, and the E2E_* env contract refuses loudly by name.
 
 The wait loops and the window/coverage logic are driven through their PURE
 cores (injected probe/clock, parsed inputs), so the whole contract is testable
-without a live dock or compositor - the busctl transport is the only untested
-seam and it is a thin argv wrapper.
+without a live dock or compositor. The busctl transport is a thin argv wrapper
+over the socket; its status-carrying primitives (call_status / call_or_fail,
+W4) are covered here with a faked _run_busctl - only the raw socket call itself
+is left to the nested drive.
 """
 
 import os
@@ -564,6 +566,78 @@ def test_typed_readbacks_still_validate_parsed_garbage_loudly(
     _busctl_reply(monkeypatch, 0, 's "[{\\"containmentId\\":\\"x\\"}]"\n')
     with pytest.raises(ValidationError):
         recipe.views()
+
+
+# ---- call_status / call_or_fail: the shared status-carrying transport (W4) ---
+#
+# The one primitive the module and per-recipe copies each reimplemented because
+# call() swallows the exit code. The seam under test is the status return and the
+# fail-loud branch; the argv-building reuses the SINGLE _run_busctl/_LATTE_OBJECT
+# transport (asserted below), so there is no second busctl path to test.
+
+
+def _busctl_capture(
+    monkeypatch: pytest.MonkeyPatch, returncode: int, stdout: str
+) -> dict[str, object]:
+    """Fake the transport, capturing the argv AND the forward_stderr flag."""
+    seen: dict[str, object] = {}
+
+    def fake(args: list[str], *, forward_stderr: bool) -> subprocess.CompletedProcess[str]:
+        seen["args"] = args
+        seen["forward_stderr"] = forward_stderr
+        return subprocess.CompletedProcess(args, returncode, stdout, "")
+
+    monkeypatch.setattr(recipe, "_run_busctl", fake)
+    return seen
+
+
+def test_call_status_returns_the_code_and_stdout(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The status call() drops: a caller must be able to branch on it.
+    seen = _busctl_capture(monkeypatch, 0, 'as 2 "10" "11"\n')
+    assert recipe.call_status("viewAppletsOrder", "u", "16") == (0, 'as 2 "10" "11"\n')
+    # The addressing triple is the single recipe._LATTE_OBJECT, then the argv.
+    assert seen["args"] == [
+        "org.kde.lattedock",
+        "/Latte",
+        "org.kde.LatteDock",
+        "viewAppletsOrder",
+        "u",
+        "16",
+    ]
+    # Default forwards busctl's stderr, exactly as call() does.
+    assert seen["forward_stderr"] is True
+
+
+def test_call_status_reports_a_nonzero_code_instead_of_an_empty_string(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A D-Bus failure must be DISTINGUISHABLE from a method that returned nothing;
+    # both collapse to "" through call(), the whole reason this primitive exists.
+    _busctl_capture(monkeypatch, 1, "")
+    assert recipe.call_status("setViewEditMode", "ub", "16", "true") == (1, "")
+
+
+def test_call_status_quiet_suppresses_busctl_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
+    # quiet=True is the 2>/dev/null sites (a cleanup, a not-up-yet poll).
+    seen = _busctl_capture(monkeypatch, 0, "")
+    _ = recipe.call_status("viewDropMarkerIndex", "u", "16", quiet=True)
+    assert seen["forward_stderr"] is False
+
+
+def test_call_or_fail_returns_on_a_successful_call(monkeypatch: pytest.MonkeyPatch) -> None:
+    _busctl_capture(monkeypatch, 0, "")
+    assert recipe.call_or_fail("should not fire", "setViewEditMode", "ub", "16", "true") is None
+
+
+def test_call_or_fail_fails_loudly_on_a_dbus_error(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A nonzero call is the recipes' `... || e2e_fail`: FAIL to stderr, exit 1.
+    _busctl_capture(monkeypatch, 1, "")
+    with pytest.raises(SystemExit) as excinfo:
+        recipe.call_or_fail("setViewEditMode true failed", "setViewEditMode", "ub", "16", "true")
+    assert excinfo.value.code == 1
+    assert "FAIL: setViewEditMode true failed" in capsys.readouterr().err
 
 
 # ---- kwin_js transport failures (harness audit A2) --------------------------
