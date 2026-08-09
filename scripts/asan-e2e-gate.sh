@@ -39,10 +39,19 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 
 # re-exec into the devshell unless the pinned toolchain is already in PATH (same
-# guard as the other gates: a bare system cmake/kwin poisons the build/vehicle)
-if ! command -v cmake >/dev/null 2>&1 || [[ "$(command -v cmake)" != /nix/store/* ]]; then
-    exec nix develop "$repo" -c "$0" "$@"
-fi
+# guard as the other gates: a bare system cmake/kwin poisons the build/vehicle).
+# uv joined the check because this gate's recipes run through the uv-managed
+# latte_harness after the BP (bash-to-python) migration (run-asan-dock.sh ->
+# run-e2e). A shell carrying a pinned store cmake but no uv - one entered before
+# the BP-0b flake change added uv to the devShell - would clear a cmake-only
+# guard and then fail deep in the recipe run on a missing uv. Re-exec if EITHER
+# tool is unpinned; cmake alone is a stale proxy for "the pinned devshell is
+# active" (the same two-tool check scripts/gate-all.sh already uses).
+for tool in cmake uv; do
+    if ! command -v "$tool" >/dev/null 2>&1 || [[ "$(command -v "$tool")" != /nix/store/* ]]; then
+        exec nix develop "$repo" -c "$0" "$@"
+    fi
+done
 
 asan_build="$repo/build-asan"
 seed="$asan_build/_asan-seedconfig"
