@@ -64,21 +64,6 @@ _NOTIFICATIONS = (
 )
 
 
-def _latte_call(fail_message: str, *args: str) -> None:
-    """`e2e_call ... >/dev/null || e2e_fail "<fail_message>"`: run a lattedock
-    action, forward busctl stderr, and fail loudly on a D-Bus error."""
-    result = subprocess.run(
-        ["busctl", "--user", "call", "org.kde.lattedock", "/Latte", "org.kde.LatteDock", *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        if result.stderr:
-            sys.stderr.write(result.stderr)
-        recipe.fail(fail_message)
-
-
 def _snapshot() -> dict[str, Any]:
     """dockSystemData as a raw JSON dict (the bash snapshot)."""
     return recipe.read_json("dockSystemData")
@@ -245,7 +230,7 @@ def main() -> None:
         root_id = views[0]["persistentDockId"]
         secondary_id = secondary["id"]
 
-        _latte_call(
+        recipe.call_or_fail(
             "could not create the linked member for Undo",
             "createLinkedView",
             "uii",
@@ -292,7 +277,9 @@ def main() -> None:
         if not member_persisted:
             recipe.fail("linked member did not reach persistence before root-removal refusal")
         before_refused_root_notification = _delivery_count()
-        _latte_call("linked-root removal refusal call failed", "removeView", "u", str(root_id))
+        recipe.call_or_fail(
+            "linked-root removal refusal call failed", "removeView", "u", str(root_id)
+        )
         time.sleep(0.5)
         after_refusal = _snapshot()["views"]
         root = next((v for v in after_refusal if v["persistentDockId"] == root_id), None)
@@ -325,7 +312,7 @@ def main() -> None:
         # Structural applet add/remove starts from the linked member. The direct root
         # owns the transaction, while both containments keep distinct applet ids and
         # mirror the real libplasma Undo state.
-        _latte_call(
+        recipe.call_or_fail(
             "member-originated applet addition failed",
             "addApplet",
             "us",
@@ -347,7 +334,7 @@ def main() -> None:
         member_applet_id = member_applet["id"]
 
         before_applet_notification = _delivery_count()
-        _latte_call(
+        recipe.call_or_fail(
             "member-originated applet removal failed",
             "removeApplet",
             "uu",
@@ -389,7 +376,9 @@ def main() -> None:
             recipe.fail("applet-removal Undo did not restore every linked applet instance")
 
         before_dock_notification = _delivery_count()
-        _latte_call("linked-member removal request failed", "removeView", "u", str(member_id))
+        recipe.call_or_fail(
+            "linked-member removal request failed", "removeView", "u", str(member_id)
+        )
 
         def member_removed_from_root(s: dict[str, Any]) -> bool:
             root_view = next(v for v in s["views"] if v["persistentDockId"] == root_id)
@@ -493,7 +482,7 @@ def main() -> None:
         if member_applet is None:
             recipe.fail("could not resolve the restored member applet")
         member_applet_id = member_applet["id"]
-        _latte_call(
+        recipe.call_or_fail(
             "second member-originated applet removal failed",
             "removeApplet",
             "uu",

@@ -46,29 +46,6 @@ _Views = list[dict[str, Any]]
 # ---- coarse actions and config reads ---------------------------------------
 
 
-def _call(fail_message: str, *args: str) -> None:
-    """`e2e_call ... >/dev/null || e2e_fail "<fail_message>"`: run a lattedock
-    action, forward busctl stderr, and fail loudly on a D-Bus error."""
-    result = subprocess.run(
-        [
-            "busctl",
-            "--user",
-            "call",
-            "org.kde.lattedock",
-            "/Latte",
-            "org.kde.LatteDock",
-            *args,
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        if result.stderr:
-            sys.stderr.write(result.stderr)
-        recipe.fail(fail_message)
-
-
 def _kscreen(*args: str) -> bool:
     """kscreen-doctor <setters>; True on success (the bash `kscreen-doctor ... >/dev/null`)."""
     return (
@@ -288,7 +265,7 @@ def _scenario(layout: str) -> None:
 
     # Create on the root's occupied primary/bottom edge. This is supported
     # stacking membership, not a free-edge fallback.
-    _call(
+    recipe.call_or_fail(
         "same-edge createLinkedView call failed",
         "createLinkedView",
         "uii",
@@ -322,7 +299,7 @@ def _scenario(layout: str) -> None:
 
     # Create from a member. The new relationship must still point directly to the
     # root, and its geometry must come from the selected non-adjacent output.
-    _call(
+    recipe.call_or_fail(
         "cross-output createLinkedView call failed",
         "createLinkedView",
         "uii",
@@ -381,7 +358,7 @@ def _scenario(layout: str) -> None:
 
     # Exact cross-dock sizing reproducer: changing the root bottom dock to start
     # alignment must not alter the separate vertical member's sizing inputs.
-    _call(
+    recipe.call_or_fail(
         "root alignment change failed",
         "setViewPlacement",
         "uiii",
@@ -416,7 +393,7 @@ def _scenario(layout: str) -> None:
     # Relocate the explicit member through both axes and outputs. The semantic end
     # alignment (2) normalizes to bottom on a vertical edge, while the root and the
     # other explicit member remain in place.
-    _call(
+    recipe.call_or_fail(
         "explicit member relocation to primary/right failed",
         "setViewPlacement",
         "uiii",
@@ -440,7 +417,7 @@ def _scenario(layout: str) -> None:
 
     _wait_for_snapshot(member_right_pred, "explicit member relocation leaked into another dock")
 
-    _call(
+    recipe.call_or_fail(
         "explicit member relocation back to secondary/left failed",
         "setViewPlacement",
         "uiii",
@@ -461,7 +438,7 @@ def _scenario(layout: str) -> None:
         v for v in recipe.read_json("dockSystemData")["views"] if v["persistentDockId"] == remote_id
     )["visibilityMode"]
     new_root_mode = "autoHide"
-    _call(
+    recipe.call_or_fail(
         "root visibility change failed",
         "setViewVisibilityMode",
         "us",
@@ -487,7 +464,7 @@ def _scenario(layout: str) -> None:
 
     _wait_for_views_data(root_hidden_pred, "Auto Hide root did not hide before peer editing")
 
-    _call(
+    recipe.call_or_fail(
         "could not enter the linked member edit presentation",
         "setViewEditMode",
         "ub",
@@ -534,7 +511,7 @@ def _scenario(layout: str) -> None:
         edit_ownership_pred,
         "passive linked peers acquired edit or configuration-window ownership",
     )
-    _call(
+    recipe.call_or_fail(
         "could not leave the linked member edit presentation",
         "setViewEditMode",
         "ub",
@@ -555,7 +532,7 @@ def _scenario(layout: str) -> None:
     # Temporarily expose the occupied-edge member on the primary top edge while
     # pointer-driven mutations run. Same-edge overlap remains supported and is
     # restored below; a covered view is not a valid pointer target.
-    _call(
+    recipe.call_or_fail(
         "could not expose the linked member for pointer-driven mutations",
         "setViewPlacement",
         "uiii",
@@ -628,7 +605,7 @@ def _scenario(layout: str) -> None:
     # Applet content remains linked. Add one resolvable plugin from a MEMBER and wait
     # until every member has the same plugin multiset with disjoint instance ids.
     before_plugin_count = len(_view_plugins(root_id).split())
-    _call(
+    recipe.call_or_fail(
         "could not add the installed plasmoid from a linked member",
         "addApplet",
         "us",
@@ -723,7 +700,7 @@ def _scenario(layout: str) -> None:
     ) != str(root_id):
         recipe.fail("member output disconnect removed the persistent relationship")
 
-    _call(
+    recipe.call_or_fail(
         "could not mutate linked applets while one member output was disconnected",
         "addApplet",
         "us",
@@ -799,7 +776,7 @@ def _scenario(layout: str) -> None:
 
     # Return the member to the already occupied edge. The relationship and content
     # operations above must not rewrite placement ownership.
-    _call(
+    recipe.call_or_fail(
         "could not restore the linked member to the occupied edge",
         "setViewPlacement",
         "uiii",
@@ -822,7 +799,7 @@ def _scenario(layout: str) -> None:
     # Duplicate the explicit member. The result must be independent and must not be
     # added to the root's linkedDockIds.
     before_ids = {v["persistentDockId"] for v in recipe.read_json("dockSystemData")["views"]}
-    _call(
+    recipe.call_or_fail(
         "Duplicate Dock failed from an explicit linked member",
         "duplicateView",
         "u",
@@ -853,7 +830,7 @@ def _scenario(layout: str) -> None:
     # Keep the relationship in edit mode across root runtime recreation. The
     # independent duplicate has no durable relation to infer, so a cue or keyboard
     # mode there would expose relationship leakage before or after replacement.
-    _call(
+    recipe.call_or_fail(
         "could not enter edit mode for runtime recreation",
         "setViewEditMode",
         "ub",
@@ -887,7 +864,9 @@ def _scenario(layout: str) -> None:
         for v in recipe.read_json("dockSystemData")["views"]
     }
     before_reload_content = _view_content_fingerprint(root_id)
-    _call("could not request root runtime recreation", "reloadView", "u", str(root_id))
+    recipe.call_or_fail(
+        "could not request root runtime recreation", "reloadView", "u", str(root_id)
+    )
 
     def recreated_pred(state: _State) -> bool:
         views = {v["persistentDockId"]: v for v in state["views"]}
@@ -938,7 +917,7 @@ def _scenario(layout: str) -> None:
         post_recreate_pred,
         "replacement runtimes lost edit ownership, passive peers, or focus isolation",
     )
-    _call(
+    recipe.call_or_fail(
         "could not leave edit mode after runtime recreation",
         "setViewEditMode",
         "ub",
@@ -978,7 +957,7 @@ def _scenario(layout: str) -> None:
     # secondary output, then disconnect the root output. All linked runtimes must
     # park together while every persistent containment survives. Reconnection
     # creates a fresh root generation first and rebinds both explicit members.
-    _call(
+    recipe.call_or_fail(
         "could not pin the independent duplicate to the primary output",
         "setViewPlacement",
         "uiii",
@@ -987,7 +966,7 @@ def _scenario(layout: str) -> None:
         "3",
         "0",
     )
-    _call(
+    recipe.call_or_fail(
         "could not move the remote member off the root test output",
         "setViewPlacement",
         "uiii",
@@ -996,7 +975,7 @@ def _scenario(layout: str) -> None:
         "6",
         "2",
     )
-    _call(
+    recipe.call_or_fail(
         "could not pin the linked root to the secondary output",
         "setViewPlacement",
         "uiii",
@@ -1083,7 +1062,7 @@ def _scenario(layout: str) -> None:
         recipe.fail("linked content failed to converge after the root output reconnected")
 
     # Restore the intended final placement before the process-reload assertion.
-    _call(
+    recipe.call_or_fail(
         "could not restore the root to the primary output",
         "setViewPlacement",
         "uiii",
@@ -1092,7 +1071,7 @@ def _scenario(layout: str) -> None:
         "4",
         "1",
     )
-    _call(
+    recipe.call_or_fail(
         "could not restore the remote member to the portrait output",
         "setViewPlacement",
         "uiii",
