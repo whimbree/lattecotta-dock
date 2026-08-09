@@ -16,6 +16,22 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ## Open / suspected
 
+### D289 - Preferences screen-tracker spinbox connects dataChanged twice
+- STATUS: OPEN (pre-existing; found by code-reading in the PR #223 independent
+  review, not user-reproduced).
+- FOUND: 2026-08-09, reviewing the -Werror phase-1 lambda-capture rewrites.
+- SYMPTOM: `TabPreferences::initUi()` wires `m_ui->screenTrackerSpinBox`'s
+  `QSpinBox::valueChanged` to two identical lambdas, so one spinbox change emits
+  `dataChanged()` twice and the settings-changed path runs twice per edit.
+- ROOT: a duplicated `connect(... screenTrackerSpinBox ... valueChanged ...)`
+  block in `app/settings/settingsdialog/tabpreferenceshandler.cpp` (the two
+  now-`[this]` lambdas are byte-identical). Predates this port; untouched in
+  substance by #223, which only made the implicit `this` captures explicit.
+- DISPOSITION: harmless in practice (`dataChanged` recomputes the same
+  preferences snapshot), but a real redundant connection; delete the second
+  block. Filed as a plan cleanup item, not fixed in #223 (out of that diff's
+  scope).
+
 ### D1 - Aborted task-reorder does not revert (Qt5-faithful live-move model)
 - STATUS: ACCEPTED (resolved from SUSPECTED 2026-07-18; confirmed live and ruled
   Qt5-faithful, not a Qt6 regression - the C-I8/P7 task-reorder driver
@@ -4782,6 +4798,36 @@ app/wm/waylandinterface.cpp:299 (Phase 4 WId), app/layouts/synchronizer.cpp:507
 carries its own detail or points into the plan and the reference docs.
 
 ## Fixed (kept for the record)
+
+### D287 - Dropped raw-layout import toasts success after writing nothing
+- STATUS: FIXED (PR #223, `3fac8c409`).
+- FOUND: 2026-08-09, while fixing the `-Wunused-result` warning on
+  `QTemporaryFile::open()` during -Werror phase 1.
+- SYMPTOM: dropping a raw layout onto the settings dialog when the temp file
+  could not be created (unwritable `$TMPDIR`, fd exhaustion) imported a
+  never-written file yet still showed "Layout imported successfully".
+- ROOT: `Layouts::addLayoutByText` ignored `QTemporaryFile::open()`'s result,
+  streamed into the unopened file, and returned the layout unconditionally; the
+  caller `TabLayouts::onRawLayoutDropped` always showed the Positive toast.
+- FIX: `addLayoutByText` qWarns with the errorString and returns an empty
+  `Data::Layout()` on open failure; the caller checks `isEmpty()` and shows the
+  established inline Error message instead. Verified sound: a successful import
+  always sets a non-empty `name` (via `addLayoutForFile`/`uniqueLayoutName`), so
+  the empty-layout sentinel can never false-positive on success.
+
+### D288 - Unwritable --log-file silently drops every debug message
+- STATUS: FIXED (PR #223, `24ee9ca6a`).
+- FOUND: 2026-08-09, while fixing the `-Wunused-result` warning on
+  `QFile::open()` during -Werror phase 1.
+- SYMPTOM: launching with `--log-file <path>` at an unwritable path swallowed
+  every routed message into a closed `QFile`; no output reached the file or the
+  terminal.
+- ROOT: `filterDebugMessageOutput` (a `QtMessageHandler`) ignored the
+  `QFile::open()` result and streamed into the closed file.
+- FIX: on open failure the handler reports the path, the `errorString`, and the
+  original message to stderr via `fprintf`, then returns. Stderr is used
+  deliberately: a message handler cannot recurse into the Qt logging it
+  implements. No message is dropped.
 
 ### D76 - Global applet-configure readback marked unrelated docks active
 - STATUS: FIXED IN PR #110 (`c11c77ed2`).

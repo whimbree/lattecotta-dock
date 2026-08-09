@@ -85,14 +85,35 @@ indexReservationGroupMemberships helper, so a stale-screen read NEWLY introduced
 in applyReservationMembershipFields / collectReservationGroupRecords would not
 trip it - an optional anti-pattern sweep over those two helper bodies would
 restore the wider coverage the monolith incidentally had. CHUNK-3 (idiom sweep:
-string-based connects -> function-pointer, dynamic_cast -> qobject_cast, mutable
-iterators) and CHUNK-2 (persistViewMoveSnapshot plus the ambiguous .clang-format
-item) are next in that batch. Still unfarmed after: CHUNK-4 (comment hygiene, the
+string-based connects -> function-pointer, dynamic_cast -> qobject_cast for
+QObject targets only, read-only-loop iterators to const) LANDED at 584a2ae3a
+(PR #222), compile-checked by the build. CHUNK-2 (persistViewMoveSnapshot plus
+the ambiguous .clang-format item) is the remaining item in that batch. Still
+unfarmed after: CHUNK-4 (comment hygiene, the
 synchronizer.cpp dead null-check), CHUNK-5 (lattecorona.cpp startDetached QString
 injection, needs a live drive), CHUNK-6 (m_connections array bounds); QML C2
 (button-row precedence, three sites, needs re-identification), C3 (colorsToIndex
 missing default return), C4 (indicator null-guard inconsistency), C6 (redundant
 anchor write), plus the dead Plasma-5 version gates and a Qt5 import sweep.
+
+The -Werror campaign (compile with warnings-as-errors) began after the audit
+batch, at the maintainer's request, with the chosen scope being the full
+campaign to a true blanket -Werror rather than a scoped subset. It is structured
+as incremental per-category `-Werror=` promotion (each category self-verifies:
+the build stays red until every instance is fixed), across four phases. Phase 1
+LANDED (PR #223; lead 3fac8c409, tip bb339281c): 36 warnings in five categories
+fixed and promoted - missing-field-initializers, unused-result, pedantic,
+deprecated (the C++ LANGUAGE class, e.g. the C++20 implicit `this` capture in
+`[=]` lambdas, kept DELIBERATELY distinct from `-Wdeprecated-declarations`), and
+dangling-reference. The unused-result fixes surfaced two real latent defects,
+now filed and fixed: D287 (a dropped raw-layout import toasted success after
+writing nothing) and D288 (an unwritable `--log-file` silently dropped every
+message); the review also found pre-existing D289 (a duplicate spinbox
+connection, OPEN). Remaining: phase 2 (the 151 `-Wzero-as-null-pointer-constant`
+sites - a `0` -> `nullptr` sweep plus moc/vendored suppression), phase 3 (the 129
+`-Wdeprecated-declarations` Qt/KF6 API-migration sites, several PRs, the largest
+and most behavior-sensitive), and phase 4 (flip to a blanket `-Werror` and decide
+the packaged/distro-build treatment).
 
 Owner decisions still open (carried forward): the D283 approach (fix the legacy
 clone path vs deprecate), history excision of the swept maintainer-local files,
