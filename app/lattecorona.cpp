@@ -1140,6 +1140,9 @@ void Corona::showAlternativesForApplet(Plasma::Applet *applet)
         latteView->setAlternativesIsShown(false);
     });
 
+    //! visibleChanged(bool) is declared by the alternatives dialog QML root
+    //! object, so it only exists in the runtime meta-object; a function-pointer
+    //! connect is impossible and the string form is the deliberate contract
     connect(qmlObj->rootObject(), SIGNAL(visibleChanged(bool)),
             this, SLOT(alternativesVisibilityChanged(bool)));
 

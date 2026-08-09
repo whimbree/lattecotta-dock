@@ -52,6 +52,9 @@ CanvasConfigView::CanvasConfigView(Latte::View *view, PrimaryConfigView *parent)
     //! parabolic metrics, so the input region must follow it
     connect(this, &QQuickView::statusChanged, this, [this](QQuickView::Status status) {
         if (status == QQuickView::Ready && rootObject()) {
+            //! rearrangeToggleRectChanged is declared by CanvasConfiguration.qml,
+            //! so it only exists in the runtime meta-object; a function-pointer
+            //! connect is impossible and the string form is the deliberate contract
             connect(rootObject(), SIGNAL(rearrangeToggleRectChanged()),
                     this, SLOT(updateInputRegion()), Qt::UniqueConnection);
             updateInputRegion();
