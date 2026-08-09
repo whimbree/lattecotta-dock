@@ -89,7 +89,7 @@ void TabLayouts::initUi()
     connect(m_corona->activitiesConsumer(), &KActivities::Consumer::activitiesChanged, this, &TabLayouts::updatePerLayoutButtonsState);
 
     connect(m_inMemoryButtons, &QButtonGroup::idToggled,
-            [ = ](int id, bool checked) {
+            [this](int id, bool checked) {
 
         if (checked) {
             m_layoutsController->setInMultipleMode(id == MemoryUsage::MultipleLayouts);
