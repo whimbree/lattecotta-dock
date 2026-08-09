@@ -59,10 +59,6 @@ def _fail_raw(message: str) -> None:
     raise SystemExit(1)
 
 
-def _view_applets_raw(cid: int) -> list[dict[str, object]]:
-    return json.loads(recipe.json_payload("viewAppletsData", "u", str(cid)))
-
-
 def _seed_layout(config_home: Path) -> None:
     config = configparser.RawConfigParser()
     config.optionxform = str  # type: ignore[assignment,method-assign]
@@ -132,7 +128,9 @@ def _body() -> None:
     print(f"D21 STATE ok: foreground brightness {fg_b} vs background {bg_b} (contrast {contrast})")
 
     # ---- STATE: every stock applet gets the scheme pushed into its colour group
-    applets = _view_applets_raw(cid)
+    # W3 (widen the readback models): colorizerActive / colorizerReason ride the
+    # typed recipe.Applet, so the per-applet decision is read by attribute.
+    applets = recipe.view_applets(cid)
     want = {
         "org.kde.plasma.digitalclock",
         "org.kde.plasma.showdesktop",
@@ -141,13 +139,11 @@ def _body() -> None:
     seen: dict[str, tuple[object, object]] = {}
     bad: list[tuple[str, object, object]] = []
     for applet in applets:
-        plugin = applet["plugin"]
-        assert isinstance(plugin, str)
-        seen[plugin] = (applet.get("colorizerActive"), applet.get("colorizerReason"))
-        if plugin in want and not (
-            applet.get("colorizerActive") is True and applet.get("colorizerReason") == "applied"
+        seen[applet.plugin] = (applet.colorizer_active, applet.colorizer_reason)
+        if applet.plugin in want and not (
+            applet.colorizer_active is True and applet.colorizer_reason == "applied"
         ):
-            bad.append((plugin, applet.get("colorizerActive"), applet.get("colorizerReason")))
+            bad.append((applet.plugin, applet.colorizer_active, applet.colorizer_reason))
     missing = [p for p in want if p not in seen]
     if missing:
         _fail_raw(f"D21 FAIL: fixture applets missing from the view: {missing}")
