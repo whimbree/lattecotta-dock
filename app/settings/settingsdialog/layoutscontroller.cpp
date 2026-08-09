@@ -787,7 +787,12 @@ const Latte::Data::Layout Layouts::addLayoutForFile(QString file, QString layout
 const Latte::Data::Layout Layouts::addLayoutByText(QString rawLayoutText)
 {
     QTemporaryFile tempFile;
-    tempFile.open();
+
+    if (!tempFile.open()) {
+        qWarning() << "dropped raw layout: temporary file creation failed :" << tempFile.errorString();
+        return Latte::Data::Layout();
+    }
+
     QTextStream stream(&tempFile);
     stream << rawLayoutText;
     stream.flush();
@@ -856,10 +861,9 @@ void Layouts::duplicateSelectedLayout()
 bool Layouts::importLayoutsFromV1ConfigFile(QString file)
 {
     KTar archive(file, QStringLiteral("application/x-tar"));
-    archive.open(QIODevice::ReadOnly);
 
     //! if the file isn't a tar archive
-    if (archive.isOpen()) {
+    if (archive.open(QIODevice::ReadOnly)) {
         QDir tempDir{uniqueTempDirectory()};
 
         const auto archiveRootDir = archive.directory();
