@@ -3347,6 +3347,55 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   write under `LC_ALL=C`.
 - SEVERITY: annoyance (dirty diffs on baseline regeneration).
 
+### D286 - vertical dock offset branch omits an explicit return (QML audit C1)
+- STATUS: ACCEPTED (not a bug; Qt5-faithful behavior). The vertical offset is
+  computed correctly; a behavior-neutral readability change symmetrized the
+  branch in the PR that files this entry.
+- FOUND: 2026-08-06 QML audit, finding C1 (the vertical-offset finding), by
+  code reading. containment/package/contents/ui/main.qml `property int offset`
+  returns `width * (Plasmoid.configuration.offset/100)` from the horizontal
+  branch, but the vertical `else` computed `height * (Plasmoid.configuration.offset/100)`
+  with no `return`. The hypothesis was that the block yields `undefined`,
+  coerces to 0, and so a vertical (Left/Right edge) dock with a non-Justify
+  alignment and a configured offset silently lands at 0. The property is
+  consumed at layouts/LayoutsContainer.qml via `root.offset`, and again in
+  background/MultiLayered.qml, which derives `background.offset` from
+  `root.offset`.
+- WHY IT IS NOT A BUG: QML property-binding blocks use ECMAScript
+  completion-value semantics, not function-return semantics. A block binding
+  yields the value of its last evaluated expression statement; an explicit
+  `return` is not required for a value to flow out. The vertical `else`'s
+  completion value IS `height * (Plasmoid.configuration.offset/100)`, so
+  `root.offset` already resolves to the correct pixel offset. The
+  "no return -> undefined -> 0" reasoning holds for a plain JS function but
+  not for a QML binding block.
+- QT5/FORK CROSS-CHECK: the implicit form is upstream. KDE Qt5 latte-dock
+  (Michail Vourlakos, present since 2017 and in the last pristine pre-port
+  state at 80bb590aa) has the same vertical branch with no explicit return;
+  the CaptSilver Qt6 port (latte-dock-qt6) carries it verbatim; latte-dock-ng
+  rewrote it with an explicit `return`. All four are behavior-identical. This
+  is not a CaptSilver-introduced regression; it is a longstanding upstream
+  shape that never misbehaved. (This port's D141 fix, ddad5c910, rewired the
+  centered applet row from `background.offset` to `root.offset`, which routed
+  the applet row through this property; it stays correct because the property
+  resolves correctly.)
+- EVIDENCE (controlled QML experiment on the port's own engine,
+  qtdeclarative 6.11.1): the verbatim property shape with the vertical branch
+  taken and no explicit return resolves to the correct value (height 500 times
+  40% -> 200); a control block whose taken branch has no trailing expression
+  resolves to 0, proving the probe detects a genuinely empty binding; the
+  explicit-return form resolves to the same 200. There is no RED state to
+  demonstrate because there is no defect - a nested-vehicle offset test would
+  show the offset applied on the unfixed QML, not a landing at 0.
+- FOLLOW-UP: the horizontal branch returned explicitly while the vertical
+  branch relied on the completion value; that asymmetry is exactly what
+  produced this false-positive audit finding. The readability commit in the PR
+  that files this entry symmetrizes the vertical branch with an explicit
+  `return` (matching latte-dock-ng), behavior-neutral, so a future reader does
+  not re-flag it.
+- SEVERITY: none (not a defect). Recorded so the C1 audit finding is not
+  re-investigated as a bug.
+
 ### D285 - a right-click during an edit-mode applet drag strands the applet outside the dock
 - STATUS: FIXED by the ConfigOverlay onCanceled restore in the PR that files
   this entry (the D285 drag-cancel stranding fix).
