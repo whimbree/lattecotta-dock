@@ -128,7 +128,7 @@ def run_axis_checks(view: int, label: str) -> None:
     before = _order(view, label)
     ok = False
     for try_ in (1, 2, 3):
-        rc = applet_reorder.applet_reorder_attempt(view, "commit", frm, to)
+        rc = applet_reorder.attempt(view, "commit", frm, to)
         if rc == 1:
             recipe.fail(f"{label}: driver error committing reorder")
         if rc == 0:
@@ -145,12 +145,12 @@ def run_axis_checks(view: int, label: str) -> None:
 
     # swap back so the refusal checks start from a known order (a second commit
     # of the same pair is deterministic)
-    applet_reorder.applet_reorder_attempt(view, "commit", frm, to)
+    applet_reorder.attempt(view, "commit", frm, to)
     base2 = _order(view, label)
 
     # (2) HC3 CORE: a drag that does NOT cross a neighbour is REFUSED - reported
     # as "no reorder" (rc 3), never as success, and the order cannot change
-    rc = applet_reorder.applet_reorder_attempt(view, "noop", frm, to)
+    rc = applet_reorder.attempt(view, "noop", frm, to)
     if rc != 3:
         recipe.fail(
             f"{label}: no-op reorder reported rc={rc}, expected 3 (REFUSED). A drag that never "
@@ -164,7 +164,7 @@ def run_axis_checks(view: int, label: str) -> None:
 
     # (3) HC3 ABORT: release-at-origin (motion + a neighbour crossed, released
     # back) leaves the order UNCHANGED and no applet stranded over chrome
-    rc = applet_reorder.applet_reorder_attempt(view, "origin", frm, to)
+    rc = applet_reorder.attempt(view, "origin", frm, to)
     if rc != 3:
         recipe.fail(
             f"{label}: release-at-origin abort reported rc={rc}, expected 3 (order restored)"

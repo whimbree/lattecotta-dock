@@ -345,17 +345,17 @@ def _stub_attempt(
 
 def test_attempt_reports_a_changed_order_as_committed(monkeypatch: pytest.MonkeyPatch) -> None:
     _stub_attempt(monkeypatch, before='"10" "11"', after='"11" "10"')
-    assert applet_reorder.applet_reorder_attempt(16, "commit", 0, 1) == 0
+    assert applet_reorder.attempt(16, "commit", 0, 1) == 0
 
 
 def test_attempt_reports_an_unchanged_order_as_refused(monkeypatch: pytest.MonkeyPatch) -> None:
     _stub_attempt(monkeypatch, before='"10" "11"', after='"10" "11"')
-    assert applet_reorder.applet_reorder_attempt(16, "noop", 0, 1) == 3
+    assert applet_reorder.attempt(16, "noop", 0, 1) == 3
 
 
 def test_attempt_reports_a_step_failure_as_a_driver_error(monkeypatch: pytest.MonkeyPatch) -> None:
     _stub_attempt(monkeypatch, before='"10" "11"', after='"10" "11"', enter_ok=False)
-    assert applet_reorder.applet_reorder_attempt(16, "commit", 0, 1) == 1
+    assert applet_reorder.attempt(16, "commit", 0, 1) == 1
 
 
 # ---- the matrix verb hookup ------------------------------------------------
@@ -366,14 +366,14 @@ def test_appletreorder_verb_is_registered_at_import() -> None:
 
 
 def test_verb_drive_commit_requires_a_reorder(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(applet_reorder, "applet_reorder_attempt", _returns_int(0))
+    monkeypatch.setattr(applet_reorder, "attempt", _returns_int(0))
     applet_reorder.verb_appletreorder_drive(16, "commit")  # no raise
 
 
 def test_verb_drive_commit_that_did_not_reorder_is_a_drive_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(applet_reorder, "applet_reorder_attempt", _returns_int(3))
+    monkeypatch.setattr(applet_reorder, "attempt", _returns_int(3))
     with pytest.raises(MatrixDriveError, match="did not change the order"):
         applet_reorder.verb_appletreorder_drive(16, "commit")
 
@@ -382,12 +382,12 @@ def test_verb_drive_commit_that_did_not_reorder_is_a_drive_error(
 def test_verb_drive_abort_accepts_committed_or_refused(
     monkeypatch: pytest.MonkeyPatch, rc: int
 ) -> None:
-    monkeypatch.setattr(applet_reorder, "applet_reorder_attempt", _returns_int(rc))
+    monkeypatch.setattr(applet_reorder, "attempt", _returns_int(rc))
     applet_reorder.verb_appletreorder_drive(16, "abort")  # no raise
 
 
 def test_verb_drive_abort_driver_error_is_a_drive_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(applet_reorder, "applet_reorder_attempt", _returns_int(1))
+    monkeypatch.setattr(applet_reorder, "attempt", _returns_int(1))
     with pytest.raises(MatrixDriveError, match="abort was a driver error"):
         applet_reorder.verb_appletreorder_drive(16, "abort")
 
@@ -401,7 +401,7 @@ def test_verb_drive_honours_the_from_to_env(monkeypatch: pytest.MonkeyPatch) -> 
         seen.append((frm, to))
         return 0
 
-    monkeypatch.setattr(applet_reorder, "applet_reorder_attempt", attempt)
+    monkeypatch.setattr(applet_reorder, "attempt", attempt)
     applet_reorder.verb_appletreorder_drive(16, "commit")
     assert seen == [(2, 5)]
 

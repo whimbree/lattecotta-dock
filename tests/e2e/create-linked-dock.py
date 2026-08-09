@@ -644,7 +644,7 @@ def _scenario(layout: str) -> None:
     # the relationship coordinator translates the member order to root ids and the
     # observable plugin sequence must then agree everywhere.
     before_applet_order = _view_plugin_order(same_edge_id)
-    if applet_reorder.applet_reorder_attempt(same_edge_id, "commit", 0, 1) != 0:
+    if applet_reorder.attempt(same_edge_id, "commit", 0, 1) != 0:
         recipe.fail("linked-member applet reorder did not commit")
     after_applet_order = _view_plugin_order(same_edge_id)
     if after_applet_order == before_applet_order:
