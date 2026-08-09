@@ -78,14 +78,14 @@ void Parabolic::onEvent(QEvent *e)
             //! (observed self-sustaining for 33s, walking the hover across four
             //! tasks and tearing the window previews down with it). Only a real
             //! pointer movement may drive the parabolic effect.
-            if (m_lastMouseMovePos && *m_lastMouseMovePos == me->windowPos()) {
+            if (m_lastMouseMovePos && *m_lastMouseMovePos == me->scenePosition()) {
                 break;
             }
 
-            m_lastMouseMovePos = me->windowPos();
+            m_lastMouseMovePos = me->scenePosition();
 
             if (m_currentParabolicItem) {
-                QPointF internal = m_currentParabolicItem->mapFromScene(me->windowPos());
+                QPointF internal = m_currentParabolicItem->mapFromScene(me->scenePosition());
 
                 if (m_currentParabolicItem->contains(internal)) {
                     m_parabolicItemNullifier.stop();
@@ -96,12 +96,12 @@ void Parabolic::onEvent(QEvent *e)
                                               Q_ARG(qreal, internal.x()),
                                               Q_ARG(qreal, internal.y()));
                 } else {
-                    m_lastOrphanParabolicMove = me->windowPos();
+                    m_lastOrphanParabolicMove = me->scenePosition();
                     //! clearing parabolic item
                     m_parabolicItemNullifier.start();
                 }
             } else {
-                m_lastOrphanParabolicMove = me->windowPos();
+                m_lastOrphanParabolicMove = me->scenePosition();
             }
         }
     default:
