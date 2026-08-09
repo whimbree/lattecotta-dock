@@ -163,7 +163,10 @@ along the way are fixed at origin, each with its evidence in the commit body.
 
 The whole test and gate harness is strictly typed Python: a uv-managed
 `latte_harness` package with pydantic validation at every D-Bus and config
-boundary, basedpyright in strict mode, and ruff, all enforced as a gate leg.
+boundary (the readback models pinned to the C++ serializer that feeds them by a
+two-part drift net, one fast-gate field-key check and one nested-vehicle
+round-trip against real bytes), basedpyright in strict mode, and ruff, all
+enforced as a gate leg.
 Bash remains only as thin entry-point shims, the exit-code gate spine, and
 external packaging and translation contracts, held to a shrink-only
 allowlist.
