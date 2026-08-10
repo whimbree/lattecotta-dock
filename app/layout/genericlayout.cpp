@@ -1805,8 +1805,8 @@ bool GenericLayout::initContainments()
             //! in second pass we load main dock and panel containments
             //! this way subcontainments will be always available to find when the layout is activating
             //! for example during startup that clones must be created and subcontainments should be taken into account
-            if ((pass==1 && Layouts::Storage::self()->isLatteContainment(containment)
-                 || (pass==2 && !Layouts::Storage::self()->isLatteContainment(containment)))) {
+            if ((pass==1 && Layouts::Storage::self()->isLatteContainment(containment))
+                 || (pass==2 && !Layouts::Storage::self()->isLatteContainment(containment))) {
                 continue;
             }
 
