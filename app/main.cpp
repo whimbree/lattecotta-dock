@@ -553,7 +553,10 @@ inline void filterDebugMessageOutput(QtMsgType type, const QMessageLogContext &c
         return;
     }
 
-    const char *function = context.function ? context.function : "";
+    //! only read inside the #ifndef QT_NO_DEBUG branch below; QT_NO_DEBUG is
+    //! defined in RelWithDebInfo/Release, so the variable is genuinely used
+    //! only in debug builds - mark it maybe-unused rather than dropping it.
+    [[maybe_unused]] const char *function = context.function ? context.function : "";
 
     QString typeStr;
     switch (type) {

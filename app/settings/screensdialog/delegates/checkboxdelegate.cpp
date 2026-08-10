@@ -78,9 +78,6 @@ void CheckBox::paint(QPainter *painter, const QStyleOptionViewItem &option, cons
 
     adjustedOption.displayAlignment = Qt::AlignLeft;
 
-    bool originalChecked{false};
-    bool currentChecked = index.data(Qt::UserRole).toBool();
-
     QString screendisplay = index.data(Qt::DisplayRole).toString();
     Latte::Data::Screen screen = index.data(Model::Screens::SCREENDATAROLE).value<Latte::Data::Screen>();
 

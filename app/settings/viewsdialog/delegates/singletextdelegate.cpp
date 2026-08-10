@@ -29,7 +29,6 @@ void SingleText::paint(QPainter *painter, const QStyleOptionViewItem &option, co
 
     bool isActive = index.data(Model::Views::ISACTIVEROLE).toBool();
     bool isMoveOrigin = index.data(Model::Views::ISMOVEORIGINROLE).toBool();
-    bool isChanged = isMoveOrigin;
 
     float textopacity = 1.0;
 

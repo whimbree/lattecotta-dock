@@ -41,7 +41,12 @@ void FloatingMaskHandshakeTest::acceptsOnlyCurrentSubmittedPresentation()
     state.complete();
     QVERIFY(!state.canCollapse(firstGeneration, first));
 
-    const quint64 secondGeneration = state.arm(second);
+    //! arm(second) must run for its state side effect (it advances the
+    //! generation and sets the pending exact mask); the returned generation is
+    //! not asserted on directly here, only the snapshots taken around it are.
+    //! arm() is [[nodiscard]], so the result is bound (not dropped) and the
+    //! binding marked maybe-unused rather than triggering -Werror=unused-result.
+    [[maybe_unused]] const quint64 secondGeneration = state.arm(second);
     const quint64 secondSnapshot = state.generationForNextFrame();
     const quint64 thirdGeneration = state.arm(third);
     QVERIFY(!state.canCollapse(secondSnapshot, second));

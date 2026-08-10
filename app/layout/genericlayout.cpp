@@ -105,7 +105,7 @@ void GenericLayout::unloadContainments()
 
     //!identify subcontainments and unload them first
     for (const auto containment : m_containments) {
-        if (Plasma::Applet *parentApplet = qobject_cast<Plasma::Applet *>(containment->parent())) {
+        if (qobject_cast<Plasma::Applet *>(containment->parent())) {
             subcontainments.append(containment);
         }
     }

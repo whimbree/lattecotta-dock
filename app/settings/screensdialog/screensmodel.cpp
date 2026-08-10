@@ -206,7 +206,6 @@ Latte::Data::ScreensTable Screens::checkedScreens()
 
 Qt::ItemFlags Screens::flags(const QModelIndex &index) const
 {
-    const int column = index.column();
     const int row = index.row();
 
     auto flags = QAbstractTableModel::flags(index);
@@ -272,7 +271,6 @@ bool Screens::setData(const QModelIndex &index, const QVariant &value, int role)
 QVariant Screens::data(const QModelIndex &index, int role) const
 {
     const int row = index.row();
-    int column = index.column();
 
     //! an invalid QModelIndex has row() == -1, which the old >= rowCount()
     //! check let through; the table indexer then converted it to uint and

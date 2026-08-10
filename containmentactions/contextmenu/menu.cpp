@@ -453,7 +453,6 @@ void Menu::populateMoveToLayouts()
         }
 
         for (int i = 0; i < layoutsmenulist.count(); ++i) {
-            bool isCurrent = currentNames.contains(layoutsmenulist[i].layoutName) && activeNames.contains(layoutsmenulist[i].layoutName);
             bool isViewCurrentLayout = layoutsmenulist[i].layoutName == viewLayoutName;
 
             QWidgetAction *action = new QWidgetAction(m_moveToLayoutMenu);

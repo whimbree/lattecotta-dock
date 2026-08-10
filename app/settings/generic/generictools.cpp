@@ -296,9 +296,7 @@ QRect remainedFromColorSchemeIcon(const QStyleOption &option, Qt::AlignmentFlag 
 
 void drawColorSchemeIcon(QPainter *painter, const QStyleOption &option, const QColor &textColor, const QColor &backgroundColor, Qt::AlignmentFlag alignment, int lengthMargin, int thickMargin)
 {
-    bool active = Latte::isActive(option);
     bool selected = Latte::isSelected(option);
-    bool focused = Latte::isFocused(option);
 
     int lenmargin = (lengthMargin == -1 ? ICONMARGIN + MARGIN : lengthMargin);
     int thickmargin = (thickMargin == -1 ? ICONMARGIN : thickMargin);
@@ -341,7 +339,6 @@ void drawColorSchemeIcon(QPainter *painter, const QStyleOption &option, const QC
     painter->setPen(pen);
 
     int rectsize = 0.7 * backTarget.width();
-    int gap = backTarget.width() - rectsize;
 
     painter->drawRect(backTarget.right() - rectsize, backTarget.bottom() - rectsize, rectsize, rectsize);
 
@@ -469,7 +466,6 @@ void drawChangesIndicator(QPainter *painter, const QStyleOptionViewItem &option)
 {
     //! draw changes circle indicator
     int csize{INDICATORCHANGESLENGTH};
-    int tsize{INDICATORCHANGESLENGTH + INDICATORCHANGESMARGIN*2};
 
     painter->save();
 
@@ -520,7 +516,6 @@ QRect drawScreen(QPainter *painter, const QStyleOption &option, bool drawMultipl
     int scr_maxlength = screenMaxLength(option, maxIconSize);
     int scr_maxthickness = maxIconSize >= 0 ? qMin(maxIconSize, option.rect.height() - MARGIN * 2) : option.rect.height() - MARGIN * 2;
 
-    int total_length = scr_maxlength + MARGIN * 2;
     int pen_width = 2;
 
     painter->save();
@@ -573,7 +568,6 @@ QRect drawScreen(QPainter *painter, const QStyleOption &option, bool drawMultipl
     //! draw multiple
     if (drawMultipleScreens) {
         int multiplemargin = 3;
-        int curx = screenRect.x()-multiplemargin;
         painter->drawLine(screenRect.x() - multiplemargin, screenRect.y() - multiplemargin,
                           screenRect.x() - multiplemargin, screenRect.y() - multiplemargin + screenRect.height());
         painter->drawLine(screenRect.x() - multiplemargin, screenRect.y() - multiplemargin,

@@ -238,7 +238,6 @@ void Indicator::load(QString type)
     KPluginMetaData metadata = m_corona->indicatorFactory()->metadata(type);
 
     if (metadata.isValid()) {
-        bool state{m_enabled};
         //! remove all previous indicators
         setPluginIsReady(false);
 

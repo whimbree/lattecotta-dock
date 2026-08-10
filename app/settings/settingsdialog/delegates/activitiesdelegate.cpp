@@ -340,8 +340,6 @@ QString Activities::joinedActivities(const QList<Latte::Data::Activity> &activit
 {
     QString finalText;
 
-    int i = 0;
-
     for (int i=0; i<activities.count(); ++i) {
         bool bold{false};
         bool italic = (!originalIds.contains(activities[i].id));

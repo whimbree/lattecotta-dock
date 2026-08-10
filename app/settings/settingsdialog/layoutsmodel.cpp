@@ -374,7 +374,6 @@ QVariant Layouts::headerData(int section, Qt::Orientation orientation, int role)
 Qt::ItemFlags Layouts::flags(const QModelIndex &index) const
 {
     const int column = index.column();
-    const int row = index.row();
 
     auto flags = QAbstractTableModel::flags(index);
 

@@ -660,7 +660,9 @@ void LayoutManager::save()
 
     int startChilds = collectLayoutAppletIds(m_startLayout, appletIds);
     int mainChilds  = collectLayoutAppletIds(m_mainLayout,  appletIds);
-    int endChilds   = collectLayoutAppletIds(m_endLayout,   appletIds);
+    //! the return count is unused for the end layout, but the call must run:
+    //! it accumulates the end layout's applet ids into appletIds
+    collectLayoutAppletIds(m_endLayout, appletIds);
 
     Latte::Types::Alignment alignment = static_cast<Latte::Types::Alignment>((*m_configuration)[QStringLiteral("alignment")].toInt());
 
@@ -1660,7 +1662,6 @@ void LayoutManager::moveAppletsBasedOnJustifyAlignment()
 
     for(int i=0; i<appletlist.count(); ++i) {
         bool issplitter = appletlist[i]->property("isInternalViewSplitter").toBool();
-        bool isparabolicspacer = appletlist[i]->property("isParabolicEdgeSpacer").toBool();
 
         if (!firstSplitterFound) {
             insertAtLayoutIndex(m_startLayout, appletlist[i], i);

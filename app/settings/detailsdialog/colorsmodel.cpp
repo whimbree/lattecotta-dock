@@ -92,7 +92,6 @@ int Colors::row(const QString &id)
 QVariant Colors::data(const QModelIndex &index, int role) const
 {
     const int row = index.row();
-    int column = index.column();
 
     //! an invalid QModelIndex has row() == -1, which the old >= rowCount()
     //! check let through; the table indexer then converted it to uint and
