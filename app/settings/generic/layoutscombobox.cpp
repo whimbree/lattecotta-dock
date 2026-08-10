@@ -41,7 +41,7 @@ void LayoutsComboBox::setLayoutIcon(const Latte::Data::LayoutIcon &icon)
     update();
 }
 
-void LayoutsComboBox::paintEvent(QPaintEvent *event)
+void LayoutsComboBox::paintEvent(QPaintEvent *)
 {
     QStylePainter painter(this);
     painter.setPen(palette().color(QPalette::Text));

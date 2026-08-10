@@ -70,7 +70,7 @@ void TabPreferences::initUi()
         }
     });
 
-    connect(m_ui->screenTrackerSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [this](int i) {
+    connect(m_ui->screenTrackerSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [this](int) {
         m_preferences.screensDelay = m_ui->screenTrackerSpinBox->value();
         Q_EMIT dataChanged();
     });
@@ -90,7 +90,7 @@ void TabPreferences::initUi()
         Q_EMIT dataChanged();
     });
 
-    connect(m_ui->screenTrackerSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [this](int i) {
+    connect(m_ui->screenTrackerSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [this](int) {
         m_preferences.screensDelay = m_ui->screenTrackerSpinBox->value();
         Q_EMIT dataChanged();
     });

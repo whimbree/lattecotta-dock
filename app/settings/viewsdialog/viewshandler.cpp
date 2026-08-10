@@ -225,7 +225,7 @@ Settings::Controller::Layouts *ViewsHandler::layoutsController() const
     return m_dialog->layoutsController();
 }
 
-void ViewsHandler::loadLayout(const Latte::Data::Layout &data)
+void ViewsHandler::loadLayout(const Latte::Data::Layout &)
 {
     updateWindowTitle();
 }

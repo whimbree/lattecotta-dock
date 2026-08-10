@@ -99,7 +99,7 @@ QPoint ContextMenuLayerQuickItem::popUpRelevantToParent(const QRect &parentItem,
     return resultPoint;
 }
 
-QPoint ContextMenuLayerQuickItem::popUpRelevantToGlobalPoint(const QRect &parentItem, const QRect popUpRect)
+QPoint ContextMenuLayerQuickItem::popUpRelevantToGlobalPoint(const QRect &, const QRect popUpRect)
 {
     QPoint resultPoint;
 

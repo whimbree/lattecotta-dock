@@ -1246,7 +1246,7 @@ void View::showConfigurationInterface(Plasma::Applet *applet)
     }
 }
 
-void View::showWidgetExplorer(const QPointF &point)
+void View::showWidgetExplorer(const QPointF &)
 {
     auto widgetExplorerView = m_corona->viewSettingsFactory()->widgetExplorerView(this);
 

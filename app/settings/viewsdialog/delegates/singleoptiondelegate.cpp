@@ -83,7 +83,7 @@ QWidget *SingleOption::createEditor(QWidget *parent, const QStyleOptionViewItem 
             action->setFont(font);
         }
 
-        connect(action, &QAction::triggered, this, [this, button, menu, action](bool checked) {
+        connect(action, &QAction::triggered, this, [this, button, menu, action](bool) {
             menu->setProperty(PRESSEDPROPERTY, action->data());
             button->clearFocus();
         });
@@ -105,7 +105,7 @@ QWidget *SingleOption::createEditor(QWidget *parent, const QStyleOptionViewItem 
     return button;
 }
 
-void SingleOption::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const
+void SingleOption::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &) const
 {
     editor->setGeometry(option.rect);
 }
