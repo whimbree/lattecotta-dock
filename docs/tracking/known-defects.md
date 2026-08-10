@@ -4822,8 +4822,8 @@ carries its own detail or points into the plan and the reference docs.
 ## Fixed (kept for the record)
 
 ### D291 - Wayland virtual-desktop list ignored the compositor insertion position
-- STATUS: FIXED (phase 4 of the -Werror campaign - warnings-as-errors; commit
-  hash finalized at merge).
+- STATUS: FIXED (phase 4 of the -Werror campaign - warnings-as-errors;
+  ef521cda2).
 - FOUND: 2026-08-10, tracing the `-Wunused-parameter` warning on `position` in
   `WaylandInterface::addDesktop`.
 - SYMPTOM: a virtual desktop created in the MIDDLE of the compositor's desktop
