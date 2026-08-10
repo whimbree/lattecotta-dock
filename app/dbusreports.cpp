@@ -97,7 +97,7 @@ QStringList enabledBorderNames(
 {
     using Border = KSvg::FrameSvg;
     QStringList names;
-    for (const auto [border, name] : {
+    for (const auto &[border, name] : {
              std::pair{Border::TopBorder, QStringLiteral("top")},
              std::pair{Border::RightBorder, QStringLiteral("right")},
              std::pair{Border::BottomBorder, QStringLiteral("bottom")},

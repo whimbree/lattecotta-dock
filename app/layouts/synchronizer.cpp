@@ -939,7 +939,7 @@ void Synchronizer::syncMultipleLayoutsToActivities(QStringList preloadedLayouts)
         }
     }
 
-    for (const auto lname : preloadedLayouts) {
+    for (const auto &lname : preloadedLayouts) {
         if (!layoutNamesToLoad.contains(lname)) {
             layoutNamesToUnload << lname;
         }
@@ -1001,7 +1001,7 @@ void Synchronizer::syncMultipleLayoutsToActivities(QStringList preloadedLayouts)
 
     //! hide layouts that will be removed in the end
     if (!layoutNamesToUnload.isEmpty()) {
-        for (const auto layoutname : layoutNamesToUnload) {
+        for (const auto &layoutname : layoutNamesToUnload) {
             Q_EMIT currentLayoutIsSwitching(layoutname);
         }
 
