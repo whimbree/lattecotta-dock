@@ -70,7 +70,7 @@ public Q_SLOTS:
     Q_INVOKABLE int assignedLayoutIndex(const QVariantList &countedChildren, int selfPosition, int beginIndex);
 };
 
-static QObject *visibleindextools_qobject_singletontype_provider(QQmlEngine *engine, QJSEngine *scriptEngine)
+[[maybe_unused]] static QObject *visibleindextools_qobject_singletontype_provider(QQmlEngine *engine, QJSEngine *scriptEngine)
 {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
