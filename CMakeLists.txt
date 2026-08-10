@@ -173,33 +173,39 @@ ecm_find_qmlmodule(org.kde.plasma.components 3.0)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/app/config-latte.h.cmake
                ${CMAKE_CURRENT_BINARY_DIR}/app/config-latte.h)
 
-# Phase 4 of the -Werror campaign (compile with warnings-as-errors): the
-# inherited build stripped -Wall and three unused-* categories that
-# KDECompilerSettings turns on, hiding the diagnostics the phase burns down.
-# Un-strip them and add -Wall -Wextra explicitly so the whole -Wall/-Wextra
-# surface is emitted. These stay WARNINGS in this phase (no -Werror= for them)
-# so the build completes while every burn-down fix self-verifies; the blanket
-# -Werror flip is the campaign's final PR, once the census reads zero.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
-
-#add format security check
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wformat -Werror=format-security")
-
-# Warnings-as-errors, promoted per phase of the -Werror campaign: every
-# category promoted here had all of its instances in this tree fixed, and the
-# promotion keeps that state self-verifying - a reintroduced instance fails
-# the build instead of scrolling past as a warning. -Werror=deprecated covers
-# C++ LANGUAGE deprecations (e.g. the C++20 implicit `this` capture in [=]
-# lambdas) and is deliberately distinct from -Werror=deprecated-declarations
-# (phase 3), the Qt/KF6 API lifecycle deprecations: with every
-# deprecated-declarations site in the tree migrated, BOTH deprecation
-# categories are now promoted. The hide-warnings block above accordingly no
-# longer strips "-Wdeprecated-declarations" - stripping the explicit warning
-# token while erroring on the diagnostic would be incoherent, and GCC emits
-# this diagnostic on-by-default regardless of the token.
-# -Werror=zero-as-null-pointer-constant (phase 2) rejects a
-# literal 0 where a null pointer is meant; nullptr is the typed spelling.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=missing-field-initializers -Werror=unused-result -Werror=pedantic -Werror=deprecated -Werror=deprecated-declarations -Werror=dangling-reference -Werror=zero-as-null-pointer-constant")
+# The -Werror campaign (compile with warnings-as-errors) is complete. Across
+# Phases 1-4 every -Wall/-Wextra diagnostic in this tree was burned to zero, so
+# the whole surface is now promoted with one blanket -Werror rather than the
+# per-category -Werror= list the campaign accreted while burning down
+# (-Werror=missing-field-initializers -Werror=unused-result -Werror=pedantic
+# -Werror=deprecated -Werror=deprecated-declarations -Werror=dangling-reference
+# -Werror=zero-as-null-pointer-constant). Those per-category promotions, and
+# this tree's own -Werror=format-security, are all SUBSUMED by the blanket flag
+# and have been folded into it: a blanket -Werror already makes each of those
+# categories an error, so listing them separately is redundant.
+#
+# -Wall -Wextra (and -Wformat, which gives format-security its diagnostic) stay
+# PERMANENT so warnings are always EMITTED; whether they ERROR is LATTE_WERROR's
+# sole job. LATTE_WERROR defaults ON for developers and CI - maximal strictness,
+# where a reintroduced warning fails the build. Distro packagers configure
+# -DLATTE_WERROR=OFF so a build on a newer or different toolchain that surfaces
+# a new warning does not hard-fail.
+#
+# For LATTE_WERROR to be the SINGLE, COMPLETE switch, OFF must make NONE of the
+# warnings errors - including the narrow -Werror= that KDECompilerSettings
+# (included above) injects unconditionally: -Werror=return-type/init-self/undef
+# for C++ and -Werror=implicit-function-declaration for C. OFF therefore strips
+# every -Werror token out of the flags so a distro opt-out is a genuine
+# no-warnings-as-errors build. A bare -Wno-error does NOT undo a per-category
+# -Werror= in GCC (verified on GCC 15), so the tokens are removed outright.
+option(LATTE_WERROR "Treat compiler warnings as errors (developer and CI default; distro packagers may configure -DLATTE_WERROR=OFF)" ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wformat")
+if(LATTE_WERROR)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+else()
+    string(REGEX REPLACE "-Werror(=[A-Za-z0-9_-]+)?" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    string(REGEX REPLACE "-Werror(=[A-Za-z0-9_-]+)?" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+endif()
 
 message(STATUS "COMPILER FLAGS : ${CMAKE_CXX_FLAGS}")
 
