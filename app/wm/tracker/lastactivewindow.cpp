@@ -31,8 +31,8 @@ const int MAXHISTORY = 22;
 LastActiveWindow::LastActiveWindow(TrackedGeneralInfo *trackedInfo)
     : QObject(trackedInfo),
       m_trackedInfo(trackedInfo),
-      m_windowsTracker(trackedInfo->wm()->windowsTracker()),
-      m_wm(trackedInfo->wm())
+      m_wm(trackedInfo->wm()),
+      m_windowsTracker(trackedInfo->wm()->windowsTracker())
 {
     connect(m_wm->schemesTracker(), &Schemes::colorSchemeChanged, this, [&](WindowId wid) {
         if (wid == m_currentWinId) {

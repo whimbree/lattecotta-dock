@@ -45,10 +45,10 @@ namespace Controller {
 Views::Views(Settings::Handler::ViewsHandler *parent)
     : QObject(parent),
       m_handler(parent),
-      m_model(new Model::Views(this, m_handler->corona())),
-      m_proxyModel(new QSortFilterProxyModel(this)),
       m_view(m_handler->ui()->viewsTable),
-      m_storage(KConfigGroup(KSharedConfig::openConfig(),"LatteSettingsDialog").group("ViewsDialog"))
+      m_storage(KConfigGroup(KSharedConfig::openConfig(),"LatteSettingsDialog").group("ViewsDialog")),
+      m_model(new Model::Views(this, m_handler->corona())),
+      m_proxyModel(new QSortFilterProxyModel(this))
 {
     loadConfig();
     m_proxyModel->setSourceModel(m_model);
