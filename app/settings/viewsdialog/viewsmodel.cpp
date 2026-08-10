@@ -636,7 +636,6 @@ QVariant Views::headerData(int section, Qt::Orientation orientation, int role) c
 Qt::ItemFlags Views::flags(const QModelIndex &index) const
 {
     const int column = index.column();
-    const int row = index.row();
 
     auto flags = QAbstractTableModel::flags(index);
 
@@ -844,9 +843,6 @@ QVariant Views::data(const QModelIndex &index, int role) const
             return (isNewView || (m_viewsTable[row].id != o_viewsTable[origviewid].id));
         }  else if (role == SORTINGROLE) {
             int fsta = sortingFactorForState(m_viewsTable[row]);
-            int fscr = sortingFactorForScreen(m_viewsTable[row]);
-            int fedg = sortingFactorForEdge(m_viewsTable[row]);
-            int fali = sortingFactorForAlignment(m_viewsTable[row]);
 
             int priority = (fsta * HIGHESTPRIORITY);
             return sortableText(priority, m_viewsTable[row].id);
@@ -859,9 +855,6 @@ QVariant Views::data(const QModelIndex &index, int role) const
             return (isNewView || (m_viewsTable[row].name != o_viewsTable[origviewid].name));
         } else if (role == SORTINGROLE) {
             int fsta = sortingFactorForState(m_viewsTable[row]);
-            int fscr = sortingFactorForScreen(m_viewsTable[row]);
-            int fedg = sortingFactorForEdge(m_viewsTable[row]);
-            int fali = sortingFactorForAlignment(m_viewsTable[row]);
 
             int priority = (fsta * HIGHESTPRIORITY);
             return sortableText(priority, m_viewsTable[row].name);
@@ -992,7 +985,6 @@ QVariant Views::data(const QModelIndex &index, int role) const
             int fsta = sortingFactorForState(m_viewsTable[row]);
             int fscr = sortingFactorForScreen(m_viewsTable[row]);
             int fedg = sortingFactorForEdge(m_viewsTable[row]);
-            int fali = sortingFactorForAlignment(m_viewsTable[row]);
             int fsub = sortingFactorForSubContainments(m_viewsTable[row]);
 
             int priority = (fsta * HIGHESTPRIORITY) + (fsub * HIGHPRIORITY) + (fscr * MEDIUMPRIORITY) + (fedg * NORMALPRIORITY);

@@ -1100,7 +1100,6 @@ void Layouts::storeColumnWidths(bool inMultipleMode)
 void Layouts::onNameDuplicatedFrom(const QString &provenId, const QString &trialId)
 {
     //! duplicated layout name
-    int pRow = rowForId(provenId);
     int tRow = rowForId(trialId);
 
     int originalRow = m_model->rowForId(provenId);

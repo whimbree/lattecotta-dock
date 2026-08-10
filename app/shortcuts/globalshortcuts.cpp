@@ -264,7 +264,6 @@ void GlobalShortcuts::activateLauncherMenu()
 bool GlobalShortcuts::activatePlasmaTaskManager(const Latte::View *view, int index, Qt::Key modifier, bool *delayedExecution)
 {
     bool activation{modifier == static_cast<Qt::Key>(Qt::META)};
-    bool newInstance{!activation};
 
     if (!view->visibility()->isShownFully()) {
         //! wait for view to fully shown
@@ -293,7 +292,6 @@ bool GlobalShortcuts::activatePlasmaTaskManager(const Latte::View *view, int ind
 bool GlobalShortcuts::activateLatteEntry(Latte::View *view, int index, Qt::Key modifier, bool *delayedExecution)
 {
     bool activation{modifier == static_cast<Qt::Key>(Qt::META)};
-    bool newInstance{!activation};
 
     int appletId = view->extendedInterface()->appletIdForVisualIndex(index);
     bool hasPopUp {(appletId>-1 && view->extendedInterface()->appletIsExpandable(appletId))};

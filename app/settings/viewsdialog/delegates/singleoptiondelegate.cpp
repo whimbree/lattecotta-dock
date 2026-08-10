@@ -33,7 +33,6 @@ SingleOption::SingleOption(QObject *parent)
 
 QWidget *SingleOption::createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-    const int row = index.row();
     const int column = index.column();
 
     QPushButton *button = new QPushButton(parent);
@@ -41,8 +40,6 @@ QWidget *SingleOption::createEditor(QWidget *parent, const QStyleOptionViewItem 
     QMenu *menu = new QMenu(button);
     button->setMenu(menu);
     menu->setMinimumWidth(option.rect.width());
-
-    bool isViewActive = index.data(Model::Views::ISACTIVEROLE).toBool();
 
     QString currentChoice = index.data(Qt::UserRole).toString();
 
