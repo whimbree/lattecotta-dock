@@ -455,7 +455,6 @@ Importer::LatteFileVersion Importer::fileVersion(QString file)
 
     bool version2rc = false;
     bool version2LatteDir = false;
-    bool version2layout = false;
 
     archive.directory()->copyTo(archiveTempDir.path());
 
@@ -483,10 +482,14 @@ Importer::LatteFileVersion Importer::fileVersion(QString file)
         KConfigGroup generalGroup = KConfigGroup(lConfig, "LayoutSettings");
         int version = generalGroup.readEntry("version", 1);
 
+        //! Only a version-1 applets file pairs with a version-1 lattedockrc.
+        //! Version-2 config archives are not detected here: they carry a
+        //! version-2 lattedockrc plus a latte/ directory of individual layout
+        //! files, matched below by (version2rc && version2LatteDir). A version-2
+        //! applets file inside a version-1 rc is not a format Latte exports, so
+        //! it falls through to UnknownFileType.
         if (version == 1) {
             version1applets = true;
-        } else if (version == 2) {
-            version2layout = true;
         }
     }
 
