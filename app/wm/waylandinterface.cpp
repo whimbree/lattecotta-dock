@@ -366,14 +366,16 @@ void WaylandInterface::setActiveEdge(QWindow *view, bool active)
     }
 }
 
-void WaylandInterface::setFrameExtents(QWindow *view, const QMargins &extents)
+void WaylandInterface::setFrameExtents(QWindow * /*view*/, const QMargins & /*extents*/)
 {
-    //! do nothing until there is a wayland way to provide this
+    //! No-op on Wayland: there is no protocol here to report server-side frame
+    //! extents, so this interface method is deliberately empty.
 }
 
-void WaylandInterface::setInputMask(QWindow *window, const QRect &rect)
+void WaylandInterface::setInputMask(QWindow * /*window*/, const QRect & /*rect*/)
 {
-    //! do nothins, QWindow::mask() is sufficient enough in order to define Window input mask
+    //! No-op on Wayland: QWindow::mask() already defines the window input mask,
+    //! so this interface method is deliberately empty.
 }
 
 WindowInfoWrap WaylandInterface::requestInfoActive()
@@ -566,8 +568,11 @@ void WaylandInterface::requestClose(WindowId wid)
 }
 
 
-void WaylandInterface::requestMoveWindow(WindowId wid, QPoint from)
+void WaylandInterface::requestMoveWindow(WindowId wid, QPoint /*from*/)
 {
+    //! from (the drag origin) is unused on Wayland: PlasmaWindow::requestMove()
+    //! hands the move to the compositor, which uses the active pointer grab
+    //! rather than an explicit start point.
     WindowInfoWrap wInfo = requestInfo(wid);
 
     if (windowCanBeDragged(wid) && inCurrentDesktopActivity(wInfo)) {
