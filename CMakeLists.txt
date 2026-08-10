@@ -175,7 +175,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/app/config-latte.h.cmake
 
 #hide warnings
 string(REPLACE "-Wall" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-string(REPLACE "-Wdeprecated-declarations" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 string(REPLACE "-Wreorder" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 string(REPLACE "-Wunused-variable" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 string(REPLACE "-Wunused-parameter" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
@@ -188,11 +187,16 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wformat -Werror=format-security")
 # promotion keeps that state self-verifying - a reintroduced instance fails
 # the build instead of scrolling past as a warning. -Werror=deprecated covers
 # C++ LANGUAGE deprecations (e.g. the C++20 implicit `this` capture in [=]
-# lambdas) and is deliberately distinct from -Wdeprecated-declarations (the
-# Qt/KF6 API lifecycle warnings), which stays warning-only until that
-# migration lands. -Werror=zero-as-null-pointer-constant (phase 2) rejects a
+# lambdas) and is deliberately distinct from -Werror=deprecated-declarations
+# (phase 3), the Qt/KF6 API lifecycle deprecations: with every
+# deprecated-declarations site in the tree migrated, BOTH deprecation
+# categories are now promoted. The hide-warnings block above accordingly no
+# longer strips "-Wdeprecated-declarations" - stripping the explicit warning
+# token while erroring on the diagnostic would be incoherent, and GCC emits
+# this diagnostic on-by-default regardless of the token.
+# -Werror=zero-as-null-pointer-constant (phase 2) rejects a
 # literal 0 where a null pointer is meant; nullptr is the typed spelling.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=missing-field-initializers -Werror=unused-result -Werror=pedantic -Werror=deprecated -Werror=dangling-reference -Werror=zero-as-null-pointer-constant")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=missing-field-initializers -Werror=unused-result -Werror=pedantic -Werror=deprecated -Werror=deprecated-declarations -Werror=dangling-reference -Werror=zero-as-null-pointer-constant")
 
 message(STATUS "COMPILER FLAGS : ${CMAKE_CXX_FLAGS}")
 
