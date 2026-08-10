@@ -501,7 +501,7 @@ QSize Dialog::pendingContentSize() const
     return nextSize;
 }
 
-void Dialog::updateSlideEffect(const QRect &globalGeometry)
+void Dialog::updateSlideEffect([[maybe_unused]] const QRect &globalGeometry)
 {
     //! Applet popups slide in from the dock's screen edge, exactly like
     //! plasmashell's popups (PopupPlasmaWindow::updateSlideEffect - the

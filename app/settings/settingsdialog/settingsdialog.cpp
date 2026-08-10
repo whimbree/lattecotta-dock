@@ -294,11 +294,11 @@ void SettingsDialog::importFullConfiguration()
 
             connect(msg, &QFileDialog::finished, msg, &QFileDialog::deleteLater);
 
-            connect(importBtn, &QPushButton::clicked, this, [&, file](bool check) {
+            connect(importBtn, &QPushButton::clicked, this, [&, file](bool) {
                 m_corona->importFullConfiguration(file);
             });
 
-            connect(takeBackupBtn, &QPushButton::clicked, this, [&](bool check) {
+            connect(takeBackupBtn, &QPushButton::clicked, this, [&](bool) {
                 exportFullConfiguration();
             });
 

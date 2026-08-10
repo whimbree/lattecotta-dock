@@ -25,7 +25,7 @@ int TasksModel::count() const
     return m_tasks.count();
 }
 
-int TasksModel::rowCount(const QModelIndex &parent) const
+int TasksModel::rowCount(const QModelIndex &) const
 {
     return m_tasks.count();
 }

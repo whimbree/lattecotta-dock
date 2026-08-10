@@ -76,6 +76,14 @@ Menu::~Menu()
 
 void Menu::restore(const KConfigGroup &config)
 {
+    //! config is unread here, but the parameter name is retained on purpose:
+    //! the settings-inventory guard (settingsinventorytest) pins this
+    //! function's signature token digest, so dropping the name would move
+    //! every tracked construction site below onto a new signature and fail
+    //! the guard. Q_UNUSED silences -Wunused-parameter without touching the
+    //! signature.
+    Q_UNUSED(config)
+
     if (!m_actions.isEmpty()) {
         return;
     }

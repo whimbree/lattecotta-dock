@@ -594,7 +594,7 @@ bool LayoutManager::isMasqueradedIndex(const int &x, const int &y)
     return (x==y && x<=MASQUERADEDINDEXTOPOINTBASE && y<=MASQUERADEDINDEXTOPOINTBASE);
 }
 
-int LayoutManager::masquearadedIndex(const int &x, const int &y)
+int LayoutManager::masquearadedIndex(const int &x, const int &)
 {
     return qAbs(x - MASQUERADEDINDEXTOPOINTBASE);
 }
@@ -1127,7 +1127,7 @@ void LayoutManager::requestAppletsDisabledColoring(const QList<int> &applets)
     setUserBlocksColorizingApplets(applets);
 }
 
-int LayoutManager::distanceFromTail(QQuickItem *layout, QPointF pos) const
+int LayoutManager::distanceFromTail(QQuickItem *, QPointF pos) const
 {
     return (int)qSqrt(qPow(pos.x() - 0, 2) + qPow(pos.y() - 0, 2));
 }

@@ -33,7 +33,7 @@ ColorCmbBoxItem::~ColorCmbBoxItem()
     m_pattern->deleteLater();
 }
 
-QSize ColorCmbBoxItem::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
+QSize ColorCmbBoxItem::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &) const
 {
     return QSize(option.rect.width(), 60);
 }

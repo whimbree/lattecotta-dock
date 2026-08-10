@@ -287,7 +287,7 @@ void Activities::setModelData(QWidget *editor, QAbstractItemModel *model, const 
     model->setData(index, assignedActivities, Qt::UserRole);
 }
 
-void Activities::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const
+void Activities::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &) const
 {
     editor->setGeometry(option.rect);
 }

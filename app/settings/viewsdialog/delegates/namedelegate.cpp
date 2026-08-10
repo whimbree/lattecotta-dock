@@ -25,7 +25,7 @@ NameDelegate::NameDelegate(QObject *parent)
 {
 }
 
-void NameDelegate::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const
+void NameDelegate::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &) const
 {
     editor->setGeometry(Latte::remainedFromScreenDrawing(option, false));
 }

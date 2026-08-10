@@ -57,7 +57,7 @@ void SchemesComboBox::setTextColor(const QColor &color)
 }
 
 
-void SchemesComboBox::paintEvent(QPaintEvent *event)
+void SchemesComboBox::paintEvent(QPaintEvent *)
 {
     QStylePainter painter(this);
     painter.setPen(palette().color(QPalette::Text));

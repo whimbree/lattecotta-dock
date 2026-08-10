@@ -498,7 +498,7 @@ int screenMaxLength(const QStyleOption &option, const int &maxIconSize)
     return scr_maxlength;
 }
 
-QRect remainedFromScreenDrawing(const QStyleOption &option, bool drawMultipleScreens, const int &maxIconSize)
+QRect remainedFromScreenDrawing(const QStyleOption &option, [[maybe_unused]] bool drawMultipleScreens, const int &maxIconSize)
 {
     int total_length = screenMaxLength(option, maxIconSize) + MARGIN * 2 + 1;
 

@@ -839,7 +839,7 @@ void TabLayouts::onDragEnterEvent(QDragEnterEvent *event)
     m_ui->layoutsView->dragEntered(event);
 }
 
-void TabLayouts::onDragLeaveEvent(QDragLeaveEvent *event)
+void TabLayouts::onDragLeaveEvent(QDragLeaveEvent *)
 {
     m_ui->layoutsView->dragLeft();
 }
