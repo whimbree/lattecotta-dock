@@ -124,29 +124,52 @@ tree-wide as a warning via ECM's KDECompilerSettings, so each phase's real chang
 is the `-Werror=` promotion, not the flag's introduction.
 
 Phase 3 (the 129 `-Wdeprecated-declarations` Qt/KF6 API-migration sites) is
-UNDERWAY, landing as grouped PRs. A read-only scout catalogued all 129 into 19
-distinct APIs across 21 files (zero in vendored code, every one migratable, no
-forced pragma). The mechanical bulk has LANDED: PR #225 (4789448eb) migrated the
-72 `QQmlPropertyMap(QObject*)` test sites to the `create()` factory (unique_ptr +
-reference binding), and PR #226 (63fcc7fbb) migrated the 49 app-code Qt renames
-in four themed commits (event accessors windowPos/posF/etc; QCheckBox
+COMPLETE. A read-only scout catalogued all 129 into 19 distinct APIs across 21
+files (zero in vendored code, every one migratable, no forced pragma). Landed as
+six PRs: #225 (4789448eb) the 72 `QQmlPropertyMap(QObject*)` test sites to
+`create()` (unique_ptr + reference binding); #226 (63fcc7fbb) the 49 app-code Qt
+renames in four themed commits (event accessors windowPos/posF/etc; QCheckBox
 checkStateChanged; QString::size; QVariant::typeId; key-sequence `+`->`|`;
-QKeyCombination::keyboardModifiers; and the inert high-dpi AA_* attribute removal
-at startup). That leaves exactly 8 BEHAVIOR-SENSITIVE sites, whose approach the
-maintainer decided (2026-08-09): Q1 QHoverEvent in `View::releaseGrab()` -> REMOVE
-the Qt5 mouse-grab-release workaround entirely (following latte-dock-ng
-26242af47), not port the deprecated ctor; Q2 `KLocalizedContext` (infoview,
-subconfigview) -> `KLocalizedQmlContext` via the `KLocalization::setupLocalizedContext`
-helper (adds a `KF6::I18nQml` link), preserving the `latte-dock` translation
-domain; Q3 `KIconLoader`/`KIconEffect` (iconitem.cpp, task-icon disabled/active
-effects + overlay badges) -> MIGRATE to the KF6 static API (`toDisabled`/`toActive`/
-`KIconUtils::addOverlays`, adds a `KF6::GuiAddons` link), accepting the
-platform-forced loss of per-group kdeglobals icon-effect config (matching upstream
-Plasma IconItem), with before/after nested-vehicle renders produced for the
-maintainer to review before merge. P6 (Q1) and P7 (Q2) are in flight; P8 (Q3, the
-icon renders) follows. The FINAL phase-3 PR promotes `-Werror=deprecated-declarations`
-only after all 8 sites migrate and the census hits zero. Then phase 4 (flip to a
-blanket `-Werror` and decide the packaged/distro-build treatment).
+QKeyCombination::keyboardModifiers; inert high-dpi AA_* attribute removal); then
+the 8 behavior-sensitive sites, and #230 (9747d7426) the flag flip.
+
+The three behavior-sensitive decisions and how they resolved:
+- Q1 QHoverEvent in `View::releaseGrab()` -> #228 (f007c6ca6) REMOVES the Qt5
+  mouse-grab-release workaround (synthetic Leave + setMouseGrabEnabled toggle)
+  outright. PREMISE CORRECTION: the initial claim that ng 26242af47 removed the
+  whole hack was WRONG - ng removed only the toggle and KEPT a synthetic Leave via
+  the non-deprecated 4-arg ctor. This change goes FURTHER (removes the Leave); the
+  maintainer chose full removal after the correction. OWED LIVE CHECK: drag a
+  window off the dock, confirm the applet under the pointer un-hovers; if it stays
+  zoomed, fall back to ng's keep-the-Leave 4-arg ctor (trivial, warning stays gone).
+- Q2 `KLocalizedContext` (infoview, subconfigview) -> #227 (34fd6f377)
+  `KLocalizedQmlContext`. The agent CORRECTLY diverged from the defaulted
+  `setupLocalizedContext` helper: that helper binds a domain only under
+  `#ifdef TRANSLATION_DOMAIN`, undefined in `app/`, so it would have left the
+  catalog empty. Explicit `setTranslationDomain("latte-dock")` preserves the
+  domain 1:1. Adds a `KF6::I18nQml` link (exported by the already-found KF6I18n
+  package, no new find_package).
+- Q3 `KIconLoader`/`KIconEffect` (iconitem.cpp, task-icon disabled/active effects +
+  overlay badges) -> #229 (95d15e510) MIGRATE to the KF6 static API
+  (`toDisabled`/`toActive`/`KIconUtils::addOverlays`, adds `KF6::GuiAddons`),
+  accepting the platform-forced loss of per-group kdeglobals icon-effect config
+  (matching upstream Plasma IconItem, documented with a comment). Nested-vehicle
+  before/after renders: disabled/active/normal PIXEL-IDENTICAL (md5-matched); only
+  the overlay badge shifts a few px (2.64%, inside the badge box) from addOverlays'
+  margin math. OWED LIVE CHECK: eyeball a real dock icon with an overlay badge;
+  the shift is a one-line margin tweak if it looks off.
+
+After the flip the full build emits ZERO compiler warnings of ANY category, so
+phase 4 (the blanket `-Werror`) has no residual categories to burn down first.
+The tree now errors on eight categories: format-security, return-type, init-self,
+undef (pre-existing) plus missing-field-initializers, unused-result, pedantic,
+deprecated, dangling-reference, zero-as-null-pointer-constant, deprecated-declarations
+(the campaign). Phase 4 remaining: decide the blanket-`-Werror` scope (bare
+`-Werror` on the currently-enabled set, which the strips of -Wall/-Wreorder/
+-Wunused-* narrow, vs re-enabling those stripped warnings for maximal strictness)
+and the packaged/distro-build treatment (an -O3 or different-toolchain build can
+surface warnings the dev -O2 build does not, so blanket -Werror likely wants a
+CMake option defaulting ON so distros can opt out).
 
 Owner decisions still open (carried forward): the D283 approach (fix the legacy
 clone path vs deprecate), history excision of the swept maintainer-local files,
