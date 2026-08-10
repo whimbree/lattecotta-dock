@@ -42,11 +42,11 @@ WindowInfoWrap::WindowInfoWrap(const WindowInfoWrap &o)
     , m_isResizable(o.m_isResizable)
     , m_isShadeable(o.m_isShadeable)
     , m_isVirtualDesktopsChangeable(o.m_isVirtualDesktopsChangeable)
-    , m_desktops(o.m_desktops)
-    , m_activities(o.m_activities)
     , m_appName(o.m_appName)
     , m_display(o.m_display)
     , m_icon(o.m_icon)
+    , m_desktops(o.m_desktops)
+    , m_activities(o.m_activities)
 {
 }
 
@@ -77,11 +77,11 @@ WindowInfoWrap::WindowInfoWrap(WindowInfoWrap &&o)
     , m_isResizable(o.m_isResizable)
     , m_isShadeable(o.m_isShadeable)
     , m_isVirtualDesktopsChangeable(o.m_isVirtualDesktopsChangeable)
-    , m_desktops(o.m_desktops)
-    , m_activities(o.m_activities)
     , m_appName(o.m_appName)
     , m_display(o.m_display)
     , m_icon(o.m_icon)
+    , m_desktops(o.m_desktops)
+    , m_activities(o.m_activities)
 {
 }
 

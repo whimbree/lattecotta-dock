@@ -29,14 +29,14 @@ Preferences::Preferences(Preferences &&o)
       layoutsInformationWindow(o.layoutsInformationWindow),
       autostart(o.autostart),
       borderlessMaximized(o.borderlessMaximized),
-      contextMenuAlwaysActions(o.contextMenuAlwaysActions),
       isAvailableGeometryBroadcastedToPlasma(o.isAvailableGeometryBroadcastedToPlasma),
       metaPressForAppLauncher(o.metaPressForAppLauncher),
       metaHoldForBadges(o.metaHoldForBadges),
-      mouseSensitivity(o.mouseSensitivity),
       parabolicSpread(o.parabolicSpread),
+      screensDelay(o.screensDelay),
       thicknessMarginInfluence(o.thicknessMarginInfluence),
-      screensDelay(o.screensDelay)
+      contextMenuAlwaysActions(o.contextMenuAlwaysActions),
+      mouseSensitivity(o.mouseSensitivity)
 {
 }
 
@@ -45,14 +45,14 @@ Preferences::Preferences(const Preferences &o)
       layoutsInformationWindow(o.layoutsInformationWindow),
       autostart(o.autostart),
       borderlessMaximized(o.borderlessMaximized),
-      contextMenuAlwaysActions(o.contextMenuAlwaysActions),
       isAvailableGeometryBroadcastedToPlasma(o.isAvailableGeometryBroadcastedToPlasma),
       metaPressForAppLauncher(o.metaPressForAppLauncher),
       metaHoldForBadges(o.metaHoldForBadges),
-      mouseSensitivity(o.mouseSensitivity),
       parabolicSpread(o.parabolicSpread),
+      screensDelay(o.screensDelay),
       thicknessMarginInfluence(o.thicknessMarginInfluence),
-      screensDelay(o.screensDelay)
+      contextMenuAlwaysActions(o.contextMenuAlwaysActions),
+      mouseSensitivity(o.mouseSensitivity)
 {
 }
 

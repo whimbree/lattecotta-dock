@@ -38,8 +38,8 @@ namespace Latte {
 
 UniversalSettings::UniversalSettings(KSharedConfig::Ptr config, QObject *parent)
     : QObject(parent),
-      m_config(config),
-      m_universalGroup(KConfigGroup(config, QStringLiteral("UniversalSettings")))
+      m_universalGroup(KConfigGroup(config, QStringLiteral("UniversalSettings"))),
+      m_config(config)
 {
     m_corona = qobject_cast<Latte::Corona *>(parent);
 

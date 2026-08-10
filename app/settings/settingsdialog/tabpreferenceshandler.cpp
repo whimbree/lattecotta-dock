@@ -24,8 +24,8 @@ namespace Handler {
 TabPreferences::TabPreferences(Latte::Settings::Dialog::SettingsDialog *parent)
     : Generic(parent),
       m_parentDialog(parent),
-      m_corona(m_parentDialog->corona()),
-      m_ui(m_parentDialog->ui())
+      m_ui(m_parentDialog->ui()),
+      m_corona(m_parentDialog->corona())
 {
     initSettings();
     initUi();

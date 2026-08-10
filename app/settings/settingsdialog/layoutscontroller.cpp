@@ -49,12 +49,12 @@ namespace Controller {
 Layouts::Layouts(Settings::Handler::TabLayouts *parent)
     : QObject(parent),
       m_handler(parent),
-      m_model(new Model::Layouts(this, m_handler->corona())),
-      m_proxyModel(new QSortFilterProxyModel(this)),
       m_view(m_handler->ui()->layoutsView),
       m_headerView(new Settings::Layouts::HeaderView(Qt::Horizontal, m_handler->dialog())),
-      m_storage(KConfigGroup(KSharedConfig::openConfig(),"LatteSettingsDialog").group("TabLayouts"))
-{   
+      m_storage(KConfigGroup(KSharedConfig::openConfig(),"LatteSettingsDialog").group("TabLayouts")),
+      m_model(new Model::Layouts(this, m_handler->corona())),
+      m_proxyModel(new QSortFilterProxyModel(this))
+{
     m_templatesKeeper = new Settings::Part::TemplatesKeeper(this, m_handler->corona());
 
     loadConfig();

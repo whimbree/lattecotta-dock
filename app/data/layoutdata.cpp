@@ -23,6 +23,7 @@ Layout::Layout(Layout &&o)
       background(o.background),
       textColor(o.textColor),
       lastUsedActivity(o.lastUsedActivity),
+      schemeFile(o.schemeFile),
       isActive(o.isActive),
       isConsideredActive(o.isConsideredActive),
       isLocked(o.isLocked),
@@ -30,11 +31,10 @@ Layout::Layout(Layout &&o)
       isTemplate(o.isTemplate),
       hasDisabledBorders(o.hasDisabledBorders),
       popUpMargin(o.popUpMargin),
-      schemeFile(o.schemeFile),
       activities(o.activities),
-      backgroundStyle(o.backgroundStyle),
       errors(o.errors),
       warnings(o.warnings),
+      backgroundStyle(o.backgroundStyle),
       views(o.views)
 {
 }
@@ -46,6 +46,7 @@ Layout::Layout(const Layout &o)
       background(o.background),
       textColor(o.textColor),
       lastUsedActivity(o.lastUsedActivity),
+      schemeFile(o.schemeFile),
       isActive(o.isActive),
       isConsideredActive(o.isConsideredActive),
       isLocked(o.isLocked),
@@ -53,11 +54,10 @@ Layout::Layout(const Layout &o)
       isTemplate(o.isTemplate),
       hasDisabledBorders(o.hasDisabledBorders),
       popUpMargin(o.popUpMargin),
-      schemeFile(o.schemeFile),
       activities(o.activities),
-      backgroundStyle(o.backgroundStyle),
       errors(o.errors),
       warnings(o.warnings),
+      backgroundStyle(o.backgroundStyle),
       views(o.views)
 {
 }

@@ -15,16 +15,16 @@ Activity::Activity()
 
 Activity::Activity(Activity &&o)
     : Generic(o),
-      icon(o.icon),
       isCurrent(o.isCurrent),
+      icon(o.icon),
       state(o.state)
 {
 }
 
 Activity::Activity(const Activity &o)
     : Generic(o),
-      icon(o.icon),
       isCurrent(o.isCurrent),
+      icon(o.icon),
       state(o.state)
 {
 }

@@ -19,48 +19,48 @@ View::View()
 View::View(View &&o)
     : Generic(o),
       isActive(o.isActive),
-      isMoveOrigin(o.isMoveOrigin),
-      isMoveDestination(o.isMoveDestination),
       onPrimary(o.onPrimary),
       isClonedFrom(o.isClonedFrom),
       screen(o.screen),
       screenEdgeMargin(o.screenEdgeMargin),
-      screensGroup(o.screensGroup),
-      linkPlacement(o.linkPlacement),
       maxLength(o.maxLength),
       edge(o.edge),
       alignment(o.alignment),
+      screensGroup(o.screensGroup),
+      linkPlacement(o.linkPlacement),
+      subcontainments(o.subcontainments),
+      errors(o.errors),
+      warnings(o.warnings),
+      isMoveOrigin(o.isMoveOrigin),
+      isMoveDestination(o.isMoveDestination),
       m_state(o.m_state),
       m_originFile(o.m_originFile),
       m_originLayout(o.m_originLayout),
-      m_originView(o.m_originView),
-      errors(o.errors),
-      warnings(o.warnings),
-      subcontainments(o.subcontainments)
+      m_originView(o.m_originView)
 {
 }
 
 View::View(const View &o)
     : Generic(o),
       isActive(o.isActive),
-      isMoveOrigin(o.isMoveOrigin),
-      isMoveDestination(o.isMoveDestination),
       onPrimary(o.onPrimary),
       isClonedFrom(o.isClonedFrom),
       screen(o.screen),
       screenEdgeMargin(o.screenEdgeMargin),
-      screensGroup(o.screensGroup),
-      linkPlacement(o.linkPlacement),
       maxLength(o.maxLength),
       edge(o.edge),
       alignment(o.alignment),
+      screensGroup(o.screensGroup),
+      linkPlacement(o.linkPlacement),
+      subcontainments(o.subcontainments),
+      errors(o.errors),
+      warnings(o.warnings),
+      isMoveOrigin(o.isMoveOrigin),
+      isMoveDestination(o.isMoveDestination),
       m_state(o.m_state),
       m_originFile(o.m_originFile),
       m_originLayout(o.m_originLayout),
-      m_originView(o.m_originView),
-      errors(o.errors),
-      warnings(o.warnings),
-      subcontainments(o.subcontainments)
+      m_originView(o.m_originView)
 {
 }
 

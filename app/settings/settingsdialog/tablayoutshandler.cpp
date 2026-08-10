@@ -48,8 +48,8 @@ namespace Handler {
 TabLayouts::TabLayouts(Settings::Dialog::SettingsDialog *parent)
     : Generic(parent),
       m_parentDialog(parent),
-      m_corona(m_parentDialog->corona()),
       m_ui(m_parentDialog->ui()),
+      m_corona(m_parentDialog->corona()),
       m_storage(KConfigGroup(KSharedConfig::openConfig(),"LatteSettingsDialog").group("TabLayouts"))
 {
     //! load first the layouts view column widths

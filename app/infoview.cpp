@@ -34,9 +34,9 @@ namespace Latte {
 
 InfoView::InfoView(Latte::Corona *corona, QString message, QScreen *screen, QWindow *parent)
     : QQuickView(parent),
-      m_corona(corona),
       m_message(message),
-      m_screen(screen)
+      m_screen(screen),
+      m_corona(corona)
 {
     m_id = QString::number(QRandomGenerator::global()->bounded(1000));
 
