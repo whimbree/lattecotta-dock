@@ -99,7 +99,13 @@ void WaylandInterface::addDesktop(const QString &id, quint32 position)
         return;
     }
 
-    m_desktops.append(id);
+    //! position is the new desktop's index in the compositor's ordered row of
+    //! desktops. m_desktops must mirror that order because switchToNextVirtual
+    //! Desktop()/switchToPreviousVirtualDesktop() navigate by indexOf() and [];
+    //! appending misplaced a desktop inserted in the middle of the row. Insert
+    //! at the reported index (equivalent to append when desktops arrive in
+    //! order, as at startup) and clamp defensively against an out-of-range one.
+    m_desktops.insert(qMin<qsizetype>(position, m_desktops.count()), id);
 
     const KWayland::Client::PlasmaVirtualDesktop *desktop = m_virtualDesktopManagement->getVirtualDesktop(id);
 

@@ -4821,6 +4821,31 @@ carries its own detail or points into the plan and the reference docs.
 
 ## Fixed (kept for the record)
 
+### D291 - Wayland virtual-desktop list ignored the compositor insertion position
+- STATUS: FIXED (phase 4 of the -Werror campaign - warnings-as-errors; commit
+  hash finalized at merge).
+- FOUND: 2026-08-10, tracing the `-Wunused-parameter` warning on `position` in
+  `WaylandInterface::addDesktop`.
+- SYMPTOM: a virtual desktop created in the MIDDLE of the compositor's desktop
+  row landed at the END of Latte's internal list, so "switch to next/previous
+  virtual desktop" navigated in the wrong order after such an insertion.
+- ROOT: `WaylandInterface::addDesktop(id, position)`
+  (app/wm/waylandinterface.cpp) appended to `m_desktops` and ignored `position`,
+  the desktop's index in the compositor's ordered row reported by
+  `PlasmaVirtualDesktopManagement::desktopCreated`. `m_desktops` order is
+  authoritative for navigation (`switchToNextVirtualDesktop`/
+  `switchToPreviousVirtualDesktop` use `indexOf()`/`operator[]`), so a
+  mis-ordered list mis-navigates. Inherited verbatim from upstream KDE
+  latte-dock master.
+- FIX: insert at the reported index, clamped to the list size
+  (`m_desktops.insert(qMin<qsizetype>(position, m_desktops.count()), id)`).
+  Equivalent to append when desktops arrive in ascending order (the startup
+  case), strictly more correct for a mid-row insertion, and cannot regress: at
+  startup positions increment so insert == append; a runtime mid-insert now
+  lands correctly; an out-of-range position clamps to the end. Live
+  multi-desktop reorder verification on the running session is a follow-up (the
+  construction proof is the current evidence).
+
 ### D287 - Dropped raw-layout import toasts success after writing nothing
 - STATUS: FIXED (PR #223, `3fac8c409`).
 - FOUND: 2026-08-09, while fixing the `-Wunused-result` warning on
