@@ -1941,7 +1941,7 @@ void Storage::importContainments(const QString &originFile, const QString &desti
     KConfigGroup originContainments = KConfigGroup(originPtr, "Containments");
     KConfigGroup destinationContainments = KConfigGroup(destinationPtr, "Containments");
 
-    for (const auto originContId : originContainments.groupList()) {
+    for (const auto &originContId : originContainments.groupList()) {
         KConfigGroup destinationContainment(&destinationContainments, originContId);
         originContainments.group(originContId).copyTo(&destinationContainment);
     }
@@ -1986,7 +1986,7 @@ Data::View Storage::newView(const Layout::GenericLayout *destinationLayout, cons
         KSharedConfigPtr lFile = KSharedConfig::openConfig(temp2File);
         KConfigGroup containments = KConfigGroup(lFile, "Containments");
 
-        for (const auto cId : containments.groupList()) {
+        for (const auto &cId : containments.groupList()) {
             if (Layouts::Storage::self()->isLatteContainment(containments.group(cId))) {
                 //! first view we will find, we update its value
                 updateView(containments.group(cId), nextViewData);

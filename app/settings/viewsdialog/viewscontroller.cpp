@@ -1199,7 +1199,7 @@ void Views::save()
     }
 
     //! remove deprecated views from external layouts that must be removed because of Cut->Paste Action
-    for(const auto vid: cuttedpastedviews.keys()){
+    for(const auto &vid: cuttedpastedviews.keys()){
         bool viewidisinteger{true};
         int vid_int = cuttedpastedviews[vid].originView().toInt(&viewidisinteger);
         QString vid_str = cuttedpastedviews[vid].originView();
@@ -1224,7 +1224,7 @@ void Views::save()
     }
 
     //! move active views between different active layouts
-    for (const auto vid: cuttedpastedactiveviews.keys()) {
+    for (const auto &vid: cuttedpastedactiveviews.keys()) {
         Data::View pastedactiveview = cuttedpastedactiveviews[vid];
         uint originviewid = pastedactiveview.originView().toUInt();
         CentralLayout *origin = originLayout(pastedactiveview);
