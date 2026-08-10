@@ -208,6 +208,13 @@ Latte::View *SubConfigView::parentView() const
 
 void SubConfigView::setParentView(Latte::View *view, const bool &immediate)
 {
+    //! immediate gates deferred-vs-immediate retargeting only where a shared
+    //! config window must first be hidden before it moves to another view;
+    //! PrimaryConfigView overrides this and honors it. A plain sub-view owns
+    //! no such window and always reparents immediately, so the flag is
+    //! intentionally unused here.
+    Q_UNUSED(immediate)
+
     if (m_latteView == view) {
         return;
     }
