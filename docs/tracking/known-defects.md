@@ -16,6 +16,28 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ## Open / suspected
 
+### D290 - Free-Activities layout reassignment on removal is unimplemented
+- STATUS: SUSPECTED (found by code-reading during phase 4 of the -Werror
+  campaign - warnings-as-errors - not yet reproduced under a driver).
+- FOUND: 2026-08-10, tracing the `-Wunused-but-set-variable` warning on
+  `freeActivitiesLayoutIsRemoved` in the settings layouts model.
+- SYMPTOM (suspected): removing the layout that holds the Free-Activities
+  assignment (`FREEACTIVITIESID`) in the settings dialog deletes that layout on
+  save and leaves Free-Activities pointing at no layout; nothing reassigns it to
+  a surviving layout.
+- ROOT: `Layouts::removeRows` (app/settings/settingsdialog/layoutsmodel.cpp)
+  detected the free-activities-layout-removed case (a boolean flag with the
+  comment "we need to reassign it properly") but never acted on it - the
+  reassignment was never written. Confirmed identical dead scaffolding in
+  upstream KDE latte-dock master and both reference forks (latte-dock-ng,
+  latte-dock-qt6), so this is an inherited upstream gap, not a port regression.
+- DISPOSITION: the dead detection flag was removed (it did nothing) and replaced
+  with a standing NOTE at the site pointing here; the underlying reassignment
+  stays unimplemented. Implementing it (have a surviving enabled layout inherit
+  Free-Activities, or refuse removal of the last free-activities layout) is a
+  separate future task; needs a live repro to confirm the runtime effect before
+  choosing the fix.
+
 ### D289 - Preferences screen-tracker spinbox connects dataChanged twice
 - STATUS: OPEN (pre-existing; found by code-reading in the PR #223 independent
   review, not user-reproduced).

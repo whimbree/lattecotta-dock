@@ -244,16 +244,12 @@ bool Layouts::removeRows(int row, int count, const QModelIndex &parent)
     int lastRow = row+count-1;
 
     if (count > 0 && m_layoutsTable.rowExists(firstRow) && (m_layoutsTable.rowExists(lastRow))) {
-        bool freeActivitiesLayoutIsRemoved{false};
-
-        for(int i=firstRow; i<=lastRow; ++i) {
-            if (m_layoutsTable[i].activities.contains(Latte::Data::Layout::FREEACTIVITIESID)) {
-                //! we need to reassign it properly
-                freeActivitiesLayoutIsRemoved = true;
-                break;
-            }
-        }
-
+        //! NOTE: removing the layout that holds the Free-Activities assignment
+        //! (FREEACTIVITIESID) leaves Free-Activities pointing at no layout. The
+        //! upstream code detected that case here but never reassigned it; the
+        //! dead detection is dropped and the gap is tracked in
+        //! docs/tracking/known-defects.md (Free-Activities reassignment on
+        //! layout removal is unimplemented).
         beginRemoveRows(QModelIndex(), firstRow, lastRow);
         for(int i=0; i<count; ++i) {
             m_layoutsTable.remove(firstRow);
