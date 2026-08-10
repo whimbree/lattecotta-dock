@@ -173,11 +173,14 @@ ecm_find_qmlmodule(org.kde.plasma.components 3.0)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/app/config-latte.h.cmake
                ${CMAKE_CURRENT_BINARY_DIR}/app/config-latte.h)
 
-#hide warnings
-string(REPLACE "-Wall" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-string(REPLACE "-Wreorder" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-string(REPLACE "-Wunused-variable" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-string(REPLACE "-Wunused-parameter" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+# Phase 4 of the -Werror campaign (compile with warnings-as-errors): the
+# inherited build stripped -Wall and three unused-* categories that
+# KDECompilerSettings turns on, hiding the diagnostics the phase burns down.
+# Un-strip them and add -Wall -Wextra explicitly so the whole -Wall/-Wextra
+# surface is emitted. These stay WARNINGS in this phase (no -Werror= for them)
+# so the build completes while every burn-down fix self-verifies; the blanket
+# -Werror flip is the campaign's final PR, once the census reads zero.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 
 #add format security check
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wformat -Werror=format-security")
