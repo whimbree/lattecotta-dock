@@ -37,7 +37,7 @@ public:
                                        bool justifyAlignment, double minLength, double contentsMaxLength);
 };
 
-static QObject *filldistributortools_qobject_singletontype_provider(QQmlEngine *engine, QJSEngine *scriptEngine)
+[[maybe_unused]] static QObject *filldistributortools_qobject_singletontype_provider(QQmlEngine *engine, QJSEngine *scriptEngine)
 {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)

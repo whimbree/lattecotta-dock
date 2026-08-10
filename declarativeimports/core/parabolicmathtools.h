@@ -32,7 +32,7 @@ public Q_SLOTS:
                                           double zoomFactor, bool reversed);
 };
 
-static QObject *parabolicmathtools_qobject_singletontype_provider(QQmlEngine *engine, QJSEngine *scriptEngine)
+[[maybe_unused]] static QObject *parabolicmathtools_qobject_singletontype_provider(QQmlEngine *engine, QJSEngine *scriptEngine)
 {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)

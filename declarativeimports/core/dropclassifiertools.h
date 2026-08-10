@@ -111,7 +111,7 @@ public Q_SLOTS:
     Q_INVOKABLE QVariantMap decideTasksDragMove(const QVariantMap &snapshot);
 };
 
-static QObject *dropclassifiertools_qobject_singletontype_provider(QQmlEngine *engine, QJSEngine *scriptEngine)
+[[maybe_unused]] static QObject *dropclassifiertools_qobject_singletontype_provider(QQmlEngine *engine, QJSEngine *scriptEngine)
 {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)

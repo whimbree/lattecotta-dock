@@ -52,7 +52,7 @@ public Q_SLOTS:
     Q_INVOKABLE int selectAdjacentTask(int count, int activeIndex, bool next) const;
 };
 
-static QObject *windowcyclertools_qobject_singletontype_provider(QQmlEngine *engine, QJSEngine *scriptEngine)
+[[maybe_unused]] static QObject *windowcyclertools_qobject_singletontype_provider(QQmlEngine *engine, QJSEngine *scriptEngine)
 {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
