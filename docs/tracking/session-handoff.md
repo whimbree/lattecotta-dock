@@ -192,18 +192,26 @@ Owed live checks from the campaign's behavior-sensitive PRs:
 - Icon overlay badge (#229): VERIFIED live 2026-08-10 - a real Discord 1,910
   badge renders cleanly bottom-right at the expected scale on the running dock.
   Closed.
-- releaseGrab de-hover (#228): the concern is moot in practice. The only path to
-  releaseGrab is `LastActiveWindow::requestMove` (the niche "press-hold-drag an
-  empty dock area to move the active window" gesture), and #228's change was
-  confirmed NOT to affect the move: `requestMoveWindow` (the KWin handoff) runs
-  BEFORE `unblockMouse`/`releaseGrab`, so only the post-move de-hover was touched,
-  using ng's proven approach minus a synthetic Leave. The move feature itself
-  appears not to fire for the maintainer (never tested; byte-identical to both
-  Wayland-only reference forks), so releaseGrab is rarely reached. A read-only
-  investigation of that feature's true intent and Wayland behavior is underway
-  (whether the plasma-window requestMove from a 500ms timer actually starts a
-  KWin interactive move); any real gap there is a SEPARATE pre-existing defect,
-  not a -Werror-campaign regression.
+- releaseGrab de-hover (#228): RESOLVED as effectively moot. The only path to
+  releaseGrab is `LastActiveWindow::requestMove` (the "press-hold-or-drag an empty
+  dock area to move the active window" gesture, part of the D30 mouse-actions
+  surface). A read-only investigation (2026-08-10) established: (1) #228 did NOT
+  affect the move - `requestMoveWindow` (the KWin handoff) runs BEFORE
+  `unblockMouse`/`releaseGrab`, so only the post-move de-hover changed, using ng's
+  proven approach minus a synthetic Leave; (2) the "does nothing" the maintainer
+  saw is CONFIGURATION, not a bug: the gesture is gated by `dragActiveWindowEnabled`
+  (main.xml default false; the Dock view-type preset forces it OFF, Panel forces
+  it ON), and the real config enables it on only one view (containment 25, a
+  non-primary Justify panel), off on the primary docks 12/13/14 that were tested;
+  (3) the Wayland path is sound, not an X11 relic - `org_kde_plasma_window.request_move`
+  is a PRIVILEGED, serial-less Plasma protocol, so the 500ms-timer dispatch is not
+  invalidated, and KWin turns it into a compositor-level interactive move.
+  D30's existing evidence already records prior nested runs confirming move/
+  maximize/close work when enabled. Not a -Werror-campaign regression; no new
+  defect. Two edge cases only a fresh live test would nail (per the investigation):
+  cursor-follow when the initiating press was on Latte's surface, and the
+  maximized-window case (`windowCanBeDragged` does not exclude maximized) - both
+  low-priority and pre-existing.
 
 Owner decisions still open (carried forward): the D283 approach (fix the legacy
 clone path vs deprecate), history excision of the swept maintainer-local files,
