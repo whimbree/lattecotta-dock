@@ -149,7 +149,7 @@ Item {
             return;
         }
 
-        if ( !doubleCallAutomaticUpdateIconSize.running && !sizer.visibility.inRelocationHiding /*block too many calls and dont apply during relocatinon hiding*/
+        if ( !confirmAppliedSizeTimer.running && !sizer.visibility.inRelocationHiding /*dont apply during relocation hiding*/
                 && (sizer.visibility.inNormalState && sizer.isActive) /*in normal and auto size active state*/
                 && (sizer.metrics.iconSize === sizer.metrics.maxIconSize || sizer.metrics.iconSize === sizer.iconSize) /*not during animations*/) {
 
@@ -166,13 +166,6 @@ Item {
                 return;
             }
 
-            //!doubler timer
-            if (!doubleCallAutomaticUpdateIconSize.secondTimeCallApplied) {
-                doubleCallAutomaticUpdateIconSize.start();
-            } else {
-                doubleCallAutomaticUpdateIconSize.secondTimeCallApplied = false;
-            }
-
             const layoutLength = (sizer.alignment === LatteCore.Types.Justify) ?
                         sizer.layouts.startLayout.length + sizer.layouts.mainLayout.length + sizer.layouts.endLayout.length : sizer.layouts.mainLayout.length
 
@@ -183,6 +176,10 @@ Item {
                                         sizer.iconSize);
 
             if (result.found) {
+                //! shield BEFORE the write: the assignment's reactions (margin
+                //! and background bindings, their deferred refit echoes) must
+                //! already see the running timer and be blocked
+                confirmAppliedSizeTimer.restart();
                 //! a found nextIconSize of -1 restores automatic sizing (a
                 //! grow reached maxIconSize); the stepper maps the core's
                 //! alternatives onto the sizer's own -1 sentinel
@@ -191,18 +188,24 @@ Item {
         }
     }
 
-    //! This functions makes sure to call the updateIconSize(); function which is costly
-    //! one more time after its last call to confirm the applied icon size found
+    //! One confirming re-run after each applied size, with every other pass
+    //! blocked until it fires. An applied size changes margins and applet
+    //! geometry over the following frames, so a pass running before the row
+    //! re-settles attributes the OLD row length to the NEW size and feeds the
+    //! engine a measurement it never made - stepping past the real fit. Caught
+    //! live (D274, the maximize-length input-region defect): a deferred refit
+    //! echo landed two frames after each applied size, the predecessor timer's
+    //! bookkeeping left the shield down after its own confirming pass applied
+    //! a size, and the stale-row passes drove a permanent 1Hz grow/shrink
+    //! cycle (60->61->62->61->60) invisible to the engine's two-pass endless
+    //! loop protector. The shield therefore stays up across EVERY applied
+    //! size - a confirming pass that applies rearms itself for one more
+    //! confirmation - and only a pass that keeps the current size leaves the
+    //! chain ended with the shield down (a settled row needs no confirmation,
+    //! and further passes are cheap pure-math keeps).
     Timer{
-        id:doubleCallAutomaticUpdateIconSize
+        id: confirmAppliedSizeTimer
         interval: 1000
-        property bool secondTimeCallApplied: false
-
-        onTriggered: {
-            if (!doubleCallAutomaticUpdateIconSize.secondTimeCallApplied) {
-                doubleCallAutomaticUpdateIconSize.secondTimeCallApplied = true;
-                sizer.updateIconSize();
-            }
-        }
+        onTriggered: sizer.updateIconSize();
     }
 }

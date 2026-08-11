@@ -38,6 +38,17 @@
 # docs/agent-logs/2026-07-18-maximize-length-repaint.md. The "no frosted band"
 # pixel confirmation on the real maximize-length feature is a desk-check (same
 # ledger).
+#
+# The per-detent assertion demands a SUSTAINED settled window, not one instant
+# sample: a below-extent detent legitimately runs a short automatic-sizing
+# confirmation chain (one more animated size step ~1s after the detent, each
+# step holding the union briefly by design), so a single sample races those
+# transients. The D274 defect this recipe caught was a PERMANENT 1Hz
+# grow/shrink oscillation whose union-hold re-widened the applied mask every
+# second forever; an oscillating dock can never produce the required quiet
+# window (six identical settled samples spanning 1.5s, longer than the
+# oscillation period), so the tripwire stays real while legitimate settling
+# passes.
 set -uo pipefail
 source "${E2E_REPO:?run through scripts/run-e2e.sh}/tests/e2e/lib.sh"
 
@@ -126,17 +137,34 @@ down_detent() {
     return 1
 }
 
+# wait for a genuine quiet window: six consecutive samples 0.3s apart, every
+# one applied == input at one unchanging width. Echoes the settled width, or
+# fails the wait (returns 1) when no such window appears within the deadline.
+stable_mask_width() {
+    local deadline=$((SECONDS + 10)) count=0 last="" aw iw
+    while (( SECONDS < deadline )); do
+        read -r aw iw <<< "$(mask_widths "$view")"
+        if [[ "$aw" == "$iw" && "$aw" != 0 && ( -z "$last" || "$aw" == "$last" ) ]]; then
+            count=$((count + 1)); last="$aw"
+            (( count >= 6 )) && { echo "$aw"; return 0; }
+        else
+            count=0; last=""
+        fi
+        sleep 0.3
+    done
+    return 1
+}
+
 #! wheel maxLength down past the applet extent so the band shrinks, checking
 #! after every settled detent that the applied mask collapsed back to the band
+#! and STAYED there (a full quiet window, see the header)
 prev_band="$rest_a"
 shrinks=0
 last_maxl="$(cur_maxl)"
 for step in $(seq 1 16); do
     new_maxl="$(down_detent "$last_maxl")" || e2e_fail "ruler down-detent $step never landed"
     last_maxl="$new_maxl"
-    sleep 1.0   #! let the settle collapse run
-    read -r aw iw <<< "$(mask_widths "$view")"
-    [[ "$aw" == "$iw" ]] || e2e_fail "after shrink to maxLength ${new_maxl}: applied ($aw) != input ($iw) - mask stuck at the wide union, settle collapse failed"
+    aw="$(stable_mask_width)" || e2e_fail "after shrink to maxLength ${new_maxl}: applied never settled onto the input band - settle collapse failed or the automatic size fit keeps oscillating (D274's signature)"
     if (( aw < prev_band )); then
         shrinks=$((shrinks + 1))
         echo "maxLength ${new_maxl}: band ${prev_band} -> ${aw}, applied collapsed to input (${aw})"
@@ -152,8 +180,8 @@ e2e_call setViewEditMode ub "$view" false >/dev/null
 in_edit=0
 sleep 2
 
-#! back out of edit mode the mask stays consistent (applied still collapsed)
-read -r fin_a fin_i <<< "$(mask_widths "$view")"
-[[ "$fin_a" == "$fin_i" ]] || e2e_fail "after leaving edit mode: applied ($fin_a) != input ($fin_i)"
+#! back out of edit mode the mask stays consistent (applied still collapsed,
+#! through the same quiet-window contract as the per-detent checks)
+fin_a="$(stable_mask_width)" || e2e_fail "after leaving edit mode: applied never settled onto the input band"
 
 echo "maximize-length path: band shrank ${rest_a} -> ${prev_band} over ${shrinks} steps, applied window mask collapsed to the band at every step"
