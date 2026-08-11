@@ -4823,7 +4823,7 @@ carries its own detail or points into the plan and the reference docs.
 
 ### D293 - Import-full restart never relaunched: whole command line passed as the program name
 - STATUS: FIXED (CHUNK-5, the startDetached command-string audit item in the C++
-  readability/safety batch).
+  readability/safety batch; PR #235, 831cf3e5c).
 - FOUND: 2026-08-10, by code-reading during the audit; the flagged anti-pattern
   was value-into-parsed-command-string concatenation, and checking the Qt 6.11
   header revealed the failure is worse than mis-splitting.

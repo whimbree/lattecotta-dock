@@ -94,8 +94,15 @@ null-deref in pauseLayout), and CHUNK-6 (the m_connections array-bounds
 invariant, now a static_assert + Q_ASSERT) LANDED at 8d7083177 (PR #234). The
 ".clang-format item" turned out to be that persistViewMove/Snapshot were the only
 two functions hand-wrapped to ~30 cols in a ~100-col file; there is no
-.clang-format in the tree. CHUNK-5 (lattecorona.cpp startDetached QString
-injection, needs a live drive) is the remaining CHUNK item. QML backlog after:
+.clang-format in the tree. CHUNK-5 LANDED at 831cf3e5c (PR #235): the
+lattecorona.cpp import-full restart passed a joined command string to
+QProcess::startDetached, which on Qt6 (the command-string overload removed)
+resolved the whole line as the program name and silently never relaunched -
+fixed to the program+args form with a qWarning on failure, filed D293; an
+end-to-end import-full is an owed live drive. With that the whole CHUNK
+readability/safety batch (CHUNK-1 through CHUNK-6) is COMPLETE; it caught two
+real broken-on-Qt6 bugs (D292 pauseLayout null-deref, D293 import-full restart).
+QML backlog after:
 C2 (button-row precedence, three sites, needs re-identification), C3
 (colorsToIndex missing default return), C4 (indicator null-guard inconsistency),
 C6 (redundant anchor write), plus the dead Plasma-5 version gates, a Qt5 import
