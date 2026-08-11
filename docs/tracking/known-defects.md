@@ -16,6 +16,39 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ## Open / suspected
 
+### D296 - Context menu indexed an unpaired view-template record out of bounds
+- STATUS: FIXED (2026-08-11, the defect-quick-wins branch). Filed and fixed the
+  same day; recorded because the D20 entry carried it only as an unnumbered
+  "separate latent" note since 2026-07-18.
+- FOUND: 2026-08-11, promoting the D20 (right-click menu collapse) entry's
+  latent note to its own item. Re-verification against current `menu.cpp`
+  found the note HALF STALE: the described `m_data[index]` out-of-bounds reads
+  (indices 0..6 after a failed `contextMenuData` D-Bus call left `m_data`
+  empty) were already fixed by `5585c708a` (2026-07-21, the clone-capability
+  menu hardening) - every `m_data` read is now bounds-safe
+  `QStringList::value()` and the layout/move/always-shown consumers are gated
+  behind `m_contextDataValid`, which `updateViewData()` sets to false with a
+  loud qWarning when the reply lacks the identity element.
+- SURVIVING HALF (the actual fix here): `Menu::populateViewTemplates()` in
+  `containmentactions/contextmenu/menu.cpp` walked the `viewTemplatesData`
+  D-Bus reply as name/id pairs, reading `m_viewTemplates[i+1]` for every even
+  `i` with no element-count check. An odd-count reply indexes one past the
+  end on the final unpaired element - undefined behavior on a QList, silent
+  in release builds.
+- FIX: the pair walk is preceded by an even-count refusal at the D-Bus
+  boundary: an odd-count reply logs
+  `refused malformed viewTemplatesData reply` with the element count and adds
+  no template entries (there is no way to tell which record lost its partner,
+  so partial parsing would misattribute ids); the Duplicate/Create Linked
+  section still renders since it is driven by `contextMenuData`, an
+  independent reply. Same refusal shape as the file's existing screensData
+  and linked-dock-request guards.
+- EVIDENCE: `dockidentitycontracttest` gained
+  `menuRefusesUnpairedViewTemplatesReply`, pinning that the refusal guard
+  exists and precedes the paired `[i+1]` read (the plugin needs a running
+  shell, so the covering test is the established textual contract guard, not
+  an instantiation test).
+
 ### D295 - trailing conjuncts attach to only one operand of an inherited `||` (task removal animation, applet indicator visibility)
 - STATUS: ACCEPTED (decided 2026-08-11; originally SUSPECTED from the C2 QML
   operator-precedence audit - the "make implicit `&&`/`||` precedence explicit"
@@ -344,12 +377,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   removal of every action, which the Qt5-faithful constraint requires to collapse
   the menu, so there is no unasked-for write-path emptying to fix, and no
   load-side or render-side default guard was added.
-- SEPARATE LATENT (SUSPECTED, not D20, not fixed here): `menu.cpp` reads
-  `m_data[index]` for indices 0..6 without checking `m_data.size()`; a failed
-  `contextMenuData` D-Bus call leaves `m_data` empty (cleared at `menu.cpp:221`,
-  never repopulated) and every access is then out-of-bounds, a silent broken
-  menu instead of a loud failure. Not triggered in the D20 scenario (the reply
-  carries seven elements); worth its own item.
+- SEPARATE LATENT: promoted to D296 (the unpaired view-template record read)
+  on 2026-08-11. The `m_data[index]` half described here was already fixed by
+  `5585c708a` (2026-07-21); the surviving `m_viewTemplates[i+1]` half is fixed
+  under D296 - see that entry.
 - FIX: `tests/e2e/110-context-menu-normal-mode.sh` asserts every view's
   normal-mode always-shown feed carries the full set, closing the verification
   gap that let the collapse be invisible.
