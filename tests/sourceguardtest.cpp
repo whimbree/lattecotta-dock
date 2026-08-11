@@ -444,11 +444,16 @@ private:
                    "?root.width*(Plasmoid.configuration.maxLength/100)"
                    ":root.height*(Plasmoid.configuration.maxLength/100);}"))
             && main.contains(QStringLiteral(
+                   // The D304 (maxLength binding dereferences latteView while
+                   // it is still null) guard chain is part of the pinned text:
+                   // the binding evaluates before the View wrapper wires
+                   // latteView, so the maximize read tolerates the transient.
                    "constmaximize=behaveAsPlasmaPanel"
                    "||(!dockFloatingTransitionOwnsGap"
                    "&&maximizeWhenMaximized"
+                   "&&!!(latteView&&latteView.windowsTracker"
                    "&&latteView.windowsTracker.currentScreen."
-                   "existsWindowMaximized);"))
+                   "existsWindowMaximized));"))
             && main.contains(QStringLiteral(
                    "constpresentedMaximumLengthPercent="
                    "dockFloatingTransitionOwnsGap"

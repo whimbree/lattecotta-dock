@@ -274,10 +274,15 @@ ContainmentItem {
     }
 
     property int maxLength: {
+        //! latteView is wired after this containment's QML tree exists
+        //! (View::init sets _latte_view_object post-creation), so this binding's
+        //! first evaluations run with latteView null - guard like the sibling
+        //! window-tracking bindings above instead of dereferencing through it.
         const maximize = behaveAsPlasmaPanel
           || (!dockFloatingTransitionOwnsGap
               && maximizeWhenMaximized
-              && latteView.windowsTracker.currentScreen.existsWindowMaximized);
+              && !!(latteView && latteView.windowsTracker
+                    && latteView.windowsTracker.currentScreen.existsWindowMaximized));
         const presentedMaximumLengthPercent = dockFloatingTransitionOwnsGap
             ? presentedDockMaximumLengthPercent : maxLengthPerCentage;
         if (root.isHorizontal) {
