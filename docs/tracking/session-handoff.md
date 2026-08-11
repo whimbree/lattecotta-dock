@@ -68,8 +68,18 @@ PARTIAL worktrees (killed by the usage limit mid-work, commits intact):
    of the blessed frame was not yet done. Resume: eyeball the golden,
    commit with the comparison evidence, two green confirmation runs, fast
    gate, tail.
-7. Phase 8 remainder (tracker-ready guard sweep + wheel-bypass
-   verify-before-implement): agent died before branching; not started.
+7. fix/phase8-remainder (tracker-ready guard sweep + wheel-bypass
+   verify-before-implement): DONE on the branch, fast-gate stamped.
+   Sweep fixed D304 (maxLength binding dereferences latteView while it
+   is still null; nested repro pair 3 TypeErrors -> 0) and D305
+   (EnvironmentActions dereferences the last-active-window chain
+   unguarded; shared activeWindowIsReady gate, SC-WT1 green); all other
+   read sites classified guarded or unreachable-null with proofs in the
+   plan item. Wheel item CLOSED NOT-APPLICABLE with driven evidence:
+   applets already receive their own wheel events (z-order routing,
+   Qt5-identical arrangement); 024-wheel-applet-passthrough.py pins the
+   routing both ways. Commits 1b0c4069a, 75132b8f0, 3fe56d71e + docs.
+   NEEDS: the normal tail (review, rebase, full gate, merge).
 
 NOT STARTED: D290 implementation (decision recorded in registry:
 reassignment shape approved, needs nested repro first). OWED LIVE (for the
