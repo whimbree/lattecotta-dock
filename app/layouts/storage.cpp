@@ -3156,589 +3156,293 @@ bool Storage::restoreView(const KSharedConfigPtr &activeConfig,
     return true;
 }
 
-ViewMovePersistenceResult Storage::persistViewMove(
-    const Layout::GenericLayout *originLayout,
-    const uint originViewId,
-    const Layout::GenericLayout *destinationLayout,
-    const KSharedConfigPtr &activeConfig)
+ViewMovePersistenceResult Storage::persistViewMove(const Layout::GenericLayout *originLayout,
+                                                   const uint originViewId,
+                                                   const Layout::GenericLayout *destinationLayout,
+                                                   const KSharedConfigPtr &activeConfig)
 {
-    if (!originLayout
-            || !destinationLayout
-            || originLayout == destinationLayout
-            || originViewId == 0
-            || !activeConfig) {
+    if (!originLayout || !destinationLayout || originLayout == destinationLayout
+        || originViewId == 0 || !activeConfig) {
         qCritical() << "Storage::persistViewMove refused invalid move participants";
-        return {
-            .status =
-                ViewMovePersistenceResult::
-                    Status::Rejected,
-            .transactionPath = {},
-            .error =
-                QStringLiteral(
-                    "invalid durable move participants")};
+        return {.status = ViewMovePersistenceResult::Status::Rejected,
+                .transactionPath = {},
+                .error = QStringLiteral("invalid durable move participants")};
     }
 
-    const QString snapshotFile =
-        storedView(
-            originLayout,
-            static_cast<int>(
-                originViewId));
+    const QString snapshotFile = storedView(originLayout, static_cast<int>(originViewId));
     if (snapshotFile.isEmpty()) {
-        qCritical() << "Storage::persistViewMove could not capture containment"
-                    << originViewId
+        qCritical() << "Storage::persistViewMove could not capture containment" << originViewId
                     << "from" << originLayout->name();
-        return {
-            .status =
-                ViewMovePersistenceResult::
-                    Status::Rejected,
-            .transactionPath = {},
-            .error =
-                QStringLiteral(
-                    "could not capture the complete source subtree")};
+        return {.status = ViewMovePersistenceResult::Status::Rejected,
+                .transactionPath = {},
+                .error = QStringLiteral("could not capture the complete source subtree")};
     }
 
-    return persistViewMoveSnapshot(
-        originLayout->name(),
-        originLayout->file(),
-        destinationLayout->name(),
-        destinationLayout->file(),
-        activeConfig,
-        originViewId,
-        snapshotFile);
+    return persistViewMoveSnapshot(originLayout->name(), originLayout->file(),
+                                   destinationLayout->name(), destinationLayout->file(),
+                                   activeConfig, originViewId, snapshotFile);
 }
 
 ViewMovePersistenceResult Storage::persistViewMoveSnapshot(
-    const QString &originLayoutName,
-    const QString &originFile,
-    const QString &destinationLayoutName,
-    const QString &destinationFile,
-    const KSharedConfigPtr &activeConfig,
-    const uint originViewId,
-    const QString &snapshotFile,
+    const QString &originLayoutName, const QString &originFile,
+    const QString &destinationLayoutName, const QString &destinationFile,
+    const KSharedConfigPtr &activeConfig, const uint originViewId, const QString &snapshotFile,
     const ViewMoveInterruption interruption,
-    const ViewMoveDirectoryFlushFailure
-        directoryFlushFailure)
+    const ViewMoveDirectoryFlushFailure directoryFlushFailure)
 {
-    const QString originBackend =
-        persistenceBackendPath(originFile);
-    const QString destinationBackend =
-        persistenceBackendPath(destinationFile);
+    const QString originBackend = persistenceBackendPath(originFile);
+    const QString destinationBackend = persistenceBackendPath(destinationFile);
     const QString hiddenBackend =
-        activeConfig
-            ? persistenceBackendPath(
-                activeConfig->name())
-            : QString();
-    const QString expectedHiddenBackend =
-        persistenceBackendPath(
-            Importer::layoutUserFilePath(
-                QString::fromLatin1(
-                    Layout::
-                        MULTIPLELAYOUTSHIDDENNAME)));
-    QStringList containmentIds =
-        snapshotContainmentIds(
-            snapshotFile);
-    const QString rootId =
-        QString::number(originViewId);
-    if (!layoutNameIsSafe(
-            originLayoutName)
-            || !layoutNameIsSafe(
-                destinationLayoutName)
-            || originLayoutName
-                == destinationLayoutName
-            || originBackend.isEmpty()
-            || destinationBackend.isEmpty()
-            || originBackend
-                == destinationBackend
-            || hiddenBackend.isEmpty()
-            || hiddenBackend
-                != expectedHiddenBackend
-            || hiddenBackend
-                == originBackend
-            || hiddenBackend
-                == destinationBackend
-            || !endpointIsDirectLayoutChild(
-                originBackend)
-            || !endpointIsDirectLayoutChild(
-                destinationBackend)
-            || !endpointIsDirectLayoutChild(
-                hiddenBackend)
-            || !persistenceEndpointIsWritable(
-                originBackend)
-            || !persistenceEndpointIsWritable(
-                destinationBackend)
-            || !persistenceEndpointIsWritable(
-                hiddenBackend)
-            || containmentIds.isEmpty()
-            || !containmentIds.contains(rootId)) {
+        activeConfig ? persistenceBackendPath(activeConfig->name()) : QString();
+    const QString expectedHiddenBackend = persistenceBackendPath(
+        Importer::layoutUserFilePath(QString::fromLatin1(Layout::MULTIPLELAYOUTSHIDDENNAME)));
+    QStringList containmentIds = snapshotContainmentIds(snapshotFile);
+    const QString rootId = QString::number(originViewId);
+    if (!layoutNameIsSafe(originLayoutName) || !layoutNameIsSafe(destinationLayoutName)
+        || originLayoutName == destinationLayoutName || originBackend.isEmpty()
+        || destinationBackend.isEmpty() || originBackend == destinationBackend
+        || hiddenBackend.isEmpty() || hiddenBackend != expectedHiddenBackend
+        || hiddenBackend == originBackend || hiddenBackend == destinationBackend
+        || !endpointIsDirectLayoutChild(originBackend)
+        || !endpointIsDirectLayoutChild(destinationBackend)
+        || !endpointIsDirectLayoutChild(hiddenBackend)
+        || !persistenceEndpointIsWritable(originBackend)
+        || !persistenceEndpointIsWritable(destinationBackend)
+        || !persistenceEndpointIsWritable(hiddenBackend) || containmentIds.isEmpty()
+        || !containmentIds.contains(rootId)) {
         qCritical() << "Storage::persistViewMoveSnapshot refused an inconsistent durable move"
-                    << originLayoutName
-                    << destinationLayoutName
-                    << originViewId;
-        return {
-            .status =
-                ViewMovePersistenceResult::
-                    Status::Rejected,
-            .transactionPath = {},
-            .error =
-                QStringLiteral(
-                    "inconsistent durable move paths or snapshot")};
+                    << originLayoutName << destinationLayoutName << originViewId;
+        return {.status = ViewMovePersistenceResult::Status::Rejected,
+                .transactionPath = {},
+                .error = QStringLiteral("inconsistent durable move paths or snapshot")};
     }
 
-    const auto initialOwner =
-        observePersistentOwner(
-            hiddenBackend,
-            containmentIds,
-            originLayoutName,
-            destinationLayoutName);
-    if (initialOwner
-            != Layout::ViewMoveTransaction::
-                PersistentOwner::Origin) {
-        qCritical() << "Storage::persistViewMoveSnapshot refused containment"
-                    << originViewId
-                    << "whose persistent owner is not"
-                    << originLayoutName;
-        return {
-            .status =
-                ViewMovePersistenceResult::
-                    Status::Rejected,
-            .transactionPath = {},
-            .error =
-                QStringLiteral(
-                    "active persistence does not name the source layout")};
+    const auto initialOwner = observePersistentOwner(hiddenBackend, containmentIds,
+                                                     originLayoutName, destinationLayoutName);
+    if (initialOwner != Layout::ViewMoveTransaction::PersistentOwner::Origin) {
+        qCritical() << "Storage::persistViewMoveSnapshot refused containment" << originViewId
+                    << "whose persistent owner is not" << originLayoutName;
+        return {.status = ViewMovePersistenceResult::Status::Rejected,
+                .transactionPath = {},
+                .error = QStringLiteral("active persistence does not name the source layout")};
     }
 
-    const QString transactionsRoot =
-        viewMoveTransactionsRoot();
+    const QString transactionsRoot = viewMoveTransactionsRoot();
     if (!QDir().mkpath(transactionsRoot)) {
         qCritical() << "Storage::persistViewMoveSnapshot could not create transaction root"
                     << transactionsRoot;
-        return {
-            .status =
-                ViewMovePersistenceResult::
-                    Status::Rejected,
-            .transactionPath = {},
-            .error =
-                QStringLiteral(
-                    "could not create the durable transaction directory")};
+        return {.status = ViewMovePersistenceResult::Status::Rejected,
+                .transactionPath = {},
+                .error = QStringLiteral("could not create the durable transaction directory")};
     }
-    const QFileInfo transactionsRootInfo(
-        transactionsRoot);
-    if (!transactionsRootInfo.isDir()
-            || transactionsRootInfo.isSymLink()
-            || transactionsRootInfo.ownerId()
-                != static_cast<uint>(::getuid())
-            || !QFile::setPermissions(
-                transactionsRoot,
-                ViewMovePrivateDirectoryPermissions)) {
+    const QFileInfo transactionsRootInfo(transactionsRoot);
+    if (!transactionsRootInfo.isDir() || transactionsRootInfo.isSymLink()
+        || transactionsRootInfo.ownerId() != static_cast<uint>(::getuid())
+        || !QFile::setPermissions(transactionsRoot, ViewMovePrivateDirectoryPermissions)) {
         qCritical() << "Storage::persistViewMoveSnapshot refused an unsafe transaction root"
                     << transactionsRoot;
-        return {
-            .status =
-                ViewMovePersistenceResult::
-                    Status::Rejected,
-            .transactionPath = {},
-            .error =
-                QStringLiteral(
-                    "durable transaction storage is not private")};
+        return {.status = ViewMovePersistenceResult::Status::Rejected,
+                .transactionPath = {},
+                .error = QStringLiteral("durable transaction storage is not private")};
     }
     if (!durablyPublishTransactionRoot(
             transactionsRoot,
-            directoryFlushFailure
-                == ViewMoveDirectoryFlushFailure::
-                    TransactionRootPublication)) {
+            directoryFlushFailure == ViewMoveDirectoryFlushFailure::TransactionRootPublication)) {
         qCritical() << "Storage::persistViewMoveSnapshot refused an undurable transaction root"
                     << transactionsRoot;
-        return {
-            .status =
-                ViewMovePersistenceResult::
-                    Status::Rejected,
-            .transactionPath = {},
-            .error =
-                QStringLiteral(
-                    "could not durably publish transaction storage")};
+        return {.status = ViewMovePersistenceResult::Status::Rejected,
+                .transactionPath = {},
+                .error = QStringLiteral("could not durably publish transaction storage")};
     }
 
-    QLockFile transactionLock(
-        QDir(transactionsRoot)
-            .filePath(
-                QStringLiteral(
-                    "transaction.lock")));
+    QLockFile transactionLock(QDir(transactionsRoot).filePath(QStringLiteral("transaction.lock")));
     transactionLock.setStaleLockTime(0);
     if (!transactionLock.tryLock(0)) {
         qCritical() << "Storage::persistViewMoveSnapshot refused a concurrent durable move";
-        return {
-            .status =
-                ViewMovePersistenceResult::
-                    Status::Rejected,
-            .transactionPath = {},
-            .error =
-                QStringLiteral(
-                    "another durable move owns the transaction lock")};
+        return {.status = ViewMovePersistenceResult::Status::Rejected,
+                .transactionPath = {},
+                .error = QStringLiteral("another durable move owns the transaction lock")};
     }
 
-    if (!pendingViewMoveTransactions()
-             .isEmpty()) {
-        qCritical() << "Storage::persistViewMoveSnapshot refused a new move while recovery is pending";
-        return {
-            .status =
-                ViewMovePersistenceResult::
-                    Status::RejectedRecoveryRequired,
-            .transactionPath = {},
-            .error =
-                QStringLiteral(
-                    "an earlier durable move requires recovery")};
+    if (!pendingViewMoveTransactions().isEmpty()) {
+        qCritical()
+            << "Storage::persistViewMoveSnapshot refused a new move while recovery is pending";
+        return {.status = ViewMovePersistenceResult::Status::RejectedRecoveryRequired,
+                .transactionPath = {},
+                .error = QStringLiteral("an earlier durable move requires recovery")};
     }
 
     const KSharedConfigPtr destinationConfig =
-        KSharedConfig::openConfig(
-            destinationBackend,
-            KConfig::SimpleConfig);
+        KSharedConfig::openConfig(destinationBackend, KConfig::SimpleConfig);
     const KSharedConfigPtr originConfig =
-        KSharedConfig::openConfig(
-            originBackend,
-            KConfig::SimpleConfig);
-    if (!configAllowsContainmentReplacement(
-            originConfig,
-            containmentIds)
-            || !configAllowsContainmentReplacement(
-                destinationConfig,
-                containmentIds)
-            || !configAllowsLayoutOwnerMutation(
-                activeConfig,
-                containmentIds)) {
-        qCritical() << "Storage::persistViewMoveSnapshot refused an immutable or read-only move participant";
-        return {
-            .status =
-                ViewMovePersistenceResult::
-                    Status::Rejected,
-            .transactionPath = {},
-            .error =
-                QStringLiteral(
-                    "a durable move participant is immutable or read-only")};
+        KSharedConfig::openConfig(originBackend, KConfig::SimpleConfig);
+    if (!configAllowsContainmentReplacement(originConfig, containmentIds)
+        || !configAllowsContainmentReplacement(destinationConfig, containmentIds)
+        || !configAllowsLayoutOwnerMutation(activeConfig, containmentIds)) {
+        qCritical()
+            << "Storage::persistViewMoveSnapshot refused an immutable or read-only move participant";
+        return {.status = ViewMovePersistenceResult::Status::Rejected,
+                .transactionPath = {},
+                .error = QStringLiteral("a durable move participant is immutable or read-only")};
     }
 
-    const QStringList endpointPaths{
+    const QStringList endpointPaths {
         originBackend,
         destinationBackend,
         hiddenBackend,
     };
-    for (const QString &endpointPath :
-            endpointPaths) {
-        if (!kConfigEndpointLockIsAvailable(
-                endpointPath)) {
+    for (const QString &endpointPath : endpointPaths) {
+        if (!kConfigEndpointLockIsAvailable(endpointPath)) {
             qCritical() << "Storage::persistViewMoveSnapshot refused a locked move participant"
                         << endpointPath;
-            return {
-                .status =
-                    ViewMovePersistenceResult::
-                        Status::Rejected,
-                .transactionPath = {},
-                .error =
-                    QStringLiteral(
-                        "a durable move participant is locked")};
+            return {.status = ViewMovePersistenceResult::Status::Rejected,
+                    .transactionPath = {},
+                    .error = QStringLiteral("a durable move participant is locked")};
         }
     }
 
-    if (!configOmitsSnapshot(
-            destinationBackend,
-            containmentIds)) {
+    if (!configOmitsSnapshot(destinationBackend, containmentIds)) {
         qCritical() << "Storage::persistViewMoveSnapshot refused destination id collision for"
-                    << containmentIds
-                    << "in" << destinationBackend;
-        return {
-            .status =
-                ViewMovePersistenceResult::
-                    Status::Rejected,
-            .transactionPath = {},
-            .error =
-                QStringLiteral(
-                    "destination already contains an affected identity")};
+                    << containmentIds << "in" << destinationBackend;
+        return {.status = ViewMovePersistenceResult::Status::Rejected,
+                .transactionPath = {},
+                .error = QStringLiteral("destination already contains an affected identity")};
     }
 
     ViewMoveJournalRecord journal;
-    journal.transactionId =
-        QUuid::createUuid()
-            .toString(
-                QUuid::WithoutBraces);
-    journal.originLayoutName =
-        originLayoutName;
-    journal.originFile =
-        originBackend;
-    journal.destinationLayoutName =
-        destinationLayoutName;
-    journal.destinationFile =
-        destinationBackend;
-    journal.hiddenFile =
-        hiddenBackend;
-    journal.rootContainmentId =
-        originViewId;
-    journal.containmentIds =
-        containmentIds;
+    journal.transactionId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    journal.originLayoutName = originLayoutName;
+    journal.originFile = originBackend;
+    journal.destinationLayoutName = destinationLayoutName;
+    journal.destinationFile = destinationBackend;
+    journal.hiddenFile = hiddenBackend;
+    journal.rootContainmentId = originViewId;
+    journal.containmentIds = containmentIds;
     journal.directoryPath =
         QDir(transactionsRoot)
-            .filePath(
-                journal.transactionId
-                + QString::fromLatin1(
-                    ViewMovePreparedSuffix));
+            .filePath(journal.transactionId + QString::fromLatin1(ViewMovePreparedSuffix));
 
     Layout::ViewMoveTransaction transaction;
-    EndpointPublicationResult
-        commitDecisionPublication{
-            EndpointPublicationResult::
-                Failed};
-    bool endpointDirectoryFlushFailed{false};
+    EndpointPublicationResult commitDecisionPublication {EndpointPublicationResult::Failed};
+    bool endpointDirectoryFlushFailed {false};
     const auto acceptDurablePublication =
-        [&endpointDirectoryFlushFailed](
-            const EndpointPublicationResult
-                publication) {
-            if (publication
-                    == EndpointPublicationResult::
-                        PublishedButDirectoryFlushFailed) {
-                endpointDirectoryFlushFailed =
-                    true;
+        [&endpointDirectoryFlushFailed](const EndpointPublicationResult publication) {
+            if (publication == EndpointPublicationResult::PublishedButDirectoryFlushFailed) {
+                endpointDirectoryFlushFailed = true;
             }
-            return publicationIsDurable(
-                publication);
+            return publicationIsDurable(publication);
         };
-    const auto pureResult =
-        transaction.commit(
-            [&journal,
-             &snapshotFile,
-             &transactionsRoot,
-             this]() {
-                if (!QDir().mkdir(
-                        journal.directoryPath)) {
-                    qCritical() << "view move transaction could not create"
-                                << journal.directoryPath;
-                    return false;
-                }
-                if (!QFile::setPermissions(
-                        journal.directoryPath,
-                        ViewMovePrivateDirectoryPermissions)) {
-                    qCritical() << "view move transaction could not make its journal private"
-                                << journal.directoryPath;
-                    return false;
-                }
-                if (!copyFileAtomically(
-                        snapshotFile,
-                        journal.snapshotPath())) {
-                    return false;
-                }
-                journal.snapshotSha256 =
-                    fileSha256(
-                        journal.snapshotPath());
-                if (journal.snapshotSha256
-                        .isEmpty()
-                        || !writeJournalManifest(
-                            journal)
-                        || !promotePreparedJournal(
-                            journal,
-                            transactionsRoot)) {
-                    return false;
-                }
+    const auto pureResult = transaction.commit(
+        [&journal, &snapshotFile, &transactionsRoot, this]() {
+            if (!QDir().mkdir(journal.directoryPath)) {
+                qCritical() << "view move transaction could not create" << journal.directoryPath;
+                return false;
+            }
+            if (!QFile::setPermissions(journal.directoryPath,
+                                       ViewMovePrivateDirectoryPermissions)) {
+                qCritical() << "view move transaction could not make its journal private"
+                            << journal.directoryPath;
+                return false;
+            }
+            if (!copyFileAtomically(snapshotFile, journal.snapshotPath())) {
+                return false;
+            }
+            journal.snapshotSha256 = fileSha256(journal.snapshotPath());
+            if (journal.snapshotSha256.isEmpty() || !writeJournalManifest(journal)
+                || !promotePreparedJournal(journal, transactionsRoot)) {
+                return false;
+            }
 
-                const auto persisted =
-                    readJournalManifest(
-                        journal.directoryPath);
-                const bool journalVerified =
-                    persisted
-                    && persisted
-                        ->snapshotSha256
-                        == journal
-                            .snapshotSha256
-                    && fileSha256(
-                        journal.snapshotPath())
-                        == journal
-                            .snapshotSha256;
-                if (journalVerified) {
-                    advanceViewMoveLifecycleGeneration(
-                        m_viewMoveJournalCreatedGeneration,
-                        "journal creation");
-                }
-                return journalVerified;
-            },
-            [destinationConfig,
-             &journal,
-             directoryFlushFailure,
-             &acceptDurablePublication]() {
-                return acceptDurablePublication(
-                    publishSnapshot(
-                        destinationConfig,
-                        journal.snapshotPath(),
-                        journal
-                            .containmentIds,
-                        QString(),
-                        false,
-                        directoryFlushFailure
-                            == ViewMoveDirectoryFlushFailure::
-                                Destination));
-            },
-            [activeConfig,
-             &journal,
-             interruption,
-             directoryFlushFailure,
-             &commitDecisionPublication,
-             &acceptDurablePublication]() {
-                if (interruption
-                        == ViewMoveInterruption::
-                            AfterDestinationPublish
-                        || interruption
-                            == ViewMoveInterruption::
-                                RejectCommitDecision) {
-                    return false;
-                }
-                commitDecisionPublication =
-                    publishLayoutOwner(
-                        activeConfig,
-                        journal
-                            .containmentIds,
-                        journal
-                            .destinationLayoutName,
-                        directoryFlushFailure
-                            == ViewMoveDirectoryFlushFailure::
-                                HiddenOwner);
-                return acceptDurablePublication(
-                    commitDecisionPublication);
-            },
-            [&journal,
-             interruption,
-             &commitDecisionPublication]() {
-                if (interruption
-                        == ViewMoveInterruption::
-                            AfterDestinationPublish
-                        || commitDecisionPublication
-                            == EndpointPublicationResult::
-                                PublishedButDirectoryFlushFailed) {
-                    return Layout::
-                        ViewMoveTransaction::
-                            PersistentOwner::Unknown;
-                }
-                return observePersistentOwner(
-                    journal.hiddenFile,
-                    journal
-                        .containmentIds,
-                    journal.originLayoutName,
-                    journal
-                        .destinationLayoutName);
-            },
-            [destinationConfig,
-             &journal,
-             directoryFlushFailure,
-             &endpointDirectoryFlushFailed,
-             &acceptDurablePublication]() {
-                if (endpointDirectoryFlushFailed) {
-                    return false;
-                }
-                return acceptDurablePublication(
-                    tombstoneSnapshot(
-                        destinationConfig,
-                        journal
-                            .containmentIds,
-                        directoryFlushFailure
-                            == ViewMoveDirectoryFlushFailure::
-                                Destination));
-            },
-            [&journal,
-             interruption,
-             directoryFlushFailure,
-             &acceptDurablePublication]() {
-                if (interruption
-                        == ViewMoveInterruption::
-                            AfterCommitDecision) {
-                    return false;
-                }
-                const KSharedConfigPtr
-                    originConfig =
-                        KSharedConfig::
-                            openConfig(
-                                journal
-                                    .originFile,
-                                KConfig::
-                                    SimpleConfig);
-                return acceptDurablePublication(
-                    tombstoneSnapshot(
-                        originConfig,
-                        journal
-                            .containmentIds,
-                        directoryFlushFailure
-                            == ViewMoveDirectoryFlushFailure::
-                                Origin));
-            });
+            const auto persisted = readJournalManifest(journal.directoryPath);
+            const bool journalVerified =
+                persisted && persisted->snapshotSha256 == journal.snapshotSha256
+                && fileSha256(journal.snapshotPath()) == journal.snapshotSha256;
+            if (journalVerified) {
+                advanceViewMoveLifecycleGeneration(m_viewMoveJournalCreatedGeneration,
+                                                   "journal creation");
+            }
+            return journalVerified;
+        },
+        [destinationConfig, &journal, directoryFlushFailure, &acceptDurablePublication]() {
+            return acceptDurablePublication(publishSnapshot(
+                destinationConfig, journal.snapshotPath(), journal.containmentIds, QString(), false,
+                directoryFlushFailure == ViewMoveDirectoryFlushFailure::Destination));
+        },
+        [activeConfig, &journal, interruption, directoryFlushFailure, &commitDecisionPublication,
+         &acceptDurablePublication]() {
+            if (interruption == ViewMoveInterruption::AfterDestinationPublish
+                || interruption == ViewMoveInterruption::RejectCommitDecision) {
+                return false;
+            }
+            commitDecisionPublication = publishLayoutOwner(
+                activeConfig, journal.containmentIds, journal.destinationLayoutName,
+                directoryFlushFailure == ViewMoveDirectoryFlushFailure::HiddenOwner);
+            return acceptDurablePublication(commitDecisionPublication);
+        },
+        [&journal, interruption, &commitDecisionPublication]() {
+            if (interruption == ViewMoveInterruption::AfterDestinationPublish
+                || commitDecisionPublication
+                       == EndpointPublicationResult::PublishedButDirectoryFlushFailed) {
+                return Layout::ViewMoveTransaction::PersistentOwner::Unknown;
+            }
+            return observePersistentOwner(journal.hiddenFile, journal.containmentIds,
+                                          journal.originLayoutName, journal.destinationLayoutName);
+        },
+        [destinationConfig, &journal, directoryFlushFailure, &endpointDirectoryFlushFailed,
+         &acceptDurablePublication]() {
+            if (endpointDirectoryFlushFailed) {
+                return false;
+            }
+            return acceptDurablePublication(tombstoneSnapshot(
+                destinationConfig, journal.containmentIds,
+                directoryFlushFailure == ViewMoveDirectoryFlushFailure::Destination));
+        },
+        [&journal, interruption, directoryFlushFailure, &acceptDurablePublication]() {
+            if (interruption == ViewMoveInterruption::AfterCommitDecision) {
+                return false;
+            }
+            const KSharedConfigPtr originConfig =
+                KSharedConfig::openConfig(journal.originFile, KConfig::SimpleConfig);
+            return acceptDurablePublication(
+                tombstoneSnapshot(originConfig, journal.containmentIds,
+                                  directoryFlushFailure == ViewMoveDirectoryFlushFailure::Origin));
+        });
 
-    if (pureResult
-            == Layout::ViewMoveTransaction::
-                Result::Committed
-            || pureResult
-                == Layout::ViewMoveTransaction::
-                    Result::
-                        CommittedRecoveryRequired) {
-        advanceViewMoveLifecycleGeneration(
-            m_viewMoveCommitDecisionGeneration,
-            "commit decision");
+    if (pureResult == Layout::ViewMoveTransaction::Result::Committed
+        || pureResult == Layout::ViewMoveTransaction::Result::CommittedRecoveryRequired) {
+        advanceViewMoveLifecycleGeneration(m_viewMoveCommitDecisionGeneration, "commit decision");
     }
 
     ViewMovePersistenceResult result;
-    result.transactionPath =
-        journal.directoryPath;
+    result.transactionPath = journal.directoryPath;
     switch (pureResult) {
-    case Layout::ViewMoveTransaction::
-            Result::Rejected: {
-        result.status =
-            ViewMovePersistenceResult::
-                Status::Rejected;
-        result.error =
-            QStringLiteral(
-                "durable move was refused before its commit decision");
+    case Layout::ViewMoveTransaction::Result::Rejected: {
+        result.status = ViewMovePersistenceResult::Status::Rejected;
+        result.error = QStringLiteral("durable move was refused before its commit decision");
         const bool journalCleanupSucceeded =
-            !QFileInfo::exists(
-                journal.directoryPath)
-            || (journal.directoryPath
-                    .endsWith(
-                        QString::fromLatin1(
-                            ViewMovePendingSuffix))
-                ? completeViewMovePersistence(
-                    journal.directoryPath)
-                : discardPreparedJournal(
-                    journal.directoryPath,
-                    transactionsRoot));
+            !QFileInfo::exists(journal.directoryPath)
+            || (journal.directoryPath.endsWith(QString::fromLatin1(ViewMovePendingSuffix))
+                    ? completeViewMovePersistence(journal.directoryPath)
+                    : discardPreparedJournal(journal.directoryPath, transactionsRoot));
         if (!journalCleanupSucceeded) {
-            result.status =
-                ViewMovePersistenceResult::
-                    Status::
-                        RejectedRecoveryRequired;
-            result.error =
-                QStringLiteral(
-                    "durable move rollback completed but journal cleanup requires recovery");
+            result.status = ViewMovePersistenceResult::Status::RejectedRecoveryRequired;
+            result.error = QStringLiteral(
+                "durable move rollback completed but journal cleanup requires recovery");
         }
         break;
     }
-    case Layout::ViewMoveTransaction::
-            Result::
-                RejectedRecoveryRequired:
-        result.status =
-            ViewMovePersistenceResult::
-                Status::
-                    RejectedRecoveryRequired;
+    case Layout::ViewMoveTransaction::Result::RejectedRecoveryRequired:
+        result.status = ViewMovePersistenceResult::Status::RejectedRecoveryRequired;
         result.error =
-            QStringLiteral(
-                "durable move was not committed and rollback requires recovery");
+            QStringLiteral("durable move was not committed and rollback requires recovery");
         break;
-    case Layout::ViewMoveTransaction::
-            Result::Committed:
-        result.status =
-            ViewMovePersistenceResult::
-                Status::Committed;
+    case Layout::ViewMoveTransaction::Result::Committed:
+        result.status = ViewMovePersistenceResult::Status::Committed;
         break;
-    case Layout::ViewMoveTransaction::
-            Result::
-                CommittedRecoveryRequired:
-        result.status =
-            ViewMovePersistenceResult::
-                Status::
-                    CommittedRecoveryRequired;
+    case Layout::ViewMoveTransaction::Result::CommittedRecoveryRequired:
+        result.status = ViewMovePersistenceResult::Status::CommittedRecoveryRequired;
         result.error =
-            QStringLiteral(
-                "durable move committed but source retirement requires recovery");
+            QStringLiteral("durable move committed but source retirement requires recovery");
         break;
     }
     return result;
