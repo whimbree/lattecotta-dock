@@ -4821,6 +4821,34 @@ carries its own detail or points into the plan and the reference docs.
 
 ## Fixed (kept for the record)
 
+### D292 - Synchronizer::pauseLayout dereferences a possibly-null layout before guarding it
+- STATUS: FIXED (CHUNK-4, the synchronizer.cpp dead-null-check audit item).
+- FOUND: 2026-08-10, by code-reading while removing the dead `layout &&`
+  null-check flagged by the audit.
+- SYMPTOM (latent): `Synchronizer::pauseLayout` looked up `centralLayout(layoutName)`
+  and immediately called `layout->isOnAllActivities()` with no null guard, then
+  several lines later tested `if (layout && !appliedactivities.isEmpty())`. The
+  late `layout &&` test could never fire - if `layout` were null the earlier
+  `isOnAllActivities()` dereference had already crashed - so the guard was dead,
+  and it masked the real gap: the pointer, which `centralLayout()` returns null
+  for when the named layout is not loaded, was dereferenced unguarded. Latent
+  because `pauseLayout` has zero callers (a plain public method, not a slot or
+  Q_INVOKABLE, and its body is an empty Phase-8 STUB after Plasma 6 removed
+  activity stopping), so the null-deref is currently unreachable; it would crash
+  if the function were ever wired to a caller passing an unloaded layout name.
+- ROOT: the null guard sat after two dereferences instead of before the first.
+  Inherited verbatim from upstream KDE latte-dock (Michail Vourlakos, 302c6a9cc2,
+  2020) - the restructure that placed `isOnAllActivities()` ahead of the guard is
+  upstream, not a port regression.
+- FIX: moved the guard before the first dereference
+  (`if (!layout || layout->isOnAllActivities()) return;`) and dropped the now
+  redundant `layout &&`. A null `layout` means the layout is not loaded and there
+  is nothing to pause, which is a legitimate absent-optional no-op matching the
+  established `if (central)` skip pattern elsewhere in this file, so an early
+  return (documented with a WHY comment) is the correct contract, not a swallowed
+  failure. Behavior-preserving for every reachable path (the function is never
+  called; and for a non-null layout the logic is unchanged).
+
 ### D291 - Wayland virtual-desktop list ignored the compositor insertion position
 - STATUS: FIXED (phase 4 of the -Werror campaign - warnings-as-errors;
   ef521cda2).
