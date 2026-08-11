@@ -15,9 +15,10 @@ are low-value churn, deliberately deferred. Next session's higher-value work:
    into real-bug vs Qt5-faithful/accepted vs test-infra, then drive fixes for the
    genuinely-broken user-facing ones (candidates: D274 maximize input region stays
    full-width after a shrink, D283 legacy clone path drops its replica on reload,
-   D19 about-dialog keep-above no-op on wayland, D268 panel-focus timing; D289 is a
-   trivial one-line dup-connection delete). Surface product-decision/live-check
-   ones to the maintainer rather than guessing.
+   D19 about-dialog keep-above no-op on wayland, D268 panel-focus timing).
+   Surface product-decision/live-check ones to the maintainer rather than
+   guessing. (D289, the dup-connection delete, landed 2026-08-11 - see the
+   defect-quick-wins section below.)
 2. PHASE 8 (the open README roadmap item) - layout/config persistence, session
    shutdown, multi-screen edge cases. The plan has 58 unticked items, most of the
    remaining gotcha-heavy ones here; several want a live desktop, so surface the
@@ -30,6 +31,14 @@ PARKED for the maintainer (do not guess): D295 (the two inherited precedence
 asymmetries - intent/live call) and the settings-wiring audit remove-vs-wire
 disposition (dead legacy-plasmoid-config settings; full inventory in the
 2026-08-10 settings-audit note below).
+
+## 2026-08-11: defect quick wins (branch fix/defect-quick-wins)
+
+Six small independent landings, one commit each, registry updated in the same
+commit: D289 (the duplicate screen-tracker spinbox connection) deleted.
+Remaining planned on the branch: D296 (context-menu out-of-bounds m_data read,
+the D20-latent), D60 (stale Tasks plugins.qmltypes), D272 (storagetest root
+QSKIP), D64 (fakepointer xkbcommon link), D19 (About keep-above stub).
 
 ## 2026-08-09: the quality cleanup wave and the model-vs-truth drift net
 

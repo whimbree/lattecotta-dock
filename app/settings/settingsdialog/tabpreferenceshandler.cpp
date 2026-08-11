@@ -90,11 +90,6 @@ void TabPreferences::initUi()
         Q_EMIT dataChanged();
     });
 
-    connect(m_ui->screenTrackerSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [this](int) {
-        m_preferences.screensDelay = m_ui->screenTrackerSpinBox->value();
-        Q_EMIT dataChanged();
-    });
-
     connect(m_ui->metaPressChkBox, &QCheckBox::checkStateChanged, this, [&]() {
         m_preferences.metaPressForAppLauncher = m_ui->metaPressChkBox->isChecked();
         Q_EMIT dataChanged();
