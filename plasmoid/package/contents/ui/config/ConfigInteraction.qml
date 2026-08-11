@@ -58,7 +58,11 @@ Item {
                 PlasmaComponents.CheckBox {
                     id: showInfoBadgeChk
                     Layout.fillWidth: true
-                    text: i18n("Show progress information for tasks")
+                    //! showInfoBadge is the unread/notifications badge, the
+                    //! same key the in-dock Tasks page labels "Notifications
+                    //! from tasks". The Qt5 label here claimed "progress
+                    //! information" while toggling this key (D306).
+                    text: i18n("Show notifications from tasks")
                 }
 
                 GridLayout {
