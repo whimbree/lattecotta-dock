@@ -96,7 +96,11 @@ LatteComponents.IndicatorItem{
                 basicColor: root.indicator.isActive || (root.indicator.isGroup && root.indicator.hasShown) ? root.isActiveColor : root.notActiveColor
 
                 size: root.size
-                glow3D: glow3D
+                //! must be root-qualified: an unqualified glow3D resolves
+                //! against the GlowPoint scope object's own glow3D first (a
+                //! self-binding), so the configuration value never arrived
+                //! (upstream-inherited)
+                glow3D: root.glow3D
                 animation: Math.max(1.65*3*LatteCore.Environment.longDuration,root.indicator.durationTime*3*LatteCore.Environment.longDuration)
                 location: Plasmoid.location
                 glowOpacity: root.glowOpacity
@@ -113,7 +117,7 @@ LatteComponents.IndicatorItem{
                     else
                         return false;
                 }
-                showBorder: root.glowEnabled && glow3D
+                showBorder: root.glowEnabled && root.glow3D
 
                 property int stateWidth: root.indicator.isGroup ? root.width - secondPoint.width : root.width - spacer.width
                 property int stateHeight: root.indicator.isGroup ? root.height - secondPoint.height : root.height - spacer.height
@@ -211,12 +215,16 @@ LatteComponents.IndicatorItem{
                 height: width
 
                 size: root.size
-                glow3D: glow3D
+                //! must be root-qualified: an unqualified glow3D resolves
+                //! against the GlowPoint scope object's own glow3D first (a
+                //! self-binding), so the configuration value never arrived
+                //! (upstream-inherited)
+                glow3D: root.glow3D
                 animation: Math.max(1.65*3*LatteCore.Environment.longDuration,root.indicator.durationTime*3*LatteCore.Environment.longDuration)
                 location: Plasmoid.location
                 glowOpacity: root.glowOpacity
                 contrastColor: root.indicator.shadowColor
-                showBorder: root.glowEnabled && glow3D
+                showBorder: root.glowEnabled && root.glow3D
 
                 basicColor: state2Color
                 roundCorners: true
