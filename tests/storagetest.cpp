@@ -57,6 +57,9 @@
 // C++
 #include <optional>
 
+// POSIX (geteuid: the permission-bit subtests are meaningless as root)
+#include <unistd.h>
+
 // KDE
 #include <KConfig>
 #include <KConfigGroup>
@@ -2578,6 +2581,16 @@ void StorageTest::removalPersistenceReportsWriteFailure()
 
 void StorageTest::classifyLayoutPersistenceEndpoints()
 {
+    //! every refusal this function asserts rides on permission bits (chmod
+    //! 0444 files, write-only files, read-only and unsearchable parents) and
+    //! root bypasses permission checks entirely, so each !isWritable()
+    //! assertion is false under euid 0 (D272, the distro-matrix containers
+    //! run ctest as root) - the common upstream QSKIP pattern
+    if (::geteuid() == 0) {
+        QSKIP("permission-bit refusals cannot be asserted as root: "
+              "euid 0 bypasses file permission checks");
+    }
+
     const QString writablePath =
         writeLayoutFixture(
             QStringLiteral(
