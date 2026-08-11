@@ -3888,7 +3888,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   batch.
 
 ### D272 - storagetest asserts permission-bit refusal that root bypasses
-- STATUS: OPEN.
+- STATUS: FIXED (2026-08-11, the defect-quick-wins branch).
 - FOUND: 2026-08-04, the BP-0c (container uv provisioning) end-to-end Arch
   gate run: `storagetest::classifyLayoutPersistenceEndpoints` failed in the
   container while green on the NixOS gate.
@@ -3896,12 +3896,20 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `!writableLayout.isWritable()`; every distro matrix container runs ctest as
   root, and root bypasses permission bits, so the assertion is false there.
   Landed `e57f8e929` (2026-07-26), after the last recorded in-container gate
-  run (2026-07-17), so every distro leg's gate stage fails until addressed.
-- FIX DIRECTION: guard the subtest under euid 0 (QSKIP, the common upstream
-  pattern) or run the container ctest unprivileged. Small standalone chunk,
-  outside the BP workstream.
-- SEVERITY: blocks the multi-distro gate stage (release CI matrix), not the
-  NixOS merge gate.
+  run (2026-07-17), so every distro leg's gate stage failed until addressed.
+- FIX: `classifyLayoutPersistenceEndpoints` QSKIPs under euid 0 (the common
+  upstream pattern). The guard sits at the function top because every refusal
+  the function asserts rides on permission bits root bypasses - not only the
+  0444 file but the write-only file, the read-only and unsearchable parents,
+  and the symbolic-link target restriction.
+- EVIDENCE: unprivileged focused ctest run green (guard dormant, all subtests
+  exercised). The euid-0 path was driven under `unshare -r` (namespace root
+  carries the same DAC-override bypass over own files as container root):
+  pre-fix source fails there with exactly the container's assertion
+  (`'!writableLayout.isWritable()' returned FALSE`), fixed source records
+  1 skipped. The container legs themselves rerun at the next matrix pass.
+- SEVERITY (was): blocked the multi-distro gate stage (release CI matrix),
+  not the NixOS merge gate.
 
 ### D271 - ctest inherits the ambient QML import path; stage shadows registrations
 - STATUS: FIXED by the build-check hermetic-ctest commit in PR #152.
