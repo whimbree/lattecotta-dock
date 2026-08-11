@@ -280,8 +280,12 @@ private:
 private:
     WindowSystem::AbstractWindowInterface *m_wm;
     Types::Visibility m_mode{Types::None};
-    //! Capacity covers the largest visibility-mode connection set.
+    //! Capacity must cover the widest visibility-mode connection set. That set
+    //! is AlwaysVisible, which installs six connections at indices 0..5 (its
+    //! base offset is 0); every other mode installs fewer. Eight leaves headroom.
     std::array<QMetaObject::Connection, 8> m_connections;
+    static_assert(std::tuple_size<decltype(m_connections)>::value >= 6,
+                  "m_connections must hold AlwaysVisible's six connections (indices 0..5)");
 
     QTimer m_timerShow;
     QTimer m_timerHide;
