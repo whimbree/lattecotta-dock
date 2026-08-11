@@ -88,7 +88,7 @@ RUN xbps-install -Suy \
         plasma-workspace-devel plasma5support-devel kpipewire-devel \
         libksysguard-devel plasma-pa \
         plasma-wayland-protocols wayland-devel wayland-protocols \
-        layer-shell-qt-devel \
+        libxkbcommon-devel layer-shell-qt-devel \
         kwin vulkan-loader vulkan-loader-devel Vulkan-Headers \
         Vulkan-ValidationLayers mesa-vulkan-lavapipe \
         noto-fonts-ttf dbus libcap-progs rsync perl python3 ImageMagick \

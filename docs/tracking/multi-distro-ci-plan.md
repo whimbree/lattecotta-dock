@@ -504,17 +504,21 @@ pass on every distro regardless of tier.
       the asserted rows (the nix devShell's allow-listed XDG_DATA_DIRS hides
       it); excluded from the matrix ctest, needs a hermetic scheme-path
       injection. Commits:
-- [ ] B2a (the D64 distro-gate fakepointer xkbcommon link repair): add
+- [x] B2a (the D64 distro-gate fakepointer xkbcommon link repair): add
       `xkbcommon` to `build_fakepointer`'s pkg-config flags and every container
       dependency set, then run the helper build through the focused container
-      self-test. The exact current helper command fails with
+      self-test. The exact previous helper command failed with
       `undefined reference to xkb_keysym_from_name`; the documented
-      Wayland-plus-xkbcommon command links successfully. This CI repair remains
-      unchecked and outside SC-T5 (the permanent runtime-effect acceptance for
-      D29, task-icon middle click appears to execute left-click behavior) scope;
-      PR #101 neither
-      implements nor approves it. Dependencies: B2.
-      Commits:
+      Wayland-plus-xkbcommon command links successfully - both re-driven in the
+      devShell at landing time (2026-08-11). The compile line and all seven
+      container dependency sets landed on the defect-quick-wins branch; the
+      in-container helper build has no separate self-test harness (the gate
+      stage of ci/build-and-gate.sh builds the helper itself), so the container
+      legs validate the repair on their next matrix run. Outside SC-T5 (the
+      permanent runtime-effect acceptance for D29, task-icon middle click
+      appears to execute left-click behavior) scope; PR #101 neither
+      implemented nor approved it. Dependencies: B2.
+      Commits: (defect-quick-wins branch; final hash at merge)
 - [x] B3 Run sceneprobe in-container in invariant+tolerance mode; confirm
       scenes render (not blank, right regions). ARCH DONE: all 13 scenes
       render and PASS in the Arch container - and bit-exact against the

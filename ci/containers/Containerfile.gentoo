@@ -136,7 +136,7 @@ RUN emerge-webrsync --quiet && \
       kde-plasma/plasma-activities-stats:6 kde-plasma/plasma-workspace:6 \
       kde-plasma/plasma-pa:6 kde-plasma/kpipewire:6 kde-plasma/libksysguard:6 \
       kde-plasma/layer-shell-qt:6 kde-plasma/kwin:6 kde-plasma/kwayland:6 \
-      dev-libs/plasma-wayland-protocols dev-libs/wayland \
+      dev-libs/plasma-wayland-protocols dev-libs/wayland x11-libs/libxkbcommon \
       media-libs/mesa media-libs/vulkan-loader dev-util/vulkan-headers \
       media-libs/vulkan-layers \
       sys-libs/libcap net-misc/rsync dev-lang/perl dev-lang/python \

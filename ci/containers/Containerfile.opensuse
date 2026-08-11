@@ -60,7 +60,8 @@ RUN zypper --non-interactive --gpg-auto-import-keys refresh \
         libplasma6-devel plasma6-activities-devel plasma6-activities-stats-devel \
         plasma6-workspace-devel kwayland6-devel plasma5support6-devel kpipewire6-devel \
         libksysguard6-devel \
-        plasma-wayland-protocols wayland-devel wayland-protocols-devel layer-shell-qt6-devel \
+        plasma-wayland-protocols wayland-devel wayland-protocols-devel \
+        libxkbcommon-devel layer-shell-qt6-devel \
         kwin6 vulkan-headers vulkan-devel libvulkan1 vulkan-validationlayers libvulkan_lvp \
         google-noto-sans-fonts dbus-1 libcap-progs rsync perl python313-base ImageMagick \
     && zypper clean --all

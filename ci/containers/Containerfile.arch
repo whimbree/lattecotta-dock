@@ -25,7 +25,7 @@ RUN pacman -Syu --noconfirm --needed \
         libplasma plasma-activities plasma-activities-stats plasma-workspace \
         plasma-pa kpipewire plasma5support libksysguard kwayland \
         plasma-wayland-protocols layer-shell-qt \
-        kwin wayland wayland-protocols \
+        kwin wayland wayland-protocols libxkbcommon \
         vulkan-headers vulkan-icd-loader vulkan-swrast vulkan-validation-layers \
         noto-fonts dbus libcap rsync perl \
         python imagemagick konsole \
