@@ -17,8 +17,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 ## Open / suspected
 
 ### D297 - servicesFromCmdLine recurses forever on a bare ignored runtime
-- STATUS: FIXED same-day (found and fixed 2026-08-11 on the fork-sync fold-in
-  branch fix/fork-sync-foldins-202608; final hash recorded at merge).
+- STATUS: FIXED same-day (found and fixed 2026-08-11, merged in PR #239 at
+  c16ac1721).
 - FOUND: 2026-08-11, by the fork-sync pass
   (docs/agent-logs/2026-08-11-fork-sync-report.md, item F1): latte-dock-ng's
   1d051010c guards the same recursion; the defect is verbatim in this tree,
