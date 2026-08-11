@@ -31,9 +31,6 @@
     <entry name="showShadows" type="Bool">
       <default>false</default>
     </entry>
-    <entry name="showGlow" type="Bool">
-      <default>true</default>
-    </entry>
     <entry name="isPreferredForPositionShortcuts" type="Bool">
       <default>false</default>
     </entry>
@@ -47,12 +44,6 @@
       <default>48</default>
     </entry>
     <entry name="zoomHelper" type="Bool">
-      <default>false</default>
-    </entry>
-    <entry name="threeColorsWindows" type="Bool">
-      <default>false</default>
-    </entry>
-    <entry name="dotsOnActive" type="Bool">
       <default>false</default>
     </entry>
     <entry name="useThemePanel" type="Bool">
