@@ -287,8 +287,11 @@ that pin the exact libplasma/KSvg/Qt behaviors the dock relies on (so a
 dependency bump fails in ctest instead of misbehaving on screen), a
 scene-render gate that compares real rasterized pixels against
 committed goldens on pure CPU, a qmllint ratchet with a committed
-baseline that only shrinks, and a coverage ratchet that makes untested
-cores un-mergeable. Feel-critical changes (the parabolic engine,
+baseline that only shrinks, a coverage ratchet that makes untested
+cores un-mergeable, and a warnings-as-errors build: the whole tree
+compiles clean under `-Wall -Wextra -Werror` for developers and CI,
+behind a `LATTE_WERROR` build option so distro packagers can opt out on
+a differing toolchain. Feel-critical changes (the parabolic engine,
 the preview pipeline) additionally get live verification on a running
 Wayland session with injected pointer glides and screenshot comparison
 before they merge. The whole dock and its plugins can also be built

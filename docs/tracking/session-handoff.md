@@ -159,17 +159,40 @@ The three behavior-sensitive decisions and how they resolved:
   margin math. OWED LIVE CHECK: eyeball a real dock icon with an overlay badge;
   the shift is a one-line margin tweak if it looks off.
 
-After the flip the full build emits ZERO compiler warnings of ANY category, so
-phase 4 (the blanket `-Werror`) has no residual categories to burn down first.
-The tree now errors on eight categories: format-security, return-type, init-self,
-undef (pre-existing) plus missing-field-initializers, unused-result, pedantic,
-deprecated, dangling-reference, zero-as-null-pointer-constant, deprecated-declarations
-(the campaign). Phase 4 remaining: decide the blanket-`-Werror` scope (bare
-`-Werror` on the currently-enabled set, which the strips of -Wall/-Wreorder/
--Wunused-* narrow, vs re-enabling those stripped warnings for maximal strictness)
-and the packaged/distro-build treatment (an -O3 or different-toolchain build can
-surface warnings the dev -O2 build does not, so blanket -Werror likely wants a
-CMake option defaulting ON so distros can opt out).
+Phase 4 (the maximal blanket `-Werror`) is COMPLETE, and with it the whole
+-Werror campaign - 11 PRs, #223 through #233. The maintainer chose maximal
+scope: re-enable the warning flags the build stripped (`-Wall`, `-Wreorder`,
+`-Wunused-variable`, `-Wunused-parameter`) plus `-Wextra`, burn down everything
+they surface, then blanket `-Werror`. A scout censused 152 net warnings, all in
+hand-written code, zero vendored, zero moc/generated, and none of the dangerous
+-Wextra categories (no sign-compare/maybe-uninitialized/type-limits). Landed as:
+#231 (f22af4b41) enable `-Wall -Wextra` + the 145 mechanical fixes (19 -Wreorder
+ctors, 39 unused-variable, 23 unused-parameter, 9 unused-function, 7
+range-loop-construct); #232 (2d41e5440) the ~7 needs-judgment sites; #233
+(221ca2f76) the flip. The un-strip earned its keep: it confirmed `version2layout`
+is NOT a bug (dead code for a v1-rc + v2-appletsrc combination Latte never
+exports; real v2 imports route correctly), and it CAUGHT TWO REAL DEFECTS - D291
+(FIXED, ef521cda2: Wayland `addDesktop` ignored the compositor insertion position
+so a mid-row virtual desktop navigated in the wrong order) and D290 (OPEN:
+removing the free-activities-holding layout leaves Free-Activities unassigned; the
+reassignment was never written - a tracked future task needing a live repro).
+
+Final warning policy (top-level CMakeLists.txt): `-Wall -Wextra -Wformat` are
+PERMANENT (always emitted); `option(LATTE_WERROR ... ON)` is the single switch for
+whether they error. ON (developers/CI, the default) applies a blanket `-Werror`
+that subsumes and replaces the campaign's per-category `-Werror=` list and the old
+`-Werror=format-security`. OFF (`-DLATTE_WERROR=OFF`, for distro packagers) strips
+every `-Werror`/`-Werror=` token - including the ones ECM's KDECompilerSettings
+injects unconditionally (`return-type`/`init-self`/`undef`, and
+`implicit-function-declaration` for C) - so a distro build on a newer or different
+toolchain that surfaces a new warning does not hard-fail. The tree compiles
+warning-clean under `-Wall -Wextra -Werror` for developers and CI.
+
+Two OWED LIVE CHECKS remain from the campaign's behavior-sensitive PRs (both
+low-risk, both with trivial fallbacks): the releaseGrab de-hover (#228 - drag a
+window off the dock, applet should un-zoom; fall back to ng's keep-the-Leave 4-arg
+ctor if not) and the icon overlay badge (#229 - eyeball a real badge for the
+few-pixel shift; a one-line margin tweak if off).
 
 Owner decisions still open (carried forward): the D283 approach (fix the legacy
 clone path vs deprecate), history excision of the swept maintainer-local files,
