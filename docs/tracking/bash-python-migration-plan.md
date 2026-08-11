@@ -455,6 +455,18 @@ Phase BP-5, tail:
   hold per the disposition table. The harness-scripting-typed-python
   memory updated with the completion state. Commits: (this docs PR's
   hash at merge)
+- [x] Post-closeout unblock (2026-08-11): the D283 fix (the legacy
+  AllScreensGroup clone path dropped its persisted replica on reload;
+  persisted screen-group replicas now adopt at startup) freed
+  duplicate-dock-independent, the lifecycle holdout. Ported per the R10
+  pattern with one recorded hardening: viewsData reads that race a fresh
+  duplicate's placement publication poll through DbusUnavailableError
+  (the bash read once unguarded and was observed failing on the refusal
+  window). Ported recipe green twice in fresh dual-output vehicles; bash
+  deleted, allowlist 58 -> 57 lines. Five bash files remain in
+  tests/e2e: three defect-blocked recipes (040/D276, 061/D209,
+  070-maximize/D274) plus lib.sh and multi-output-lib.sh.
+  Commits: d9967b21c, f5c15aedd, 4c0b756af (hashes re-resolve at merge)
 
 ## Filed follow-ups (wave 1)
 
