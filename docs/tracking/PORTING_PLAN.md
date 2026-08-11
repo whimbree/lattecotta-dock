@@ -1048,6 +1048,39 @@ into C++. There is no drop-in replacement to import.
       with its source signal and cache key unchanged; a nameless pixmap icon
       remains green. The coverage ratchet reports 94 ctest entries and 31 paired
       unit headers.
+- [ ] Grouped-window cycling: restore a minimized group member before
+      presenting it (fork-sync INVESTIGATE, filed 2026-08-11 from
+      docs/agent-logs/2026-08-11-fork-sync-report.md). latte-dock-ng's
+      79004a8ae (with follow-up 0ea1fe3e8) found that activating a
+      minimized member of a grouped task on KWin Wayland can leave it
+      minimized, and added an explicit restore step before the activation
+      request. This tree pins Qt5 semantics deliberately: the cycle
+      functions snapshot isMinimized per window
+      (plasmoid/package/contents/ui/task/SubWindows.qml,
+      _snapshotGroupWindows), selection lives in LatteCore.WindowCycler
+      (declarativeimports/core/units/windowcycler.h,
+      declarativeimports/core/windowcyclertools.cpp), and activation is
+      tasksModel.requestActivate only. Needs a live nested-vehicle repro
+      first: cycle a group with a minimized member on this pin and observe
+      whether KWin unminimizes on activate; only diverge from the Qt5
+      shape if the repro proves activation leaves the window minimized,
+      and then record the platform constraint per the Qt5-faithful rule.
+      Commits:
+- [ ] Grouped-window cycling: decide the phantom surfaceless-entry filter
+      (fork-sync INVESTIGATE, filed 2026-08-11 from
+      docs/agent-logs/2026-08-11-fork-sync-report.md). latte-dock-ng's
+      ccbfe7608 skips group entries with no real window surface when
+      cycling backwards; the trigger is real-world (daemon processes
+      holding surfaceless toplevels, e.g. ghostty). This tree's
+      _snapshotGroupWindows/WindowCycler pair carries no phantom filter
+      (deliberate Qt5 pinning; the snapshot maps an undefined WinIdList
+      to winId 0 but still cycles the row). The "skip phantom toplevels
+      when cycling" clause in the grouped-task click-activation item
+      above landed only the cycling fallback (14c973b3), so this is the
+      open half of that clause. Repro with a surfaceless-toplevel daemon
+      inside a group on the nested vehicle, then decide
+      filter-vs-faithful with evidence.
+      Commits:
 
 ### Phase 7: Widget management, drag-and-drop, edit mode
 
@@ -2447,7 +2480,16 @@ multi-view, multi-monitor setup.
       SIGTERM -> full trail -> all five throwaway views unloaded ->
       clean exit ~1.5s, no core. LIVE CHECK PENDING (needs my hands,
       kills the session): one real logout/login cycle observing the
-      journal for the SIGTERM line and a clean exit.
+      journal for the SIGTERM line and a clean exit. That same cycle
+      also verifies no lingering xdg_toplevels block logout (fork-sync
+      note, 2026-08-11, docs/agent-logs/2026-08-11-fork-sync-report.md):
+      KWin's session teardown waits on xdg_toplevels closing (its
+      closeWaylandWindows path), which the layer-shell dock surfaces sit
+      outside of - the reason latte-dock-ng's 51b9de4aa
+      unmap-views-on-shutdown does not apply here - but Latte's OWN
+      xdg_toplevel windows (settings and config chrome) ARE covered by
+      that wait, so a stray open config window at logout is exactly what
+      it would stall on.
       Commits: e02d1bcde (quit pattern), 9d183984e (lifecycleState
       D-Bus readback: startup/running/quit-requested/unloaded,
       observability-first)
@@ -2696,6 +2738,33 @@ multi-view, multi-monitor setup.
       global wheel handler, while keeping the Latte tasks plasmoid's
       area excluded from that bypass (its area is where containment-
       level scroll actions are supposed to intercept)
+      Commits:
+- [ ] Multi-screen relocation ping-pong: does reconsiderScreen() need an
+      in-relocation guard (fork-sync INVESTIGATE, filed 2026-08-11 from
+      docs/agent-logs/2026-08-11-fork-sync-report.md)? latte-dock-ng's
+      8b3442167 fixed an AllSecondaryScreens (the every-screen-but-primary
+      placement mode) relocation ping-pong by refusing screen
+      reconsideration while a relocation is in flight. In this tree
+      Positioner::reconsiderScreen() (app/view/positioner.cpp:630)
+      enforces its primary-screen case with no inRelocationAnimation()
+      guard, though the state exists (app/view/positioner.h:47) and other
+      paths already consult it (positioner.cpp:373, 716). Decide with a
+      repro, not by analogy: drive an AllSecondaryScreens layout through
+      screen add/remove on the nested vehicle and watch for repeated
+      relocation; only add the guard if the ping-pong reproduces, else a
+      guard without a repro is a bandaid risk.
+      Commits:
+- [ ] Clone-removal destroy cascade repro (fork-sync INVESTIGATE, filed
+      2026-08-11 from docs/agent-logs/2026-08-11-fork-sync-report.md).
+      latte-dock-ng's 5c0a6c2c5 fixed applet loss when switching a dock
+      from AllScreens to SingleScreen: their clone teardown destroyed
+      containment state the original still owned. This tree's chain is
+      removeClone -> GenericLayout::removeView -> destroyContainment ->
+      containment->destroy(); whether that cascade can ever reach the
+      ORIGINAL containment (taking real applets with it) needs a
+      multi-screen repro: AllScreens dock with per-screen clones, flip to
+      SingleScreen, verify every original applet survives with its config
+      keys intact, not just visually present.
       Commits:
 
 ### Phase 9: Theming, colorization, multi-monitor visual polish
@@ -3260,6 +3329,29 @@ showed how much of the dock can only be driven by a pointer today.
       task-cycling-shortcuts feature (overlaps Latte's own shortcut
       system - decide at Phase 12, not auto-port).
       Commits: (alternativeshelper fix in its own commit)
+- [ ] Kicker-style cascading submenus stuck open: live check on this pin
+      (fork-sync INVESTIGATE, filed 2026-08-11 from
+      docs/agent-logs/2026-08-11-fork-sync-report.md). latte-dock-ng hit
+      cascading applet submenus (kicker-style menus) staying open on
+      Plasma 6.6 and fixed it across ac30d8dce/9a0f91eed (plus c3d33d7cb,
+      58a72b0c8) with an event-driven pointer-window tracker. The failure
+      is a Plasma 6.6 focus-behavior class, so whether this tree is
+      exposed needs a live check: host a kicker-style applet with
+      cascading submenus in a dock on this pin and walk the submenu tree.
+      Their tracker is the reference implementation if it reproduces.
+      Commits:
+- [ ] Edit-mode effects frame-commit: live check that blur/effects
+      toggles render immediately in edit mode (fork-sync INVESTIGATE,
+      low, filed 2026-08-11 from
+      docs/agent-logs/2026-08-11-fork-sync-report.md). latte-dock-ng's
+      b16b22648 found effect changes invisible until the next frame
+      commit and forces a view update on change. This tree's drawEffects
+      binding carries no !editMode gate (good, so effects are not
+      suppressed in edit mode), but the frame-commit half may still
+      apply. Live check: toggle blur while in edit mode and confirm the
+      change renders without leaving edit mode; if it stalls, their
+      update()-on-change is the reference shape.
+      Commits:
 - [ ] Edit mode / primary config view opened UNINVOKED on one
       real-config dock start (2026-07-15 10:52: the log shows
       "#primaryconfigview# initialization started" right at boot with
@@ -5239,6 +5331,18 @@ prerequisites in the phases above are done.
       check, currently UNVERIFIED - needs the appmenu KDED module
       running) so users have a working global menu while the port
       cooks and we have a behavior baseline to compare against.
+      Status-change idempotence note (fork-sync, 2026-08-11,
+      docs/agent-logs/2026-08-11-fork-sync-report.md): View::statusChanged
+      (app/view/view.cpp) already treats NeedsAttention like
+      RequiresAttention (block-hiding only), which is why latte-dock-ng's
+      606a1d22e keep-submenus-open fix does not apply; but every
+      containment status change also runs applyPanelFocusPolicy ->
+      applyKeyboardFocusPolicy, which unconditionally executes setFlags,
+      initViewFlags, LS::setFocusPolicy and requestUpdate. If those are
+      not value-idempotent, entering NeedsAttention while an applet menu
+      is open could churn the layer surface (latte-dock-ng's appmenu bug
+      class). Verify value-idempotence as part of the applet's live
+      checks.
       Commits:
 - [ ] Lattecotta package rename (DELIBERATELY DEFERRED, decided
       2026-07-16 with the rebrand): eventually rename packages,
