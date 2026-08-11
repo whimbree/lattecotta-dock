@@ -1647,7 +1647,7 @@ multi-view, multi-monitor setup.
       source still unidentified.
       Commits: 4c9f3bc7 (removed the original churn vector), 9ea29eaa
       (churn hardening, the actual fix)
-- [ ] Comic/any switch-threshold applet EXPANDS from parabolic zoom
+- [x] Comic/any switch-threshold applet EXPANDS from parabolic zoom
       alone: hovering grows the item past switchWidth/switchHeight and
       AppletQuickItem opens the popup with no click (observed live
       2026-07-12, survives cleanly since 9ea29eaa but the popup opening
@@ -1655,7 +1655,21 @@ multi-view, multi-monitor setup.
       check how Qt5 AppletQuickItem's compactRepresentationCheck treated
       panel form factors vs size thresholds, and whether Latte should
       pin preferredRepresentation for zoom-resized applets.
-      Commits:
+      RESOLVED 2026-08-11 as ACCEPTED, Qt5-faithful, verified against
+      both primary sources: plasma-framework 5.116 appletShouldBeExpanded
+      gives the switchWidth/switchHeight size check unconditional
+      precedence over form factor AND preferredRepresentation whenever
+      switch sizes are set, and libplasma 6.7.3 keeps the same ordering
+      (adding only an anti-resize-loop refinement). Latte's parabolic
+      zoom resizes the wrapper for real (ParabolicItem basicScaling
+      width/height, identical architecture in the Qt5-era tree at
+      eda019016 and today), so a hover past the thresholds expanded the
+      applet on Qt5 exactly as it does here - inherited PlasmaQuick
+      behavior, not a port regression. A preferredRepresentation pin
+      would be ignored while switch sizes are set (both majors consult
+      the size check first), so the proposed mitigation is a no-op;
+      any future change is a deliberate divergence proposal, not a fix.
+      Commits: none needed (verification-only closure)
 - [x] 'No QSGTexture provided from updateSampledImage()' warnings:
       SOURCES IDENTIFIED 2026-07-13 by config bisection. Startup
       baseline ~45: disabling appletShadowsEnabled on all containments
@@ -2647,18 +2661,33 @@ multi-view, multi-monitor setup.
       rearranged layout also survives duplication in the interactive
       session
       Commits: c3d15966
-- [ ] Name the context-menu plugin's built `.so` to exactly match its
+- [x] Name the context-menu plugin's built `.so` to exactly match its
       `KPlugin::Id` (e.g. `org.kde.latte.contextmenu.so`) - KF6 derives
       a containmentactions plugin's id from its **file name**, not the
       metadata's embedded id, and Plasma's lookup-by-id silently fails
-      otherwise
-      Commits:
-- [ ] Explicitly re-assert the default `RightButton` -> context-menu-
+      otherwise. ALREADY DONE when this item was filed: the CMakeLists
+      sets OUTPUT_NAME org.kde.latte.contextmenu with the rationale
+      comment; item found still unticked during the 2026-08-11 Phase 8
+      sweep and closed against the existing commit.
+      Commits: 716714516
+- [x] Explicitly re-assert the default `RightButton` -> context-menu-
       plugin mapping whenever a containment is wired up, rather than
       trusting it to persist from saved layout config - Plasma 6 no
       longer restores a containment's configured mouse-action plugins
-      from saved config on its own
-      Commits:
+      from saved config on its own. RESOLVED 2026-08-11 as NOT
+      APPLICABLE at the pin, verified against the primary source:
+      libplasma 6.7.3 Containment::restore loads [ActionPlugins][type]
+      from the corona config and falls back to the shell package's
+      defaults file when the group is absent; this tree ships
+      shell/package/contents/defaults with [Panel][ContainmentActions]
+      RightButton;NoModifier=org.kde.latte.contextmenu, and
+      Manager::cleanupOnStartup already scrubs deprecated
+      org.kde.contextmenu mappings that could shadow the default. The
+      premise (no restore on Plasma 6) does not hold for this stack;
+      live evidence agrees (the dock context menu works, D20 drove the
+      full always-shown set end to end). No re-assert code is needed;
+      an explicit re-assert would duplicate the restore contract.
+      Commits: none needed (verification-only closure)
 - [ ] Implement a per-applet-type wheel-event bypass list (system
       tray, general external applets like volume/brightness/media) so
       they receive their own wheel events past the containment-level

@@ -537,16 +537,19 @@ actually reviewed for each, so a future "check for updates" is a diff
 from here, not a re-read of the whole history:
 
 - **latte-dock-ng** (`~/Projects/latte-dock-ng`, remote `origin` ->
-  `ruizhi-lab/latte-dock-ng`): reviewed through `456154efb` (2026-07-14).
-  Check for new work:
-  `cd ~/Projects/latte-dock-ng && git fetch origin && git log --oneline 456154efb..origin/main`
+  `ruizhi-lab/latte-dock-ng`): reviewed through `a48c121d8` (2026-08-11;
+  previously `456154efb`, 2026-07-14 - that pass read ~100 commits
+  v1.2.25..v1.2.38, folded the tasktools recursion fix and the
+  KPluginFactory include, and filed the INVESTIGATE items as plan
+  entries). Check for new work:
+  `cd ~/Projects/latte-dock-ng && git fetch origin && git log --oneline a48c121d8..origin/main`
   If that shows anything, read full bodies (not just subjects) via
-  `git log --format="%n=== %h %s ===%n%b" 456154efb..origin/main`
+  `git log --format="%n=== %h %s ===%n%b" a48c121d8..origin/main`
   before deciding what's worth folding in, then update this hash.
 - **latte-dock-qt6** (`~/Projects/latte-dock-qt6`, remote `origin` ->
-  `CaptSilver/latte-dock-qt6`): reviewed through `81384003` (2026-07-14;
-  before that `9003f33a`, the end of the port-work range named in the
-  original comparison request). It woke back up in July 2026 with a
+  `CaptSilver/latte-dock-qt6`): reviewed through `81384003` (2026-07-14,
+  reconfirmed unchanged upstream 2026-08-11; before that `9003f33a`, the
+  end of the port-work range named in the original comparison request). It woke back up in July 2026 with a
   testability campaign (pure-helper extractions, DI seams, coverage
   gates) - that restructuring is their architecture direction and is
   NOT foldable into our upstream-shaped tree wholesale; read their
@@ -562,7 +565,10 @@ from here, not a re-read of the whole history:
   `curl -s "https://invent.kde.org/api/v4/projects/plasma%2Fplasma-desktop/repository/files/applets%2Ftaskmanager%2Fbackend.cpp/raw?ref=master" | diff - plasmoid/plugin/backend.cpp`
   (ours carries deliberate extensions - KWin D-Bus watcher,
   showAudioStreamOsd - so expect a stable base diff; look for NEW
-  upstream hunks. See docs/reference/taskmanager-integration-research.md for the
+  upstream hunks. Last diffed 2026-08-11: backend.cpp carried three new
+  upstream commits - da33d713 (dead variable, folded), 8cdade3d and
+  606724cd (both in the Meta+N shortcut block our copy does not carry,
+  N/A); every other vendored file unchanged upstream since 2026-07-14. See docs/reference/taskmanager-integration-research.md for the
   vendor-vs-integrate analysis and the decision record.)
 
 ## Current status
