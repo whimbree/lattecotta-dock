@@ -16,6 +16,27 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ## Open / suspected
 
+### D303 - Startup slide-out committed a zero-width layer surface (nested vehicle, observed once)
+- STATUS: OPEN (observed once, not yet reproduced; Phase 8 startup/geometry
+  territory).
+- FOUND: 2026-08-11, incidentally while driving the D298 e2e recipe: the
+  first nested-vehicle launch of the D21 top-edge dock died with
+  `zwlr_layer_surface_v1#56: error 1: the layer surface has a width of 0 but
+  its anchor doesn't include the left and the right screen edge` followed by
+  "The Wayland connection experienced a fatal error: Protocol error", during
+  the startup slide-out ("startup: delayer fired, starting slide-out" then
+  struts removed, then the error). The identical seed passed on the immediate
+  rerun, and the 110 control recipe passed in the same vehicle: 1 crash in 3
+  launches that session.
+- MECHANISM (hypothesis): something drove the view window width to 0 during
+  the startup slide-out and the width reached the layer surface before a
+  valid size did; wlr-layer-shell refuses a zero-size surface whose anchors
+  do not span the axis, and the protocol error kills the Wayland connection.
+  The SubConfigView family already defers show until sized for exactly this
+  compositor rule; the main view's slide-out path evidently can still commit
+  a zero width. Needs a reproduction under the Phase 8 startup work; the
+  crashed run's dock log was captured (session scratchpad, d303-crash-dock.log).
+
 ### D302 - cleanupOnStartup's ActionPlugins cleanup writes around Corona's live KConfig instance
 - STATUS: SUSPECTED (found by code-reading during the D283 root-cause
   trace; not yet driven).
@@ -5117,6 +5138,87 @@ app/wm/waylandinterface.cpp:299 (Phase 4 WId), app/layouts/synchronizer.cpp:507
 carries its own detail or points into the plan and the reference docs.
 
 ## Fixed (kept for the record)
+
+### D298 - ThemeExtended scheme snapshots stale after a runtime color-scheme change
+- STATUS: FIXED (fix/theming-audit-fixes: b9cf3d966 the refresh fix with its
+  unit test, f71564749 the dock-level e2e guard).
+- FOUND: 2026-08-11, by the Phase 9 theming audit (finding 1,
+  docs/agent-logs/2026-08-11-theming-audit-inventory.md); statically decided
+  from the source, then reproduced red under both new tests.
+- SYMPTOM: after a runtime Light<->Dark color-scheme switch, every themeColors
+  palette (default/dark/light/reversed), isLightTheme, and each colorizer
+  decision derived from them stayed on the OLD scheme until restart, while the
+  wm-tracker kdeglobals scheme kept updating live - a half-updated dock.
+- ROOT: Plasma 6 auto-accent kdeglobals always carries [WM] activeBackground,
+  so SchemeColors::possibleSchemeFile("kdeglobals") resolves to the CONSTANT
+  ~/.config/kdeglobals; every refresh route (the two KDirWatch callbacks AND
+  the loadThemePaths rerun on Plasma::Theme::themeChanged) funnelled into
+  setOriginalSchemeFile, whose path-equality early return (theme.cpp:180)
+  swallowed the refresh once the schemes existed. Qt5 carried the same guard
+  but only met the condition under Plasma >= 5.25 auto-accent.
+- FIX: the kdeglobals branch calls an unguarded Theme::refreshOriginalScheme()
+  from all three call sites; the guard stays for the theme-owned colors-file
+  branch where changes arrive as path changes. Unit: themeextendedrefreshtest
+  (real KDirWatch wiring, red pre-fix). Nested (audit check N1):
+  115-theme-scheme-live-refresh.py - reversed.colors #c8d2dc in force, in-place
+  kdeglobals rewrite, then default.colors #f0f1f2 with NO restart.
+
+### D299 - Config and info windows lacked the KDE_COLOR_SCHEME_PATH palette pin
+- STATUS: FIXED in mechanism (fix/theming-audit-fixes: 066449d11). OWED at the
+  real desktop: the original a774ee554 divergence scenario driven against a
+  config window (a later-created clone or second-monitor dock, open its config
+  window, compare palettes) - the nested vehicle runs with
+  QT_QPA_PLATFORMTHEME empty, so no platform theme reads the pin there and the
+  nested evidence is creation/no-regression parity only
+  (settings-window-onscreen green with the pinned SubConfigView).
+- FOUND: 2026-08-11, by the Phase 9 theming audit (finding 2): grep showed the
+  a774ee554 pin applied to View only.
+- ROOT: same later-created-QQuickWindow palette resolution as a774ee554; the
+  SubConfigView family, the applet-config PlasmaQuick::ConfigView, and
+  InfoView all create palette-bearing QQuickWindows with no pin.
+- FIX: the same four-line pin at each creation point (SubConfigView
+  constructor covering all four subclasses, the appletConfigView site before
+  init(), the InfoView constructor). SubWindow and ScreenSpaceReservation stay
+  unpinned by design: no palette content.
+
+### D300 - Default indicator "3D glow" option never reached GlowPoint (self-binding)
+- STATUS: FIXED (fix/theming-audit-fixes: 191318b0d). Upstream-inherited: the
+  self-binding is byte-identical in Qt5 (a3bdc89a0), so the option has been
+  dead since it shipped; the fix is a deliberate correction of an inherited
+  defect, not a Qt5-behavior reinterpretation.
+- FOUND: 2026-08-11, by the Phase 9 theming audit (finding 4).
+- SYMPTOM (latent): unchecking "3D glow" in the default indicator's config did
+  nothing - GlowPoint's own default (true) equals the config default, so the
+  gap only shows once a user changes the setting.
+- ROOT: `glow3D: glow3D` on both GlowPoints resolves the RHS against the QML
+  scope object first - the GlowPoint instance, which declares its own glow3D -
+  a self-binding; the root's configuration-fed glow3D never arrived. The
+  neighbouring `showBorder: glow3D` read the same self-bound value.
+- FIX: root-qualification at all sites (`root.glow3D`), matching the file's
+  other bindings, plus the same correction in the unreachable client fallback
+  LatteIndicator.qml. Zero "Binding loop" warnings in the nested dock logs
+  with the fix staged (the audit's N5 question is retired with the binding).
+
+### D301 - MultiLayered double-toggled panelShadows on every theme change (stale Qt5 premise)
+- STATUS: FIXED by removal (fix/theming-audit-fixes: 745f8bd3e).
+- FOUND: 2026-08-11, by the Phase 9 theming audit (finding 3, SUSPECT pending
+  the N2 nested check); premise verified stale before removal.
+- ROOT: the Connections on themeExtended.themeChanged wrote
+  Plasmoid.configuration.panelShadows twice to force the Plasma 5
+  FrameSvgItem to re-resolve stale margins. KF6 KSvg does this itself: at the
+  pinned 6.27, FrameSvg::repaintNeeded connects to FrameSvgItem::doUpdate
+  (framesvgitem.cpp:294) whose CheckMarginsChange guards emit marginsChanged
+  whenever the re-resolved margins moved. The toggle cost config-write churn
+  plus external-shadow destroy/recreate, multiplied once D298 made
+  themeChanged fire on every scheme change too.
+- EVIDENCE (audit check N2, nested vehicle, toggle removed): a planted fixture
+  theme with 40px panel-background margins, runtime round-trip
+  default -> fixture -> default via plasmarc + KConfigNotify;
+  appletsLayoutGeometry followed each flip live:
+  (6,0,1428,44) -> (40,0,1360,50) -> (6,0,1428,44). Probe-design note: the
+  effects/content rects are margin-invariant by construction and edgePadding
+  maxes the C++-scanned padding with solidBackground.margins (same SVG, equal
+  by construction), so appletsLayoutGeometry is the observable that moves.
 
 ### D294 - Ability indicator level reads level.indicator.host without the null guard its sibling binding uses
 - STATUS: FIXED (C4, the indicator null-guard-inconsistency audit item; PR #236,

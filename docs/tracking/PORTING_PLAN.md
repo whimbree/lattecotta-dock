@@ -2844,6 +2844,64 @@ multi-view, multi-monitor setup.
       Owed at the desk: popup collapses on entering configure mode.
       Commits: b84c1f8ff
 
+- [x] Theming/colorization pipeline audit (2026-08-11): every colorizer,
+      panel-background, per-applet colorizing, indicator/badge coloring,
+      window-scheme-tracking and theme-extended chain traced consumer-by
+      -consumer with verdicts; full inventory in
+      docs/agent-logs/2026-08-11-theming-audit-inventory.md (the README
+      roadmap's Phase 9 audit line links here)
+      Commits: 52968020b
+- [x] Fix D298 (ThemeExtended scheme snapshots stale after a runtime
+      color-scheme change): unguarded refreshOriginalScheme() on the
+      constant-path kdeglobals branch; unit test drives the real KDirWatch
+      wiring, e2e recipe 115 pins the dock-level refresh (audit check N1)
+      Commits: b9cf3d966, f71564749
+- [x] Fix D299 (config/info windows lacked the KDE_COLOR_SCHEME_PATH
+      palette pin): SubConfigView family, applet-config ConfigView and
+      InfoView pinned like View (a774ee554); owed real-desktop palette
+      check recorded in the registry entry
+      Commits: 066449d11
+- [x] Fix D300 (default indicator "3D glow" dead setting, upstream
+      -inherited self-binding): root-qualified so the config option
+      reaches GlowPoint; client fallback corrected identically
+      Commits: 191318b0d
+- [x] Fix D301 (MultiLayered panelShadows double-toggle on theme change):
+      premise verified stale (KF6 FrameSvgItem re-resolves margins itself,
+      pinned-source + nested 40px-fixture round-trip, audit check N2) and
+      the toggle removed
+      Commits: 745f8bd3e
+- [ ] windowColors Active/Touching ecosystem gap (audit finding 5,
+      decision recorded 2026-08-11): the ONLY per-window scheme feeder is
+      the external "Window Colors" KWin script driving the
+      windowColorScheme D-Bus method, and its Plasma 6 compatibility is
+      unverified - without it both modes silently degrade to the default
+      scheme (Qt5-faithful). DECISION: document the degrade for now; the
+      script port is a continuation-features candidate, not part of the
+      audit-fixes PR. Remaining work: a user-facing degrade note where
+      windowColors is documented, the D1 real-desktop check whether a
+      Plasma 6-compatible script exists, and the in-port half (nested
+      windowColorScheme D-Bus injection + colorizerData readback, audit
+      check N4)
+      Commits: (decision recorded here)
+- [ ] Theming-audit minor notes batch (audit finding 6, none are
+      defects): (a) Manager.qml dropped Qt5's focusGlowColor - dead
+      in-tree in Qt5 too, third-party KNS indicators only; note-only.
+      (b) compat note candidate for docs: Qt5-era third-party indicators
+      reading indicator.palette.* now silently get Qt6's QQuickPalette
+      (the Qt6-forced palette->colorPalette rename, b474adadf).
+      (c) theme.cpp deserves a comment on the bare-KSvg::Svg
+      global-ImageSet dependency (works via libplasma ThemePrivate
+      mutating the process-global ImageSet; construction order is
+      load-bearing). (d) panelbackground.h declares
+      shadowSizeChanged/shadowColorChanged but never emits them
+      (Qt5-inherited). (e) ItemWrapper.qml:72-81 comment still carries
+      the pre-correction "MultiEffect does NOT auto-wrap" claim on the
+      dormant rollback leg. (f) dead keys containment showGlow +
+      plasmoid showGlow/threeColorsWindows/dotsOnActive fold into the
+      2026-08-10 settings-audit remove-vs-wire disposition when that is
+      decided
+      Commits: (filed 2026-08-11, unactioned)
+
 ### Phase 10: Stabilization / verification
 
 #### Accessibility, keyboard and automation requirements (added 2026-07-16)
