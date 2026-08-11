@@ -244,11 +244,16 @@ Corona::~Corona()
     qDebug() << "Latte Corona - deleted...";
 
     if (!m_importFullConfigurationFile.isEmpty()) {
-        //!NOTE: Restart latte to import the new configuration
-        QString importCommand = "latte-dock --import-full \"" + m_importFullConfigurationFile + "\"";
-        qDebug() << "Executing Import Full Configuration command : " << importCommand;
+        //!NOTE: Restart latte to import the new configuration. The path travels
+        //! as a discrete argument (never concatenated into a parsed command
+        //! string): Qt 6 removed the command-string startDetached overload, so
+        //! the old joined form resolved to the (program, args) overload with
+        //! the whole command line as the program name and never launched (D293).
+        qDebug() << "Executing Import Full Configuration command : latte-dock --import-full" << m_importFullConfigurationFile;
 
-        QProcess::startDetached(importCommand);
+        if (!QProcess::startDetached(QStringLiteral("latte-dock"), {QStringLiteral("--import-full"), m_importFullConfigurationFile})) {
+            qWarning() << "Failed to launch latte-dock for the full-configuration import :" << m_importFullConfigurationFile;
+        }
     }
 }
 
