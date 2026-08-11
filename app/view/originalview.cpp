@@ -384,6 +384,16 @@ void OriginalView::synchronizeScreenGroupMembers()
         return;
     }
 
+    //! Startup trickles views in one per event-loop pass with relationship
+    //! roots ordered before persisted linked members (initContainments).
+    //! Reconciling before those members register would treat their screens as
+    //! uncovered, generate fresh clones there, and the surplus pass below
+    //! would then destroy the persisted replicas (D283). The layout reruns
+    //! this synchronization once its startup views have landed.
+    if (layout() && layout()->hasPendingStartupViews()) {
+        return;
+    }
+
     if (containment() && containment()->destroyed()) {
         cleanClones();
         return;

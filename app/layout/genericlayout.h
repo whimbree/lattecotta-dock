@@ -130,6 +130,10 @@ public:
     void recreateView(Plasma::Containment *containment, bool delayed = true);
     bool hasLatteView(Plasma::Containment *containment);
     [[nodiscard]] bool isRecreatingView(const Plasma::Containment *containment) const;
+    //! true while initContainments() is still trickling startup views; roots
+    //! defer screen-group clone generation until every persisted linked member
+    //! had its chance to register (D283, the reload replica adoption window)
+    [[nodiscard]] bool hasPendingStartupViews() const;
 
     bool newView(const QString &templateName);
     Data::View newView(const Latte::Data::View &nextViewData);
@@ -262,8 +266,11 @@ private:
 private:
     [[nodiscard]] KSharedConfigPtr activeSingleLayoutConfig() const;
 
+    void completeStartupViewCreation();
+
     bool m_blockAutomaticLatteViewCreation{false};
     bool m_hasInitializedContainments{false};
+    bool m_hasPendingStartupViews{false};
     QPointer<Latte::View> m_lastConfigViewFor;
 
     QStringList m_unloadedContainmentsIds;
