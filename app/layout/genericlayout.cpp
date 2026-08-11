@@ -1903,10 +1903,26 @@ void GenericLayout::completeStartupViewCreation()
     //! views were still trickling in (the D283 reload replica adoption
     //! window). Run the reconciliation each of them skipped, now that every
     //! persisted linked member had its chance to register with its root.
+    //!
+    //! Collect the roots BEFORE synchronizing (the syncLatteViewsToScreens
+    //! discipline): synchronizeScreenGroupMembers mutates m_latteViews in
+    //! both directions - createClone() imports a containment whose
+    //! containmentAdded fires addView() synchronously (an insert), and the
+    //! surplus path removeClone() retires a view (a remove) - so iterating
+    //! the live hash here would invalidate the iterator mid-loop. The
+    //! snapshot's raw pointers stay valid for the loop: synchronization only
+    //! creates or removes ClonedViews, never an OriginalView, and removal
+    //! retires views through deleteLater(), never inside this call chain.
+    QList<Latte::OriginalView *> roots;
+    roots.reserve(m_latteViews.size());
     for (auto *const view : std::as_const(m_latteViews)) {
         if (auto *const root = qobject_cast<Latte::OriginalView *>(view)) {
-            root->synchronizeScreenGroupMembers();
+            roots << root;
         }
+    }
+
+    for (auto *const root : std::as_const(roots)) {
+        root->synchronizeScreenGroupMembers();
     }
 }
 
