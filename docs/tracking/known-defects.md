@@ -4061,7 +4061,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   affected environment; blocked the R4 batch gate).
 
 ### D276 - the 040 preview-tooltip golden no longer matches this machine
-- STATUS: OPEN.
+- STATUS: FIXED (2026-08-11, re-blessed dark; hash at merge).
 - ADDENDUM (2026-08-06): 031-ruler-slider-crossview's golden was the same
   class (a light-palette golden against the current dark render, 96.48%
   mismatch) and was re-blessed dark through the recipe's own E2E_BLESS
@@ -4080,6 +4080,18 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   precedent (c1cb4ead4). The mismatch is the same light-palette-golden vs
   current-dark-render class 031 hit; execution rides the next nested-vehicle
   batch.
+- FIX (2026-08-11): executed per the decision, the 031 precedent flow
+  (c1cb4ead4, PR #188). The pre-bless nested drive reproduced the recorded
+  signature (90981 px differ, 69.76%, max delta 245 at (547,0), expected
+  #0a000000 got #ff222525 - the light-golden vs dark-render class; the
+  recorded 68.44% figure came from an earlier capture of the same class).
+  Old and new goldens compared by eye: identical 548x238 geometry and content
+  (titles without the " - Konsole" tail, BETA's "On E2E Desk Two" subtext,
+  both icon-fallback thumbnails, the close buttons, the blue underline under
+  BETA); the only delta is the palette class, light background with dark text
+  to dark background with light text. The blessed frame verified by eye per
+  the recipe header, and the re-driven recipe reports pixel match and PASS
+  twice across two independent vehicle bring-ups. Commit: (hash at merge).
 
 ### D272 - storagetest asserts permission-bit refusal that root bypasses
 - STATUS: FIXED (2026-08-11, the defect-quick-wins branch).
