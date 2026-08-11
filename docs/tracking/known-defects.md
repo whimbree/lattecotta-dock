@@ -132,6 +132,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   The follow-up is semantics-PRESERVING parentheses plus a pointer comment at
   both sites so the precedence stops reading as an accident; any behavioral
   reshape still requires a live repro first.
+- FOLLOW-UP EXECUTED (2026-08-11): both sites now parenthesize the second `||`
+  operand explicitly and carry a D295 pointer comment. Byte-equivalent parse:
+  `&&` binds tighter than `||` in JS/QML, so `A || B && C` already meant
+  `A || (B && C)`; the added parentheses reproduce that exact grouping. Commit:
+  (hash at merge).
 - FOUND: 2026-08-10, while parenthesizing the three unambiguous precedence sites
   the audit could resolve. Two sites have the shape `A || (grouped) && trailing`
   where `trailing` reads as if it should gate the whole `A || (grouped)` but,

@@ -20,12 +20,17 @@ SequentialAnimation {
 
     //Animation Add/Remove (1) - when is window with no launcher in current activity, animations enabled
     //Animation Add/Remove (4) - the user removes a launcher, animation enabled
+    //D295 (trailing conjuncts attach to only one operand of an inherited ||): the
+    //startup and compositing gates apply only to the no-launcher-in-current-activity
+    //case, never to the no-launcher-at-all case. Inherited Qt5 precedence,
+    //deliberately preserved; the parentheses spell out the binding that was already
+    //in effect (see docs/tracking/known-defects.md).
     property bool animation1: ( (tasksModel.launcherPosition(taskItem.launcherUrl) === -1 /*no-launcher*/
                                  && tasksModel.launcherPosition(taskItem.launcherUrlWithIcon) === -1)
                                || ((!taskItem.abilities.launchers.inCurrentActivity(taskItem.launcherUrl)/*no-launcher-in-current-activity*/
-                                    && !taskItem.abilities.launchers.inCurrentActivity(taskItem.launcherUrlWithIcon)))
-                               && !taskItem.isStartup
-                               && LatteCore.WindowSystem.compositingActive)
+                                    && !taskItem.abilities.launchers.inCurrentActivity(taskItem.launcherUrlWithIcon))
+                                   && !taskItem.isStartup
+                                   && LatteCore.WindowSystem.compositingActive))
 
     property bool animation4: (tasksExtendedManager.launchersToBeRemovedCount /*update trigger*/
                                && (tasksExtendedManager.isLauncherToBeRemoved(taskItem.launcherUrl)
