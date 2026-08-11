@@ -568,23 +568,26 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   the corresponding archive metadata.
 
 ### D60 - Tasks QML type metadata omits accessibility composer methods
-- STATUS: OPEN (confirmed by generated-metadata comparison 2026-07-21). The
-  defect record landed at `faceecd35`; the repair remains separate from SC-T3
-  (the D29 narrow middle-click dispatch readback).
+- STATUS: FIXED (2026-08-11, the defect-quick-wins branch). The defect record
+  landed at `faceecd35`; the repair stayed separate from SC-T3 (the D29
+  narrow middle-click dispatch readback) as that record required.
 - FOUND: SC-T3 (the narrow dispatch readback for D29 (task-icon middle click
   appears to execute left-click behavior)) type-metadata check.
-- SYMPTOM: QML tooling cannot discover
+- SYMPTOM: QML tooling could not discover
   `TooltipTextComposer.composeAccessibleDescription(QVariantMap)` or
   `TooltipTextComposer.muteToggleLabel()`, although production QML calls both
-  methods and the plugin exports them at runtime.
-- EVIDENCE: regenerating `org.kde.latte.private.tasks` metadata from the built
-  plugin adds exactly those two method declarations beyond the tracked
-  `plasmoid/plugin/plugins.qmltypes` after the new SC-T3 Backend property,
-  signal, and method are matched. The runtime methods exist in
-  `tooltiptextcomposer.h/.cpp`; the tracked tooling metadata is stale.
-- NEXT: regenerate and review the complete tasks `plugins.qmltypes` file in a
-  separate tooling-metadata change. No unrelated metadata fix is included in
-  SC-T3.
+  methods and the plugin exports them at runtime (both are Q_INVOKABLE in
+  `tooltiptextcomposer.h`).
+- FIX: `plasmoid/plugin/plugins.qmltypes` regenerated from the built plugin
+  with the recipe documented in `plasmoid/CMakeLists.txt` (qmlplugindump
+  -nonrelocatable org.kde.latte.private.tasks 0.1 against the refreshed
+  build/_qmlstage stage, offscreen, doctrine-conformant import paths via the
+  harness's own stage/assemble helpers - the 004d9e2ca stale-stage lesson).
+- EVIDENCE: the full regenerated diff against the tracked file is exactly the
+  two missing Method declarations, nothing else - the SC-T3 Backend
+  property/signal/method and every other entry match byte-for-byte, so the
+  dump confirms the tracked metadata was stale by precisely the two methods
+  this record named.
 
 ### D61 - Middle-click aggregate could expose an older plausible event
 - STATUS: FIXED. PR #99 landed the fail-closed aggregate fix at `bfd30f235`.
