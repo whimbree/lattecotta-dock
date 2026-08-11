@@ -1166,13 +1166,10 @@ PlasmaComponents.Page {
                         Layout.maximumWidth: Layout.minimumWidth
                         text: i18n("Blur")
                         checkable: true
+                        checked: plasmoid.configuration.blurEnabled
                         enabled: showBackground.checked && LatteCore.WindowSystem.compositingActive
                         QQC2.ToolTip.text: i18n("Background is blurred underneath")
                         QQC2.ToolTip.visible: hovered
-
-                        readonly property int blurEnabled: plasmoid.configuration.blurEnabled
-
-                        onBlurEnabledChanged: checked = blurEnabled;
 
                         onClicked: {
                             plasmoid.configuration.blurEnabled  = checked
@@ -1185,13 +1182,10 @@ PlasmaComponents.Page {
                         Layout.maximumWidth: Layout.minimumWidth
                         text: i18n("Shadows")
                         checkable: true
+                        checked: plasmoid.configuration.panelShadows
                         enabled: showBackground.checked && LatteCore.WindowSystem.compositingActive && themeExtended.hasShadow
                         QQC2.ToolTip.text: i18n("Background shows its shadows")
                         QQC2.ToolTip.visible: hovered
-
-                        readonly property int panelShadows: plasmoid.configuration.panelShadows
-
-                        onPanelShadowsChanged: checked = panelShadows
 
                         onClicked: {
                             plasmoid.configuration.panelShadows  = checked
