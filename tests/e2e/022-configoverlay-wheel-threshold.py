@@ -3,29 +3,32 @@
 # SPDX-FileCopyrightText: 2026 Bree Spektor
 # SPDX-License-Identifier: GPL-2.0-or-later
 # e2e-mode: nested-only
-# e2e-expect: status 57
 #
-# SC-CW1 (the D57 ConfigOverlay wheel-threshold reproduction): drive a real
+# SC-CW2 (the D57 signed decrease-threshold regression guard): drive a real
 # Latte-style applet through ConfigOverlay.onWheel and observe the independent
 # applet geometry readback. The production handler divides angleDelta.y by 8,
-# increases above +12, and should decrease below -12. A standard 120-unit
-# detent is therefore 15 degrees; the exact strict boundary is 96 units.
+# increases above +12, and decreases below -12. A standard 120-unit detent is
+# therefore 15 degrees; the exact strict boundary is 96 units.
 #
-# The current inherited decrease comparison is `angle < 12`, so delivered
-# -96, +/-90, and horizontal events are expected to expose D57 by shrinking
-# the applet. The recipe states the correct threshold expectations and remains
-# XFAIL only when all of those effects occur. The separate axisstop control
-# asks KWin for wl_pointer.axis_stop; Qt emits no QWheelEvent in this isolated
+# Originally SC-CW1 (the D57 ConfigOverlay wheel-threshold reproduction), an
+# `# e2e-expect: status 57` recipe that exited 57 only on the complete broken
+# matrix of the inherited `angle < 12` decrease comparison (-96, +/-90, and
+# horizontal events shrinking the applet on both view axes). The fix signed
+# that comparison to `angle < -12`; this recipe now asserts the corrected
+# matrix as a plain status-0 regression guard: +/-120 step the length by
+# +/-8, the +/-96 strict boundary, +/-90 sub-threshold, and horizontal
+# +/-120 deltas are no-ops, and a trailing positive control proves delivery
+# still works after the no-op block. The separate axisstop control asks KWin
+# for wl_pointer.axis_stop; Qt emits no QWheelEvent in this isolated
 # sequence, so it does not claim ConfigOverlay accepts a delivered (0,0).
+# The fixture keeps its SC-CW1 name; it is the same layout and applet.
 #
 # Ported from tests/e2e/022-configoverlay-wheel-threshold.sh to
 # latte_harness.recipe / latte_harness.applet_reorder (BP-3, the bash-to-python
-# migration's driver-recipe batch). The exit-status contract (57 on the D57
-# signature, 0 on the corrected signature) and the # e2e-expect: status 57
-# marker are preserved byte-identically; the applet_reorder_enter/exit rearrange
-# path is the typed driver, the fixture staging/backup/restore is a direct port
-# of the bash cleanup discipline.
-"""SC-CW1 ConfigOverlay wheel-threshold reproduction (the D57 status-57 recipe)."""
+# migration's driver-recipe batch); the applet_reorder_enter/exit rearrange
+# path is the typed driver, the fixture staging/backup/restore is a direct
+# port of the bash cleanup discipline.
+"""SC-CW2 ConfigOverlay wheel-threshold regression guard (the D57 corrected matrix)."""
 
 import os
 import shutil
@@ -205,7 +208,6 @@ def _record_case(
     delta: str,
     wheel_axis: str,
     spec_delta: int,
-    inherited_delta: int,
     counters: dict[str, int],
 ) -> None:
     before = _applet_length(
@@ -232,7 +234,11 @@ def _record_case(
             observed = after - before
             if observed != 0:
                 break
-        if observed != 0 or inherited_delta == 0:
+        # Retry only cases the spec expects to move: a no-effect run of an
+        # expected-effect case is indistinguishable from a dropped event, so it
+        # gets two more deliveries; a no-op case cannot prove delivery (the
+        # trailing positive control carries that proof for the no-op block).
+        if observed != 0 or spec_delta == 0:
             break
         print(f"  ({view_axis} {label} was not delivered on attempt {attempt}, retrying)")
     after = _applet_length(
@@ -241,17 +247,14 @@ def _record_case(
     observed = after - before
     print(
         f"OBS|view={view_axis}|event={label}|angleDelta={delta}|length={before}->{after}|"
-        f"delta={observed:+d}|spec={spec_delta:+d}|inherited={inherited_delta:+d}"
+        f"delta={observed:+d}|spec={spec_delta:+d}"
     )
-    if observed != inherited_delta:
+    if observed != spec_delta:
         print(
-            f"UNEXPECTED: {view_axis} {label} produced {observed}, expected inherited-path effect "
-            f"{inherited_delta}",
+            f"REGRESSION: {view_axis} {label} produced {observed:+d}, expected {spec_delta:+d}",
             file=sys.stderr,
             flush=True,
         )
-        counters["unexpected_effects"] += 1
-    if observed != spec_delta:
         counters["spec_failures"] += 1
 
 
@@ -280,16 +283,16 @@ def _run_axis(axis: str, fixture: str, config_home: str, counters: dict[str, int
     except applet_reorder.AppletReorderError:
         recipe.fail(f"{axis}: could not enter the ConfigOverlay rearrange path")
 
-    _record_case(view, axis, "vertical-positive", "120", "vertical", 8, 8, counters)
-    _record_case(view, axis, "vertical-negative", "-120", "vertical", -8, -8, counters)
-    _record_case(view, axis, "vertical-positive-boundary", "96", "vertical", 0, 0, counters)
-    _record_case(view, axis, "vertical-negative-boundary", "-96", "vertical", 0, -8, counters)
-    _record_case(view, axis, "vertical-positive-subthreshold", "90", "vertical", 0, -8, counters)
-    _record_case(view, axis, "vertical-negative-subthreshold", "-90", "vertical", 0, -8, counters)
-    _record_case(view, axis, "horizontal-positive", "120", "horizontal", 0, -8, counters)
-    _record_case(view, axis, "horizontal-negative", "-120", "horizontal", 0, -8, counters)
-    _record_case(view, axis, "vertical-axis-stop", "stop", "axisstop", 0, 0, counters)
-    _record_case(view, axis, "post-zero-positive-control", "120", "vertical", 8, 8, counters)
+    _record_case(view, axis, "vertical-positive", "120", "vertical", 8, counters)
+    _record_case(view, axis, "vertical-negative", "-120", "vertical", -8, counters)
+    _record_case(view, axis, "vertical-positive-boundary", "96", "vertical", 0, counters)
+    _record_case(view, axis, "vertical-negative-boundary", "-96", "vertical", 0, counters)
+    _record_case(view, axis, "vertical-positive-subthreshold", "90", "vertical", 0, counters)
+    _record_case(view, axis, "vertical-negative-subthreshold", "-90", "vertical", 0, counters)
+    _record_case(view, axis, "horizontal-positive", "120", "horizontal", 0, counters)
+    _record_case(view, axis, "horizontal-negative", "-120", "horizontal", 0, counters)
+    _record_case(view, axis, "vertical-axis-stop", "stop", "axisstop", 0, counters)
+    _record_case(view, axis, "post-zero-positive-control", "120", "vertical", 8, counters)
 
     try:
         applet_reorder.applet_reorder_exit(view)
@@ -416,29 +419,21 @@ def _body(
 
     _select_fixture_layout(f"{config_home}/lattedockrc")
 
-    counters = {"spec_failures": 0, "unexpected_effects": 0}
+    counters = {"spec_failures": 0}
 
     _run_axis("horizontal", fixture, config_home, counters)
     _run_axis("vertical", fixture, config_home, counters)
 
-    if counters["unexpected_effects"] == 0 and counters["spec_failures"] == 10:
-        _finalize_recipe(config_home, fixture_data, backup, state)
-        print(
-            "D57 reproduced: -96, +/-90, and horizontal wheel events decreased the Latte-style "
-            "applet on both view axes"
-        )
-        return 57
     if counters["spec_failures"] == 0:
         _finalize_recipe(config_home, fixture_data, backup, state)
         print(
-            "D57 corrected signature observed on both view axes; "
-            "promote SC-CW1 to a regression guard"
+            "D57 regression guard: the corrected signed-threshold wheel matrix "
+            "held on both view axes"
         )
         return 0
     recipe.fail(
-        f"SC-CW1 observed a partial or unrelated signature "
-        f"(inherited mismatches={counters['unexpected_effects']}, "
-        f"spec violations={counters['spec_failures']})"
+        f"D57 regression: {counters['spec_failures']} of 20 wheel-threshold cases "
+        "deviated from the corrected matrix (see the REGRESSION lines)"
     )
 
 
@@ -467,11 +462,11 @@ def main() -> NoReturn:
         return _body(fixture, config_home, fixture_data, backup, state)
 
     def cleanup(status: int) -> int:
-        # This recipe's success status is the D57 signature (57) OR the corrected
-        # 0; a cleanup that left residue must fail the run either way, so it forces
-        # 1 rather than the worsen-0-only policy - which would let 57 leak past a
-        # failed cleanup as a pass under the `# e2e-expect: status 57` marker. Not
-        # a bug, a distinct status policy this recipe deliberately keeps.
+        # Cleanup residue must fail the run: force 1 over any status so a green
+        # matrix can never leak past a failed restore. (As the SC-CW1 reproduction
+        # this recipe forced 1 to keep the reserved 57 from passing under its
+        # `# e2e-expect: status 57` marker; the promotion to a plain status-0
+        # regression guard keeps the same explicit policy.)
         return 1 if _cleanup(config_home, fixture_data, backup, state) else status
 
     # run_with_cleanup owns the try-body / finally-cleanup shape: cleanup runs on
