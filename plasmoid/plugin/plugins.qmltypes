@@ -386,6 +386,12 @@ Module {
             type: "string"
             Parameter { name: "facts"; type: "QVariantMap" }
         }
+        Method {
+            name: "composeAccessibleDescription"
+            type: "string"
+            Parameter { name: "facts"; type: "QVariantMap" }
+        }
+        Method { name: "muteToggleLabel"; type: "string" }
     }
     Component {
         name: "Latte::Tasks::Types"

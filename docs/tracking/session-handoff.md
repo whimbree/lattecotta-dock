@@ -38,8 +38,9 @@ Six small independent landings, one commit each, registry updated in the same
 commit: D289 (the duplicate screen-tracker spinbox connection) deleted; D296
 (the unpaired view-template record read, promoted from the D20 entry's latent
 note - whose m_data half turned out already fixed by 5585c708a) refused loudly
-at the D-Bus boundary. Remaining planned on the branch: D60 (stale Tasks
-plugins.qmltypes), D272 (storagetest root QSKIP), D64 (fakepointer xkbcommon
+at the D-Bus boundary; D60 (stale Tasks plugins.qmltypes) regenerated, the
+diff exactly the two missing TooltipTextComposer methods. Remaining planned
+on the branch: D272 (storagetest root QSKIP), D64 (fakepointer xkbcommon
 link), D19 (About keep-above stub).
 
 ## 2026-08-09: the quality cleanup wave and the model-vs-truth drift net
