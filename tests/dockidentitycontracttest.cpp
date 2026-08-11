@@ -76,6 +76,7 @@ private Q_SLOTS:
     void containmentRemovalCommitsWithoutNotificationClose();
     void ignoredWindowCleanupRetainsOtherOwners();
     void persistentMenuIdentitySurvivesRuntimeGap();
+    void menuRefusesUnpairedViewTemplatesReply();
     void geometryDiagnosticsReadEachViewsSizingAuthority();
     void appletMutationsUseRelationshipBoundary();
     void startupValidatesRelationshipGraphBeforeConstruction();
@@ -947,6 +948,23 @@ void DockIdentityContractTest::persistentMenuIdentitySurvivesRuntimeGap()
     QVERIFY(visibleActions.contains(QStringLiteral("setVisible(m_contextDataValid&&!configuring)")));
     QVERIFY(visibleActions.contains(QStringLiteral("m_view.explicitLinkedMembersCount>0")));
     QVERIFY(visibleActions.contains(QStringLiteral("removeAction->setEnabled(!rootHasExplicitMembers)")));
+}
+
+//! viewTemplatesData is a flat name/id pair list from a D-Bus boundary; the
+//! menu must refuse an odd-count reply loudly BEFORE the paired [i+1] read,
+//! or the final unpaired element indexes one past the end (D296, the unpaired
+//! view-template record read).
+void DockIdentityContractTest::menuRefusesUnpairedViewTemplatesReply()
+{
+    const QString menuSource = readFile(QStringLiteral("containmentactions/contextmenu/menu.cpp"));
+    const QString populateTemplates = normalized(functionBody(menuSource, QStringLiteral("void Menu::populateViewTemplates")));
+
+    const int refusal = populateTemplates.indexOf(QStringLiteral("if(m_viewTemplates.count()%2!=0){qWarning()"));
+    const int pairedRead = populateTemplates.indexOf(QStringLiteral("templateAction->setData(m_viewTemplates[i+1]);"));
+    QVERIFY2(refusal >= 0,
+             "populateViewTemplates must refuse an odd-count viewTemplatesData reply loudly.");
+    QVERIFY2(pairedRead > refusal,
+             "the paired template-id read must sit behind the even-count refusal.");
 }
 
 void DockIdentityContractTest::geometryDiagnosticsReadEachViewsSizingAuthority()

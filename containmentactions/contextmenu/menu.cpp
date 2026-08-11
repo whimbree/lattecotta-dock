@@ -523,15 +523,20 @@ void Menu::populateViewTemplates()
 {
     m_addViewMenu->clear();
 
-    for(int i=0; i<m_viewTemplates.count(); ++i) {
-        if (i % 2 == 1) {
-            //! even records are the templates ids and they have already been registered
-            continue;
+    //! viewTemplatesData is a flat name/id pair list arriving over D-Bus; an
+    //! odd element count is a malformed reply with no way to tell which record
+    //! lost its partner, so the whole list is refused loudly instead of
+    //! indexing one past the end on the final unpaired element (D296, the
+    //! unpaired view-template record read)
+    if (m_viewTemplates.count() % 2 != 0) {
+        qWarning() << "context menu: refused malformed viewTemplatesData reply, expected"
+                   << "name/id pairs, got" << m_viewTemplates.count() << "elements";
+    } else {
+        for (int i=0; i<m_viewTemplates.count(); i += 2) {
+            QAction *templateAction = m_addViewMenu->addAction(m_viewTemplates[i]);
+            templateAction->setIcon(QIcon::fromTheme("list-add"));
+            templateAction->setData(m_viewTemplates[i+1]);
         }
-
-        QAction *templateAction = m_addViewMenu->addAction(m_viewTemplates[i]);
-        templateAction->setIcon(QIcon::fromTheme("list-add"));
-        templateAction->setData(m_viewTemplates[i+1]);
     }
 
     if (m_contextDataValid) {
