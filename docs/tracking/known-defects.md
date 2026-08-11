@@ -84,20 +84,23 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   SUSPECTED until then.
 
 ### D289 - Preferences screen-tracker spinbox connects dataChanged twice
-- STATUS: OPEN (pre-existing; found by code-reading in the PR #223 independent
-  review, not user-reproduced).
-- FOUND: 2026-08-09, reviewing the -Werror phase-1 lambda-capture rewrites.
-- SYMPTOM: `TabPreferences::initUi()` wires `m_ui->screenTrackerSpinBox`'s
-  `QSpinBox::valueChanged` to two identical lambdas, so one spinbox change emits
-  `dataChanged()` twice and the settings-changed path runs twice per edit.
+- STATUS: FIXED (2026-08-11, the defect-quick-wins branch).
+- FOUND: 2026-08-09, reviewing the -Werror phase-1 lambda-capture rewrites
+  (pre-existing; found by code-reading in the PR #223 independent review, not
+  reproduced live).
+- SYMPTOM: `TabPreferences::initUi()` wired `m_ui->screenTrackerSpinBox`'s
+  `QSpinBox::valueChanged` to two identical lambdas, so one spinbox change
+  emitted `dataChanged()` twice and the settings-changed path ran twice per
+  edit.
 - ROOT: a duplicated `connect(... screenTrackerSpinBox ... valueChanged ...)`
   block in `app/settings/settingsdialog/tabpreferenceshandler.cpp` (the two
-  now-`[this]` lambdas are byte-identical). Predates this port; untouched in
+  `[this]` lambdas were byte-identical). Predates this port; untouched in
   substance by #223, which only made the implicit `this` captures explicit.
-- DISPOSITION: harmless in practice (`dataChanged` recomputes the same
-  preferences snapshot), but a real redundant connection; delete the second
-  block. Filed as a plan cleanup item, not fixed in #223 (out of that diff's
-  scope).
+- FIX: the second block deleted; the surviving connection at the top of
+  `initUi()` still writes `m_preferences.screensDelay` and emits
+  `dataChanged()` once per edit. Confirmed byte-identical before deletion
+  (same receiver-less connect form, same lambda body), so behavior changes
+  only in emission count.
 
 ### D1 - Aborted task-reorder does not revert (Qt5-faithful live-move model)
 - STATUS: ACCEPTED (resolved from SUSPECTED 2026-07-18; confirmed live and ruled
