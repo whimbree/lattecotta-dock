@@ -544,19 +544,21 @@ blocking.
       find_package(X11|XCB), no X11 nix buildInput survives)
       Commits: 4c84c1bad, 67bd25638, 2f78a7d7e
 - [ ] AWAIT SIGN-OFF (survivor-sweep proposals, docs/tracking/x11-cleanup-audit.md):
-      D2 the aboutApplication keep-above X11-id no-op (a Qt WId fed
-      through fromX11WId never resolves in windowFor() on wayland, so
-      the keep-above silently does nothing - known-defects D19; stub
-      or wire through the surface, do not blind-delete the intent);
+      D2 the aboutApplication keep-above X11-id no-op - RESOLVED AS
+      STUB 2026-08-11 on the defect-quick-wins branch (the stub arm of
+      the proposal's stub-or-wire choice: pretending call removed,
+      `//! STUB: Phase 4` at the site, known-defects D19 stays open
+      until Phase 4 wires the surface role; final hash at merge);
       D3 the windowColorScheme else arm (X11 decimal parse, dead in
       production, collapse to the wayland branch - retires the last
       non-test fromX11WId parse caller); D5 the dead netwm.h include
       in the vendored plasmoid/plugin/backend.h (verify against
       current upstream plasma-desktop before removing, to keep the
       vendored diff clean); D1 strip the WindowId X11 parse surface
-      (gated on D2/D3 first); S1 the WindowId QByteArray-vs-QUuid
+      (gated on D2/D3 first; the D2 half of that gate is now clear);
+      S1 the WindowId QByteArray-vs-QUuid
       substrate (a separate change, downstream of D1, touches the QML
-      ArrayBuffer boundary). None applied this pass
+      ArrayBuffer boundary). D3/D5/D1/S1 still await sign-off
       Commits:
 - [x] README + docs register update (timeless: "Wayland-only,
       matching Plasma 6.8+'s Wayland-exclusive direction"), CLAUDE.md

@@ -34,8 +34,10 @@ The window-id model after the removal:
   nothing carries the raw uuid bytes onward in parallel (see the WHY-BOTH
   check below).
 - The X11 decimal-string payload is now produced only by `fromX11WId`, which
-  still has two callers in `lattecorona.cpp` (proposals D2 and D3). It is no
-  longer produced anywhere else.
+  has one remaining caller in `lattecorona.cpp` (proposal D3, the
+  windowColorScheme else arm) since proposal D2 resolved as a stub on the
+  defect-quick-wins branch (2026-08-11). It is no longer produced anywhere
+  else.
 
 ## Classified inventory
 
@@ -53,7 +55,7 @@ propose only.
 | `app/view/helpers/screenedgeghostwindow.cpp:24-25` | Same dead `// X11`/NETWM + orphaned KWindowSystem block | No, same as above | A - REMOVED (`67bd25638`) |
 | `app/plasma/extended/theme.cpp:29` | `// X11` label over `#include <KWindowSystem>` | Include is LIVE (line 51 `isPlatformWayland()`); label is stale (KWindowSystem is platform-neutral) | C - relabelled `// KDE` (`2f78a7d7e`) |
 | `app/wm/windowid.h` `fromX11WId`/`toX11WId`/`parseX11WindowId` | The X11 decimal-string parse surface of the WindowId newtype | LIVE: two callers in `lattecorona.cpp` + unit tests | D - proposal D1 |
-| `app/lattecorona.cpp:882` | `setKeepAbove(fromX11WId(aboutDialog->winId()), true)` | LIVE but a silent no-op on wayland (a Qt `WId` never matches a PlasmaWindow uuid in `windowFor()`) | D - proposal D2 (defect) |
+| `app/lattecorona.cpp:882` | `setKeepAbove(fromX11WId(aboutDialog->winId()), true)` | LIVE but a silent no-op on wayland (a Qt `WId` never matches a PlasmaWindow uuid in `windowFor()`) | D - proposal D2 (defect) - RESOLVED AS STUB 2026-08-11 (call removed, `//! STUB: Phase 4` at the site; D19) |
 | `app/lattecorona.cpp:1099-1111` | `windowColorScheme` else arm: decimal parse + `fromX11WId` | Only when `!isPlatformWayland` (production refuses; offscreen has no windows to color) | D - proposal D3 |
 | `app/view/*` `byPassWM` / `byPassX11WM` / `Qt::BypassWindowManagerHint` (~36 refs) | User-persisted layout setting with a config-UI surface | LIVE and user-facing | D - proposal D4 (already an OPEN plan item) |
 | `plasmoid/plugin/backend.h:26` | `#include <netwm.h>` in the vendored task-manager backend | No NET* symbol used, but the file tracks upstream plasma-desktop | D - proposal D5 (verify vs upstream) |
@@ -116,12 +118,15 @@ The five leftovers:
    and has an "if not on Wayland, parse the id the old X11 way" branch that can
    never run. Removing it is safe, and it deletes the last real (non-test) use of
    the old X11 id-parsing.
-2. **The About dialog's broken "keep on top" [D2].** The Help -> About dialog
-   should float above other windows; it asks using an old X11 window id that
-   Wayland can never match, so the request silently does nothing and the dialog
-   can end up buried. A real (minor) bug. Do not leave it a SILENT nothing: mark
-   it a clear stub now (findable, deferred to the window-surface work), and wire
-   it up properly later.
+2. **The About dialog's broken "keep on top" [D2].** RESOLVED AS STUB
+   (2026-08-11, the defect-quick-wins branch, exactly the marked-stub path this
+   proposal recommended): the Help -> About dialog should float above other
+   windows; it asked using an old X11 window id that Wayland can never match,
+   so the request silently did nothing and the dialog can end up buried. The
+   pretending call is removed; the site carries a `//! STUB: Phase 4` marker
+   and a qDebug note, deferred to the window-surface work (known-defects D19
+   tracks it, and stays open until Phase 4 wires the surface role). This
+   unblocks the D2 half of proposal D1's gate.
 3. **Trim the window-identity wrapper [D1].** A small type represents "which
    window this is" and can build that identity two ways: the Wayland way (live)
    and the old X11 way (dead). Once #1 and #2 are gone, nothing uses the X11 way,
