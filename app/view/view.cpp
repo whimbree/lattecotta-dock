@@ -1233,6 +1233,15 @@ void View::showConfigurationInterface(Plasma::Applet *applet)
         applyActivitiesToWindows();
     } else {
         m_appletConfigView = new PlasmaQuick::ConfigView(applet);
+
+        //! same later-created-QQuickWindow palette pin as View::init() (the
+        //! a774ee554 mechanism), set before init() so the platform theme
+        //! never resolves this window against the panel-theme palette
+        const QString appletConfigScheme = WindowSystem::SchemeColors::possibleSchemeFile(QStringLiteral("kdeglobals"));
+        if (!appletConfigScheme.isEmpty()) {
+            m_appletConfigView->setProperty("KDE_COLOR_SCHEME_PATH", appletConfigScheme);
+        }
+
         m_appletConfigView.data()->init();
 
         //! center applet config window
