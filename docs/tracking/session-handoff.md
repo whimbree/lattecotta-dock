@@ -165,6 +165,23 @@ round's 43e478866 iterator hardening):
   still writes around the corona's SimpleConfig instance (same cef08bd1f
   split, low severity, fix shape recorded).
 
+## 2026-08-11: D57 fixed - the ConfigOverlay wheel threshold is signed
+
+SC-CW2 (the D57 signed decrease-threshold fix and regression promotion)
+landed on branch fix/d57-wheel-threshold: the ConfigOverlay decrease
+comparison went from `angle < 12` to `angle < -12` at `a526937a9`, and the
+SC-CW1 reproduction recipe (tests/e2e/022-configoverlay-wheel-threshold.py)
+was promoted to an unmarked status-0 regression guard at `6686d468e`. The
+inherited arm is verbatim Qt5 upstream (`527cddb72`), so the signed threshold
+is a recorded divergence from Qt5 behavior, commented at the site; the
+approval the registry required is recorded in the fix commit (maintainer
+decision, 2026-08-11). Two consecutive green nested runs observed the
+corrected matrix on both view axes (+120:+8, -120:-8, +96:0, -96:0, +/-90:0,
+horizontal +/-120:0, axis-stop:0, trailing +120 control:+8). A tree-wide
+angleDelta sweep confirmed ConfigOverlay was the only unsigned-threshold
+site. Registry entry updated to FIXED; the SC-CW2 plan item is ticked
+(hashes re-resolve at merge).
+
 ## 2026-08-09: the quality cleanup wave and the model-vs-truth drift net
 
 With the bash-to-python migration (BP) complete, a quality cleanup wave swept the

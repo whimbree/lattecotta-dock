@@ -525,25 +525,29 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   (task-icon middle click appears to execute left-click behavior).
 
 ### D57 - ConfigOverlay wheel threshold accepts nonnegative decrease deltas
-- STATUS: OPEN. PR #96 landed SC-CW1 (the D57 ConfigOverlay wheel-threshold
-  reproduction) at reproduction commit `5ec57175f`, tracking commit
-  `aa6399b44`, tracking trim `709c0946b`, and evidence qualifier `9b0672cf9`.
+- STATUS: FIXED. SC-CW2 (the D57 signed decrease-threshold fix and regression
+  promotion) landed the root fix at `a526937a9` and the recipe promotion at
+  `6686d468e`; the registry's approval gate was satisfied by the maintainer
+  decision recorded in the fix commit (2026-08-11). PR #96 had landed SC-CW1
+  (the D57 ConfigOverlay wheel-threshold reproduction) at reproduction commit
+  `5ec57175f`, tracking commit `aa6399b44`, tracking trim `709c0946b`, and
+  evidence qualifier `9b0672cf9`.
 - FOUND: 2026-07-20, SC-F1 (the per-view source inventory and evidence ledger).
 - SYMPTOM: delivered horizontal +/-120, vertical +/-90, and the vertical -96
-  boundary decrease a Latte-style applet's length on either view axis.
+  boundary decreased a Latte-style applet's length on either view axis.
 - ROOT CAUSE: `containment/package/contents/ui/editmode/ConfigOverlay.qml`
-  divides `wheel.angleDelta.y` by 8 but decreases for `angle < 12` instead of
-  `angle < -12`; horizontal events enter that arm with `angle == 0`.
-- EVIDENCE: repeated nested runs observed +120:+8, -120:-8, +96:0, -96:-8,
-  +90:-8, -90:-8, and horizontal +/-120:-8 on both view axes. Normal mode was a
-  no-op. Explicit `axisstop` sends a zero fake-input axis; KWin forwards it as
-  `wl_pointer.axis_stop`, and Qt emits no `QWheelEvent` in this isolated sequence.
-  The following +120 still increases length. Status 57 means this complete matrix
-  after cleanup; status 0 is XPASS, and partial signatures or harness failures
-  remain FAIL.
-- NEXT: SC-CW2 (the D57 signed decrease-threshold fix and regression promotion)
-  remains unchecked, approval-required, and unapproved. Merged SC-CW1 evidence
-  does not authorize the production fix.
+  divides `wheel.angleDelta.y` by 8 but decreased for `angle < 12` instead of
+  `angle < -12`; horizontal events entered that arm with `angle == 0`. The
+  comparison is verbatim Qt5 upstream (`527cddb72` carries the same arm), an
+  inherited upstream defect; the signed threshold is a recorded divergence from
+  Qt5 behavior under the maintained-continuation rule, commented at the site.
+- EVIDENCE: post-fix, two consecutive green nested runs of the promoted
+  regression recipe (`tests/e2e/022-configoverlay-wheel-threshold.py`, now an
+  unmarked status-0 guard) observed the corrected matrix on both view axes:
+  +120:+8, -120:-8, +96:0, -96:0, +/-90:0, horizontal +/-120:0, axis-stop:0,
+  and the trailing +120 delivery control:+8; normal mode stayed a no-op and the
+  config restored byte-identically. Reproduction-era broken-matrix evidence and
+  the `wl_pointer.axis_stop` note live in the SC-CW1 commits above.
 
 ### D58 - Close-only and minimize-toggle settings do not enable window tracking
 - STATUS: FIXED. PR #94 landed the root fix at `15f026887`, initial tracking at

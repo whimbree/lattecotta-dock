@@ -363,17 +363,19 @@ branches without changing behavior.
 
 ### D57 (ConfigOverlay wheel threshold accepts nonnegative decrease deltas)
 
-Status is OPEN. PR #96 landed SC-CW1 (the D57 ConfigOverlay wheel-threshold
-reproduction) at `5ec57175f`, `aa6399b44`, `709c0946b`, and `9b0672cf9`.
-`ConfigOverlay.qml` divides `wheel.angleDelta.y` by 8 but decreases for
-`angle < 12` instead of `angle < -12`. Both view axes produced +120:+8,
--120:-8, +96:0, -96:-8, +90:-8, -90:-8, and horizontal +/-120:-8. Explicit
-`axisstop` sends a zero fake-input axis; KWin forwards it as
-`wl_pointer.axis_stop`, and Qt emits no `QWheelEvent` in this isolated sequence.
-The following +120 still increases length. Only the complete cleaned-up matrix
-exits 57; corrected behavior exits 0 as XPASS, and partial or harness failures
-fail. SC-CW2 (the D57 signed decrease-threshold fix and regression promotion)
-remains unchecked, approval-required, and unapproved.
+Status is FIXED. SC-CW2 (the D57 signed decrease-threshold fix and regression
+promotion) signed the decrease comparison from `angle < 12` to `angle < -12`
+at `a526937a9` and promoted the recipe to an unmarked status-0 regression
+guard at `6686d468e`; the approval the registry required is recorded in the
+fix commit (maintainer decision, 2026-08-11). The inherited comparison is
+verbatim Qt5 upstream (`527cddb72`), so the signed threshold is a recorded
+divergence from Qt5 behavior, commented at the site. PR #96 had landed SC-CW1
+(the D57 ConfigOverlay wheel-threshold reproduction) at `5ec57175f`,
+`aa6399b44`, `709c0946b`, and `9b0672cf9`; its broken-matrix and
+`wl_pointer.axis_stop` evidence stands in those commit bodies. Post-fix, two
+consecutive green nested runs observed the corrected matrix on both view axes
+(+120:+8, -120:-8, +96:0, -96:0, +/-90:0, horizontal +/-120:0, axis-stop:0,
+trailing +120 control:+8).
 
 ### D58 (close-only and minimize-toggle settings do not enable window tracking)
 
@@ -595,12 +597,13 @@ in the D29 chain; wheel remains in SC-R6.
       `57bc03ce0`, `7f747f944`, `fb3466223`, `ce424574a`, `cd6d317b2`, and
       `240476b9c`. Reproduction only; no production behavior changed.
       Commits: 5ec57175f, aa6399b44, 709c0946b, 9b0672cf9
-- [ ] **SC-CW2 (the D57 signed decrease-threshold fix and regression
-      promotion):** SC-CW1 is merged, but explicit approval must still be
-      recorded before changing the decrease comparison from `angle < 12` to
-      `angle < -12`, removing the expected-failure marker, and retaining the
-      both-axis matrix as a status-0 regression. Approval required; not approved.
-      Commits:
+- [x] **SC-CW2 (the D57 signed decrease-threshold fix and regression
+      promotion):** changed the decrease comparison from `angle < 12` to
+      `angle < -12`, removed the expected-failure marker, and retained the
+      both-axis matrix as a status-0 regression. The required approval is
+      recorded in the fix commit (maintainer decision, 2026-08-11); the signed
+      threshold is a recorded divergence from the verbatim-Qt5 arm.
+      Commits: a526937a9, 6686d468e
 - [x] **SC-B1 (the D30 current-contract investigation):** confirmed current
       gestures, event ownership, booleans/defaults, target lifecycle, requests,
       effects, and Qt5/fork parity across enabled, disabled, and no-target nested
