@@ -114,9 +114,10 @@ Also worth an early cheap pass: the reference-fork + plasma-desktop sync is ~4
 weeks stale (last reviewed ng 456154efb / qt6 81384003, 2026-07-14) - diff for
 fixes-others-already-made before writing new ones.
 PARKED for the maintainer (do not guess): D295 (the two inherited precedence
-asymmetries - intent/live call) and the settings-wiring audit remove-vs-wire
-disposition (dead legacy-plasmoid-config settings; full inventory in the
-2026-08-10 settings-audit note below).
+asymmetries - intent/live call). The settings-wiring audit remove-vs-wire
+disposition was DECIDED 2026-08-11 and landed on branch
+fix/settings-audit-disposition (outcomes in the 2026-08-10 settings-audit
+note below).
 
 ## 2026-08-11: defect quick wins (branch fix/defect-quick-wins)
 
@@ -342,9 +343,9 @@ confirmed). Small nit for a future pass: the now-fully-dead commented-out
 plasmoid/.../code/tools.js:36-37.
 
 Cleanup board remaining (parked for the maintainer, not blocking): the D295 live
-check (two upstream precedence asymmetries needing an intent/live call) and the
-settings-wiring audit fixes (PARKED pending the remove-vs-wire disposition; see
-the settings-audit note below).
+check (two upstream precedence asymmetries needing an intent/live call). The
+settings-wiring audit fixes are no longer parked: dispositioned and landed
+2026-08-11 (see the settings-audit note below).
 
 Settings-wiring audit (2026-08-10, read-only scout; full inventory in the session
 scratchpad settings-audit-inventory.md). ~134 interactive controls across 9 config
@@ -369,7 +370,34 @@ embed-detection alias (ConfigPanel); FRAGILE REFLECT (the `onXChanged: checked=X
 Tasks Applet" block is commented out (TasksConfig.qml). Secondary (not dead): the
 Effects/Appearance background sliders still use the D16 clobber-prone plain
 `value:` binding (only external-change re-sync affected, load-time reflect fine).
-Not yet filed as defects pending disposition.
+DISPOSITION DECIDED AND LANDED (2026-08-11, branch
+fix/settings-audit-disposition). The rule, applied per key: check the Qt5
+tree first (ac3505b07, 2022-05-29, late Qt5, on this repo's own first-parent
+history). If Qt5 consumed the key and this port lost the consumer, WIRE the
+Qt5 behavior back; if the key was dead in Qt5 too, REMOVE the control/write
+as a recorded divergence (shipping a control that provably did nothing in
+Qt5 either is inherited dead weight under the no-silent-stubs agreement);
+mislabels get fixed to describe what they actually toggle. Outcomes:
+- showGlow / threeColorsWindows / dotsOnActive: dead in Qt5 too (orphaned by
+  the v0.9 indicator-architecture refactors) - controls, aliases and
+  plasmoid main.xml entries REMOVED.
+- solidPanel / colorizeTransparentPanels: the same four TypeSelection preset
+  writes existed in Qt5, equally undeclared and unread - writes DROPPED.
+- wheelEnabled: Qt5 shipped the checkbox identically hardcoded
+  enabled:false - KEPT disabled, now with a comment naming the Qt5
+  precedent.
+- showInfoBadge mislabel: same wrong label in Qt5 - RELABELLED to the
+  notifications-badge meaning, filed as D306 (fixed).
+- cfg_isInNowDockPanel: the 2017 isInNowDockPanel-to-isInLatteDock key
+  rename (169b2b034) missed ConfigPanel in Qt5 and every release since -
+  FIXED to isInLatteDock as the evident intent, filed as D307 (fixed).
+- Fragile reflect (dragActiveWindowEnabled / closeActiveWindowEnabled /
+  blurEnabled / panelShadows): converted to direct checked: bindings
+  matching their Outline/All-Corners siblings; first-open reflect against
+  an all-true config confirmed in the nested vehicle (screenshots read:
+  all four render checked, same-row false-default siblings unchecked).
+- Tasks "Remove Latte Tasks Applet" block: commented out in Qt5 at
+  ac3505b07 too - left as-is, Qt5-faithful, no defect filed.
 
 The -Werror campaign (compile with warnings-as-errors) began after the audit
 batch, at the maintainer's request, with the chosen scope being the full
