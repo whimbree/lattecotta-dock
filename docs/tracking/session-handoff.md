@@ -190,17 +190,20 @@ D274 (the maximize-length input region stays full width after an edit shrink)
 was neither of its registry's hypotheses: temporary step and mask
 instrumentation in the nested vehicle caught a PERMANENT 1Hz automatic-sizing
 grow/shrink oscillation. A deferred refit echo lands ~2 frames after every
-applied icon size (since 51eb53c69, the D244 fix, added the content-budget
-refit connection), the doubleCall timer's shield was down after its own
-confirming pass applied, and the echo stepped AutoSizeEngine with the old row
+applied icon size (51eb53c69, the D244 fix, retargeted the deferred refit
+connection onto its new content budget), the doubleCall timer's shield was
+down after its own confirming pass applied, and the echo stepped
+AutoSizeEngine with the old row
 length attributed to the new size - the poisoned projection grew into a
 measured overflow, mirror-shrank back, four passes per cycle, invisible to the
 two-pass protector. The cycle's parabolic full-span input writes plus the
 union-hold kept the applied window mask at full screen width ~150ms of every
 second; the recipe's one-instant sample raced it (3 of 4 runs red pre-fix).
-Fix: the applying pass always arms the confirmation shield
-(confirmAppliedSizeTimer in AutoSize.qml); the recipe asserts a sustained
-quiet window; 4 of 4 runs green post-fix. D4 closed by classifying the
+Fix: a pass that changes the applied size arms the confirmation shield
+(confirmAppliedSizeTimer in AutoSize.qml; a re-proposal of the current size,
+the floor-overflow steady state, ends the chain - the review-round
+correction); the recipe asserts a sustained quiet window; 4 of 4 runs green
+post-fix. D4 closed by classifying the
 input-mask union-hold on the visibility state instead of band shape (the
 recorded previous-band direction is superseded in the registry with the
 reasoning: a hide from a zoomed band and the accept-nowhere sentinel are
