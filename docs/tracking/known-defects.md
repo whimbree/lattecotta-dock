@@ -314,27 +314,36 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   remains the owner.
 
 ### D19 - About dialog keep-above is a silent X11-shaped no-op on wayland
-- STATUS: OPEN (found 2026-07-18 by the X11 survivor-sweep code-read; the X11
-  removal wave missed it because it is not textually an isPlatformX11 branch -
-  it is an X11-shaped call the wayland interface silently drops).
-- SYMPTOM: the About dialog is not actually raised keep-above on wayland. It may
+- STATUS: OPEN, stub recorded (2026-08-11, the defect-quick-wins branch): the
+  pretending call is removed and the site carries a `//! STUB: Phase 4` marker
+  plus a qDebug note, so the gap is loud and greppable instead of silent. The
+  deferral target is the Phase 4 surface-management rework (the same owner as
+  the skipTaskBar stub in waylandinterface.cpp). Found 2026-07-18 by the X11
+  survivor-sweep code-read; the X11 removal wave missed it because it is not
+  textually an isPlatformX11 branch - it is an X11-shaped call the wayland
+  interface silently drops.
+- SYMPTOM: the About dialog is not raised keep-above on wayland. It may
   appear under other always-on-top windows instead of above them.
-- EVIDENCE (code-read, lattecorona.cpp:882 + waylandinterface.cpp setKeepAbove):
-  aboutApplication() calls
+- EVIDENCE (code-read, Corona::aboutApplication + waylandinterface.cpp
+  setKeepAbove): aboutApplication() called
   `m_wm->setKeepAbove(WindowId::fromX11WId(aboutDialog->winId()), true)`
   unconditionally. `aboutDialog->winId()` is a Qt WId; fromX11WId wraps its
   decimal string. On wayland WaylandInterface::setKeepAbove does windowFor(wid),
   which resolves a WindowId against PlasmaWindow::uuid() values - a Qt WId
   decimal string can never equal a PlasmaWindow uuid, so windowFor() returns
   null and requestToggleKeepAbove() is never reached. Pairs with the skipTaskBar
-  STUB one line above (waylandinterface.cpp:297), already a no-op with a Phase-4
+  STUB (waylandinterface.cpp), already a no-op with a Phase-4
   surface-management note.
-- DISPOSITION PENDING: the intent (keep the About dialog above) is legitimate,
-  so this is not a delete - it is a stub-or-wire decision. Either mark it a
-  `// STUB` like skipTaskBar (defer to the PlasmaShellSurface/layer-shell
-  surface-management work) or request keep-above through the wayland surface
-  directly. Filed as proposal D2 in docs/tracking/x11-cleanup-audit.md; not fixed this
-  pass (the survivor sweep executes removals only, surfaces behaviour changes).
+- DISPOSITION (decided 2026-08-11, resolving the stub-or-wire choice filed as
+  proposal D2 in docs/tracking/x11-cleanup-audit.md): STUB, not wire. No
+  in-tree mechanism sets keep-above for Latte's own auxiliary toplevels on
+  wayland (the setKeepAbove/requestToggleKeepAbove path is uuid-addressed
+  PlasmaWindow management for foreign windows; the docks themselves ride
+  layer-shell), so a wire is real surface-management work, owned by Phase 4.
+  Removing the call is not a behavior change - it never did anything on
+  wayland - and the backend API stays intact for its legitimate uuid callers.
+  With the stub recorded, this entry no longer represents silent breakage;
+  it closes when Phase 4 wires the surface role.
 ### D20 - Right-click menu collapses in normal mode when the always-shown key is empty
 - STATUS: the collapse-on-empty is ACCEPTED (Qt5-faithful: a genuinely empty
   `contextMenuActionsAlwaysShown` must hide every gated action in normal mode);

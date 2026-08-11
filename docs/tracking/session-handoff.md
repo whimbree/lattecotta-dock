@@ -43,8 +43,9 @@ diff exactly the two missing TooltipTextComposer methods; D272 (storagetest
 root QSKIP) guarded, both paths driven (unshare -r reproduced the container
 failure pre-fix); D64 (fakepointer xkbcommon link) repaired per B2a across
 the compile line and all seven container dependency sets, link proven both
-ways in the devShell. Remaining planned on the branch: D19 (About keep-above
-stub).
+ways in the devShell; D19 (About keep-above no-op) resolved as a marked stub
+per audit proposal D2 (pretending call removed, Phase 4 owns the wire, entry
+stays open until then). All six planned landings are on the branch.
 
 ## 2026-08-09: the quality cleanup wave and the model-vs-truth drift net
 

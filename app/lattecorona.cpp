@@ -1011,7 +1011,16 @@ void Corona::aboutApplication()
     aboutDialog = new KAboutApplicationDialog(KAboutData::applicationData());
     connect(aboutDialog.data(), &QDialog::finished, aboutDialog.data(), &QObject::deleteLater);
     m_wm->skipTaskBar(*aboutDialog);
-    m_wm->setKeepAbove(WindowSystem::WindowId::fromX11WId(aboutDialog->winId()), true);
+    //! STUB: Phase 4 - keep-above for the About dialog (D19, the About
+    //! keep-above silent no-op). The removed call fed
+    //! WindowId::fromX11WId(aboutDialog->winId()) to setKeepAbove(); on
+    //! wayland windowFor() resolves ids against PlasmaWindow uuids, so a Qt
+    //! WId can never match and the request silently did nothing. Latte's own
+    //! toplevels have no uuid-addressed handle here; the dialog's surface
+    //! should request keep-above when the Phase 4 surface-management rework
+    //! gives auxiliary windows a real surface role - the same deferral as
+    //! the skipTaskBar stub in waylandinterface.cpp one call above.
+    qDebug() << "about dialog: keep-above is stubbed on wayland (D19); deferred to the Phase 4 surface-management rework";
 
     aboutDialog->show();
 }
