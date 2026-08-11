@@ -199,7 +199,10 @@ phases, one commit-traceable checklist item per task. The coarse picture:
       exists but nothing requires it
 - [ ] Layout/config persistence, session shutdown, multi-screen edge cases
       (the open phase; live-driven fixes land here continuously)
-- [ ] Theming and colorization polish audit
+- [x] Theming and colorization pipeline audit: every colorizer,
+      panel-background, indicator/badge and window-scheme chain traced
+      consumer-by-consumer, with runtime color-scheme changes now
+      followed live (no dock restart)
 - [ ] CI/CD and multi-distro matrix: the local gates (build-check, QML
       compile gate, qmllint ratchet, coverage ratchet, scene-render gate)
       are pure shell over cmake/ctest and CI-portable by design, and the
