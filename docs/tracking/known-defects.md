@@ -56,6 +56,52 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   matching the in-dock Tasks page's wording for showInfoBadge. Exposing
   showProgressBadge here was not done: Qt5 never exposed it on this page and
   the Qt5-faithful rule keeps the page's control set as upstream shipped it.
+### D305 - EnvironmentActions dereferences the last-active-window chain unguarded
+- STATUS: FIXED (75132b8f0 on fix/phase8-remainder; hash final at merge).
+- FOUND: 2026-08-11, by the Phase 8 tracker-ready guard sweep (code-reading,
+  with latte-dock-ng's 3a1aeaf53 as the live parallel: their fork hit this
+  null-deref shape during startup and guarded it with a ready property).
+- SYMPTOM: every imperative handler in the empty-area MouseArea (middle-click
+  close, window drag press/move/double-click, the ToggleMinimized wheel
+  branches, the drag timer) reads selectedWindowsTracker.lastActiveWindow with
+  no null guard; in a null window the handler dies on a TypeError and the
+  action silently does nothing.
+- ROOT: the QML-visible lastActiveWindow resolves through the wm registration
+  maps (Windows::lastActiveWindow returns nullptr for an unregistered view or
+  layout); the layout-keyed resolution used by the ActiveFromAllScreens filter
+  can miss during startup (Windows::addRelevantLayout documents delayed layout
+  assignment) and during layout moves (updateRelevantLayouts drops orphaned
+  layouts). selectedWindowsTracker itself is null until the View wrapper wires
+  latteView.
+- FIX: one shared activeWindowIsReady gate on the MouseArea (the plan item's
+  explicit ready-property pattern), consumed by every last-active-window
+  handler; ready-state behavior unchanged and Qt5-faithful. The switchTo
+  desktop/activity sites stay unguarded deliberately: input cannot arrive
+  before the containment is adopted into the mapped View window, by which
+  point latteView.windowsTracker resolves (the sweep's class-b proof).
+- EVIDENCE: SC-WT1 (022-empty-area-window-actions) green end to end on the
+  gated code: close and minimize still act, no-target legs stay no-ops with
+  the dock alive.
+
+### D304 - maxLength binding dereferences latteView while it is still null
+- STATUS: FIXED (1b0c4069a on fix/phase8-remainder; hash final at merge).
+- FOUND: 2026-08-11, by the Phase 8 tracker-ready guard sweep (code-reading,
+  then reproduced in the nested vehicle).
+- SYMPTOM: with maximizeWhenMaximized configured and the dock in mask mode,
+  every startup logs TypeErrors from containment main.qml's maxLength binding
+  and computes maxLength from a broken evaluation until the interface wiring
+  settles.
+- ROOT: the containment QML is created by the shell before the C++ View
+  wrapper exists (View::init wires _latte_view_object afterwards), so
+  bindings first evaluate with latteView null, plus a second window where
+  latteView is wired but windowsTracker is not yet constructed; maxLength was
+  the single tracker read in the file without the sibling guard chain.
+- FIX: the same !! guard chain over latteView and windowsTracker the sibling
+  window-tracking bindings use; the binding self-heals once
+  windowsTrackerChanged fires.
+- EVIDENCE: nested repro pair, maximizeWhenMaximized=true on the seeded
+  layout: unfixed logs 3 TypeError lines at main.qml:280 per startup (both
+  null shapes observed), fixed logs 0 with the same probe.
 
 ### D303 - Startup slide-out committed a zero-width layer surface (nested vehicle, observed once)
 - STATUS: OPEN (observed once, not yet reproduced; Phase 8 startup/geometry

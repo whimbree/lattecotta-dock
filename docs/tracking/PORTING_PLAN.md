@@ -2555,7 +2555,7 @@ multi-view, multi-monitor setup.
       paper it with a retry timer.
       Commits: 538abc8ec (instrumentation + the struts-side
       re-trigger that heals non-stranded runs)
-- [ ] Guard any code that reads a window/activity/audio tracker object
+- [x] Guard any code that reads a window/activity/audio tracker object
       during early startup with an explicit "is this tracker actually
       ready yet" property, rather than assuming it's non-null - both
       forks hit null-dereference-during-startup bugs of this shape
@@ -2563,8 +2563,41 @@ multi-view, multi-monitor setup.
       `selectedWindowsTracker`/`lastActiveWindow` before the window
       tracker had initialized). A general instance of "don't assume an
       async-initialized dependency is ready just because your own
-      component finished constructing"
-      Commits:
+      component finished constructing".
+      DONE 2026-08-11: full consumer sweep of every tracker read site
+      (selectedWindowsTracker, lastActiveWindow, windowsTracker,
+      activityInfo, audioStreams), classified a) already guarded,
+      b) unguarded but unreachable-null with the creation-order proof,
+      c) genuinely exposed. Ground truths established: latteView starts
+      null (the shell creates the containment QML before the View
+      wrapper; View::init wires _latte_view_object afterwards);
+      windowsTracker.currentScreen/allScreens are WindowsTracker-ctor
+      invariants; the QML-visible lastActiveWindow is map-gated and
+      returns null for an unregistered view/layout (delayed layout
+      assignment at startup, layout moves). Class a (no action):
+      containment main.qml guarded bindings, BindingsExternal,
+      colorizer/Manager, LatteBridge, DebugWindow, dbusreports.cpp
+      (Q_ASSERT invariant plus explicit lastWindow null check), plasmoid
+      audioStreams (array plus pulseAudio Loader-item check). Class b
+      (no action, proof recorded): visibilitymanager.cpp currentScreen
+      derefs (tracker created before VisibilityManager, sub-trackers are
+      ctor invariants); activityInfo consumers (TaskManager.ActivityInfo
+      is a synchronously created local QML object, never null; the
+      Launchers ability copy is a construction-time binding);
+      EnvironmentActions switchTo desktop/activity handler sites (input
+      cannot arrive before the containment is adopted into the mapped
+      View window, and the wiring precedes setSource). Class c (fixed):
+      containment main.qml maxLength binding, D304 (maxLength binding
+      dereferences latteView while it is still null) - driven repro pair
+      in the nested vehicle, 3 TypeErrors unfixed vs 0 fixed; and every
+      EnvironmentActions last-active-window handler, D305
+      (EnvironmentActions dereferences the last-active-window chain
+      unguarded) - fixed with the shared activeWindowIsReady
+      ready-property gate, SC-WT1 (022-empty-area-window-actions) green
+      on the gated code. Registry entries in
+      docs/tracking/known-defects.md carry the full mechanism.
+      Commits: 1b0c4069a, 75132b8f0 (fix/phase8-remainder; final at
+      merge)
 - [x] Fix multi-screen cloned-view applet-order sync. RESOLVED
       2026-07-16: in our tree the guard is implicit (translatability
       of original ids to cloned ids), and all THREE manually-synced
@@ -2734,13 +2767,37 @@ multi-view, multi-monitor setup.
       full always-shown set end to end). No re-assert code is needed;
       an explicit re-assert would duplicate the restore contract.
       Commits: none needed (verification-only closure)
-- [ ] Implement a per-applet-type wheel-event bypass list (system
+- [x] Implement a per-applet-type wheel-event bypass list (system
       tray, general external applets like volume/brightness/media) so
       they receive their own wheel events past the containment-level
       global wheel handler, while keeping the Latte tasks plasmoid's
       area excluded from that bypass (its area is where containment-
-      level scroll actions are supposed to intercept)
-      Commits:
+      level scroll actions are supposed to intercept).
+      CLOSED NOT-APPLICABLE 2026-08-11, verified before implementing:
+      no bypass list is needed because the routing is structural and
+      already correct. The containment wheel handler is the
+      EnvironmentActions MouseArea declared first in LayoutsContainer
+      (bottom of the sibling stacking order) with every AppletsContainer
+      above it; Qt Quick gives the topmost accepting item the wheel, so
+      a wheel-consuming applet takes its own events and only declined
+      wheels fall through to the containment scroll action. View::event
+      only emits wheelScrolled and forwards to scene delivery. The
+      pre-port history shows the identical Qt5 arrangement (the port
+      commits on EnvironmentActions.qml never moved the handler), and
+      the tasks plasmoid needs no exclusion: its own handlers consume
+      wheel over task icons (020-wheel-task-cycle pins that). Driven in
+      the nested vehicle with scrollAction=ScrollToggleMinimized and a
+      seeded org.kde.plasma.icontasks: a wheel over its task buttons
+      cycled activation with nothing minimized (applet consumed), a
+      wheel over empty dock area minimized the active fixture
+      (containment fired), and a wheel over the applet's launcher strip
+      fell through to the containment (the applet declines there) -
+      all three routings observed. 024-wheel-applet-passthrough.py is
+      the permanent both-ways pin. Side finding recorded in the recipe:
+      Plasma 6.6 demoted stock taskmanager's wheelEnabled to an Enum
+      defaulting to None, so the stock task manager consumes no wheel
+      until configured (the recipe opts in with AllTask).
+      Commits: 3fe56d71e (fix/phase8-remainder; final at merge)
 - [ ] Multi-screen relocation ping-pong: does reconsiderScreen() need an
       in-relocation guard (fork-sync INVESTIGATE, filed 2026-08-11 from
       docs/agent-logs/2026-08-11-fork-sync-report.md)? latte-dock-ng's
