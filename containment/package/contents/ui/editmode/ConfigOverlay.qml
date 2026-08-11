@@ -285,9 +285,16 @@ MouseArea {
 
         var angle = wheel.angleDelta.y / 8;
 
+        //! D57 (ConfigOverlay wheel threshold accepts nonnegative decrease deltas):
+        //! Qt5 upstream compares `angle < 12` here (verbatim at 527cddb72), so every
+        //! delta below +96 shrinks the applet, including horizontal wheel events,
+        //! which enter with angle == 0. The increase arm's `angle > 12` shows the
+        //! intended symmetry; the signed `angle < -12` is a recorded divergence from
+        //! Qt5 behavior fixing that inherited defect (SC-CW2, the D57 signed
+        //! decrease-threshold fix).
         if (angle > 12)
             currentApplet.latteStyleApplet.increaseLength();
-        else if (angle < 12)
+        else if (angle < -12)
             currentApplet.latteStyleApplet.decreaseLength();
     }
 
