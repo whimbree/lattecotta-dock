@@ -11,6 +11,7 @@
 // local
 #include <config-latte.h>
 #include "wm/abstractwindowinterface.h"
+#include "wm/schemecolors.h"
 #include "view/panelshadows_p.h"
 
 // Qt
@@ -39,6 +40,14 @@ InfoView::InfoView(Latte::Corona *corona, QString message, QScreen *screen, QWin
       m_corona(corona)
 {
     m_id = QString::number(QRandomGenerator::global()->bounded(1000));
+
+    //! same later-created-QQuickWindow palette pin as View::init() (the
+    //! a774ee554 mechanism): this window renders Kirigami.Theme-colored QML
+    //! and must resolve the application palette, not the panel-theme one
+    const QString defaultScheme = WindowSystem::SchemeColors::possibleSchemeFile(QStringLiteral("kdeglobals"));
+    if (!defaultScheme.isEmpty()) {
+        setProperty("KDE_COLOR_SCHEME_PATH", defaultScheme);
+    }
 
     setTitle(validTitle());
 

@@ -17,6 +17,7 @@
 #include "../../shortcuts/globalshortcuts.h"
 #include "../../shortcuts/shortcutstracker.h"
 #include "../../wm/abstractwindowinterface.h"
+#include "../../wm/schemecolors.h"
 #include "../../wm/waylandlayershell.h"
 
 // Qt
@@ -34,6 +35,17 @@ SubConfigView::SubConfigView(Latte::View *view, const QString &title, const bool
       m_isNormalWindow(isNormalWindow)
 {
     m_corona = qobject_cast<Latte::Corona *>(view->containment()->corona());
+
+    //! same later-created-QQuickWindow palette pin as View::init() (the
+    //! a774ee554 mechanism): without it this window resolves its
+    //! KDEPlatformTheme palette independently and can pick the dark
+    //! panel-theme palette instead of the application one. Covers the whole
+    //! SubConfigView family (primary/secondary/canvas config chrome and the
+    //! widget explorer), which all render Kirigami.Theme-colored QML.
+    const QString defaultScheme = WindowSystem::SchemeColors::possibleSchemeFile(QStringLiteral("kdeglobals"));
+    if (!defaultScheme.isEmpty()) {
+        setProperty("KDE_COLOR_SCHEME_PATH", defaultScheme);
+    }
 
     //! setupWaylandIntegration() deliberately does not run here: it needs a
     //! valid m_latteView for the screen and location, and that is only
