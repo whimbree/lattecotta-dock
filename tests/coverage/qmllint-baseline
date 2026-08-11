@@ -98,7 +98,7 @@
 196	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/debugger/DebugWindow.qml
 91	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/editmode/ConfigOverlay.qml
 10	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/layouts/AppletsContainer.qml
-67	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/layouts/EnvironmentActions.qml
+50	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/layouts/EnvironmentActions.qml
 7	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/layouts/ParabolicEdgeSpacer.qml
 8	share/plasma/plasmoids/org.kde.latte.containment/contents/ui/layouts/loaders/Tasks.qml
 3	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/config/config.qml

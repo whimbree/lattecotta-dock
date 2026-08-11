@@ -55,18 +55,37 @@ Loader {
         property int lastPressX: -1
         property int lastPressY: -1
 
+        //! One scope-local handle so every tracker read below stays off the
+        //! unqualified context chain (the qmllint ratchet; the Launchers
+        //! ability uses the same pattern).
+        readonly property QtObject selectedTracker: selectedWindowsTracker
+
+        //! The last-active-window chain is an async dependency that is
+        //! legitimately absent: selectedWindowsTracker is null until the C++
+        //! View wrapper wires latteView, and its lastActiveWindow resolves
+        //! through the wm registration maps, which can miss the view's layout
+        //! during startup or layout moves (Windows::addRelevantLayout records
+        //! the delayed-assignment case). An input event landing in one of
+        //! those windows deliberately does nothing - the same visible outcome
+        //! as before this gate, where the handler died on the null read
+        //! without acting, but without the TypeError. latte-dock-ng hit this
+        //! null-deref shape live (3a1aeaf53). lastActiveWindowChanged fires on
+        //! layout registration, so this binding wakes up when the map fills.
+        readonly property bool activeWindowIsReady: !!(selectedTracker
+                                                       && selectedTracker.lastActiveWindow)
+
         onClicked: (mouse) => {
-            if (root.closeActiveWindowEnabled && mouse.button === Qt.MiddleButton) {
-                selectedWindowsTracker.lastActiveWindow.requestClose();
+            if (root.closeActiveWindowEnabled && mouse.button === Qt.MiddleButton && activeWindowIsReady) {
+                selectedTracker.lastActiveWindow.requestClose();
             }
         }
 
         onPressed: (mouse) => {
-            if (!root.dragActiveWindowEnabled) {
+            if (!root.dragActiveWindowEnabled || !activeWindowIsReady) {
                 return;
             }
 
-            if (mouse.button === Qt.LeftButton && selectedWindowsTracker.lastActiveWindow.canBeDragged()) {
+            if (mouse.button === Qt.LeftButton && selectedTracker.lastActiveWindow.canBeDragged()) {
                 lastPressX = mouse.x;
                 lastPressY = mouse.y;
                 dragWindowTimer.start();
@@ -79,7 +98,7 @@ Loader {
         }
 
         onPositionChanged: (mouse) => {
-            if (!root.dragActiveWindowEnabled || !(mainArea.pressedButtons & Qt.LeftButton)) {
+            if (!root.dragActiveWindowEnabled || !activeWindowIsReady || !(mainArea.pressedButtons & Qt.LeftButton)) {
                 return;
             }
 
@@ -89,19 +108,19 @@ Loader {
 
             var tryDrag = mainArea.pressed && (stepX>threshold || stepY>threshold);
 
-            if ( tryDrag && selectedWindowsTracker.lastActiveWindow.canBeDragged()) {
+            if ( tryDrag && selectedTracker.lastActiveWindow.canBeDragged()) {
                 dragWindowTimer.stop();
                 activateDragging();
             }
         }
 
         onDoubleClicked: {
-            if (!root.dragActiveWindowEnabled) {
+            if (!root.dragActiveWindowEnabled || !activeWindowIsReady) {
                 return;
             }
 
             dragWindowTimer.stop();
-            selectedWindowsTracker.lastActiveWindow.requestToggleMaximized();
+            selectedTracker.lastActiveWindow.requestToggleMaximized();
         }
 
         //! Qt5 fired past angle = delta/8 > 10 on the signed extreme of
@@ -139,8 +158,8 @@ Loader {
                 } else if (root.scrollAction === LatteContainment.Types.ScrollToggleMinimized) {
                     if (!ctrlPressed) {
                         tasksLoader.item.activateNextPrevTask(true);
-                    } else if (!selectedWindowsTracker.lastActiveWindow.isMaximized){
-                        selectedWindowsTracker.lastActiveWindow.requestToggleMaximized();
+                    } else if (activeWindowIsReady && !selectedTracker.lastActiveWindow.isMaximized){
+                        selectedTracker.lastActiveWindow.requestToggleMaximized();
                     }
                 } else if (tasksLoader.active) {
                     tasksLoader.item.activateNextPrevTask(true);
@@ -152,20 +171,22 @@ Loader {
                 } else if (root.scrollAction === LatteContainment.Types.ScrollActivities) {
                     latteView.windowsTracker.switchToNextActivity();
                 } else if (root.scrollAction === LatteContainment.Types.ScrollToggleMinimized) {
-                    if (!ctrlPressed) {
-                        if (selectedWindowsTracker.lastActiveWindow.isValid
-                                && !selectedWindowsTracker.lastActiveWindow.isMinimized
-                                && selectedWindowsTracker.lastActiveWindow.isMaximized){
+                    if (!activeWindowIsReady) {
+                        //! no target to toggle; deliberately do nothing
+                    } else if (!ctrlPressed) {
+                        if (selectedTracker.lastActiveWindow.isValid
+                                && !selectedTracker.lastActiveWindow.isMinimized
+                                && selectedTracker.lastActiveWindow.isMaximized){
                             //! maximized
-                            selectedWindowsTracker.lastActiveWindow.requestToggleMaximized();
-                        } else if (selectedWindowsTracker.lastActiveWindow.isValid
-                                   && !selectedWindowsTracker.lastActiveWindow.isMinimized
-                                   && !selectedWindowsTracker.lastActiveWindow.isMaximized) {
+                            selectedTracker.lastActiveWindow.requestToggleMaximized();
+                        } else if (selectedTracker.lastActiveWindow.isValid
+                                   && !selectedTracker.lastActiveWindow.isMinimized
+                                   && !selectedTracker.lastActiveWindow.isMaximized) {
                             //! normal
-                            selectedWindowsTracker.lastActiveWindow.requestToggleMinimized();
+                            selectedTracker.lastActiveWindow.requestToggleMinimized();
                         }
-                    } else if (selectedWindowsTracker.lastActiveWindow.isMaximized) {
-                        selectedWindowsTracker.lastActiveWindow.requestToggleMaximized();
+                    } else if (selectedTracker.lastActiveWindow.isMaximized) {
+                        selectedTracker.lastActiveWindow.requestToggleMaximized();
                     }
                 } else if (tasksLoader.active) {
                     tasksLoader.item.activateNextPrevTask(false);
@@ -178,7 +199,7 @@ Loader {
         }
 
         function activateDragging(){
-            selectedWindowsTracker.requestMoveLastWindow(mainArea.mouseX, mainArea.mouseY);
+            selectedTracker.requestMoveLastWindow(mainArea.mouseX, mainArea.mouseY);
             mainArea.lastPressX = -1;
             mainArea.lastPressY = -1;
         }
@@ -188,7 +209,7 @@ Loader {
             id: dragWindowTimer
             interval: 500
             onTriggered: {
-                if (mainArea.pressed && selectedWindowsTracker.lastActiveWindow.canBeDragged()) {
+                if (mainArea.pressed && mainArea.activeWindowIsReady && mainArea.selectedTracker.lastActiveWindow.canBeDragged()) {
                     mainArea.activateDragging();
                 }
             }
