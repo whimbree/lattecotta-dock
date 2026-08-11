@@ -1861,6 +1861,7 @@ bool GenericLayout::initContainments()
         return startupRank(left) < startupRank(right);
     });
 
+    m_hasPendingStartupViews = !pending.isEmpty();
     addNextStartupView(pending);
 
     m_hasInitializedContainments = true;
@@ -1888,6 +1889,24 @@ void GenericLayout::addNextStartupView(QList<QPointer<Plasma::Containment>> pend
         QMetaObject::invokeMethod(this, [this, pending]() {
             addNextStartupView(pending);
         }, Qt::QueuedConnection);
+        return;
+    }
+
+    completeStartupViewCreation();
+}
+
+void GenericLayout::completeStartupViewCreation()
+{
+    m_hasPendingStartupViews = false;
+
+    //! Every root deferred its screen-group synchronization while startup
+    //! views were still trickling in (the D283 reload replica adoption
+    //! window). Run the reconciliation each of them skipped, now that every
+    //! persisted linked member had its chance to register with its root.
+    for (auto *const view : std::as_const(m_latteViews)) {
+        if (auto *const root = qobject_cast<Latte::OriginalView *>(view)) {
+            root->synchronizeScreenGroupMembers();
+        }
     }
 }
 
@@ -2152,6 +2171,11 @@ void GenericLayout::recreateView(Plasma::Containment *containment, bool delayed)
 bool GenericLayout::isRecreatingView(const Plasma::Containment *containment) const
 {
     return containment && m_viewsToRecreate.contains(containment);
+}
+
+bool GenericLayout::hasPendingStartupViews() const
+{
+    return m_hasPendingStartupViews;
 }
 
 
