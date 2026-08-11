@@ -44,6 +44,11 @@ AbilityItem.IndicatorLevel {
         }
     }
 
+    //! D295 (trailing conjuncts attach to only one operand of an inherited ||): in the
+    //! final conjunct, enabledForApplets gates only the debug-paddings branch, not the
+    //! primary activeIndicatorEnabled branch. Inherited Qt5 precedence, deliberately
+    //! preserved; the parentheses spell out the binding that was already in effect
+    //! (see docs/tracking/known-defects.md).
     level.isDrawn: !appletItem.isSeparator
                    && !appletItem.isMarginsAreaSeparator
                    && !appletItem.isHidden
@@ -51,8 +56,8 @@ AbilityItem.IndicatorLevel {
                    && !communicator.indexerIsSupported
                    && level.indicator.host.isEnabled
                    && (appletItem.communicator.requires.activeIndicatorEnabled
-                       || (!appletItem.communicator.requires.activeIndicatorEnabled && appletItem.debug.graphicsEnabled /*debug paddings*/)
-                       && level.indicator.host.info.enabledForApplets)
+                       || ((!appletItem.communicator.requires.activeIndicatorEnabled && appletItem.debug.graphicsEnabled /*debug paddings*/)
+                           && level.indicator.host.info.enabledForApplets))
 
     readonly property bool locked: appletItem.lockZoom || appletItem.parabolic.factor.zoom === 1
 
