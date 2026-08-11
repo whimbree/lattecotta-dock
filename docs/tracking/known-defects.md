@@ -4855,8 +4855,8 @@ carries its own detail or points into the plan and the reference docs.
 ## Fixed (kept for the record)
 
 ### D294 - Ability indicator level reads level.indicator.host without the null guard its sibling binding uses
-- STATUS: FIXED (C4, the indicator null-guard-inconsistency audit item; this
-  branch).
+- STATUS: FIXED (C4, the indicator null-guard-inconsistency audit item; PR #236,
+  a683aaf87).
 - FOUND: 2026-08-10, by code-reading during the C4 audit.
 - SYMPTOM (latent): a TypeError ("Cannot read property 'host' of null") in the
   mouse-coordinate Connections' `enabled` binding whenever it evaluates while

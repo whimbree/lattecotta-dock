@@ -102,11 +102,20 @@ fixed to the program+args form with a qWarning on failure, filed D293; an
 end-to-end import-full is an owed live drive. With that the whole CHUNK
 readability/safety batch (CHUNK-1 through CHUNK-6) is COMPLETE; it caught two
 real broken-on-Qt6 bugs (D292 pauseLayout null-deref, D293 import-full restart).
-QML backlog after:
-C2 (button-row precedence, three sites, needs re-identification), C3
-(colorsToIndex missing default return), C4 (indicator null-guard inconsistency),
-C6 (redundant anchor write), plus the dead Plasma-5 version gates, a Qt5 import
-sweep, and the settings-wiring audit fixes (see the settings-audit note below).
+QML audit items C2/C3/C4/C6 LANDED at 5d262c1c0 (PR #236): C2 the three
+correct-but-implicit precedence parens (the "button-row" label was a mislabel;
+the sites are the applet-visible binding, ShortcutBadge, Totals); C3 the
+colorsToIndex loud-warn + return-0 fallback for an unmapped palette; C4 the
+ability-indicator null-guard fix (D294, FIXED, a683aaf87 - a real TypeError when
+level.indicator was null); C6 the redundant anchors.centerIn removal in GlowPoint.
+D295 (SUSPECTED, needs live verification) filed for two upstream precedence
+asymmetries the batch deliberately did NOT reshape by guesswork: RealRemovalAnimation
+`animation1` and containment IndicatorLevel `isDrawn`, both the bug-prone
+`A || (group) && trailing` shape (verbatim in both reference forks) - a maintainer
+call whether the trailing conjuncts were meant to gate both `||` operands.
+Cleanup board remaining: the dead Plasma-5 version gates, a Qt5 import sweep, the
+D295 live check, and the settings-wiring audit fixes (PARKED pending the
+maintainer's remove-vs-wire disposition; see the settings-audit note below).
 
 Settings-wiring audit (2026-08-10, read-only scout; full inventory in the session
 scratchpad settings-audit-inventory.md). ~134 interactive controls across 9 config
