@@ -98,13 +98,14 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   the storm (whose bash-eval sourceguard net became a typed pure core
   with pytest mutation controls), the dual-output selftest, and the
   asan gate's own driven set; task-reorder-lib, applet-reorder-driver,
-  dnd-lib and audit-lib are retired. EVERY remaining bash recipe is
-  blocked on a tracked item: 040 (D276), 061 (D209), 070-maximize
-  (D274), duplicate-dock-independent (D283), and 073 (the mechanical
-  sourceguard follow-up that also gates the last three matrix libs).
-  What remains of BP is those unblocks plus BP-5c (the docs sweep and
-  closeout). The waves also fixed D280, a real focus-lifecycle dock
-  defect a recipe drive exposed.
+  dnd-lib and audit-lib are retired. BP is COMPLETE (2026-08-06, the
+  073 port and the BP-5c closeout); the allowlist floor only shrinks as
+  blockers clear - duplicate-dock-independent left it 2026-08-11 when
+  the D283 fix (persisted screen-group replicas adopt on reload) freed
+  it, leaving three defect-blocked bash recipes (040/D276, 061/D209,
+  070-maximize/D274) plus their lib.sh/multi-output-lib.sh spine. The
+  waves also fixed D280, a real focus-lifecycle dock defect a recipe
+  drive exposed.
 
 ## Registries and state
 

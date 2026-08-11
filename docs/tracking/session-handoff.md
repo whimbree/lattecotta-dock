@@ -99,11 +99,11 @@ are low-value churn, deliberately deferred. Next session's higher-value work:
 1. UNRESOLVED DEFECTS. Triage the ~20 OPEN/SUSPECTED entries in known-defects.md
    into real-bug vs Qt5-faithful/accepted vs test-infra, then drive fixes for the
    genuinely-broken user-facing ones (candidates: D274 maximize input region stays
-   full-width after a shrink, D283 legacy clone path drops its replica on reload,
-   D19 about-dialog keep-above no-op on wayland, D268 panel-focus timing).
-   Surface product-decision/live-check ones to the maintainer rather than
-   guessing. (D289, the dup-connection delete, landed 2026-08-11 - see the
-   defect-quick-wins section below.)
+   full-width after a shrink, D19 about-dialog keep-above no-op on wayland, D268
+   panel-focus timing). Surface product-decision/live-check ones to the
+   maintainer rather than guessing. (D289, the dup-connection delete, landed
+   2026-08-11 - see the defect-quick-wins section below; D283 is FIXED
+   2026-08-11, see its section below.)
 2. PHASE 8 (the open README roadmap item) - layout/config persistence, session
    shutdown, multi-screen edge cases. The plan has 58 unticked items, most of the
    remaining gotcha-heavy ones here; several want a live desktop, so surface the
@@ -130,7 +130,39 @@ failure pre-fix); D64 (fakepointer xkbcommon link) repaired per B2a across
 the compile line and all seven container dependency sets, link proven both
 ways in the devShell; D19 (About keep-above no-op) resolved as a marked stub
 per audit proposal D2 (pretending call removed, Phase 4 owns the wire, entry
-stays open until then). All six planned landings are on the branch.
+stays open until then). All six landed on main in PR #238.
+
+
+## 2026-08-11: D283 fixed - persisted screen-group replicas adopt on reload
+
+The D283 approach decision landed as FIX THE LEGACY PATH (rationale in the
+registry entry and the part-two commit body). Branch fix/d283-clone-reload,
+three commits plus this docs commit (hashes re-resolve at merge):
+
+- The root was three stacked layers, log-traced in the dual-output nested
+  vehicle: cef08bd1f's SimpleConfig unification made the corona load the
+  PRE-strip layout state (the persisted replica loaded despite the startup
+  strip; the recipe's earlier identity preservation at defaa0c7ad was the
+  gap-filling id remap reissuing the freed id, an allocator accident); the
+  8adc09a88 startup partition let the root generate a fresh clone before the
+  persisted replica registered; the surplus reconciliation then destroyed the
+  replica.
+- Fix part one (d9967b21c): clone generation defers while startup views
+  trickle (GenericLayout::hasPendingStartupViews), resynchronized at drain.
+- Fix part two (f5c15aedd): the active-load boundaries (cleanupOnStartup,
+  importToCorona) no longer strip ScreenGroupDerived records; the replica
+  loads and its root adopts it. Exports and cross-mode moves still strip.
+  Deliberate divergence from upstream Qt5's strip-and-regenerate, recorded.
+- The recipe port (4c0b756af): duplicate-dock-independent is typed Python
+  now (the last lifecycle bash holdout), with the placement-refusal polling
+  hardening; bash deleted, allowlist 58 -> 57.
+- Evidence: recipe green 3x on the fixed tree (bash twice on the final head,
+  including reload membership [1, 12, 13, 14] with isClonedFrom intact),
+  ported recipe green twice in fresh vehicles, create-linked-dock and
+  linked-dock-removal-undo green (explicit path untouched).
+- Filed D302 (SUSPECTED): cleanupOnStartup's remaining ActionPlugins cleanup
+  still writes around the corona's SimpleConfig instance (same cef08bd1f
+  split, low severity, fix shape recorded).
 
 ## 2026-08-09: the quality cleanup wave and the model-vs-truth drift net
 

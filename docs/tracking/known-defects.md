@@ -16,6 +16,32 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ## Open / suspected
 
+### D302 - cleanupOnStartup's ActionPlugins cleanup writes around Corona's live KConfig instance
+- STATUS: SUSPECTED (found by code-reading during the D283 root-cause
+  trace; not yet driven).
+- FOUND: 2026-08-11, tracing why the reload replica strip no longer
+  reached the corona (the D283 mechanism): cef08bd1f made
+  AbstractLayout::setFile open the layout file as
+  (path, KConfig::SimpleConfig) to share Corona::config()'s repository,
+  and the CentralLayout is constructed before Manager::loadLatteLayout
+  runs, so that shared instance is loaded BEFORE cleanupOnStartup
+  mutates the file through the default-flags
+  KSharedConfig::openConfig(path). The mutation syncs the disk but never
+  reparses the corona's instance.
+- SYMPTOM (hypothesized): cleanupOnStartup's remaining duty, deleting
+  deprecated [ActionPlugins] right-button entries, is invisible to the
+  session being loaded - the corona restores from the pre-clean state,
+  and the on-disk cleanup only takes effect at some later start whose
+  write ordering differs. Low severity in practice:
+  GenericLayout::addContainment re-asserts the RightButton contextmenu
+  binding on every containment regardless of the ActionPlugins state.
+  The Containments half of the same split WAS user-visible as D283's
+  mechanism and is gone since the D283 fix stopped mutating containment
+  groups at load.
+- FIX SHAPE when driven: route cleanupOnStartup's writes through the
+  same (path, SimpleConfig) repository the corona reads, or perform them
+  before the CentralLayout opens the file.
+
 ### D297 - servicesFromCmdLine recurses forever on a bare ignored runtime
 - STATUS: FIXED same-day (found and fixed 2026-08-11, merged in PR #239 at
   c16ac1721).
@@ -3683,8 +3709,17 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   controlled negative oracles); the Python port passes the same drive.
 
 ### D283 - the legacy AllScreensGroup clone path drops its persisted replica on reload
-- STATUS: OPEN. Approach decision owed: fix the legacy path or record it
-  deprecated in favor of explicit linked docks and rework the recipe.
+- STATUS: FIXED (2026-08-11) by the two-commit adoption fix on the
+  fix/d283-clone-reload branch: "fix(view): defer screen-group clone
+  generation until startup views land" (d9967b21c) and "fix(layout):
+  adopt persisted screen-group replicas on reload" (f5c15aedd); the
+  recipe port followed as 4c0b756af (hashes re-resolve at merge).
+- APPROACH DECISION (was owed): FIX the legacy path rather than
+  deprecate it behind explicit linked docks. The regression is in-port
+  (the explicit-linked-dock rework broke a shipped upstream-shaped
+  path), identity churn on every reload is real correctness damage for
+  AllScreensGroup configs, and deprecation stays available later but is
+  not license to ship a regression.
 - FOUND: 2026-08-06, the BP-3 R10 batch (the lifecycle recipe wave of the
   bash-to-python migration): duplicate-dock-independent failed
   deterministically twice - expected containments [1, 12, 13, 14], got
@@ -3696,9 +3731,44 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   all four identities at the PR #109 merge (defaa0c7ad), so the reuse
   regressed inside the explicit-linked-dock rework that followed (~30
   commits later). A dock-side regression in a superseded-but-shipped
-  path, not test staleness; the recipe stays bash until the decision.
-- SEVERITY: legacy-path correctness (identity churn on every reload for
-  AllScreensGroup clones; explicit linked docks unaffected).
+  path, not test staleness; the recipe stayed bash until the decision.
+- ROOT (three stacked layers, log-traced in the nested vehicle):
+  1. cef08bd1f made AbstractLayout::setFile open the layout file as
+     (path, KConfig::SimpleConfig) to share Corona::config()'s
+     repository. The CentralLayout constructed before
+     Manager::loadLatteLayout therefore holds that instance loaded
+     BEFORE cleanupOnStartup's replica strip, which mutated the
+     default-flags KSharedConfig instance and synced only the disk - so
+     the corona restored the PRE-strip containment set and the replica
+     loaded anyway. Before cef08bd1f the corona read the stripped disk
+     and the gap-filling id remap reissued the freed id, so the recipe's
+     identity preservation at defaa0c7ad was an allocator accident, not
+     designed reuse.
+  2. The startup partition (8adc09a88) loads clones after roots, and the
+     root's screen-group synchronization fired as soon as its own view
+     landed: it generated a fresh clone (15) for the "uncovered" second
+     output before persisted replica 12 registered.
+  3. The surplus reconciliation then removed 12 as the second clone on
+     an already-covered screen.
+- FIX: persisted ScreenGroupDerived replicas are now a designed startup
+  input. Part one gates clone generation on the startup trickle
+  (GenericLayout::hasPendingStartupViews, resynchronized at drain);
+  part two stops stripping them at the active-load boundaries
+  (Manager::cleanupOnStartup, Storage::importToCorona), so the replica
+  loads and its root adopts it through the clone addView path - the
+  same adoption explicit linked members received in 8adc09a88. Exports
+  and cross-mode moves still strip. Deliberate divergence from upstream
+  Qt5's strip-and-regenerate, recorded in the part-two commit body.
+- EVIDENCE: the dual-output nested duplicate-dock-independent recipe
+  green three times on the fixed tree (once on part one alone, twice on
+  the full head), reload preserving membership [1, 12, 13, 14] with
+  replica 12 keeping isClonedFrom=1; the explicit-path recipes
+  create-linked-dock and linked-dock-removal-undo green on the same
+  head. The recipe now runs as typed Python (the bash holdout ported
+  once the blocker cleared).
+- SEVERITY (historical): legacy-path correctness (identity churn on
+  every reload for AllScreensGroup clones; explicit linked docks
+  unaffected).
 
 ### D280 - removing a keyboard-focus dock strands the panel focus session for the undo window
 - STATUS: FIXED by the view-removal session-release commit in the PR that
