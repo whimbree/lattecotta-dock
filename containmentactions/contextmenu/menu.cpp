@@ -28,6 +28,7 @@
 
 // KDE
 #include <KLocalizedString>
+#include <KPluginFactory>
 
 // Plasma
 #include <Plasma/Containment>
