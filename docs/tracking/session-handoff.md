@@ -87,14 +87,19 @@ trip it - an optional anti-pattern sweep over those two helper bodies would
 restore the wider coverage the monolith incidentally had. CHUNK-3 (idiom sweep:
 string-based connects -> function-pointer, dynamic_cast -> qobject_cast for
 QObject targets only, read-only-loop iterators to const) LANDED at 584a2ae3a
-(PR #222), compile-checked by the build. CHUNK-2 (persistViewMoveSnapshot plus
-the ambiguous .clang-format item) is the remaining item in that batch. Still
-unfarmed after: CHUNK-4 (comment hygiene, the
-synchronizer.cpp dead null-check), CHUNK-5 (lattecorona.cpp startDetached QString
-injection, needs a live drive), CHUNK-6 (m_connections array bounds); QML C2
-(button-row precedence, three sites, needs re-identification), C3 (colorsToIndex
-missing default return), C4 (indicator null-guard inconsistency), C6 (redundant
-anchor write), plus the dead Plasma-5 version gates and a Qt5 import sweep.
+(PR #222), compile-checked by the build. CHUNK-2 (the view-move-persistence
+reflow to house line width, proven token-identical), CHUNK-4 (the
+synchronizer.cpp dead null-check, which uncovered and fixed the D292 latent
+null-deref in pauseLayout), and CHUNK-6 (the m_connections array-bounds
+invariant, now a static_assert + Q_ASSERT) LANDED at 8d7083177 (PR #234). The
+".clang-format item" turned out to be that persistViewMove/Snapshot were the only
+two functions hand-wrapped to ~30 cols in a ~100-col file; there is no
+.clang-format in the tree. CHUNK-5 (lattecorona.cpp startDetached QString
+injection, needs a live drive) is the remaining CHUNK item. QML backlog after:
+C2 (button-row precedence, three sites, needs re-identification), C3
+(colorsToIndex missing default return), C4 (indicator null-guard inconsistency),
+C6 (redundant anchor write), plus the dead Plasma-5 version gates, a Qt5 import
+sweep, and the settings-wiring audit fixes (see the settings-audit note below).
 
 Settings-wiring audit (2026-08-10, read-only scout; full inventory in the session
 scratchpad settings-audit-inventory.md). ~134 interactive controls across 9 config

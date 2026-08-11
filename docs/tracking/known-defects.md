@@ -4822,7 +4822,8 @@ carries its own detail or points into the plan and the reference docs.
 ## Fixed (kept for the record)
 
 ### D292 - Synchronizer::pauseLayout dereferences a possibly-null layout before guarding it
-- STATUS: FIXED (CHUNK-4, the synchronizer.cpp dead-null-check audit item).
+- STATUS: FIXED (CHUNK-4, the synchronizer.cpp dead-null-check audit item; PR
+  #234, 8d7083177).
 - FOUND: 2026-08-10, by code-reading while removing the dead `layout &&`
   null-check flagged by the audit.
 - SYMPTOM (latent): `Synchronizer::pauseLayout` looked up `centralLayout(layoutName)`
