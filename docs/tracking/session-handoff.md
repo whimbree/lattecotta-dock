@@ -41,8 +41,10 @@ note - whose m_data half turned out already fixed by 5585c708a) refused loudly
 at the D-Bus boundary; D60 (stale Tasks plugins.qmltypes) regenerated, the
 diff exactly the two missing TooltipTextComposer methods; D272 (storagetest
 root QSKIP) guarded, both paths driven (unshare -r reproduced the container
-failure pre-fix). Remaining planned on the branch: D64 (fakepointer
-xkbcommon link), D19 (About keep-above stub).
+failure pre-fix); D64 (fakepointer xkbcommon link) repaired per B2a across
+the compile line and all seven container dependency sets, link proven both
+ways in the devShell. Remaining planned on the branch: D19 (About keep-above
+stub).
 
 ## 2026-08-09: the quality cleanup wave and the model-vs-truth drift net
 

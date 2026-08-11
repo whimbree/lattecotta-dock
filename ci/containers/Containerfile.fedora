@@ -63,7 +63,7 @@ RUN dnf install -y --setopt=install_weak_deps=False \
         kf6-qqc2-desktop-style plasma-pa kpipewire-devel plasma5support-devel \
         libksysguard-devel \
         plasma-wayland-protocols-devel wayland-devel wayland-protocols-devel \
-        layer-shell-qt-devel \
+        libxkbcommon-devel layer-shell-qt-devel \
         kwin vulkan-loader vulkan-headers mesa-vulkan-drivers \
         vulkan-validation-layers \
         google-noto-sans-fonts dbus dbus-daemon libcap rsync perl \

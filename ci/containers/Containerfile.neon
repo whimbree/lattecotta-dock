@@ -84,7 +84,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         plasma5support-dev libplasma-dev plasma-activities-dev \
         plasma-activities-stats-dev plasma-workspace-dev kwayland-dev \
         libksysguard-dev plasma-wayland-protocols libwayland-dev \
-        wayland-protocols liblayershellqtinterface-dev \
+        wayland-protocols libxkbcommon-dev liblayershellqtinterface-dev \
         kwin-wayland \
         libvulkan-dev libvulkan1 vulkan-validationlayers mesa-vulkan-drivers \
         fonts-noto-core dbus libcap2-bin rsync perl python3 imagemagick \

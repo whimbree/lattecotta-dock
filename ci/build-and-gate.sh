@@ -68,8 +68,13 @@ build_fakepointer() {
     mkdir -p "$gendir"
     wayland-scanner client-header "$xml" "$gendir/fake-input-client-protocol.h"
     wayland-scanner private-code  "$xml" "$gendir/fake-input-protocol.c"
+    # xkbcommon is load-bearing: fakepointer.c resolves key names with
+    # xkb_keysym_from_name (the key/dragkey verbs), so linking wayland-client
+    # alone fails with an undefined reference (D64, the distro-gate
+    # fakepointer xkbcommon link repair; the source's own header documents
+    # this exact pkg-config pair).
     cc -O2 -o "$out" "$SRC/scripts/tools/fakepointer.c" "$gendir/fake-input-protocol.c" \
-        -I"$gendir" $(pkg-config --cflags --libs wayland-client)
+        -I"$gendir" $(pkg-config --cflags --libs wayland-client xkbcommon)
 }
 
 # The default-layout config seeder lives in scripts/lib-e2e-seed.sh, shared with

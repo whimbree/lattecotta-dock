@@ -645,25 +645,32 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   tracking commit `f2c2ba089` after GitHub's rebase merge.
 
 ### D64 - Distro-gate fakepointer build omits the xkbcommon link dependency
-- STATUS: OPEN (confirmed by the exact helper link command 2026-07-21). The
-  defect record landed at `611824a68`; no repair landed with it.
+- STATUS: FIXED (2026-08-11, the defect-quick-wins branch; the fix is B2a,
+  the D64 distro-gate fakepointer xkbcommon link repair from
+  `multi-distro-ci-plan.md`). Container revalidation happens at the next
+  matrix pass - no container was run for this landing.
 - FOUND: SC-T5 (the permanent runtime-effect acceptance for D29, task-icon
   middle click appears to execute left-click behavior) local fakepointer build.
-- ROOT: `ci/build-and-gate.sh` compiles `scripts/tools/fakepointer.c` with only
+  The defect record landed at `611824a68`; no repair landed with it.
+- ROOT: `ci/build-and-gate.sh` compiled `scripts/tools/fakepointer.c` with only
   `pkg-config --cflags --libs wayland-client`. The source calls
   `xkb_keysym_from_name` for its key and drag-key verbs, so the binary also
-  requires `xkbcommon`. The live-verification build recipe already names both
-  packages.
-- EVIDENCE: running the helper's exact compiler and linker arguments against
-  the generated fake-input protocol failed with
-  `undefined reference to xkb_keysym_from_name`. Adding
-  `pkg-config --cflags --libs wayland-client xkbcommon` produced the
-  fakepointer binary used by the passing SC-T5 nested runs.
-- FIX DIRECTION: B2a (the D64 distro-gate fakepointer xkbcommon link repair) in
-  `multi-distro-ci-plan.md` adds the missing package to the helper and every
-  container dependency set, then exercises the helper build in the focused
-  container self-test. This remains separate from SC-T5 and does not require a
-  dock behavior change.
+  requires `xkbcommon` - the pairing fakepointer.c's own header comment
+  documents.
+- FIX: `build_fakepointer`'s pkg-config line gained `xkbcommon` (with a
+  comment naming why it is load-bearing), and every container dependency set
+  names the distro's xkbcommon dev package explicitly (Arch libxkbcommon,
+  Debian/Neon libxkbcommon-dev, Fedora/openSUSE/Void libxkbcommon-devel,
+  Gentoo x11-libs/libxkbcommon) rather than relying on a transitive pull
+  without headers or .pc files.
+- EVIDENCE: in the devShell, the helper's exact build sequence
+  (wayland-scanner client-header/private-code on fake-input.xml, then the cc
+  line) links cleanly with `wayland-client xkbcommon` and fails with
+  `undefined reference to xkb_keysym_from_name` with the old
+  `wayland-client`-only line - both driven 2026-08-11. There is no separate
+  container self-test harness to extend: the gate stage of
+  `ci/build-and-gate.sh` itself builds the helper, so the container legs
+  validate the repair on their next run.
 
 ### D65 - Popup row stable values were not unique at the wire level
 - STATUS: FIXED (`523c6f468`).
