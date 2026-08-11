@@ -261,7 +261,6 @@ Item{
 
         Rectangle {
             id: smallCircle
-            anchors.centerIn: parent
             anchors.fill: parent
 
             color: glowItem.basicColor
@@ -270,7 +269,6 @@ Item{
         }
 
         Loader{
-            anchors.centerIn: parent
             anchors.fill: parent
 
             active: glowItem.showAttention
