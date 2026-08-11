@@ -526,8 +526,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ### D57 - ConfigOverlay wheel threshold accepts nonnegative decrease deltas
 - STATUS: FIXED. SC-CW2 (the D57 signed decrease-threshold fix and regression
-  promotion) landed the root fix at `a526937a9` and the recipe promotion at
-  `6686d468e`; the registry's approval gate was satisfied by the maintainer
+  promotion) landed the root fix at `88175a7c6` and the recipe promotion at
+  `51f6737d8`; the registry's approval gate was satisfied by the maintainer
   decision recorded in the fix commit (2026-08-11). PR #96 had landed SC-CW1
   (the D57 ConfigOverlay wheel-threshold reproduction) at reproduction commit
   `5ec57175f`, tracking commit `aa6399b44`, tracking trim `709c0946b`, and

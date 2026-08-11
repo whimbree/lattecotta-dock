@@ -365,8 +365,8 @@ branches without changing behavior.
 
 Status is FIXED. SC-CW2 (the D57 signed decrease-threshold fix and regression
 promotion) signed the decrease comparison from `angle < 12` to `angle < -12`
-at `a526937a9` and promoted the recipe to an unmarked status-0 regression
-guard at `6686d468e`; the approval the registry required is recorded in the
+at `88175a7c6` and promoted the recipe to an unmarked status-0 regression
+guard at `51f6737d8`; the approval the registry required is recorded in the
 fix commit (maintainer decision, 2026-08-11). The inherited comparison is
 verbatim Qt5 upstream (`527cddb72`), so the signed threshold is a recorded
 divergence from Qt5 behavior, commented at the site. PR #96 had landed SC-CW1
@@ -603,7 +603,7 @@ in the D29 chain; wheel remains in SC-R6.
       both-axis matrix as a status-0 regression. The required approval is
       recorded in the fix commit (maintainer decision, 2026-08-11); the signed
       threshold is a recorded divergence from the verbatim-Qt5 arm.
-      Commits: a526937a9, 6686d468e
+      Commits: 88175a7c6, 51f6737d8
 - [x] **SC-B1 (the D30 current-contract investigation):** confirmed current
       gestures, event ownership, booleans/defaults, target lifecycle, requests,
       effects, and Qt5/fork parity across enabled, disabled, and no-target nested

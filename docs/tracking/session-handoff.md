@@ -25,7 +25,7 @@ size-check precedence both majors).
 
 READY-TO-MERGE branches (each gate-green in its worktree under
 .claude/worktrees/, stamp = head, none pushed except where noted):
-1. fix/d57-wheel-threshold (a526937a9/6686d468e/14a9ae541, stamp
+1. fix/d57-wheel-threshold (88175a7c6/51f6737d8/22c341ab8; merged PR #242, stamp
    14a9ae541): the SC-CW2 signed wheel-threshold fix (angle < -12),
    reproduction recipe promoted to a status-0 regression guard, both
    nested runs green with the corrected matrix. NEEDS: first independent
@@ -169,9 +169,9 @@ round's 43e478866 iterator hardening):
 
 SC-CW2 (the D57 signed decrease-threshold fix and regression promotion)
 landed on branch fix/d57-wheel-threshold: the ConfigOverlay decrease
-comparison went from `angle < 12` to `angle < -12` at `a526937a9`, and the
+comparison went from `angle < 12` to `angle < -12` at `88175a7c6`, and the
 SC-CW1 reproduction recipe (tests/e2e/022-configoverlay-wheel-threshold.py)
-was promoted to an unmarked status-0 regression guard at `6686d468e`. The
+was promoted to an unmarked status-0 regression guard at `51f6737d8`. The
 inherited arm is verbatim Qt5 upstream (`527cddb72`), so the signed threshold
 is a recorded divergence from Qt5 behavior, commented at the site; the
 approval the registry required is recorded in the fix commit (maintainer
@@ -180,7 +180,7 @@ corrected matrix on both view axes (+120:+8, -120:-8, +96:0, -96:0, +/-90:0,
 horizontal +/-120:0, axis-stop:0, trailing +120 control:+8). A tree-wide
 angleDelta sweep confirmed ConfigOverlay was the only unsigned-threshold
 site. Registry entry updated to FIXED; the SC-CW2 plan item is ticked
-(hashes re-resolve at merge).
+(merged in PR #242).
 
 ## 2026-08-09: the quality cleanup wave and the model-vs-truth drift net
 
