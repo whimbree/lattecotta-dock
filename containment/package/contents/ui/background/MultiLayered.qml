@@ -484,15 +484,21 @@ BackgroundProperties{
             root.updateEffectsArea.disconnect(updateEffectsArea);
         }
 
-        //! Fix for FrameSvgItem QML version not updating its margins after a theme change
-        //! with this hack we enforce such update. I could use the repaintNeeded signal but
-        //! it is called more often than the themeChanged one.
+        //! On a theme change the prefix may need re-picking (a theme can
+        //! gain or lose the location-prefixed panel-background variants) and
+        //! the effects area re-publishing. The Qt5-era double-toggle of
+        //! Plasmoid.configuration.panelShadows that sat here (a nudge forcing
+        //! the Plasma 5 FrameSvgItem to re-resolve stale margins) is gone:
+        //! KF6 KSvg's FrameSvgItem re-resolves its margins on a theme change
+        //! itself (driven in the nested vehicle: a runtime theme round-trip
+        //! against a 40px-margin fixture theme moved and restored the
+        //! published effects rect with no nudge), and the toggle cost real
+        //! config-write churn plus external-shadow destroy/recreate on every
+        //! theme change.
         Connections {
             target: themeExtended
             onThemeChanged: {
                 solidBackground.adjustPrefix();
-                Plasmoid.configuration.panelShadows = !Plasmoid.configuration.panelShadows;
-                Plasmoid.configuration.panelShadows = !Plasmoid.configuration.panelShadows;
                 updateEffectsArea();
             }
         }
