@@ -4,7 +4,7 @@
 */
 
 import QtQuick 2.7
-import QtQuick.Layouts 1.3
+import QtQuick.Layouts
 
 import org.kde.plasma.core 2.0 as PlasmaCore
 

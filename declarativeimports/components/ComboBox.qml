@@ -8,7 +8,7 @@ import QtQuick 2.7
 import QtQuick.Window 2.2
 import QtQuick.Templates 2.2 as T
 import QtQuick.Controls 2.2 as Controls
-import QtQuick.Layouts 1.3
+import QtQuick.Layouts
 import QtQuick.Effects
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.ksvg 1.0 as KSvg

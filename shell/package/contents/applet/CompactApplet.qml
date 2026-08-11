@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 import QtQuick
-import QtQuick.Layouts 1.1
+import QtQuick.Layouts
 import QtQuick.Window 2.0
 import QtQuick.Effects
 
