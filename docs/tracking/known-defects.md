@@ -5140,8 +5140,8 @@ carries its own detail or points into the plan and the reference docs.
 ## Fixed (kept for the record)
 
 ### D298 - ThemeExtended scheme snapshots stale after a runtime color-scheme change
-- STATUS: FIXED (fix/theming-audit-fixes: b9cf3d966 the refresh fix with its
-  unit test, f71564749 the dock-level e2e guard).
+- STATUS: FIXED (PR #243: fe84be275 the refresh fix with its
+  unit test, 6cd82ec79 the dock-level e2e guard).
 - FOUND: 2026-08-11, by the Phase 9 theming audit (finding 1,
   docs/agent-logs/2026-08-11-theming-audit-inventory.md); statically decided
   from the source, then reproduced red under both new tests.
@@ -5164,7 +5164,7 @@ carries its own detail or points into the plan and the reference docs.
   kdeglobals rewrite, then default.colors #f0f1f2 with NO restart.
 
 ### D299 - Config and info windows lacked the KDE_COLOR_SCHEME_PATH palette pin
-- STATUS: FIXED in mechanism (fix/theming-audit-fixes: 066449d11). OWED at the
+- STATUS: FIXED in mechanism (PR #243: 3d807686b). OWED at the
   real desktop: the original a774ee554 divergence scenario driven against a
   config window (a later-created clone or second-monitor dock, open its config
   window, compare palettes) - the nested vehicle runs with
@@ -5182,7 +5182,7 @@ carries its own detail or points into the plan and the reference docs.
   unpinned by design: no palette content.
 
 ### D300 - Default indicator "3D glow" option never reached GlowPoint (self-binding)
-- STATUS: FIXED (fix/theming-audit-fixes: 191318b0d). Upstream-inherited: the
+- STATUS: FIXED (PR #243: d21e8de06). Upstream-inherited: the
   self-binding is byte-identical in Qt5 (a3bdc89a0), so the option has been
   dead since it shipped; the fix is a deliberate correction of an inherited
   defect, not a Qt5-behavior reinterpretation.
@@ -5200,7 +5200,7 @@ carries its own detail or points into the plan and the reference docs.
   with the fix staged (the audit's N5 question is retired with the binding).
 
 ### D301 - MultiLayered double-toggled panelShadows on every theme change (stale Qt5 premise)
-- STATUS: FIXED by removal (fix/theming-audit-fixes: 745f8bd3e).
+- STATUS: FIXED by removal (PR #243: ce326c527).
 - FOUND: 2026-08-11, by the Phase 9 theming audit (finding 3, SUSPECT pending
   the N2 nested check); premise verified stale before removal.
 - ROOT: the Connections on themeExtended.themeChanged wrote

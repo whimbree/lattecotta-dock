@@ -2855,21 +2855,21 @@ multi-view, multi-monitor setup.
       color-scheme change): unguarded refreshOriginalScheme() on the
       constant-path kdeglobals branch; unit test drives the real KDirWatch
       wiring, e2e recipe 115 pins the dock-level refresh (audit check N1)
-      Commits: b9cf3d966, f71564749
+      Commits: fe84be275, 6cd82ec79
 - [x] Fix D299 (config/info windows lacked the KDE_COLOR_SCHEME_PATH
       palette pin): SubConfigView family, applet-config ConfigView and
       InfoView pinned like View (a774ee554); owed real-desktop palette
       check recorded in the registry entry
-      Commits: 066449d11
+      Commits: 3d807686b
 - [x] Fix D300 (default indicator "3D glow" dead setting, upstream
       -inherited self-binding): root-qualified so the config option
       reaches GlowPoint; client fallback corrected identically
-      Commits: 191318b0d
+      Commits: d21e8de06
 - [x] Fix D301 (MultiLayered panelShadows double-toggle on theme change):
       premise verified stale (KF6 FrameSvgItem re-resolves margins itself,
       pinned-source + nested 40px-fixture round-trip, audit check N2) and
       the toggle removed
-      Commits: 745f8bd3e
+      Commits: ce326c527
 - [ ] windowColors Active/Touching ecosystem gap (audit finding 5,
       decision recorded 2026-08-11): the ONLY per-window scheme feeder is
       the external "Window Colors" KWin script driving the
