@@ -59,7 +59,7 @@ Item{
                 onIsMinimizedChanged: windowsContainer.updateStates();
                 onIsActiveChanged:  {
                     if (isActive) {
-                        var winIdList = (root.plasma515 ? WinIdList : LegacyWinIdList);
+                        var winIdList = WinIdList;
                         windowsContainer.lastActiveWinInGroup = (winIdList!==undefined ? winIdList[0] : 0);
                     }
                     windowsContainer.updateStates();
@@ -177,7 +177,7 @@ Item{
 
         for (var i = 0; i < childs.count; ++i) {
             var kid = childs.get(i);
-            var winIdList = (root.plasma515 ? kid.model.WinIdList : kid.model.LegacyWinIdList);
+            var winIdList = kid.model.WinIdList;
 
             snapshot.push({
                 winId: (winIdList !== undefined ? winIdList[0] : 0),

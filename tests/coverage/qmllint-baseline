@@ -116,10 +116,10 @@
 7	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/previews/ToolTipWindowMouseArea.qml
 17	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/AudioStream.qml
 30	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/ProgressOverlay.qml
-43	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/SubWindows.qml
+40	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/SubWindows.qml
 78	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskIcon.qml
-211	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskItem.qml
-181	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskMouseArea.qml
+205	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskItem.qml
+177	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskMouseArea.qml
 8	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/animations/ClickedAnimation.qml
 32	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/animations/LauncherAnimation.qml
 27	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/animations/NewWindowAnimation.qml
@@ -143,7 +143,7 @@
 99	share/plasma/shells/org.kde.latte.shell/contents/configuration/canvas/maxlength/Ruler.qml
 12	share/plasma/shells/org.kde.latte.shell/contents/configuration/canvas/maxlength/RulerMouseArea.qml
 1	share/plasma/shells/org.kde.latte.shell/contents/configuration/config.qml
-242	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/AppearanceConfig.qml
+240	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/AppearanceConfig.qml
 238	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/BehaviorConfig.qml
 63	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/EffectsConfig.qml
 238	share/plasma/shells/org.kde.latte.shell/contents/configuration/pages/TasksConfig.qml
