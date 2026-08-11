@@ -119,15 +119,15 @@ VIEW_SURFACE = SerializerSurface(
     signature="QJsonObject serializeViewRecord(const ViewRecord &record)",
     model=View,
     unmodeled={
+        #! type, inputRegionRects and appliedInputRegionRects left this list when
+        #! the 070 maximize-length mask recipe's port started reading them (the
+        #! widen-the-model arm of this pin's designed motion)
         "layout": "the layout name; recipes read placement/geometry, not the layout",
-        "type": "dock vs panel; recipes read edge and geometry, not the view type",
         "onPrimary": "the primary-output flag; no recipe branches on it",
         "isOffScreen": "the off-screen flag; recipes assert settled on-screen geometry",
         "strutsThickness": "strut reservation depth; a dockSystemData/struts concern",
         "publishedStruts": "the published strut rect; read via dockSystemData, not here",
         "maskRect": "the paint mask rect; a rendering concern, not a recipe input",
-        "inputRegionRects": "the input region; recipes drive via geometry, not the mask",
-        "appliedInputRegionRects": "the applied input region; same, a mid-shrink mask detail",
         "linkedEditHighlight": "the linked-edit highlight flag; no recipe reads it",
     },
 )

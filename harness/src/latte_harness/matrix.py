@@ -252,13 +252,14 @@ class MatrixView(recipe.View):
     (inherited from recipe.View) still tolerates a dock-side field addition.
     """
 
-    view_type: str = Field(alias="type")
+    #! view_type and input_region_rects moved to the shared recipe.View when the
+    #! 070 maximize-length mask recipe's port started reading them (the same W3
+    #! promotion this class's docstring describes)
     on_primary: bool = Field(alias="onPrimary")
     is_off_screen: bool = Field(alias="isOffScreen")
     struts_thickness: int = Field(alias="strutsThickness")
     published_struts: Rect = Field(alias="publishedStruts")
     mask_rect: Rect = Field(alias="maskRect")
-    input_region_rects: list[Rect] = Field(alias="inputRegionRects")
 
     def residue_snapshot(self) -> str:
         """The deterministic residue snapshot for byte-comparison across an abort.

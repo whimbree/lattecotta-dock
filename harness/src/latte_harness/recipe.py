@@ -173,6 +173,15 @@ class View(_Readback):
     absolute_geometry: Rect = Field(alias="absoluteGeometry")
     local_geometry: Rect = Field(alias="localGeometry")
     screen_geometry: Rect = Field(alias="screenGeometry")
+    view_type: str = Field(alias="type")
+    #! the logical input band and the region actually handed to QWindow::setMask
+    #! (each an array of rects, empty when the mask is cleared; a single rect
+    #! today, dbusreports.h documents the array-for-future-multi-rect shape).
+    #! They differ only while a length-shrink union-hold awaits its settle
+    #! collapse; the 070 maximize-length mask recipe asserts their sustained
+    #! agreement at every settled detent (D274's tripwire).
+    input_region_rects: list[Rect] = Field(alias="inputRegionRects")
+    applied_input_region_rects: list[Rect] = Field(alias="appliedInputRegionRects")
 
 
 class Applet(_Readback):

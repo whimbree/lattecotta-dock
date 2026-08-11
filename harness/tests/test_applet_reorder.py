@@ -203,6 +203,9 @@ def _view(cid: int, *, edit_mode: bool, configuring: bool) -> recipe.View:
             "absoluteGeometry": [0, 900, 1600, 100],
             "localGeometry": [0, 0, 1600, 100],
             "screenGeometry": [0, 0, 1600, 1000],
+            "type": "dock",
+            "inputRegionRects": [[0, 0, 1600, 100]],
+            "appliedInputRegionRects": [[0, 0, 1600, 100]],
         }
     )
 
