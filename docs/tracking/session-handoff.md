@@ -113,9 +113,26 @@ asymmetries the batch deliberately did NOT reshape by guesswork: RealRemovalAnim
 `animation1` and containment IndicatorLevel `isDrawn`, both the bug-prone
 `A || (group) && trailing` shape (verbatim in both reference forks) - a maintainer
 call whether the trailing conjuncts were meant to gate both `||` operands.
-Cleanup board remaining: the dead Plasma-5 version gates, a Qt5 import sweep, the
-D295 live check, and the settings-wiring audit fixes (PARKED pending the
-maintainer's remove-vs-wire disposition; see the settings-audit note below).
+Cleanup progress: the dead Plasma-5/KF5 version gates LANDED at 70f30c8a6 (PR
+#237) - the plasmoid present-windows gate ladder collapsed to the live Plasma
+5.25+ API, the grouping gate to unconditional -1, the KF5 kirigamiLibraryIsFound
+gate removed (AppearanceConfig visibility unchanged); the live 6.7 libplasma C++
+gate was correctly KEPT. The Qt5 import sweep is UNDERWAY as bounded per-family
+passes: QtQuick.Layouts done (dcdd3666a, 44 imports -> versionless). Remaining
+import families (deferred with a plan, one commit per family, each proven by the
+QML compile gate + qmllint ratchet): QtQuick (largest, ~247), QtQuick.Window,
+QtQuick.Controls (keep the `as QQC2` alias, drop only the version),
+QtQuick.Templates, QtQml.Models, QtTest - all pure-Qt, versionless-safe on Qt6.
+Then a SEPARATE per-module pass for the versioned `org.kde.*` / Kirigami / latte
+`0.x` imports (NOT a blind strip - each needs its Qt6 qmldir/registration
+confirmed). Small nit for a future pass: the now-fully-dead commented-out
+`backend.presentWindows(model.LegacyWinIdList)` block in
+plasmoid/.../code/tools.js:36-37.
+
+Cleanup board remaining (parked for the maintainer, not blocking): the D295 live
+check (two upstream precedence asymmetries needing an intent/live call) and the
+settings-wiring audit fixes (PARKED pending the remove-vs-wire disposition; see
+the settings-audit note below).
 
 Settings-wiring audit (2026-08-10, read-only scout; full inventory in the session
 scratchpad settings-audit-inventory.md). ~134 interactive controls across 9 config
