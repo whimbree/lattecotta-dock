@@ -98,12 +98,13 @@ D294). The mechanical-cleanup vein is mined out; the remaining Qt5 import famili
 are low-value churn, deliberately deferred. Next session's higher-value work:
 1. UNRESOLVED DEFECTS. Triage the ~20 OPEN/SUSPECTED entries in known-defects.md
    into real-bug vs Qt5-faithful/accepted vs test-infra, then drive fixes for the
-   genuinely-broken user-facing ones (candidates: D274 maximize input region stays
-   full-width after a shrink, D19 about-dialog keep-above no-op on wayland, D268
-   panel-focus timing). Surface product-decision/live-check ones to the
-   maintainer rather than guessing. (D289, the dup-connection delete, landed
-   2026-08-11 - see the defect-quick-wins section below; D283 is FIXED
-   2026-08-11, see its section below.)
+   genuinely-broken user-facing ones (candidates: D19 about-dialog keep-above
+   no-op on wayland, D268 panel-focus timing). Surface
+   product-decision/live-check ones to the maintainer rather than guessing.
+   (D289, the dup-connection delete, landed 2026-08-11 - see the
+   defect-quick-wins section below; D283 is FIXED 2026-08-11, see its section
+   below; D274 and D4, the maximize input-region and hide-mask pair, are
+   FIXED 2026-08-11 - see the D274 section below.)
 2. PHASE 8 (the open README roadmap item) - layout/config persistence, session
    shutdown, multi-screen edge cases. The plan has 58 unticked items, most of the
    remaining gotcha-heavy ones here; several want a live desktop, so surface the
@@ -181,6 +182,35 @@ horizontal +/-120:0, axis-stop:0, trailing +120 control:+8). A tree-wide
 angleDelta sweep confirmed ConfigOverlay was the only unsigned-threshold
 site. Registry entry updated to FIXED; the SC-CW2 plan item is ticked
 (merged in PR #242).
+
+## 2026-08-11: D274 root-caused and fixed, D4 closed, 070 recipe ported
+
+Branch fix/d274-input-region (unmerged; the orchestrator carries the merge).
+D274 (the maximize-length input region stays full width after an edit shrink)
+was neither of its registry's hypotheses: temporary step and mask
+instrumentation in the nested vehicle caught a PERMANENT 1Hz automatic-sizing
+grow/shrink oscillation. A deferred refit echo lands ~2 frames after every
+applied icon size (since 51eb53c69, the D244 fix, added the content-budget
+refit connection), the doubleCall timer's shield was down after its own
+confirming pass applied, and the echo stepped AutoSizeEngine with the old row
+length attributed to the new size - the poisoned projection grew into a
+measured overflow, mirror-shrank back, four passes per cycle, invisible to the
+two-pass protector. The cycle's parabolic full-span input writes plus the
+union-hold kept the applied window mask at full screen width ~150ms of every
+second; the recipe's one-instant sample raced it (3 of 4 runs red pre-fix).
+Fix: the applying pass always arms the confirmation shield
+(confirmAppliedSizeTimer in AutoSize.qml); the recipe asserts a sustained
+quiet window; 4 of 4 runs green post-fix. D4 closed by classifying the
+input-mask union-hold on the visibility state instead of band shape (the
+recorded previous-band direction is superseded in the registry with the
+reasoning: a hide from a zoomed band and the accept-nowhere sentinel are
+geometrically indistinguishable from the parabolic zoom-out that must hold);
+RED-controlled unit tests pin the race, the sentinel and the zoomed cases.
+The 070 recipe then ported to the typed harness (its bash was the last
+defect-blocked e2e holdout): recipe.View widened with type /
+inputRegionRects / appliedInputRegionRects, the schema pin's UNMODELED list
+shrank by the same three keys, and the bash allowlist shrank by the deleted
+recipe line.
 
 ## 2026-08-09: the quality cleanup wave and the model-vs-truth drift net
 
