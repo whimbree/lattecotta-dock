@@ -16,6 +16,32 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ## Open / suspected
 
+### D297 - servicesFromCmdLine recurses forever on a bare ignored runtime
+- STATUS: FIXED same-day (found and fixed 2026-08-11 on the fork-sync fold-in
+  branch fix/fork-sync-foldins-202608; final hash recorded at merge).
+- FOUND: 2026-08-11, by the fork-sync pass
+  (docs/agent-logs/2026-08-11-fork-sync-report.md, item F1): latte-dock-ng's
+  1d051010c guards the same recursion; the defect is verbatim in this tree,
+  inherited from upstream KDE latte-dock.
+- SYMPTOM: stack exhaustion (crash) inside servicesFromCmdLine whenever a
+  tracked process's command line is a single token that is itself listed in
+  TryIgnoreRuntimes (taskmanagerrulesrc Settings group), e.g. a bare
+  "python3" with no arguments and no matching .desktop service.
+- ROOT: app/wm/tasktools.cpp computes `firstSpace = cmdLine.indexOf(' ')`
+  and, when no service matched and the command line is in TryIgnoreRuntimes,
+  recurses with `_cmdLine.mid(firstSpace + 1)` to strip the runtime prefix.
+  With no space firstSpace is -1 and `mid(0)` returns the identical string:
+  every level re-derives ignore = true and recurses again until the stack
+  is exhausted.
+- FIX: a terminal condition at the origin - when no separator is left there
+  is nothing to strip after the ignored runtime, so the empty service list
+  is returned and callers fall back to window-class matching. Returning
+  empty (rather than ng's `ignore && firstSpace >= 0` fall-through) keeps
+  the TryIgnoreRuntimes contract: the fall-through path can reach the
+  synthetic-KService branch and present the ignored runtime itself as the
+  application. Regression pinned in tests/wmtoolstest.cpp
+  (returnNoServicesForBareIgnoredRuntime).
+
 ### D296 - Context menu indexed an unpaired view-template record out of bounds
 - STATUS: FIXED (2026-08-11, the defect-quick-wins branch). Filed and fixed the
   same day; recorded because the D20 entry carried it only as an unnumbered
