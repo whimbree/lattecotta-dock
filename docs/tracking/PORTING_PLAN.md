@@ -5255,7 +5255,9 @@ prerequisites in the phases above are done.
       sustained quiet window.
       Driven in the nested vehicle: red 3 of 4 runs pre-fix, repeated green
       post-fix. Full trace in the D274 registry entry.
-      Commits: (fill at merge)
+      Commits: 33cba57c0 (shield until settle), 7012643f3 (shield rests at
+      the floor, the review round), ac570dce5 (recipe port), 82a516920 +
+      4f7c55e22 (registry and wording)
 - [x] Fix D4 (the maximize-length + autohide-hide mask over-capture race).
       The recorded previous-band fix direction was superseded with reasoning
       on record: rect arithmetic cannot separate a hide (departure) from a
@@ -5267,7 +5269,7 @@ prerequisites in the phases above are done.
       sentinel) directly, never unioned; visible-band decisions unchanged.
       inputmaskflushtest pins the settle-pending hide, the sentinel, the
       zoomed hide, and the visible both-axis shrink that still holds.
-      Commits: (fill at merge)
+      Commits: f4da1a7e9 (visibility classification), 82a516920 (registry)
 - [ ] Resolve D268 (panel focus target may precede the committed layer
       activation). Add a nested harness that can hold and release the
       layer-shell keyboard-interactivity commit, prove the application active

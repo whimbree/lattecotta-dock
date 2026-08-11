@@ -567,7 +567,7 @@ from here, not a re-read of the whole history:
   showAudioStreamOsd - so expect a stable base diff; look for NEW
   upstream hunks. Last diffed 2026-08-11: backend.cpp carried three new
   upstream commits - da33d713 (dead variable, folded), 8cdade3d and
-  606724cd (both in the Meta+N shortcut block our copy does not carry,
+  606724cd (both in the Meta+N shortcut block the vendored copy does not carry,
   N/A); every other vendored file unchanged upstream since 2026-07-14. See docs/reference/taskmanager-integration-research.md for the
   vendor-vs-integrate analysis and the decision record.)
 
