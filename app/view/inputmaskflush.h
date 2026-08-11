@@ -30,9 +30,10 @@ namespace ViewPart {
 //! band along the LENGTH axis on two paths - "maximize panel length in presence
 //! of maximized windows" releasing on un-maximize, and parabolic zoom-OUT
 //! (unhover) narrowing the full-length zoomed band back to the applet band -
-//! and BOTH are the same frosted-band bug, so BOTH are held by design. It also
-//! shrinks the band along the THICKNESS axis on autohide/dodge HIDE (the band
-//! collapses to its reveal strip); that is deliberately NOT held (see below).
+//! and BOTH are the same frosted-band bug, so BOTH are held by design. An
+//! autohide/dodge HIDE collapses the band to its reveal strip (and a hidden
+//! sidebar to the accept-input-nowhere sentinel); those are deliberately NOT
+//! held, classified by the visibility state, not band shape (see below).
 //!
 //! The fix keeps the WINDOW mask at the union of the bands seen since a
 //! LENGTH-axis shrink began, so the shrink never clips the vacated region's
@@ -44,28 +45,43 @@ namespace ViewPart {
 namespace InputMaskFlush {
 
 //! The region to hand QWindow::setMask, given the region currently applied to
-//! the window, the new logical band, and the dock's LENGTH axis (horizontal for
-//! Top/Bottom docks, vertical for Left/Right). A clear/degenerate band clears
-//! the mask; a first band with no prior applied mask is used as-is.
+//! the window, the new logical band, the dock's LENGTH axis (horizontal for
+//! Top/Bottom docks, vertical for Left/Right), and whether the dock is hidden.
+//! A clear/degenerate band clears the mask; a first band with no prior applied
+//! mask is used as-is.
 //!
-//! The union is held ONLY for a shrink along the LENGTH axis: that is the
-//! frosted-band case (the dock stays put and its length-ends vacate), so the
-//! union keeps the vacated ends inside the mask and their clearing damage is
-//! submitted. A grow, or a THICKNESS-axis shrink, returns the band directly. The
-//! thickness shrink is the autohide/dodge HIDE collapsing the band to its reveal
-//! strip: the dock leaves, nothing stale is stranded where it stood, so there is
-//! nothing to hold - and holding the former (thick) band as the WINDOW mask
-//! would over-capture pointer input across the vacated dock body while the dock
-//! is hidden (clicks swallowed instead of falling through, the reveal strip
-//! widened to the whole former dock). Input hit-testing rides the same mask as
-//! the damage clip, so the hold is scoped to exactly where the frosted band is.
-inline QRect windowMaskFor(const QRect &applied, const QRect &band, Qt::Orientation lengthAxis)
+//! The union is held ONLY for a visible dock's shrink along the LENGTH axis:
+//! that is the frosted-band case (the dock stays put and its length-ends
+//! vacate), so the union keeps the vacated ends inside the mask and their
+//! clearing damage is submitted. A grow, a visible thickness-axis shrink, and
+//! EVERY hidden-dock band return the band directly.
+//!
+//! A hidden dock's band is a departure artifact - the autohide/dodge reveal
+//! strip, or a hidden sidebar's accept-input-nowhere sentinel - never a
+//! visible band that shrank in place: the dock leaves, nothing stale is
+//! stranded where it stood, and holding the former band as the WINDOW mask
+//! would over-capture pointer input across the vacated dock body while the
+//! dock is hidden (clicks swallowed instead of falling through). The hidden
+//! flag, not band shape, makes that call (fix D4): a hide landing while the
+//! previous band was parabolic-zoomed shrinks BOTH axes exactly like the
+//! parabolic zoom-out that MUST hold, and the sentinel is a valid 1x1 rect
+//! every geometric test misreads as a length shrink - before this flag, a
+//! hidden sidebar's sentinel was unioned into a full-window input mask for the
+//! settle interval on every hide (caught in the nested vehicle, 2026-08-11).
+//! Input hit-testing rides the same mask as the damage clip, so the hold is
+//! scoped to exactly where the frosted band is.
+inline QRect windowMaskFor(const QRect &applied, const QRect &band, Qt::Orientation lengthAxis,
+                           bool dockIsHidden)
 {
     if (!band.isValid() || band.isEmpty()) {
         return QRect();
     }
 
     if (!applied.isValid() || applied.isEmpty()) {
+        return band;
+    }
+
+    if (dockIsHidden) {
         return band;
     }
 

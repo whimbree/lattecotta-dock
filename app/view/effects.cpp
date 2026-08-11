@@ -649,13 +649,17 @@ void Effects::applyInputMaskToWindow()
 
     //! InputMaskFlush owns the region decision: on a Qt6-wayland masked dock the
     //! window mask both gates input AND clips each frame's submitted damage, so a
-    //! LENGTH-axis shrink (maximize-length release, parabolic zoom-out) is held at
-    //! the union until it settles, keeping the vacated ends' clearing damage
-    //! inside the mask (the frosted-band fix caught live 2026-07-18); a grow or a
-    //! thickness-axis shrink (autohide/dodge HIDE collapsing to the reveal strip)
-    //! is applied straight through, so a hidden dock never over-captures input
-    //! across its vacated body. See inputmaskflush.h.
-    const QRect toApply = InputMaskFlush::windowMaskFor(m_appliedInputMask, m_inputMask, lengthAxis());
+    //! visible dock's LENGTH-axis shrink (maximize-length release, parabolic
+    //! zoom-out) is held at the union until it settles, keeping the vacated ends'
+    //! clearing damage inside the mask (the frosted-band fix caught live
+    //! 2026-07-18); a grow, and every hidden-dock band (the reveal strip, a hidden
+    //! sidebar's accept-nowhere sentinel), is applied straight through, so a
+    //! hidden dock never over-captures input across its vacated body. The hidden
+    //! state is read here in the same synchronous delivery that computed the band
+    //! from it (VisibilityManager.qml updateInputGeometry), so the flag and the
+    //! band cannot disagree. See inputmaskflush.h (fix D4).
+    const bool dockIsHidden = m_view->visibility() && m_view->visibility()->isHidden();
+    const QRect toApply = InputMaskFlush::windowMaskFor(m_appliedInputMask, m_inputMask, lengthAxis(), dockIsHidden);
 
     //! The mask computation legitimately passes degenerate rects while the
     //! layouter is still warming up (localGeometry width 0) and Qt.rect(0,0,-1,-1)
