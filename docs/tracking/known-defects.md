@@ -16,6 +16,24 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ## Open / suspected
 
+### D306 - Standalone Interaction checkbox claimed "progress information" but toggled the notifications badge
+- STATUS: FIXED (2026-08-11, the settings-audit-disposition branch).
+- FOUND: 2026-08-10 settings-wiring audit (problem #7 in the inventory);
+  disposition landed 2026-08-11.
+- SYMPTOM: on the standalone Tasks-applet Interaction page (shown when
+  org.kde.latte.plasmoid is configured outside a Latte dock), the checkbox
+  labelled "Show progress information for tasks" is aliased to
+  cfg_showInfoBadge, the unread/notifications badge key. Toggling it changes
+  the wrong badge; the real progress key (showProgressBadge) is not exposed
+  on this page at all.
+- ROOT: inherited from Qt5 upstream. ac3505b07 (2022-05-29, late Qt5) ships
+  the identical label/alias pairing. The in-dock Tasks page labels the same
+  key correctly ("Notifications from tasks").
+- FIX: relabel to "Show notifications from tasks" so label and key agree,
+  matching the in-dock Tasks page's wording for showInfoBadge. Exposing
+  showProgressBadge here was not done: Qt5 never exposed it on this page and
+  the Qt5-faithful rule keeps the page's control set as upstream shipped it.
+
 ### D303 - Startup slide-out committed a zero-width layer surface (nested vehicle, observed once)
 - STATUS: OPEN (observed once, not yet reproduced; Phase 8 startup/geometry
   territory).
