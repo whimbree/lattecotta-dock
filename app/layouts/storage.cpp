@@ -1467,7 +1467,9 @@ void Storage::importToCorona(const Layout::GenericLayout *layout)
     //! Setting mutable for create a containment
     layout->corona()->setImmutability(Plasma::Types::Mutable);
 
-    removeScreenGroupDerivedViews(layout->file());
+    //! Persisted screen-group replicas stay in the file and are adopted by
+    //! their relationship roots after import (D283), matching the single
+    //! layout startup path in Manager::cleanupOnStartup.
 
     QString temp1FilePath = m_storageTmpDir.path() +  "/" + layout->name() + ".multiple.views";
     //! we need to copy first the layout file because the kde cache
