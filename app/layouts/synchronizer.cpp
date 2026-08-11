@@ -497,13 +497,16 @@ void Synchronizer::pauseLayout(QString layoutName)
     if (m_manager->memoryUsage() == MemoryUsage::MultipleLayouts) {
         CentralLayout *layout = centralLayout(layoutName);
 
-        if (layout->isOnAllActivities()) {
+        //! layout is absent when the named layout is not currently loaded, in
+        //! which case there is nothing to pause; guard the pointer before the
+        //! first dereference (isOnAllActivities) instead of after it
+        if (!layout || layout->isOnAllActivities()) {
             return;
         }
 
         QStringList appliedactivities = layout->appliedActivities();
 
-        if (layout && !appliedactivities.isEmpty()) {
+        if (!appliedactivities.isEmpty()) {
             //! STUB: Phase 8 - Plasma 6 removed activity stopping entirely
             //! (KActivities::Controller::stopActivity is gone and
             //! kactivitymanagerd no longer exposes StopActivity over D-Bus,
@@ -963,29 +966,27 @@ void Synchronizer::syncMultipleLayoutsToActivities(QStringList preloadedLayouts)
         if (!centralLayout(layoutname)) {
             CentralLayout *newLayout = new CentralLayout(this, QString(layoutPath(layoutname)), layoutname);
 
-            if (newLayout) {
-                qDebug() << "ACTIVATING LAYOUT ::::: " << layoutname;
+            qDebug() << "ACTIVATING LAYOUT ::::: " << layoutname;
 
-                //! Order of initialization steps is very important and guarantees correct startup initialization
-                //! Step1: corona is set for the layout
-                //! Step2: containments from the layout file are adjusted and are imported into main corona
-                //! Step3: layout connects to corona signals and slots
-                //! Step4: layout is added in manager and is accessible for others to find
-                //! Step5: layout is attaching its initial containmens and is now considered ACTIVE
-                newLayout->setCorona(m_manager->corona()); //step1
-                if (!preloadedLayouts.contains(layoutname)) {
-                    newLayout->importToCorona();           //step2
-                }
-                newLayout->initCorona();                   //step3
-                addLayout(newLayout);                      //step4
-                newLayout->initContainments();             //step5
-
-                if (!defaultForcedLayout.isEmpty() && defaultForcedLayout == layoutname) {
-                    Q_EMIT newLayoutAdded(newLayout->data());
-                }
-
-                newlyActivatedLayouts << newLayout->name();
+            //! Order of initialization steps is very important and guarantees correct startup initialization
+            //! Step1: corona is set for the layout
+            //! Step2: containments from the layout file are adjusted and are imported into main corona
+            //! Step3: layout connects to corona signals and slots
+            //! Step4: layout is added in manager and is accessible for others to find
+            //! Step5: layout is attaching its initial containmens and is now considered ACTIVE
+            newLayout->setCorona(m_manager->corona()); //step1
+            if (!preloadedLayouts.contains(layoutname)) {
+                newLayout->importToCorona();           //step2
             }
+            newLayout->initCorona();                   //step3
+            addLayout(newLayout);                      //step4
+            newLayout->initContainments();             //step5
+
+            if (!defaultForcedLayout.isEmpty() && defaultForcedLayout == layoutname) {
+                Q_EMIT newLayoutAdded(newLayout->data());
+            }
+
+            newlyActivatedLayouts << newLayout->name();
         }
     }
 
