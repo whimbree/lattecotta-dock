@@ -16,6 +16,39 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ## Open / suspected
 
+### D295 - trailing conjuncts attach to only one operand of an inherited `||` (task removal animation, applet indicator visibility)
+- STATUS: SUSPECTED (found by code-reading during the C2 QML operator-precedence
+  audit - the "make implicit `&&`/`||` precedence explicit" backlog item - not
+  yet reproduced under a driver).
+- FOUND: 2026-08-10, while parenthesizing the three unambiguous precedence sites
+  the audit could resolve. Two sites have the shape `A || (grouped) && trailing`
+  where `trailing` reads as if it should gate the whole `A || (grouped)` but,
+  under JS/QML precedence (`&&` binds tighter than `||`), gates only `(grouped)`.
+- SITE 1 (stronger): `plasmoid/package/contents/ui/task/animations/RealRemovalAnimation.qml`
+  `animation1` computes `G1 || (G2 && !taskItem.isStartup && LatteCore.WindowSystem.compositingActive)`.
+  `G1` is "no launcher exists at all", `G2` is "launcher exists but not in the
+  current activity". The sibling `animation4` right below it chains every
+  condition with `&&` (`count && (A||B) && !isStartup && compositing`), so the
+  apparent intent is `(G1 || G2) && !isStartup && compositing` - the startup and
+  compositing gates applying to BOTH launcher cases. As written, when `G1` is
+  true the animation is enabled even during startup / without compositing, and
+  `enabledAnimation` downstream does not re-check either gate.
+- SITE 2 (weaker): `containment/package/contents/ui/applet/IndicatorLevel.qml`
+  `level.isDrawn`'s tail is `activeIndicatorEnabled || ((!activeIndicatorEnabled
+  && debug.graphicsEnabled) && enabledForApplets)`, so `enabledForApplets` gates
+  only the debug-paddings branch, not the primary `activeIndicatorEnabled`
+  branch. This may be intentional (a per-applet `requires.activeIndicatorEnabled`
+  deliberately overriding the host's applet default), hence lower confidence.
+- ROOT: both expressions are verbatim upstream KDE latte-dock and identical in
+  both reference forks (latte-dock-ng, latte-dock-qt6), so this is inherited, not
+  a port regression.
+- DISPOSITION: left behaviour UNCHANGED under the Qt5-faithful rule - the shipped
+  precedence is the spec and a behaviour change here needs a live repro to
+  confirm the runtime effect before choosing a fix (same posture as D290). The
+  three sites whose precedence intent WAS unambiguous were parenthesized in the
+  C2 commit; these two are recorded here instead of silently reshaped, so the
+  ambiguity stays visible for a future live-verification pass.
+
 ### D290 - Free-Activities layout reassignment on removal is unimplemented
 - STATUS: SUSPECTED (found by code-reading during phase 4 of the -Werror
   campaign - warnings-as-errors - not yet reproduced under a driver).

@@ -748,7 +748,7 @@ ContainmentItem {
 
         // don't show applet if it chooses to be hidden but still make it  accessible in the panelcontroller
         appletContainer.visible = Qt.binding(function() {
-            return (appletContainer.applet && appletContainer.applet.plasmoid.status !== PlasmaCore.Types.HiddenStatus || (!Plasmoid.immutable && root.inConfigureAppletsMode)) && !appletContainer.isHidden;
+            return ((appletContainer.applet && appletContainer.applet.plasmoid.status !== PlasmaCore.Types.HiddenStatus) || (!Plasmoid.immutable && root.inConfigureAppletsMode)) && !appletContainer.isHidden;
         });
         return appletContainer;
     }

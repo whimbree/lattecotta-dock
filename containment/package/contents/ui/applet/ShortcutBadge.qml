@@ -13,7 +13,7 @@ Loader{
     active: appletItem.canShowAppletNumberBadge &&
             (appletItem.shortcuts.showPositionShortcutBadges
              || appletItem.shortcuts.showAppletShortcutBadges
-             || appletItem.shortcuts.showMetaBadge && applet.plasmoid.id===appletItem.shortcuts.applicationLauncherId)
+             || (appletItem.shortcuts.showMetaBadge && applet.plasmoid.id===appletItem.shortcuts.applicationLauncherId))
 
     asynchronous: true
     visible: badgeString!==""
