@@ -52,8 +52,8 @@ Item{
         //! the same measurement until its scalar presentation returns to the
         //! fully floated endpoint.
         when: totalsItem.stablePanelEnvelope
-              || !totalsItem.dockTransitionDisplaced
-                 && !(hideThickScreenGap || hideLengthScreenGaps)
+              || (!totalsItem.dockTransitionDisplaced
+                  && !(hideThickScreenGap || hideLengthScreenGaps))
         value: (paddings.headThickness + paddings.tailThickness)
         restoreMode: Binding.RestoreNone
     }

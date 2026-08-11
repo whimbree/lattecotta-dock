@@ -574,8 +574,8 @@ private:
             && backgroundTotals.contains(QStringLiteral(
                    "property:\"minThickness\""
                    "when:totalsItem.stablePanelEnvelope"
-                   "||!totalsItem.dockTransitionDisplaced"
-                   "&&!(hideThickScreenGap||hideLengthScreenGaps)"))
+                   "||(!totalsItem.dockTransitionDisplaced"
+                   "&&!(hideThickScreenGap||hideLengthScreenGaps))"))
             && viewHeader.contains(QStringLiteral(
                    "Q_PROPERTY(boolfloatingGapConfigured"
                    "READfloatingGapConfigured"
