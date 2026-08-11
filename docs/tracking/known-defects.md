@@ -17,9 +17,15 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 ## Open / suspected
 
 ### D295 - trailing conjuncts attach to only one operand of an inherited `||` (task removal animation, applet indicator visibility)
-- STATUS: SUSPECTED (found by code-reading during the C2 QML operator-precedence
-  audit - the "make implicit `&&`/`||` precedence explicit" backlog item - not
-  yet reproduced under a driver).
+- STATUS: ACCEPTED (decided 2026-08-11; originally SUSPECTED from the C2 QML
+  operator-precedence audit - the "make implicit `&&`/`||` precedence explicit"
+  backlog item - never reproduced under a driver).
+- DECISION (2026-08-11): both sites are ACCEPTED as inherited Qt5 behavior -
+  verbatim upstream KDE latte-dock and identical in both reference forks, with
+  no live misbehavior attributed to either in three weeks of daily driving.
+  The follow-up is semantics-PRESERVING parentheses plus a pointer comment at
+  both sites so the precedence stops reading as an accident; any behavioral
+  reshape still requires a live repro first.
 - FOUND: 2026-08-10, while parenthesizing the three unambiguous precedence sites
   the audit could resolve. Two sites have the shape `A || (grouped) && trailing`
   where `trailing` reads as if it should gate the whole `A || (grouped)` but,
@@ -70,6 +76,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   Free-Activities, or refuse removal of the last free-activities layout) is a
   separate future task; needs a live repro to confirm the runtime effect before
   choosing the fix.
+- DECISION (2026-08-11): the approved fix shape is reassignment - on removal of
+  the layout holding the Free-Activities assignment, a surviving enabled layout
+  inherits it (upstream's recorded intent at the dead flag's site). Refusing
+  the removal was rejected: it adds a modal obstacle upstream never had.
+  Implementation still requires the nested repro this entry records; stays
+  SUSPECTED until then.
 
 ### D289 - Preferences screen-tracker spinbox connects dataChanged twice
 - STATUS: OPEN (pre-existing; found by code-reading in the PR #223 independent
@@ -163,6 +175,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 ### D3 - Phantom ScreenConnectors entry on dropped-back cross-screen move
 - STATUS: SUSPECTED (adversarial code-reading; C-A4 + the hardened residue
   detector will confirm).
+- TRIAGE (2026-08-11): stays SUSPECTED - a code-reading hypothesis with a
+  named confirmation path (the C-A4 abort matrix plus the hardened residue
+  detector) and no observed strand since filing. Phase 8 multi-screen work
+  owns driving that confirmation.
 - FOUND: 2026-07-18, adversarial abort design (PR #31).
 - SYMPTOM: a cross-screen move dragged toward output B then dropped back on A
   can strand a phantom [ScreenConnectors] entry in lattedockrc (residue outside
@@ -256,6 +272,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   Qt5 Latte is the spec - compare its drag-hover behaviour before deciding FIX
   vs ACCEPTED. Not in C-I9 scope (the driver's job is to drive and observe the
   drop, which it does correctly); a future F2-add investigation owns it.
+- TRIAGE (2026-08-11): real but cosmetic-only (adds exactly one on drop, zero
+  on abort; the flicker is presentation jitter). Deferral stands: the Qt5
+  drag-hover comparison decides FIX vs ACCEPTED and the F2-add investigation
+  remains the owner.
 
 ### D19 - About dialog keep-above is a silent X11-shaped no-op on wayland
 - STATUS: OPEN (found 2026-07-18 by the X11 survivor-sweep code-read; the X11
@@ -358,9 +378,13 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   applicable. Temporary instrumentation was removed.
 
 ### D30 - Behavior mouse actions expose fixed booleans instead of full choices
-- STATUS: OPEN. SC-B1 (the D30 current-contract investigation) confirmed the
-  Qt5/fork-parity contract; SC-B2 (the D30 product decision and sign-off gate)
-  remains pending, with no action expansion approved.
+- STATUS: ACCEPTED (2026-08-11). SC-B1 (the D30 current-contract investigation)
+  confirmed the Qt5/fork-parity contract; SC-B2 (the D30 product decision and
+  sign-off gate) is DECIDED: retain the Qt5-faithful boolean controls and
+  gesture ownership, no action expansion. The booleans match Qt5 and both
+  reference forks, the nested evidence covers every configuration, and an
+  action-model expansion would be a divergence with no recorded need. A future
+  divergence proposal reopens SC-B2 as its own decision unit.
 - CURRENT CONTRACT: `BehaviorConfig.qml` binds two checkable buttons to
   `dragActiveWindowEnabled` and `closeActiveWindowEnabled`, with no action model
   or popup. The first boolean owns left drag or hold-to-move and left
@@ -373,10 +397,10 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   move, maximize, and close; desktop and task wheel paths; activity refusal; and
   target history. Qt5 and both reference forks retain the same boolean controls
   and gesture ownership. This is inherited behavior, not a Qt6 popup regression.
-- DISPOSITION: the evidence favors retain-and-clarify, but SC-B2 (the D30
-  product decision and sign-off gate) remains pending. Typed core/API work,
-  protocol operation families, migration, UI, observability, and nested gesture
-  matrices remain separate units if a divergence is later approved.
+- DISPOSITION: retain-and-clarify, decided 2026-08-11 (see STATUS). Typed
+  core/API work, protocol operation families, migration, UI, observability, and
+  nested gesture matrices remain separate units if a divergence is later
+  approved.
 - FINDINGS: D58 (close-only and minimize-toggle settings do not enable window
   tracking) was the confirmed root defect found by SC-B1 and is fixed by PR #94.
   Separate plan findings cover Wayland close without an `isCloseable()` check,
@@ -1160,6 +1184,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   and notification delivery count.
 - NEXT: implement one relationship snapshot, tombstone, notification owner,
   and Undo restore covering the root and every persistent explicit member.
+- TRIAGE (2026-08-11): stands as recorded - the refusal mitigation is the
+  shipped contract, and the group-wide transaction remains the gate for
+  enabling root removal while explicit members remain.
 
 ### D112 - Startup accepted malformed dock identity roles
 - STATUS: FIXED in PR #113 (`824a7c8b6`).
@@ -1378,7 +1405,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   submits each one for removal before the clean fixture stop.
 
 ### D126 - Side docks resized from intermediate layout frames
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`e5930c301`).
+- STATUS: FIXED on main (`3e67476d5`).
 - FOUND: 2026-07-22, live side-dock acceptance after the edit-canvas repair.
 - SYMPTOM: a side dock repeatedly expanded and contracted while top and bottom
   docks remained stable. A 10 Hz atomic snapshot caught the effective icon size
@@ -1405,7 +1432,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   same settled size for 180 additional samples. Temporary telemetry was removed.
 
 ### D127 - Automatic sizing stranded usable length in modulo-8 buckets
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`eee511c62`).
+- STATUS: FIXED on main (`b58f48ba5`).
 - FOUND: 2026-07-22, live automatic-size acceptance on horizontal and vertical
   docks.
 - SYMPTOM: a dock could remain visibly smaller even though another valid icon
@@ -1423,7 +1450,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   and live docks converged without post-input movement.
 
 ### D128 - Task artwork painted smaller than its autosized slot
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`b1d993279`).
+- STATUS: FIXED on main (`40eb55e89`).
 - FOUND: 2026-07-22, live inspection after the integer automatic-size search.
 - SYMPTOM: the layout could consume a computed non-standard slot while the
   visible task icon remained at the next smaller standard icon size, making
@@ -1436,8 +1463,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   painted dimensions and both corner pixels to occupy the complete slot.
 
 ### D129 - Automatic sizing reserved a full hovered icon
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`25390b5d1`,
-  completed by D135 in `d8faf2d49`).
+- STATUS: FIXED on main (`92efde218`,
+  completed by D135 in `c714a9f87`).
 - FOUND: 2026-07-22, live comparison of settled row length, Maximum Length,
   and hover zoom.
 - SYMPTOM: automatic sizing could discard roughly one full icon of available
@@ -1456,7 +1483,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   while 56 px does not. `qmlinteraction` and `autosizeenginetest` pass.
 
 ### D130 - Settings bars ignored or stole wheel input
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`711391bb5`).
+- STATUS: FIXED on main (`24ef98367`).
 - FOUND: 2026-07-22, live Appearance settings acceptance with a real mouse.
 - SYMPTOM: settings sliders ignored the wheel. A first always-enabled repair
   then changed Screen height while the settings page was being scrolled,
@@ -1472,7 +1499,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `qmlcompilegate` pass.
 
 ### D131 - Screen-relative sizing obscured its meaning and mode
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`0e7693bce`).
+- STATUS: FIXED on main (`dbb025fcf`).
 - FOUND: 2026-07-22, live recovery from the persisted D130 wheel mutation.
 - SYMPTOM: `Relative Size: 2.7%` did not say what the percentage referenced,
   and Absolute Size appeared permanently broken while the mutually exclusive
@@ -1488,7 +1515,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   2.7 percent configuration from the other docks' `-1` Off sentinel.
 
 ### D132 - Length-control inventory anchors depended on source hashes
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`2e931284d`).
+- STATUS: FIXED on main (`7e8ce22a0`).
 - FOUND: 2026-07-22, first canonical gate after the settings wheel repair.
 - SYMPTOM: `settingsinventorytest` rejected the Maximum, Minimum, and Offset
   fine-adjust areas after a behavior-neutral edit changed their anonymous
@@ -1501,7 +1528,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   exactly once.
 
 ### D133 - Screen-height guidance exceeded the QML lint baseline
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`06df46103`).
+- STATUS: FIXED on main (`f9abab7a2`).
 - FOUND: 2026-07-22, first canonical gate after adding the Screen height
   explanation.
 - SYMPTOM: `qmllintgate` reported that `AppearanceConfig.qml` increased from
@@ -1514,7 +1541,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   pass with the previous exact per-file warning count.
 
 ### D134 - Autosize ignored background end padding
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`71a8081ab`).
+- STATUS: FIXED on main (`1c60ecaac`).
 - FOUND: 2026-07-22, live side-dock acceptance at 100 percent Maximum Length.
 - SYMPTOM: the side dock chose an overly large stable icon size and clipped its
   rounded background at both ends. Its 1240 px canvas carried an effects
@@ -1532,7 +1559,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `qmlcompilegate`, and `qmllintgate` pass.
 
 ### D135 - Hover presentation reduced the stable autosize fit
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`d8faf2d49`).
+- STATUS: FIXED on main (`c714a9f87`).
 - FOUND: 2026-07-22, independent review of PR #116 and live acceptance of the
   stable-resting-layout requirement.
 - SYMPTOM: the D129 growth repair still left usable resting space because it
@@ -1550,7 +1577,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   suite and `autosizeenginetest` pass.
 
 ### D136 - Padding changes left autosize on a stale budget
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`4387f0210`).
+- STATUS: FIXED on main (`9ad8d5101`).
 - FOUND: 2026-07-22, independent review of PR #116.
 - SYMPTOM: changing background margins, rounding, indicators, or theme extents
   after settlement could leave the previous automatic icon size in place.
@@ -1566,7 +1593,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   passes.
 
 ### D137 - D-Bus references described stale raw-length semantics
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`b18a3c0cf`).
+- STATUS: FIXED on main (`38079941b`).
 - FOUND: 2026-07-22, independent review of PR #116.
 - SYMPTOM: both public D-Bus references said `availablePrimaryLength` was raw
   containment `maxLength` after D134 changed the live authority.
@@ -1578,7 +1605,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   source contract that rejects the old edit-controller `maxLength` read.
 
 ### D138 - Sub-floor icon ranges entered the autosize core
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`eb7168c`).
+- STATUS: FIXED on main (`6acb874e0`).
 - FOUND: 2026-07-22, independent review of PR #116.
 - SYMPTOM: positive sizes below the 16 px floor, current sizes above their
   configured ceiling, and invalid applied-size state reached the pure search.
@@ -1594,7 +1621,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `qmlinteraction` and `autosizeenginetest` pass.
 
 ### D139 - Touched inherited QML omitted adaptation attribution
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`2c4e99430`).
+- STATUS: FIXED on main (`866a7f31b`).
 - FOUND: 2026-07-22, independent review of PR #116.
 - SYMPTOM: `LayoutsContainer.qml` and `EffectsConfig.qml` were modified on the
   branch without recording the current adaptation copyright.
@@ -1605,8 +1632,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   the 2026 Bree Spektor line.
 
 ### D140 - Zoomed side-dock chrome clipped at both ends
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`1228ecf8c`,
-  `d19a1805c`, `921bf089b`, `a0ab006f8`), with its transient-span ownership
+- STATUS: FIXED on main (`50db1384d`,
+  `ddad5c910`, `3c1260754`, `7bcc65d16`), with its transient-span ownership
   corrected by D150 (hovered applet row escaped its resting background), D169
   (panel shadows consumed the stable panel and applet span), and D170 (the
   first D169 correction weakened end-hover shadow bounds).
@@ -1633,7 +1660,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   interaction cases pass.
 
 ### D141 - Bounded background movement shifted the applet row
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`d19a1805c`).
+- STATUS: FIXED on main (`ddad5c910`).
 - FOUND: 2026-07-22, independent review of PR #116 after the D140 chrome fit.
 - SYMPTOM: clamping a centered background's -34 px parabolic offset to zero
   shifted the applet row by +34 px during end-icon hover.
@@ -1647,8 +1674,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   feedback expression.
 
 ### D142 - Stable autosize charged shadow paint against the applet budget
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`921bf089b`, corrected by D169 (panel shadows consumed the stable panel and
+- STATUS: FIXED on main
+  (`3c1260754`, corrected by D169 (panel shadows consumed the stable panel and
   applet span) at `ae10800dc`).
 - FOUND: 2026-07-22, independent review of PR #116 after the D140 chrome fit.
 - SYMPTOM: enabling a background shadow could select smaller resting icons even
@@ -1662,8 +1689,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   disappears. All 245 QML interaction cases pass.
 
 ### D143 - Dock-mode Justify charged shadow paint against configured length
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`a0ab006f8`, corrected by D169 at `ae10800dc`).
+- STATUS: FIXED on main
+  (`7bcc65d16`, corrected by D169 at `ae10800dc`).
 - FOUND: 2026-07-22, independent review of PR #116 after the D140 chrome fit.
 - SYMPTOM: enabling 42 px end shadows shortened an 84 percent Justify panel by
   84 px, even though its configured length did not change.
@@ -1679,8 +1706,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   compensation.
 
 ### D144 - Aspect-scaled background shadow clipped side docks
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`b03a68005`,
-  `545e79c34`).
+- STATUS: FIXED on main (`99639c6b9`,
+  `78495afcf`).
 - FOUND: 2026-07-22, live first-and-last-item hover acceptance after D140.
 - SYMPTOM: the solid background stayed inside the side-dock canvas, but the
   visible drop shadow remained tight against or clipped by the output ends.
@@ -1707,7 +1734,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   placement geometry.
 
 ### D145 - Translucent backgrounds attenuated custom shadows
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`727f94ded`).
+- STATUS: FIXED on main (`a2a430b88`).
 - FOUND: 2026-07-22, mandatory cold review of the D144 renderer replacement.
 - SYMPTOM: reducing background opacity also weakened the custom shadow, and a
   fully transparent background erased it. Qt5 Latte kept those values
@@ -1725,7 +1752,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   interaction, source-guard, and scene-probe gates pass.
 
 ### D146 - Zero-size custom shadows reserved empty geometry
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`166342ca1`).
+- STATUS: FIXED on main (`0efed0b4c`).
 - FOUND: 2026-07-22, mandatory cold review of the D144 renderer replacement.
 - SYMPTOM: a valid zero-pixel custom shadow reserved two pixels at every
   eligible edge even though the renderer was disabled.
@@ -1739,7 +1766,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   placement or missing metrics imports.
 
 ### D147 - Shadow renderer cleanup improved the QML warning ratchet
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (commit below).
+- STATUS: FIXED on main (commit below).
 - FOUND: 2026-07-22, first canonical gate after the D145 and D146 review fixes.
 - SYMPTOM: all other registered tests passed, but `qmllintgate` rejected a
   two-warning improvement in `MultiLayered.qml` because its exact baseline still
@@ -1751,7 +1778,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   final canonical rerun provides whole-tree evidence.
 
 ### D148 - Shadow regressions bypassed production ownership guards
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`3d775a0a2`).
+- STATUS: FIXED on main (`2e1cf331e`).
 - FOUND: 2026-07-22, second cold review of the D145 and D146 corrections.
 - SYMPTOM: the render and metric tests exercised `BackgroundShadow` directly,
   while the production matcher did not require the `CustomBackground` sibling
@@ -1766,7 +1793,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   constant replacement of the alias are all rejected by `sourceguardtest`.
 
 ### D149 - Qt 6.9 floor stopped at CMake
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`b8f492b01`).
+- STATUS: FIXED on main (`d225abda9`).
 - FOUND: 2026-07-22, second cold review of the D145 renderer correction.
 - SYMPTOM: CMake required Qt 6.9 for `RectangularShadow`, but every native
   package recipe and several current installation or CI references still
@@ -1781,8 +1808,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   canonical gate supplies the repository-wide package-contract evidence.
 
 ### D150 - Hovered applet row escaped its resting background
-- STATUS: FIXED on `fix/vertical-autosize-animation-tracker` (`3219a1761`,
-  `45092dca8`).
+- STATUS: FIXED on main (`e6e975e74`,
+  `f07cb993f`).
 - FOUND: 2026-07-23, live landscape-dock acceptance after the side-dock shadow
   corrections.
 - SYMPTOM: zooming the first or last item moved the clock and end applets
@@ -1806,7 +1833,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   shape. C++ and QML cases pin resting, expanded, capped, and vertical inputs.
 
 ### D151 - Nested hover preview did not exercise parabolic expansion
-- STATUS: OPEN on `fix/vertical-autosize-animation-tracker`.
+- STATUS: OPEN.
+- TRIAGE (2026-08-11): test-infra, not a product defect - the missing piece is
+  deterministic rendered-zoom coverage through the production view-motion
+  bridge in the nested vehicle. Unowned; the D150 pure and live-state oracles
+  keep the product surface covered.
 - FOUND: 2026-07-23, deterministic presentation-coverage work for D150.
 - SYMPTOM: the nested `parabolic-hover-preview` recipe mapped the expected
   layer-6 preview, but the measured applet span stayed 843 px before and during
@@ -1827,7 +1858,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   deterministic rendered-zoom coverage.
 
 ### D152 - Linked portrait dock overflowed with automatic sizing off
-- STATUS: OPEN on `fix/vertical-autosize-animation-tracker`.
+- STATUS: OPEN.
+- TRIAGE (2026-08-11): real product defect (a stable unrenderable layout on a
+  real dual-output config), confirmed by recorded D-Bus payloads. The fix shape
+  stands as recorded below; the plan item lives in the continuation section of
+  docs/tracking/PORTING_PLAN.md. Needs the dual-output nested vehicle.
 - FOUND: 2026-07-23, all-view live presentation watcher introduced for D150.
 - SYMPTOM: the linked dock on the 1440 px portrait output paints a stable
   applet row beyond both ends of its canvas. The saved workspace image shows
@@ -1845,8 +1880,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   preserved the D-Bus payloads plus the workspace screenshot.
 
 ### D153 - Partial bottom reservation moved a separated side dock
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`25c74a6a3`, `6608a1d39`); real-layout visual acceptance is pending.
+- STATUS: FIXED on main
+  (`9a744c110`, `9d49b4042`); real-layout visual acceptance is pending.
 - FOUND: 2026-07-23, live comparison of a partial bottom dock in Always
   Visible and dodge visibility modes beside a right dock.
 - SYMPTOM: enabling Always Visible on the partial-width bottom dock shortened
@@ -1873,8 +1908,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   geometry-agreement replay also passes.
 
 ### D154 - Dock resize speed varied with slider distance
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`ee405a940`); real-layout visual acceptance is pending.
+- STATUS: FIXED on main
+  (`ba009c622`); real-layout visual acceptance is pending.
 - FOUND: 2026-07-23, live Absolute Size slider acceptance.
 - SYMPTOM: changing the size by a large amount animated at a visibly different
   rate from a small change, and repeated large changes produced jitter.
@@ -1891,8 +1926,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `MetricsPrivate.qml` from 18 to 16 curated qmllint warnings.
 
 ### D155 - Small icons doubled the theme background minimum
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`2322b0349`); real-layout visual acceptance is pending.
+- STATUS: FIXED on main
+  (`fafaf5caa`); real-layout visual acceptance is pending.
 - FOUND: 2026-07-24, live vertical dock sizing at 24, 26, and 28 px.
 - SYMPTOM: the dock background became extremely thick at 24 and 26 px, then
   abruptly returned to normal at 28 px.
@@ -1910,8 +1945,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `sourceguardtest`.
 
 ### D156 - Layouts submenu collapsed to its radio-button column
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`16baf03c1`); real-menu visual acceptance is pending.
+- STATUS: FIXED on main
+  (`58d4dee65`); real-menu visual acceptance is pending.
 - FOUND: 2026-07-24, live Latte context menu.
 - SYMPTOM: opening Layouts showed only the radio and color controls in a narrow
   strip; layout names were not visible.
@@ -1926,8 +1961,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   delegate width and the containing menu's adoption of that width.
 
 ### D157 - Layouts submenu regression was absent from the coverage ratchet
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`8daf1f804`).
+- STATUS: FIXED on main
+  (`675f45532`).
 - FOUND: 2026-07-24, first canonical gate after adding
   `layoutmenuitemwidgettest`.
 - SYMPTOM: all 105 CTest entries passed, then the coverage ratchet rejected the
@@ -1940,8 +1975,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   the one-entry inventory diff.
 
 ### D158 - Same-edge placement notes overstated the OG Latte UI contract
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`5ff991d8e`).
+- STATUS: FIXED on main
+  (`e14602fe3`).
 - FOUND: 2026-07-24, source-history verification of the no-stacking placement
   decision.
 - SYMPTOM: the identity record described separated same-edge views as a normal
@@ -1957,8 +1992,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `edges.removeOne(view->location())` rule to upstream `bbddfd3d48`.
 
 ### D159 - Stacking diagnostics claimed an unenforced overlap invariant
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`707d1778a`, regression assertion `313eedba0`).
+- STATUS: FIXED on main
+  (`4adb15ba0`, regression assertion `a14accb54`).
 - FOUND: 2026-07-24, cold review of the no-inward-stacking contract.
 - SYMPTOM: `dockSystemData` said stable spans must not overlap even though the
   same snapshot could contain overlapping views.
@@ -1977,7 +2012,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 ### D160 - Same-edge maximum reservation depth was described as implemented
 - STATUS: FIXED in PR #118 (`0a4407f30`, `e8adfb96e`, atomic correction
   `63497b3ac`). The earlier
-  tracking correction is `9dcf27dd8`.
+  tracking correction is `392cd09ea`.
 - FOUND: 2026-07-24, cold review of the no-inward-stacking contract.
 - SYMPTOM: the placement record said separated same-edge members contribute
   only their maximum depth.
@@ -1994,8 +2029,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   returns to a publisher-free state without an orphan.
 
 ### D161 - Layouts submenu sizing test omitted painted control columns
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`81fbf1ed3`, odd-height correction `bebe0a9f4`).
+- STATUS: FIXED on main
+  (`ce0c4438d`, odd-height correction `546574046`).
 - FOUND: 2026-07-24, cold review of the D156 production regression.
 - SYMPTOM: a size hint only one pixel wider than the label could satisfy the
   test while still clipping the manually painted radio and icon slots.
@@ -2009,9 +2044,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   the resulting hint.
 
 ### D162 - Justify applets occupied shadow-only margins
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`cf50d7845`, cycle correction `4edcd203d`, asymmetric-margin correction
-  `6cd8ff860`, mutation correction `3feb54939`, shadow-ownership correction
+- STATUS: FIXED on main
+  (`9c8ccf764`, cycle correction `b89bdb9b3`, asymmetric-margin correction
+  `28afe1513`, mutation correction `3c8240d0b`, shadow-ownership correction
   `ae10800dc`).
 - FOUND: 2026-07-24, live top-dock rendering at 22 px icon size.
 - SYMPTOM: the first and last applets extended past the solid rounded
@@ -2030,8 +2065,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   canvas fail.
 
 ### D163 - Native background shadows retained Kirigami alpha compensation
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`92fab9745`); real-layout visual acceptance is pending.
+- STATUS: FIXED on main
+  (`956ac832b`); real-layout visual acceptance is pending.
 - FOUND: 2026-07-24, live comparison of the thin top-dock shadow.
 - SYMPTOM: the shadow was much darker than the theme color and appeared as a
   detached background behind the dock.
@@ -2047,8 +2082,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   detached dark plate.
 
 ### D164 - The first D162 correction formed a Justify geometry cycle
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`4edcd203d`).
+- STATUS: FIXED on main
+  (`b89bdb9b3`).
 - FOUND: 2026-07-24, mandatory cold review of the thin-dock correction.
 - SYMPTOM: the corrected endpoint positions could settle live while remaining
   vulnerable to binding loops, stale geometry, or collapse.
@@ -2062,8 +2097,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   binding-loop warning after the correction.
 
 ### D165 - The first D162 correction assumed equal end shadows
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`6cd8ff860`, corrected by D169 at `ae10800dc`).
+- STATUS: FIXED on main
+  (`28afe1513`, corrected by D169 at `ae10800dc`).
 - FOUND: 2026-07-24, mandatory cold review of the thin-dock correction.
 - SYMPTOM: themes with unequal tail and head shadow margins could displace the
   applet row relative to the solid rounded background.
@@ -2078,8 +2113,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   placement with the complete visual fails.
 
 ### D166 - The first D162 origin mutation produced invalid QML
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`3feb54939`).
+- STATUS: FIXED on main
+  (`3c8240d0b`).
 - FOUND: 2026-07-24, mandatory cold review of the thin-dock correction.
 - SYMPTOM: the regression test failed after an origin mutation, but the
   replacement expression referenced a variable outside its scope.
@@ -2091,8 +2126,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   regressions fail it.
 
 ### D167 - Thin-dock tracking used a bare D145 codeword
-- STATUS: FIXED locally on `fix/vertical-autosize-animation-tracker`
-  (`e8ca33c2f`).
+- STATUS: FIXED on main
+  (`ba7d06124`).
 - FOUND: 2026-07-24, mandatory cold review of the thin-dock correction.
 - SYMPTOM: the handoff and D163 root used `D145` without its plain-English
   description.
@@ -2782,6 +2817,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   D209 open.
 - EVIDENCE: the recipe now requires `schemaVersion == 10`; no script, manifest,
   or tracking entry invokes recipe 061 by name.
+- TRIAGE (2026-08-11): test-infra (a coverage front door, no product defect).
+  The fixture constructor plus runner registration remain the work; unowned.
 
 ### D210 - Floating panel attachment changed primary-axis layout clearance
 - STATUS: FIXED IN PR #126 (`dc0fda084`).
@@ -3277,6 +3314,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   responsive, exposed running task rows, and completed the top-Panel attached
   presentation. No layout or configuration mutation was involved.
 - SEVERITY: known issue.
+- TRIAGE (2026-08-11): external (KDE Solid/KIO). The one owed action is the
+  upstream bug report, which needs the maintainer's bugtracker account -
+  recorded as an owed maintainer step, not sessionable work.
 
 ### D266 - Inline Global Menu text ignored a light panel palette
 - STATUS: FIXED on `main` by `fa36143ad` (PR #147).
@@ -3360,6 +3400,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   status request to B to committed panel activation deterministically. Do not
   change production ordering without that proof.
 - SEVERITY: known issue.
+- TRIAGE (2026-08-11): stays SUSPECTED with production ordering unchanged. The
+  precondition is the hold-and-release harness for the layer-shell
+  keyboard-interactivity commit; the race window is sub-commit-latency narrow,
+  the real nested A-to-B path could not reproduce it, and no live report
+  exists, so the harness investment is deliberately deferred behind the
+  confirmed defect queue.
 
 ### D269 - qmllint TaskItem curated count drifts under byte-identical inputs
 - STATUS: FIXED by the input-order pin in fix/d269-qmllint-input-order (the
@@ -3798,6 +3844,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   re-bless decision (and a check of what changed the rendering), not a
   port fix.
 - SEVERITY: test-coverage gap (the recipe is dead weight until re-blessed).
+- DECISION (2026-08-11): re-bless the 040 golden dark through the recipe's own
+  E2E_BLESS flow with by-eye verification of the blessed frame, the 031
+  precedent (c1cb4ead4). The mismatch is the same light-palette-golden vs
+  current-dark-render class 031 hit; execution rides the next nested-vehicle
+  batch.
 
 ### D272 - storagetest asserts permission-bit refusal that root bypasses
 - STATUS: OPEN.
