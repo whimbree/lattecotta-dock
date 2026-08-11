@@ -889,6 +889,18 @@ PlasmaComponents.Page {
                         } else if (colors === LatteContainment.Types.SmartThemeColors) {
                             return 5;
                         }
+
+                        //! Every ThemeColorsGroup value (containment types.h /
+                        //! main.xml) is mapped above, so this is reached only if a
+                        //! corrupt config or a future unmapped enum value arrives.
+                        //! Return the model's first row (Plasma Theme Colors, the
+                        //! config default) instead of undefined: an undefined
+                        //! currentIndex would then feed model[currentIndex].value
+                        //! back to the config through onCurrentIndexChanged and
+                        //! throw. Warn loudly so the unmapped value is not
+                        //! silently swallowed.
+                        console.warn("AppearanceConfig: unmapped themeColors value", colors, "- falling back to Plasma Theme Colors (index 0)");
+                        return 0;
                     }
                 }
 
