@@ -8,7 +8,9 @@
 // Real-link behavioral test for the two free-standing window-system helpers
 // (linked through lattedock-core):
 //   app/wm/tasktools.cpp    - appDataFromUrl()/defaultApplication() URL
-//                             parsing behind launcher/task identity
+//                             parsing behind launcher/task identity, plus
+//                             the servicesFromCmdLine() bare-ignored-runtime
+//                             terminal condition
 //   app/wm/schemecolors.cpp - the .colors color-scheme parser behind the
 //                             dynamic window-scheme coloring
 //
@@ -26,6 +28,10 @@
 // local
 #include "wm/schemecolors.h"
 #include "wm/tasktools.h"
+
+// KDE
+#include <KConfigGroup>
+#include <KSharedConfig>
 
 // Qt
 #include <QColor>
@@ -56,6 +62,9 @@ private Q_SLOTS:
     void parseSkipTaskbarQuery();
     void fallBackToFileNameForUnresolvedUrl();
     void readUnregisteredDesktopFileDirectly();
+
+    //! tasktools - servicesFromCmdLine
+    void returnNoServicesForBareIgnoredRuntime();
 
     //! schemecolors
     void parseWmSelectionWindowAndButtonGroups();
@@ -168,6 +177,22 @@ void WmToolsTest::readUnregisteredDesktopFileDirectly()
     QCOMPARE(data.name, QStringLiteral("Latte WmTools Probe"));
     QCOMPARE(data.genericName, QStringLiteral("Probe Generic"));
     QCOMPARE(data.id, QStringLiteral("lattewmtoolsprobe"));
+}
+
+void WmToolsTest::returnNoServicesForBareIgnoredRuntime()
+{
+    // a single-token command line that is itself listed in TryIgnoreRuntimes
+    // has nothing left to strip after the runtime; before the terminal
+    // condition in servicesFromCmdLine() this recursed on the identical
+    // string until stack exhaustion, so the regression signal here is a
+    // crash, not a QVERIFY failure
+    const QString runtime = QStringLiteral("lattewmtools-bare-runtime");
+
+    KSharedConfig::Ptr rules = KSharedConfig::openConfig(m_dir.filePath(QStringLiteral("taskmanagerrulesrc")));
+    rules->group(QStringLiteral("Settings"))
+        .writeEntry(QStringLiteral("TryIgnoreRuntimes"), QStringList{runtime});
+
+    QVERIFY(servicesFromCmdLine(runtime, QStringLiteral("probe"), rules).isEmpty());
 }
 
 void WmToolsTest::parseWmSelectionWindowAndButtonGroups()

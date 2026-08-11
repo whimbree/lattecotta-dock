@@ -555,6 +555,19 @@ KService::List servicesFromCmdLine(const QString &_cmdLine, const QString &proce
         }
 
         if (ignore) {
+            // Terminal condition: a bare ignored runtime (no space in the
+            // command line, firstSpace == -1) leaves nothing to strip;
+            // recursing on _cmdLine.mid(0) would re-enter with the identical
+            // string until stack exhaustion. No service is derivable from the
+            // runtime alone, and falling through would let the synthetic
+            // KService branch below present the ignored runtime itself as
+            // the application - exactly what TryIgnoreRuntimes exists to
+            // prevent - so the empty list is the contract; callers fall back
+            // to window-class matching.
+            if (firstSpace < 0) {
+                return services;
+            }
+
             return servicesFromCmdLine(_cmdLine.mid(firstSpace + 1), processName, rulesConfig);
         }
     }

@@ -466,9 +466,10 @@ target_include_directories(visibilityrevealtest PRIVATE
     ${CMAKE_BINARY_DIR}/app)
 
 # The wm free helpers: tasktools URL->AppData parsing (launcher/task
-# identity) and the SchemeColors .colors parser (dynamic window-scheme
-# coloring); carries its own main() so XDG_DATA_HOME is a temp dir for the
-# scheme-name resolution fixtures.
+# identity) plus the servicesFromCmdLine bare-ignored-runtime terminal
+# condition (D297), and the SchemeColors .colors parser (dynamic
+# window-scheme coloring); carries its own main() so XDG_DATA_HOME is a
+# temp dir for the scheme-name resolution fixtures.
 ecm_add_test(wmtoolstest.cpp
     TEST_NAME wmtoolstest
     LINK_LIBRARIES lattedock-core Qt6::Test
