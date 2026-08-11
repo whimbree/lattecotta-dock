@@ -299,6 +299,12 @@ void VisibilityManager::setMode(Latte::Types::Visibility mode)
 
     switch (m_mode) {
     case Types::AlwaysVisible: {
+        //! AlwaysVisible writes the highest m_connections slot of any mode
+        //! (base+5, and base is 0 for this mode). Assert it stays in range so a
+        //! future added connection or a nonzero base for this mode trips here
+        //! instead of overrunning the array.
+        Q_ASSERT(base + 5 < static_cast<int>(m_connections.size()));
+
         if (m_latteView->containment() && m_latteView->screen()) {
             updateStrutsBasedOnLayoutsAndActivities();
         }
