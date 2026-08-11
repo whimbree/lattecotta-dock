@@ -34,7 +34,6 @@ Item {
     height: 200
 
     // plasmoid main.qml root properties SubWindows resolves by context
-    property bool plasma515: true
     property bool inDraggingPhase: false
     // TaskItem property the windowsCount binding resolves by context
     property bool isGroupParent: taskItem.isGroupParent
