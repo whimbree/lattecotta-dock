@@ -41,6 +41,11 @@ Item {
                 PlasmaComponents.CheckBox {
                     id: wheelEnabled
                     text: i18n("Cycle through tasks with mouse wheel")
+                    //! Deliberately non-adjustable, matching Qt5 Latte
+                    //! (ac3505b07): the wheelEnabled key is consumed
+                    //! (taskslayout/MouseHandler.qml) and defaults to true,
+                    //! but upstream shipped this checkbox permanently
+                    //! disabled. Kept as-is under the Qt5-faithful rule.
                     enabled: false
                 }
 
