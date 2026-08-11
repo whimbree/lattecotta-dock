@@ -96,6 +96,31 @@ injection, needs a live drive), CHUNK-6 (m_connections array bounds); QML C2
 missing default return), C4 (indicator null-guard inconsistency), C6 (redundant
 anchor write), plus the dead Plasma-5 version gates and a Qt5 import sweep.
 
+Settings-wiring audit (2026-08-10, read-only scout; full inventory in the session
+scratchpad settings-audit-inventory.md). ~134 interactive controls across 9 config
+surfaces, each config key grep-verified for real consumers. HEADLINE: the four
+PRIMARY Latte pages (Behavior, Appearance, Effects, Tasks) have ZERO dead settings
+- every key a control writes drives real dock behavior; the upstream "renders but
+never applies" trap is absent there. Every dead/broken control is in the LEGACY
+standalone-plasmoid config (`plasmoid/package/contents/ui/config/Config{Appearance,
+Panel,Interaction}.qml`), the niche surface shown only when the org.kde.latte.plasmoid
+Tasks applet is added to a normal Plasma panel (not inside a Latte dock), never
+previously audited. Problem list (disposition PENDING - some are remove-vs-wire
+product calls like D30/version2layout): DEAD SETTINGS (adjustable, key never
+consumed) `showGlow`/`threeColorsWindows`/`dotsOnActive` (ConfigAppearance);
+DEAD WRITES to undeclared keys `solidPanel`/`colorizeTransparentPanels`
+(TypeSelection preset buttons); NON-ADJUSTABLE `wheelEnabled` (ConfigInteraction,
+hardcoded enabled:false); MISLABEL a ConfigInteraction checkbox labelled "Show
+progress information" actually toggles `showInfoBadge`; DEAD `cfg_isInNowDockPanel`
+embed-detection alias (ConfigPanel); FRAGILE REFLECT (the `onXChanged: checked=X`
++ int-holds-bool pattern rather than a direct `checked:` binding) on
+`dragActiveWindowEnabled`/`closeActiveWindowEnabled` (BehaviorConfig) and
+`blurEnabled`/`panelShadows` (AppearanceConfig); HIDDEN the Tasks "Remove Latte
+Tasks Applet" block is commented out (TasksConfig.qml). Secondary (not dead): the
+Effects/Appearance background sliders still use the D16 clobber-prone plain
+`value:` binding (only external-change re-sync affected, load-time reflect fine).
+Not yet filed as defects pending disposition.
+
 The -Werror campaign (compile with warnings-as-errors) began after the audit
 batch, at the maintainer's request, with the chosen scope being the full
 campaign to a true blanket -Werror rather than a scoped subset. It is structured
