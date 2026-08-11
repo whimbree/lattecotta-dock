@@ -9,7 +9,7 @@
 */
 
 import QtQuick 2.6
-import QtQuick.Layouts 1.1
+import QtQuick.Layouts
 import QtQuick.Effects
 import QtQml.Models 2.2
 

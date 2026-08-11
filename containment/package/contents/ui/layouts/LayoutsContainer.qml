@@ -6,7 +6,7 @@
 */
 
 import QtQuick 2.1
-import QtQuick.Layouts 1.1
+import QtQuick.Layouts
 
 import org.kde.plasma.plasmoid 2.0
 
