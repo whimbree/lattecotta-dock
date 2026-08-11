@@ -1514,7 +1514,8 @@ multi-view, multi-monitor setup.
       instrumentation over a deliberate ruler-driven band shrink (the
       vehicle cannot flip existsWindowMaximized, so the identical maxLength
       path is driven instead) and guarded by
-      tests/e2e/070-maximize-length-mask.sh. SCOPED after PR #24 review (F2):
+      tests/e2e/070-maximize-length-mask.py (bash originally; ported to the
+      typed harness once D274 cleared). SCOPED after PR #24 review (F2):
       the input mask is the ONLY input driver, so the union-hold governed every
       shrink - including the autohide/dodge HIDE, where it held the full former
       band as the input mask while the dock was hidden (over-capturing input
@@ -5235,6 +5236,35 @@ prerequisites in the phases above are done.
       Commits: f4e370775 (focus lifecycle), 85ff12b91 (D-Bus readback),
       7d39e3eea (nested regressions), f0996ef2c (reference attribution),
       1bbd33d72 (review regressions)
+- [x] Fix D274 (the maximize-length input region stays full width after an
+      edit-mode length shrink). Root cause: a permanent 1Hz automatic-sizing
+      grow/shrink oscillation, not a settle-collapse regression. A deferred
+      refit echo lands about two frames after every applied icon size (since
+      51eb53c69 added the content-budget refit connection) and the doubleCall
+      timer's shield was down after its own confirming pass applied, so the
+      echo stepped AutoSizeEngine with the old row length attributed to the
+      new size; the poisoned projection grew into a measured overflow and
+      mirror-shrank forever, four passes per cycle, invisible to the two-pass
+      endless-loop protector. Each cycle's parabolic full-span input write
+      plus the union-hold kept the applied window mask at full screen width
+      ~150ms of every second, which the recipe's one-instant sample raced.
+      Fix: the applying pass always arms the confirmation shield
+      (confirmAppliedSizeTimer); the recipe asserts a sustained quiet window.
+      Driven in the nested vehicle: red 3 of 4 runs pre-fix, repeated green
+      post-fix. Full trace in the D274 registry entry.
+      Commits: (fill at merge)
+- [x] Fix D4 (the maximize-length + autohide-hide mask over-capture race).
+      The recorded previous-band fix direction was superseded with reasoning
+      on record: rect arithmetic cannot separate a hide (departure) from a
+      parabolic zoom-out (shrink-in-place that must hold) once both axes
+      shrink, and the accept-input-nowhere sentinel is a valid rect every
+      shape test misreads (captured unioned into a full-window input mask on
+      hidden-sidebar hides). Fix: InputMaskFlush::windowMaskFor takes
+      dockIsHidden and applies a hidden dock's band (reveal strip or
+      sentinel) directly, never unioned; visible-band decisions unchanged.
+      inputmaskflushtest pins the settle-pending hide, the sentinel, the
+      zoomed hide, and the visible both-axis shrink that still holds.
+      Commits: (fill at merge)
 - [ ] Resolve D268 (panel focus target may precede the committed layer
       activation). Add a nested harness that can hold and release the
       layer-shell keyboard-interactivity commit, prove the application active

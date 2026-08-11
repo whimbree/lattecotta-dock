@@ -276,7 +276,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   group); positioner.cpp:843,890 (pending-move members).
 
 ### D4 - Maximize-length + autohide-hide sub-100ms mask over-capture race
-- STATUS: OPEN (latent; found in the #24 re-review).
+- STATUS: FIXED: visibility-state classification in InputMaskFlush
+  (fix/d274-input-region; hash recorded at merge).
 - FOUND: 2026-07-18, PR #24 independent re-review.
 - SYMPTOM: the InputMaskFlush axis test keys off the currently-applied (possibly
   still-held) region, not the previous logical band. If a maximize-length settle
@@ -285,9 +286,25 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   as input mask while hidden - a re-appearance of the over-capture, confined to
   a sub-100ms race instead of every hide. Strictly better than pre-#24, exotic
   combo (maximize-length + autohide + timing).
-- EVIDENCE: app/view/inputmaskflush.h:64.
-- FIX DIRECTION: classify the shrink axis against the previous logical band
-  while still unioning against the applied region for coverage.
+- EVIDENCE: app/view/inputmaskflush.h:64. The D274 mask traces (2026-08-11,
+  nested vehicle) surfaced a second, non-exotic shape of the same
+  misclassification: a hidden sidebar's accept-input-nowhere sentinel (the
+  valid 1x1 rect at -1,-1) read as a length shrink and was unioned into a
+  full-window input mask (QRect(-1,-1 1244x385) captured live) for the settle
+  interval on every hide.
+- FIX DIRECTION SUPERSEDED (2026-08-11): the recorded direction (classify the
+  shrink axis against the previous logical band) cannot work. A hide landing
+  while the previous band is parabolic-zoomed shrinks BOTH axes, exactly like
+  the parabolic zoom-out that MUST hold (one of the two frosted-band cases),
+  and the sentinel is a valid rect every band-shape test misreads; no rect
+  arithmetic separates a departure from a shrink-in-place. The truthful
+  classifier is the visibility state the band was computed from.
+- FIX: windowMaskFor takes dockIsHidden (read from the same VisibilityManager
+  state the QML band computation consumed, in the same synchronous delivery);
+  a hidden dock's band (reveal strip or sentinel) applies directly and is
+  never unioned, every visible-band decision unchanged. inputmaskflushtest
+  pins the settle-pending hide, the sentinel, the zoomed hide, and the
+  visible both-axis shrink that must still hold.
 
 ### D15 - the Maximum ruler drags the Minimum (coupled-min side effect)
 - STATUS: ACCEPTED (Bree 2026-07-18: KEEP the Qt5-faithful coupling - it keeps a
@@ -3927,17 +3944,47 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - SEVERITY: test-coverage gap (a selftest silently absent from the net).
 
 ### D274 - maximize-length input region stays full width after an edit shrink
-- STATUS: OPEN.
+- STATUS: FIXED: the automatic-sizing settle shield (fix/d274-input-region;
+  hash recorded at merge).
 - FOUND: 2026-08-05, the BP-3 R2 batch's A/B verification: the
   070-maximize-length-mask recipe fails identically as bash and as its
   faithful Python port in the nested vehicle.
 - SYMPTOM: at rest applied == input == 874; after an edit-mode length shrink
   to maxLength 52 the input band reads 814 but the applied window input
   region stays the full screen width 1600, so the recipe's applied == input
-  assertion fails. Either the maximize-length settle collapse regressed or
-  the edit-mode input region is full-canvas in this state.
-- SEVERITY: input-region correctness (a too-wide input region eats clicks
-  beside the dock); recipe kept as bash until the defect is resolved.
+  assertion fails.
+- ROOT CAUSE (traced 2026-08-11, nested vehicle, temporary step and mask
+  instrumentation): neither of the recorded hypotheses. The settle collapse
+  works and edit mode holds no full-canvas input; the dock was in a PERMANENT
+  1Hz automatic-sizing grow/shrink oscillation. A deferred refit echo lands
+  about two frames after every applied icon size (present since 51eb53c69,
+  the D244 stable-ownership fix, added the content-budget refit connection),
+  the doubleCall timer's shield was down whenever its own confirming pass
+  applied a size, and the echo stepped the engine with the OLD row length
+  attributed to the NEW size. The poisoned linear projection grew into a size
+  the previous pass had measured to overflow (802@60 misattributed to 61
+  projects 62 at 815 when the real row at 62 measures 822 over the 820
+  budget), the mirrored stale shrink overshot back, and the four-pass cycle
+  (60->61->62->61->60) was invisible to the engine's two-pass endless-loop
+  protector. Every cycle's animation raised needBothAxis, wrote the parabolic
+  full-span input band, and the length-shrink union-hold re-widened the
+  applied window mask to the full screen width for ~150ms of every second;
+  the recipe's one-instant sample failed whenever it landed in that window
+  (3 of 4 uninstrumented runs) and passed in the quiet 85% (the intermittent
+  green that made the defect look phase-dependent).
+- FIX: the pass that applies a size arms the confirmation timer
+  (AutoSize.qml confirmAppliedSizeTimer) so the shield stays up across EVERY
+  applied size, including one applied by the confirming pass itself; only a
+  keep pass ends the chain. With truthful settled measurements the engine's
+  own projections refuse the overshoot and the fit converges in at most two
+  confirmations. The recipe asserts a sustained quiet window (six identical
+  applied == input samples spanning 1.5s) instead of one instant, matching
+  its stated "after each shrink settles" intent; an oscillating dock can
+  never produce that window.
+- VERIFIED: pre-fix 3 of 4 nested-vehicle runs failed at maxLength 52 with
+  applied 1600 vs input 814; post-fix repeated runs green with the band
+  collapsing and holding at every detent (874 -> 822 -> ... -> below 70% of
+  rest).
 
 ### D275 - a recipe-started dock stays a zombie its parent never reaps
 - STATUS: FIXED by the dock_stop reaping probe in the PR that files this
