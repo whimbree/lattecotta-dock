@@ -498,7 +498,11 @@ void Manager::setOnActivities(QString layoutName, QStringList activities)
 
 void Manager::cleanupOnStartup(QString path)
 {
-    Layouts::Storage::self()->removeScreenGroupDerivedViews(path);
+    //! Persisted screen-group replicas are adopted at reload instead of being
+    //! stripped and regenerated (D283): the startup partition loads each one
+    //! after its relationship root, which reclaims it through the clone
+    //! addView path. Only exports and cross-mode moves still call
+    //! removeScreenGroupDerivedViews so shared files stay replica-free.
 
     KSharedConfigPtr filePtr = KSharedConfig::openConfig(path);
 
