@@ -176,11 +176,29 @@ void Theme::setOriginalSchemeFile(const QString &file)
 {
     //! an unchanged path is only "done" when the schemes actually exist; the
     //! very first call with an unresolved (empty) file matches the initial
-    //! empty path, and returning here would leave them null forever
+    //! empty path, and returning here would leave them null forever.
+    //! This guard is only valid for scheme sources whose changes arrive as
+    //! PATH changes (a plasma theme's own colors file: switching themes
+    //! switches files). The kdeglobals source resolves to a constant path
+    //! under the Plasma 6 auto-accent layout, so its callers must use
+    //! refreshOriginalScheme() directly or every runtime change is swallowed
+    //! here.
     if (m_originalSchemePath == file && m_defaultScheme && m_reversedScheme) {
         return;
     }
 
+    refreshOriginalScheme(file);
+}
+
+//! re-snapshot the scheme colors unconditionally. On the Plasma 6
+//! auto-accent path possibleSchemeFile("kdeglobals") always resolves to the
+//! constant ~/.config/kdeglobals, so a runtime color-scheme change arrives
+//! as new CONTENT at an unchanged path - a path-equality check cannot see
+//! it, and the dark/light/reversed snapshots plus isLightTheme would stay
+//! stale until restart while the wm-tracker side (which watches kdeglobals
+//! directly) keeps updating: a half-updated dock.
+void Theme::refreshOriginalScheme(const QString &file)
+{
     if (file.isEmpty() || !QFileInfo(file).exists()) {
         qWarning() << "plasma theme original scheme file could not be resolved (" << file
                    << "); scheme colors will fall back to built-in defaults";
@@ -388,25 +406,31 @@ void Theme::loadThemePaths()
     if (QFileInfo(themeColorScheme).exists()) {
         setOriginalSchemeFile(themeColorScheme);
     } else {
-        //! when plasma theme uses the kde colors
-        //! we track when kde color scheme is changing
+        //! when the plasma theme uses the kde colors, the kde color scheme
+        //! is tracked for changes.
+        //! every call on this branch is the unguarded refreshOriginalScheme():
+        //! the resolved path is constant under Plasma 6 auto-accent (see the
+        //! refreshOriginalScheme() comment), so scheme changes arrive as new
+        //! content at the same path and the setOriginalSchemeFile() path
+        //! guard would swallow them - both here and on the load() rerun that
+        //! Plasma::Theme::themeChanged triggers
         QString kdeSettingsFile = Latte::configPath() + "/kdeglobals";
 
         KDirWatch::self()->addFile(kdeSettingsFile);
 
         m_kdeConnections[0] = connect(KDirWatch::self(), &KDirWatch::dirty, this, [ &, kdeSettingsFile](const QString & path) {
             if (path == kdeSettingsFile) {
-                this->setOriginalSchemeFile(WindowSystem::SchemeColors::possibleSchemeFile("kdeglobals"));
+                this->refreshOriginalScheme(WindowSystem::SchemeColors::possibleSchemeFile("kdeglobals"));
             }
         });
 
         m_kdeConnections[1] = connect(KDirWatch::self(), &KDirWatch::created, this, [ &, kdeSettingsFile](const QString & path) {
             if (path == kdeSettingsFile) {
-                this->setOriginalSchemeFile(WindowSystem::SchemeColors::possibleSchemeFile("kdeglobals"));
+                this->refreshOriginalScheme(WindowSystem::SchemeColors::possibleSchemeFile("kdeglobals"));
             }
         });
 
-        setOriginalSchemeFile(WindowSystem::SchemeColors::possibleSchemeFile("kdeglobals"));
+        refreshOriginalScheme(WindowSystem::SchemeColors::possibleSchemeFile("kdeglobals"));
     }
 }
 
