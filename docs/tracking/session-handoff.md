@@ -188,11 +188,22 @@ injects unconditionally (`return-type`/`init-self`/`undef`, and
 toolchain that surfaces a new warning does not hard-fail. The tree compiles
 warning-clean under `-Wall -Wextra -Werror` for developers and CI.
 
-Two OWED LIVE CHECKS remain from the campaign's behavior-sensitive PRs (both
-low-risk, both with trivial fallbacks): the releaseGrab de-hover (#228 - drag a
-window off the dock, applet should un-zoom; fall back to ng's keep-the-Leave 4-arg
-ctor if not) and the icon overlay badge (#229 - eyeball a real badge for the
-few-pixel shift; a one-line margin tweak if off).
+Owed live checks from the campaign's behavior-sensitive PRs:
+- Icon overlay badge (#229): VERIFIED live 2026-08-10 - a real Discord 1,910
+  badge renders cleanly bottom-right at the expected scale on the running dock.
+  Closed.
+- releaseGrab de-hover (#228): the concern is moot in practice. The only path to
+  releaseGrab is `LastActiveWindow::requestMove` (the niche "press-hold-drag an
+  empty dock area to move the active window" gesture), and #228's change was
+  confirmed NOT to affect the move: `requestMoveWindow` (the KWin handoff) runs
+  BEFORE `unblockMouse`/`releaseGrab`, so only the post-move de-hover was touched,
+  using ng's proven approach minus a synthetic Leave. The move feature itself
+  appears not to fire for the maintainer (never tested; byte-identical to both
+  Wayland-only reference forks), so releaseGrab is rarely reached. A read-only
+  investigation of that feature's true intent and Wayland behavior is underway
+  (whether the plasma-window requestMove from a 500ms timer actually starts a
+  KWin interactive move); any real gap there is a SEPARATE pre-existing defect,
+  not a -Werror-campaign regression.
 
 Owner decisions still open (carried forward): the D283 approach (fix the legacy
 clone path vs deprecate), history excision of the swept maintainer-local files,
