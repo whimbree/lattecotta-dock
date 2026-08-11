@@ -4821,6 +4821,40 @@ carries its own detail or points into the plan and the reference docs.
 
 ## Fixed (kept for the record)
 
+### D293 - Import-full restart never relaunched: whole command line passed as the program name
+- STATUS: FIXED (CHUNK-5, the startDetached command-string audit item in the C++
+  readability/safety batch).
+- FOUND: 2026-08-10, by code-reading during the audit; the flagged anti-pattern
+  was value-into-parsed-command-string concatenation, and checking the Qt 6.11
+  header revealed the failure is worse than mis-splitting.
+- SYMPTOM: applying "import full configuration" shut the dock down and no new
+  instance ever started; the import silently never happened, for every path.
+- ROOT: the Corona destructor built
+  `"latte-dock --import-full \"" + m_importFullConfigurationFile + "\""` and
+  passed it to `QProcess::startDetached`. Qt 6 removed the deprecated
+  command-string overload (Qt 5.15 deprecation), so the call re-resolves,
+  still compiling, against `startDetached(const QString &program, const
+  QStringList &arguments = {})`: the entire joined command line becomes the
+  PROGRAM NAME with zero arguments, PATH lookup finds no such executable, and
+  the launch fails. The returned false was also discarded, so the failure was
+  silent. The string form is inherited from upstream KDE latte-dock (Michail
+  Vourlakos, 11798211a, 2020); under Qt 5 its splitCommand semantics honored
+  the manual double quotes (spaces worked, only embedded-quote paths broke),
+  so this is a Qt5-to-Qt6 overload-resolution hazard, not an upstream runtime
+  bug. Both reference forks fixed it the same way (latte-dock-qt6 3a678b8c;
+  latte-dock-ng carries the args form since its history reset).
+- FIX: pass the program and arguments discretely,
+  `QProcess::startDetached(QStringLiteral("latte-dock"),
+  {QStringLiteral("--import-full"), m_importFullConfigurationFile})` - no
+  string parsing, spaces and quotes in the path travel verbatim - and
+  qWarning when startDetached reports failure instead of discarding the bool.
+  The CLI contract is confirmed against app/main.cpp: `import-full` is
+  registered with a value name and read via `parser.value()`, so
+  option-then-value as two discrete tokens is exactly what QCommandLineParser
+  expects. Live confirmation (perform an import-full and observe the restart
+  plus the imported config) is an owed live drive; the construction proof is
+  the current evidence.
+
 ### D292 - Synchronizer::pauseLayout dereferences a possibly-null layout before guarding it
 - STATUS: FIXED (CHUNK-4, the synchronizer.cpp dead-null-check audit item; PR
   #234, 8d7083177).
