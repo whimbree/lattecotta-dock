@@ -176,10 +176,18 @@ Item {
                                         sizer.iconSize);
 
             if (result.found) {
-                //! shield BEFORE the write: the assignment's reactions (margin
-                //! and background bindings, their deferred refit echoes) must
-                //! already see the running timer and be blocked
-                confirmAppliedSizeTimer.restart();
+                //! shield only a CHANGED size, and BEFORE the write: the
+                //! assignment's reactions (margin and background bindings,
+                //! their deferred refit echoes) must already see the running
+                //! timer and be blocked. A found-but-equal size (the engine's
+                //! shrink branch re-proposing the floor while the row
+                //! overflows even at 16px) is a no-op write with no geometry
+                //! reaction and no echo, so it needs no shield - re-arming on
+                //! it would keep the confirmation chain running at 1Hz
+                //! forever on any over-full dock.
+                if (result.nextIconSize !== sizer.iconSize) {
+                    confirmAppliedSizeTimer.restart();
+                }
                 //! a found nextIconSize of -1 restores automatic sizing (a
                 //! grow reached maxIconSize); the stepper maps the core's
                 //! alternatives onto the sizer's own -1 sentinel
@@ -199,10 +207,12 @@ Item {
     //! a size, and the stale-row passes drove a permanent 1Hz grow/shrink
     //! cycle (60->61->62->61->60) invisible to the engine's two-pass endless
     //! loop protector. The shield therefore stays up across EVERY applied
-    //! size - a confirming pass that applies rearms itself for one more
-    //! confirmation - and only a pass that keeps the current size leaves the
-    //! chain ended with the shield down (a settled row needs no confirmation,
-    //! and further passes are cheap pure-math keeps).
+    //! size - a confirming pass that applies a DIFFERENT size rearms itself
+    //! for one more confirmation - and a pass that keeps or merely re-proposes
+    //! the current size leaves the chain ended with the shield down (a settled
+    //! row needs no confirmation, further passes are cheap pure-math keeps,
+    //! and the floor-overflow steady state must rest instead of confirming at
+    //! 1Hz forever).
     Timer{
         id: confirmAppliedSizeTimer
         interval: 1000

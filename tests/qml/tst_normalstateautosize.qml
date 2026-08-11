@@ -354,5 +354,33 @@ Item {
             compare(visibilityManager.inNormalState, true,
                     "the declarative state stays true when the causal feedback edge is absent");
         }
+
+        function test_confirmShieldRestsInFloorOverflow() {
+            //! a row that overflows even the 16px floor: the engine's shrink
+            //! branch re-proposes ApplySize{16} on every pass (found but
+            //! unchanged), and the confirmation shield must NOT re-arm on
+            //! that no-op apply - re-arming keeps the costly confirmation
+            //! chain running at 1Hz forever on any over-full dock
+            root.maxLength = 100;
+            sizer = createBlockedSizer(productionSizerComponent);
+            productionAnimations.needLength.removeEvent(blocker);
+            wait(0);
+            compare(sizer.iconSize, 16,
+                    "a row overflowing every size must pin the 16px floor");
+
+            //! let the armed shield expire and the confirming pass run: at
+            //! the floor it re-proposes 16 and must leave the chain ended
+            wait(1200);
+
+            //! the shield state is observable through a real budget change:
+            //! at rest, its refit pass runs immediately and applies the
+            //! larger fit; a wrongly re-armed shield swallows the pass and
+            //! the size stays pinned at the floor until the next confirm
+            root.maxLength = 997.6;
+            wait(0);
+            compare(sizer.iconSize, 63,
+                    "the confirmation shield must rest in the floor-overflow "
+                    + "steady state so a real budget change refits immediately");
+        }
     }
 }
