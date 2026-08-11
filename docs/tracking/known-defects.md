@@ -16,6 +16,29 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ## Open / suspected
 
+### D307 - Standalone Panel page's embedded-in-dock disable logic bound a key that does not exist
+- STATUS: FIXED (2026-08-11, the settings-audit-disposition branch).
+- FOUND: 2026-08-10 settings-wiring audit (problem #8 in the inventory);
+  disposition landed 2026-08-11.
+- SYMPTOM: the standalone Tasks-applet Panel page aliases
+  cfg_isInNowDockPanel to a config key isInNowDockPanel that is declared in
+  no main.xml. The page's "disable the controls and show the use-the-Latte-
+  configuration-window label when embedded in a dock" logic therefore never
+  activates: inside a Latte dock the Panel page still renders its controls
+  enabled, unlike the Appearance page next to it, which keys off the real
+  isInLatteDock.
+- ROOT: inherited nine-year defect. Commit 169b2b034 (2017-02-09, "update
+  semantics", dropping old nowDock variables) renamed the key
+  isInNowDockPanel to isInLatteDock in the plasmoid main.xml and updated
+  ConfigAppearance, but missed ConfigPanel. Qt5 at ac3505b07 still carries
+  the stale alias, so the embed logic was equally dead in Qt5.
+- FIX: bind the alias and every page reference to isInLatteDock, the key
+  main.qml sets to true when the applet becomes ready inside a dock
+  (Plasmoid.configuration.isInLatteDock = true on myView.isReadyChanged),
+  mirroring ConfigAppearance's working wiring. Fixed at the evident intent
+  even though Qt5 shipped it broken: this is a lost rename, not a designed
+  behavior, so the Qt5-faithful rule does not protect it.
+
 ### D306 - Standalone Interaction checkbox claimed "progress information" but toggled the notifications badge
 - STATUS: FIXED (2026-08-11, the settings-audit-disposition branch).
 - FOUND: 2026-08-10 settings-wiring audit (problem #7 in the inventory);

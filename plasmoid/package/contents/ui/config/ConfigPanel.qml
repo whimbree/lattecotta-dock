@@ -24,9 +24,9 @@ Item {
     property alias cfg_useThemePanel: useThemePanel.checked
     property alias cfg_panelSize: panelSize.value
     property alias cfg_transparentPanel: transparentPanel.checked
-    property alias cfg_isInNowDockPanel: mainItem.isInNowDockPanel
+    property alias cfg_isInLatteDock: mainItem.isInLatteDock
 
-    property bool isInNowDockPanel
+    property bool isInLatteDock
 
     ColumnLayout {
 
@@ -35,7 +35,7 @@ Item {
         Layout.fillWidth: true
 
         GridLayout{
-            enabled: !mainItem.isInNowDockPanel
+            enabled: !mainItem.isInLatteDock
             Layout.fillWidth: true
             columns: 3
             property bool panelConfigEnabled: showBarLine.checked && useThemePanel.checked
@@ -119,26 +119,26 @@ Item {
 
     LatteComponents.ShadowedItem {
         id:shadowText
-        anchors.fill: inNowDockLabel
-        enabled: isInNowDockPanel
+        anchors.fill: inLatteDockLabel
+        enabled: isInLatteDock
         shadowSizePx: 3
         shadowColor: "#cc080808"
-        source: inNowDockLabel
+        source: inLatteDockLabel
 
         shadowHorizontalOffset: -1
-        visible: isInNowDockPanel
+        visible: isInLatteDock
     }
 
 
     PlasmaComponents.Label {
-        id:inNowDockLabel
+        id:inLatteDockLabel
         anchors.horizontalCenter: mainItem.horizontalCenter
         anchors.verticalCenter: mainColumn.verticalCenter
       //  anchors.verticalCenterOffset:  (mainColumn.height / 4)
 
         width: 0.85 * mainItem.width
         text: i18n("For the disabled settings you should use the Latte Dock Configuration Window")
-        visible: mainItem.isInNowDockPanel
+        visible: mainItem.isInLatteDock
 
         horizontalAlignment: Text.AlignHCenter
         //  font.bold: true
