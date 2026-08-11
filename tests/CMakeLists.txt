@@ -480,6 +480,20 @@ target_include_directories(wmtoolstest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+# The ThemeExtended runtime scheme refresh (D298): a rewrite of the
+# auto-accent kdeglobals (constant possibleSchemeFile path) must re-snapshot
+# the default/reversed schemes and the lightness through the real KDirWatch
+# wiring; carries its own main() so the whole XDG surface is a temp root.
+ecm_add_test(themeextendedrefreshtest.cpp
+    TEST_NAME themeextendedrefreshtest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(themeextendedrefreshtest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(themeextendedrefreshtest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
 ecm_add_test(windowinfowraptest.cpp
     TEST_NAME windowinfowraptest
     LINK_LIBRARIES lattedock-core Qt6::Test

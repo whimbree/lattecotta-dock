@@ -116,6 +116,7 @@ private:
     void updateBackgrounds();
 
     void setOriginalSchemeFile(const QString &file);
+    void refreshOriginalScheme(const QString &file);
     void updateHasShadow();
     void updateDefaultScheme();
     void updateDefaultSchemeValues();

@@ -1,4 +1,4 @@
-124
+125
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -105,6 +105,7 @@ syncedlaunchersclienttest
 tasksbackendtest
 taskshandleraudittest
 themeawareicontest
+themeextendedrefreshtest
 tooltiptexttest
 universalsettingstest
 userconfiguringcontracttest
