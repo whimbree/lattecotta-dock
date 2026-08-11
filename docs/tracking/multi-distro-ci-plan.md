@@ -518,7 +518,7 @@ pass on every distro regardless of tier.
       permanent runtime-effect acceptance for D29, task-icon middle click
       appears to execute left-click behavior) scope; PR #101 neither
       implemented nor approved it. Dependencies: B2.
-      Commits: (defect-quick-wins branch; final hash at merge)
+      Commits: 50efbacd8
 - [x] B3 Run sceneprobe in-container in invariant+tolerance mode; confirm
       scenes render (not blank, right regions). ARCH DONE: all 13 scenes
       render and PASS in the Arch container - and bit-exact against the
