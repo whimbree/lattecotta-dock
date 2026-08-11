@@ -208,10 +208,12 @@ Owed live checks from the campaign's behavior-sensitive PRs:
   invalidated, and KWin turns it into a compositor-level interactive move.
   D30's existing evidence already records prior nested runs confirming move/
   maximize/close work when enabled. Not a -Werror-campaign regression; no new
-  defect. Two edge cases only a fresh live test would nail (per the investigation):
-  cursor-follow when the initiating press was on Latte's surface, and the
-  maximized-window case (`windowCanBeDragged` does not exclude maximized) - both
-  low-priority and pre-existing.
+  defect. LIVE-CONFIRMED 2026-08-10: enabling `dragActiveWindowEnabled` on a dock
+  makes the drag-to-move work on the real Wayland desktop, so the feature
+  functions, KWin does follow the cursor from the plasma-window `requestMove`, and
+  #228 did not break it. The toggle is confirmed wired end-to-end (UI enable ->
+  real behavior). The one remaining untested edge is the maximized-window case
+  (`windowCanBeDragged` does not exclude maximized) - low-priority, pre-existing.
 
 Owner decisions still open (carried forward): the D283 approach (fix the legacy
 clone path vs deprecate), history excision of the swept maintainer-local files,
