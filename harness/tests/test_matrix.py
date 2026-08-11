@@ -174,6 +174,7 @@ _RAW_VIEW: dict[str, object] = {
     "publishedStruts": [0, 0, 0, 100],
     "maskRect": [0, 900, 1600, 100],
     "inputRegionRects": [[0, 900, 1600, 100]],
+    "appliedInputRegionRects": [[0, 900, 1600, 100]],
     "absoluteGeometry": [0, 900, 1600, 100],
     "localGeometry": [0, 0, 1600, 100],
     "screenGeometry": [0, 0, 1600, 1000],

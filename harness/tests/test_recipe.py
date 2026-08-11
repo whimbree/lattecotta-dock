@@ -63,6 +63,9 @@ def _one_view_dict() -> dict[str, object]:
         "absoluteGeometry": [0, 900, 1600, 100],
         "localGeometry": [0, 0, 1600, 100],
         "screenGeometry": [0, 0, 1600, 1000],
+        "type": "dock",
+        "inputRegionRects": [[0, 0, 1600, 100]],
+        "appliedInputRegionRects": [[0, 0, 1600, 100]],
     }
 
 

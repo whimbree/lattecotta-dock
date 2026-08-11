@@ -129,6 +129,9 @@ def test_empty_point_refuses_loudly_when_all_covered(monkeypatch: pytest.MonkeyP
                     "absoluteGeometry": [0, 0, 1600, 1000],
                     "localGeometry": [0, 0, 1600, 1000],
                     "screenGeometry": [0, 0, 1600, 1000],
+                    "type": "dock",
+                    "inputRegionRects": [[0, 0, 1600, 1000]],
+                    "appliedInputRegionRects": [[0, 0, 1600, 1000]],
                 }
             )
         ]

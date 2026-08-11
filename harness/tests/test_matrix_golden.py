@@ -87,6 +87,9 @@ def _view(cid: int, *, cloned: bool, geometry: tuple[int, int, int, int]) -> rec
             "absoluteGeometry": list(geometry),
             "localGeometry": [0, 0, geometry[2], geometry[3]],
             "screenGeometry": [0, 0, 1600, 1000],
+            "type": "dock",
+            "inputRegionRects": [[0, 0, geometry[2], geometry[3]]],
+            "appliedInputRegionRects": [[0, 0, geometry[2], geometry[3]]],
         }
     )
 
