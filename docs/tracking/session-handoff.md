@@ -1,7 +1,35 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-08-09.
+Last updated 2026-08-11.
+
+## NEXT-SESSION FOCUS (set 2026-08-11)
+
+The -Werror campaign (warnings-clean under -Wall -Wextra -Werror behind
+LATTE_WERROR) and the audit-backlog cleanup (C++ CHUNK-1..6, QML C2/C3/C4/C6,
+dead Plasma-5/KF5 gates, the QtQuick.Layouts import family) are DONE - roughly
+17 PRs, and six real Qt6 bugs fixed along the way (D287, D288, D291, D292, D293,
+D294). The mechanical-cleanup vein is mined out; the remaining Qt5 import families
+are low-value churn, deliberately deferred. Next session's higher-value work:
+1. UNRESOLVED DEFECTS. Triage the ~20 OPEN/SUSPECTED entries in known-defects.md
+   into real-bug vs Qt5-faithful/accepted vs test-infra, then drive fixes for the
+   genuinely-broken user-facing ones (candidates: D274 maximize input region stays
+   full-width after a shrink, D283 legacy clone path drops its replica on reload,
+   D19 about-dialog keep-above no-op on wayland, D268 panel-focus timing; D289 is a
+   trivial one-line dup-connection delete). Surface product-decision/live-check
+   ones to the maintainer rather than guessing.
+2. PHASE 8 (the open README roadmap item) - layout/config persistence, session
+   shutdown, multi-screen edge cases. The plan has 58 unticked items, most of the
+   remaining gotcha-heavy ones here; several want a live desktop, so surface the
+   real-dock test moments.
+3. THEMING / COLORIZATION POLISH AUDIT (the other unchecked README item, Phase 9).
+Also worth an early cheap pass: the reference-fork + plasma-desktop sync is ~4
+weeks stale (last reviewed ng 456154efb / qt6 81384003, 2026-07-14) - diff for
+fixes-others-already-made before writing new ones.
+PARKED for the maintainer (do not guess): D295 (the two inherited precedence
+asymmetries - intent/live call) and the settings-wiring audit remove-vs-wire
+disposition (dead legacy-plasmoid-config settings; full inventory in the
+2026-08-10 settings-audit note below).
 
 ## 2026-08-09: the quality cleanup wave and the model-vs-truth drift net
 
