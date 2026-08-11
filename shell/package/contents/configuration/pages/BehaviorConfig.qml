@@ -659,13 +659,10 @@ PlasmaComponents.Page {
                             Layout.fillWidth: true
                             text: i18n("Drag Active Window")
                             checkable: true
+                            checked: plasmoid.configuration.dragActiveWindowEnabled
                             QQC2.ToolTip.text: i18n("The user can use left mouse button to drag and maximized/restore last active window from empty areas")
                             QQC2.ToolTip.visible: hovered
                             icon.name: "transform-move"
-
-                            readonly property int dragActiveWindowEnabled: plasmoid.configuration.dragActiveWindowEnabled
-
-                            onDragActiveWindowEnabledChanged: checked = dragActiveWindowEnabled
 
                             onClicked: {
                                 plasmoid.configuration.dragActiveWindowEnabled = checked;
@@ -685,13 +682,10 @@ PlasmaComponents.Page {
                             Layout.fillWidth: true
                             text: i18n("Close Active Window")
                             checkable: true
+                            checked: plasmoid.configuration.closeActiveWindowEnabled
                             QQC2.ToolTip.text: i18n("The user can use middle mouse button to close last active window from empty areas")
                             QQC2.ToolTip.visible: hovered
                             icon.name: "window-close"
-
-                            readonly property int closeActiveWindowEnabled: plasmoid.configuration.closeActiveWindowEnabled
-
-                            onCloseActiveWindowEnabledChanged: checked = closeActiveWindowEnabled;
 
                             onClicked: {
                                 plasmoid.configuration.closeActiveWindowEnabled = checked;
