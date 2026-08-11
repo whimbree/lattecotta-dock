@@ -3957,8 +3957,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   instrumentation): neither of the recorded hypotheses. The settle collapse
   works and edit mode holds no full-canvas input; the dock was in a PERMANENT
   1Hz automatic-sizing grow/shrink oscillation. A deferred refit echo lands
-  about two frames after every applied icon size (present since 51eb53c69,
-  the D244 stable-ownership fix, added the content-budget refit connection),
+  about two frames after every applied icon size (51eb53c69, the D244
+  stable-ownership fix, retargeted the pre-existing deferred refit connection
+  onto its new content budget, giving the echo its current shape),
   the doubleCall timer's shield was down whenever its own confirming pass
   applied a size, and the echo stepped the engine with the OLD row length
   attributed to the NEW size. The poisoned linear projection grew into a size
@@ -3972,10 +3973,13 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   the recipe's one-instant sample failed whenever it landed in that window
   (3 of 4 uninstrumented runs) and passed in the quiet 85% (the intermittent
   green that made the defect look phase-dependent).
-- FIX: the pass that applies a size arms the confirmation timer
-  (AutoSize.qml confirmAppliedSizeTimer) so the shield stays up across EVERY
-  applied size, including one applied by the confirming pass itself; only a
-  keep pass ends the chain. With truthful settled measurements the engine's
+- FIX: a pass that CHANGES the applied size arms the confirmation timer
+  (AutoSize.qml confirmAppliedSizeTimer) so the shield stays up across every
+  real size change, including one applied by the confirming pass itself; a
+  keep pass, or a re-proposal of the current size (the floor-overflow steady
+  state, where the engine keeps returning ApplySize{16} while the row
+  overflows even the floor), ends the chain so the confirmation loop rests
+  instead of running at 1Hz forever. With truthful settled measurements the engine's
   own projections refuse the overshoot and the fit converges in at most two
   confirmations. The recipe asserts a sustained quiet window (six identical
   applied == input samples spanning 1.5s) instead of one instant, matching

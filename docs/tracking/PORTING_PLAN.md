@@ -5240,7 +5240,8 @@ prerequisites in the phases above are done.
       edit-mode length shrink). Root cause: a permanent 1Hz automatic-sizing
       grow/shrink oscillation, not a settle-collapse regression. A deferred
       refit echo lands about two frames after every applied icon size (since
-      51eb53c69 added the content-budget refit connection) and the doubleCall
+      51eb53c69 retargeted the deferred refit connection onto its new content
+      budget) and the doubleCall
       timer's shield was down after its own confirming pass applied, so the
       echo stepped AutoSizeEngine with the old row length attributed to the
       new size; the poisoned projection grew into a measured overflow and
@@ -5248,8 +5249,10 @@ prerequisites in the phases above are done.
       endless-loop protector. Each cycle's parabolic full-span input write
       plus the union-hold kept the applied window mask at full screen width
       ~150ms of every second, which the recipe's one-instant sample raced.
-      Fix: the applying pass always arms the confirmation shield
-      (confirmAppliedSizeTimer); the recipe asserts a sustained quiet window.
+      Fix: a pass that changes the applied size arms the confirmation shield
+      (confirmAppliedSizeTimer); a keep or a re-proposal of the current size
+      (the floor-overflow steady state) ends the chain; the recipe asserts a
+      sustained quiet window.
       Driven in the nested vehicle: red 3 of 4 runs pre-fix, repeated green
       post-fix. Full trace in the D274 registry entry.
       Commits: (fill at merge)
