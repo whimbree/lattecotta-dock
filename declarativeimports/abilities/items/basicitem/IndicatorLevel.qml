@@ -34,7 +34,7 @@ AbilityItem.IndicatorLevel {
 
     Connections {
         target: abilityItem
-        enabled: indicatorLevel.level.indicator.host ? indicatorLevel.level.indicator.host.info.needsMouseEventCoordinates : false
+        enabled: indicatorLevel.level.indicator && indicatorLevel.level.indicator.host ? indicatorLevel.level.indicator.host.info.needsMouseEventCoordinates : false
         function onMousePressed(x, y, button) {
             var fixedPos = indicatorLevel.mapFromItem(abilityItem, x, y);
             level.mousePressed(Math.round(fixedPos.x), Math.round(fixedPos.y), button);

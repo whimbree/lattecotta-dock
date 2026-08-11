@@ -4854,6 +4854,31 @@ carries its own detail or points into the plan and the reference docs.
 
 ## Fixed (kept for the record)
 
+### D294 - Ability indicator level reads level.indicator.host without the null guard its sibling binding uses
+- STATUS: FIXED (C4, the indicator null-guard-inconsistency audit item; this
+  branch).
+- FOUND: 2026-08-10, by code-reading during the C4 audit.
+- SYMPTOM (latent): a TypeError ("Cannot read property 'host' of null") in the
+  mouse-coordinate Connections' `enabled` binding whenever it evaluates while
+  `level.indicator` is still null; the binding then resolves to undefined
+  (falsy) rather than the intended value. No crash, but a swallowed transient
+  error during the indicator-item creation window.
+- ROOT: `declarativeimports/abilities/items/basicitem/IndicatorLevel.qml` guards
+  `level.indicator` two ways inconsistently. `level.isDrawn` (line 26) checks
+  `level.indicator && level.indicator.host && ...`, establishing that
+  `level.indicator` is treated as nullable at binding-evaluation time (it is: the
+  base `IndicatorItem`'s `indicator` getter returns null before the parent's
+  `level.indicator: abilityIndicatorObj` binding resolves). The Connections
+  `enabled` binding (line 37) guarded only `.host` and dereferenced
+  `level.indicator.host` with `level.indicator` unguarded, so the same nullable
+  object is defended in one place and not the other. Verbatim upstream and
+  identical in both reference forks (latte-dock-ng, latte-dock-qt6), so inherited.
+- FIX: added `level.indicator &&` to the line-37 ternary condition, matching the
+  contract line 26 already establishes. Behaviour-preserving in the normal case
+  (both non-null gives the same value); when `level.indicator` is null it now
+  returns false - the same safe default the `.host`-null branch already returns -
+  instead of throwing.
+
 ### D293 - Import-full restart never relaunched: whole command line passed as the program name
 - STATUS: FIXED (CHUNK-5, the startDetached command-string audit item in the C++
   readability/safety batch; PR #235, 831cf3e5c).
