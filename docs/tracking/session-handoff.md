@@ -3,6 +3,91 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-08-11.
 
+## IN-FLIGHT SALVAGE STATE (2026-08-11 autonomous session, written at the
+## usage-limit cut; resets 4am - read this FIRST, supersedes the focus below)
+
+MERGED this session: PR #238 (defect quick wins: D289 dup connect, D296
+menu odd-count refusal, D60 qmltypes regen, D272 root QSKIP, D64 xkbcommon
+link, D19 keep-above stub) and PR #239 (fork-sync fold-ins: D297 tasktools
+recursion fix with SIGSEGV-proven regression test, KPluginFactory hardening
+at two sites, vendored backend hygiene, six INVESTIGATE plan filings). Both
+tree-verified against their full-gate stamps after GitHub's rebase-merge
+sha rewrite; hashes reconciled (B2a -> 50efbacd8, D297 -> c16ac1721). Also
+on main: the open-registry triage (all 22 non-FIXED entries dispositioned,
+42 stale branch-sha statuses remapped), the 2026-08-11 fork-sync pass
+(CLAUDE.md hashes: ng a48c121d8, qt6 unchanged 81384003) with its verdict
+report and the Phase 9 theming audit inventory in docs/agent-logs/, and
+three Phase 8 verification-only closures (context-menu .so naming already
+done at 716714516; RightButton re-assert NOT APPLICABLE at pin, libplasma
+6.7.3 restores ActionPlugins with shell-defaults fallback; comic
+switch-threshold hover expansion ACCEPTED Qt5-faithful, identical
+size-check precedence both majors).
+
+READY-TO-MERGE branches (each gate-green in its worktree under
+.claude/worktrees/, stamp = head, none pushed except where noted):
+1. fix/d57-wheel-threshold (a526937a9/6686d468e/14a9ae541, stamp
+   14a9ae541): the SC-CW2 signed wheel-threshold fix (angle < -12),
+   reproduction recipe promoted to a status-0 regression guard, both
+   nested runs green with the corrected matrix. NEEDS: first independent
+   review, rebase, full gate, merge.
+2. fix/d283-clone-reload (head 8c11114e7, stamp matches; PUSHED, PR #240
+   open): persisted AllScreensGroup replica adoption on reload; first
+   review's MAJOR (iterator invalidation in completeStartupViewCreation)
+   FIXED via root-snapshot in 8c11114e7; incidental finding renumbered
+   D296->D302. NEEDS: the second independent review (required for a
+   MAJOR), rebase (known-defects.md conflicts expected), full gate, merge.
+3. fix/d274-input-region (head 77058e0a1, stamp matches; PUSHED, PR #241
+   open): the 1Hz autosize-oscillation root cause of D274 plus the D4
+   visibility-classified mask hold. First review verdict MERGE AFTER
+   FIXES with one MAJOR still OPEN: the AutoSize confirm shield re-arms
+   forever at the 16px floor-overflow state (review supplied the one-line
+   remedy: restart the confirm timer only when result.nextIconSize
+   actually differs from sizer.iconSize, keeping the write after) plus a
+   MINOR (51eb3c... attribution says "added the connection", should say
+   "retargeted"). NEEDS: that fix + re-gate + second review + merge.
+
+PARTIAL worktrees (killed by the usage limit mid-work, commits intact):
+4. fix/theming-audit-fixes (4 commits: bc2dc4296 runtime scheme refresh
+   fix, 99b9184ea its e2e guard, 15312078f glow3D self-binding fix,
+   58d053d0f double-toggle removal) plus DIRTY uncommitted work on the
+   config-window KDE_COLOR_SCHEME_PATH pin (infoview.cpp,
+   subconfigview.cpp, view.cpp modified, registry entry started). Resume:
+   finish the pin commit, registry entries (numbers D298-D301 reserved for
+   this branch), fast gate, then the normal tail.
+5. fix/settings-audit-disposition (5 commits: dead-checkbox removals,
+   dead preset writes dropped, wheelEnabled comment, mislabel fix,
+   isInNowDockPanel embed-logic revival) plus DIRTY item-6 fragile-reflect
+   conversions (AppearanceConfig/BehaviorConfig direct checked: bindings).
+   Resume: finish item 6 with its nested first-open evidence, item 7
+   check, handoff PARKED->DECIDED note, fast gate, tail. Decision rule
+   recorded in the commit bodies (Qt5-consumed -> wire, Qt5-dead ->
+   remove).
+6. chore/dispositions-d295-d276 (1 commit 8f19a1474, the D295
+   semantics-preserving parens) plus the re-blessed 040 golden MODIFIED
+   uncommitted; the bless run PASSED 1/1 but the load-bearing BY-EYE check
+   of the blessed frame was not yet done. Resume: eyeball the golden,
+   commit with the comparison evidence, two green confirmation runs, fast
+   gate, tail.
+7. Phase 8 remainder (tracker-ready guard sweep + wheel-bypass
+   verify-before-implement): agent died before branching; not started.
+
+NOT STARTED: D290 implementation (decision recorded in registry:
+reassignment shape approved, needs nested repro first). OWED LIVE (for the
+maintainer): D258 upstream Solid/KIO report; the settings-window at-desk
+semantic walk; lock/unlock DPMS cycle; autostart entry decision (still
+points at the packaged ng binary); one real logout/login SIGTERM check;
+config-window palette-divergence check on the second monitor (theming
+branch); Window Colors KWin-script availability check.
+
+Merge-tail mechanics used this session (works, keep): agents gate with
+LATTE_GATE_FAST=1 in their worktrees (stamp lands in the worktree's
+build/), the orchestrator pushes FROM the worktree, opens the PR, runs one
+lean Opus review (second review only after a MAJOR), rebases in the main
+checkout, runs the FULL gate there, pushes with --force-with-lease, merges
+via gh pr merge --rebase, then verifies tree identity (git diff gated-head
+origin/main must be empty), transfers the stamp to the content-identical
+merged sha, and reconciles hash placeholders in a docs commit.
+
 ## NEXT-SESSION FOCUS (set 2026-08-11)
 
 The -Werror campaign (warnings-clean under -Wall -Wextra -Werror behind
