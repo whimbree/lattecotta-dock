@@ -3709,11 +3709,12 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   controlled negative oracles); the Python port passes the same drive.
 
 ### D283 - the legacy AllScreensGroup clone path drops its persisted replica on reload
-- STATUS: FIXED (2026-08-11) by the two-commit adoption fix on the
-  fix/d283-clone-reload branch: "fix(view): defer screen-group clone
-  generation until startup views land" (d9967b21c) and "fix(layout):
-  adopt persisted screen-group replicas on reload" (f5c15aedd); the
-  recipe port followed as 4c0b756af (hashes re-resolve at merge).
+- STATUS: FIXED (2026-08-11), merged in PR #240: "fix(view): defer
+  screen-group clone generation until startup views land" (6cde8b7f8),
+  "fix(layout): adopt persisted screen-group replicas on reload"
+  (76ecfd813), the recipe port (1942148c6), and the review round's
+  iterator-invalidation hardening "fix(layout): stop startup clone
+  generation mutating the view table mid-iteration" (43e478866).
 - APPROACH DECISION (was owed): FIX the legacy path rather than
   deprecate it behind explicit linked docks. The regression is in-port
   (the explicit-linked-dock rework broke a shipped upstream-shaped

@@ -136,8 +136,9 @@ stays open until then). All six landed on main in PR #238.
 ## 2026-08-11: D283 fixed - persisted screen-group replicas adopt on reload
 
 The D283 approach decision landed as FIX THE LEGACY PATH (rationale in the
-registry entry and the part-two commit body). Branch fix/d283-clone-reload,
-three commits plus this docs commit (hashes re-resolve at merge):
+registry entry and the part-two commit body). Merged in PR #240 (main
+hashes 6cde8b7f8 / 76ecfd813 / 1942148c6 / dd5d2a6ba plus the review
+round's 43e478866 iterator hardening):
 
 - The root was three stacked layers, log-traced in the dual-output nested
   vehicle: cef08bd1f's SimpleConfig unification made the corona load the
@@ -147,13 +148,13 @@ three commits plus this docs commit (hashes re-resolve at merge):
   8adc09a88 startup partition let the root generate a fresh clone before the
   persisted replica registered; the surplus reconciliation then destroyed the
   replica.
-- Fix part one (d9967b21c): clone generation defers while startup views
+- Fix part one (6cde8b7f8): clone generation defers while startup views
   trickle (GenericLayout::hasPendingStartupViews), resynchronized at drain.
-- Fix part two (f5c15aedd): the active-load boundaries (cleanupOnStartup,
+- Fix part two (76ecfd813): the active-load boundaries (cleanupOnStartup,
   importToCorona) no longer strip ScreenGroupDerived records; the replica
   loads and its root adopts it. Exports and cross-mode moves still strip.
   Deliberate divergence from upstream Qt5's strip-and-regenerate, recorded.
-- The recipe port (4c0b756af): duplicate-dock-independent is typed Python
+- The recipe port (1942148c6): duplicate-dock-independent is typed Python
   now (the last lifecycle bash holdout), with the placement-refusal polling
   hardening; bash deleted, allowlist 58 -> 57.
 - Evidence: recipe green 3x on the fixed tree (bash twice on the final head,

@@ -548,7 +548,8 @@ blocking.
       STUB 2026-08-11 on the defect-quick-wins branch (the stub arm of
       the proposal's stub-or-wire choice: pretending call removed,
       `//! STUB: Phase 4` at the site, known-defects D19 stays open
-      until Phase 4 wires the surface role; final hash at merge);
+      until Phase 4 wires the surface role; merged in PR #238 at
+      bbe531886);
       D3 the windowColorScheme else arm (X11 decimal parse, dead in
       production, collapse to the wayland branch - retires the last
       non-test fromX11WId parse caller); D5 the dead netwm.h include
