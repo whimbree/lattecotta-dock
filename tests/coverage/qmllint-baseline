@@ -152,7 +152,7 @@
 38	share/plasma/shells/org.kde.latte.shell/contents/controls/DragCorner.qml
 48	share/plasma/shells/org.kde.latte.shell/contents/controls/IndicatorConfigUiManager.qml
 4	share/plasma/shells/org.kde.latte.shell/contents/controls/InnerShadow.qml
-44	share/plasma/shells/org.kde.latte.shell/contents/controls/TypeSelection.qml
+40	share/plasma/shells/org.kde.latte.shell/contents/controls/TypeSelection.qml
 35	share/plasma/shells/org.kde.latte.shell/contents/explorer/AppletAlternatives.qml
 33	share/plasma/shells/org.kde.latte.shell/contents/views/AppletDelegate.qml
 2	share/plasma/shells/org.kde.latte.shell/contents/views/InfoView.qml

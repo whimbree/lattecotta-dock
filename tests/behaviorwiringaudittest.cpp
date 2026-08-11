@@ -27,23 +27,17 @@
 // and re-tracks when it changes (a pure reflection, unlike D16's clobbered
 // slider), driven through a real QML binding so a broken reflection is caught.
 //
-// AU-3d (the S-a finding) is the sharp one: TypeSelection.qml's Dock/Panel
-// preset writes plasmoid.configuration.solidPanel and .colorizeTransparentPanels,
-// and NEITHER key exists in containment/package/contents/config/main.xml nor is
-// read anywhere in the tree (the only "solidPanel*" symbols are the
-// differently-named BackgroundStateResolver::solidPanelForced concept, fed by
-// the real solidBackgroundForMaximized key). Whatever a write to such a key does
-// on the running map, no subsystem consumes it: it is a DEAD KEY. That verdict
-// rests on two STATIC facts (schema-absent + zero readers), not on a runtime
-// probe, so the harness cannot "prove it lands nowhere" - and must not pretend
-// to. A plain QQmlPropertyMap does NOT enforce a schema: a QML write to an
-// unheld key CREATES it (verified here), unlike the assumption that seeding is
-// mandatory. So what the harness pins deterministically is the P2-violation
-// SHAPE: the real preset body writes solidPanel and colorizeTransparentPanels
-// IN ADDITION to its schema keys, i.e. it touches two keys beyond the labelled
-// set. The live half (tests/e2e/032, viewConfigData over the real
-// KConfigPropertyMap) is where whether the real map even keeps a schema-absent
-// key is observed; the "nothing reads them" half is the reported grep evidence.
+// AU-3d (the S-a finding) is RESOLVED history: TypeSelection.qml's Dock/Panel
+// presets wrote plasmoid.configuration.solidPanel and .colorizeTransparentPanels,
+// two keys with no schema entry in containment/package/contents/config/main.xml
+// and zero readers anywhere in the tree, until the 2026-08-11 settings-audit
+// disposition removed the writes (dead in Qt5 too at ac3505b07; see the
+// disposition record in docs/tracking/session-handoff.md). While the finding
+// was open this file pinned the P2-violation shape (the presets touched two
+// keys beyond their labelled sets); those pins retired with the writes. What
+// remains here is the preset coverage the pins carried: each preset's
+// config-write body runs verbatim and must change EXACTLY its labelled schema
+// keys, so a reintroduced stray write is caught as a set mismatch.
 
 // Qt
 #include <QJsonObject>
@@ -115,11 +109,10 @@ class BehaviorWiringAuditTest : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
-    //! AU-3d / S-a: the TypeSelection dead-key finding
-    void solidPanelDeadKeyWriteIsLiveButSchemaAbsent();
-    void colorizeTransparentPanelsDeadKeyWriteIsLiveButSchemaAbsent();
-    void dockPresetWritesSchemaKeysPlusTheTwoDeadKeys();
-    void panelPresetWritesSchemaKeysPlusTheTwoDeadKeys();
+    //! AU-3d: the TypeSelection presets write exactly their schema sets
+    //! (the S-a dead-key pins retired with the 2026-08-11 disposition)
+    void dockPresetWritesExactlyItsSchemaKeys();
+    void panelPresetWritesExactlyItsSchemaKeys();
 
     //! AU-3c: the Actions/Environment/Items checkboxes (cfg) write only their key
     void actionCheckboxesEachWriteOnlyTheirOwnKey();
@@ -231,68 +224,25 @@ bool BehaviorWiringAuditTest::evalCheckedBinding(QObject *source, const QString 
     return checked;
 }
 
-// ============================ AU-3d / S-a ==================================
+// ============================ AU-3d presets ================================
+// (The S-a dead-key pins lived here - isolated solidPanel /
+// colorizeTransparentPanels write probes and the presets' two-keys-beyond-
+// the-schema-set assertions - until the 2026-08-11 settings-audit disposition
+// removed those writes from TypeSelection.qml. The preset schema coverage
+// they carried continues below.)
 
-//! S-a, the isolated write: TypeSelection's `plasmoid.configuration.solidPanel =
-//! false` is LIVE code that executes and hits the config map (here it even
-//! CREATES the key, because a plain QQmlPropertyMap does not enforce a schema).
-//! The defect is not that the write fails - it is that solidPanel has no schema
-//! entry in containment/package/contents/config/main.xml and no reader anywhere
-//! in the tree (grep: the only "solidPanel*" symbols are the differently-named
-//! BackgroundStateResolver::solidPanelForced concept, fed by solidBackgroundFor-
-//! Maximized). So wherever the value lands, nothing consumes it. This pins the
-//! write as live and its key as one the audit reports schema-absent.
-void BehaviorWiringAuditTest::solidPanelDeadKeyWriteIsLiveButSchemaAbsent()
-{
-    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
-    QQmlPropertyMap &config = *configOwner;
-    //! a General group WITHOUT solidPanel (it has no schema entry to seed from)
-    seed(config, {{QStringLiteral("useThemePanel"), true}, {QStringLiteral("panelSize"), 5}});
-
-    const QJsonObject before = snapshot(config);
-    QCOMPARE(runHandler(config, QStringLiteral("configuration.solidPanel = false;")), QString());
-    const QJsonObject after = snapshot(config);
-
-    //! the write executed and reached the map (a live write, not dead-stripped)
-    QVERIFY2(changedConfigKeys(before, after) == QStringList{QStringLiteral("solidPanel")},
-             "the solidPanel write is live: it targets exactly the solidPanel key");
-    QVERIFY(valueReflects(after, QStringLiteral("solidPanel"), false));
-    //! neighbours are untouched - it is one stray key, not a wider miswrite
-    QVERIFY(valueReflects(after, QStringLiteral("useThemePanel"), true));
-}
-
-//! S-a, the second dead key. colorizeTransparentPanels is even deader than
-//! solidPanel: grep finds ZERO readers anywhere in the tree AND no schema entry.
-//! Same shape - a live write to a key nothing defines or reads.
-void BehaviorWiringAuditTest::colorizeTransparentPanelsDeadKeyWriteIsLiveButSchemaAbsent()
-{
-    std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
-    QQmlPropertyMap &config = *configOwner;
-    seed(config, {{QStringLiteral("useThemePanel"), true}, {QStringLiteral("panelSize"), 5}});
-
-    const QJsonObject before = snapshot(config);
-    QCOMPARE(runHandler(config, QStringLiteral("configuration.colorizeTransparentPanels = false;")), QString());
-    const QJsonObject after = snapshot(config);
-
-    QVERIFY2(changedConfigKeys(before, after) == QStringList{QStringLiteral("colorizeTransparentPanels")},
-             "the colorizeTransparentPanels write is live: it targets exactly that key");
-    QVERIFY(valueReflects(after, QStringLiteral("colorizeTransparentPanels"), false));
-}
-
-//! S-a in situ: the Dock preset's config-write body verbatim (TypeSelection.qml
-//! dockTypeButton.onPressedChanged lines 60-84, plasmoid.configuration -> the
+//! The Dock preset's config-write body verbatim (TypeSelection.qml
+//! dockTypeButton.onPressedChanged lines 60-81, plasmoid.configuration -> the
 //! stub map, LatteCore/LatteContainment enum constants -> their inlined values).
 //! The two non-config lines (userRequestedViewType, visibility.mode) are the
-//! preset's C++ actions, not config writes, so they are excluded - the S-a
-//! question is purely about the config writes. The map is seeded with every
-//! SCHEMA key the preset touches, each at a value the preset does NOT write, so
-//! every schema write registers as a change; solidPanel / colorizeTransparentPanels
-//! are NOT seeded (they have no schema entry). The decisive assertion: the preset
-//! changes the schema keys PLUS the two schema-absent dead keys - it writes two
-//! keys beyond the labelled set (the P2 violation). The "and nothing reads those
-//! two" half is the reported grep evidence; whether the real KConfigPropertyMap
-//! keeps them is the live tests/e2e/032 question.
-void BehaviorWiringAuditTest::dockPresetWritesSchemaKeysPlusTheTwoDeadKeys()
+//! preset's C++ actions, not config writes, so they are excluded. The map is
+//! seeded with every schema key the preset touches, each at a value the preset
+//! does NOT write, so every write registers as a change. The decisive
+//! assertion: the preset changes EXACTLY its labelled schema keys - a stray
+//! write beyond the set (the retired S-a defect's shape: TypeSelection wrote
+//! schema-absent solidPanel / colorizeTransparentPanels until the 2026-08-11
+//! disposition removed them) fails as a set mismatch.
+void BehaviorWiringAuditTest::dockPresetWritesExactlyItsSchemaKeys()
 {
     std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
     QQmlPropertyMap &config = *configOwner;
@@ -314,12 +264,10 @@ void BehaviorWiringAuditTest::dockPresetWritesSchemaKeysPlusTheTwoDeadKeys()
         {QStringLiteral("floatingInternalGapIsForced"), false},
     });
 
-    //! verbatim write order (a QQmlPropertyMap write to an unheld key creates it
-    //! rather than aborting, so the two dead-key writes stay in their real spots)
+    //! verbatim write order
     const QString dockPresetConfigBody = QStringLiteral(
         "configuration.alignment = %1;\n"                         // LatteCore.Types.Center
         "configuration.useThemePanel = true;\n"
-        "configuration.solidPanel = false;\n"                     // DEAD KEY (no schema, no reader)
         "configuration.panelSize = 5;\n"
         "configuration.appletShadowsEnabled = true;\n"
         "configuration.zoomLevel = 16;\n"
@@ -327,7 +275,6 @@ void BehaviorWiringAuditTest::dockPresetWritesSchemaKeysPlusTheTwoDeadKeys()
         "configuration.scrollAction = %2;\n"                      // LatteContainment.Types.ScrollNone
         "configuration.autoSizeEnabled = true;\n"
         "configuration.solidBackgroundForMaximized = false;\n"
-        "configuration.colorizeTransparentPanels = false;\n"      // DEAD KEY (no schema, no reader)
         "configuration.backgroundOnlyOnMaximized = false;\n"
         "configuration.disablePanelShadowForMaximized = false;\n"
         "configuration.plasmaBackgroundForPopups = false;\n"
@@ -338,8 +285,7 @@ void BehaviorWiringAuditTest::dockPresetWritesSchemaKeysPlusTheTwoDeadKeys()
     QCOMPARE(runHandler(config, dockPresetConfigBody), QString());
     const QJsonObject after = snapshot(config);
 
-    //! the 13 schema keys AND the two dead keys change - the preset touches two
-    //! keys beyond its schema set
+    //! exactly the 13 schema keys change - nothing beyond the labelled set
     QVERIFY(onlyExpectedKeysChanged(before, after, {
         QStringLiteral("alignment"), QStringLiteral("useThemePanel"), QStringLiteral("panelSize"),
         QStringLiteral("appletShadowsEnabled"), QStringLiteral("zoomLevel"),
@@ -347,24 +293,17 @@ void BehaviorWiringAuditTest::dockPresetWritesSchemaKeysPlusTheTwoDeadKeys()
         QStringLiteral("autoSizeEnabled"), QStringLiteral("solidBackgroundForMaximized"),
         QStringLiteral("backgroundOnlyOnMaximized"), QStringLiteral("disablePanelShadowForMaximized"),
         QStringLiteral("plasmaBackgroundForPopups"), QStringLiteral("floatingInternalGapIsForced"),
-        QStringLiteral("solidPanel"), QStringLiteral("colorizeTransparentPanels"),
     }));
-    //! the dead-key writes are the two beyond the schema set
-    QVERIFY2(after.contains(QStringLiteral("solidPanel")),
-             "the Dock preset writes solidPanel (a schema-absent key)");
-    QVERIFY2(after.contains(QStringLiteral("colorizeTransparentPanels")),
-             "the Dock preset writes colorizeTransparentPanels (a schema-absent key)");
-    //! and the live schema writes did apply (P1 for the preset)
+    //! and the schema writes did apply (P1 for the preset)
     QVERIFY(valueReflects(after, QStringLiteral("alignment"), kAlignCenter));
     QVERIFY(valueReflects(after, QStringLiteral("zoomLevel"), 16));
 }
 
-//! S-a in situ for the Panel preset (TypeSelection.qml panelTypeButton
-//! lines 103-131). Same shape, a different 15-key schema set (adds panelShadows,
-//! titleTooltips, backgroundRadius, backgroundShadowSize; drops
-//! solidBackgroundForMaximized and scrollAction), and the SAME two dead-key
-//! writes beyond the schema set.
-void BehaviorWiringAuditTest::panelPresetWritesSchemaKeysPlusTheTwoDeadKeys()
+//! The Panel preset (TypeSelection.qml panelTypeButton lines 102-127). Same
+//! shape, a different 15-key schema set (adds panelShadows, titleTooltips,
+//! backgroundRadius, backgroundShadowSize; drops solidBackgroundForMaximized
+//! and scrollAction), the same exactly-the-schema-set assertion.
+void BehaviorWiringAuditTest::panelPresetWritesExactlyItsSchemaKeys()
 {
     std::unique_ptr<QQmlPropertyMap> configOwner{QQmlPropertyMap::create()};
     QQmlPropertyMap &config = *configOwner;
@@ -386,11 +325,10 @@ void BehaviorWiringAuditTest::panelPresetWritesSchemaKeysPlusTheTwoDeadKeys()
         {QStringLiteral("backgroundShadowSize"), 999},
     });
 
-    //! verbatim write order (see the Dock note on QQmlPropertyMap dynamic keys)
+    //! verbatim write order
     const QString panelPresetConfigBody = QStringLiteral(
         "configuration.alignment = %1;\n"                         // LatteCore.Types.Justify
         "configuration.useThemePanel = true;\n"
-        "configuration.solidPanel = false;\n"                     // DEAD KEY
         "configuration.panelSize = 100;\n"
         "configuration.panelShadows = true;\n"
         "configuration.appletShadowsEnabled = false;\n"
@@ -398,7 +336,6 @@ void BehaviorWiringAuditTest::panelPresetWritesSchemaKeysPlusTheTwoDeadKeys()
         "configuration.titleTooltips = false;\n"
         "configuration.dragActiveWindowEnabled = true;\n"
         "configuration.autoSizeEnabled = false;\n"
-        "configuration.colorizeTransparentPanels = false;\n"      // DEAD KEY
         "configuration.backgroundOnlyOnMaximized = false;\n"
         "configuration.disablePanelShadowForMaximized = false;\n"
         "configuration.plasmaBackgroundForPopups = true;\n"
@@ -419,12 +356,7 @@ void BehaviorWiringAuditTest::panelPresetWritesSchemaKeysPlusTheTwoDeadKeys()
         QStringLiteral("backgroundOnlyOnMaximized"), QStringLiteral("disablePanelShadowForMaximized"),
         QStringLiteral("plasmaBackgroundForPopups"), QStringLiteral("floatingInternalGapIsForced"),
         QStringLiteral("backgroundRadius"), QStringLiteral("backgroundShadowSize"),
-        QStringLiteral("solidPanel"), QStringLiteral("colorizeTransparentPanels"),
     }));
-    QVERIFY2(after.contains(QStringLiteral("solidPanel")),
-             "the Panel preset writes solidPanel (a schema-absent key)");
-    QVERIFY2(after.contains(QStringLiteral("colorizeTransparentPanels")),
-             "the Panel preset writes colorizeTransparentPanels (a schema-absent key)");
     QVERIFY(valueReflects(after, QStringLiteral("alignment"), kAlignJustify));
     QVERIFY(valueReflects(after, QStringLiteral("backgroundRadius"), -1));
 }

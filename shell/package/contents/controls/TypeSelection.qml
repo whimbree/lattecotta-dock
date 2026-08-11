@@ -59,7 +59,6 @@ Grid {
                 latteView.visibility.mode = LatteCore.Types.DodgeActive;
                 plasmoid.configuration.alignment = LatteCore.Types.Center;
                 plasmoid.configuration.useThemePanel = true;
-                plasmoid.configuration.solidPanel = false;
                 plasmoid.configuration.panelSize = 5;
                 plasmoid.configuration.appletShadowsEnabled = true;
                 plasmoid.configuration.zoomLevel = 16;
@@ -74,7 +73,6 @@ Grid {
 
                 //! Dynamic Background
                 plasmoid.configuration.solidBackgroundForMaximized = false;
-                plasmoid.configuration.colorizeTransparentPanels = false;
                 plasmoid.configuration.backgroundOnlyOnMaximized = false;
                 plasmoid.configuration.disablePanelShadowForMaximized = false;
                 plasmoid.configuration.plasmaBackgroundForPopups = false;
@@ -103,7 +101,6 @@ Grid {
                 latteView.visibility.mode = LatteCore.Types.AlwaysVisible;
                 plasmoid.configuration.alignment = LatteCore.Types.Justify;
                 plasmoid.configuration.useThemePanel = true;
-                plasmoid.configuration.solidPanel = false;
                 plasmoid.configuration.panelSize = 100;
                 plasmoid.configuration.panelShadows = true;
                 plasmoid.configuration.appletShadowsEnabled = false;
@@ -118,7 +115,6 @@ Grid {
                 plasmoid.configuration.autoSizeEnabled = false;
 
                 //! Dynamic Background
-                plasmoid.configuration.colorizeTransparentPanels = false;
                 plasmoid.configuration.backgroundOnlyOnMaximized = false;
                 plasmoid.configuration.disablePanelShadowForMaximized = false;
                 plasmoid.configuration.plasmaBackgroundForPopups = true;
