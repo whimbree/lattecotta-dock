@@ -82,6 +82,7 @@ private Q_SLOTS:
     void viewsTable_subtractedAndOnlyOriginals();
     void viewsTable_appendTemporaryView();
     void layoutsTable_subtractedAndFreeActivities();
+    void layoutsTable_freeActivitiesInheritorChoice();
 };
 
 void DataTypesTest::linkedConfigurationPolicy_keepsAppletGeometryLocal()
@@ -920,6 +921,79 @@ void DataTypesTest::layoutsTable_subtractedAndFreeActivities()
     // unmatched id is a no-op (no crash, others untouched)
     lhs.setLayoutForFreeActivities(QStringLiteral("missing"));
     QVERIFY(lhs[QStringLiteral("a")].activities.isEmpty());
+}
+
+// The D290 inheritor choice (Free-Activities layout reassignment on removal):
+// which surviving layout inherits the Free-Activities assignment after its
+// holder left the table. The priority contract lives in
+// LayoutsTable::freeActivitiesInheritorId(); the settings layouts model calls
+// it from removeRows(), which needs a live Corona, so the choice is pinned
+// here at the data layer.
+void DataTypesTest::layoutsTable_freeActivitiesInheritorChoice()
+{
+    const QString freeId = QString::fromLatin1(Data::Layout::FREEACTIVITIESID);
+    const QString allId = QString::fromLatin1(Data::Layout::ALLACTIVITIESID);
+
+    // an empty table has nothing to inherit
+    Data::LayoutsTable empty;
+    QVERIFY(empty.freeActivitiesInheritorId().isEmpty());
+
+    Data::Layout disabled;
+    disabled.id = QStringLiteral("disabled");
+    disabled.name = QStringLiteral("Disabled");
+
+    Data::Layout enabledExplicit;
+    enabledExplicit.id = QStringLiteral("explicit");
+    enabledExplicit.name = QStringLiteral("Explicit");
+    enabledExplicit.activities = QStringList{QStringLiteral("activity-a")};
+
+    Data::Layout enabledSecond;
+    enabledSecond.id = QStringLiteral("second");
+    enabledSecond.name = QStringLiteral("Second");
+    enabledSecond.activities = QStringList{QStringLiteral("activity-b")};
+
+    // a surviving Free-Activities holder: free activities stay covered
+    {
+        Data::LayoutsTable table;
+        Data::Layout holder;
+        holder.id = QStringLiteral("holder");
+        holder.activities = QStringList{freeId};
+        table << disabled << holder;
+        QVERIFY(table.freeActivitiesInheritorId().isEmpty());
+    }
+
+    // a surviving All-Activities holder also covers free activities
+    {
+        Data::LayoutsTable table;
+        Data::Layout allholder;
+        allholder.id = QStringLiteral("allholder");
+        allholder.activities = QStringList{allId};
+        table << enabledExplicit << allholder;
+        QVERIFY(table.freeActivitiesInheritorId().isEmpty());
+    }
+
+    // the first ENABLED layout inherits, not the first row
+    {
+        Data::LayoutsTable table;
+        table << disabled << enabledExplicit << enabledSecond;
+        QCOMPARE(table.freeActivitiesInheritorId(), QStringLiteral("explicit"));
+    }
+
+    // only disabled survivors: the first row inherits (and becomes enabled
+    // for free activities), rather than leaving them serving no layout
+    {
+        Data::LayoutsTable table;
+        Data::Layout disabledSecond;
+        disabledSecond.id = QStringLiteral("disabled2");
+        table << disabled << disabledSecond;
+        QCOMPARE(table.freeActivitiesInheritorId(), QStringLiteral("disabled"));
+
+        // round trip: assigning the inheritor closes the gap - a holder now
+        // exists, so no further inheritance is requested
+        table.setLayoutForFreeActivities(table.freeActivitiesInheritorId());
+        QVERIFY(table[QStringLiteral("disabled")].isForFreeActivities());
+        QVERIFY(table.freeActivitiesInheritorId().isEmpty());
+    }
 }
 
 QTEST_GUILESS_MAIN(DataTypesTest)

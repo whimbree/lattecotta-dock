@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2020 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -154,6 +155,8 @@ private Q_SLOTS:
 
 private:
     void initActivities();
+
+    void reassignFreeActivities();
 
     void setActivities(const int &row, const QStringList &activities);
     void setId(const int &row, const QString &newId);
