@@ -2826,6 +2826,16 @@ multi-view, multi-monitor setup.
       keys intact, not just visually present.
       Commits:
 
+- [x] Fix D290 (Free-Activities layout reassignment on removal is
+      unimplemented): removing the FREEACTIVITIESID holder in the settings
+      dialog left free activities with no layout to load (nested repro:
+      a new activity showed no dock, viewsData refused, no fallback).
+      Per the recorded decision a surviving layout now inherits the
+      assignment at the removal site; inheritor choice pinned by
+      layoutsTable_freeActivitiesInheritorChoice in datatypestest.
+      Commits: 6023a6341
+      (branch-local; resolve at merge)
+
 ### Phase 9: Theming, colorization, multi-monitor visual polish
 
 - [x] Audit every Plasma/Kirigami color-group property read against

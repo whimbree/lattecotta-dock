@@ -254,32 +254,47 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   ambiguity stays visible for a future live-verification pass.
 
 ### D290 - Free-Activities layout reassignment on removal is unimplemented
-- STATUS: SUSPECTED (found by code-reading during phase 4 of the -Werror
-  campaign - warnings-as-errors - not yet reproduced under a driver).
+- STATUS: FIXED (2026-08-13, the fix/d290-freeactivities-reassignment branch).
 - FOUND: 2026-08-10, tracing the `-Wunused-but-set-variable` warning on
   `freeActivitiesLayoutIsRemoved` in the settings layouts model.
-- SYMPTOM (suspected): removing the layout that holds the Free-Activities
-  assignment (`FREEACTIVITIESID`) in the settings dialog deletes that layout on
-  save and leaves Free-Activities pointing at no layout; nothing reassigns it to
-  a surviving layout.
+- SYMPTOM (confirmed in the nested vehicle, 2026-08-13): in multiple-layouts
+  mode with one layout explicitly assigned to the only running activity and a
+  second layout holding the Free-Activities assignment (`FREEACTIVITIESID`, so
+  it is not loaded and is removable), removing the holder in the settings
+  dialog reassigned nothing (the survivor's Activities chip stayed on its
+  explicit assignment), Apply deleted the holder's layout file leaving no
+  free-activities layout, and a newly created activity then loaded NO layout:
+  `layoutsData` kept reporting only the explicitly-assigned layout, the
+  forced-Default safety net in `syncMultipleLayoutsToActivities` never fires
+  while any other layout is loaded, `viewsData` refused ("[]") for as long as
+  the orphaned free activity was current (recovering on the assigned one), and
+  the only painted dock belonged to a layout not applied there. Fully silent.
 - ROOT: `Layouts::removeRows` (app/settings/settingsdialog/layoutsmodel.cpp)
   detected the free-activities-layout-removed case (a boolean flag with the
   comment "we need to reassign it properly") but never acted on it - the
-  reassignment was never written. Confirmed identical dead scaffolding in
-  upstream KDE latte-dock master and both reference forks (latte-dock-ng,
-  latte-dock-qt6), so this is an inherited upstream gap, not a port regression.
-- DISPOSITION: the dead detection flag was removed (it did nothing) and replaced
-  with a standing NOTE at the site pointing here; the underlying reassignment
-  stays unimplemented. Implementing it (have a surviving enabled layout inherit
-  Free-Activities, or refuse removal of the last free-activities layout) is a
-  separate future task; needs a live repro to confirm the runtime effect before
-  choosing the fix.
+  reassignment was never written. Upstream archaeology: the consumer existed
+  once (`autoAssignFreeActivitiesLayout`, upstream 0d39ee6f5) and was dropped
+  in upstream c7d163fdb when the separate All-Activities option landed, so the
+  detection is dead in upstream KDE latte-dock master and both reference forks
+  (latte-dock-ng, latte-dock-qt6) - an inherited upstream gap, not a port
+  regression. The dead flag was removed with a NOTE pointing here (f698c7842).
 - DECISION (2026-08-11): the approved fix shape is reassignment - on removal of
   the layout holding the Free-Activities assignment, a surviving enabled layout
   inherits it (upstream's recorded intent at the dead flag's site). Refusing
   the removal was rejected: it adds a modal obstacle upstream never had.
-  Implementation still requires the nested repro this entry records; stays
-  SUSPECTED until then.
+- FIX: `Data::LayoutsTable::freeActivitiesInheritorId()` carries the inheritor
+  choice (none while a Free- or All-Activities holder survives, else the first
+  enabled layout, else the first layout at all - upstream 0d39ee6f5's
+  lowest-priority arm); `Layouts::removeRows` restores the detection and hands
+  the assignment over via `setCurrentLayoutForFreeActivities` with a loud
+  qWarning. The All-Activities skip refines the decision deliberately: such a
+  survivor already covers free activities. Pinned by
+  `layoutsTable_freeActivitiesInheritorChoice` in tests/datatypestest.cpp.
+- EVIDENCE (post-fix, same nested drive): Remove flips the survivor's chip to
+  "[ Free Activities ]" in the open dialog and the qWarning fires; Apply
+  persists `activities={free-activities}` into the survivor's file; a newly
+  created activity is served by the inheritor (`layoutsData` lists it under
+  the survivor's applied activities, `viewsData` returns real geometry again).
 
 ### D289 - Preferences screen-tracker spinbox connects dataChanged twice
 - STATUS: FIXED (2026-08-11, the defect-quick-wins branch).

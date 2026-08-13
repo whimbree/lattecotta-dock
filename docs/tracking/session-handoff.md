@@ -1,7 +1,7 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-08-11.
+Last updated 2026-08-13.
 
 ## IN-FLIGHT SALVAGE STATE (2026-08-11 autonomous session, written at the
 ## usage-limit cut; resets 4am - read this FIRST, supersedes the focus below)
@@ -81,8 +81,16 @@ PARTIAL worktrees (killed by the usage limit mid-work, commits intact):
    routing both ways. Commits 1b0c4069a, 75132b8f0, 3fe56d71e + docs.
    NEEDS: the normal tail (review, rebase, full gate, merge).
 
-NOT STARTED: D290 implementation (decision recorded in registry:
-reassignment shape approved, needs nested repro first). OWED LIVE (for the
+DONE 2026-08-13 (formerly NOT STARTED here): D290 (Free-Activities layout
+reassignment on removal) implemented on fix/d290-freeactivities-reassignment
+(6023a6341 fix + tracking docs commit; branch-local hashes, resolve at
+merge). The nested repro ran FIRST per the recorded decision gate and
+confirmed the symptom (removal+save leaves no free-activities holder; a new
+activity loads no layout, viewsData refuses, no fallback fires), then the
+removal-site reassignment landed with the
+layoutsTable_freeActivitiesInheritorChoice pin in datatypestest; registry
+entry FIXED with pre/post evidence. NEEDS: push, PR, independent review,
+rebase, full gate at merge. OWED LIVE (for the
 maintainer): D258 upstream Solid/KIO report; the settings-window at-desk
 semantic walk; lock/unlock DPMS cycle; autostart entry decision (still
 points at the packaged ng binary); one real logout/login SIGTERM check;
