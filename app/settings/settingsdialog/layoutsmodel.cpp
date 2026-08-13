@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2020 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -244,22 +245,55 @@ bool Layouts::removeRows(int row, int count, const QModelIndex &parent)
     int lastRow = row+count-1;
 
     if (count > 0 && m_layoutsTable.rowExists(firstRow) && (m_layoutsTable.rowExists(lastRow))) {
-        //! NOTE: removing the layout that holds the Free-Activities assignment
-        //! (FREEACTIVITIESID) leaves Free-Activities pointing at no layout. The
-        //! upstream code detected that case here but never reassigned it; the
-        //! dead detection is dropped and the gap is tracked in
-        //! docs/tracking/known-defects.md (Free-Activities reassignment on
-        //! layout removal is unimplemented).
+        bool freeActivitiesHolderIsRemoved{false};
+
+        for(int i=firstRow; i<=lastRow; ++i) {
+            if (m_layoutsTable[i].activities.contains(Latte::Data::Layout::FREEACTIVITIESID)) {
+                freeActivitiesHolderIsRemoved = true;
+                break;
+            }
+        }
+
         beginRemoveRows(QModelIndex(), firstRow, lastRow);
         for(int i=0; i<count; ++i) {
             m_layoutsTable.remove(firstRow);
         }
         endRemoveRows();
 
+        if (freeActivitiesHolderIsRemoved) {
+            //! D290 (Free-Activities layout reassignment on removal): upstream
+            //! detected this case but never acted on it ("we need to reassign
+            //! it properly"); without the reassignment, saving leaves free
+            //! activities with no layout to load and they show no dock at all.
+            reassignFreeActivities();
+        }
+
         return true;
     }
 
     return false;
+}
+
+//! Hands the Free-Activities assignment to a surviving layout after its
+//! holder was removed (D290). The inheritor choice - none needed while a
+//! Free- or All-Activities holder survives, else the first enabled layout,
+//! else the first layout at all - lives in
+//! Data::LayoutsTable::freeActivitiesInheritorId(). An empty table needs no
+//! reassignment here: at runtime the synchronizer force-loads a Default
+//! layout on all activities when nothing is loadable (its
+//! syncMultipleLayoutsToActivities safety arm).
+void Layouts::reassignFreeActivities()
+{
+    const QString inheritorId = m_layoutsTable.freeActivitiesInheritorId();
+
+    if (inheritorId.isEmpty()) {
+        return;
+    }
+
+    qWarning() << "Settings::Model::Layouts :: the removed layout(s) held the Free Activities assignment; layout"
+               << m_layoutsTable[inheritorId].name << "inherits it";
+
+    setCurrentLayoutForFreeActivities(inheritorId);
 }
 
 QString Layouts::layoutNameForFreeActivities() const

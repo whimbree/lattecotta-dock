@@ -1,5 +1,6 @@
 /*
     SPDX-FileCopyrightText: 2020 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -29,6 +30,7 @@ public:
     LayoutsTable &operator=(LayoutsTable &&rhs);
     LayoutsTable subtracted(const LayoutsTable &rhs) const;
 
+    QString freeActivitiesInheritorId() const;
     void setLayoutForFreeActivities(const QString &id);
 };
 
