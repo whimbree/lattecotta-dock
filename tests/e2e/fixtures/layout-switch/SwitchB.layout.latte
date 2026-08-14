@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# Layout-switch fixture B, derived from
+# shell/package/contents/templates/Default.layout.latte: one always-visible
+# LEFT dock (location=5, vertical formfactor=3), containment id 2,
+# appletOrder=5;4 (org.kde.plasma.analogclock before org.kde.latte.plasmoid -
+# the REVERSE of SwitchA's plugin order). Every discriminator is inverted
+# against SwitchA.layout.latte so the 120/121/122 layout-switch recipes can
+# tell the two layouts apart by containment id, edge, and applet order alone.
+
+[ActionPlugins][1]
+RightButton;NoModifier=org.kde.latte.contextmenu
+
+[Containments][2]
+activityId=
+byPassWM=false
+dockWindowBehavior=true
+enableKWinEdges=true
+formfactor=3
+immutability=1
+isClonedFrom=-1
+isPreferredForShortcuts=false
+lastScreen=0
+layoutId=
+location=5
+name=Switch B Dock
+onPrimary=true
+plugin=org.kde.latte.containment
+raiseOnActivityChange=false
+raiseOnDesktopChange=false
+screensGroup=0
+timerHide=700
+timerShow=200
+viewType=0
+visibility=0
+wallpaperplugin=org.kde.image
+
+[Containments][2][Applets][4]
+immutability=1
+plugin=org.kde.latte.plasmoid
+
+[Containments][2][Applets][4][Configuration]
+PreloadWeight=0
+
+[Containments][2][Applets][4][Configuration][General]
+isInLatteDock=true
+
+[Containments][2][Applets][5]
+immutability=1
+plugin=org.kde.plasma.analogclock
+
+[Containments][2][Applets][5][Configuration]
+PreloadWeight=0
+
+[Containments][2][General]
+advanced=false
+alignmentUpgraded=true
+appletOrder=5;4
+configurationSticker=true
+panelSize=10
+shadowOpacity=60
+shadowSize=45
+shadows=All
+shadowsUpgraded=true
+showGlow=false
+tasksUpgraded=true
+titleTooltips=false
+zoomLevel=17
+
+[Containments][2][Indicator]
+customType=
+enabled=true
+type=org.kde.latte.default
+
+[LayoutSettings]
+activities=
+backgroundStyle=0
+color=red
+customBackground=
+customTextColor=
+icon=
+lastUsedActivity=
+launchers=
+popUpMargin=-1
+preferredForShortcutsTouched=false
+showInMenu=true
+version=2
