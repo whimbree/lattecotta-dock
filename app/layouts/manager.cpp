@@ -496,7 +496,7 @@ void Manager::setOnActivities(QString layoutName, QStringList activities)
     }
 }
 
-void Manager::cleanupOnStartup(QString path)
+void Manager::cleanupOnStartup(const QString &path)
 {
     //! Persisted screen-group replicas are adopted at reload instead of being
     //! stripped and regenerated (D283): the startup partition loads each one
@@ -504,7 +504,17 @@ void Manager::cleanupOnStartup(QString path)
     //! addView path. Only exports and cross-mode moves still call
     //! removeScreenGroupDerivedViews so shared files stay replica-free.
 
-    KSharedConfigPtr filePtr = KSharedConfig::openConfig(path);
+    //! One KConfig repository exists per active layout file:
+    //! AbstractLayout::setFile and Plasma's Corona::config() open
+    //! (path, SimpleConfig), and the CentralLayout is constructed before this
+    //! scrub runs. The KSharedConfig cache keys on open flags, so a
+    //! default-flags open here created a SECOND repository over the same
+    //! file: its deletions synced the disk but never reached the entry map
+    //! the corona restores from, and a restored ghost containment was then
+    //! written straight back to disk by the layout's startup sync (D302).
+    //! Same-flags open joins the live repository regardless of load order.
+    KSharedConfigPtr filePtr =
+        KSharedConfig::openConfig(path, KConfig::SimpleConfig);
 
     KConfigGroup actionGroups = KConfigGroup(filePtr, "ActionPlugins");
 
@@ -538,6 +548,13 @@ void Manager::cleanupOnStartup(QString path)
     for (const auto &cId : removeContaimentsList) {
         containmentGroups.group(cId).deleteGroup();
     }
+
+    //! The shared repository outlives this call (the CentralLayout holds a
+    //! reference), so the destructor sync that flushed the old temporary
+    //! instance never runs; sync explicitly so readers that open the file
+    //! with an independent repository (Storage's default-flags opens) see
+    //! the scrubbed disk state immediately.
+    filePtr->sync();
 }
 
 

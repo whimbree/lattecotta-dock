@@ -112,6 +112,12 @@ public:
         uint originViewId,
         const QString &destinationLayoutName) const;
 
+    //! Removes deprecated or oldstyle config options from a layout file
+    //! before the corona restores it. Static (no Manager state): a pure
+    //! file scrub, directly testable against the corona-shaped
+    //! (path, SimpleConfig) repository it must stay visible to (D302).
+    static void cleanupOnStartup(const QString &path);
+
 public Q_SLOTS:
     void showAboutDialog();
 
@@ -136,7 +142,6 @@ private:
         const QString &originLayoutName,
         uint originViewId,
         const QString &destinationLayoutName) const;
-    void cleanupOnStartup(QString path); //!remove deprecated or oldstyle config options
     void clearUnloadedContainmentsFromLinkedFile(QStringList containmentsIds, bool bypassChecks = false);
 
     void loadLatteLayout(QString layoutPath);

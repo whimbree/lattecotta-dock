@@ -1,4 +1,4 @@
-125
+126
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -13,6 +13,7 @@ autosizeenginetest
 backgroundstatetest
 badgemathtest
 behaviorwiringaudittest
+cleanuponstartuptest
 colorizerdecisiontest
 colortoolstest
 commontoolstest
