@@ -172,6 +172,22 @@ target_include_directories(storagetest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+# D302 (the startup config scrub wrote around the corona's live KConfig
+# repository): the real Manager::cleanupOnStartup against the corona-shaped
+# (path, SimpleConfig) double-open over temp layout fixtures - the scrub must
+# land in the repository the session restores from AND reach the disk bytes;
+# carries its own main() so the XDG homes are throwaway before
+# QGuiApplication.
+ecm_add_test(cleanuponstartuptest.cpp
+    TEST_NAME cleanuponstartuptest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(cleanuponstartuptest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(cleanuponstartuptest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
 # UniversalSettings over a throwaway KSharedConfig with a null corona: the
 # signal->saveConfig persistence wiring, guarded setters, documented
 # defaults, screen scales and the transient inConfigureAppletsMode contract;
