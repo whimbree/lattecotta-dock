@@ -238,6 +238,35 @@ class DockSystemData(_Readback):
     views: list[DockView]
 
 
+class LayoutRecord(_Readback):
+    """One entry of layoutsData's layouts[] - a LOADED (central) layout.
+
+    collectLayoutsData (app/dbusreports.cpp) serializes only the synchronizer's
+    central layouts, so in single mode the settled reply carries exactly one
+    record - the layout switching recipes assert that shape, never the whole
+    storage list. All four fields are written for every record by
+    serializeLayoutRecord (app/dbusreports.h), so all are required.
+    """
+
+    name: str
+    is_active: bool = Field(alias="isActive")
+    activities: list[str]
+    views_count: int = Field(alias="viewsCount")
+
+
+class LayoutsData(_Readback):
+    """The layoutsData reply: the memory mode plus the loaded-layout records.
+
+    ``memory_usage`` is the dock's own mode name from memoryUsageName
+    (app/dbusreports.h): "single" or "multiple" ("current" is a query sentinel
+    the manager never reports). Kept as ``str`` for the same reason View's
+    enum-like fields are: the dock owns the name set.
+    """
+
+    memory_usage: str = Field(alias="memoryUsage")
+    layouts: list[LayoutRecord]
+
+
 _VIEWS = TypeAdapter(list[View])
 _APPLETS = TypeAdapter(list[Applet])
 _TASKS = TypeAdapter(list[Task])
@@ -412,6 +441,11 @@ def view_tasks(containment_id: int) -> list[Task]:
 def dock_system_data() -> DockSystemData:
     """dockSystemData, validated into the typed snapshot."""
     return DockSystemData.model_validate(read_json("dockSystemData"))
+
+
+def layouts_data() -> LayoutsData:
+    """layoutsData, validated into the typed memory-mode-plus-layouts snapshot."""
+    return LayoutsData.model_validate(read_json("layoutsData"))
 
 
 def _find_view(containment_id: int) -> View | None:

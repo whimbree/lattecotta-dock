@@ -29,6 +29,7 @@ from latte_harness.recipe import (
     Applet,
     DockSystemData,
     DockView,
+    LayoutsData,
     RecipeError,
     Task,
     View,
@@ -195,6 +196,47 @@ def test_task_model_rejects_a_missing_widened_field() -> None:
     incomplete = {k: v for k, v in _one_task_dict().items() if k != "launcherUrl"}
     with pytest.raises(ValidationError):
         Task.model_validate(incomplete)
+
+
+def _one_layouts_dict() -> dict[str, object]:
+    """A COMPLETE layoutsData reply - the serializeLayoutsData surface: the
+    memory-mode name plus one serializeLayoutRecord entry (all four record
+    fields are always written)."""
+    return {
+        "memoryUsage": "single",
+        "layouts": [
+            {"name": "SwitchA", "isActive": True, "activities": [], "viewsCount": 1},
+        ],
+    }
+
+
+def test_layouts_model_parses_a_real_payload() -> None:
+    data = LayoutsData.model_validate(_one_layouts_dict())
+    assert data.memory_usage == "single"
+    assert len(data.layouts) == 1
+    record = data.layouts[0]
+    assert record.name == "SwitchA"
+    assert record.is_active is True
+    assert record.activities == []
+    assert record.views_count == 1
+
+
+def test_layouts_model_rejects_a_missing_record_field() -> None:
+    # viewsCount is always written by serializeLayoutRecord; a record without
+    # the key is malformed and must fail at the boundary, never default to 0.
+    incomplete: dict[str, object] = {
+        "memoryUsage": "single",
+        "layouts": [{"name": "SwitchA", "isActive": True, "activities": []}],
+    }
+    with pytest.raises(ValidationError):
+        LayoutsData.model_validate(incomplete)
+
+
+def test_layouts_model_tolerates_a_dock_side_field_addition() -> None:
+    # extra="ignore" is the documented tolerance: a field the dock adds later
+    # must not break existing recipes.
+    data = LayoutsData.model_validate({**_one_layouts_dict(), "futureField": 7})
+    assert data.layouts[0].name == "SwitchA"
 
 
 # ---- the busctl-reply unescape (byte-identical to the e2e_json sed) ---------
