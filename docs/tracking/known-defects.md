@@ -125,8 +125,9 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   crashed run's dock log was captured (session scratchpad, d303-crash-dock.log).
 
 ### D302 - cleanupOnStartup's ActionPlugins cleanup writes around Corona's live KConfig instance
-- STATUS: SUSPECTED (found by code-reading during the D283 root-cause
-  trace; not yet driven).
+- STATUS: FIXED (2026-08-14 on fix/d302-kconfig-split, "fix(layouts):
+  make cleanupOnStartup's scrub visible to the session being loaded";
+  final hash resolves at PR merge).
 - FOUND: 2026-08-11, tracing why the reload replica strip no longer
   reached the corona (the D283 mechanism): cef08bd1f made
   AbstractLayout::setFile open the layout file as
@@ -136,19 +137,27 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   mutates the file through the default-flags
   KSharedConfig::openConfig(path). The mutation syncs the disk but never
   reparses the corona's instance.
-- SYMPTOM (hypothesized): cleanupOnStartup's remaining duty, deleting
-  deprecated [ActionPlugins] right-button entries, is invisible to the
-  session being loaded - the corona restores from the pre-clean state,
-  and the on-disk cleanup only takes effect at some later start whose
-  write ordering differs. Low severity in practice:
-  GenericLayout::addContainment re-asserts the RightButton contextmenu
-  binding on every containment regardless of the ActionPlugins state.
-  The Containments half of the same split WAS user-visible as D283's
-  mechanism and is gone since the D283 fix stopped mutating containment
-  groups at load.
-- FIX SHAPE when driven: route cleanupOnStartup's writes through the
-  same (path, SimpleConfig) repository the corona reads, or perform them
-  before the CentralLayout opens the file.
+- DRIVEN (2026-08-14, nested vehicle): seeding the default layout with a
+  deprecated org.kde.contextmenu [ActionPlugins] binding plus a ghost
+  org.kde.desktopcontainment containment and restarting showed the split
+  is WORSE than the ActionPlugins-only hypothesis: the ghost containment,
+  deleted from the disk by the scrub, was restored from the stale
+  repository and written back to disk by the layout's startup sync
+  already before the first post-startup read - the on-disk cleanup of the
+  Containments half was fully undone every session. The ActionPlugins
+  half stayed scrubbed on disk even pre-fix (nothing rewrites the
+  top-level group) and has no same-session runtime observable, as
+  hypothesized; GenericLayout::addContainment re-asserts the RightButton
+  binding regardless.
+- FIX: unified onto one repository per file, the recorded root: the scrub
+  opens (path, SimpleConfig) so it joins the corona's live repository
+  regardless of load order, and syncs explicitly since the shared
+  repository outlives the call. Reordering was rejected because any code
+  path opening the file before the scrub re-breaks it. cleanupOnStartup
+  became public static; cleanuponstartuptest pins both duties against the
+  corona-shaped double-open (red pre-fix on the shared-repository case),
+  and the driven recipe went red-to-green across the fix with the stock
+  org.kde.latte.contextmenu binding surviving untouched.
 
 ### D297 - servicesFromCmdLine recurses forever on a bare ignored runtime
 - STATUS: FIXED same-day (found and fixed 2026-08-11, merged in PR #239 at
