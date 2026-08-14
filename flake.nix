@@ -16,7 +16,7 @@
   # nixpkgs node of /persist/etc/nixos/flake.lock for the full one.
   # The final packaging (Phase 11) targets whatever the installing system has;
   # this pin is only the dev/test shell.
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/0e251e24a4f24e036a084b6b4b2d2491af4167f4";
 
   outputs = { self, nixpkgs }:
     let
