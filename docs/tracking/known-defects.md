@@ -125,9 +125,8 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   crashed run's dock log was captured (session scratchpad, d303-crash-dock.log).
 
 ### D302 - cleanupOnStartup's ActionPlugins cleanup writes around Corona's live KConfig instance
-- STATUS: FIXED (2026-08-14 on fix/d302-kconfig-split, "fix(layouts):
-  make cleanupOnStartup's scrub visible to the session being loaded";
-  final hash resolves at PR merge).
+- STATUS: FIXED (2026-08-14, merged in PR #249 at 66da6f4f1, "fix(layouts):
+  make cleanupOnStartup's scrub visible to the session being loaded").
 - FOUND: 2026-08-11, tracing why the reload replica strip no longer
   reached the corona (the D283 mechanism): cef08bd1f made
   AbstractLayout::setFile open the layout file as
