@@ -125,27 +125,6 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   layout: unfixed logs 3 TypeError lines at main.qml:280 per startup (both
   null shapes observed), fixed logs 0 with the same probe.
 
-### D303 - Startup slide-out committed a zero-width layer surface (nested vehicle, observed once)
-- STATUS: OPEN (observed once, not yet reproduced; Phase 8 startup/geometry
-  territory).
-- FOUND: 2026-08-11, incidentally while driving the D298 e2e recipe: the
-  first nested-vehicle launch of the D21 top-edge dock died with
-  `zwlr_layer_surface_v1#56: error 1: the layer surface has a width of 0 but
-  its anchor doesn't include the left and the right screen edge` followed by
-  "The Wayland connection experienced a fatal error: Protocol error", during
-  the startup slide-out ("startup: delayer fired, starting slide-out" then
-  struts removed, then the error). The identical seed passed on the immediate
-  rerun, and the 110 control recipe passed in the same vehicle: 1 crash in 3
-  launches that session.
-- MECHANISM (hypothesis): something drove the view window width to 0 during
-  the startup slide-out and the width reached the layer surface before a
-  valid size did; wlr-layer-shell refuses a zero-size surface whose anchors
-  do not span the axis, and the protocol error kills the Wayland connection.
-  The SubConfigView family already defers show until sized for exactly this
-  compositor rule; the main view's slide-out path evidently can still commit
-  a zero width. Needs a reproduction under the Phase 8 startup work; the
-  crashed run's dock log was captured (session scratchpad, d303-crash-dock.log).
-
 ### D302 - cleanupOnStartup's ActionPlugins cleanup writes around Corona's live KConfig instance
 - STATUS: FIXED (2026-08-14, merged in PR #249 at 66da6f4f1, "fix(layouts):
   make cleanupOnStartup's scrub visible to the session being loaded").
@@ -5287,6 +5266,46 @@ app/wm/waylandinterface.cpp:299 (Phase 4 WId), app/layouts/synchronizer.cpp:507
 carries its own detail or points into the plan and the reference docs.
 
 ## Fixed (kept for the record)
+
+### D303 - Startup slide-out committed a zero-width layer surface
+- STATUS: FIXED (2026-08-15, 0467fe28c on the fix/d303-zero-width-surface
+  branch; hash re-resolves at merge).
+- FOUND: 2026-08-11, incidentally while driving the D298 e2e recipe: the
+  first nested-vehicle launch of the D21 top-edge dock died with
+  `zwlr_layer_surface_v1#56: error 1: the layer surface has a width of 0 but
+  its anchor doesn't include the left and the right screen edge` followed by
+  "The Wayland connection experienced a fatal error: Protocol error", during
+  the startup slide-out. The identical seed passed on the immediate rerun:
+  1 crash in 3 launches that session.
+- MECHANISM (root-caused 2026-08-15 at the wire level; the original
+  window-width-reached-zero hypothesis was wrong): while a view carries the
+  fallback anchoring from configureView()/updateAnchoring(), its anchors span
+  the length axis (masked horizontal surfaces structurally, Justify surfaces
+  via the alignment mapping) and LayerShellQt zeroes the desired size of
+  every anchor-spanned axis (QWaylandLayerSurface::setDesiredSize,
+  layer-shell-qt 6.7.3), so the surface's committed desired width is 0 for
+  the whole startup phase - legal exactly while the anchors span. The first
+  placement publish (viewPlacement, the Top|Left D153 encoding) stops
+  spanning; LayerShellQt reacts to anchorsChanged with set_anchor then a
+  corrective set_size as two wire requests (12us apart in the captured run)
+  while the QtQuick render thread commits frames every ~16.6ms from its own
+  queue. A commit landing inside that gap presents non-spanning anchors with
+  the stale zero width and wlr-layer-shell kills the connection (~1/1400 per
+  publish - rare, matching one crash across many sessions).
+- FIX (0467fe28c): drop the map across any span-dropping anchor flip of a
+  mapped view surface (viewPlacementDropsSpannedAxis feeding the
+  m_showAfterLayerShellPlacement defer-show transaction) - an unmapped window
+  has no surface to commit, so the recreated surface receives its complete
+  state before its first commit; and fire the startup publish synchronously
+  in onStartupFinished (guards intact) so the remap happens while the content
+  is still slid out, before the reveal animation starts.
+- EVIDENCE: pre-fix WAYLAND_DEBUG capture (D21 seed, 1600x1000 nested
+  vehicle): set_size(0,44) from map to flip, set_anchor(5) then +12us
+  set_size(1440,44), render-thread commits every ~16.6ms. Post-fix capture:
+  destroy, fresh get_layer_surface, complete state, then the first commit.
+  12 pre-fix and 12 post-fix cold starts of the seed all clean (the race is
+  rare by construction: trials bound the frequency, the capture carries the
+  proof); layershellmapping/positionergeometry/reservation unit tests green.
 
 ### D298 - ThemeExtended scheme snapshots stale after a runtime color-scheme change
 - STATUS: FIXED (PR #243: fe84be275 the refresh fix with its
