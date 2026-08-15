@@ -136,7 +136,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   operand explicitly and carry a D295 pointer comment. Byte-equivalent parse:
   `&&` binds tighter than `||` in JS/QML, so `A || B && C` already meant
   `A || (B && C)`; the added parentheses reproduce that exact grouping. Commit:
-  (hash at merge).
+  (537560402, merged PR #245).
 - FOUND: 2026-08-10, while parenthesizing the three unambiguous precedence sites
   the audit could resolve. Two sites have the shape `A || (grouped) && trailing`
   where `trailing` reads as if it should gate the whole `A || (grouped)` but,
@@ -4061,7 +4061,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   affected environment; blocked the R4 batch gate).
 
 ### D276 - the 040 preview-tooltip golden no longer matches this machine
-- STATUS: FIXED (2026-08-11, re-blessed dark; hash at merge).
+- STATUS: FIXED (2026-08-11, re-blessed dark; 537560402 parens, a38de2b42 re-bless, PR #245).
 - ADDENDUM (2026-08-06): 031-ruler-slider-crossview's golden was the same
   class (a light-palette golden against the current dark render, 96.48%
   mismatch) and was re-blessed dark through the recipe's own E2E_BLESS
@@ -4091,7 +4091,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   BETA); the only delta is the palette class, light background with dark text
   to dark background with light text. The blessed frame verified by eye per
   the recipe header, and the re-driven recipe reports pixel match and PASS
-  twice across two independent vehicle bring-ups. Commit: (hash at merge).
+  twice across two independent vehicle bring-ups. Commit: a38de2b42 (PR #245).
 
 ### D272 - storagetest asserts permission-bit refusal that root bypasses
 - STATUS: FIXED (2026-08-11, the defect-quick-wins branch).
