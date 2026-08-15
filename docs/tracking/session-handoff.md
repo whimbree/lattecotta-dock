@@ -106,6 +106,25 @@ via gh pr merge --rebase, then verifies tree identity (git diff gated-head
 origin/main must be empty), transfers the stamp to the content-identical
 merged sha, and reconciles hash placeholders in a docs commit.
 
+## 2026-08-14 layout-switch recipe wave (branch test/multilayout-recipe-wave)
+
+The multi-layout/layout-switching surface's first dedicated e2e coverage
+(switchToLayout previously had ZERO harness callers): recipes
+120-layout-switch-swap, 121-layout-switch-restart-persistence and
+122-layout-switch-applet-order-roundtrip, on the typed
+LayoutRecord/LayoutsData readback (recipe.layouts_data()), the
+layout_switch harness module, and the SwitchA/SwitchB inverted-discriminator
+fixtures (tests/e2e/fixtures/layout-switch/). Each recipe green twice in the
+nested vehicle. Plan: two Phase 8 items (the wave tick + the OPEN
+multi-activity coverage gap, blocked on the vehicle's single default
+activity) and a Phase 10 item for D310. Registry: D310 filed (fakepointer's
+canonical ~/.local/bin symlink dangles after any fresh build and the e2e
+runner then refuses every run machine-wide; worked around by building the
+tool into the wave worktree and setting E2E_FAKEPOINTER). GATE: deliberately
+NOT run in the wave's worktree - the nixpkgs re-pin was landing on main at
+the time, so the gate is deferred to the orchestrator's post-re-pin merge
+gate (the branch still needs its stamp before push).
+
 ## NEXT-SESSION FOCUS (set 2026-08-11)
 
 The -Werror campaign (warnings-clean under -Wall -Wextra -Werror behind

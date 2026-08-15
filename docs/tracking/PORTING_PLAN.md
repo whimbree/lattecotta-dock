@@ -2835,6 +2835,45 @@ multi-view, multi-monitor setup.
       layoutsTable_freeActivitiesInheritorChoice in datatypestest.
       Commits: 089a305fa (merged PR #248)
       
+- [x] Layout-switching e2e coverage (the multi-layout recipe wave,
+      2026-08-14). The switchToLayout/layoutsData D-Bus surface had ZERO
+      dedicated recipes - the largest untested surface in the layout code.
+      Landed three nested-vehicle typed-Python recipes, one contract each,
+      pull-asserting through layoutsData plus the typed views/applets
+      readbacks against two seeded single-mode fixture layouts whose every
+      discriminator is inverted (SwitchA: bottom dock, containment 1,
+      appletOrder=2;3; SwitchB: left dock, containment 2, appletOrder=5;4;
+      tests/e2e/fixtures/layout-switch/):
+      120-layout-switch-swap (a switch swaps the loaded central layout and
+      its whole view set), 121-layout-switch-restart-persistence
+      (singleModeLayoutName follows the switch at the clean-stop flush and
+      the switched-to layout comes back after a restart), and
+      122-layout-switch-applet-order-roundtrip (per-layout applet order
+      survives switch-away-and-back, SwitchB's reversed order as the
+      non-vacuity control). Substrate: the typed LayoutRecord/LayoutsData
+      readback models and recipe.layouts_data(), plus the layout_switch
+      harness module (stop-first seeding with a live-dock refusal, the
+      single-active-layout wait that names its last observed reply on
+      timeout, the viewAppletsOrder/viewAppletsData plugin-sequence join),
+      under the strict harness gate with unit tests. Each recipe run green
+      twice in the nested vehicle; run evidence in the commit bodies.
+      Commits: (filled at merge)
+
+- [ ] Multi-activity layout assignment has NO e2e coverage (the gap the
+      2026-08-14 layout-switch wave deliberately left). The nested vehicle
+      dbus-activates kactivitymanagerd with exactly ONE default activity
+      (latte_harness.seed preseeds WAYLAND_DISPLAY into the activation
+      environment precisely so the activities consumer reaches Running),
+      so switchToLayoutInMultipleModeBasedOnActivities
+      (app/layouts/synchronizer.cpp) can only ever see one activity id:
+      per-activity MultipleLayouts assignment, free-activities layouts and
+      activity-driven switching are all undrivable in the vehicle today.
+      Future work: probe creating a second activity inside the nested
+      session via the kactivities D-Bus API (org.kde.ActivityManager
+      /ActivityManager AddActivity) - feasibility unprobed; if it works, a
+      MultipleLayouts recipe wave (memoryUsage=1, per-activity assignment,
+      activity-switch-driven layout swap) becomes drivable.
+      Commits:
 
 ### Phase 9: Theming, colorization, multi-monitor visual polish
 
@@ -3196,6 +3235,30 @@ showed how much of the dock can only be driven by a pointer today.
       test IS pointer delivery (input masks, hover chains, drags) -
       those keep using fakepointer as today, with the glide rules from
       the live-verification skill.
+      Commits:
+- [ ] Root-fix D310 (fakepointer's canonical install dangles after any
+      fresh build): $HOME/.local/bin/fakepointer is a symlink into the
+      main checkout's build/_e2e-tools/, which a fresh build deletes, and
+      the e2e runner's precondition then refuses EVERY run on the machine
+      - even recipe sets that never inject input (driven evidence and the
+      full mechanism in docs/tracking/known-defects.md D310, found
+      2026-08-14 by the layout-switch wave's first run). Candidates:
+      run-e2e self-heals by building scripts/tools/fakepointer.c into
+      $E2E_BUILD/_e2e-tools when the resolved E2E_FAKEPOINTER path is
+      missing (the same self-heal precedent as its uv/devshell re-exec),
+      or the canonical install becomes a real copy owned by an install
+      script instead of a symlink into a wipeable build tree.
+      Commits:
+- [ ] Fold layoutsData (and DockSystemData) into the model-vs-truth
+      drift net. Both are typed readback models consumed by recipes but
+      deliberately outside latte_harness.dbus_schema_pin's three pinned
+      per-record surfaces, relying on boundary validation plus
+      extra="ignore" - exactly the hand-maintained-mirror class the net
+      was built for, and layoutsData even has a serialize*Record shape
+      like the pinned three (noted by the multi-layout wave's
+      independent review, 2026-08-14). Widening the pin is a small
+      dbus_schema_pin change plus per-surface UNMODELED justifications.
+      Commits:
       Commits:
 - [ ] Full AT-SPI support: the dock must be a first-class citizen for
       assistive technology. Wire Qt's accessibility bridge end to end:
