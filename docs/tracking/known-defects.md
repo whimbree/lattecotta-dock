@@ -518,6 +518,27 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   on abort; the flicker is presentation jitter). Deferral stands: the Qt5
   drag-hover comparison decides FIX vs ACCEPTED and the F2-add investigation
   remains the owner.
+- ARCHAEOLOGY VERDICT (2026-08-15): CONFIRMED Qt6/Wayland regression, not
+  Qt5-faithful. The handler code is byte-equivalent to Qt5 (the grow-on-enter
+  addEvent and the immediate onDragLeave park are unchanged since 2019-2021,
+  checked at 0cc73324c), and the window never resizes in either era - the
+  moving part is the COMMITTED INPUT REGION: drag-driven relayout flows into
+  updateMaskArea -> inputMask -> setMask, and on Wayland KWin re-evaluates dnd
+  focus against that region on commit, so the drag's own mask churn bounces
+  enter/leave (enter with ZERO motion events before leave is the
+  compositor-bounced-focus signature; wl_data_device.motion only flows while
+  focus is held, which is why onDragMove never fires). X11's XDND is
+  source-driven at toplevel granularity and could not express the bounce.
+  Corroboration: latte-dock-ng abandoned the QML DropArea path entirely on
+  Qt6/Wayland (their 735525810 C++ reroute) and debounced the identical
+  oscillation family in hover (their 814edad9e). RECORDED FIX SHAPE: hold the
+  input mask during a contained drag via the D4 InputMaskFlush seam
+  (View::containsDrag is already maintained at view.cpp:2694-2709; keep the
+  applied mask at the union/full band while containsDrag, defer every
+  shrink+settle to drop/leave-settle), with an optional leave-debounce in
+  DragDropArea.qml as the symptom-level companion (upstream's clearInfoTimer
+  is the in-file precedent). The visual grow-on-enter stays (Qt5-faithful,
+  BUG 408926). Implementation is a review-ready follow-up task.
 
 ### D19 - About dialog keep-above is a silent X11-shaped no-op on wayland
 - STATUS: OPEN, stub recorded (2026-08-11, the defect-quick-wins branch): the
@@ -5268,8 +5289,7 @@ carries its own detail or points into the plan and the reference docs.
 ## Fixed (kept for the record)
 
 ### D303 - Startup slide-out committed a zero-width layer surface
-- STATUS: FIXED (2026-08-15, 8564e277b, merged PR #251 (originally authored on the fix/d303-zero-width-surface
-  branch).
+- STATUS: FIXED (2026-08-15, 8564e277b, merged in PR #251).
 - FOUND: 2026-08-11, incidentally while driving the D298 e2e recipe: the
   first nested-vehicle launch of the D21 top-edge dock died with
   `zwlr_layer_surface_v1#56: error 1: the layer surface has a width of 0 but

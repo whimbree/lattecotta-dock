@@ -1,111 +1,89 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-08-13.
+Last updated 2026-08-15.
 
-## IN-FLIGHT SALVAGE STATE (2026-08-11 autonomous session, written at the
-## usage-limit cut; resets 4am - read this FIRST, supersedes the focus below)
+## NEXT-SESSION FOCUS (set 2026-08-15)
 
-MERGED this session: PR #238 (defect quick wins: D289 dup connect, D296
-menu odd-count refusal, D60 qmltypes regen, D272 root QSKIP, D64 xkbcommon
-link, D19 keep-above stub) and PR #239 (fork-sync fold-ins: D297 tasktools
-recursion fix with SIGSEGV-proven regression test, KPluginFactory hardening
-at two sites, vendored backend hygiene, six INVESTIGATE plan filings). Both
-tree-verified against their full-gate stamps after GitHub's rebase-merge
-sha rewrite; hashes reconciled (B2a -> 50efbacd8, D297 -> c16ac1721). Also
-on main: the open-registry triage (all 22 non-FIXED entries dispositioned,
-42 stale branch-sha statuses remapped), the 2026-08-11 fork-sync pass
-(CLAUDE.md hashes: ng a48c121d8, qt6 unchanged 81384003) with its verdict
-report and the Phase 9 theming audit inventory in docs/agent-logs/, and
-three Phase 8 verification-only closures (context-menu .so naming already
-done at 716714516; RightButton re-assert NOT APPLICABLE at pin, libplasma
-6.7.3 restores ActionPlugins with shell-defaults fallback; comic
-switch-threshold hover expansion ACCEPTED Qt5-faithful, identical
-size-check precedence both majors).
+The 2026-08-11..15 autonomous defect-and-audit campaign is COMPLETE: fourteen
+PRs merged (#238-#251), twenty-two defects moved (fixed, accepted, or
+dispositioned), the theming audit (Phase 9) landed end to end, the Phase 8
+implementable remainder closed, the settings-audit disposition executed, and
+the first layout-switching e2e coverage landed. The full session record is the
+dated sections below. Next session's higher-value work:
+1. D209 (the partial-reservation recipe front door): the port was resumed
+   in flight at session end - if its branch test/d209-recipe-front-door is
+   green and unmerged, run the merge tail (review done? NO - it still needs
+   its first independent review, then rebase + full gate + merge).
+2. D18 (widget-explorer drag flicker): now a CONFIRMED Qt6/Wayland
+   regression with the mechanism named by source archaeology - the drag
+   mutates the compositor's committed input region under the pointer
+   (X11's XDND could not express the bounce; the enter-with-zero-moves
+   signature is compositor-bounced dnd focus). Recorded fix shape: hold
+   the input mask during a contained drag via the D4 InputMaskFlush seam
+   (View::containsDrag already exists); optional leave-debounce as the
+   symptom-level companion. Review-ready implementation task.
+3. D310 (fakepointer's canonical install dangles after any fresh build,
+   bit this session twice): implement the run-e2e self-heal per the plan
+   item.
+4. Gate ordering follow-up: gate-all runs harness-check BEFORE build-check,
+   so a rebased branch adding a ctest entry trips the coverage ratchet
+   against the stale configure (bit twice this session; the workaround is
+   a manual cmake reconfigure first). Move a reconfigure into the gate
+   ahead of harness-check, or reorder the legs with the ordering reasoned.
+5. The bigger open engineering items: D152 (linked portrait overflow,
+   needs the dual-output vehicle), D111's group-wide removal transaction,
+   D268's hold-and-release harness, the multi-activity coverage probe
+   (kactivities AddActivity in the vehicle), and the drift-net widening
+   for layoutsData/DockSystemData.
+OWED LIVE CHECKS (need the maintainer at the desk): the settings-window
+at-desk semantic walk; a lock/unlock DPMS cycle; the autostart entry decision
+(it still points at the packaged latte-dock-ng binary); one real logout/login
+observing the SIGTERM line; an end-to-end import-full drive (D293's tail);
+D299's config-window palette-divergence check on the second monitor; the
+Window Colors KWin-script availability check; and the D258 upstream
+Solid/KIO report (needs the maintainer's bugtracker account).
 
-READY-TO-MERGE branches (each gate-green in its worktree under
-.claude/worktrees/, stamp = head, none pushed except where noted):
-1. fix/d57-wheel-threshold (88175a7c6/51f6737d8/22c341ab8; merged PR #242, stamp
-   14a9ae541): the SC-CW2 signed wheel-threshold fix (angle < -12),
-   reproduction recipe promoted to a status-0 regression guard, both
-   nested runs green with the corrected matrix. NEEDS: first independent
-   review, rebase, full gate, merge.
-2. fix/d283-clone-reload (head 8c11114e7, stamp matches; PUSHED, PR #240
-   open): persisted AllScreensGroup replica adoption on reload; first
-   review's MAJOR (iterator invalidation in completeStartupViewCreation)
-   FIXED via root-snapshot in 8c11114e7; incidental finding renumbered
-   D296->D302. NEEDS: the second independent review (required for a
-   MAJOR), rebase (known-defects.md conflicts expected), full gate, merge.
-3. fix/d274-input-region (head 77058e0a1, stamp matches; PUSHED, PR #241
-   open): the 1Hz autosize-oscillation root cause of D274 plus the D4
-   visibility-classified mask hold. First review verdict MERGE AFTER
-   FIXES with one MAJOR still OPEN: the AutoSize confirm shield re-arms
-   forever at the 16px floor-overflow state (review supplied the one-line
-   remedy: restart the confirm timer only when result.nextIconSize
-   actually differs from sizer.iconSize, keeping the write after) plus a
-   MINOR (51eb3c... attribution says "added the connection", should say
-   "retargeted"). NEEDS: that fix + re-gate + second review + merge.
+## 2026-08-11..15: the autonomous campaign - fourteen PRs, mechanics and lessons
 
-PARTIAL worktrees (killed by the usage limit mid-work, commits intact):
-4. fix/theming-audit-fixes (4 commits: bc2dc4296 runtime scheme refresh
-   fix, 99b9184ea its e2e guard, 15312078f glow3D self-binding fix,
-   58d053d0f double-toggle removal) plus DIRTY uncommitted work on the
-   config-window KDE_COLOR_SCHEME_PATH pin (infoview.cpp,
-   subconfigview.cpp, view.cpp modified, registry entry started). Resume:
-   finish the pin commit, registry entries (numbers D298-D301 reserved for
-   this branch), fast gate, then the normal tail.
-5. fix/settings-audit-disposition (5 commits: dead-checkbox removals,
-   dead preset writes dropped, wheelEnabled comment, mislabel fix,
-   isInNowDockPanel embed-logic revival) plus DIRTY item-6 fragile-reflect
-   conversions (AppearanceConfig/BehaviorConfig direct checked: bindings).
-   Resume: finish item 6 with its nested first-open evidence, item 7
-   check, handoff PARKED->DECIDED note, fast gate, tail. Decision rule
-   recorded in the commit bodies (Qt5-consumed -> wire, Qt5-dead ->
-   remove).
-6. chore/dispositions-d295-d276 (1 commit 8f19a1474, the D295
-   semantics-preserving parens) plus the re-blessed 040 golden MODIFIED
-   uncommitted; the bless run PASSED 1/1 but the load-bearing BY-EYE check
-   of the blessed frame was not yet done. Resume: eyeball the golden,
-   commit with the comparison evidence, two green confirmation runs, fast
-   gate, tail.
-7. fix/phase8-remainder (tracker-ready guard sweep + wheel-bypass
-   verify-before-implement): DONE on the branch, fast-gate stamped.
-   Sweep fixed D304 (maxLength binding dereferences latteView while it
-   is still null; nested repro pair 3 TypeErrors -> 0) and D305
-   (EnvironmentActions dereferences the last-active-window chain
-   unguarded; shared activeWindowIsReady gate, SC-WT1 green); all other
-   read sites classified guarded or unreachable-null with proofs in the
-   plan item. Wheel item CLOSED NOT-APPLICABLE with driven evidence:
-   applets already receive their own wheel events (z-order routing,
-   Qt5-identical arrangement); 024-wheel-applet-passthrough.py pins the
-   routing both ways. Commits 1b0c4069a, 75132b8f0, 3fe56d71e + docs.
-   NEEDS: the normal tail (review, rebase, full gate, merge).
+Fourteen PRs merged through the full discipline (subagent authoring in
+isolated worktrees, one independent lean-Opus review per PR - a second
+review after any MAJOR finding - rebase, full gate on the rebased head,
+gh pr merge --rebase, tree-identity verification, stamp transfer, hash
+reconciliation): #238 defect quick wins, #239 fork-sync fold-ins, #240
+D283 clone-reload, #241 D274/D4 input mask, #242 D57 wheel threshold,
+#243 the theming wave (D298-D301), #244 the nixpkgs re-pin + CMake 4.3 C
+enablement, #245 dispositions (D295 parens, D276 re-bless), #246 the
+settings-audit disposition (D306/D307), #247 the Phase 8 remainder
+(D304/D305), #248 D290 Free-Activities reassignment, #249 D302 KConfig
+split, #250 the layout-switching recipe wave (D310 filed), #251 D303
+zero-width layer surface.
 
-DONE 2026-08-13 (formerly NOT STARTED here): D290 (Free-Activities layout
-reassignment on removal) implemented on fix/d290-freeactivities-reassignment
-(6023a6341 fix + tracking docs commit; branch-local hashes, resolve at
-merge). The nested repro ran FIRST per the recorded decision gate and
-confirmed the symptom (removal+save leaves no free-activities holder; a new
-activity loads no layout, viewsData refuses, no fallback fires), then the
-removal-site reassignment landed with the
-layoutsTable_freeActivitiesInheritorChoice pin in datatypestest; registry
-entry FIXED with pre/post evidence. NEEDS: push, PR, independent review,
-rebase, full gate at merge. OWED LIVE (for the
-maintainer): D258 upstream Solid/KIO report; the settings-window at-desk
-semantic walk; lock/unlock DPMS cycle; autostart entry decision (still
-points at the packaged ng binary); one real logout/login SIGTERM check;
-config-window palette-divergence check on the second monitor (theming
-branch); Window Colors KWin-script availability check.
-
-Merge-tail mechanics used this session (works, keep): agents gate with
-LATTE_GATE_FAST=1 in their worktrees (stamp lands in the worktree's
-build/), the orchestrator pushes FROM the worktree, opens the PR, runs one
-lean Opus review (second review only after a MAJOR), rebases in the main
-checkout, runs the FULL gate there, pushes with --force-with-lease, merges
-via gh pr merge --rebase, then verifies tree identity (git diff gated-head
-origin/main must be empty), transfers the stamp to the content-identical
-merged sha, and reconciles hash placeholders in a docs commit.
-
+Environment events and operational lessons (all verified this session):
+- The machine's NixOS system was rebuilt mid-session; the lockstep guard
+  correctly refused every gate until the re-pin (PR #244) landed. CMake
+  4.3.4 arrived with it and hard-errors fresh configures of a CXX-only
+  project (FindX11 probes); project() now enables C with the constraint
+  commented.
+- Concurrent gate-all runs from sibling worktrees starve each other's
+  qmlinteraction leg past its 1500s timeout (three independent
+  confirmations). Serialize gates across agents; check pgrep first.
+- gate-all's harness-check leg reads the ctest list from the EXISTING
+  configure; a rebased branch that adds a ctest entry needs a reconfigure
+  first or the ratchet reports a stale count (focus item 4 above).
+- Harness background tasks can be reaped mid-run; long gates now run
+  setsid-detached with a separate poller (the live-delivery precedent
+  extended to gates).
+- Agents resumed from transcript after a usage-limit kill can lose their
+  worktree cwd and operate on the MAIN checkout (one switched branches
+  mid-gate before being corrected); a resumed agent's first act must be
+  re-verifying git rev-parse --show-toplevel.
+- GitHub's rebase-merge sweeps any unpushed main-side docs commits into
+  the PR being merged (they land content-identically under new shas);
+  push main promptly after docs commits.
+- After every gh pr merge --rebase the merged tree was verified
+  byte-identical to the gated head (git diff <gated> origin/main empty)
+  before transferring the stamp to the rewritten sha.
 ## 2026-08-14 layout-switch recipe wave (branch test/multilayout-recipe-wave)
 
 The multi-layout/layout-switching surface's first dedicated e2e coverage
@@ -125,36 +103,6 @@ NOT run in the wave's worktree - the nixpkgs re-pin was landing on main at
 the time, so the gate is deferred to the orchestrator's post-re-pin merge
 gate (the branch still needs its stamp before push).
 
-## NEXT-SESSION FOCUS (set 2026-08-11)
-
-The -Werror campaign (warnings-clean under -Wall -Wextra -Werror behind
-LATTE_WERROR) and the audit-backlog cleanup (C++ CHUNK-1..6, QML C2/C3/C4/C6,
-dead Plasma-5/KF5 gates, the QtQuick.Layouts import family) are DONE - roughly
-17 PRs, and six real Qt6 bugs fixed along the way (D287, D288, D291, D292, D293,
-D294). The mechanical-cleanup vein is mined out; the remaining Qt5 import families
-are low-value churn, deliberately deferred. Next session's higher-value work:
-1. UNRESOLVED DEFECTS. Triage the ~20 OPEN/SUSPECTED entries in known-defects.md
-   into real-bug vs Qt5-faithful/accepted vs test-infra, then drive fixes for the
-   genuinely-broken user-facing ones (candidates: D19 about-dialog keep-above
-   no-op on wayland, D268 panel-focus timing). Surface
-   product-decision/live-check ones to the maintainer rather than guessing.
-   (D289, the dup-connection delete, landed 2026-08-11 - see the
-   defect-quick-wins section below; D283 is FIXED 2026-08-11, see its section
-   below; D274 and D4, the maximize input-region and hide-mask pair, are
-   FIXED 2026-08-11 - see the D274 section below.)
-2. PHASE 8 (the open README roadmap item) - layout/config persistence, session
-   shutdown, multi-screen edge cases. The plan has 58 unticked items, most of the
-   remaining gotcha-heavy ones here; several want a live desktop, so surface the
-   real-dock test moments.
-3. THEMING / COLORIZATION POLISH AUDIT (the other unchecked README item, Phase 9).
-Also worth an early cheap pass: the reference-fork + plasma-desktop sync is ~4
-weeks stale (last reviewed ng 456154efb / qt6 81384003, 2026-07-14) - diff for
-fixes-others-already-made before writing new ones.
-PARKED for the maintainer (do not guess): D295 (the two inherited precedence
-asymmetries - intent/live call). The settings-wiring audit remove-vs-wire
-disposition was DECIDED 2026-08-11 and landed on branch
-fix/settings-audit-disposition (outcomes in the 2026-08-10 settings-audit
-note below).
 
 ## 2026-08-11: defect quick wins (branch fix/defect-quick-wins)
 

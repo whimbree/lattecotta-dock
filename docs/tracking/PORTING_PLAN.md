@@ -3259,6 +3259,15 @@ showed how much of the dock can only be driven by a pointer today.
       those keep using fakepointer as today, with the glide rules from
       the live-verification skill.
       Commits:
+- [ ] Reorder or self-heal gate-all's harness-check vs build-check
+      ordering: harness-check's coverage-ratchet probe reads the ctest
+      list from the EXISTING build configure, so a rebased branch that
+      adds a ctest entry fails the ratchet against the stale list until
+      a manual cmake reconfigure runs (bit twice in the 2026-08-11..15
+      merge train: themeextendedrefreshtest and cleanuponstartuptest).
+      Either run a configure ahead of harness-check inside gate-all or
+      reorder the legs with the ordering reasoned at the site.
+      Commits:
 - [ ] Root-fix D310 (fakepointer's canonical install dangles after any
       fresh build): $HOME/.local/bin/fakepointer is a symlink into the
       main checkout's build/_e2e-tools/, which a fresh build deletes, and
