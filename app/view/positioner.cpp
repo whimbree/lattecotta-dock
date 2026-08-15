@@ -486,7 +486,20 @@ void Positioner::onStartupFinished()
 {
     if (m_inStartup) {
         m_inStartup = false;
+        //! Run the coalesced solve NOW instead of after the 150ms timer,
+        //! keeping syncGeometry()'s own entry guards: this first publish
+        //! performs the D303 defer-remap (View::
+        //! applyPositionedLayerShellGeometry) that recreates the layer
+        //! surface, and it must complete before control returns to the QML
+        //! startup chain - finishStartup's next statements attach the KWin
+        //! slide and begin the reveal animation, and a timer-deferred publish
+        //! would remap the surface mid-reveal instead of while the content is
+        //! still slid out.
         syncGeometry();
+        if (m_syncGeometryTimer.isActive()) {
+            m_syncGeometryTimer.stop();
+            immediateSyncGeometry();
+        }
         Q_EMIT isOffScreenChanged();
     }
 }

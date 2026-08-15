@@ -851,6 +851,24 @@ bool View::applyPositionedLayerShellGeometry(
         return false;
     }
 
+    //! D303 (startup slide-out committed a zero-width layer surface): a
+    //! mapped surface still carrying the fallback anchoring commits a zero
+    //! desired size on its anchor-spanned length axis, and the switch to
+    //! viewPlacement()'s Top|Left anchors is not atomic against render-thread
+    //! frame commits (mechanism at viewPlacementDropsSpannedAxis()). An
+    //! unmapped window has no surface to commit, so dropping the map across
+    //! the flip makes it atomic: the recreated surface receives its complete
+    //! new state before its first commit, the same surface-recreation rule
+    //! moveToScreen() applies for output rebinds. The applied-placement show
+    //! path (showAppliedLayerShellPlacement at the end of the placement
+    //! transaction) restores visibility; the visibility manager's mustBeShown
+    //! handler is the independent safety net behind it.
+    if (isVisible()
+            && WindowSystem::LayerShell::viewPlacementDropsSpannedAxis(this)) {
+        m_showAfterLayerShellPlacement = true;
+        setVisible(false);
+    }
+
     const auto configureRequests =
         WindowSystem::LayerShell::applyViewPlacement(
             this,

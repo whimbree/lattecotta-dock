@@ -504,6 +504,27 @@ ViewPlacementApplication applyViewPlacement(
     };
 }
 
+bool viewPlacementDropsSpannedAxis(QWindow *window)
+{
+    const LSW *const ls = LSW::get(window);
+    if (!ls) {
+        return false;
+    }
+
+    //! viewPlacement() anchors Top|Left, which spans neither axis; any axis
+    //! the current anchors span (fallback anchoring from configureView() /
+    //! updateAnchoring() spans the length axis of masked horizontal and
+    //! Justify surfaces) therefore loses its span when the placement applies,
+    //! and its committed desired size is 0 at that moment (LayerShellQt
+    //! zeroes the desired size of every spanned axis).
+    const LSW::Anchors anchors = ls->anchors();
+    const bool spansHorizontal = anchors.testFlag(LSW::AnchorLeft)
+        && anchors.testFlag(LSW::AnchorRight);
+    const bool spansVertical = anchors.testFlag(LSW::AnchorTop)
+        && anchors.testFlag(LSW::AnchorBottom);
+    return spansHorizontal || spansVertical;
+}
+
 ReservationPlacement reservationPlacement(Plasma::Types::Location location,
                                           const QRect &strutGeometry,
                                           const QRect &screenGeometry)
