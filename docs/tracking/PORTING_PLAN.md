@@ -2553,6 +2553,27 @@ multi-view, multi-monitor setup.
       angle (frame-callback-starved window freezing a running
       SequentialAnimation). Fix at the origin once named; do NOT
       paper it with a retry timer.
+      Deliberate reproduction attempt (2026-08-14, nested vehicle):
+      10 cold-start trials against a six-view loaded config with the
+      dock's QML disk cache ($XDG_CACHE_HOME/lattedock/qmlcache)
+      wiped before every launch - the cold-type-cache half of the
+      first-run-after-a-C++-rebuild fingerprint. All 10 settled
+      (7.9-30.3s until every view left inStartup) with the full
+      breadcrumb trail each run: 6/6 hasRestoredApplets handler
+      entries, 6/6 startup-delayer firings, zero watchdog warnings.
+      NOT reproduced under cold-cache loader pressure alone; the
+      armed instrumentation stays for the next natural occurrence.
+      Clock mapping pinned while reading the chain, narrowing the
+      suspects: the 2s hasRestoredApplets timer is an event-loop
+      QTimer, but BOTH QML hops after it ride the scene-graph
+      animation clock (QQmlTimer is animation-job based, and the
+      slide-out is a SequentialAnimation), and all five desk
+      occurrences post-date the threaded render loop becoming the
+      default (28fdca5f2, 2026-07-13). The animation-driver angle
+      stays the strongest suspect; the vehicle's virtual single
+      output may simply never starve frame callbacks the way the
+      desk compositor can, which would explain the vehicle-clean,
+      desk-only pattern.
       Commits: 538abc8ec (instrumentation + the struts-side
       re-trigger that heals non-stranded runs)
 - [x] Guard any code that reads a window/activity/audio tracker object
