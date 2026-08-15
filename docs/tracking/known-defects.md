@@ -57,7 +57,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   showProgressBadge here was not done: Qt5 never exposed it on this page and
   the Qt5-faithful rule keeps the page's control set as upstream shipped it.
 ### D305 - EnvironmentActions dereferences the last-active-window chain unguarded
-- STATUS: FIXED (75132b8f0 on fix/phase8-remainder; hash final at merge).
+- STATUS: FIXED (fd60de049, merged PR #247).
 - FOUND: 2026-08-11, by the Phase 8 tracker-ready guard sweep (code-reading,
   with latte-dock-ng's 3a1aeaf53 as the live parallel: their fork hit this
   null-deref shape during startup and guarded it with a ready property).
@@ -84,7 +84,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   the dock alive.
 
 ### D304 - maxLength binding dereferences latteView while it is still null
-- STATUS: FIXED (1b0c4069a on fix/phase8-remainder; hash final at merge).
+- STATUS: FIXED (faabdc47b, merged PR #247).
 - FOUND: 2026-08-11, by the Phase 8 tracker-ready guard sweep (code-reading,
   then reproduced in the nested vehicle).
 - SYMPTOM: with maximizeWhenMaximized configured and the dock in mask mode,

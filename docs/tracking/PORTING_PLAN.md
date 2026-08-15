@@ -2596,7 +2596,7 @@ multi-view, multi-monitor setup.
       ready-property gate, SC-WT1 (022-empty-area-window-actions) green
       on the gated code. Registry entries in
       docs/tracking/known-defects.md carry the full mechanism.
-      Commits: 1b0c4069a, 75132b8f0 (fix/phase8-remainder; final at
+      Commits: faabdc47b, fd60de049 (fix/phase8-remainder; final at
       merge)
 - [x] Fix multi-screen cloned-view applet-order sync. RESOLVED
       2026-07-16: in our tree the guard is implicit (translatability
@@ -2797,7 +2797,7 @@ multi-view, multi-monitor setup.
       Plasma 6.6 demoted stock taskmanager's wheelEnabled to an Enum
       defaulting to None, so the stock task manager consumes no wheel
       until configured (the recipe opts in with AllTask).
-      Commits: 3fe56d71e (fix/phase8-remainder; final at merge)
+      Commits: 3c5a49fb7 (fix/phase8-remainder; final at merge)
 - [ ] Multi-screen relocation ping-pong: does reconsiderScreen() need an
       in-relocation guard (fork-sync INVESTIGATE, filed 2026-08-11 from
       docs/agent-logs/2026-08-11-fork-sync-report.md)? latte-dock-ng's
