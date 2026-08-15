@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-project(lattedock)
+# C is enabled alongside CXX because CMake 4.3 (arriving with the 0e251e24
+# nixpkgs re-pin) hard-errors in check_library_exists during a FRESH
+# configure otherwise: KF6WindowSystem -> KF6KIO pulls FindX11, whose
+# library probes need a C compiler, and enabling the language after the
+# project() call ("CMAKE_C_COMPILER not set, after EnableLanguage") is no
+# longer tolerated. Warm build dirs mask this; every new worktree or CI
+# configure hits it. The dock itself stays pure C++ (plus the one C
+# helper, scripts/tools/fakepointer.c, built outside CMake).
+project(lattedock C CXX)
 
 # C++20, verified not assumed (step 2.5 in the extraction plan): the KF6
 # pin builds this tree at 20 (checked with full build-check; at the time
