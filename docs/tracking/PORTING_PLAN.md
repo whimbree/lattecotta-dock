@@ -2833,8 +2833,8 @@ multi-view, multi-monitor setup.
       Per the recorded decision a surviving layout now inherits the
       assignment at the removal site; inheritor choice pinned by
       layoutsTable_freeActivitiesInheritorChoice in datatypestest.
-      Commits: 6023a6341
-      (branch-local; resolve at merge)
+      Commits: 089a305fa (merged PR #248)
+      
 
 ### Phase 9: Theming, colorization, multi-monitor visual polish
 
