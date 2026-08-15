@@ -5268,8 +5268,8 @@ carries its own detail or points into the plan and the reference docs.
 ## Fixed (kept for the record)
 
 ### D303 - Startup slide-out committed a zero-width layer surface
-- STATUS: FIXED (2026-08-15, 0467fe28c on the fix/d303-zero-width-surface
-  branch; hash re-resolves at merge).
+- STATUS: FIXED (2026-08-15, 8564e277b, merged PR #251 (originally authored on the fix/d303-zero-width-surface
+  branch).
 - FOUND: 2026-08-11, incidentally while driving the D298 e2e recipe: the
   first nested-vehicle launch of the D21 top-edge dock died with
   `zwlr_layer_surface_v1#56: error 1: the layer surface has a width of 0 but
@@ -5292,7 +5292,7 @@ carries its own detail or points into the plan and the reference docs.
   queue. A commit landing inside that gap presents non-spanning anchors with
   the stale zero width and wlr-layer-shell kills the connection (~1/1400 per
   publish - rare, matching one crash across many sessions).
-- FIX (0467fe28c): drop the map across any span-dropping anchor flip of a
+- FIX (8564e277b): drop the map across any span-dropping anchor flip of a
   mapped view surface (viewPlacementDropsSpannedAxis feeding the
   m_showAfterLayerShellPlacement defer-show transaction) - an unmapped window
   has no surface to commit, so the recreated surface receives its complete
