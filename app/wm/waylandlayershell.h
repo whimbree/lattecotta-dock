@@ -164,6 +164,18 @@ struct ViewPlacementApplication {
     QWindow *window, QScreen *screen, Plasma::Types::Location location,
     const QRect &viewGeometry, const QRect &screenGeometry);
 
+//! True when @p window's CURRENT layer-shell anchors span an axis (both
+//! edges of that axis anchored) that viewPlacement()'s Top|Left anchoring
+//! will stop spanning. On a spanned axis LayerShellQt zeroes the committed
+//! desired size (the compositor sizes it), so applying the view placement to
+//! a MAPPED surface in this state opens the D303 race: LayerShellQt reacts
+//! to the anchor change with set_anchor followed by a corrective set_size -
+//! two separate wire requests - and a render-thread frame commit landing
+//! between them presents "size 0 on an unspanned axis", a fatal wlr-layer-
+//! shell protocol error. Callers use this to drop the map across the flip
+//! (View::applyPositionedLayerShellGeometry).
+[[nodiscard]] bool viewPlacementDropsSpannedAxis(QWindow *window);
+
 //! Layer-shell state for a transparent surface that publishes one output-edge
 //! group's maximum reservation independently from every visual canvas.
 struct ReservationPlacement {
