@@ -2857,7 +2857,9 @@ multi-view, multi-monitor setup.
       timeout, the viewAppletsOrder/viewAppletsData plugin-sequence join),
       under the strict harness gate with unit tests. Each recipe run green
       twice in the nested vehicle; run evidence in the commit bodies.
-      Commits: (filled at merge)
+      Commits: b68e5a128 (typed readback), 24b529b5b (helpers +
+      fixtures), 4152205cc / c5fc0909c / e91a54057 (recipes 120-122),
+      7c78bcff5 (docs), merged PR #250
 
 - [ ] Multi-activity layout assignment has NO e2e coverage (the gap the
       2026-08-14 layout-switch wave deliberately left). The nested vehicle
