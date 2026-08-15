@@ -16,6 +16,28 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 
 ## Open / suspected
 
+### D310 - fakepointer's canonical install dangles after any fresh build, refusing every e2e run machine-wide
+- STATUS: OPEN (harness infrastructure).
+- FOUND: 2026-08-14, driving the layout-switch recipe wave: the wave's first
+  run-e2e invocation exited 2 at the precondition ("FAIL fakepointer not found
+  at $HOME/.local/bin/fakepointer") before any recipe ran.
+- MECHANISM: $HOME/.local/bin/fakepointer is a SYMLINK (dated 2026-08-08) into
+  the main checkout's build tree (build/_e2e-tools/fakepointer), and nothing in
+  the tree rebuilds that artifact: a fresh build deletes build/_e2e-tools/, the
+  symlink dangles, and the e2e runner's precondition (e2e_runner.py, the
+  E2E_FAKEPOINTER os.access X_OK check) then refuses EVERY run - including
+  recipe sets that never inject input. Observed exactly so: main's
+  build/_e2e-tools/ was gone after the nixpkgs re-pin's fresh build while the
+  symlink survived.
+- WORKAROUND (applied for the wave, per the live-verification skill's rebuild
+  recipe): compile scripts/tools/fakepointer.c into the worktree's
+  build/_e2e-tools/ and point E2E_FAKEPOINTER at it.
+- ROOT-FIX candidates (filed as a Phase 10 plan item): run-e2e self-heals by
+  building the tool into $E2E_BUILD/_e2e-tools when the resolved path is
+  missing (the same self-heal precedent as its uv/devshell re-exec), or the
+  canonical install becomes a real copy owned by an install script instead of
+  a symlink into a wipeable build tree.
+
 ### D307 - Standalone Panel page's embedded-in-dock disable logic bound a key that does not exist
 - STATUS: FIXED (2026-08-11, e7a1521f4, merged PR #246).
 - FOUND: 2026-08-10 settings-wiring audit (problem #8 in the inventory);
