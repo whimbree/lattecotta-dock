@@ -17,7 +17,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 ## Open / suspected
 
 ### D307 - Standalone Panel page's embedded-in-dock disable logic bound a key that does not exist
-- STATUS: FIXED (2026-08-11, the settings-audit-disposition branch).
+- STATUS: FIXED (2026-08-11, e7a1521f4, merged PR #246).
 - FOUND: 2026-08-10 settings-wiring audit (problem #8 in the inventory);
   disposition landed 2026-08-11.
 - SYMPTOM: the standalone Tasks-applet Panel page aliases
@@ -40,7 +40,7 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   behavior, so the Qt5-faithful rule does not protect it.
 
 ### D306 - Standalone Interaction checkbox claimed "progress information" but toggled the notifications badge
-- STATUS: FIXED (2026-08-11, the settings-audit-disposition branch).
+- STATUS: FIXED (2026-08-11, 7e86dff0c, merged PR #246).
 - FOUND: 2026-08-10 settings-wiring audit (problem #7 in the inventory);
   disposition landed 2026-08-11.
 - SYMPTOM: on the standalone Tasks-applet Interaction page (shown when
