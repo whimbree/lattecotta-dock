@@ -11,10 +11,18 @@ dispositioned), the theming audit (Phase 9) landed end to end, the Phase 8
 implementable remainder closed, the settings-audit disposition executed, and
 the first layout-switching e2e coverage landed. The full session record is the
 dated sections below. Next session's higher-value work:
-1. D209 (the partial-reservation recipe front door): the port was resumed
-   in flight at session end - if its branch test/d209-recipe-front-door is
-   green and unmerged, run the merge tail (review done? NO - it still needs
-   its first independent review, then rebase + full gate + merge).
+1. D209 (the partial-reservation recipe front door): PARKED on
+   test/d209-recipe-front-door (29959822a the typed port with its
+   deterministic three-view fixture and the bash retirement, 39787415d
+   docs; based at 169ab9cc4, needs the rebase). The port's FIRST drive
+   held every phase except the edge-migration equal-generation clause and
+   filed D312 (edge migration republishes reservation groups in two
+   coordinator transactions where the bash-era contract pinned one atomic
+   transaction; SUSPECTED - may be a stale expectation; the entry with the
+   failing snapshot rides the BRANCH, not main). Next session: disposition
+   D312 (real split-transaction defect vs contract update), then the two
+   green runs + the mutation control, then the review and merge tail.
+   harness-check was green twice on the committed head.
 2. D18 (widget-explorer drag flicker): now a CONFIRMED Qt6/Wayland
    regression with the mechanism named by source archaeology - the drag
    mutates the compositor's committed input region under the pointer
