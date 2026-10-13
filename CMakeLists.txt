@@ -210,6 +210,24 @@ option(LATTE_WERROR "Treat compiler warnings as errors (developer and CI default
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wformat")
 if(LATTE_WERROR)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+    # One carve-out from the blanket -Werror: GCC 16's new -Wsfinae-incomplete
+    # (on by default, not part of -Wall/-Wextra) fires on Qt's own metatype
+    # machinery, not on this tree's code. moc-generated code probes types for
+    # completeness via SFINAE (QtPrivate::IsCompleteHelper in qmetatype.h, e.g.
+    # for a signal/property mentioning Latte::View* in a header that only
+    # forward-declares View), and AUTOMOC's merged mocs_compilation.cpp then
+    # defines that same type later in the same TU - exactly the
+    # probe-then-define pattern the warning exists to flag. The probe site is
+    # inside qtbase headers, so it cannot be fixed here. -Wno-error= (not
+    # -Wno-) keeps the diagnostic EMITTED per the doctrine above; it just
+    # stops erroring. Probe the positive flag form: GCC silently accepts
+    # unknown -Wno-* spellings, so testing those would false-pass. Revisit
+    # once qtbase suppresses the warning at the probe site.
+    include(CheckCXXCompilerFlag)
+    check_cxx_compiler_flag("-Wsfinae-incomplete" LATTE_COMPILER_HAS_WSFINAE_INCOMPLETE)
+    if(LATTE_COMPILER_HAS_WSFINAE_INCOMPLETE)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=sfinae-incomplete")
+    endif()
 else()
     string(REGEX REPLACE "-Werror(=[A-Za-z0-9_-]+)?" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REGEX REPLACE "-Werror(=[A-Za-z0-9_-]+)?" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
