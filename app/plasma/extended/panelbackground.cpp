@@ -191,8 +191,6 @@ void PanelBackground::updateRoundnessFallback(KSvg::Svg *svg)
     }
 
     int discovRow = (m_location == Plasma::Types::LeftEdge ? corner.height()-1 : 0);
-    int discovCol{0};
-    //int discovCol = (m_location == Plasma::Types::LeftEdge ? corner.width()-1 : 0);
     int round{0};
 
     int minOpacity = m_maxOpacity * 255;
@@ -206,7 +204,6 @@ void PanelBackground::updateRoundnessFallback(KSvg::Svg *svg)
             QRgb pixelData = line[col];
 
             if (qAlpha(pixelData) < minOpacity) {
-                discovCol++;
                 round++;
             } else {
                 break;
@@ -220,7 +217,6 @@ void PanelBackground::updateRoundnessFallback(KSvg::Svg *svg)
             QRgb pixelData = line[col];
 
             if (qAlpha(pixelData) < minOpacity) {
-                discovCol--;
                 round++;
             } else {
                 break;
